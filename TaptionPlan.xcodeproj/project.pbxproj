@@ -29,6 +29,9 @@
 		A10000000000000000000014 /* AppleIntegrations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000014 /* AppleIntegrations.swift */; };
 		A10000000000000000000015 /* LiveActivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* LiveActivitySupport.swift */; };
 		A10000000000000000000016 /* FeatureEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* FeatureEngineTests.swift */; };
+		A10000000000000000000018 /* NavigationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000018 /* NavigationModels.swift */; };
+		A10000000000000000000019 /* CatPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000019 /* CatPresentation.swift */; };
+		A1000000000000000000001A /* TimelineInteractionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001A /* TimelineInteractionEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,6 +70,9 @@
 		F10000000000000000000015 /* LiveActivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivitySupport.swift; sourceTree = "<group>"; };
 		F10000000000000000000016 /* FeatureEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000017 /* TaptionPlan.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlan.entitlements; sourceTree = "<group>"; };
+		F10000000000000000000018 /* NavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationModels.swift; sourceTree = "<group>"; };
+		F10000000000000000000019 /* CatPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatPresentation.swift; sourceTree = "<group>"; };
+		F1000000000000000000001A /* TimelineInteractionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineInteractionEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,24 +115,9 @@
 			isa = PBXGroup;
 			children = (
 				F10000000000000000000001 /* TaptionPlanApp.swift */,
-				F10000000000000000000002 /* AppModel.swift */,
-				F10000000000000000000003 /* PlanItem.swift */,
-				F10000000000000000000004 /* Theme.swift */,
-				F10000000000000000000005 /* AppShellView.swift */,
-				F10000000000000000000006 /* ScheduleView.swift */,
-				F10000000000000000000007 /* GoalsView.swift */,
-				F10000000000000000000008 /* ReviewView.swift */,
-				F10000000000000000000009 /* SettingsView.swift */,
-				F1000000000000000000000A /* AddPlanSheet.swift */,
-				F1000000000000000000000D /* DraftComponents.swift */,
-				F1000000000000000000000E /* DetailViews.swift */,
-				F1000000000000000000000F /* FeatureModels.swift */,
-				F10000000000000000000010 /* PlanRepository.swift */,
-				F10000000000000000000011 /* PlanningEngine.swift */,
-				F10000000000000000000012 /* TemplatesAndSettings.swift */,
-				F10000000000000000000013 /* SensorFusion.swift */,
-				F10000000000000000000014 /* AppleIntegrations.swift */,
-				F10000000000000000000015 /* LiveActivitySupport.swift */,
+				810000000000000000000005 /* UI */,
+				810000000000000000000006 /* UX */,
+				810000000000000000000007 /* CORE */,
 				F10000000000000000000017 /* TaptionPlan.entitlements */,
 				F1000000000000000000000B /* Assets.xcassets */,
 			);
@@ -140,6 +131,48 @@
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
 			);
 			path = TaptionPlanTests;
+			sourceTree = "<group>";
+		};
+		810000000000000000000005 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000005 /* AppShellView.swift */,
+				F10000000000000000000006 /* ScheduleView.swift */,
+				F10000000000000000000007 /* GoalsView.swift */,
+				F10000000000000000000008 /* ReviewView.swift */,
+				F10000000000000000000009 /* SettingsView.swift */,
+				F1000000000000000000000A /* AddPlanSheet.swift */,
+				F1000000000000000000000D /* DraftComponents.swift */,
+				F1000000000000000000000E /* DetailViews.swift */,
+				F10000000000000000000004 /* Theme.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		810000000000000000000006 /* UX */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000002 /* AppModel.swift */,
+				F10000000000000000000018 /* NavigationModels.swift */,
+				F10000000000000000000019 /* CatPresentation.swift */,
+				F1000000000000000000001A /* TimelineInteractionEngine.swift */,
+			);
+			path = UX;
+			sourceTree = "<group>";
+		};
+		810000000000000000000007 /* CORE */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000003 /* PlanItem.swift */,
+				F1000000000000000000000F /* FeatureModels.swift */,
+				F10000000000000000000010 /* PlanRepository.swift */,
+				F10000000000000000000011 /* PlanningEngine.swift */,
+				F10000000000000000000012 /* TemplatesAndSettings.swift */,
+				F10000000000000000000013 /* SensorFusion.swift */,
+				F10000000000000000000014 /* AppleIntegrations.swift */,
+				F10000000000000000000015 /* LiveActivitySupport.swift */,
+			);
+			path = CORE;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -260,6 +293,9 @@
 				A10000000000000000000013 /* SensorFusion.swift in Sources */,
 				A10000000000000000000014 /* AppleIntegrations.swift in Sources */,
 				A10000000000000000000015 /* LiveActivitySupport.swift in Sources */,
+				A10000000000000000000018 /* NavigationModels.swift in Sources */,
+				A10000000000000000000019 /* CatPresentation.swift in Sources */,
+				A1000000000000000000001A /* TimelineInteractionEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

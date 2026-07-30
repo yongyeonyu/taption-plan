@@ -537,21 +537,3 @@ actor FeatureSettingsStore {
         defaults.removeObject(forKey: key)
     }
 }
-
-struct CatMotionPolicy: Equatable, Sendable {
-    var style: CatStyle
-    var isRunning: Bool
-    var animationDuration: TimeInterval
-
-    static func resolve(
-        style: CatStyle,
-        hasCurrentActivity: Bool,
-        reduceMotion: Bool
-    ) -> CatMotionPolicy {
-        CatMotionPolicy(
-            style: style,
-            isRunning: hasCurrentActivity && !reduceMotion,
-            animationDuration: hasCurrentActivity && !reduceMotion ? 2 : 0
-        )
-    }
-}
