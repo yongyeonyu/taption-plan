@@ -21,6 +21,14 @@
 		A1000000000000000000000C /* TimeScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000C /* TimeScaleTests.swift */; };
 		A1000000000000000000000D /* DraftComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* DraftComponents.swift */; };
 		A1000000000000000000000E /* DetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* DetailViews.swift */; };
+		A1000000000000000000000F /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
+		A10000000000000000000010 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
+		A10000000000000000000011 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
+		A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* TemplatesAndSettings.swift */; };
+		A10000000000000000000013 /* SensorFusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SensorFusion.swift */; };
+		A10000000000000000000014 /* AppleIntegrations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000014 /* AppleIntegrations.swift */; };
+		A10000000000000000000015 /* LiveActivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* LiveActivitySupport.swift */; };
+		A10000000000000000000016 /* FeatureEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* FeatureEngineTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +58,15 @@
 		F1000000000000000000000C /* TimeScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeScaleTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000000D /* DraftComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftComponents.swift; sourceTree = "<group>"; };
 		F1000000000000000000000E /* DetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViews.swift; sourceTree = "<group>"; };
+		F1000000000000000000000F /* FeatureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureModels.swift; sourceTree = "<group>"; };
+		F10000000000000000000010 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
+		F10000000000000000000011 /* PlanningEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningEngine.swift; sourceTree = "<group>"; };
+		F10000000000000000000012 /* TemplatesAndSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesAndSettings.swift; sourceTree = "<group>"; };
+		F10000000000000000000013 /* SensorFusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorFusion.swift; sourceTree = "<group>"; };
+		F10000000000000000000014 /* AppleIntegrations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrations.swift; sourceTree = "<group>"; };
+		F10000000000000000000015 /* LiveActivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivitySupport.swift; sourceTree = "<group>"; };
+		F10000000000000000000016 /* FeatureEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTests.swift; sourceTree = "<group>"; };
+		F10000000000000000000017 /* TaptionPlan.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlan.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +120,14 @@
 				F1000000000000000000000A /* AddPlanSheet.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
 				F1000000000000000000000E /* DetailViews.swift */,
+				F1000000000000000000000F /* FeatureModels.swift */,
+				F10000000000000000000010 /* PlanRepository.swift */,
+				F10000000000000000000011 /* PlanningEngine.swift */,
+				F10000000000000000000012 /* TemplatesAndSettings.swift */,
+				F10000000000000000000013 /* SensorFusion.swift */,
+				F10000000000000000000014 /* AppleIntegrations.swift */,
+				F10000000000000000000015 /* LiveActivitySupport.swift */,
+				F10000000000000000000017 /* TaptionPlan.entitlements */,
 				F1000000000000000000000B /* Assets.xcassets */,
 			);
 			path = TaptionPlan;
@@ -112,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000000000000000000000C /* TimeScaleTests.swift */,
+				F10000000000000000000016 /* FeatureEngineTests.swift */,
 			);
 			path = TaptionPlanTests;
 			sourceTree = "<group>";
@@ -227,6 +253,13 @@
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
+				A1000000000000000000000F /* FeatureModels.swift in Sources */,
+				A10000000000000000000010 /* PlanRepository.swift in Sources */,
+				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
+				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
+				A10000000000000000000013 /* SensorFusion.swift in Sources */,
+				A10000000000000000000014 /* AppleIntegrations.swift in Sources */,
+				A10000000000000000000015 /* LiveActivitySupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -235,6 +268,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
+				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -369,6 +403,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -377,9 +412,12 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Taption Plan";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "고정된 일정을 시간표에 표시하기 위해 캘린더 접근이 필요합니다.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "운동과 수면의 실제 기록을 시간표와 비교하기 위해 건강 데이터 접근이 필요합니다.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "방문 장소와 이동 구간을 저전력 방식으로 자동 기록하려면 백그라운드 위치 접근이 필요합니다.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "머문 장소와 이동 시간을 사용자가 허용한 범위에서 기록하기 위해 위치 접근이 필요합니다.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "액션 아이템에 음성 메모를 첨부하기 위해 마이크 접근이 필요합니다.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "걷기와 이동 상태를 추정하기 위해 동작 및 피트니스 접근이 필요합니다.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "촬영 시각에 맞춰 사진을 시간표에 표시하기 위해 사진 접근이 필요합니다.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -404,6 +442,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -411,9 +450,12 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Taption Plan";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "고정된 일정을 시간표에 표시하기 위해 캘린더 접근이 필요합니다.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "운동과 수면의 실제 기록을 시간표와 비교하기 위해 건강 데이터 접근이 필요합니다.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "방문 장소와 이동 구간을 저전력 방식으로 자동 기록하려면 백그라운드 위치 접근이 필요합니다.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "머문 장소와 이동 시간을 사용자가 허용한 범위에서 기록하기 위해 위치 접근이 필요합니다.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "액션 아이템에 음성 메모를 첨부하기 위해 마이크 접근이 필요합니다.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "걷기와 이동 상태를 추정하기 위해 동작 및 피트니스 접근이 필요합니다.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "촬영 시각에 맞춰 사진을 시간표에 표시하기 위해 사진 접근이 필요합니다.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
