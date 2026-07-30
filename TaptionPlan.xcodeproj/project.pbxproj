@@ -19,6 +19,8 @@
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
 		A1000000000000000000000C /* TimeScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000C /* TimeScaleTests.swift */; };
+		A1000000000000000000000D /* DraftComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* DraftComponents.swift */; };
+		A1000000000000000000000E /* DetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* DetailViews.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +48,8 @@
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000000C /* TimeScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeScaleTests.swift; sourceTree = "<group>"; };
+		F1000000000000000000000D /* DraftComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftComponents.swift; sourceTree = "<group>"; };
+		F1000000000000000000000E /* DetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +101,8 @@
 				F10000000000000000000008 /* ReviewView.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
+				F1000000000000000000000D /* DraftComponents.swift */,
+				F1000000000000000000000E /* DetailViews.swift */,
 				F1000000000000000000000B /* Assets.xcassets */,
 			);
 			path = TaptionPlan;
@@ -219,6 +225,8 @@
 				A10000000000000000000008 /* ReviewView.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
+				A1000000000000000000000D /* DraftComponents.swift in Sources */,
+				A1000000000000000000000E /* DetailViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
