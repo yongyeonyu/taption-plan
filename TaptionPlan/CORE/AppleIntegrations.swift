@@ -943,6 +943,60 @@ private struct PedometerSensorUpdate: Sendable {
     var floorsDescended: Int?
     var stepCount: Int?
     var walkingRunningDistanceMeters: Double?
+    var currentPaceSecondsPerMeter: Double?
+    var currentCadenceStepsPerSecond: Double?
+    var averageActivePaceSecondsPerMeter: Double?
+}
+
+private struct DeviceMotionAccumulator {
+    private(set) var sampleCount = 0
+    private var accelerationMean = 0.0
+    private var accelerationM2 = 0.0
+    private var accelerationPeak = 0.0
+    private var rotationMean = 0.0
+    private var rotationM2 = 0.0
+    private var rotationPeak = 0.0
+
+    mutating func append(_ snapshot: DeviceMotionSnapshot) {
+        let acceleration = Self.magnitude(snapshot.userAcceleration)
+        let rotation = Self.magnitude(snapshot.rotationRate)
+        sampleCount += 1
+        let count = Double(sampleCount)
+
+        let accelerationDelta = acceleration - accelerationMean
+        accelerationMean += accelerationDelta / count
+        accelerationM2 += accelerationDelta * (acceleration - accelerationMean)
+        accelerationPeak = max(accelerationPeak, acceleration)
+
+        let rotationDelta = rotation - rotationMean
+        rotationMean += rotationDelta / count
+        rotationM2 += rotationDelta * (rotation - rotationMean)
+        rotationPeak = max(rotationPeak, rotation)
+    }
+
+    var summary: DeviceMotionSummary? {
+        guard sampleCount > 0 else { return nil }
+        let divisor = Double(max(1, sampleCount - 1))
+        return DeviceMotionSummary(
+            sampleCount: sampleCount,
+            meanUserAccelerationG: accelerationMean,
+            userAccelerationStandardDeviationG:
+                sqrt(max(0, accelerationM2 / divisor)),
+            peakUserAccelerationG: accelerationPeak,
+            meanRotationRateRadiansPerSecond: rotationMean,
+            rotationRateStandardDeviationRadiansPerSecond:
+                sqrt(max(0, rotationM2 / divisor)),
+            peakRotationRateRadiansPerSecond: rotationPeak
+        )
+    }
+
+    mutating func reset() {
+        self = DeviceMotionAccumulator()
+    }
+
+    private static func magnitude(_ vector: SensorVector3) -> Double {
+        sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z)
+    }
 }
 
 @MainActor
@@ -968,7 +1022,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var latestFloorsDescended: Int?
     private var latestStepCount: Int?
     private var latestWalkingRunningDistance: Double?
+    private var latestCurrentPace: Double?
+    private var latestCurrentCadence: Double?
+    private var latestAverageActivePace: Double?
     private var latestDeviceMotion: DeviceMotionSnapshot?
+    private var deviceMotionAccumulator = DeviceMotionAccumulator()
 
     override init() {
         super.init()
@@ -984,10 +1042,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             location: CLLocationManager.locationServicesEnabled(),
             motionActivity: CMMotionActivityManager.isActivityAvailable(),
             deviceMotion: deviceMotionManager.isDeviceMotionAvailable,
+            magnetometer: deviceMotionManager.isMagnetometerAvailable,
             relativeAltitude: CMAltimeter.isRelativeAltitudeAvailable(),
             stepCounting: CMPedometer.isStepCountingAvailable(),
             distance: CMPedometer.isDistanceAvailable(),
-            floorCounting: CMPedometer.isFloorCountingAvailable()
+            floorCounting: CMPedometer.isFloorCountingAvailable(),
+            pace: CMPedometer.isPaceAvailable(),
+            cadence: CMPedometer.isCadenceAvailable()
         )
     }
 
@@ -1068,6 +1129,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestFloorsDescended = nil
         latestStepCount = nil
         latestWalkingRunningDistance = nil
+        latestCurrentPace = nil
+        latestCurrentCadence = nil
+        latestAverageActivePace = nil
+        latestDeviceMotion = nil
+        deviceMotionAccumulator.reset()
         continuation?.finish()
         continuation = nil
     }
@@ -1108,11 +1174,16 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
         if configuration.collectsDeviceMotion,
            deviceMotionManager.isDeviceMotionAvailable {
-            deviceMotionManager.deviceMotionUpdateInterval = max(
-                0.25,
-                min(2, configuration.minimumEmissionInterval)
-            )
+            deviceMotionManager.deviceMotionUpdateInterval =
+                configuration.profile == .accuracy ? 0.25 : 2
+            let availableFrames =
+                CMMotionManager.availableAttitudeReferenceFrames()
+            let referenceFrame: CMAttitudeReferenceFrame =
+                availableFrames.contains(.xArbitraryCorrectedZVertical)
+                    ? .xArbitraryCorrectedZVertical
+                    : .xArbitraryZVertical
             deviceMotionManager.startDeviceMotionUpdates(
+                using: referenceFrame,
                 to: .main
             ) { [weak self] motion, _ in
                 guard let motion else { return }
@@ -1136,11 +1207,23 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                         x: motion.attitude.roll,
                         y: motion.attitude.pitch,
                         z: motion.attitude.yaw
-                    )
+                    ),
+                    magneticFieldMicroteslas: SensorVector3(
+                        x: motion.magneticField.field.x,
+                        y: motion.magneticField.field.y,
+                        z: motion.magneticField.field.z
+                    ),
+                    magneticFieldAccuracy:
+                        Int(motion.magneticField.accuracy.rawValue),
+                    headingDegrees: motion.heading >= 0
+                        ? motion.heading
+                        : nil
                 )
                 Task { @MainActor in
-                    self?.latestDeviceMotion = snapshot
-                    self?.emit()
+                    guard let self else { return }
+                    self.latestDeviceMotion = snapshot
+                    self.deviceMotionAccumulator.append(snapshot)
+                    self.emit()
                 }
             }
         }
@@ -1170,7 +1253,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                         floorsDescended: data?.floorsDescended?.intValue,
                         stepCount: data?.numberOfSteps.intValue,
                         walkingRunningDistanceMeters:
-                            data?.distance?.doubleValue
+                            data?.distance?.doubleValue,
+                        currentPaceSecondsPerMeter:
+                            data?.currentPace?.doubleValue,
+                        currentCadenceStepsPerSecond:
+                            data?.currentCadence?.doubleValue,
+                        averageActivePaceSecondsPerMeter:
+                            data?.averageActivePace?.doubleValue
                     )
                     Task { @MainActor in
                         self?.apply(update)
@@ -1264,7 +1353,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 timestamp: now,
                 point: point,
                 speedMetersPerSecond: location.flatMap { $0.speed >= 0 ? $0.speed : nil },
+                speedAccuracyMetersPerSecond: location.flatMap {
+                    $0.speedAccuracy >= 0 ? $0.speedAccuracy : nil
+                },
                 courseDegrees: location.flatMap { $0.course >= 0 ? $0.course : nil },
+                courseAccuracyDegrees: location.flatMap {
+                    $0.courseAccuracy >= 0 ? $0.courseAccuracy : nil
+                },
                 motion: latestMotion,
                 motionConfidence: latestMotionConfidence,
                 relativeAltitudeMeters: latestRelativeAltitude,
@@ -1274,11 +1369,16 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 floorsDescended: latestFloorsDescended,
                 stepCount: latestStepCount,
                 walkingRunningDistanceMeters: latestWalkingRunningDistance,
+                currentPaceSecondsPerMeter: latestCurrentPace,
+                currentCadenceStepsPerSecond: latestCurrentCadence,
+                averageActivePaceSecondsPerMeter: latestAverageActivePace,
                 deviceMotion: latestDeviceMotion,
+                deviceMotionSummary: deviceMotionAccumulator.summary,
                 systemFloor: location?.floor?.level,
                 gpsAvailable: location != nil
             )
         )
+        deviceMotionAccumulator.reset()
     }
 
     private func apply(_ update: AltimeterSensorUpdate) {
@@ -1294,6 +1394,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestStepCount = update.stepCount
         latestWalkingRunningDistance =
             update.walkingRunningDistanceMeters
+        latestCurrentPace = update.currentPaceSecondsPerMeter
+        latestCurrentCadence = update.currentCadenceStepsPerSecond
+        latestAverageActivePace = update.averageActivePaceSecondsPerMeter
         emit()
     }
 
@@ -1316,12 +1419,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     private static func motionKind(_ activity: CMMotionActivity) -> MotionKind {
-        if activity.stationary { return .stationary }
-        if activity.walking { return .walking }
-        if activity.running { return .running }
-        if activity.cycling { return .cycling }
-        if activity.automotive { return .automotive }
-        return .unknown
+        MotionKindResolver.resolve(
+            stationary: activity.stationary,
+            walking: activity.walking,
+            running: activity.running,
+            cycling: activity.cycling,
+            automotive: activity.automotive
+        )
     }
 
     private static func confidence(
@@ -1431,12 +1535,13 @@ final class AppleMotionHistoryService: @unchecked Sendable {
     }
 
     private static func motionKind(_ activity: CMMotionActivity) -> MotionKind {
-        if activity.stationary { return .stationary }
-        if activity.walking { return .walking }
-        if activity.running { return .running }
-        if activity.cycling { return .cycling }
-        if activity.automotive { return .automotive }
-        return .unknown
+        MotionKindResolver.resolve(
+            stationary: activity.stationary,
+            walking: activity.walking,
+            running: activity.running,
+            cycling: activity.cycling,
+            automotive: activity.automotive
+        )
     }
 
     private static func confidence(

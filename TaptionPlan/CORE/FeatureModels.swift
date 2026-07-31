@@ -559,6 +559,10 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     var name: String
     var point: GeoPoint?
     var floor: Int?
+    var referenceRelativeAltitudeMeters: Double?
+    var referencePressureKilopascals: Double?
+    var referenceAltimeterSessionID: UUID?
+    var floorCapturedAt: Date?
     var radiusMeters: Double
     var createdAt: Date
     var updatedAt: Date
@@ -569,6 +573,10 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         name: String? = nil,
         point: GeoPoint? = nil,
         floor: Int? = nil,
+        referenceRelativeAltitudeMeters: Double? = nil,
+        referencePressureKilopascals: Double? = nil,
+        referenceAltimeterSessionID: UUID? = nil,
+        floorCapturedAt: Date? = nil,
         radiusMeters: Double = 120,
         createdAt: Date = .now,
         updatedAt: Date = .now
@@ -578,6 +586,12 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         self.name = name ?? kind.defaultName
         self.point = point
         self.floor = floor
+        self.referenceRelativeAltitudeMeters =
+            referenceRelativeAltitudeMeters
+        self.referencePressureKilopascals =
+            referencePressureKilopascals
+        self.referenceAltimeterSessionID = referenceAltimeterSessionID
+        self.floorCapturedAt = floorCapturedAt
         self.radiusMeters = radiusMeters
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -591,6 +605,49 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         FrequentPlace(kind: .hobby),
         FrequentPlace(kind: .exercise),
     ]
+
+    var stablePlaceKey: String {
+        "frequent-\(id.uuidString.lowercased())"
+    }
+
+    var floorCalibration: FloorCalibration? {
+        guard let point, let floor else { return nil }
+        return FloorCalibration(
+            placeName: name,
+            referenceFloor: floor,
+            floorHeightMeters: 3,
+            referencePoint: point,
+            referenceRelativeAltitudeMeters:
+                referenceRelativeAltitudeMeters,
+            referencePressureKilopascals:
+                referencePressureKilopascals,
+            referenceAltimeterSessionID: referenceAltimeterSessionID,
+            capturedAt: floorCapturedAt ?? updatedAt
+        )
+    }
+
+    mutating func setLocation(
+        from reading: SensorReading,
+        floor: Int
+    ) {
+        point = reading.point
+        self.floor = floor
+        referenceRelativeAltitudeMeters = reading.relativeAltitudeMeters
+        referencePressureKilopascals = reading.pressureKilopascals
+        referenceAltimeterSessionID = reading.altimeterSessionID
+        floorCapturedAt = reading.timestamp
+        updatedAt = .now
+    }
+
+    mutating func clearLocation() {
+        point = nil
+        floor = nil
+        referenceRelativeAltitudeMeters = nil
+        referencePressureKilopascals = nil
+        referenceAltimeterSessionID = nil
+        floorCapturedAt = nil
+        updatedAt = .now
+    }
 }
 
 struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
@@ -780,7 +837,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var timestamp: Date
     var point: GeoPoint?
     var speedMetersPerSecond: Double?
+    var speedAccuracyMetersPerSecond: Double?
     var courseDegrees: Double?
+    var courseAccuracyDegrees: Double?
     var motion: MotionKind
     var motionConfidence: ConfidenceLevel
     var relativeAltitudeMeters: Double?
@@ -790,7 +849,11 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var floorsDescended: Int?
     var stepCount: Int?
     var walkingRunningDistanceMeters: Double?
+    var currentPaceSecondsPerMeter: Double?
+    var currentCadenceStepsPerSecond: Double?
+    var averageActivePaceSecondsPerMeter: Double?
     var deviceMotion: DeviceMotionSnapshot?
+    var deviceMotionSummary: DeviceMotionSummary?
     var systemFloor: Int?
     var gpsAvailable: Bool
     var nearbyStation: Bool
@@ -808,7 +871,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         timestamp: Date,
         point: GeoPoint? = nil,
         speedMetersPerSecond: Double? = nil,
+        speedAccuracyMetersPerSecond: Double? = nil,
         courseDegrees: Double? = nil,
+        courseAccuracyDegrees: Double? = nil,
         motion: MotionKind = .unknown,
         motionConfidence: ConfidenceLevel = .low,
         relativeAltitudeMeters: Double? = nil,
@@ -818,7 +883,11 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         floorsDescended: Int? = nil,
         stepCount: Int? = nil,
         walkingRunningDistanceMeters: Double? = nil,
+        currentPaceSecondsPerMeter: Double? = nil,
+        currentCadenceStepsPerSecond: Double? = nil,
+        averageActivePaceSecondsPerMeter: Double? = nil,
         deviceMotion: DeviceMotionSnapshot? = nil,
+        deviceMotionSummary: DeviceMotionSummary? = nil,
         systemFloor: Int? = nil,
         gpsAvailable: Bool = true,
         nearbyStation: Bool = false,
@@ -835,7 +904,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.timestamp = timestamp
         self.point = point
         self.speedMetersPerSecond = speedMetersPerSecond
+        self.speedAccuracyMetersPerSecond = speedAccuracyMetersPerSecond
         self.courseDegrees = courseDegrees
+        self.courseAccuracyDegrees = courseAccuracyDegrees
         self.motion = motion
         self.motionConfidence = motionConfidence
         self.relativeAltitudeMeters = relativeAltitudeMeters
@@ -845,7 +916,12 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.floorsDescended = floorsDescended
         self.stepCount = stepCount
         self.walkingRunningDistanceMeters = walkingRunningDistanceMeters
+        self.currentPaceSecondsPerMeter = currentPaceSecondsPerMeter
+        self.currentCadenceStepsPerSecond = currentCadenceStepsPerSecond
+        self.averageActivePaceSecondsPerMeter =
+            averageActivePaceSecondsPerMeter
         self.deviceMotion = deviceMotion
+        self.deviceMotionSummary = deviceMotionSummary
         self.systemFloor = systemFloor
         self.gpsAvailable = gpsAvailable
         self.nearbyStation = nearbyStation
@@ -979,6 +1055,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var floorCalibration: FloorCalibration?
     var frequentPlaces: [FrequentPlace]
     var movementCorrections: [TravelModeCorrection]
+    var suppressedActualIDs: Set<UUID>
     var weatherEnabled: Bool
     var notificationsEnabled: Bool
     var permissions: [PermissionFeature: PermissionState]
@@ -995,9 +1072,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         locationEnabled: false,
         backgroundPreciseLocationEnabled: false,
         sensorCollectionProfile: .balanced,
-        floorCalibration: .homeTwentiethFloor,
+        floorCalibration: nil,
         frequentPlaces: FrequentPlace.defaults,
         movementCorrections: [],
+        suppressedActualIDs: [],
         weatherEnabled: false,
         notificationsEnabled: false,
         permissions: Dictionary(
@@ -1017,9 +1095,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         locationEnabled: Bool,
         backgroundPreciseLocationEnabled: Bool,
         sensorCollectionProfile: SensorCollectionProfile,
-        floorCalibration: FloorCalibration? = .homeTwentiethFloor,
+        floorCalibration: FloorCalibration? = nil,
         frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
         movementCorrections: [TravelModeCorrection] = [],
+        suppressedActualIDs: Set<UUID> = [],
         weatherEnabled: Bool,
         notificationsEnabled: Bool,
         permissions: [PermissionFeature: PermissionState]
@@ -1038,6 +1117,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.floorCalibration = floorCalibration
         self.frequentPlaces = Self.mergedFrequentPlaces(frequentPlaces)
         self.movementCorrections = movementCorrections
+        self.suppressedActualIDs = suppressedActualIDs
         self.weatherEnabled = weatherEnabled
         self.notificationsEnabled = notificationsEnabled
         self.permissions = permissions
@@ -1058,6 +1138,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case floorCalibration
         case frequentPlaces
         case movementCorrections
+        case suppressedActualIDs
         case weatherEnabled
         case notificationsEnabled
         case permissions
@@ -1124,6 +1205,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             [TravelModeCorrection].self,
             forKey: .movementCorrections
         ) ?? defaults.movementCorrections
+        suppressedActualIDs = try values.decodeIfPresent(
+            Set<UUID>.self,
+            forKey: .suppressedActualIDs
+        ) ?? defaults.suppressedActualIDs
         weatherEnabled = try values.decodeIfPresent(
             Bool.self,
             forKey: .weatherEnabled

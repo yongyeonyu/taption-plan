@@ -94,6 +94,22 @@ struct DeviceMotionSnapshot: Codable, Hashable, Sendable {
     var userAcceleration: SensorVector3
     var rotationRate: SensorVector3
     var attitudeRadians: SensorVector3
+    var magneticFieldMicroteslas: SensorVector3? = nil
+    var magneticFieldAccuracy: Int? = nil
+    var headingDegrees: Double? = nil
+}
+
+/// A compact statistical window of the high-frequency motion stream.
+/// The raw stream is too large to place on the timeline, so every persisted
+/// sensor reading carries the features needed for movement classification.
+struct DeviceMotionSummary: Codable, Hashable, Sendable {
+    var sampleCount: Int
+    var meanUserAccelerationG: Double
+    var userAccelerationStandardDeviationG: Double
+    var peakUserAccelerationG: Double
+    var meanRotationRateRadiansPerSecond: Double
+    var rotationRateStandardDeviationRadiansPerSecond: Double
+    var peakRotationRateRadiansPerSecond: Double
 }
 
 struct MotionActivityRecord: Identifiable, Codable, Hashable, Sendable {
@@ -112,6 +128,25 @@ struct MotionActivityRecord: Identifiable, Codable, Hashable, Sendable {
         self.span = span
         self.motion = motion
         self.confidence = confidence
+    }
+}
+
+enum MotionKindResolver {
+    static func resolve(
+        stationary: Bool,
+        walking: Bool,
+        running: Bool,
+        cycling: Bool,
+        automotive: Bool
+    ) -> MotionKind {
+        if running { return .running }
+        if cycling { return .cycling }
+        if walking { return .walking }
+        // Core Motion may report automotive and stationary together while a
+        // vehicle waits at a light. Preserve the enclosing vehicle segment.
+        if automotive { return .automotive }
+        if stationary { return .stationary }
+        return .unknown
     }
 }
 
@@ -173,10 +208,13 @@ struct SensorHardwareAvailability: Codable, Hashable, Sendable {
     var location: Bool
     var motionActivity: Bool
     var deviceMotion: Bool
+    var magnetometer: Bool
     var relativeAltitude: Bool
     var stepCounting: Bool
     var distance: Bool
     var floorCounting: Bool
+    var pace: Bool
+    var cadence: Bool
 }
 
 enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
@@ -215,7 +253,7 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
     static let standard = SensorCollectionConfiguration(
         profile: .balanced,
         highAccuracyDuringMovement: true,
-        collectsDeviceMotion: false,
+        collectsDeviceMotion: true,
         allowsBackgroundLocation: false,
         minimumEmissionInterval: SensorCollectionProfile.balanced.interval
     )
@@ -227,7 +265,7 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
         SensorCollectionConfiguration(
             profile: profile,
             highAccuracyDuringMovement: profile != .batterySaver,
-            collectsDeviceMotion: profile == .accuracy,
+            collectsDeviceMotion: profile != .batterySaver,
             allowsBackgroundLocation: allowsBackgroundLocation,
             minimumEmissionInterval: profile.interval
         )

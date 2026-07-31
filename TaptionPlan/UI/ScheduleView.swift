@@ -51,6 +51,7 @@ private struct TimelineSelection: Equatable {
     let title: String
     let span: TimeSpan
     let planID: UUID?
+    let actualID: UUID?
     let travelID: UUID?
     let isRoute: Bool
     let categoryID: String?
@@ -60,6 +61,7 @@ private struct TimelineSelection: Equatable {
         title: String,
         span: TimeSpan,
         planID: UUID?,
+        actualID: UUID? = nil,
         travelID: UUID? = nil,
         isRoute: Bool,
         categoryID: String? = nil,
@@ -68,6 +70,7 @@ private struct TimelineSelection: Equatable {
         self.title = title
         self.span = span
         self.planID = planID
+        self.actualID = actualID
         self.travelID = travelID
         self.isRoute = isRoute
         self.categoryID = categoryID
@@ -272,7 +275,12 @@ struct ScheduleView: View {
                 section: $detailSection,
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
-                routeReadings: routeReadings
+                routeReadings: routeReadings,
+                onActualDeleted: { actualID in
+                    if selectedTimelineItem?.actualID == actualID {
+                        selectedTimelineItem = nil
+                    }
+                }
             )
             .simultaneousGesture(
                 TapGesture().onEnded {
@@ -291,7 +299,7 @@ struct ScheduleView: View {
         guard let selection = timelineSelection(at: date) else {
             selectedPhotoCluster = nil
             selectedTimelineItem = TimelineSelection(
-                title: "플레이해드 위치",
+                title: "현재 위치",
                 span: playheadFocusSpan(around: date),
                 planID: nil,
                 isRoute: true,
@@ -521,8 +529,10 @@ private struct TimelineDetailPanel: View {
     let highlightedSection: TimelineDetailSection?
     @Binding var selectedPhotoCluster: PhotoCluster?
     let routeReadings: [SensorReading]
+    let onActualDeleted: (UUID) -> Void
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var selectedPhotoIndex = 0
+    @State private var pendingActualDeletionID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -608,6 +618,28 @@ private struct TimelineDetailPanel: View {
         .task {
             fitMapToRoutes()
         }
+        .confirmationDialog(
+            "이 실제 기록을 삭제할까요?",
+            isPresented: Binding(
+                get: { pendingActualDeletionID != nil },
+                set: { if !$0 { pendingActualDeletionID = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("실제 기록 삭제", role: .destructive) {
+                guard let actualID = pendingActualDeletionID else { return }
+                pendingActualDeletionID = nil
+                Task {
+                    await model.deleteActual(actualID)
+                    onActualDeleted(actualID)
+                }
+            }
+            Button("취소", role: .cancel) {
+                pendingActualDeletionID = nil
+            }
+        } message: {
+            Text("이 기록만 삭제되며 연결된 계획은 그대로 유지됩니다.")
+        }
     }
 
     private var routeContent: some View {
@@ -687,7 +719,7 @@ private struct TimelineDetailPanel: View {
             }
 
             if isPlayheadLocationOnly {
-                Text("이동 내용이 없어 플레이해드 위치만 표시합니다.")
+                Text("이동 내용이 없어 현재 위치만 표시합니다.")
                     .font(.taption(size: 7.5, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.horizontal, 8)
@@ -744,7 +776,23 @@ private struct TimelineDetailPanel: View {
     private var actionContent: some View {
         VStack(alignment: .leading, spacing: 7) {
             detailHeading("액션·메모", systemImage: "checklist.checked")
-            if let selection,
+            if let actual = selectedActual {
+                Text(actual.title)
+                    .font(.taption(size: 14, weight: .bold))
+                Text("\(actual.startedAt.formatted(date: .omitted, time: .shortened)) → \((actual.endedAt ?? .now).formatted(date: .omitted, time: .shortened))")
+                    .font(.taption(size: 9))
+                    .foregroundStyle(Color.tpSecondary)
+                Text("실제 기록 · \(actualSourceLabel(actual.source))")
+                    .font(.taption(size: 8.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                Button(role: .destructive) {
+                    pendingActualDeletionID = actual.id
+                } label: {
+                    Label("실제 기록 삭제", systemImage: "trash")
+                }
+                .font(.taption(size: 9, weight: .bold))
+                .buttonStyle(.bordered)
+            } else if let selection,
                let planID = selection.planID,
                selection.categoryID != "calendar" {
                 Text(selection.title)
@@ -769,6 +817,23 @@ private struct TimelineDetailPanel: View {
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
             }
+        }
+    }
+
+    private var selectedActual: ActualRecord? {
+        guard let actualID = selection?.actualID else { return nil }
+        return model.snapshot.actuals.first { $0.id == actualID }
+    }
+
+    private func actualSourceLabel(_ source: ActualSource) -> String {
+        switch source {
+        case .timer: "타이머"
+        case .manual: "직접 기록"
+        case .healthKit: "Apple 건강"
+        case .appleWatch: "Apple Watch"
+        case .calendar: "캘린더"
+        case .location: "위치"
+        case .photo: "사진"
         }
     }
 
@@ -973,7 +1038,7 @@ private struct TimelineDetailPanel: View {
     private var routeTitle: String {
         if playheadDate != nil {
             return routeSegments.isEmpty
-                ? "플레이해드 위치"
+                ? "현재 위치"
                 : "현재 이동 경로"
         }
         if selection?.isRoute == true {
@@ -1512,7 +1577,12 @@ struct GroupGanttView: View {
                 section: $detailSection,
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
-                routeReadings: routeReadings
+                routeReadings: routeReadings,
+                onActualDeleted: { actualID in
+                    if selectedTimelineItem?.actualID == actualID {
+                        selectedTimelineItem = nil
+                    }
+                }
             )
             .simultaneousGesture(
                 TapGesture().onEnded {
@@ -1531,7 +1601,7 @@ struct GroupGanttView: View {
         guard let selection = timelineSelection(at: date) else {
             selectedPhotoCluster = nil
             selectedTimelineItem = TimelineSelection(
-                title: "플레이해드 위치",
+                title: "현재 위치",
                 span: playheadFocusSpan(around: date),
                 planID: nil,
                 isRoute: true,
@@ -2692,7 +2762,11 @@ private struct TimelineBoard: View {
             status: .completed,
             isActual: true,
             detailText:
-                "실제 · \(actualSourceName(actual.source)) · \(confidenceName(actual.confidence))"
+                "실제 · \(actualSourceName(actual.source)) · \(confidenceName(actual.confidence))",
+            categoryID: actual.categoryID,
+            categoryName: model.snapshot.categories.first {
+                $0.id == actual.categoryID
+            }?.name
         )
     }
 
@@ -3885,6 +3959,10 @@ private struct TimelineBoard: View {
             title: block.title,
             span: selectionSpan,
             planID: block.planID,
+            actualID: block.isActual
+                && model.snapshot.actuals.contains(where: { $0.id == block.id })
+                ? block.id
+                : nil,
             travelID: block.categoryID == "movement" ? block.id : nil,
             isRoute: block.opensLocationTimeline,
             categoryID: block.categoryID,

@@ -17,6 +17,8 @@ struct SettingsView: View {
     @State private var sharedExport: ShareableURL?
     @State private var showsDeleteConfirmation = false
     @State private var customFrequentPlaceName = ""
+    @State private var floorPromptPlace: FrequentPlace?
+    @State private var frequentPlaceFloor = 1
 
     var body: some View {
         VStack(spacing: 0) {
@@ -192,16 +194,6 @@ struct SettingsView: View {
                         locationIntegrationRow
                         frequentPlacesRow
                         sensorCollectionProfileRow
-                        settingsRow(
-                            icon: "building.2",
-                            iconBackground: .tpPlace,
-                            iconColor: .tpPlaceDark,
-                            title: "집 층수 기준",
-                            subtitle: "현재 위치를 집 20층·층고 3m로 다시 보정",
-                            value: model.homeFloorCalibrationStatus
-                        ) {
-                            model.prepareHomeFloorCalibration()
-                        }
                         settingsToggleRow(
                             icon: "cloud.sun",
                             iconBackground: .tpWeather,
@@ -298,8 +290,11 @@ struct SettingsView: View {
                         .padding(.horizontal, 3)
                 }
                 .padding(.horizontal, 13)
-                .padding(.vertical, 11)
+                .padding(.top, 11)
+                .padding(.bottom, 104)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .scrollBounceBehavior(.always)
             .background(Color.tpBackground)
         }
         .overlay {
@@ -494,6 +489,11 @@ struct SettingsView: View {
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
         }
+        .sheet(item: $floorPromptPlace) { place in
+            frequentPlaceFloorPicker(place)
+                .presentationDetents([.height(310)])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     private var frequentPlacesSummary: String {
@@ -528,9 +528,10 @@ struct SettingsView: View {
 
             HStack(spacing: 4) {
                 Button {
-                    model.setFrequentPlaceToCurrentLocation(place.id)
+                    frequentPlaceFloor = place.floor ?? 1
+                    floorPromptPlace = place
                 } label: {
-                    Text("현재 위치")
+                    Text("현재 위치 설정")
                         .font(.taption(size: 7.5, weight: .bold))
                         .foregroundStyle(Color.tpPlaceDark)
                         .frame(maxWidth: .infinity)
@@ -541,6 +542,28 @@ struct SettingsView: View {
                         )
                 }
                 .buttonStyle(.plain)
+
+                Button(role: .destructive) {
+                    model.clearFrequentPlaceLocation(place.id)
+                } label: {
+                    Text("위치 삭제")
+                        .font(.taption(size: 7.5, weight: .bold))
+                        .foregroundStyle(
+                            place.point == nil
+                                ? Color.tpSecondary.opacity(0.45)
+                                : Color(red: 0.72, green: 0.19, blue: 0.16)
+                        )
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(
+                            place.point == nil
+                                ? Color.tpBackground
+                                : Color(red: 1.00, green: 0.92, blue: 0.92),
+                            in: RoundedRectangle(cornerRadius: 7)
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(place.point == nil)
 
                 if place.kind == .custom {
                     Button(role: .destructive) {
@@ -572,6 +595,55 @@ struct SettingsView: View {
         guard place.point != nil else { return "미지정" }
         let floor = place.floor.map { " · \($0)층" } ?? ""
         return "지정됨\(floor) · 반경 \(Int(place.radiusMeters))m"
+    }
+
+    private func frequentPlaceFloorPicker(
+        _ place: FrequentPlace
+    ) -> some View {
+        VStack(spacing: 12) {
+            Text("\(place.name) 현재 층")
+                .font(.taption(size: 15, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+
+            Text("기준 층을 선택하면 같은 건물 안의 층간 이동을 센서로 구분합니다.")
+                .font(.taption(size: 9))
+                .foregroundStyle(Color.tpSecondary)
+                .multilineTextAlignment(.center)
+
+            Picker("층수", selection: $frequentPlaceFloor) {
+                ForEach(frequentPlaceFloorOptions, id: \.self) { floor in
+                    Text(floorName(floor)).tag(floor)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(height: 120)
+
+            HStack(spacing: 8) {
+                Button("취소") {
+                    floorPromptPlace = nil
+                }
+                .buttonStyle(.bordered)
+
+                Button("현재 위치로 설정") {
+                    floorPromptPlace = nil
+                    model.setFrequentPlaceToCurrentLocation(
+                        place.id,
+                        floor: frequentPlaceFloor
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .font(.taption(size: 10, weight: .bold))
+        }
+        .padding(18)
+    }
+
+    private var frequentPlaceFloorOptions: [Int] {
+        Array(-20 ... -1) + Array(1 ... 200)
+    }
+
+    private func floorName(_ floor: Int) -> String {
+        floor < 0 ? "지하 \(-floor)층" : "\(floor)층"
     }
 
     private var sensorCollectionProfileRow: some View {

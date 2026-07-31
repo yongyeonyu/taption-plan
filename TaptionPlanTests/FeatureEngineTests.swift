@@ -663,6 +663,29 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testAutomotivePersistsWhenCoreMotionAlsoReportsStationary() {
+        XCTAssertEqual(
+            MotionKindResolver.resolve(
+                stationary: true,
+                walking: false,
+                running: false,
+                cycling: false,
+                automotive: true
+            ),
+            .automotive
+        )
+        XCTAssertEqual(
+            MotionKindResolver.resolve(
+                stationary: false,
+                walking: true,
+                running: true,
+                cycling: false,
+                automotive: false
+            ),
+            .running
+        )
+    }
+
     func testIPhoneStepIncreaseSeparatesWalkingFromAutomotiveMotion() {
         let base = makeDate(2026, 7, 30, 9, 0)
         let span = TimeSpan(
@@ -743,6 +766,110 @@ final class FeatureEngineTests: XCTestCase {
                 || result.evidence.contains("차량 가능 속도")
                 || result.evidence.contains("Core Motion 자동차 후보")
         )
+    }
+
+    func testCadenceAndMotionWindowIdentifyWalkingWithoutGPS() {
+        let base = makeDate(2026, 8, 1, 8, 0)
+        let readings = (0..<3).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: nil,
+                motion: .unknown,
+                motionConfidence: .low,
+                currentPaceSecondsPerMeter: 0.72,
+                currentCadenceStepsPerSecond: 1.75,
+                deviceMotionSummary: DeviceMotionSummary(
+                    sampleCount: 60,
+                    meanUserAccelerationG: 0.12,
+                    userAccelerationStandardDeviationG: 0.09,
+                    peakUserAccelerationG: 0.42,
+                    meanRotationRateRadiansPerSecond: 0.24,
+                    rotationRateStandardDeviationRadiansPerSecond: 0.11,
+                    peakRotationRateRadiansPerSecond: 0.72
+                ),
+                gpsAvailable: false
+            )
+        }
+
+        let result = TravelModeClassifier().classify(
+            readings: readings,
+            inside: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(3 * 60)
+            )
+        )
+
+        XCTAssertEqual(result.mode, .walking)
+        XCTAssertTrue(
+            result.evidence.contains {
+                $0.contains("cadence 105보/분")
+            }
+        )
+        XCTAssertTrue(
+            result.evidence.contains("걸음 cadence와 3축 가속도 일치")
+        )
+    }
+
+    func testPoorAccuracyGPSSpikeDoesNotBecomeAirplane() {
+        let base = makeDate(2026, 8, 1, 8, 0)
+        let speeds: [(Double, Double)] = [
+            (1.2, 0.4),
+            (1.4, 0.5),
+            (95, 80),
+            (1.3, 0.4),
+            (1.5, 0.5),
+        ]
+        let readings = speeds.enumerated().map { index, item in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: item.0,
+                speedAccuracyMetersPerSecond: item.1,
+                motion: .walking,
+                motionConfidence: .high,
+                stepCount: index * 80,
+                currentCadenceStepsPerSecond: 1.5
+            )
+        }
+
+        let result = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertEqual(result.mode, .walking)
+        XCTAssertNotEqual(result.mode, .airplane)
+    }
+
+    func testLowStepAutomotiveMotionUsesVehicleVibrationWindow() {
+        let base = makeDate(2026, 8, 1, 18, 0)
+        let readings = (0..<4).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: 13,
+                speedAccuracyMetersPerSecond: 0.8,
+                motion: .automotive,
+                motionConfidence: .high,
+                stepCount: 20 + index,
+                currentCadenceStepsPerSecond: 0,
+                deviceMotionSummary: DeviceMotionSummary(
+                    sampleCount: 30,
+                    meanUserAccelerationG: 0.08,
+                    userAccelerationStandardDeviationG: 0.04,
+                    peakUserAccelerationG: 0.31,
+                    meanRotationRateRadiansPerSecond: 0.09,
+                    rotationRateStandardDeviationRadiansPerSecond: 0.03,
+                    peakRotationRateRadiansPerSecond: 0.2
+                )
+            )
+        }
+
+        let result = TravelModeClassifier().classify(
+            readings: readings,
+            inside: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(4 * 60)
+            )
+        )
+
+        XCTAssertEqual(result.mode, .car)
+        XCTAssertTrue(result.evidence.contains("저걸음 차량 진동 패턴"))
     }
 
     func testAppleWatchWorkoutOverridesConflictingIPhoneMotion() {
@@ -1228,6 +1355,110 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testFrequentPlaceFloorAnchorsSameBuildingAndDetectsFloorMove() {
+        let base = makeDate(2026, 8, 1, 9)
+        let sessionID = UUID()
+        let anchor = GeoPoint(
+            latitude: 37.5000,
+            longitude: 127.0000,
+            altitude: 60,
+            horizontalAccuracy: 6,
+            verticalAccuracy: 5
+        )
+        let frequent = FrequentPlace(
+            kind: .company,
+            name: "회사",
+            point: anchor,
+            floor: 9,
+            referenceRelativeAltitudeMeters: 0,
+            referencePressureKilopascals: 100.5,
+            referenceAltimeterSessionID: sessionID,
+            floorCapturedAt: base
+        )
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(30 * 60)
+        )
+        let detected = PlaceStay(
+            placeKey: "gps-cluster-1",
+            displayName: "자동 감지 장소",
+            span: span,
+            confidence: .medium,
+            point: GeoPoint(
+                latitude: 37.5002,
+                longitude: 127.0001,
+                altitude: 60,
+                horizontalAccuracy: 12,
+                verticalAccuracy: 8
+            )
+        )
+        let altitudes: [Double] = [0, 0.1, 3.0, 3.1, 3.1]
+        let readings = altitudes.enumerated().map { index, altitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(
+                    Double(index) * 5 * 60
+                ),
+                point: anchor,
+                relativeAltitudeMeters: altitude,
+                pressureKilopascals: 100.5 - altitude * 0.012,
+                altimeterSessionID: sessionID
+            )
+        }
+
+        let resolved = FrequentPlaceResolutionEngine().applying(
+            [frequent],
+            to: [detected],
+            readings: readings
+        )
+        let result = FloorTimelineEngine().apply(
+            readings: readings,
+            to: resolved,
+            knownPlaces: []
+        )
+
+        XCTAssertEqual(resolved.first?.placeKey, frequent.stablePlaceKey)
+        XCTAssertEqual(resolved.first?.displayName, "회사")
+        XCTAssertEqual(resolved.first?.floor, 9)
+        XCTAssertEqual(result.places.map(\.floor), [9, 10])
+        XCTAssertEqual(result.transitions.first?.fromFloor, 9)
+        XCTAssertEqual(result.transitions.first?.toFloor, 10)
+        XCTAssertTrue(
+            MovementRouteBuilder().build(
+                stays: result.places,
+                readings: readings
+            ).isEmpty
+        )
+    }
+
+    func testFrequentPlaceLocationCanBeClearedWithoutDeletingPlace() {
+        let base = makeDate(2026, 8, 1, 9)
+        var place = FrequentPlace(kind: .home)
+        place.setLocation(
+            from: SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127,
+                    altitude: 60,
+                    horizontalAccuracy: 6,
+                    verticalAccuracy: 5
+                ),
+                relativeAltitudeMeters: 1.2,
+                pressureKilopascals: 100.4,
+                altimeterSessionID: UUID()
+            ),
+            floor: 20
+        )
+
+        XCTAssertNotNil(place.floorCalibration)
+        place.clearLocation()
+
+        XCTAssertEqual(place.kind, .home)
+        XCTAssertNil(place.point)
+        XCTAssertNil(place.floor)
+        XCTAssertNil(place.floorCalibration)
+    }
+
     func testSleepAnalysisBuildsOneSessionWithoutDoubleCountingOverlaps() {
         let base = makeDate(2026, 7, 30, 22, 0)
         let segments = [
@@ -1457,6 +1688,12 @@ final class FeatureEngineTests: XCTestCase {
             AppFeatureSettings.defaults.sensorCollectionProfile,
             .balanced
         )
+        let balanced = SensorCollectionConfiguration.configured(
+            for: .balanced,
+            allowsBackgroundLocation: true
+        )
+        XCTAssertTrue(balanced.collectsDeviceMotion)
+        XCTAssertEqual(balanced.minimumEmissionInterval, 5 * 60)
     }
 
     func testAppleDeviceMotionHistoryOverridesAppSensorEstimate() {
@@ -1961,6 +2198,88 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testWidgetPlaybackAlwaysKeepsFourAutomaticLanes() {
+        let base = makeDate(2026, 8, 1, 12, 0)
+
+        XCTAssertEqual(
+            TaptionWidgetPlaybackEngine.lanes(
+                for: [],
+                at: base
+            ),
+            [.schedule, .location, .movement, .activity]
+        )
+
+        let action = TaptionWidgetItem(
+            id: UUID(),
+            title: "여행 준비",
+            categoryID: "travel",
+            startsAt: base.addingTimeInterval(-30 * 60),
+            endsAt: base.addingTimeInterval(30 * 60),
+            status: "planned",
+            isFixed: false,
+            lane: .action
+        )
+        XCTAssertEqual(
+            TaptionWidgetPlaybackEngine.lanes(
+                for: [action],
+                at: base
+            ),
+            [.schedule, .location, .movement, .activity, .action]
+        )
+        XCTAssertEqual(
+            TaptionWidgetPlaybackEngine.activeItems(
+                in: .action,
+                from: [action],
+                at: base
+            ),
+            [action]
+        )
+    }
+
+    func testWidgetPlaybackUsesMinuteTicksAndExactItemBoundaries() {
+        let base = makeDate(2026, 8, 1, 12, 0)
+        let startsAt = base.addingTimeInterval(95)
+        let endsAt = base.addingTimeInterval(185)
+        let movement = TaptionWidgetItem(
+            id: UUID(),
+            title: "자가용",
+            categoryID: "movement",
+            startsAt: startsAt,
+            endsAt: endsAt,
+            status: "recorded",
+            isFixed: true,
+            lane: .movement
+        )
+        let dates = TaptionWidgetPlaybackEngine.timelineDates(
+            for: [movement],
+            from: base,
+            horizon: base.addingTimeInterval(5 * 60)
+        )
+
+        XCTAssertTrue(dates.contains(base.addingTimeInterval(60)))
+        XCTAssertTrue(dates.contains(startsAt))
+        XCTAssertTrue(dates.contains(endsAt))
+        XCTAssertEqual(dates, dates.sorted())
+    }
+
+    func testWidgetCatWalksAcrossAndTurnsAround() {
+        let reference = Date(timeIntervalSinceReferenceDate: 0)
+        let start = TaptionWidgetCatWalkEngine.pose(at: reference)
+        let farEdge = TaptionWidgetCatWalkEngine.pose(
+            at: reference.addingTimeInterval(18)
+        )
+        let returning = TaptionWidgetCatWalkEngine.pose(
+            at: reference.addingTimeInterval(20)
+        )
+
+        XCTAssertEqual(start.progress, 0, accuracy: 0.001)
+        XCTAssertFalse(start.facesLeft)
+        XCTAssertEqual(farEdge.progress, 1, accuracy: 0.001)
+        XCTAssertFalse(farEdge.facesLeft)
+        XCTAssertEqual(returning.progress, 1, accuracy: 0.001)
+        XCTAssertTrue(returning.facesLeft)
+    }
+
     func testJSONCSVAndRepositoryRoundTrip() async throws {
         let base = makeDate(2026, 7, 30)
         let plan = PlanRecord(
@@ -2170,6 +2489,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         object.removeValue(forKey: "notificationsEnabled")
         object.removeValue(forKey: "movementCorrections")
+        object.removeValue(forKey: "suppressedActualIDs")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
         let migrated = try JSONDecoder().decode(
@@ -2179,11 +2499,47 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertFalse(migrated.notificationsEnabled)
         XCTAssertTrue(migrated.movementCorrections.isEmpty)
+        XCTAssertTrue(migrated.suppressedActualIDs.isEmpty)
         XCTAssertEqual(migrated.startScale, .day)
         XCTAssertEqual(
             migrated.permissions.count,
             PermissionFeature.allCases.count
         )
+    }
+
+    func testDeletedActualRecordStaysSuppressedOnAutomaticRefresh() throws {
+        let base = makeDate(2026, 8, 1, 9, 0)
+        let deleted = ActualRecord(
+            planID: UUID(),
+            title: "여행 준비",
+            categoryID: "travel",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(hour),
+            source: .timer
+        )
+        let remaining = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(2 * hour),
+            endedAt: base.addingTimeInterval(3 * hour),
+            source: .healthKit
+        )
+
+        let visible = ActualRecordSuppressionEngine.visibleRecords(
+            from: [deleted, remaining, deleted],
+            suppressedIDs: [deleted.id]
+        )
+
+        XCTAssertEqual(visible, [remaining])
+
+        var settings = AppFeatureSettings.defaults
+        settings.suppressedActualIDs = [deleted.id]
+        let decoded = try JSONDecoder().decode(
+            AppFeatureSettings.self,
+            from: JSONEncoder().encode(settings)
+        )
+        XCTAssertEqual(decoded.suppressedActualIDs, [deleted.id])
     }
 
     func testCloudKitRequiresExactContainerEntitlement() {

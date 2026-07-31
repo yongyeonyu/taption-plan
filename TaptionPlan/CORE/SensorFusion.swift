@@ -42,16 +42,30 @@ struct TravelModeClassifier: Sendable {
         }
 
         let speeds = speedSeries(for: ordered)
-        let averageSpeed = speeds.isEmpty ? 0 : speeds.reduce(0, +) / Double(speeds.count)
-        let maxSpeed = speeds.max() ?? 0
+        let averageSpeed = trimmedMean(speeds)
+        let maxSpeed = percentile(speeds, fraction: 0.9) ?? 0
         let gpsLossRatio = ordered.isEmpty
             ? 0
             : Double(ordered.filter { !$0.gpsAvailable }.count)
                 / Double(ordered.count)
         let relativeAltitudes = ordered.compactMap(\.relativeAltitudeMeters)
         let altitudeDelta = (relativeAltitudes.last ?? 0) - (relativeAltitudes.first ?? 0)
-        let dominantMotion = Dictionary(grouping: ordered, by: \.motion)
-            .max(by: { $0.value.count < $1.value.count })?.key ?? .unknown
+        let motionScores = ordered.reduce(into: [MotionKind: Double]()) {
+            scores,
+            reading in
+            scores[reading.motion, default: 0] += confidenceWeight(
+                reading.motionConfidence
+            )
+        }
+        let dominantMotionEntry = motionScores.max {
+            $0.value < $1.value
+        }
+        let dominantMotion = dominantMotionEntry?.key ?? .unknown
+        let dominantMotionWeight = min(
+            1,
+            (dominantMotionEntry?.value ?? 0)
+                / Double(max(1, ordered.count))
+        )
 
         var candidates: [TravelMode: (Double, [String])] = [:]
         func add(_ mode: TravelMode, _ score: Double, _ evidence: String) {
@@ -63,15 +77,31 @@ struct TravelModeClassifier: Sendable {
 
         switch dominantMotion {
         case .walking:
-            add(.walking, 0.75, "Core Motion 보행")
+            add(
+                .walking,
+                0.75 * dominantMotionWeight,
+                "Core Motion 보행"
+            )
         case .running:
-            add(.running, 0.82, "Core Motion 달리기")
+            add(
+                .running,
+                0.82 * dominantMotionWeight,
+                "Core Motion 달리기"
+            )
         case .cycling:
-            add(.cycling, 0.82, "Core Motion 자전거")
+            add(
+                .cycling,
+                0.82 * dominantMotionWeight,
+                "Core Motion 자전거"
+            )
         case .automotive:
-            add(.car, 0.48, "Core Motion 자동차 후보")
-            add(.bus, 0.2, "동력 이동")
-            add(.taxi, 0.2, "동력 이동")
+            add(
+                .car,
+                0.48 * dominantMotionWeight,
+                "Core Motion 자동차 후보"
+            )
+            add(.bus, 0.2 * dominantMotionWeight, "동력 이동")
+            add(.taxi, 0.2 * dominantMotionWeight, "동력 이동")
         case .stationary, .unknown:
             break
         }
@@ -110,16 +140,23 @@ struct TravelModeClassifier: Sendable {
         )
         let durationMinutes = max(1, inferenceSpan.duration / 60)
         let stepsPerMinute = Double(stepSignal.bestCount) / durationMinutes
+        let gaitSpeed = stepSignal.distanceMeters
+            / max(1, inferenceSpan.duration)
         let walkingStepThreshold = max(12, Int(durationMinutes * 10))
-        if stepSignal.bestCount >= walkingStepThreshold,
-           stepsPerMinute >= 10 {
+        let hasPedestrianCadence = stepSignal.cadenceStepsPerSecond >= 0.75
+        if (stepSignal.bestCount >= walkingStepThreshold
+            && stepsPerMinute >= 10)
+            || hasPedestrianCadence {
             let hasVehicleSpeed = averageSpeed > 5.5 || maxSpeed > 8
             let stepScore = hasVehicleSpeed ? 0.18 : 0.58
-            add(.walking, stepScore, stepSignal.primaryEvidence)
-            if averageSpeed >= 2.2,
-               averageSpeed < 6,
-               stepsPerMinute >= 100 {
-                add(.running, 0.36, "고반복 걸음과 달리기 속도대")
+            add(.walking, stepScore, stepSignal.gaitEvidence)
+            if stepSignal.cadenceStepsPerSecond >= 2.15
+                || stepSignal.paceSecondsPerMeter > 0
+                    && stepSignal.paceSecondsPerMeter <= 0.52
+                || averageSpeed >= 2.2
+                    && averageSpeed < 6
+                    && stepsPerMinute >= 100 {
+                add(.running, 0.42, "빠른 보행 cadence·pace")
             }
             if dominantMotion == .automotive, averageSpeed <= 5.5 {
                 add(.walking, 0.12, "차량 진동보다 지속적인 걸음 우선")
@@ -131,6 +168,7 @@ struct TravelModeClassifier: Sendable {
         } else if stepSignal.hasCoverage,
                   inferenceSpan.duration >= 2 * 60,
                   stepsPerMinute <= 2.5,
+                  stepSignal.cadenceStepsPerSecond <= 0.2,
                   dominantMotion == .automotive || averageSpeed > 4 {
             add(.car, 0.42, "iPhone·Apple Watch 걸음 증가 거의 없음")
             add(.bus, 0.2, "보행이 아닌 동력 이동")
@@ -142,6 +180,37 @@ struct TravelModeClassifier: Sendable {
             add(.car, 0.24, "걸음 데이터 미수집 · 차량/속도 신호 우선")
             add(.bus, 0.12, "걸음 데이터 미수집 · 동력 이동 후보")
             add(.taxi, 0.12, "걸음 데이터 미수집 · 동력 이동 후보")
+        }
+
+        if gaitSpeed >= 0.5, gaitSpeed < 2.2 {
+            add(.walking, 0.14, "걸음 거리·시간 보행 속도 일치")
+        } else if gaitSpeed >= 2.2, gaitSpeed < 6 {
+            add(.running, 0.16, "걸음 거리·시간 달리기 속도 일치")
+        }
+
+        let motionSignal = deviceMotionSignal(ordered)
+        if motionSignal.sampleCount >= 3 {
+            if hasPedestrianCadence,
+               motionSignal.meanAccelerationG >= 0.025,
+               averageSpeed < 5.5 {
+                add(.walking, 0.12, "걸음 cadence와 3축 가속도 일치")
+            }
+            if dominantMotion == .running,
+               motionSignal.accelerationDeviationG >= 0.08 {
+                add(.running, 0.12, "달리기 가속도 변동")
+            }
+            if dominantMotion == .automotive,
+               stepsPerMinute <= 5,
+               motionSignal.accelerationDeviationG >= 0.015 {
+                add(.car, 0.12, "저걸음 차량 진동 패턴")
+            }
+            if dominantMotion == .cycling,
+               stepSignal.cadenceStepsPerSecond <= 0.35,
+               motionSignal.meanRotationRate >= 0.02,
+               averageSpeed >= 2,
+               averageSpeed <= 15 {
+                add(.cycling, 0.14, "저걸음·자전거 속도·회전 센서 일치")
+            }
         }
 
         if !speeds.isEmpty {
@@ -207,9 +276,15 @@ struct TravelModeClassifier: Sendable {
             add(.ship, 0.55, "항구·수상 경로")
         }
 
-        let winner = candidates.max { lhs, rhs in lhs.value.0 < rhs.value.0 }
+        let ranked = candidates.sorted { $0.value.0 > $1.value.0 }
+        let winner = ranked.first
             ?? (.walking, (0.2, ["기본 저신뢰 보행 후보"]))
-        let score = min(1, winner.value.0)
+        let runnerUpScore = ranked.dropFirst().first?.value.0 ?? 0
+        let margin = max(0, winner.value.0 - runnerUpScore)
+        let score = min(
+            1,
+            min(1, winner.value.0) * (0.82 + min(0.18, margin))
+        )
         return MovementInference(
             mode: winner.key,
             confidence: ConfidenceLevel(score: score),
@@ -228,9 +303,22 @@ struct TravelModeClassifier: Sendable {
     }
 
     private func speedSeries(for readings: [SensorReading]) -> [Double] {
-        var values = readings
-            .compactMap(\.speedMetersPerSecond)
-            .filter { $0 >= 0 }
+        var values = readings.compactMap { reading -> Double? in
+            guard let speed = reading.speedMetersPerSecond,
+                  speed >= 0,
+                  speed.isFinite else {
+                return nil
+            }
+            if let accuracy = reading.speedAccuracyMetersPerSecond,
+               accuracy > max(3, speed * 0.75) {
+                return nil
+            }
+            if let horizontalAccuracy = reading.point?.horizontalAccuracy,
+               horizontalAccuracy > 150 {
+                return nil
+            }
+            return speed
+        }
 
         let pointReadings = readings
             .filter { $0.point != nil }
@@ -240,13 +328,114 @@ struct TravelModeClassifier: Sendable {
                   let to = pair.1.point else {
                 continue
             }
+            guard from.horizontalAccuracy <= 150,
+                  to.horizontalAccuracy <= 150 else {
+                continue
+            }
             let elapsed = pair.1.timestamp.timeIntervalSince(pair.0.timestamp)
             guard elapsed >= 5 else { continue }
             let distance = distanceMeters(from, to)
             guard distance >= 8 else { continue }
             values.append(distance / elapsed)
         }
-        return values
+        guard values.count >= 5,
+              let median = percentile(values, fraction: 0.5) else {
+            return values
+        }
+        let deviations = values.map { abs($0 - median) }
+        let medianDeviation = percentile(deviations, fraction: 0.5) ?? 0
+        let upperBound = median + max(4, medianDeviation * 4)
+        return values.filter { $0 <= upperBound }
+    }
+
+    private func trimmedMean(_ values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0 }
+        let ordered = values.sorted()
+        let trim = ordered.count >= 10 ? ordered.count / 10 : 0
+        let range = trim..<(ordered.count - trim)
+        let kept = ordered[range]
+        return kept.reduce(0, +) / Double(kept.count)
+    }
+
+    private func percentile(
+        _ values: [Double],
+        fraction: Double
+    ) -> Double? {
+        guard !values.isEmpty else { return nil }
+        let ordered = values.sorted()
+        let index = Int(
+            (Double(ordered.count - 1) * min(1, max(0, fraction))).rounded()
+        )
+        return ordered[index]
+    }
+
+    private func confidenceWeight(_ confidence: ConfidenceLevel) -> Double {
+        switch confidence {
+        case .high: 1
+        case .medium: 0.72
+        case .low: 0.4
+        }
+    }
+
+    private struct DeviceMotionSignal {
+        var sampleCount: Int
+        var meanAccelerationG: Double
+        var accelerationDeviationG: Double
+        var meanRotationRate: Double
+    }
+
+    private func deviceMotionSignal(
+        _ readings: [SensorReading]
+    ) -> DeviceMotionSignal {
+        let summaries = readings.compactMap(\.deviceMotionSummary)
+        if !summaries.isEmpty {
+            let count = summaries.reduce(0) { $0 + $1.sampleCount }
+            let divisor = Double(max(1, count))
+            return DeviceMotionSignal(
+                sampleCount: count,
+                meanAccelerationG: summaries.reduce(0) {
+                    $0 + $1.meanUserAccelerationG * Double($1.sampleCount)
+                } / divisor,
+                accelerationDeviationG: summaries.reduce(0) {
+                    $0 + $1.userAccelerationStandardDeviationG
+                        * Double($1.sampleCount)
+                } / divisor,
+                meanRotationRate: summaries.reduce(0) {
+                    $0 + $1.meanRotationRateRadiansPerSecond
+                        * Double($1.sampleCount)
+                } / divisor
+            )
+        }
+
+        let snapshots = readings.compactMap(\.deviceMotion)
+        let accelerations = snapshots.map {
+            magnitude($0.userAcceleration)
+        }
+        let rotations = snapshots.map { magnitude($0.rotationRate) }
+        return DeviceMotionSignal(
+            sampleCount: snapshots.count,
+            meanAccelerationG: mean(accelerations),
+            accelerationDeviationG: standardDeviation(accelerations),
+            meanRotationRate: mean(rotations)
+        )
+    }
+
+    private func magnitude(_ vector: SensorVector3) -> Double {
+        sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z)
+    }
+
+    private func mean(_ values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0 }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    private func standardDeviation(_ values: [Double]) -> Double {
+        guard values.count >= 2 else { return 0 }
+        let average = mean(values)
+        let variance = values.reduce(0) {
+            $0 + pow($1 - average, 2)
+        } / Double(values.count - 1)
+        return sqrt(max(0, variance))
     }
 
     private func sensorSpan(for readings: [SensorReading]) -> TimeSpan {
@@ -293,6 +482,9 @@ struct TravelModeClassifier: Sendable {
         var watchCount: Int
         var otherCount: Int
         var hasCoverage: Bool
+        var cadenceStepsPerSecond: Double
+        var paceSecondsPerMeter: Double
+        var distanceMeters: Double
 
         var bestCount: Int {
             max(livePhoneCount, healthPhoneCount, watchCount, otherCount)
@@ -309,6 +501,23 @@ struct TravelModeClassifier: Sendable {
                 return "iPhone HealthKit 걸음 \(healthPhoneCount)보"
             }
             return "HealthKit 걸음 \(otherCount)보"
+        }
+
+        var gaitEvidence: String {
+            if cadenceStepsPerSecond > 0 {
+                let stepsPerMinute = Int(
+                    (cadenceStepsPerSecond * 60).rounded()
+                )
+                return "\(primaryEvidence) · cadence \(stepsPerMinute)보/분"
+            }
+            if paceSecondsPerMeter > 0 {
+                return String(
+                    format: "%@ · pace %.2f초/m",
+                    primaryEvidence,
+                    paceSecondsPerMeter
+                )
+            }
+            return primaryEvidence
         }
     }
 
@@ -347,16 +556,48 @@ struct TravelModeClassifier: Sendable {
                 .max() ?? 0
         }
 
+        let cadence = readings
+            .compactMap(\.currentCadenceStepsPerSecond)
+            .filter { $0.isFinite && $0 >= 0 }
+            .max() ?? 0
+        let pace = readings
+            .compactMap(\.currentPaceSecondsPerMeter)
+            .filter { $0.isFinite && $0 > 0 }
+            .min() ?? 0
+        let liveDistance = cumulativeIncrease(
+            readings.compactMap(\.walkingRunningDistanceMeters)
+        )
+        let healthDistance = evidence
+            .filter {
+                $0.kind == .steps
+                    && $0.span.intersection(with: span) != nil
+            }
+            .compactMap(\.distanceMeters)
+            .max() ?? 0
+
         return StepSignal(
             livePhoneCount: livePhoneCount,
             healthPhoneCount: maximum(for: .iPhone),
             watchCount: maximum(for: .appleWatch),
             otherCount: maximum(for: .other),
-            hasCoverage: stepReadings.count >= 2 || !groupedCounts.isEmpty
+            hasCoverage: stepReadings.count >= 2
+                || !groupedCounts.isEmpty
+                || cadence > 0
+                || pace > 0,
+            cadenceStepsPerSecond: cadence,
+            paceSecondsPerMeter: pace,
+            distanceMeters: max(liveDistance, healthDistance)
         )
     }
 
     private func cumulativeIncrease(_ values: [Int]) -> Int {
+        guard values.count >= 2 else { return 0 }
+        return zip(values, values.dropFirst()).reduce(0) { total, pair in
+            total + (pair.1 >= pair.0 ? pair.1 - pair.0 : pair.1)
+        }
+    }
+
+    private func cumulativeIncrease(_ values: [Double]) -> Double {
         guard values.count >= 2 else { return 0 }
         return zip(values, values.dropFirst()).reduce(0) { total, pair in
             total + (pair.1 >= pair.0 ? pair.1 - pair.0 : pair.1)
@@ -713,6 +954,65 @@ private struct AltitudeFloorCandidate {
 struct FloorTimelineResult: Sendable {
     var places: [PlaceStay]
     var transitions: [FloorTransition]
+}
+
+struct FrequentPlaceResolutionEngine: Sendable {
+    func applying(
+        _ frequentPlaces: [FrequentPlace],
+        to detectedPlaces: [PlaceStay],
+        readings: [SensorReading]
+    ) -> [PlaceStay] {
+        let candidates = frequentPlaces.filter { $0.point != nil }
+        guard !candidates.isEmpty else { return detectedPlaces }
+
+        return detectedPlaces.map { place in
+            guard let point = place.point,
+                  let match = nearestMatch(
+                    to: point,
+                    candidates: candidates
+                  ) else {
+                return place
+            }
+
+            var updated = place
+            updated.placeKey = match.stablePlaceKey
+            updated.displayName = match.name
+            updated.buildingName = match.name
+
+            if let calibration = match.floorCalibration,
+               let reading = readings
+                .filter({ place.span.contains($0.timestamp) })
+                .sorted(by: { $0.timestamp < $1.timestamp })
+                .first,
+               let estimate = FloorCalibrationEngine().estimate(
+                    reading: reading,
+                    calibration: calibration
+               ) {
+                updated.floor = estimate.floor
+                updated.confidence = estimate.confidence
+            } else if let floor = match.floor {
+                updated.floor = floor
+                updated.confidence = .high
+            }
+            updated.isConfirmed = true
+            return updated
+        }
+    }
+
+    private func nearestMatch(
+        to point: GeoPoint,
+        candidates: [FrequentPlace]
+    ) -> FrequentPlace? {
+        candidates.compactMap { frequent -> (FrequentPlace, Double)? in
+            guard let frequentPoint = frequent.point else { return nil }
+            let distance = distanceMeters(point, frequentPoint)
+            return distance <= frequent.radiusMeters
+                ? (frequent, distance)
+                : nil
+        }
+        .min(by: { $0.1 < $1.1 })?
+        .0
+    }
 }
 
 struct FloorTimelineEngine: Sendable {

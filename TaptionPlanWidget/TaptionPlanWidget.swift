@@ -14,7 +14,6 @@ struct TaptionPlanWidgetBundle: WidgetBundle {
 struct TaptionScheduleEntry: TimelineEntry {
     var date: Date
     var payload: TaptionWidgetPayload
-    var animationPhase: Int = 0
 }
 
 struct TaptionScheduleProvider: TimelineProvider {
@@ -42,44 +41,28 @@ struct TaptionScheduleProvider: TimelineProvider {
     ) {
         let now = Date.now
         let payload = TaptionWidgetSharedStore.readPayload()
-        let horizon = now.addingTimeInterval(4 * 3_600)
-        var refreshDates = (0...16).map {
-            now.addingTimeInterval(Double($0) * 15 * 60)
-        }
-        if payload.hasRunningItem(at: now),
-           payload.reducesMotion != true {
+        let horizon = now.addingTimeInterval(2 * 3_600)
+        var refreshDates = TaptionWidgetPlaybackEngine.timelineDates(
+            for: payload.items,
+            from: now,
+            horizon: horizon
+        )
+        if payload.reducesMotion != true {
             refreshDates.append(
-                contentsOf: (1...36).map {
-                    now.addingTimeInterval(Double($0) * 5)
+                contentsOf: (1...60).map {
+                    now.addingTimeInterval(Double($0) * 2)
                 }
             )
         }
-        refreshDates.append(
-            contentsOf: payload.items.flatMap { [$0.startsAt, $0.endsAt] }
-                .filter { now < $0 && $0 < horizon }
-        )
         let entries = Array(Set(refreshDates))
             .sorted()
             .map {
                 TaptionScheduleEntry(
                     date: $0,
-                    payload: payload,
-                    animationPhase: Self.animationPhase(at: $0)
+                    payload: payload
                 )
             }
         completion(Timeline(entries: entries, policy: .after(horizon)))
-    }
-
-    private static func animationPhase(at date: Date) -> Int {
-        Int(date.timeIntervalSinceReferenceDate / 5) % 4
-    }
-}
-
-private extension TaptionWidgetPayload {
-    func hasRunningItem(at date: Date) -> Bool {
-        items.contains {
-            !$0.isCompleted && $0.startsAt <= date && date <= $0.endsAt
-        }
     }
 }
 
@@ -105,28 +88,43 @@ private struct TaptionScheduleWidgetView: View {
     let entry: TaptionScheduleEntry
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-
-            PrototypeWidgetTrack(
-                payload: entry.payload,
-                date: entry.date,
-                animationPhase: entry.animationPhase
+        TimelineView(
+            .periodic(
+                from: entry.date,
+                by: playbackInterval
             )
-            .frame(height: 112)
+        ) { context in
+            let playbackDate = max(entry.date, context.date)
+            VStack(spacing: 0) {
+                header(
+                    at: playbackDate,
+                    walkPose: TaptionWidgetCatWalkEngine.pose(
+                        at: playbackDate
+                    )
+                )
+
+                PrototypeWidgetTrack(
+                    payload: entry.payload,
+                    date: playbackDate
+                )
+                .frame(height: 112)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .widgetURL(deepLinkURL)
     }
 
-    private var header: some View {
+    private func header(
+        at date: Date,
+        walkPose: TaptionWidgetCatWalkPose
+    ) -> some View {
         HStack(spacing: 0) {
             Text("지금의 시간표")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(WidgetPalette.ink)
 
-            Text(currentItem == nil ? "쉬는 중" : "집중 중")
+            Text(statusLabel(at: date))
                 .font(.system(size: 8, weight: .bold))
                 .foregroundStyle(WidgetPalette.focusInk)
                 .padding(.horizontal, 6)
@@ -135,25 +133,22 @@ private struct TaptionScheduleWidgetView: View {
                 .padding(.leading, 5)
 
             Link(destination: URL(string: "taptionplan://cats")!) {
-                Text("\(catShortName) ▾")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(WidgetPalette.secondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.white, in: Capsule())
-                    .overlay {
-                        Capsule().stroke(WidgetPalette.line)
-                    }
+                WidgetWalkingCat(
+                    style: entry.payload.catStyle,
+                    reducesMotion: entry.payload.reducesMotion ?? false,
+                    pose: walkPose
+                )
+                .frame(width: 48, height: 22)
             }
             .buttonStyle(.plain)
-            .padding(.leading, 3)
+            .padding(.leading, 5)
 
             Spacer(minLength: 4)
 
             HStack(spacing: 3) {
                 Image(systemName: weatherSymbol)
                     .font(.system(size: 10, weight: .semibold))
-                Text(weatherAndTimeLabel)
+                Text(weatherAndTimeLabel(at: date))
                     .font(.system(size: 9, weight: .bold))
                     .monospacedDigit()
             }
@@ -163,85 +158,46 @@ private struct TaptionScheduleWidgetView: View {
         .padding(.bottom, 10)
     }
 
-    @ViewBuilder
-    private func actionButton(
-        _ title: String,
-        icon: String,
-        action: TaptionWidgetCommandKind
-    ) -> some View {
-        if let actionItem {
-            Button(
-                intent: TaptionWidgetActionIntent(
-                    planID: actionItem.id.uuidString,
-                    action: action
-                )
-            ) {
-                actionLabel(title, icon: icon)
-            }
-            .buttonStyle(.plain)
-        } else {
-            actionLabel(title, icon: icon)
-                .foregroundStyle(WidgetPalette.ink.opacity(0.42))
-        }
-    }
-
-    private func actionLabel(
-        _ title: String,
-        icon: String
-    ) -> some View {
-        Label(title, systemImage: icon)
-            .font(.system(size: 10, weight: .bold))
-            .lineLimit(1)
-            .minimumScaleFactor(0.82)
-            .foregroundStyle(WidgetPalette.ink)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(
-                WidgetPalette.actionFill,
-                in: RoundedRectangle(cornerRadius: 10)
-            )
-    }
-
     private var visibleItems: [TaptionWidgetItem] {
         entry.payload.items
             .filter { !$0.isCompleted }
             .sorted { $0.startsAt < $1.startsAt }
     }
 
-    private var currentItem: TaptionWidgetItem? {
+    private func currentItem(at date: Date) -> TaptionWidgetItem? {
         visibleItems.first {
-            $0.startsAt <= entry.date && entry.date <= $0.endsAt
+            $0.startsAt <= date && date < $0.endsAt
         }
     }
 
-    private var actionItem: TaptionWidgetItem? {
-        let actionableItems = visibleItems.filter { !$0.isFixed }
-        return actionableItems.first {
-            $0.startsAt <= entry.date && entry.date <= $0.endsAt
+    private func actionItem(at date: Date) -> TaptionWidgetItem? {
+        let actionableItems = visibleItems.filter {
+            $0.resolvedLane == .action && !$0.isFixed
         }
-            ?? actionableItems.first(where: { entry.date < $0.startsAt })
+        return actionableItems.first {
+            $0.startsAt <= date && date < $0.endsAt
+        }
+            ?? actionableItems.first(where: { date < $0.startsAt })
             ?? actionableItems.last
     }
 
-    private var catShortName: String {
-        switch entry.payload.catStyle {
-        case "white": "흰색"
-        case "calico": "삼색"
-        case "mackerel": "고등어"
-        case "black": "검정"
-        case "gray": "회색"
-        case "cheese": "치즈"
-        case "cow": "젖소무늬"
-        default: "삼색"
+    private func statusLabel(at date: Date) -> String {
+        if TaptionWidgetPlaybackEngine.activeItems(
+            in: .action,
+            from: entry.payload.items,
+            at: date
+        ).isEmpty == false {
+            return "집중 중"
         }
+        return currentItem(at: date) == nil ? "대기" : "기록 중"
     }
 
     private var weatherSymbol: String {
         entry.payload.weatherSymbolName ?? "clock"
     }
 
-    private var weatherAndTimeLabel: String {
-        let time = entry.date.formatted(date: .omitted, time: .shortened)
+    private func weatherAndTimeLabel(at date: Date) -> String {
+        let time = date.formatted(date: .omitted, time: .shortened)
         guard let temperature = entry.payload.temperatureCelsius else {
             return time
         }
@@ -249,75 +205,95 @@ private struct TaptionScheduleWidgetView: View {
     }
 
     private var deepLinkURL: URL? {
-        guard let item = actionItem else {
+        guard let item = actionItem(at: entry.date) else {
             return URL(string: "taptionplan://today")
         }
         return URL(string: "taptionplan://plan/\(item.id.uuidString)")
+    }
+
+    private var playbackInterval: TimeInterval {
+        entry.payload.reducesMotion == true ? 60 : 2
     }
 }
 
 private struct PrototypeWidgetTrack: View {
     let payload: TaptionWidgetPayload
     let date: Date
-    let animationPhase: Int
 
     var body: some View {
         GeometryReader { proxy in
-            let nowX = proxy.size.width / 2
+            let lanes = TaptionWidgetPlaybackEngine.lanes(
+                for: payload.items,
+                at: date
+            )
+            let labelWidth: CGFloat = 48
+            let axisHeight: CGFloat = 14
+            let trackWidth = max(1, proxy.size.width - labelWidth)
+            let rowHeight = max(
+                17,
+                (proxy.size.height - axisHeight) / CGFloat(lanes.count)
+            )
+            let nowX = labelWidth + trackWidth / 2
 
             ZStack(alignment: .topLeading) {
-                Rectangle()
-                    .fill(WidgetPalette.line)
-                    .frame(height: 1)
+                axisLabels(
+                    labelWidth: labelWidth,
+                    trackWidth: trackWidth
+                )
 
-                Rectangle()
-                    .fill(WidgetPalette.line)
-                    .frame(height: 1)
-                    .offset(y: 75)
-
-                ForEach(trackItems) { item in
-                    let start = fraction(item.startsAt)
-                    let end = fraction(item.endsAt)
-                    let width = max(
-                        20,
-                        proxy.size.width * max(0.02, end - start)
+                ForEach(Array(lanes.enumerated()), id: \.element) { index, lane in
+                    let y = axisHeight + CGFloat(index) * rowHeight
+                    laneBackground(
+                        lane: lane,
+                        width: proxy.size.width,
+                        height: rowHeight
                     )
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(categoryColor(item))
-                        .frame(width: width, height: 26)
-                        .overlay(alignment: .leading) {
-                            Text(item.title)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(
-                                    WidgetPalette.ink.opacity(0.62)
-                                )
-                                .lineLimit(1)
-                                .padding(.horizontal, 6)
-                        }
+                    .offset(y: y)
+
+                    laneLabel(lane)
+                        .frame(width: labelWidth - 4, height: rowHeight)
+                        .offset(x: 2, y: y)
+                }
+
+                ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { fraction in
+                    Rectangle()
+                        .fill(WidgetPalette.line.opacity(fraction == 0.5 ? 0.9 : 0.55))
+                        .frame(width: 0.5, height: rowHeight * CGFloat(lanes.count))
                         .offset(
-                            x: proxy.size.width * start,
-                            y: 40
+                            x: labelWidth + trackWidth * fraction,
+                            y: axisHeight
                         )
+                }
+
+                ForEach(Array(lanes.enumerated()), id: \.element) { index, lane in
+                    let y = axisHeight + CGFloat(index) * rowHeight
+                    ForEach(trackItems(in: lane).prefix(6)) { item in
+                        itemBar(
+                            item,
+                            lane: lane,
+                            trackWidth: trackWidth,
+                            rowHeight: rowHeight
+                        )
+                        .offset(
+                            x: labelWidth + trackWidth * fraction(item.startsAt),
+                            y: y
+                                + max(2, (rowHeight - barHeight(rowHeight)) / 2)
+                        )
+                    }
                 }
 
                 Rectangle()
                     .fill(WidgetPalette.now)
-                    .frame(width: 2, height: 41)
-                    .offset(x: nowX - 1, y: 35)
+                    .frame(
+                        width: 1.5,
+                        height: rowHeight * CGFloat(lanes.count)
+                    )
+                    .offset(x: nowX - 0.75, y: axisHeight)
 
                 Circle()
                     .fill(WidgetPalette.now)
-                    .frame(width: 8, height: 8)
-                    .offset(x: nowX - 4, y: 32)
-
-                WidgetCat(
-                    style: payload.catStyle,
-                    isRunning: currentItem != nil,
-                    reducesMotion: payload.reducesMotion ?? false,
-                    animationPhase: animationPhase
-                )
-                .frame(width: 40, height: 27)
-                .offset(x: nowX - 20, y: 4)
+                    .frame(width: 6, height: 6)
+                    .offset(x: nowX - 3, y: axisHeight - 3)
             }
             .clipped()
         }
@@ -331,22 +307,102 @@ private struct PrototypeWidgetTrack: View {
         date.addingTimeInterval(3 * 3_600)
     }
 
-    private var trackItems: [TaptionWidgetItem] {
-        Array(
-            payload.items
-                .filter { !$0.isCompleted }
-                .filter {
-                    $0.startsAt < windowEnd && windowStart < $0.endsAt
-                }
-                .sorted { $0.startsAt < $1.startsAt }
-                .prefix(2)
+    private func trackItems(
+        in lane: TaptionWidgetLane
+    ) -> [TaptionWidgetItem] {
+        TaptionWidgetPlaybackEngine.visibleItems(
+            in: lane,
+            from: payload.items,
+            at: date
         )
     }
 
-    private var currentItem: TaptionWidgetItem? {
-        trackItems.first {
-            $0.startsAt <= date && date <= $0.endsAt
+    private func axisLabels(
+        labelWidth: CGFloat,
+        trackWidth: CGFloat
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            Text("6시간")
+                .font(.system(size: 7.5, weight: .bold))
+                .foregroundStyle(WidgetPalette.secondary)
+                .frame(width: labelWidth - 4, alignment: .leading)
+                .offset(x: 2)
+            Text(windowStart.formatted(date: .omitted, time: .shortened))
+                .font(.system(size: 7, weight: .semibold))
+                .foregroundStyle(WidgetPalette.secondary)
+                .offset(x: labelWidth)
+            Text(date.formatted(date: .omitted, time: .shortened))
+                .font(.system(size: 7.5, weight: .bold))
+                .foregroundStyle(WidgetPalette.now)
+                .frame(width: 54)
+                .offset(x: labelWidth + trackWidth / 2 - 27)
+            Text(windowEnd.formatted(date: .omitted, time: .shortened))
+                .font(.system(size: 7, weight: .semibold))
+                .foregroundStyle(WidgetPalette.secondary)
+                .frame(width: 45, alignment: .trailing)
+                .offset(x: labelWidth + trackWidth - 45)
         }
+    }
+
+    private func laneBackground(
+        lane: TaptionWidgetLane,
+        width: CGFloat,
+        height: CGFloat
+    ) -> some View {
+        Rectangle()
+            .fill(
+                lane == .action
+                    ? Color.white
+                    : WidgetPalette.automaticFill
+            )
+            .frame(width: width, height: height)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(WidgetPalette.line)
+                    .frame(height: 0.5)
+            }
+    }
+
+    private func laneLabel(_ lane: TaptionWidgetLane) -> some View {
+        Label(lane.title, systemImage: lane.systemImage)
+            .font(.system(size: 7.5, weight: .bold))
+            .foregroundStyle(WidgetPalette.ink.opacity(0.72))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+    }
+
+    private func itemBar(
+        _ item: TaptionWidgetItem,
+        lane: TaptionWidgetLane,
+        trackWidth: CGFloat,
+        rowHeight: CGFloat
+    ) -> some View {
+        let start = fraction(item.startsAt)
+        let end = fraction(item.endsAt)
+        let width = max(4, trackWidth * max(0.012, end - start))
+        let active = item.startsAt <= date && date < item.endsAt
+        return RoundedRectangle(cornerRadius: 5)
+            .fill(categoryColor(item, lane: lane).opacity(active ? 1 : 0.72))
+            .frame(width: width, height: barHeight(rowHeight))
+            .overlay(alignment: .leading) {
+                if width >= 27 {
+                    Text(item.title)
+                        .font(.system(size: 7.5, weight: active ? .bold : .semibold))
+                        .foregroundStyle(WidgetPalette.ink.opacity(0.72))
+                        .lineLimit(1)
+                        .padding(.horizontal, 4)
+                }
+            }
+            .overlay {
+                if active {
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(WidgetPalette.ink.opacity(0.28), lineWidth: 0.6)
+                }
+            }
+    }
+
+    private func barHeight(_ rowHeight: CGFloat) -> CGFloat {
+        min(14, max(10, rowHeight - 5))
     }
 
     private func fraction(_ value: Date) -> CGFloat {
@@ -362,9 +418,24 @@ private struct PrototypeWidgetTrack: View {
         )
     }
 
-    private func categoryColor(_ item: TaptionWidgetItem) -> Color {
+    private func categoryColor(
+        _ item: TaptionWidgetItem,
+        lane: TaptionWidgetLane
+    ) -> Color {
         if let hex = item.categoryHex {
             return Color(widgetHex: hex)
+        }
+        switch lane {
+        case .schedule:
+            return Color(red: 0.78, green: 0.80, blue: 0.83)
+        case .location:
+            return Color(red: 0.63, green: 0.83, blue: 0.92)
+        case .movement:
+            return Color(red: 0.82, green: 0.68, blue: 0.46)
+        case .activity:
+            return Color(red: 0.49, green: 0.68, blue: 0.51)
+        case .action:
+            break
         }
         return switch item.categoryID {
         case "exercise": Color(red: 0.996, green: 0.835, blue: 0.812)
@@ -378,6 +449,53 @@ private struct PrototypeWidgetTrack: View {
         case "photo": Color(red: 0.906, green: 0.843, blue: 0.933)
         default: Color(red: 0.745, green: 0.855, blue: 0.890)
         }
+    }
+}
+
+private struct WidgetWalkingCat: View {
+    let style: String
+    let reducesMotion: Bool
+    let pose: TaptionWidgetCatWalkPose
+
+    var body: some View {
+        GeometryReader { proxy in
+            let catWidth = min(31, proxy.size.width)
+            let available = max(0, proxy.size.width - catWidth)
+            let progress = reducesMotion ? 0.5 : pose.progress
+
+            ZStack(alignment: .topLeading) {
+                HStack(spacing: 6) {
+                    ForEach(0..<4, id: \.self) { index in
+                        Circle()
+                            .fill(
+                                WidgetPalette.secondary.opacity(
+                                    index % 2 == pose.legPhase % 2
+                                        ? 0.20
+                                        : 0.08
+                                )
+                            )
+                            .frame(width: 2.2, height: 1.5)
+                    }
+                }
+                .offset(x: 5, y: 19)
+
+                WidgetCat(
+                    style: style,
+                    isRunning: !reducesMotion,
+                    reducesMotion: reducesMotion,
+                    animationPhase: pose.legPhase
+                )
+                .frame(width: catWidth, height: 22)
+                .scaleEffect(
+                    x: pose.facesLeft && !reducesMotion ? -1 : 1,
+                    y: 1
+                )
+                .offset(x: available * progress)
+            }
+        }
+        .accessibilityLabel(
+            "\(CatPalette(style: style).name) 고양이가 걷는 중"
+        )
     }
 }
 
@@ -398,7 +516,7 @@ private struct WidgetCat: View {
                 : 0
 
             if isRunning && !reducesMotion {
-                drawSpeedLines(in: &context, phase: effectivePhase)
+                drawWalkingPuffs(in: &context, phase: effectivePhase)
             }
             drawShadow(in: &context)
             drawCat(in: &context, phase: effectivePhase)
@@ -406,36 +524,38 @@ private struct WidgetCat: View {
         .accessibilityLabel(accessibilityName)
     }
 
-    private func drawSpeedLines(
+    private func drawWalkingPuffs(
         in context: inout GraphicsContext,
         phase: Int
     ) {
-        let offset = Double(phase % 2) * 2
-        let opacity = phase % 2 == 0 ? 0.66 : 0.42
-        let color = Color(red: 0.65, green: 0.65, blue: 0.68)
-            .opacity(opacity)
-        var longLine = Path()
-        longLine.move(to: CGPoint(x: -offset, y: 10))
-        longLine.addLine(to: CGPoint(x: 7 - offset, y: 10))
-        context.stroke(
-            longLine,
-            with: .color(color),
-            style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+        let bounce = Double(phase % 2)
+        context.fill(
+            Path(
+                ellipseIn: CGRect(
+                    x: 4 - bounce,
+                    y: 18 + bounce,
+                    width: 3,
+                    height: 2
+                )
+            ),
+            with: .color(Color.white.opacity(0.82))
         )
-
-        var shortLine = Path()
-        shortLine.move(to: CGPoint(x: 2 - offset, y: 16))
-        shortLine.addLine(to: CGPoint(x: 6 - offset, y: 16))
-        context.stroke(
-            shortLine,
-            with: .color(color),
-            style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+        context.fill(
+            Path(
+                ellipseIn: CGRect(
+                    x: 1 + bounce,
+                    y: 20 - bounce,
+                    width: 2,
+                    height: 1.5
+                )
+            ),
+            with: .color(Color.white.opacity(0.55))
         )
     }
 
     private func drawShadow(in context: inout GraphicsContext) {
         context.fill(
-            Path(ellipseIn: CGRect(x: 9, y: 23, width: 28, height: 3)),
+            Path(ellipseIn: CGRect(x: 7.5, y: 23.2, width: 30, height: 2.8)),
             with: .color(.black.opacity(0.15))
         )
     }
@@ -443,6 +563,10 @@ private struct WidgetCat: View {
     private func drawCat(in context: inout GraphicsContext, phase: Int) {
         let palette = CatPalette(style: style)
         let outline = GraphicsContext.Shading.color(palette.outline)
+        let faceLine = style == "black"
+            ? Color.white.opacity(0.82)
+            : palette.outline
+        let pink = Color(red: 1, green: 0.61, blue: 0.67)
         let stroke = StrokeStyle(
             lineWidth: 2.2,
             lineCap: .round,
@@ -529,25 +653,203 @@ private struct WidgetCat: View {
             }
         }
 
+        var ears = Path()
+        ears.move(to: CGPoint(x: 25.4, y: 5.8 + bodyLift))
+        ears.addLine(to: CGPoint(x: 26.1, y: 0.7 + bodyLift))
+        ears.addLine(to: CGPoint(x: 30.6, y: 4.2 + bodyLift))
+        ears.move(to: CGPoint(x: 32.1, y: 4.2 + bodyLift))
+        ears.addLine(to: CGPoint(x: 36.7, y: 0.8 + bodyLift))
+        ears.addLine(to: CGPoint(x: 37.2, y: 6.7 + bodyLift))
+        context.fill(ears, with: .color(palette.base))
+        context.stroke(
+            ears,
+            with: outline,
+            style: StrokeStyle(
+                lineWidth: 1.2,
+                lineCap: .round,
+                lineJoin: .round
+            )
+        )
+
+        var innerEars = Path()
+        innerEars.move(to: CGPoint(x: 26.6, y: 4.3 + bodyLift))
+        innerEars.addLine(to: CGPoint(x: 26.8, y: 2.1 + bodyLift))
+        innerEars.addLine(to: CGPoint(x: 28.9, y: 4.2 + bodyLift))
+        innerEars.closeSubpath()
+        innerEars.move(to: CGPoint(x: 34.0, y: 4.1 + bodyLift))
+        innerEars.addLine(to: CGPoint(x: 36.1, y: 2.1 + bodyLift))
+        innerEars.addLine(to: CGPoint(x: 36.2, y: 4.8 + bodyLift))
+        innerEars.closeSubpath()
+        context.fill(innerEars, with: .color(pink.opacity(0.76)))
+
         let head = Path(
-            ellipseIn: CGRect(x: 25.8, y: 4.3 + bodyLift, width: 10.4, height: 10.4)
+            ellipseIn: CGRect(
+                x: 24.1,
+                y: 2.8 + bodyLift,
+                width: 13.5,
+                height: 13.4
+            )
         )
         context.fill(head, with: .color(palette.base))
-        context.stroke(head, with: outline, style: StrokeStyle(lineWidth: 1))
+        context.stroke(head, with: outline, style: StrokeStyle(lineWidth: 1.1))
 
-        var ears = Path()
-        ears.move(to: CGPoint(x: 27, y: 6 + bodyLift))
-        ears.addLine(to: CGPoint(x: 27.5, y: 1 + bodyLift))
-        ears.addLine(to: CGPoint(x: 31.5, y: 5.2 + bodyLift))
-        ears.move(to: CGPoint(x: 32.5, y: 5.3 + bodyLift))
-        ears.addLine(to: CGPoint(x: 36, y: 1 + bodyLift))
-        ears.addLine(to: CGPoint(x: 36.5, y: 7 + bodyLift))
-        context.fill(ears, with: .color(palette.base))
-        context.stroke(ears, with: outline, style: stroke)
+        if style == "calico" {
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: 24.8,
+                        y: 3.6 + bodyLift,
+                        width: 5.3,
+                        height: 4.2
+                    )
+                ),
+                with: .color(palette.orange)
+            )
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: 33.5,
+                        y: 4.2 + bodyLift,
+                        width: 3.4,
+                        height: 3.8
+                    )
+                ),
+                with: .color(palette.dark)
+            )
+        } else if style == "cow" {
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: 24.6,
+                        y: 3.5 + bodyLift,
+                        width: 5.4,
+                        height: 4.5
+                    )
+                ),
+                with: .color(palette.dark)
+            )
+        } else if style == "mackerel" || style == "cheese" {
+            for x in [28.5, 31.0, 33.5] {
+                var foreheadStripe = Path()
+                foreheadStripe.move(
+                    to: CGPoint(x: x, y: 3.7 + bodyLift)
+                )
+                foreheadStripe.addLine(
+                    to: CGPoint(x: x - 0.3, y: 5.5 + bodyLift)
+                )
+                context.stroke(
+                    foreheadStripe,
+                    with: .color(palette.stripe),
+                    style: StrokeStyle(
+                        lineWidth: 0.75,
+                        lineCap: .round
+                    )
+                )
+            }
+        }
+
+        let muzzle = Path(
+            ellipseIn: CGRect(
+                x: 29.4,
+                y: 9.3 + bodyLift,
+                width: 5.7,
+                height: 4.5
+            )
+        )
+        context.fill(muzzle, with: .color(Color.white.opacity(0.60)))
+
+        for eyeX in [27.7, 33.3] {
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: eyeX,
+                        y: 7.1 + bodyLift,
+                        width: 1.7,
+                        height: 2.0
+                    )
+                ),
+                with: .color(palette.eye)
+            )
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: eyeX + 0.55,
+                        y: 7.35 + bodyLift,
+                        width: 0.45,
+                        height: 0.55
+                    )
+                ),
+                with: .color(Color.white.opacity(0.92))
+            )
+        }
 
         context.fill(
-            Path(ellipseIn: CGRect(x: 32.3, y: 8.3 + bodyLift, width: 1.4, height: 1.4)),
-            with: .color(palette.eye)
+            Path(
+                ellipseIn: CGRect(
+                    x: 31.65,
+                    y: 10.25 + bodyLift,
+                    width: 1.55,
+                    height: 1.15
+                )
+            ),
+            with: .color(pink)
+        )
+
+        var smile = Path()
+        smile.move(to: CGPoint(x: 32.42, y: 11.35 + bodyLift))
+        smile.addCurve(
+            to: CGPoint(x: 31.45, y: 12.15 + bodyLift),
+            control1: CGPoint(x: 32.2, y: 11.95 + bodyLift),
+            control2: CGPoint(x: 31.75, y: 12.15 + bodyLift)
+        )
+        smile.move(to: CGPoint(x: 32.42, y: 11.35 + bodyLift))
+        smile.addCurve(
+            to: CGPoint(x: 33.4, y: 12.15 + bodyLift),
+            control1: CGPoint(x: 32.65, y: 11.95 + bodyLift),
+            control2: CGPoint(x: 33.1, y: 12.15 + bodyLift)
+        )
+        context.stroke(
+            smile,
+            with: .color(faceLine),
+            style: StrokeStyle(lineWidth: 0.55, lineCap: .round)
+        )
+
+        context.fill(
+            Path(
+                ellipseIn: CGRect(
+                    x: 26.2,
+                    y: 10.65 + bodyLift,
+                    width: 2.1,
+                    height: 1.2
+                )
+            ),
+            with: .color(pink.opacity(0.48))
+        )
+        context.fill(
+            Path(
+                ellipseIn: CGRect(
+                    x: 35.2,
+                    y: 10.65 + bodyLift,
+                    width: 1.8,
+                    height: 1.2
+                )
+            ),
+            with: .color(pink.opacity(0.48))
+        )
+
+        var whiskers = Path()
+        whiskers.move(to: CGPoint(x: 29.5, y: 11.1 + bodyLift))
+        whiskers.addLine(to: CGPoint(x: 26.3, y: 10.4 + bodyLift))
+        whiskers.move(to: CGPoint(x: 29.5, y: 12.0 + bodyLift))
+        whiskers.addLine(to: CGPoint(x: 26.2, y: 12.4 + bodyLift))
+        whiskers.move(to: CGPoint(x: 35.0, y: 11.1 + bodyLift))
+        whiskers.addLine(to: CGPoint(x: 38.4, y: 10.4 + bodyLift))
+        whiskers.move(to: CGPoint(x: 35.0, y: 12.0 + bodyLift))
+        whiskers.addLine(to: CGPoint(x: 38.5, y: 12.5 + bodyLift))
+        context.stroke(
+            whiskers,
+            with: .color(faceLine.opacity(0.72)),
+            style: StrokeStyle(lineWidth: 0.55, lineCap: .round)
         )
 
         let legPairs: [(CGPoint, CGPoint)] = isRunning
@@ -563,6 +865,20 @@ private struct WidgetCat: View {
             leg.move(to: start)
             leg.addLine(to: end)
             context.stroke(leg, with: outline, style: stroke)
+            let paw = Path(
+                ellipseIn: CGRect(
+                    x: end.x - 1.45,
+                    y: end.y - 0.7,
+                    width: 3.1,
+                    height: 1.55
+                )
+            )
+            context.fill(paw, with: .color(palette.base))
+            context.stroke(
+                paw,
+                with: outline,
+                style: StrokeStyle(lineWidth: 0.65)
+            )
         }
     }
 
@@ -670,7 +986,7 @@ private enum WidgetPalette {
     static let ink = Color(red: 0.11, green: 0.11, blue: 0.12)
     static let secondary = Color(red: 0.43, green: 0.43, blue: 0.45)
     static let line = Color(red: 0.93, green: 0.93, blue: 0.94)
-    static let actionFill = Color(red: 0.93, green: 0.93, blue: 0.94)
+    static let automaticFill = Color(red: 0.96, green: 0.96, blue: 0.965)
     static let focusFill = Color(red: 1.00, green: 0.95, blue: 0.85)
     static let focusInk = Color(red: 0.57, green: 0.38, blue: 0.08)
     static let weather = Color(red: 0.31, green: 0.47, blue: 0.59)

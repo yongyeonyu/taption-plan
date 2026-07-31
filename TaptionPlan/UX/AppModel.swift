@@ -130,11 +130,7 @@ final class AppModel {
         self.sensorService?.onReadingPersisted = { [weak self] reading in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                let didCaptureFloorCalibration =
-                    self.updateFloorCalibration(with: reading)
-                if didCaptureFloorCalibration {
-                    await self.persistDeviceLocalSnapshot()
-                }
+                self.updateFloorEstimate(with: reading)
                 await self.refreshSensorTimeline(
                     containing: reading.timestamp
                 )
@@ -171,17 +167,6 @@ final class AppModel {
 
     var settings: AppFeatureSettings {
         snapshot.settings
-    }
-
-    var homeFloorCalibrationStatus: String {
-        guard let calibration = settings.floorCalibration else {
-            return "설정 안 됨"
-        }
-        let base =
-            "\(calibration.placeName) \(calibration.referenceFloor)층"
-        return calibration.isCaptured
-            ? "\(base) · 보정됨"
-            : "\(base) · 현재 위치 대기"
     }
 
     var currentAltitudeStatus: String? {
@@ -352,6 +337,11 @@ final class AppModel {
                         loaded.categories.append(category)
                     }
                 }
+                migrateLegacyFloorCalibration(in: &loaded)
+                loaded.actuals = ActualRecordSuppressionEngine.visibleRecords(
+                    from: loaded.actuals,
+                    suppressedIDs: loaded.settings.suppressedActualIDs
+                )
                 snapshot = loaded
                 try await repository.save(snapshot)
                 publishWidgetPayload()
@@ -762,13 +752,6 @@ final class AppModel {
             )
             isSensorCollecting = true
         }
-        Task { await persist() }
-    }
-
-    func prepareHomeFloorCalibration() {
-        snapshot.settings.floorCalibration = .homeTwentiethFloor
-        latestAltitudeEstimate = nil
-        resumeSensorCollectionIfNeeded()
         Task { await persist() }
     }
 
@@ -1282,6 +1265,34 @@ final class AppModel {
         await persist()
     }
 
+    func deleteActual(_ actualID: UUID) async {
+        guard let actual = snapshot.actuals.first(where: {
+            $0.id == actualID
+        }) else {
+            userFacingError = "삭제할 실제 기록을 찾지 못했습니다."
+            return
+        }
+
+        snapshot.settings.suppressedActualIDs.insert(actualID)
+        snapshot.actuals.removeAll { $0.id == actualID }
+
+        if actual.endedAt == nil,
+           let planID = actual.planID,
+           let planIndex = snapshot.plans.firstIndex(where: {
+               $0.id == planID
+           }),
+           snapshot.plans[planIndex].status == .running {
+            snapshot.plans[planIndex].status = .planned
+            snapshot.plans[planIndex].updatedAt = .now
+            try? await liveActivityController.stop(
+                plan: snapshot.plans[planIndex],
+                catStyle: snapshot.settings.catStyle
+            )
+        }
+
+        await persist()
+    }
+
     func addPlanToCalendar(_ planID: UUID) async {
         guard let index = snapshot.plans.firstIndex(where: {
             $0.id == planID
@@ -1662,6 +1673,10 @@ final class AppModel {
             into: snapshot.actuals,
             linkedPlan: linkedPlan
         )
+        snapshot.actuals = ActualRecordSuppressionEngine.visibleRecords(
+            from: snapshot.actuals,
+            suppressedIDs: snapshot.settings.suppressedActualIDs
+        )
         await persistDeviceLocalSnapshot()
     }
 
@@ -1774,10 +1789,8 @@ final class AppModel {
             detectedPlaces[index].displayName = name
         }
 
-        detectedPlaces = applyFrequentPlaceNames(to: detectedPlaces)
-
-        detectedPlaces = FloorCalibrationEngine().applying(
-            settings.floorCalibration,
+        detectedPlaces = FrequentPlaceResolutionEngine().applying(
+            settings.frequentPlaces,
             to: detectedPlaces,
             readings: readings
         )
@@ -1826,46 +1839,6 @@ final class AppModel {
         if snapshot.settings.weatherEnabled,
            let point = readings.last?.point {
             await refreshWeather(at: point, in: span)
-        }
-    }
-
-    private func applyFrequentPlaceNames(
-        to places: [PlaceStay]
-    ) -> [PlaceStay] {
-        let candidates = snapshot.settings.frequentPlaces
-            .filter { $0.point != nil }
-        guard !candidates.isEmpty else { return places }
-
-        return places.map { place in
-            guard let point = place.point,
-                  let match = candidates
-                    .compactMap({ frequent -> (FrequentPlace, Double)? in
-                        guard let frequentPoint = frequent.point else {
-                            return nil
-                        }
-                        let distance = CLLocation(
-                            latitude: point.latitude,
-                            longitude: point.longitude
-                        ).distance(
-                            from: CLLocation(
-                                latitude: frequentPoint.latitude,
-                                longitude: frequentPoint.longitude
-                            )
-                        )
-                        return distance <= frequent.radiusMeters
-                            ? (frequent, distance)
-                            : nil
-                    })
-                    .min(by: { $0.1 < $1.1 }) else {
-                return place
-            }
-
-            var updated = place
-            updated.displayName = match.0.name
-            updated.floor = updated.floor ?? match.0.floor
-            updated.confidence = .high
-            updated.isConfirmed = true
-            return updated
         }
     }
 
@@ -2019,27 +1992,58 @@ final class AppModel {
         Task { await persist() }
     }
 
-    func setFrequentPlaceToCurrentLocation(_ placeID: UUID) {
+    func setFrequentPlaceToCurrentLocation(
+        _ placeID: UUID,
+        floor: Int
+    ) {
+        guard (-20...200).contains(floor), floor != 0 else {
+            userFacingError = "층수는 지하 20층부터 지상 200층 사이로 입력해 주세요."
+            return
+        }
         guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
             $0.id == placeID
         }) else {
             return
         }
-        guard let point = latestSensorReading?.point else {
+        guard let reading = latestSensorReading,
+              reading.point != nil else {
             userFacingError =
                 "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
             return
         }
-        snapshot.settings.frequentPlaces[index].point = point
-        snapshot.settings.frequentPlaces[index].floor =
-            latestAltitudeEstimate?.floor
-            ?? latestSensorReading?.systemFloor
-            ?? snapshot.settings.frequentPlaces[index].floor
-        snapshot.settings.frequentPlaces[index].updatedAt = .now
+        snapshot.settings.frequentPlaces[index].setLocation(
+            from: reading,
+            floor: floor
+        )
+        snapshot.settings.floorCalibration = nil
         snapshot.settings.frequentPlaces =
             AppFeatureSettings.mergedFrequentPlaces(
                 snapshot.settings.frequentPlaces
             )
+        snapshot.places = FrequentPlaceResolutionEngine().applying(
+            snapshot.settings.frequentPlaces,
+            to: snapshot.places,
+            readings: [reading]
+        )
+        updateFloorEstimate(with: reading)
+        Task {
+            await persist()
+            await refreshSensorTimeline(containing: selectedDate)
+        }
+    }
+
+    func clearFrequentPlaceLocation(_ placeID: UUID) {
+        guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+            $0.id == placeID
+        }) else {
+            return
+        }
+        snapshot.settings.frequentPlaces[index].clearLocation()
+        if let latestSensorReading {
+            updateFloorEstimate(with: latestSensorReading)
+        } else {
+            latestAltitudeEstimate = nil
+        }
         Task {
             await persist()
             await refreshSensorTimeline(containing: selectedDate)
@@ -2233,7 +2237,10 @@ final class AppModel {
             snapshot.actuals = AppleDeviceGroundTruthEngine
                 .replacingHealthKitActuals(
                     existing: snapshot.actuals,
-                    with: freshActuals,
+                    with: ActualRecordSuppressionEngine.visibleRecords(
+                        from: freshActuals,
+                        suppressedIDs: snapshot.settings.suppressedActualIDs
+                    ),
                     inside: span
                 )
             sleepSessions = freshSessions
@@ -2288,29 +2295,81 @@ final class AppModel {
         isSensorCollecting = true
     }
 
-    @discardableResult
-    private func updateFloorCalibration(
+    private func updateFloorEstimate(
         with reading: SensorReading
-    ) -> Bool {
+    ) {
         latestSensorReading = reading
-        guard let calibration = settings.floorCalibration else {
+        guard let point = reading.point,
+              let match = settings.frequentPlaces
+                .compactMap({ place -> (FrequentPlace, Double)? in
+                    guard let reference = place.point,
+                          place.floorCalibration != nil else {
+                        return nil
+                    }
+                    let distance = distanceMeters(point, reference)
+                    return distance <= place.radiusMeters
+                        ? (place, distance)
+                        : nil
+                })
+                .min(by: { $0.1 < $1.1 })?.0,
+              let calibration = match.floorCalibration else {
             latestAltitudeEstimate = nil
-            return false
+            return
         }
-        let engine = FloorCalibrationEngine()
-        let captured = engine.capturing(
-            calibration,
-            from: reading
-        )
-        let didCapture = captured != calibration
-        if didCapture {
-            snapshot.settings.floorCalibration = captured
-        }
-        latestAltitudeEstimate = engine.estimate(
+        latestAltitudeEstimate = FloorCalibrationEngine().estimate(
             reading: reading,
-            calibration: captured
+            calibration: calibration
         )
-        return didCapture
+    }
+
+    private func migrateLegacyFloorCalibration(
+        in snapshot: inout TaptionDataSnapshot
+    ) {
+        guard let calibration = snapshot.settings.floorCalibration else {
+            return
+        }
+        defer { snapshot.settings.floorCalibration = nil }
+        guard calibration.isCaptured,
+              let point = calibration.referencePoint,
+              let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+                  $0.kind == .home
+              }) else {
+            return
+        }
+        let existingPoint =
+            snapshot.settings.frequentPlaces[index].point
+        if let existingPoint,
+           distanceMeters(existingPoint, point)
+            > snapshot.settings.frequentPlaces[index].radiusMeters {
+            return
+        }
+        if existingPoint == nil {
+            snapshot.settings.frequentPlaces[index].point = point
+        }
+        if snapshot.settings.frequentPlaces[index].floor == nil {
+            snapshot.settings.frequentPlaces[index].floor =
+                calibration.referenceFloor
+        }
+        snapshot.settings.frequentPlaces[index]
+            .referenceRelativeAltitudeMeters =
+                snapshot.settings.frequentPlaces[index]
+                    .referenceRelativeAltitudeMeters
+                ?? calibration.referenceRelativeAltitudeMeters
+        snapshot.settings.frequentPlaces[index]
+            .referencePressureKilopascals =
+                snapshot.settings.frequentPlaces[index]
+                    .referencePressureKilopascals
+                ?? calibration.referencePressureKilopascals
+        snapshot.settings.frequentPlaces[index]
+            .referenceAltimeterSessionID =
+                snapshot.settings.frequentPlaces[index]
+                    .referenceAltimeterSessionID
+                ?? calibration.referenceAltimeterSessionID
+        snapshot.settings.frequentPlaces[index].floorCapturedAt =
+            snapshot.settings.frequentPlaces[index].floorCapturedAt
+            ?? calibration.capturedAt
+        snapshot.settings.frequentPlaces[index].updatedAt =
+            calibration.capturedAt ?? .now
     }
 
     private func refreshWeather(at point: GeoPoint, in span: TimeSpan) async {
@@ -2362,6 +2421,17 @@ final class AppModel {
     private func publishWidgetPayload() {
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: .now)
+        let widgetStart = calendar.date(
+            byAdding: .day,
+            value: -1,
+            to: dayStart
+        ) ?? dayStart.addingTimeInterval(-86_400)
+        let widgetEnd = calendar.date(
+            byAdding: .day,
+            value: 8,
+            to: dayStart
+        ) ?? dayStart.addingTimeInterval(8 * 86_400)
+        let widgetSpan = TimeSpan(start: widgetStart, end: widgetEnd)
         let weekStart = calendar.dateInterval(
             of: .weekOfYear,
             for: dayStart
@@ -2370,7 +2440,7 @@ final class AppModel {
             ?? weekStart.addingTimeInterval(7 * 86_400)
         let span = TimeSpan(start: weekStart, end: weekEnd)
         let planItems = snapshot.plans
-            .filter { $0.span.intersection(with: span) != nil }
+            .filter { $0.span.intersection(with: widgetSpan) != nil }
             .sorted { $0.span.start < $1.span.start }
             .map { plan in
                 let category = snapshot.categories.first {
@@ -2387,11 +2457,12 @@ final class AppModel {
                     status: plan.status.rawValue,
                     isFixed: plan.isFixed,
                     categoryName: category?.name,
-                    categoryHex: category?.lightHex
+                    categoryHex: category?.lightHex,
+                    lane: .action
                 )
             }
         let calendarItems = snapshot.calendarEvents
-            .filter { $0.span.intersection(with: span) != nil }
+            .filter { $0.span.intersection(with: widgetSpan) != nil }
             .map { event in
                 TaptionWidgetItem(
                     id: UUID(uuidString: event.id) ?? UUID(),
@@ -2404,10 +2475,71 @@ final class AppModel {
                     status: PlanStatus.planned.rawValue,
                     isFixed: true,
                     categoryName: "캘린더",
-                    categoryHex: "#BEDAE3"
+                    categoryHex: "#BEDAE3",
+                    lane: .schedule
                 )
             }
-        let items = (planItems + calendarItems)
+        let locationItems = snapshot.places
+            .filter { $0.span.intersection(with: widgetSpan) != nil }
+            .map { place in
+                let placeTitle = place.floor.map {
+                    "\(place.displayName) · \($0)층"
+                } ?? place.displayName
+                return TaptionWidgetItem(
+                    id: place.id,
+                    title: snapshot.settings.showsPhotosInWidgets
+                        ? placeTitle
+                        : "위치 기록",
+                    categoryID: "location",
+                    startsAt: place.span.start,
+                    endsAt: place.span.end,
+                    status: "recorded",
+                    isFixed: true,
+                    categoryName: "위치",
+                    categoryHex: "#BEDAE3",
+                    lane: .location
+                )
+            }
+        let movementItems = snapshot.travel
+            .filter { $0.span.intersection(with: widgetSpan) != nil }
+            .map { travel in
+                TaptionWidgetItem(
+                    id: travel.id,
+                    title: widgetTravelModeName(travel.mode),
+                    categoryID: "movement",
+                    startsAt: travel.span.start,
+                    endsAt: travel.span.end,
+                    status: "recorded",
+                    isFixed: true,
+                    categoryName: "이동",
+                    categoryHex: "#D2AE76",
+                    lane: .movement
+                )
+            }
+        let activityItems = AutomaticRecordTimelineEngine.activities(
+            from: snapshot.actuals,
+            inside: widgetSpan
+        ).map { actual in
+            TaptionWidgetItem(
+                id: actual.id,
+                title: actual.title,
+                categoryID: actual.categoryID,
+                startsAt: actual.startedAt,
+                endsAt: actual.endedAt ?? .now,
+                status: "recorded",
+                isFixed: true,
+                categoryName: "활동",
+                categoryHex: "#7CA980",
+                lane: .activity
+            )
+        }
+        let items = (
+            planItems
+                + calendarItems
+                + locationItems
+                + movementItems
+                + activityItems
+        )
             .sorted { $0.startsAt < $1.startsAt }
         let weather = snapshot.weather.min {
             abs($0.observedAt.timeIntervalSinceNow)
@@ -2415,8 +2547,8 @@ final class AppModel {
         }
         let payload = TaptionWidgetPayload(
             generatedAt: .now,
-            viewportStart: weekStart,
-            viewportEnd: weekEnd,
+            viewportStart: widgetStart,
+            viewportEnd: widgetEnd,
             items: items,
             catStyle: snapshot.settings.catStyle.rawValue,
             hidesSensitiveContent: !snapshot.settings.showsPhotosInWidgets,
@@ -2467,6 +2599,21 @@ final class AppModel {
             )
         )
         try? watchConnectivityService.update(payload: watchPayload)
+    }
+
+    private func widgetTravelModeName(_ mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .cycling: "자전거"
+        case .bus: "버스"
+        case .subway: "지하철"
+        case .taxi: "택시"
+        case .car: "자가용"
+        case .train: "기차"
+        case .airplane: "비행기"
+        case .ship: "배"
+        }
     }
 
     private var visibleDataSpan: TimeSpan {
@@ -2574,13 +2721,19 @@ final class AppModel {
             local.settings.backgroundPreciseLocationEnabled
         value.settings.sensorCollectionProfile =
             local.settings.sensorCollectionProfile
-        value.settings.floorCalibration =
-            local.settings.floorCalibration
+        value.settings.floorCalibration = nil
         value.settings.movementCorrections =
             local.settings.movementCorrections
+        value.settings.suppressedActualIDs.formUnion(
+            local.settings.suppressedActualIDs
+        )
         value.settings.weatherEnabled = local.settings.weatherEnabled
         value.settings.notificationsEnabled =
             local.settings.notificationsEnabled
+        value.actuals = ActualRecordSuppressionEngine.visibleRecords(
+            from: value.actuals,
+            suppressedIDs: value.settings.suppressedActualIDs
+        )
         return value
     }
 

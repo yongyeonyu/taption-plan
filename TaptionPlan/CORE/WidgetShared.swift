@@ -47,6 +47,41 @@ struct TaptionWidgetCommand: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
+    case schedule
+    case location
+    case movement
+    case activity
+    case action
+
+    static let automatic: [Self] = [
+        .schedule,
+        .location,
+        .movement,
+        .activity,
+    ]
+
+    var title: String {
+        switch self {
+        case .schedule: "일정"
+        case .location: "위치"
+        case .movement: "이동"
+        case .activity: "활동"
+        case .action: "액션"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .schedule: "calendar"
+        case .location: "mappin.and.ellipse"
+        case .movement: "arrow.trianglehead.swap"
+        case .activity: "figure.run"
+        case .action: "checklist.checked"
+        }
+    }
+}
+
 struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var title: String
@@ -57,6 +92,7 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
     var isFixed: Bool
     var categoryName: String?
     var categoryHex: String?
+    var lane: TaptionWidgetLane?
 
     init(
         id: UUID,
@@ -67,7 +103,8 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
         status: String,
         isFixed: Bool,
         categoryName: String? = nil,
-        categoryHex: String? = nil
+        categoryHex: String? = nil,
+        lane: TaptionWidgetLane? = nil
     ) {
         self.id = id
         self.title = title
@@ -78,6 +115,7 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
         self.isFixed = isFixed
         self.categoryName = categoryName
         self.categoryHex = categoryHex
+        self.lane = lane
     }
 
     var isRunning: Bool {
@@ -86,6 +124,113 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
 
     var isCompleted: Bool {
         status == "completed"
+    }
+
+    var resolvedLane: TaptionWidgetLane {
+        if let lane { return lane }
+        return switch categoryID {
+        case "calendar": .schedule
+        case "location": .location
+        case "movement": .movement
+        case "activity": .activity
+        default: .action
+        }
+    }
+}
+
+enum TaptionWidgetPlaybackEngine {
+    static let defaultWindowDuration: TimeInterval = 6 * 3_600
+
+    static func lanes(
+        for items: [TaptionWidgetItem],
+        at date: Date,
+        windowDuration: TimeInterval = defaultWindowDuration
+    ) -> [TaptionWidgetLane] {
+        let hasAction = visibleItems(
+            in: .action,
+            from: items,
+            at: date,
+            windowDuration: windowDuration
+        ).isEmpty == false
+        return TaptionWidgetLane.automatic + (hasAction ? [.action] : [])
+    }
+
+    static func visibleItems(
+        in lane: TaptionWidgetLane,
+        from items: [TaptionWidgetItem],
+        at date: Date,
+        windowDuration: TimeInterval = defaultWindowDuration
+    ) -> [TaptionWidgetItem] {
+        let halfWindow = max(60, windowDuration) / 2
+        let start = date.addingTimeInterval(-halfWindow)
+        let end = date.addingTimeInterval(halfWindow)
+        return items
+            .filter { $0.resolvedLane == lane }
+            .filter { lane != .action || !$0.isCompleted }
+            .filter { $0.startsAt < end && start < $0.endsAt }
+            .sorted {
+                if $0.startsAt == $1.startsAt {
+                    return $0.endsAt < $1.endsAt
+                }
+                return $0.startsAt < $1.startsAt
+            }
+    }
+
+    static func activeItems(
+        in lane: TaptionWidgetLane,
+        from items: [TaptionWidgetItem],
+        at date: Date
+    ) -> [TaptionWidgetItem] {
+        items
+            .filter { $0.resolvedLane == lane }
+            .filter { lane != .action || !$0.isCompleted }
+            .filter { $0.startsAt <= date && date < $0.endsAt }
+            .sorted { $0.startsAt < $1.startsAt }
+    }
+
+    static func timelineDates(
+        for items: [TaptionWidgetItem],
+        from now: Date,
+        horizon: Date,
+        minuteInterval: Int = 1
+    ) -> [Date] {
+        guard now < horizon else { return [now] }
+        let step = TimeInterval(max(1, minuteInterval) * 60)
+        var dates = [now]
+        var next = now.addingTimeInterval(step)
+        while next <= horizon {
+            dates.append(next)
+            next = next.addingTimeInterval(step)
+        }
+        dates.append(contentsOf: items.flatMap { [$0.startsAt, $0.endsAt] })
+        return Array(Set(dates.filter { now <= $0 && $0 <= horizon }))
+            .sorted()
+    }
+}
+
+struct TaptionWidgetCatWalkPose: Equatable, Sendable {
+    var progress: Double
+    var facesLeft: Bool
+    var legPhase: Int
+}
+
+enum TaptionWidgetCatWalkEngine {
+    static func pose(
+        at date: Date,
+        stepDuration: TimeInterval = 2
+    ) -> TaptionWidgetCatWalkPose {
+        let duration = max(0.5, stepDuration)
+        let rawStep = Int(date.timeIntervalSinceReferenceDate / duration)
+        let step = ((rawStep % 20) + 20) % 20
+        let facesLeft = step >= 10
+        let progress = facesLeft
+            ? Double(19 - step) / 9
+            : Double(step) / 9
+        return TaptionWidgetCatWalkPose(
+            progress: min(1, max(0, progress)),
+            facesLeft: facesLeft,
+            legPhase: step % 4
+        )
     }
 }
 
@@ -170,21 +315,53 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
             items: [
                 TaptionWidgetItem(
                     id: UUID(),
-                    title: "회의",
-                    categoryID: "project",
+                    title: "팀 회의",
+                    categoryID: "calendar",
                     startsAt: now.addingTimeInterval(-2.82 * 3_600),
                     endsAt: now.addingTimeInterval(-1.14 * 3_600),
                     status: "planned",
-                    isFixed: true
+                    isFixed: true,
+                    lane: .schedule
                 ),
                 TaptionWidgetItem(
                     id: UUID(),
-                    title: "러닝",
+                    title: "회사 · 10층",
+                    categoryID: "location",
+                    startsAt: now.addingTimeInterval(-2.5 * 3_600),
+                    endsAt: now.addingTimeInterval(1.6 * 3_600),
+                    status: "recorded",
+                    isFixed: true,
+                    lane: .location
+                ),
+                TaptionWidgetItem(
+                    id: UUID(),
+                    title: "자가용",
+                    categoryID: "movement",
+                    startsAt: now.addingTimeInterval(-0.8 * 3_600),
+                    endsAt: now.addingTimeInterval(-0.25 * 3_600),
+                    status: "recorded",
+                    isFixed: true,
+                    lane: .movement
+                ),
+                TaptionWidgetItem(
+                    id: UUID(),
+                    title: "걷기",
                     categoryID: "exercise",
+                    startsAt: now.addingTimeInterval(-0.2 * 3_600),
+                    endsAt: now.addingTimeInterval(0.2 * 3_600),
+                    status: "recorded",
+                    isFixed: true,
+                    lane: .activity
+                ),
+                TaptionWidgetItem(
+                    id: UUID(),
+                    title: "신제품 기획",
+                    categoryID: "project",
                     startsAt: now.addingTimeInterval(-0.24 * 3_600),
                     endsAt: now.addingTimeInterval(1.98 * 3_600),
                     status: "running",
-                    isFixed: false
+                    isFixed: false,
+                    lane: .action
                 ),
             ],
             catStyle: "calico",

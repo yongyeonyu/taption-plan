@@ -516,6 +516,15 @@ enum ActionMemoEditingEngine {
     }
 }
 
+enum ActualRecordSuppressionEngine {
+    static func visibleRecords(
+        from records: [ActualRecord],
+        suppressedIDs: Set<UUID>
+    ) -> [ActualRecord] {
+        records.filter { !suppressedIDs.contains($0.id) }
+    }
+}
+
 struct QuickActionResult: Sendable {
     var plan: PlanRecord
     var actuals: [ActualRecord]
