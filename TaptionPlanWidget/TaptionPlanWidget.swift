@@ -68,178 +68,129 @@ struct TaptionScheduleWidget: Widget {
                 .containerBackground(.white, for: .widget)
         }
         .configurationDisplayName("Taption 시간표")
-        .description("계획과 현재 시간을 보고 바로 완료하거나 미룰 수 있습니다.")
-        .supportedFamilies([
-            .systemSmall,
-            .systemMedium,
-            .systemLarge,
-            .systemExtraLarge,
-            .accessoryInline,
-            .accessoryCircular,
-            .accessoryRectangular,
-        ])
+        .description("현재선 중심의 시간표에서 계획을 바로 처리합니다.")
+        .supportedFamilies([.systemMedium])
+        .contentMarginsDisabled()
     }
 }
 
 private struct TaptionScheduleWidgetView: View {
-    @Environment(\.widgetFamily) private var family
     let entry: TaptionScheduleEntry
 
     var body: some View {
-        Group {
-            switch family {
-            case .accessoryInline:
-                inlineAccessoryView
-            case .accessoryCircular:
-                circularAccessoryView
-            case .accessoryRectangular:
-                accessoryView
-            case .systemSmall:
-                compactView
-            default:
-                fullView
+        VStack(spacing: 0) {
+            header
+
+            PrototypeWidgetTrack(
+                payload: entry.payload,
+                date: entry.date
+            )
+            .frame(height: 76)
+
+            HStack(spacing: 7) {
+                actionButton(
+                    "했어요",
+                    icon: "checkmark",
+                    action: .complete
+                )
+                actionButton(
+                    "30분",
+                    icon: "clock",
+                    action: .postponeThirtyMinutes
+                )
+                actionButton(
+                    "다음 빈 시간",
+                    icon: "location.north",
+                    action: .moveToNextFreeTime
+                )
             }
+            .padding(.top, 11)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .widgetURL(deepLinkURL)
     }
 
-    private var inlineAccessoryView: some View {
-        Text("Taption · \(currentItem?.title ?? visibleItems.first?.title ?? "다음 계획 없음")")
-    }
-
-    private var circularAccessoryView: some View {
-        ZStack {
-            AccessoryWidgetBackground()
-            if let item = currentItem {
-                ProgressView(
-                    timerInterval: item.startsAt...item.endsAt,
-                    countsDown: false
-                ) {
-                    WidgetCat(style: entry.payload.catStyle)
-                        .frame(width: 22, height: 16)
-                }
-                .progressViewStyle(.circular)
-            } else {
-                Image(systemName: "chart.bar.xaxis")
-                    .font(.title3.bold())
-            }
-        }
-    }
-
-    private var accessoryView: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Label("Taption", systemImage: "chart.bar.xaxis")
-                .font(.caption2.bold())
-            Text(currentItem?.title ?? "다음 계획 없음")
-                .font(.caption)
-                .lineLimit(1)
-            if let currentItem {
-                Text(currentItem.startsAt, style: .time)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var compactView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            header
-            if let item = currentItem ?? visibleItems.first {
-                Text(item.title)
-                    .font(.system(size: 15, weight: .bold))
-                    .lineLimit(2)
-                Text(item.startsAt, style: .time)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-                Button(
-                    intent: TaptionWidgetActionIntent(
-                        planID: item.id.uuidString,
-                        action: .complete
-                    )
-                ) {
-                    Label("완료", systemImage: "checkmark")
-                        .font(.caption.bold())
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.black)
-            } else {
-                Spacer()
-                Text("오늘 계획을 추가해 보세요")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-        }
-    }
-
-    private var fullView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            header
-            WidgetTimeline(
-                payload: entry.payload,
-                date: entry.date,
-                catStyle: entry.payload.catStyle,
-                window: timelineWindow,
-                rowLimit: rowLimit
-            )
-            .frame(maxHeight: .infinity)
-
-            if let item = currentItem ?? visibleItems.first {
-                HStack(spacing: 6) {
-                    actionButton(
-                        "완료",
-                        icon: "checkmark",
-                        item: item,
-                        action: .complete
-                    )
-                    actionButton(
-                        "30분",
-                        icon: "clock.arrow.circlepath",
-                        item: item,
-                        action: .postponeThirtyMinutes
-                    )
-                    actionButton(
-                        "빈 시간",
-                        icon: "arrow.right.to.line",
-                        item: item,
-                        action: .moveToNextFreeTime
-                    )
-                }
-            }
-        }
-    }
-
     private var header: some View {
-        HStack {
-            Label("오늘", systemImage: "chart.bar.xaxis")
-                .font(.system(size: 12, weight: .black))
-            Spacer()
-            Text(entry.date, style: .time)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.red)
+        HStack(spacing: 0) {
+            Text("지금의 시간표")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(WidgetPalette.ink)
+
+            Text(currentItem == nil ? "쉬는 중" : "집중 중")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(WidgetPalette.focusInk)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(WidgetPalette.focusFill, in: Capsule())
+                .padding(.leading, 5)
+
+            Link(destination: URL(string: "taptionplan://cats")!) {
+                Text("\(catShortName) ▾")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(WidgetPalette.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.white, in: Capsule())
+                    .overlay {
+                        Capsule().stroke(WidgetPalette.line)
+                    }
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 3)
+
+            Spacer(minLength: 4)
+
+            HStack(spacing: 3) {
+                Image(systemName: weatherSymbol)
+                    .font(.system(size: 10, weight: .semibold))
+                Text(weatherAndTimeLabel)
+                    .font(.system(size: 9, weight: .bold))
+                    .monospacedDigit()
+            }
+            .foregroundStyle(WidgetPalette.weather)
         }
+        .frame(height: 20)
+        .padding(.bottom, 10)
     }
 
+    @ViewBuilder
     private func actionButton(
         _ title: String,
         icon: String,
-        item: TaptionWidgetItem,
         action: TaptionWidgetCommandKind
     ) -> some View {
-        Button(
-            intent: TaptionWidgetActionIntent(
-                planID: item.id.uuidString,
-                action: action
-            )
-        ) {
-            Label(title, systemImage: icon)
-                .font(.system(size: 9, weight: .bold))
-                .frame(maxWidth: .infinity)
+        if let actionItem {
+            Button(
+                intent: TaptionWidgetActionIntent(
+                    planID: actionItem.id.uuidString,
+                    action: action
+                )
+            ) {
+                actionLabel(title, icon: icon)
+            }
+            .buttonStyle(.plain)
+        } else {
+            actionLabel(title, icon: icon)
+                .foregroundStyle(WidgetPalette.ink.opacity(0.42))
         }
-        .buttonStyle(.bordered)
-        .tint(.black)
+    }
+
+    private func actionLabel(
+        _ title: String,
+        icon: String
+    ) -> some View {
+        Label(title, systemImage: icon)
+            .font(.system(size: 10, weight: .bold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .foregroundStyle(WidgetPalette.ink)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(
+                WidgetPalette.actionFill,
+                in: RoundedRectangle(cornerRadius: 10)
+            )
     }
 
     private var visibleItems: [TaptionWidgetItem] {
@@ -254,250 +205,410 @@ private struct TaptionScheduleWidgetView: View {
         }
     }
 
+    private var actionItem: TaptionWidgetItem? {
+        let actionableItems = visibleItems.filter { !$0.isFixed }
+        return actionableItems.first {
+            $0.startsAt <= entry.date && entry.date <= $0.endsAt
+        }
+            ?? actionableItems.first(where: { entry.date < $0.startsAt })
+            ?? actionableItems.last
+    }
+
+    private var catShortName: String {
+        switch entry.payload.catStyle {
+        case "white": "흰색"
+        case "calico": "삼색"
+        case "mackerel": "고등어"
+        case "black": "검정"
+        case "gray": "회색"
+        case "cheese": "치즈"
+        case "cow": "젖소무늬"
+        default: "삼색"
+        }
+    }
+
+    private var weatherSymbol: String {
+        entry.payload.weatherSymbolName ?? "clock"
+    }
+
+    private var weatherAndTimeLabel: String {
+        let time = entry.date.formatted(date: .omitted, time: .shortened)
+        guard let temperature = entry.payload.temperatureCelsius else {
+            return time
+        }
+        return "\(temperature.rounded().formatted())° · \(time)"
+    }
+
     private var deepLinkURL: URL? {
-        guard let item = currentItem ?? visibleItems.first else {
+        guard let item = actionItem else {
             return URL(string: "taptionplan://today")
         }
         return URL(string: "taptionplan://plan/\(item.id.uuidString)")
     }
-
-    private var timelineWindow: WidgetTimelineWindow {
-        switch family {
-        case .systemMedium:
-            .centered(hours: 6)
-        case .systemExtraLarge:
-            .week
-        default:
-            .day
-        }
-    }
-
-    private var rowLimit: Int {
-        switch family {
-        case .systemMedium: 3
-        case .systemLarge: 6
-        case .systemExtraLarge: 8
-        default: 4
-        }
-    }
 }
 
-private enum WidgetTimelineWindow {
-    case centered(hours: Double)
-    case day
-    case week
-}
-
-private struct WidgetTimeline: View {
+private struct PrototypeWidgetTrack: View {
     let payload: TaptionWidgetPayload
     let date: Date
-    let catStyle: String
-    let window: WidgetTimelineWindow
-    let rowLimit: Int
 
     var body: some View {
         GeometryReader { proxy in
-            let headerWidth: CGFloat = 44
-            let timelineWidth = max(1, proxy.size.width - headerWidth)
-            let rows = Array(
-                payload.items
-                    .filter { !$0.isCompleted }
-                    .filter {
-                        $0.startsAt < windowEnd && windowStart < $0.endsAt
-                    }
-                    .sorted { $0.startsAt < $1.startsAt }
-                    .prefix(rowLimit)
-            )
+            let nowX = proxy.size.width / 2
 
             ZStack(alignment: .topLeading) {
-                VStack(spacing: 3) {
-                    ForEach(rows) { item in
-                        HStack(spacing: 4) {
-                            Text(categoryName(item.categoryID))
-                                .font(.system(size: 8, weight: .semibold))
+                Rectangle()
+                    .fill(WidgetPalette.line)
+                    .frame(height: 1)
+
+                Rectangle()
+                    .fill(WidgetPalette.line)
+                    .frame(height: 1)
+                    .offset(y: 75)
+
+                ForEach(trackItems) { item in
+                    let start = fraction(item.startsAt)
+                    let end = fraction(item.endsAt)
+                    let width = max(
+                        20,
+                        proxy.size.width * max(0.02, end - start)
+                    )
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(categoryColor(item))
+                        .frame(width: width, height: 26)
+                        .overlay(alignment: .leading) {
+                            Text(item.title)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(
+                                    WidgetPalette.ink.opacity(0.62)
+                                )
                                 .lineLimit(1)
-                                .frame(width: headerWidth, alignment: .leading)
-
-                            GeometryReader { rowProxy in
-                                let start = fraction(item.startsAt)
-                                let end = fraction(item.endsAt)
-                                RoundedRectangle(cornerRadius: 5)
-                                    .fill(
-                                        categoryColor(item.categoryID)
-                                            .opacity(item.endsAt < date ? 0.32 : 0.72)
-                                    )
-                                    .frame(
-                                        width: max(
-                                            18,
-                                            rowProxy.size.width * max(0.02, end - start)
-                                        )
-                                    )
-                                    .overlay(alignment: .leading) {
-                                        Text(item.title)
-                                            .font(.system(size: 8, weight: .bold))
-                                            .lineLimit(1)
-                                            .padding(.horizontal, 5)
-                                    }
-                                    .offset(x: rowProxy.size.width * start)
-                            }
+                                .padding(.horizontal, 6)
                         }
-                        .frame(height: 23)
-                    }
-                }
-
-                let now = fraction(date)
-                if 0...1 ~= now {
-                    Rectangle()
-                        .fill(.red)
-                        .frame(width: 1.5)
-                        .offset(x: headerWidth + timelineWidth * now)
-
-                    WidgetCat(style: catStyle)
-                        .frame(width: 20, height: 14)
                         .offset(
-                            x: headerWidth + timelineWidth * now - 10,
-                            y: -5
+                            x: proxy.size.width * start,
+                            y: 40
                         )
                 }
+
+                Rectangle()
+                    .fill(WidgetPalette.now)
+                    .frame(width: 2, height: 41)
+                    .offset(x: nowX - 1, y: 35)
+
+                Circle()
+                    .fill(WidgetPalette.now)
+                    .frame(width: 8, height: 8)
+                    .offset(x: nowX - 4, y: 32)
+
+                WidgetCat(
+                    style: payload.catStyle,
+                    isRunning: currentItem != nil,
+                    reducesMotion: payload.reducesMotion ?? false
+                )
+                .frame(width: 40, height: 27)
+                .offset(x: nowX - 20, y: 4)
             }
+            .clipped()
         }
     }
 
-    private func fraction(_ date: Date) -> CGFloat {
+    private var windowStart: Date {
+        date.addingTimeInterval(-3 * 3_600)
+    }
+
+    private var windowEnd: Date {
+        date.addingTimeInterval(3 * 3_600)
+    }
+
+    private var trackItems: [TaptionWidgetItem] {
+        Array(
+            payload.items
+                .filter { !$0.isCompleted }
+                .filter {
+                    $0.startsAt < windowEnd && windowStart < $0.endsAt
+                }
+                .sorted { $0.startsAt < $1.startsAt }
+                .prefix(2)
+        )
+    }
+
+    private var currentItem: TaptionWidgetItem? {
+        trackItems.first {
+            $0.startsAt <= date && date <= $0.endsAt
+        }
+    }
+
+    private func fraction(_ value: Date) -> CGFloat {
         let duration = windowEnd.timeIntervalSince(windowStart)
-        guard duration > 0 else { return 0 }
         return CGFloat(
             min(
                 1,
                 max(
                     0,
-                    date.timeIntervalSince(windowStart) / duration
+                    value.timeIntervalSince(windowStart) / duration
                 )
             )
         )
     }
 
-    private var windowStart: Date {
-        let calendar = Calendar.autoupdatingCurrent
-        return switch window {
-        case .centered(let hours):
-            date.addingTimeInterval(-hours * 1_800)
-        case .day:
-            calendar.startOfDay(for: date)
-        case .week:
-            calendar.dateInterval(of: .weekOfYear, for: date)?.start
-                ?? calendar.startOfDay(for: date)
-        }
-    }
-
-    private var windowEnd: Date {
-        let calendar = Calendar.autoupdatingCurrent
-        return switch window {
-        case .centered(let hours):
-            date.addingTimeInterval(hours * 1_800)
-        case .day:
-            calendar.date(byAdding: .day, value: 1, to: windowStart)
-                ?? windowStart.addingTimeInterval(86_400)
-        case .week:
-            calendar.date(byAdding: .day, value: 7, to: windowStart)
-                ?? windowStart.addingTimeInterval(7 * 86_400)
-        }
-    }
-
-    private func categoryName(_ id: String) -> String {
-        if let value = payload.items.first(where: {
-            $0.categoryID == id
-        })?.categoryName {
-            return value
-        }
-        return switch id {
-        case "movement": "이동"
-        case "location": "위치"
-        case "photo": "사진"
-        case "exercise": "운동"
-        case "study": "학습"
-        case "hobby": "취미"
-        case "sleep": "수면"
-        case "routine": "생활"
-        case "relationship": "관계"
-        case "rest": "휴식"
-        case "travel": "여행"
-        case "health": "건강"
-        default: "계획"
-        }
-    }
-
-    private func categoryColor(_ id: String) -> Color {
-        if let hex = payload.items.first(where: {
-            $0.categoryID == id
-        })?.categoryHex {
+    private func categoryColor(_ item: TaptionWidgetItem) -> Color {
+        if let hex = item.categoryHex {
             return Color(widgetHex: hex)
         }
-        return switch id {
-        case "exercise": Color(red: 0.99, green: 0.73, blue: 0.68)
-        case "study": Color(red: 0.72, green: 0.62, blue: 0.84)
-        case "hobby": Color(red: 0.61, green: 0.83, blue: 0.73)
-        case "sleep": Color(red: 0.55, green: 0.63, blue: 0.74)
-        case "movement": Color(red: 0.77, green: 0.60, blue: 0.35)
-        case "location": Color(red: 0.43, green: 0.69, blue: 0.82)
-        case "travel": Color(red: 0.95, green: 0.56, blue: 0.40)
-        default: Color(red: 0.47, green: 0.70, blue: 0.79)
+        return switch item.categoryID {
+        case "exercise": Color(red: 0.996, green: 0.835, blue: 0.812)
+        case "study": Color(red: 0.827, green: 0.780, blue: 0.902)
+        case "hobby": Color(red: 0.769, green: 0.914, blue: 0.855)
+        case "sleep": Color(red: 0.851, green: 0.867, blue: 0.918)
+        case "movement": Color(red: 0.910, green: 0.827, blue: 0.702)
+        case "location": Color(red: 0.847, green: 0.910, blue: 0.949)
+        case "travel": Color(red: 0.945, green: 0.710, blue: 0.596)
+        case "health": Color(red: 0.784, green: 0.875, blue: 0.765)
+        case "photo": Color(red: 0.906, green: 0.843, blue: 0.933)
+        default: Color(red: 0.745, green: 0.855, blue: 0.890)
         }
     }
 }
 
 private struct WidgetCat: View {
     let style: String
+    var isRunning: Bool = true
+    var reducesMotion: Bool = false
 
     var body: some View {
-        ZStack {
-            Capsule()
-                .fill(baseColor)
-                .frame(width: 14, height: 8)
-                .overlay(Capsule().stroke(.black.opacity(0.7), lineWidth: 0.8))
-            Circle()
-                .fill(baseColor)
-                .frame(width: 8, height: 8)
-                .offset(x: 7, y: -2)
-                .overlay(
-                    Circle()
-                        .fill(markColor)
-                        .frame(width: 3, height: 3)
-                        .offset(x: 8, y: -3)
+        Canvas { rawContext, size in
+            let scaleX = size.width / 40
+            let scaleY = size.height / 27
+            var context = rawContext
+            context.scaleBy(x: scaleX, y: scaleY)
+
+            if isRunning && !reducesMotion {
+                drawSpeedLines(in: &context)
+            }
+            drawShadow(in: &context)
+            drawCat(in: &context)
+        }
+        .accessibilityLabel(accessibilityName)
+    }
+
+    private func drawSpeedLines(in context: inout GraphicsContext) {
+        var longLine = Path()
+        longLine.move(to: CGPoint(x: 0, y: 10))
+        longLine.addLine(to: CGPoint(x: 7, y: 10))
+        context.stroke(
+            longLine,
+            with: .color(Color(red: 0.65, green: 0.65, blue: 0.68)),
+            style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+        )
+
+        var shortLine = Path()
+        shortLine.move(to: CGPoint(x: 2, y: 16))
+        shortLine.addLine(to: CGPoint(x: 6, y: 16))
+        context.stroke(
+            shortLine,
+            with: .color(Color(red: 0.65, green: 0.65, blue: 0.68)),
+            style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+        )
+    }
+
+    private func drawShadow(in context: inout GraphicsContext) {
+        context.fill(
+            Path(ellipseIn: CGRect(x: 9, y: 23, width: 28, height: 3)),
+            with: .color(.black.opacity(0.15))
+        )
+    }
+
+    private func drawCat(in context: inout GraphicsContext) {
+        let palette = CatPalette(style: style)
+        let outline = GraphicsContext.Shading.color(palette.outline)
+        let stroke = StrokeStyle(
+            lineWidth: 2.2,
+            lineCap: .round,
+            lineJoin: .round
+        )
+
+        var tail = Path()
+        tail.move(to: CGPoint(x: 11, y: 12))
+        tail.addCurve(
+            to: CGPoint(x: 4, y: 5),
+            control1: CGPoint(x: 5, y: 14),
+            control2: CGPoint(x: 2, y: 10)
+        )
+        context.stroke(tail, with: outline, style: stroke)
+
+        let body = Path(
+            ellipseIn: CGRect(x: 9.5, y: 6, width: 21, height: 12)
+        )
+        context.fill(body, with: .color(palette.base))
+        context.stroke(body, with: outline, style: StrokeStyle(lineWidth: 1))
+
+        if style == "calico" {
+            var orangePatch = Path()
+            orangePatch.move(to: CGPoint(x: 10.5, y: 10))
+            orangePatch.addCurve(
+                to: CGPoint(x: 19, y: 6.6),
+                control1: CGPoint(x: 12.9, y: 6.6),
+                control2: CGPoint(x: 16.7, y: 5.3)
+            )
+            orangePatch.addLine(to: CGPoint(x: 17.5, y: 17.5))
+            orangePatch.addCurve(
+                to: CGPoint(x: 10.5, y: 14),
+                control1: CGPoint(x: 14.2, y: 17.3),
+                control2: CGPoint(x: 11.9, y: 16.1)
+            )
+            orangePatch.closeSubpath()
+            context.fill(orangePatch, with: .color(palette.orange))
+
+            var darkPatch = Path()
+            darkPatch.move(to: CGPoint(x: 21, y: 6.2))
+            darkPatch.addCurve(
+                to: CGPoint(x: 29.5, y: 11.3),
+                control1: CGPoint(x: 24.8, y: 6.4),
+                control2: CGPoint(x: 28.1, y: 8.2)
+            )
+            darkPatch.addLine(to: CGPoint(x: 25.7, y: 16.5))
+            darkPatch.addLine(to: CGPoint(x: 20.4, y: 17.2))
+            darkPatch.closeSubpath()
+            context.fill(darkPatch, with: .color(palette.dark))
+        } else if style == "cow" {
+            context.fill(
+                Path(ellipseIn: CGRect(x: 13, y: 7, width: 7, height: 7)),
+                with: .color(palette.dark)
+            )
+            context.fill(
+                Path(ellipseIn: CGRect(x: 22, y: 11, width: 6, height: 5)),
+                with: .color(palette.dark)
+            )
+        }
+
+        if style == "mackerel" || style == "cheese" {
+            for x in [15.0, 19.0, 23.5] {
+                var stripe = Path()
+                stripe.move(to: CGPoint(x: x, y: 7))
+                stripe.addLine(to: CGPoint(x: x - 0.5, y: 11))
+                context.stroke(
+                    stripe,
+                    with: .color(palette.stripe),
+                    style: StrokeStyle(lineWidth: 1.4, lineCap: .round)
                 )
-            Capsule()
-                .fill(baseColor)
-                .frame(width: 8, height: 2)
-                .rotationEffect(.degrees(-38))
-                .offset(x: -8, y: -3)
-            ForEach([-4.0, 4.0], id: \.self) { x in
-                Capsule()
-                    .fill(.black.opacity(0.75))
-                    .frame(width: 6, height: 1.4)
-                    .rotationEffect(.degrees(x < 0 ? 18 : -18))
-                    .offset(x: x, y: 5)
             }
         }
-    }
 
-    private var baseColor: Color {
-        switch style {
-        case "black": .black
-        case "gray", "mackerel": .gray
-        case "cheese": .orange
-        default: .white
+        let head = Path(
+            ellipseIn: CGRect(x: 25.8, y: 4.3, width: 10.4, height: 10.4)
+        )
+        context.fill(head, with: .color(palette.base))
+        context.stroke(head, with: outline, style: StrokeStyle(lineWidth: 1))
+
+        var ears = Path()
+        ears.move(to: CGPoint(x: 27, y: 6))
+        ears.addLine(to: CGPoint(x: 27.5, y: 1))
+        ears.addLine(to: CGPoint(x: 31.5, y: 5.2))
+        ears.move(to: CGPoint(x: 32.5, y: 5.3))
+        ears.addLine(to: CGPoint(x: 36, y: 1))
+        ears.addLine(to: CGPoint(x: 36.5, y: 7))
+        context.fill(ears, with: .color(palette.base))
+        context.stroke(ears, with: outline, style: stroke)
+
+        context.fill(
+            Path(ellipseIn: CGRect(x: 32.3, y: 8.3, width: 1.4, height: 1.4)),
+            with: .color(palette.eye)
+        )
+
+        let legPairs: [(CGPoint, CGPoint)] = isRunning
+            ? [
+                (CGPoint(x: 14, y: 16.5), CGPoint(x: 11, y: 22)),
+                (CGPoint(x: 19, y: 17), CGPoint(x: 22, y: 22)),
+                (CGPoint(x: 25, y: 16.5), CGPoint(x: 23, y: 22)),
+                (CGPoint(x: 29, y: 15.5), CGPoint(x: 33, y: 20)),
+            ]
+            : [
+                (CGPoint(x: 15, y: 16), CGPoint(x: 14, y: 20)),
+                (CGPoint(x: 20, y: 17), CGPoint(x: 20, y: 20)),
+                (CGPoint(x: 25, y: 17), CGPoint(x: 25, y: 20)),
+                (CGPoint(x: 30, y: 15.5), CGPoint(x: 30, y: 19.5)),
+            ]
+        for (start, end) in legPairs {
+            var leg = Path()
+            leg.move(to: start)
+            leg.addLine(to: end)
+            context.stroke(leg, with: outline, style: stroke)
         }
     }
 
-    private var markColor: Color {
+    private var accessibilityName: String {
+        "\(CatPalette(style: style).name) 고양이"
+    }
+}
+
+private struct CatPalette {
+    let base: Color
+    let outline: Color
+    let eye: Color
+    let orange: Color
+    let dark: Color
+    let stripe: Color
+    let name: String
+
+    init(style: String) {
+        orange = Color(red: 0.86, green: 0.53, blue: 0.23)
+        dark = Color(red: 0.22, green: 0.21, blue: 0.23)
         switch style {
-        case "calico": .orange
-        case "cow": .black
-        case "mackerel": Color(red: 0.25, green: 0.27, blue: 0.30)
-        case "cheese": Color(red: 0.66, green: 0.35, blue: 0.12)
-        default: baseColor
+        case "white":
+            base = Color(red: 1, green: 0.996, blue: 0.98)
+            outline = Color(red: 0.39, green: 0.39, blue: 0.41)
+            eye = Color(red: 0.13, green: 0.13, blue: 0.14)
+            stripe = outline
+            name = "흰색"
+        case "mackerel":
+            base = Color(red: 0.55, green: 0.57, blue: 0.58)
+            outline = Color(red: 0.27, green: 0.28, blue: 0.29)
+            eye = Color(red: 1, green: 0.96, blue: 0.72)
+            stripe = Color(red: 0.29, green: 0.31, blue: 0.32)
+            name = "고등어"
+        case "black":
+            base = Color(red: 0.13, green: 0.13, blue: 0.14)
+            outline = Color(red: 0.04, green: 0.04, blue: 0.04)
+            eye = Color(red: 0.96, green: 0.83, blue: 0.37)
+            stripe = outline
+            name = "검정"
+        case "gray":
+            base = Color(red: 0.64, green: 0.65, blue: 0.67)
+            outline = Color(red: 0.35, green: 0.37, blue: 0.39)
+            eye = .white
+            stripe = outline
+            name = "회색"
+        case "cheese":
+            base = Color(red: 0.90, green: 0.63, blue: 0.30)
+            outline = Color(red: 0.60, green: 0.39, blue: 0.17)
+            eye = Color(red: 0.26, green: 0.19, blue: 0.12)
+            stripe = Color(red: 0.66, green: 0.42, blue: 0.16)
+            name = "치즈"
+        case "cow":
+            base = Color(red: 1, green: 0.996, blue: 0.98)
+            outline = Color(red: 0.33, green: 0.34, blue: 0.35)
+            eye = Color(red: 0.13, green: 0.13, blue: 0.14)
+            stripe = outline
+            name = "젖소무늬"
+        default:
+            base = Color(red: 0.97, green: 0.95, blue: 0.91)
+            outline = Color(red: 0.31, green: 0.29, blue: 0.29)
+            eye = Color(red: 0.13, green: 0.13, blue: 0.14)
+            stripe = outline
+            name = "삼색"
         }
     }
+}
+
+private enum WidgetPalette {
+    static let ink = Color(red: 0.11, green: 0.11, blue: 0.12)
+    static let secondary = Color(red: 0.43, green: 0.43, blue: 0.45)
+    static let line = Color(red: 0.93, green: 0.93, blue: 0.94)
+    static let actionFill = Color(red: 0.93, green: 0.93, blue: 0.94)
+    static let focusFill = Color(red: 1.00, green: 0.95, blue: 0.85)
+    static let focusInk = Color(red: 0.57, green: 0.38, blue: 0.08)
+    static let weather = Color(red: 0.31, green: 0.47, blue: 0.59)
+    static let now = Color(red: 1.00, green: 0.23, blue: 0.19)
 }
 
 struct TaptionWidgetActionIntent: AppIntent {
@@ -614,18 +725,21 @@ struct TaptionPlanLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TaptionActivityAttributes.self) { context in
             TaptionLiveActivityLockScreenView(context: context)
-                .activityBackgroundTint(.white)
-                .activitySystemActionForegroundColor(.black)
+                .activityBackgroundTint(
+                    Color(red: 0.08, green: 0.08, blue: 0.09)
+                )
+                .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     WidgetCat(style: context.state.catStyle)
-                        .frame(width: 24, height: 18)
+                        .frame(width: 30, height: 21)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     Text(context.state.title)
                         .font(.headline)
                         .lineLimit(1)
+                        .foregroundStyle(.white)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 10) {
@@ -633,18 +747,21 @@ struct TaptionPlanLiveActivity: Widget {
                             timerInterval: context.state.startedAt...context.state.endsAt,
                             countsDown: false
                         )
-                        .tint(.black)
+                        .tint(Color(red: 0.48, green: 0.37, blue: 0.65))
                         Button(
                             intent: TaptionWidgetActionIntent(
                                 planID: context.attributes.planID.uuidString,
                                 action: .stopCurrentActivity
                             )
                         ) {
-                            Image(systemName: "stop.fill")
+                            Text("종료")
                                 .font(.caption.bold())
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(.white, in: Capsule())
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.black)
+                        .buttonStyle(.plain)
                     }
                 }
             } compactLeading: {
@@ -655,8 +772,10 @@ struct TaptionPlanLiveActivity: Widget {
                     .monospacedDigit()
                     .frame(width: 42)
             } minimal: {
-                Image(systemName: "chart.bar.xaxis")
+                WidgetCat(style: context.state.catStyle)
+                    .frame(width: 18, height: 13)
             }
+            .keylineTint(Color(red: 0.48, green: 0.37, blue: 0.65))
         }
     }
 }
@@ -665,34 +784,54 @@ private struct TaptionLiveActivityLockScreenView: View {
     let context: ActivityViewContext<TaptionActivityAttributes>
 
     var body: some View {
-        HStack(spacing: 12) {
-            WidgetCat(style: context.state.catStyle)
-                .frame(width: 30, height: 20)
-            VStack(alignment: .leading, spacing: 5) {
+        VStack(spacing: 0) {
+            HStack {
                 Text(context.state.title)
-                    .font(.headline)
+                    .font(.system(size: 13, weight: .bold))
                     .lineLimit(1)
-                ProgressView(
-                    timerInterval: context.state.startedAt...context.state.endsAt,
-                    countsDown: false
-                )
-                .tint(.black)
+                Spacer()
+                Text(remainingLabel)
+                    .font(.system(size: 11))
+                    .foregroundStyle(
+                        Color(red: 0.78, green: 0.78, blue: 0.80)
+                    )
             }
-            Text(context.state.endsAt, style: .time)
-                .font(.caption.bold())
-            Button(
-                intent: TaptionWidgetActionIntent(
-                    planID: context.attributes.planID.uuidString,
-                    action: .stopCurrentActivity
-                )
-            ) {
-                Image(systemName: "stop.fill")
-                    .font(.caption.bold())
+
+            ProgressView(
+                timerInterval:
+                    context.state.startedAt...context.state.endsAt,
+                countsDown: false
+            )
+            .progressViewStyle(.linear)
+            .tint(Color(red: 0.48, green: 0.37, blue: 0.65))
+            .padding(.vertical, 13)
+
+            HStack {
+                Text(timeLabel)
+                    .font(.system(size: 11))
+                    .monospacedDigit()
+                Spacer()
+                Button(
+                    intent: TaptionWidgetActionIntent(
+                        planID: context.attributes.planID.uuidString,
+                        action: .stopCurrentActivity
+                    )
+                ) {
+                    Text("종료")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(WidgetPalette.ink)
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 7)
+                        .background(
+                            .white,
+                            in: RoundedRectangle(cornerRadius: 12)
+                        )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.black)
         }
-        .padding()
+        .foregroundStyle(.white)
+        .padding(14)
         .widgetURL(
             URL(
                 string:
@@ -700,4 +839,36 @@ private struct TaptionLiveActivityLockScreenView: View {
             )
         )
     }
+
+    private var remainingLabel: String {
+        let minutes = max(
+            0,
+            Int(
+                ceil(
+                    context.state.endsAt.timeIntervalSinceNow / 60
+                )
+            )
+        )
+        return "\(minutes)분 남음"
+    }
+
+    private var timeLabel: String {
+        let start = context.state.startedAt.formatted(
+            date: .omitted,
+            time: .shortened
+        )
+        let end = context.state.endsAt.formatted(
+            date: .omitted,
+            time: .shortened
+        )
+        return "\(start) → \(end)"
+    }
 }
+
+#if DEBUG
+#Preview(as: .systemMedium) {
+    TaptionScheduleWidget()
+} timeline: {
+    TaptionScheduleEntry(date: .now, payload: .placeholder)
+}
+#endif

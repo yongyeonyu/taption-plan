@@ -458,6 +458,9 @@ struct HealthActual: Identifiable, Codable, Hashable, Sendable {
     var distanceMeters: Double?
     var energyKilocalories: Double?
     var sourceName: String
+    var linkedPlanID: UUID? = nil
+    var linkedTitle: String? = nil
+    var linkedCategoryID: String? = nil
 }
 
 // MARK: - Location and movement
@@ -468,6 +471,40 @@ struct GeoPoint: Codable, Hashable, Sendable {
     var altitude: Double
     var horizontalAccuracy: Double
     var verticalAccuracy: Double
+}
+
+struct FloorCalibration: Codable, Hashable, Sendable {
+    var placeName: String
+    var referenceFloor: Int
+    var floorHeightMeters: Double
+    var referencePoint: GeoPoint?
+    var referenceRelativeAltitudeMeters: Double?
+    var referencePressureKilopascals: Double?
+    var referenceAltimeterSessionID: UUID?
+    var capturedAt: Date?
+
+    static let homeTwentiethFloor = FloorCalibration(
+        placeName: "집",
+        referenceFloor: 20,
+        floorHeightMeters: 3,
+        referencePoint: nil,
+        referenceRelativeAltitudeMeters: nil,
+        referencePressureKilopascals: nil,
+        referenceAltimeterSessionID: nil,
+        capturedAt: nil
+    )
+
+    var isCaptured: Bool {
+        referencePoint != nil && capturedAt != nil
+    }
+}
+
+struct CalibratedAltitudeEstimate: Codable, Hashable, Sendable {
+    var floor: Int
+    var seaLevelAltitudeMeters: Double
+    var verticalAccuracyMeters: Double
+    var confidence: ConfidenceLevel
+    var evidence: [String]
 }
 
 struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
@@ -538,6 +575,37 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+struct TravelModeCorrection: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var fromPlaceKey: String?
+    var toPlaceKey: String?
+    var span: TimeSpan
+    var mode: TravelMode
+    var inferredMode: TravelMode
+    var inferredConfidence: ConfidenceLevel
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        fromPlaceKey: String? = nil,
+        toPlaceKey: String? = nil,
+        span: TimeSpan,
+        mode: TravelMode,
+        inferredMode: TravelMode,
+        inferredConfidence: ConfidenceLevel,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.fromPlaceKey = fromPlaceKey
+        self.toPlaceKey = toPlaceKey
+        self.span = span
+        self.mode = mode
+        self.inferredMode = inferredMode
+        self.inferredConfidence = inferredConfidence
+        self.updatedAt = updatedAt
+    }
+}
+
 struct FloorTransition: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var placeKey: String
@@ -567,6 +635,8 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var motion: MotionKind
     var motionConfidence: ConfidenceLevel
     var relativeAltitudeMeters: Double?
+    var pressureKilopascals: Double?
+    var altimeterSessionID: UUID?
     var floorsAscended: Int?
     var floorsDescended: Int?
     var stepCount: Int?
@@ -593,6 +663,8 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         motion: MotionKind = .unknown,
         motionConfidence: ConfidenceLevel = .low,
         relativeAltitudeMeters: Double? = nil,
+        pressureKilopascals: Double? = nil,
+        altimeterSessionID: UUID? = nil,
         floorsAscended: Int? = nil,
         floorsDescended: Int? = nil,
         stepCount: Int? = nil,
@@ -618,6 +690,8 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.motion = motion
         self.motionConfidence = motionConfidence
         self.relativeAltitudeMeters = relativeAltitudeMeters
+        self.pressureKilopascals = pressureKilopascals
+        self.altimeterSessionID = altimeterSessionID
         self.floorsAscended = floorsAscended
         self.floorsDescended = floorsDescended
         self.stepCount = stepCount
@@ -752,6 +826,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var healthEnabled: Bool
     var locationEnabled: Bool
     var backgroundPreciseLocationEnabled: Bool
+    var sensorCollectionProfile: SensorCollectionProfile
+    var floorCalibration: FloorCalibration?
+    var movementCorrections: [TravelModeCorrection]
     var weatherEnabled: Bool
     var notificationsEnabled: Bool
     var permissions: [PermissionFeature: PermissionState]
@@ -767,6 +844,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         healthEnabled: false,
         locationEnabled: false,
         backgroundPreciseLocationEnabled: false,
+        sensorCollectionProfile: .balanced,
+        floorCalibration: .homeTwentiethFloor,
+        movementCorrections: [],
         weatherEnabled: false,
         notificationsEnabled: false,
         permissions: Dictionary(
@@ -785,6 +865,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         healthEnabled: Bool,
         locationEnabled: Bool,
         backgroundPreciseLocationEnabled: Bool,
+        sensorCollectionProfile: SensorCollectionProfile,
+        floorCalibration: FloorCalibration? = .homeTwentiethFloor,
+        movementCorrections: [TravelModeCorrection] = [],
         weatherEnabled: Bool,
         notificationsEnabled: Bool,
         permissions: [PermissionFeature: PermissionState]
@@ -799,6 +882,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.healthEnabled = healthEnabled
         self.locationEnabled = locationEnabled
         self.backgroundPreciseLocationEnabled = backgroundPreciseLocationEnabled
+        self.sensorCollectionProfile = sensorCollectionProfile
+        self.floorCalibration = floorCalibration
+        self.movementCorrections = movementCorrections
         self.weatherEnabled = weatherEnabled
         self.notificationsEnabled = notificationsEnabled
         self.permissions = permissions
@@ -815,6 +901,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case healthEnabled
         case locationEnabled
         case backgroundPreciseLocationEnabled
+        case sensorCollectionProfile
+        case floorCalibration
+        case movementCorrections
         case weatherEnabled
         case notificationsEnabled
         case permissions
@@ -863,6 +952,18 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             Bool.self,
             forKey: .backgroundPreciseLocationEnabled
         ) ?? defaults.backgroundPreciseLocationEnabled
+        sensorCollectionProfile = try values.decodeIfPresent(
+            SensorCollectionProfile.self,
+            forKey: .sensorCollectionProfile
+        ) ?? defaults.sensorCollectionProfile
+        floorCalibration = try values.decodeIfPresent(
+            FloorCalibration.self,
+            forKey: .floorCalibration
+        ) ?? defaults.floorCalibration
+        movementCorrections = try values.decodeIfPresent(
+            [TravelModeCorrection].self,
+            forKey: .movementCorrections
+        ) ?? defaults.movementCorrections
         weatherEnabled = try values.decodeIfPresent(
             Bool.self,
             forKey: .weatherEnabled

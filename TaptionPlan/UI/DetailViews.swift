@@ -16,7 +16,7 @@ struct QuickActionSheet: View {
 
             HStack(spacing: 8) {
                 Text(item.title)
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.taption(size: 16, weight: .bold))
                 Spacer()
                 if let planID = item.planID {
                     Button {
@@ -28,7 +28,7 @@ struct QuickActionSheet: View {
                         }
                     } label: {
                         Label("편집", systemImage: "slider.horizontal.3")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.taption(size: 9, weight: .bold))
                             .foregroundStyle(Color.tpSecondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 6)
@@ -45,9 +45,9 @@ struct QuickActionSheet: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(item.time)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.taption(size: 15, weight: .bold))
                     Text(item.context)
-                        .font(.system(size: 11))
+                        .font(.taption(size: 11))
                         .foregroundStyle(Color.tpSecondary)
                 }
                 Spacer(minLength: 4)
@@ -62,7 +62,7 @@ struct QuickActionSheet: View {
                                 ? "calendar.badge.plus"
                                 : "checkmark.circle.fill"
                         )
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.taption(size: 16, weight: .semibold))
                         .foregroundStyle(
                             selectedPlan?.externalEventID == nil
                                 ? Color.tpSecondary
@@ -98,18 +98,18 @@ struct QuickActionSheet: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "note.text")
-                        .font(.system(size: 15))
+                        .font(.taption(size: 15))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("메모 \(itemMemos.count)개")
-                            .font(.system(size: 10.5, weight: .bold))
+                            .font(.taption(size: 10.5, weight: .bold))
                             .foregroundStyle(Color.tpInk)
                         Text(lastMemoLabel)
-                            .font(.system(size: 9))
+                            .font(.taption(size: 9))
                             .foregroundStyle(Color.tpSecondary)
                     }
                     Spacer()
                     Text("보기")
-                        .font(.system(size: 9.5, weight: .bold))
+                        .font(.taption(size: 9.5, weight: .bold))
                 }
                 .foregroundStyle(Color.tpStudyDark)
                 .padding(.horizontal, 10)
@@ -184,7 +184,7 @@ struct QuickActionSheet: View {
     ) -> some View {
         Button(action: action) {
             Label(title, systemImage: icon)
-                .font(.system(size: 12, weight: .bold))
+                .font(.taption(size: 12, weight: .bold))
                 .foregroundStyle(style == .primary ? Color.white : style == .health ? Color(red: 0.55, green: 0.20, blue: 0.16) : Color.tpInk)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -229,6 +229,7 @@ struct MemoDetailView: View {
     @State private var selectedTag = "결정"
     @State private var memo = ""
     @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var editingMemoID: UUID?
 
     private let tags: [(label: String, kind: MemoKind)] = [
         ("결정", .decision),
@@ -247,12 +248,12 @@ struct MemoDetailView: View {
                 VStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(planContext)
-                            .font(.system(size: 9.5, weight: .bold))
+                            .font(.taption(size: 9.5, weight: .bold))
                             .foregroundStyle(categoryColor)
                         Text(selectedPlan?.title ?? "계획을 선택해 주세요")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.taption(size: 16, weight: .bold))
                         Text(hierarchyText)
-                            .font(.system(size: 10))
+                            .font(.taption(size: 10))
                             .foregroundStyle(Color.tpSecondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -265,7 +266,7 @@ struct MemoDetailView: View {
                                 selectedTag = tag.label
                             } label: {
                                 Text(tag.label)
-                                    .font(.system(size: 9, weight: .bold))
+                                    .font(.taption(size: 9, weight: .bold))
                                     .foregroundStyle(selectedTag == tag.label ? Color(red: 0.36, green: 0.27, blue: 0.49) : Color.tpSecondary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 7)
@@ -290,18 +291,19 @@ struct MemoDetailView: View {
                         } else {
                             ForEach(planMemos) { entry in
                                 memoEntry(entry)
-                                    .contextMenu {
-                                        Button("삭제", role: .destructive) {
-                                            model.deleteMemo(entry.id)
-                                        }
-                                    }
                             }
                         }
                     }
 
                     VStack(spacing: 8) {
-                        TextField("이 액션 아이템에 짧은 메모 남기기…", text: $memo, axis: .vertical)
-                            .font(.system(size: 11))
+                        TextField(
+                            editingMemoID == nil
+                                ? "이 액션 아이템에 짧은 메모 남기기…"
+                                : "메모 내용 수정…",
+                            text: $memo,
+                            axis: .vertical
+                        )
+                            .font(.taption(size: 11))
                             .lineLimit(2...3)
                             .padding(.horizontal, 2)
                             .frame(minHeight: 40, alignment: .top)
@@ -331,9 +333,9 @@ struct MemoDetailView: View {
                             ) {
                                 VStack(spacing: 2) {
                                     Image(systemName: "photo")
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .font(.taption(size: 12, weight: .semibold))
                                     Text("사진")
-                                        .font(.system(size: 8, weight: .bold))
+                                        .font(.taption(size: 8, weight: .bold))
                                 }
                                 .foregroundStyle(Color.tpSecondary)
                                 .frame(width: 42, height: 34)
@@ -344,8 +346,20 @@ struct MemoDetailView: View {
                             }
                             .buttonStyle(.plain)
                             Spacer()
+                            if editingMemoID != nil {
+                                Button("취소", action: cancelEditing)
+                                    .font(.taption(size: 9.5, weight: .bold))
+                                    .foregroundStyle(Color.tpSecondary)
+                                    .buttonStyle(.plain)
+                            }
                             Button(action: saveMemo) {
-                                memoTool("plus", "추가", dark: true)
+                                memoTool(
+                                    editingMemoID == nil
+                                        ? "plus" : "checkmark",
+                                    editingMemoID == nil
+                                        ? "추가" : "저장",
+                                    dark: true
+                                )
                             }
                             .buttonStyle(.plain)
                             .disabled(
@@ -382,17 +396,39 @@ struct MemoDetailView: View {
     private func memoEntry(_ entry: ActionMemo) -> some View {
         HStack(alignment: .top, spacing: 7) {
             Text(entry.createdAt.formatted(date: .omitted, time: .shortened))
-                .font(.system(size: 9))
+                .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
                 .frame(width: 38, alignment: .trailing)
                 .padding(.top, 9)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(entry.kind.displayName)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(Color.tpStudyDark)
+                HStack(spacing: 5) {
+                    Text(entry.kind.displayName)
+                        .font(.taption(size: 9, weight: .bold))
+                        .foregroundStyle(Color.tpStudyDark)
+                    Spacer()
+                    Menu {
+                        Button("수정", systemImage: "pencil") {
+                            beginEditing(entry)
+                        }
+                        Button(
+                            "삭제",
+                            systemImage: "trash",
+                            role: .destructive
+                        ) {
+                            deleteMemo(entry.id)
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.taption(size: 10, weight: .bold))
+                            .foregroundStyle(Color.tpSecondary)
+                            .frame(width: 28, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("메모 메뉴")
+                }
                 Text(entry.text)
-                    .font(.system(size: 11))
+                    .font(.taption(size: 11))
                     .lineSpacing(3)
                 if !entry.attachments.isEmpty {
                     HStack(spacing: 5) {
@@ -493,12 +529,40 @@ struct MemoDetailView: View {
     }
 
     private func saveMemo() {
-        model.addMemo(
-            text: memo,
-            kind: selectedMemoKind,
-            to: selectedPlan?.id
-        )
+        if let editingMemoID {
+            model.updateMemo(
+                editingMemoID,
+                text: memo,
+                kind: selectedMemoKind
+            )
+        } else {
+            model.addMemo(
+                text: memo,
+                kind: selectedMemoKind,
+                to: selectedPlan?.id
+            )
+        }
+        cancelEditing()
+    }
+
+    private func beginEditing(_ entry: ActionMemo) {
+        editingMemoID = entry.id
+        memo = entry.text
+        selectedTag = tags.first(where: {
+            $0.kind == entry.kind
+        })?.label ?? "결정"
+    }
+
+    private func cancelEditing() {
+        editingMemoID = nil
         memo = ""
+    }
+
+    private func deleteMemo(_ memoID: UUID) {
+        if editingMemoID == memoID {
+            cancelEditing()
+        }
+        model.deleteMemo(memoID)
     }
 
     private var selectedMemoKind: MemoKind {
@@ -509,7 +573,7 @@ struct MemoDetailView: View {
 
     private func memoTool(_ icon: String, _ title: String, dark: Bool = false) -> some View {
         Label(title, systemImage: icon)
-            .font(.system(size: 9.5, weight: .bold))
+            .font(.taption(size: 9.5, weight: .bold))
             .foregroundStyle(dark ? Color.white : Color.tpSecondary)
             .padding(.horizontal, 9)
             .padding(.vertical, 7)
@@ -532,7 +596,7 @@ private struct MemoPhotoThumbnail: View {
                     .scaledToFill()
             } else {
                 Image(systemName: "photo")
-                    .font(.system(size: 13))
+                    .font(.taption(size: 13))
                     .foregroundStyle(Color.tpPhotoDark)
             }
         }
@@ -562,7 +626,7 @@ struct CatPickerView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 9) {
                     Text("모양만 달라지고, 일정 위를 달리는 위치와 속도는 모두 같습니다.")
-                        .font(.system(size: 9))
+                        .font(.taption(size: 9))
                         .foregroundStyle(Color.tpSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 2)
@@ -578,10 +642,10 @@ struct CatPickerView: View {
                         .frame(height: 45)
 
                         Text("\(model.selectedCatCoat.rawValue) · 위젯 미리보기")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.taption(size: 11, weight: .bold))
                             .padding(.top, 7)
                         Text("선택한 모습이 홈 위젯 · 잠금 화면 · 앱에 함께 적용")
-                            .font(.system(size: 7.5))
+                            .font(.taption(size: 7.5))
                             .foregroundStyle(Color.tpSecondary)
                             .padding(.top, 2)
                     }
@@ -612,10 +676,10 @@ struct CatPickerView: View {
                                     CatFaceView(coat: coat)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(coat.rawValue)
-                                            .font(.system(size: 9.5, weight: .bold))
+                                            .font(.taption(size: 9.5, weight: .bold))
                                             .foregroundStyle(Color.tpInk)
                                         Text(coat.caption)
-                                            .font(.system(size: 6.8))
+                                            .font(.taption(size: 6.8))
                                             .foregroundStyle(Color.tpSecondary)
                                     }
                                     Spacer(minLength: 0)
@@ -633,7 +697,7 @@ struct CatPickerView: View {
                                 .overlay(alignment: .topTrailing) {
                                     if model.selectedCatCoat == coat {
                                         Image(systemName: "checkmark")
-                                            .font(.system(size: 8, weight: .black))
+                                            .font(.taption(size: 8, weight: .black))
                                             .foregroundStyle(.white)
                                             .frame(width: 15, height: 15)
                                             .background(Color.tpInk, in: Circle())
@@ -649,7 +713,7 @@ struct CatPickerView: View {
                         model.detail = nil
                     } label: {
                         Text("\(model.selectedCatCoat.rawValue)로 적용")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.taption(size: 10, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
@@ -661,7 +725,7 @@ struct CatPickerView: View {
                         "설정에서 언제든 바꿀 수 있습니다. ‘동작 줄이기’가 켜지면 선택한 고양이가 정지 자세로 표시됩니다.",
                         systemImage: "paintpalette"
                     )
-                    .font(.system(size: 7.3))
+                    .font(.taption(size: 7.3))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -692,7 +756,7 @@ struct InferenceDetailView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 8) {
                     Text("이동은 아래 10종류만 사용합니다. 센서가 직접 구분하지 못하는 수단은 여러 신호를 합쳐 신뢰도와 함께 표시합니다.")
-                        .font(.system(size: 9.5))
+                        .font(.taption(size: 9.5))
                         .foregroundStyle(Color.tpSecondary)
                         .lineSpacing(3)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -708,9 +772,9 @@ struct InferenceDetailView: View {
                             } label: {
                                 VStack(spacing: 4) {
                                     Image(systemName: mode.systemImage)
-                                        .font(.system(size: 15))
+                                        .font(.taption(size: 15))
                                     Text(mode.displayName)
-                                        .font(.system(size: 7.5, weight: .bold))
+                                        .font(.taption(size: 7.5, weight: .bold))
                                 }
                                 .foregroundStyle(
                                     selectedTravel?.mode == mode
@@ -768,7 +832,7 @@ struct InferenceDetailView: View {
                         "iPhone GPS·모션·기압이 기본 · Apple Watch 운동·경로·활동 데이터는 권한을 받은 경우에만 보조",
                         systemImage: "applewatch"
                     )
-                    .font(.system(size: 7.5))
+                    .font(.taption(size: 7.5))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -796,7 +860,7 @@ struct InferenceDetailView: View {
         VStack(spacing: 7) {
             HStack(spacing: 7) {
                 Image(systemName: travel.mode.systemImage)
-                    .font(.system(size: 15))
+                    .font(.taption(size: 15))
                     .foregroundStyle(Color.tpTransitDark)
                     .frame(width: 29, height: 29)
                     .background(
@@ -807,16 +871,20 @@ struct InferenceDetailView: View {
                     Text(
                         "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened))"
                     )
-                        .font(.system(size: 8))
+                        .font(.taption(size: 8))
                         .foregroundStyle(Color.tpSecondary)
                     Text(
                         "\(travel.mode.displayName) · \(travel.span.duration.shortDuration)"
                     )
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.taption(size: 11, weight: .bold))
                 }
                 Spacer()
-                Text(travel.confidence.displayName)
-                    .font(.system(size: 7.5, weight: .black))
+                Text(
+                    travel.isConfirmed
+                        ? "확인됨"
+                        : travel.confidence.displayName
+                )
+                    .font(.taption(size: 7.5, weight: .black))
                     .foregroundStyle(
                         travel.confidence == .high
                             ? Color(red: 0.18, green: 0.46, blue: 0.28)
@@ -839,13 +907,29 @@ struct InferenceDetailView: View {
             }
 
             HStack(spacing: 6) {
-                Button("맞아요") {
-                    model.confirmTravel(travel.id, mode: travel.mode)
+                if travel.isConfirmed {
+                    Button("자동 판정으로 되돌리기") {
+                        model.forgetTravelConfirmation(travel.id)
+                    }
+                    .foregroundStyle(Color.tpSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(
+                        Color(red: 0.94, green: 0.94, blue: 0.95),
+                        in: RoundedRectangle(cornerRadius: 9)
+                    )
+                } else {
+                    Button("맞아요") {
+                        model.confirmTravel(travel.id, mode: travel.mode)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(
+                        Color.tpInk,
+                        in: RoundedRectangle(cornerRadius: 9)
+                    )
                 }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
-                .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 9))
                 Button("다른 수단") {
                     selectedTravelID = travel.id
                 }
@@ -857,7 +941,7 @@ struct InferenceDetailView: View {
                     in: RoundedRectangle(cornerRadius: 9)
                 )
             }
-            .font(.system(size: 8.5, weight: .bold))
+            .font(.taption(size: 8.5, weight: .bold))
             .buttonStyle(.plain)
         }
         .padding(10)
@@ -876,7 +960,7 @@ struct InferenceDetailView: View {
         VStack(spacing: 7) {
             HStack(spacing: 7) {
                 Image(systemName: "building.2")
-                    .font(.system(size: 15))
+                    .font(.taption(size: 15))
                     .foregroundStyle(Color.tpPlaceDark)
                     .frame(width: 29, height: 29)
                     .background(
@@ -890,16 +974,16 @@ struct InferenceDetailView: View {
                             time: .shortened
                         )
                     )
-                    .font(.system(size: 8))
+                    .font(.taption(size: 8))
                     .foregroundStyle(Color.tpSecondary)
                     Text(
                         "\(floor.fromFloor.map { "\($0)층" } ?? "기준층 미확인") → \(floorOverrides[floor.id] ?? floor.toFloor ?? 0)층"
                     )
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.taption(size: 11, weight: .bold))
                 }
                 Spacer()
                 Text(floor.confidence.displayName)
-                    .font(.system(size: 7.5, weight: .black))
+                    .font(.taption(size: 7.5, weight: .black))
                     .foregroundStyle(
                         floor.confidence == .high
                             ? Color(red: 0.18, green: 0.46, blue: 0.28)
@@ -920,7 +1004,7 @@ struct InferenceDetailView: View {
                     Image(systemName: "minus")
                 }
                 Text("\(floorOverrides[floor.id] ?? floor.toFloor ?? 0)층")
-                    .font(.system(size: 10, weight: .black))
+                    .font(.taption(size: 10, weight: .black))
                     .frame(maxWidth: .infinity)
                 Button {
                     floorOverrides[floor.id, default: 0] += 1
@@ -943,7 +1027,7 @@ struct InferenceDetailView: View {
                     in: RoundedRectangle(cornerRadius: 9)
                 )
             }
-            .font(.system(size: 8.5, weight: .bold))
+            .font(.taption(size: 8.5, weight: .bold))
             .buttonStyle(.plain)
         }
         .padding(10)
@@ -952,7 +1036,7 @@ struct InferenceDetailView: View {
 
     private func signalChip(_ signal: String) -> some View {
         Text(signal)
-            .font(.system(size: 7.5, weight: .semibold))
+            .font(.taption(size: 7.5, weight: .semibold))
             .foregroundStyle(Color.tpSecondary)
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
@@ -989,14 +1073,14 @@ struct InferenceDetailView: View {
     private var privacyCard: some View {
         HStack(spacing: 6) {
             Image(systemName: "lock")
-                .font(.system(size: 15))
+                .font(.taption(size: 15))
                 .foregroundStyle(Color.tpPlaceDark)
             VStack(alignment: .leading, spacing: 2) {
                 Text("모르면 확정하지 않음")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Text("‘차량 추정’ 또는 ‘층 미확인’으로 남기고 한 번 탭해 수정")
-                    .font(.system(size: 8))
+                    .font(.taption(size: 8))
                     .foregroundStyle(Color.tpSecondary)
             }
         }
@@ -1049,11 +1133,16 @@ struct LocationTimelineView: View {
                             Text(locationStatusTitle)
                                 .fontWeight(.bold)
                             Spacer()
-                            Text(sensorSignalLabel)
-                                .font(.system(size: 9.5))
+                            Text(
+                                model.currentAltitudeStatus
+                                    ?? sensorSignalLabel
+                            )
+                                .font(.taption(size: 9.5))
                                 .foregroundStyle(Color.tpSecondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
                         }
-                        .font(.system(size: 10.5))
+                        .font(.taption(size: 10.5))
                         .foregroundStyle(Color(red: 0.14, green: 0.37, blue: 0.49))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
@@ -1105,14 +1194,14 @@ struct LocationTimelineView: View {
 
                     HStack(spacing: 6) {
                         Image(systemName: "lock")
-                            .font(.system(size: 15))
+                            .font(.taption(size: 15))
                             .foregroundStyle(Color.tpPlaceDark)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("센서 결과는 신뢰도와 함께 기기 안에서 정리")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.taption(size: 9, weight: .bold))
                                 .foregroundStyle(Color.tpInk)
                             Text("정확한 주소·원시 좌표는 기본 타임라인에 표시하지 않음")
-                                .font(.system(size: 8))
+                                .font(.taption(size: 8))
                         }
                     }
                     .foregroundStyle(Color.tpSecondary)
@@ -1139,7 +1228,7 @@ struct LocationTimelineView: View {
             Color.clear.frame(width: 50)
             ForEach(viewportTickDates, id: \.self) { date in
                 Text(viewportTickLabel(date))
-                    .font(.system(size: 10))
+                    .font(.taption(size: 10))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -1232,7 +1321,7 @@ struct LocationTimelineView: View {
                 .frame(width: 2, height: proxy.size.height)
                 .position(x: x, y: proxy.size.height / 2)
             Text(date.formatted(date: .omitted, time: .shortened))
-                .font(.system(size: 9, weight: .bold))
+                .font(.taption(size: 9, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -1246,13 +1335,13 @@ struct LocationTimelineView: View {
         VStack(spacing: 0) {
             HStack {
                 Text("오늘 움직인 경로")
-                    .font(.system(size: 10.5, weight: .bold))
+                    .font(.taption(size: 10.5, weight: .bold))
                 Spacer()
                 HStack(spacing: 3) {
                     Circle().fill(Color(red: 0.27, green: 0.83, blue: 0.51)).frame(width: 5, height: 5)
                     Text("위 시간축과 실시간 동기화")
                 }
-                .font(.system(size: 7.5))
+                .font(.taption(size: 7.5))
                 .foregroundStyle(Color(red: 0.56, green: 0.94, blue: 0.72))
             }
             .padding(.bottom, 4)
@@ -1266,7 +1355,7 @@ struct LocationTimelineView: View {
                         )
                 }
             }
-            .font(.system(size: 6))
+            .font(.taption(size: 6))
             .foregroundStyle(Color(red: 0.41, green: 0.41, blue: 0.44))
 
             GeometryReader { proxy in
@@ -1305,14 +1394,14 @@ struct LocationTimelineView: View {
                 ForEach(dayFloors) { floor in
                     let point = fraction(for: floor.span.end)
                     Text(floor.floorChangeLabel)
-                        .font(.system(size: 6, weight: .black))
+                        .font(.taption(size: 6, weight: .black))
                         .foregroundStyle(.white)
                         .position(x: proxy.size.width * point, y: 47)
                 }
 
                 if dayPlaces.isEmpty && dayTravel.isEmpty {
                     Text("오늘의 위치·이동 기록이 아직 없습니다")
-                        .font(.system(size: 8.5, weight: .bold))
+                        .font(.taption(size: 8.5, weight: .bold))
                         .foregroundStyle(Color.white.opacity(0.72))
                         .position(
                             x: proxy.size.width / 2,
@@ -1343,7 +1432,7 @@ struct LocationTimelineView: View {
                                 time: .shortened
                             )
                         )
-                        .font(.system(size: 6, weight: .black))
+                        .font(.taption(size: 6, weight: .black))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 2)
@@ -1393,7 +1482,7 @@ struct LocationTimelineView: View {
                     Color(red: 0.78, green: 0.78, blue: 0.80)
                 )
             }
-            .font(.system(size: 6.8))
+            .font(.taption(size: 6.8))
             .foregroundStyle(Color(red: 0.56, green: 0.56, blue: 0.58))
             .padding(.top, 6)
             .overlay(alignment: .top) {
@@ -1411,7 +1500,7 @@ struct LocationTimelineView: View {
         HStack(spacing: 4) {
             RoundedRectangle(cornerRadius: 3).fill(color).frame(width: 8, height: 8)
             Text(title)
-                .font(.system(size: compact ? 9 : 10.5, weight: .semibold))
+                .font(.taption(size: compact ? 9 : 10.5, weight: .semibold))
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
         }
@@ -1421,7 +1510,7 @@ struct LocationTimelineView: View {
 
     private func locationBar(_ title: String, _ start: CGFloat, _ length: CGFloat, _ proxy: GeometryProxy) -> some View {
         Text(title)
-            .font(.system(size: 9.5, weight: .black))
+            .font(.taption(size: 9.5, weight: .black))
             .foregroundStyle(Color(red: 0.14, green: 0.37, blue: 0.49))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
@@ -1433,7 +1522,7 @@ struct LocationTimelineView: View {
 
     private func moveBar(_ icon: String, _ start: CGFloat, _ length: CGFloat, _ proxy: GeometryProxy, dashed: Bool = false) -> some View {
         Image(systemName: icon)
-            .font(.system(size: 11))
+            .font(.taption(size: 11))
             .foregroundStyle(Color(red: 0.44, green: 0.29, blue: 0.09))
             .frame(width: max(14, proxy.size.width * length), height: 29)
             .background(Color.tpTransit.opacity(dashed ? 0.68 : 1), in: RoundedRectangle(cornerRadius: 9))
@@ -1446,7 +1535,7 @@ struct LocationTimelineView: View {
 
     private func simpleBar(_ title: String, start: CGFloat, length: CGFloat, proxy: GeometryProxy) -> some View {
         Text(title)
-            .font(.system(size: 10.5, weight: .semibold))
+            .font(.taption(size: 10.5, weight: .semibold))
             .foregroundStyle(Color.tpInk.opacity(0.64))
             .lineLimit(1)
             .padding(.horizontal, 6)
@@ -1483,7 +1572,7 @@ struct LocationTimelineView: View {
                 .overlay { Circle().stroke(.white, lineWidth: 2) }
                 .frame(width: 11, height: 11)
             Text(title)
-                .font(.system(size: 6))
+                .font(.taption(size: 6))
                 .multilineTextAlignment(.center)
                 .fixedSize()
                 .offset(y: above ? -19 : 19)
@@ -1549,11 +1638,14 @@ struct LocationTimelineView: View {
     }
 
     private func placeLabel(_ place: PlaceStay) -> String {
-        guard let floor = place.floor else { return place.displayName }
-        let suffix = "\(floor)F"
-        return place.displayName.contains(suffix)
-            ? place.displayName
-            : "\(place.displayName)·\(suffix)"
+        var values = [place.displayName]
+        if let floor = place.floor {
+            values.append("\(floor)F")
+        }
+        if let point = place.point {
+            values.append("해발 \(Int(point.altitude.rounded()))m")
+        }
+        return values.joined(separator: "·")
     }
 
     private func fraction(for date: Date) -> CGFloat {
@@ -1693,7 +1785,7 @@ struct LocationTimelineView: View {
                 .fill(Color.tpPlaceDark)
                 .frame(width: 2, height: 64)
             Text(floor.floorChangeLabel)
-                .font(.system(size: 6.5, weight: .black))
+                .font(.taption(size: 6.5, weight: .black))
                 .foregroundStyle(Color.tpPlaceDark)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 2)
@@ -1709,7 +1801,7 @@ struct LocationTimelineView: View {
 
     private func emptyRowText(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 8.5))
+            .font(.taption(size: 8.5))
             .foregroundStyle(Color.tpSecondary.opacity(0.72))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -1727,14 +1819,14 @@ struct WidgetPreviewView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("홈 화면 · 중간 위젯")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.taption(size: 12, weight: .bold))
                         .foregroundStyle(Color.tpInk.opacity(0.55))
                         .padding(.horizontal, 4)
 
                     widgetCard
 
                     Text("잠금 화면 · 현재 활동")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.taption(size: 12, weight: .bold))
                         .foregroundStyle(Color.tpInk.opacity(0.55))
                         .padding(.horizontal, 4)
                         .padding(.top, 12)
@@ -1761,15 +1853,15 @@ struct WidgetPreviewView: View {
             HStack {
                 HStack(spacing: 5) {
                     Text("지금의 시간표")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.taption(size: 13, weight: .bold))
                     Text("집중 중")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.taption(size: 8, weight: .bold))
                         .foregroundStyle(Color(red: 0.57, green: 0.38, blue: 0.08))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Color(red: 1.00, green: 0.95, blue: 0.85), in: Capsule())
                     Text("\(model.selectedCatCoat.shortName) ▾")
-                        .font(.system(size: 8, weight: .bold))
+                        .font(.taption(size: 8, weight: .bold))
                         .foregroundStyle(Color.tpSecondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -1778,7 +1870,7 @@ struct WidgetPreviewView: View {
                 }
                 Spacer()
                 Label(widgetTrailingLabel, systemImage: weatherSymbol)
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpWeatherDark)
             }
             .padding(.bottom, 10)
@@ -1800,7 +1892,7 @@ struct WidgetPreviewView: View {
                         .frame(width: width, height: 24)
                         .overlay(alignment: .leading) {
                             Text(plan.title)
-                                .font(.system(size: 9.5, weight: .semibold))
+                                .font(.taption(size: 9.5, weight: .semibold))
                                 .lineLimit(1)
                                 .padding(.horizontal, 6)
                         }
@@ -1851,7 +1943,7 @@ struct WidgetPreviewView: View {
             }
         } label: {
             Label(title, systemImage: icon)
-                .font(.system(size: 10, weight: .bold))
+                .font(.taption(size: 10, weight: .bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .background(
@@ -1867,14 +1959,14 @@ struct WidgetPreviewView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(activeWidgetPlan?.title ?? "현재 실행 중인 계획 없음")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.taption(size: 13, weight: .bold))
                 Spacer()
                 if let plan = activeWidgetPlan {
                     Text(
                         plan.span.end,
                         style: .relative
                     )
-                    .font(.system(size: 11))
+                    .font(.taption(size: 11))
                     .foregroundStyle(
                         Color(red: 0.78, green: 0.78, blue: 0.80)
                     )
@@ -1892,7 +1984,7 @@ struct WidgetPreviewView: View {
             .frame(height: 6)
             .padding(.vertical, 13)
             HStack {
-                Text(activeTimeLabel).font(.system(size: 11))
+                Text(activeTimeLabel).font(.taption(size: 11))
                 Spacer()
                 if let planID = activeWidgetPlan?.id {
                     Button("종료") {
@@ -1903,7 +1995,7 @@ struct WidgetPreviewView: View {
                             )
                         }
                     }
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.taption(size: 11, weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 13)
                     .padding(.vertical, 7)
@@ -2015,15 +2107,19 @@ struct OnboardingView: View {
                 HStack(spacing: 5) {
                     Capsule().fill(Color.tpInk).frame(width: 34, height: 4)
                     Capsule().fill(Color(red: 0.85, green: 0.85, blue: 0.87)).frame(width: 22, height: 4)
-                    Text("1 / 2 · 나에게 맞게 시작")
-                        .font(.system(size: 9.5, weight: .bold))
+                    Text(
+                        model.snapshot.profile == nil
+                            ? "1 / 2 · 나에게 맞게 시작"
+                            : "1 / 2 · 시작 구성 바꾸기"
+                    )
+                        .font(.taption(size: 9.5, weight: .bold))
                         .foregroundStyle(Color.tpSecondary)
                 }
 
                 Text("나와 비슷한 시작점을\n골라보세요")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.taption(size: 20, weight: .bold))
                 Text("대표 조합만 먼저 보여드립니다. 선택한 뒤 언제든 역할·상황·목표를 바꿀 수 있습니다.")
-                    .font(.system(size: 10.5))
+                    .font(.taption(size: 10.5))
                     .foregroundStyle(Color.tpSecondary)
 
                 VStack(spacing: 7) {
@@ -2073,8 +2169,12 @@ struct OnboardingView: View {
                 Button {
                     model.detail = .templateReview
                 } label: {
-                    Text("\(model.pendingTemplateApplication?.displayName ?? "선택한 구성")으로 시작")
-                        .font(.system(size: 12, weight: .bold))
+                    Text(
+                        model.snapshot.profile == nil
+                            ? "\(model.pendingTemplateApplication?.displayName ?? "선택한 구성")으로 시작"
+                            : "다음"
+                    )
+                        .font(.taption(size: 12, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
@@ -2090,7 +2190,7 @@ struct OnboardingView: View {
                 Button("닫기") { model.detail = nil }
                 Spacer()
             }
-            .font(.system(size: 11, weight: .bold))
+            .font(.taption(size: 11, weight: .bold))
             .foregroundStyle(Color.tpSecondary)
             .padding(.horizontal, 14)
             .padding(.vertical, 5)
@@ -2171,7 +2271,7 @@ struct OnboardingView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 8.5, weight: .black))
+                .font(.taption(size: 8.5, weight: .black))
                 .foregroundStyle(Color.tpSecondary)
             ChipFlowLayout {
                 content()
@@ -2186,7 +2286,7 @@ struct OnboardingView: View {
     ) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 8.5, weight: .bold))
+                .font(.taption(size: 8.5, weight: .bold))
                 .foregroundStyle(selected ? Color.white : Color.tpSecondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
@@ -2209,13 +2309,13 @@ struct OnboardingView: View {
         HStack(spacing: 10) {
             HStack(spacing: -5) {
                 Image(systemName: icon)
-                    .font(.system(size: 15))
+                    .font(.taption(size: 15))
                     .foregroundStyle(Color.tpProjectDark)
                     .frame(width: 30, height: 30)
                     .background(Color.tpProject, in: RoundedRectangle(cornerRadius: 10))
                 if let second {
                     Image(systemName: second)
-                        .font(.system(size: 15))
+                        .font(.taption(size: 15))
                         .foregroundStyle(Color.tpRelationshipDark)
                         .frame(width: 30, height: 30)
                         .background(Color.tpRelationship, in: RoundedRectangle(cornerRadius: 10))
@@ -2225,11 +2325,11 @@ struct OnboardingView: View {
             .frame(width: 52)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.system(size: 12, weight: .bold))
+                Text(title).font(.taption(size: 12, weight: .bold))
                 HStack(spacing: 4) {
                     ForEach(tags, id: \.self) { tag in
                         Text(tag)
-                            .font(.system(size: 7.5, weight: .black))
+                            .font(.taption(size: 7.5, weight: .black))
                             .foregroundStyle(tag.contains("역할") ? Color(red: 0.24, green: 0.44, blue: 0.53) : Color(red: 0.58, green: 0.32, blue: 0.47))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
@@ -2237,7 +2337,7 @@ struct OnboardingView: View {
                     }
                 }
                 Text(caption)
-                    .font(.system(size: 8.5))
+                    .font(.taption(size: 8.5))
                     .foregroundStyle(Color.tpSecondary)
             }
             Spacer()
@@ -2262,22 +2362,27 @@ struct TemplateReviewView: View {
                     Capsule().fill(Color(red: 0.85, green: 0.85, blue: 0.87)).frame(width: 22, height: 4)
                     Capsule().fill(Color.tpInk).frame(width: 34, height: 4)
                     Text("2 / 2 · 시작 구성 확인")
-                        .font(.system(size: 9.5, weight: .bold))
+                        .font(.taption(size: 9.5, weight: .bold))
                         .foregroundStyle(Color.tpSecondary)
                 }
-                Text("이렇게 시작할게요").font(.system(size: 20, weight: .bold))
+                Text(
+                    model.snapshot.profile == nil
+                        ? "이렇게 시작할게요"
+                        : "이 구성으로 바꿀게요"
+                )
+                .font(.taption(size: 20, weight: .bold))
                 Text("모두 제안일 뿐입니다. 지금 끄거나 나중에 다시 바꿀 수 있습니다.")
-                    .font(.system(size: 10.5))
+                    .font(.taption(size: 10.5))
                     .foregroundStyle(Color.tpSecondary)
 
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("대표 조합").font(.system(size: 8.5)).foregroundStyle(Color.tpSecondary)
+                    Text("대표 조합").font(.taption(size: 8.5)).foregroundStyle(Color.tpSecondary)
                     Text(application?.displayName ?? "시작 구성")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.taption(size: 16, weight: .bold))
                     ChipFlowLayout {
                         ForEach(visibleCategoryNames, id: \.self) { name in
                             Text(name)
-                                .font(.system(size: 8.5, weight: .semibold))
+                                .font(.taption(size: 8.5, weight: .semibold))
                                 .foregroundStyle(Color.tpSecondary)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 4)
@@ -2300,7 +2405,7 @@ struct TemplateReviewView: View {
                     ChipFlowLayout {
                         ForEach(application?.quickAdds ?? [], id: \.self) {
                             Text($0)
-                                .font(.system(size: 8.5, weight: .bold))
+                                .font(.taption(size: 8.5, weight: .bold))
                                 .foregroundStyle(Color.tpSecondary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
@@ -2340,8 +2445,12 @@ struct TemplateReviewView: View {
                         model.detail = nil
                     }
                 } label: {
-                    Text("이 구성으로 시작")
-                        .font(.system(size: 12, weight: .bold))
+                    Text(
+                        model.snapshot.profile == nil
+                            ? "이 구성으로 시작"
+                            : "이 구성 적용"
+                    )
+                        .font(.taption(size: 12, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
@@ -2375,7 +2484,7 @@ struct TemplateReviewView: View {
 
     private func reviewSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.system(size: 10, weight: .bold))
+            Text(title).font(.taption(size: 10, weight: .bold))
             content()
         }
         .padding(10)
@@ -2385,10 +2494,10 @@ struct TemplateReviewView: View {
 
     private func reviewSetting(_ title: String, value: String, off: Bool = false) -> some View {
         HStack {
-            Text(title).font(.system(size: 9.5)).foregroundStyle(Color.tpSecondary)
+            Text(title).font(.taption(size: 9.5)).foregroundStyle(Color.tpSecondary)
             Spacer()
             Text(value)
-                .font(.system(size: 8.5, weight: .bold))
+                .font(.taption(size: 8.5, weight: .bold))
                 .foregroundStyle(off ? Color(red: 0.54, green: 0.36, blue: 0.20) : Color(red: 0.31, green: 0.44, blue: 0.57))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
@@ -2408,11 +2517,11 @@ private struct DetailHeader: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(.system(size: 19, weight: .bold))
+                .font(.taption(size: 19, weight: .bold))
                 .foregroundStyle(Color.tpInk)
             Spacer()
             Button(trailing, action: action)
-                .font(.system(size: 12, weight: .bold))
+                .font(.taption(size: 12, weight: .bold))
                 .foregroundStyle(trailingColor)
         }
         .padding(.horizontal, 10)

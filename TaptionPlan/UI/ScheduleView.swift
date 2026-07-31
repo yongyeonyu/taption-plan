@@ -1,4 +1,102 @@
 import SwiftUI
+import UIKit
+
+private let scheduleLabelColumnWidth: CGFloat = 64
+
+private struct TimelineAxisMarker: Identifiable {
+    let id: String
+    let fraction: Double
+    let label: String
+    let isCurrent: Bool
+}
+
+struct TwoFingerDoubleTapAttachment: UIViewRepresentable {
+    let onRecognized: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onRecognized: onRecognized)
+    }
+
+    func makeUIView(context: Context) -> AttachmentView {
+        let view = AttachmentView()
+        view.isUserInteractionEnabled = false
+        view.coordinator = context.coordinator
+        return view
+    }
+
+    func updateUIView(
+        _ uiView: AttachmentView,
+        context: Context
+    ) {
+        context.coordinator.onRecognized = onRecognized
+        uiView.installRecognizerIfNeeded()
+    }
+
+    static func dismantleUIView(
+        _ uiView: AttachmentView,
+        coordinator: Coordinator
+    ) {
+        uiView.removeRecognizer()
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onRecognized: () -> Void
+
+        init(onRecognized: @escaping () -> Void) {
+            self.onRecognized = onRecognized
+        }
+
+        @objc func didRecognize() {
+            onRecognized()
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith
+                otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+    }
+
+    final class AttachmentView: UIView {
+        weak var coordinator: Coordinator?
+        private weak var installedSuperview: UIView?
+        private var recognizer: UITapGestureRecognizer?
+
+        override func didMoveToSuperview() {
+            super.didMoveToSuperview()
+            installRecognizerIfNeeded()
+        }
+
+        func installRecognizerIfNeeded() {
+            guard let superview, let coordinator else { return }
+            if installedSuperview === superview, recognizer != nil {
+                return
+            }
+            removeRecognizer()
+            let recognizer = UITapGestureRecognizer(
+                target: coordinator,
+                action: #selector(Coordinator.didRecognize)
+            )
+            recognizer.numberOfTapsRequired = 2
+            recognizer.numberOfTouchesRequired = 2
+            recognizer.cancelsTouchesInView = false
+            recognizer.delegate = coordinator
+            superview.addGestureRecognizer(recognizer)
+            installedSuperview = superview
+            self.recognizer = recognizer
+        }
+
+        func removeRecognizer() {
+            if let recognizer {
+                installedSuperview?.removeGestureRecognizer(recognizer)
+            }
+            recognizer = nil
+            installedSuperview = nil
+        }
+    }
+}
 
 struct ScheduleView: View {
     @Bindable var model: AppModel
@@ -9,7 +107,11 @@ struct ScheduleView: View {
                 title: headerTitle,
                 trailing: headerTrailing,
                 selectedScale: model.selectedScale,
-                onScaleChange: { model.selectScale($0) }
+                onScaleChange: { model.selectScale($0) },
+                onPrevious: { model.shiftSelectedDate(by: -1) },
+                onNext: { model.shiftSelectedDate(by: 1) },
+                isPreviousEnabled: model.canShiftToPreviousPeriod,
+                isNextEnabled: model.canShiftToNextPeriod
             )
             TimelineBoard(
                 model: model,
@@ -21,31 +123,10 @@ struct ScheduleView: View {
     }
 
     private var headerTitle: String {
-        switch model.selectedScale {
-        case .day:
-            model.selectedDate.formatted(
-                Date.FormatStyle()
-                    .month(.defaultDigits)
-                    .day(.defaultDigits)
-                    .weekday(.wide)
-                    .locale(Locale(identifier: "ko_KR"))
-            )
-        case .week:
-            "\(visibleSpan.start.formatted(.dateTime.month().day())) – \(visibleSpan.end.addingTimeInterval(-1).formatted(.dateTime.month().day()))"
-        case .month:
-            model.selectedDate.formatted(
-                Date.FormatStyle()
-                    .year()
-                    .month(.defaultDigits)
-                    .locale(Locale(identifier: "ko_KR"))
-            )
-        case .year:
-            model.selectedDate.formatted(
-                Date.FormatStyle()
-                    .year()
-                    .locale(Locale(identifier: "ko_KR"))
-            )
-        }
+        ScheduleHeaderFormatter().title(
+            for: model.selectedDate,
+            scale: model.selectedScale
+        )
     }
 
     private var headerTrailing: String {
@@ -54,7 +135,7 @@ struct ScheduleView: View {
             if let weather = closestWeather {
                 "\(weather.temperatureCelsius.rounded().formatted())° · \(weather.condition)"
             } else {
-                "좌우로 날짜 이동"
+                ""
             }
         case .week:
             "W\(Calendar.autoupdatingCurrent.component(.weekOfYear, from: model.selectedDate))"
@@ -119,52 +200,91 @@ private struct TimelineBoard: View {
     let storedPlans: [PlanRecord]
     var isGroup = false
     @State private var editingPlanID: UUID?
+    @State private var viewport = GanttViewport.full
+    @State private var dragOrigin: GanttViewport?
+    @State private var magnifyOrigin: GanttViewport?
+    @State private var zoomFeedbackSequence = 0
 
     var body: some View {
         VStack(spacing: 0) {
             axis
 
-            ZStack(alignment: .topLeading) {
-                VStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        TimelineRow(
-                            row: row,
-                            editingPlanID: editingPlanID,
-                            visibleDuration: visibleSpan.duration,
-                            onBlockTap: handleTap,
-                            onEdit: { editingPlanID = $0 },
-                            onMove: { block, delta in
-                                guard let planID = block.planID else { return }
-                                model.movePlan(planID, by: delta)
-                            },
-                            onResizeStart: { block, delta in
-                                guard let planID = block.planID else { return }
-                                model.resizePlan(planID, startDelta: delta)
-                            },
-                            onResizeEnd: { block, delta in
-                                guard let planID = block.planID else { return }
-                                model.resizePlan(planID, endDelta: delta)
-                            }
-                        )
+            GeometryReader { proxy in
+                ZStack(alignment: .topLeading) {
+                    VStack(spacing: 0) {
+                        ForEach(rows) { row in
+                            TimelineRow(
+                                row: row,
+                                editingPlanID: editingPlanID,
+                                visibleDuration:
+                                    visibleSpan.duration * viewport.length,
+                                viewport: viewport,
+                                onBlockTap: handleTap,
+                                onBlockDoubleTap: focusOnBlock,
+                                onEdit: { editingPlanID = $0 },
+                                onMove: { block, delta in
+                                    guard let planID = block.planID else {
+                                        return
+                                    }
+                                    model.movePlan(planID, by: delta)
+                                },
+                                onResizeStart: { block, delta in
+                                    guard let planID = block.planID else {
+                                        return
+                                    }
+                                    model.resizePlan(
+                                        planID,
+                                        startDelta: delta
+                                    )
+                                },
+                                onResizeEnd: { block, delta in
+                                    guard let planID = block.planID else {
+                                        return
+                                    }
+                                    model.resizePlan(
+                                        planID,
+                                        endDelta: delta
+                                    )
+                                }
+                            )
+                        }
+
+                        if scale == .day,
+                           !isGroup,
+                           !photoClusters.isEmpty {
+                            photoRow
+                        } else if scale != .day {
+                            summaryStrip
+                        }
+
+                        if scale == .day, hasVisibleActuals {
+                            planActualStrip
+                        }
                     }
 
-                    if scale == .day, !isGroup, !photoClusters.isEmpty {
-                        photoRow
-                    } else if scale != .day {
-                        summaryStrip
-                    }
+                    gridLines
+                        .allowsHitTesting(false)
 
-                    if scale == .day, hasVisibleActuals {
-                        planActualStrip
+                    TimelineView(.periodic(from: .now, by: 60)) { context in
+                        currentLine(at: context.date)
+                            .allowsHitTesting(false)
                     }
                 }
-
-                gridLines
-                    .allowsHitTesting(false)
-
-                TimelineView(.periodic(from: .now, by: 60)) { context in
-                    currentLine(at: context.date)
-                        .allowsHitTesting(false)
+                .contentShape(Rectangle())
+                .simultaneousGesture(
+                    viewportDragGesture(
+                        width: max(
+                            1,
+                            proxy.size.width
+                                - scheduleLabelColumnWidth
+                        )
+                    )
+                )
+                .simultaneousGesture(viewportMagnifyGesture)
+                .background {
+                    TwoFingerDoubleTapAttachment {
+                        resetViewport(withFeedback: true)
+                    }
                 }
             }
             .frame(height: contentHeight)
@@ -172,17 +292,86 @@ private struct TimelineBoard: View {
             Spacer(minLength: 0)
         }
         .background(Color.white)
+        .onChange(of: scale) { _, _ in
+            resetViewport()
+        }
+        .onChange(of: model.selectedDate) { _, _ in
+            resetViewport()
+        }
+        .accessibilityHint(
+            "간트 본문을 드래그해 이동하고 두 손가락으로 최대 1분 단위까지 확대합니다"
+        )
+        .accessibilityIdentifier("schedule.timeline.board")
+        .accessibilityValue(currentZoomStage.label)
+        .sensoryFeedback(
+            .impact(weight: .light),
+            trigger: zoomFeedbackSequence
+        )
     }
 
     private var axis: some View {
         HStack(spacing: 0) {
-            Color.clear.frame(width: 50)
-            ForEach(scale.axisLabels, id: \.self) { label in
-                Text(label)
-                    .font(.system(size: 10, weight: label == highlightedAxisLabel ? .bold : .regular))
-                    .foregroundStyle(label == highlightedAxisLabel ? Color.tpNow : Color.tpSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                resetViewport(withFeedback: true)
+            } label: {
+                HStack(spacing: 3) {
+                    Text(currentZoomStage.label)
+                    if !viewport.isFull {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                }
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(
+                    viewport.isFull
+                        ? Color.tpSecondary
+                        : Color.tpInk
+                )
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(
+                    viewport.isFull
+                        ? Color.clear
+                        : Color(red: 0.94, green: 0.94, blue: 0.95),
+                    in: Capsule()
+                )
             }
+            .buttonStyle(.plain)
+            .frame(width: scheduleLabelColumnWidth)
+            .accessibilityLabel(
+                viewport.isFull
+                    ? "현재 배율 \(currentZoomStage.label)"
+                    : "현재 배율 \(currentZoomStage.label), 전체 보기로 복귀"
+            )
+            .accessibilityIdentifier("schedule.zoom.level")
+            GeometryReader { proxy in
+                ZStack(alignment: .topLeading) {
+                    ForEach(axisMarkers) { marker in
+                        Text(marker.label)
+                            .font(
+                                .taption(
+                                    size: 10,
+                                    weight: marker.isCurrent
+                                        ? .bold
+                                        : .regular
+                                )
+                            )
+                            .foregroundStyle(
+                                marker.isCurrent
+                                    ? Color.tpNow
+                                    : Color.tpSecondary
+                            )
+                            .fixedSize()
+                            .position(
+                                x: markerX(
+                                    marker,
+                                    width: proxy.size.width
+                                ),
+                                y: proxy.size.height / 2
+                            )
+                    }
+                }
+            }
+            .clipped()
         }
         .padding(.leading, 4)
         .padding(.trailing, 4)
@@ -207,7 +396,7 @@ private struct TimelineBoard: View {
 
     private var rows: [TimelineRowModel] {
         let resolved = resolvedRows
-        if !resolved.isEmpty {
+        if resolved.contains(where: { !$0.blocks.isEmpty }) {
             return resolved
         }
 
@@ -252,7 +441,7 @@ private struct TimelineBoard: View {
                 ),
             ]
 
-            return dayRows
+            return resolved + dayRows
 
         case .week:
             return [
@@ -393,7 +582,8 @@ private struct TimelineBoard: View {
                                     allocation.lanes[event.id, default: 0]
                                 ) * 28,
                                 height: 22,
-                                isFixed: true
+                                isFixed: true,
+                                detailText: "고정 일정"
                             )
                         }
                     )
@@ -404,10 +594,20 @@ private struct TimelineBoard: View {
         let orderedCategories = model.snapshot.categories.sorted {
             $0.sortOrder < $1.sortOrder
         }
-        for definition in orderedCategories where !definition.isHidden {
+        for definition in orderedCategories {
+            let isDefaultSensorCategory =
+                scale == .day
+                && includesCalendar
+                && (definition.id == "movement"
+                    || definition.id == "location")
+            guard !definition.isHidden || isDefaultSensorCategory else {
+                continue
+            }
             let categoryPlans = grouped[definition.id, default: []]
             let categoryActuals = actualsGrouped[definition.id, default: []]
-            guard !categoryPlans.isEmpty || !categoryActuals.isEmpty else {
+            guard isDefaultSensorCategory
+                || !categoryPlans.isEmpty
+                || !categoryActuals.isEmpty else {
                 continue
             }
             let category = PlanCategory(categoryID: definition.id)
@@ -439,6 +639,13 @@ private struct TimelineBoard: View {
                     height: 12
                 )
             }
+            let sensorBlocks = sensorTimelineBlocks(
+                categoryID: definition.id,
+                top: 7
+                    + CGFloat(planAllocation.count) * 28
+                    + CGFloat(actualAllocation.count) * 16
+            )
+            let sensorLaneCount = sensorBlocks.isEmpty ? 0 : 1
             values.append(
                 TimelineRowModel(
                     title: definition.name,
@@ -451,8 +658,9 @@ private struct TimelineBoard: View {
                         14
                             + CGFloat(planAllocation.count) * 28
                             + CGFloat(actualAllocation.count) * 16
+                            + CGFloat(sensorLaneCount) * 22
                     ),
-                    blocks: planBlocks + actualBlocks
+                    blocks: planBlocks + actualBlocks + sensorBlocks
                 )
             )
         }
@@ -525,7 +733,8 @@ private struct TimelineBoard: View {
             height: height,
             isFixed: plan.isFixed,
             groupCount: childCount > 0 ? childCount : nil,
-            status: plan.status
+            status: plan.status,
+            detailText: "계획"
         )
     }
 
@@ -542,8 +751,113 @@ private struct TimelineBoard: View {
             height: height,
             isFixed: true,
             status: .completed,
-            isActual: true
+            isActual: true,
+            detailText:
+                "실제 · \(actualSourceName(actual.source)) · \(confidenceName(actual.confidence))"
         )
+    }
+
+    private func sensorTimelineBlocks(
+        categoryID: String,
+        top: CGFloat
+    ) -> [TimelineBlock] {
+        switch categoryID {
+        case "movement":
+            return model.snapshot.travel
+                .filter {
+                    $0.span.intersection(with: visibleSpan) != nil
+                }
+                .sorted { $0.span.start < $1.span.start }
+                .map { travel in
+                    timelineBlock(
+                        id: travel.id,
+                        title: travelModeName(travel.mode),
+                        span: travel.span,
+                        top: top,
+                        height: 16,
+                        isFixed: true,
+                        status: .completed,
+                        isActual: true,
+                        opensLocationTimeline: true,
+                        detailText:
+                            "센서 추정 · \(confidenceName(travel.confidence))"
+                    )
+                }
+        case "location":
+            return model.snapshot.places
+                .filter {
+                    $0.span.intersection(with: visibleSpan) != nil
+                }
+                .sorted { $0.span.start < $1.span.start }
+                .map { place in
+                    let title = place.floor.map {
+                        "\(place.displayName) · \($0)층"
+                    } ?? place.displayName
+                    let altitude = place.point.map {
+                        "해발 \(Int($0.altitude.rounded()))m"
+                            + (
+                                $0.verticalAccuracy >= 0
+                                    ? " · ±\(Int($0.verticalAccuracy.rounded()))m"
+                                    : ""
+                            )
+                    }
+                    return timelineBlock(
+                        id: place.id,
+                        title: title,
+                        span: place.span,
+                        top: top,
+                        height: 16,
+                        isFixed: true,
+                        status: .completed,
+                        isActual: true,
+                        opensLocationTimeline: true,
+                        detailText:
+                            [
+                                "센서 추정",
+                                confidenceName(place.confidence),
+                                altitude,
+                            ]
+                            .compactMap { $0 }
+                            .joined(separator: " · ")
+                    )
+                }
+        default:
+            return []
+        }
+    }
+
+    private func travelModeName(_ mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .cycling: "자전거"
+        case .bus: "버스"
+        case .subway: "지하철"
+        case .taxi: "택시"
+        case .car: "자가용"
+        case .train: "기차"
+        case .airplane: "비행기"
+        case .ship: "배"
+        }
+    }
+
+    private func confidenceName(_ confidence: ConfidenceLevel) -> String {
+        switch confidence {
+        case .low: "낮은 신뢰"
+        case .medium: "중간 신뢰"
+        case .high: "높은 신뢰"
+        }
+    }
+
+    private func actualSourceName(_ source: ActualSource) -> String {
+        switch source {
+        case .manual: "직접 기록"
+        case .timer: "타이머"
+        case .healthKit: "Apple 건강"
+        case .calendar: "캘린더"
+        case .location: "위치"
+        case .photo: "사진"
+        }
     }
 
     private func laneAllocation<Item: Identifiable>(
@@ -590,7 +904,9 @@ private struct TimelineBoard: View {
         groupCount: Int? = nil,
         actualFraction: Double? = nil,
         status: PlanStatus = .planned,
-        isActual: Bool = false
+        isActual: Bool = false,
+        opensLocationTimeline: Bool = false,
+        detailText: String? = nil
     ) -> TimelineBlock {
         let overlap = span.intersection(with: visibleSpan) ?? span
         let duration = max(1, visibleSpan.duration)
@@ -610,7 +926,11 @@ private struct TimelineBoard: View {
             groupCount: groupCount,
             actualFraction: actualFraction,
             status: status,
-            isActual: isActual
+            isActual: isActual,
+            opensLocationTimeline: opensLocationTimeline,
+            startsAt: span.start,
+            endsAt: span.end,
+            detailText: detailText
         )
     }
 
@@ -648,17 +968,30 @@ private struct TimelineBoard: View {
 
     @ViewBuilder
     private var gridLines: some View {
-        if scale == .day {
-            GeometryReader { proxy in
-                ForEach(0..<5, id: \.self) { index in
-                    Rectangle()
-                        .fill(Color(red: 0.96, green: 0.96, blue: 0.97))
-                        .frame(width: 0.5)
-                        .position(
-                            x: 50 + (proxy.size.width - 50) * CGFloat(index) / 5,
-                            y: proxy.size.height / 2
-                        )
+        if scale == .day || !viewport.isFull {
+            HStack(spacing: 0) {
+                Color.clear.frame(width: scheduleLabelColumnWidth)
+                GeometryReader { proxy in
+                    ZStack(alignment: .topLeading) {
+                        ForEach(axisMarkers) { marker in
+                            Rectangle()
+                                .fill(
+                                    Color(
+                                        red: 0.96,
+                                        green: 0.96,
+                                        blue: 0.97
+                                    )
+                                )
+                                .frame(width: 0.5)
+                                .position(
+                                    x: proxy.size.width
+                                        * CGFloat(marker.fraction),
+                                    y: proxy.size.height / 2
+                                )
+                        }
+                    }
                 }
+                .clipped()
             }
         }
     }
@@ -667,29 +1000,43 @@ private struct TimelineBoard: View {
     private func currentLine(at date: Date) -> some View {
         if visibleSpan.contains(date) {
         GeometryReader { proxy in
-            let timelineWidth = max(1, proxy.size.width - 50)
-            let x = 50 + timelineWidth * nowFraction(at: date)
+            let timelineWidth = max(
+                1,
+                proxy.size.width - scheduleLabelColumnWidth
+            )
+            let viewportFraction = (
+                Double(nowFraction(at: date)) - viewport.start
+            ) / viewport.length
+            let x = scheduleLabelColumnWidth
+                + timelineWidth * CGFloat(viewportFraction)
 
-            ZStack(alignment: .topLeading) {
-                Rectangle()
-                    .fill(Color.tpNow)
-                    .frame(width: 2, height: proxy.size.height)
-                    .position(x: x, y: proxy.size.height / 2)
+            if (0...1).contains(viewportFraction) {
+                ZStack(alignment: .topLeading) {
+                    Rectangle()
+                        .fill(Color.tpNow)
+                        .frame(width: 2, height: proxy.size.height)
+                        .position(x: x, y: proxy.size.height / 2)
 
-                Circle()
-                    .fill(Color.tpNow)
-                    .frame(width: 8, height: 8)
-                    .position(x: x, y: 1)
+                    Circle()
+                        .fill(Color.tpNow)
+                        .frame(width: 8, height: 8)
+                        .position(x: x, y: 1)
 
-                if scale == .day, !isGroup {
-                    Text(date.formatted(date: .omitted, time: .shortened))
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.tpNow, in: Capsule())
-                        .fixedSize()
-                        .position(x: x, y: 7)
+                    if scale == .day, !isGroup {
+                        Text(
+                            date.formatted(
+                                date: .omitted,
+                                time: .shortened
+                            )
+                        )
+                            .font(.taption(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.tpNow, in: Capsule())
+                            .fixedSize()
+                            .position(x: x, y: 7)
+                    }
                 }
             }
         }
@@ -704,17 +1051,28 @@ private struct TimelineBoard: View {
                     .fill(Color.tpPhotoDark)
                     .frame(width: 8, height: 8)
                 Text("사진")
-                    .font(.system(size: 10.5, weight: .semibold))
+                    .font(.taption(size: 10.5, weight: .semibold))
             }
             .foregroundStyle(Color.tpInk)
             .padding(.leading, 8)
-            .frame(width: 50, alignment: .leading)
+            .frame(
+                width: scheduleLabelColumnWidth,
+                alignment: .leading
+            )
 
             GeometryReader { proxy in
-                ForEach(photoClusters) { cluster in
-                    photoMarker(cluster: cluster, proxy: proxy)
+                ZStack(alignment: .topLeading) {
+                    ForEach(photoClusters) { cluster in
+                        if let x = photoMarkerX(
+                            cluster,
+                            width: proxy.size.width
+                        ) {
+                            photoMarker(cluster: cluster, x: x)
+                        }
+                    }
                 }
             }
+            .clipped()
         }
         .frame(height: 65)
         .background(Color(red: 0.99, green: 0.98, blue: 1.00))
@@ -725,13 +1083,9 @@ private struct TimelineBoard: View {
 
     private func photoMarker(
         cluster: PhotoCluster,
-        proxy: GeometryProxy
+        x: CGFloat
     ) -> some View {
-        let fraction = CGFloat(
-            cluster.capturedAt.timeIntervalSince(visibleSpan.start)
-                / max(1, visibleSpan.duration)
-        )
-        return Button {
+        Button {
             model.selectedPhotoCluster = cluster
         } label: {
             VStack(spacing: 2) {
@@ -750,7 +1104,7 @@ private struct TimelineBoard: View {
 
                     if cluster.additionalCount > 0 {
                         Text("+\(cluster.additionalCount)")
-                            .font(.system(size: 7, weight: .black))
+                            .font(.taption(size: 7, weight: .black))
                             .foregroundStyle(.white)
                             .frame(minWidth: 17, minHeight: 17)
                             .background(Color.tpPhotoDark, in: Capsule())
@@ -764,27 +1118,45 @@ private struct TimelineBoard: View {
                         time: .shortened
                     )
                 )
-                    .font(.system(size: 6.5, weight: .black))
+                    .font(.taption(size: 6.5, weight: .black))
                     .foregroundStyle(Color.tpPhotoDark)
             }
         }
         .buttonStyle(.plain)
         .position(
-            x: min(
-                proxy.size.width - 22,
-                max(22, proxy.size.width * fraction)
-            ),
+            x: x,
             y: 32
+        )
+    }
+
+    private func photoMarkerX(
+        _ cluster: PhotoCluster,
+        width: CGFloat
+    ) -> CGFloat? {
+        let fraction =
+            cluster.capturedAt.timeIntervalSince(visibleSpan.start)
+            / max(1, visibleSpan.duration)
+        guard viewport.start <= fraction, fraction <= viewport.end else {
+            return nil
+        }
+        let viewportFraction =
+            (fraction - viewport.start) / viewport.length
+        return min(
+            width - 22,
+            max(22, width * CGFloat(viewportFraction))
         )
     }
 
     private var summaryStrip: some View {
         HStack(spacing: 0) {
             Text(summaryTitle)
-                .font(.system(size: scale == .month ? 9 : 10, weight: .regular))
+                .font(.taption(size: scale == .month ? 9 : 10, weight: .regular))
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.leading, scale == .month ? 4 : 8)
-                .frame(width: 50, alignment: .leading)
+                .frame(
+                    width: scheduleLabelColumnWidth,
+                    alignment: .leading
+                )
 
             HStack(spacing: 3) {
                 ForEach(summaryColors.indices, id: \.self) { index in
@@ -808,7 +1180,7 @@ private struct TimelineBoard: View {
                                         "\(summaryBuckets[index].photoCount)"
                                     )
                                 }
-                                .font(.system(size: 6.5, weight: .black))
+                                .font(.taption(size: 6.5, weight: .black))
                                 .foregroundStyle(Color.tpPhotoDark)
                             }
                         }
@@ -834,7 +1206,7 @@ private struct TimelineBoard: View {
     private var planActualStrip: some View {
         HStack(spacing: 5) {
             Image(systemName: "chart.bar.fill")
-                .font(.system(size: 8, weight: .bold))
+                .font(.taption(size: 8, weight: .bold))
                 .foregroundStyle(Color.tpProjectDark)
             Text("계획")
                 .foregroundStyle(Color.tpSecondary)
@@ -846,7 +1218,7 @@ private struct TimelineBoard: View {
                 .fontWeight(.black)
                 .foregroundStyle(Color.tpProjectDark)
         }
-        .font(.system(size: 9))
+        .font(.taption(size: 9))
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(
@@ -920,7 +1292,125 @@ private struct TimelineBoard: View {
         )
     }
 
-    private var highlightedAxisLabel: String {
+    private var viewportMinimumLength: Double {
+        GanttViewport.oneMinuteMinimumLength(
+            for: visibleSpan.duration
+        )
+    }
+
+    private var currentZoomStage: GanttZoomStage {
+        GanttZoomStage.nearest(
+            to: visibleSpan.duration * viewport.length
+        )
+    }
+
+    private var viewportVisibleSpan: TimeSpan {
+        TimeSpan(
+            start: visibleSpan.start.addingTimeInterval(
+                visibleSpan.duration * viewport.start
+            ),
+            end: visibleSpan.start.addingTimeInterval(
+                visibleSpan.duration * viewport.end
+            )
+        )
+    }
+
+    private var axisMarkers: [TimelineAxisMarker] {
+        guard !viewport.isFull else {
+            let labels = scale.axisLabels
+            return labels.enumerated().map { index, label in
+                TimelineAxisMarker(
+                    id: "full-\(index)-\(label)",
+                    fraction: Double(index) / Double(max(1, labels.count)),
+                    label: label,
+                    isCurrent: label == currentAxisLabel
+                )
+            }
+        }
+
+        let span = viewportVisibleSpan
+        let step = axisTickInterval
+        let start = span.start.timeIntervalSinceReferenceDate
+        let end = span.end.timeIntervalSinceReferenceDate
+        var next = ceil(start / step) * step
+        var markers: [TimelineAxisMarker] = []
+
+        while next <= end, markers.count < 64 {
+            let date = Date(timeIntervalSinceReferenceDate: next)
+            markers.append(
+                TimelineAxisMarker(
+                    id: "zoom-\(next)",
+                    fraction: (next - start) / max(1, end - start),
+                    label: axisTickLabel(date),
+                    isCurrent: abs(date.timeIntervalSinceNow) < step / 2
+                )
+            )
+            next += step
+        }
+
+        if markers.isEmpty {
+            let date = span.start.addingTimeInterval(span.duration / 2)
+            return [
+                TimelineAxisMarker(
+                    id: "zoom-center-\(date.timeIntervalSinceReferenceDate)",
+                    fraction: 0.5,
+                    label: axisTickLabel(date),
+                    isCurrent: span.contains(.now)
+                )
+            ]
+        }
+        return markers
+    }
+
+    private var axisTickInterval: TimeInterval {
+        let target = viewportVisibleSpan.duration / 6
+        let supportedSteps: [TimeInterval] = [
+            60,
+            5 * 60,
+            15 * 60,
+            30 * 60,
+            60 * 60,
+            3 * 60 * 60,
+            6 * 60 * 60,
+            12 * 60 * 60,
+            24 * 60 * 60,
+            2 * 24 * 60 * 60,
+            5 * 24 * 60 * 60,
+            7 * 24 * 60 * 60,
+            14 * 24 * 60 * 60,
+            30 * 24 * 60 * 60,
+            90 * 24 * 60 * 60,
+        ]
+        return supportedSteps.first { $0 >= target }
+            ?? supportedSteps.last!
+    }
+
+    private func axisTickLabel(_ date: Date) -> String {
+        let calendar = Calendar.autoupdatingCurrent
+        if viewportVisibleSpan.duration <= 2 * 24 * 60 * 60 {
+            return String(
+                format: "%02d:%02d",
+                calendar.component(.hour, from: date),
+                calendar.component(.minute, from: date)
+            )
+        }
+        if viewportVisibleSpan.duration <= 90 * 24 * 60 * 60 {
+            return "\(calendar.component(.month, from: date)).\(calendar.component(.day, from: date))"
+        }
+        return "\(calendar.component(.month, from: date))월"
+    }
+
+    private func markerX(
+        _ marker: TimelineAxisMarker,
+        width: CGFloat
+    ) -> CGFloat {
+        min(
+            max(18, width - 18),
+            max(18, width * CGFloat(marker.fraction))
+        )
+    }
+
+    private var currentAxisLabel: String {
         let calendar = Calendar.autoupdatingCurrent
         return switch scale {
         case .day:
@@ -1029,7 +1519,167 @@ private struct TimelineBoard: View {
         return "\(range) 요약\(photoText), 탭하여 확대"
     }
 
+    private func viewportDragGesture(
+        width: CGFloat
+    ) -> some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                guard editingPlanID == nil,
+                      abs(value.translation.width)
+                        > abs(value.translation.height) else {
+                    return
+                }
+                if dragOrigin == nil {
+                    dragOrigin = viewport
+                }
+                guard let dragOrigin else { return }
+                viewport = dragOrigin.panning(
+                    translation: Double(value.translation.width),
+                    viewportWidth: Double(width)
+                )
+            }
+            .onEnded { _ in
+                dragOrigin = nil
+            }
+    }
+
+    private var viewportMagnifyGesture: some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.01)
+            .onChanged { value in
+                if magnifyOrigin == nil {
+                    magnifyOrigin = viewport
+                    editingPlanID = nil
+                }
+                guard let magnifyOrigin else { return }
+                viewport = magnifyOrigin.magnifying(
+                    by: Double(value.magnification),
+                    anchor: Double(value.startAnchor.x),
+                    minimumLength: viewportMinimumLength
+                )
+            }
+            .onEnded { value in
+                finishSemanticMagnification(
+                    factor: Double(value.magnification),
+                    anchor: Double(value.startAnchor.x)
+                )
+                magnifyOrigin = nil
+            }
+    }
+
+    private func finishSemanticMagnification(
+        factor: Double,
+        anchor: Double
+    ) {
+        let origin = magnifyOrigin ?? viewport
+        let zoomsIn = factor >= 1.15
+        let zoomsOut = factor <= 0.85
+        guard zoomsIn || zoomsOut else {
+            viewport = origin
+            return
+        }
+
+        if scale != .day {
+            let targetScale = zoomsIn ? scale.narrower : scale.broader
+            guard let targetScale else {
+                viewport = origin
+                return
+            }
+            transitionScale(
+                to: targetScale,
+                origin: origin,
+                anchor: anchor
+            )
+            return
+        }
+
+        let originStage = GanttZoomStage.nearest(
+            to: visibleSpan.duration * origin.length
+        )
+        if zoomsOut, originStage == .day {
+            guard let broader = scale.broader else {
+                viewport = origin
+                return
+            }
+            transitionScale(
+                to: broader,
+                origin: origin,
+                anchor: anchor
+            )
+            return
+        }
+
+        let targetStage = zoomsIn
+            ? originStage.narrower
+            : originStage.broader
+        guard let targetStage, targetStage >= .day else {
+            viewport = origin
+            return
+        }
+        viewport = origin.fitting(
+            visibleDuration: targetStage.duration,
+            within: visibleSpan.duration,
+            anchor: anchor
+        )
+        zoomFeedbackSequence += 1
+    }
+
+    private func transitionScale(
+        to targetScale: TimeScale,
+        origin: GanttViewport,
+        anchor: Double
+    ) {
+        let clampedAnchor = min(1, max(0, anchor))
+        let anchorFraction =
+            origin.start + origin.length * clampedAnchor
+        model.selectedDate = visibleSpan.start.addingTimeInterval(
+            visibleSpan.duration * anchorFraction
+        )
+        viewport = .full
+        model.selectScale(targetScale)
+        zoomFeedbackSequence += 1
+    }
+
+    private func resetViewport(withFeedback: Bool = false) {
+        let changed = !viewport.isFull
+        viewport = .full
+        dragOrigin = nil
+        magnifyOrigin = nil
+        editingPlanID = nil
+        if withFeedback, changed {
+            zoomFeedbackSequence += 1
+        }
+    }
+
+    private func focusOnBlock(_ block: TimelineBlock) {
+        let totalDuration = max(60, visibleSpan.duration)
+        let blockStart: Double
+        let blockLength: Double
+        if let startsAt = block.startsAt,
+           let endsAt = block.endsAt {
+            blockStart = startsAt.timeIntervalSince(visibleSpan.start)
+                / totalDuration
+            blockLength = endsAt.timeIntervalSince(startsAt)
+                / totalDuration
+        } else {
+            blockStart = Double(block.start)
+            blockLength = Double(block.length)
+        }
+
+        viewport = GanttViewport.full.focusing(
+            start: blockStart,
+            length: blockLength,
+            minimumLength: viewportMinimumLength
+        )
+        editingPlanID = nil
+        zoomFeedbackSequence += 1
+    }
+
     private func handleTap(_ block: TimelineBlock) {
+        if block.opensLocationTimeline {
+            model.detail = .locationTimeline
+            return
+        }
+
         if block.groupCount != nil {
             if let planID = block.planID {
                 model.openGroup(planID)
@@ -1055,11 +1705,18 @@ private struct TimelineBoard: View {
     }
 }
 
+private struct TimelineBlockSlice {
+    let centerX: CGFloat
+    let width: CGFloat
+}
+
 private struct TimelineRow: View {
     let row: TimelineRowModel
     let editingPlanID: UUID?
     let visibleDuration: TimeInterval
+    let viewport: GanttViewport
     let onBlockTap: (TimelineBlock) -> Void
+    let onBlockDoubleTap: (TimelineBlock) -> Void
     let onEdit: (UUID?) -> Void
     let onMove: (TimelineBlock, TimeInterval) -> Void
     let onResizeStart: (TimelineBlock, TimeInterval) -> Void
@@ -1077,35 +1734,53 @@ private struct TimelineRow: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
             }
-            .font(.system(size: row.title.count > 4 ? 9 : 10.5, weight: .semibold))
+            .font(.taption(size: row.title.count > 4 ? 9 : 10.5, weight: .semibold))
             .foregroundStyle(Color.tpInk)
             .padding(.leading, row.title.count > 4 ? 4 : 8)
-            .frame(width: 50, alignment: .leading)
+            .frame(
+                width: scheduleLabelColumnWidth,
+                alignment: .leading
+            )
 
             GeometryReader { proxy in
-                ForEach(row.blocks) { block in
-                    let width = max(block.minimumWidth, proxy.size.width * block.length)
-                    TimelineBar(
-                        block: block,
-                        color: row.fillColor,
-                        actualColor: row.actualColor,
-                        width: width,
-                        isEditing: editingPlanID == block.planID,
-                        secondsPerPoint:
-                            visibleDuration / max(1, proxy.size.width),
-                        onEdit: { onEdit(block.planID) },
-                        onMove: { onMove(block, $0) },
-                        onResizeStart: { onResizeStart(block, $0) },
-                        onResizeEnd: { onResizeEnd(block, $0) }
-                    )
-                        .onTapGesture { onBlockTap(block) }
-                        .position(
-                            x: proxy.size.width * block.start
-                                + width / 2,
-                            y: block.top + block.height / 2
-                        )
+                ZStack(alignment: .topLeading) {
+                    ForEach(row.blocks) { block in
+                        if let slice = visibleSlice(
+                            for: block,
+                            width: proxy.size.width
+                        ) {
+                            TimelineBar(
+                                block: block,
+                                color: row.fillColor,
+                                actualColor: row.actualColor,
+                                width: slice.width,
+                                isEditing: editingPlanID == block.planID,
+                                visibleDuration: visibleDuration,
+                                secondsPerPoint:
+                                    visibleDuration
+                                    / max(1, proxy.size.width),
+                                onTap: { onBlockTap(block) },
+                                onDoubleTap: {
+                                    onBlockDoubleTap(block)
+                                },
+                                onEdit: { onEdit(block.planID) },
+                                onMove: { onMove(block, $0) },
+                                onResizeStart: {
+                                    onResizeStart(block, $0)
+                                },
+                                onResizeEnd: {
+                                    onResizeEnd(block, $0)
+                                }
+                            )
+                                .position(
+                                    x: slice.centerX,
+                                    y: block.top + block.height / 2
+                                )
+                        }
+                    }
                 }
             }
+            .clipped()
         }
         .frame(height: row.height)
         .overlay(alignment: .bottom) {
@@ -1113,6 +1788,29 @@ private struct TimelineRow: View {
                 .fill(Color(red: 0.95, green: 0.95, blue: 0.96))
                 .frame(height: 0.5)
         }
+    }
+
+    private func visibleSlice(
+        for block: TimelineBlock,
+        width: CGFloat
+    ) -> TimelineBlockSlice? {
+        let blockStart = Double(block.start)
+        let blockEnd = blockStart + Double(block.length)
+        let overlapStart = max(blockStart, viewport.start)
+        let overlapEnd = min(blockEnd, viewport.end)
+        guard overlapStart < overlapEnd else { return nil }
+
+        let startFraction =
+            (overlapStart - viewport.start) / viewport.length
+        let endFraction =
+            (overlapEnd - viewport.start) / viewport.length
+        let naturalWidth =
+            width * CGFloat(endFraction - startFraction)
+        return TimelineBlockSlice(
+            centerX:
+                width * CGFloat((startFraction + endFraction) / 2),
+            width: max(block.minimumWidth, naturalWidth)
+        )
     }
 }
 
@@ -1122,7 +1820,10 @@ private struct TimelineBar: View {
     let actualColor: Color
     let width: CGFloat
     let isEditing: Bool
+    let visibleDuration: TimeInterval
     let secondsPerPoint: TimeInterval
+    let onTap: () -> Void
+    let onDoubleTap: () -> Void
     let onEdit: () -> Void
     let onMove: (TimeInterval) -> Void
     let onResizeStart: (TimeInterval) -> Void
@@ -1130,8 +1831,8 @@ private struct TimelineBar: View {
 
     var body: some View {
         HStack(spacing: 3) {
-            Text(block.title)
-                .font(.system(size: block.height <= 20 ? 9.5 : 10.5, weight: .semibold))
+            Text(primaryText)
+                .font(.taption(size: block.height <= 20 ? 9.5 : 10.5, weight: .semibold))
                 .foregroundStyle(
                     block.isActual
                         ? Color.white
@@ -1140,18 +1841,18 @@ private struct TimelineBar: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
 
-            if let count = block.groupCount {
+            if !showsMinuteDetails, let count = block.groupCount {
                 Spacer(minLength: 1)
                 Text("▸ \(count)")
-                    .font(.system(size: 8.5, weight: .bold))
+                    .font(.taption(size: 8.5, weight: .bold))
                     .foregroundStyle(Color.tpInk.opacity(0.62))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(Color.white.opacity(0.70), in: Capsule())
             }
-            if block.status == .completed {
+            if !showsMinuteDetails, block.status == .completed {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(actualColor)
             }
         }
@@ -1226,6 +1927,18 @@ private struct TimelineBar: View {
                 .padding(.horizontal, -5)
             }
         }
+        .highPriorityGesture(
+            TapGesture(count: 2)
+                .exclusively(before: TapGesture(count: 1))
+                .onEnded { value in
+                    switch value {
+                    case .first:
+                        onDoubleTap()
+                    case .second:
+                        onTap()
+                    }
+                }
+        )
         .onLongPressGesture(minimumDuration: 0.35, perform: onEdit)
         .simultaneousGesture(
             DragGesture(minimumDistance: 12)
@@ -1236,8 +1949,23 @@ private struct TimelineBar: View {
         )
         .accessibilityHint(
             block.isFixed
-                ? "캘린더의 고정 일정"
-                : "길게 누른 뒤 드래그하면 이동하고 양 끝점을 끌면 길이를 조절합니다"
+                ? "두 번 탭하면 일정에 맞춰 확대합니다"
+                : "두 번 탭하면 확대하고, 길게 누른 뒤 드래그하면 이동하며 양 끝점을 끌면 길이를 조절합니다"
+        )
+    }
+
+    private var showsMinuteDetails: Bool {
+        visibleDuration
+            <= GanttZoomStage.oneMinute.duration * 1.15
+    }
+
+    private var primaryText: String {
+        GanttPrecisionPresentation.label(
+            title: block.title,
+            startsAt: block.startsAt,
+            endsAt: block.endsAt,
+            detailText: block.detailText,
+            visibleDuration: visibleDuration
         )
     }
 
@@ -1306,7 +2034,11 @@ private struct TimelineBlock: Identifiable {
     let actualFraction: Double?
     let status: PlanStatus
     let isActual: Bool
+    let opensLocationTimeline: Bool
     let minimumWidth: CGFloat
+    let startsAt: Date?
+    let endsAt: Date?
+    let detailText: String?
 
     init(
         id: UUID = UUID(),
@@ -1321,7 +2053,11 @@ private struct TimelineBlock: Identifiable {
         actualFraction: Double? = nil,
         status: PlanStatus = .planned,
         isActual: Bool = false,
-        minimumWidth: CGFloat = 18
+        opensLocationTimeline: Bool = false,
+        minimumWidth: CGFloat = 18,
+        startsAt: Date? = nil,
+        endsAt: Date? = nil,
+        detailText: String? = nil
     ) {
         self.id = id
         self.planID = planID
@@ -1335,7 +2071,11 @@ private struct TimelineBlock: Identifiable {
         self.actualFraction = actualFraction
         self.status = status
         self.isActual = isActual
+        self.opensLocationTimeline = opensLocationTimeline
         self.minimumWidth = minimumWidth
+        self.startsAt = startsAt
+        self.endsAt = endsAt
+        self.detailText = detailText
     }
 }
 
@@ -1368,7 +2108,7 @@ private struct PhotoAssetThumbnail: View {
                         endPoint: .bottomTrailing
                     )
                     Image(systemName: "photo")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.taption(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
                 }
             }

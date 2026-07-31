@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 @testable import TaptionPlan
 
 final class FeatureEngineTests: XCTestCase {
@@ -142,6 +143,167 @@ final class FeatureEngineTests: XCTestCase {
             ),
             60
         )
+    }
+
+    func testGanttViewportPinchZoomAndPanStayInsideTimeline() {
+        let zoomed = GanttViewport.full.magnifying(
+            by: 2,
+            anchor: 0.25
+        )
+        XCTAssertEqual(zoomed.start, 0.125, accuracy: 0.0001)
+        XCTAssertEqual(zoomed.length, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(zoomed.zoomScale, 2, accuracy: 0.0001)
+
+        let panned = zoomed.panning(
+            translation: -100,
+            viewportWidth: 400
+        )
+        XCTAssertEqual(panned.start, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(panned.end, 0.75, accuracy: 0.0001)
+
+        let clampedRight = panned.panning(
+            translation: -2_000,
+            viewportWidth: 400
+        )
+        XCTAssertEqual(clampedRight.end, 1, accuracy: 0.0001)
+
+        let restored = clampedRight.magnifying(
+            by: 0.01,
+            anchor: 0.5
+        )
+        XCTAssertEqual(restored, .full)
+    }
+
+    func testGanttViewportStopsAtOneMinuteForEveryTimelineDuration() {
+        let durations: [TimeInterval] = [
+            24 * 60 * 60,
+            7 * 24 * 60 * 60,
+            31 * 24 * 60 * 60,
+            366 * 24 * 60 * 60,
+        ]
+
+        for duration in durations {
+            let minimumLength = GanttViewport.oneMinuteMinimumLength(
+                for: duration
+            )
+            let zoomed = GanttViewport.full.magnifying(
+                by: 1_000_000,
+                anchor: 0.5,
+                minimumLength: minimumLength
+            )
+
+            XCTAssertEqual(
+                duration * zoomed.length,
+                60,
+                accuracy: 0.001
+            )
+        }
+    }
+
+    func testGanttSemanticZoomStagesFollowProductHierarchy() {
+        XCTAssertEqual(
+            GanttZoomStage.allCases,
+            [
+                .year,
+                .month,
+                .week,
+                .day,
+                .hour,
+                .fifteenMinutes,
+                .fiveMinutes,
+                .oneMinute,
+            ]
+        )
+        XCTAssertEqual(GanttZoomStage.day.narrower, .hour)
+        XCTAssertEqual(GanttZoomStage.oneMinute.narrower, nil)
+        XCTAssertEqual(GanttZoomStage.oneMinute.broader, .fiveMinutes)
+        XCTAssertEqual(GanttZoomStage.nearest(to: 15 * 60), .fifteenMinutes)
+        XCTAssertEqual(GanttZoomStage.nearest(to: 60), .oneMinute)
+
+        XCTAssertEqual(TimeScale.year.narrower, .month)
+        XCTAssertEqual(TimeScale.month.narrower, .week)
+        XCTAssertEqual(TimeScale.week.narrower, .day)
+        XCTAssertEqual(TimeScale.day.broader, .week)
+    }
+
+    func testGanttViewportFocusAndSemanticFitStayInsideTimeline() {
+        let focused = GanttViewport.full.focusing(
+            start: 0.45,
+            length: 0.10,
+            minimumLength: 1 / 1_440
+        )
+        XCTAssertLessThan(focused.start, 0.45)
+        XCTAssertGreaterThan(focused.end, 0.55)
+
+        let oneHour = GanttViewport.full.fitting(
+            visibleDuration: 60 * 60,
+            within: 24 * 60 * 60,
+            anchor: 0.75
+        )
+        XCTAssertEqual(
+            oneHour.length * 24 * 60 * 60,
+            60 * 60,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            oneHour.start + oneHour.length * 0.75,
+            0.75,
+            accuracy: 0.001
+        )
+    }
+
+    func testOneMinuteGanttPrioritizesTimeActualAndSensorConfidence() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let start = makeDate(2026, 7, 31, 9, 4)
+        let end = makeDate(2026, 7, 31, 9, 36)
+
+        XCTAssertEqual(
+            GanttPrecisionPresentation.label(
+                title: "자가용",
+                startsAt: start,
+                endsAt: end,
+                detailText: "센서 추정 · 높은 신뢰",
+                visibleDuration: 60,
+                calendar: calendar
+            ),
+            "09:04–09:36 · 센서 추정 · 높은 신뢰"
+        )
+        XCTAssertEqual(
+            GanttPrecisionPresentation.label(
+                title: "러닝",
+                startsAt: start,
+                endsAt: end,
+                detailText: "실제 · Apple 건강 · 높은 신뢰",
+                visibleDuration: 15 * 60,
+                calendar: calendar
+            ),
+            "러닝"
+        )
+    }
+
+    @MainActor
+    func testTwoFingerDoubleTapRecognizerIsInstalledAndInvokesReset() {
+        var recognitionCount = 0
+        let coordinator = TwoFingerDoubleTapAttachment.Coordinator {
+            recognitionCount += 1
+        }
+        let hostView = UIView()
+        let attachmentView = TwoFingerDoubleTapAttachment.AttachmentView()
+        attachmentView.coordinator = coordinator
+
+        hostView.addSubview(attachmentView)
+        attachmentView.installRecognizerIfNeeded()
+
+        let recognizer = hostView.gestureRecognizers?
+            .compactMap { $0 as? UITapGestureRecognizer }
+            .first
+        XCTAssertEqual(recognizer?.numberOfTapsRequired, 2)
+        XCTAssertEqual(recognizer?.numberOfTouchesRequired, 2)
+        XCTAssertEqual(recognizer?.cancelsTouchesInView, false)
+
+        coordinator.didRecognize()
+        XCTAssertEqual(recognitionCount, 1)
     }
 
     func testScheduleDragSnapsToFifteenMinutes() throws {
@@ -304,6 +466,29 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(result.categories.contains(where: { $0.id == custom.id }))
     }
 
+    func testCategoryDragReorderingMovesInsteadOfSwapping() {
+        let categories = Array(CategoryCatalog.builtIn.prefix(4))
+        let reordered = CategoryCatalog.moving(
+            categories,
+            fromOffsets: IndexSet(integer: 0),
+            toOffset: 3
+        )
+
+        XCTAssertEqual(
+            reordered.map(\.id),
+            [
+                categories[1].id,
+                categories[2].id,
+                categories[0].id,
+                categories[3].id,
+            ]
+        )
+        XCTAssertEqual(
+            reordered.map(\.sortOrder),
+            Array(0..<categories.count)
+        )
+    }
+
     func testSubwayNeedsCombinedSignals() {
         let base = makeDate(2026, 7, 30, 8, 0)
         let readings = (0..<6).map { index in
@@ -351,6 +536,232 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testIPhoneStepIncreaseSeparatesWalkingFromAutomotiveMotion() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(3 * 60)
+        )
+        let walkingReadings = (0..<4).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: 1.4,
+                motion: .automotive,
+                motionConfidence: .medium,
+                stepCount: index * 90
+            )
+        }
+        let walking = TravelModeClassifier().classify(
+            readings: walkingReadings,
+            inside: span
+        )
+
+        XCTAssertEqual(walking.mode, .walking)
+        XCTAssertTrue(
+            walking.evidence.contains("iPhone 실시간 걸음 270보")
+        )
+
+        let automotiveReadings = (0..<4).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                stepCount: 100 + min(index, 1)
+            )
+        }
+        let automotive = TravelModeClassifier().classify(
+            readings: automotiveReadings,
+            inside: span
+        )
+
+        XCTAssertEqual(automotive.mode, .car)
+        XCTAssertTrue(
+            automotive.evidence.contains(
+                "iPhone·Apple Watch 걸음 증가 거의 없음"
+            )
+        )
+    }
+
+    func testAppleWatchWorkoutOverridesConflictingIPhoneMotion() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(10 * 60)
+        )
+        let readings = (0..<6).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 2 * 60),
+                speedMetersPerSecond: 8,
+                motion: .automotive,
+                motionConfidence: .high,
+                stepCount: index * 100
+            )
+        }
+        let watchWorkout = AppleMovementEvidence(
+            span: span,
+            source: .appleWatch,
+            kind: .workout,
+            workoutMode: .walking,
+            stepCount: 1_000,
+            distanceMeters: 800,
+            sourceName: "Apple Watch",
+            deviceName: "Apple Watch"
+        )
+
+        let result = TravelModeClassifier().classify(
+            readings: readings,
+            inside: span,
+            healthEvidence: [watchWorkout]
+        )
+
+        XCTAssertEqual(result.mode, .walking)
+        XCTAssertEqual(result.confidence, .high)
+        XCTAssertTrue(
+            result.evidence.contains("Apple Watch 걷기 운동")
+        )
+    }
+
+    func testMovementCorrectionSurvivesRefreshAndCanBeForgotten() throws {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let originalPlaces = [
+            PlaceStay(
+                placeKey: "home",
+                displayName: "집",
+                span: TimeSpan(
+                    start: base.addingTimeInterval(-hour),
+                    end: base
+                ),
+                confidence: .high
+            ),
+            PlaceStay(
+                placeKey: "office",
+                displayName: "회사",
+                span: TimeSpan(
+                    start: base.addingTimeInterval(hour),
+                    end: base.addingTimeInterval(2 * hour)
+                ),
+                confidence: .high
+            ),
+        ]
+        let original = TravelSegment(
+            fromPlaceID: originalPlaces[0].id,
+            toPlaceID: originalPlaces[1].id,
+            mode: .car,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(hour)
+            ),
+            distanceMeters: 12_000,
+            confidence: .medium,
+            evidence: ["iPhone 자동차 활동"]
+        )
+        let corrections = MovementCorrectionEngine.recording(
+            mode: .subway,
+            for: original,
+            places: originalPlaces,
+            existing: [],
+            at: base.addingTimeInterval(2 * hour)
+        )
+
+        let nextDay = base.addingTimeInterval(24 * hour)
+        let refreshedPlaces = [
+            PlaceStay(
+                placeKey: "home",
+                displayName: "집",
+                span: TimeSpan(
+                    start: nextDay.addingTimeInterval(-hour),
+                    end: nextDay
+                ),
+                confidence: .high
+            ),
+            PlaceStay(
+                placeKey: "office",
+                displayName: "회사",
+                span: TimeSpan(
+                    start: nextDay.addingTimeInterval(hour),
+                    end: nextDay.addingTimeInterval(2 * hour)
+                ),
+                confidence: .high
+            ),
+        ]
+        let refreshed = TravelSegment(
+            fromPlaceID: refreshedPlaces[0].id,
+            toPlaceID: refreshedPlaces[1].id,
+            mode: .bus,
+            span: TimeSpan(
+                start: nextDay,
+                end: nextDay.addingTimeInterval(hour)
+            ),
+            distanceMeters: 12_100,
+            confidence: .low,
+            evidence: ["새 센서 판정"]
+        )
+
+        let applied = try XCTUnwrap(
+            MovementCorrectionEngine.applying(
+                corrections,
+                to: [refreshed],
+                places: refreshedPlaces
+            ).first
+        )
+
+        XCTAssertEqual(applied.mode, .subway)
+        XCTAssertEqual(applied.confidence, .high)
+        XCTAssertTrue(applied.isConfirmed)
+        XCTAssertTrue(applied.evidence.contains("사용자 확인 기억"))
+        XCTAssertEqual(corrections.first?.inferredMode, .car)
+        XCTAssertTrue(
+            MovementCorrectionEngine.removingCorrection(
+                for: applied,
+                places: refreshedPlaces,
+                from: corrections
+            ).isEmpty
+        )
+    }
+
+    func testMemoEditingPreservesIdentityAndAttachments() throws {
+        let createdAt = makeDate(2026, 7, 30, 9, 0)
+        let updatedAt = createdAt.addingTimeInterval(60)
+        let attachment = MemoAttachment(
+            kind: .photo,
+            localIdentifier: "photo-id",
+            createdAt: createdAt
+        )
+        let original = ActionMemo(
+            planID: UUID(),
+            kind: .idea,
+            text: "초안",
+            attachments: [attachment],
+            createdAt: createdAt,
+            updatedAt: createdAt
+        )
+
+        let updated = try XCTUnwrap(
+            ActionMemoEditingEngine.updating(
+                original,
+                text: "  다음 행동  ",
+                kind: .nextAction,
+                at: updatedAt
+            )
+        )
+
+        XCTAssertEqual(updated.id, original.id)
+        XCTAssertEqual(updated.planID, original.planID)
+        XCTAssertEqual(updated.text, "다음 행동")
+        XCTAssertEqual(updated.kind, .nextAction)
+        XCTAssertEqual(updated.attachments, [attachment])
+        XCTAssertEqual(updated.createdAt, createdAt)
+        XCTAssertEqual(updated.updatedAt, updatedAt)
+        XCTAssertNil(
+            ActionMemoEditingEngine.updating(
+                original,
+                text: "  ",
+                kind: .decision
+            )
+        )
+    }
+
     func testFloorEstimatorUsesRelativeAltitudeAndBaseline() {
         let base = makeDate(2026, 7, 30)
         let readings = [
@@ -368,6 +779,89 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(result?.fromFloor, 9)
         XCTAssertEqual(result?.toFloor, 10)
+    }
+
+    func testHomeFloorCalibrationUsesRelativeAltitudeAndShowsSeaLevelAltitude() {
+        let base = makeDate(2026, 7, 31, 18)
+        let sessionID = UUID()
+        let homePoint = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 82,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        let initial = SensorReading(
+            timestamp: base,
+            point: homePoint,
+            relativeAltitudeMeters: 0,
+            pressureKilopascals: 100.2,
+            altimeterSessionID: sessionID
+        )
+        let engine = FloorCalibrationEngine()
+        let calibration = engine.capturing(
+            .homeTwentiethFloor,
+            from: initial
+        )
+        let estimate = engine.estimate(
+            reading: SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                point: homePoint,
+                relativeAltitudeMeters: 3.1,
+                pressureKilopascals: 100.16,
+                altimeterSessionID: sessionID
+            ),
+            calibration: calibration
+        )
+
+        XCTAssertTrue(calibration.isCaptured)
+        XCTAssertEqual(estimate?.floor, 21)
+        XCTAssertEqual(
+            estimate?.seaLevelAltitudeMeters ?? 0,
+            85.1,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(estimate?.verticalAccuracyMeters, 6)
+        XCTAssertEqual(estimate?.confidence, .high)
+    }
+
+    func testHomeFloorCalibrationRejectsFarAwayLocation() {
+        let base = makeDate(2026, 7, 31, 18)
+        let sessionID = UUID()
+        let homePoint = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 82,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        let engine = FloorCalibrationEngine()
+        let calibration = engine.capturing(
+            .homeTwentiethFloor,
+            from: SensorReading(
+                timestamp: base,
+                point: homePoint,
+                relativeAltitudeMeters: 0,
+                altimeterSessionID: sessionID
+            )
+        )
+        let estimate = engine.estimate(
+            reading: SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                point: GeoPoint(
+                    latitude: 37.52,
+                    longitude: 127.02,
+                    altitude: 85,
+                    horizontalAccuracy: 8,
+                    verticalAccuracy: 6
+                ),
+                relativeAltitudeMeters: 3,
+                altimeterSessionID: sessionID
+            ),
+            calibration: calibration
+        )
+
+        XCTAssertNil(estimate)
     }
 
     func testFloorEstimatorUsesPedometerCountersAsCumulativeValues() {
@@ -399,6 +893,101 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(result?.toFloor, 10)
         XCTAssertTrue(result?.evidence.contains("층계 +1") == true)
+    }
+
+    func testFloorEstimatorDoesNotMixDifferentAltimeterSessions() {
+        let base = makeDate(2026, 7, 30, 9)
+        let firstSession = UUID()
+        let secondSession = UUID()
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                relativeAltitudeMeters: 0,
+                altimeterSessionID: firstSession
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                relativeAltitudeMeters: 0.1,
+                altimeterSessionID: firstSession
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(120),
+                relativeAltitudeMeters: 3.1,
+                altimeterSessionID: secondSession
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(180),
+                relativeAltitudeMeters: 3.2,
+                altimeterSessionID: secondSession
+            ),
+        ]
+
+        XCTAssertNil(
+            FloorEstimator().estimate(
+                readings: readings,
+                placeKey: "office",
+                baselineFloor: 9
+            )
+        )
+    }
+
+    func testFloorTimelineAppliesConfirmedBaselineAndSplitsPlace() {
+        let base = makeDate(2026, 7, 30, 9)
+        let sessionID = UUID()
+        let placeSpan = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(30 * 60)
+        )
+        let detected = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            span: placeSpan,
+            confidence: .high
+        )
+        let known = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            floor: 9,
+            span: TimeSpan(
+                start: base.addingTimeInterval(-8 * hour),
+                end: base.addingTimeInterval(-7 * hour)
+            ),
+            confidence: .high,
+            isConfirmed: true
+        )
+        let altitudes: [Double] = [0, 0.1, 3.0, 3.1, 3.1]
+        let readings = altitudes.enumerated().map { index, altitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(
+                    Double(index) * 5 * 60
+                ),
+                relativeAltitudeMeters: altitude,
+                pressureKilopascals: 101.3 - altitude * 0.012,
+                altimeterSessionID: sessionID
+            )
+        }
+
+        let result = FloorTimelineEngine().apply(
+            readings: readings,
+            to: [detected],
+            knownPlaces: [known]
+        )
+
+        XCTAssertEqual(result.places.map(\.floor), [9, 10])
+        XCTAssertEqual(result.transitions.count, 1)
+        XCTAssertEqual(result.transitions.first?.fromFloor, 9)
+        XCTAssertEqual(result.transitions.first?.toFloor, 10)
+        XCTAssertTrue(
+            result.transitions.first?.evidence.contains(
+                "기압 고도 센서"
+            ) == true
+        )
+        XCTAssertTrue(
+            MovementRouteBuilder().build(
+                stays: result.places,
+                readings: readings
+            ).isEmpty
+        )
     }
 
     func testSleepAnalysisBuildsOneSessionWithoutDoubleCountingOverlaps() {
@@ -552,6 +1141,290 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored[0].deviceMotion, motion)
     }
 
+    func testSensorCollectionProfilesUseRequestedIntervalsAndPowerPolicy() {
+        XCTAssertEqual(
+            SensorCollectionProfile.batterySaver.interval,
+            15 * 60
+        )
+        XCTAssertEqual(
+            SensorCollectionProfile.balanced.interval,
+            5 * 60
+        )
+        XCTAssertEqual(
+            SensorCollectionProfile.accuracy.interval,
+            60
+        )
+
+        let batterySaver = SensorCollectionConfiguration.configured(
+            for: .batterySaver,
+            allowsBackgroundLocation: false
+        )
+        XCTAssertFalse(batterySaver.highAccuracyDuringMovement)
+        XCTAssertFalse(batterySaver.collectsDeviceMotion)
+        XCTAssertEqual(batterySaver.minimumEmissionInterval, 15 * 60)
+
+        let accuracy = SensorCollectionConfiguration.configured(
+            for: .accuracy,
+            allowsBackgroundLocation: true
+        )
+        XCTAssertTrue(accuracy.highAccuracyDuringMovement)
+        XCTAssertTrue(accuracy.collectsDeviceMotion)
+        XCTAssertTrue(accuracy.allowsBackgroundLocation)
+        XCTAssertEqual(accuracy.minimumEmissionInterval, 60)
+        XCTAssertEqual(
+            AppFeatureSettings.defaults.sensorCollectionProfile,
+            .balanced
+        )
+    }
+
+    func testAppleDeviceMotionHistoryOverridesAppSensorEstimate() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let readings = [
+            SensorReading(
+                timestamp: base.addingTimeInterval(10 * 60),
+                motion: .unknown,
+                motionConfidence: .low
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(70 * 60),
+                motion: .walking,
+                motionConfidence: .low
+            ),
+        ]
+        let activities = [
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(30 * 60)
+                ),
+                motion: .running,
+                confidence: .high
+            ),
+        ]
+
+        let result = AppleDeviceGroundTruthEngine.applyingMotionHistory(
+            to: readings,
+            activities: activities
+        )
+
+        XCTAssertEqual(result[0].motion, .running)
+        XCTAssertEqual(result[0].motionConfidence, .high)
+        XCTAssertEqual(result[1].motion, .walking)
+    }
+
+    func testAppleDeviceMotionFillsMovementMissingFromGPS() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let walking = MotionActivityRecord(
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(20 * 60)
+            ),
+            motion: .walking,
+            confidence: .high
+        )
+        let running = MotionActivityRecord(
+            span: TimeSpan(
+                start: base.addingTimeInterval(30 * 60),
+                end: base.addingTimeInterval(40 * 60)
+            ),
+            motion: .running,
+            confidence: .medium
+        )
+        let pedometer = PedometerSummary(
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(hour)
+            ),
+            stepCount: 3_000,
+            distanceMeters: 3_000,
+            floorsAscended: 1,
+            floorsDescended: 0,
+            averageActivePaceSecondsPerMeter: nil
+        )
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [],
+            motionActivities: [walking, running],
+            pedometer: pedometer
+        )
+
+        XCTAssertEqual(result.map(\.mode), [.walking, .running])
+        XCTAssertEqual(
+            result.reduce(0) { $0 + $1.distanceMeters },
+            3_000,
+            accuracy: 0.001
+        )
+        XCTAssertTrue(
+            result.allSatisfy {
+                $0.evidence.contains("iPhone Core Motion 기록")
+            }
+        )
+    }
+
+    func testAppleDeviceGPSMovementWinsOverMotionFallback() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let gps = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(30 * 60)
+            ),
+            distanceMeters: 8_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+        let automotive = MotionActivityRecord(
+            span: TimeSpan(
+                start: base.addingTimeInterval(10 * 60),
+                end: base.addingTimeInterval(25 * 60)
+            ),
+            motion: .automotive,
+            confidence: .high
+        )
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [gps],
+            motionActivities: [automotive],
+            pedometer: nil
+        )
+
+        XCTAssertEqual(result, [gps])
+    }
+
+    func testHealthKitRefreshReplacesOnlyHealthKitGroundTruthWindow() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(24 * hour)
+        )
+        let manual = ActualRecord(
+            planID: nil,
+            title: "직접 기록",
+            categoryID: "exercise",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(hour),
+            source: .manual
+        )
+        let staleHealth = ActualRecord(
+            planID: nil,
+            title: "이전 Watch 기록",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(2 * hour),
+            endedAt: base.addingTimeInterval(3 * hour),
+            source: .healthKit
+        )
+        let freshHealth = ActualRecord(
+            planID: nil,
+            title: "새 Watch 기록",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(4 * hour),
+            endedAt: base.addingTimeInterval(5 * hour),
+            source: .healthKit
+        )
+
+        let result = AppleDeviceGroundTruthEngine
+            .replacingHealthKitActuals(
+                existing: [manual, staleHealth],
+                with: [freshHealth, freshHealth],
+                inside: span
+            )
+
+        XCTAssertTrue(result.contains(manual))
+        XCTAssertFalse(result.contains(staleHealth))
+        XCTAssertEqual(
+            result.filter { $0.source == .healthKit },
+            [freshHealth]
+        )
+    }
+
+    func testLinkedWatchWorkoutSupersedesItsTimerActual() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let planID = UUID()
+        let timer = ActualRecord(
+            planID: planID,
+            title: "아침 달리기",
+            categoryID: "exercise",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(30 * 60),
+            source: .timer
+        )
+        let otherTimer = ActualRecord(
+            planID: UUID(),
+            title: "다른 계획",
+            categoryID: "project",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(30 * 60),
+            source: .timer
+        )
+        let watchWorkout = ActualRecord(
+            planID: planID,
+            title: "아침 달리기",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(20),
+            endedAt: base.addingTimeInterval(31 * 60),
+            source: .healthKit
+        )
+
+        let result = AppleDeviceGroundTruthEngine.replacingHealthKitActuals(
+            existing: [timer, otherTimer],
+            with: [watchWorkout],
+            inside: TimeSpan(
+                start: base.addingTimeInterval(-60),
+                end: base.addingTimeInterval(60 * 60)
+            )
+        )
+
+        XCTAssertFalse(result.contains(timer))
+        XCTAssertTrue(result.contains(otherTimer))
+        XCTAssertTrue(result.contains(watchWorkout))
+    }
+
+    func testWatchPayloadAndCommandRoundTrip() throws {
+        let planID = UUID()
+        let command = TaptionWatchCommand(
+            planID: planID,
+            kind: .postponeThirtyMinutes
+        )
+        let commandData = try JSONEncoder().encode(command)
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                TaptionWatchCommand.self,
+                from: commandData
+            ),
+            command
+        )
+
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let payload = TaptionWatchPayload(
+            generatedAt: base,
+            viewportStart: base,
+            viewportEnd: base.addingTimeInterval(24 * hour),
+            items: [
+                TaptionWatchPlanItem(
+                    id: planID,
+                    title: "워치 연동",
+                    categoryID: "project",
+                    startsAt: base,
+                    endsAt: base.addingTimeInterval(hour),
+                    status: PlanStatus.planned.rawValue,
+                    actualStartedAt: nil,
+                    categoryName: "프로젝트",
+                    categoryHex: "#5C81B1"
+                )
+            ],
+            catStyle: CatStyle.calico.rawValue,
+            reducesMotion: false
+        )
+        let payloadData = try JSONEncoder().encode(payload)
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                TaptionWatchPayload.self,
+                from: payloadData
+            ),
+            payload
+        )
+    }
+
     func testPlaceDetectionRequiresLongStay() {
         let base = makeDate(2026, 7, 30)
         let point = GeoPoint(
@@ -665,6 +1538,34 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
     }
 
+    func testAppGroupRepositoryMigratesExistingDeviceSnapshotOnce() async throws {
+        var existing = TaptionDataSnapshot.empty
+        existing.updatedAt = makeDate(2026, 7, 31, 18)
+        existing.categories = CategoryCatalog.builtIn
+        existing.plans = [
+            PlanRecord(
+                title: "기존 계획",
+                span: TimeSpan(
+                    start: existing.updatedAt,
+                    end: existing.updatedAt.addingTimeInterval(hour)
+                ),
+                categoryID: "project"
+            )
+        ]
+        let primary = InMemoryPlanRepository()
+        let legacy = InMemoryPlanRepository(snapshot: existing)
+        let repository = MigratingPlanRepository(
+            primary: primary,
+            legacy: legacy
+        )
+
+        let loaded = try await repository.load()
+        let shared = try await primary.load()
+
+        XCTAssertEqual(loaded.plans.first?.title, "기존 계획")
+        XCTAssertEqual(shared.plans, loaded.plans)
+    }
+
     func testWidgetCommandMutatesSharedSnapshotWithoutOpeningApp() throws {
         let base = makeDate(2026, 7, 30, 9)
         let plan = PlanRecord(
@@ -723,6 +1624,10 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(
             TaptionDeepLink(url: URL(string: "taptionplan://today")!),
             .today
+        )
+        XCTAssertEqual(
+            TaptionDeepLink(url: URL(string: "taptionplan://cats")!),
+            .catPicker
         )
     }
 
@@ -797,6 +1702,7 @@ final class FeatureEngineTests: XCTestCase {
                 as? [String: Any]
         )
         object.removeValue(forKey: "notificationsEnabled")
+        object.removeValue(forKey: "movementCorrections")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
         let migrated = try JSONDecoder().decode(
@@ -805,10 +1711,203 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         XCTAssertFalse(migrated.notificationsEnabled)
+        XCTAssertTrue(migrated.movementCorrections.isEmpty)
         XCTAssertEqual(migrated.startScale, .day)
         XCTAssertEqual(
             migrated.permissions.count,
             PermissionFeature.allCases.count
+        )
+    }
+
+    func testCloudKitRequiresExactContainerEntitlement() {
+        XCTAssertFalse(
+            CloudKitEntitlementPolicy.canInitialize(
+                containerIdentifier: "iCloud.com.taption.plan",
+                embeddedProfileData: nil
+            )
+        )
+        XCTAssertFalse(
+            CloudKitEntitlementPolicy.canInitialize(
+                containerIdentifier: "iCloud.com.taption.plan",
+                embeddedProfileData: Data(
+                    "iCloud.com.example.other".utf8
+                )
+            )
+        )
+        XCTAssertTrue(
+            CloudKitEntitlementPolicy.canInitialize(
+                containerIdentifier: "iCloud.com.taption.plan",
+                embeddedProfileData: Data(
+                    """
+                    <key>com.apple.developer.icloud-container-identifiers</key>
+                    <array><string>iCloud.com.taption.plan</string></array>
+                    """.utf8
+                )
+            )
+        )
+    }
+
+    func testOpenMeteoWeatherCodesUseKoreanConditionsAndDayNightSymbols() {
+        let clearDay = OpenMeteoWeatherCodePresentation(
+            code: 0,
+            isDay: true
+        )
+        XCTAssertEqual(clearDay.condition, "맑음")
+        XCTAssertEqual(clearDay.symbolName, "sun.max.fill")
+
+        let clearNight = OpenMeteoWeatherCodePresentation(
+            code: 0,
+            isDay: false
+        )
+        XCTAssertEqual(clearNight.condition, "맑음")
+        XCTAssertEqual(clearNight.symbolName, "moon.stars.fill")
+
+        let heavyRain = OpenMeteoWeatherCodePresentation(
+            code: 65,
+            isDay: true
+        )
+        XCTAssertEqual(heavyRain.condition, "강한 비")
+        XCTAssertEqual(heavyRain.symbolName, "cloud.heavyrain.fill")
+    }
+
+    func testScheduleHeaderUsesKoreanCalendarTitles() {
+        let date = makeDate(2026, 7, 31)
+        let formatter = ScheduleHeaderFormatter(calendar: utcCalendar)
+
+        XCTAssertEqual(
+            formatter.title(for: date, scale: .day),
+            "7월 31일 (금)"
+        )
+        XCTAssertEqual(
+            formatter.title(for: date, scale: .week),
+            "7월 27일 – 8월 2일"
+        )
+        XCTAssertEqual(
+            formatter.title(for: date, scale: .month),
+            "2026년 7월"
+        )
+        XCTAssertEqual(
+            formatter.title(for: date, scale: .year),
+            "2026년"
+        )
+    }
+
+    func testPeriodNavigationRequiresDataInAdjacentPeriodForEveryScale() throws {
+        let date = makeDate(2026, 7, 31, 12)
+        let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)
+        let aggregation = TimelineAggregationEngine(calendar: utcCalendar)
+
+        for level in TimelineLevel.allCases {
+            XCTAssertFalse(
+                engine.canNavigate(
+                    from: date,
+                    level: level,
+                    direction: 1,
+                    snapshot: .empty
+                ),
+                "\(level.rawValue) should be disabled without data"
+            )
+
+            let nextDate = try XCTUnwrap(
+                engine.adjacentDate(
+                    from: date,
+                    level: level,
+                    direction: 1
+                )
+            )
+            let nextSpan = aggregation.interval(
+                for: level,
+                containing: nextDate
+            )
+            var snapshot = TaptionDataSnapshot.empty
+            snapshot.plans = [
+                PlanRecord(
+                    title: "다음 기간 계획",
+                    span: TimeSpan(
+                        start: nextSpan.start.addingTimeInterval(60),
+                        end: nextSpan.start.addingTimeInterval(hour)
+                    ),
+                    categoryID: "project"
+                )
+            ]
+
+            XCTAssertTrue(
+                engine.canNavigate(
+                    from: date,
+                    level: level,
+                    direction: 1,
+                    snapshot: snapshot
+                ),
+                "\(level.rawValue) should be enabled with adjacent data"
+            )
+            XCTAssertFalse(
+                engine.canNavigate(
+                    from: date,
+                    level: level,
+                    direction: -1,
+                    snapshot: snapshot
+                ),
+                "\(level.rawValue) should not reuse next-period data"
+            )
+        }
+    }
+
+    func testPeriodNavigationUsesTimelineRecordsButNotWeatherContext() throws {
+        let date = makeDate(2026, 7, 31, 12)
+        let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)
+        let nextDate = try XCTUnwrap(
+            engine.adjacentDate(
+                from: date,
+                level: .day,
+                direction: 1
+            )
+        )
+
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.weather = [
+            WeatherContext(
+                observedAt: nextDate,
+                condition: "맑음",
+                symbolName: "sun.max.fill",
+                temperatureCelsius: 28
+            )
+        ]
+        XCTAssertFalse(
+            engine.canNavigate(
+                from: date,
+                level: .day,
+                direction: 1,
+                snapshot: snapshot
+            )
+        )
+
+        snapshot.photos = [
+            PhotoMoment(
+                id: "hidden-photo",
+                capturedAt: nextDate,
+                pixelWidth: 1_000,
+                pixelHeight: 1_000,
+                isFavorite: false,
+                isHiddenFromTimeline: true
+            )
+        ]
+        XCTAssertFalse(
+            engine.canNavigate(
+                from: date,
+                level: .day,
+                direction: 1,
+                snapshot: snapshot
+            )
+        )
+
+        snapshot.photos[0].isHiddenFromTimeline = false
+        XCTAssertTrue(
+            engine.canNavigate(
+                from: date,
+                level: .day,
+                direction: 1,
+                snapshot: snapshot
+            )
         )
     }
 

@@ -139,6 +139,9 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
     var items: [TaptionWidgetItem]
     var catStyle: String
     var hidesSensitiveContent: Bool
+    var weatherSymbolName: String?
+    var temperatureCelsius: Double?
+    var reducesMotion: Bool?
 
     static var empty: TaptionWidgetPayload {
         let calendar = Calendar.autoupdatingCurrent
@@ -149,14 +152,17 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
             viewportEnd: day.addingTimeInterval(86_400),
             items: [],
             catStyle: "calico",
-            hidesSensitiveContent: true
+            hidesSensitiveContent: true,
+            weatherSymbolName: nil,
+            temperatureCelsius: nil,
+            reducesMotion: false
         )
     }
 
     static var placeholder: TaptionWidgetPayload {
         let calendar = Calendar.autoupdatingCurrent
         let day = calendar.startOfDay(for: .now)
-        let first = Date.now.addingTimeInterval(-20 * 60)
+        let now = Date.now
         return TaptionWidgetPayload(
             generatedAt: .now,
             viewportStart: day,
@@ -164,16 +170,28 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
             items: [
                 TaptionWidgetItem(
                     id: UUID(),
-                    title: "오늘의 첫 계획",
+                    title: "회의",
                     categoryID: "project",
-                    startsAt: first,
-                    endsAt: first.addingTimeInterval(80 * 60),
+                    startsAt: now.addingTimeInterval(-2.82 * 3_600),
+                    endsAt: now.addingTimeInterval(-1.14 * 3_600),
                     status: "planned",
+                    isFixed: true
+                ),
+                TaptionWidgetItem(
+                    id: UUID(),
+                    title: "러닝",
+                    categoryID: "exercise",
+                    startsAt: now.addingTimeInterval(-0.24 * 3_600),
+                    endsAt: now.addingTimeInterval(1.98 * 3_600),
+                    status: "running",
                     isFixed: false
                 ),
             ],
             catStyle: "calico",
-            hidesSensitiveContent: true
+            hidesSensitiveContent: false,
+            weatherSymbolName: "cloud.sun",
+            temperatureCelsius: 23,
+            reducesMotion: false
         )
     }
 }

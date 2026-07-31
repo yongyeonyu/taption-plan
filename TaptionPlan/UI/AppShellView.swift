@@ -26,6 +26,7 @@ struct AppShellView: View {
         .sheet(item: $model.selectedPhotoCluster) { cluster in
             PhotoClusterSheet(model: model, cluster: cluster)
         }
+        .font(.taption(size: 17))
         .tint(.tpInk)
         .preferredColorScheme(.light)
         .task {

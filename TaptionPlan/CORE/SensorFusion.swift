@@ -3,16 +3,10 @@ import Foundation
 struct TravelModeClassifier: Sendable {
     func classify(
         readings: [SensorReading],
+        inside requestedSpan: TimeSpan? = nil,
+        healthEvidence: [AppleMovementEvidence] = [],
         correctedMode: TravelMode? = nil
     ) -> MovementInference {
-        guard !readings.isEmpty else {
-            return MovementInference(
-                mode: .walking,
-                confidence: .low,
-                score: 0,
-                evidence: ["센서 데이터 부족"]
-            )
-        }
         if let correctedMode {
             return MovementInference(
                 mode: correctedMode,
@@ -21,14 +15,41 @@ struct TravelModeClassifier: Sendable {
                 evidence: ["사용자 교정"]
             )
         }
+        guard !readings.isEmpty || !healthEvidence.isEmpty else {
+            return MovementInference(
+                mode: .walking,
+                confidence: .low,
+                score: 0,
+                evidence: ["센서 데이터 부족"]
+            )
+        }
 
-        let speeds = readings.compactMap(\.speedMetersPerSecond).filter { $0 >= 0 }
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let inferenceSpan = requestedSpan ?? sensorSpan(for: ordered)
+        if let watchWorkout = authoritativeWatchWorkout(
+            in: inferenceSpan,
+            evidence: healthEvidence
+        ) {
+            return MovementInference(
+                mode: watchWorkout.workoutMode ?? .walking,
+                confidence: .high,
+                score: 0.98,
+                evidence: [
+                    "Apple Watch \(modeName(watchWorkout.workoutMode)) 운동",
+                    "HealthKit 기기 출처 확인",
+                ]
+            )
+        }
+
+        let speeds = ordered.compactMap(\.speedMetersPerSecond).filter { $0 >= 0 }
         let averageSpeed = speeds.isEmpty ? 0 : speeds.reduce(0, +) / Double(speeds.count)
-        let gpsLossRatio = Double(readings.filter { !$0.gpsAvailable }.count)
-            / Double(readings.count)
-        let relativeAltitudes = readings.compactMap(\.relativeAltitudeMeters)
+        let gpsLossRatio = ordered.isEmpty
+            ? 0
+            : Double(ordered.filter { !$0.gpsAvailable }.count)
+                / Double(ordered.count)
+        let relativeAltitudes = ordered.compactMap(\.relativeAltitudeMeters)
         let altitudeDelta = (relativeAltitudes.last ?? 0) - (relativeAltitudes.first ?? 0)
-        let dominantMotion = Dictionary(grouping: readings, by: \.motion)
+        let dominantMotion = Dictionary(grouping: ordered, by: \.motion)
             .max(by: { $0.value.count < $1.value.count })?.key ?? .unknown
 
         var candidates: [TravelMode: (Double, [String])] = [:]
@@ -54,7 +75,7 @@ struct TravelModeClassifier: Sendable {
             break
         }
 
-        for workout in readings.compactMap(\.watchWorkoutKind).map({
+        for workout in ordered.compactMap(\.watchWorkoutKind).map({
             $0.localizedLowercase
         }) {
             if workout.contains("run") || workout.contains("달리") {
@@ -66,26 +87,73 @@ struct TravelModeClassifier: Sendable {
             }
         }
 
-        if averageSpeed < 2.2 {
-            add(.walking, 0.14, "평균 저속")
-        } else if averageSpeed < 5.5 {
-            add(.running, 0.12, "달리기 속도대")
-            add(.cycling, 0.14, "자전거 속도대")
-        } else if averageSpeed > 55 {
-            add(.airplane, 0.65, "고속 이동")
-        } else if averageSpeed > 18 {
-            add(.train, 0.2, "철도 가능 속도")
-            add(.car, 0.16, "도로 이동 가능 속도")
+        for workout in healthEvidence where workout.kind == .workout {
+            guard workout.span.intersection(with: inferenceSpan) != nil,
+                  let mode = workout.workoutMode else {
+                continue
+            }
+            let sourceName = workout.source == .appleWatch
+                ? "Apple Watch"
+                : "HealthKit"
+            add(
+                mode,
+                workout.source == .appleWatch ? 0.62 : 0.42,
+                "\(sourceName) \(modeName(mode)) 운동"
+            )
         }
 
-        let stationRatio = ratio(readings, where: \.nearbyStation)
-        let railRatio = ratio(readings, where: \.matchesRailRoute)
-        let transitRatio = ratio(readings, where: \.matchesPublicTransitRoute)
-        let stopRatio = ratio(readings, where: \.frequentStops)
-        let taxiHintRatio = ratio(readings, where: \.rideHailingHint)
-        let airportRatio = ratio(readings, where: \.nearAirport)
-        let portRatio = ratio(readings, where: \.nearPort)
-        let waterRatio = ratio(readings, where: \.onWater)
+        let stepSignal = stepSignal(
+            readings: ordered,
+            evidence: healthEvidence,
+            inside: inferenceSpan
+        )
+        let durationMinutes = max(1, inferenceSpan.duration / 60)
+        let stepsPerMinute = Double(stepSignal.bestCount) / durationMinutes
+        let walkingStepThreshold = max(12, Int(durationMinutes * 10))
+        if stepSignal.bestCount >= walkingStepThreshold,
+           stepsPerMinute >= 10 {
+            let stepScore = averageSpeed > 5.5 ? 0.3 : 0.58
+            add(.walking, stepScore, stepSignal.primaryEvidence)
+            if averageSpeed >= 2.2,
+               averageSpeed < 6,
+               stepsPerMinute >= 100 {
+                add(.running, 0.36, "고반복 걸음과 달리기 속도대")
+            }
+            if dominantMotion == .automotive, averageSpeed <= 5.5 {
+                add(.walking, 0.12, "차량 진동보다 지속적인 걸음 우선")
+            }
+        } else if stepSignal.hasCoverage,
+                  inferenceSpan.duration >= 2 * 60,
+                  stepsPerMinute <= 2.5,
+                  dominantMotion == .automotive || averageSpeed > 4 {
+            add(.car, 0.28, "iPhone·Apple Watch 걸음 증가 거의 없음")
+            add(.bus, 0.2, "보행이 아닌 동력 이동")
+            add(.taxi, 0.2, "보행이 아닌 동력 이동")
+            add(.train, 0.1, "보행이 아닌 동력 이동")
+        }
+
+        if !speeds.isEmpty {
+            if averageSpeed < 2.2 {
+                add(.walking, 0.14, "평균 저속")
+            } else if averageSpeed < 5.5 {
+                add(.running, 0.12, "달리기 속도대")
+                add(.cycling, 0.14, "자전거 속도대")
+            } else if averageSpeed > 55 {
+                add(.airplane, 0.65, "고속 이동")
+            } else if averageSpeed > 18 {
+                add(.train, 0.2, "철도 가능 속도")
+                add(.car, 0.16, "도로 이동 가능 속도")
+            }
+        }
+
+        let stationRatio = ratio(ordered, where: \.nearbyStation)
+        let railRatio = ratio(ordered, where: \.matchesRailRoute)
+        let transitRatio = ratio(ordered, where: \.matchesPublicTransitRoute)
+        let stopRatio = ratio(ordered, where: \.frequentStops)
+        let taxiHintRatio = ratio(ordered, where: \.rideHailingHint)
+        let airportRatio = ratio(ordered, where: \.nearAirport)
+        let portRatio = ratio(ordered, where: \.nearPort)
+        let waterRatio = ratio(ordered, where: \.onWater)
 
         if stationRatio >= 0.25 {
             add(.subway, 0.16, "역 접근")
@@ -139,7 +207,139 @@ struct TravelModeClassifier: Sendable {
         _ readings: [SensorReading],
         where keyPath: KeyPath<SensorReading, Bool>
     ) -> Double {
-        Double(readings.filter { $0[keyPath: keyPath] }.count) / Double(readings.count)
+        guard !readings.isEmpty else { return 0 }
+        return Double(readings.filter { $0[keyPath: keyPath] }.count)
+            / Double(readings.count)
+    }
+
+    private func sensorSpan(for readings: [SensorReading]) -> TimeSpan {
+        guard let first = readings.first,
+              let last = readings.last else {
+            return TimeSpan(start: .distantPast, end: .distantPast)
+        }
+        return TimeSpan(
+            start: first.timestamp,
+            end: max(
+                last.timestamp,
+                first.timestamp.addingTimeInterval(60)
+            )
+        )
+    }
+
+    private func authoritativeWatchWorkout(
+        in span: TimeSpan,
+        evidence: [AppleMovementEvidence]
+    ) -> AppleMovementEvidence? {
+        guard span.duration > 0 else { return nil }
+        return evidence
+            .filter {
+                $0.source == .appleWatch
+                    && $0.kind == .workout
+                    && $0.workoutMode != nil
+            }
+            .compactMap { record -> (AppleMovementEvidence, TimeInterval)? in
+                guard let overlap = record.span.intersection(with: span) else {
+                    return nil
+                }
+                return (record, overlap.duration)
+            }
+            .filter {
+                $0.1 >= 60 && $0.1 / span.duration >= 0.5
+            }
+            .max { $0.1 < $1.1 }?
+            .0
+    }
+
+    private struct StepSignal {
+        var livePhoneCount: Int
+        var healthPhoneCount: Int
+        var watchCount: Int
+        var otherCount: Int
+        var hasCoverage: Bool
+
+        var bestCount: Int {
+            max(livePhoneCount, healthPhoneCount, watchCount, otherCount)
+        }
+
+        var primaryEvidence: String {
+            if watchCount == bestCount, watchCount > 0 {
+                return "Apple Watch 걸음 \(watchCount)보"
+            }
+            if livePhoneCount == bestCount, livePhoneCount > 0 {
+                return "iPhone 실시간 걸음 \(livePhoneCount)보"
+            }
+            if healthPhoneCount == bestCount, healthPhoneCount > 0 {
+                return "iPhone HealthKit 걸음 \(healthPhoneCount)보"
+            }
+            return "HealthKit 걸음 \(otherCount)보"
+        }
+    }
+
+    private func stepSignal(
+        readings: [SensorReading],
+        evidence: [AppleMovementEvidence],
+        inside span: TimeSpan
+    ) -> StepSignal {
+        let stepReadings = readings.compactMap { reading in
+            reading.stepCount.map { (reading.timestamp, $0) }
+        }
+        let livePhoneCount = cumulativeIncrease(
+            stepReadings.sorted { $0.0 < $1.0 }.map(\.1)
+        )
+        var groupedCounts: [String: (AppleMovementEvidenceSource, Int)] = [:]
+        for record in evidence where record.kind == .steps {
+            guard let count = record.stepCount,
+                  count >= 0,
+                  let overlap = record.span.intersection(with: span) else {
+                continue
+            }
+            let fraction = min(
+                1,
+                overlap.duration / max(1, record.span.duration)
+            )
+            let allocated = Int((Double(count) * fraction).rounded())
+            let key = "\(record.source.rawValue)|\(record.sourceName)|\(record.deviceName ?? "")"
+            let existing = groupedCounts[key] ?? (record.source, 0)
+            groupedCounts[key] = (record.source, existing.1 + allocated)
+        }
+
+        func maximum(for source: AppleMovementEvidenceSource) -> Int {
+            groupedCounts.values
+                .filter { $0.0 == source }
+                .map(\.1)
+                .max() ?? 0
+        }
+
+        return StepSignal(
+            livePhoneCount: livePhoneCount,
+            healthPhoneCount: maximum(for: .iPhone),
+            watchCount: maximum(for: .appleWatch),
+            otherCount: maximum(for: .other),
+            hasCoverage: stepReadings.count >= 2 || !groupedCounts.isEmpty
+        )
+    }
+
+    private func cumulativeIncrease(_ values: [Int]) -> Int {
+        guard values.count >= 2 else { return 0 }
+        return zip(values, values.dropFirst()).reduce(0) { total, pair in
+            total + (pair.1 >= pair.0 ? pair.1 - pair.0 : pair.1)
+        }
+    }
+
+    private func modeName(_ mode: TravelMode?) -> String {
+        switch mode {
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .cycling: "자전거"
+        case .bus: "버스"
+        case .subway: "지하철"
+        case .taxi: "택시"
+        case .car: "자가용"
+        case .train: "기차"
+        case .airplane: "비행기"
+        case .ship: "배"
+        case nil: "이동"
+        }
     }
 }
 
@@ -152,61 +352,446 @@ struct FloorEstimator: Sendable {
         baselineFloor: Int?,
         floorHeightMeters: Double? = nil
     ) -> FloorTransition? {
-        guard let first = readings.first, let last = readings.last,
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        guard let first = ordered.first, let last = ordered.last,
               first.timestamp < last.timestamp else {
             return nil
         }
 
-        let systemFloors = readings.compactMap(\.systemFloor)
-        if let from = systemFloors.first,
-           let to = systemFloors.last,
+        let systemReadings = ordered.filter { $0.systemFloor != nil }
+        if let firstSystemReading = systemReadings.first,
+           let lastSystemReading = systemReadings.last,
+           let from = firstSystemReading.systemFloor,
+           let to = lastSystemReading.systemFloor,
            from != to {
+            let crossingIndex = systemReadings.firstIndex {
+                $0.systemFloor == to
+            } ?? systemReadings.index(before: systemReadings.endIndex)
+            let transitionStart = crossingIndex > systemReadings.startIndex
+                ? systemReadings[
+                    systemReadings.index(before: crossingIndex)
+                ].timestamp
+                : firstSystemReading.timestamp
             return FloorTransition(
                 id: UUID(),
                 placeKey: placeKey,
                 fromFloor: from,
                 toFloor: to,
                 relativeAltitudeMeters: Double(to - from) * defaultFloorHeightMeters,
-                span: TimeSpan(start: first.timestamp, end: last.timestamp),
+                span: TimeSpan(
+                    start: transitionStart,
+                    end: systemReadings[crossingIndex].timestamp
+                ),
                 confidence: .high,
                 evidence: ["시스템 실내 층 정보"]
             )
         }
 
-        let altitudeValues = readings.compactMap(\.relativeAltitudeMeters)
-        guard let altitudeStart = altitudeValues.first,
-              let altitudeEnd = altitudeValues.last else {
+        let floorHeight = max(
+            2.2,
+            floorHeightMeters ?? defaultFloorHeightMeters
+        )
+        let candidates = altitudeGroups(in: ordered).compactMap { group in
+            altitudeCandidate(
+                from: group,
+                floorHeight: floorHeight
+            )
+        }
+        guard let candidate = candidates.max(by: {
+            if abs($0.floorDelta) == abs($1.floorDelta) {
+                return $0.span.end < $1.span.end
+            }
+            return abs($0.floorDelta) < abs($1.floorDelta)
+        }) else {
             return nil
         }
-        let delta = altitudeEnd - altitudeStart
-        let floorHeight = max(2.2, floorHeightMeters ?? defaultFloorHeightMeters)
-        let floorDelta = Int((delta / floorHeight).rounded())
-        guard floorDelta != 0 else { return nil }
 
-        let firstAscended = readings.first?.floorsAscended ?? 0
-        let lastAscended = readings.last?.floorsAscended ?? firstAscended
-        let firstDescended = readings.first?.floorsDescended ?? 0
-        let lastDescended = readings.last?.floorsDescended ?? firstDescended
-        let pedometerDelta = (lastAscended - firstAscended)
-            - (lastDescended - firstDescended)
         let evidence = [
-            "상대고도 \(String(format: "%+.1f", delta))m",
-            pedometerDelta == 0 ? nil : "층계 \(pedometerDelta > 0 ? "+" : "")\(pedometerDelta)"
+            "기압 고도 센서",
+            "상대고도 \(String(format: "%+.1f", candidate.altitudeDelta))m",
+            candidate.pedometerDelta == 0
+                ? nil
+                : "층계 \(candidate.pedometerDelta > 0 ? "+" : "")\(candidate.pedometerDelta)",
         ].compactMap { $0 }
         let confidence: ConfidenceLevel = baselineFloor == nil
             ? .low
-            : (pedometerDelta == floorDelta || systemFloors.count > 1 ? .high : .medium)
+            : (candidate.pedometerDelta == candidate.floorDelta
+                ? .high
+                : .medium)
 
         return FloorTransition(
             id: UUID(),
             placeKey: placeKey,
             fromFloor: baselineFloor,
-            toFloor: baselineFloor.map { $0 + floorDelta },
-            relativeAltitudeMeters: delta,
-            span: TimeSpan(start: first.timestamp, end: last.timestamp),
+            toFloor: baselineFloor.map {
+                $0 + candidate.floorDelta
+            },
+            relativeAltitudeMeters: candidate.altitudeDelta,
+            span: candidate.span,
             confidence: confidence,
             evidence: evidence
         )
+    }
+
+    private func altitudeGroups(
+        in readings: [SensorReading]
+    ) -> [[SensorReading]] {
+        let altitudeReadings = readings.filter {
+            $0.relativeAltitudeMeters != nil
+        }
+        guard !altitudeReadings.isEmpty else { return [] }
+
+        var groups: [[SensorReading]] = []
+        var current: [SensorReading] = []
+        for reading in altitudeReadings {
+            if let previous = current.last,
+               previous.altimeterSessionID != reading.altimeterSessionID
+                || reading.timestamp.timeIntervalSince(previous.timestamp)
+                    > 30 * 60 {
+                groups.append(current)
+                current = []
+            }
+            current.append(reading)
+        }
+        if !current.isEmpty {
+            groups.append(current)
+        }
+        return groups.filter { $0.count >= 2 }
+    }
+
+    private func altitudeCandidate(
+        from readings: [SensorReading],
+        floorHeight: Double
+    ) -> AltitudeFloorCandidate? {
+        guard let first = readings.first,
+              let last = readings.last,
+              let altitudeStart = first.relativeAltitudeMeters,
+              let altitudeEnd = last.relativeAltitudeMeters else {
+            return nil
+        }
+        let altitudeDelta = altitudeEnd - altitudeStart
+        let floorDelta = Int((altitudeDelta / floorHeight).rounded())
+        guard floorDelta != 0 else { return nil }
+
+        let offsets = readings.map {
+            Int(
+                (
+                    (($0.relativeAltitudeMeters ?? altitudeStart)
+                        - altitudeStart)
+                    / floorHeight
+                ).rounded()
+            )
+        }
+        let firstAscended = first.floorsAscended ?? 0
+        let lastAscended = last.floorsAscended ?? firstAscended
+        let firstDescended = first.floorsDescended ?? 0
+        let lastDescended = last.floorsDescended ?? firstDescended
+        let pedometerDelta = (lastAscended - firstAscended)
+            - (lastDescended - firstDescended)
+        let stableSampleCount = offsets.reversed().prefix {
+            $0 == floorDelta
+        }.count
+        guard stableSampleCount >= 2
+                || pedometerDelta == floorDelta else {
+            return nil
+        }
+
+        let crossingIndex = offsets.firstIndex {
+            $0 == floorDelta
+        } ?? offsets.index(before: offsets.endIndex)
+        let transitionStart = crossingIndex > offsets.startIndex
+            ? readings[crossingIndex - 1].timestamp
+            : first.timestamp
+        return AltitudeFloorCandidate(
+            floorDelta: floorDelta,
+            altitudeDelta: altitudeDelta,
+            pedometerDelta: pedometerDelta,
+            span: TimeSpan(
+                start: transitionStart,
+                end: readings[crossingIndex].timestamp
+            )
+        )
+    }
+}
+
+struct FloorCalibrationEngine: Sendable {
+    var maximumReferenceDistanceMeters: Double = 120
+
+    func capturing(
+        _ calibration: FloorCalibration,
+        from reading: SensorReading
+    ) -> FloorCalibration {
+        guard !calibration.isCaptured,
+              let point = reading.point,
+              point.altitude.isFinite else {
+            return calibration
+        }
+        var value = calibration
+        value.referencePoint = point
+        value.referenceRelativeAltitudeMeters =
+            reading.relativeAltitudeMeters
+        value.referencePressureKilopascals =
+            reading.pressureKilopascals
+        value.referenceAltimeterSessionID =
+            reading.altimeterSessionID
+        value.capturedAt = reading.timestamp
+        return value
+    }
+
+    func estimate(
+        reading: SensorReading,
+        calibration: FloorCalibration
+    ) -> CalibratedAltitudeEstimate? {
+        guard let referencePoint = calibration.referencePoint,
+              isNearReference(
+                reading.point,
+                referencePoint: referencePoint
+              ) else {
+            return nil
+        }
+
+        let delta: Double
+        let confidence: ConfidenceLevel
+        let evidence: [String]
+        if reading.altimeterSessionID
+                == calibration.referenceAltimeterSessionID,
+           let current = reading.relativeAltitudeMeters,
+           let reference =
+                calibration.referenceRelativeAltitudeMeters {
+            delta = current - reference
+            confidence = .high
+            evidence = [
+                "\(calibration.placeName) \(calibration.referenceFloor)층 사용자 기준",
+                "기압 상대고도",
+            ]
+        } else if let currentPressure =
+                    reading.pressureKilopascals,
+                  let referencePressure =
+                    calibration.referencePressureKilopascals,
+                  currentPressure > 0,
+                  referencePressure > 0 {
+            delta = 44_330
+                * (
+                    1
+                    - pow(
+                        currentPressure / referencePressure,
+                        0.1903
+                    )
+                )
+            confidence = .medium
+            evidence = [
+                "\(calibration.placeName) \(calibration.referenceFloor)층 사용자 기준",
+                "기압차 보정",
+            ]
+        } else if let point = reading.point {
+            delta = point.altitude - referencePoint.altitude
+            confidence = .low
+            evidence = [
+                "\(calibration.placeName) \(calibration.referenceFloor)층 사용자 기준",
+                "GPS 고도",
+            ]
+        } else {
+            return nil
+        }
+
+        let floorHeight = max(2.2, calibration.floorHeightMeters)
+        let floor = max(
+            1,
+            calibration.referenceFloor
+                + Int((delta / floorHeight).rounded())
+        )
+        let verticalAccuracy = max(
+            3,
+            reading.point.flatMap {
+                $0.verticalAccuracy >= 0
+                    ? $0.verticalAccuracy
+                    : nil
+            }
+                ?? (
+                    referencePoint.verticalAccuracy >= 0
+                        ? referencePoint.verticalAccuracy
+                        : 20
+                )
+        )
+        return CalibratedAltitudeEstimate(
+            floor: floor,
+            seaLevelAltitudeMeters:
+                referencePoint.altitude + delta,
+            verticalAccuracyMeters: verticalAccuracy,
+            confidence: confidence,
+            evidence: evidence
+        )
+    }
+
+    func applying(
+        _ calibration: FloorCalibration?,
+        to places: [PlaceStay],
+        readings: [SensorReading]
+    ) -> [PlaceStay] {
+        guard let calibration, calibration.isCaptured else {
+            return places
+        }
+        return places.map { place in
+            guard let reading = readings
+                .filter({ place.span.contains($0.timestamp) })
+                .sorted(by: { $0.timestamp < $1.timestamp })
+                .first,
+                  let estimate = estimate(
+                    reading: reading,
+                    calibration: calibration
+                  ) else {
+                return place
+            }
+            var calibrated = place
+            calibrated.displayName = calibration.placeName
+            calibrated.floor = estimate.floor
+            calibrated.confidence = estimate.confidence
+            calibrated.isConfirmed = true
+            return calibrated
+        }
+    }
+
+    private func isNearReference(
+        _ point: GeoPoint?,
+        referencePoint: GeoPoint
+    ) -> Bool {
+        guard let point else { return true }
+        let accuracyRadius = max(
+            maximumReferenceDistanceMeters,
+            max(0, point.horizontalAccuracy)
+                + max(0, referencePoint.horizontalAccuracy)
+        )
+        return distanceMeters(point, referencePoint)
+            <= accuracyRadius
+    }
+}
+
+private struct AltitudeFloorCandidate {
+    var floorDelta: Int
+    var altitudeDelta: Double
+    var pedometerDelta: Int
+    var span: TimeSpan
+}
+
+struct FloorTimelineResult: Sendable {
+    var places: [PlaceStay]
+    var transitions: [FloorTransition]
+}
+
+struct FloorTimelineEngine: Sendable {
+    var estimator = FloorEstimator()
+    var minimumPlaceSegmentDuration: TimeInterval = 60
+
+    func apply(
+        readings: [SensorReading],
+        to detectedPlaces: [PlaceStay],
+        knownPlaces: [PlaceStay]
+    ) -> FloorTimelineResult {
+        var floorByPlaceKey = knownFloorMap(knownPlaces)
+        var resolvedPlaces: [PlaceStay] = []
+        var transitions: [FloorTransition] = []
+
+        for var place in detectedPlaces.sorted(by: {
+            $0.span.start < $1.span.start
+        }) {
+            let relevant = readings.filter {
+                place.span.contains($0.timestamp)
+            }
+            let baselineFloor =
+                place.floor ?? floorByPlaceKey[place.placeKey]
+            guard let transition = estimator.estimate(
+                readings: relevant,
+                placeKey: place.placeKey,
+                baselineFloor: baselineFloor
+            ) else {
+                if place.floor == nil {
+                    place.floor = baselineFloor
+                }
+                resolvedPlaces.append(place)
+                continue
+            }
+
+            transitions.append(transition)
+            guard let fromFloor = transition.fromFloor,
+                  let toFloor = transition.toFloor else {
+                resolvedPlaces.append(place)
+                continue
+            }
+            floorByPlaceKey[place.placeKey] = toFloor
+
+            if let segments = split(
+                place,
+                transition: transition,
+                fromFloor: fromFloor,
+                toFloor: toFloor
+            ) {
+                resolvedPlaces.append(contentsOf: segments)
+            } else {
+                place.floor = toFloor
+                place.confidence = transition.confidence
+                place.isConfirmed = false
+                resolvedPlaces.append(place)
+            }
+        }
+
+        return FloorTimelineResult(
+            places: resolvedPlaces,
+            transitions: transitions
+        )
+    }
+
+    private func knownFloorMap(
+        _ places: [PlaceStay]
+    ) -> [String: Int] {
+        let grouped = Dictionary(grouping: places) {
+            $0.placeKey
+        }
+        return grouped.reduce(into: [String: Int]()) {
+            values, entry in
+            let ordered = entry.value.sorted {
+                $0.span.end < $1.span.end
+            }
+            let known = ordered.last {
+                $0.floor != nil && $0.isConfirmed
+            } ?? ordered.last { $0.floor != nil }
+            if let floor = known?.floor {
+                values[entry.key] = floor
+            }
+        }
+    }
+
+    private func split(
+        _ place: PlaceStay,
+        transition: FloorTransition,
+        fromFloor: Int,
+        toFloor: Int
+    ) -> [PlaceStay]? {
+        guard fromFloor != toFloor,
+              transition.span.start.timeIntervalSince(place.span.start)
+                >= minimumPlaceSegmentDuration,
+              place.span.end.timeIntervalSince(transition.span.end)
+                >= minimumPlaceSegmentDuration else {
+            return nil
+        }
+
+        var before = place
+        before.id = UUID()
+        before.floor = fromFloor
+        before.span = TimeSpan(
+            start: place.span.start,
+            end: transition.span.start
+        )
+
+        var after = place
+        after.id = UUID()
+        after.floor = toFloor
+        after.span = TimeSpan(
+            start: transition.span.end,
+            end: place.span.end
+        )
+        after.confidence = transition.confidence
+        after.isConfirmed = false
+        return [before, after]
     }
 }
 
@@ -292,12 +877,14 @@ struct MovementRouteBuilder: Sendable {
     func build(
         stays: [PlaceStay],
         readings: [SensorReading],
+        healthEvidence: [AppleMovementEvidence] = [],
         correctedModes: [String: TravelMode] = [:]
     ) -> [TravelSegment] {
         let orderedStays = stays.sorted { $0.span.start < $1.span.start }
         guard orderedStays.count >= 2 else { return [] }
 
         return zip(orderedStays, orderedStays.dropFirst()).compactMap { from, to in
+            guard from.placeKey != to.placeKey else { return nil }
             let span = TimeSpan(start: from.span.end, end: to.span.start)
             guard span.duration > 0 else { return nil }
             let segmentReadings = readings.filter {
@@ -306,6 +893,8 @@ struct MovementRouteBuilder: Sendable {
             let signature = "\(from.placeKey)->\(to.placeKey)"
             let inference = classifier.classify(
                 readings: segmentReadings,
+                inside: span,
+                healthEvidence: healthEvidence,
                 correctedMode: correctedModes[signature]
             )
             let distance = pathDistance(segmentReadings.compactMap(\.point))
@@ -325,6 +914,357 @@ struct MovementRouteBuilder: Sendable {
     private func pathDistance(_ points: [GeoPoint]) -> Double {
         zip(points, points.dropFirst()).reduce(0) {
             $0 + distanceMeters($1.0, $1.1)
+        }
+    }
+}
+
+enum MovementCorrectionEngine {
+    private static let maximumRememberedCorrections = 200
+
+    static func recording(
+        mode: TravelMode,
+        for segment: TravelSegment,
+        places: [PlaceStay],
+        existing: [TravelModeCorrection],
+        at date: Date = .now
+    ) -> [TravelModeCorrection] {
+        let placeKeys = placeKeys(for: segment, places: places)
+        let previous = bestCorrection(
+            for: segment,
+            places: places,
+            in: existing
+        )
+        let correction = TravelModeCorrection(
+            id: previous?.id ?? UUID(),
+            fromPlaceKey: placeKeys.from,
+            toPlaceKey: placeKeys.to,
+            span: segment.span,
+            mode: mode,
+            inferredMode: previous?.inferredMode ?? segment.mode,
+            inferredConfidence:
+                previous?.inferredConfidence ?? segment.confidence,
+            updatedAt: date
+        )
+
+        var result = existing.filter { value in
+            guard let previous else {
+                return !matchesSameTarget(
+                    value,
+                    segment: segment,
+                    places: places
+                )
+            }
+            return value.id != previous.id
+        }
+        result.append(correction)
+        result.sort { $0.updatedAt < $1.updatedAt }
+        if result.count > maximumRememberedCorrections {
+            result.removeFirst(result.count - maximumRememberedCorrections)
+        }
+        return result
+    }
+
+    static func applying(
+        _ corrections: [TravelModeCorrection],
+        to segments: [TravelSegment],
+        places: [PlaceStay]
+    ) -> [TravelSegment] {
+        segments.map { segment in
+            guard let correction = bestCorrection(
+                for: segment,
+                places: places,
+                in: corrections
+            ) else {
+                return segment
+            }
+            var value = segment
+            value.mode = correction.mode
+            value.confidence = .high
+            value.isConfirmed = true
+            value.evidence.removeAll { $0.hasPrefix("사용자 확인") }
+            value.evidence.append("사용자 확인 기억")
+            return value
+        }
+    }
+
+    static func correction(
+        for segment: TravelSegment,
+        places: [PlaceStay],
+        in corrections: [TravelModeCorrection]
+    ) -> TravelModeCorrection? {
+        bestCorrection(
+            for: segment,
+            places: places,
+            in: corrections
+        )
+    }
+
+    static func removingCorrection(
+        for segment: TravelSegment,
+        places: [PlaceStay],
+        from corrections: [TravelModeCorrection]
+    ) -> [TravelModeCorrection] {
+        guard let matched = bestCorrection(
+            for: segment,
+            places: places,
+            in: corrections
+        ) else {
+            return corrections
+        }
+        return corrections.filter { $0.id != matched.id }
+    }
+
+    private static func bestCorrection(
+        for segment: TravelSegment,
+        places: [PlaceStay],
+        in corrections: [TravelModeCorrection]
+    ) -> TravelModeCorrection? {
+        corrections
+            .compactMap { correction -> (TravelModeCorrection, Double)? in
+                guard let score = matchScore(
+                    correction,
+                    segment: segment,
+                    places: places
+                ) else {
+                    return nil
+                }
+                return (correction, score)
+            }
+            .max {
+                if $0.1 == $1.1 {
+                    return $0.0.updatedAt < $1.0.updatedAt
+                }
+                return $0.1 < $1.1
+            }?
+            .0
+    }
+
+    private static func matchesSameTarget(
+        _ correction: TravelModeCorrection,
+        segment: TravelSegment,
+        places: [PlaceStay]
+    ) -> Bool {
+        matchScore(
+            correction,
+            segment: segment,
+            places: places
+        ) != nil
+    }
+
+    private static func matchScore(
+        _ correction: TravelModeCorrection,
+        segment: TravelSegment,
+        places: [PlaceStay]
+    ) -> Double? {
+        let segmentKeys = placeKeys(for: segment, places: places)
+        if let correctionFrom = correction.fromPlaceKey,
+           let correctionTo = correction.toPlaceKey,
+           correctionFrom == segmentKeys.from,
+           correctionTo == segmentKeys.to {
+            return 3
+        }
+
+        guard let intersection = correction.span.intersection(
+            with: segment.span
+        ) else {
+            return nil
+        }
+        let shorterDuration = max(
+            1,
+            min(correction.span.duration, segment.span.duration)
+        )
+        let overlapRatio = intersection.duration / shorterDuration
+        guard overlapRatio >= 0.5 else { return nil }
+        return 1 + overlapRatio
+    }
+
+    private static func placeKeys(
+        for segment: TravelSegment,
+        places: [PlaceStay]
+    ) -> (from: String?, to: String?) {
+        let keysByID = Dictionary(
+            uniqueKeysWithValues: places.map { ($0.id, $0.placeKey) }
+        )
+        return (
+            segment.fromPlaceID.flatMap { keysByID[$0] },
+            segment.toPlaceID.flatMap { keysByID[$0] }
+        )
+    }
+}
+
+/// Reconciles records that already exist in Apple's device stores with
+/// Taption's own in-app estimates. Plans and user-entered records are retained;
+/// only records from the same Apple source are replaced.
+enum AppleDeviceGroundTruthEngine {
+    static func applyingMotionHistory(
+        to readings: [SensorReading],
+        activities: [MotionActivityRecord]
+    ) -> [SensorReading] {
+        let orderedActivities = activities.sorted {
+            $0.span.start < $1.span.start
+        }
+        return readings
+            .map { reading in
+                guard let activity = orderedActivities.last(where: {
+                    $0.motion != .unknown
+                        && $0.span.contains(reading.timestamp)
+                }) else {
+                    return reading
+                }
+                var value = reading
+                value.motion = activity.motion
+                value.motionConfidence = activity.confidence
+                return value
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+    }
+
+    static func mergingTravel(
+        gpsSegments: [TravelSegment],
+        motionActivities: [MotionActivityRecord],
+        pedometer: PedometerSummary?,
+        healthEvidence: [AppleMovementEvidence] = []
+    ) -> [TravelSegment] {
+        let watchSegments = healthEvidence
+            .filter {
+                $0.source == .appleWatch
+                    && $0.kind == .workout
+                    && $0.workoutMode != nil
+                    && $0.span.duration >= 60
+            }
+            .filter { workout in
+                !gpsSegments.contains {
+                    $0.span.intersection(with: workout.span) != nil
+                }
+            }
+            .map { workout in
+                TravelSegment(
+                    mode: workout.workoutMode ?? .walking,
+                    span: workout.span,
+                    distanceMeters: workout.distanceMeters ?? 0,
+                    confidence: .high,
+                    evidence: [
+                        "Apple Watch 운동 기록",
+                        "HealthKit 기기 출처 확인",
+                    ]
+                )
+            }
+        let candidates = motionActivities
+            .filter { $0.span.duration >= 60 }
+            .filter { activity in
+                !gpsSegments.contains {
+                    $0.span.intersection(with: activity.span) != nil
+                }
+                    && !watchSegments.contains {
+                        $0.span.intersection(with: activity.span) != nil
+                    }
+            }
+            .compactMap { activity -> (MotionActivityRecord, MovementInference)? in
+                guard travelMode(for: activity.motion) != nil else {
+                    return nil
+                }
+                let reading = SensorReading(
+                    timestamp: activity.span.start,
+                    motion: activity.motion,
+                    motionConfidence: activity.confidence,
+                    gpsAvailable: false
+                )
+                let inference = TravelModeClassifier().classify(
+                    readings: [reading],
+                    inside: activity.span,
+                    healthEvidence: healthEvidence
+                )
+                return (activity, inference)
+            }
+
+        let walkingRunningDuration = candidates.reduce(0) { result, candidate in
+            switch candidate.1.mode {
+            case .walking, .running:
+                result + candidate.0.span.duration
+            default:
+                result
+            }
+        }
+
+        let motionSegments = candidates.map { activity, inference in
+            let mode = inference.mode
+            let usesPedometerDistance =
+                (mode == .walking || mode == .running)
+                && walkingRunningDuration > 0
+            let distance = usesPedometerDistance
+                ? (pedometer?.distanceMeters ?? 0)
+                    * activity.span.duration / walkingRunningDuration
+                : 0
+            var evidence = ["iPhone Core Motion 기록"]
+            if usesPedometerDistance, pedometer?.distanceMeters != nil {
+                evidence.append("iPhone 걸음·거리 기록")
+            }
+            if activity.motion == .automotive {
+                evidence.append("차량 종류는 사용자 확인 필요")
+            }
+            evidence.append(contentsOf: inference.evidence)
+            return TravelSegment(
+                mode: mode,
+                span: activity.span,
+                distanceMeters: distance,
+                confidence: inference.confidence,
+                evidence: Array(Set(evidence)).sorted()
+            )
+        }
+
+        return (gpsSegments + watchSegments + motionSegments)
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    static func replacingHealthKitActuals(
+        existing: [ActualRecord],
+        with fresh: [ActualRecord],
+        inside span: TimeSpan
+    ) -> [ActualRecord] {
+        var seen = Set<UUID>()
+        let uniqueFresh = fresh.filter {
+            $0.source == .healthKit && seen.insert($0.id).inserted
+        }
+        let linkedWorkouts = uniqueFresh.filter { $0.planID != nil }
+        return (
+            existing.filter { existingActual in
+                if existingActual.source == .healthKit,
+                   existingActual.span().intersection(with: span) != nil {
+                    return false
+                }
+                guard existingActual.source == .timer,
+                      let planID = existingActual.planID else {
+                    return true
+                }
+                let supersededByWatchWorkout = linkedWorkouts.contains { workout in
+                    guard workout.planID == planID else { return false }
+                    let endsAt = workout.endedAt ?? workout.startedAt
+                    let timerSpan = existingActual.span(asOf: endsAt)
+                    let startsTogether = abs(
+                        existingActual.startedAt.timeIntervalSince(workout.startedAt)
+                    ) <= 5 * 60
+                    return startsTogether
+                        || timerSpan.intersection(with: workout.span()) != nil
+                }
+                return !supersededByWatchWorkout
+            }
+            + uniqueFresh
+        )
+        .sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private static func travelMode(for motion: MotionKind) -> TravelMode? {
+        switch motion {
+        case .walking:
+            .walking
+        case .running:
+            .running
+        case .cycling:
+            .cycling
+        case .automotive:
+            .car
+        case .stationary, .unknown:
+            nil
         }
     }
 }

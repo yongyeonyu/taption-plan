@@ -108,8 +108,10 @@ final class AppleSensorDataService {
     private let archive: SensorReadingArchive
     private let history: AppleMotionHistoryService
     private var collectionTask: Task<Void, Never>?
+    private var activeConfiguration: SensorCollectionConfiguration?
 
     private(set) var lastPersistenceErrorDescription: String?
+    var onReadingPersisted: ((SensorReading) -> Void)?
 
     init(
         collector: AppleSensorCollector = AppleSensorCollector(),
@@ -146,14 +148,20 @@ final class AppleSensorDataService {
     func startCollection(
         configuration: SensorCollectionConfiguration = .standard
     ) {
-        guard collectionTask == nil else { return }
+        if collectionTask != nil,
+           activeConfiguration == configuration {
+            return
+        }
+        stopCollection()
         lastPersistenceErrorDescription = nil
+        activeConfiguration = configuration
         let stream = collector.readings(configuration: configuration)
         collectionTask = Task { [weak self] in
             for await reading in stream {
                 guard !Task.isCancelled, let self else { break }
                 do {
                     try await self.archive.append(reading)
+                    self.onReadingPersisted?(reading)
                 } catch {
                     self.lastPersistenceErrorDescription = error.localizedDescription
                 }
@@ -164,6 +172,7 @@ final class AppleSensorDataService {
     func stopCollection() {
         collectionTask?.cancel()
         collectionTask = nil
+        activeConfiguration = nil
         collector.stop()
     }
 
@@ -181,6 +190,38 @@ final class AppleSensorDataService {
         in span: TimeSpan
     ) async throws -> PedometerSummary? {
         try await history.pedometerSummary(in: span)
+    }
+
+    func pedometerEvidence(
+        for activities: [MotionActivityRecord]
+    ) async -> [AppleMovementEvidence] {
+        var result: [AppleMovementEvidence] = []
+        let eligible = activities
+            .filter {
+                $0.span.duration >= 2 * 60
+                    && $0.motion != .stationary
+                    && $0.motion != .unknown
+            }
+            .prefix(64)
+        for activity in eligible {
+            guard let summary = try? await history.pedometerSummary(
+                in: activity.span
+            ) else {
+                continue
+            }
+            result.append(
+                AppleMovementEvidence(
+                    span: activity.span,
+                    source: .iPhone,
+                    kind: .steps,
+                    stepCount: summary.stepCount,
+                    distanceMeters: summary.distanceMeters,
+                    sourceName: "iPhone CMPedometer",
+                    deviceName: "iPhone"
+                )
+            )
+        }
+        return result
     }
 
     func deleteArchivedReadings() async throws {

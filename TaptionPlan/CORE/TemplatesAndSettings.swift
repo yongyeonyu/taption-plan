@@ -84,6 +84,39 @@ enum CategoryCatalog {
             .sorted { $0.sortOrder < $1.sortOrder }
     }
 
+    static func moving(
+        _ categories: [CategoryDefinition],
+        fromOffsets source: IndexSet,
+        toOffset destination: Int
+    ) -> [CategoryDefinition] {
+        var orderedIDs = categories
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.id)
+        let movingIDs = source
+            .sorted()
+            .compactMap { index in
+                orderedIDs.indices.contains(index)
+                    ? orderedIDs[index]
+                    : nil
+            }
+        for index in source.sorted(by: >)
+        where orderedIDs.indices.contains(index) {
+            orderedIDs.remove(at: index)
+        }
+        let removedBeforeDestination = source.filter {
+            $0 < destination
+        }.count
+        let insertionIndex = min(
+            orderedIDs.count,
+            max(0, destination - removedBeforeDestination)
+        )
+        orderedIDs.insert(
+            contentsOf: movingIDs,
+            at: insertionIndex
+        )
+        return reordered(categories, orderedIDs: orderedIDs)
+    }
+
     static func deleting(
         categoryID: String,
         reassigningTo replacementID: String,

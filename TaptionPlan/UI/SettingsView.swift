@@ -1,5 +1,17 @@
 import SwiftUI
 
+private enum SettingsTypography {
+    static let accountTitle: CGFloat = 13
+    static let cardTitle: CGFloat = 12
+    static let rowTitle: CGFloat = 10.5
+    static let action: CGFloat = 9.5
+    static let value: CGFloat = 9
+    static let accountSubtitle: CGFloat = 8.5
+    static let sectionTitle: CGFloat = 8.5
+    static let rowSubtitle: CGFloat = 7.8
+    static let footnote: CGFloat = 8
+}
+
 struct SettingsView: View {
     @Bindable var model: AppModel
     @State private var sharedExport: ShareableURL?
@@ -7,12 +19,37 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DraftTopBar(title: "설정", trailing: model.integrationStatusSummary)
+            DraftTopBar(
+                title: "설정",
+                trailing: model.integrationStatusSummary,
+                textSizeAdjustment: 1
+            )
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 9) {
                     accountCard
                     proCard
+
+                    settingsSection("나에게 맞추기") {
+                        settingsRow(
+                            icon: "person.crop.circle.badge.checkmark",
+                            iconBackground: Color(
+                                red: 0.93,
+                                green: 0.92,
+                                blue: 0.97
+                            ),
+                            iconColor: Color(
+                                red: 0.35,
+                                green: 0.28,
+                                blue: 0.55
+                            ),
+                            title: "시작 구성",
+                            subtitle: "역할 · 상황 · 목표와 추천 대분류 설정",
+                            value: model.currentProfileDisplayName
+                        ) {
+                            model.openInitialSetup()
+                        }
+                    }
 
                     settingsSection("화면과 동작") {
                         settingsScaleRow(
@@ -141,7 +178,7 @@ struct SettingsView: View {
                             iconBackground: Color(red: 0.93, green: 0.96, blue: 0.91),
                             iconColor: .tpHealthDark,
                             title: "건강 · Apple Watch",
-                            subtitle: "운동 · 수면 실제 기록",
+                            subtitle: model.appleWatchIntegrationSummary,
                             isOn: Binding(
                                 get: { model.settings.healthEnabled },
                                 set: { enabled in
@@ -152,6 +189,17 @@ struct SettingsView: View {
                             )
                         )
                         locationIntegrationRow
+                        sensorCollectionProfileRow
+                        settingsRow(
+                            icon: "building.2",
+                            iconBackground: .tpPlace,
+                            iconColor: .tpPlaceDark,
+                            title: "집 층수 기준",
+                            subtitle: "현재 위치를 집 20층·층고 3m로 다시 보정",
+                            value: model.homeFloorCalibrationStatus
+                        ) {
+                            model.prepareHomeFloorCalibration()
+                        }
                         settingsToggleRow(
                             icon: "cloud.sun",
                             iconBackground: .tpWeather,
@@ -242,7 +290,7 @@ struct SettingsView: View {
                     }
 
                     Text("권한은 필요한 기능을 처음 켤 때만 요청하며, 설정에서 언제든 연결을 끊을 수 있습니다.")
-                        .font(.system(size: 7))
+                        .font(.taption(size: SettingsTypography.footnote))
                         .foregroundStyle(Color.tpSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 3)
@@ -293,7 +341,7 @@ struct SettingsView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "mappin.and.ellipse")
-                        .font(.system(size: 14))
+                        .font(.taption(size: 14))
                         .foregroundStyle(Color.tpPlaceDark)
                         .frame(width: 27, height: 27)
                         .background(
@@ -303,20 +351,27 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 3) {
                             Text("위치 · 이동")
-                                .font(.system(size: 9.5, weight: .bold))
+                                .font(
+                                    .taption(
+                                        size: SettingsTypography.rowTitle,
+                                        weight: .bold
+                                    )
+                                )
                                 .foregroundStyle(Color.tpInk)
                             if model.settings.locationEnabled {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 6.5, weight: .bold))
+                                    .font(.taption(size: 6.5, weight: .bold))
                                     .foregroundStyle(Color.tpSecondary)
                             }
                         }
                         Text(
                             model.isSensorCollecting
-                                ? "기록 중 · 탭해서 경로 보기"
+                                ? "기록 중 · \(model.settings.sensorCollectionProfile.intervalMinutes)분 간격 · 탭해서 경로 보기"
                                 : "장소와 이동수단 자동 추정"
                         )
-                        .font(.system(size: 6.8))
+                        .font(
+                            .taption(size: SettingsTypography.rowSubtitle)
+                        )
                         .foregroundStyle(Color.tpSecondary)
                     }
                 }
@@ -352,28 +407,142 @@ struct SettingsView: View {
         }
     }
 
+    private var sensorCollectionProfileRow: some View {
+        VStack(spacing: 7) {
+            HStack(spacing: 8) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.taption(size: 14))
+                    .foregroundStyle(Color.tpMovementDark)
+                    .frame(width: 27, height: 27)
+                    .background(
+                        Color.tpMovement,
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("GPS · 센서 기록 간격")
+                        .font(
+                            .taption(
+                                size: SettingsTypography.rowTitle,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(Color.tpInk)
+                    Text("변경하면 위치·동작 수집에 바로 적용")
+                        .font(
+                            .taption(size: SettingsTypography.rowSubtitle)
+                        )
+                        .foregroundStyle(Color.tpSecondary)
+                }
+
+                Spacer(minLength: 4)
+
+                Text(
+                    "\(model.settings.sensorCollectionProfile.displayName) · "
+                    + "\(model.settings.sensorCollectionProfile.intervalMinutes)분"
+                )
+                .font(
+                    .taption(
+                        size: SettingsTypography.value,
+                        weight: .bold
+                    )
+                )
+                .foregroundStyle(Color.tpMovementDark)
+            }
+
+            Slider(
+                value: Binding(
+                    get: {
+                        Double(
+                            model.settings.sensorCollectionProfile.rawValue
+                        )
+                    },
+                    set: { value in
+                        guard let profile = SensorCollectionProfile(
+                            rawValue: Int(value.rounded())
+                        ) else {
+                            return
+                        }
+                        model.setSensorCollectionProfile(profile)
+                    }
+                ),
+                in: 0...2,
+                step: 1
+            )
+            .tint(Color.tpMovementDark)
+            .accessibilityLabel("GPS와 센서 기록 간격")
+            .accessibilityValue(
+                "\(model.settings.sensorCollectionProfile.displayName), "
+                + "\(model.settings.sensorCollectionProfile.intervalMinutes)분"
+            )
+
+            HStack(alignment: .top) {
+                sensorProfileLabel("배터리 최소화", minutes: 15)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                sensorProfileLabel("기본", minutes: 5)
+                    .frame(maxWidth: .infinity)
+                sensorProfileLabel("정확도 최적화", minutes: 1)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .frame(height: 0.5)
+        }
+    }
+
+    private func sensorProfileLabel(
+        _ title: String,
+        minutes: Int
+    ) -> some View {
+        VStack(
+            alignment: minutes == 15
+                ? .leading
+                : (minutes == 1 ? .trailing : .center),
+            spacing: 0
+        ) {
+            Text(title)
+            Text("\(minutes)분")
+                .fontWeight(.bold)
+        }
+        .font(.taption(size: SettingsTypography.footnote))
+        .foregroundStyle(Color.tpSecondary)
+    }
+
     private var accountCard: some View {
         Button {
             model.detail = .widgetPreview
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "chart.bar.xaxis")
-                    .font(.system(size: 19))
+                    .font(.taption(size: 19))
                     .foregroundStyle(.white)
                     .frame(width: 38, height: 38)
                     .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 12))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("내 시간표")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(
+                            .taption(
+                                size: SettingsTypography.accountTitle,
+                                weight: .bold
+                            )
+                        )
                         .foregroundStyle(Color.tpInk)
                     Text("iPhone · Apple Watch · iCloud")
-                        .font(.system(size: 7.5))
+                        .font(
+                            .taption(
+                                size: SettingsTypography.accountSubtitle
+                            )
+                        )
                         .foregroundStyle(Color.tpSecondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.taption(size: 12, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
             }
             .padding(11)
@@ -388,7 +557,7 @@ struct SettingsView: View {
                 Image(systemName: model.hasProAccess
                     ? "checkmark.seal.fill"
                     : "sparkles")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.taption(size: 18, weight: .semibold))
                     .foregroundStyle(
                         model.hasProAccess
                             ? Color(red: 0.18, green: 0.52, blue: 0.32)
@@ -404,13 +573,25 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(model.proProduct?.displayName ?? "Taption Plan Pro")
-                        .font(.system(size: 11, weight: .black))
+                        .font(
+                            .taption(
+                                size: SettingsTypography.cardTitle,
+                                weight: .black
+                            )
+                        )
                         .foregroundStyle(Color.tpInk)
                     Text(model.storeStatusMessage)
-                        .font(.system(size: 7.5, weight: .semibold))
+                        .font(
+                            .taption(
+                                size: SettingsTypography.accountSubtitle,
+                                weight: .semibold
+                            )
+                        )
                         .foregroundStyle(Color.tpSecondary)
                     Text("한 번 구매하면 이후 가격이 올라도 계속 사용할 수 있습니다.")
-                        .font(.system(size: 6.8))
+                        .font(
+                            .taption(size: SettingsTypography.rowSubtitle)
+                        )
                         .foregroundStyle(Color.tpSecondary)
                 }
                 Spacer(minLength: 0)
@@ -427,7 +608,12 @@ struct SettingsView: View {
                     }
                 } label: {
                     Text(primaryPurchaseLabel)
-                        .font(.system(size: 8.5, weight: .bold))
+                        .font(
+                            .taption(
+                                size: SettingsTypography.action,
+                                weight: .bold
+                            )
+                        )
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 7)
@@ -445,7 +631,12 @@ struct SettingsView: View {
                     Task { await model.restorePurchases() }
                 } label: {
                     Text("구매 복원")
-                        .font(.system(size: 8.5, weight: .bold))
+                        .font(
+                            .taption(
+                                size: SettingsTypography.action,
+                                weight: .bold
+                            )
+                        )
                         .foregroundStyle(Color.tpInk)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
@@ -479,7 +670,12 @@ struct SettingsView: View {
     ) -> some View {
         VStack(spacing: 0) {
             Text(title)
-                .font(.system(size: 7.5, weight: .black))
+                .font(
+                    .taption(
+                        size: SettingsTypography.sectionTitle,
+                        weight: .black
+                    )
+                )
                 .foregroundStyle(Color.tpSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 10)
@@ -535,7 +731,7 @@ struct SettingsView: View {
     ) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(.taption(size: 14))
                 .foregroundStyle(iconColor)
                 .frame(width: 27, height: 27)
                 .background(
@@ -544,10 +740,17 @@ struct SettingsView: View {
                 )
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.system(size: 9.5, weight: .bold))
+                    .font(
+                        .taption(
+                            size: SettingsTypography.rowTitle,
+                            weight: .bold
+                        )
+                    )
                     .foregroundStyle(Color.tpInk)
                 Text(subtitle)
-                    .font(.system(size: 6.8))
+                    .font(
+                        .taption(size: SettingsTypography.rowSubtitle)
+                    )
                     .foregroundStyle(Color.tpSecondary)
             }
             Spacer()
@@ -605,7 +808,7 @@ struct SettingsView: View {
     ) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(.taption(size: 14))
                 .foregroundStyle(iconColor)
                 .frame(width: 27, height: 27)
                 .background(
@@ -615,10 +818,17 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.system(size: 9.5, weight: .bold))
+                    .font(
+                        .taption(
+                            size: SettingsTypography.rowTitle,
+                            weight: .bold
+                        )
+                    )
                     .foregroundStyle(Color.tpInk)
                 Text(subtitle)
-                    .font(.system(size: 6.8))
+                    .font(
+                        .taption(size: SettingsTypography.rowSubtitle)
+                    )
                     .foregroundStyle(Color.tpSecondary)
             }
 
@@ -627,8 +837,8 @@ struct SettingsView: View {
             if !value.isEmpty {
                 Text(value)
                     .font(
-                        .system(
-                            size: 8,
+                        .taption(
+                            size: SettingsTypography.value,
                             weight: valueIsOn ? .black : .regular
                         )
                     )
@@ -640,7 +850,7 @@ struct SettingsView: View {
             }
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.taption(size: 10, weight: .semibold))
                 .foregroundStyle(
                     Color(red: 0.69, green: 0.69, blue: 0.71)
                 )

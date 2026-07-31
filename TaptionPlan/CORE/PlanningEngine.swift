@@ -297,6 +297,93 @@ struct TimelineAggregationEngine: Sendable {
     }
 }
 
+struct TimelinePeriodNavigationEngine: Sendable {
+    var calendar: Calendar
+
+    init(calendar: Calendar = .autoupdatingCurrent) {
+        self.calendar = calendar
+    }
+
+    func adjacentDate(
+        from date: Date,
+        level: TimelineLevel,
+        direction: Int
+    ) -> Date? {
+        guard direction != 0 else { return date }
+        return calendar.date(
+            byAdding: component(for: level),
+            value: direction > 0 ? 1 : -1,
+            to: date
+        )
+    }
+
+    func canNavigate(
+        from date: Date,
+        level: TimelineLevel,
+        direction: Int,
+        snapshot: TaptionDataSnapshot,
+        asOf: Date = .now
+    ) -> Bool {
+        guard direction != 0,
+              let targetDate = adjacentDate(
+                from: date,
+                level: level,
+                direction: direction
+              ) else {
+            return false
+        }
+        let targetSpan = TimelineAggregationEngine(
+            calendar: calendar
+        ).interval(for: level, containing: targetDate)
+        return containsTimelineData(
+            in: targetSpan,
+            snapshot: snapshot,
+            asOf: asOf
+        )
+    }
+
+    func containsTimelineData(
+        in span: TimeSpan,
+        snapshot: TaptionDataSnapshot,
+        asOf: Date = .now
+    ) -> Bool {
+        snapshot.plans.contains {
+            $0.span.intersection(with: span) != nil
+        }
+            || snapshot.actuals.contains {
+                $0.span(asOf: asOf).intersection(with: span) != nil
+            }
+            || snapshot.calendarEvents.contains {
+                $0.span.intersection(with: span) != nil
+            }
+            || snapshot.photos.contains {
+                !$0.isHiddenFromTimeline
+                    && span.start <= $0.capturedAt
+                    && $0.capturedAt < span.end
+            }
+            || snapshot.places.contains {
+                $0.span.intersection(with: span) != nil
+            }
+            || snapshot.travel.contains {
+                $0.span.intersection(with: span) != nil
+            }
+            || snapshot.floorTransitions.contains {
+                $0.span.intersection(with: span) != nil
+            }
+    }
+
+    private func component(
+        for level: TimelineLevel
+    ) -> Calendar.Component {
+        switch level {
+        case .day: .day
+        case .week: .weekOfYear
+        case .month: .month
+        case .year: .year
+        }
+    }
+}
+
 enum ScheduleEditEngine {
     static let dragSnap: TimeInterval = 15 * 60
 
@@ -335,6 +422,25 @@ enum ScheduleEditEngine {
         return Date(
             timeIntervalSinceReferenceDate: (seconds / dragSnap).rounded() * dragSnap
         )
+    }
+}
+
+enum ActionMemoEditingEngine {
+    static func updating(
+        _ memo: ActionMemo,
+        text: String,
+        kind: MemoKind,
+        at date: Date = .now
+    ) -> ActionMemo? {
+        let cleanText = text.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !cleanText.isEmpty else { return nil }
+        var value = memo
+        value.text = cleanText
+        value.kind = kind
+        value.updatedAt = date
+        return value
     }
 }
 

@@ -6,6 +6,36 @@ protocol PlanDataRepository: Sendable {
     func save(_ snapshot: TaptionDataSnapshot) async throws
 }
 
+actor MigratingPlanRepository: PlanDataRepository {
+    private let primary: any PlanDataRepository
+    private let legacy: any PlanDataRepository
+
+    init(
+        primary: any PlanDataRepository,
+        legacy: any PlanDataRepository
+    ) {
+        self.primary = primary
+        self.legacy = legacy
+    }
+
+    func load() async throws -> TaptionDataSnapshot {
+        let shared = try await primary.load()
+        guard shared.updatedAt == .distantPast else {
+            return shared
+        }
+        let existing = try await legacy.load()
+        guard existing.updatedAt != .distantPast else {
+            return shared
+        }
+        try await primary.save(existing)
+        return existing
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        try await primary.save(snapshot)
+    }
+}
+
 enum RepositoryError: Error, Equatable {
     case invalidSnapshot
     case unsupportedSchema(Int)
@@ -114,6 +144,7 @@ enum CloudSyncDecision: Equatable, Sendable {
 }
 
 actor CloudKitSnapshotSyncService {
+    private static let containerIdentifier = "iCloud.com.taption.plan"
     private static let recordName = "taption-data-v1"
     private static let recordType = "TaptionSnapshot"
     private static let inlineLimit = 850_000
@@ -127,10 +158,28 @@ actor CloudKitSnapshotSyncService {
 #if targetEnvironment(simulator)
         return nil
 #else
+#if DEBUG
+        guard CloudKitEntitlementPolicy.canInitialize(
+            containerIdentifier: containerIdentifier,
+            embeddedProfileData: embeddedProvisioningProfileData()
+        ) else {
+            return nil
+        }
+#endif
         return CloudKitSnapshotSyncService(
-            container: CKContainer(identifier: "iCloud.com.taption.plan")
+            container: CKContainer(identifier: containerIdentifier)
         )
 #endif
+    }
+
+    private nonisolated static func embeddedProvisioningProfileData() -> Data? {
+        guard let profileURL = Bundle.main.url(
+            forResource: "embedded",
+            withExtension: "mobileprovision"
+        ) else {
+            return nil
+        }
+        return try? Data(contentsOf: profileURL, options: .mappedIfSafe)
     }
 
     init(container: CKContainer) {
@@ -233,6 +282,18 @@ actor CloudKitSnapshotSyncService {
         record["payloadAsset"] = CKAsset(fileURL: temporaryURL)
         _ = try await database.save(record)
         return value
+    }
+}
+
+enum CloudKitEntitlementPolicy {
+    static func canInitialize(
+        containerIdentifier: String,
+        embeddedProfileData: Data?
+    ) -> Bool {
+        guard let embeddedProfileData else { return false }
+        return embeddedProfileData.range(
+            of: Data(containerIdentifier.utf8)
+        ) != nil
     }
 }
 

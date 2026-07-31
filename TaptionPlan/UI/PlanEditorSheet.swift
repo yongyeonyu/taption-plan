@@ -40,7 +40,7 @@ struct PlanEditorSheet: View {
                     timeCard
                     hierarchyCard
                     Toggle("중요 계획", isOn: $isImportant)
-                        .font(.system(size: 10.5, weight: .bold))
+                        .font(.taption(size: 10.5, weight: .bold))
                         .tint(Color.tpInk)
                         .padding(11)
                         .draftCard(radius: 13)
@@ -55,7 +55,7 @@ struct PlanEditorSheet: View {
                                 "Apple 캘린더로 보내기",
                                 systemImage: "calendar.badge.plus"
                             )
-                            .font(.system(size: 10.5, weight: .bold))
+                            .font(.taption(size: 10.5, weight: .bold))
                             .foregroundStyle(Color.tpInk)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
@@ -71,7 +71,7 @@ struct PlanEditorSheet: View {
                         save()
                     } label: {
                         Text("변경 저장")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.taption(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 11)
@@ -91,7 +91,7 @@ struct PlanEditorSheet: View {
                         showsDeleteConfirmation = true
                     } label: {
                         Text("계획 삭제")
-                            .font(.system(size: 10.5, weight: .bold))
+                            .font(.taption(size: 10.5, weight: .bold))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -168,10 +168,10 @@ struct PlanEditorSheet: View {
     private var nameCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("계획 이름")
-                .font(.system(size: 8.5, weight: .black))
+                .font(.taption(size: 8.5, weight: .black))
                 .foregroundStyle(Color.tpSecondary)
             TextField("계획 이름", text: $title)
-                .font(.system(size: 14, weight: .bold))
+                .font(.taption(size: 14, weight: .bold))
                 .textInputAutocapitalization(.sentences)
         }
         .padding(11)
@@ -181,7 +181,7 @@ struct PlanEditorSheet: View {
     private var categoryCard: some View {
         HStack {
             Text("대분류")
-                .font(.system(size: 10))
+                .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
             Spacer()
             Picker("대분류", selection: $categoryID) {
@@ -193,7 +193,7 @@ struct PlanEditorSheet: View {
                     .tag(category.id)
                 }
             }
-            .font(.system(size: 10.5, weight: .bold))
+            .font(.taption(size: 10.5, weight: .bold))
         }
         .padding(11)
         .draftCard(radius: 13)
@@ -213,7 +213,7 @@ struct PlanEditorSheet: View {
                 displayedComponents: [.date, .hourAndMinute]
             )
         }
-        .font(.system(size: 10.5, weight: .bold))
+        .font(.taption(size: 10.5, weight: .bold))
         .padding(11)
         .draftCard(radius: 13)
         .onChange(of: startAt) { oldValue, newValue in
@@ -228,7 +228,7 @@ struct PlanEditorSheet: View {
     private var hierarchyCard: some View {
         HStack {
             Text("상위 목표")
-                .font(.system(size: 10))
+                .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
             Spacer()
             Picker("상위 목표", selection: $parentID) {
@@ -237,7 +237,7 @@ struct PlanEditorSheet: View {
                     Text(plan.title).tag(UUID?.some(plan.id))
                 }
             }
-            .font(.system(size: 10.5, weight: .bold))
+            .font(.taption(size: 10.5, weight: .bold))
         }
         .padding(11)
         .draftCard(radius: 13)

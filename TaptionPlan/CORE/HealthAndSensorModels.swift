@@ -124,6 +124,51 @@ struct PedometerSummary: Codable, Hashable, Sendable {
     var averageActivePaceSecondsPerMeter: Double?
 }
 
+enum AppleMovementEvidenceSource: String, Codable, Hashable, Sendable {
+    case iPhone
+    case appleWatch
+    case other
+}
+
+enum AppleMovementEvidenceKind: String, Codable, Hashable, Sendable {
+    case workout
+    case steps
+}
+
+struct AppleMovementEvidence: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var span: TimeSpan
+    var source: AppleMovementEvidenceSource
+    var kind: AppleMovementEvidenceKind
+    var workoutMode: TravelMode?
+    var stepCount: Int?
+    var distanceMeters: Double?
+    var sourceName: String
+    var deviceName: String?
+
+    init(
+        id: UUID = UUID(),
+        span: TimeSpan,
+        source: AppleMovementEvidenceSource,
+        kind: AppleMovementEvidenceKind,
+        workoutMode: TravelMode? = nil,
+        stepCount: Int? = nil,
+        distanceMeters: Double? = nil,
+        sourceName: String,
+        deviceName: String? = nil
+    ) {
+        self.id = id
+        self.span = span
+        self.source = source
+        self.kind = kind
+        self.workoutMode = workoutMode
+        self.stepCount = stepCount
+        self.distanceMeters = distanceMeters
+        self.sourceName = sourceName
+        self.deviceName = deviceName
+    }
+}
+
 struct SensorHardwareAvailability: Codable, Hashable, Sendable {
     var location: Bool
     var motionActivity: Bool
@@ -134,16 +179,57 @@ struct SensorHardwareAvailability: Codable, Hashable, Sendable {
     var floorCounting: Bool
 }
 
+enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
+    case batterySaver = 0
+    case balanced = 1
+    case accuracy = 2
+
+    var interval: TimeInterval {
+        switch self {
+        case .batterySaver: 15 * 60
+        case .balanced: 5 * 60
+        case .accuracy: 60
+        }
+    }
+
+    var intervalMinutes: Int {
+        Int(interval / 60)
+    }
+
+    var displayName: String {
+        switch self {
+        case .batterySaver: "배터리 최소화"
+        case .balanced: "균형"
+        case .accuracy: "정확도 최적화"
+        }
+    }
+}
+
 struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
+    var profile: SensorCollectionProfile
     var highAccuracyDuringMovement: Bool
     var collectsDeviceMotion: Bool
     var allowsBackgroundLocation: Bool
     var minimumEmissionInterval: TimeInterval
 
     static let standard = SensorCollectionConfiguration(
+        profile: .balanced,
         highAccuracyDuringMovement: true,
-        collectsDeviceMotion: true,
+        collectsDeviceMotion: false,
         allowsBackgroundLocation: false,
-        minimumEmissionInterval: 15
+        minimumEmissionInterval: SensorCollectionProfile.balanced.interval
     )
+
+    static func configured(
+        for profile: SensorCollectionProfile,
+        allowsBackgroundLocation: Bool
+    ) -> SensorCollectionConfiguration {
+        SensorCollectionConfiguration(
+            profile: profile,
+            highAccuracyDuringMovement: profile != .batterySaver,
+            collectsDeviceMotion: profile == .accuracy,
+            allowsBackgroundLocation: allowsBackgroundLocation,
+            minimumEmissionInterval: profile.interval
+        )
+    }
 }

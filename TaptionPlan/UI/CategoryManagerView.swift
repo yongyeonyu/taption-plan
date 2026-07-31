@@ -13,42 +13,45 @@ struct CategoryManagerView: View {
                 onBack: { model.detail = nil }
             )
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 8) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("계획을 추가할 때만 선택")
-                                .font(.system(size: 10.5, weight: .bold))
-                                .foregroundStyle(Color.tpInk)
-                            Text("순서·숨김은 시간표와 선택 화면에 함께 적용됩니다.")
-                                .font(.system(size: 7.5))
-                                .foregroundStyle(Color.tpSecondary)
-                        }
-                        Spacer()
-                        Button {
-                            isCreatingCategory = true
-                        } label: {
-                            Label("추가", systemImage: "plus")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(
-                                    Color.tpInk,
-                                    in: RoundedRectangle(cornerRadius: 9)
-                                )
-                        }
-                        .buttonStyle(.plain)
+            List {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("계획을 추가할 때만 선택")
+                            .font(.taption(size: 10.5, weight: .bold))
+                            .foregroundStyle(Color.tpInk)
+                        Text("오른쪽 손잡이를 길게 눌러 순서를 바꿉니다.")
+                            .font(.taption(size: 7.5))
+                            .foregroundStyle(Color.tpSecondary)
                     }
-                    .padding(11)
-                    .draftCard(radius: 14)
-
-                    ForEach(orderedCategories) { category in
-                        categoryRow(category)
+                    Spacer()
+                    Button {
+                        isCreatingCategory = true
+                    } label: {
+                        Label("추가", systemImage: "plus")
+                            .font(.taption(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(
+                                Color.tpInk,
+                                in: RoundedRectangle(cornerRadius: 9)
+                            )
                     }
+                    .buttonStyle(.borderless)
                 }
-                .padding(12)
+                .padding(11)
+                .draftCard(radius: 14)
+                .categoryListRow(top: 12)
+
+                ForEach(orderedCategories) { category in
+                    categoryRow(category)
+                        .categoryListRow()
+                }
+                .onMove(perform: model.moveCategories)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .environment(\.editMode, .constant(.active))
             .background(Color.tpBackground)
         }
         .sheet(item: $editingCategory) { category in
@@ -70,7 +73,7 @@ struct CategoryManagerView: View {
     ) -> some View {
         HStack(spacing: 8) {
             Image(systemName: category.icon.systemImage)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.taption(size: 14, weight: .semibold))
                 .foregroundStyle(Color(hex: category.darkHex))
                 .frame(width: 31, height: 31)
                 .background(
@@ -81,20 +84,20 @@ struct CategoryManagerView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(category.name)
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.taption(size: 10, weight: .bold))
                         .foregroundStyle(
                             category.isHidden
                                 ? Color.tpSecondary : Color.tpInk
                         )
                     Text(category.isBuiltIn ? "기본" : "사용자")
-                        .font(.system(size: 6.5, weight: .black))
+                        .font(.taption(size: 6.5, weight: .black))
                         .foregroundStyle(Color.tpSecondary)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(Color.tpBackground, in: Capsule())
                 }
                 Text(category.isHidden ? "숨김" : "시간표에 표시")
-                    .font(.system(size: 7))
+                    .font(.taption(size: 7))
                     .foregroundStyle(Color.tpSecondary)
             }
 
@@ -113,26 +116,12 @@ struct CategoryManagerView: View {
             }
 
             Button {
-                model.moveCategory(category.id, by: -1)
-            } label: {
-                Image(systemName: "arrow.up")
-            }
-            .disabled(category.id == orderedCategories.first?.id)
-
-            Button {
-                model.moveCategory(category.id, by: 1)
-            } label: {
-                Image(systemName: "arrow.down")
-            }
-            .disabled(category.id == orderedCategories.last?.id)
-
-            Button {
                 editingCategory = category
             } label: {
                 Image(systemName: "slider.horizontal.3")
             }
         }
-        .font(.system(size: 10, weight: .semibold))
+        .font(.taption(size: 10, weight: .semibold))
         .foregroundStyle(Color.tpSecondary)
         .buttonStyle(.plain)
         .padding(.horizontal, 10)
@@ -141,6 +130,21 @@ struct CategoryManagerView: View {
             Color.white,
             in: RoundedRectangle(cornerRadius: 13, style: .continuous)
         )
+    }
+}
+
+private extension View {
+    func categoryListRow(top: CGFloat = 4) -> some View {
+        listRowInsets(
+            EdgeInsets(
+                top: top,
+                leading: 12,
+                bottom: 4,
+                trailing: 8
+            )
+        )
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 }
 
@@ -197,7 +201,7 @@ private struct CategoryEditorSheet: View {
 
                     if category != nil {
                         Toggle("시간표에서 숨기기", isOn: $isHidden)
-                            .font(.system(size: 10.5, weight: .bold))
+                            .font(.taption(size: 10.5, weight: .bold))
                             .tint(Color.tpInk)
                             .padding(11)
                             .draftCard(radius: 13)
@@ -205,7 +209,7 @@ private struct CategoryEditorSheet: View {
 
                     Button(action: save) {
                         Text(category == nil ? "대분류 추가" : "변경 저장")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.taption(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 11)
@@ -261,7 +265,7 @@ private struct CategoryEditorSheet: View {
     private var preview: some View {
         HStack(spacing: 9) {
             Image(systemName: selectedIcon.systemImage)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.taption(size: 18, weight: .semibold))
                 .foregroundStyle(Color.tpInk)
                 .frame(width: 38, height: 38)
                 .background(
@@ -270,10 +274,10 @@ private struct CategoryEditorSheet: View {
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text("미리보기")
-                    .font(.system(size: 8))
+                    .font(.taption(size: 8))
                     .foregroundStyle(Color.tpSecondary)
                 Text(name.isEmpty ? "새 대분류" : name)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.taption(size: 13, weight: .bold))
             }
             Spacer()
         }
@@ -284,10 +288,10 @@ private struct CategoryEditorSheet: View {
     private var nameRow: some View {
         HStack {
             Text("이름")
-                .font(.system(size: 10))
+                .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
             TextField("대분류 이름", text: $name)
-                .font(.system(size: 12, weight: .bold))
+                .font(.taption(size: 12, weight: .bold))
                 .multilineTextAlignment(.trailing)
         }
         .padding(11)
@@ -297,7 +301,7 @@ private struct CategoryEditorSheet: View {
     private var iconGrid: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("아이콘 · 24개")
-                .font(.system(size: 10, weight: .bold))
+                .font(.taption(size: 10, weight: .bold))
             LazyVGrid(
                 columns: Array(
                     repeating: GridItem(.flexible()),
@@ -310,7 +314,7 @@ private struct CategoryEditorSheet: View {
                         selectedIcon = icon
                     } label: {
                         Image(systemName: icon.systemImage)
-                            .font(.system(size: 14))
+                            .font(.taption(size: 14))
                             .foregroundStyle(
                                 selectedIcon == icon
                                     ? Color.white : Color.tpSecondary
@@ -334,7 +338,7 @@ private struct CategoryEditorSheet: View {
     private var colorPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("색상")
-                .font(.system(size: 10, weight: .bold))
+                .font(.taption(size: 10, weight: .bold))
             HStack {
                 ForEach(colorHexes, id: \.self) { hex in
                     Button {
@@ -366,7 +370,7 @@ private struct CategoryEditorSheet: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("대분류 삭제")
-                .font(.system(size: 10, weight: .bold))
+                .font(.taption(size: 10, weight: .bold))
                 .foregroundStyle(Color(red: 0.72, green: 0.19, blue: 0.16))
             Picker("기존 기록 이동", selection: $replacementID) {
                 ForEach(model.snapshot.categories.filter {
@@ -375,13 +379,13 @@ private struct CategoryEditorSheet: View {
                     Text(replacement.name).tag(replacement.id)
                 }
             }
-            .font(.system(size: 9.5))
+            .font(.taption(size: 9.5))
 
             Button(role: .destructive) {
                 showsDeleteConfirmation = true
             } label: {
                 Text("기록을 옮기고 대분류 삭제")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.taption(size: 10, weight: .bold))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)

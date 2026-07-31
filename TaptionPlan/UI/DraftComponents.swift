@@ -7,6 +7,11 @@ struct DraftTopBar: View {
     var selectedScale: TimeScale?
     var onScaleChange: ((TimeScale) -> Void)?
     var onBack: (() -> Void)?
+    var onPrevious: (() -> Void)?
+    var onNext: (() -> Void)?
+    var isPreviousEnabled = true
+    var isNextEnabled = true
+    var textSizeAdjustment: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 7) {
@@ -15,25 +20,70 @@ struct DraftTopBar: View {
                     Button(action: onBack) {
                         HStack(spacing: 3) {
                             Image(systemName: "chevron.left")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.taption(size: 12, weight: .bold))
                             Text(title)
                         }
                     }
                     .buttonStyle(.plain)
-                    .font(.system(size: 17, weight: .bold))
+                    .font(
+                        .taption(
+                            size: 17 + textSizeAdjustment,
+                            weight: .bold
+                        )
+                    )
                     .foregroundStyle(Color.tpInk)
+                } else if onPrevious != nil || onNext != nil {
+                    HStack(spacing: 3) {
+                        periodNavigationButton(
+                            systemName: "chevron.left",
+                            action: onPrevious,
+                            isEnabled: isPreviousEnabled,
+                            accessibilityLabel: "이전 \(selectedScale?.rawValue ?? "기간")"
+                        )
+
+                        Text(title)
+                            .font(
+                                .taption(
+                                    size: 19 + textSizeAdjustment,
+                                    weight: .bold
+                                )
+                            )
+                            .foregroundStyle(Color.tpInk)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+
+                        periodNavigationButton(
+                            systemName: "chevron.right",
+                            action: onNext,
+                            isEnabled: isNextEnabled,
+                            accessibilityLabel: "다음 \(selectedScale?.rawValue ?? "기간")"
+                        )
+                    }
+                    .layoutPriority(1)
                 } else {
                     Text(title)
-                        .font(.system(size: 19, weight: .bold))
+                        .font(
+                            .taption(
+                                size: 19 + textSizeAdjustment,
+                                weight: .bold
+                            )
+                        )
                         .foregroundStyle(Color.tpInk)
                 }
 
                 Spacer(minLength: 4)
 
-                Text(trailing)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(trailingColor)
-                    .lineLimit(1)
+                if !trailing.isEmpty {
+                    Text(trailing)
+                        .font(
+                            .taption(
+                                size: 12 + textSizeAdjustment,
+                                weight: .regular
+                            )
+                        )
+                        .foregroundStyle(trailingColor)
+                        .lineLimit(1)
+                }
             }
 
             if let selectedScale {
@@ -52,6 +102,33 @@ struct DraftTopBar: View {
                 .frame(height: 0.5)
         }
     }
+
+    private func periodNavigationButton(
+        systemName: String,
+        action: (() -> Void)?,
+        isEnabled: Bool,
+        accessibilityLabel: String
+    ) -> some View {
+        Button {
+            action?()
+        } label: {
+            Image(systemName: systemName)
+                .font(.taption(size: 12.5, weight: .bold))
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(
+            isEnabled ? Color.tpInk : Color.tpSecondary.opacity(0.28)
+        )
+        .disabled(!isEnabled || action == nil)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityIdentifier(
+            systemName == "chevron.left"
+                ? "schedule.period.previous"
+                : "schedule.period.next"
+        )
+    }
 }
 
 struct DraftScalePicker: View {
@@ -65,7 +142,7 @@ struct DraftScalePicker: View {
                     onSelect(scale)
                 } label: {
                     Text(scale.rawValue)
-                        .font(.system(size: 12.5, weight: selected == scale ? .semibold : .regular))
+                        .font(.taption(size: 12.5, weight: selected == scale ? .semibold : .regular))
                         .foregroundStyle(selected == scale ? Color.tpInk : Color.tpSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
@@ -106,7 +183,7 @@ struct DraftBottomNavigationBar: View {
                 model.isAddPlanPresented = true
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 23, weight: .medium))
+                    .font(.taption(size: 23, weight: .medium))
                     .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
                     .background(Color.tpInk, in: Circle())
@@ -138,10 +215,10 @@ struct DraftBottomNavigationBar: View {
         } label: {
             VStack(spacing: 3) {
                 Image(systemName: tab.systemImage)
-                    .font(.system(size: 19, weight: model.selectedTab == tab ? .bold : .regular))
+                    .font(.taption(size: 19, weight: model.selectedTab == tab ? .bold : .regular))
                     .frame(height: 20)
                 Text(tab.rawValue)
-                    .font(.system(size: 9.5, weight: model.selectedTab == tab ? .bold : .regular))
+                    .font(.taption(size: 9.5, weight: model.selectedTab == tab ? .bold : .regular))
             }
             .foregroundStyle(model.selectedTab == tab ? Color.tpInk : Color.tpSecondary)
             .frame(maxWidth: .infinity)
@@ -160,7 +237,7 @@ struct DraftChip: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: fontSize, weight: .bold))
+            .font(.taption(size: fontSize, weight: .bold))
             .foregroundStyle(selected ? Color.white : Color.tpSecondary)
             .padding(.horizontal, 9)
             .padding(.vertical, 6)

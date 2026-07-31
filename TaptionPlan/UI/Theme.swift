@@ -1,5 +1,14 @@
 import SwiftUI
 
+extension Font {
+    static func taption(
+        size: CGFloat,
+        weight: Font.Weight = .regular
+    ) -> Font {
+        .system(size: size + 2, weight: weight)
+    }
+}
+
 extension Color {
     static let tpInk = Color(red: 0.11, green: 0.11, blue: 0.12)
     static let tpSecondary = Color(red: 0.43, green: 0.43, blue: 0.45)

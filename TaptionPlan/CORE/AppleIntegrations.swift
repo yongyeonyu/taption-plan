@@ -339,13 +339,22 @@ final class AppleHealthService: @unchecked Sendable {
         return try await workouts + sleeps
     }
 
+    func movementEvidence(
+        in span: TimeSpan
+    ) async throws -> [AppleMovementEvidence] {
+        async let workouts = workoutMovementEvidence(in: span)
+        async let steps = stepMovementEvidence(in: span)
+        return try await (workouts + steps)
+            .sorted { $0.span.start < $1.span.start }
+    }
+
     private func workoutActuals(in span: TimeSpan) async throws -> [ActualRecord] {
         try await workoutDetails(in: span).map { detail in
             ActualRecord(
                 id: detail.id,
-                planID: nil,
-                title: detail.kind,
-                categoryID: "exercise",
+                planID: detail.linkedPlanID,
+                title: detail.linkedTitle ?? detail.kind,
+                categoryID: detail.linkedCategoryID ?? "exercise",
                 startedAt: detail.span.start,
                 endedAt: detail.span.end,
                 source: .healthKit,
@@ -393,9 +402,129 @@ final class AppleHealthService: @unchecked Sendable {
                 energyKilocalories: energyType
                     .flatMap { workout.statistics(for: $0)?.sumQuantity() }
                     .map { $0.doubleValue(for: .kilocalorie()) },
-                sourceName: workout.sourceRevision.source.name
+                sourceName: workout.sourceRevision.source.name,
+                linkedPlanID: (workout.metadata?[
+                    TaptionWatchHealthMetadata.planID
+                ] as? String).flatMap(UUID.init(uuidString:)),
+                linkedTitle: workout.metadata?[
+                    TaptionWatchHealthMetadata.planTitle
+                ] as? String,
+                linkedCategoryID: workout.metadata?[
+                    TaptionWatchHealthMetadata.categoryID
+                ] as? String
             )
         }
+    }
+
+    private func workoutMovementEvidence(
+        in span: TimeSpan
+    ) async throws -> [AppleMovementEvidence] {
+        let samples = try await samples(
+            type: HKObjectType.workoutType(),
+            span: span
+        )
+        return samples.compactMap { sample in
+            guard let workout = sample as? HKWorkout,
+                  let mode = workout.workoutActivityType.movementTravelMode,
+                  let overlap = TimeSpan(
+                    start: workout.startDate,
+                    end: workout.endDate
+                  ).intersection(with: span) else {
+                return nil
+            }
+            let overlapFraction = min(
+                1,
+                overlap.duration / max(1, workout.duration)
+            )
+            let distanceType = HKQuantityType.quantityType(
+                forIdentifier: workout.workoutActivityType == .cycling
+                    ? .distanceCycling
+                    : .distanceWalkingRunning
+            )
+            return AppleMovementEvidence(
+                id: workout.uuid,
+                span: overlap,
+                source: Self.movementSource(for: workout),
+                kind: .workout,
+                workoutMode: mode,
+                distanceMeters: distanceType
+                    .flatMap { workout.statistics(for: $0)?.sumQuantity() }
+                    .map {
+                        $0.doubleValue(for: .meter()) * overlapFraction
+                    },
+                sourceName: workout.sourceRevision.source.name,
+                deviceName: Self.deviceName(for: workout)
+            )
+        }
+    }
+
+    private func stepMovementEvidence(
+        in span: TimeSpan
+    ) async throws -> [AppleMovementEvidence] {
+        guard let type = HKObjectType.quantityType(
+            forIdentifier: .stepCount
+        ) else {
+            return []
+        }
+        let samples = try await samples(type: type, span: span)
+        return samples.compactMap { sample in
+            guard let quantity = sample as? HKQuantitySample else {
+                return nil
+            }
+            let originalSpan = TimeSpan(
+                start: quantity.startDate,
+                end: quantity.endDate
+            )
+            guard let overlap = originalSpan.intersection(with: span) else {
+                return nil
+            }
+            let overlapFraction = min(
+                1,
+                overlap.duration / max(1, originalSpan.duration)
+            )
+            let steps = Int(
+                (
+                    quantity.quantity.doubleValue(for: .count())
+                        * overlapFraction
+                ).rounded()
+            )
+            guard steps > 0 else { return nil }
+            return AppleMovementEvidence(
+                id: quantity.uuid,
+                span: overlap,
+                source: Self.movementSource(for: quantity),
+                kind: .steps,
+                stepCount: steps,
+                sourceName: quantity.sourceRevision.source.name,
+                deviceName: Self.deviceName(for: quantity)
+            )
+        }
+    }
+
+    private static func movementSource(
+        for sample: HKSample
+    ) -> AppleMovementEvidenceSource {
+        let signature = [
+            sample.device?.name,
+            sample.device?.model,
+            sample.sourceRevision.productType,
+            sample.sourceRevision.source.name,
+        ]
+        .compactMap { $0?.localizedLowercase }
+        .joined(separator: " ")
+        if signature.contains("watch") {
+            return .appleWatch
+        }
+        if signature.contains("iphone") {
+            return .iPhone
+        }
+        return .other
+    }
+
+    private static func deviceName(for sample: HKSample) -> String? {
+        sample.device?.name
+            ?? sample.device?.model
+            ?? sample.sourceRevision.productType
     }
 
     private func sleepDetails(in span: TimeSpan) async throws -> [HealthActual] {
@@ -478,19 +607,84 @@ private extension HKWorkoutActivityType {
         default: "운동"
         }
     }
+
+    var movementTravelMode: TravelMode? {
+        switch self {
+        case .walking: .walking
+        case .running: .running
+        case .cycling: .cycling
+        default: nil
+        }
+    }
 }
 
 // MARK: - Weather
 
 actor AppleWeatherContextService {
     private let service = WeatherKit.WeatherService.shared
+    private let fallbackService: OpenMeteoWeatherContextService
+    private var cachedContext: CachedWeatherContext?
+    private var appleAuthenticationRetryAfter: Date?
+
+    init(
+        fallbackService: OpenMeteoWeatherContextService =
+            OpenMeteoWeatherContextService()
+    ) {
+        self.fallbackService = fallbackService
+    }
 
     func context(
         latitude: Double,
         longitude: Double,
         at date: Date = .now
     ) async throws -> WeatherContext {
-        let location = CLLocation(latitude: latitude, longitude: longitude)
+        let point = CLLocation(latitude: latitude, longitude: longitude)
+        if let cachedContext,
+           cachedContext.isReusable(for: point, at: date) {
+            return cachedContext.context
+        }
+
+        if appleAuthenticationRetryAfter.map({ date >= $0 }) ?? true {
+            do {
+                let context = try await appleContext(
+                    at: point,
+                    observedAt: date
+                )
+                cachedContext = CachedWeatherContext(
+                    location: point,
+                    context: context
+                )
+                appleAuthenticationRetryAfter = nil
+                return context
+            } catch {
+                if Self.isWeatherKitAuthenticationFailure(error) {
+                    appleAuthenticationRetryAfter = date.addingTimeInterval(
+                        6 * 60 * 60
+                    )
+                }
+            }
+        }
+
+        do {
+            let context = try await fallbackService.context(
+                latitude: latitude,
+                longitude: longitude,
+                at: date
+            )
+            cachedContext = CachedWeatherContext(
+                location: point,
+                context: context
+            )
+            return context
+        } catch {
+            throw WeatherContextServiceError.temporarilyUnavailable
+        }
+    }
+
+    private func appleContext(
+        at location: CLLocation,
+        observedAt date: Date
+    ) async throws -> WeatherContext {
         let (current, hourly) = try await service.weather(
             for: location,
             including: .current,
@@ -507,9 +701,184 @@ actor AppleWeatherContextService {
             precipitationChance: closestHour?.precipitationChance
         )
     }
+
+    private static func isWeatherKitAuthenticationFailure(
+        _ error: Error
+    ) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain.contains(
+            "WDSJWTAuthenticatorServiceListener.Errors"
+        ), nsError.code == 2 {
+            return true
+        }
+        if let underlying = nsError.userInfo[
+            NSUnderlyingErrorKey
+        ] as? Error {
+            return isWeatherKitAuthenticationFailure(underlying)
+        }
+        return false
+    }
+}
+
+private struct CachedWeatherContext {
+    let location: CLLocation
+    let context: WeatherContext
+
+    func isReusable(
+        for newLocation: CLLocation,
+        at date: Date
+    ) -> Bool {
+        abs(date.timeIntervalSince(context.observedAt)) < 10 * 60
+            && newLocation.distance(from: location) < 1_000
+    }
+}
+
+enum WeatherContextServiceError: LocalizedError {
+    case temporarilyUnavailable
+
+    var errorDescription: String? {
+        "날씨 서비스에 잠시 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."
+    }
+}
+
+actor OpenMeteoWeatherContextService {
+    private let session: URLSession
+
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
+
+    func context(
+        latitude: Double,
+        longitude: Double,
+        at date: Date = .now
+    ) async throws -> WeatherContext {
+        var components = URLComponents(
+            string: "https://api.open-meteo.com/v1/forecast"
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "latitude", value: String(latitude)),
+            URLQueryItem(name: "longitude", value: String(longitude)),
+            URLQueryItem(
+                name: "current",
+                value:
+                    "temperature_2m,weather_code,"
+                    + "precipitation_probability,is_day"
+            ),
+            URLQueryItem(name: "timezone", value: "auto"),
+            URLQueryItem(name: "forecast_days", value: "1"),
+        ]
+        guard let url = components?.url else {
+            throw OpenMeteoWeatherError.invalidRequest
+        }
+
+        let (data, response) = try await session.data(from: url)
+        guard let response = response as? HTTPURLResponse,
+              (200..<300).contains(response.statusCode) else {
+            throw OpenMeteoWeatherError.invalidResponse
+        }
+        let payload = try JSONDecoder().decode(
+            OpenMeteoWeatherResponse.self,
+            from: data
+        )
+        let presentation = OpenMeteoWeatherCodePresentation(
+            code: payload.current.weatherCode,
+            isDay: payload.current.isDay != 0
+        )
+        return WeatherContext(
+            observedAt: date,
+            condition: presentation.condition,
+            symbolName: presentation.symbolName,
+            temperatureCelsius: payload.current.temperatureCelsius,
+            precipitationChance:
+                payload.current.precipitationProbability.map { $0 / 100 }
+        )
+    }
+}
+
+private enum OpenMeteoWeatherError: Error {
+    case invalidRequest
+    case invalidResponse
+}
+
+private struct OpenMeteoWeatherResponse: Decodable {
+    struct Current: Decodable {
+        let temperatureCelsius: Double
+        let weatherCode: Int
+        let precipitationProbability: Double?
+        let isDay: Int
+
+        enum CodingKeys: String, CodingKey {
+            case temperatureCelsius = "temperature_2m"
+            case weatherCode = "weather_code"
+            case precipitationProbability = "precipitation_probability"
+            case isDay = "is_day"
+        }
+    }
+
+    let current: Current
+}
+
+struct OpenMeteoWeatherCodePresentation: Equatable {
+    let condition: String
+    let symbolName: String
+
+    init(code: Int, isDay: Bool) {
+        switch code {
+        case 0:
+            condition = "맑음"
+            symbolName = isDay ? "sun.max.fill" : "moon.stars.fill"
+        case 1:
+            condition = "대체로 맑음"
+            symbolName = isDay ? "sun.min.fill" : "moon.fill"
+        case 2:
+            condition = "구름 조금"
+            symbolName = isDay ? "cloud.sun.fill" : "cloud.moon.fill"
+        case 3:
+            condition = "흐림"
+            symbolName = "cloud.fill"
+        case 45, 48:
+            condition = "안개"
+            symbolName = "cloud.fog.fill"
+        case 51, 53, 55:
+            condition = "이슬비"
+            symbolName = "cloud.drizzle.fill"
+        case 56, 57, 66, 67:
+            condition = "진눈깨비"
+            symbolName = "cloud.sleet.fill"
+        case 61, 63:
+            condition = "비"
+            symbolName = "cloud.rain.fill"
+        case 65, 80, 81, 82:
+            condition = "강한 비"
+            symbolName = "cloud.heavyrain.fill"
+        case 71, 73, 75, 77, 85, 86:
+            condition = "눈"
+            symbolName = "cloud.snow.fill"
+        case 95, 96, 99:
+            condition = "뇌우"
+            symbolName = "cloud.bolt.rain.fill"
+        default:
+            condition = "날씨 정보"
+            symbolName = "cloud.fill"
+        }
+    }
 }
 
 // MARK: - Live sensor collection
+
+private struct AltimeterSensorUpdate: Sendable {
+    var relativeAltitudeMeters: Double?
+    var pressureKilopascals: Double?
+    var sessionID: UUID
+}
+
+private struct PedometerSensorUpdate: Sendable {
+    var floorsAscended: Int?
+    var floorsDescended: Int?
+    var stepCount: Int?
+    var walkingRunningDistanceMeters: Double?
+}
 
 @MainActor
 final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDelegate {
@@ -520,6 +889,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private let pedometer = CMPedometer()
 
     private var continuation: AsyncStream<SensorReading>.Continuation?
+    private var periodicEmissionTask: Task<Void, Never>?
     private var configuration: SensorCollectionConfiguration = .standard
     private var isCollecting = false
     private var lastEmissionAt: Date?
@@ -527,6 +897,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var latestMotion: MotionKind = .unknown
     private var latestMotionConfidence: ConfidenceLevel = .low
     private var latestRelativeAltitude: Double?
+    private var latestPressureKilopascals: Double?
+    private var altimeterSessionID: UUID?
     private var latestFloorsAscended: Int?
     private var latestFloorsDescended: Int?
     private var latestStepCount: Int?
@@ -608,6 +980,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     func stop() {
+        periodicEmissionTask?.cancel()
+        periodicEmissionTask = nil
         locationManager.stopUpdatingLocation()
         locationManager.stopMonitoringVisits()
         locationManager.stopMonitoringSignificantLocationChanges()
@@ -618,6 +992,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         pedometer.stopUpdates()
         isCollecting = false
         lastEmissionAt = nil
+        latestRelativeAltitude = nil
+        latestPressureKilopascals = nil
+        altimeterSessionID = nil
+        latestFloorsAscended = nil
+        latestFloorsDescended = nil
+        latestStepCount = nil
+        latestWalkingRunningDistance = nil
         continuation?.finish()
         continuation = nil
     }
@@ -625,6 +1006,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private func start() {
         guard !isCollecting else { return }
         isCollecting = true
+        applyLocationPolicy(isMoving: false)
         locationManager.allowsBackgroundLocationUpdates =
             configuration.allowsBackgroundLocation
             && locationManager.authorizationStatus == .authorizedAlways
@@ -646,10 +1028,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                     self.latestMotion = Self.motionKind(activity)
                     self.latestMotionConfidence = Self.confidence(activity.confidence)
                     if self.configuration.highAccuracyDuringMovement {
-                        self.locationManager.desiredAccuracy = activity.stationary
-                            ? kCLLocationAccuracyHundredMeters
-                            : kCLLocationAccuracyBest
-                        self.locationManager.distanceFilter = activity.stationary ? 50 : 10
+                        self.applyLocationPolicy(
+                            isMoving: !activity.stationary
+                        )
                     }
                     self.emit()
                 }
@@ -696,23 +1077,45 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
 
         if CMAltimeter.isRelativeAltitudeAvailable() {
+            let sessionID = UUID()
+            altimeterSessionID = sessionID
             altimeter.startRelativeAltitudeUpdates(to: .main) { [weak self] data, _ in
+                let update = AltimeterSensorUpdate(
+                    relativeAltitudeMeters:
+                        data?.relativeAltitude.doubleValue,
+                    pressureKilopascals: data?.pressure.doubleValue,
+                    sessionID: sessionID
+                )
                 Task { @MainActor in
-                    self?.latestRelativeAltitude = data?.relativeAltitude.doubleValue
-                    self?.emit()
+                    self?.apply(update)
                 }
             }
         }
 
         if CMPedometer.isStepCountingAvailable() {
-            pedometer.startUpdates(from: .now) { [weak self] data, _ in
-                Task { @MainActor in
-                    self?.latestFloorsAscended = data?.floorsAscended?.intValue
-                    self?.latestFloorsDescended = data?.floorsDescended?.intValue
-                    self?.latestStepCount = data?.numberOfSteps.intValue
-                    self?.latestWalkingRunningDistance = data?.distance?.doubleValue
-                    self?.emit()
+            let handler:
+                @Sendable (CMPedometerData?, Error?) -> Void = {
+                    [weak self] data, _ in
+                    let update = PedometerSensorUpdate(
+                        floorsAscended: data?.floorsAscended?.intValue,
+                        floorsDescended: data?.floorsDescended?.intValue,
+                        stepCount: data?.numberOfSteps.intValue,
+                        walkingRunningDistanceMeters:
+                            data?.distance?.doubleValue
+                    )
+                    Task { @MainActor in
+                        self?.apply(update)
+                    }
                 }
+            pedometer.startUpdates(from: .now, withHandler: handler)
+        }
+
+        let interval = max(1, configuration.minimumEmissionInterval)
+        periodicEmissionTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(interval))
+                guard !Task.isCancelled, let self else { break }
+                self.emit()
             }
         }
     }
@@ -721,11 +1124,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
     ) {
+        let isFirstLocationFix = latestLocation == nil
         latestLocation = locations.last {
             $0.horizontalAccuracy >= 0
                 && abs($0.timestamp.timeIntervalSinceNow) < 5 * 60
         }
-        emit(force: true)
+        emit(force: isFirstLocationFix && latestLocation != nil)
     }
 
     func locationManager(
@@ -745,7 +1149,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestLocation = location
         latestMotion = .stationary
         latestMotionConfidence = .high
-        emit(force: true)
+        emit()
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -788,13 +1192,15 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
         continuation?.yield(
             SensorReading(
-                timestamp: location?.timestamp ?? .now,
+                timestamp: now,
                 point: point,
                 speedMetersPerSecond: location.flatMap { $0.speed >= 0 ? $0.speed : nil },
                 courseDegrees: location.flatMap { $0.course >= 0 ? $0.course : nil },
                 motion: latestMotion,
                 motionConfidence: latestMotionConfidence,
                 relativeAltitudeMeters: latestRelativeAltitude,
+                pressureKilopascals: latestPressureKilopascals,
+                altimeterSessionID: altimeterSessionID,
                 floorsAscended: latestFloorsAscended,
                 floorsDescended: latestFloorsDescended,
                 stepCount: latestStepCount,
@@ -804,6 +1210,39 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 gpsAvailable: location != nil
             )
         )
+    }
+
+    private func apply(_ update: AltimeterSensorUpdate) {
+        latestRelativeAltitude = update.relativeAltitudeMeters
+        latestPressureKilopascals = update.pressureKilopascals
+        altimeterSessionID = update.sessionID
+        emit()
+    }
+
+    private func apply(_ update: PedometerSensorUpdate) {
+        latestFloorsAscended = update.floorsAscended
+        latestFloorsDescended = update.floorsDescended
+        latestStepCount = update.stepCount
+        latestWalkingRunningDistance =
+            update.walkingRunningDistanceMeters
+        emit()
+    }
+
+    private func applyLocationPolicy(isMoving: Bool) {
+        switch configuration.profile {
+        case .batterySaver:
+            locationManager.desiredAccuracy = kCLLocationAccuracyKilometer
+            locationManager.distanceFilter = 500
+        case .balanced:
+            locationManager.desiredAccuracy = isMoving
+                ? kCLLocationAccuracyBest
+                : kCLLocationAccuracyHundredMeters
+            locationManager.distanceFilter = isMoving ? 10 : 50
+        case .accuracy:
+            locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            locationManager.distanceFilter = 5
+        }
+        locationManager.pausesLocationUpdatesAutomatically = true
     }
 
     private static func motionKind(_ activity: CMMotionActivity) -> MotionKind {

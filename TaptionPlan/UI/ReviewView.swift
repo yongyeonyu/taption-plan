@@ -45,10 +45,10 @@ struct ReviewView: View {
         VStack(spacing: 7) {
             HStack(alignment: .firstTextBaseline) {
                 Text("\(model.reviewScale.periodName) 회고")
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.taption(size: 19, weight: .bold))
                 Spacer()
                 Text(periodText(report.span))
-                    .font(.system(size: 12))
+                    .font(.taption(size: 12))
                     .foregroundStyle(Color.tpSecondary)
             }
 
@@ -58,7 +58,7 @@ struct ReviewView: View {
                         model.reviewScale = scale
                     } label: {
                         Text(scale.rawValue)
-                            .font(.system(size: 12.5, weight: model.reviewScale == scale ? .semibold : .regular))
+                            .font(.taption(size: 12.5, weight: model.reviewScale == scale ? .semibold : .regular))
                             .foregroundStyle(model.reviewScale == scale ? Color.tpInk : Color.tpSecondary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 5)
@@ -98,13 +98,13 @@ struct ReviewView: View {
             Text(
                 "계획 \(durationText(report.plannedDuration)) · 실제 \(durationText(report.actualDuration))"
             )
-                .font(.system(size: 10))
+                .font(.taption(size: 10))
                 .foregroundStyle(Color(red: 0.68, green: 0.68, blue: 0.70))
             Text(difference == 0 ? "차이 없음" : signedDurationText(difference))
-                .font(.system(size: 24, weight: .bold))
+                .font(.taption(size: 24, weight: .bold))
                 .padding(.vertical, 5)
             Text("점수가 아니라 \(model.reviewScale.periodName) 시간의 차이")
-                .font(.system(size: 10))
+                .font(.taption(size: 10))
                 .foregroundStyle(Color(red: 0.68, green: 0.68, blue: 0.70))
 
             GeometryReader { proxy in
@@ -126,14 +126,14 @@ struct ReviewView: View {
     private func reviewCard(_ title: String, value: String, caption: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title)
-                .font(.system(size: 10))
+                .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
             Text(value)
-                .font(.system(size: 16, weight: .bold))
+                .font(.taption(size: 16, weight: .bold))
                 .padding(.top, 5)
                 .padding(.bottom, 2)
             Text(caption)
-                .font(.system(size: 10))
+                .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(2)
         }
@@ -145,7 +145,7 @@ struct ReviewView: View {
     private var contextCard: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text("\(model.reviewScale.periodName)을 설명한 기록")
-                .font(.system(size: 11, weight: .bold))
+                .font(.taption(size: 11, weight: .bold))
             if report.contexts.isEmpty {
                 contextLine(
                     "tray",
@@ -165,11 +165,11 @@ struct ReviewView: View {
     private func contextLine(_ image: String, _ text: String) -> some View {
         HStack(spacing: 7) {
             Image(systemName: image)
-                .font(.system(size: 13))
+                .font(.taption(size: 13))
                 .foregroundStyle(Color.tpSecondary)
                 .frame(width: 14)
             Text(text)
-                .font(.system(size: 10.5))
+                .font(.taption(size: 10.5))
         }
     }
 

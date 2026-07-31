@@ -103,7 +103,7 @@ struct AddPlanSheet: View {
                     planNamePlaceholder,
                     text: $title
                 )
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.taption(size: 17, weight: .semibold))
                     .focused($titleFocused)
                     .submitLabel(.done)
                     .onSubmit(addPlan)
@@ -132,17 +132,17 @@ struct AddPlanSheet: View {
             } label: {
                 HStack(spacing: 8) {
                     Text("대분류")
-                        .font(.system(size: 11))
+                        .font(.taption(size: 11))
                         .foregroundStyle(Color.tpSecondary)
                     Spacer()
                     Label(
                         selectedCategory.name,
                         systemImage: selectedCategory.icon.systemImage
                     )
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.taption(size: 12, weight: .bold))
                         .foregroundStyle(Color.tpInk)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.taption(size: 12, weight: .semibold))
                         .foregroundStyle(Color(red: 0.68, green: 0.68, blue: 0.70))
                 }
                 .padding(.horizontal, 2)
@@ -220,7 +220,7 @@ struct AddPlanSheet: View {
             if !model.addPlanContext.isGoal {
             HStack(spacing: 7) {
                 Text("최근")
-                    .font(.system(size: 11))
+                    .font(.taption(size: 11))
                     .foregroundStyle(Color.tpSecondary)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
@@ -245,14 +245,14 @@ struct AddPlanSheet: View {
                model.addPlanContext.parentID != nil {
                 HStack(spacing: 7) {
                     Text("상위 목표")
-                        .font(.system(size: 11))
+                        .font(.taption(size: 11))
                         .foregroundStyle(Color.tpSecondary)
                     Spacer()
                     Label(
                         parent.title,
                         systemImage: "arrow.turn.down.right"
                     )
-                    .font(.system(size: 10.5, weight: .bold))
+                    .font(.taption(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(1)
                 }
@@ -260,7 +260,7 @@ struct AddPlanSheet: View {
             } else if model.addPlanContext == .quick {
                 HStack(spacing: 7) {
                     Text("상위 목표")
-                        .font(.system(size: 11))
+                        .font(.taption(size: 11))
                         .foregroundStyle(Color.tpSecondary)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
@@ -286,11 +286,11 @@ struct AddPlanSheet: View {
 
             HStack {
                 Button("취소") { dismiss() }
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.taption(size: 11, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                 Spacer()
                 Button("추가", action: addPlan)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.taption(size: 11, weight: .bold))
                     .foregroundStyle(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.tpSecondary : Color.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
@@ -402,7 +402,7 @@ private struct CategoryPickerScreen: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 12) {
                     Text("영어 공부에 가장 가까운 대분류 하나를 선택하세요. 선택 후 항목 추가 화면으로 바로 돌아갑니다.")
-                        .font(.system(size: 11))
+                        .font(.taption(size: 11))
                         .foregroundStyle(Color.tpSecondary)
                         .lineSpacing(3)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -419,7 +419,7 @@ private struct CategoryPickerScreen: View {
                                     category.name,
                                     systemImage: category.icon.systemImage
                                 )
-                                    .font(.system(size: 10.5, weight: .bold))
+                                    .font(.taption(size: 10.5, weight: .bold))
                                     .foregroundStyle(Color.tpInk)
                                     .frame(maxWidth: .infinity, minHeight: 44)
                                     .background(
@@ -439,7 +439,7 @@ private struct CategoryPickerScreen: View {
 
                         Button(action: onCustom) {
                             Label("직접 추가", systemImage: "plus")
-                                .font(.system(size: 10.5, weight: .bold))
+                                .font(.taption(size: 10.5, weight: .bold))
                                 .foregroundStyle(Color.tpSecondary)
                                 .frame(maxWidth: .infinity, minHeight: 44)
                                 .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
@@ -453,7 +453,7 @@ private struct CategoryPickerScreen: View {
 
                     Button(action: onSelect) {
                         Text("\(selectedCategoryName)으로 선택")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.taption(size: 14, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 13)
@@ -502,16 +502,16 @@ private struct CustomCategoryScreen: View {
                 VStack(spacing: 9) {
                     HStack(spacing: 9) {
                         Image(systemName: selectedIcon.systemImage)
-                            .font(.system(size: 18))
+                            .font(.taption(size: 18))
                             .foregroundStyle(Color(red: 0.33, green: 0.46, blue: 0.24))
                             .frame(width: 34, height: 34)
                             .background(colors[selectedColor], in: RoundedRectangle(cornerRadius: 11))
                         VStack(alignment: .leading, spacing: 2) {
                             Text("미리보기")
-                                .font(.system(size: 9.5))
+                                .font(.taption(size: 9.5))
                                 .foregroundStyle(Color.tpSecondary)
                             Text(name.isEmpty ? "새 대분류" : name)
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.taption(size: 14, weight: .bold))
                         }
                         Spacer()
                     }
@@ -520,10 +520,10 @@ private struct CustomCategoryScreen: View {
 
                     HStack {
                         Text("이름")
-                            .font(.system(size: 11))
+                            .font(.taption(size: 11))
                             .foregroundStyle(Color.tpSecondary)
                         TextField("대분류 이름", text: $name)
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.taption(size: 13, weight: .bold))
                             .multilineTextAlignment(.trailing)
                     }
                     .padding(11)
@@ -531,14 +531,14 @@ private struct CustomCategoryScreen: View {
 
                     VStack(alignment: .leading, spacing: 9) {
                         Text("아이콘 · 24개")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.taption(size: 11, weight: .bold))
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 5) {
                             ForEach(icons, id: \.self) { icon in
                                 Button {
                                     selectedIcon = icon
                                 } label: {
                                     Image(systemName: icon.systemImage)
-                                        .font(.system(size: 15))
+                                        .font(.taption(size: 15))
                                         .foregroundStyle(selectedIcon == icon ? Color.white : Color.tpSecondary)
                                         .frame(maxWidth: .infinity, minHeight: 31)
                                         .background(
@@ -555,7 +555,7 @@ private struct CustomCategoryScreen: View {
 
                     VStack(alignment: .leading, spacing: 9) {
                         Text("색상")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.taption(size: 11, weight: .bold))
                         HStack {
                             ForEach(colors.indices, id: \.self) { index in
                                 Button {
@@ -584,7 +584,7 @@ private struct CustomCategoryScreen: View {
                         onSave(name, selectedIcon, colorHex)
                     } label: {
                         Text("대분류 추가")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.taption(size: 14, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 13)
@@ -624,15 +624,15 @@ private struct TimeSliderScreen: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 8) {
                     RoundedRectangle(cornerRadius: 4).fill(Color.tpStudyDark).frame(width: 12, height: 12)
-                    Text("영어 공부").font(.system(size: 16, weight: .bold))
+                    Text("영어 공부").font(.taption(size: 16, weight: .bold))
                 }
 
                 HStack(alignment: .firstTextBaseline) {
                     Text(timeRangeLabel)
-                        .font(.system(size: 24, weight: .black))
+                        .font(.taption(size: 24, weight: .black))
                     Spacer()
                     Text(durationLabel)
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .font(.taption(size: 12.5, weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                 }
 
@@ -677,7 +677,7 @@ private struct TimeSliderScreen: View {
                                 time: .shortened
                             )
                         )
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.taption(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
@@ -700,7 +700,7 @@ private struct TimeSliderScreen: View {
                         Text($0).frame(maxWidth: .infinity)
                     }
                 }
-                .font(.system(size: 10))
+                .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
 
                 HStack(spacing: 6) {
@@ -709,7 +709,7 @@ private struct TimeSliderScreen: View {
                             durationMinutes = minutes
                         } label: {
                             Text(presetLabel(minutes))
-                                .font(.system(size: 9.5, weight: .bold))
+                                .font(.taption(size: 9.5, weight: .bold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 7)
                                 .foregroundStyle(
@@ -744,7 +744,7 @@ private struct TimeSliderScreen: View {
 
                 Button(action: onDone) {
                     Text("완료")
-                        .font(.system(size: 14.5, weight: .bold))
+                        .font(.taption(size: 14.5, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
@@ -873,9 +873,9 @@ private struct TimeSliderScreen: View {
 
     private func hint(_ title: String, _ caption: String) -> some View {
         VStack(spacing: 3) {
-            Text(title).font(.system(size: 11, weight: .bold))
+            Text(title).font(.taption(size: 11, weight: .bold))
             Text(caption)
-                .font(.system(size: 9.5))
+                .font(.taption(size: 9.5))
                 .foregroundStyle(Color.tpSecondary)
                 .multilineTextAlignment(.center)
         }
@@ -892,10 +892,10 @@ private func pickerHeader(
 ) -> some View {
     HStack {
         Text(title)
-            .font(.system(size: 19, weight: .bold))
+            .font(.taption(size: 19, weight: .bold))
         Spacer()
         Button(trailing, action: action)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.taption(size: 12, weight: .semibold))
             .foregroundStyle(Color.tpSecondary)
     }
     .padding(.horizontal, 10)

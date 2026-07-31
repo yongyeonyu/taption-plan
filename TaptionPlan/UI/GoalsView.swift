@@ -95,25 +95,25 @@ struct GoalsView: View {
                                         .fill(goal.category.darkColor)
                                         .frame(width: 10, height: 10)
                                     Text(goal.title)
-                                        .font(.system(size: 13.5, weight: .bold))
+                                        .font(.taption(size: 13.5, weight: .bold))
                                         .foregroundStyle(Color.tpInk)
                                     Spacer(minLength: 4)
                                     Text(goal.period)
-                                        .font(.system(size: 10.5))
+                                        .font(.taption(size: 10.5))
                                         .foregroundStyle(Color.tpSecondary)
                                 }
 
                                 HStack {
                                     if goal.title.contains("운동") {
                                         Image(systemName: "heart.text.square")
-                                            .font(.system(size: 9))
+                                            .font(.taption(size: 9))
                                     }
                                     Text(goal.leftDetail)
                                     Spacer(minLength: 4)
                                     Text(goal.rightDetail)
                                         .fontWeight(.semibold)
                                 }
-                                .font(.system(size: 10.5))
+                                .font(.taption(size: 10.5))
                                 .foregroundStyle(Color.tpSecondary)
                                 .padding(.top, 8)
                                 .padding(.bottom, 6)
@@ -143,7 +143,7 @@ struct GoalsView: View {
                             Image(systemName: "plus")
                             Text("새 목표")
                         }
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.taption(size: 13, weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)

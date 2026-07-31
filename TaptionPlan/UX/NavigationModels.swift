@@ -3,6 +3,7 @@ import Foundation
 enum TaptionDeepLink: Equatable {
     case today
     case plan(UUID)
+    case catPicker
 
     init?(url: URL) {
         guard url.scheme?.lowercased() == "taptionplan" else { return nil }
@@ -16,6 +17,8 @@ enum TaptionDeepLink: Equatable {
                 return nil
             }
             self = .plan(id)
+        case "cats":
+            self = .catPicker
         default:
             return nil
         }
@@ -133,5 +136,56 @@ enum TimeScale: String, CaseIterable, Identifiable {
         case .month: .month
         case .year: .year
         }
+    }
+
+    var narrower: TimeScale? {
+        switch self {
+        case .year: .month
+        case .month: .week
+        case .week: .day
+        case .day: nil
+        }
+    }
+
+    var broader: TimeScale? {
+        switch self {
+        case .year: nil
+        case .month: .year
+        case .week: .month
+        case .day: .week
+        }
+    }
+}
+
+struct ScheduleHeaderFormatter {
+    var calendar: Calendar
+
+    init(calendar: Calendar = .autoupdatingCurrent) {
+        self.calendar = calendar
+    }
+
+    func title(for date: Date, scale: TimeScale) -> String {
+        switch scale {
+        case .day:
+            return format(date, pattern: "M월 d일 (E)")
+        case .week:
+            let span = TimelineAggregationEngine(
+                calendar: calendar
+            ).interval(for: .week, containing: date)
+            return "\(format(span.start, pattern: "M월 d일")) – \(format(span.end.addingTimeInterval(-1), pattern: "M월 d일"))"
+        case .month:
+            return format(date, pattern: "yyyy년 M월")
+        case .year:
+            return format(date, pattern: "yyyy년")
+        }
+    }
+
+    private func format(_ date: Date, pattern: String) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = pattern
+        return formatter.string(from: date)
     }
 }

@@ -35,7 +35,10 @@ final class AppModel {
     private(set) var proProduct: StoreProductPresentation?
     private(set) var storeStatusMessage = "App Store 확인 중"
     private(set) var sensorAvailability: SensorHardwareAvailability?
+    private(set) var latestSensorReading: SensorReading?
+    private(set) var latestAltitudeEstimate: CalibratedAltitudeEstimate?
     private(set) var sleepSessions: [SleepSession] = []
+    private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
     var userFacingError: String?
 
     @ObservationIgnored private let repository: any PlanDataRepository
@@ -51,6 +54,7 @@ final class AppModel {
     @ObservationIgnored private let liveActivityController: TaptionLiveActivityController
     @ObservationIgnored private let notificationScheduler: PlanNotificationScheduler
     @ObservationIgnored private let purchaseService: StoreKitPurchaseService
+    @ObservationIgnored private let watchConnectivityService: AppleWatchConnectivityService
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
 
     init(
@@ -71,11 +75,21 @@ final class AppModel {
         notificationScheduler: PlanNotificationScheduler =
             PlanNotificationScheduler(),
         purchaseService: StoreKitPurchaseService =
-            StoreKitPurchaseService()
+            StoreKitPurchaseService(),
+        watchConnectivityService: AppleWatchConnectivityService =
+            AppleWatchConnectivityService()
     ) {
         if let repository {
             self.repository = repository
-        } else if let sharedRepository = try? FilePlanRepository.appGroup() {
+        } else if let sharedRepository = try? FilePlanRepository.appGroup(),
+                  let legacyRepository =
+                    try? FilePlanRepository.applicationSupport() {
+            self.repository = MigratingPlanRepository(
+                primary: sharedRepository,
+                legacy: legacyRepository
+            )
+        } else if let sharedRepository =
+                    try? FilePlanRepository.appGroup() {
             self.repository = sharedRepository
         } else if let fileRepository = try? FilePlanRepository.applicationSupport() {
             self.repository = fileRepository
@@ -94,9 +108,36 @@ final class AppModel {
         self.liveActivityController = liveActivityController
         self.notificationScheduler = notificationScheduler
         self.purchaseService = purchaseService
+        self.watchConnectivityService = watchConnectivityService
         self.voiceMemoPlayer.onFinish = { [weak self] in
             self?.playingVoiceAttachmentID = nil
         }
+        self.sensorService?.onReadingPersisted = { [weak self] reading in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let didCaptureFloorCalibration =
+                    self.updateFloorCalibration(with: reading)
+                if didCaptureFloorCalibration {
+                    await self.persistDeviceLocalSnapshot()
+                }
+                await self.refreshSensorTimeline(
+                    containing: reading.timestamp
+                )
+                await self.persistDeviceLocalSnapshot()
+            }
+        }
+        self.watchConnectivityService.activate(
+            onCommand: { [weak self] command in
+                Task { @MainActor [weak self] in
+                    await self?.applyWatchCommand(command)
+                }
+            },
+            onStatusChange: { [weak self] state in
+                Task { @MainActor [weak self] in
+                    self?.appleWatchConnectionState = state
+                }
+            }
+        )
     }
 
     var showsBottomBar: Bool {
@@ -112,6 +153,30 @@ final class AppModel {
         snapshot.settings
     }
 
+    var homeFloorCalibrationStatus: String {
+        guard let calibration = settings.floorCalibration else {
+            return "설정 안 됨"
+        }
+        let base =
+            "\(calibration.placeName) \(calibration.referenceFloor)층"
+        return calibration.isCaptured
+            ? "\(base) · 보정됨"
+            : "\(base) · 현재 위치 대기"
+    }
+
+    var currentAltitudeStatus: String? {
+        guard let estimate = latestAltitudeEstimate else { return nil }
+        return "\(estimate.floor)층 추정 · 해발 \(Int(estimate.seaLevelAltitudeMeters.rounded()))m · ±\(Int(estimate.verticalAccuracyMeters.rounded()))m"
+    }
+
+    var canShiftToPreviousPeriod: Bool {
+        canShiftSelectedDate(by: -1)
+    }
+
+    var canShiftToNextPeriod: Bool {
+        canShiftSelectedDate(by: 1)
+    }
+
     var integrationStatusSummary: String {
         if isRefreshingIntegrations {
             return "연동 확인 중"
@@ -125,6 +190,11 @@ final class AppModel {
             settings.locationEnabled,
         ].filter { $0 }.count
         return enabled == 0 ? "기기 안에 안전하게 저장" : "연동 \(enabled)개 사용 중"
+    }
+
+    var appleWatchIntegrationSummary: String {
+        let health = settings.healthEnabled ? "운동·수면 기록 켜짐" : "건강 권한 꺼짐"
+        return "\(appleWatchConnectionState.settingsLabel) · \(health)"
     }
 
     func selectTab(_ tab: RootTab) {
@@ -169,19 +239,26 @@ final class AppModel {
     }
 
     func shiftSelectedDate(by direction: Int) {
-        let component: Calendar.Component
-        switch selectedScale {
-        case .day: component = .day
-        case .week: component = .weekOfYear
-        case .month: component = .month
-        case .year: component = .year
+        guard canShiftSelectedDate(by: direction),
+              let targetDate = TimelinePeriodNavigationEngine()
+                .adjacentDate(
+                    from: selectedDate,
+                    level: selectedScale.timelineLevel,
+                    direction: direction
+                ) else {
+            return
         }
-        selectedDate = Calendar.autoupdatingCurrent.date(
-            byAdding: component,
-            value: direction,
-            to: selectedDate
-        ) ?? selectedDate
+        selectedDate = targetDate
         Task { await refreshEnabledData() }
+    }
+
+    private func canShiftSelectedDate(by direction: Int) -> Bool {
+        TimelinePeriodNavigationEngine().canNavigate(
+            from: selectedDate,
+            level: selectedScale.timelineLevel,
+            direction: direction,
+            snapshot: snapshot
+        )
     }
 
     func returnToNow() {
@@ -191,32 +268,38 @@ final class AppModel {
 
     func openDeepLink(_ url: URL) {
         guard let link = TaptionDeepLink(url: url) else { return }
-        if link == .today {
+        switch link {
+        case .today:
             selectedTab = .schedule
             selectedScale = .day
             selectedDate = .now
             detail = nil
             return
-        }
-
-        guard case .plan(let planID) = link,
-              let plan = snapshot.plans.first(where: { $0.id == planID }) else {
-            userFacingError = "위젯에서 선택한 계획을 찾지 못했습니다."
+        case .catPicker:
+            selectedTab = .settings
+            detail = .catPicker
             return
-        }
+        case .plan(let planID):
+            guard let plan = snapshot.plans.first(where: {
+                $0.id == planID
+            }) else {
+                userFacingError = "위젯에서 선택한 계획을 찾지 못했습니다."
+                return
+            }
 
-        selectedTab = .schedule
-        selectedScale = .day
-        selectedDate = plan.span.start
-        detail = nil
-        selectedAction = QuickActionItem(
-            planID: plan.id,
-            title: plan.title,
-            time:
-                "\(plan.span.start.formatted(date: .omitted, time: .shortened)) → "
-                + plan.span.end.formatted(date: .omitted, time: .shortened),
-            context: "계획 \(Int(plan.span.duration / 60))분"
-        )
+            selectedTab = .schedule
+            selectedScale = .day
+            selectedDate = plan.span.start
+            detail = nil
+            selectedAction = QuickActionItem(
+                planID: plan.id,
+                title: plan.title,
+                time:
+                    "\(plan.span.start.formatted(date: .omitted, time: .shortened)) → "
+                    + plan.span.end.formatted(date: .omitted, time: .shortened),
+                context: "계획 \(Int(plan.span.duration / 60))분"
+            )
+        }
     }
 
     func bootstrap() async {
@@ -225,7 +308,10 @@ final class AppModel {
             resumeSensorCollectionIfNeeded()
             return
         }
-        guard bootstrapTask == nil else { return }
+        if let bootstrapTask {
+            await bootstrapTask.value
+            return
+        }
 
         let task = Task { [weak self] in
             guard let self else { return }
@@ -233,8 +319,17 @@ final class AppModel {
                 var loaded = try await repository.load()
                 if loaded.categories.isEmpty {
                     loaded.categories = CategoryCatalog.builtIn
+                } else {
+                    for category in CategoryCatalog.builtIn
+                    where !loaded.categories.contains(where: {
+                        $0.id == category.id
+                    }) {
+                        loaded.categories.append(category)
+                    }
                 }
                 snapshot = loaded
+                try await repository.save(snapshot)
+                publishWidgetPayload()
                 selectedScale = TimeScale(timelineLevel: loaded.settings.startScale)
                 selectedCatCoat = CatCoat(catStyle: loaded.settings.catStyle)
                 pendingProfileSelection =
@@ -250,7 +345,9 @@ final class AppModel {
                 isBootstrapped = true
                 await synchronizeCloud(showErrors: false)
                 await refreshPermissionStates()
-                await refreshEnabledData()
+                await refreshEnabledData(
+                    includesCurrentDeviceDay: true
+                )
                 await refreshStore(showErrors: false)
                 resumeSensorCollectionIfNeeded()
             } catch {
@@ -268,8 +365,12 @@ final class AppModel {
 
     func sceneBecameActive() async {
         await bootstrap()
+        watchConnectivityService.refreshConnectionState()
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
         await refreshPermissionStates()
+        await refreshEnabledData(
+            includesCurrentDeviceDay: true
+        )
         await refreshStore(showErrors: false)
         resumeSensorCollectionIfNeeded()
         await persist()
@@ -487,11 +588,9 @@ final class AppModel {
 
         if refreshed.isGranted {
             sensorService.startCollection(
-                configuration: SensorCollectionConfiguration(
-                    highAccuracyDuringMovement: true,
-                    collectsDeviceMotion: true,
-                    allowsBackgroundLocation: always,
-                    minimumEmissionInterval: 1
+                configuration: .configured(
+                    for: settings.sensorCollectionProfile,
+                    allowsBackgroundLocation: always
                 )
             )
             isSensorCollecting = true
@@ -507,9 +606,12 @@ final class AppModel {
         await persist()
     }
 
-    func refreshEnabledData() async {
+    func refreshEnabledData(
+        includesCurrentDeviceDay: Bool = false
+    ) async {
         guard !isRefreshingIntegrations else { return }
         isRefreshingIntegrations = true
+        defer { isRefreshingIntegrations = false }
         if permissionState(for: .photos).isGranted, settings.showsPhotos {
             refreshPhotos()
         }
@@ -521,10 +623,15 @@ final class AppModel {
             await refreshHealthData()
         }
         if settings.locationEnabled {
-            await refreshSensorTimeline()
+            if includesCurrentDeviceDay {
+                await refreshSensorTimeline(containing: .now)
+            }
+            if !includesCurrentDeviceDay
+                || !Calendar.autoupdatingCurrent.isDateInToday(selectedDate) {
+                await refreshSensorTimeline(containing: selectedDate)
+            }
         }
         await persist()
-        isRefreshingIntegrations = false
     }
 
     func synchronizeCloud(showErrors: Bool = true) async {
@@ -587,6 +694,35 @@ final class AppModel {
         Task { await persist() }
     }
 
+    func setSensorCollectionProfile(
+        _ profile: SensorCollectionProfile
+    ) {
+        guard snapshot.settings.sensorCollectionProfile != profile else {
+            return
+        }
+        snapshot.settings.sensorCollectionProfile = profile
+        if settings.locationEnabled,
+           permissionState(for: .location).isGranted,
+           let sensorService {
+            sensorService.startCollection(
+                configuration: .configured(
+                    for: profile,
+                    allowsBackgroundLocation:
+                        settings.backgroundPreciseLocationEnabled
+                )
+            )
+            isSensorCollecting = true
+        }
+        Task { await persist() }
+    }
+
+    func prepareHomeFloorCalibration() {
+        snapshot.settings.floorCalibration = .homeTwentiethFloor
+        latestAltitudeEstimate = nil
+        resumeSensorCollectionIfNeeded()
+        Task { await persist() }
+    }
+
     func setWidgetPhotosVisible(_ visible: Bool) {
         snapshot.settings.showsPhotosInWidgets =
             visible && permissionState(for: .photos).isGranted
@@ -635,9 +771,23 @@ final class AppModel {
         try? TemplateCatalog.apply(pendingProfileSelection)
     }
 
+    var currentProfileDisplayName: String {
+        guard let profile = snapshot.profile,
+              let application = try? TemplateCatalog.apply(profile) else {
+            return "미설정"
+        }
+        return application.displayName
+    }
+
     var selectedMemoPlan: PlanRecord? {
         guard let selectedMemoPlanID else { return nil }
         return snapshot.plans.first { $0.id == selectedMemoPlanID }
+    }
+
+    func openInitialSetup() {
+        pendingProfileSelection =
+            snapshot.profile ?? TemplateCatalog.representativeSelections[0]
+        detail = .onboarding
     }
 
     func selectTemplate(_ selection: ProfileSelection) {
@@ -744,6 +894,24 @@ final class AppModel {
 
     func deleteMemo(_ memoID: UUID) {
         snapshot.memos.removeAll { $0.id == memoID }
+        Task { await persist() }
+    }
+
+    func updateMemo(
+        _ memoID: UUID,
+        text: String,
+        kind: MemoKind
+    ) {
+        guard let index = snapshot.memos.firstIndex(where: {
+            $0.id == memoID
+        }), let updated = ActionMemoEditingEngine.updating(
+            snapshot.memos[index],
+            text: text,
+            kind: kind
+        ) else {
+            return
+        }
+        snapshot.memos[index] = updated
         Task { await persist() }
     }
 
@@ -1207,6 +1375,22 @@ final class AppModel {
         guard sorted.indices.contains(destination) else { return }
         var orderedIDs = sorted.map(\.id)
         orderedIDs.swapAt(index, destination)
+        applyCategoryOrder(orderedIDs)
+    }
+
+    func moveCategories(
+        fromOffsets source: IndexSet,
+        toOffset destination: Int
+    ) {
+        snapshot.categories = CategoryCatalog.moving(
+            snapshot.categories,
+            fromOffsets: source,
+            toOffset: destination
+        )
+        Task { await persist() }
+    }
+
+    private func applyCategoryOrder(_ orderedIDs: [String]) {
         snapshot.categories = CategoryCatalog.reordered(
             snapshot.categories,
             orderedIDs: orderedIDs
@@ -1314,76 +1498,145 @@ final class AppModel {
         await persist()
     }
 
-    func refreshSensorTimeline() async {
+    private func applyWatchCommand(_ command: TaptionWatchCommand) async {
+        switch command.kind {
+        case .start:
+            await startPlan(command.planID, at: command.requestedAt)
+        case .complete:
+            await performQuickAction(
+                .complete,
+                planID: command.planID,
+                at: command.requestedAt
+            )
+        case .postponeThirtyMinutes:
+            await performQuickAction(
+                .postponeThirtyMinutes,
+                planID: command.planID,
+                at: command.requestedAt
+            )
+        case .skip:
+            await skipPlan(command.planID)
+        case .stopCurrentActivity:
+            await performQuickAction(
+                .stopCurrentActivity,
+                planID: command.planID,
+                at: command.requestedAt
+            )
+        }
+    }
+
+    func refreshSensorTimeline(containing date: Date? = nil) async {
         guard let sensorService else { return }
         let span = TimelineAggregationEngine().interval(
             for: .day,
-            containing: selectedDate
+            containing: date ?? selectedDate
         )
+        let archivedReadings: [SensorReading]
         do {
-            let readings = try await sensorService.archivedReadings(in: span)
-            guard !readings.isEmpty else { return }
-
-            let knownNames = snapshot.places.reduce(into: [String: String]()) {
-                $0[$1.placeKey] = $1.displayName
-            }
-            var places = PlaceDetectionEngine().detectStays(
-                readings: readings,
-                knownNames: knownNames
+            archivedReadings = try await sensorService.archivedReadings(
+                in: span
             )
-            for index in places.indices
-                where places[index].displayName == "자동 감지 장소" {
-                guard let point = places[index].point,
-                      let name = await placeNameResolver.displayName(
-                          latitude: point.latitude,
-                          longitude: point.longitude
-                      ) else {
-                    continue
-                }
-                places[index].displayName = name
-            }
+        } catch {
+            userFacingError =
+                "위치 기록을 읽지 못했습니다. \(error.localizedDescription)"
+            return
+        }
+        let motionActivities =
+            (try? await sensorService.motionActivities(in: span)) ?? []
+        let pedometer =
+            try? await sensorService.pedometerSummary(in: span)
+        let iPhonePedometerEvidence =
+            await sensorService.pedometerEvidence(for: motionActivities)
+        let healthKitMovementEvidence: [AppleMovementEvidence]
+        if settings.healthEnabled {
+            healthKitMovementEvidence =
+                (try? await healthService.movementEvidence(in: span)) ?? []
+        } else {
+            healthKitMovementEvidence = []
+        }
+        let healthMovementEvidence =
+            iPhonePedometerEvidence + healthKitMovementEvidence
+        if archivedReadings.isEmpty,
+           motionActivities.isEmpty,
+           healthMovementEvidence.isEmpty {
+            return
+        }
 
-            let travel = MovementRouteBuilder().build(
+        let readings = AppleDeviceGroundTruthEngine
+            .applyingMotionHistory(
+                to: archivedReadings,
+                activities: motionActivities
+            )
+        let knownPlaces = snapshot.places
+        let knownNames = knownPlaces.reduce(into: [String: String]()) {
+            $0[$1.placeKey] = $1.displayName
+        }
+        var detectedPlaces = PlaceDetectionEngine().detectStays(
+            readings: readings,
+            knownNames: knownNames
+        )
+        for index in detectedPlaces.indices
+            where detectedPlaces[index].displayName == "자동 감지 장소" {
+            guard let point = detectedPlaces[index].point,
+                  let name = await placeNameResolver.displayName(
+                      latitude: point.latitude,
+                      longitude: point.longitude
+                  ) else {
+                continue
+            }
+            detectedPlaces[index].displayName = name
+        }
+
+        detectedPlaces = FloorCalibrationEngine().applying(
+            settings.floorCalibration,
+            to: detectedPlaces,
+            readings: readings
+        )
+
+        let floorTimeline = FloorTimelineEngine().apply(
+            readings: readings,
+            to: detectedPlaces,
+            knownPlaces: knownPlaces
+        )
+        let places = floorTimeline.places
+        let floors = floorTimeline.transitions
+        let inferredTravel = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: MovementRouteBuilder().build(
                 stays: places,
-                readings: readings
-            )
-            var floors: [FloorTransition] = []
-            for place in places {
-                let relevant = readings.filter {
-                    place.span.contains($0.timestamp)
-                }
-                if let floor = FloorEstimator().estimate(
-                    readings: relevant,
-                    placeKey: place.placeKey,
-                    baselineFloor: place.floor
-                ) {
-                    floors.append(floor)
-                }
-            }
+                readings: readings,
+                healthEvidence: healthMovementEvidence
+            ),
+            motionActivities: motionActivities,
+            pedometer: pedometer,
+            healthEvidence: healthMovementEvidence
+        )
+        let travel = MovementCorrectionEngine.applying(
+            snapshot.settings.movementCorrections,
+            to: inferredTravel,
+            places: places
+        )
 
+        snapshot.travel.removeAll {
+            $0.span.intersection(with: span) != nil
+        }
+        if !archivedReadings.isEmpty {
             snapshot.places.removeAll {
-                $0.span.intersection(with: span) != nil
-            }
-            snapshot.travel.removeAll {
                 $0.span.intersection(with: span) != nil
             }
             snapshot.floorTransitions.removeAll {
                 $0.span.intersection(with: span) != nil
             }
             snapshot.places.append(contentsOf: places)
-            snapshot.travel.append(contentsOf: travel)
             snapshot.floorTransitions.append(contentsOf: floors)
-            snapshot.places.sort { $0.span.start < $1.span.start }
-            snapshot.travel.sort { $0.span.start < $1.span.start }
-            snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
+        }
+        snapshot.travel.append(contentsOf: travel)
+        snapshot.places.sort { $0.span.start < $1.span.start }
+        snapshot.travel.sort { $0.span.start < $1.span.start }
+        snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
 
-            if snapshot.settings.weatherEnabled,
-               let point = readings.last?.point {
-                await refreshWeather(at: point, in: span)
-            }
-        } catch {
-            userFacingError =
-                "위치·이동 기록을 정리하지 못했습니다. \(error.localizedDescription)"
+        if snapshot.settings.weatherEnabled,
+           let point = readings.last?.point {
+            await refreshWeather(at: point, in: span)
         }
     }
 
@@ -1403,13 +1656,56 @@ final class AppModel {
         }) else {
             return
         }
+        let wasChanged = snapshot.travel[index].mode != mode
+        snapshot.settings.movementCorrections =
+            MovementCorrectionEngine.recording(
+                mode: mode,
+                for: snapshot.travel[index],
+                places: snapshot.places,
+                existing: snapshot.settings.movementCorrections
+            )
         snapshot.travel[index].mode = mode
         snapshot.travel[index].confidence = .high
         snapshot.travel[index].isConfirmed = true
-        if !snapshot.travel[index].evidence.contains("사용자 교정") {
-            snapshot.travel[index].evidence.append("사용자 교정")
+        snapshot.travel[index].evidence.removeAll {
+            $0.hasPrefix("사용자 확인") || $0 == "사용자 교정"
         }
+        snapshot.travel[index].evidence.append(
+            wasChanged ? "사용자 확인 · 수단 수정" : "사용자 확인"
+        )
         Task { await persist() }
+    }
+
+    func forgetTravelConfirmation(_ travelID: UUID) {
+        guard let index = snapshot.travel.firstIndex(where: {
+            $0.id == travelID
+        }) else {
+            return
+        }
+        let segment = snapshot.travel[index]
+        let correction = MovementCorrectionEngine.correction(
+            for: segment,
+            places: snapshot.places,
+            in: snapshot.settings.movementCorrections
+        )
+        snapshot.settings.movementCorrections =
+            MovementCorrectionEngine.removingCorrection(
+                for: segment,
+                places: snapshot.places,
+                from: snapshot.settings.movementCorrections
+            )
+        snapshot.travel[index].mode = correction?.inferredMode ?? segment.mode
+        snapshot.travel[index].confidence =
+            correction?.inferredConfidence ?? .medium
+        snapshot.travel[index].isConfirmed = false
+        snapshot.travel[index].evidence.removeAll {
+            $0.hasPrefix("사용자 확인") || $0 == "사용자 교정"
+        }
+        Task {
+            await persist()
+            await refreshSensorTimeline(containing: segment.span.start)
+            await persistDeviceLocalSnapshot()
+        }
     }
 
     func confirmPlace(_ placeID: UUID, name: String, floor: Int?) {
@@ -1540,12 +1836,12 @@ final class AppModel {
             async let actualValues = healthService.actuals(in: span)
             async let sessions = healthService.sleepSessions(in: span)
             let (freshActuals, freshSessions) = try await (actualValues, sessions)
-            snapshot.actuals.removeAll {
-                $0.source == .healthKit
-                    && $0.span().intersection(with: span) != nil
-            }
-            snapshot.actuals.append(contentsOf: freshActuals)
-            snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+            snapshot.actuals = AppleDeviceGroundTruthEngine
+                .replacingHealthKitActuals(
+                    existing: snapshot.actuals,
+                    with: freshActuals,
+                    inside: span
+                )
             sleepSessions = freshSessions
         } catch {
             userFacingError = "건강 데이터를 읽지 못했습니다. \(error.localizedDescription)"
@@ -1560,14 +1856,38 @@ final class AppModel {
             return
         }
         sensorService.startCollection(
-            configuration: SensorCollectionConfiguration(
-                highAccuracyDuringMovement: true,
-                collectsDeviceMotion: true,
-                allowsBackgroundLocation: settings.backgroundPreciseLocationEnabled,
-                minimumEmissionInterval: 1
+            configuration: .configured(
+                for: settings.sensorCollectionProfile,
+                allowsBackgroundLocation:
+                    settings.backgroundPreciseLocationEnabled
             )
         )
         isSensorCollecting = true
+    }
+
+    @discardableResult
+    private func updateFloorCalibration(
+        with reading: SensorReading
+    ) -> Bool {
+        latestSensorReading = reading
+        guard let calibration = settings.floorCalibration else {
+            latestAltitudeEstimate = nil
+            return false
+        }
+        let engine = FloorCalibrationEngine()
+        let captured = engine.capturing(
+            calibration,
+            from: reading
+        )
+        let didCapture = captured != calibration
+        if didCapture {
+            snapshot.settings.floorCalibration = captured
+        }
+        latestAltitudeEstimate = engine.estimate(
+            reading: reading,
+            calibration: captured
+        )
+        return didCapture
     }
 
     private func refreshWeather(at point: GeoPoint, in span: TimeSpan) async {
@@ -1626,7 +1946,7 @@ final class AppModel {
         let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)
             ?? weekStart.addingTimeInterval(7 * 86_400)
         let span = TimeSpan(start: weekStart, end: weekEnd)
-        let items = snapshot.plans
+        let planItems = snapshot.plans
             .filter { $0.span.intersection(with: span) != nil }
             .sorted { $0.span.start < $1.span.start }
             .map { plan in
@@ -1647,13 +1967,39 @@ final class AppModel {
                     categoryHex: category?.lightHex
                 )
             }
+        let calendarItems = snapshot.calendarEvents
+            .filter { $0.span.intersection(with: span) != nil }
+            .map { event in
+                TaptionWidgetItem(
+                    id: UUID(uuidString: event.id) ?? UUID(),
+                    title: snapshot.settings.showsPhotosInWidgets
+                        ? event.title
+                        : "일정",
+                    categoryID: "calendar",
+                    startsAt: event.span.start,
+                    endsAt: event.span.end,
+                    status: PlanStatus.planned.rawValue,
+                    isFixed: true,
+                    categoryName: "캘린더",
+                    categoryHex: "#BEDAE3"
+                )
+            }
+        let items = (planItems + calendarItems)
+            .sorted { $0.startsAt < $1.startsAt }
+        let weather = snapshot.weather.min {
+            abs($0.observedAt.timeIntervalSinceNow)
+                < abs($1.observedAt.timeIntervalSinceNow)
+        }
         let payload = TaptionWidgetPayload(
             generatedAt: .now,
             viewportStart: weekStart,
             viewportEnd: weekEnd,
             items: items,
             catStyle: snapshot.settings.catStyle.rawValue,
-            hidesSensitiveContent: !snapshot.settings.showsPhotosInWidgets
+            hidesSensitiveContent: !snapshot.settings.showsPhotosInWidgets,
+            weatherSymbolName: weather?.symbolName,
+            temperatureCelsius: weather?.temperatureCelsius,
+            reducesMotion: snapshot.settings.reduceMotion
         )
         do {
             try TaptionWidgetSharedStore.writePayload(payload)
@@ -1661,6 +2007,37 @@ final class AppModel {
         } catch {
             userFacingError = "위젯 데이터를 갱신하지 못했습니다. \(error.localizedDescription)"
         }
+        let watchItems = snapshot.plans
+            .filter { $0.span.intersection(with: span) != nil }
+            .sorted { $0.span.start < $1.span.start }
+            .map { plan in
+                let category = snapshot.categories.first {
+                    $0.id == plan.categoryID
+                }
+                let activeActual = snapshot.actuals.last {
+                    $0.planID == plan.id && $0.endedAt == nil
+                }
+                return TaptionWatchPlanItem(
+                    id: plan.id,
+                    title: plan.title,
+                    categoryID: plan.categoryID,
+                    startsAt: plan.span.start,
+                    endsAt: plan.span.end,
+                    status: plan.status.rawValue,
+                    actualStartedAt: activeActual?.startedAt,
+                    categoryName: category?.name,
+                    categoryHex: category?.lightHex
+                )
+            }
+        let watchPayload = TaptionWatchPayload(
+            generatedAt: .now,
+            viewportStart: weekStart,
+            viewportEnd: weekEnd,
+            items: watchItems,
+            catStyle: snapshot.settings.catStyle.rawValue,
+            reducesMotion: snapshot.settings.reduceMotion
+        )
+        try? watchConnectivityService.update(payload: watchPayload)
     }
 
     private var visibleDataSpan: TimeSpan {
@@ -1679,12 +2056,13 @@ final class AppModel {
     }
 
     private var recentHealthSpan: TimeSpan {
+        let now = Date.now
         let start = Calendar.autoupdatingCurrent.date(
             byAdding: .day,
             value: -31,
-            to: Calendar.autoupdatingCurrent.startOfDay(for: selectedDate)
-        ) ?? selectedDate.addingTimeInterval(-31 * 86_400)
-        return TimeSpan(start: start, end: .now)
+            to: Calendar.autoupdatingCurrent.startOfDay(for: now)
+        ) ?? now.addingTimeInterval(-31 * 86_400)
+        return TimeSpan(start: start, end: now)
     }
 
     private func persist() async {
@@ -1735,6 +2113,8 @@ final class AppModel {
             safe.evidence = []
             return safe
         }
+        value.settings.floorCalibration = nil
+        value.settings.movementCorrections = []
         return value
     }
 
@@ -1759,10 +2139,29 @@ final class AppModel {
         value.settings.locationEnabled = local.settings.locationEnabled
         value.settings.backgroundPreciseLocationEnabled =
             local.settings.backgroundPreciseLocationEnabled
+        value.settings.sensorCollectionProfile =
+            local.settings.sensorCollectionProfile
+        value.settings.floorCalibration =
+            local.settings.floorCalibration
+        value.settings.movementCorrections =
+            local.settings.movementCorrections
         value.settings.weatherEnabled = local.settings.weatherEnabled
         value.settings.notificationsEnabled =
             local.settings.notificationsEnabled
         return value
+    }
+
+    private func persistDeviceLocalSnapshot() async {
+        do {
+            var value = snapshot
+            value.updatedAt = .now
+            snapshot = value
+            try await repository.save(value)
+            publishWidgetPayload()
+        } catch {
+            userFacingError =
+                "센서 기록을 저장하지 못했습니다. \(error.localizedDescription)"
+        }
     }
 }
 

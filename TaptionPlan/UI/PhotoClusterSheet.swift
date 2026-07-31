@@ -5,87 +5,66 @@ struct PhotoClusterSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
     let cluster: PhotoCluster
+    @State private var selectedIndex = 0
 
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 9) {
-                    if !contextLabels.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("이 시간의 맥락")
-                                .font(.system(size: 10, weight: .black))
-                                .foregroundStyle(Color.tpSecondary)
-                            ChipFlowLayout(spacing: 5) {
-                                ForEach(contextLabels, id: \.self) {
-                                    Text($0)
-                                        .font(
-                                            .system(
-                                                size: 9,
-                                                weight: .semibold
-                                            )
-                                        )
-                                        .foregroundStyle(Color.tpInk)
-                                        .padding(.horizontal, 7)
-                                        .padding(.vertical, 5)
-                                        .background(
-                                            Color.white,
-                                            in: Capsule()
-                                        )
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(10)
-                        .background(
-                            Color.tpPhoto.opacity(0.42),
-                            in: RoundedRectangle(
-                                cornerRadius: 13,
-                                style: .continuous
+            VStack(spacing: 9) {
+                if photos.isEmpty {
+                    ContentUnavailableView(
+                        "표시할 사진이 없습니다",
+                        systemImage: "photo"
+                    )
+                    .frame(maxHeight: .infinity)
+                } else {
+                    TabView(selection: $selectedIndex) {
+                        ForEach(
+                            Array(photos.enumerated()),
+                            id: \.element.id
+                        ) { index, photo in
+                            PhotoClusterPage(
+                                model: model,
+                                photo: photo,
+                                index: index,
+                                totalCount: photos.count
                             )
-                        )
-                    }
-
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.flexible(), spacing: 3),
-                            GridItem(.flexible(), spacing: 3),
-                            GridItem(.flexible(), spacing: 3),
-                        ],
-                        spacing: 3
-                    ) {
-                        ForEach(cluster.photos) { photo in
-                            VStack(alignment: .leading, spacing: 3) {
-                                PhotoClusterThumbnail(
-                                    model: model,
-                                    localIdentifier: photo.id
-                                )
-                                .aspectRatio(1, contentMode: .fill)
-                                .clipShape(
-                                    RoundedRectangle(
-                                        cornerRadius: 9,
-                                        style: .continuous
-                                    )
-                                )
-                                Text(
-                                    photo.capturedAt.formatted(
-                                        date: .omitted,
-                                        time: .shortened
-                                    )
-                                )
-                                .font(
-                                    .system(size: 7, weight: .semibold)
-                                )
-                                .foregroundStyle(Color.tpSecondary)
-                                .padding(.horizontal, 2)
-                            }
+                            .tag(index)
                         }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(
+                        Color.black,
+                        in: RoundedRectangle(
+                            cornerRadius: 14,
+                            style: .continuous
+                        )
+                    )
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: 14,
+                            style: .continuous
+                        )
+                    )
+
+                    HStack(spacing: 8) {
+                        Text(selectedPhotoTime)
+                        Spacer(minLength: 8)
+                        Text("\(selectedIndex + 1) / \(photos.count)")
+                    }
+                    .font(.taption(size: 8, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.horizontal, 2)
+
+                    if !contextLabels.isEmpty {
+                        contextStrip
                     }
                 }
-                .padding(10)
             }
+            .padding(10)
             .background(Color.tpBackground)
             .navigationTitle(
-                "\(cluster.capturedAt.formatted(date: .abbreviated, time: .omitted)) · 사진 \(cluster.photos.count)장"
+                "\(cluster.capturedAt.formatted(date: .abbreviated, time: .omitted)) · 사진 \(photos.count)장"
             )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -95,6 +74,53 @@ struct PhotoClusterSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private var photos: [PhotoMoment] {
+        cluster.photos.sorted { $0.capturedAt < $1.capturedAt }
+    }
+
+    private var selectedPhotoTime: String {
+        guard photos.indices.contains(selectedIndex) else { return "" }
+        return photos[selectedIndex].capturedAt.formatted(
+            date: .omitted,
+            time: .shortened
+        )
+    }
+
+    private var contextStrip: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("이 시간의 맥락")
+                .font(.taption(size: 10, weight: .black))
+                .foregroundStyle(Color.tpSecondary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(contextLabels, id: \.self) {
+                        Text($0)
+                            .font(
+                                .taption(
+                                    size: 9,
+                                    weight: .semibold
+                                )
+                            )
+                            .foregroundStyle(Color.tpInk)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 5)
+                            .background(Color.white, in: Capsule())
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            Color.tpPhoto.opacity(0.42),
+            in: RoundedRectangle(
+                cornerRadius: 13,
+                style: .continuous
+            )
+        )
     }
 
     private var contextLabels: [String] {
@@ -124,34 +150,67 @@ struct PhotoClusterSheet: View {
     }
 }
 
-private struct PhotoClusterThumbnail: View {
+private struct PhotoClusterPage: View {
     @Bindable var model: AppModel
-    let localIdentifier: String
+    let photo: PhotoMoment
+    let index: Int
+    let totalCount: Int
     @State private var image: UIImage?
+    @State private var failedToLoad = false
 
     var body: some View {
         ZStack {
-            Color.tpPhoto.opacity(0.55)
+            Color.black
+
             if let image {
                 Image(uiImage: image)
                     .resizable()
-                    .scaledToFill()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if failedToLoad {
+                VStack(spacing: 8) {
+                    Image(systemName: "photo")
+                        .font(.taption(size: 24, weight: .semibold))
+                    Text("사진을 불러오지 못했습니다")
+                        .font(.taption(size: 9, weight: .semibold))
+                }
+                .foregroundStyle(Color.white.opacity(0.72))
             } else {
                 ProgressView()
-                    .controlSize(.small)
-                    .tint(Color.tpPhotoDark)
+                    .controlSize(.regular)
+                    .tint(.white)
             }
         }
         .clipped()
-        .task(id: localIdentifier) {
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "사진 \(index + 1), 전체 \(totalCount)장"
+        )
+        .accessibilityHint("좌우로 쓸어 다음 사진이나 이전 사진 보기")
+        .task(id: photo.id) {
             guard image == nil else { return }
             guard let data = try? await model.photoThumbnailData(
-                localIdentifier: localIdentifier,
-                size: CGSize(width: 480, height: 480)
+                localIdentifier: photo.id,
+                size: previewSize
             ) else {
+                failedToLoad = true
                 return
             }
             image = UIImage(data: data)
+            failedToLoad = image == nil
         }
+    }
+
+    private var previewSize: CGSize {
+        let width = max(1, photo.pixelWidth)
+        let height = max(1, photo.pixelHeight)
+        let longestSide = max(width, height)
+        let scale = min(1, 1_600 / CGFloat(longestSide))
+        return CGSize(
+            width: CGFloat(width) * scale,
+            height: CGFloat(height) * scale
+        )
     }
 }
