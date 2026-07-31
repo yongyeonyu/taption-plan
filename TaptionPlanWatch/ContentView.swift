@@ -157,6 +157,16 @@ struct WatchContentView: View {
                     metric("심박", value: workout.heartRate > 0 ? "\(Int(workout.heartRate))" : "—", unit: "BPM")
                     metric("거리", value: distanceText, unit: workout.distanceMeters >= 1_000 ? "KM" : "M")
                 }
+                HStack(spacing: 5) {
+                    Image(systemName: "waveform.path.ecg")
+                    Text("Watch 센서 \(workout.sensorSampleCount)개 기록 중")
+                    if let altitude = workout.latestRelativeAltitudeMeters {
+                        Text("· 고도 \(altitude, specifier: "%.1f")m")
+                    }
+                }
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
                 Button(role: .destructive) {
                     Task {
                         if let plan = await workout.stop() {

@@ -16,6 +16,7 @@ struct SettingsView: View {
     @Bindable var model: AppModel
     @State private var sharedExport: ShareableURL?
     @State private var showsDeleteConfirmation = false
+    @State private var customFrequentPlaceName = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -128,7 +129,7 @@ struct SettingsView: View {
                         settingsToggleRow(
                             icon: "calendar",
                             title: "캘린더",
-                            subtitle: "고정 일정 가져오기",
+                            subtitle: "Apple · Google 캘린더 일정 가져오기",
                             isOn: Binding(
                                 get: {
                                     !model.settings.selectedCalendarIDs.isEmpty
@@ -189,6 +190,7 @@ struct SettingsView: View {
                             )
                         )
                         locationIntegrationRow
+                        frequentPlacesRow
                         sensorCollectionProfileRow
                         settingsRow(
                             icon: "building.2",
@@ -365,9 +367,12 @@ struct SettingsView: View {
                             }
                         }
                         Text(
-                            model.isSensorCollecting
-                                ? "기록 중 · \(model.settings.sensorCollectionProfile.intervalMinutes)분 간격 · 탭해서 경로 보기"
-                                : "장소와 이동수단 자동 추정"
+                            model.settings.locationEnabled
+                                && !model.settings.backgroundPreciseLocationEnabled
+                                ? "앱 사용 중만 기록 · ‘항상’ 위치 허용 필요"
+                                : model.isSensorCollecting
+                                    ? "기록 중 · \(model.settings.sensorCollectionProfile.intervalMinutes)분 간격 · 탭해서 경로 보기"
+                                    : "장소와 이동수단 자동 추정"
                         )
                         .font(
                             .taption(size: SettingsTypography.rowSubtitle)
@@ -405,6 +410,168 @@ struct SettingsView: View {
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
         }
+    }
+
+    private var frequentPlacesRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "star.circle.fill")
+                    .font(.taption(size: 14))
+                    .foregroundStyle(Color.tpPlaceDark)
+                    .frame(width: 27, height: 27)
+                    .background(
+                        Color.tpPlace,
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("자주가는 곳")
+                        .font(
+                            .taption(
+                                size: SettingsTypography.rowTitle,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(Color.tpInk)
+                    Text("집 · 학교 · 학원 · 회사 등을 현재 위치로 지정")
+                        .font(.taption(size: SettingsTypography.rowSubtitle))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                Spacer()
+                Text(frequentPlacesSummary)
+                    .font(
+                        .taption(
+                            size: SettingsTypography.value,
+                            weight: .bold
+                        )
+                    )
+                    .foregroundStyle(Color.tpPlaceDark)
+            }
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 6),
+                    GridItem(.flexible(), spacing: 6),
+                ],
+                spacing: 6
+            ) {
+                ForEach(model.settings.frequentPlaces) { place in
+                    frequentPlaceChip(place)
+                }
+            }
+
+            HStack(spacing: 6) {
+                TextField("사용자 추가", text: $customFrequentPlaceName)
+                    .font(.taption(size: 9, weight: .semibold))
+                    .textInputAutocapitalization(.never)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 7)
+                    .background(
+                        Color.tpBackground,
+                        in: RoundedRectangle(cornerRadius: 9)
+                    )
+
+                Button {
+                    model.addCustomFrequentPlace(name: customFrequentPlaceName)
+                    customFrequentPlaceName = ""
+                } label: {
+                    Label("추가", systemImage: "plus")
+                        .font(.taption(size: 8.5, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 7)
+                        .background(
+                            Color.tpInk,
+                            in: RoundedRectangle(cornerRadius: 9)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .frame(height: 0.5)
+        }
+    }
+
+    private var frequentPlacesSummary: String {
+        let pinned = model.settings.frequentPlaces.filter {
+            $0.point != nil
+        }.count
+        return "\(pinned)/\(model.settings.frequentPlaces.count)"
+    }
+
+    private func frequentPlaceChip(_ place: FrequentPlace) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 5) {
+                Image(systemName: place.kind.systemImage)
+                    .font(.taption(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpPlaceDark)
+                Text(place.name)
+                    .font(.taption(size: 8.8, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                if place.point != nil {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.taption(size: 8.8, weight: .bold))
+                        .foregroundStyle(Color.tpPlaceDark)
+                }
+            }
+
+            Text(frequentPlaceSubtitle(place))
+                .font(.taption(size: 7.2, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(1)
+
+            HStack(spacing: 4) {
+                Button {
+                    model.setFrequentPlaceToCurrentLocation(place.id)
+                } label: {
+                    Text("현재 위치")
+                        .font(.taption(size: 7.5, weight: .bold))
+                        .foregroundStyle(Color.tpPlaceDark)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(
+                            Color.tpPlace,
+                            in: RoundedRectangle(cornerRadius: 7)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                if place.kind == .custom {
+                    Button(role: .destructive) {
+                        model.deleteFrequentPlace(place.id)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.taption(size: 8, weight: .bold))
+                            .foregroundStyle(
+                                Color(red: 0.72, green: 0.19, blue: 0.16)
+                            )
+                            .frame(width: 24, height: 23)
+                            .background(
+                                Color(red: 1.00, green: 0.92, blue: 0.92),
+                                in: RoundedRectangle(cornerRadius: 7)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(8)
+        .background(
+            Color.tpBackground,
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
+    }
+
+    private func frequentPlaceSubtitle(_ place: FrequentPlace) -> String {
+        guard place.point != nil else { return "미지정" }
+        let floor = place.floor.map { " · \($0)층" } ?? ""
+        return "지정됨\(floor) · 반경 \(Int(place.radiusMeters))m"
     }
 
     private var sensorCollectionProfileRow: some View {

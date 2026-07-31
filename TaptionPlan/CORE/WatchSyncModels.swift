@@ -70,9 +70,55 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var reducesMotion: Bool
 }
 
+struct TaptionWatchSensorVector3: Codable, Hashable, Sendable {
+    var x: Double
+    var y: Double
+    var z: Double
+}
+
+/// A cumulative, battery-conscious summary of the sensors collected during an
+/// explicit Apple Watch workout. The Watch samples motion locally and sends a
+/// summary periodically instead of streaming every high-frequency event.
+struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID { sessionID }
+    var sessionID: UUID
+    var sequence: Int
+    var workoutKind: TaptionWatchWorkoutKind
+    var linkedPlanID: UUID?
+    var linkedPlanTitle: String?
+    var linkedCategoryID: String?
+    var startedAt: Date
+    var endedAt: Date
+    var isFinal: Bool
+
+    var accelerometerSampleCount: Int
+    var accelerometerAverageG: TaptionWatchSensorVector3?
+    var peakAccelerationG: Double?
+    var gyroscopeSampleCount: Int
+    var gyroscopeAverageRadiansPerSecond: TaptionWatchSensorVector3?
+    var peakRotationRateRadiansPerSecond: Double?
+    var gravity: TaptionWatchSensorVector3?
+    var userAccelerationG: TaptionWatchSensorVector3?
+    var rotationRateRadiansPerSecond: TaptionWatchSensorVector3?
+    var attitudeRadians: TaptionWatchSensorVector3?
+
+    var relativeAltitudeMeters: Double?
+    var pressureKilopascals: Double?
+    var stepCount: Int?
+    var distanceMeters: Double?
+    var floorsAscended: Int?
+    var floorsDescended: Int?
+
+    var latestHeartRate: Double?
+    var averageHeartRate: Double?
+    var maximumHeartRate: Double?
+    var activeEnergyKilocalories: Double?
+}
+
 enum TaptionWatchEnvelope {
     static let payloadKey = "taption.watch.payload"
     static let commandKey = "taption.watch.command"
+    static let sensorSummaryKey = "taption.watch.sensor-summary"
     static let acceptedKey = "taption.watch.accepted"
 }
 
@@ -80,4 +126,5 @@ enum TaptionWatchHealthMetadata {
     static let planID = "com.taption.plan.planID"
     static let planTitle = "com.taption.plan.planTitle"
     static let categoryID = "com.taption.plan.categoryID"
+    static let sensorSessionID = "com.taption.plan.sensorSessionID"
 }

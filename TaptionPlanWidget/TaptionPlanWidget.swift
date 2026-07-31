@@ -14,6 +14,7 @@ struct TaptionPlanWidgetBundle: WidgetBundle {
 struct TaptionScheduleEntry: TimelineEntry {
     var date: Date
     var payload: TaptionWidgetPayload
+    var animationPhase: Int = 0
 }
 
 struct TaptionScheduleProvider: TimelineProvider {
@@ -45,14 +46,40 @@ struct TaptionScheduleProvider: TimelineProvider {
         var refreshDates = (0...16).map {
             now.addingTimeInterval(Double($0) * 15 * 60)
         }
+        if payload.hasRunningItem(at: now),
+           payload.reducesMotion != true {
+            refreshDates.append(
+                contentsOf: (1...36).map {
+                    now.addingTimeInterval(Double($0) * 5)
+                }
+            )
+        }
         refreshDates.append(
             contentsOf: payload.items.flatMap { [$0.startsAt, $0.endsAt] }
                 .filter { now < $0 && $0 < horizon }
         )
         let entries = Array(Set(refreshDates))
             .sorted()
-            .map { TaptionScheduleEntry(date: $0, payload: payload) }
+            .map {
+                TaptionScheduleEntry(
+                    date: $0,
+                    payload: payload,
+                    animationPhase: Self.animationPhase(at: $0)
+                )
+            }
         completion(Timeline(entries: entries, policy: .after(horizon)))
+    }
+
+    private static func animationPhase(at date: Date) -> Int {
+        Int(date.timeIntervalSinceReferenceDate / 5) % 4
+    }
+}
+
+private extension TaptionWidgetPayload {
+    func hasRunningItem(at date: Date) -> Bool {
+        items.contains {
+            !$0.isCompleted && $0.startsAt <= date && date <= $0.endsAt
+        }
     }
 }
 
@@ -83,7 +110,8 @@ private struct TaptionScheduleWidgetView: View {
 
             PrototypeWidgetTrack(
                 payload: entry.payload,
-                date: entry.date
+                date: entry.date,
+                animationPhase: entry.animationPhase
             )
             .frame(height: 76)
 
@@ -250,6 +278,7 @@ private struct TaptionScheduleWidgetView: View {
 private struct PrototypeWidgetTrack: View {
     let payload: TaptionWidgetPayload
     let date: Date
+    let animationPhase: Int
 
     var body: some View {
         GeometryReader { proxy in
@@ -303,7 +332,8 @@ private struct PrototypeWidgetTrack: View {
                 WidgetCat(
                     style: payload.catStyle,
                     isRunning: currentItem != nil,
-                    reducesMotion: payload.reducesMotion ?? false
+                    reducesMotion: payload.reducesMotion ?? false,
+                    animationPhase: animationPhase
                 )
                 .frame(width: 40, height: 27)
                 .offset(x: nowX - 20, y: 4)
@@ -374,6 +404,7 @@ private struct WidgetCat: View {
     let style: String
     var isRunning: Bool = true
     var reducesMotion: Bool = false
+    var animationPhase: Int = 0
 
     var body: some View {
         Canvas { rawContext, size in
@@ -381,32 +412,42 @@ private struct WidgetCat: View {
             let scaleY = size.height / 27
             var context = rawContext
             context.scaleBy(x: scaleX, y: scaleY)
+            let effectivePhase = isRunning && !reducesMotion
+                ? animationPhase
+                : 0
 
             if isRunning && !reducesMotion {
-                drawSpeedLines(in: &context)
+                drawSpeedLines(in: &context, phase: effectivePhase)
             }
             drawShadow(in: &context)
-            drawCat(in: &context)
+            drawCat(in: &context, phase: effectivePhase)
         }
         .accessibilityLabel(accessibilityName)
     }
 
-    private func drawSpeedLines(in context: inout GraphicsContext) {
+    private func drawSpeedLines(
+        in context: inout GraphicsContext,
+        phase: Int
+    ) {
+        let offset = Double(phase % 2) * 2
+        let opacity = phase % 2 == 0 ? 0.66 : 0.42
+        let color = Color(red: 0.65, green: 0.65, blue: 0.68)
+            .opacity(opacity)
         var longLine = Path()
-        longLine.move(to: CGPoint(x: 0, y: 10))
-        longLine.addLine(to: CGPoint(x: 7, y: 10))
+        longLine.move(to: CGPoint(x: -offset, y: 10))
+        longLine.addLine(to: CGPoint(x: 7 - offset, y: 10))
         context.stroke(
             longLine,
-            with: .color(Color(red: 0.65, green: 0.65, blue: 0.68)),
+            with: .color(color),
             style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
         )
 
         var shortLine = Path()
-        shortLine.move(to: CGPoint(x: 2, y: 16))
-        shortLine.addLine(to: CGPoint(x: 6, y: 16))
+        shortLine.move(to: CGPoint(x: 2 - offset, y: 16))
+        shortLine.addLine(to: CGPoint(x: 6 - offset, y: 16))
         context.stroke(
             shortLine,
-            with: .color(Color(red: 0.65, green: 0.65, blue: 0.68)),
+            with: .color(color),
             style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
         )
     }
@@ -418,7 +459,7 @@ private struct WidgetCat: View {
         )
     }
 
-    private func drawCat(in context: inout GraphicsContext) {
+    private func drawCat(in context: inout GraphicsContext, phase: Int) {
         let palette = CatPalette(style: style)
         let outline = GraphicsContext.Shading.color(palette.outline)
         let stroke = StrokeStyle(
@@ -426,57 +467,70 @@ private struct WidgetCat: View {
             lineCap: .round,
             lineJoin: .round
         )
+        let runningPhase = phase % 4
+        let bodyLift = isRunning
+            ? (runningPhase == 1 || runningPhase == 3 ? -0.8 : 0.4)
+            : 0
+        let tailTip = runningPhase == 0 || runningPhase == 3
+            ? CGPoint(x: 4, y: 5)
+            : CGPoint(x: 3.5, y: 8.2)
+        let tailControl1 = runningPhase == 0 || runningPhase == 3
+            ? CGPoint(x: 5, y: 14)
+            : CGPoint(x: 5.2, y: 11.4)
+        let tailControl2 = runningPhase == 0 || runningPhase == 3
+            ? CGPoint(x: 2, y: 10)
+            : CGPoint(x: 1.8, y: 10.8)
 
         var tail = Path()
-        tail.move(to: CGPoint(x: 11, y: 12))
+        tail.move(to: CGPoint(x: 11, y: 12 + bodyLift))
         tail.addCurve(
-            to: CGPoint(x: 4, y: 5),
-            control1: CGPoint(x: 5, y: 14),
-            control2: CGPoint(x: 2, y: 10)
+            to: tailTip,
+            control1: tailControl1,
+            control2: tailControl2
         )
         context.stroke(tail, with: outline, style: stroke)
 
         let body = Path(
-            ellipseIn: CGRect(x: 9.5, y: 6, width: 21, height: 12)
+            ellipseIn: CGRect(x: 9.5, y: 6 + bodyLift, width: 21, height: 12)
         )
         context.fill(body, with: .color(palette.base))
         context.stroke(body, with: outline, style: StrokeStyle(lineWidth: 1))
 
         if style == "calico" {
             var orangePatch = Path()
-            orangePatch.move(to: CGPoint(x: 10.5, y: 10))
+            orangePatch.move(to: CGPoint(x: 10.5, y: 10 + bodyLift))
             orangePatch.addCurve(
-                to: CGPoint(x: 19, y: 6.6),
-                control1: CGPoint(x: 12.9, y: 6.6),
-                control2: CGPoint(x: 16.7, y: 5.3)
+                to: CGPoint(x: 19, y: 6.6 + bodyLift),
+                control1: CGPoint(x: 12.9, y: 6.6 + bodyLift),
+                control2: CGPoint(x: 16.7, y: 5.3 + bodyLift)
             )
-            orangePatch.addLine(to: CGPoint(x: 17.5, y: 17.5))
+            orangePatch.addLine(to: CGPoint(x: 17.5, y: 17.5 + bodyLift))
             orangePatch.addCurve(
-                to: CGPoint(x: 10.5, y: 14),
-                control1: CGPoint(x: 14.2, y: 17.3),
-                control2: CGPoint(x: 11.9, y: 16.1)
+                to: CGPoint(x: 10.5, y: 14 + bodyLift),
+                control1: CGPoint(x: 14.2, y: 17.3 + bodyLift),
+                control2: CGPoint(x: 11.9, y: 16.1 + bodyLift)
             )
             orangePatch.closeSubpath()
             context.fill(orangePatch, with: .color(palette.orange))
 
             var darkPatch = Path()
-            darkPatch.move(to: CGPoint(x: 21, y: 6.2))
+            darkPatch.move(to: CGPoint(x: 21, y: 6.2 + bodyLift))
             darkPatch.addCurve(
-                to: CGPoint(x: 29.5, y: 11.3),
-                control1: CGPoint(x: 24.8, y: 6.4),
-                control2: CGPoint(x: 28.1, y: 8.2)
+                to: CGPoint(x: 29.5, y: 11.3 + bodyLift),
+                control1: CGPoint(x: 24.8, y: 6.4 + bodyLift),
+                control2: CGPoint(x: 28.1, y: 8.2 + bodyLift)
             )
-            darkPatch.addLine(to: CGPoint(x: 25.7, y: 16.5))
-            darkPatch.addLine(to: CGPoint(x: 20.4, y: 17.2))
+            darkPatch.addLine(to: CGPoint(x: 25.7, y: 16.5 + bodyLift))
+            darkPatch.addLine(to: CGPoint(x: 20.4, y: 17.2 + bodyLift))
             darkPatch.closeSubpath()
             context.fill(darkPatch, with: .color(palette.dark))
         } else if style == "cow" {
             context.fill(
-                Path(ellipseIn: CGRect(x: 13, y: 7, width: 7, height: 7)),
+                Path(ellipseIn: CGRect(x: 13, y: 7 + bodyLift, width: 7, height: 7)),
                 with: .color(palette.dark)
             )
             context.fill(
-                Path(ellipseIn: CGRect(x: 22, y: 11, width: 6, height: 5)),
+                Path(ellipseIn: CGRect(x: 22, y: 11 + bodyLift, width: 6, height: 5)),
                 with: .color(palette.dark)
             )
         }
@@ -484,8 +538,8 @@ private struct WidgetCat: View {
         if style == "mackerel" || style == "cheese" {
             for x in [15.0, 19.0, 23.5] {
                 var stripe = Path()
-                stripe.move(to: CGPoint(x: x, y: 7))
-                stripe.addLine(to: CGPoint(x: x - 0.5, y: 11))
+                stripe.move(to: CGPoint(x: x, y: 7 + bodyLift))
+                stripe.addLine(to: CGPoint(x: x - 0.5, y: 11 + bodyLift))
                 context.stroke(
                     stripe,
                     with: .color(palette.stripe),
@@ -495,33 +549,28 @@ private struct WidgetCat: View {
         }
 
         let head = Path(
-            ellipseIn: CGRect(x: 25.8, y: 4.3, width: 10.4, height: 10.4)
+            ellipseIn: CGRect(x: 25.8, y: 4.3 + bodyLift, width: 10.4, height: 10.4)
         )
         context.fill(head, with: .color(palette.base))
         context.stroke(head, with: outline, style: StrokeStyle(lineWidth: 1))
 
         var ears = Path()
-        ears.move(to: CGPoint(x: 27, y: 6))
-        ears.addLine(to: CGPoint(x: 27.5, y: 1))
-        ears.addLine(to: CGPoint(x: 31.5, y: 5.2))
-        ears.move(to: CGPoint(x: 32.5, y: 5.3))
-        ears.addLine(to: CGPoint(x: 36, y: 1))
-        ears.addLine(to: CGPoint(x: 36.5, y: 7))
+        ears.move(to: CGPoint(x: 27, y: 6 + bodyLift))
+        ears.addLine(to: CGPoint(x: 27.5, y: 1 + bodyLift))
+        ears.addLine(to: CGPoint(x: 31.5, y: 5.2 + bodyLift))
+        ears.move(to: CGPoint(x: 32.5, y: 5.3 + bodyLift))
+        ears.addLine(to: CGPoint(x: 36, y: 1 + bodyLift))
+        ears.addLine(to: CGPoint(x: 36.5, y: 7 + bodyLift))
         context.fill(ears, with: .color(palette.base))
         context.stroke(ears, with: outline, style: stroke)
 
         context.fill(
-            Path(ellipseIn: CGRect(x: 32.3, y: 8.3, width: 1.4, height: 1.4)),
+            Path(ellipseIn: CGRect(x: 32.3, y: 8.3 + bodyLift, width: 1.4, height: 1.4)),
             with: .color(palette.eye)
         )
 
         let legPairs: [(CGPoint, CGPoint)] = isRunning
-            ? [
-                (CGPoint(x: 14, y: 16.5), CGPoint(x: 11, y: 22)),
-                (CGPoint(x: 19, y: 17), CGPoint(x: 22, y: 22)),
-                (CGPoint(x: 25, y: 16.5), CGPoint(x: 23, y: 22)),
-                (CGPoint(x: 29, y: 15.5), CGPoint(x: 33, y: 20)),
-            ]
+            ? runningLegPairs(phase: runningPhase, lift: bodyLift)
             : [
                 (CGPoint(x: 15, y: 16), CGPoint(x: 14, y: 20)),
                 (CGPoint(x: 20, y: 17), CGPoint(x: 20, y: 20)),
@@ -533,6 +582,42 @@ private struct WidgetCat: View {
             leg.move(to: start)
             leg.addLine(to: end)
             context.stroke(leg, with: outline, style: stroke)
+        }
+    }
+
+    private func runningLegPairs(
+        phase: Int,
+        lift: Double
+    ) -> [(CGPoint, CGPoint)] {
+        switch phase {
+        case 0:
+            [
+                (CGPoint(x: 14, y: 16.5 + lift), CGPoint(x: 11, y: 22)),
+                (CGPoint(x: 19, y: 17 + lift), CGPoint(x: 22, y: 22)),
+                (CGPoint(x: 25, y: 16.5 + lift), CGPoint(x: 23, y: 22)),
+                (CGPoint(x: 29, y: 15.5 + lift), CGPoint(x: 33, y: 20)),
+            ]
+        case 1:
+            [
+                (CGPoint(x: 14, y: 16 + lift), CGPoint(x: 17, y: 21)),
+                (CGPoint(x: 19, y: 17 + lift), CGPoint(x: 16, y: 22)),
+                (CGPoint(x: 25, y: 16.4 + lift), CGPoint(x: 29, y: 21)),
+                (CGPoint(x: 29, y: 15.6 + lift), CGPoint(x: 27, y: 20.5)),
+            ]
+        case 2:
+            [
+                (CGPoint(x: 14, y: 16.5 + lift), CGPoint(x: 20, y: 20.8)),
+                (CGPoint(x: 19, y: 17 + lift), CGPoint(x: 13, y: 21.8)),
+                (CGPoint(x: 25, y: 16.5 + lift), CGPoint(x: 31, y: 21.3)),
+                (CGPoint(x: 29, y: 15.5 + lift), CGPoint(x: 24, y: 21)),
+            ]
+        default:
+            [
+                (CGPoint(x: 14, y: 16 + lift), CGPoint(x: 10.5, y: 21.4)),
+                (CGPoint(x: 19, y: 17 + lift), CGPoint(x: 22.5, y: 21.7)),
+                (CGPoint(x: 25, y: 16.4 + lift), CGPoint(x: 22.5, y: 21)),
+                (CGPoint(x: 29, y: 15.6 + lift), CGPoint(x: 33.5, y: 20.2)),
+            ]
         }
     }
 

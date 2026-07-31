@@ -29,6 +29,7 @@ enum ActualSource: String, Codable, CaseIterable, Sendable {
     case manual
     case timer
     case healthKit
+    case appleWatch
     case calendar
     case location
     case photo
@@ -111,6 +112,7 @@ enum CategoryIcon: String, Codable, CaseIterable, Sendable {
     case shopping
     case nature
     case calendar
+    case event
     case memo
 }
 
@@ -166,6 +168,8 @@ struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
     var title: String
     var span: TimeSpan
     var categoryID: String
+    var middleCategoryName: String?
+    var subCategoryName: String?
     var parentID: UUID?
     var status: PlanStatus
     var origin: PlanOrigin
@@ -181,6 +185,8 @@ struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
         title: String,
         span: TimeSpan,
         categoryID: String,
+        middleCategoryName: String? = nil,
+        subCategoryName: String? = nil,
         parentID: UUID? = nil,
         status: PlanStatus = .planned,
         origin: PlanOrigin = .user,
@@ -195,6 +201,8 @@ struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
         self.title = title
         self.span = span
         self.categoryID = categoryID
+        self.middleCategoryName = middleCategoryName
+        self.subCategoryName = subCategoryName
         self.parentID = parentID
         self.status = status
         self.origin = origin
@@ -380,6 +388,7 @@ struct CalendarRecord: Identifiable, Codable, Hashable, Sendable {
     var isAllDay: Bool
     var calendarTitle: String
     var calendarColorHex: String?
+    var sourceTitle: String?
 }
 
 struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
@@ -389,6 +398,7 @@ struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
     var pixelHeight: Int
     var isFavorite: Bool
     var isHiddenFromTimeline: Bool
+    var location: GeoPoint?
     var linkedPlanID: UUID?
     var linkedPlaceID: UUID?
 
@@ -399,6 +409,7 @@ struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
         pixelHeight: Int,
         isFavorite: Bool,
         isHiddenFromTimeline: Bool,
+        location: GeoPoint? = nil,
         linkedPlanID: UUID? = nil,
         linkedPlaceID: UUID? = nil
     ) {
@@ -408,6 +419,7 @@ struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
         self.pixelHeight = pixelHeight
         self.isFavorite = isFavorite
         self.isHiddenFromTimeline = isHiddenFromTimeline
+        self.location = location
         self.linkedPlanID = linkedPlanID
         self.linkedPlaceID = linkedPlaceID
     }
@@ -507,6 +519,80 @@ struct CalibratedAltitudeEstimate: Codable, Hashable, Sendable {
     var evidence: [String]
 }
 
+enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
+    case home
+    case school
+    case academy
+    case company
+    case hobby
+    case exercise
+    case custom
+
+    var defaultName: String {
+        switch self {
+        case .home: "집"
+        case .school: "학교"
+        case .academy: "학원"
+        case .company: "회사"
+        case .hobby: "취미"
+        case .exercise: "운동"
+        case .custom: "사용자 추가"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .home: "house.fill"
+        case .school: "graduationcap.fill"
+        case .academy: "book.closed.fill"
+        case .company: "building.2.fill"
+        case .hobby: "paintpalette.fill"
+        case .exercise: "figure.run"
+        case .custom: "plus.circle.fill"
+        }
+    }
+}
+
+struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var kind: FrequentPlaceKind
+    var name: String
+    var point: GeoPoint?
+    var floor: Int?
+    var radiusMeters: Double
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        kind: FrequentPlaceKind,
+        name: String? = nil,
+        point: GeoPoint? = nil,
+        floor: Int? = nil,
+        radiusMeters: Double = 120,
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.kind = kind
+        self.name = name ?? kind.defaultName
+        self.point = point
+        self.floor = floor
+        self.radiusMeters = radiusMeters
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    static let defaults: [FrequentPlace] = [
+        FrequentPlace(kind: .home),
+        FrequentPlace(kind: .school),
+        FrequentPlace(kind: .academy),
+        FrequentPlace(kind: .company),
+        FrequentPlace(kind: .hobby),
+        FrequentPlace(kind: .exercise),
+    ]
+}
+
 struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var placeKey: String
@@ -572,6 +658,69 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
         self.confidence = confidence
         self.evidence = evidence
         self.isConfirmed = isConfirmed
+    }
+}
+
+struct TravelSegmentGroup: Identifiable, Hashable, Sendable {
+    var id: UUID
+    var segments: [TravelSegment]
+
+    init(segments: [TravelSegment]) {
+        self.segments = segments.sorted { $0.span.start < $1.span.start }
+        id = self.segments.first?.id ?? UUID()
+    }
+
+    var segmentIDs: [UUID] {
+        segments.map(\.id)
+    }
+
+    var mode: TravelMode {
+        segments.first?.mode ?? .walking
+    }
+
+    var span: TimeSpan {
+        let now = Date.now
+        return TimeSpan(
+            start: segments.first?.span.start ?? now,
+            end: segments.last?.span.end ?? now
+        )
+    }
+
+    var distanceMeters: Double {
+        segments.reduce(0) { $0 + $1.distanceMeters }
+    }
+
+    var confidence: ConfidenceLevel {
+        if segments.contains(where: { $0.confidence == .low }) {
+            return .low
+        }
+        if segments.allSatisfy({ $0.confidence == .high }) {
+            return .high
+        }
+        return .medium
+    }
+
+    var confirmedCount: Int {
+        segments.filter(\.isConfirmed).count
+    }
+
+    var isConfirmed: Bool {
+        !segments.isEmpty && confirmedCount == segments.count
+    }
+
+    var evidence: [String] {
+        var seen = Set<String>()
+        return segments.flatMap(\.evidence).filter {
+            seen.insert($0).inserted
+        }
+    }
+
+    var fromPlaceID: UUID? {
+        segments.first?.fromPlaceID
+    }
+
+    var toPlaceID: UUID? {
+        segments.last?.toPlaceID
     }
 }
 
@@ -828,6 +977,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var backgroundPreciseLocationEnabled: Bool
     var sensorCollectionProfile: SensorCollectionProfile
     var floorCalibration: FloorCalibration?
+    var frequentPlaces: [FrequentPlace]
     var movementCorrections: [TravelModeCorrection]
     var weatherEnabled: Bool
     var notificationsEnabled: Bool
@@ -846,6 +996,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         backgroundPreciseLocationEnabled: false,
         sensorCollectionProfile: .balanced,
         floorCalibration: .homeTwentiethFloor,
+        frequentPlaces: FrequentPlace.defaults,
         movementCorrections: [],
         weatherEnabled: false,
         notificationsEnabled: false,
@@ -867,6 +1018,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         backgroundPreciseLocationEnabled: Bool,
         sensorCollectionProfile: SensorCollectionProfile,
         floorCalibration: FloorCalibration? = .homeTwentiethFloor,
+        frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
         movementCorrections: [TravelModeCorrection] = [],
         weatherEnabled: Bool,
         notificationsEnabled: Bool,
@@ -884,6 +1036,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.backgroundPreciseLocationEnabled = backgroundPreciseLocationEnabled
         self.sensorCollectionProfile = sensorCollectionProfile
         self.floorCalibration = floorCalibration
+        self.frequentPlaces = Self.mergedFrequentPlaces(frequentPlaces)
         self.movementCorrections = movementCorrections
         self.weatherEnabled = weatherEnabled
         self.notificationsEnabled = notificationsEnabled
@@ -903,6 +1056,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case backgroundPreciseLocationEnabled
         case sensorCollectionProfile
         case floorCalibration
+        case frequentPlaces
         case movementCorrections
         case weatherEnabled
         case notificationsEnabled
@@ -960,6 +1114,12 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             FloorCalibration.self,
             forKey: .floorCalibration
         ) ?? defaults.floorCalibration
+        frequentPlaces = Self.mergedFrequentPlaces(
+            try values.decodeIfPresent(
+                [FrequentPlace].self,
+                forKey: .frequentPlaces
+            ) ?? defaults.frequentPlaces
+        )
         movementCorrections = try values.decodeIfPresent(
             [TravelModeCorrection].self,
             forKey: .movementCorrections
@@ -980,6 +1140,18 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         where permissions[feature] == nil {
             permissions[feature] = .notDetermined
         }
+    }
+
+    static func mergedFrequentPlaces(
+        _ places: [FrequentPlace]
+    ) -> [FrequentPlace] {
+        var result = places
+        for item in FrequentPlace.defaults where !result.contains(where: {
+            $0.kind == item.kind && $0.kind != .custom
+        }) {
+            result.append(item)
+        }
+        return result
     }
 }
 

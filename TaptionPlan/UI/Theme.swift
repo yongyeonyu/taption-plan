@@ -26,6 +26,7 @@ extension Color {
     static let tpRest = Color(red: 220 / 255, green: 233 / 255, blue: 226 / 255)
     static let tpTravel = Color(red: 241 / 255, green: 181 / 255, blue: 152 / 255)
     static let tpHealthArea = Color(red: 200 / 255, green: 223 / 255, blue: 195 / 255)
+    static let tpEvent = Color(red: 245 / 255, green: 221 / 255, blue: 238 / 255)
     static let tpWeather = Color(red: 221 / 255, green: 234 / 255, blue: 248 / 255)
     static let tpPhoto = Color(red: 231 / 255, green: 215 / 255, blue: 238 / 255)
     static let tpPlace = Color(red: 216 / 255, green: 232 / 255, blue: 242 / 255)
@@ -42,6 +43,7 @@ extension Color {
     static let tpRestDark = Color(red: 77 / 255, green: 128 / 255, blue: 104 / 255)
     static let tpTravelDark = Color(red: 217 / 255, green: 123 / 255, blue: 47 / 255)
     static let tpHealthDark = Color(red: 95 / 255, green: 141 / 255, blue: 91 / 255)
+    static let tpEventDark = Color(red: 157 / 255, green: 93 / 255, blue: 134 / 255)
     static let tpWeatherDark = Color(red: 79 / 255, green: 120 / 255, blue: 151 / 255)
     static let tpPhotoDark = Color(red: 142 / 255, green: 90 / 255, blue: 168 / 255)
     static let tpPlaceDark = Color(red: 53 / 255, green: 124 / 255, blue: 165 / 255)
@@ -97,6 +99,7 @@ extension CategoryIcon {
         case .shopping: "bag"
         case .nature: "leaf"
         case .calendar: "calendar"
+        case .event: "sparkles"
         case .memo: "note.text"
         }
     }
@@ -118,6 +121,7 @@ extension PlanCategory {
         case .rest: .tpRest
         case .travel: .tpTravel
         case .health: .tpHealthArea
+        case .event: .tpEvent
         }
     }
 
@@ -136,6 +140,7 @@ extension PlanCategory {
         case .rest: .tpRestDark
         case .travel: .tpTravelDark
         case .health: .tpHealthDark
+        case .event: .tpEventDark
         }
     }
 
@@ -154,6 +159,7 @@ extension PlanCategory {
         case .rest: "cup.and.saucer"
         case .travel: "airplane"
         case .health: "heart.text.square"
+        case .event: "sparkles"
         }
     }
 }

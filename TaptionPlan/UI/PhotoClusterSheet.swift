@@ -150,7 +150,7 @@ struct PhotoClusterSheet: View {
     }
 }
 
-private struct PhotoClusterPage: View {
+struct PhotoClusterPage: View {
     @Bindable var model: AppModel
     let photo: PhotoMoment
     let index: Int

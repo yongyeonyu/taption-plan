@@ -98,6 +98,64 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNotNil(year[.day])
     }
 
+    func testAutomaticActivityIncludesSleepWorkoutAndWatchWithOverlapLanes() {
+        let day = makeDate(2026, 8, 1)
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: day,
+            endedAt: day.addingTimeInterval(8 * hour),
+            source: .healthKit
+        )
+        let workout = ActualRecord(
+            planID: nil,
+            title: "러닝",
+            categoryID: "exercise",
+            startedAt: day.addingTimeInterval(7 * hour),
+            endedAt: day.addingTimeInterval(9 * hour),
+            source: .healthKit
+        )
+        let watch = ActualRecord(
+            planID: nil,
+            title: "Apple Watch 활동",
+            categoryID: "health",
+            startedAt: day.addingTimeInterval(10 * hour),
+            endedAt: day.addingTimeInterval(11 * hour),
+            source: .appleWatch
+        )
+        let manual = ActualRecord(
+            planID: nil,
+            title: "직접 기록",
+            categoryID: "routine",
+            startedAt: day.addingTimeInterval(12 * hour),
+            endedAt: day.addingTimeInterval(13 * hour),
+            source: .manual
+        )
+        let span = TimeSpan(
+            start: day,
+            end: day.addingTimeInterval(24 * hour)
+        )
+
+        let activities = AutomaticRecordTimelineEngine.activities(
+            from: [manual, watch, workout, sleep],
+            inside: span,
+            asOf: span.end
+        )
+        XCTAssertEqual(activities.map(\.id), [sleep.id, workout.id, watch.id])
+
+        let allocation = TimelineLaneAllocator.allocate(
+            activities,
+            span: { $0.span(asOf: span.end) }
+        )
+        XCTAssertEqual(allocation.count, 2)
+        XCTAssertNotEqual(
+            allocation.lanes[sleep.id],
+            allocation.lanes[workout.id]
+        )
+        XCTAssertEqual(allocation.lanes[sleep.id], allocation.lanes[watch.id])
+    }
+
     func testGoalChildMustStayInsideParent() {
         let base = makeDate(2026, 1, 1)
         let parent = PlanRecord(
@@ -583,6 +641,41 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testAutomotiveMotionWithVehicleSpeedBeatsIncidentalSteps() {
+        let base = makeDate(2026, 7, 31, 19, 0)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(10 * 60)
+        )
+        let readings = (0..<3).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 5 * 60),
+                point: GeoPoint(
+                    latitude: 37.50 + Double(index) * 0.01,
+                    longitude: 126.90 + Double(index) * 0.01,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 30
+                ),
+                motion: .automotive,
+                motionConfidence: .high,
+                stepCount: 420 + index * 8
+            )
+        }
+
+        let result = TravelModeClassifier().classify(
+            readings: readings,
+            inside: span
+        )
+
+        XCTAssertEqual(result.mode, .car)
+        XCTAssertTrue(
+            result.evidence.contains("차량 속도대와 자동차 모션 우선")
+                || result.evidence.contains("차량 가능 속도")
+                || result.evidence.contains("Core Motion 자동차 후보")
+        )
+    }
+
     func testAppleWatchWorkoutOverridesConflictingIPhoneMotion() {
         let base = makeDate(2026, 7, 30, 9, 0)
         let span = TimeSpan(
@@ -717,6 +810,82 @@ final class FeatureEngineTests: XCTestCase {
                 places: refreshedPlaces,
                 from: corrections
             ).isEmpty
+        )
+    }
+
+    func testAdjacentSimilarTravelSegmentsAreGrouped() throws {
+        let base = makeDate(2026, 7, 31, 18, 21)
+        let first = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(4 * 60)
+            ),
+            distanceMeters: 1_100,
+            confidence: .medium,
+            evidence: ["Core Motion 자동차 후보"]
+        )
+        let second = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base.addingTimeInterval(4 * 60),
+                end: base.addingTimeInterval(7 * 60)
+            ),
+            distanceMeters: 900,
+            confidence: .medium,
+            evidence: ["iPhone Core Motion 기록"]
+        )
+
+        let group = try XCTUnwrap(
+            TravelSegmentGroupingEngine.groups(from: [second, first]).first
+        )
+
+        XCTAssertEqual(group.segmentIDs, [first.id, second.id])
+        XCTAssertEqual(group.mode, .car)
+        XCTAssertEqual(group.span.start, first.span.start)
+        XCTAssertEqual(group.span.end, second.span.end)
+        XCTAssertEqual(group.distanceMeters, 2_000)
+        XCTAssertEqual(group.evidence.count, 2)
+    }
+
+    func testTravelGroupingKeepsDifferentOrDistantSegmentsSeparate() {
+        let base = makeDate(2026, 7, 31, 15, 42)
+        let walking = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(21 * 60)
+            ),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: []
+        )
+        let laterWalking = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base.addingTimeInterval(38 * 60),
+                end: base.addingTimeInterval(79 * 60)
+            ),
+            distanceMeters: 2_500,
+            confidence: .medium,
+            evidence: []
+        )
+        let car = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base.addingTimeInterval(79 * 60),
+                end: base.addingTimeInterval(83 * 60)
+            ),
+            distanceMeters: 900,
+            confidence: .medium,
+            evidence: []
+        )
+
+        XCTAssertEqual(
+            TravelSegmentGroupingEngine.groups(
+                from: [walking, laterWalking, car]
+            ).map(\.segments.count),
+            [1, 1, 1]
         )
     }
 
@@ -1141,6 +1310,50 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored[0].deviceMotion, motion)
     }
 
+    func testRawDeviceDataArchiveStoresMonthlyCompressedPayloads() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taption-raw-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let archive = RawDeviceDataMonthlyArchive(rootDirectory: directory)
+        let july = makeDate(2026, 7, 31, 5, 42)
+        let august = makeDate(2026, 8, 1, 0, 5)
+        let reading = SensorReading(
+            timestamp: july,
+            point: GeoPoint(
+                latitude: 37.524,
+                longitude: 126.673,
+                altitude: 42,
+                horizontalAccuracy: 9,
+                verticalAccuracy: 12
+            ),
+            motion: .automotive,
+            stepCount: 33
+        )
+        try archive.append(
+            source: .gps,
+            kind: "sensor-reading",
+            payload: reading,
+            capturedAt: july
+        )
+        let watchPayload = RawArchiveWatchFixture(sampleCount: 12, mode: "car")
+        try archive.append(
+            source: .appleWatch,
+            kind: "watch-sensor-summary",
+            payload: watchPayload,
+            capturedAt: august
+        )
+
+        let julyValues = try archive.envelopes(inMonthContaining: july)
+        let augustValues = try archive.envelopes(inMonthContaining: august)
+        XCTAssertEqual(julyValues.count, 1)
+        XCTAssertEqual(julyValues[0].source, .gps)
+        XCTAssertEqual(julyValues[0].kind, "sensor-reading")
+        XCTAssertTrue(julyValues[0].payloadJSON.contains("\"automotive\""))
+        XCTAssertEqual(augustValues.count, 1)
+        XCTAssertEqual(augustValues[0].source, .appleWatch)
+    }
+
     func testSensorCollectionProfilesUseRequestedIntervalsAndPowerPolicy() {
         XCTAssertEqual(
             SensorCollectionProfile.batterySaver.interval,
@@ -1423,6 +1636,114 @@ final class FeatureEngineTests: XCTestCase {
             ),
             payload
         )
+    }
+
+    func testWatchSensorSummaryRoundTripCreatesOneActivityAndHealthReplacesIt()
+        throws {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let plan = PlanRecord(
+            title: "출근 달리기",
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(30 * 60)
+            ),
+            categoryID: "exercise"
+        )
+        let summary = TaptionWatchSensorSummary(
+            sessionID: UUID(),
+            sequence: 2,
+            workoutKind: .running,
+            linkedPlanID: plan.id,
+            linkedPlanTitle: plan.title,
+            linkedCategoryID: plan.categoryID,
+            startedAt: base,
+            endedAt: base.addingTimeInterval(30 * 60),
+            isFinal: true,
+            accelerometerSampleCount: 18_000,
+            accelerometerAverageG: TaptionWatchSensorVector3(
+                x: 0.1,
+                y: -0.2,
+                z: 0.9
+            ),
+            peakAccelerationG: 2.4,
+            gyroscopeSampleCount: 18_000,
+            gyroscopeAverageRadiansPerSecond: TaptionWatchSensorVector3(
+                x: 0.2,
+                y: 0.1,
+                z: -0.1
+            ),
+            peakRotationRateRadiansPerSecond: 3.1,
+            gravity: TaptionWatchSensorVector3(x: 0, y: 0, z: -1),
+            userAccelerationG: TaptionWatchSensorVector3(
+                x: 0.1,
+                y: 0.2,
+                z: 0.3
+            ),
+            rotationRateRadiansPerSecond: TaptionWatchSensorVector3(
+                x: 0.2,
+                y: 0.3,
+                z: 0.4
+            ),
+            attitudeRadians: TaptionWatchSensorVector3(
+                x: 0.3,
+                y: 0.4,
+                z: 0.5
+            ),
+            relativeAltitudeMeters: 8.4,
+            pressureKilopascals: 100.8,
+            stepCount: 3_210,
+            distanceMeters: 4_800,
+            floorsAscended: 2,
+            floorsDescended: 1,
+            latestHeartRate: 154,
+            averageHeartRate: 146,
+            maximumHeartRate: 171,
+            activeEnergyKilocalories: 280
+        )
+
+        let encoded = try JSONEncoder().encode(summary)
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                TaptionWatchSensorSummary.self,
+                from: encoded
+            ),
+            summary
+        )
+
+        let watchActuals = AppleWatchSensorActivityEngine.upserting(
+            summary,
+            into: [],
+            linkedPlan: plan
+        )
+        let repeated = AppleWatchSensorActivityEngine.upserting(
+            summary,
+            into: watchActuals,
+            linkedPlan: plan
+        )
+        XCTAssertEqual(repeated.count, 1)
+        XCTAssertEqual(repeated[0].id, summary.sessionID)
+        XCTAssertEqual(repeated[0].source, .appleWatch)
+        XCTAssertEqual(repeated[0].planID, plan.id)
+
+        let healthActual = ActualRecord(
+            id: summary.sessionID,
+            planID: plan.id,
+            title: plan.title,
+            categoryID: plan.categoryID,
+            startedAt: summary.startedAt,
+            endedAt: summary.endedAt,
+            source: .healthKit
+        )
+        let reconciled = AppleDeviceGroundTruthEngine
+            .replacingHealthKitActuals(
+                existing: repeated,
+                with: [healthActual],
+                inside: TimeSpan(
+                    start: base.addingTimeInterval(-60),
+                    end: base.addingTimeInterval(hour)
+                )
+            )
+        XCTAssertEqual(reconciled, [healthActual])
     }
 
     func testPlaceDetectionRequiresLongStay() {
@@ -1935,4 +2256,9 @@ final class FeatureEngineTests: XCTestCase {
             )
         )!
     }
+}
+
+private struct RawArchiveWatchFixture: Codable, Hashable {
+    var sampleCount: Int
+    var mode: String
 }

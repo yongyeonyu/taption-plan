@@ -9,10 +9,14 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let cachedPayloadKey = "TaptionPlan.cachedWatchPayload"
+    private let pendingSensorSummariesKey =
+        "TaptionPlan.pendingWatchSensorSummaries"
+    private var pendingSensorSummaries: [TaptionWatchSensorSummary] = []
 
     override init() {
         super.init()
         restoreCachedPayload()
+        restorePendingSensorSummaries()
         guard WCSession.isSupported() else {
             statusText = "연결을 지원하지 않음"
             return
@@ -62,6 +66,16 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
     }
 
+    func sendSensorSummary(_ summary: TaptionWatchSensorSummary) {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else {
+            cachePending(summary)
+            return
+        }
+        transfer(summary, through: session)
+    }
+
     nonisolated func session(
         _ session: WCSession,
         activationDidCompleteWith activationState: WCSessionActivationState,
@@ -79,6 +93,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             )
             if let data {
                 self?.apply(data: data)
+            }
+            if activationState == .activated {
+                self?.flushPendingSensorSummaries(using: .default)
             }
         }
     }
@@ -152,6 +169,86 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         default:
             statusText = "연결 상태 확인 중"
         }
+    }
+
+    private func transfer(
+        _ summary: TaptionWatchSensorSummary,
+        through session: WCSession
+    ) {
+        guard let data = try? encoder.encode(summary) else { return }
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.sensorSummaryKey: data,
+        ]
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(
+                envelope,
+                replyHandler: nil,
+                errorHandler: nil
+            )
+        }
+    }
+
+    private func cachePending(_ summary: TaptionWatchSensorSummary) {
+        pendingSensorSummaries.removeAll {
+            $0.sessionID == summary.sessionID
+                && $0.sequence == summary.sequence
+        }
+        pendingSensorSummaries.append(summary)
+        pendingSensorSummaries.sort {
+            if $0.startedAt == $1.startedAt {
+                return $0.sequence < $1.sequence
+            }
+            return $0.startedAt < $1.startedAt
+        }
+        if pendingSensorSummaries.count > 40 {
+            pendingSensorSummaries.removeFirst(
+                pendingSensorSummaries.count - 40
+            )
+        }
+        persistPendingSensorSummaries()
+    }
+
+    private func flushPendingSensorSummaries(using session: WCSession) {
+        guard session.activationState == .activated,
+              !pendingSensorSummaries.isEmpty else {
+            return
+        }
+        let pending = pendingSensorSummaries
+        pendingSensorSummaries = []
+        persistPendingSensorSummaries()
+        for summary in pending {
+            transfer(summary, through: session)
+        }
+    }
+
+    private func restorePendingSensorSummaries() {
+        guard let data = UserDefaults.standard.data(
+            forKey: pendingSensorSummariesKey
+        ),
+        let values = try? decoder.decode(
+            [TaptionWatchSensorSummary].self,
+            from: data
+        ) else {
+            return
+        }
+        pendingSensorSummaries = values
+    }
+
+    private func persistPendingSensorSummaries() {
+        if pendingSensorSummaries.isEmpty {
+            UserDefaults.standard.removeObject(
+                forKey: pendingSensorSummariesKey
+            )
+            return
+        }
+        guard let data = try? encoder.encode(pendingSensorSummaries) else {
+            return
+        }
+        UserDefaults.standard.set(
+            data,
+            forKey: pendingSensorSummariesKey
+        )
     }
 }
 

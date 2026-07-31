@@ -7,6 +7,8 @@ struct PlanEditorSheet: View {
 
     @State private var title: String
     @State private var categoryID: String
+    @State private var middleCategoryName: String
+    @State private var subCategoryName: String
     @State private var startAt: Date
     @State private var endAt: Date
     @State private var parentID: UUID?
@@ -20,6 +22,12 @@ struct PlanEditorSheet: View {
         _title = State(initialValue: plan?.title ?? "")
         _categoryID = State(
             initialValue: plan?.categoryID ?? "project"
+        )
+        _middleCategoryName = State(
+            initialValue: plan?.middleCategoryName ?? ""
+        )
+        _subCategoryName = State(
+            initialValue: plan?.subCategoryName ?? ""
         )
         _startAt = State(initialValue: plan?.span.start ?? .now)
         _endAt = State(
@@ -37,6 +45,7 @@ struct PlanEditorSheet: View {
                 VStack(spacing: 10) {
                     nameCard
                     categoryCard
+                    categoryHierarchyCard
                     timeCard
                     hierarchyCard
                     Toggle("중요 계획", isOn: $isImportant)
@@ -199,6 +208,40 @@ struct PlanEditorSheet: View {
         .draftCard(radius: 13)
     }
 
+    private var categoryHierarchyCard: some View {
+        VStack(spacing: 8) {
+            hierarchyTextField(
+                label: "중분류",
+                placeholder: "예: 일본, 자격증, 가족여행",
+                text: $middleCategoryName
+            )
+            hierarchyTextField(
+                label: "소분류",
+                placeholder: "예: 항공권, 필기, 숙소",
+                text: $subCategoryName
+            )
+        }
+        .padding(11)
+        .draftCard(radius: 13)
+    }
+
+    private func hierarchyTextField(
+        label: String,
+        placeholder: String,
+        text: Binding<String>
+    ) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.taption(size: 10))
+                .foregroundStyle(Color.tpSecondary)
+                .frame(width: 48, alignment: .leading)
+            TextField(placeholder, text: text)
+                .font(.taption(size: 10.5, weight: .bold))
+                .multilineTextAlignment(.trailing)
+                .textInputAutocapitalization(.never)
+        }
+    }
+
     private var timeCard: some View {
         VStack(spacing: 8) {
             DatePicker(
@@ -248,6 +291,8 @@ struct PlanEditorSheet: View {
             planID,
             title: title,
             categoryID: categoryID,
+            middleCategoryName: middleCategoryName,
+            subCategoryName: subCategoryName,
             span: TimeSpan(start: startAt, end: endAt),
             parentID: parentID,
             isImportant: isImportant

@@ -6,7 +6,10 @@ struct DraftTopBar: View {
     var trailingColor: Color = .tpSecondary
     var selectedScale: TimeScale?
     var onScaleChange: ((TimeScale) -> Void)?
+    var dayZoom: TimelineZoomPreset?
+    var onDayZoomChange: ((TimelineZoomPreset) -> Void)?
     var onBack: (() -> Void)?
+    var onTitleTap: (() -> Void)?
     var onPrevious: (() -> Void)?
     var onNext: (() -> Void)?
     var isPreviousEnabled = true
@@ -41,16 +44,7 @@ struct DraftTopBar: View {
                             accessibilityLabel: "이전 \(selectedScale?.rawValue ?? "기간")"
                         )
 
-                        Text(title)
-                            .font(
-                                .taption(
-                                    size: 19 + textSizeAdjustment,
-                                    weight: .bold
-                                )
-                            )
-                            .foregroundStyle(Color.tpInk)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                        titleButton
 
                         periodNavigationButton(
                             systemName: "chevron.right",
@@ -61,14 +55,7 @@ struct DraftTopBar: View {
                     }
                     .layoutPriority(1)
                 } else {
-                    Text(title)
-                        .font(
-                            .taption(
-                                size: 19 + textSizeAdjustment,
-                                weight: .bold
-                            )
-                        )
-                        .foregroundStyle(Color.tpInk)
+                    titleText
                 }
 
                 Spacer(minLength: 4)
@@ -87,9 +74,12 @@ struct DraftTopBar: View {
             }
 
             if let selectedScale {
-                DraftScalePicker(selected: selectedScale) { scale in
-                    onScaleChange?(scale)
-                }
+                DraftScalePicker(
+                    selected: selectedScale,
+                    dayZoom: dayZoom,
+                    onSelect: { scale in onScaleChange?(scale) },
+                    onDayZoomChange: { zoom in onDayZoomChange?(zoom) }
+                )
             }
         }
         .padding(.horizontal, 10)
@@ -101,6 +91,33 @@ struct DraftTopBar: View {
                 .fill(Color.tpLine)
                 .frame(height: 0.5)
         }
+    }
+
+    @ViewBuilder
+    private var titleButton: some View {
+        if let onTitleTap {
+            Button(action: onTitleTap) {
+                titleText
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("현재 날짜와 시간으로 이동")
+            .accessibilityIdentifier("schedule.jump-to-now")
+        } else {
+            titleText
+        }
+    }
+
+    private var titleText: some View {
+        Text(title)
+            .font(
+                .taption(
+                    size: 19 + textSizeAdjustment,
+                    weight: .bold
+                )
+            )
+            .foregroundStyle(Color.tpInk)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
     }
 
     private func periodNavigationButton(
@@ -133,15 +150,38 @@ struct DraftTopBar: View {
 
 struct DraftScalePicker: View {
     let selected: TimeScale
+    let dayZoom: TimelineZoomPreset?
     let onSelect: (TimeScale) -> Void
+    let onDayZoomChange: (TimelineZoomPreset) -> Void
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(TimeScale.allCases) { scale in
-                Button {
-                    onSelect(scale)
-                } label: {
-                    Text(scale.rawValue)
+                if scale == .day, let dayZoom {
+                    Menu {
+                        Section("일 타임라인 배율") {
+                            ForEach(TimelineZoomPreset.allCases) { preset in
+                                Button {
+                                    onDayZoomChange(preset)
+                                } label: {
+                                    HStack {
+                                        Text(preset.rawValue)
+                                        Spacer()
+                                        Text(preset.detail)
+                                            .foregroundStyle(.secondary)
+                                        if preset == dayZoom {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(scale.rawValue)
+                            Image(systemName: "chevron.down")
+                                .font(.taption(size: 7, weight: .bold))
+                        }
                         .font(.taption(size: 12.5, weight: selected == scale ? .semibold : .regular))
                         .foregroundStyle(selected == scale ? Color.tpInk : Color.tpSecondary)
                         .frame(maxWidth: .infinity)
@@ -153,8 +193,28 @@ struct DraftScalePicker: View {
                                     .shadow(color: .black.opacity(0.12), radius: 1.5, y: 1)
                             }
                         }
+                    }
+                    .accessibilityLabel("일 타임라인 배율 \(dayZoom.rawValue)")
+                    .accessibilityIdentifier("schedule.day-zoom-menu")
+                } else {
+                    Button {
+                        onSelect(scale)
+                    } label: {
+                        Text(scale.rawValue)
+                            .font(.taption(size: 12.5, weight: selected == scale ? .semibold : .regular))
+                            .foregroundStyle(selected == scale ? Color.tpInk : Color.tpSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background {
+                                if selected == scale {
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .fill(Color.white)
+                                        .shadow(color: .black.opacity(0.12), radius: 1.5, y: 1)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(2)
@@ -199,8 +259,8 @@ struct DraftBottomNavigationBar: View {
             tabButton(.settings)
         }
         .padding(.horizontal, 6)
-        .padding(.top, 8)
-        .padding(.bottom, 6)
+        .padding(.top, 16)
+        .padding(.bottom, 0)
         .background(.white.opacity(0.97))
         .overlay(alignment: .top) {
             Rectangle()

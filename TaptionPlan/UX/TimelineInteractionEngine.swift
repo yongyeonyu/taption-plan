@@ -1,5 +1,52 @@
 import Foundation
 
+enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
+    case oneMinute = "1분"
+    case fiveMinutes = "5분"
+    case fifteenMinutes = "15분"
+    case oneHour = "1시간"
+    case threeHours = "3시간"
+    case sixHours = "6시간"
+    case twelveHours = "12시간"
+    case oneDay = "1일"
+    case threeDays = "3일"
+    case oneWeek = "1주"
+
+    var id: Self { self }
+
+    var duration: TimeInterval {
+        switch self {
+        case .oneMinute: 60
+        case .fiveMinutes: 5 * 60
+        case .fifteenMinutes: 15 * 60
+        case .oneHour: 60 * 60
+        case .threeHours: 3 * 60 * 60
+        case .sixHours: 6 * 60 * 60
+        case .twelveHours: 12 * 60 * 60
+        case .oneDay: 24 * 60 * 60
+        case .threeDays: 3 * 24 * 60 * 60
+        case .oneWeek: 7 * 24 * 60 * 60
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .oneMinute: "최대 확대"
+        case .fiveMinutes, .fifteenMinutes: "분 단위"
+        case .oneHour, .threeHours, .sixHours, .twelveHours: "시간 단위"
+        case .oneDay: "하루 전체"
+        case .threeDays, .oneWeek: "여러 날 연속"
+        }
+    }
+
+    static func nearest(to duration: TimeInterval) -> Self {
+        allCases.min {
+            abs(log(max(60, duration) / $0.duration))
+                < abs(log(max(60, duration) / $1.duration))
+        } ?? .oneDay
+    }
+}
+
 enum GanttZoomStage: Int, CaseIterable, Comparable, Sendable {
     case year
     case month

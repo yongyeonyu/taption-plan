@@ -6,6 +6,8 @@ struct AddPlanSheet: View {
 
     @State private var title = ""
     @State private var categoryID = "study"
+    @State private var middleCategoryName = ""
+    @State private var subCategoryName = ""
     @State private var durationMinutes = 60
     @State private var goalDurationMonths = 12
     @State private var startAt = Date.now
@@ -73,6 +75,8 @@ struct AddPlanSheet: View {
                 ) ?? model.selectedDate
             } else if let parent = selectedParent {
                 categoryID = parent.categoryID
+                middleCategoryName = parent.middleCategoryName ?? ""
+                subCategoryName = parent.subCategoryName ?? ""
                 startAt = max(
                     roundedToNextTenMinutes(model.selectedDate),
                     parent.span.start
@@ -156,6 +160,20 @@ struct AddPlanSheet: View {
                 }
             }
             .buttonStyle(.plain)
+
+            VStack(spacing: 6) {
+                hierarchyTextField(
+                    label: "중분류",
+                    placeholder: "예: 일본, 자격증, 가족여행",
+                    text: $middleCategoryName
+                )
+                hierarchyTextField(
+                    label: "소분류",
+                    placeholder: "예: 항공권, 필기, 숙소",
+                    text: $subCategoryName
+                )
+            }
+            .padding(.top, 8)
 
             if model.addPlanContext.isGoal {
                 HStack(spacing: 7) {
@@ -314,6 +332,8 @@ struct AddPlanSheet: View {
         model.addPlan(
             title: cleanTitle,
             categoryID: categoryID,
+            middleCategoryName: middleCategoryName,
+            subCategoryName: subCategoryName,
             startAt: startAt,
             duration: selectedDuration,
             parentID: model.addPlanContext.isGoal ? nil : parentID
@@ -325,6 +345,30 @@ struct AddPlanSheet: View {
         model.snapshot.categories.first { $0.id == categoryID }
             ?? CategoryCatalog.builtIn.first { $0.id == "study" }
             ?? CategoryCatalog.builtIn[0]
+    }
+
+    private func hierarchyTextField(
+        label: String,
+        placeholder: String,
+        text: Binding<String>
+    ) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.taption(size: 10.5, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+                .frame(width: 44, alignment: .leading)
+            TextField(placeholder, text: text)
+                .font(.taption(size: 11.5, weight: .semibold))
+                .textInputAutocapitalization(.never)
+                .submitLabel(.done)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            Color(red: 0.965, green: 0.965, blue: 0.975),
+            in: RoundedRectangle(cornerRadius: 10)
+        )
     }
 
     private var selectedParent: PlanRecord? {
@@ -487,7 +531,7 @@ private struct CustomCategoryScreen: View {
         .briefcase, .building, .book, .graduation, .target, .award,
         .stroller, .family, .shield, .health, .exercise, .sleep,
         .performance, .music, .travel, .location, .home, .meal,
-        .cafe, .pet, .shopping, .nature, .calendar, .memo,
+        .cafe, .pet, .shopping, .nature, .calendar, .event, .memo,
     ]
     private let colors: [Color] = [
         .tpProject, Color(red: 0.85, green: 0.90, blue: 0.78), .tpExercise,

@@ -102,11 +102,83 @@ enum GoalDecompositionEngine {
     }
 }
 
+struct TimelineLaneAllocation<ID: Hashable> {
+    var lanes: [ID: Int]
+    var count: Int
+}
+
+enum TimelineLaneAllocator {
+    static func allocate<Item: Identifiable>(
+        _ items: [Item],
+        span: (Item) -> TimeSpan
+    ) -> TimelineLaneAllocation<Item.ID>
+    where Item.ID: Hashable {
+        let sorted = items.sorted {
+            let lhs = span($0)
+            let rhs = span($1)
+            if lhs.start == rhs.start {
+                return lhs.end < rhs.end
+            }
+            return lhs.start < rhs.start
+        }
+        var laneEnds: [Date] = []
+        var lanes: [Item.ID: Int] = [:]
+
+        for item in sorted {
+            let itemSpan = span(item)
+            let lane = laneEnds.firstIndex {
+                $0 <= itemSpan.start
+            } ?? laneEnds.count
+
+            if lane == laneEnds.count {
+                laneEnds.append(itemSpan.end)
+            } else {
+                laneEnds[lane] = itemSpan.end
+            }
+            lanes[item.id] = lane
+        }
+
+        return TimelineLaneAllocation(
+            lanes: lanes,
+            count: laneEnds.count
+        )
+    }
+}
+
+enum AutomaticRecordTimelineEngine {
+    static func activities(
+        from actuals: [ActualRecord],
+        inside span: TimeSpan,
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        actuals
+            .filter {
+                ($0.source == .healthKit || $0.source == .appleWatch)
+                    && $0.span(asOf: asOf).intersection(with: span) != nil
+            }
+            .sorted {
+                if $0.startedAt == $1.startedAt {
+                    return $0.span(asOf: asOf).end
+                        < $1.span(asOf: asOf).end
+                }
+                return $0.startedAt < $1.startedAt
+            }
+    }
+}
+
 struct TimelineAggregationEngine: Sendable {
     var calendar: Calendar
 
     init(calendar: Calendar = .autoupdatingCurrent) {
-        self.calendar = calendar
+        self.calendar = Self.normalizedTimelineCalendar(calendar)
+    }
+
+    private static func normalizedTimelineCalendar(_ calendar: Calendar) -> Calendar {
+        var timelineCalendar = calendar
+        timelineCalendar.locale = Locale(identifier: "ko_KR")
+        timelineCalendar.firstWeekday = 2  // Monday
+        timelineCalendar.minimumDaysInFirstWeek = 4
+        return timelineCalendar
     }
 
     func rollup(

@@ -1,18 +1,191 @@
 import Foundation
+import OSLog
+
+enum RawDeviceDataSource: String, Codable, Sendable {
+    case gps
+    case iPhoneSensor
+    case iPhoneMotion
+    case iPhonePedometer
+    case healthKit
+    case appleWatch
+}
+
+struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var capturedAt: Date
+    var source: RawDeviceDataSource
+    var kind: String
+    var schemaVersion: Int
+    var payloadJSON: String
+
+    init<T: Encodable>(
+        id: UUID = UUID(),
+        capturedAt: Date = .now,
+        source: RawDeviceDataSource,
+        kind: String,
+        schemaVersion: Int = 1,
+        payload: T,
+        encoder: JSONEncoder = RawDeviceDataMonthlyArchive.payloadEncoder()
+    ) throws {
+        self.id = id
+        self.capturedAt = capturedAt
+        self.source = source
+        self.kind = kind
+        self.schemaVersion = schemaVersion
+        let data = try encoder.encode(payload)
+        self.payloadJSON = String(decoding: data, as: UTF8.self)
+    }
+}
+
+final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
+    private let rootDirectory: URL
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
+    private let calendar: Calendar
+    private let lock = NSLock()
+
+    init(rootDirectory: URL, calendar: Calendar = .autoupdatingCurrent) {
+        self.rootDirectory = rootDirectory
+        self.calendar = calendar
+        self.encoder = Self.payloadEncoder()
+        self.decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+    }
+
+    static func applicationSupport(
+        fileManager: FileManager = .default
+    ) throws -> RawDeviceDataMonthlyArchive {
+        let root = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        return RawDeviceDataMonthlyArchive(
+            rootDirectory: root.appendingPathComponent(
+                "TaptionPlan/RawData",
+                isDirectory: true
+            )
+        )
+    }
+
+    static func payloadEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }
+
+    func append<T: Encodable>(
+        source: RawDeviceDataSource,
+        kind: String,
+        payload: T,
+        capturedAt: Date = .now
+    ) throws {
+        let envelope = try RawDeviceDataEnvelope(
+            capturedAt: capturedAt,
+            source: source,
+            kind: kind,
+            payload: payload,
+            encoder: encoder
+        )
+        try append(envelopes: [envelope])
+    }
+
+    func append(envelopes: [RawDeviceDataEnvelope]) throws {
+        guard !envelopes.isEmpty else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        let grouped = Dictionary(grouping: envelopes) {
+            monthKey(for: $0.capturedAt)
+        }
+        for (monthKey, values) in grouped {
+            let fileURL = try compressedFileURL(for: monthKey)
+            var payload = try existingPayload(at: fileURL)
+            for envelope in values.sorted(by: { $0.capturedAt < $1.capturedAt }) {
+                payload.append(try encoder.encode(envelope))
+                payload.append(0x0A)
+            }
+            try compress(payload).write(
+                to: fileURL,
+                options: [
+                    .atomic,
+                    .completeFileProtectionUntilFirstUserAuthentication,
+                ]
+            )
+        }
+    }
+
+    func envelopes(inMonthContaining date: Date) throws
+        -> [RawDeviceDataEnvelope] {
+        lock.lock()
+        defer { lock.unlock() }
+        let fileURL = try compressedFileURL(for: monthKey(for: date))
+        let payload = try existingPayload(at: fileURL)
+        return payload.split(separator: 0x0A).compactMap {
+            try? decoder.decode(RawDeviceDataEnvelope.self, from: Data($0))
+        }
+    }
+
+    private func compressedFileURL(for monthKey: String) throws -> URL {
+        let directory = rootDirectory.appendingPathComponent(
+            monthKey,
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        return directory.appendingPathComponent(
+            "taption-raw-\(monthKey).jsonl.zlib"
+        )
+    }
+
+    private func existingPayload(at fileURL: URL) throws -> Data {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            return Data()
+        }
+        let compressed = try Data(contentsOf: fileURL)
+        guard !compressed.isEmpty else { return Data() }
+        return try decompress(compressed)
+    }
+
+    private func monthKey(for date: Date) -> String {
+        let components = calendar.dateComponents([.year, .month], from: date)
+        let year = components.year ?? 1970
+        let month = components.month ?? 1
+        return String(format: "%04d-%02d", year, month)
+    }
+
+    private func compress(_ data: Data) throws -> Data {
+        try (data as NSData).compressed(using: .zlib) as Data
+    }
+
+    private func decompress(_ data: Data) throws -> Data {
+        try (data as NSData).decompressed(using: .zlib) as Data
+    }
+}
 
 actor SensorReadingArchive {
+    private static let logger = Logger(
+        subsystem: "com.taption.plan",
+        category: "RawDeviceDataArchive"
+    )
     private let fileURL: URL
     private let retentionInterval: TimeInterval
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private let rawArchive: RawDeviceDataMonthlyArchive?
     private var lastCompactionAt: Date?
 
     init(
         fileURL: URL,
-        retentionInterval: TimeInterval = 7 * 86_400
+        retentionInterval: TimeInterval = 7 * 86_400,
+        rawArchive: RawDeviceDataMonthlyArchive? = nil
     ) {
         self.fileURL = fileURL
         self.retentionInterval = max(86_400, retentionInterval)
+        self.rawArchive = rawArchive
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
         encoder.dateEncodingStrategy = .secondsSince1970
@@ -33,11 +206,26 @@ actor SensorReadingArchive {
             isDirectory: true
         )
         return SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl")
+            fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
+            rawArchive: try? RawDeviceDataMonthlyArchive.applicationSupport()
         )
     }
 
     func append(_ reading: SensorReading, now: Date = .now) throws {
+        if let rawArchive {
+            do {
+                try rawArchive.append(
+                    source: reading.point == nil ? .iPhoneSensor : .gps,
+                    kind: "sensor-reading",
+                    payload: reading,
+                    capturedAt: reading.timestamp
+                )
+            } catch {
+                Self.logger.error(
+                    "Raw sensor archive failed: \(error.localizedDescription, privacy: .public)"
+                )
+            }
+        }
         if lastCompactionAt.map({ now.timeIntervalSince($0) >= 86_400 }) ?? true {
             try compact(now: now)
             lastCompactionAt = now
@@ -46,6 +234,7 @@ actor SensorReadingArchive {
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
+        try applyBackgroundFileProtectionIfNeeded()
         var line = try encoder.encode(reading)
         line.append(0x0A)
 
@@ -57,7 +246,10 @@ actor SensorReadingArchive {
         } else {
             try line.write(
                 to: fileURL,
-                options: [.atomic, .completeFileProtection]
+                options: [
+                    .atomic,
+                    .completeFileProtectionUntilFirstUserAuthentication,
+                ]
             )
         }
     }
@@ -82,13 +274,22 @@ actor SensorReadingArchive {
         }
         try payload.write(
             to: fileURL,
-            options: [.atomic, .completeFileProtection]
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
         )
     }
 
     func deleteAll() throws {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         try FileManager.default.removeItem(at: fileURL)
+    }
+
+    func rawEnvelopes(inMonthContaining date: Date) throws
+        -> [RawDeviceDataEnvelope] {
+        guard let rawArchive else { return [] }
+        return try rawArchive.envelopes(inMonthContaining: date)
     }
 
     private func allReadings() throws -> [SensorReading] {
@@ -100,10 +301,27 @@ actor SensorReadingArchive {
             try? decoder.decode(SensorReading.self, from: Data($0))
         }
     }
+
+    private func applyBackgroundFileProtectionIfNeeded() throws {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            return
+        }
+        try FileManager.default.setAttributes(
+            [
+                .protectionKey:
+                    FileProtectionType.completeUntilFirstUserAuthentication,
+            ],
+            ofItemAtPath: fileURL.path
+        )
+    }
 }
 
 @MainActor
 final class AppleSensorDataService {
+    private static let logger = Logger(
+        subsystem: "com.taption.plan",
+        category: "SensorArchive"
+    )
     private let collector: AppleSensorCollector
     private let archive: SensorReadingArchive
     private let history: AppleMotionHistoryService
@@ -141,6 +359,10 @@ final class AppleSensorDataService {
         history.permissionState()
     }
 
+    func hasAlwaysLocationAuthorization() -> Bool {
+        collector.hasAlwaysLocationAuthorization()
+    }
+
     func requestLocationPermission(always: Bool = false) {
         collector.requestLocationPermission(always: always)
     }
@@ -164,6 +386,9 @@ final class AppleSensorDataService {
                     self.onReadingPersisted?(reading)
                 } catch {
                     self.lastPersistenceErrorDescription = error.localizedDescription
+                    Self.logger.error(
+                        "Sensor archive append failed: \(error.localizedDescription, privacy: .public)"
+                    )
                 }
             }
         }

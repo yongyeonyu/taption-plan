@@ -266,7 +266,13 @@ enum TaptionWidgetSharedStore {
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        try data.write(
+            to: url,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
+        )
     }
 
     private static var encoder: JSONEncoder {

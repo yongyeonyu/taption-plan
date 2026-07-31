@@ -56,6 +56,7 @@ enum PlanCategory: String, CaseIterable, Identifiable {
     case rest = "휴식"
     case travel = "여행"
     case health = "건강"
+    case event = "이벤트"
 
     var id: Self { self }
 
@@ -73,6 +74,7 @@ enum PlanCategory: String, CaseIterable, Identifiable {
         case "rest": self = .rest
         case "travel": self = .travel
         case "health": self = .health
+        case "event": self = .event
         default: self = .project
         }
     }
@@ -92,6 +94,7 @@ enum PlanCategory: String, CaseIterable, Identifiable {
         case .rest: "rest"
         case .travel: "travel"
         case .health: "health"
+        case .event: "event"
         }
     }
 }

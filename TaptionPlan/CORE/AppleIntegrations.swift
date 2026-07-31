@@ -63,7 +63,8 @@ final class AppleCalendarService {
                 span: TimeSpan(start: event.startDate, end: event.endDate),
                 isAllDay: event.isAllDay,
                 calendarTitle: event.calendar.title,
-                calendarColorHex: Self.hex(event.calendar.cgColor)
+                calendarColorHex: Self.hex(event.calendar.cgColor),
+                sourceTitle: event.calendar.source.title
             )
         }
     }
@@ -169,6 +170,15 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
         var moments: [PhotoMoment] = []
         result.enumerateObjects { asset, _, _ in
             guard let date = asset.creationDate else { return }
+            let point = asset.location.map {
+                GeoPoint(
+                    latitude: $0.coordinate.latitude,
+                    longitude: $0.coordinate.longitude,
+                    altitude: $0.altitude,
+                    horizontalAccuracy: $0.horizontalAccuracy,
+                    verticalAccuracy: $0.verticalAccuracy
+                )
+            }
             moments.append(
                 PhotoMoment(
                     id: asset.localIdentifier,
@@ -177,6 +187,7 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
                     pixelHeight: asset.pixelHeight,
                     isFavorite: asset.isFavorite,
                     isHiddenFromTimeline: asset.isHidden,
+                    location: point,
                     linkedPlanID: nil,
                     linkedPlaceID: nil
                 )
@@ -291,7 +302,8 @@ final class AppleHealthService: @unchecked Sendable {
     func actuals(in span: TimeSpan) async throws -> [ActualRecord] {
         async let workouts = workoutActuals(in: span)
         async let sleeps = sleepActuals(in: span)
-        return try await workouts + sleeps
+        async let mindful = mindfulSessionActuals(in: span)
+        return try await workouts + sleeps + mindful
     }
 
     func sleepSegments(in span: TimeSpan) async throws -> [SleepSegment] {
@@ -378,6 +390,35 @@ final class AppleHealthService: @unchecked Sendable {
         }
     }
 
+    private func mindfulSessionActuals(
+        in span: TimeSpan
+    ) async throws -> [ActualRecord] {
+        guard let type = HKObjectType.categoryType(
+            forIdentifier: .mindfulSession
+        ) else {
+            return []
+        }
+        let values = try await samples(type: type, span: span)
+        return values.compactMap { sample in
+            guard let overlap = TimeSpan(
+                start: sample.startDate,
+                end: sample.endDate
+            ).intersection(with: span) else {
+                return nil
+            }
+            return ActualRecord(
+                id: sample.uuid,
+                planID: nil,
+                title: "마음챙김",
+                categoryID: "health",
+                startedAt: overlap.start,
+                endedAt: overlap.end,
+                source: .healthKit,
+                confidence: .high
+            )
+        }
+    }
+
     private func workoutDetails(in span: TimeSpan) async throws -> [HealthActual] {
         let type = HKObjectType.workoutType()
         let samples = try await samples(type: type, span: span)
@@ -391,8 +432,12 @@ final class AppleHealthService: @unchecked Sendable {
             let energyType = HKQuantityType.quantityType(
                 forIdentifier: .activeEnergyBurned
             )
+            let taptionID = (workout.metadata?[
+                TaptionWatchHealthMetadata.sensorSessionID
+            ] as? String).flatMap(UUID.init(uuidString:))
+                ?? workout.uuid
             return HealthActual(
-                id: UUID(uuidString: workout.uuid.uuidString) ?? UUID(),
+                id: taptionID,
                 kind: workout.workoutActivityType.displayName,
                 span: TimeSpan(start: workout.startDate, end: workout.endDate),
                 duration: workout.duration,
@@ -442,7 +487,10 @@ final class AppleHealthService: @unchecked Sendable {
                     : .distanceWalkingRunning
             )
             return AppleMovementEvidence(
-                id: workout.uuid,
+                id: (workout.metadata?[
+                    TaptionWatchHealthMetadata.sensorSessionID
+                ] as? String).flatMap(UUID.init(uuidString:))
+                    ?? workout.uuid,
                 span: overlap,
                 source: Self.movementSource(for: workout),
                 kind: .workout,
@@ -575,9 +623,12 @@ final class AppleHealthService: @unchecked Sendable {
         [
             HKObjectType.workoutType(),
             HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
+            HKObjectType.categoryType(forIdentifier: .mindfulSession),
             HKObjectType.quantityType(forIdentifier: .stepCount),
             HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
-            HKObjectType.quantityType(forIdentifier: .flightsClimbed)
+            HKObjectType.quantityType(forIdentifier: .flightsClimbed),
+            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
+            HKObjectType.quantityType(forIdentifier: .heartRate)
         ].compactMap { $0 }
     }
 }
@@ -604,6 +655,20 @@ private extension HKWorkoutActivityType {
         case .cycling: "자전거"
         case .swimming: "수영"
         case .traditionalStrengthTraining, .functionalStrengthTraining: "근력운동"
+        case .hiking: "하이킹"
+        case .rowing: "로잉"
+        case .elliptical: "일립티컬"
+        case .highIntensityIntervalTraining: "HIIT"
+        case .dance: "댄스"
+        case .yoga: "요가"
+        case .pilates: "필라테스"
+        case .coreTraining: "코어 운동"
+        case .flexibility: "유연성 운동"
+        case .mixedCardio: "유산소 운동"
+        case .crossTraining: "크로스 트레이닝"
+        case .stairs, .stairClimbing: "계단 오르기"
+        case .cooldown: "쿨다운"
+        case .mindAndBody: "마음과 몸"
         default: "운동"
         }
     }
@@ -952,8 +1017,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
     }
 
+    func hasAlwaysLocationAuthorization() -> Bool {
+        locationManager.authorizationStatus == .authorizedAlways
+    }
+
     func requestLocationPermission(always: Bool = false) {
-        if always, locationManager.authorizationStatus == .authorizedWhenInUse {
+        if always {
             locationManager.requestAlwaysAuthorization()
         } else {
             locationManager.requestWhenInUseAuthorization()
@@ -1242,7 +1311,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             locationManager.desiredAccuracy = kCLLocationAccuracyBest
             locationManager.distanceFilter = 5
         }
-        locationManager.pausesLocationUpdatesAutomatically = true
+        locationManager.pausesLocationUpdatesAutomatically =
+            configuration.profile != .accuracy
     }
 
     private static func motionKind(_ activity: CMMotionActivity) -> MotionKind {

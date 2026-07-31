@@ -14,7 +14,8 @@ enum CategoryCatalog {
         category("relationship", "관계", .family, "#F9D9E1", "#A75B70", "#B9617B", 9),
         category("rest", "휴식", .nature, "#E3E4E8", "#696D77", "#777C88", 10),
         category("travel", "여행", .travel, "#CDE8F1", "#407F98", "#3F91AE", 11),
-        category("health", "건강", .health, "#D4E7D1", "#4D7A49", "#568D51", 12)
+        category("health", "건강", .health, "#D4E7D1", "#4D7A49", "#568D51", 12),
+        category("event", "이벤트", .event, "#F5DDEE", "#9D5D86", "#B86B9D", 13)
     ]
 
     static func makeCustom(

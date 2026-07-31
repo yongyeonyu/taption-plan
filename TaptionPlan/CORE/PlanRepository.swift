@@ -110,7 +110,13 @@ actor FilePlanRepository: PlanDataRepository {
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
+        try data.write(
+            to: fileURL,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
+        )
     }
 
     func deleteAll() async throws {

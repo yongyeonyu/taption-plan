@@ -41,8 +41,9 @@ struct TravelModeClassifier: Sendable {
             )
         }
 
-        let speeds = ordered.compactMap(\.speedMetersPerSecond).filter { $0 >= 0 }
+        let speeds = speedSeries(for: ordered)
         let averageSpeed = speeds.isEmpty ? 0 : speeds.reduce(0, +) / Double(speeds.count)
+        let maxSpeed = speeds.max() ?? 0
         let gpsLossRatio = ordered.isEmpty
             ? 0
             : Double(ordered.filter { !$0.gpsAvailable }.count)
@@ -68,7 +69,7 @@ struct TravelModeClassifier: Sendable {
         case .cycling:
             add(.cycling, 0.82, "Core Motion 자전거")
         case .automotive:
-            add(.car, 0.35, "Core Motion 자동차 후보")
+            add(.car, 0.48, "Core Motion 자동차 후보")
             add(.bus, 0.2, "동력 이동")
             add(.taxi, 0.2, "동력 이동")
         case .stationary, .unknown:
@@ -112,7 +113,8 @@ struct TravelModeClassifier: Sendable {
         let walkingStepThreshold = max(12, Int(durationMinutes * 10))
         if stepSignal.bestCount >= walkingStepThreshold,
            stepsPerMinute >= 10 {
-            let stepScore = averageSpeed > 5.5 ? 0.3 : 0.58
+            let hasVehicleSpeed = averageSpeed > 5.5 || maxSpeed > 8
+            let stepScore = hasVehicleSpeed ? 0.18 : 0.58
             add(.walking, stepScore, stepSignal.primaryEvidence)
             if averageSpeed >= 2.2,
                averageSpeed < 6,
@@ -122,14 +124,24 @@ struct TravelModeClassifier: Sendable {
             if dominantMotion == .automotive, averageSpeed <= 5.5 {
                 add(.walking, 0.12, "차량 진동보다 지속적인 걸음 우선")
             }
+            if dominantMotion == .automotive, hasVehicleSpeed {
+                add(.car, 0.56, "차량 속도대와 자동차 모션 우선")
+                add(.taxi, 0.18, "차량 속도대와 자동차 모션 우선")
+            }
         } else if stepSignal.hasCoverage,
                   inferenceSpan.duration >= 2 * 60,
                   stepsPerMinute <= 2.5,
                   dominantMotion == .automotive || averageSpeed > 4 {
-            add(.car, 0.28, "iPhone·Apple Watch 걸음 증가 거의 없음")
+            add(.car, 0.42, "iPhone·Apple Watch 걸음 증가 거의 없음")
             add(.bus, 0.2, "보행이 아닌 동력 이동")
             add(.taxi, 0.2, "보행이 아닌 동력 이동")
             add(.train, 0.1, "보행이 아닌 동력 이동")
+        } else if !stepSignal.hasCoverage,
+                  inferenceSpan.duration >= 2 * 60,
+                  dominantMotion == .automotive || averageSpeed > 5.5 || maxSpeed > 8 {
+            add(.car, 0.24, "걸음 데이터 미수집 · 차량/속도 신호 우선")
+            add(.bus, 0.12, "걸음 데이터 미수집 · 동력 이동 후보")
+            add(.taxi, 0.12, "걸음 데이터 미수집 · 동력 이동 후보")
         }
 
         if !speeds.isEmpty {
@@ -143,6 +155,9 @@ struct TravelModeClassifier: Sendable {
             } else if averageSpeed > 18 {
                 add(.train, 0.2, "철도 가능 속도")
                 add(.car, 0.16, "도로 이동 가능 속도")
+            } else if averageSpeed > 5.5 || maxSpeed > 8 {
+                add(.car, 0.24, "차량 가능 속도")
+                add(.taxi, 0.12, "차량 가능 속도")
             }
         }
 
@@ -210,6 +225,28 @@ struct TravelModeClassifier: Sendable {
         guard !readings.isEmpty else { return 0 }
         return Double(readings.filter { $0[keyPath: keyPath] }.count)
             / Double(readings.count)
+    }
+
+    private func speedSeries(for readings: [SensorReading]) -> [Double] {
+        var values = readings
+            .compactMap(\.speedMetersPerSecond)
+            .filter { $0 >= 0 }
+
+        let pointReadings = readings
+            .filter { $0.point != nil }
+            .sorted { $0.timestamp < $1.timestamp }
+        for pair in zip(pointReadings, pointReadings.dropFirst()) {
+            guard let from = pair.0.point,
+                  let to = pair.1.point else {
+                continue
+            }
+            let elapsed = pair.1.timestamp.timeIntervalSince(pair.0.timestamp)
+            guard elapsed >= 5 else { continue }
+            let distance = distanceMeters(from, to)
+            guard distance >= 8 else { continue }
+            values.append(distance / elapsed)
+        }
+        return values
     }
 
     private func sensorSpan(for readings: [SensorReading]) -> TimeSpan {
@@ -918,6 +955,57 @@ struct MovementRouteBuilder: Sendable {
     }
 }
 
+enum TravelSegmentGroupingEngine {
+    static let defaultMaximumGap: TimeInterval = 5 * 60
+
+    static func groups(
+        from segments: [TravelSegment],
+        maximumGap: TimeInterval = defaultMaximumGap
+    ) -> [TravelSegmentGroup] {
+        let ordered = segments.sorted { $0.span.start < $1.span.start }
+        var grouped: [[TravelSegment]] = []
+
+        for segment in ordered {
+            guard var current = grouped.popLast() else {
+                grouped.append([segment])
+                continue
+            }
+            if canMerge(
+                segment,
+                after: current.last,
+                maximumGap: maximumGap
+            ) {
+                current.append(segment)
+                grouped.append(current)
+            } else {
+                grouped.append(current)
+                grouped.append([segment])
+            }
+        }
+
+        return grouped.map(TravelSegmentGroup.init)
+    }
+
+    private static func canMerge(
+        _ next: TravelSegment,
+        after previous: TravelSegment?,
+        maximumGap: TimeInterval
+    ) -> Bool {
+        guard let previous,
+              previous.mode == next.mode else {
+            return false
+        }
+        let gap = next.span.start.timeIntervalSince(previous.span.end)
+        guard gap <= maximumGap else { return false }
+        if let previousDestination = previous.toPlaceID,
+           let nextOrigin = next.fromPlaceID,
+           previousDestination != nextOrigin {
+            return false
+        }
+        return true
+    }
+}
+
 enum MovementCorrectionEngine {
     private static let maximumRememberedCorrections = 200
 
@@ -1225,11 +1313,16 @@ enum AppleDeviceGroundTruthEngine {
         let uniqueFresh = fresh.filter {
             $0.source == .healthKit && seen.insert($0.id).inserted
         }
+        let freshIDs = Set(uniqueFresh.map(\.id))
         let linkedWorkouts = uniqueFresh.filter { $0.planID != nil }
         return (
             existing.filter { existingActual in
                 if existingActual.source == .healthKit,
                    existingActual.span().intersection(with: span) != nil {
+                    return false
+                }
+                if existingActual.source == .appleWatch,
+                   freshIDs.contains(existingActual.id) {
                     return false
                 }
                 guard existingActual.source == .timer,
@@ -1266,6 +1359,44 @@ enum AppleDeviceGroundTruthEngine {
         case .stationary, .unknown:
             nil
         }
+    }
+}
+
+enum AppleWatchSensorActivityEngine {
+    static func upserting(
+        _ summary: TaptionWatchSensorSummary,
+        into existing: [ActualRecord],
+        linkedPlan: PlanRecord?
+    ) -> [ActualRecord] {
+        if existing.contains(where: {
+            $0.id == summary.sessionID && $0.source == .healthKit
+        }) {
+            return existing
+        }
+
+        let title = linkedPlan?.title
+            ?? summary.linkedPlanTitle
+            ?? "Apple Watch \(summary.workoutKind.title)"
+        let categoryID = linkedPlan?.categoryID
+            ?? summary.linkedCategoryID
+            ?? "exercise"
+        let record = ActualRecord(
+            id: summary.sessionID,
+            planID: linkedPlan?.id ?? summary.linkedPlanID,
+            title: title,
+            categoryID: categoryID,
+            startedAt: summary.startedAt,
+            endedAt: max(summary.startedAt, summary.endedAt),
+            source: .appleWatch,
+            confidence: summary.accelerometerSampleCount > 0
+                ? .high
+                : .medium,
+            createdAt: summary.startedAt
+        )
+        return (
+            existing.filter { $0.id != summary.sessionID }
+                + [record]
+        ).sorted { $0.startedAt < $1.startedAt }
     }
 }
 

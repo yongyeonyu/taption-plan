@@ -1,3 +1,4 @@
+import CoreMotion
 import Foundation
 import HealthKit
 
@@ -8,13 +9,47 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published private(set) var heartRate = 0.0
     @Published private(set) var distanceMeters = 0.0
     @Published private(set) var activeEnergyKilocalories = 0.0
+    @Published private(set) var sensorSampleCount = 0
+    @Published private(set) var latestRelativeAltitudeMeters: Double?
     @Published private(set) var errorMessage: String?
 
     private let healthStore = HKHealthStore()
+    private let motionManager = CMMotionManager()
+    private let altimeter = CMAltimeter()
+    private let pedometer = CMPedometer()
+    private let sensorQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "com.taption.plan.watch-sensors"
+        queue.qualityOfService = .userInitiated
+        queue.maxConcurrentOperationCount = 1
+        return queue
+    }()
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
     private(set) var linkedPlan: TaptionWatchPlanItem?
     private(set) var workoutKind: TaptionWatchWorkoutKind?
+    var onSensorSummary: ((TaptionWatchSensorSummary) -> Void)?
+
+    private var sensorSessionID: UUID?
+    private var sensorSequence = 0
+    private var sensorSummaryTask: Task<Void, Never>?
+    private var accelerometerSum = TaptionWatchSensorVector3.zero
+    private var accelerometerCount = 0
+    private var peakAccelerationG = 0.0
+    private var gyroscopeSum = TaptionWatchSensorVector3.zero
+    private var gyroscopeCount = 0
+    private var peakRotationRate = 0.0
+    private var latestGravity: TaptionWatchSensorVector3?
+    private var latestUserAcceleration: TaptionWatchSensorVector3?
+    private var latestRotationRate: TaptionWatchSensorVector3?
+    private var latestAttitude: TaptionWatchSensorVector3?
+    private var latestPressureKilopascals: Double?
+    private var latestStepCount: Int?
+    private var latestPedometerDistanceMeters: Double?
+    private var latestFloorsAscended: Int?
+    private var latestFloorsDescended: Int?
+    private var averageHeartRate: Double?
+    private var maximumHeartRate: Double?
 
     func dismissError() {
         errorMessage = nil
@@ -46,6 +81,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             newBuilder.delegate = self
 
             let start = Date.now
+            let sensorSessionID = UUID()
             session = newSession
             builder = newBuilder
             self.linkedPlan = linkedPlan
@@ -57,19 +93,24 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
             newSession.startActivity(with: start)
             try await newBuilder.beginCollection(at: start)
+            var metadata: [String: Any] = [
+                TaptionWatchHealthMetadata.sensorSessionID:
+                    sensorSessionID.uuidString,
+                HKMetadataKeyWorkoutBrandName: "Taption Plan",
+            ]
             if let linkedPlan {
-                try await newBuilder.addMetadata([
+                metadata.merge([
                     TaptionWatchHealthMetadata.planID: linkedPlan.id.uuidString,
                     TaptionWatchHealthMetadata.planTitle: linkedPlan.title,
                     TaptionWatchHealthMetadata.categoryID: linkedPlan.categoryID,
-                    HKMetadataKeyWorkoutBrandName: "Taption Plan",
-                ])
-            } else {
-                try await newBuilder.addMetadata([
-                    HKMetadataKeyWorkoutBrandName: "Taption Plan",
-                ])
+                ]) { _, new in new }
             }
+            try await newBuilder.addMetadata(metadata)
             isActive = true
+            startSensorCollection(
+                sessionID: sensorSessionID,
+                startedAt: start
+            )
             return true
         } catch {
             reset(with: "운동을 시작하지 못했습니다. \(error.localizedDescription)")
@@ -81,6 +122,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         guard let session, let builder else { return nil }
         let linkedPlan = linkedPlan
         let end = Date.now
+        if let summary = stopSensorCollection(at: end, isFinal: true) {
+            onSensorSummary?(summary)
+        }
         session.end()
         do {
             try await builder.endCollection(at: end)
@@ -108,15 +152,26 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
         let workout = HKObjectType.workoutType()
+        var readTypes: Set<HKObjectType> = [
+            workout,
+            heartRate,
+            walkingRunningDistance,
+            cyclingDistance,
+            activeEnergy,
+        ]
+        if let stepCount = HKQuantityType.quantityType(
+            forIdentifier: .stepCount
+        ) {
+            readTypes.insert(stepCount)
+        }
+        if let flightsClimbed = HKQuantityType.quantityType(
+            forIdentifier: .flightsClimbed
+        ) {
+            readTypes.insert(flightsClimbed)
+        }
         try await healthStore.requestAuthorization(
             toShare: [workout],
-            read: [
-                workout,
-                heartRate,
-                walkingRunningDistance,
-                cyclingDistance,
-                activeEnergy,
-            ]
+            read: readTypes
         )
     }
 
@@ -129,9 +184,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
             switch quantityType.identifier {
             case HKQuantityTypeIdentifier.heartRate.rawValue:
+                let unit = HKUnit.count().unitDivided(by: .minute())
                 heartRate = statistics.mostRecentQuantity()?.doubleValue(
-                    for: HKUnit.count().unitDivided(by: .minute())
+                    for: unit
                 ) ?? heartRate
+                averageHeartRate = statistics.averageQuantity()?.doubleValue(
+                    for: unit
+                ) ?? averageHeartRate
+                maximumHeartRate = statistics.maximumQuantity()?.doubleValue(
+                    for: unit
+                ) ?? maximumHeartRate
             case HKQuantityTypeIdentifier.distanceWalkingRunning.rawValue,
                  HKQuantityTypeIdentifier.distanceCycling.rawValue:
                 distanceMeters = statistics.sumQuantity()?.doubleValue(
@@ -148,13 +210,246 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func reset(with message: String? = nil) {
+        if let summary = stopSensorCollection(at: .now, isFinal: true) {
+            onSensorSummary?(summary)
+        }
         session = nil
         builder = nil
         linkedPlan = nil
         workoutKind = nil
         startedAt = nil
         isActive = false
+        sensorSampleCount = 0
+        latestRelativeAltitudeMeters = nil
         errorMessage = message
+    }
+
+    private func startSensorCollection(
+        sessionID: UUID,
+        startedAt: Date
+    ) {
+        stopSensorHardware()
+        sensorSessionID = sessionID
+        sensorSequence = 0
+        accelerometerSum = .zero
+        accelerometerCount = 0
+        peakAccelerationG = 0
+        gyroscopeSum = .zero
+        gyroscopeCount = 0
+        peakRotationRate = 0
+        latestGravity = nil
+        latestUserAcceleration = nil
+        latestRotationRate = nil
+        latestAttitude = nil
+        latestRelativeAltitudeMeters = nil
+        latestPressureKilopascals = nil
+        latestStepCount = nil
+        latestPedometerDistanceMeters = nil
+        latestFloorsAscended = nil
+        latestFloorsDescended = nil
+        averageHeartRate = nil
+        maximumHeartRate = nil
+        sensorSampleCount = 0
+
+        let updateInterval: TimeInterval = 0.1
+        if motionManager.isAccelerometerAvailable {
+            motionManager.accelerometerUpdateInterval = updateInterval
+            motionManager.startAccelerometerUpdates(
+                to: sensorQueue
+            ) { [weak self] data, _ in
+                guard let data else { return }
+                let value = TaptionWatchSensorVector3(
+                    x: data.acceleration.x,
+                    y: data.acceleration.y,
+                    z: data.acceleration.z
+                )
+                Task { @MainActor [weak self] in
+                    self?.recordAccelerometer(value)
+                }
+            }
+        }
+        if motionManager.isGyroAvailable {
+            motionManager.gyroUpdateInterval = updateInterval
+            motionManager.startGyroUpdates(
+                to: sensorQueue
+            ) { [weak self] data, _ in
+                guard let data else { return }
+                let value = TaptionWatchSensorVector3(
+                    x: data.rotationRate.x,
+                    y: data.rotationRate.y,
+                    z: data.rotationRate.z
+                )
+                Task { @MainActor [weak self] in
+                    self?.recordGyroscope(value)
+                }
+            }
+        }
+        if motionManager.isDeviceMotionAvailable {
+            motionManager.deviceMotionUpdateInterval = updateInterval
+            motionManager.startDeviceMotionUpdates(
+                to: sensorQueue
+            ) { [weak self] data, _ in
+                guard let data else { return }
+                let gravity = TaptionWatchSensorVector3(
+                    x: data.gravity.x,
+                    y: data.gravity.y,
+                    z: data.gravity.z
+                )
+                let acceleration = TaptionWatchSensorVector3(
+                    x: data.userAcceleration.x,
+                    y: data.userAcceleration.y,
+                    z: data.userAcceleration.z
+                )
+                let rotation = TaptionWatchSensorVector3(
+                    x: data.rotationRate.x,
+                    y: data.rotationRate.y,
+                    z: data.rotationRate.z
+                )
+                let attitude = TaptionWatchSensorVector3(
+                    x: data.attitude.roll,
+                    y: data.attitude.pitch,
+                    z: data.attitude.yaw
+                )
+                Task { @MainActor [weak self] in
+                    self?.latestGravity = gravity
+                    self?.latestUserAcceleration = acceleration
+                    self?.latestRotationRate = rotation
+                    self?.latestAttitude = attitude
+                }
+            }
+        }
+        if CMAltimeter.isRelativeAltitudeAvailable() {
+            altimeter.startRelativeAltitudeUpdates(
+                to: sensorQueue
+            ) { [weak self] data, _ in
+                let altitude = data?.relativeAltitude.doubleValue
+                let pressure = data?.pressure.doubleValue
+                Task { @MainActor [weak self] in
+                    self?.latestRelativeAltitudeMeters = altitude
+                    self?.latestPressureKilopascals = pressure
+                }
+            }
+        }
+        if CMPedometer.isStepCountingAvailable() {
+            pedometer.startUpdates(from: startedAt) { [weak self] data, _ in
+                let steps = data?.numberOfSteps.intValue
+                let distance = data?.distance?.doubleValue
+                let up = data?.floorsAscended?.intValue
+                let down = data?.floorsDescended?.intValue
+                Task { @MainActor [weak self] in
+                    self?.latestStepCount = steps
+                    self?.latestPedometerDistanceMeters = distance
+                    self?.latestFloorsAscended = up
+                    self?.latestFloorsDescended = down
+                }
+            }
+        }
+
+        sensorSummaryTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled, let self else { break }
+                self.emitSensorSummary(isFinal: false)
+            }
+        }
+    }
+
+    private func recordAccelerometer(_ value: TaptionWatchSensorVector3) {
+        accelerometerSum.add(value)
+        accelerometerCount += 1
+        sensorSampleCount = accelerometerCount
+        peakAccelerationG = max(peakAccelerationG, value.magnitude)
+    }
+
+    private func recordGyroscope(_ value: TaptionWatchSensorVector3) {
+        gyroscopeSum.add(value)
+        gyroscopeCount += 1
+        peakRotationRate = max(peakRotationRate, value.magnitude)
+    }
+
+    private func emitSensorSummary(isFinal: Bool) {
+        guard let summary = makeSensorSummary(
+            at: .now,
+            isFinal: isFinal
+        ) else {
+            return
+        }
+        onSensorSummary?(summary)
+    }
+
+    private func stopSensorCollection(
+        at endedAt: Date,
+        isFinal: Bool
+    ) -> TaptionWatchSensorSummary? {
+        guard sensorSessionID != nil else { return nil }
+        let summary = makeSensorSummary(at: endedAt, isFinal: isFinal)
+        sensorSummaryTask?.cancel()
+        sensorSummaryTask = nil
+        stopSensorHardware()
+        sensorSessionID = nil
+        return summary
+    }
+
+    private func stopSensorHardware() {
+        motionManager.stopAccelerometerUpdates()
+        motionManager.stopGyroUpdates()
+        motionManager.stopDeviceMotionUpdates()
+        altimeter.stopRelativeAltitudeUpdates()
+        pedometer.stopUpdates()
+    }
+
+    private func makeSensorSummary(
+        at endedAt: Date,
+        isFinal: Bool
+    ) -> TaptionWatchSensorSummary? {
+        guard let sensorSessionID,
+              let startedAt,
+              let workoutKind else {
+            return nil
+        }
+        sensorSequence += 1
+        return TaptionWatchSensorSummary(
+            sessionID: sensorSessionID,
+            sequence: sensorSequence,
+            workoutKind: workoutKind,
+            linkedPlanID: linkedPlan?.id,
+            linkedPlanTitle: linkedPlan?.title,
+            linkedCategoryID: linkedPlan?.categoryID,
+            startedAt: startedAt,
+            endedAt: max(startedAt, endedAt),
+            isFinal: isFinal,
+            accelerometerSampleCount: accelerometerCount,
+            accelerometerAverageG: accelerometerCount > 0
+                ? accelerometerSum.divided(by: Double(accelerometerCount))
+                : nil,
+            peakAccelerationG: accelerometerCount > 0
+                ? peakAccelerationG
+                : nil,
+            gyroscopeSampleCount: gyroscopeCount,
+            gyroscopeAverageRadiansPerSecond: gyroscopeCount > 0
+                ? gyroscopeSum.divided(by: Double(gyroscopeCount))
+                : nil,
+            peakRotationRateRadiansPerSecond: gyroscopeCount > 0
+                ? peakRotationRate
+                : nil,
+            gravity: latestGravity,
+            userAccelerationG: latestUserAcceleration,
+            rotationRateRadiansPerSecond: latestRotationRate,
+            attitudeRadians: latestAttitude,
+            relativeAltitudeMeters: latestRelativeAltitudeMeters,
+            pressureKilopascals: latestPressureKilopascals,
+            stepCount: latestStepCount,
+            distanceMeters: latestPedometerDistanceMeters
+                ?? (distanceMeters > 0 ? distanceMeters : nil),
+            floorsAscended: latestFloorsAscended,
+            floorsDescended: latestFloorsDescended,
+            latestHeartRate: heartRate > 0 ? heartRate : nil,
+            averageHeartRate: averageHeartRate,
+            maximumHeartRate: maximumHeartRate,
+            activeEnergyKilocalories: activeEnergyKilocalories > 0
+                ? activeEnergyKilocalories
+                : nil
+        )
     }
 }
 
@@ -198,5 +493,28 @@ private extension TaptionWatchWorkoutKind {
         case .running: .running
         case .cycling: .cycling
         }
+    }
+}
+
+private extension TaptionWatchSensorVector3 {
+    static let zero = TaptionWatchSensorVector3(x: 0, y: 0, z: 0)
+
+    var magnitude: Double {
+        sqrt(x * x + y * y + z * z)
+    }
+
+    mutating func add(_ other: TaptionWatchSensorVector3) {
+        x += other.x
+        y += other.y
+        z += other.z
+    }
+
+    func divided(by divisor: Double) -> TaptionWatchSensorVector3 {
+        guard divisor != 0 else { return .zero }
+        return TaptionWatchSensorVector3(
+            x: x / divisor,
+            y: y / divisor,
+            z: z / divisor
+        )
     }
 }

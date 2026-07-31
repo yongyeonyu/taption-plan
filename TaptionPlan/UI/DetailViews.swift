@@ -1,3 +1,4 @@
+import MapKit
 import PhotosUI
 import SwiftUI
 
@@ -739,8 +740,10 @@ struct CatPickerView: View {
 
 struct InferenceDetailView: View {
     @Bindable var model: AppModel
-    @State private var selectedTravelID: UUID?
+    @State private var selectedGroupID: UUID?
     @State private var floorOverrides: [UUID: Int] = [:]
+    @State private var routeReadings: [SensorReading] = []
+    @State private var mapPosition: MapCameraPosition = .automatic
 
     private let modes: [TravelMode] = [
         .walking, .running, .cycling, .bus, .subway,
@@ -761,12 +764,14 @@ struct InferenceDetailView: View {
                         .lineSpacing(3)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
+                    routeMapCard
+
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 5) {
                         ForEach(modes, id: \.self) { mode in
                             Button {
-                                guard let selectedTravelID else { return }
+                                guard let selectedGroup else { return }
                                 model.confirmTravel(
-                                    selectedTravelID,
+                                    selectedGroup.segmentIDs,
                                     mode: mode
                                 )
                             } label: {
@@ -777,13 +782,13 @@ struct InferenceDetailView: View {
                                         .font(.taption(size: 7.5, weight: .bold))
                                 }
                                 .foregroundStyle(
-                                    selectedTravel?.mode == mode
+                                    selectedGroup?.mode == mode
                                         ? Color.white
                                         : Color(red: 0.40, green: 0.27, blue: 0.11)
                                 )
                                 .frame(maxWidth: .infinity, minHeight: 48)
                                 .background(
-                                    selectedTravel?.mode == mode
+                                    selectedGroup?.mode == mode
                                         ? Color.tpTransitDark
                                         : Color.white,
                                     in: RoundedRectangle(cornerRadius: 10)
@@ -791,7 +796,7 @@ struct InferenceDetailView: View {
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 10)
                                         .stroke(
-                                            selectedTravel?.mode == mode
+                                            selectedGroup?.mode == mode
                                                 ? Color.tpTransitDark
                                                 : Color(
                                                     red: 0.89,
@@ -803,7 +808,7 @@ struct InferenceDetailView: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                            .disabled(selectedTravelID == nil)
+                            .disabled(selectedGroupID == nil)
                         }
                     }
 
@@ -817,10 +822,10 @@ struct InferenceDetailView: View {
                         )
                         .padding(.vertical, 20)
                     } else {
-                        ForEach(dayTravel) { travel in
-                            travelInferenceCard(travel)
+                        ForEach(dayTravelGroups) { group in
+                            travelInferenceCard(group)
                                 .onTapGesture {
-                                    selectedTravelID = travel.id
+                                    selectedGroupID = group.id
                                 }
                         }
                         ForEach(dayFloors) { floor in
@@ -844,22 +849,29 @@ struct InferenceDetailView: View {
             .background(Color.tpBackground)
         }
         .onAppear {
-            selectedTravelID =
-                dayTravel.first(where: { !$0.isConfirmed })?.id
-                ?? dayTravel.first?.id
+            selectedGroupID =
+                dayTravelGroups.first(where: { !$0.isConfirmed })?.id
+                ?? dayTravelGroups.first?.id
             for floor in dayFloors {
                 floorOverrides[floor.id] =
                     floor.toFloor ?? floor.fromFloor ?? 0
             }
         }
+        .task(id: model.selectedDate) {
+            routeReadings = await model.sensorReadings(in: daySpan)
+            fitMapToSelection()
+        }
+        .onChange(of: selectedGroupID) { _, _ in
+            fitMapToSelection()
+        }
     }
 
     private func travelInferenceCard(
-        _ travel: TravelSegment
+        _ group: TravelSegmentGroup
     ) -> some View {
         VStack(spacing: 7) {
             HStack(spacing: 7) {
-                Image(systemName: travel.mode.systemImage)
+                Image(systemName: group.mode.systemImage)
                     .font(.taption(size: 15))
                     .foregroundStyle(Color.tpTransitDark)
                     .frame(width: 29, height: 29)
@@ -869,47 +881,68 @@ struct InferenceDetailView: View {
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(
-                        "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened))"
+                        "\(group.span.start.formatted(date: .omitted, time: .shortened))–\(group.span.end.formatted(date: .omitted, time: .shortened))"
                     )
                         .font(.taption(size: 8))
                         .foregroundStyle(Color.tpSecondary)
                     Text(
-                        "\(travel.mode.displayName) · \(travel.span.duration.shortDuration)"
+                        "\(group.mode.displayName) · \(group.span.duration.shortDuration)"
                     )
                         .font(.taption(size: 11, weight: .bold))
                 }
                 Spacer()
                 Text(
-                    travel.isConfirmed
+                    group.isConfirmed
                         ? "확인됨"
-                        : travel.confidence.displayName
+                        : group.confirmedCount > 0
+                            ? "일부 확인"
+                            : group.confidence.displayName
                 )
                     .font(.taption(size: 7.5, weight: .black))
                     .foregroundStyle(
-                        travel.confidence == .high
+                        group.confidence == .high
                             ? Color(red: 0.18, green: 0.46, blue: 0.28)
                             : Color(red: 0.61, green: 0.41, blue: 0.11)
                     )
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
                     .background(
-                        travel.confidence == .high
+                        group.confidence == .high
                             ? Color(red: 0.92, green: 0.96, blue: 0.93)
                             : Color(red: 1.00, green: 0.95, blue: 0.85),
                         in: RoundedRectangle(cornerRadius: 7)
                     )
             }
 
+            if group.segments.count > 1 {
+                HStack(spacing: 5) {
+                    Image(systemName: "square.stack.3d.up")
+                    Text("이어진 유사 경로 \(group.segments.count)개를 한 번에 표시")
+                    Spacer()
+                    if group.distanceMeters > 0 {
+                        Text(formattedDistance(group.distanceMeters))
+                    }
+                }
+                .font(.taption(size: 7.5, weight: .bold))
+                .foregroundStyle(Color.tpTransitDark)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(
+                    Color.tpTransit.opacity(0.58),
+                    in: RoundedRectangle(cornerRadius: 8)
+                )
+            }
+
             ChipFlowLayout(spacing: 4) {
-                ForEach(travel.evidence, id: \.self) { signal in
+                ForEach(group.evidence, id: \.self) { signal in
                     signalChip(signal)
                 }
             }
 
             HStack(spacing: 6) {
-                if travel.isConfirmed {
+                if group.isConfirmed {
                     Button("자동 판정으로 되돌리기") {
-                        model.forgetTravelConfirmation(travel.id)
+                        model.forgetTravelConfirmations(group.segmentIDs)
                     }
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity)
@@ -920,7 +953,10 @@ struct InferenceDetailView: View {
                     )
                 } else {
                     Button("맞아요") {
-                        model.confirmTravel(travel.id, mode: travel.mode)
+                        model.confirmTravel(
+                            group.segmentIDs,
+                            mode: group.mode
+                        )
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -931,7 +967,7 @@ struct InferenceDetailView: View {
                     )
                 }
                 Button("다른 수단") {
-                    selectedTravelID = travel.id
+                    selectedGroupID = group.id
                 }
                 .foregroundStyle(Color.tpSecondary)
                 .frame(maxWidth: .infinity)
@@ -947,7 +983,7 @@ struct InferenceDetailView: View {
         .padding(10)
         .draftCard()
         .overlay {
-            if selectedTravelID == travel.id {
+            if selectedGroupID == group.id {
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(Color.tpTransitDark, lineWidth: 2)
             }
@@ -1046,6 +1082,238 @@ struct InferenceDetailView: View {
             )
     }
 
+    private var routeMapCard: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "map")
+                    .foregroundStyle(Color.tpTransitDark)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("오늘 이동 경로")
+                        .font(.taption(size: 10, weight: .bold))
+                    Text("구간을 누르면 해당 경로를 강조합니다")
+                        .font(.taption(size: 7.5))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                Spacer()
+                Text("\(dayTravelGroups.count)개 묶음")
+                    .font(.taption(size: 7.5, weight: .bold))
+                    .foregroundStyle(Color.tpTransitDark)
+            }
+
+            if allRouteCoordinates.isEmpty {
+                VStack(spacing: 6) {
+                    Image(systemName: "location.slash")
+                        .font(.taption(size: 18))
+                    Text("저장된 GPS 좌표가 있는 경로부터 지도에 표시됩니다")
+                        .font(.taption(size: 8, weight: .semibold))
+                }
+                .foregroundStyle(Color.tpSecondary)
+                .frame(maxWidth: .infinity, minHeight: 105)
+                .background(
+                    Color.tpBackground,
+                    in: RoundedRectangle(cornerRadius: 11)
+                )
+            } else {
+                Map(position: $mapPosition, content: {
+                    ForEach(dayTravelGroups) { group in
+                        let coordinates = coordinates(for: group)
+                        if coordinates.count >= 2 {
+                            MapPolyline(coordinates: coordinates)
+                                .stroke(
+                                    group.mode.routeColor.opacity(
+                                        selectedGroupID == group.id ? 1 : 0.42
+                                    ),
+                                    style: StrokeStyle(
+                                        lineWidth: selectedGroupID == group.id ? 5 : 3,
+                                        lineCap: .round,
+                                        lineJoin: .round
+                                    )
+                                )
+                        }
+                    }
+                    if let group = selectedGroup,
+                       let start = coordinates(for: group).first {
+                        Marker("출발", systemImage: "circle.fill", coordinate: start)
+                            .tint(group.mode.routeColor)
+                    }
+                    if let group = selectedGroup,
+                       let end = coordinates(for: group).last,
+                       coordinates(for: group).count >= 2 {
+                        Marker("도착", systemImage: "mappin", coordinate: end)
+                            .tint(group.mode.routeColor)
+                    }
+                })
+                .mapStyle(.standard)
+                .frame(height: 165)
+                .clipShape(RoundedRectangle(cornerRadius: 11))
+            }
+
+            HStack(spacing: 7) {
+                if let selectedGroup {
+                    Label(
+                        "\(selectedGroup.mode.displayName) · \(selectedGroup.span.duration.shortDuration)",
+                        systemImage: selectedGroup.mode.systemImage
+                    )
+                    .font(.taption(size: 8, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .lineLimit(1)
+                } else {
+                    Text("경로를 선택해 주세요")
+                        .font(.taption(size: 8))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                Spacer()
+                Button {
+                    guard let selectedGroup else { return }
+                    openInAppleMaps(selectedGroup)
+                } label: {
+                    Label("Apple 지도", systemImage: "arrow.up.right.square")
+                        .font(.taption(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 7)
+                        .background(
+                            Color.tpInk,
+                            in: RoundedRectangle(cornerRadius: 9)
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(
+                    selectedGroup.map { coordinates(for: $0).isEmpty }
+                        ?? true
+                )
+                .opacity(
+                    selectedGroup.map { coordinates(for: $0).isEmpty }
+                        == false ? 1 : 0.42
+                )
+            }
+        }
+        .padding(9)
+        .draftCard()
+    }
+
+    private var allRouteCoordinates: [CLLocationCoordinate2D] {
+        dayTravelGroups.flatMap(coordinates(for:))
+    }
+
+    private func routePoints(for group: TravelSegmentGroup) -> [GeoPoint] {
+        var points: [GeoPoint] = []
+        if let fromPlaceID = group.fromPlaceID,
+           let point = model.snapshot.places.first(where: {
+               $0.id == fromPlaceID
+           })?.point {
+            points.append(point)
+        }
+        points.append(contentsOf: routeReadings
+            .filter { group.span.contains($0.timestamp) }
+            .sorted { $0.timestamp < $1.timestamp }
+            .compactMap(\.point)
+            .filter { $0.horizontalAccuracy <= 200 }
+        )
+        if let toPlaceID = group.toPlaceID,
+           let point = model.snapshot.places.first(where: {
+               $0.id == toPlaceID
+           })?.point {
+            points.append(point)
+        }
+
+        return points.reduce(into: []) { result, point in
+            guard let previous = result.last else {
+                result.append(point)
+                return
+            }
+            if distanceMeters(previous, point) >= 8 {
+                result.append(point)
+            }
+        }
+    }
+
+    private func coordinates(
+        for group: TravelSegmentGroup
+    ) -> [CLLocationCoordinate2D] {
+        routePoints(for: group).map {
+            CLLocationCoordinate2D(
+                latitude: $0.latitude,
+                longitude: $0.longitude
+            )
+        }
+    }
+
+    private func fitMapToSelection() {
+        let values: [CLLocationCoordinate2D]
+        if let selectedGroup {
+            values = coordinates(for: selectedGroup)
+        } else {
+            values = allRouteCoordinates
+        }
+        guard let first = values.first else {
+            mapPosition = .automatic
+            return
+        }
+        let latitudes = values.map(\.latitude)
+        let longitudes = values.map(\.longitude)
+        let minimumLatitude = latitudes.min() ?? first.latitude
+        let maximumLatitude = latitudes.max() ?? first.latitude
+        let minimumLongitude = longitudes.min() ?? first.longitude
+        let maximumLongitude = longitudes.max() ?? first.longitude
+        mapPosition = .region(
+            MKCoordinateRegion(
+                center: CLLocationCoordinate2D(
+                    latitude: (minimumLatitude + maximumLatitude) / 2,
+                    longitude: (minimumLongitude + maximumLongitude) / 2
+                ),
+                span: MKCoordinateSpan(
+                    latitudeDelta: max(
+                        0.005,
+                        (maximumLatitude - minimumLatitude) * 1.45
+                    ),
+                    longitudeDelta: max(
+                        0.005,
+                        (maximumLongitude - minimumLongitude) * 1.45
+                    )
+                )
+            )
+        )
+    }
+
+    private func openInAppleMaps(_ group: TravelSegmentGroup) {
+        let values = coordinates(for: group)
+        guard let first = values.first else { return }
+        let start = MKMapItem(placemark: MKPlacemark(coordinate: first))
+        start.name = model.snapshot.places.first(where: {
+            $0.id == group.fromPlaceID
+        })?.displayName ?? "출발"
+
+        guard values.count >= 2, let last = values.last else {
+            start.openInMaps()
+            return
+        }
+        let destination = MKMapItem(
+            placemark: MKPlacemark(coordinate: last)
+        )
+        destination.name = model.snapshot.places.first(where: {
+            $0.id == group.toPlaceID
+        })?.displayName ?? "도착"
+        var options: [String: Any] = [:]
+        if let directionMode = group.mode.appleMapsDirectionsMode {
+            options[MKLaunchOptionsDirectionsModeKey] = directionMode
+        }
+        if group.mode == .car || group.mode == .taxi || group.mode == .bus {
+            options[MKLaunchOptionsShowsTrafficKey] = true
+        }
+        MKMapItem.openMaps(
+            with: [start, destination],
+            launchOptions: options
+        )
+    }
+
+    private func formattedDistance(_ meters: Double) -> String {
+        if meters >= 1_000 {
+            return String(format: "%.1fkm", meters / 1_000)
+        }
+        return "\(Int(meters.rounded()))m"
+    }
+
     private var daySpan: TimeSpan {
         TimelineAggregationEngine().interval(
             for: .day,
@@ -1059,15 +1327,19 @@ struct InferenceDetailView: View {
             .sorted { $0.span.start < $1.span.start }
     }
 
+    private var dayTravelGroups: [TravelSegmentGroup] {
+        TravelSegmentGroupingEngine.groups(from: dayTravel)
+    }
+
     private var dayFloors: [FloorTransition] {
         model.snapshot.floorTransitions
             .filter { $0.span.intersection(with: daySpan) != nil }
             .sorted { $0.span.start < $1.span.start }
     }
 
-    private var selectedTravel: TravelSegment? {
-        guard let selectedTravelID else { return nil }
-        return dayTravel.first { $0.id == selectedTravelID }
+    private var selectedGroup: TravelSegmentGroup? {
+        guard let selectedGroupID else { return nil }
+        return dayTravelGroups.first { $0.id == selectedGroupID }
     }
 
     private var privacyCard: some View {
@@ -2585,6 +2857,21 @@ private extension TravelMode {
             Color(red: 0.72, green: 0.66, blue: 0.92)
         case .ship:
             Color(red: 0.34, green: 0.67, blue: 0.76)
+        }
+    }
+
+    var appleMapsDirectionsMode: String? {
+        switch self {
+        case .walking, .running:
+            MKLaunchOptionsDirectionsModeWalking
+        case .cycling:
+            MKLaunchOptionsDirectionsModeCycling
+        case .bus, .subway, .train:
+            MKLaunchOptionsDirectionsModeTransit
+        case .taxi, .car:
+            MKLaunchOptionsDirectionsModeDriving
+        case .airplane, .ship:
+            nil
         }
     }
 }
