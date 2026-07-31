@@ -5,6 +5,75 @@ import UIKit
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    func testPlayheadMapUsesOnlyMovementContainingExactPlayheadTime() {
+        let playhead = makeDate(2026, 8, 1, 9, 0)
+        let nearby = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: playhead.addingTimeInterval(-30 * 60),
+                end: playhead.addingTimeInterval(-10 * 60)
+            ),
+            distanceMeters: 4_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+        let containing = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: playhead.addingTimeInterval(-5 * 60),
+                end: playhead.addingTimeInterval(5 * 60)
+            ),
+            distanceMeters: 600,
+            confidence: .high,
+            evidence: ["걸음 수"]
+        )
+        let focusSpan = TimeSpan(
+            start: playhead.addingTimeInterval(-15 * 60),
+            end: playhead.addingTimeInterval(15 * 60)
+        )
+
+        let exact = TimelineRouteDisplayPolicy.segments(
+            from: [nearby, containing],
+            intersecting: focusSpan,
+            at: playhead
+        )
+        XCTAssertEqual(exact.map(\.id), [containing.id])
+        XCTAssertTrue(
+            TimelineRouteDisplayPolicy.allowsFallbackPath(
+                at: playhead,
+                routeSegments: exact
+            )
+        )
+
+        let noMovement = TimelineRouteDisplayPolicy.segments(
+            from: [nearby],
+            intersecting: focusSpan,
+            at: playhead
+        )
+        XCTAssertTrue(noMovement.isEmpty)
+        XCTAssertFalse(
+            TimelineRouteDisplayPolicy.allowsFallbackPath(
+                at: playhead,
+                routeSegments: noMovement
+            )
+        )
+
+        let rangeSelection = TimelineRouteDisplayPolicy.segments(
+            from: [nearby, containing],
+            intersecting: focusSpan,
+            at: nil
+        )
+        XCTAssertEqual(Set(rangeSelection.map(\.id)), Set([nearby.id, containing.id]))
+
+        let tappedSegment = TimelineRouteDisplayPolicy.segments(
+            from: [nearby, containing],
+            intersecting: focusSpan,
+            at: nil,
+            selectedTravelID: nearby.id
+        )
+        XCTAssertEqual(tappedSegment.map(\.id), [nearby.id])
+    }
+
     func testHierarchySupportsUnlimitedDescendantsAndRollup() throws {
         let base = makeDate(2026, 1, 1)
         let year = PlanRecord(

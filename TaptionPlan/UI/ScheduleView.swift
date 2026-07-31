@@ -51,6 +51,7 @@ private struct TimelineSelection: Equatable {
     let title: String
     let span: TimeSpan
     let planID: UUID?
+    let travelID: UUID?
     let isRoute: Bool
     let categoryID: String?
     let categoryName: String?
@@ -59,6 +60,7 @@ private struct TimelineSelection: Equatable {
         title: String,
         span: TimeSpan,
         planID: UUID?,
+        travelID: UUID? = nil,
         isRoute: Bool,
         categoryID: String? = nil,
         categoryName: String? = nil
@@ -66,6 +68,7 @@ private struct TimelineSelection: Equatable {
         self.title = title
         self.span = span
         self.planID = planID
+        self.travelID = travelID
         self.isRoute = isRoute
         self.categoryID = categoryID
         self.categoryName = categoryName
@@ -198,6 +201,7 @@ struct ScheduleView: View {
     @State private var selectedPhotoCluster: PhotoCluster?
     @State private var routeReadings: [SensorReading] = []
     @State private var editingPlanID: UUID?
+    @State private var mapPlayheadDate: Date?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -226,20 +230,24 @@ struct ScheduleView: View {
                 dayZoom: $dayZoom,
                 editingPlanID: $editingPlanID,
                 onPlayheadMove: { date in
+                    mapPlayheadDate = date
                     focusMapOnPlayhead(at: date)
                 },
                 onSelection: { selection in
+                    mapPlayheadDate = nil
                     selectedTimelineItem = selection
                     selectedPhotoCluster = nil
                     detailSection = selection.preferredDetailSection
                 },
                 onFocus: { selection in
+                    mapPlayheadDate = nil
                     selectedTimelineItem = selection
                     selectedPhotoCluster = nil
                     detailSection = selection.preferredDetailSection
                 },
                 onPhotoSelection: { cluster in
                     editingPlanID = nil
+                    mapPlayheadDate = nil
                     selectedPhotoCluster = cluster
                     selectedTimelineItem = TimelineSelection(
                         title: "사진",
@@ -260,6 +268,7 @@ struct ScheduleView: View {
             TimelineDetailPanel(
                 model: model,
                 selection: selectedTimelineItem,
+                playheadDate: mapPlayheadDate,
                 section: $detailSection,
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
@@ -318,6 +327,7 @@ struct ScheduleView: View {
                 title: timelineTravelModeName(travel.mode),
                 span: travel.span,
                 planID: nil,
+                travelID: travel.id,
                 isRoute: true,
                 categoryID: "movement",
                 categoryName: "이동"
@@ -439,7 +449,7 @@ struct ScheduleView: View {
     }
 
     private var routeReadingsSpan: TimeSpan {
-        if selectedTimelineItem?.title == "플레이해드 위치" {
+        if mapPlayheadDate != nil {
             return daySpan
         }
         return selectedTimelineItem?.span ?? daySpan
@@ -477,9 +487,36 @@ private func timelineTravelModeName(_ mode: TravelMode) -> String {
     }
 }
 
+enum TimelineRouteDisplayPolicy {
+    static func segments(
+        from travel: [TravelSegment],
+        intersecting activeSpan: TimeSpan,
+        at playheadDate: Date?,
+        selectedTravelID: UUID? = nil
+    ) -> [TravelSegment] {
+        if let selectedTravelID {
+            return travel.filter { $0.id == selectedTravelID }
+        }
+        if let playheadDate {
+            return travel.filter { $0.span.contains(playheadDate) }
+        }
+        return travel.filter {
+            $0.span.intersection(with: activeSpan) != nil
+        }
+    }
+
+    static func allowsFallbackPath(
+        at playheadDate: Date?,
+        routeSegments: [TravelSegment]
+    ) -> Bool {
+        playheadDate == nil || !routeSegments.isEmpty
+    }
+}
+
 private struct TimelineDetailPanel: View {
     @Bindable var model: AppModel
     let selection: TimelineSelection?
+    let playheadDate: Date?
     @Binding var section: TimelineDetailSection
     let highlightedSection: TimelineDetailSection?
     @Binding var selectedPhotoCluster: PhotoCluster?
@@ -559,6 +596,9 @@ private struct TimelineDetailPanel: View {
             fitMapToRoutes()
             selectedPhotoIndex = 0
         }
+        .onChange(of: playheadDate) { _, _ in
+            fitMapToRoutes()
+        }
         .onChange(of: routeReadings) { _, _ in
             fitMapToRoutes()
         }
@@ -580,11 +620,14 @@ private struct TimelineDetailPanel: View {
                 .font(.taption(size: 10, weight: .bold))
                 .foregroundStyle(Color.tpTransitDark)
                 Spacer()
-                Text("Apple 지도 경로")
+                Text(isPlayheadLocationOnly ? "Apple 지도 위치" : "Apple 지도 경로")
                     .font(.taption(size: 8))
                     .foregroundStyle(Color.tpSecondary)
             }
-            if displayedRouteCoordinates.isEmpty {
+            if let travel = explicitlySelectedTravel {
+                travelModeEditor(for: travel)
+            }
+            if !hasMapContent {
                 Label("기록된 이동 경로가 없습니다", systemImage: "location.slash")
                     .font(.taption(size: 9, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
@@ -617,7 +660,8 @@ private struct TimelineDetailPanel: View {
                                 )
                         }
                     }
-                    if routeSegments.isEmpty,
+                    if allowsFallbackRoutePath,
+                       routeSegments.isEmpty,
                        fallbackRouteCoordinates.count >= 2 {
                         MapPolyline(coordinates: fallbackRouteCoordinates)
                             .stroke(
@@ -640,6 +684,18 @@ private struct TimelineDetailPanel: View {
                 .mapStyle(.standard)
                 .frame(height: 216)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+
+            if isPlayheadLocationOnly {
+                Text("이동 내용이 없어 플레이해드 위치만 표시합니다.")
+                    .font(.taption(size: 7.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Color(red: 0.98, green: 0.98, blue: 0.98),
+                        in: Capsule()
+                    )
             }
 
             if !routeSegments.isEmpty &&
@@ -893,7 +949,10 @@ private struct TimelineDetailPanel: View {
     }
 
     private var activeRouteSpan: TimeSpan {
-        selection?.span ?? daySpan
+        if let playheadDate {
+            return playheadFocusSpan(around: playheadDate)
+        }
+        return selection?.span ?? daySpan
     }
 
     private var activePhotoSpan: TimeSpan {
@@ -912,6 +971,11 @@ private struct TimelineDetailPanel: View {
     }
 
     private var routeTitle: String {
+        if playheadDate != nil {
+            return routeSegments.isEmpty
+                ? "플레이해드 위치"
+                : "현재 이동 경로"
+        }
         if selection?.isRoute == true {
             return "선택된 이동 경로"
         }
@@ -922,9 +986,19 @@ private struct TimelineDetailPanel: View {
     }
 
     private var routeSegments: [TravelSegment] {
-        model.snapshot.travel.filter {
-            $0.span.intersection(with: activeRouteSpan) != nil
+        TimelineRouteDisplayPolicy.segments(
+            from: model.snapshot.travel,
+            intersecting: activeRouteSpan,
+            at: playheadDate,
+            selectedTravelID: selection?.travelID
+        )
+    }
+
+    private var explicitlySelectedTravel: TravelSegment? {
+        guard playheadDate == nil, let travelID = selection?.travelID else {
+            return nil
         }
+        return model.snapshot.travel.first { $0.id == travelID }
     }
 
     private var selectedSegmentIDs: Set<UUID> {
@@ -951,6 +1025,10 @@ private struct TimelineDetailPanel: View {
     }
 
     private var routeLocationPins: [RouteLocationPin] {
+        if playheadDate != nil && routeSegments.isEmpty {
+            return []
+        }
+
         var pins: [RouteLocationPin] = []
         var usedPlaceIDs = Set<UUID>()
         let values = selectedSegment == nil ? routeSegments : routeSegments.filter {
@@ -1045,17 +1123,6 @@ private struct TimelineDetailPanel: View {
         return pins
     }
 
-    private var isPlayheadRouteSelection: Bool {
-        selection?.title == "플레이해드 위치"
-    }
-
-    private var playheadDate: Date? {
-        guard isPlayheadRouteSelection, let selection else { return nil }
-        return selection.span.start.addingTimeInterval(
-            selection.span.duration / 2
-        )
-    }
-
     private var playheadRoutePin: RouteLocationPin? {
         guard let coordinate = playheadFocusCoordinate else { return nil }
         return RouteLocationPin(
@@ -1064,6 +1131,25 @@ private struct TimelineDetailPanel: View {
             title: "플레이해드",
             tint: .tpNow
         )
+    }
+
+    private var allowsFallbackRoutePath: Bool {
+        TimelineRouteDisplayPolicy.allowsFallbackPath(
+            at: playheadDate,
+            routeSegments: routeSegments
+        )
+    }
+
+    private var isPlayheadLocationOnly: Bool {
+        playheadDate != nil
+            && routeSegments.isEmpty
+            && playheadRoutePin != nil
+    }
+
+    private var hasMapContent: Bool {
+        playheadRoutePin != nil
+            || !routeLocationPins.isEmpty
+            || !displayedRouteCoordinates.isEmpty
     }
 
     private var playheadFocusCoordinate: CLLocationCoordinate2D? {
@@ -1137,6 +1223,7 @@ private struct TimelineDetailPanel: View {
         if segmentCoordinates.count >= 2 {
             return segmentCoordinates
         }
+        guard allowsFallbackRoutePath else { return [] }
         return fallbackRouteCoordinates
     }
 
@@ -1162,6 +1249,69 @@ private struct TimelineDetailPanel: View {
             "비행기"
         case .ship:
             "배"
+        }
+    }
+
+    private func routeModeSystemImage(_ mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "figure.walk"
+        case .running: "figure.run"
+        case .cycling: "bicycle"
+        case .bus: "bus"
+        case .subway: "tram"
+        case .taxi: "car.side"
+        case .car: "car"
+        case .train: "train.side.front.car"
+        case .airplane: "airplane"
+        case .ship: "ferry"
+        }
+    }
+
+    private func travelModeEditor(for travel: TravelSegment) -> some View {
+        HStack(spacing: 8) {
+            Label(
+                routeModeName(travel.mode),
+                systemImage: routeModeSystemImage(travel.mode)
+            )
+            .font(.taption(size: 9, weight: .bold))
+            .foregroundStyle(Color.tpInk)
+
+            Text(
+                "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened))"
+            )
+            .font(.taption(size: 8))
+            .foregroundStyle(Color.tpSecondary)
+
+            Spacer(minLength: 4)
+
+            Menu {
+                ForEach(TravelMode.allCases, id: \.self) { mode in
+                    Button {
+                        model.confirmTravel(travel.id, mode: mode)
+                    } label: {
+                        Label(
+                            routeModeName(mode),
+                            systemImage: routeModeSystemImage(mode)
+                        )
+                    }
+                }
+            } label: {
+                Label("이동수단 변경", systemImage: "pencil")
+                    .font(.taption(size: 8.5, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Color.tpInk, in: Capsule())
+            }
+            .accessibilityLabel("이동수단 변경")
+            .accessibilityValue(routeModeName(travel.mode))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 9))
+        .overlay {
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(Color.tpLine, lineWidth: 0.7)
         }
     }
 
@@ -1294,6 +1444,7 @@ struct GroupGanttView: View {
     @State private var selectedPhotoCluster: PhotoCluster?
     @State private var routeReadings: [SensorReading] = []
     @State private var editingPlanID: UUID?
+    @State private var mapPlayheadDate: Date?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1319,20 +1470,24 @@ struct GroupGanttView: View {
                 dayZoom: $dayZoom,
                 editingPlanID: $editingPlanID,
                 onPlayheadMove: { date in
+                    mapPlayheadDate = date
                     focusMapOnPlayhead(at: date)
                 },
                 onSelection: { selection in
+                    mapPlayheadDate = nil
                     selectedTimelineItem = selection
                     selectedPhotoCluster = nil
                     detailSection = selection.preferredDetailSection
                 },
                 onFocus: { selection in
+                    mapPlayheadDate = nil
                     selectedTimelineItem = selection
                     selectedPhotoCluster = nil
                     detailSection = selection.preferredDetailSection
                 },
                 onPhotoSelection: { cluster in
                     editingPlanID = nil
+                    mapPlayheadDate = nil
                     selectedPhotoCluster = cluster
                     selectedTimelineItem = TimelineSelection(
                         title: "사진",
@@ -1353,6 +1508,7 @@ struct GroupGanttView: View {
             TimelineDetailPanel(
                 model: model,
                 selection: selectedTimelineItem,
+                playheadDate: mapPlayheadDate,
                 section: $detailSection,
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
@@ -1411,6 +1567,7 @@ struct GroupGanttView: View {
                 title: timelineTravelModeName(travel.mode),
                 span: travel.span,
                 planID: nil,
+                travelID: travel.id,
                 isRoute: true,
                 categoryID: "movement",
                 categoryName: "이동"
@@ -1511,7 +1668,7 @@ struct GroupGanttView: View {
     }
 
     private var routeReadingsSpan: TimeSpan {
-        if selectedTimelineItem?.title == "플레이해드 위치" {
+        if mapPlayheadDate != nil {
             return selectedDaySpan
         }
         return selectedTimelineItem?.span ?? selectedDaySpan
@@ -1685,16 +1842,21 @@ private struct TimelineBoard: View {
         .background(Color.white)
         .onAppear {
             continuousCenterDate = model.selectedDate
+            if isContinuousDay {
+                onPlayheadMove?(continuousCenterDate)
+            }
         }
         .onChange(of: scale) { _, _ in
             if isContinuousDay {
                 continuousCenterDate = model.selectedDate
+                onPlayheadMove?(continuousCenterDate)
             }
             resetViewport()
         }
         .onChange(of: model.selectedDate) { _, newDate in
             if isContinuousDay {
                 continuousCenterDate = newDate
+                onPlayheadMove?(newDate)
             } else {
                 resetViewport()
             }
@@ -2366,7 +2528,9 @@ private struct TimelineBoard: View {
                     altitude,
                 ]
                 .compactMap { $0 }
-                .joined(separator: " · ")
+                .joined(separator: " · "),
+                categoryID: "location",
+                categoryName: "위치"
             )
         }
         return TimelineRowModel(
@@ -2416,7 +2580,9 @@ private struct TimelineBoard: View {
                 isActual: true,
                 opensLocationTimeline: true,
                 detailText:
-                    "자동 이동 · \(confidenceName(travel.confidence))"
+                    "자동 이동 · \(confidenceName(travel.confidence))",
+                categoryID: "movement",
+                categoryName: "이동"
             )
         }
         return TimelineRowModel(
@@ -2554,7 +2720,9 @@ private struct TimelineBoard: View {
                         isActual: true,
                         opensLocationTimeline: true,
                         detailText:
-                            "센서 추정 · \(confidenceName(travel.confidence))"
+                            "센서 추정 · \(confidenceName(travel.confidence))",
+                        categoryID: "movement",
+                        categoryName: "이동"
                     )
                 }
         case "location":
@@ -2592,7 +2760,9 @@ private struct TimelineBoard: View {
                                 altitude,
                             ]
                             .compactMap { $0 }
-                            .joined(separator: " · ")
+                            .joined(separator: " · "),
+                        categoryID: "location",
+                        categoryName: "위치"
                     )
                 }
         default:
@@ -3715,6 +3885,7 @@ private struct TimelineBoard: View {
             title: block.title,
             span: selectionSpan,
             planID: block.planID,
+            travelID: block.categoryID == "movement" ? block.id : nil,
             isRoute: block.opensLocationTimeline,
             categoryID: block.categoryID,
             categoryName: block.categoryName
@@ -4027,6 +4198,11 @@ private struct TimelineBar: View {
                 ? "두 번 탭하면 일정에 맞춰 확대합니다"
                 : "두 번 탭하면 확대하고, 길게 누른 뒤 드래그하면 이동하며 양 끝점을 끌면 길이를 조절합니다"
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            onTap()
+        }
     }
 
     private var showsMinuteDetails: Bool {
