@@ -488,7 +488,7 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     func testAllCustomCategoryRequirementsExist() throws {
-        XCTAssertEqual(CategoryCatalog.builtIn.count, 13)
+        XCTAssertEqual(CategoryCatalog.builtIn.count, 14)
         XCTAssertGreaterThanOrEqual(CategoryIcon.allCases.count, 24)
         let custom = try CategoryCatalog.makeCustom(
             name: "봉사",
@@ -583,7 +583,7 @@ final class FeatureEngineTests: XCTestCase {
         let ship = SensorReading(
             timestamp: base,
             speedMetersPerSecond: 8,
-            motion: .automotive,
+            motion: .unknown,
             motionConfidence: .medium,
             nearPort: true,
             onWater: true
@@ -1855,7 +1855,7 @@ final class FeatureEngineTests: XCTestCase {
         try await repository.save(snapshot)
         let restored = try await repository.load()
 
-        XCTAssertEqual(restored.categories.count, 13)
+        XCTAssertEqual(restored.categories.count, 14)
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
     }
 
