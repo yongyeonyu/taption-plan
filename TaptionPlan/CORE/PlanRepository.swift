@@ -270,13 +270,13 @@ actor CloudKitSnapshotSyncService {
         let record = (try? await database.record(for: recordID))
             ?? CKRecord(recordType: Self.recordType, recordID: recordID)
 
-        record["schemaVersion"] = value.schemaVersion as CKRecordValue
-        record["updatedAt"] = value.updatedAt as CKRecordValue
-
         if data.count <= Self.inlineLimit {
-            record["payload"] = data as CKRecordValue
-            record["payloadAsset"] = nil
-            _ = try await database.save(record)
+            try await saveWithConflictRecovery(
+                record,
+                value: value,
+                inlineData: data,
+                assetURL: nil
+            )
             return value
         }
 
@@ -284,10 +284,72 @@ actor CloudKitSnapshotSyncService {
             .appendingPathComponent("taption-cloud-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: temporaryURL) }
         try data.write(to: temporaryURL, options: .atomic)
-        record["payload"] = nil
-        record["payloadAsset"] = CKAsset(fileURL: temporaryURL)
-        _ = try await database.save(record)
+        try await saveWithConflictRecovery(
+            record,
+            value: value,
+            inlineData: nil,
+            assetURL: temporaryURL
+        )
         return value
+    }
+
+    /// A phone, Watch-triggered refresh, and another Apple device can update
+    /// the single snapshot record at nearly the same time. CloudKit then
+    /// rejects a stale record change tag as a client oplock conflict. Reapply
+    /// the local snapshot to the server's newest record and retry a bounded
+    /// number of times so edits remain atomic without presenting a false save
+    /// failure to the user.
+    private func saveWithConflictRecovery(
+        _ initialRecord: CKRecord,
+        value: TaptionDataSnapshot,
+        inlineData: Data?,
+        assetURL: URL?
+    ) async throws {
+        var record = initialRecord
+        let maximumAttempts = 3
+
+        for attempt in 1...maximumAttempts {
+            applyPayload(
+                to: record,
+                value: value,
+                inlineData: inlineData,
+                assetURL: assetURL
+            )
+
+            do {
+                _ = try await database.save(record)
+                return
+            } catch let error as CKError
+                where error.code == .serverRecordChanged
+                    && attempt < maximumAttempts {
+                if let serverRecord = error.userInfo[
+                    CKRecordChangedErrorServerRecordKey
+                ] as? CKRecord {
+                    record = serverRecord
+                } else {
+                    record = try await database.record(
+                        for: initialRecord.recordID
+                    )
+                }
+            }
+        }
+    }
+
+    private func applyPayload(
+        to record: CKRecord,
+        value: TaptionDataSnapshot,
+        inlineData: Data?,
+        assetURL: URL?
+    ) {
+        record["schemaVersion"] = value.schemaVersion as CKRecordValue
+        record["updatedAt"] = value.updatedAt as CKRecordValue
+        if let inlineData {
+            record["payload"] = inlineData as CKRecordValue
+            record["payloadAsset"] = nil
+        } else if let assetURL {
+            record["payload"] = nil
+            record["payloadAsset"] = CKAsset(fileURL: assetURL)
+        }
     }
 }
 

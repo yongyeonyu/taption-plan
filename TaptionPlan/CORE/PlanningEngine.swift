@@ -851,16 +851,13 @@ enum WidgetSnapshotFactory {
                 isCurrent: plan.span.contains(now) && plan.status != .completed
             )
         }
-        let hasCurrent = items.contains(where: \.isCurrent)
         return WidgetSnapshot(
             generatedAt: now,
             viewport: viewport,
             items: items,
-            availableActions: hasCurrent
-                ? [.complete, .postponeThirtyMinutes, .moveToNextFreeTime]
-                : [],
+            availableActions: [],
             catStyle: catStyle,
-            catIsRunning: hasCurrent,
+            catIsRunning: items.contains(where: \.isCurrent),
             hidesSensitiveContent: hideSensitiveContent
         )
     }

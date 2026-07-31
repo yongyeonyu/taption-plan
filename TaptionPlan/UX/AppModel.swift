@@ -2458,7 +2458,13 @@ final class AppModel {
             viewportEnd: weekEnd,
             items: watchItems,
             catStyle: snapshot.settings.catStyle.rawValue,
-            reducesMotion: snapshot.settings.reduceMotion
+            reducesMotion: snapshot.settings.reduceMotion,
+            todaySummary: TaptionWatchDaySummaryFactory.make(
+                plans: snapshot.plans,
+                actuals: snapshot.actuals,
+                at: .now,
+                calendar: calendar
+            )
         )
         try? watchConnectivityService.update(payload: watchPayload)
     }
@@ -2589,6 +2595,65 @@ final class AppModel {
             userFacingError =
                 "센서 기록을 저장하지 못했습니다. \(error.localizedDescription)"
         }
+    }
+}
+
+enum TaptionWatchDaySummaryFactory {
+    static func make(
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        at date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> TaptionWatchDaySummary {
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: dayStart
+        ) ?? dayStart.addingTimeInterval(86_400)
+        let day = TimeSpan(start: dayStart, end: dayEnd)
+        let scheduled = plans.filter {
+            $0.status != .skipped && $0.span.intersection(with: day) != nil
+        }
+        let recordedSpans: [TimeSpan] = actuals.compactMap {
+            $0.span(asOf: date).intersection(with: day)
+        }
+        let activeCategoryIDs: Set<String> = [
+            "movement",
+            "exercise",
+            "health",
+        ]
+        let activeSpans: [TimeSpan] = actuals.compactMap { actual -> TimeSpan? in
+            guard activeCategoryIDs.contains(actual.categoryID) else {
+                return nil
+            }
+            return actual.span(asOf: date).intersection(with: day)
+        }
+        return TaptionWatchDaySummary(
+            date: dayStart,
+            scheduledCount: scheduled.count,
+            completedCount: scheduled.filter {
+                $0.status == .completed
+            }.count,
+            recordedMinutes: minutes(in: recordedSpans),
+            activeMinutes: minutes(in: activeSpans)
+        )
+    }
+
+    private static func minutes(in spans: [TimeSpan]) -> Int {
+        let ordered = spans.sorted { $0.start < $1.start }
+        guard var current = ordered.first else { return 0 }
+        var duration: TimeInterval = 0
+        for span in ordered.dropFirst() {
+            if span.start <= current.end {
+                current.end = max(current.end, span.end)
+            } else {
+                duration += current.duration
+                current = span
+            }
+        }
+        duration += current.duration
+        return max(0, Int((duration / 60).rounded()))
     }
 }
 

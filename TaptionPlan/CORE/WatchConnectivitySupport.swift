@@ -118,6 +118,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private let commandDefaults: UserDefaults
     private let commandDefaultsKey = "TaptionPlan.appliedWatchCommandIDs"
     private let lock = NSLock()
+    private var latestPayloadData: Data?
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
     private var sensorSummaryHandler:
         (@Sendable (TaptionWatchSensorSummary) -> Void)?
@@ -157,8 +158,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     }
 
     func update(payload: TaptionWatchPayload) throws {
-        guard WCSession.isSupported() else { return }
         let data = try encoder.encode(payload)
+        storeLatestPayload(data)
+        guard WCSession.isSupported() else { return }
         let message: [String: Any] = [TaptionWatchEnvelope.payloadKey: data]
         let session = WCSession.default
         guard session.activationState == .activated,
@@ -209,7 +211,14 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
         let accepted = receiveEnvelope(message)
-        replyHandler([TaptionWatchEnvelope.acceptedKey: accepted])
+        var reply: [String: Any] = [
+            TaptionWatchEnvelope.acceptedKey: accepted,
+        ]
+        if message[TaptionWatchEnvelope.refreshRequestKey] as? Bool == true,
+           let data = loadLatestPayload() {
+            reply[TaptionWatchEnvelope.payloadKey] = data
+        }
+        replyHandler(reply)
     }
 
     nonisolated func session(
@@ -222,6 +231,10 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     @discardableResult
     private func receiveEnvelope(_ envelope: [String: Any]) -> Bool {
         var accepted = receiveCommand(from: envelope)
+        if envelope[TaptionWatchEnvelope.refreshRequestKey] as? Bool == true {
+            publishLatestPayload()
+            accepted = true
+        }
         if let data = envelope[
             TaptionWatchEnvelope.sensorSummaryKey
         ] as? Data,
@@ -237,6 +250,37 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             accepted = true
         }
         return accepted
+    }
+
+    private func publishLatestPayload() {
+        guard let data = loadLatestPayload(), WCSession.isSupported() else {
+            return
+        }
+        let session = WCSession.default
+        guard session.activationState == .activated, session.isPaired else {
+            return
+        }
+        let message: [String: Any] = [TaptionWatchEnvelope.payloadKey: data]
+        try? session.updateApplicationContext(message)
+        if session.isReachable {
+            session.sendMessage(
+                message,
+                replyHandler: nil,
+                errorHandler: nil
+            )
+        }
+    }
+
+    private func storeLatestPayload(_ data: Data) {
+        lock.lock()
+        latestPayloadData = data
+        lock.unlock()
+    }
+
+    private func loadLatestPayload() -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return latestPayloadData
     }
 
     @discardableResult

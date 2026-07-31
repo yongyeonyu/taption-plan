@@ -1626,7 +1626,14 @@ final class FeatureEngineTests: XCTestCase {
                 )
             ],
             catStyle: CatStyle.calico.rawValue,
-            reducesMotion: false
+            reducesMotion: false,
+            todaySummary: TaptionWatchDaySummary(
+                date: base,
+                scheduledCount: 3,
+                completedCount: 1,
+                recordedMinutes: 95,
+                activeMinutes: 40
+            )
         )
         let payloadData = try JSONEncoder().encode(payload)
         XCTAssertEqual(
@@ -1636,6 +1643,76 @@ final class FeatureEngineTests: XCTestCase {
             ),
             payload
         )
+    }
+
+    func testWatchDaySummaryMergesOverlappingActuals() {
+        let base = makeDate(2026, 7, 30, 9)
+        let plans = [
+            PlanRecord(
+                title: "완료한 계획",
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(hour)
+                ),
+                categoryID: "project",
+                status: .completed
+            ),
+            PlanRecord(
+                title: "다음 계획",
+                span: TimeSpan(
+                    start: base.addingTimeInterval(2 * hour),
+                    end: base.addingTimeInterval(3 * hour)
+                ),
+                categoryID: "study"
+            ),
+            PlanRecord(
+                title: "건너뛴 계획",
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(hour)
+                ),
+                categoryID: "hobby",
+                status: .skipped
+            ),
+        ]
+        let actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "걷기",
+                categoryID: "movement",
+                startedAt: base,
+                endedAt: base.addingTimeInterval(hour),
+                source: .appleWatch
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "운동",
+                categoryID: "exercise",
+                startedAt: base.addingTimeInterval(30 * 60),
+                endedAt: base.addingTimeInterval(90 * 60),
+                source: .healthKit
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "project",
+                startedAt: base.addingTimeInterval(3 * hour),
+                endedAt: base.addingTimeInterval(4 * hour),
+                source: .timer
+            ),
+        ]
+
+        let summary = TaptionWatchDaySummaryFactory.make(
+            plans: plans,
+            actuals: actuals,
+            at: base.addingTimeInterval(6 * hour),
+            calendar: utcCalendar
+        )
+
+        XCTAssertEqual(summary.scheduledCount, 2)
+        XCTAssertEqual(summary.completedCount, 1)
+        XCTAssertEqual(summary.recordedMinutes, 150)
+        XCTAssertEqual(summary.activeMinutes, 90)
     }
 
     func testWatchSensorSummaryRoundTripCreatesOneActivityAndHealthReplacesIt()
@@ -1804,7 +1881,7 @@ final class FeatureEngineTests: XCTestCase {
             hideSensitiveContent: true
         )
         XCTAssertTrue(snapshot.catIsRunning)
-        XCTAssertEqual(snapshot.availableActions.count, 3)
+        XCTAssertTrue(snapshot.availableActions.isEmpty)
         XCTAssertEqual(
             CatMotionPolicy.resolve(
                 style: .white,

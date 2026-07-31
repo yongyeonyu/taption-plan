@@ -24,15 +24,6 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let session = WCSession.default
         session.delegate = self
         session.activate()
-        if let data = session.receivedApplicationContext[
-            TaptionWatchEnvelope.payloadKey
-        ] as? Data {
-            apply(data: data)
-        }
-        updateStatus(
-            activationRawValue: session.activationState.rawValue,
-            isReachable: session.isReachable
-        )
     }
 
     var orderedItems: [TaptionWatchPlanItem] {
@@ -41,7 +32,11 @@ final class WatchConnectivityController: NSObject, ObservableObject {
 
     func currentItem(at date: Date = .now) -> TaptionWatchPlanItem? {
         orderedItems.first { $0.status == "running" }
-            ?? orderedItems.first { $0.startsAt <= date && date < $0.endsAt }
+            ?? orderedItems.first {
+                $0.status == "planned"
+                    && $0.startsAt <= date
+                    && date < $0.endsAt
+            }
     }
 
     func nextItem(at date: Date = .now) -> TaptionWatchPlanItem? {
@@ -52,17 +47,46 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     func send(_ kind: TaptionWatchCommandKind, for planID: UUID) {
+        let command = TaptionWatchCommand(planID: planID, kind: kind)
         guard WCSession.isSupported(),
-              let data = try? encoder.encode(
-                TaptionWatchCommand(planID: planID, kind: kind)
-              ) else {
+              let data = try? encoder.encode(command) else {
             return
         }
+        applyOptimistic(command)
         let envelope: [String: Any] = [TaptionWatchEnvelope.commandKey: data]
         let session = WCSession.default
         session.transferUserInfo(envelope)
         if session.isReachable {
             session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
+        }
+    }
+
+    func requestSync() {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        let request: [String: Any] = [
+            TaptionWatchEnvelope.refreshRequestKey: true,
+        ]
+        if session.isReachable {
+            session.sendMessage(
+                request,
+                replyHandler: { [weak self] reply in
+                    guard let data = reply[
+                        TaptionWatchEnvelope.payloadKey
+                    ] as? Data else {
+                        return
+                    }
+                    Task { @MainActor [weak self] in
+                        self?.apply(data: data)
+                    }
+                },
+                errorHandler: { _ in
+                    session.transferUserInfo(request)
+                }
+            )
+        } else {
+            session.transferUserInfo(request)
         }
     }
 
@@ -96,6 +120,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             }
             if activationState == .activated {
                 self?.flushPendingSensorSummaries(using: .default)
+                self?.requestSync()
             }
         }
     }
@@ -108,6 +133,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                 activationRawValue: activationRawValue,
                 isReachable: isReachable
             )
+            if isReachable {
+                self?.requestSync()
+            }
         }
     }
 
@@ -131,6 +159,16 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
     }
 
+    nonisolated func session(
+        _ session: WCSession,
+        didReceiveUserInfo userInfo: [String: Any] = [:]
+    ) {
+        let data = userInfo[TaptionWatchEnvelope.payloadKey] as? Data
+        Task { @MainActor [weak self] in
+            if let data { self?.apply(data: data) }
+        }
+    }
+
     private func apply(data: Data) {
         guard let value = try? decoder.decode(
                 TaptionWatchPayload.self,
@@ -140,6 +178,36 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
         payload = value
         UserDefaults.standard.set(data, forKey: cachedPayloadKey)
+    }
+
+    private func applyOptimistic(_ command: TaptionWatchCommand) {
+        guard var value = payload,
+              let index = value.items.firstIndex(where: {
+                  $0.id == command.planID
+              }) else {
+            return
+        }
+        switch command.kind {
+        case .start:
+            value.items[index].status = "running"
+            value.items[index].actualStartedAt = command.requestedAt
+        case .complete, .stopCurrentActivity:
+            value.items[index].status = "completed"
+            value.items[index].actualStartedAt = nil
+        case .skip:
+            value.items[index].status = "skipped"
+            value.items[index].actualStartedAt = nil
+        case .postponeThirtyMinutes:
+            value.items[index].startsAt = value.items[index].startsAt
+                .addingTimeInterval(30 * 60)
+            value.items[index].endsAt = value.items[index].endsAt
+                .addingTimeInterval(30 * 60)
+        }
+        value.generatedAt = .now
+        payload = value
+        if let data = try? encoder.encode(value) {
+            UserDefaults.standard.set(data, forKey: cachedPayloadKey)
+        }
     }
 
     private func restoreCachedPayload() {

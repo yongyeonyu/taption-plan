@@ -2176,27 +2176,8 @@ struct WidgetPreviewView: View {
                 Rectangle().fill(Color.tpNow).frame(width: 2, height: 42)
                     .position(x: proxy.size.width * now, y: 55)
             }
-            .frame(height: 76)
+            .frame(height: 112)
             .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine).frame(height: 0.5) }
-
-            HStack(spacing: 7) {
-                widgetAction(
-                    "checkmark",
-                    "했어요",
-                    action: .complete
-                )
-                widgetAction(
-                    "clock",
-                    "30분",
-                    action: .postponeThirtyMinutes
-                )
-                widgetAction(
-                    "location.north",
-                    "다음 빈 시간",
-                    action: .moveToNextFreeTime
-                )
-            }
-            .padding(.top, 11)
         }
         .padding(14)
         .background(.white.opacity(0.94), in: RoundedRectangle(cornerRadius: 20))

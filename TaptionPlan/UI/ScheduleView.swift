@@ -197,6 +197,7 @@ struct ScheduleView: View {
     @State private var detailSection: TimelineDetailSection = .map
     @State private var selectedPhotoCluster: PhotoCluster?
     @State private var routeReadings: [SensorReading] = []
+    @State private var editingPlanID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -213,11 +214,17 @@ struct ScheduleView: View {
                 isPreviousEnabled: model.canShiftToPreviousPeriod,
                 isNextEnabled: model.canShiftToNextPeriod
             )
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    editingPlanID = nil
+                }
+            )
             TimelineBoard(
                 model: model,
                 scale: model.selectedScale,
                 storedPlans: model.snapshot.plans,
                 dayZoom: $dayZoom,
+                editingPlanID: $editingPlanID,
                 onPlayheadMove: { date in
                     focusMapOnPlayhead(at: date)
                 },
@@ -232,6 +239,7 @@ struct ScheduleView: View {
                     detailSection = selection.preferredDetailSection
                 },
                 onPhotoSelection: { cluster in
+                    editingPlanID = nil
                     selectedPhotoCluster = cluster
                     selectedTimelineItem = TimelineSelection(
                         title: "사진",
@@ -245,6 +253,10 @@ struct ScheduleView: View {
                 }
             )
             Spacer(minLength: 0)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    editingPlanID = nil
+                }
             TimelineDetailPanel(
                 model: model,
                 selection: selectedTimelineItem,
@@ -252,6 +264,11 @@ struct ScheduleView: View {
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
                 routeReadings: routeReadings
+            )
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    editingPlanID = nil
+                }
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -272,12 +289,10 @@ struct ScheduleView: View {
                 categoryID: "movement",
                 categoryName: "이동"
             )
-            detailSection = .map
             return
         }
 
         selectedTimelineItem = selection
-        detailSection = selection.preferredDetailSection
         if selection.categoryID != "photo" {
             selectedPhotoCluster = nil
         }
@@ -484,15 +499,33 @@ private struct TimelineDetailPanel: View {
                         } label: {
                             Label(item.rawValue, systemImage: item.systemImage)
                                 .font(.taption(size: 9, weight: isSelected || isHighlighted ? .bold : .regular))
-                                .foregroundStyle(isSelected || isHighlighted ? Color.tpInk : Color.tpSecondary)
+                                .foregroundStyle(
+                                    isSelected
+                                        ? Color.white
+                                        : isHighlighted
+                                            ? Color.tpInk
+                                            : Color.tpSecondary
+                                )
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 6)
                                 .background(
-                                    isSelected ? Color.white : Color.clear,
+                                    isSelected ? Color.tpInk : Color.clear,
                                     in: Capsule()
                                 )
+                                .overlay {
+                                    if isHighlighted && !isSelected {
+                                        Capsule()
+                                            .stroke(
+                                                Color.tpInk.opacity(0.24),
+                                                lineWidth: 0.75
+                                            )
+                                    }
+                                }
                         }
                         .buttonStyle(.plain)
+                        .accessibilityAddTraits(
+                            isSelected ? .isSelected : []
+                        )
                     }
                 }
                 .padding(.horizontal, 8)
@@ -655,28 +688,28 @@ private struct TimelineDetailPanel: View {
     private var actionContent: some View {
         VStack(alignment: .leading, spacing: 7) {
             detailHeading("액션·메모", systemImage: "checklist.checked")
-            if let selection {
+            if let selection,
+               let planID = selection.planID,
+               selection.categoryID != "calendar" {
                 Text(selection.title)
                     .font(.taption(size: 14, weight: .bold))
                 Text("\(selection.span.start.formatted(date: .omitted, time: .shortened)) → \(selection.span.end.formatted(date: .omitted, time: .shortened))")
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
-                if let planID = selection.planID {
-                    actionMemoPreview(planID: planID)
-                    HStack(spacing: 8) {
-                        Button("액션아이템 편집") {
-                            model.planEditorRequest = PlanEditorRequest(id: planID)
-                        }
-                        Button("메모 추가") {
-                            model.openMemo(for: planID)
-                        }
+                actionMemoPreview(planID: planID)
+                HStack(spacing: 8) {
+                    Button("액션아이템 편집") {
+                        model.planEditorRequest = PlanEditorRequest(id: planID)
                     }
-                    .font(.taption(size: 9, weight: .bold))
-                    .buttonStyle(.borderedProminent)
-                    .tint(.tpInk)
+                    Button("메모 추가") {
+                        model.openMemo(for: planID)
+                    }
                 }
+                .font(.taption(size: 9, weight: .bold))
+                .buttonStyle(.borderedProminent)
+                .tint(.tpInk)
             } else {
-                Text("간트 항목을 누르면 상세 내용이 표시됩니다")
+                Text("액션아이템을 선택하면 메모가 표시됩니다")
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -810,16 +843,11 @@ private struct TimelineDetailPanel: View {
     private var scheduleContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             detailHeading("일정", systemImage: "calendar")
-            let plans = model.snapshot.plans.filter {
-                $0.span.intersection(with: selection?.span ?? daySpan) != nil
-                    && $0.parentID == nil
-                    && $0.categoryID != "event"
-            }
             let calendarEvents = model.snapshot.calendarEvents.filter {
                 $0.span.intersection(with: selection?.span ?? daySpan) != nil
             }
-            if plans.isEmpty && calendarEvents.isEmpty {
-                Text("선택한 시간의 계획이 없습니다")
+            if calendarEvents.isEmpty {
+                Text("선택한 시간의 일정이 없습니다")
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
             } else {
@@ -837,15 +865,6 @@ private struct TimelineDetailPanel: View {
                         }
                         Spacer()
                         Text(event.span.start.formatted(date: .omitted, time: .shortened))
-                            .font(.taption(size: 8))
-                            .foregroundStyle(Color.tpSecondary)
-                    }
-                }
-                ForEach(plans.prefix(4)) { plan in
-                    HStack {
-                        Text(plan.title).font(.taption(size: 9, weight: .semibold))
-                        Spacer()
-                        Text(plan.span.start.formatted(date: .omitted, time: .shortened))
                             .font(.taption(size: 8))
                             .foregroundStyle(Color.tpSecondary)
                     }
@@ -1274,6 +1293,7 @@ struct GroupGanttView: View {
     @State private var detailSection: TimelineDetailSection = .map
     @State private var selectedPhotoCluster: PhotoCluster?
     @State private var routeReadings: [SensorReading] = []
+    @State private var editingPlanID: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1286,12 +1306,18 @@ struct GroupGanttView: View {
                 onDayZoomChange: { dayZoom = $0 },
                 onBack: { model.closeCurrentGroup() }
             )
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    editingPlanID = nil
+                }
+            )
             TimelineBoard(
                 model: model,
                 scale: model.selectedScale,
                 storedPlans: model.snapshot.plans,
                 isGroup: true,
                 dayZoom: $dayZoom,
+                editingPlanID: $editingPlanID,
                 onPlayheadMove: { date in
                     focusMapOnPlayhead(at: date)
                 },
@@ -1306,6 +1332,7 @@ struct GroupGanttView: View {
                     detailSection = selection.preferredDetailSection
                 },
                 onPhotoSelection: { cluster in
+                    editingPlanID = nil
                     selectedPhotoCluster = cluster
                     selectedTimelineItem = TimelineSelection(
                         title: "사진",
@@ -1319,6 +1346,10 @@ struct GroupGanttView: View {
                 }
             )
             Spacer(minLength: 0)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    editingPlanID = nil
+                }
             TimelineDetailPanel(
                 model: model,
                 selection: selectedTimelineItem,
@@ -1326,6 +1357,11 @@ struct GroupGanttView: View {
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
                 routeReadings: routeReadings
+            )
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    editingPlanID = nil
+                }
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -1346,12 +1382,10 @@ struct GroupGanttView: View {
                 categoryID: "movement",
                 categoryName: "이동"
             )
-            detailSection = .map
             return
         }
 
         selectedTimelineItem = selection
-        detailSection = selection.preferredDetailSection
         if selection.categoryID != "photo" {
             selectedPhotoCluster = nil
         }
@@ -1520,11 +1554,11 @@ private struct TimelineBoard: View {
     let storedPlans: [PlanRecord]
     var isGroup = false
     @Binding var dayZoom: TimelineZoomPreset
+    @Binding var editingPlanID: UUID?
     var onPlayheadMove: ((Date) -> Void)?
     var onSelection: ((TimelineSelection) -> Void)?
     var onFocus: ((TimelineSelection) -> Void)?
     var onPhotoSelection: ((PhotoCluster) -> Void)?
-    @State private var editingPlanID: UUID?
     @State private var viewport = GanttViewport.full
     @State private var dragOrigin: GanttViewport?
     @State private var magnifyOrigin: GanttViewport?
@@ -1540,10 +1574,21 @@ private struct TimelineBoard: View {
         GeometryReader { boardProxy in
             VStack(spacing: 0) {
                 axis(markers: layout.axisMarkers)
+                    .simultaneousGesture(
+                        TapGesture().onEnded {
+                            editingPlanID = nil
+                        }
+                    )
 
                 ScrollView(.vertical, showsIndicators: false) {
                     GeometryReader { _ in
                         ZStack(alignment: .topLeading) {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    editingPlanID = nil
+                                }
+
                             VStack(spacing: 0) {
                                 ForEach(layout.rows) { row in
                                     TimelineRow(
@@ -3549,6 +3594,19 @@ private struct TimelineBoard: View {
         }
 
         guard let categoryID = row.categoryID else { return }
+        if categoryID == "calendar" {
+            onSelection?(
+                TimelineSelection(
+                    title: "일정",
+                    span: visibleSpan,
+                    planID: nil,
+                    isRoute: false,
+                    categoryID: "calendar",
+                    categoryName: "일정"
+                )
+            )
+            return
+        }
         let memoPlan = model.memoPlan(
             forCategoryID: categoryID,
             categoryName: row.title,
@@ -3727,9 +3785,20 @@ private struct TimelineRow: View {
                 }
             }
             .buttonStyle(.plain)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    onEdit(nil)
+                }
+            )
 
             GeometryReader { proxy in
                 ZStack(alignment: .topLeading) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            onEdit(nil)
+                        }
+
                     if row.isSystemAutomatic {
                         Rectangle()
                             .fill(Color.tpInk.opacity(0.026))
@@ -3751,7 +3820,12 @@ private struct TimelineRow: View {
                                 secondsPerPoint:
                                     visibleDuration
                                     / max(1, proxy.size.width),
-                                onTap: { onBlockTap(block) },
+                                onTap: {
+                                    if block.planID == nil {
+                                        onEdit(nil)
+                                    }
+                                    onBlockTap(block)
+                                },
                                 onDoubleTap: {
                                     onBlockDoubleTap(block)
                                 },
@@ -3936,7 +4010,11 @@ private struct TimelineBar: View {
                     }
                 }
         )
-        .onLongPressGesture(minimumDuration: 0.35, perform: onEdit)
+        .onLongPressGesture(
+            minimumDuration: 0.18,
+            maximumDistance: 12,
+            perform: onEdit
+        )
         .simultaneousGesture(
             DragGesture(minimumDistance: 12)
                 .onEnded {

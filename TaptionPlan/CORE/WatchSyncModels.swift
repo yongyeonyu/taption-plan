@@ -61,6 +61,14 @@ struct TaptionWatchPlanItem: Identifiable, Codable, Hashable, Sendable {
     var categoryHex: String?
 }
 
+struct TaptionWatchDaySummary: Codable, Hashable, Sendable {
+    var date: Date
+    var scheduledCount: Int
+    var completedCount: Int
+    var recordedMinutes: Int
+    var activeMinutes: Int
+}
+
 struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var generatedAt: Date
     var viewportStart: Date
@@ -68,6 +76,7 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var items: [TaptionWatchPlanItem]
     var catStyle: String
     var reducesMotion: Bool
+    var todaySummary: TaptionWatchDaySummary? = nil
 }
 
 struct TaptionWatchSensorVector3: Codable, Hashable, Sendable {
@@ -119,6 +128,7 @@ enum TaptionWatchEnvelope {
     static let payloadKey = "taption.watch.payload"
     static let commandKey = "taption.watch.command"
     static let sensorSummaryKey = "taption.watch.sensor-summary"
+    static let refreshRequestKey = "taption.watch.refresh-request"
     static let acceptedKey = "taption.watch.accepted"
 }
 

@@ -113,26 +113,7 @@ private struct TaptionScheduleWidgetView: View {
                 date: entry.date,
                 animationPhase: entry.animationPhase
             )
-            .frame(height: 76)
-
-            HStack(spacing: 7) {
-                actionButton(
-                    "했어요",
-                    icon: "checkmark",
-                    action: .complete
-                )
-                actionButton(
-                    "30분",
-                    icon: "clock",
-                    action: .postponeThirtyMinutes
-                )
-                actionButton(
-                    "다음 빈 시간",
-                    icon: "location.north",
-                    action: .moveToNextFreeTime
-                )
-            }
-            .padding(.top, 11)
+            .frame(height: 112)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
