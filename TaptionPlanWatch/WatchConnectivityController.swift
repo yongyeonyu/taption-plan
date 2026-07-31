@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import WidgetKit
 
 @MainActor
 final class WatchConnectivityController: NSObject, ObservableObject {
@@ -68,25 +69,20 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let request: [String: Any] = [
             TaptionWatchEnvelope.refreshRequestKey: true,
         ]
+
+        // Keep the reliable request independent from the live request.  A
+        // WatchConnectivity reply/error callback may arrive on its private
+        // operation queue; closures created from this @MainActor type then
+        // trip Swift 6's actor-isolation precondition before their body runs.
+        // The iPhone publishes its latest payload when it receives either
+        // form of the refresh request, so no callback is needed here.
+        session.transferUserInfo(request)
         if session.isReachable {
             session.sendMessage(
                 request,
-                replyHandler: { [weak self] reply in
-                    guard let data = reply[
-                        TaptionWatchEnvelope.payloadKey
-                    ] as? Data else {
-                        return
-                    }
-                    Task { @MainActor [weak self] in
-                        self?.apply(data: data)
-                    }
-                },
-                errorHandler: { _ in
-                    session.transferUserInfo(request)
-                }
+                replyHandler: nil,
+                errorHandler: nil
             )
-        } else {
-            session.transferUserInfo(request)
         }
     }
 
@@ -178,6 +174,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
         payload = value
         UserDefaults.standard.set(data, forKey: cachedPayloadKey)
+        publishToWidget(value)
     }
 
     private func applyOptimistic(_ command: TaptionWatchCommand) {
@@ -208,6 +205,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         if let data = try? encoder.encode(value) {
             UserDefaults.standard.set(data, forKey: cachedPayloadKey)
         }
+        publishToWidget(value)
     }
 
     private func restoreCachedPayload() {
@@ -219,6 +217,14 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         payload = value
+        publishToWidget(value)
+    }
+
+    private func publishToWidget(_ payload: TaptionWatchPayload) {
+        guard (try? TaptionWatchWidgetStore.write(payload)) != nil else {
+            return
+        }
+        WidgetCenter.shared.reloadTimelines(ofKind: TaptionWatchWidgetKind.status)
     }
 
     private func updateStatus(

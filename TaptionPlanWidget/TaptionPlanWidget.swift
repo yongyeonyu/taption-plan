@@ -50,7 +50,9 @@ struct TaptionScheduleProvider: TimelineProvider {
         if payload.reducesMotion != true {
             refreshDates.append(
                 contentsOf: (1...60).map {
-                    now.addingTimeInterval(Double($0) * 2)
+                    now.addingTimeInterval(
+                        Double($0) * TaptionWidgetCatWalkEngine.defaultStepDuration
+                    )
                 }
             )
         }
@@ -212,7 +214,9 @@ private struct TaptionScheduleWidgetView: View {
     }
 
     private var playbackInterval: TimeInterval {
-        entry.payload.reducesMotion == true ? 60 : 2
+        entry.payload.reducesMotion == true
+            ? 60
+            : TaptionWidgetCatWalkEngine.defaultStepDuration
     }
 }
 
@@ -567,6 +571,12 @@ private struct WidgetCat: View {
             ? Color.white.opacity(0.82)
             : palette.outline
         let pink = Color(red: 1, green: 0.61, blue: 0.67)
+        let furHighlight = Color.white.opacity(
+            style == "white" ? 0.64 : 0.34
+        )
+        let detailLine = style == "black"
+            ? Color.white.opacity(0.64)
+            : palette.outline.opacity(0.58)
         let stroke = StrokeStyle(
             lineWidth: 2.2,
             lineCap: .round,
@@ -593,13 +603,96 @@ private struct WidgetCat: View {
             control1: tailControl1,
             control2: tailControl2
         )
-        context.stroke(tail, with: outline, style: stroke)
+        context.stroke(
+            tail,
+            with: outline,
+            style: StrokeStyle(
+                lineWidth: 4.1,
+                lineCap: .round,
+                lineJoin: .round
+            )
+        )
+        context.stroke(
+            tail,
+            with: .color(palette.base),
+            style: StrokeStyle(
+                lineWidth: 2.75,
+                lineCap: .round,
+                lineJoin: .round
+            )
+        )
+
+        if style == "mackerel" || style == "cheese" {
+            for offset in [0.0, 2.2, 4.4] {
+                var tailStripe = Path()
+                tailStripe.move(
+                    to: CGPoint(
+                        x: 4.1 + offset * 0.72,
+                        y: tailTip.y + 1.0 + offset * 0.72
+                    )
+                )
+                tailStripe.addLine(
+                    to: CGPoint(
+                        x: 5.8 + offset * 0.72,
+                        y: tailTip.y + 1.8 + offset * 0.72
+                    )
+                )
+                context.stroke(
+                    tailStripe,
+                    with: .color(palette.stripe),
+                    style: StrokeStyle(
+                        lineWidth: 0.8,
+                        lineCap: .round
+                    )
+                )
+            }
+        } else if style == "calico" || style == "cow" {
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: tailTip.x - 1.45,
+                        y: tailTip.y - 1.35,
+                        width: 2.9,
+                        height: 2.7
+                    )
+                ),
+                with: .color(
+                    style == "calico" ? palette.orange : palette.dark
+                )
+            )
+        }
 
         let body = Path(
             ellipseIn: CGRect(x: 9.5, y: 6 + bodyLift, width: 21, height: 12)
         )
         context.fill(body, with: .color(palette.base))
         context.stroke(body, with: outline, style: StrokeStyle(lineWidth: 1))
+
+        var backHighlight = Path()
+        backHighlight.move(to: CGPoint(x: 12.2, y: 8.7 + bodyLift))
+        backHighlight.addCurve(
+            to: CGPoint(x: 23.7, y: 7.5 + bodyLift),
+            control1: CGPoint(x: 15.2, y: 6.8 + bodyLift),
+            control2: CGPoint(x: 20.6, y: 6.4 + bodyLift)
+        )
+        context.stroke(
+            backHighlight,
+            with: .color(furHighlight),
+            style: StrokeStyle(lineWidth: 0.8, lineCap: .round)
+        )
+
+        var bellyShade = Path()
+        bellyShade.move(to: CGPoint(x: 14.4, y: 16.2 + bodyLift))
+        bellyShade.addCurve(
+            to: CGPoint(x: 24.8, y: 16.7 + bodyLift),
+            control1: CGPoint(x: 17.8, y: 18.0 + bodyLift),
+            control2: CGPoint(x: 22.0, y: 18.0 + bodyLift)
+        )
+        context.stroke(
+            bellyShade,
+            with: .color(detailLine.opacity(0.42)),
+            style: StrokeStyle(lineWidth: 0.65, lineCap: .round)
+        )
 
         if style == "calico" {
             var orangePatch = Path()
@@ -693,6 +786,18 @@ private struct WidgetCat: View {
         context.fill(head, with: .color(palette.base))
         context.stroke(head, with: outline, style: StrokeStyle(lineWidth: 1.1))
 
+        context.fill(
+            Path(
+                ellipseIn: CGRect(
+                    x: 26.1,
+                    y: 4.5 + bodyLift,
+                    width: 7.8,
+                    height: 4.2
+                )
+            ),
+            with: .color(furHighlight.opacity(0.54))
+        )
+
         if style == "calico" {
             context.fill(
                 Path(
@@ -748,6 +853,36 @@ private struct WidgetCat: View {
             }
         }
 
+        var collar = Path()
+        collar.move(to: CGPoint(x: 25.7, y: 14.0 + bodyLift))
+        collar.addCurve(
+            to: CGPoint(x: 31.1, y: 15.0 + bodyLift),
+            control1: CGPoint(x: 27.2, y: 14.8 + bodyLift),
+            control2: CGPoint(x: 29.6, y: 15.1 + bodyLift)
+        )
+        context.stroke(
+            collar,
+            with: .color(Color(red: 0.86, green: 0.28, blue: 0.26)),
+            style: StrokeStyle(lineWidth: 0.85, lineCap: .round)
+        )
+        let bell = Path(
+            ellipseIn: CGRect(
+                x: 28.3,
+                y: 14.4 + bodyLift,
+                width: 1.65,
+                height: 1.65
+            )
+        )
+        context.fill(
+            bell,
+            with: .color(Color(red: 0.98, green: 0.73, blue: 0.19))
+        )
+        context.stroke(
+            bell,
+            with: .color(palette.outline.opacity(0.72)),
+            style: StrokeStyle(lineWidth: 0.35)
+        )
+
         let muzzle = Path(
             ellipseIn: CGRect(
                 x: 29.4,
@@ -773,10 +908,21 @@ private struct WidgetCat: View {
             context.fill(
                 Path(
                     ellipseIn: CGRect(
-                        x: eyeX + 0.55,
-                        y: 7.35 + bodyLift,
-                        width: 0.45,
-                        height: 0.55
+                        x: eyeX + 0.68,
+                        y: 7.48 + bodyLift,
+                        width: 0.38,
+                        height: 1.15
+                    )
+                ),
+                with: .color(Color.black.opacity(0.88))
+            )
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: eyeX + 0.42,
+                        y: 7.28 + bodyLift,
+                        width: 0.5,
+                        height: 0.58
                     )
                 ),
                 with: .color(Color.white.opacity(0.92))
@@ -837,6 +983,25 @@ private struct WidgetCat: View {
             with: .color(pink.opacity(0.48))
         )
 
+        for point in [
+            CGPoint(x: 29.7, y: 11.3 + bodyLift),
+            CGPoint(x: 29.9, y: 12.0 + bodyLift),
+            CGPoint(x: 34.8, y: 11.3 + bodyLift),
+            CGPoint(x: 34.6, y: 12.0 + bodyLift),
+        ] {
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: point.x - 0.18,
+                        y: point.y - 0.18,
+                        width: 0.36,
+                        height: 0.36
+                    )
+                ),
+                with: .color(detailLine.opacity(0.78))
+            )
+        }
+
         var whiskers = Path()
         whiskers.move(to: CGPoint(x: 29.5, y: 11.1 + bodyLift))
         whiskers.addLine(to: CGPoint(x: 26.3, y: 10.4 + bodyLift))
@@ -879,6 +1044,29 @@ private struct WidgetCat: View {
                 with: outline,
                 style: StrokeStyle(lineWidth: 0.65)
             )
+            for toeOffset in [-0.42, 0.42] {
+                var toe = Path()
+                toe.move(
+                    to: CGPoint(
+                        x: end.x + toeOffset,
+                        y: end.y - 0.2
+                    )
+                )
+                toe.addLine(
+                    to: CGPoint(
+                        x: end.x + toeOffset,
+                        y: end.y + 0.38
+                    )
+                )
+                context.stroke(
+                    toe,
+                    with: .color(detailLine.opacity(0.72)),
+                    style: StrokeStyle(
+                        lineWidth: 0.28,
+                        lineCap: .round
+                    )
+                )
+            }
         }
     }
 

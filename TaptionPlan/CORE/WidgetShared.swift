@@ -208,6 +208,20 @@ enum TaptionWidgetPlaybackEngine {
     }
 }
 
+enum TaptionWidgetContentPolicy {
+    static func locationTitle(
+        displayName: String,
+        floor: Int?
+    ) -> String {
+        let cleanName = displayName.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        let baseTitle = cleanName.isEmpty ? "위치 기록" : cleanName
+        guard let floor else { return baseTitle }
+        return "\(baseTitle) · \(floor)층"
+    }
+}
+
 struct TaptionWidgetCatWalkPose: Equatable, Sendable {
     var progress: Double
     var facesLeft: Bool
@@ -215,17 +229,22 @@ struct TaptionWidgetCatWalkPose: Equatable, Sendable {
 }
 
 enum TaptionWidgetCatWalkEngine {
+    static let defaultStepDuration: TimeInterval = 0.6
+    static let stepCount = 20
+    static let roundTripDuration = defaultStepDuration * Double(stepCount)
+
     static func pose(
         at date: Date,
-        stepDuration: TimeInterval = 2
+        stepDuration: TimeInterval = defaultStepDuration
     ) -> TaptionWidgetCatWalkPose {
         let duration = max(0.5, stepDuration)
         let rawStep = Int(date.timeIntervalSinceReferenceDate / duration)
-        let step = ((rawStep % 20) + 20) % 20
-        let facesLeft = step >= 10
+        let step = ((rawStep % stepCount) + stepCount) % stepCount
+        let halfStepCount = stepCount / 2
+        let facesLeft = step >= halfStepCount
         let progress = facesLeft
-            ? Double(19 - step) / 9
-            : Double(step) / 9
+            ? Double(stepCount - 1 - step) / Double(halfStepCount - 1)
+            : Double(step) / Double(halfStepCount - 1)
         return TaptionWidgetCatWalkPose(
             progress: min(1, max(0, progress)),
             facesLeft: facesLeft,

@@ -2262,22 +2262,55 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(dates, dates.sorted())
     }
 
+    func testWidgetLocationUsesResolvedIPhonePlaceName() {
+        XCTAssertEqual(
+            TaptionWidgetContentPolicy.locationTitle(
+                displayName: "집",
+                floor: nil
+            ),
+            "집"
+        )
+        XCTAssertEqual(
+            TaptionWidgetContentPolicy.locationTitle(
+                displayName: "회사",
+                floor: 10
+            ),
+            "회사 · 10층"
+        )
+        XCTAssertEqual(
+            TaptionWidgetContentPolicy.locationTitle(
+                displayName: "   ",
+                floor: nil
+            ),
+            "위치 기록"
+        )
+    }
+
     func testWidgetCatWalksAcrossAndTurnsAround() {
         let reference = Date(timeIntervalSinceReferenceDate: 0)
+        let step = TaptionWidgetCatWalkEngine.defaultStepDuration
         let start = TaptionWidgetCatWalkEngine.pose(at: reference)
         let farEdge = TaptionWidgetCatWalkEngine.pose(
-            at: reference.addingTimeInterval(18)
+            at: reference.addingTimeInterval((step * 9) + 0.01)
         )
         let returning = TaptionWidgetCatWalkEngine.pose(
-            at: reference.addingTimeInterval(20)
+            at: reference.addingTimeInterval((step * 10) + 0.01)
+        )
+        let looped = TaptionWidgetCatWalkEngine.pose(
+            at: reference.addingTimeInterval(
+                TaptionWidgetCatWalkEngine.roundTripDuration + 0.01
+            )
         )
 
+        XCTAssertEqual(TaptionWidgetCatWalkEngine.roundTripDuration, 12)
         XCTAssertEqual(start.progress, 0, accuracy: 0.001)
         XCTAssertFalse(start.facesLeft)
         XCTAssertEqual(farEdge.progress, 1, accuracy: 0.001)
         XCTAssertFalse(farEdge.facesLeft)
         XCTAssertEqual(returning.progress, 1, accuracy: 0.001)
         XCTAssertTrue(returning.facesLeft)
+        XCTAssertEqual(looped.progress, 0, accuracy: 0.001)
+        XCTAssertFalse(looped.facesLeft)
     }
 
     func testJSONCSVAndRepositoryRoundTrip() async throws {

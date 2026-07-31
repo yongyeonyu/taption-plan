@@ -2482,14 +2482,12 @@ final class AppModel {
         let locationItems = snapshot.places
             .filter { $0.span.intersection(with: widgetSpan) != nil }
             .map { place in
-                let placeTitle = place.floor.map {
-                    "\(place.displayName) · \($0)층"
-                } ?? place.displayName
                 return TaptionWidgetItem(
                     id: place.id,
-                    title: snapshot.settings.showsPhotosInWidgets
-                        ? placeTitle
-                        : "위치 기록",
+                    title: TaptionWidgetContentPolicy.locationTitle(
+                        displayName: place.displayName,
+                        floor: place.floor
+                    ),
                     categoryID: "location",
                     startsAt: place.span.start,
                     endsAt: place.span.end,
