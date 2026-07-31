@@ -370,6 +370,188 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result?.toFloor, 10)
     }
 
+    func testFloorEstimatorUsesPedometerCountersAsCumulativeValues() {
+        let base = makeDate(2026, 7, 30)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                relativeAltitudeMeters: 0,
+                floorsAscended: 4,
+                floorsDescended: 1
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(30),
+                relativeAltitudeMeters: 3,
+                floorsAscended: 5,
+                floorsDescended: 1
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                relativeAltitudeMeters: 3.1,
+                floorsAscended: 5,
+                floorsDescended: 1
+            )
+        ]
+        let result = FloorEstimator().estimate(
+            readings: readings,
+            placeKey: "office",
+            baselineFloor: 9
+        )
+        XCTAssertEqual(result?.toFloor, 10)
+        XCTAssertTrue(result?.evidence.contains("층계 +1") == true)
+    }
+
+    func testSleepAnalysisBuildsOneSessionWithoutDoubleCountingOverlaps() {
+        let base = makeDate(2026, 7, 30, 22, 0)
+        let segments = [
+            SleepSegment(
+                stage: .inBed,
+                span: TimeSpan(start: base, end: base.addingTimeInterval(8.5 * hour)),
+                sourceName: "iPhone"
+            ),
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(0.5 * hour),
+                    end: base.addingTimeInterval(3 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .deep,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(3 * hour),
+                    end: base.addingTimeInterval(4 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(4 * hour),
+                    end: base.addingTimeInterval(6 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .rem,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(6 * hour),
+                    end: base.addingTimeInterval(7 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .awake,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(7 * hour),
+                    end: base.addingTimeInterval(7.25 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .rem,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(7.25 * hour),
+                    end: base.addingTimeInterval(8 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .asleepUnspecified,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(0.5 * hour),
+                    end: base.addingTimeInterval(8 * hour)
+                ),
+                sourceName: "iPhone"
+            )
+        ]
+
+        let sessions = SleepAnalysisEngine().sessions(from: segments)
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].asleepDuration, 7.25 * hour)
+        XCTAssertEqual(sessions[0].awakeDuration, 0.25 * hour)
+        XCTAssertEqual(sessions[0].inBedDuration, 8.5 * hour)
+        XCTAssertEqual(sessions[0].stageDurations[.deep], hour)
+        XCTAssertEqual(sessions[0].sourceNames, ["iPhone", "Apple Watch"])
+        XCTAssertEqual(
+            sessions[0].sleepEfficiency ?? 0,
+            7.25 / 8.5,
+            accuracy: 0.0001
+        )
+    }
+
+    func testSleepAnalysisSeparatesNapFromNightSleep() {
+        let base = makeDate(2026, 7, 30, 1, 0)
+        let segments = [
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(start: base, end: base.addingTimeInterval(6 * hour)),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .asleepUnspecified,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(12 * hour),
+                    end: base.addingTimeInterval(13 * hour)
+                ),
+                sourceName: "iPhone"
+            )
+        ]
+        XCTAssertEqual(
+            SleepAnalysisEngine().sessions(from: segments).count,
+            2
+        )
+    }
+
+    func testSensorArchivePersistsMotionAndPrunesOldReadings() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taption-sensors-\(UUID().uuidString)")
+        let fileURL = directory.appendingPathComponent("readings.jsonl")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let archive = SensorReadingArchive(
+            fileURL: fileURL,
+            retentionInterval: 86_400
+        )
+        let now = makeDate(2026, 7, 30, 12, 0)
+        let motion = DeviceMotionSnapshot(
+            gravity: SensorVector3(x: 0, y: 0, z: -1),
+            userAcceleration: SensorVector3(x: 0.1, y: 0, z: 0),
+            rotationRate: SensorVector3(x: 0, y: 0.2, z: 0),
+            attitudeRadians: SensorVector3(x: 0, y: 0, z: 1)
+        )
+        try await archive.append(
+            SensorReading(
+                timestamp: now.addingTimeInterval(-2 * 86_400),
+                motion: .walking,
+                stepCount: 100
+            ),
+            now: now
+        )
+        try await archive.append(
+            SensorReading(
+                timestamp: now,
+                motion: .running,
+                stepCount: 220,
+                deviceMotion: motion
+            ),
+            now: now
+        )
+        try await archive.compact(now: now)
+
+        let restored = try await archive.readings(
+            in: TimeSpan(
+                start: now.addingTimeInterval(-3 * 86_400),
+                end: now.addingTimeInterval(hour)
+            )
+        )
+        XCTAssertEqual(restored.count, 1)
+        XCTAssertEqual(restored[0].motion, .running)
+        XCTAssertEqual(restored[0].stepCount, 220)
+        XCTAssertEqual(restored[0].deviceMotion, motion)
+    }
+
     func testPlaceDetectionRequiresLongStay() {
         let base = makeDate(2026, 7, 30)
         let point = GeoPoint(
@@ -481,6 +663,153 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(restored.categories.count, 13)
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
+    }
+
+    func testWidgetCommandMutatesSharedSnapshotWithoutOpeningApp() throws {
+        let base = makeDate(2026, 7, 30, 9)
+        let plan = PlanRecord(
+            title: "집중 작업",
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(hour)
+            ),
+            categoryID: "project"
+        )
+        var source = TaptionDataSnapshot.empty
+        source.plans = [plan]
+
+        let postponed = try TaptionWidgetCommandEngine.apply(
+            TaptionWidgetCommand(
+                planID: plan.id,
+                kind: .postponeThirtyMinutes,
+                requestedAt: base
+            ),
+            to: source
+        )
+        XCTAssertEqual(
+            postponed.plans[0].span.start,
+            base.addingTimeInterval(30 * 60)
+        )
+        XCTAssertEqual(
+            postponed.plans[0].span.end,
+            base.addingTimeInterval(90 * 60)
+        )
+
+        let completed = try TaptionWidgetCommandEngine.apply(
+            TaptionWidgetCommand(
+                planID: plan.id,
+                kind: .complete,
+                requestedAt: base.addingTimeInterval(45 * 60)
+            ),
+            to: source
+        )
+        XCTAssertEqual(completed.plans[0].status, .completed)
+        XCTAssertEqual(completed.actuals.count, 1)
+        XCTAssertEqual(
+            completed.actuals[0].endedAt,
+            base.addingTimeInterval(hour)
+        )
+    }
+
+    func testWidgetDeepLinkParsesExactPlan() throws {
+        let planID = UUID()
+        let link = TaptionDeepLink(
+            url: URL(
+                string: "taptionplan://plan/\(planID.uuidString)"
+            )!
+        )
+
+        XCTAssertEqual(link, .plan(planID))
+        XCTAssertEqual(
+            TaptionDeepLink(url: URL(string: "taptionplan://today")!),
+            .today
+        )
+    }
+
+    func testPlanNotificationPolicyKeepsOnlyUpcomingPlansInOrder() {
+        let now = makeDate(2026, 7, 30, 9)
+        let past = PlanRecord(
+            title: "지난 계획",
+            span: TimeSpan(
+                start: now.addingTimeInterval(-hour),
+                end: now
+            ),
+            categoryID: "project"
+        )
+        let later = PlanRecord(
+            title: "두 번째",
+            span: TimeSpan(
+                start: now.addingTimeInterval(2 * hour),
+                end: now.addingTimeInterval(3 * hour)
+            ),
+            categoryID: "project"
+        )
+        let first = PlanRecord(
+            title: "첫 번째",
+            span: TimeSpan(
+                start: now.addingTimeInterval(hour),
+                end: now.addingTimeInterval(2 * hour)
+            ),
+            categoryID: "study"
+        )
+        var completed = later
+        completed.id = UUID()
+        completed.status = .completed
+
+        let reminders = PlanNotificationPolicy.reminderPlans(
+            from: [past, later, completed, first],
+            now: now
+        )
+
+        XCTAssertEqual(reminders.map(\.id), [first.id, later.id])
+        XCTAssertEqual(
+            PlanNotificationScheduler.identifier(for: first.id),
+            "plan-start-\(first.id.uuidString)"
+        )
+    }
+
+    func testCommercePolicyUsesLifetimeNonConsumableEntitlement() {
+        XCTAssertTrue(TaptionCommercePolicy.isLifetimeNonConsumable)
+        XCTAssertTrue(
+            TaptionCommercePolicy.grantsProAccess(
+                productID: TaptionCommercePolicy.proProductID,
+                revocationDate: nil
+            )
+        )
+        XCTAssertFalse(
+            TaptionCommercePolicy.grantsProAccess(
+                productID: TaptionCommercePolicy.proProductID,
+                revocationDate: .now
+            )
+        )
+        XCTAssertFalse(
+            TaptionCommercePolicy.grantsProAccess(
+                productID: "com.example.other",
+                revocationDate: nil
+            )
+        )
+    }
+
+    func testSettingsMigrationDefaultsNotificationToggleToOff() throws {
+        let encoded = try JSONEncoder().encode(AppFeatureSettings.defaults)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded)
+                as? [String: Any]
+        )
+        object.removeValue(forKey: "notificationsEnabled")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let migrated = try JSONDecoder().decode(
+            AppFeatureSettings.self,
+            from: legacyData
+        )
+
+        XCTAssertFalse(migrated.notificationsEnabled)
+        XCTAssertEqual(migrated.startScale, .day)
+        XCTAssertEqual(
+            migrated.permissions.count,
+            PermissionFeature.allCases.count
+        )
     }
 
     private var utcCalendar: Calendar {

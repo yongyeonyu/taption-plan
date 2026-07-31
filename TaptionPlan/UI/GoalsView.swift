@@ -3,8 +3,41 @@ import SwiftUI
 struct GoalsView: View {
     @Bindable var model: AppModel
 
-    private let goals = [
+    private var goals: [GoalCard] {
+        let roots = model.snapshot.plans
+            .filter { $0.parentID == nil && $0.status != .skipped }
+            .sorted { $0.span.start < $1.span.start }
+        guard !roots.isEmpty else { return Self.sampleGoals }
+
+        let aggregation = TimelineAggregationEngine()
+        return roots.map { plan in
+            let rollup = try? aggregation.rollup(
+                goalID: plan.id,
+                plans: model.snapshot.plans,
+                actuals: model.snapshot.actuals
+            )
+            let planned = rollup?.plannedDuration ?? plan.span.duration
+            let actual = rollup?.actualDuration ?? 0
+            let progress = planned > 0
+                ? min(1, max(0, actual / planned))
+                : 0
+            return GoalCard(
+                id: plan.id,
+                planID: plan.id,
+                title: plan.title,
+                period: periodText(plan.span),
+                leftDetail: "하위 \(rollup?.descendantCount ?? 0)개 · 월→주→일",
+                rightDetail: "실제 \(durationText(actual)) / 계획 \(durationText(planned))",
+                progress: progress,
+                category: PlanCategory(categoryID: plan.categoryID)
+            )
+        }
+    }
+
+    private static let sampleGoals = [
         GoalCard(
+            id: UUID(),
+            planID: nil,
             title: "자격증 취득",
             period: "3월 – 6월",
             leftDetail: "하위 3개 · 월→주→일 연결됨",
@@ -13,6 +46,8 @@ struct GoalsView: View {
             category: .study
         ),
         GoalCard(
+            id: UUID(),
+            planID: nil,
             title: "주 3회 운동 습관",
             period: "1월 – 12월",
             leftDetail: "하위 2개 · 건강 데이터 연동",
@@ -21,6 +56,8 @@ struct GoalsView: View {
             category: .exercise
         ),
         GoalCard(
+            id: UUID(),
+            planID: nil,
             title: "신제품 프로젝트",
             period: "4월 – 9월",
             leftDetail: "하위 4개 · 이번 주 진행 중",
@@ -29,6 +66,8 @@ struct GoalsView: View {
             category: .project
         ),
         GoalCard(
+            id: UUID(),
+            planID: nil,
             title: "일본 여행",
             period: "8월",
             leftDetail: "하위 5개 · 예약 2건 완료",
@@ -46,7 +85,9 @@ struct GoalsView: View {
                 LazyVStack(spacing: 10) {
                     ForEach(goals) { goal in
                         Button {
-                            model.detail = .group
+                            if let planID = goal.planID {
+                                model.openGroup(planID)
+                            }
                         } label: {
                             VStack(alignment: .leading, spacing: 0) {
                                 HStack(spacing: 7) {
@@ -95,6 +136,7 @@ struct GoalsView: View {
                     }
 
                     Button {
+                        model.addPlanContext = .goal
                         model.isAddPlanPresented = true
                     } label: {
                         HStack(spacing: 4) {
@@ -118,10 +160,32 @@ struct GoalsView: View {
             .background(Color.tpBackground)
         }
     }
+
+    private func periodText(_ span: TimeSpan) -> String {
+        let calendar = Calendar.autoupdatingCurrent
+        if calendar.isDate(span.start, equalTo: span.end, toGranularity: .month) {
+            return span.start.formatted(.dateTime.month().day())
+                + " – "
+                + span.end.formatted(.dateTime.day())
+        }
+        return span.start.formatted(.dateTime.month().day())
+            + " – "
+            + span.end.formatted(.dateTime.month().day())
+    }
+
+    private func durationText(_ interval: TimeInterval) -> String {
+        let totalMinutes = max(0, Int(interval / 60))
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours == 0 { return "\(minutes)m" }
+        if minutes == 0 { return "\(hours)h" }
+        return "\(hours)h \(minutes)m"
+    }
 }
 
 private struct GoalCard: Identifiable {
-    let id = UUID()
+    let id: UUID
+    let planID: UUID?
     let title: String
     let period: String
     let leftDetail: String

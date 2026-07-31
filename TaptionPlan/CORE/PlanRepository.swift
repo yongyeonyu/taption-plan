@@ -11,6 +11,7 @@ enum RepositoryError: Error, Equatable {
     case unsupportedSchema(Int)
     case cloudAccountUnavailable
     case cloudPayloadMissing
+    case appGroupUnavailable
 }
 
 actor FilePlanRepository: PlanDataRepository {
@@ -40,6 +41,22 @@ actor FilePlanRepository: PlanDataRepository {
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         return FilePlanRepository(
             fileURL: directory.appendingPathComponent("taption-data-v1.json")
+        )
+    }
+
+    static func appGroup(
+        identifier: String = TaptionWidgetSharedStore.appGroupIdentifier,
+        fileManager: FileManager = .default
+    ) throws -> FilePlanRepository {
+        guard let directory = fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier: identifier
+        ) else {
+            throw RepositoryError.appGroupUnavailable
+        }
+        return FilePlanRepository(
+            fileURL: directory.appendingPathComponent(
+                "taption-data-v1.json"
+            )
         )
     }
 
@@ -106,7 +123,17 @@ actor CloudKitSnapshotSyncService {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    init(container: CKContainer = .default()) {
+    nonisolated static func automatic() -> CloudKitSnapshotSyncService? {
+#if targetEnvironment(simulator)
+        return nil
+#else
+        return CloudKitSnapshotSyncService(
+            container: CKContainer(identifier: "iCloud.com.taption.plan")
+        )
+#endif
+    }
+
+    init(container: CKContainer) {
         self.container = container
         self.database = container.privateCloudDatabase
         self.encoder = JSONEncoder()

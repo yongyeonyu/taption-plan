@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct QuickActionSheet: View {
@@ -13,16 +14,74 @@ struct QuickActionSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 14)
 
-            Text(item.title)
-                .font(.system(size: 16, weight: .bold))
-                .padding(.bottom, 14)
+            HStack(spacing: 8) {
+                Text(item.title)
+                    .font(.system(size: 16, weight: .bold))
+                Spacer()
+                if let planID = item.planID {
+                    Button {
+                        dismiss()
+                        Task { @MainActor in
+                            model.planEditorRequest = PlanEditorRequest(
+                                id: planID
+                            )
+                        }
+                    } label: {
+                        Label("편집", systemImage: "slider.horizontal.3")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color.tpSecondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .background(
+                                Color.tpBackground,
+                                in: RoundedRectangle(cornerRadius: 8)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.bottom, 14)
 
-            VStack(alignment: .leading, spacing: 5) {
-                Text(item.time)
-                    .font(.system(size: 15, weight: .bold))
-                Text(item.context)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.tpSecondary)
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(item.time)
+                        .font(.system(size: 15, weight: .bold))
+                    Text(item.context)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                Spacer(minLength: 4)
+                if item.planID != nil {
+                    Button {
+                        run {
+                            id in await model.addPlanToCalendar(id)
+                        }
+                    } label: {
+                        Image(
+                            systemName: selectedPlan?.externalEventID == nil
+                                ? "calendar.badge.plus"
+                                : "checkmark.circle.fill"
+                        )
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(
+                            selectedPlan?.externalEventID == nil
+                                ? Color.tpSecondary
+                                : Color(red: 0.18, green: 0.52, blue: 0.32)
+                        )
+                        .frame(width: 34, height: 34)
+                        .background(
+                            Color.white,
+                            in: RoundedRectangle(cornerRadius: 9)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(selectedPlan?.externalEventID != nil)
+                    .accessibilityLabel(
+                        selectedPlan?.externalEventID == nil
+                            ? "캘린더로 보내기"
+                            : "캘린더에 추가됨"
+                    )
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
@@ -31,19 +90,20 @@ struct QuickActionSheet: View {
             .padding(.bottom, 12)
 
             Button {
+                model.selectedMemoPlanID = item.planID
                 dismiss()
                 Task { @MainActor in
-                    model.detail = .memo
+                    model.openMemo(for: item.planID)
                 }
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "note.text")
                         .font(.system(size: 15))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("메모 2개")
+                        Text("메모 \(itemMemos.count)개")
                             .font(.system(size: 10.5, weight: .bold))
                             .foregroundStyle(Color.tpInk)
-                        Text("마지막 기록 · 오늘 16:40")
+                        Text(lastMemoLabel)
                             .font(.system(size: 9))
                             .foregroundStyle(Color.tpSecondary)
                     }
@@ -66,15 +126,40 @@ struct QuickActionSheet: View {
                 columns: [GridItem(.flexible()), GridItem(.flexible())],
                 spacing: 8
             ) {
-                actionButton("play.fill", "시작", style: .primary)
-                actionButton("checkmark", "했어요")
-                actionButton("clock", "30분 미루기", style: .health)
-                actionButton("location.north", "다음 빈 시간")
-                actionButton("note.text", "메모") {
-                    dismiss()
-                    Task { @MainActor in model.detail = .memo }
+                actionButton("play.fill", "시작", style: .primary) {
+                    run { planID in await model.startPlan(planID) }
                 }
-                actionButton("arrow.counterclockwise", "오늘은 건너뜀")
+                actionButton("checkmark", "했어요") {
+                    run {
+                        planID in await model.performQuickAction(.complete, planID: planID)
+                    }
+                }
+                actionButton("clock", "30분 미루기", style: .health) {
+                    run {
+                        planID in
+                        await model.performQuickAction(
+                            .postponeThirtyMinutes,
+                            planID: planID
+                        )
+                    }
+                }
+                actionButton("location.north", "다음 빈 시간") {
+                    run {
+                        planID in
+                        await model.performQuickAction(
+                            .moveToNextFreeTime,
+                            planID: planID
+                        )
+                    }
+                }
+                actionButton("note.text", "메모") {
+                    model.selectedMemoPlanID = item.planID
+                    dismiss()
+                    Task { @MainActor in model.openMemo(for: item.planID) }
+                }
+                actionButton("arrow.counterclockwise", "오늘은 건너뜀") {
+                    run { planID in await model.skipPlan(planID) }
+                }
             }
         }
         .padding(.horizontal, 18)
@@ -110,14 +195,47 @@ struct QuickActionSheet: View {
         }
         .buttonStyle(.plain)
     }
+
+    private func run(
+        _ operation: @escaping @MainActor (UUID) async -> Void
+    ) {
+        guard let planID = item.planID else {
+            dismiss()
+            return
+        }
+        dismiss()
+        Task { await operation(planID) }
+    }
+
+    private var itemMemos: [ActionMemo] {
+        model.memos(for: item.planID)
+    }
+
+    private var selectedPlan: PlanRecord? {
+        guard let planID = item.planID else { return nil }
+        return model.snapshot.plans.first { $0.id == planID }
+    }
+
+    private var lastMemoLabel: String {
+        guard let last = itemMemos.last else {
+            return "아직 남긴 메모가 없습니다"
+        }
+        return "마지막 기록 · \(last.createdAt.formatted(date: .abbreviated, time: .shortened))"
+    }
 }
 
 struct MemoDetailView: View {
     @Bindable var model: AppModel
     @State private var selectedTag = "결정"
     @State private var memo = ""
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
-    private let tags = ["결정", "아이디어", "막힘", "다음 할 일"]
+    private let tags: [(label: String, kind: MemoKind)] = [
+        ("결정", .decision),
+        ("아이디어", .idea),
+        ("막힘", .blocker),
+        ("다음 할 일", .nextAction),
+    ]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -128,12 +246,12 @@ struct MemoDetailView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("프로젝트 · 오늘 09:00–12:00")
+                        Text(planContext)
                             .font(.system(size: 9.5, weight: .bold))
-                            .foregroundStyle(Color.tpProjectDark)
-                        Text("신제품 기획")
+                            .foregroundStyle(categoryColor)
+                        Text(selectedPlan?.title ?? "계획을 선택해 주세요")
                             .font(.system(size: 16, weight: .bold))
-                        Text("2026년 출시 목표 › 이번 주 기획안 확정")
+                        Text(hierarchyText)
                             .font(.system(size: 10))
                             .foregroundStyle(Color.tpSecondary)
                     }
@@ -142,17 +260,17 @@ struct MemoDetailView: View {
                     .draftCard(radius: 15)
 
                     HStack(spacing: 5) {
-                        ForEach(tags, id: \.self) { tag in
+                        ForEach(tags, id: \.label) { tag in
                             Button {
-                                selectedTag = tag
+                                selectedTag = tag.label
                             } label: {
-                                Text(tag)
+                                Text(tag.label)
                                     .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(selectedTag == tag ? Color(red: 0.36, green: 0.27, blue: 0.49) : Color.tpSecondary)
+                                    .foregroundStyle(selectedTag == tag.label ? Color(red: 0.36, green: 0.27, blue: 0.49) : Color.tpSecondary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 7)
                                     .background(
-                                        selectedTag == tag ? Color.tpStudy : Color(red: 0.92, green: 0.92, blue: 0.93),
+                                        selectedTag == tag.label ? Color.tpStudy : Color(red: 0.92, green: 0.92, blue: 0.93),
                                         in: RoundedRectangle(cornerRadius: 9)
                                     )
                             }
@@ -161,9 +279,24 @@ struct MemoDetailView: View {
                     }
 
                     VStack(spacing: 8) {
-                        memoEntry("09:20", tag: "결정", body: "첫 버전은 iPhone부터 출시하고 기능을 단계적으로 연다.")
-                        memoEntry("14:10", tag: "아이디어", body: "위젯의 현재선 위에서 고양이가 짧게 달리게 한다.")
-                        memoEntry("16:40", tag: "다음 할 일", body: "위치·날씨 권한 안내 문구와 개인정보 범위를 확인한다.")
+                        if planMemos.isEmpty {
+                            ContentUnavailableView(
+                                "아직 메모가 없습니다",
+                                systemImage: "note.text",
+                                description: Text("결정이나 아이디어를 짧게 남겨보세요.")
+                            )
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                        } else {
+                            ForEach(planMemos) { entry in
+                                memoEntry(entry)
+                                    .contextMenu {
+                                        Button("삭제", role: .destructive) {
+                                            model.deleteMemo(entry.id)
+                                        }
+                                    }
+                            }
+                        }
                     }
 
                     VStack(spacing: 8) {
@@ -176,10 +309,50 @@ struct MemoDetailView: View {
                         Rectangle().fill(Color(red: 0.93, green: 0.93, blue: 0.95)).frame(height: 0.5)
 
                         HStack(spacing: 7) {
-                            memoTool("mic", "음성")
-                            memoTool("photo", "사진")
+                            Button {
+                                Task {
+                                    await model.toggleVoiceMemo(
+                                        kind: selectedMemoKind,
+                                        to: selectedPlan?.id
+                                    )
+                                }
+                            } label: {
+                                memoTool(
+                                    model.isRecordingVoiceMemo
+                                        ? "stop.circle.fill" : "mic",
+                                    model.isRecordingVoiceMemo
+                                        ? "녹음 종료" : "음성"
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            PhotosPicker(
+                                selection: $selectedPhotoItem,
+                                matching: .images
+                            ) {
+                                VStack(spacing: 2) {
+                                    Image(systemName: "photo")
+                                        .font(.system(size: 12, weight: .semibold))
+                                    Text("사진")
+                                        .font(.system(size: 8, weight: .bold))
+                                }
+                                .foregroundStyle(Color.tpSecondary)
+                                .frame(width: 42, height: 34)
+                                .background(
+                                    Color(red: 0.95, green: 0.95, blue: 0.97),
+                                    in: RoundedRectangle(cornerRadius: 8)
+                                )
+                            }
+                            .buttonStyle(.plain)
                             Spacer()
-                            memoTool("plus", "추가", dark: true)
+                            Button(action: saveMemo) {
+                                memoTool("plus", "추가", dark: true)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(
+                                memo.trimmingCharacters(
+                                    in: .whitespacesAndNewlines
+                                ).isEmpty || selectedPlan == nil
+                            )
                         }
                     }
                     .padding(10)
@@ -194,29 +367,144 @@ struct MemoDetailView: View {
             }
             .background(Color.tpBackground)
         }
+        .onChange(of: selectedPhotoItem) { _, item in
+            guard let identifier = item?.itemIdentifier else { return }
+            model.addAttachmentMemo(
+                kind: selectedMemoKind,
+                attachmentKind: .photo,
+                localIdentifier: identifier,
+                to: selectedPlan?.id
+            )
+            selectedPhotoItem = nil
+        }
     }
 
-    private func memoEntry(_ time: String, tag: String, body: String) -> some View {
+    private func memoEntry(_ entry: ActionMemo) -> some View {
         HStack(alignment: .top, spacing: 7) {
-            Text(time)
+            Text(entry.createdAt.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: 9))
                 .foregroundStyle(Color.tpSecondary)
                 .frame(width: 38, alignment: .trailing)
                 .padding(.top, 9)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(tag)
+                Text(entry.kind.displayName)
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpStudyDark)
-                Text(body)
+                Text(entry.text)
                     .font(.system(size: 11))
                     .lineSpacing(3)
+                if !entry.attachments.isEmpty {
+                    HStack(spacing: 5) {
+                        ForEach(entry.attachments) { attachment in
+                            if attachment.kind == .photo {
+                                MemoPhotoThumbnail(
+                                    model: model,
+                                    localIdentifier:
+                                        attachment.localIdentifier
+                                )
+                                .frame(width: 42, height: 42)
+                                .clipShape(
+                                    RoundedRectangle(
+                                        cornerRadius: 8,
+                                        style: .continuous
+                                    )
+                                )
+                            } else {
+                                Button {
+                                    model.toggleVoicePlayback(attachment)
+                                } label: {
+                                    Label(
+                                        model.playingVoiceAttachmentID
+                                            == attachment.id
+                                            ? "정지" : "음성 재생",
+                                        systemImage:
+                                            model.playingVoiceAttachmentID
+                                            == attachment.id
+                                            ? "stop.fill" : "play.fill"
+                                    )
+                                    .font(
+                                        .system(
+                                            size: 7.5,
+                                            weight: .bold
+                                        )
+                                    )
+                                    .foregroundStyle(Color.tpSecondary)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Color.tpBackground,
+                                        in: RoundedRectangle(
+                                            cornerRadius: 7
+                                        )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.top, 2)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 10)
             .padding(.vertical, 9)
             .draftCard(radius: 12)
         }
+    }
+
+    private var selectedPlan: PlanRecord? {
+        model.selectedMemoPlan
+    }
+
+    private var planMemos: [ActionMemo] {
+        model.memos(for: selectedPlan?.id)
+    }
+
+    private var selectedCategory: CategoryDefinition? {
+        guard let categoryID = selectedPlan?.categoryID else { return nil }
+        return model.snapshot.categories.first { $0.id == categoryID }
+    }
+
+    private var categoryColor: Color {
+        Color(hex: selectedCategory?.darkHex ?? "#4E8EA8")
+    }
+
+    private var planContext: String {
+        guard let plan = selectedPlan else { return "메모" }
+        let date = plan.span.start.formatted(
+            Date.FormatStyle(date: .abbreviated, time: .omitted)
+        )
+        let time = "\(plan.span.start.formatted(date: .omitted, time: .shortened))–\(plan.span.end.formatted(date: .omitted, time: .shortened))"
+        return "\(selectedCategory?.name ?? "계획") · \(date) \(time)"
+    }
+
+    private var hierarchyText: String {
+        guard let plan = selectedPlan else {
+            return "시간표에서 액션 아이템을 먼저 선택하세요"
+        }
+        guard let parentID = plan.parentID,
+              let parent = model.snapshot.plans.first(where: {
+                  $0.id == parentID
+              }) else {
+            return "상위 목표 없음"
+        }
+        return "\(parent.title) › \(plan.title)"
+    }
+
+    private func saveMemo() {
+        model.addMemo(
+            text: memo,
+            kind: selectedMemoKind,
+            to: selectedPlan?.id
+        )
+        memo = ""
+    }
+
+    private var selectedMemoKind: MemoKind {
+        tags.first(where: {
+            $0.label == selectedTag
+        })?.kind ?? .decision
     }
 
     private func memoTool(_ icon: String, _ title: String, dark: Bool = false) -> some View {
@@ -227,6 +515,38 @@ struct MemoDetailView: View {
             .padding(.vertical, 7)
             .background(dark ? Color.tpInk : Color(red: 0.94, green: 0.94, blue: 0.95))
             .clipShape(RoundedRectangle(cornerRadius: 9))
+    }
+}
+
+private struct MemoPhotoThumbnail: View {
+    @Bindable var model: AppModel
+    let localIdentifier: String
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            Color.tpPhoto.opacity(0.55)
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "photo")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.tpPhotoDark)
+            }
+        }
+        .clipped()
+        .task(id: localIdentifier) {
+            guard image == nil else { return }
+            guard let data = try? await model.photoThumbnailData(
+                localIdentifier: localIdentifier,
+                size: CGSize(width: 180, height: 180)
+            ) else {
+                return
+            }
+            image = UIImage(data: data)
+        }
     }
 }
 
@@ -286,7 +606,7 @@ struct CatPickerView: View {
                     ) {
                         ForEach(CatCoat.allCases) { coat in
                             Button {
-                                model.selectedCatCoat = coat
+                                model.selectCatCoat(coat)
                             } label: {
                                 HStack(spacing: 9) {
                                     CatFaceView(coat: coat)
@@ -355,12 +675,12 @@ struct CatPickerView: View {
 
 struct InferenceDetailView: View {
     @Bindable var model: AppModel
+    @State private var selectedTravelID: UUID?
+    @State private var floorOverrides: [UUID: Int] = [:]
 
-    private let modes: [(String, String)] = [
-        ("figure.walk", "걷기"), ("figure.run", "달리기"), ("bicycle", "자전거"),
-        ("bus", "버스"), ("tram", "지하철"), ("car.side", "택시"),
-        ("car", "자가용"), ("train.side.front.car", "기차"), ("airplane", "비행기"),
-        ("ferry", "배"),
+    private let modes: [TravelMode] = [
+        .walking, .running, .cycling, .bus, .subway,
+        .taxi, .car, .train, .airplane, .ship,
     ]
 
     var body: some View {
@@ -378,49 +698,71 @@ struct InferenceDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 5) {
-                        ForEach(Array(modes.enumerated()), id: \.offset) { _, mode in
-                            VStack(spacing: 4) {
-                                Image(systemName: mode.0)
-                                    .font(.system(size: 15))
-                                    .foregroundStyle(Color.tpTransitDark)
-                                Text(mode.1)
-                                    .font(.system(size: 7.5, weight: .bold))
-                                    .foregroundStyle(Color(red: 0.40, green: 0.27, blue: 0.11))
+                        ForEach(modes, id: \.self) { mode in
+                            Button {
+                                guard let selectedTravelID else { return }
+                                model.confirmTravel(
+                                    selectedTravelID,
+                                    mode: mode
+                                )
+                            } label: {
+                                VStack(spacing: 4) {
+                                    Image(systemName: mode.systemImage)
+                                        .font(.system(size: 15))
+                                    Text(mode.displayName)
+                                        .font(.system(size: 7.5, weight: .bold))
+                                }
+                                .foregroundStyle(
+                                    selectedTravel?.mode == mode
+                                        ? Color.white
+                                        : Color(red: 0.40, green: 0.27, blue: 0.11)
+                                )
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .background(
+                                    selectedTravel?.mode == mode
+                                        ? Color.tpTransitDark
+                                        : Color.white,
+                                    in: RoundedRectangle(cornerRadius: 10)
+                                )
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(
+                                            selectedTravel?.mode == mode
+                                                ? Color.tpTransitDark
+                                                : Color(
+                                                    red: 0.89,
+                                                    green: 0.89,
+                                                    blue: 0.91
+                                                ),
+                                            lineWidth: 1
+                                        )
+                                }
                             }
-                            .frame(maxWidth: .infinity, minHeight: 48)
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color(red: 0.89, green: 0.89, blue: 0.91), lineWidth: 1)
-                            }
+                            .buttonStyle(.plain)
+                            .disabled(selectedTravelID == nil)
                         }
                     }
 
-                    inferenceCard(
-                        icon: "tram",
-                        iconColor: .tpTransitDark,
-                        iconBackground: .tpTransit,
-                        time: "08:18–08:56",
-                        title: "지하철 · 38분",
-                        confidence: "높음",
-                        high: true,
-                        signals: ["역 진입", "GPS 약화", "상대고도 −18m", "철도 경로 일치", "전후 보행"],
-                        yes: "맞아요",
-                        no: "다른 수단"
-                    )
-
-                    inferenceCard(
-                        icon: "building.2",
-                        iconColor: .tpPlaceDark,
-                        iconBackground: .tpPlace,
-                        time: "11:03 · 같은 건물 안",
-                        title: "회사 9층 → 10층",
-                        confidence: "중간",
-                        high: false,
-                        signals: ["상대고도 +3.1m", "1층 ≈ 3m", "10층 정지 2h 48m", "기준층 확인됨"],
-                        yes: "10층 맞아요",
-                        no: "층 수정"
-                    )
+                    if dayTravel.isEmpty && dayFloors.isEmpty {
+                        ContentUnavailableView(
+                            "확인할 추정 기록이 없습니다",
+                            systemImage: "location.slash",
+                            description: Text(
+                                "위치·동작 센서가 이동이나 층 변화를 감지하면 여기에 나타납니다."
+                            )
+                        )
+                        .padding(.vertical, 20)
+                    } else {
+                        ForEach(dayTravel) { travel in
+                            travelInferenceCard(travel)
+                                .onTapGesture {
+                                    selectedTravelID = travel.id
+                                }
+                        }
+                        ForEach(dayFloors) { floor in
+                            floorInferenceCard(floor)
+                        }
+                    }
 
                     Label(
                         "iPhone GPS·모션·기압이 기본 · Apple Watch 운동·경로·활동 데이터는 권한을 받은 경우에만 보조",
@@ -437,42 +779,53 @@ struct InferenceDetailView: View {
             }
             .background(Color.tpBackground)
         }
+        .onAppear {
+            selectedTravelID =
+                dayTravel.first(where: { !$0.isConfirmed })?.id
+                ?? dayTravel.first?.id
+            for floor in dayFloors {
+                floorOverrides[floor.id] =
+                    floor.toFloor ?? floor.fromFloor ?? 0
+            }
+        }
     }
 
-    private func inferenceCard(
-        icon: String,
-        iconColor: Color,
-        iconBackground: Color,
-        time: String,
-        title: String,
-        confidence: String,
-        high: Bool,
-        signals: [String],
-        yes: String,
-        no: String
+    private func travelInferenceCard(
+        _ travel: TravelSegment
     ) -> some View {
         VStack(spacing: 7) {
             HStack(spacing: 7) {
-                Image(systemName: icon)
+                Image(systemName: travel.mode.systemImage)
                     .font(.system(size: 15))
-                    .foregroundStyle(iconColor)
+                    .foregroundStyle(Color.tpTransitDark)
                     .frame(width: 29, height: 29)
-                    .background(iconBackground, in: RoundedRectangle(cornerRadius: 9))
+                    .background(
+                        Color.tpTransit,
+                        in: RoundedRectangle(cornerRadius: 9)
+                    )
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(time)
+                    Text(
+                        "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened))"
+                    )
                         .font(.system(size: 8))
                         .foregroundStyle(Color.tpSecondary)
-                    Text(title)
+                    Text(
+                        "\(travel.mode.displayName) · \(travel.span.duration.shortDuration)"
+                    )
                         .font(.system(size: 11, weight: .bold))
                 }
                 Spacer()
-                Text(confidence)
+                Text(travel.confidence.displayName)
                     .font(.system(size: 7.5, weight: .black))
-                    .foregroundStyle(high ? Color(red: 0.18, green: 0.46, blue: 0.28) : Color(red: 0.61, green: 0.41, blue: 0.11))
+                    .foregroundStyle(
+                        travel.confidence == .high
+                            ? Color(red: 0.18, green: 0.46, blue: 0.28)
+                            : Color(red: 0.61, green: 0.41, blue: 0.11)
+                    )
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
                     .background(
-                        high
+                        travel.confidence == .high
                             ? Color(red: 0.92, green: 0.96, blue: 0.93)
                             : Color(red: 1.00, green: 0.95, blue: 0.85),
                         in: RoundedRectangle(cornerRadius: 7)
@@ -480,38 +833,157 @@ struct InferenceDetailView: View {
             }
 
             ChipFlowLayout(spacing: 4) {
-                ForEach(signals, id: \.self) { signal in
-                    Text(signal)
-                        .font(.system(size: 7.5, weight: .semibold))
-                        .foregroundStyle(Color.tpSecondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(
-                            Color(red: 0.94, green: 0.94, blue: 0.95),
-                            in: RoundedRectangle(cornerRadius: 7)
-                        )
+                ForEach(travel.evidence, id: \.self) { signal in
+                    signalChip(signal)
                 }
             }
 
             HStack(spacing: 6) {
-                Text(yes)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 9))
-                Text(no)
-                    .foregroundStyle(Color.tpSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(
-                        Color(red: 0.94, green: 0.94, blue: 0.95),
-                        in: RoundedRectangle(cornerRadius: 9)
-                    )
+                Button("맞아요") {
+                    model.confirmTravel(travel.id, mode: travel.mode)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 9))
+                Button("다른 수단") {
+                    selectedTravelID = travel.id
+                }
+                .foregroundStyle(Color.tpSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(
+                    Color(red: 0.94, green: 0.94, blue: 0.95),
+                    in: RoundedRectangle(cornerRadius: 9)
+                )
             }
             .font(.system(size: 8.5, weight: .bold))
+            .buttonStyle(.plain)
         }
         .padding(10)
         .draftCard()
+        .overlay {
+            if selectedTravelID == travel.id {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.tpTransitDark, lineWidth: 2)
+            }
+        }
+    }
+
+    private func floorInferenceCard(
+        _ floor: FloorTransition
+    ) -> some View {
+        VStack(spacing: 7) {
+            HStack(spacing: 7) {
+                Image(systemName: "building.2")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.tpPlaceDark)
+                    .frame(width: 29, height: 29)
+                    .background(
+                        Color.tpPlace,
+                        in: RoundedRectangle(cornerRadius: 9)
+                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(
+                        floor.span.end.formatted(
+                            date: .omitted,
+                            time: .shortened
+                        )
+                    )
+                    .font(.system(size: 8))
+                    .foregroundStyle(Color.tpSecondary)
+                    Text(
+                        "\(floor.fromFloor.map { "\($0)층" } ?? "기준층 미확인") → \(floorOverrides[floor.id] ?? floor.toFloor ?? 0)층"
+                    )
+                    .font(.system(size: 11, weight: .bold))
+                }
+                Spacer()
+                Text(floor.confidence.displayName)
+                    .font(.system(size: 7.5, weight: .black))
+                    .foregroundStyle(
+                        floor.confidence == .high
+                            ? Color(red: 0.18, green: 0.46, blue: 0.28)
+                            : Color(red: 0.61, green: 0.41, blue: 0.11)
+                    )
+            }
+
+            ChipFlowLayout(spacing: 4) {
+                ForEach(floor.evidence, id: \.self) { signal in
+                    signalChip(signal)
+                }
+            }
+
+            HStack(spacing: 6) {
+                Button {
+                    floorOverrides[floor.id, default: 0] -= 1
+                } label: {
+                    Image(systemName: "minus")
+                }
+                Text("\(floorOverrides[floor.id] ?? floor.toFloor ?? 0)층")
+                    .font(.system(size: 10, weight: .black))
+                    .frame(maxWidth: .infinity)
+                Button {
+                    floorOverrides[floor.id, default: 0] += 1
+                } label: {
+                    Image(systemName: "plus")
+                }
+                Button("이 층으로 확인") {
+                    model.confirmFloorTransition(
+                        floor.id,
+                        toFloor:
+                            floorOverrides[floor.id]
+                            ?? floor.toFloor
+                    )
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    Color.tpInk,
+                    in: RoundedRectangle(cornerRadius: 9)
+                )
+            }
+            .font(.system(size: 8.5, weight: .bold))
+            .buttonStyle(.plain)
+        }
+        .padding(10)
+        .draftCard()
+    }
+
+    private func signalChip(_ signal: String) -> some View {
+        Text(signal)
+            .font(.system(size: 7.5, weight: .semibold))
+            .foregroundStyle(Color.tpSecondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(
+                Color(red: 0.94, green: 0.94, blue: 0.95),
+                in: RoundedRectangle(cornerRadius: 7)
+            )
+    }
+
+    private var daySpan: TimeSpan {
+        TimelineAggregationEngine().interval(
+            for: .day,
+            containing: model.selectedDate
+        )
+    }
+
+    private var dayTravel: [TravelSegment] {
+        model.snapshot.travel
+            .filter { $0.span.intersection(with: daySpan) != nil }
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    private var dayFloors: [FloorTransition] {
+        model.snapshot.floorTransitions
+            .filter { $0.span.intersection(with: daySpan) != nil }
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    private var selectedTravel: TravelSegment? {
+        guard let selectedTravelID else { return nil }
+        return dayTravel.first { $0.id == selectedTravelID }
     }
 
     private var privacyCard: some View {
@@ -540,15 +1012,28 @@ struct InferenceDetailView: View {
 
 struct LocationTimelineView: View {
     @Bindable var model: AppModel
+    @State private var viewportStart: CGFloat = 0
+    @State private var viewportLength: CGFloat = 1
+    @State private var dragStart: CGFloat?
+    @State private var magnifyStart: (
+        start: CGFloat,
+        length: CGFloat
+    )?
 
     var body: some View {
         VStack(spacing: 0) {
             DraftTopBar(
-                title: "7월 30일 목요일",
-                trailing: "2026",
+                title: model.selectedDate.formatted(
+                    Date.FormatStyle()
+                        .month(.defaultDigits)
+                        .day(.defaultDigits)
+                        .weekday(.wide)
+                        .locale(Locale(identifier: "ko_KR"))
+                ),
+                trailing: "\(Calendar.autoupdatingCurrent.component(.year, from: model.selectedDate))",
                 selectedScale: .day,
                 onScaleChange: {
-                    model.selectedScale = $0
+                    model.selectScale($0)
                     model.detail = nil
                 }
             )
@@ -561,10 +1046,10 @@ struct LocationTimelineView: View {
                         HStack(spacing: 7) {
                             Image(systemName: "mappin.and.ellipse")
                                 .foregroundStyle(Color(red: 0.18, green: 0.54, blue: 0.36))
-                            Text("위치·이동 추정 중")
+                            Text(locationStatusTitle)
                                 .fontWeight(.bold)
                             Spacer()
-                            Text("GPS · 모션 · 기압 · Watch")
+                            Text(sensorSignalLabel)
                                 .font(.system(size: 9.5))
                                 .foregroundStyle(Color.tpSecondary)
                         }
@@ -590,9 +1075,29 @@ struct LocationTimelineView: View {
                             moveRow
                             projectRow
                         }
-                        currentLocationLine
+                        TimelineView(.periodic(from: .now, by: 60)) { context in
+                            currentLocationLine(at: context.date)
+                        }
                     }
                     .frame(height: 208)
+                    .clipped()
+                    .overlay {
+                        GeometryReader { proxy in
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    viewportDragGesture(
+                                        width: max(
+                                            1,
+                                            proxy.size.width - 50
+                                        )
+                                    )
+                                )
+                                .simultaneousGesture(
+                                    viewportMagnifyGesture
+                                )
+                        }
+                    }
 
                     routeDock
                         .padding(.horizontal, 8)
@@ -624,13 +1129,16 @@ struct LocationTimelineView: View {
             }
             .background(Color.white)
         }
+        .task(id: model.selectedDate) {
+            await model.refreshSensorTimeline()
+        }
     }
 
     private var compactTimeAxis: some View {
         HStack(spacing: 0) {
             Color.clear.frame(width: 50)
-            ForEach(["06", "09", "12", "15", "18", "21"], id: \.self) { label in
-                Text(label)
+            ForEach(viewportTickDates, id: \.self) { date in
+                Text(viewportTickLabel(date))
                     .font(.system(size: 10))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -645,23 +1153,21 @@ struct LocationTimelineView: View {
         HStack(spacing: 0) {
             rowLabel("위치", color: .tpPlaceDark)
             GeometryReader { proxy in
-                locationBar("집", 0, 0.14, proxy)
-                locationBar("회사·9F", 0.26, 0.13, proxy)
-                Rectangle()
-                    .fill(Color.tpPlaceDark)
-                    .frame(width: 2, height: 64)
-                    .position(x: proxy.size.width * 0.395, y: 39)
-                Text("↑ 1F")
-                    .font(.system(size: 6.5, weight: .black))
-                    .foregroundStyle(Color.tpPlaceDark)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 7))
-                    .overlay { RoundedRectangle(cornerRadius: 7).stroke(Color.tpPlaceDark.opacity(0.35)) }
-                    .position(x: proxy.size.width * 0.36, y: 13)
-                locationBar("회사·10F", 0.41, 0.25, proxy)
-                locationBar("", 0.74, 0.08, proxy)
-                locationBar("집", 0.91, 0.09, proxy)
+                ForEach(dayPlaces) { place in
+                    let range = fractionRange(place.span)
+                    locationBar(
+                        placeLabel(place),
+                        range.lowerBound,
+                        range.upperBound - range.lowerBound,
+                        proxy
+                    )
+                }
+                ForEach(dayFloors) { floor in
+                    floorMarker(floor, proxy: proxy)
+                }
+                if dayPlaces.isEmpty {
+                    emptyRowText("머문 장소를 감지하면 여기에 표시됩니다")
+                }
             }
         }
         .frame(height: 78)
@@ -673,12 +1179,19 @@ struct LocationTimelineView: View {
         HStack(spacing: 0) {
             rowLabel("이동", color: .tpTransitDark)
             GeometryReader { proxy in
-                moveBar("figure.walk", 0.14, 0.04, proxy)
-                moveBar("tram", 0.18, 0.06, proxy)
-                moveBar("figure.walk", 0.245, 0.035, proxy)
-                moveBar("car.side", 0.67, 0.06, proxy)
-                moveBar("figure.walk", 0.83, 0.035, proxy)
-                moveBar("car", 0.86, 0.05, proxy, dashed: true)
+                ForEach(dayTravel) { travel in
+                    let range = fractionRange(travel.span)
+                    moveBar(
+                        travel.mode.systemImage,
+                        range.lowerBound,
+                        range.upperBound - range.lowerBound,
+                        proxy,
+                        dashed: travel.confidence == .low
+                    )
+                }
+                if dayTravel.isEmpty {
+                    emptyRowText("위치 사이 이동을 자동으로 분류합니다")
+                }
             }
         }
         .frame(height: 70)
@@ -690,28 +1203,42 @@ struct LocationTimelineView: View {
         HStack(spacing: 0) {
             rowLabel("프로젝트", color: .tpProjectDark, compact: true)
             GeometryReader { proxy in
-                simpleBar("신제품 기획", start: 0.27, length: 0.24, proxy: proxy)
-                simpleBar("회의", start: 0.53, length: 0.12, proxy: proxy)
+                ForEach(dayPlans) { plan in
+                    let range = fractionRange(plan.span)
+                    simpleBar(
+                        plan.title,
+                        start: range.lowerBound,
+                        length: range.upperBound - range.lowerBound,
+                        proxy: proxy
+                    )
+                }
+                if dayPlans.isEmpty {
+                    emptyRowText("같은 시간의 계획이 함께 표시됩니다")
+                }
             }
         }
         .frame(height: 60)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine.opacity(0.5)).frame(height: 0.5) }
     }
 
-    private var currentLocationLine: some View {
+    @ViewBuilder
+    private func currentLocationLine(at date: Date) -> some View {
+        if visibleTimelineSpan.contains(date) {
         GeometryReader { proxy in
-            let x = proxy.size.width * 0.6125
+            let x = 50 + max(1, proxy.size.width - 50)
+                * fraction(for: date)
             Rectangle()
                 .fill(Color.tpNow)
                 .frame(width: 2, height: proxy.size.height)
                 .position(x: x, y: proxy.size.height / 2)
-            Text("14:15")
+            Text(date.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(Color.tpNow, in: Capsule())
                 .position(x: x, y: 7)
+        }
         }
     }
 
@@ -731,8 +1258,12 @@ struct LocationTimelineView: View {
             .padding(.bottom, 4)
 
             HStack {
-                ForEach(["06", "09", "12", "15", "18", "21"], id: \.self) { label in
-                    Text(label).frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(viewportTickDates, id: \.self) { date in
+                    Text(viewportTickLabel(date))
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .leading
+                        )
                 }
             }
             .font(.system(size: 6))
@@ -744,43 +1275,123 @@ struct LocationTimelineView: View {
                     .frame(height: 1)
                     .position(x: proxy.size.width / 2, y: 28)
 
-                routeSegment(.tpPlaceDark, 0, 0.135, proxy)
-                routeSegment(.tpTransitDark, 0.135, 0.014, proxy)
-                routeSegment(Color(red: 0.95, green: 0.77, blue: 0.44), 0.149, 0.047, proxy)
-                routeSegment(.tpTransitDark, 0.196, 0.009, proxy)
-                routeSegment(.tpPlaceDark, 0.205, 0.135, proxy)
-                routeSegment(Color(red: 0.56, green: 0.79, blue: 0.90), 0.34, 0.01, proxy)
-                routeSegment(.tpPlaceDark, 0.35, 0.20, proxy)
+                ForEach(dayPlaces) { place in
+                    let range = fractionRange(place.span)
+                    routeSegment(
+                        .tpPlaceDark,
+                        range.lowerBound,
+                        range.upperBound - range.lowerBound,
+                        proxy
+                    )
+                    routeNode(
+                        "\(placeLabel(place))\n\(place.span.end.formatted(date: .omitted, time: .shortened))",
+                        range.upperBound,
+                        above: dayPlaces.firstIndex(where: {
+                            $0.id == place.id
+                        })?.isMultiple(of: 2) ?? true,
+                        proxy
+                    )
+                }
+                ForEach(dayTravel) { travel in
+                    let range = fractionRange(travel.span)
+                    routeSegment(
+                        travel.mode.routeColor,
+                        range.lowerBound,
+                        range.upperBound - range.lowerBound,
+                        proxy,
+                        dashed: travel.confidence == .low
+                    )
+                }
+                ForEach(dayFloors) { floor in
+                    let point = fraction(for: floor.span.end)
+                    Text(floor.floorChangeLabel)
+                        .font(.system(size: 6, weight: .black))
+                        .foregroundStyle(.white)
+                        .position(x: proxy.size.width * point, y: 47)
+                }
 
-                routeNode("집\n08:02", 0.135, above: true, proxy)
-                routeNode("역삼역\n08:14", 0.149, above: false, proxy)
-                routeNode("을지로입구\n08:56", 0.196, above: true, proxy)
-                routeNode("회사·9F\n09:05", 0.205, above: false, proxy)
-                routeNode("회사·10F\n11:03", 0.35, above: false, proxy)
+                if dayPlaces.isEmpty && dayTravel.isEmpty {
+                    Text("오늘의 위치·이동 기록이 아직 없습니다")
+                        .font(.system(size: 8.5, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.72))
+                        .position(
+                            x: proxy.size.width / 2,
+                            y: 28
+                        )
+                }
 
-                Rectangle()
-                    .fill(Color.tpNow)
-                    .frame(width: 2, height: 49)
-                    .position(x: proxy.size.width * 0.55, y: 31)
-                Circle()
-                    .fill(Color.tpNow)
-                    .frame(width: 12, height: 12)
-                    .position(x: proxy.size.width * 0.55, y: 28)
-                Text("14:15")
-                    .font(.system(size: 6, weight: .black))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background(Color.tpNow, in: RoundedRectangle(cornerRadius: 6))
-                    .position(x: proxy.size.width * 0.60, y: 7)
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    if visibleTimelineSpan.contains(context.date) {
+                        let current = fraction(for: context.date)
+                        Rectangle()
+                            .fill(Color.tpNow)
+                            .frame(width: 2, height: 49)
+                            .position(
+                                x: proxy.size.width * current,
+                                y: 31
+                            )
+                        Circle()
+                            .fill(Color.tpNow)
+                            .frame(width: 12, height: 12)
+                            .position(
+                                x: proxy.size.width * current,
+                                y: 28
+                            )
+                        Text(
+                            context.date.formatted(
+                                date: .omitted,
+                                time: .shortened
+                            )
+                        )
+                        .font(.system(size: 6, weight: .black))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(
+                            Color.tpNow,
+                            in: RoundedRectangle(cornerRadius: 6)
+                        )
+                        .position(
+                            x: min(
+                                proxy.size.width - 23,
+                                max(23, proxy.size.width * current)
+                            ),
+                            y: 7
+                        )
+                    }
+                }
             }
             .frame(height: 62)
+            .clipped()
+            .overlay {
+                GeometryReader { proxy in
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .gesture(
+                            viewportDragGesture(
+                                width: max(1, proxy.size.width)
+                            )
+                        )
+                        .simultaneousGesture(viewportMagnifyGesture)
+                }
+            }
 
             HStack {
                 Text("길이 = 실제 시간 · 빨간 선 = 현재")
                 Spacer()
-                Text("밀면 위 간트도 함께 이동 ›")
-                    .foregroundStyle(Color(red: 0.78, green: 0.78, blue: 0.80))
+                Button {
+                    followNow()
+                } label: {
+                    Text(
+                        viewportLength < 0.999
+                            ? "지금으로"
+                            : "밀기·핀치로 함께 탐색"
+                    )
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(
+                    Color(red: 0.78, green: 0.78, blue: 0.80)
+                )
             }
             .font(.system(size: 6.8))
             .foregroundStyle(Color(red: 0.56, green: 0.56, blue: 0.58))
@@ -844,10 +1455,24 @@ struct LocationTimelineView: View {
             .position(x: proxy.size.width * start + max(18, proxy.size.width * length) / 2, y: 29)
     }
 
-    private func routeSegment(_ color: Color, _ start: CGFloat, _ length: CGFloat, _ proxy: GeometryProxy) -> some View {
+    private func routeSegment(
+        _ color: Color,
+        _ start: CGFloat,
+        _ length: CGFloat,
+        _ proxy: GeometryProxy,
+        dashed: Bool = false
+    ) -> some View {
         Capsule()
-            .fill(color)
+            .fill(color.opacity(dashed ? 0.48 : 1))
             .frame(width: max(2, proxy.size.width * length), height: 7)
+            .overlay {
+                if dashed {
+                    Capsule().stroke(
+                        .white.opacity(0.65),
+                        style: StrokeStyle(lineWidth: 1, dash: [3, 2])
+                    )
+                }
+            }
             .position(x: proxy.size.width * start + max(2, proxy.size.width * length) / 2, y: 28)
     }
 
@@ -864,6 +1489,229 @@ struct LocationTimelineView: View {
                 .offset(y: above ? -19 : 19)
         }
         .position(x: proxy.size.width * position, y: 28)
+    }
+
+    private var daySpan: TimeSpan {
+        TimelineAggregationEngine().interval(
+            for: .day,
+            containing: model.selectedDate
+        )
+    }
+
+    private var dayPlaces: [PlaceStay] {
+        model.snapshot.places
+            .filter {
+                $0.span.intersection(with: visibleTimelineSpan) != nil
+            }
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    private var dayTravel: [TravelSegment] {
+        model.snapshot.travel
+            .filter {
+                $0.span.intersection(with: visibleTimelineSpan) != nil
+            }
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    private var dayFloors: [FloorTransition] {
+        model.snapshot.floorTransitions
+            .filter {
+                $0.span.intersection(with: visibleTimelineSpan) != nil
+            }
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    private var dayPlans: [PlanRecord] {
+        model.snapshot.plans
+            .filter {
+                $0.span.intersection(with: visibleTimelineSpan) != nil
+            }
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    private var locationStatusTitle: String {
+        if model.isSensorCollecting { return "위치·이동 기록 중" }
+        if model.settings.locationEnabled { return "위치·이동 대기 중" }
+        return "위치·이동 연결 필요"
+    }
+
+    private var sensorSignalLabel: String {
+        guard let availability = model.sensorAvailability else {
+            return "GPS · 모션 · 기압 · Watch"
+        }
+        var values: [String] = []
+        if availability.location { values.append("GPS") }
+        if availability.motionActivity { values.append("모션") }
+        if availability.relativeAltitude { values.append("기압") }
+        if model.settings.healthEnabled { values.append("Watch") }
+        return values.isEmpty ? "센서 확인 필요" : values.joined(separator: " · ")
+    }
+
+    private func placeLabel(_ place: PlaceStay) -> String {
+        guard let floor = place.floor else { return place.displayName }
+        let suffix = "\(floor)F"
+        return place.displayName.contains(suffix)
+            ? place.displayName
+            : "\(place.displayName)·\(suffix)"
+    }
+
+    private func fraction(for date: Date) -> CGFloat {
+        max(
+            0,
+            min(
+                1,
+                CGFloat(
+                    date.timeIntervalSince(visibleTimelineSpan.start)
+                        / max(1, visibleTimelineSpan.duration)
+                )
+            )
+        )
+    }
+
+    private func fractionRange(_ span: TimeSpan) -> ClosedRange<CGFloat> {
+        let overlap = span.intersection(with: visibleTimelineSpan)
+            ?? span
+        return fraction(for: overlap.start)...fraction(for: overlap.end)
+    }
+
+    private var visibleTimelineSpan: TimeSpan {
+        TimeSpan(
+            start: daySpan.start.addingTimeInterval(
+                daySpan.duration * TimeInterval(viewportStart)
+            ),
+            end: daySpan.start.addingTimeInterval(
+                daySpan.duration
+                    * TimeInterval(viewportStart + viewportLength)
+            )
+        )
+    }
+
+    private var viewportTickDates: [Date] {
+        (0..<6).map { index in
+            visibleTimelineSpan.start.addingTimeInterval(
+                visibleTimelineSpan.duration
+                    * TimeInterval(index) / 6
+            )
+        }
+    }
+
+    private func viewportTickLabel(_ date: Date) -> String {
+        let components = Calendar.autoupdatingCurrent.dateComponents(
+            [.hour, .minute],
+            from: date
+        )
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        if viewportLength >= 0.5 || minute == 0 {
+            return String(format: "%02d", hour)
+        }
+        return String(format: "%02d:%02d", hour, minute)
+    }
+
+    private func viewportDragGesture(
+        width: CGFloat
+    ) -> some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                if dragStart == nil {
+                    dragStart = viewportStart
+                }
+                let origin = dragStart ?? viewportStart
+                viewportStart = clampedViewportStart(
+                    origin
+                        - value.translation.width
+                        / max(1, width)
+                        * viewportLength,
+                    length: viewportLength
+                )
+            }
+            .onEnded { _ in
+                dragStart = nil
+            }
+    }
+
+    private var viewportMagnifyGesture: some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.01)
+            .onChanged { value in
+                if magnifyStart == nil {
+                    magnifyStart = (viewportStart, viewportLength)
+                }
+                guard let origin = magnifyStart else { return }
+                let newLength = max(
+                    0.125,
+                    min(1, origin.length / value.magnification)
+                )
+                let center = origin.start + origin.length / 2
+                viewportLength = newLength
+                viewportStart = clampedViewportStart(
+                    center - newLength / 2,
+                    length: newLength
+                )
+            }
+            .onEnded { _ in
+                magnifyStart = nil
+            }
+    }
+
+    private func clampedViewportStart(
+        _ value: CGFloat,
+        length: CGFloat
+    ) -> CGFloat {
+        max(0, min(1 - length, value))
+    }
+
+    private func followNow() {
+        guard daySpan.contains(.now) else {
+            viewportStart = 0
+            viewportLength = 1
+            return
+        }
+        if viewportLength >= 0.999 {
+            viewportStart = 0
+            return
+        }
+        let nowFraction = CGFloat(
+            Date.now.timeIntervalSince(daySpan.start)
+                / max(1, daySpan.duration)
+        )
+        withAnimation(.easeOut(duration: 0.22)) {
+            viewportStart = clampedViewportStart(
+                nowFraction - viewportLength * 0.65,
+                length: viewportLength
+            )
+        }
+    }
+
+    private func floorMarker(
+        _ floor: FloorTransition,
+        proxy: GeometryProxy
+    ) -> some View {
+        let x = proxy.size.width * fraction(for: floor.span.end)
+        return ZStack {
+            Rectangle()
+                .fill(Color.tpPlaceDark)
+                .frame(width: 2, height: 64)
+            Text(floor.floorChangeLabel)
+                .font(.system(size: 6.5, weight: .black))
+                .foregroundStyle(Color.tpPlaceDark)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(.white, in: RoundedRectangle(cornerRadius: 7))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(Color.tpPlaceDark.opacity(0.35))
+                }
+                .offset(y: -25)
+        }
+        .position(x: x, y: 39)
+    }
+
+    private func emptyRowText(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 8.5))
+            .foregroundStyle(Color.tpSecondary.opacity(0.72))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -929,39 +1777,60 @@ struct WidgetPreviewView: View {
                         .overlay { Capsule().stroke(Color.tpLine) }
                 }
                 Spacer()
-                Label("23° · 14:05", systemImage: "cloud.sun")
+                Label(widgetTrailingLabel, systemImage: weatherSymbol)
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpWeatherDark)
             }
             .padding(.bottom, 10)
 
             GeometryReader { proxy in
+                let now = widgetFraction(Date.now)
                 Rectangle().fill(Color.tpLine).frame(height: 0.5).position(x: proxy.size.width / 2, y: 0)
                 RunningCatView(coat: model.selectedCatCoat)
-                    .position(x: proxy.size.width / 2, y: 19)
-                FixedStripeBackground()
-                    .frame(width: proxy.size.width * 0.28, height: 26)
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
-                    .position(x: proxy.size.width * 0.17, y: 53)
-                Text("회의")
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .position(x: proxy.size.width * 0.12, y: 53)
-                RoundedRectangle(cornerRadius: 7).fill(Color.tpExercise)
-                    .frame(width: proxy.size.width * 0.37, height: 26)
-                    .position(x: proxy.size.width * 0.645, y: 53)
-                Text("러닝")
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .position(x: proxy.size.width * 0.55, y: 53)
+                    .position(x: proxy.size.width * now, y: 19)
+                ForEach(Array(widgetPlans.prefix(2).enumerated()), id: \.element.id) { index, plan in
+                    let start = widgetFraction(plan.span.start)
+                    let end = widgetFraction(plan.span.end)
+                    let width = max(
+                        20,
+                        proxy.size.width * max(0.02, end - start)
+                    )
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(categoryColor(plan.categoryID))
+                        .frame(width: width, height: 24)
+                        .overlay(alignment: .leading) {
+                            Text(plan.title)
+                                .font(.system(size: 9.5, weight: .semibold))
+                                .lineLimit(1)
+                                .padding(.horizontal, 6)
+                        }
+                        .position(
+                            x: proxy.size.width * start + width / 2,
+                            y: 45 + CGFloat(index * 27)
+                        )
+                }
                 Rectangle().fill(Color.tpNow).frame(width: 2, height: 42)
-                    .position(x: proxy.size.width / 2, y: 55)
+                    .position(x: proxy.size.width * now, y: 55)
             }
             .frame(height: 76)
             .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine).frame(height: 0.5) }
 
             HStack(spacing: 7) {
-                widgetAction("checkmark", "했어요")
-                widgetAction("clock", "30분")
-                widgetAction("location.north", "다음 빈 시간")
+                widgetAction(
+                    "checkmark",
+                    "했어요",
+                    action: .complete
+                )
+                widgetAction(
+                    "clock",
+                    "30분",
+                    action: .postponeThirtyMinutes
+                )
+                widgetAction(
+                    "location.north",
+                    "다음 빈 시간",
+                    action: .moveToNextFreeTime
+                )
             }
             .padding(.top, 11)
         }
@@ -970,46 +1839,175 @@ struct WidgetPreviewView: View {
         .shadow(color: .black.opacity(0.12), radius: 12, y: 8)
     }
 
-    private func widgetAction(_ icon: String, _ title: String) -> some View {
-        Label(title, systemImage: icon)
-            .font(.system(size: 10, weight: .bold))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(Color(red: 0.93, green: 0.93, blue: 0.94), in: RoundedRectangle(cornerRadius: 10))
+    private func widgetAction(
+        _ icon: String,
+        _ title: String,
+        action: WidgetAction
+    ) -> some View {
+        Button {
+            guard let planID = activeWidgetPlan?.id else { return }
+            Task {
+                await model.performQuickAction(action, planID: planID)
+            }
+        } label: {
+            Label(title, systemImage: icon)
+                .font(.system(size: 10, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    Color(red: 0.93, green: 0.93, blue: 0.94),
+                    in: RoundedRectangle(cornerRadius: 10)
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(activeWidgetPlan == nil)
     }
 
     private var liveCard: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("영어 공부").font(.system(size: 13, weight: .bold))
+                Text(activeWidgetPlan?.title ?? "현재 실행 중인 계획 없음")
+                    .font(.system(size: 13, weight: .bold))
                 Spacer()
-                Text("38분 남음").font(.system(size: 11)).foregroundStyle(Color(red: 0.78, green: 0.78, blue: 0.80))
+                if let plan = activeWidgetPlan {
+                    Text(
+                        plan.span.end,
+                        style: .relative
+                    )
+                    .font(.system(size: 11))
+                    .foregroundStyle(
+                        Color(red: 0.78, green: 0.78, blue: 0.80)
+                    )
+                }
             }
             GeometryReader { proxy in
                 Capsule().fill(Color(red: 0.21, green: 0.21, blue: 0.23))
-                Capsule().fill(Color.tpStudyDark).frame(width: proxy.size.width * 0.62)
+                Capsule()
+                    .fill(Color.tpStudyDark)
+                    .frame(
+                        width: proxy.size.width
+                            * activeProgress
+                    )
             }
             .frame(height: 6)
             .padding(.vertical, 13)
             HStack {
-                Text("21:00 → 22:00").font(.system(size: 11))
+                Text(activeTimeLabel).font(.system(size: 11))
                 Spacer()
-                Text("종료")
+                if let planID = activeWidgetPlan?.id {
+                    Button("종료") {
+                        Task {
+                            await model.performQuickAction(
+                                .stopCurrentActivity,
+                                planID: planID
+                            )
+                        }
+                    }
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 13)
                     .padding(.vertical, 7)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 12))
+                    .background(
+                        .white,
+                        in: RoundedRectangle(cornerRadius: 12)
+                    )
+                    .buttonStyle(.plain)
+                }
             }
         }
         .foregroundStyle(.white)
         .padding(14)
         .background(Color(red: 0.08, green: 0.08, blue: 0.09), in: RoundedRectangle(cornerRadius: 18))
     }
+
+    private var widgetDaySpan: TimeSpan {
+        TimelineAggregationEngine().interval(
+            for: .day,
+            containing: .now
+        )
+    }
+
+    private var widgetPlans: [PlanRecord] {
+        model.snapshot.plans
+            .filter {
+                $0.status != .skipped
+                    && $0.span.intersection(with: widgetDaySpan) != nil
+            }
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    private var activeWidgetPlan: PlanRecord? {
+        widgetPlans.first {
+            $0.status == .running || $0.span.contains(.now)
+        } ?? widgetPlans.first { $0.span.start > .now }
+    }
+
+    private func widgetFraction(_ date: Date) -> CGFloat {
+        max(
+            0,
+            min(
+                1,
+                CGFloat(
+                    date.timeIntervalSince(widgetDaySpan.start)
+                        / max(1, widgetDaySpan.duration)
+                )
+            )
+        )
+    }
+
+    private func categoryColor(_ id: String) -> Color {
+        guard let category = model.snapshot.categories.first(where: {
+            $0.id == id
+        }) else {
+            return .tpProject
+        }
+        return Color(hex: category.lightHex)
+    }
+
+    private var activeProgress: CGFloat {
+        guard let plan = activeWidgetPlan, plan.span.duration > 0 else {
+            return 0
+        }
+        return max(
+            0,
+            min(
+                1,
+                CGFloat(
+                    Date.now.timeIntervalSince(plan.span.start)
+                        / plan.span.duration
+                )
+            )
+        )
+    }
+
+    private var activeTimeLabel: String {
+        guard let plan = activeWidgetPlan else {
+            return "계획을 시작하면 잠금 화면에 표시됩니다"
+        }
+        return "\(plan.span.start.formatted(date: .omitted, time: .shortened)) → \(plan.span.end.formatted(date: .omitted, time: .shortened))"
+    }
+
+    private var currentWeather: WeatherContext? {
+        model.snapshot.weather.min {
+            abs($0.observedAt.timeIntervalSinceNow)
+                < abs($1.observedAt.timeIntervalSinceNow)
+        }
+    }
+
+    private var widgetTrailingLabel: String {
+        let time = Date.now.formatted(date: .omitted, time: .shortened)
+        guard let currentWeather else { return time }
+        return "\(currentWeather.temperatureCelsius.rounded().formatted())° · \(time)"
+    }
+
+    private var weatherSymbol: String {
+        currentWeather?.symbolName ?? "clock"
+    }
 }
 
 struct OnboardingView: View {
     @Bindable var model: AppModel
+    @State private var showsCustomCombination = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -1029,16 +2027,53 @@ struct OnboardingView: View {
                     .foregroundStyle(Color.tpSecondary)
 
                 VStack(spacing: 7) {
-                    personaCard("briefcase", second: "stroller", title: "회사원 + 육아", tags: ["역할 · 회사원", "상황 · 육아"], caption: "회의 · 집중업무 · 등하원 · 가족 일정", selected: true)
-                    personaCard("graduationcap", second: "target", title: "학생 + 수능", tags: ["역할 · 학생", "목표 · 수능"], caption: "수업 · 과목 공부 · 기출 · 모의고사")
-                    personaCard("briefcase", second: "medal", title: "회사원 + 자격증", tags: ["역할 · 회사원", "목표 · 자격증"], caption: "회의 · 집중업무 · 강의 · 문제풀이")
-                    personaCard("plus", second: nil, title: "직접 조합", tags: [], caption: "역할 · 상황 · 목표를 각각 골라 만들기")
+                    templateCardButton(
+                        TemplateCatalog.representativeSelections[0],
+                        icon: "briefcase",
+                        second: "stroller",
+                        title: "회사원 + 육아",
+                        tags: ["역할 · 회사원", "상황 · 육아"],
+                        caption: "회의 · 집중업무 · 등하원 · 가족 일정"
+                    )
+                    templateCardButton(
+                        TemplateCatalog.representativeSelections[1],
+                        icon: "graduationcap",
+                        second: "scope",
+                        title: "학생 + 수능",
+                        tags: ["역할 · 학생", "목표 · 수능"],
+                        caption: "수업 · 과목 공부 · 기출 · 모의고사"
+                    )
+                    templateCardButton(
+                        TemplateCatalog.representativeSelections[2],
+                        icon: "briefcase",
+                        second: "medal",
+                        title: "회사원 + 자격증",
+                        tags: ["역할 · 회사원", "목표 · 자격증"],
+                        caption: "회의 · 집중업무 · 강의 · 문제풀이"
+                    )
+                    Button {
+                        showsCustomCombination.toggle()
+                    } label: {
+                        personaCard(
+                            "plus",
+                            second: nil,
+                            title: "직접 조합",
+                            tags: [],
+                            caption: "역할 · 상황 · 목표를 각각 골라 만들기",
+                            selected: showsCustomCombination
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if showsCustomCombination {
+                    customCombination
                 }
 
                 Button {
                     model.detail = .templateReview
                 } label: {
-                    Text("회사원 + 육아로 시작")
+                    Text("\(model.pendingTemplateApplication?.displayName ?? "선택한 구성")으로 시작")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -1061,6 +2096,106 @@ struct OnboardingView: View {
             .padding(.vertical, 5)
             .background(Color.tpBackground)
         }
+    }
+
+    private func templateCardButton(
+        _ selection: ProfileSelection,
+        icon: String,
+        second: String?,
+        title: String,
+        tags: [String],
+        caption: String
+    ) -> some View {
+        Button {
+            model.selectTemplate(selection)
+            showsCustomCombination = false
+        } label: {
+            personaCard(
+                icon,
+                second: second,
+                title: title,
+                tags: tags,
+                caption: caption,
+                selected: model.pendingProfileSelection == selection
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var customCombination: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            componentSection("역할 · 1개") {
+                ForEach(TemplateCatalog.roles) { component in
+                    componentChip(
+                        component.name,
+                        selected:
+                            model.pendingProfileSelection.roleID == component.id
+                    ) {
+                        model.selectTemplateRole(component.id)
+                    }
+                }
+            }
+            componentSection("상황 · 최대 2개") {
+                ForEach(TemplateCatalog.situations) { component in
+                    componentChip(
+                        component.name,
+                        selected: model.pendingProfileSelection.situationIDs
+                            .contains(component.id)
+                    ) {
+                        model.toggleTemplateSituation(component.id)
+                    }
+                }
+            }
+            componentSection("목표 · 최대 2개") {
+                ForEach(TemplateCatalog.goals) { component in
+                    componentChip(
+                        component.name,
+                        selected: model.pendingProfileSelection.goalIDs
+                            .contains(component.id)
+                    ) {
+                        model.toggleTemplateGoal(component.id)
+                    }
+                }
+            }
+        }
+        .padding(11)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
+        .overlay {
+            RoundedRectangle(cornerRadius: 15).stroke(Color.tpLine)
+        }
+    }
+
+    private func componentSection<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 8.5, weight: .black))
+                .foregroundStyle(Color.tpSecondary)
+            ChipFlowLayout {
+                content()
+            }
+        }
+    }
+
+    private func componentChip(
+        _ title: String,
+        selected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 8.5, weight: .bold))
+                .foregroundStyle(selected ? Color.white : Color.tpSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    selected ? Color.tpInk : Color(red: 0.94, green: 0.94, blue: 0.95),
+                    in: RoundedRectangle(cornerRadius: 8)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private func personaCard(
@@ -1137,10 +2272,11 @@ struct TemplateReviewView: View {
 
                 VStack(alignment: .leading, spacing: 7) {
                     Text("대표 조합").font(.system(size: 8.5)).foregroundStyle(Color.tpSecondary)
-                    Text("회사원 + 육아").font(.system(size: 16, weight: .bold))
+                    Text(application?.displayName ?? "시작 구성")
+                        .font(.system(size: 16, weight: .bold))
                     ChipFlowLayout {
-                        ForEach(["업무", "돌봄", "이동", "건강", "휴식", "수면"], id: \.self) {
-                            Text($0)
+                        ForEach(visibleCategoryNames, id: \.self) { name in
+                            Text(name)
                                 .font(.system(size: 8.5, weight: .semibold))
                                 .foregroundStyle(Color.tpSecondary)
                                 .padding(.horizontal, 6)
@@ -1161,8 +2297,8 @@ struct TemplateReviewView: View {
                 )
 
                 reviewSection("빠른 추가") {
-                    HStack(spacing: 5) {
-                        ForEach(["회의", "집중업무", "등하원", "가족 일정"], id: \.self) {
+                    ChipFlowLayout {
+                        ForEach(application?.quickAdds ?? [], id: \.self) {
                             Text($0)
                                 .font(.system(size: 8.5, weight: .bold))
                                 .foregroundStyle(Color.tpSecondary)
@@ -1175,15 +2311,34 @@ struct TemplateReviewView: View {
 
                 reviewSection("연결과 개인정보") {
                     VStack(spacing: 0) {
-                        reviewSetting("캘린더 일정 불러오기", value: "나중에 묻기")
-                        reviewSetting("건강 수면·운동 비교", value: "나중에 묻기")
-                        reviewSetting("위치 오래 머문 장소", value: "끔", off: true)
-                        reviewSetting("일정 공유", value: "끔", off: true)
+                        reviewSetting(
+                            "캘린더 일정 불러오기",
+                            value: suggestionLabel(for: .calendar),
+                            off: !isSuggested(.calendar)
+                        )
+                        reviewSetting(
+                            "건강 수면·운동 비교",
+                            value: suggestionLabel(for: .health),
+                            off: !isSuggested(.health)
+                        )
+                        reviewSetting(
+                            "위치 오래 머문 장소",
+                            value: suggestionLabel(for: .location),
+                            off: !isSuggested(.location)
+                        )
+                        reviewSetting(
+                            "일정 공유",
+                            value: suggestionLabel(for: .cloud),
+                            off: !isSuggested(.cloud)
+                        )
                     }
                 }
 
                 Button {
-                    model.detail = nil
+                    Task {
+                        await model.applyPendingTemplate()
+                        model.detail = nil
+                    }
                 } label: {
                     Text("이 구성으로 시작")
                         .font(.system(size: 12, weight: .bold))
@@ -1197,6 +2352,25 @@ struct TemplateReviewView: View {
             .padding(14)
         }
         .background(Color.tpBackground)
+    }
+
+    private var application: TemplateApplication? {
+        model.pendingTemplateApplication
+    }
+
+    private var visibleCategoryNames: [String] {
+        (application?.visibleCategoryIDs ?? []).compactMap { id in
+            application?.categoryDisplayNames[id]
+                ?? CategoryCatalog.builtIn.first { $0.id == id }?.name
+        }
+    }
+
+    private func isSuggested(_ feature: PermissionFeature) -> Bool {
+        application?.suggestedPermissions[feature] == true
+    }
+
+    private func suggestionLabel(for feature: PermissionFeature) -> String {
+        isSuggested(feature) ? "사용 제안" : "끔"
     }
 
     private func reviewSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -1245,5 +2419,98 @@ private struct DetailHeader: View {
         .padding(.vertical, 12)
         .background(Color.white)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine).frame(height: 0.5) }
+    }
+}
+
+private extension MemoKind {
+    var displayName: String {
+        switch self {
+        case .decision: "결정"
+        case .idea: "아이디어"
+        case .blocker: "막힘"
+        case .nextAction: "다음 할 일"
+        }
+    }
+}
+
+private extension TravelMode {
+    var systemImage: String {
+        switch self {
+        case .walking: "figure.walk"
+        case .running: "figure.run"
+        case .cycling: "bicycle"
+        case .bus: "bus"
+        case .subway: "tram"
+        case .taxi: "car.side"
+        case .car: "car"
+        case .train: "train.side.front.car"
+        case .airplane: "airplane"
+        case .ship: "ferry"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .cycling: "자전거"
+        case .bus: "버스"
+        case .subway: "지하철"
+        case .taxi: "택시"
+        case .car: "자가용"
+        case .train: "기차"
+        case .airplane: "비행기"
+        case .ship: "배"
+        }
+    }
+
+    var routeColor: Color {
+        switch self {
+        case .walking, .running, .cycling:
+            Color.tpTransitDark
+        case .bus, .taxi, .car:
+            Color(red: 0.95, green: 0.77, blue: 0.44)
+        case .subway, .train:
+            Color(red: 0.56, green: 0.79, blue: 0.90)
+        case .airplane:
+            Color(red: 0.72, green: 0.66, blue: 0.92)
+        case .ship:
+            Color(red: 0.34, green: 0.67, blue: 0.76)
+        }
+    }
+}
+
+private extension FloorTransition {
+    var floorChangeLabel: String {
+        if let fromFloor, let toFloor {
+            let delta = toFloor - fromFloor
+            return "\(delta >= 0 ? "↑" : "↓")\(abs(delta))F"
+        }
+        return String(
+            format: "%@%.1fm",
+            relativeAltitudeMeters >= 0 ? "↑" : "↓",
+            abs(relativeAltitudeMeters)
+        )
+    }
+}
+
+private extension ConfidenceLevel {
+    var displayName: String {
+        switch self {
+        case .low: "낮음"
+        case .medium: "중간"
+        case .high: "높음"
+        }
+    }
+}
+
+private extension TimeInterval {
+    var shortDuration: String {
+        let totalMinutes = max(0, Int((self / 60).rounded()))
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours == 0 { return "\(minutes)분" }
+        if minutes == 0 { return "\(hours)시간" }
+        return "\(hours)시간 \(minutes)분"
     }
 }

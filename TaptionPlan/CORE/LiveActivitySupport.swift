@@ -1,19 +1,6 @@
 @preconcurrency import ActivityKit
 import Foundation
 
-struct TaptionActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable {
-        var title: String
-        var categoryID: String
-        var startedAt: Date
-        var endsAt: Date
-        var catStyle: CatStyle
-        var isRunning: Bool
-    }
-
-    var planID: UUID
-}
-
 enum LiveActivityError: Error, Equatable {
     case unavailable
     case durationExceedsEightHours
@@ -43,7 +30,7 @@ actor TaptionLiveActivityController {
             categoryID: plan.categoryID,
             startedAt: plan.span.start,
             endsAt: plan.span.end,
-            catStyle: catStyle,
+            catStyle: catStyle.rawValue,
             isRunning: true
         )
         let newActivity = try Activity.request(
@@ -68,7 +55,7 @@ actor TaptionLiveActivityController {
             categoryID: plan.categoryID,
             startedAt: plan.span.start,
             endsAt: plan.span.end,
-            catStyle: catStyle,
+            catStyle: catStyle.rawValue,
             isRunning: plan.status == .running
         )
         await activity.update(
@@ -86,7 +73,7 @@ actor TaptionLiveActivityController {
             categoryID: plan.categoryID,
             startedAt: plan.span.start,
             endsAt: min(.now, plan.span.end),
-            catStyle: catStyle,
+            catStyle: catStyle.rawValue,
             isRunning: false
         )
         await activity.end(

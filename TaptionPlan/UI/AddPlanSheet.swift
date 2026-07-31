@@ -1,13 +1,15 @@
-import SwiftData
 import SwiftUI
 
 struct AddPlanSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
+    @Bindable var model: AppModel
 
     @State private var title = ""
-    @State private var category = PlanCategory.study
+    @State private var categoryID = "study"
     @State private var durationMinutes = 60
+    @State private var goalDurationMonths = 12
+    @State private var startAt = Date.now
+    @State private var parentID: UUID?
     @State private var path: [AddRoute] = []
     @State private var selectedDetent: PresentationDetent = .height(330)
     @FocusState private var titleFocused: Bool
@@ -19,7 +21,8 @@ struct AddPlanSheet: View {
                     switch route {
                     case .category:
                         CategoryPickerScreen(
-                            selection: $category,
+                            categories: model.snapshot.categories,
+                            selection: $categoryID,
                             onSelect: {
                                 path.removeLast()
                                 selectedDetent = .height(330)
@@ -31,15 +34,24 @@ struct AddPlanSheet: View {
                             }
                         )
                     case .customCategory:
-                        CustomCategoryScreen {
-                            category = .hobby
-                            path.removeAll()
-                            selectedDetent = .height(330)
+                        CustomCategoryScreen { name, icon, colorHex in
+                            if let category = model.addCustomCategory(
+                                name: name,
+                                icon: icon,
+                                lightHex: colorHex
+                            ) {
+                                categoryID = category.id
+                                path.removeAll()
+                                selectedDetent = .height(330)
+                            }
                         } onCancel: {
                             path.removeLast()
                         }
                     case .time:
-                        TimeSliderScreen(durationMinutes: $durationMinutes) {
+                        TimeSliderScreen(
+                            startAt: $startAt,
+                            durationMinutes: $durationMinutes
+                        ) {
                             path.removeLast()
                             selectedDetent = .height(330)
                         }
@@ -51,6 +63,29 @@ struct AddPlanSheet: View {
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(22)
         .onAppear {
+            parentID = model.addPlanContext.parentID
+            if model.addPlanContext.isGoal {
+                startAt = Calendar.autoupdatingCurrent.date(
+                    from: Calendar.autoupdatingCurrent.dateComponents(
+                        [.year, .month],
+                        from: model.selectedDate
+                    )
+                ) ?? model.selectedDate
+            } else if let parent = selectedParent {
+                categoryID = parent.categoryID
+                startAt = max(
+                    roundedToNextTenMinutes(model.selectedDate),
+                    parent.span.start
+                )
+            } else {
+                startAt = roundedToNextTenMinutes(startAt)
+            }
+            if selectedCategory.isHidden,
+               let firstVisible = model.snapshot.categories.first(where: {
+                   !$0.isHidden
+               }) {
+                categoryID = firstVisible.id
+            }
             titleFocused = true
         }
     }
@@ -64,7 +99,10 @@ struct AddPlanSheet: View {
                 .padding(.bottom, 14)
 
             HStack(spacing: 0) {
-                TextField("계획 이름", text: $title)
+                TextField(
+                    planNamePlaceholder,
+                    text: $title
+                )
                     .font(.system(size: 17, weight: .semibold))
                     .focused($titleFocused)
                     .submitLabel(.done)
@@ -97,7 +135,10 @@ struct AddPlanSheet: View {
                         .font(.system(size: 11))
                         .foregroundStyle(Color.tpSecondary)
                     Spacer()
-                    Label(category.rawValue, systemImage: category.systemImage)
+                    Label(
+                        selectedCategory.name,
+                        systemImage: selectedCategory.icon.systemImage
+                    )
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Color.tpInk)
                     Image(systemName: "chevron.right")
@@ -116,42 +157,130 @@ struct AddPlanSheet: View {
             }
             .buttonStyle(.plain)
 
-            HStack(spacing: 7) {
-                DraftChip(title: "오늘 21:00", selected: true)
-                DraftChip(title: "30분", selected: durationMinutes == 30)
-                    .onTapGesture { durationMinutes = 30 }
-                DraftChip(title: "1시간", selected: durationMinutes == 60)
-                    .onTapGesture { durationMinutes = 60 }
-                DraftChip(title: "2시간", selected: durationMinutes == 120)
-                    .onTapGesture { durationMinutes = 120 }
-                DraftChip(title: "슬라이더…")
-                    .onTapGesture {
-                        titleFocused = false
-                        selectedDetent = .large
-                        path.append(.time)
+            if model.addPlanContext.isGoal {
+                HStack(spacing: 7) {
+                    DraftChip(
+                        title: startAt.formatted(
+                            Date.FormatStyle()
+                                .year()
+                                .month(.abbreviated)
+                                .locale(Locale(identifier: "ko_KR"))
+                        ),
+                        selected: true
+                    )
+                    ForEach([1, 3, 6, 12], id: \.self) { months in
+                        DraftChip(
+                            title: months == 12
+                                ? "1년" : "\(months)개월",
+                            selected: goalDurationMonths == months
+                        )
+                        .onTapGesture {
+                            goalDurationMonths = months
+                        }
                     }
+                }
+                .padding(.top, 10)
+            } else {
+                HStack(spacing: 7) {
+                    DraftChip(
+                        title: startAt.formatted(
+                            Date.FormatStyle(
+                                date: .abbreviated,
+                                time: .shortened
+                            )
+                            .locale(Locale(identifier: "ko_KR"))
+                        ),
+                        selected: true
+                    )
+                    DraftChip(
+                        title: "30분",
+                        selected: durationMinutes == 30
+                    )
+                    .onTapGesture { durationMinutes = 30 }
+                    DraftChip(
+                        title: "1시간",
+                        selected: durationMinutes == 60
+                    )
+                    .onTapGesture { durationMinutes = 60 }
+                    DraftChip(
+                        title: "2시간",
+                        selected: durationMinutes == 120
+                    )
+                    .onTapGesture { durationMinutes = 120 }
+                    DraftChip(title: "슬라이더…")
+                        .onTapGesture {
+                            titleFocused = false
+                            selectedDetent = .large
+                            path.append(.time)
+                        }
+                }
+                .padding(.top, 10)
             }
-            .padding(.top, 10)
 
+            if !model.addPlanContext.isGoal {
             HStack(spacing: 7) {
                 Text("최근")
                     .font(.system(size: 11))
                     .foregroundStyle(Color.tpSecondary)
-                DraftChip(title: "러닝")
-                DraftChip(title: "영어 공부")
-                DraftChip(title: "독서")
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(quickSuggestions, id: \.self) { suggestion in
+                            Button {
+                                title = suggestion
+                            } label: {
+                                DraftChip(
+                                    title: suggestion,
+                                    selected: title == suggestion
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
             }
             .padding(.top, 6)
+            }
 
-            HStack(spacing: 7) {
-                Text("상위 목표")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.tpSecondary)
-                DraftChip(title: "자격증 취득", selected: true)
-                DraftChip(title: "없음")
-                Spacer()
+            if let parent = selectedParent,
+               model.addPlanContext.parentID != nil {
+                HStack(spacing: 7) {
+                    Text("상위 목표")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.tpSecondary)
+                    Spacer()
+                    Label(
+                        parent.title,
+                        systemImage: "arrow.turn.down.right"
+                    )
+                    .font(.system(size: 10.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(1)
+                }
+                .padding(.top, 8)
+            } else if model.addPlanContext == .quick {
+                HStack(spacing: 7) {
+                    Text("상위 목표")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.tpSecondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(rootPlans.prefix(3)) { plan in
+                                DraftChip(
+                                    title: plan.title,
+                                    selected: parentID == plan.id
+                                )
+                                .onTapGesture { parentID = plan.id }
+                            }
+                            DraftChip(
+                                title: "없음",
+                                selected: parentID == nil
+                            )
+                            .onTapGesture { parentID = nil }
+                        }
+                    }
+                }
+                .padding(.top, 6)
             }
-            .padding(.top, 6)
 
             Spacer(minLength: 0)
 
@@ -182,16 +311,74 @@ struct AddPlanSheet: View {
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanTitle.isEmpty else { return }
 
-        let startAt = Date.now
-        modelContext.insert(
-            PlanItem(
-                title: cleanTitle,
-                startAt: startAt,
-                endAt: startAt.addingTimeInterval(TimeInterval(durationMinutes * 60)),
-                category: category
-            )
+        model.addPlan(
+            title: cleanTitle,
+            categoryID: categoryID,
+            startAt: startAt,
+            duration: selectedDuration,
+            parentID: model.addPlanContext.isGoal ? nil : parentID
         )
         dismiss()
+    }
+
+    private var selectedCategory: CategoryDefinition {
+        model.snapshot.categories.first { $0.id == categoryID }
+            ?? CategoryCatalog.builtIn.first { $0.id == "study" }
+            ?? CategoryCatalog.builtIn[0]
+    }
+
+    private var selectedParent: PlanRecord? {
+        guard let parentID else { return nil }
+        return model.snapshot.plans.first { $0.id == parentID }
+    }
+
+    private var planNamePlaceholder: String {
+        if model.addPlanContext.isGoal { return "목표 이름" }
+        if model.addPlanContext.parentID != nil {
+            return "하위 계획 이름"
+        }
+        return "계획 이름"
+    }
+
+    private var rootPlans: [PlanRecord] {
+        model.snapshot.plans
+            .filter { $0.parentID == nil && $0.status != .skipped }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    private var quickSuggestions: [String] {
+        var values = model.snapshot.plans
+            .sorted { $0.updatedAt > $1.updatedAt }
+            .map(\.title)
+        values.append(
+            contentsOf: model.pendingTemplateApplication?.quickAdds ?? []
+        )
+        var seen = Set<String>()
+        return values.filter { seen.insert($0).inserted }.prefix(6).map {
+            $0
+        }
+    }
+
+    private var selectedDuration: TimeInterval {
+        if model.addPlanContext.isGoal {
+            let end = Calendar.autoupdatingCurrent.date(
+                byAdding: .month,
+                value: goalDurationMonths,
+                to: startAt
+            ) ?? startAt.addingTimeInterval(
+                TimeInterval(goalDurationMonths * 30 * 86_400)
+            )
+            return max(86_400, end.timeIntervalSince(startAt))
+        }
+        return TimeInterval(durationMinutes * 60)
+    }
+
+    private func roundedToNextTenMinutes(_ date: Date) -> Date {
+        let interval: TimeInterval = 10 * 60
+        return Date(
+            timeIntervalSinceReferenceDate:
+                ceil(date.timeIntervalSinceReferenceDate / interval) * interval
+        )
     }
 }
 
@@ -202,7 +389,8 @@ private enum AddRoute: Hashable {
 }
 
 private struct CategoryPickerScreen: View {
-    @Binding var selection: PlanCategory
+    let categories: [CategoryDefinition]
+    @Binding var selection: String
     let onSelect: () -> Void
     let onCustom: () -> Void
     let onCancel: () -> Void
@@ -223,20 +411,26 @@ private struct CategoryPickerScreen: View {
                         columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
                         spacing: 8
                     ) {
-                        ForEach(PlanCategory.allCases) { category in
+                        ForEach(categories.filter { !$0.isHidden }) { category in
                             Button {
-                                selection = category
+                                selection = category.id
                             } label: {
-                                Label(category.rawValue, systemImage: category.systemImage)
+                                Label(
+                                    category.name,
+                                    systemImage: category.icon.systemImage
+                                )
                                     .font(.system(size: 10.5, weight: .bold))
                                     .foregroundStyle(Color.tpInk)
                                     .frame(maxWidth: .infinity, minHeight: 44)
-                                    .background(category.color, in: RoundedRectangle(cornerRadius: 10))
+                                    .background(
+                                        Color(hex: category.lightHex),
+                                        in: RoundedRectangle(cornerRadius: 10)
+                                    )
                                     .overlay {
                                         RoundedRectangle(cornerRadius: 10)
                                             .stroke(
-                                                selection == category ? Color.tpInk : Color.tpLine,
-                                                lineWidth: selection == category ? 2 : 1
+                                                selection == category.id ? Color.tpInk : Color.tpLine,
+                                                lineWidth: selection == category.id ? 2 : 1
                                             )
                                     }
                             }
@@ -258,7 +452,7 @@ private struct CategoryPickerScreen: View {
                     }
 
                     Button(action: onSelect) {
-                        Text("\(selection.rawValue)으로 선택")
+                        Text("\(selectedCategoryName)으로 선택")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -275,21 +469,25 @@ private struct CategoryPickerScreen: View {
         }
         .toolbar(.hidden, for: .navigationBar)
     }
+
+    private var selectedCategoryName: String {
+        categories.first { $0.id == selection }?.name ?? "대분류"
+    }
 }
 
 private struct CustomCategoryScreen: View {
     @State private var name = "봉사"
-    @State private var selectedIcon = "person.2"
+    @State private var selectedIcon = CategoryIcon.family
     @State private var selectedColor = 1
 
-    let onSave: () -> Void
+    let onSave: (String, CategoryIcon, String) -> Void
     let onCancel: () -> Void
 
-    private let icons = [
-        "briefcase", "building.2", "book", "graduationcap", "target", "medal",
-        "stroller", "person.2", "shield", "heart.text.square", "dumbbell", "moon",
-        "camera", "music.note", "airplane", "mappin.and.ellipse", "house", "fork.knife",
-        "cup.and.saucer", "pawprint", "bag", "leaf", "calendar", "note.text",
+    private let icons: [CategoryIcon] = [
+        .briefcase, .building, .book, .graduation, .target, .award,
+        .stroller, .family, .shield, .health, .exercise, .sleep,
+        .performance, .music, .travel, .location, .home, .meal,
+        .cafe, .pet, .shopping, .nature, .calendar, .memo,
     ]
     private let colors: [Color] = [
         .tpProject, Color(red: 0.85, green: 0.90, blue: 0.78), .tpExercise,
@@ -303,7 +501,7 @@ private struct CustomCategoryScreen: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 9) {
                     HStack(spacing: 9) {
-                        Image(systemName: selectedIcon)
+                        Image(systemName: selectedIcon.systemImage)
                             .font(.system(size: 18))
                             .foregroundStyle(Color(red: 0.33, green: 0.46, blue: 0.24))
                             .frame(width: 34, height: 34)
@@ -339,7 +537,7 @@ private struct CustomCategoryScreen: View {
                                 Button {
                                     selectedIcon = icon
                                 } label: {
-                                    Image(systemName: icon)
+                                    Image(systemName: icon.systemImage)
                                         .font(.system(size: 15))
                                         .foregroundStyle(selectedIcon == icon ? Color.white : Color.tpSecondary)
                                         .frame(maxWidth: .infinity, minHeight: 31)
@@ -382,7 +580,9 @@ private struct CustomCategoryScreen: View {
                     .padding(11)
                     .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
 
-                    Button(action: onSave) {
+                    Button {
+                        onSave(name, selectedIcon, colorHex)
+                    } label: {
                         Text("대분류 추가")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
@@ -399,11 +599,23 @@ private struct CustomCategoryScreen: View {
         }
         .toolbar(.hidden, for: .navigationBar)
     }
+
+    private var colorHex: String {
+        ["#BEDAE3", "#D9E6C7", "#FED5CF", "#F1B598", "#D3C7E6", "#F4D7E7"][
+            selectedColor
+        ]
+    }
 }
 
 private struct TimeSliderScreen: View {
+    @Binding var startAt: Date
     @Binding var durationMinutes: Int
     let onDone: () -> Void
+
+    @State private var dragOriginSpan: TimeSpan?
+    @State private var dragStartedAt: Date?
+    @State private var previousFeedbackDate: Date?
+    @State private var isPrecisionMode = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -416,15 +628,21 @@ private struct TimeSliderScreen: View {
                 }
 
                 HStack(alignment: .firstTextBaseline) {
-                    Text("21:00 → 22:00")
+                    Text(timeRangeLabel)
                         .font(.system(size: 24, weight: .black))
                     Spacer()
-                    Text("\(durationMinutes / 60)시간")
+                    Text(durationLabel)
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                 }
 
                 GeometryReader { proxy in
+                    let availableWidth = max(1, proxy.size.width - 12)
+                    let lower =
+                        xPosition(for: span.start, width: availableWidth) + 6
+                    let upper =
+                        xPosition(for: span.end, width: availableWidth) + 6
+                    let barWidth = max(16, upper - lower)
                     ZStack {
                         RoundedRectangle(cornerRadius: 14)
                             .fill(Color(red: 0.96, green: 0.96, blue: 0.97))
@@ -438,17 +656,39 @@ private struct TimeSliderScreen: View {
                         }
                         RoundedRectangle(cornerRadius: 10)
                             .fill(Color.tpStudy)
-                            .frame(width: proxy.size.width * 0.18, height: 38)
-                            .position(x: proxy.size.width * 0.55, y: 28)
-                        sliderHandle.position(x: proxy.size.width * 0.46, y: 28)
-                        sliderHandle.position(x: proxy.size.width * 0.64, y: 28)
-                        Text("21:00")
+                            .frame(width: barWidth, height: 38)
+                            .position(x: lower + barWidth / 2, y: 28)
+                            .gesture(
+                                dragGesture(.body, width: availableWidth)
+                            )
+                        sliderHandle
+                            .position(x: lower, y: 28)
+                            .gesture(
+                                dragGesture(.start, width: availableWidth)
+                            )
+                        sliderHandle
+                            .position(x: upper, y: 28)
+                            .gesture(
+                                dragGesture(.end, width: availableWidth)
+                            )
+                        Text(
+                            span.start.formatted(
+                                date: .omitted,
+                                time: .shortened
+                            )
+                        )
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
                             .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 10))
-                            .position(x: proxy.size.width * 0.46, y: -5)
+                            .position(
+                                x: min(
+                                    proxy.size.width - 31,
+                                    max(31, lower)
+                                ),
+                                y: -5
+                            )
                     }
                 }
                 .frame(height: 56)
@@ -456,23 +696,50 @@ private struct TimeSliderScreen: View {
                 .padding(.top, 18)
 
                 HStack {
-                    ForEach(["18", "19", "20", "21", "22", "23", "24"], id: \.self) {
+                    ForEach(["00", "04", "08", "12", "16", "20", "24"], id: \.self) {
                         Text($0).frame(maxWidth: .infinity)
                     }
                 }
                 .font(.system(size: 10))
                 .foregroundStyle(Color.tpSecondary)
 
-                Slider(value: Binding(
-                    get: { Double(durationMinutes) },
-                    set: { durationMinutes = Int($0.rounded() / 10) * 10 }
-                ), in: 30...180, step: 10)
-                .tint(.tpStudyDark)
+                HStack(spacing: 6) {
+                    ForEach([30, 60, 90, 120], id: \.self) { minutes in
+                        Button {
+                            durationMinutes = minutes
+                        } label: {
+                            Text(presetLabel(minutes))
+                                .font(.system(size: 9.5, weight: .bold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 7)
+                                .foregroundStyle(
+                                    durationMinutes == minutes
+                                        ? Color.white : Color.tpSecondary
+                                )
+                                .background(
+                                    durationMinutes == minutes
+                                        ? Color.tpStudyDark
+                                        : Color(
+                                            red: 0.94,
+                                            green: 0.94,
+                                            blue: 0.95
+                                        ),
+                                    in: RoundedRectangle(cornerRadius: 9)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
 
                 HStack(spacing: 6) {
                     hint("슬라이드", "1분 단위\n이동")
                     hint("빠르게", "10분 단위\n반올림 스냅")
-                    hint("꾹 누르기", "확대되어\n미세 조정")
+                    hint(
+                        "꾹 누르기",
+                        isPrecisionMode
+                            ? "정밀 조정\n사용 중"
+                            : "정밀 조정\n1분 단위"
+                    )
                 }
 
                 Button(action: onDone) {
@@ -500,6 +767,108 @@ private struct TimeSliderScreen: View {
             .overlay {
                 Capsule().fill(Color(red: 0.79, green: 0.79, blue: 0.81)).frame(width: 2.5, height: 14)
             }
+    }
+
+    private var span: TimeSpan {
+        TimeSpan(
+            start: startAt,
+            end: startAt.addingTimeInterval(
+                TimeInterval(max(1, durationMinutes) * 60)
+            )
+        )
+    }
+
+    private var dayBounds: TimeSpan {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: startAt)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(86_400)
+        return TimeSpan(start: start, end: end)
+    }
+
+    private var timeRangeLabel: String {
+        "\(span.start.formatted(date: .omitted, time: .shortened)) → \(span.end.formatted(date: .omitted, time: .shortened))"
+    }
+
+    private var durationLabel: String {
+        let hours = durationMinutes / 60
+        let minutes = durationMinutes % 60
+        if hours == 0 { return "\(minutes)분" }
+        if minutes == 0 { return "\(hours)시간" }
+        return "\(hours)시간 \(minutes)분"
+    }
+
+    private func presetLabel(_ minutes: Int) -> String {
+        if minutes < 60 { return "\(minutes)분" }
+        if minutes.isMultiple(of: 60) { return "\(minutes / 60)시간" }
+        return "\(minutes / 60)시간 \(minutes % 60)분"
+    }
+
+    private func xPosition(for date: Date, width: CGFloat) -> CGFloat {
+        let fraction = date.timeIntervalSince(dayBounds.start)
+            / max(1, dayBounds.duration)
+        return width * CGFloat(max(0, min(1, fraction)))
+    }
+
+    private func dragGesture(
+        _ handle: TimeSliderHandle,
+        width: CGFloat
+    ) -> some Gesture {
+        DragGesture(minimumDistance: 1)
+            .onChanged { value in
+                let now = Date.now
+                if dragOriginSpan == nil {
+                    dragOriginSpan = span
+                    dragStartedAt = now
+                    previousFeedbackDate = handle == .end
+                        ? span.end : span.start
+                }
+                guard let origin = dragOriginSpan,
+                      let began = dragStartedAt else {
+                    return
+                }
+                let elapsed = max(0.016, now.timeIntervalSince(began))
+                let velocity = Double(value.translation.width) / elapsed
+                let precision = elapsed >= 0.35
+                isPrecisionMode = precision
+                let delta = Double(value.translation.width / max(1, width))
+                    * dayBounds.duration
+                let adjusted = TimeSliderEngine.adjust(
+                    origin,
+                    handle: handle,
+                    delta: delta,
+                    velocityPointsPerSecond: velocity,
+                    isLongPressPrecision: precision,
+                    bounds: dayBounds,
+                    minimumDuration: 10 * 60
+                )
+                if let previousFeedbackDate {
+                    let current = handle == .end
+                        ? adjusted.end : adjusted.start
+                    if TimeSliderEngine.crossedTenMinuteTick(
+                        previous: previousFeedbackDate,
+                        current: current
+                    ) {
+                        UISelectionFeedbackGenerator().selectionChanged()
+                        self.previousFeedbackDate = current
+                    }
+                }
+                apply(adjusted)
+            }
+            .onEnded { _ in
+                dragOriginSpan = nil
+                dragStartedAt = nil
+                previousFeedbackDate = nil
+                isPrecisionMode = false
+            }
+    }
+
+    private func apply(_ adjusted: TimeSpan) {
+        startAt = adjusted.start
+        durationMinutes = max(
+            1,
+            Int((adjusted.duration / 60).rounded())
+        )
     }
 
     private func hint(_ title: String, _ caption: String) -> some View {
@@ -536,6 +905,5 @@ private func pickerHeader(
 }
 
 #Preview {
-    AddPlanSheet()
-        .modelContainer(for: PlanItem.self, inMemory: true)
+    AddPlanSheet(model: AppModel())
 }

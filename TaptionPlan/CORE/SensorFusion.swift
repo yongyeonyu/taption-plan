@@ -183,9 +183,12 @@ struct FloorEstimator: Sendable {
         let floorDelta = Int((delta / floorHeight).rounded())
         guard floorDelta != 0 else { return nil }
 
-        let pedometerDelta = readings.reduce(0) {
-            $0 + ($1.floorsAscended ?? 0) - ($1.floorsDescended ?? 0)
-        }
+        let firstAscended = readings.first?.floorsAscended ?? 0
+        let lastAscended = readings.last?.floorsAscended ?? firstAscended
+        let firstDescended = readings.first?.floorsDescended ?? 0
+        let lastDescended = readings.last?.floorsDescended ?? firstDescended
+        let pedometerDelta = (lastAscended - firstAscended)
+            - (lastDescended - firstDescended)
         let evidence = [
             "상대고도 \(String(format: "%+.1f", delta))m",
             pedometerDelta == 0 ? nil : "층계 \(pedometerDelta > 0 ? "+" : "")\(pedometerDelta)"

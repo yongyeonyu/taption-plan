@@ -569,6 +569,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var relativeAltitudeMeters: Double?
     var floorsAscended: Int?
     var floorsDescended: Int?
+    var stepCount: Int?
+    var walkingRunningDistanceMeters: Double?
+    var deviceMotion: DeviceMotionSnapshot?
     var systemFloor: Int?
     var gpsAvailable: Bool
     var nearbyStation: Bool
@@ -592,6 +595,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         relativeAltitudeMeters: Double? = nil,
         floorsAscended: Int? = nil,
         floorsDescended: Int? = nil,
+        stepCount: Int? = nil,
+        walkingRunningDistanceMeters: Double? = nil,
+        deviceMotion: DeviceMotionSnapshot? = nil,
         systemFloor: Int? = nil,
         gpsAvailable: Bool = true,
         nearbyStation: Bool = false,
@@ -614,6 +620,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.relativeAltitudeMeters = relativeAltitudeMeters
         self.floorsAscended = floorsAscended
         self.floorsDescended = floorsDescended
+        self.stepCount = stepCount
+        self.walkingRunningDistanceMeters = walkingRunningDistanceMeters
+        self.deviceMotion = deviceMotion
         self.systemFloor = systemFloor
         self.gpsAvailable = gpsAvailable
         self.nearbyStation = nearbyStation
@@ -744,6 +753,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var locationEnabled: Bool
     var backgroundPreciseLocationEnabled: Bool
     var weatherEnabled: Bool
+    var notificationsEnabled: Bool
     var permissions: [PermissionFeature: PermissionState]
 
     static let defaults = AppFeatureSettings(
@@ -758,10 +768,118 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         locationEnabled: false,
         backgroundPreciseLocationEnabled: false,
         weatherEnabled: false,
+        notificationsEnabled: false,
         permissions: Dictionary(
             uniqueKeysWithValues: PermissionFeature.allCases.map { ($0, .notDetermined) }
         )
     )
+
+    init(
+        startScale: TimelineLevel,
+        rememberLastScale: Bool,
+        catStyle: CatStyle,
+        reduceMotion: Bool,
+        showsPhotos: Bool,
+        showsPhotosInWidgets: Bool,
+        selectedCalendarIDs: [String],
+        healthEnabled: Bool,
+        locationEnabled: Bool,
+        backgroundPreciseLocationEnabled: Bool,
+        weatherEnabled: Bool,
+        notificationsEnabled: Bool,
+        permissions: [PermissionFeature: PermissionState]
+    ) {
+        self.startScale = startScale
+        self.rememberLastScale = rememberLastScale
+        self.catStyle = catStyle
+        self.reduceMotion = reduceMotion
+        self.showsPhotos = showsPhotos
+        self.showsPhotosInWidgets = showsPhotosInWidgets
+        self.selectedCalendarIDs = selectedCalendarIDs
+        self.healthEnabled = healthEnabled
+        self.locationEnabled = locationEnabled
+        self.backgroundPreciseLocationEnabled = backgroundPreciseLocationEnabled
+        self.weatherEnabled = weatherEnabled
+        self.notificationsEnabled = notificationsEnabled
+        self.permissions = permissions
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case startScale
+        case rememberLastScale
+        case catStyle
+        case reduceMotion
+        case showsPhotos
+        case showsPhotosInWidgets
+        case selectedCalendarIDs
+        case healthEnabled
+        case locationEnabled
+        case backgroundPreciseLocationEnabled
+        case weatherEnabled
+        case notificationsEnabled
+        case permissions
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Self.defaults
+        startScale = try values.decodeIfPresent(
+            TimelineLevel.self,
+            forKey: .startScale
+        ) ?? defaults.startScale
+        rememberLastScale = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .rememberLastScale
+        ) ?? defaults.rememberLastScale
+        catStyle = try values.decodeIfPresent(
+            CatStyle.self,
+            forKey: .catStyle
+        ) ?? defaults.catStyle
+        reduceMotion = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .reduceMotion
+        ) ?? defaults.reduceMotion
+        showsPhotos = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .showsPhotos
+        ) ?? defaults.showsPhotos
+        showsPhotosInWidgets = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .showsPhotosInWidgets
+        ) ?? defaults.showsPhotosInWidgets
+        selectedCalendarIDs = try values.decodeIfPresent(
+            [String].self,
+            forKey: .selectedCalendarIDs
+        ) ?? defaults.selectedCalendarIDs
+        healthEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .healthEnabled
+        ) ?? defaults.healthEnabled
+        locationEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .locationEnabled
+        ) ?? defaults.locationEnabled
+        backgroundPreciseLocationEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .backgroundPreciseLocationEnabled
+        ) ?? defaults.backgroundPreciseLocationEnabled
+        weatherEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .weatherEnabled
+        ) ?? defaults.weatherEnabled
+        notificationsEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .notificationsEnabled
+        ) ?? defaults.notificationsEnabled
+        permissions = try values.decodeIfPresent(
+            [PermissionFeature: PermissionState].self,
+            forKey: .permissions
+        ) ?? defaults.permissions
+        for feature in PermissionFeature.allCases
+        where permissions[feature] == nil {
+            permissions[feature] = .notDetermined
+        }
+    }
 }
 
 struct TaptionDataSnapshot: Codable, Hashable, Sendable {

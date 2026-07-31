@@ -1,11 +1,50 @@
 import Foundation
 
+enum TaptionDeepLink: Equatable {
+    case today
+    case plan(UUID)
+
+    init?(url: URL) {
+        guard url.scheme?.lowercased() == "taptionplan" else { return nil }
+        switch url.host {
+        case "today":
+            self = .today
+        case "plan":
+            let components = url.pathComponents.filter { $0 != "/" }
+            guard let rawID = components.first,
+                  let id = UUID(uuidString: rawID) else {
+                return nil
+            }
+            self = .plan(id)
+        default:
+            return nil
+        }
+    }
+}
+
+enum AddPlanContext: Equatable {
+    case quick
+    case goal
+    case child(UUID)
+
+    var isGoal: Bool {
+        if case .goal = self { return true }
+        return false
+    }
+
+    var parentID: UUID? {
+        if case .child(let id) = self { return id }
+        return nil
+    }
+}
+
 enum AppDetail: Equatable {
     case group
     case locationTimeline
     case memo
     case inference
     case catPicker
+    case categoryManager
     case onboarding
     case templateReview
     case widgetPreview
@@ -13,9 +52,26 @@ enum AppDetail: Equatable {
 
 struct QuickActionItem: Identifiable {
     let id = UUID()
+    let planID: UUID?
     let title: String
     let time: String
     let context: String
+
+    init(
+        planID: UUID? = nil,
+        title: String,
+        time: String,
+        context: String
+    ) {
+        self.planID = planID
+        self.title = title
+        self.time = time
+        self.context = context
+    }
+}
+
+struct PlanEditorRequest: Identifiable, Equatable {
+    let id: UUID
 }
 
 enum ReviewScale: String, CaseIterable, Identifiable {
@@ -67,6 +123,15 @@ enum TimeScale: String, CaseIterable, Identifiable {
         case .week: ["월", "화", "수", "목", "금", "토", "일"]
         case .month: ["1", "5", "10", "15", "20", "25", "30"]
         case .year: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
+        }
+    }
+
+    var timelineLevel: TimelineLevel {
+        switch self {
+        case .day: .day
+        case .week: .week
+        case .month: .month
+        case .year: .year
         }
     }
 }

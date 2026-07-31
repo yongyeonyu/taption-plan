@@ -15,12 +15,21 @@ struct ReviewView: View {
                         columns: [GridItem(.flexible()), GridItem(.flexible())],
                         spacing: 8
                     ) {
-                        reviewCard("프로젝트·학습", value: "18h 20m", caption: "계획보다 1h 40m 적음")
-                        reviewCard("운동", value: "3회 · 2h", caption: "계획대로 실행")
-                        reviewCard("수면", value: "평균 6h 48m", caption: "지난주보다 ＋22m")
-                        reviewCard("이동", value: "6h 20m", caption: "예정 밖 이동 50m")
-                        reviewCard("취미·휴식", value: "5h 10m", caption: "회복 시간 ＋40m")
-                        reviewCard("생활·관계", value: "12h 30m", caption: "가족과 보낸 시간 4h")
+                        if report.categories.isEmpty {
+                            reviewCard(
+                                "기록 없음",
+                                value: "0분",
+                                caption: "계획을 실행하면 차이가 여기에 쌓입니다."
+                            )
+                        } else {
+                            ForEach(Array(report.categories.prefix(6))) { category in
+                                reviewCard(
+                                    categoryName(category.categoryID),
+                                    value: durationText(category.actual),
+                                    caption: differenceText(category)
+                                )
+                            }
+                        }
                     }
 
                     contextCard
@@ -35,10 +44,10 @@ struct ReviewView: View {
     private var reviewHeader: some View {
         VStack(spacing: 7) {
             HStack(alignment: .firstTextBaseline) {
-                Text("이번 주 회고")
+                Text("\(model.reviewScale.periodName) 회고")
                     .font(.system(size: 19, weight: .bold))
                 Spacer()
-                Text("7.27 – 8.2")
+                Text(periodText(report.span))
                     .font(.system(size: 12))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -80,21 +89,30 @@ struct ReviewView: View {
     }
 
     private var recapHero: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("계획 32시간 · 실제 26시간 40분")
+        let ratio = report.plannedDuration > 0
+            ? min(1, report.actualDuration / report.plannedDuration)
+            : 0
+        let difference = report.actualDuration - report.plannedDuration
+
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(
+                "계획 \(durationText(report.plannedDuration)) · 실제 \(durationText(report.actualDuration))"
+            )
                 .font(.system(size: 10))
                 .foregroundStyle(Color(red: 0.68, green: 0.68, blue: 0.70))
-            Text("83%")
+            Text(difference == 0 ? "차이 없음" : signedDurationText(difference))
                 .font(.system(size: 24, weight: .bold))
                 .padding(.vertical, 5)
-            Text("점수가 아니라 이번 주 시간의 차이")
+            Text("점수가 아니라 \(model.reviewScale.periodName) 시간의 차이")
                 .font(.system(size: 10))
                 .foregroundStyle(Color(red: 0.68, green: 0.68, blue: 0.70))
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule().fill(.white.opacity(0.18))
-                    Capsule().fill(Color.tpProjectDark).frame(width: proxy.size.width * 0.74)
+                    Capsule()
+                        .fill(Color.tpProjectDark)
+                        .frame(width: proxy.size.width * ratio)
                 }
             }
             .frame(height: 9)
@@ -126,12 +144,18 @@ struct ReviewView: View {
 
     private var contextCard: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text("이번 주를 설명한 기록")
+            Text("\(model.reviewScale.periodName)을 설명한 기록")
                 .font(.system(size: 11, weight: .bold))
-            contextLine("cloud.rain", "목요일 비 · 야외 러닝을 금요일로 이동")
-            contextLine("calendar.badge.clock", "갑작스러운 회의 50분 · 보고서 일정 지연")
-            contextLine("photo", "기억으로 남긴 사진 4장")
-            contextLine("note.text", "신제품 기획 · 결정과 다음 할 일 메모 3개")
+            if report.contexts.isEmpty {
+                contextLine(
+                    "tray",
+                    "사진·날씨·메모가 연결되면 이번 기간의 맥락을 보여드립니다."
+                )
+            } else {
+                ForEach(report.contexts) { context in
+                    contextLine(context.symbolName, context.text)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(11)
@@ -146,6 +170,71 @@ struct ReviewView: View {
                 .frame(width: 14)
             Text(text)
                 .font(.system(size: 10.5))
+        }
+    }
+
+    private var report: ReviewReport {
+        ReviewEngine().report(
+            for: model.reviewScale.timelineLevel,
+            containing: model.selectedDate,
+            plans: model.snapshot.plans,
+            actuals: model.snapshot.actuals,
+            weather: model.snapshot.weather,
+            photos: model.snapshot.photos,
+            memos: model.snapshot.memos
+        )
+    }
+
+    private func periodText(_ span: TimeSpan) -> String {
+        span.start.formatted(.dateTime.month().day())
+            + " – "
+            + span.end.addingTimeInterval(-1).formatted(.dateTime.month().day())
+    }
+
+    private func categoryName(_ id: String) -> String {
+        model.snapshot.categories.first { $0.id == id }?.name
+            ?? PlanCategory(categoryID: id).rawValue
+    }
+
+    private func durationText(_ interval: TimeInterval) -> String {
+        let totalMinutes = max(0, Int(interval / 60))
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours == 0 { return "\(minutes)분" }
+        if minutes == 0 { return "\(hours)시간" }
+        return "\(hours)시간 \(minutes)분"
+    }
+
+    private func signedDurationText(_ interval: TimeInterval) -> String {
+        let prefix = interval > 0 ? "＋" : "－"
+        return prefix + durationText(abs(interval))
+    }
+
+    private func differenceText(_ category: CategoryDuration) -> String {
+        let difference = category.actual - category.planned
+        if abs(difference) < 60 {
+            return "계획과 실제가 같습니다."
+        }
+        return difference > 0
+            ? "계획보다 \(durationText(difference)) 더 사용"
+            : "계획보다 \(durationText(abs(difference))) 적음"
+    }
+}
+
+private extension ReviewScale {
+    var periodName: String {
+        switch self {
+        case .week: "이번 주"
+        case .month: "이번 달"
+        case .year: "올해"
+        }
+    }
+
+    var timelineLevel: TimelineLevel {
+        switch self {
+        case .week: .week
+        case .month: .month
+        case .year: .year
         }
     }
 }

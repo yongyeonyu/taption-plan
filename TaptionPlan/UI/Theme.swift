@@ -38,6 +38,59 @@ extension Color {
     static let tpPlaceDark = Color(red: 53 / 255, green: 124 / 255, blue: 165 / 255)
     static let tpTransitDark = Color(red: 154 / 255, green: 106 / 255, blue: 45 / 255)
     static let tpNow = Color(red: 1.00, green: 59 / 255, blue: 48 / 255)
+
+    init(hex: String) {
+        let clean = hex
+            .trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var value: UInt64 = 0
+        Scanner(string: clean).scanHexInt64(&value)
+        let red: Double
+        let green: Double
+        let blue: Double
+        switch clean.count {
+        case 3:
+            red = Double((value >> 8) * 17) / 255
+            green = Double((value >> 4 & 0xF) * 17) / 255
+            blue = Double((value & 0xF) * 17) / 255
+        default:
+            red = Double(value >> 16 & 0xFF) / 255
+            green = Double(value >> 8 & 0xFF) / 255
+            blue = Double(value & 0xFF) / 255
+        }
+        self.init(red: red, green: green, blue: blue)
+    }
+}
+
+extension CategoryIcon {
+    var systemImage: String {
+        switch self {
+        case .briefcase: "briefcase"
+        case .building: "building.2"
+        case .book: "book"
+        case .graduation: "graduationcap"
+        case .target: "target"
+        case .award: "medal"
+        case .stroller: "stroller"
+        case .family: "person.2"
+        case .shield: "shield"
+        case .health: "heart.text.square"
+        case .exercise: "dumbbell"
+        case .sleep: "moon.zzz"
+        case .performance: "theatermasks"
+        case .music: "music.note"
+        case .travel: "airplane"
+        case .location: "mappin.and.ellipse"
+        case .photo: "photo"
+        case .home: "house"
+        case .meal: "fork.knife"
+        case .cafe: "cup.and.saucer"
+        case .pet: "pawprint"
+        case .shopping: "bag"
+        case .nature: "leaf"
+        case .calendar: "calendar"
+        case .memo: "note.text"
+        }
+    }
 }
 
 extension PlanCategory {

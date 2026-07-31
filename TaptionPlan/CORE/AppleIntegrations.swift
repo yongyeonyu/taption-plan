@@ -234,9 +234,14 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
 
 final class AppleHealthService: @unchecked Sendable {
     private let store: HKHealthStore
+    private let sleepEngine: SleepAnalysisEngine
 
-    init(store: HKHealthStore = HKHealthStore()) {
+    init(
+        store: HKHealthStore = HKHealthStore(),
+        sleepEngine: SleepAnalysisEngine = SleepAnalysisEngine()
+    ) {
         self.store = store
+        self.sleepEngine = sleepEngine
     }
 
     func permissionState() -> PermissionState {
@@ -257,10 +262,75 @@ final class AppleHealthService: @unchecked Sendable {
         }
     }
 
+    func authorizationRequestState() async throws -> PermissionState {
+        guard HKHealthStore.isHealthDataAvailable() else { return .unavailable }
+        let readTypes = Set(readTypes())
+        return try await withCheckedThrowingContinuation { continuation in
+            store.getRequestStatusForAuthorization(
+                toShare: [],
+                read: readTypes
+            ) { status, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                switch status {
+                case .shouldRequest:
+                    continuation.resume(returning: .notDetermined)
+                case .unnecessary:
+                    continuation.resume(returning: .authorized)
+                case .unknown:
+                    continuation.resume(returning: .notDetermined)
+                @unknown default:
+                    continuation.resume(returning: .unavailable)
+                }
+            }
+        }
+    }
+
     func actuals(in span: TimeSpan) async throws -> [ActualRecord] {
         async let workouts = workoutActuals(in: span)
         async let sleeps = sleepActuals(in: span)
         return try await workouts + sleeps
+    }
+
+    func sleepSegments(in span: TimeSpan) async throws -> [SleepSegment] {
+        guard let type = HKObjectType.categoryType(
+            forIdentifier: .sleepAnalysis
+        ) else {
+            return []
+        }
+        let samples = try await samples(type: type, span: span)
+        return samples.compactMap { sample in
+            guard let category = sample as? HKCategorySample,
+                  let healthStage = HKCategoryValueSleepAnalysis(
+                    rawValue: category.value
+                  ),
+                  let stage = healthStage.taptionStage,
+                  let overlap = TimeSpan(
+                    start: category.startDate,
+                    end: category.endDate
+                  ).intersection(with: span) else {
+                return nil
+            }
+            return SleepSegment(
+                id: category.uuid,
+                stage: stage,
+                span: overlap,
+                sourceName: category.sourceRevision.source.name,
+                sourceBundleIdentifier: category.sourceRevision.source.bundleIdentifier,
+                deviceName: category.device?.name,
+                timeZoneIdentifier: category.metadata?[HKMetadataKeyTimeZone] as? String,
+                isUserEntered: category.metadata?[HKMetadataKeyWasUserEntered] as? Bool ?? false
+            )
+        }
+    }
+
+    func sleepSessions(in span: TimeSpan) async throws -> [SleepSession] {
+        sleepEngine.sessions(
+            from: try await sleepSegments(in: span),
+            inside: span
+        )
     }
 
     func healthDetails(in span: TimeSpan) async throws -> [HealthActual] {
@@ -285,14 +355,14 @@ final class AppleHealthService: @unchecked Sendable {
     }
 
     private func sleepActuals(in span: TimeSpan) async throws -> [ActualRecord] {
-        try await sleepDetails(in: span).map { detail in
+        try await sleepSessions(in: span).map { session in
             ActualRecord(
-                id: detail.id,
+                id: session.id,
                 planID: nil,
                 title: "수면",
                 categoryID: "sleep",
-                startedAt: detail.span.start,
-                endedAt: detail.span.end,
+                startedAt: session.span.start,
+                endedAt: session.span.end,
                 source: .healthKit,
                 confidence: .high
             )
@@ -329,30 +399,15 @@ final class AppleHealthService: @unchecked Sendable {
     }
 
     private func sleepDetails(in span: TimeSpan) async throws -> [HealthActual] {
-        guard let type = HKObjectType.categoryType(
-            forIdentifier: .sleepAnalysis
-        ) else {
-            return []
-        }
-        let samples = try await samples(type: type, span: span)
-        return samples.compactMap { sample in
-            guard let category = sample as? HKCategorySample,
-                  let value = HKCategoryValueSleepAnalysis(rawValue: category.value),
-                  value != .inBed else {
-                return nil
-            }
-            let recordSpan = TimeSpan(
-                start: category.startDate,
-                end: category.endDate
-            )
+        try await sleepSessions(in: span).map { session in
             return HealthActual(
-                id: UUID(uuidString: category.uuid.uuidString) ?? UUID(),
+                id: session.id,
                 kind: "수면",
-                span: recordSpan,
-                duration: recordSpan.duration,
+                span: session.span,
+                duration: session.asleepDuration,
                 distanceMeters: nil,
                 energyKilocalories: nil,
-                sourceName: category.sourceRevision.source.name
+                sourceName: session.sourceNames.joined(separator: ", ")
             )
         }
     }
@@ -364,7 +419,7 @@ final class AppleHealthService: @unchecked Sendable {
         let predicate = HKQuery.predicateForSamples(
             withStart: span.start,
             end: span.end,
-            options: .strictStartDate
+            options: []
         )
         let sort = NSSortDescriptor(
             key: HKSampleSortIdentifierStartDate,
@@ -395,6 +450,20 @@ final class AppleHealthService: @unchecked Sendable {
             HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
             HKObjectType.quantityType(forIdentifier: .flightsClimbed)
         ].compactMap { $0 }
+    }
+}
+
+private extension HKCategoryValueSleepAnalysis {
+    var taptionStage: SleepStage? {
+        switch self {
+        case .inBed: .inBed
+        case .awake: .awake
+        case .asleepCore: .core
+        case .asleepDeep: .deep
+        case .asleepREM: .rem
+        case .asleepUnspecified: .asleepUnspecified
+        @unknown default: nil
+        }
     }
 }
 
@@ -445,17 +514,24 @@ actor AppleWeatherContextService {
 @MainActor
 final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
-    private let motionManager = CMMotionActivityManager()
+    private let activityManager = CMMotionActivityManager()
+    private let deviceMotionManager = CMMotionManager()
     private let altimeter = CMAltimeter()
     private let pedometer = CMPedometer()
 
     private var continuation: AsyncStream<SensorReading>.Continuation?
+    private var configuration: SensorCollectionConfiguration = .standard
+    private var isCollecting = false
+    private var lastEmissionAt: Date?
     private var latestLocation: CLLocation?
     private var latestMotion: MotionKind = .unknown
     private var latestMotionConfidence: ConfidenceLevel = .low
     private var latestRelativeAltitude: Double?
     private var latestFloorsAscended: Int?
     private var latestFloorsDescended: Int?
+    private var latestStepCount: Int?
+    private var latestWalkingRunningDistance: Double?
+    private var latestDeviceMotion: DeviceMotionSnapshot?
 
     override init() {
         super.init()
@@ -464,6 +540,18 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         locationManager.distanceFilter = 50
         locationManager.pausesLocationUpdatesAutomatically = true
+    }
+
+    func hardwareAvailability() -> SensorHardwareAvailability {
+        SensorHardwareAvailability(
+            location: CLLocationManager.locationServicesEnabled(),
+            motionActivity: CMMotionActivityManager.isActivityAvailable(),
+            deviceMotion: deviceMotionManager.isDeviceMotionAvailable,
+            relativeAltitude: CMAltimeter.isRelativeAltitudeAvailable(),
+            stepCounting: CMPedometer.isStepCountingAvailable(),
+            distance: CMPedometer.isDistanceAvailable(),
+            floorCounting: CMPedometer.isFloorCountingAvailable()
+        )
     }
 
     func permissionState() -> PermissionState {
@@ -479,8 +567,21 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
     }
 
+    func motionPermissionState() -> PermissionState {
+        switch CMMotionActivityManager.authorizationStatus() {
+        case .notDetermined:
+            return .notDetermined
+        case .restricted, .denied:
+            return .denied
+        case .authorized:
+            return .authorized
+        @unknown default:
+            return .unavailable
+        }
+    }
+
     func requestLocationPermission(always: Bool = false) {
-        if always {
+        if always, locationManager.authorizationStatus == .authorizedWhenInUse {
             locationManager.requestAlwaysAuthorization()
         } else {
             locationManager.requestWhenInUseAuthorization()
@@ -488,46 +589,108 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     func readings(highAccuracyDuringMovement: Bool = true) -> AsyncStream<SensorReading> {
+        var configuration = SensorCollectionConfiguration.standard
+        configuration.highAccuracyDuringMovement = highAccuracyDuringMovement
+        return readings(configuration: configuration)
+    }
+
+    func readings(
+        configuration: SensorCollectionConfiguration
+    ) -> AsyncStream<SensorReading> {
         AsyncStream { continuation in
             self.continuation = continuation
+            self.configuration = configuration
             continuation.onTermination = { [weak self] _ in
                 Task { @MainActor in self?.stop() }
             }
-            start(highAccuracyDuringMovement: highAccuracyDuringMovement)
+            start()
         }
     }
 
     func stop() {
         locationManager.stopUpdatingLocation()
         locationManager.stopMonitoringVisits()
-        motionManager.stopActivityUpdates()
+        locationManager.stopMonitoringSignificantLocationChanges()
+        locationManager.allowsBackgroundLocationUpdates = false
+        activityManager.stopActivityUpdates()
+        deviceMotionManager.stopDeviceMotionUpdates()
         altimeter.stopRelativeAltitudeUpdates()
         pedometer.stopUpdates()
+        isCollecting = false
+        lastEmissionAt = nil
         continuation?.finish()
         continuation = nil
     }
 
-    private func start(highAccuracyDuringMovement: Bool) {
-        locationManager.startMonitoringVisits()
-        locationManager.startMonitoringSignificantLocationChanges()
+    private func start() {
+        guard !isCollecting else { return }
+        isCollecting = true
+        locationManager.allowsBackgroundLocationUpdates =
+            configuration.allowsBackgroundLocation
+            && locationManager.authorizationStatus == .authorizedAlways
+        if CLLocationManager.isMonitoringAvailable(for: CLVisit.self) {
+            locationManager.startMonitoringVisits()
+        }
+        if CLLocationManager.significantLocationChangeMonitoringAvailable() {
+            locationManager.startMonitoringSignificantLocationChanges()
+        }
         if permissionState() == .authorized {
             locationManager.startUpdatingLocation()
         }
 
         if CMMotionActivityManager.isActivityAvailable() {
-            motionManager.startActivityUpdates(to: .main) { [weak self] activity in
+            activityManager.startActivityUpdates(to: .main) { [weak self] activity in
                 guard let activity else { return }
                 Task { @MainActor in
                     guard let self else { return }
                     self.latestMotion = Self.motionKind(activity)
                     self.latestMotionConfidence = Self.confidence(activity.confidence)
-                    if highAccuracyDuringMovement {
+                    if self.configuration.highAccuracyDuringMovement {
                         self.locationManager.desiredAccuracy = activity.stationary
                             ? kCLLocationAccuracyHundredMeters
                             : kCLLocationAccuracyBest
                         self.locationManager.distanceFilter = activity.stationary ? 50 : 10
                     }
                     self.emit()
+                }
+            }
+        }
+
+        if configuration.collectsDeviceMotion,
+           deviceMotionManager.isDeviceMotionAvailable {
+            deviceMotionManager.deviceMotionUpdateInterval = max(
+                0.25,
+                min(2, configuration.minimumEmissionInterval)
+            )
+            deviceMotionManager.startDeviceMotionUpdates(
+                to: .main
+            ) { [weak self] motion, _ in
+                guard let motion else { return }
+                let snapshot = DeviceMotionSnapshot(
+                    gravity: SensorVector3(
+                        x: motion.gravity.x,
+                        y: motion.gravity.y,
+                        z: motion.gravity.z
+                    ),
+                    userAcceleration: SensorVector3(
+                        x: motion.userAcceleration.x,
+                        y: motion.userAcceleration.y,
+                        z: motion.userAcceleration.z
+                    ),
+                    rotationRate: SensorVector3(
+                        x: motion.rotationRate.x,
+                        y: motion.rotationRate.y,
+                        z: motion.rotationRate.z
+                    ),
+                    attitudeRadians: SensorVector3(
+                        x: motion.attitude.roll,
+                        y: motion.attitude.pitch,
+                        z: motion.attitude.yaw
+                    )
+                )
+                Task { @MainActor in
+                    self?.latestDeviceMotion = snapshot
+                    self?.emit()
                 }
             }
         }
@@ -546,6 +709,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 Task { @MainActor in
                     self?.latestFloorsAscended = data?.floorsAscended?.intValue
                     self?.latestFloorsDescended = data?.floorsDescended?.intValue
+                    self?.latestStepCount = data?.numberOfSteps.intValue
+                    self?.latestWalkingRunningDistance = data?.distance?.doubleValue
                     self?.emit()
                 }
             }
@@ -556,8 +721,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
     ) {
-        latestLocation = locations.last
-        emit()
+        latestLocation = locations.last {
+            $0.horizontalAccuracy >= 0
+                && abs($0.timestamp.timeIntervalSinceNow) < 5 * 60
+        }
+        emit(force: true)
     }
 
     func locationManager(
@@ -576,11 +744,15 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         )
         latestLocation = location
         latestMotion = .stationary
-        emit()
+        latestMotionConfidence = .high
+        emit(force: true)
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         if permissionState() == .authorized {
+            manager.allowsBackgroundLocationUpdates =
+                configuration.allowsBackgroundLocation
+                && manager.authorizationStatus == .authorizedAlways
             manager.startUpdatingLocation()
         }
     }
@@ -594,8 +766,16 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
     }
 
-    private func emit() {
+    private func emit(force: Bool = false) {
         guard continuation != nil else { return }
+        let now = Date.now
+        if !force,
+           let lastEmissionAt,
+           now.timeIntervalSince(lastEmissionAt)
+            < max(0.25, configuration.minimumEmissionInterval) {
+            return
+        }
+        lastEmissionAt = now
         let location = latestLocation
         let point = location.map {
             GeoPoint(
@@ -617,10 +797,128 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 relativeAltitudeMeters: latestRelativeAltitude,
                 floorsAscended: latestFloorsAscended,
                 floorsDescended: latestFloorsDescended,
+                stepCount: latestStepCount,
+                walkingRunningDistanceMeters: latestWalkingRunningDistance,
+                deviceMotion: latestDeviceMotion,
                 systemFloor: location?.floor?.level,
                 gpsAvailable: location != nil
             )
         )
+    }
+
+    private static func motionKind(_ activity: CMMotionActivity) -> MotionKind {
+        if activity.stationary { return .stationary }
+        if activity.walking { return .walking }
+        if activity.running { return .running }
+        if activity.cycling { return .cycling }
+        if activity.automotive { return .automotive }
+        return .unknown
+    }
+
+    private static func confidence(
+        _ confidence: CMMotionActivityConfidence
+    ) -> ConfidenceLevel {
+        switch confidence {
+        case .high: .high
+        case .medium: .medium
+        case .low: .low
+        @unknown default: .low
+        }
+    }
+}
+
+// MARK: - Historical iPhone motion data
+
+final class AppleMotionHistoryService: @unchecked Sendable {
+    private let activityManager: CMMotionActivityManager
+    private let pedometer: CMPedometer
+
+    init(
+        activityManager: CMMotionActivityManager = CMMotionActivityManager(),
+        pedometer: CMPedometer = CMPedometer()
+    ) {
+        self.activityManager = activityManager
+        self.pedometer = pedometer
+    }
+
+    func permissionState() -> PermissionState {
+        switch CMMotionActivityManager.authorizationStatus() {
+        case .notDetermined:
+            return .notDetermined
+        case .restricted, .denied:
+            return .denied
+        case .authorized:
+            return .authorized
+        @unknown default:
+            return .unavailable
+        }
+    }
+
+    func activities(in span: TimeSpan) async throws -> [MotionActivityRecord] {
+        guard CMMotionActivityManager.isActivityAvailable() else { return [] }
+        return try await withCheckedThrowingContinuation { continuation in
+            activityManager.queryActivityStarting(
+                from: span.start,
+                to: span.end,
+                to: .main
+            ) { activities, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    let ordered = (activities ?? [])
+                        .filter { $0.startDate < span.end }
+                        .sorted { $0.startDate < $1.startDate }
+                    let records = ordered.enumerated().compactMap {
+                        index, activity -> MotionActivityRecord? in
+                        let start = max(span.start, activity.startDate)
+                        let nextStart = ordered.indices.contains(index + 1)
+                            ? ordered[index + 1].startDate
+                            : span.end
+                        let end = min(span.end, max(start, nextStart))
+                        guard start < end else { return nil }
+                        return MotionActivityRecord(
+                            span: TimeSpan(start: start, end: end),
+                            motion: Self.motionKind(activity),
+                            confidence: Self.confidence(activity.confidence)
+                        )
+                    }
+                    continuation.resume(returning: records)
+                }
+            }
+        }
+    }
+
+    func pedometerSummary(in span: TimeSpan) async throws -> PedometerSummary? {
+        guard CMPedometer.isStepCountingAvailable() else { return nil }
+        return try await withCheckedThrowingContinuation { continuation in
+            pedometer.queryPedometerData(
+                from: span.start,
+                to: span.end
+            ) { data, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let data {
+                    continuation.resume(
+                        returning: PedometerSummary(
+                            span: TimeSpan(
+                                start: data.startDate,
+                                end: data.endDate
+                            ),
+                            stepCount: data.numberOfSteps.intValue,
+                            distanceMeters: data.distance?.doubleValue,
+                            floorsAscended: data.floorsAscended?.intValue,
+                            floorsDescended: data.floorsDescended?.intValue,
+                            averageActivePaceSecondsPerMeter:
+                                data.averageActivePace?.doubleValue
+                        )
+                    )
+                } else {
+                    continuation.resume(
+                        throwing: CocoaError(.fileReadUnknown)
+                    )
+                }
+            }
+        }
     }
 
     private static func motionKind(_ activity: CMMotionActivity) -> MotionKind {
@@ -714,22 +1012,98 @@ final class VoiceMemoRecorder: NSObject, AVAudioRecorderDelegate {
     }
 }
 
+@MainActor
+final class VoiceMemoPlayer: NSObject, @preconcurrency AVAudioPlayerDelegate {
+    private var player: AVAudioPlayer?
+    var onFinish: (() -> Void)?
+
+    var isPlaying: Bool {
+        player?.isPlaying == true
+    }
+
+    func play(filePath: String) throws {
+        stop()
+        let url = URL(fileURLWithPath: filePath)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw VoiceMemoPlaybackError.fileMissing
+        }
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playback, mode: .spokenAudio)
+        try session.setActive(true)
+        let player = try AVAudioPlayer(contentsOf: url)
+        player.delegate = self
+        player.prepareToPlay()
+        guard player.play() else {
+            throw VoiceMemoPlaybackError.couldNotStart
+        }
+        self.player = player
+    }
+
+    func stop() {
+        player?.stop()
+        player = nil
+        try? AVAudioSession.sharedInstance().setActive(false)
+    }
+
+    func audioPlayerDidFinishPlaying(
+        _ player: AVAudioPlayer,
+        successfully flag: Bool
+    ) {
+        self.player = nil
+        try? AVAudioSession.sharedInstance().setActive(false)
+        onFinish?()
+    }
+}
+
+enum VoiceMemoPlaybackError: LocalizedError {
+    case fileMissing
+    case couldNotStart
+
+    var errorDescription: String? {
+        switch self {
+        case .fileMissing:
+            "음성 메모 파일을 찾지 못했습니다."
+        case .couldNotStart:
+            "음성 메모 재생을 시작하지 못했습니다."
+        }
+    }
+}
+
 actor PlanNotificationScheduler {
+    static let identifierPrefix = "plan-start-"
+
     private let center = UNUserNotificationCenter.current()
 
-    func requestPermission() async throws -> Bool {
-        try await center.requestAuthorization(options: [.alert, .badge, .sound])
+    func authorizationState() async -> PermissionState {
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .notDetermined:
+            return .notDetermined
+        case .denied:
+            return .denied
+        case .authorized, .provisional, .ephemeral:
+            return .authorized
+        @unknown default:
+            return .unavailable
+        }
+    }
+
+    func requestPermission() async throws -> PermissionState {
+        _ = try await center.requestAuthorization(
+            options: [.alert, .badge, .sound]
+        )
+        return await authorizationState()
     }
 
     func scheduleStartReminder(for plan: PlanRecord) async throws {
-        guard plan.span.start > .now else { return }
+        guard plan.span.start > .now, plan.status == .planned else { return }
         let content = UNMutableNotificationContent()
         content.title = plan.title
         content.body = "계획 시작 시간입니다."
         content.sound = .default
         content.userInfo = ["planID": plan.id.uuidString]
         let components = Calendar.autoupdatingCurrent.dateComponents(
-            [.year, .month, .day, .hour, .minute],
+            [.year, .month, .day, .hour, .minute, .second],
             from: plan.span.start
         )
         let trigger = UNCalendarNotificationTrigger(
@@ -738,16 +1112,98 @@ actor PlanNotificationScheduler {
         )
         try await center.add(
             UNNotificationRequest(
-                identifier: "plan-start-\(plan.id.uuidString)",
+                identifier: Self.identifier(for: plan.id),
                 content: content,
                 trigger: trigger
             )
         )
     }
 
+    func synchronize(
+        plans: [PlanRecord],
+        now: Date = .now
+    ) async throws {
+        guard await authorizationState().isGranted else { return }
+
+        let desired = PlanNotificationPolicy.reminderPlans(
+            from: plans,
+            now: now
+        )
+        let desiredIDs = Set(desired.map { Self.identifier(for: $0.id) })
+        let current = await center.pendingNotificationRequests()
+        let managed = current.filter {
+            $0.identifier.hasPrefix(Self.identifierPrefix)
+        }
+        let obsolete = managed
+            .map(\.identifier)
+            .filter { !desiredIDs.contains($0) }
+        if !obsolete.isEmpty {
+            center.removePendingNotificationRequests(
+                withIdentifiers: obsolete
+            )
+        }
+
+        let existingByID = Dictionary(
+            uniqueKeysWithValues: managed.map { ($0.identifier, $0) }
+        )
+        for plan in desired {
+            let identifier = Self.identifier(for: plan.id)
+            let existingDate = (
+                existingByID[identifier]?.trigger
+                    as? UNCalendarNotificationTrigger
+            )?.nextTriggerDate()
+            if let existingDate,
+               abs(existingDate.timeIntervalSince(plan.span.start)) < 1 {
+                continue
+            }
+            if existingByID[identifier] != nil {
+                center.removePendingNotificationRequests(
+                    withIdentifiers: [identifier]
+                )
+            }
+            try await scheduleStartReminder(for: plan)
+        }
+    }
+
     func cancel(for planID: UUID) {
         center.removePendingNotificationRequests(
-            withIdentifiers: ["plan-start-\(planID.uuidString)"]
+            withIdentifiers: [Self.identifier(for: planID)]
         )
+    }
+
+    func cancelAllPlanReminders() async {
+        let requests = await center.pendingNotificationRequests()
+        let identifiers = requests
+            .map(\.identifier)
+            .filter { $0.hasPrefix(Self.identifierPrefix) }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+    }
+
+    nonisolated static func identifier(for planID: UUID) -> String {
+        "\(identifierPrefix)\(planID.uuidString)"
+    }
+}
+
+enum PlanNotificationPolicy {
+    static let maximumPendingPlanReminders = 60
+
+    static func reminderPlans(
+        from plans: [PlanRecord],
+        now: Date,
+        limit: Int = maximumPendingPlanReminders
+    ) -> [PlanRecord] {
+        plans
+            .filter {
+                $0.status == .planned
+                    && $0.span.start > now
+            }
+            .sorted { lhs, rhs in
+                if lhs.span.start == rhs.span.start {
+                    return lhs.createdAt < rhs.createdAt
+                }
+                return lhs.span.start < rhs.span.start
+            }
+            .prefix(max(0, limit))
+            .map { $0 }
     }
 }

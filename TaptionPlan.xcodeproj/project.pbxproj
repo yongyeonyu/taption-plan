@@ -32,6 +32,21 @@
 		A10000000000000000000018 /* NavigationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000018 /* NavigationModels.swift */; };
 		A10000000000000000000019 /* CatPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000019 /* CatPresentation.swift */; };
 		A1000000000000000000001A /* TimelineInteractionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001A /* TimelineInteractionEngine.swift */; };
+		A1000000000000000000001B /* HealthAndSensorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001B /* HealthAndSensorModels.swift */; };
+		A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001C /* SleepAnalysisEngine.swift */; };
+		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
+		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* TaptionPlanWidget.swift */; };
+		A10000000000000000000020 /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
+		A10000000000000000000021 /* TaptionPlanWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* TaptionPlanWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000022 /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
+		A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001B /* HealthAndSensorModels.swift */; };
+		A10000000000000000000024 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
+		A10000000000000000000025 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
+		A10000000000000000000026 /* StoreKitSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000023 /* StoreKitSupport.swift */; };
+		A10000000000000000000027 /* CategoryManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000024 /* CategoryManagerView.swift */; };
+		A10000000000000000000028 /* PlanEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000025 /* PlanEditorSheet.swift */; };
+		A10000000000000000000029 /* PhotoClusterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000026 /* PhotoClusterSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,11 +57,33 @@
 			remoteGlobalIDString = E10000000000000000000001;
 			remoteInfo = TaptionPlan;
 		};
+		B10000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E10000000000000000000003;
+			remoteInfo = TaptionPlanWidget;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		940000000000000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A10000000000000000000021 /* TaptionPlanWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000002 /* TaptionPlanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C10000000000000000000003 /* TaptionPlanWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaptionPlanWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10000000000000000000001 /* TaptionPlanApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanApp.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		F10000000000000000000003 /* PlanItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanItem.swift; sourceTree = "<group>"; };
@@ -73,6 +110,18 @@
 		F10000000000000000000018 /* NavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationModels.swift; sourceTree = "<group>"; };
 		F10000000000000000000019 /* CatPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatPresentation.swift; sourceTree = "<group>"; };
 		F1000000000000000000001A /* TimelineInteractionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineInteractionEngine.swift; sourceTree = "<group>"; };
+		F1000000000000000000001B /* HealthAndSensorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthAndSensorModels.swift; sourceTree = "<group>"; };
+		F1000000000000000000001C /* SleepAnalysisEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepAnalysisEngine.swift; sourceTree = "<group>"; };
+		F1000000000000000000001D /* SensorDataServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDataServices.swift; sourceTree = "<group>"; };
+		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F1000000000000000000001F /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
+		F10000000000000000000020 /* TaptionPlanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWidget.swift; sourceTree = "<group>"; };
+		F10000000000000000000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F10000000000000000000022 /* TaptionPlanWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWidget.entitlements; sourceTree = "<group>"; };
+		F10000000000000000000023 /* StoreKitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitSupport.swift; sourceTree = "<group>"; };
+		F10000000000000000000024 /* CategoryManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryManagerView.swift; sourceTree = "<group>"; };
+		F10000000000000000000025 /* PlanEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorSheet.swift; sourceTree = "<group>"; };
+		F10000000000000000000026 /* PhotoClusterSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoClusterSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +139,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		910000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -98,6 +154,7 @@
 			children = (
 				810000000000000000000003 /* TaptionPlan */,
 				810000000000000000000004 /* TaptionPlanTests */,
+				810000000000000000000008 /* TaptionPlanWidget */,
 				810000000000000000000002 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -107,6 +164,7 @@
 			children = (
 				C10000000000000000000001 /* TaptionPlan.app */,
 				C10000000000000000000002 /* TaptionPlanTests.xctest */,
+				C10000000000000000000003 /* TaptionPlanWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -119,6 +177,7 @@
 				810000000000000000000006 /* UX */,
 				810000000000000000000007 /* CORE */,
 				F10000000000000000000017 /* TaptionPlan.entitlements */,
+				F1000000000000000000001E /* Info.plist */,
 				F1000000000000000000000B /* Assets.xcassets */,
 			);
 			path = TaptionPlan;
@@ -145,6 +204,9 @@
 				F1000000000000000000000D /* DraftComponents.swift */,
 				F1000000000000000000000E /* DetailViews.swift */,
 				F10000000000000000000004 /* Theme.swift */,
+				F10000000000000000000024 /* CategoryManagerView.swift */,
+				F10000000000000000000025 /* PlanEditorSheet.swift */,
+				F10000000000000000000026 /* PhotoClusterSheet.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -171,8 +233,23 @@
 				F10000000000000000000013 /* SensorFusion.swift */,
 				F10000000000000000000014 /* AppleIntegrations.swift */,
 				F10000000000000000000015 /* LiveActivitySupport.swift */,
+				F1000000000000000000001B /* HealthAndSensorModels.swift */,
+				F1000000000000000000001C /* SleepAnalysisEngine.swift */,
+				F1000000000000000000001D /* SensorDataServices.swift */,
+				F1000000000000000000001F /* WidgetShared.swift */,
+				F10000000000000000000023 /* StoreKitSupport.swift */,
 			);
 			path = CORE;
+			sourceTree = "<group>";
+		};
+		810000000000000000000008 /* TaptionPlanWidget */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000020 /* TaptionPlanWidget.swift */,
+				F10000000000000000000021 /* Info.plist */,
+				F10000000000000000000022 /* TaptionPlanWidget.entitlements */,
+			);
+			path = TaptionPlanWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -185,10 +262,12 @@
 				920000000000000000000001 /* Sources */,
 				910000000000000000000001 /* Frameworks */,
 				930000000000000000000001 /* Resources */,
+				940000000000000000000001 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B20000000000000000000002 /* PBXTargetDependency */,
 			);
 			name = TaptionPlan;
 			productName = TaptionPlan;
@@ -213,6 +292,23 @@
 			productReference = C10000000000000000000002 /* TaptionPlanTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		E10000000000000000000003 /* TaptionPlanWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 710000000000000000000004 /* Build configuration list for PBXNativeTarget "TaptionPlanWidget" */;
+			buildPhases = (
+				920000000000000000000003 /* Sources */,
+				910000000000000000000003 /* Frameworks */,
+				930000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TaptionPlanWidget;
+			productName = TaptionPlanWidget;
+			productReference = C10000000000000000000003 /* TaptionPlanWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -229,6 +325,9 @@
 					E10000000000000000000002 = {
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = E10000000000000000000001;
+					};
+					E10000000000000000000003 = {
+						CreatedOnToolsVersion = 26.6;
 					};
 				};
 			};
@@ -247,6 +346,7 @@
 			targets = (
 				E10000000000000000000001 /* TaptionPlan */,
 				E10000000000000000000002 /* TaptionPlanTests */,
+				E10000000000000000000003 /* TaptionPlanWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -261,6 +361,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		930000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		930000000000000000000003 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -296,6 +403,14 @@
 				A10000000000000000000018 /* NavigationModels.swift in Sources */,
 				A10000000000000000000019 /* CatPresentation.swift in Sources */,
 				A1000000000000000000001A /* TimelineInteractionEngine.swift in Sources */,
+				A1000000000000000000001B /* HealthAndSensorModels.swift in Sources */,
+				A1000000000000000000001C /* SleepAnalysisEngine.swift in Sources */,
+				A1000000000000000000001D /* SensorDataServices.swift in Sources */,
+				A1000000000000000000001E /* WidgetShared.swift in Sources */,
+				A10000000000000000000026 /* StoreKitSupport.swift in Sources */,
+				A10000000000000000000027 /* CategoryManagerView.swift in Sources */,
+				A10000000000000000000028 /* PlanEditorSheet.swift in Sources */,
+				A10000000000000000000029 /* PhotoClusterSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -308,6 +423,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		920000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */,
+				A10000000000000000000020 /* WidgetShared.swift in Sources */,
+				A10000000000000000000022 /* FeatureModels.swift in Sources */,
+				A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */,
+				A10000000000000000000024 /* PlanningEngine.swift in Sources */,
+				A10000000000000000000025 /* PlanRepository.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -315,6 +443,11 @@
 			isa = PBXTargetDependency;
 			target = E10000000000000000000001 /* TaptionPlan */;
 			targetProxy = B10000000000000000000001 /* PBXContainerItemProxy */;
+		};
+		B20000000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E10000000000000000000003 /* TaptionPlanWidget */;
+			targetProxy = B10000000000000000000002 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -441,22 +574,11 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Taption Plan";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "고정된 일정을 시간표에 표시하기 위해 캘린더 접근이 필요합니다.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "운동과 수면의 실제 기록을 시간표와 비교하기 위해 건강 데이터 접근이 필요합니다.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "방문 장소와 이동 구간을 저전력 방식으로 자동 기록하려면 백그라운드 위치 접근이 필요합니다.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "머문 장소와 이동 시간을 사용자가 허용한 범위에서 기록하기 위해 위치 접근이 필요합니다.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "액션 아이템에 음성 메모를 첨부하기 위해 마이크 접근이 필요합니다.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "걷기와 이동 상태를 추정하기 위해 동작 및 피트니스 접근이 필요합니다.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "촬영 시각에 맞춰 사진을 시간표에 표시하기 위해 사진 접근이 필요합니다.";
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TaptionPlan/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -480,21 +602,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = "";
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Taption Plan";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "고정된 일정을 시간표에 표시하기 위해 캘린더 접근이 필요합니다.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "운동과 수면의 실제 기록을 시간표와 비교하기 위해 건강 데이터 접근이 필요합니다.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "방문 장소와 이동 구간을 저전력 방식으로 자동 기록하려면 백그라운드 위치 접근이 필요합니다.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "머문 장소와 이동 시간을 사용자가 허용한 범위에서 기록하기 위해 위치 접근이 필요합니다.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "액션 아이템에 음성 메모를 첨부하기 위해 마이크 접근이 필요합니다.";
-				INFOPLIST_KEY_NSMotionUsageDescription = "걷기와 이동 상태를 추정하기 위해 동작 및 피트니스 접근이 필요합니다.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "촬영 시각에 맞춰 사진을 시간표에 표시하기 위해 사진 접근이 필요합니다.";
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TaptionPlan/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -553,6 +664,60 @@
 			};
 			name = Release;
 		};
+		610000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.taption.plan.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		610000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.taption.plan.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -579,6 +744,15 @@
 			buildConfigurations = (
 				610000000000000000000005 /* Debug */,
 				610000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		710000000000000000000004 /* Build configuration list for PBXNativeTarget "TaptionPlanWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				610000000000000000000007 /* Debug */,
+				610000000000000000000008 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

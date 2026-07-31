@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AppShellView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var model = AppModel()
 
     var body: some View {
@@ -14,13 +15,78 @@ struct AppShellView: View {
             }
         }
         .sheet(isPresented: $model.isAddPlanPresented) {
-            AddPlanSheet()
+            AddPlanSheet(model: model)
         }
         .sheet(item: $model.selectedAction) { item in
             QuickActionSheet(model: model, item: item)
         }
+        .sheet(item: $model.planEditorRequest) { request in
+            PlanEditorSheet(model: model, planID: request.id)
+        }
+        .sheet(item: $model.selectedPhotoCluster) { cluster in
+            PhotoClusterSheet(model: model, cluster: cluster)
+        }
         .tint(.tpInk)
         .preferredColorScheme(.light)
+        .task {
+            await model.bootstrap()
+            if let planID = TaptionPlanAppDelegate.takePendingPlanID(),
+               let url = URL(
+                    string: "taptionplan://plan/\(planID.uuidString)"
+               ) {
+                model.openDeepLink(url)
+            }
+        }
+        .onOpenURL { url in
+            Task { @MainActor in
+                await model.bootstrap()
+                model.openDeepLink(url)
+            }
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: .taptionPlanOpenNotificationPlan
+            )
+        ) { notification in
+            let planID =
+                TaptionPlanAppDelegate.takePendingPlanID()
+                ?? notification.object as? UUID
+            guard let planID,
+                  let url = URL(
+                    string: "taptionplan://plan/\(planID.uuidString)"
+                  ) else {
+                return
+            }
+            Task { @MainActor in
+                await model.bootstrap()
+                model.openDeepLink(url)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            Task {
+                switch phase {
+                case .active:
+                    await model.sceneBecameActive()
+                case .background:
+                    await model.sceneEnteredBackground()
+                case .inactive:
+                    break
+                @unknown default:
+                    break
+                }
+            }
+        }
+        .alert(
+            "확인해 주세요",
+            isPresented: Binding(
+                get: { model.userFacingError != nil },
+                set: { if !$0 { model.clearError() } }
+            )
+        ) {
+            Button("확인") { model.clearError() }
+        } message: {
+            Text(model.userFacingError ?? "")
+        }
     }
 
     @ViewBuilder
@@ -37,6 +103,8 @@ struct AppShellView: View {
                 InferenceDetailView(model: model)
             case .catPicker:
                 CatPickerView(model: model)
+            case .categoryManager:
+                CategoryManagerView(model: model)
             case .onboarding:
                 OnboardingView(model: model)
             case .templateReview:
@@ -66,5 +134,4 @@ struct AppShellView: View {
 
 #Preview {
     AppShellView()
-        .modelContainer(for: PlanItem.self, inMemory: true)
 }

@@ -97,6 +97,12 @@ struct DraftBottomNavigationBar: View {
             tabButton(.goals)
 
             Button {
+                if model.detail == .group,
+                   let parentID = model.selectedGroupPlanID {
+                    model.addPlanContext = .child(parentID)
+                } else {
+                    model.addPlanContext = .quick
+                }
                 model.isAddPlanPresented = true
             } label: {
                 Image(systemName: "plus")
@@ -108,7 +114,9 @@ struct DraftBottomNavigationBar: View {
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
-            .accessibilityLabel("계획 추가")
+            .accessibilityLabel(
+                model.detail == .group ? "하위 계획 추가" : "계획 추가"
+            )
 
             tabButton(.review)
             tabButton(.settings)

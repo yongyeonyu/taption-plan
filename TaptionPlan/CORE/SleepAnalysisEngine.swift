@@ -1,0 +1,136 @@
+import Foundation
+
+struct SleepAnalysisEngine: Sendable {
+    var maximumGapBetweenSegments: TimeInterval = 90 * 60
+
+    func sessions(
+        from segments: [SleepSegment],
+        inside requestedSpan: TimeSpan? = nil
+    ) -> [SleepSession] {
+        let clipped = deduplicatedSegments(segments).compactMap { segment -> SleepSegment? in
+            guard let requestedSpan else { return segment }
+            guard let overlap = segment.span.intersection(with: requestedSpan) else {
+                return nil
+            }
+            var value = segment
+            value.span = overlap
+            return value
+        }
+        let ordered = clipped.sorted {
+            if $0.span.start == $1.span.start {
+                return $0.span.end < $1.span.end
+            }
+            return $0.span.start < $1.span.start
+        }
+        guard let first = ordered.first else { return [] }
+
+        var groups: [[SleepSegment]] = []
+        var current = [first]
+        var currentEnd = first.span.end
+
+        for segment in ordered.dropFirst() {
+            if segment.span.start.timeIntervalSince(currentEnd) > maximumGapBetweenSegments {
+                groups.append(current)
+                current = [segment]
+                currentEnd = segment.span.end
+            } else {
+                current.append(segment)
+                currentEnd = max(currentEnd, segment.span.end)
+            }
+        }
+        groups.append(current)
+
+        return groups.compactMap(makeSession)
+    }
+
+    private func makeSession(_ segments: [SleepSegment]) -> SleepSession? {
+        let asleepSegments = segments.filter(\.stage.isAsleep)
+        guard let first = asleepSegments.min(by: { $0.span.start < $1.span.start }),
+              let last = asleepSegments.max(by: { $0.span.end < $1.span.end }) else {
+            return nil
+        }
+        let stageDurations = resolvedStageDurations(segments)
+        let asleepDuration = stageDurations.reduce(0) {
+            $0 + ($1.key.isAsleep ? $1.value : 0)
+        }
+        guard asleepDuration > 0 else { return nil }
+
+        return SleepSession(
+            id: first.id,
+            span: TimeSpan(start: first.span.start, end: last.span.end),
+            asleepDuration: asleepDuration,
+            awakeDuration: stageDurations[.awake, default: 0],
+            inBedDuration: unionDuration(
+                segments.filter { $0.stage == .inBed }.map(\.span)
+            ),
+            stageDurations: stageDurations,
+            sourceNames: unique(
+                segments.map(\.sourceName).filter { !$0.isEmpty }
+            ),
+            segments: segments.sorted { $0.span.start < $1.span.start }
+        )
+    }
+
+    private func resolvedStageDurations(
+        _ segments: [SleepSegment]
+    ) -> [SleepStage: TimeInterval] {
+        let boundaries = Array(
+            Set(segments.flatMap { [$0.span.start, $0.span.end] })
+        ).sorted()
+        guard boundaries.count >= 2 else { return [:] }
+
+        var durations: [SleepStage: TimeInterval] = [:]
+        for (start, end) in zip(boundaries, boundaries.dropFirst()) {
+            guard start < end else { continue }
+            let active = segments.filter {
+                $0.span.start < end && start < $0.span.end
+            }
+            guard let selected = active.max(by: {
+                stagePriority($0.stage) < stagePriority($1.stage)
+            }) else {
+                continue
+            }
+            durations[selected.stage, default: 0] += end.timeIntervalSince(start)
+        }
+        return durations
+    }
+
+    private func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
+        let ordered = spans.sorted { $0.start < $1.start }
+        guard var current = ordered.first else { return 0 }
+        var duration: TimeInterval = 0
+
+        for span in ordered.dropFirst() {
+            if span.start <= current.end {
+                current.end = max(current.end, span.end)
+            } else {
+                duration += current.duration
+                current = span
+            }
+        }
+        return duration + current.duration
+    }
+
+    private func deduplicatedSegments(
+        _ segments: [SleepSegment]
+    ) -> [SleepSegment] {
+        var seen = Set<UUID>()
+        return segments.filter { seen.insert($0.id).inserted }
+    }
+
+    private func unique(_ values: [String]) -> [String] {
+        var seen = Set<String>()
+        return values.filter { seen.insert($0).inserted }
+    }
+
+    private func stagePriority(_ stage: SleepStage) -> Int {
+        switch stage {
+        case .awake: 60
+        case .deep: 50
+        case .rem: 40
+        case .core: 30
+        case .asleepUnspecified: 20
+        case .inBed: 10
+        }
+    }
+}

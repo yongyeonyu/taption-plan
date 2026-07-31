@@ -58,4 +58,40 @@ enum PlanCategory: String, CaseIterable, Identifiable {
     case health = "건강"
 
     var id: Self { self }
+
+    init(categoryID: String) {
+        switch categoryID {
+        case "movement": self = .movement
+        case "location": self = .location
+        case "photo": self = .photo
+        case "exercise": self = .exercise
+        case "study": self = .study
+        case "hobby": self = .hobby
+        case "sleep": self = .sleep
+        case "routine": self = .routine
+        case "relationship": self = .relationship
+        case "rest": self = .rest
+        case "travel": self = .travel
+        case "health": self = .health
+        default: self = .project
+        }
+    }
+
+    var categoryID: String {
+        switch self {
+        case .movement: "movement"
+        case .location: "location"
+        case .photo: "photo"
+        case .project: "project"
+        case .exercise: "exercise"
+        case .study: "study"
+        case .hobby: "hobby"
+        case .sleep: "sleep"
+        case .routine: "routine"
+        case .relationship: "relationship"
+        case .rest: "rest"
+        case .travel: "travel"
+        case .health: "health"
+        }
+    }
 }
