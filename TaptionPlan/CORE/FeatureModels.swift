@@ -374,6 +374,7 @@ struct TemplateApplication: Codable, Hashable, Sendable {
     var visibleCategoryIDs: [String]
     var categoryDisplayNames: [String: String]
     var quickAdds: [String]
+    var recommendedGoalTitles: [String]
     var suggestedPermissions: [PermissionFeature: Bool]
     var reviewFocus: [String]
 }
@@ -441,6 +442,9 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var symbolName: String
     var temperatureCelsius: Double
     var precipitationChance: Double?
+    var placeID: UUID?
+    var placeName: String?
+    var point: GeoPoint?
     var isContextOnly: Bool
 
     init(
@@ -450,6 +454,9 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         symbolName: String,
         temperatureCelsius: Double,
         precipitationChance: Double? = nil,
+        placeID: UUID? = nil,
+        placeName: String? = nil,
+        point: GeoPoint? = nil,
         isContextOnly: Bool = true
     ) {
         self.id = id
@@ -458,6 +465,9 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         self.symbolName = symbolName
         self.temperatureCelsius = temperatureCelsius
         self.precipitationChance = precipitationChance
+        self.placeID = placeID
+        self.placeName = placeName
+        self.point = point
         self.isContextOnly = isContextOnly
     }
 }
@@ -1254,7 +1264,107 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
     var travel: [TravelSegment]
     var floorTransitions: [FloorTransition]
     var profile: ProfileSelection?
+    var customProfileComponents: [ProfileComponent]
     var settings: AppFeatureSettings
+
+    init(
+        schemaVersion: Int,
+        updatedAt: Date,
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        memos: [ActionMemo],
+        categories: [CategoryDefinition],
+        photos: [PhotoMoment],
+        calendarEvents: [CalendarRecord],
+        weather: [WeatherContext],
+        places: [PlaceStay],
+        travel: [TravelSegment],
+        floorTransitions: [FloorTransition],
+        profile: ProfileSelection?,
+        customProfileComponents: [ProfileComponent] = [],
+        settings: AppFeatureSettings
+    ) {
+        self.schemaVersion = schemaVersion
+        self.updatedAt = updatedAt
+        self.plans = plans
+        self.actuals = actuals
+        self.memos = memos
+        self.categories = categories
+        self.photos = photos
+        self.calendarEvents = calendarEvents
+        self.weather = weather
+        self.places = places
+        self.travel = travel
+        self.floorTransitions = floorTransitions
+        self.profile = profile
+        self.customProfileComponents = customProfileComponents
+        self.settings = settings
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Self.empty
+        schemaVersion = try values.decodeIfPresent(
+            Int.self,
+            forKey: .schemaVersion
+        ) ?? defaults.schemaVersion
+        updatedAt = try values.decodeIfPresent(
+            Date.self,
+            forKey: .updatedAt
+        ) ?? defaults.updatedAt
+        plans = try values.decodeIfPresent(
+            [PlanRecord].self,
+            forKey: .plans
+        ) ?? defaults.plans
+        actuals = try values.decodeIfPresent(
+            [ActualRecord].self,
+            forKey: .actuals
+        ) ?? defaults.actuals
+        memos = try values.decodeIfPresent(
+            [ActionMemo].self,
+            forKey: .memos
+        ) ?? defaults.memos
+        categories = try values.decodeIfPresent(
+            [CategoryDefinition].self,
+            forKey: .categories
+        ) ?? defaults.categories
+        photos = try values.decodeIfPresent(
+            [PhotoMoment].self,
+            forKey: .photos
+        ) ?? defaults.photos
+        calendarEvents = try values.decodeIfPresent(
+            [CalendarRecord].self,
+            forKey: .calendarEvents
+        ) ?? defaults.calendarEvents
+        weather = try values.decodeIfPresent(
+            [WeatherContext].self,
+            forKey: .weather
+        ) ?? defaults.weather
+        places = try values.decodeIfPresent(
+            [PlaceStay].self,
+            forKey: .places
+        ) ?? defaults.places
+        travel = try values.decodeIfPresent(
+            [TravelSegment].self,
+            forKey: .travel
+        ) ?? defaults.travel
+        floorTransitions = try values.decodeIfPresent(
+            [FloorTransition].self,
+            forKey: .floorTransitions
+        ) ?? defaults.floorTransitions
+        profile = try values.decodeIfPresent(
+            ProfileSelection.self,
+            forKey: .profile
+        )
+        customProfileComponents = try values.decodeIfPresent(
+            [ProfileComponent].self,
+            forKey: .customProfileComponents
+        ) ?? []
+        settings = try values.decodeIfPresent(
+            AppFeatureSettings.self,
+            forKey: .settings
+        ) ?? defaults.settings
+    }
 
     static let empty = TaptionDataSnapshot(
         schemaVersion: 1,
@@ -1270,6 +1380,7 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         travel: [],
         floorTransitions: [],
         profile: nil,
+        customProfileComponents: [],
         settings: .defaults
     )
 }

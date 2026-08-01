@@ -13,6 +13,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private let pendingSensorSummariesKey =
         "TaptionPlan.pendingWatchSensorSummaries"
     private var pendingSensorSummaries: [TaptionWatchSensorSummary] = []
+    private var widgetReloadFollowupTask: Task<Void, Never>?
 
     override init() {
         super.init()
@@ -225,6 +226,16 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWatchWidgetKind.status)
+        WidgetCenter.shared.reloadAllTimelines()
+        widgetReloadFollowupTask?.cancel()
+        widgetReloadFollowupTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            guard !Task.isCancelled else { return }
+            WidgetCenter.shared.reloadTimelines(
+                ofKind: TaptionWatchWidgetKind.status
+            )
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     private func updateStatus(

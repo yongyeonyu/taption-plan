@@ -37,12 +37,12 @@ private struct TaptionWatchWidgetProvider: TimelineProvider {
         completion: @escaping (Timeline<TaptionWatchWidgetEntry>) -> Void
     ) {
         let now = Date.now
-        let horizon = now.addingTimeInterval(12 * 3_600)
+        let horizon = now.addingTimeInterval(30 * 60)
         let payload = TaptionWatchWidgetStore.read()
         var dates = stride(
             from: now,
             through: horizon,
-            by: 5 * 60
+            by: 60
         ).map { $0 }
         dates.append(contentsOf: (payload?.items ?? []).flatMap {
             [$0.startsAt, $0.endsAt]
@@ -95,7 +95,7 @@ private struct TaptionWatchWidgetView: View {
                 Text(currentItem == nil ? "Taption Plan" : "지금")
                     .font(.caption2.weight(.semibold))
                 Spacer(minLength: 2)
-                Text(entry.date, style: .time)
+                Text(playbackDate, style: .time)
                     .font(.caption2.monospacedDigit())
             }
 
@@ -179,15 +179,29 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var items: [TaptionWatchPlanItem] {
-        (entry.payload?.items ?? []).sorted { $0.startsAt < $1.startsAt }
+        (freshestPayload?.items ?? []).sorted { $0.startsAt < $1.startsAt }
+    }
+
+    private var freshestPayload: TaptionWatchPayload? {
+        guard let stored = TaptionWatchWidgetStore.read() else {
+            return entry.payload
+        }
+        guard let entryPayload = entry.payload else { return stored }
+        return stored.generatedAt >= entryPayload.generatedAt
+            ? stored
+            : entryPayload
+    }
+
+    private var playbackDate: Date {
+        max(entry.date, .now)
     }
 
     private var currentItem: TaptionWatchPlanItem? {
         items.first { $0.status == "running" }
             ?? items.first {
                 $0.status == "planned"
-                    && $0.startsAt <= entry.date
-                    && entry.date < $0.endsAt
+                    && $0.startsAt <= playbackDate
+                    && playbackDate < $0.endsAt
             }
     }
 
@@ -196,14 +210,14 @@ private struct TaptionWatchWidgetView: View {
         return items.first {
             $0.id != currentID
                 && $0.status == "planned"
-                && entry.date < $0.endsAt
+                && playbackDate < $0.endsAt
         }
     }
 
     private var summary: TaptionWatchDaySummary {
-        entry.payload?.todaySummary
+        freshestPayload?.todaySummary
             ?? TaptionWatchDaySummary(
-                date: entry.date,
+                date: playbackDate,
                 scheduledCount: items.count,
                 completedCount: items.filter { $0.status == "completed" }.count,
                 recordedMinutes: 0,
@@ -217,7 +231,7 @@ private struct TaptionWatchWidgetView: View {
         guard duration > 0 else { return 0 }
         return min(
             1,
-            max(0, entry.date.timeIntervalSince(currentItem.startsAt) / duration)
+            max(0, playbackDate.timeIntervalSince(currentItem.startsAt) / duration)
         )
     }
 

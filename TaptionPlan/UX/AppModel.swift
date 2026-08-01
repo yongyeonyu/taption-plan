@@ -76,6 +76,8 @@ final class AppModel {
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
     @ObservationIgnored private var foregroundHealthRefreshTask:
         Task<Void, Never>?
+    @ObservationIgnored private var widgetReloadFollowupTask:
+        Task<Void, Never>?
     @ObservationIgnored private var isSceneActive = false
     @ObservationIgnored private var isHealthRefreshRunning = false
     @ObservationIgnored private var isHealthBackgroundDeliveryConfigured = false
@@ -840,15 +842,37 @@ final class AppModel {
     }
 
     var pendingTemplateApplication: TemplateApplication? {
-        try? TemplateCatalog.apply(pendingProfileSelection)
+        try? TemplateCatalog.apply(
+            pendingProfileSelection,
+            customComponents: snapshot.customProfileComponents
+        )
     }
 
     var currentProfileDisplayName: String {
         guard let profile = snapshot.profile,
-              let application = try? TemplateCatalog.apply(profile) else {
+              let application = try? TemplateCatalog.apply(
+                profile,
+                customComponents: snapshot.customProfileComponents
+              ) else {
             return "미설정"
         }
         return application.displayName
+    }
+
+    var profileRoles: [ProfileComponent] {
+        TemplateCatalog.roles(
+            including: snapshot.customProfileComponents
+        )
+    }
+
+    var profileSituations: [ProfileComponent] {
+        TemplateCatalog.situations(
+            including: snapshot.customProfileComponents
+        )
+    }
+
+    var profileGoals: [ProfileComponent] {
+        TemplateCatalog.goals
     }
 
     var selectedMemoPlan: PlanRecord? {
@@ -892,10 +916,58 @@ final class AppModel {
         }
     }
 
+    @discardableResult
+    func addCustomTemplateRole(name: String) -> ProfileComponent? {
+        addCustomProfileComponent(kind: .role, name: name)
+    }
+
+    @discardableResult
+    func addCustomTemplateSituation(name: String) -> ProfileComponent? {
+        addCustomProfileComponent(kind: .situation, name: name)
+    }
+
+    @discardableResult
+    private func addCustomProfileComponent(
+        kind: ProfileComponentKind,
+        name: String
+    ) -> ProfileComponent? {
+        do {
+            let component = try TemplateCatalog.makeCustomComponent(
+                kind: kind,
+                name: name,
+                existing: snapshot.customProfileComponents
+            )
+            snapshot.customProfileComponents.append(component)
+            switch kind {
+            case .role:
+                pendingProfileSelection.roleID = component.id
+            case .situation:
+                if pendingProfileSelection.situationIDs.count < 2 {
+                    pendingProfileSelection.situationIDs.append(component.id)
+                } else {
+                    userFacingError =
+                        "상황은 추가됐지만 선택은 최대 2개까지 가능합니다."
+                }
+            case .goal:
+                break
+            }
+            Task { await persist() }
+            return component
+        } catch TemplateError.emptyComponentName {
+            userFacingError = "이름을 입력해 주세요."
+        } catch TemplateError.duplicateComponentName {
+            userFacingError = "같은 이름이 이미 있습니다."
+        } catch {
+            userFacingError = "항목을 추가하지 못했습니다."
+        }
+        return nil
+    }
+
     func applyPendingTemplate(at date: Date = .now) async {
         do {
             let application = try TemplateCatalog.apply(
-                pendingProfileSelection
+                pendingProfileSelection,
+                customComponents: snapshot.customProfileComponents
             )
             let visibleIDs = Set(application.visibleCategoryIDs)
             snapshot.categories = snapshot.categories.map { category in
@@ -916,11 +988,12 @@ final class AppModel {
 
             let goalPlans = try TemplateCatalog.makeGoalPlans(
                 for: pendingProfileSelection,
-                startingAt: Calendar.autoupdatingCurrent.startOfDay(for: date)
+                startingAt: Calendar.autoupdatingCurrent.startOfDay(for: date),
+                customComponents: snapshot.customProfileComponents
             )
             for goal in goalPlans where !snapshot.plans.contains(where: {
                 $0.parentID == nil
-                    && $0.title == goal.title
+                    && TemplateCatalog.matchesGoalTitle($0.title, goal.title)
                     && $0.categoryID == goal.categoryID
             }) {
                 snapshot.plans.append(goal)
@@ -1876,9 +1949,8 @@ final class AppModel {
         snapshot.travel.sort { $0.span.start < $1.span.start }
         snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
 
-        if snapshot.settings.weatherEnabled,
-           let point = readings.last?.point {
-            await refreshWeather(at: point, in: span)
+        if snapshot.settings.weatherEnabled {
+            await refreshWeather(for: places, in: span)
         }
     }
 
@@ -2507,20 +2579,43 @@ final class AppModel {
             calibration.capturedAt ?? .now
     }
 
-    private func refreshWeather(at point: GeoPoint, in span: TimeSpan) async {
-        do {
-            let context = try await weatherService.context(
-                latitude: point.latitude,
-                longitude: point.longitude
-            )
+    private func refreshWeather(for places: [PlaceStay], in span: TimeSpan) async {
+        let locatedPlaces = places.filter { $0.point != nil }
+        guard !locatedPlaces.isEmpty else { return }
+
+        var contexts: [WeatherContext] = []
+        var firstError: Error?
+        for place in locatedPlaces {
+            guard let point = place.point else { continue }
+            do {
+                var context = try await weatherService.context(
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                    at: place.span.end
+                )
+                context.observedAt = place.span.end
+                context.placeID = place.id
+                context.placeName = place.displayName
+                context.point = point
+                contexts.append(context)
+            } catch {
+                if firstError == nil {
+                    firstError = error
+                }
+            }
+        }
+
+        if !contexts.isEmpty {
             snapshot.weather.removeAll {
                 $0.observedAt >= span.start && $0.observedAt <= span.end
             }
-            snapshot.weather.append(context)
+            snapshot.weather.append(contentsOf: contexts)
             snapshot.weather.sort { $0.observedAt < $1.observedAt }
-        } catch {
+        }
+
+        if let firstError, contexts.isEmpty {
             userFacingError =
-                "현재 날씨를 불러오지 못했습니다. \(error.localizedDescription)"
+                "현재 날씨를 불러오지 못했습니다. \(firstError.localizedDescription)"
         }
     }
 
@@ -2709,7 +2804,7 @@ final class AppModel {
         )
         do {
             try TaptionWidgetSharedStore.writePayload(payload)
-            WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
+            requestImmediateWidgetRefresh()
         } catch {
             userFacingError = "위젯 데이터를 갱신하지 못했습니다. \(error.localizedDescription)"
         }
@@ -2746,6 +2841,20 @@ final class AppModel {
             )
         )
         try? watchConnectivityService.update(payload: watchPayload)
+    }
+
+    private func requestImmediateWidgetRefresh() {
+        widgetReloadFollowupTask?.cancel()
+        WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
+        WidgetCenter.shared.reloadAllTimelines()
+        widgetReloadFollowupTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            guard !Task.isCancelled else { return }
+            WidgetCenter.shared.reloadTimelines(
+                ofKind: TaptionWidgetKind.schedule
+            )
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     private func widgetTravelModeName(_ mode: TravelMode) -> String {

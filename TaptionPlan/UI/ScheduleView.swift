@@ -1041,13 +1041,39 @@ private struct TimelineDetailPanel: View {
                                 .foregroundStyle(Color.tpSecondary)
                         }
                         Spacer()
-                        Text(event.span.start.formatted(date: .omitted, time: .shortened))
+                        Text(calendarEventDateTimeLabel(for: event))
                             .font(.taption(size: 8))
                             .foregroundStyle(Color.tpSecondary)
+                            .multilineTextAlignment(.trailing)
                     }
                 }
             }
         }
+    }
+
+    private func calendarEventDateTimeLabel(for event: CalendarRecord) -> String {
+        let date = calendarDateLabel(event.span.start)
+        if event.isAllDay {
+            return "\(date) · 종일"
+        }
+        let start = event.span.start.formatted(date: .omitted, time: .shortened)
+        let end = event.span.end.formatted(date: .omitted, time: .shortened)
+        return "\(date) · \(start)–\(end)"
+    }
+
+    private func calendarDateLabel(_ date: Date) -> String {
+        let calendar = Calendar.autoupdatingCurrent
+        let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
+        let month = calendar.component(.month, from: date)
+        let day = calendar.component(.day, from: date)
+        let weekdayIndex = max(
+            0,
+            min(
+                weekdaySymbols.count - 1,
+                calendar.component(.weekday, from: date) - 1
+            )
+        )
+        return "\(month)월 \(day)일 (\(weekdaySymbols[weekdayIndex]))"
     }
 
     private func calendarSourceLabel(for event: CalendarRecord) -> String {
@@ -2884,12 +2910,42 @@ private struct TimelineBoard: View {
     }
 
     private func calendarDetailText(_ event: CalendarRecord) -> String {
-        [event.sourceTitle, event.calendarTitle, "고정 일정"]
+        [
+            calendarEventDateTimeLabel(for: event),
+            event.sourceTitle,
+            event.calendarTitle,
+            "고정 일정",
+        ]
             .compactMap { value in
                 guard let value, !value.isEmpty else { return nil }
                 return value
             }
             .joined(separator: " · ")
+    }
+
+    private func calendarEventDateTimeLabel(for event: CalendarRecord) -> String {
+        let date = calendarDateLabel(event.span.start)
+        if event.isAllDay {
+            return "\(date) · 종일"
+        }
+        let start = event.span.start.formatted(date: .omitted, time: .shortened)
+        let end = event.span.end.formatted(date: .omitted, time: .shortened)
+        return "\(date) · \(start)–\(end)"
+    }
+
+    private func calendarDateLabel(_ date: Date) -> String {
+        let calendar = Calendar.autoupdatingCurrent
+        let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
+        let month = calendar.component(.month, from: date)
+        let day = calendar.component(.day, from: date)
+        let weekdayIndex = max(
+            0,
+            min(
+                weekdaySymbols.count - 1,
+                calendar.component(.weekday, from: date) - 1
+            )
+        )
+        return "\(month)월 \(day)일 (\(weekdaySymbols[weekdayIndex]))"
     }
 
     private func timelineBlock(

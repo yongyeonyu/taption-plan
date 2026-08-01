@@ -267,9 +267,17 @@ enum TemplateError: Error, Equatable {
     case tooManySituations
     case tooManyGoals
     case unknownComponent(String)
+    case emptyComponentName
+    case duplicateComponentName
+    case unsupportedCustomComponent
 }
 
 enum TemplateCatalog {
+    struct SituationGoalTemplate: Hashable, Sendable {
+        var name: String
+        var categoryID: String
+    }
+
     static let roles: [ProfileComponent] = [
         component(
             "student", .role, "학생",
@@ -464,14 +472,189 @@ enum TemplateCatalog {
         goal("moving", "이사", ["project", "movement", "routine"], ["project": "이사"], ["계약", "짐", "행정"])
     ]
 
+    static let situationGoalTemplatesByID: [String: [SituationGoalTemplate]] = [
+        "parenting": [
+            situationGoal("수유", "routine"),
+            situationGoal("목욕", "routine"),
+            situationGoal("병원", "health"),
+            situationGoal("검진", "health"),
+            situationGoal("예방접종", "health"),
+            situationGoal("이유식", "routine"),
+            situationGoal("등하원", "movement"),
+            situationGoal("도우미", "relationship"),
+            situationGoal("놀이·발달", "relationship"),
+            situationGoal("낮잠·수면", "sleep"),
+            situationGoal("개인 회복", "rest"),
+        ],
+        "pregnancy": [
+            situationGoal("진료", "health"),
+            situationGoal("검진", "health"),
+            situationGoal("운동", "exercise"),
+            situationGoal("스트레스 관리", "rest"),
+            situationGoal("약 복용", "health"),
+            situationGoal("영양·식사", "routine"),
+            situationGoal("출산 준비", "project"),
+            situationGoal("태교·휴식", "rest"),
+            situationGoal("산후 회복", "health"),
+        ],
+        "family-care": [
+            situationGoal("병원 동행", "health"),
+            situationGoal("약 복용", "health"),
+            situationGoal("돌봄 교대", "relationship"),
+            situationGoal("이동 지원", "movement"),
+            situationGoal("간병 기록", "health"),
+            situationGoal("보호자 회복", "rest"),
+        ],
+        "rehabilitation": [
+            situationGoal("진료", "health"),
+            situationGoal("약 복용", "health"),
+            situationGoal("재활운동", "exercise"),
+            situationGoal("통증 기록", "health"),
+            situationGoal("수면 회복", "sleep"),
+            situationGoal("생활 복귀", "routine"),
+        ],
+        "job-change": [
+            situationGoal("지원", "project"),
+            situationGoal("포트폴리오", "project"),
+            situationGoal("면접", "relationship"),
+            situationGoal("학습", "study"),
+            situationGoal("네트워킹", "relationship"),
+            situationGoal("휴식 관리", "rest"),
+        ],
+        "startup": [
+            situationGoal("제품", "project"),
+            situationGoal("고객 인터뷰", "relationship"),
+            situationGoal("행정", "routine"),
+            situationGoal("자금", "project"),
+            situationGoal("영업", "relationship"),
+            situationGoal("본업 균형", "rest"),
+        ],
+        "night-shift": [
+            situationGoal("주간근무", "project"),
+            situationGoal("야간근무", "project"),
+            situationGoal("수면", "sleep"),
+            situationGoal("식사", "routine"),
+            situationGoal("이동", "movement"),
+            situationGoal("회복", "rest"),
+        ],
+        "leave": [
+            situationGoal("회복", "rest"),
+            situationGoal("학습", "study"),
+            situationGoal("여행", "travel"),
+            situationGoal("생활 재정비", "routine"),
+            situationGoal("건강관리", "health"),
+        ],
+        "relocation": [
+            situationGoal("계약", "project"),
+            situationGoal("짐 정리", "routine"),
+            situationGoal("행정", "routine"),
+            situationGoal("이동", "movement"),
+            situationGoal("생활 기반", "routine"),
+            situationGoal("동네 적응", "relationship"),
+        ],
+        "long-trip": [
+            situationGoal("이동", "movement"),
+            situationGoal("예약", "travel"),
+            situationGoal("업무", "project"),
+            situationGoal("시차 적응", "sleep"),
+            situationGoal("휴식", "rest"),
+            situationGoal("현지 생활", "routine"),
+        ],
+        "retirement": [
+            situationGoal("건강", "health"),
+            situationGoal("관계", "relationship"),
+            situationGoal("취미", "hobby"),
+            situationGoal("봉사", "relationship"),
+            situationGoal("학습", "study"),
+            situationGoal("생활 균형", "routine"),
+        ],
+        "side-job": [
+            situationGoal("본업", "project"),
+            situationGoal("부업", "project"),
+            situationGoal("이동", "movement"),
+            situationGoal("정산", "routine"),
+            situationGoal("수면", "sleep"),
+            situationGoal("휴식", "rest"),
+        ],
+    ]
+
     static let representativeSelections: [ProfileSelection] = [
         ProfileSelection(roleID: "employee", situationIDs: ["parenting"]),
         ProfileSelection(roleID: "student", goalIDs: ["exam-suneung"]),
         ProfileSelection(roleID: "employee", goalIDs: ["certificate"])
     ]
 
-    static func apply(_ selection: ProfileSelection) throws -> TemplateApplication {
-        guard let role = roles.first(where: { $0.id == selection.roleID }) else {
+    static func roles(
+        including customComponents: [ProfileComponent]
+    ) -> [ProfileComponent] {
+        roles + customComponents.filter { $0.kind == .role }
+    }
+
+    static func situations(
+        including customComponents: [ProfileComponent]
+    ) -> [ProfileComponent] {
+        situations + customComponents.filter { $0.kind == .situation }
+    }
+
+    static func makeCustomComponent(
+        kind: ProfileComponentKind,
+        name: String,
+        existing: [ProfileComponent]
+    ) throws -> ProfileComponent {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw TemplateError.emptyComponentName }
+        guard kind == .role || kind == .situation else {
+            throw TemplateError.unsupportedCustomComponent
+        }
+        let sameKindComponents: [ProfileComponent] = switch kind {
+        case .role:
+            roles(including: existing)
+        case .situation:
+            situations(including: existing)
+        case .goal:
+            goals
+        }
+        guard !sameKindComponents.contains(where: {
+            $0.name.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
+        }) else {
+            throw TemplateError.duplicateComponentName
+        }
+
+        let idPrefix = kind == .role ? "custom.role" : "custom.situation"
+        let id = "\(idPrefix).\(UUID().uuidString.lowercased())"
+        switch kind {
+        case .role:
+            return component(
+                id, .role, trimmed,
+                ["project", "movement", "health", "relationship", "rest", "sleep"],
+                ["project": trimmed],
+                ["\(trimmed) 일정", "집중", "준비", "정리", "회복"],
+                [.calendar: true, .health: false],
+                ["\(trimmed) 시간"]
+            )
+        case .situation:
+            return component(
+                id, .situation, trimmed,
+                ["project", "routine", "health", "relationship", "movement", "rest", "sleep"],
+                [:],
+                ["\(trimmed) 기록", "준비", "진행", "이동", "휴식"],
+                [.calendar: true, .health: false],
+                ["\(trimmed) 관리"]
+            )
+        case .goal:
+            throw TemplateError.unsupportedCustomComponent
+        }
+    }
+
+    static func apply(
+        _ selection: ProfileSelection,
+        customComponents: [ProfileComponent] = []
+    ) throws -> TemplateApplication {
+        let availableRoles = roles(including: customComponents)
+        let availableSituations = situations(including: customComponents)
+        guard let role = availableRoles.first(where: {
+            $0.id == selection.roleID
+        }) else {
             throw TemplateError.roleMissing
         }
         guard selection.situationIDs.count <= 2 else {
@@ -482,7 +665,9 @@ enum TemplateCatalog {
         }
 
         let selectedSituations = try selection.situationIDs.map { id in
-            guard let value = situations.first(where: { $0.id == id }) else {
+            guard let value = availableSituations.first(where: {
+                $0.id == id
+            }) else {
                 throw TemplateError.unknownComponent(id)
             }
             return value
@@ -498,6 +683,7 @@ enum TemplateCatalog {
         var categories: [String] = []
         var displayNames: [String: String] = [:]
         var quickAdds: [String] = []
+        var recommendedGoalTitles: [String] = []
         var permissions: [PermissionFeature: Bool] = [:]
         var reviewFocus: [String] = []
 
@@ -511,6 +697,21 @@ enum TemplateCatalog {
             }
             appendUnique(component.reviewFocus, to: &reviewFocus)
         }
+        for situation in selectedSituations {
+            appendUnique(
+                situationGoalTemplates(for: situation).map {
+                    goalItemTitle(
+                        situationName: situation.name,
+                        goalName: $0.name
+                    )
+                },
+                to: &recommendedGoalTitles
+            )
+        }
+        appendUnique(
+            selectedGoals.map { goalItemTitle(goalName: $0.name) },
+            to: &recommendedGoalTitles
+        )
 
         let suffixNames = (selectedSituations + selectedGoals).map(\.name)
         let displayName = ([role.name] + suffixNames).joined(separator: " + ")
@@ -520,6 +721,7 @@ enum TemplateCatalog {
             visibleCategoryIDs: categories,
             categoryDisplayNames: displayNames,
             quickAdds: quickAdds,
+            recommendedGoalTitles: recommendedGoalTitles,
             suggestedPermissions: permissions,
             reviewFocus: reviewFocus
         )
@@ -528,8 +730,18 @@ enum TemplateCatalog {
     static func makeGoalPlans(
         for selection: ProfileSelection,
         startingAt date: Date,
+        customComponents: [ProfileComponent] = [],
         calendar: Calendar = .autoupdatingCurrent
     ) throws -> [PlanRecord] {
+        let availableSituations = situations(including: customComponents)
+        let selectedSituations = try selection.situationIDs.map { id in
+            guard let situation = availableSituations.first(where: {
+                $0.id == id
+            }) else {
+                throw TemplateError.unknownComponent(id)
+            }
+            return situation
+        }
         let selectedGoals = try selection.goalIDs.map { id in
             guard let goal = goals.first(where: { $0.id == id }) else {
                 throw TemplateError.unknownComponent(id)
@@ -538,14 +750,70 @@ enum TemplateCatalog {
         }
         let end = calendar.date(byAdding: .year, value: 1, to: date)
             ?? date.addingTimeInterval(365 * 86_400)
-        return selectedGoals.map { goal in
+
+        let situationPlans = selectedSituations.flatMap { situation in
+            situationGoalTemplates(for: situation).map { template in
+                PlanRecord(
+                    title: goalItemTitle(
+                        situationName: situation.name,
+                        goalName: template.name
+                    ),
+                    span: TimeSpan(start: date, end: end),
+                    categoryID: template.categoryID,
+                    middleCategoryName: situation.name,
+                    subCategoryName: template.name,
+                    isImportant: true
+                )
+            }
+        }
+        let explicitGoalPlans = selectedGoals.map { goal in
             PlanRecord(
-                title: goal.name,
+                title: goalItemTitle(goalName: goal.name),
                 span: TimeSpan(start: date, end: end),
                 categoryID: goal.categoryIDs.first ?? "project",
                 isImportant: true
             )
         }
+        return situationPlans + explicitGoalPlans
+    }
+
+    static func matchesGoalTitle(_ lhs: String, _ rhs: String) -> Bool {
+        canonicalGoalTitle(lhs) == canonicalGoalTitle(rhs)
+    }
+
+    private static func situationGoalTemplates(
+        for situation: ProfileComponent
+    ) -> [SituationGoalTemplate] {
+        situationGoalTemplatesByID[situation.id] ?? situation.quickAdds.map {
+            SituationGoalTemplate(
+                name: $0,
+                categoryID: situation.categoryIDs.first ?? "project"
+            )
+        }
+    }
+
+    private static func goalItemTitle(
+        situationName: String? = nil,
+        goalName: String
+    ) -> String {
+        let cleanGoal = goalName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanSituation = situationName?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard let cleanSituation, !cleanSituation.isEmpty else {
+            return "목표:\(cleanGoal)"
+        }
+        return "목표:\(cleanSituation) · \(cleanGoal)"
+    }
+
+    private static func canonicalGoalTitle(_ raw: String) -> String {
+        var value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.hasPrefix("목표:") {
+            value = String(value.dropFirst("목표:".count))
+        }
+        return value
+            .replacingOccurrences(of: " ", with: "")
+            .lowercased()
     }
 
     private static func component(
@@ -590,6 +858,13 @@ enum TemplateCatalog {
         _ quickAdds: [String]
     ) -> ProfileComponent {
         component(id, .goal, name, categories, names, quickAdds, [:], ["\(name) 준비시간"])
+    }
+
+    private static func situationGoal(
+        _ name: String,
+        _ categoryID: String
+    ) -> SituationGoalTemplate {
+        SituationGoalTemplate(name: name, categoryID: categoryID)
     }
 
     private static func appendUnique<T: Hashable>(

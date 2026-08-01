@@ -2418,9 +2418,19 @@ struct WidgetPreviewView: View {
     }
 }
 
+private enum CustomProfileComponentField: Hashable {
+    case role
+    case situation
+}
+
 struct OnboardingView: View {
     @Bindable var model: AppModel
     @State private var showsCustomCombination = false
+    @State private var isAddingCustomRole = false
+    @State private var isAddingCustomSituation = false
+    @State private var customRoleName = ""
+    @State private var customSituationName = ""
+    @FocusState private var customComponentFocus: CustomProfileComponentField?
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -2545,30 +2555,76 @@ struct OnboardingView: View {
 
     private var customCombination: some View {
         VStack(alignment: .leading, spacing: 10) {
-            componentSection("역할 · 1개") {
-                ForEach(TemplateCatalog.roles) { component in
-                    componentChip(
-                        component.name,
-                        selected:
-                            model.pendingProfileSelection.roleID == component.id
+            VStack(alignment: .leading, spacing: 7) {
+                componentSection("역할 · 1개") {
+                    ForEach(model.profileRoles) { component in
+                        componentChip(
+                            component.name,
+                            selected:
+                                model.pendingProfileSelection.roleID == component.id
+                        ) {
+                            model.selectTemplateRole(component.id)
+                        }
+                    }
+                    addComponentChip("역할 추가") {
+                        isAddingCustomRole = true
+                        customComponentFocus = .role
+                    }
+                }
+                if isAddingCustomRole {
+                    customComponentInput(
+                        placeholder: "예: 창작자",
+                        text: $customRoleName,
+                        focus: .role
                     ) {
-                        model.selectTemplateRole(component.id)
+                        if model.addCustomTemplateRole(name: customRoleName) != nil {
+                            customRoleName = ""
+                            isAddingCustomRole = false
+                        }
+                    } onCancel: {
+                        customRoleName = ""
+                        isAddingCustomRole = false
                     }
                 }
             }
-            componentSection("상황 · 최대 2개") {
-                ForEach(TemplateCatalog.situations) { component in
-                    componentChip(
-                        component.name,
-                        selected: model.pendingProfileSelection.situationIDs
-                            .contains(component.id)
+
+            VStack(alignment: .leading, spacing: 7) {
+                componentSection("상황 · 최대 2개") {
+                    ForEach(model.profileSituations) { component in
+                        componentChip(
+                            component.name,
+                            selected: model.pendingProfileSelection.situationIDs
+                                .contains(component.id)
+                        ) {
+                            model.toggleTemplateSituation(component.id)
+                        }
+                    }
+                    addComponentChip("상황 추가") {
+                        isAddingCustomSituation = true
+                        customComponentFocus = .situation
+                    }
+                }
+                if isAddingCustomSituation {
+                    customComponentInput(
+                        placeholder: "예: 반려동물 돌봄",
+                        text: $customSituationName,
+                        focus: .situation
                     ) {
-                        model.toggleTemplateSituation(component.id)
+                        if model.addCustomTemplateSituation(
+                            name: customSituationName
+                        ) != nil {
+                            customSituationName = ""
+                            isAddingCustomSituation = false
+                        }
+                    } onCancel: {
+                        customSituationName = ""
+                        isAddingCustomSituation = false
                     }
                 }
             }
+
             componentSection("목표 · 최대 2개") {
-                ForEach(TemplateCatalog.goals) { component in
+                ForEach(model.profileGoals) { component in
                     componentChip(
                         component.name,
                         selected: model.pendingProfileSelection.goalIDs
@@ -2583,6 +2639,67 @@ struct OnboardingView: View {
         .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
         .overlay {
             RoundedRectangle(cornerRadius: 15).stroke(Color.tpLine)
+        }
+    }
+
+    private func addComponentChip(
+        _ title: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: "plus.circle.fill")
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpInk.opacity(0.72))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    Color(red: 0.96, green: 0.96, blue: 0.97),
+                    in: RoundedRectangle(cornerRadius: 8)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func customComponentInput(
+        placeholder: String,
+        text: Binding<String>,
+        focus: CustomProfileComponentField,
+        onSave: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 7) {
+            TextField(placeholder, text: text)
+                .font(.taption(size: 10.5, weight: .bold))
+                .focused($customComponentFocus, equals: focus)
+                .submitLabel(.done)
+                .onSubmit(onSave)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 8)
+                .background(
+                    Color(red: 0.96, green: 0.96, blue: 0.97),
+                    in: RoundedRectangle(cornerRadius: 9)
+                )
+
+            Button("추가", action: onSave)
+                .font(.taption(size: 9.5, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    text.wrappedValue
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .isEmpty ? Color.tpLine : Color.tpInk,
+                    in: RoundedRectangle(cornerRadius: 9)
+                )
+                .disabled(
+                    text.wrappedValue
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .isEmpty
+                )
+
+            Button("취소", action: onCancel)
+                .font(.taption(size: 9.5, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
         }
     }
 
@@ -2735,6 +2852,24 @@ struct TemplateReviewView: View {
                     }
                 }
 
+                if !recommendedGoalTitles.isEmpty {
+                    reviewSection("상황별 목표") {
+                        ChipFlowLayout {
+                            ForEach(recommendedGoalTitles, id: \.self) { title in
+                                Text(title)
+                                    .font(.taption(size: 8.3, weight: .bold))
+                                    .foregroundStyle(Color.tpInk.opacity(0.76))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        Color(red: 0.96, green: 0.94, blue: 0.98),
+                                        in: RoundedRectangle(cornerRadius: 9)
+                                    )
+                            }
+                        }
+                    }
+                }
+
                 reviewSection("연결과 개인정보") {
                     VStack(spacing: 0) {
                         reviewSetting(
@@ -2793,6 +2928,10 @@ struct TemplateReviewView: View {
             application?.categoryDisplayNames[id]
                 ?? CategoryCatalog.builtIn.first { $0.id == id }?.name
         }
+    }
+
+    private var recommendedGoalTitles: [String] {
+        application?.recommendedGoalTitles ?? []
     }
 
     private func isSuggested(_ feature: PermissionFeature) -> Bool {

@@ -41,7 +41,7 @@ struct TaptionScheduleProvider: TimelineProvider {
     ) {
         let now = Date.now
         let payload = TaptionWidgetSharedStore.readPayload()
-        let horizon = now.addingTimeInterval(2 * 3_600)
+        let horizon = now.addingTimeInterval(15 * 60)
         var refreshDates = TaptionWidgetPlaybackEngine.timelineDates(
             for: payload.items,
             from: now,
@@ -206,22 +206,25 @@ private struct TaptionScheduleWidgetView: View {
                 by: playbackInterval
             )
         ) { context in
+            let payload = freshestPayload
             let playbackDate = max(entry.date, context.date)
             let metrics = TaptionScheduleWidgetMetrics(family: family)
             VStack(spacing: 0) {
                 header(
                     at: playbackDate,
+                    payload: payload,
                     metrics: metrics,
                     walkPose: TaptionWidgetCatWalkEngine.pose(
                         at: playbackDate,
                         preferredAction: preferredCatAction(
-                            at: playbackDate
+                            at: playbackDate,
+                            payload: payload
                         )
                     )
                 )
 
                 PrototypeWidgetTrack(
-                    payload: entry.payload,
+                    payload: payload,
                     date: playbackDate,
                     visibleRowLimit: metrics.visibleRowLimit,
                     maxItemsPerLane: metrics.maxItemsPerLane,
@@ -232,11 +235,12 @@ private struct TaptionScheduleWidgetView: View {
         }
         .padding(.horizontal, TaptionScheduleWidgetMetrics(family: family).horizontalPadding)
         .padding(.vertical, TaptionScheduleWidgetMetrics(family: family).verticalPadding)
-        .widgetURL(deepLinkURL)
+        .widgetURL(deepLinkURL(payload: freshestPayload, at: .now))
     }
 
     private func header(
         at date: Date,
+        payload: TaptionWidgetPayload,
         metrics: TaptionScheduleWidgetMetrics,
         walkPose: TaptionWidgetCatWalkPose
     ) -> some View {
@@ -245,7 +249,7 @@ private struct TaptionScheduleWidgetView: View {
                 .font(.system(size: metrics.titleFontSize, weight: .bold))
                 .foregroundStyle(WidgetPalette.ink)
 
-            Text(statusLabel(at: date))
+            Text(statusLabel(at: date, payload: payload))
                 .font(.system(size: metrics.badgeFontSize, weight: .bold))
                 .foregroundStyle(WidgetPalette.focusInk)
                 .padding(.horizontal, 6)
@@ -255,8 +259,8 @@ private struct TaptionScheduleWidgetView: View {
 
             Link(destination: URL(string: "taptionplan://cats")!) {
                 WidgetWalkingCat(
-                    style: entry.payload.catStyle,
-                    reducesMotion: entry.payload.reducesMotion ?? false,
+                    style: payload.catStyle,
+                    reducesMotion: payload.reducesMotion ?? false,
                     pose: walkPose
                 )
                 .frame(width: metrics.catWidth, height: metrics.catHeight)
@@ -267,9 +271,9 @@ private struct TaptionScheduleWidgetView: View {
             Spacer(minLength: 4)
 
             HStack(spacing: 3) {
-                Image(systemName: weatherSymbol)
+                Image(systemName: weatherSymbol(payload: payload))
                     .font(.system(size: metrics.weatherIconSize, weight: .semibold))
-                Text(weatherAndTimeLabel(at: date))
+                Text(weatherAndTimeLabel(at: date, payload: payload))
                     .font(.system(size: metrics.weatherFontSize, weight: .bold))
                     .monospacedDigit()
             }
@@ -279,20 +283,35 @@ private struct TaptionScheduleWidgetView: View {
         .padding(.bottom, metrics.headerBottomSpacing)
     }
 
-    private var visibleItems: [TaptionWidgetItem] {
-        entry.payload.items
+    private var freshestPayload: TaptionWidgetPayload {
+        let stored = TaptionWidgetSharedStore.readPayload()
+        return stored.generatedAt >= entry.payload.generatedAt
+            ? stored
+            : entry.payload
+    }
+
+    private func visibleItems(
+        in payload: TaptionWidgetPayload
+    ) -> [TaptionWidgetItem] {
+        payload.items
             .filter { !$0.isCompleted }
             .sorted { $0.startsAt < $1.startsAt }
     }
 
-    private func currentItem(at date: Date) -> TaptionWidgetItem? {
-        visibleItems.first {
+    private func currentItem(
+        at date: Date,
+        payload: TaptionWidgetPayload
+    ) -> TaptionWidgetItem? {
+        visibleItems(in: payload).first {
             $0.startsAt <= date && date < $0.endsAt
         }
     }
 
-    private func actionItem(at date: Date) -> TaptionWidgetItem? {
-        let actionableItems = visibleItems.filter {
+    private func actionItem(
+        at date: Date,
+        payload: TaptionWidgetPayload
+    ) -> TaptionWidgetItem? {
+        let actionableItems = visibleItems(in: payload).filter {
             $0.resolvedLane == .action && !$0.isFixed
         }
         return actionableItems.first {
@@ -303,9 +322,10 @@ private struct TaptionScheduleWidgetView: View {
     }
 
     private func preferredCatAction(
-        at date: Date
+        at date: Date,
+        payload: TaptionWidgetPayload
     ) -> TaptionWidgetCatAction? {
-        guard let item = visibleItems.first(where: {
+        guard let item = visibleItems(in: payload).first(where: {
             $0.resolvedLane == .action
                 && !$0.isFixed
                 && $0.startsAt <= date
@@ -319,38 +339,49 @@ private struct TaptionScheduleWidgetView: View {
         )
     }
 
-    private func statusLabel(at date: Date) -> String {
+    private func statusLabel(
+        at date: Date,
+        payload: TaptionWidgetPayload
+    ) -> String {
         if TaptionWidgetPlaybackEngine.activeItems(
             in: .action,
-            from: entry.payload.items,
+            from: payload.items,
             at: date
         ).isEmpty == false {
             return "집중 중"
         }
-        return currentItem(at: date) == nil ? "대기" : "기록 중"
+        return currentItem(at: date, payload: payload) == nil
+            ? "대기"
+            : "기록 중"
     }
 
-    private var weatherSymbol: String {
-        entry.payload.weatherSymbolName ?? "clock"
+    private func weatherSymbol(payload: TaptionWidgetPayload) -> String {
+        payload.weatherSymbolName ?? "clock"
     }
 
-    private func weatherAndTimeLabel(at date: Date) -> String {
+    private func weatherAndTimeLabel(
+        at date: Date,
+        payload: TaptionWidgetPayload
+    ) -> String {
         let time = date.formatted(date: .omitted, time: .shortened)
-        guard let temperature = entry.payload.temperatureCelsius else {
+        guard let temperature = payload.temperatureCelsius else {
             return time
         }
         return "\(temperature.rounded().formatted())° · \(time)"
     }
 
-    private var deepLinkURL: URL? {
-        guard let item = actionItem(at: entry.date) else {
+    private func deepLinkURL(
+        payload: TaptionWidgetPayload,
+        at date: Date
+    ) -> URL? {
+        guard let item = actionItem(at: date, payload: payload) else {
             return URL(string: "taptionplan://today")
         }
         return URL(string: "taptionplan://plan/\(item.id.uuidString)")
     }
 
     private var playbackInterval: TimeInterval {
-        entry.payload.reducesMotion == true
+        freshestPayload.reducesMotion == true
             ? 60
             : TaptionWidgetCatWalkEngine.defaultStepDuration
     }
@@ -1913,6 +1944,7 @@ struct TaptionWidgetActionIntent: AppIntent {
         }
         try TaptionWidgetSharedStore.appendCommand(command)
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
+        WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
 

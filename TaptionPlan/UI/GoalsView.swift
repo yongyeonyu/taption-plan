@@ -7,7 +7,6 @@ struct GoalsView: View {
         let roots = model.snapshot.plans
             .filter { $0.parentID == nil && $0.status != .skipped }
             .sorted { $0.span.start < $1.span.start }
-        guard !roots.isEmpty else { return Self.sampleGoals }
 
         let aggregation = TimelineAggregationEngine()
         return roots.map { plan in
@@ -34,55 +33,16 @@ struct GoalsView: View {
         }
     }
 
-    private static let sampleGoals = [
-        GoalCard(
-            id: UUID(),
-            planID: nil,
-            title: "목표:자격증 취득",
-            period: "3월 – 6월",
-            leftDetail: "하위 3개 · 월→주→일 연결됨",
-            rightDetail: "실제 27h / 계획 40h",
-            progress: 0.67,
-            category: .study
-        ),
-        GoalCard(
-            id: UUID(),
-            planID: nil,
-            title: "목표:주 3회 운동 습관",
-            period: "1월 – 12월",
-            leftDetail: "하위 2개 · 건강 데이터 연동",
-            rightDetail: "실제 48h / 계획 72h",
-            progress: 0.66,
-            category: .exercise
-        ),
-        GoalCard(
-            id: UUID(),
-            planID: nil,
-            title: "목표:신제품 프로젝트",
-            period: "4월 – 9월",
-            leftDetail: "하위 4개 · 이번 주 진행 중",
-            rightDetail: "실제 112h / 계획 160h",
-            progress: 0.70,
-            category: .project
-        ),
-        GoalCard(
-            id: UUID(),
-            planID: nil,
-            title: "목표:일본 여행",
-            period: "8월",
-            leftDetail: "하위 5개 · 예약 2건 완료",
-            rightDetail: "D-9",
-            progress: 0.40,
-            category: .travel
-        ),
-    ]
-
     var body: some View {
         VStack(spacing: 0) {
             DraftTopBar(title: "목표", trailing: "2026")
 
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 10) {
+                    if goals.isEmpty {
+                        emptyGoalState
+                    }
+
                     ForEach(goals) { goal in
                         let childRows = childTimelineRows(for: goal.planID)
                         VStack(alignment: .leading, spacing: 9) {
@@ -165,6 +125,29 @@ struct GoalsView: View {
                 .padding(.vertical, 12)
             }
             .background(Color.tpBackground)
+        }
+    }
+
+    private var emptyGoalState: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("아직 목표가 없습니다")
+                .font(.taption(size: 12.5, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+            Text("새 목표를 추가하거나 시작 구성에서 상황별 목표를 만들 수 있습니다.")
+                .font(.taption(size: 9))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            Color.white.opacity(0.78),
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.6)
         }
     }
 
