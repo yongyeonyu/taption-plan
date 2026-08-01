@@ -62,6 +62,10 @@
 		A10000000000000000000036 /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
 		A10000000000000000000037 /* TaptionPlanWatchWidget.appex in Embed Watch Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000005 /* TaptionPlanWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000038 /* WatchWidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000035 /* WatchWidgetShared.swift */; };
+		A10000000000000000000039 /* TimelineBoardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000039 /* TimelineBoardModels.swift */; };
+		A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003A /* TimelineBlockStyleViews.swift */; };
+		A1000000000000000000003B /* WidgetPayloadFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003B /* WidgetPayloadFactory.swift */; };
+		A1000000000000000000003C /* WidgetPayloadFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003B /* WidgetPayloadFactory.swift */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -193,6 +197,9 @@
 		F10000000000000000000036 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10000000000000000000037 /* TaptionPlanWatchWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWatchWidget.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000038 /* TaptionPlanWatchWidgetDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWatchWidgetDebug.entitlements; sourceTree = "<group>"; };
+		F10000000000000000000039 /* TimelineBoardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBoardModels.swift; sourceTree = "<group>"; };
+		F1000000000000000000003A /* TimelineBlockStyleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBlockStyleViews.swift; sourceTree = "<group>"; };
+		F1000000000000000000003B /* WidgetPayloadFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPayloadFactory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -264,7 +271,7 @@
 				F10000000000000000000001 /* TaptionPlanApp.swift */,
 				810000000000000000000005 /* UI */,
 				810000000000000000000006 /* UX */,
-				810000000000000000000007 /* CORE */,
+				810000000000000000000007 /* Core */,
 				F10000000000000000000017 /* TaptionPlan.entitlements */,
 				F10000000000000000000027 /* TaptionPlanDebug.entitlements */,
 				F1000000000000000000001E /* Info.plist */,
@@ -298,6 +305,7 @@
 				F10000000000000000000025 /* PlanEditorSheet.swift */,
 				F10000000000000000000026 /* PhotoClusterSheet.swift */,
 				F10000000000000000000032 /* PhotoGalleryView.swift */,
+				F1000000000000000000003A /* TimelineBlockStyleViews.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -309,11 +317,12 @@
 				F10000000000000000000018 /* NavigationModels.swift */,
 				F10000000000000000000019 /* CatPresentation.swift */,
 				F1000000000000000000001A /* TimelineInteractionEngine.swift */,
+				F10000000000000000000039 /* TimelineBoardModels.swift */,
 			);
 			path = UX;
 			sourceTree = "<group>";
 		};
-		810000000000000000000007 /* CORE */ = {
+		810000000000000000000007 /* Core */ = {
 			isa = PBXGroup;
 			children = (
 				F10000000000000000000003 /* PlanItem.swift */,
@@ -328,11 +337,12 @@
 				F1000000000000000000001C /* SleepAnalysisEngine.swift */,
 				F1000000000000000000001D /* SensorDataServices.swift */,
 				F1000000000000000000001F /* WidgetShared.swift */,
+				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
 				F10000000000000000000023 /* StoreKitSupport.swift */,
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
 			);
-			path = CORE;
+			path = Core;
 			sourceTree = "<group>";
 		};
 		810000000000000000000008 /* TaptionPlanWidget */ = {
@@ -628,6 +638,9 @@
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
 				A10000000000000000000032 /* PhotoGalleryView.swift in Sources */,
+				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
+				A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */,
+				A1000000000000000000003B /* WidgetPayloadFactory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -650,6 +663,7 @@
 				A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */,
 				A10000000000000000000024 /* PlanningEngine.swift in Sources */,
 				A10000000000000000000025 /* PlanRepository.swift in Sources */,
+				A1000000000000000000003C /* WidgetPayloadFactory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

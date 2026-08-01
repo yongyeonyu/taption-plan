@@ -173,6 +173,26 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         }
     }
 
+    func requestWorkout(_ request: TaptionWatchWorkoutRequest) throws {
+        guard WCSession.isSupported() else { return }
+        let data = try encoder.encode(request)
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.workoutRequestKey: data,
+        ]
+        let session = WCSession.default
+        guard session.activationState == .activated, session.isPaired else {
+            return
+        }
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(
+                envelope,
+                replyHandler: nil,
+                errorHandler: nil
+            )
+        }
+    }
+
     nonisolated func session(
         _ session: WCSession,
         activationDidCompleteWith activationState: WCSessionActivationState,

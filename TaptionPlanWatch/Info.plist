@@ -26,11 +26,14 @@
 	<string>Apple Watch에서 측정한 걷기·달리기·자전거 운동을 건강 앱에 저장합니다.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>운동 중 3축 가속도·회전·고도·걸음 센서를 활동 기록에 반영합니다.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>걷기와 달리기 경로를 Apple 지도에 기록하려면 위치 접근이 필요합니다.</string>
 	<key>WKApplication</key>
 	<true/>
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>
+		<string>location</string>
 	</array>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.taption.plan</string>

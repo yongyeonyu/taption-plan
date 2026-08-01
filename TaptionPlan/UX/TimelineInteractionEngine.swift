@@ -11,6 +11,8 @@ enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
     case oneDay = "1일"
     case threeDays = "3일"
     case oneWeek = "1주"
+    case oneMonth = "1월"
+    case oneYear = "1년"
 
     var id: Self { self }
 
@@ -26,6 +28,8 @@ enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
         case .oneDay: 24 * 60 * 60
         case .threeDays: 3 * 24 * 60 * 60
         case .oneWeek: 7 * 24 * 60 * 60
+        case .oneMonth: 31 * 24 * 60 * 60
+        case .oneYear: 366 * 24 * 60 * 60
         }
     }
 
@@ -35,7 +39,45 @@ enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
         case .fiveMinutes, .fifteenMinutes: "분 단위"
         case .oneHour, .threeHours, .sixHours, .twelveHours: "시간 단위"
         case .oneDay: "하루 전체"
-        case .threeDays, .oneWeek: "여러 날 연속"
+        case .threeDays: "여러 날 연속"
+        case .oneWeek: "주 전체"
+        case .oneMonth: "월 전체"
+        case .oneYear: "년 전체"
+        }
+    }
+
+    var preferredScale: TimeScale {
+        switch self {
+        case .oneWeek:
+            .week
+        case .oneMonth:
+            .month
+        case .oneYear:
+            .year
+        default:
+            .day
+        }
+    }
+
+    static func defaultPreset(for scale: TimeScale) -> Self {
+        switch scale {
+        case .day: .oneDay
+        case .week: .oneWeek
+        case .month: .oneMonth
+        case .year: .oneYear
+        }
+    }
+
+    static func nearest(to stage: GanttZoomStage) -> Self {
+        switch stage {
+        case .year: .oneYear
+        case .month: .oneMonth
+        case .week: .oneWeek
+        case .day: .oneDay
+        case .hour: .oneHour
+        case .fifteenMinutes: .fifteenMinutes
+        case .fiveMinutes: .fiveMinutes
+        case .oneMinute: .oneMinute
         }
     }
 

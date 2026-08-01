@@ -49,6 +49,36 @@ enum TaptionWatchWorkoutKind: String, Codable, CaseIterable, Sendable {
     }
 }
 
+enum TaptionWatchWorkoutRequestAction: String, Codable, Sendable {
+    case start
+    case stop
+}
+
+struct TaptionWatchWorkoutRequest: Codable, Hashable, Sendable {
+    var id: UUID
+    var sessionID: UUID
+    var action: TaptionWatchWorkoutRequestAction
+    var kind: TaptionWatchWorkoutKind
+    var linkedPlanID: UUID?
+    var requestedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        sessionID: UUID,
+        action: TaptionWatchWorkoutRequestAction,
+        kind: TaptionWatchWorkoutKind,
+        linkedPlanID: UUID? = nil,
+        requestedAt: Date = .now
+    ) {
+        self.id = id
+        self.sessionID = sessionID
+        self.action = action
+        self.kind = kind
+        self.linkedPlanID = linkedPlanID
+        self.requestedAt = requestedAt
+    }
+}
+
 struct TaptionWatchPlanItem: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var title: String
@@ -83,6 +113,18 @@ struct TaptionWatchSensorVector3: Codable, Hashable, Sendable {
     var x: Double
     var y: Double
     var z: Double
+}
+
+struct TaptionWatchLocationPoint: Codable, Hashable, Sendable {
+    var id: UUID
+    var capturedAt: Date
+    var latitude: Double
+    var longitude: Double
+    var altitude: Double
+    var horizontalAccuracy: Double
+    var verticalAccuracy: Double
+    var speedMetersPerSecond: Double?
+    var courseDegrees: Double?
 }
 
 /// A cumulative, battery-conscious summary of the sensors collected during an
@@ -122,12 +164,14 @@ struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
     var averageHeartRate: Double?
     var maximumHeartRate: Double?
     var activeEnergyKilocalories: Double?
+    var routePoints: [TaptionWatchLocationPoint]?
 }
 
 enum TaptionWatchEnvelope {
     static let payloadKey = "taption.watch.payload"
     static let commandKey = "taption.watch.command"
     static let sensorSummaryKey = "taption.watch.sensor-summary"
+    static let workoutRequestKey = "taption.watch.workout-request"
     static let refreshRequestKey = "taption.watch.refresh-request"
     static let acceptedKey = "taption.watch.accepted"
 }

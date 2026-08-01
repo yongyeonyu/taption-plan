@@ -12,6 +12,9 @@ struct DraftTopBar: View {
     var onTitleTap: (() -> Void)?
     var onPrevious: (() -> Void)?
     var onNext: (() -> Void)?
+    var trailingSystemImage: String?
+    var onTrailingTap: (() -> Void)?
+    var trailingAccessibilityLabel = ""
     var isPreviousEnabled = true
     var isNextEnabled = true
     var textSizeAdjustment: CGFloat = 0
@@ -60,16 +63,59 @@ struct DraftTopBar: View {
 
                 Spacer(minLength: 4)
 
-                if !trailing.isEmpty {
-                    Text(trailing)
-                        .font(
-                            .taption(
-                                size: 12 + textSizeAdjustment,
-                                weight: .regular
+                if let trailingSystemImage,
+                   let onTrailingTap {
+                    Button(action: onTrailingTap) {
+                        Image(systemName: trailingSystemImage)
+                            .font(
+                                .taption(
+                                    size: 16 + textSizeAdjustment,
+                                    weight: .bold
+                                )
                             )
+                            .foregroundStyle(Color.tpInk)
+                            .frame(width: 34, height: 34)
+                            .background(
+                                Color(red: 0.94, green: 0.94, blue: 0.95),
+                                in: Circle()
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(
+                        trailingAccessibilityLabel.isEmpty
+                            ? trailingSystemImage
+                            : trailingAccessibilityLabel
+                    )
+                } else if !trailing.isEmpty {
+                    if let onTrailingTap {
+                        Button(action: onTrailingTap) {
+                            Text(trailing)
+                                .font(
+                                    .taption(
+                                        size: 12 + textSizeAdjustment,
+                                        weight: .semibold
+                                    )
+                                )
+                                .foregroundStyle(trailingColor)
+                                .lineLimit(1)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            trailingAccessibilityLabel.isEmpty
+                                ? trailing
+                                : trailingAccessibilityLabel
                         )
-                        .foregroundStyle(trailingColor)
-                        .lineLimit(1)
+                    } else {
+                        Text(trailing)
+                            .font(
+                                .taption(
+                                    size: 12 + textSizeAdjustment,
+                                    weight: .regular
+                                )
+                            )
+                            .foregroundStyle(trailingColor)
+                            .lineLimit(1)
+                    }
                 }
             }
 
@@ -157,31 +203,10 @@ struct DraftScalePicker: View {
     var body: some View {
         HStack(spacing: 0) {
             ForEach(TimeScale.allCases) { scale in
-                if scale == .day, let dayZoom {
-                    Menu {
-                        Section("일 타임라인 배율") {
-                            ForEach(TimelineZoomPreset.allCases) { preset in
-                                Button {
-                                    onDayZoomChange(preset)
-                                } label: {
-                                    HStack {
-                                        Text(preset.rawValue)
-                                        Spacer()
-                                        Text(preset.detail)
-                                            .foregroundStyle(.secondary)
-                                        if preset == dayZoom {
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text(scale.rawValue)
-                            Image(systemName: "chevron.down")
-                                .font(.taption(size: 7, weight: .bold))
-                        }
+                Button {
+                    onSelect(scale)
+                } label: {
+                    Text(scale.rawValue)
                         .font(.taption(size: 12.5, weight: selected == scale ? .semibold : .regular))
                         .foregroundStyle(selected == scale ? Color.tpInk : Color.tpSecondary)
                         .frame(maxWidth: .infinity)
@@ -193,28 +218,10 @@ struct DraftScalePicker: View {
                                     .shadow(color: .black.opacity(0.12), radius: 1.5, y: 1)
                             }
                         }
-                    }
-                    .accessibilityLabel("일 타임라인 배율 \(dayZoom.rawValue)")
-                    .accessibilityIdentifier("schedule.day-zoom-menu")
-                } else {
-                    Button {
-                        onSelect(scale)
-                    } label: {
-                        Text(scale.rawValue)
-                            .font(.taption(size: 12.5, weight: selected == scale ? .semibold : .regular))
-                            .foregroundStyle(selected == scale ? Color.tpInk : Color.tpSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 5)
-                            .background {
-                                if selected == scale {
-                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .fill(Color.white)
-                                        .shadow(color: .black.opacity(0.12), radius: 1.5, y: 1)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(scale.rawValue) 보기")
+                .accessibilityIdentifier("schedule.scale.\(scale.rawValue)")
             }
         }
         .padding(2)
@@ -234,7 +241,9 @@ struct DraftBottomNavigationBar: View {
             tabButton(.goals)
 
             Button {
-                if model.detail == .group,
+                if model.selectedTab == .goals {
+                    model.addPlanContext = .goal
+                } else if model.detail == .group,
                    let parentID = model.selectedGroupPlanID {
                     model.addPlanContext = .child(parentID)
                 } else {
@@ -252,7 +261,7 @@ struct DraftBottomNavigationBar: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
             .accessibilityLabel(
-                model.detail == .group ? "하위 계획 추가" : "계획 추가"
+                mainAddButtonAccessibilityLabel
             )
 
             tabButton(.review)
@@ -267,6 +276,11 @@ struct DraftBottomNavigationBar: View {
                 .fill(Color.tpLine)
                 .frame(height: 0.5)
         }
+    }
+
+    private var mainAddButtonAccessibilityLabel: String {
+        if model.selectedTab == .goals { return "목표 추가" }
+        return model.detail == .group ? "하위 계획 추가" : "계획 추가"
     }
 
     private func tabButton(_ tab: RootTab) -> some View {

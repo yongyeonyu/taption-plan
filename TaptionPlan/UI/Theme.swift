@@ -110,6 +110,7 @@ extension PlanCategory {
         switch self {
         case .movement: .tpMovement
         case .location: .tpPlace
+        case .activity: .tpHealthArea
         case .photo: .tpPhoto
         case .project: .tpProject
         case .exercise: .tpExercise
@@ -129,6 +130,7 @@ extension PlanCategory {
         switch self {
         case .movement: .tpMovementDark
         case .location: .tpPlaceDark
+        case .activity: .tpHealthDark
         case .photo: .tpPhotoDark
         case .project: .tpProjectDark
         case .exercise: .tpExerciseDark
@@ -148,6 +150,7 @@ extension PlanCategory {
         switch self {
         case .movement: "figure.walk"
         case .location: "mappin.and.ellipse"
+        case .activity: "figure.run"
         case .photo: "photo"
         case .project: "briefcase"
         case .exercise: "figure.run"

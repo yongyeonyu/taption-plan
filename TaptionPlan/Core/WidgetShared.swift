@@ -51,6 +51,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
     case schedule
     case location
     case movement
+    case sleep
     case activity
     case action
 
@@ -58,6 +59,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
         .schedule,
         .location,
         .movement,
+        .sleep,
         .activity,
     ]
 
@@ -66,6 +68,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
         case .schedule: "일정"
         case .location: "위치"
         case .movement: "이동"
+        case .sleep: "수면"
         case .activity: "활동"
         case .action: "액션"
         }
@@ -76,6 +79,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
         case .schedule: "calendar"
         case .location: "mappin.and.ellipse"
         case .movement: "arrow.trianglehead.swap"
+        case .sleep: "moon.zzz"
         case .activity: "figure.run"
         case .action: "checklist.checked"
         }
@@ -132,6 +136,7 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
         case "calendar": .schedule
         case "location": .location
         case "movement": .movement
+        case "sleep": .sleep
         case "activity": .activity
         default: .action
         }
@@ -606,6 +611,9 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
     var generatedAt: Date
     var viewportStart: Date
     var viewportEnd: Date
+    var displayCenterDate: Date?
+    var displayDuration: TimeInterval?
+    var displayResolutionLabel: String?
     var items: [TaptionWidgetItem]
     var catStyle: String
     var hidesSensitiveContent: Bool
@@ -620,6 +628,9 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
             generatedAt: .now,
             viewportStart: day,
             viewportEnd: day.addingTimeInterval(86_400),
+            displayCenterDate: .now,
+            displayDuration: 24 * 60 * 60,
+            displayResolutionLabel: "1일",
             items: [],
             catStyle: "calico",
             hidesSensitiveContent: true,
@@ -637,6 +648,9 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
             generatedAt: .now,
             viewportStart: day,
             viewportEnd: day.addingTimeInterval(86_400),
+            displayCenterDate: now,
+            displayDuration: 24 * 60 * 60,
+            displayResolutionLabel: "1일",
             items: [
                 TaptionWidgetItem(
                     id: UUID(),
@@ -667,6 +681,16 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
                     status: "recorded",
                     isFixed: true,
                     lane: .movement
+                ),
+                TaptionWidgetItem(
+                    id: UUID(),
+                    title: "수면",
+                    categoryID: "sleep",
+                    startsAt: now.addingTimeInterval(-4.8 * 3_600),
+                    endsAt: now.addingTimeInterval(-1.2 * 3_600),
+                    status: "recorded",
+                    isFixed: true,
+                    lane: .sleep
                 ),
                 TaptionWidgetItem(
                     id: UUID(),

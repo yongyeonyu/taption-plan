@@ -271,3 +271,28 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
         )
     }
 }
+
+enum TrackingSessionPolicy {
+    static let automaticStartDuration: TimeInterval = 10
+    static let automaticStopStationaryDuration: TimeInterval = 2 * 60
+    static let activeHorizontalAccuracyLimit: Double = 50
+    static let activeDistanceFilterMeters: Double = 5
+
+    static func shouldAutomaticallyStart(
+        motion: MotionKind,
+        confidence: ConfidenceLevel,
+        sustainedFor duration: TimeInterval
+    ) -> Bool {
+        (motion == .walking || motion == .running)
+            && confidence != .low
+            && duration >= automaticStartDuration
+    }
+
+    static func shouldAutomaticallyStop(
+        motion: MotionKind,
+        stationaryFor duration: TimeInterval
+    ) -> Bool {
+        motion == .stationary
+            && duration >= automaticStopStationaryDuration
+    }
+}

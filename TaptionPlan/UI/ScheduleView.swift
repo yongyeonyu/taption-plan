@@ -257,6 +257,7 @@ struct ScheduleView: View {
     @State private var editingPlanID: UUID?
     @State private var mapPlayheadDate: Date?
     @State private var playheadDetailGate = TimelinePlayheadDetailGate()
+    @State private var showsAirQualityDetails = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -264,12 +265,16 @@ struct ScheduleView: View {
                 title: headerTitle,
                 trailing: headerTrailing,
                 selectedScale: model.selectedScale,
-                onScaleChange: { model.selectScale($0) },
+                onScaleChange: selectScaleFromTopBar,
                 dayZoom: dayZoom,
                 onDayZoomChange: { dayZoom = $0 },
                 onTitleTap: { model.returnToNow() },
                 onPrevious: { model.shiftSelectedDate(by: -1) },
                 onNext: { model.shiftSelectedDate(by: 1) },
+                onTrailingTap: closestWeather?.airQuality == nil
+                    ? nil
+                    : { showsAirQualityDetails = true },
+                trailingAccessibilityLabel: "현재 날씨와 미세먼지 상세 보기",
                 isPreviousEnabled: model.canShiftToPreviousPeriod,
                 isNextEnabled: model.canShiftToNextPeriod
             )
@@ -329,7 +334,10 @@ struct ScheduleView: View {
                 section: $detailSection,
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
-                routeReadings: routeReadings,
+                routeReadings: model.mergingLiveSensorReadings(
+                    routeReadings,
+                    in: routeReadingsSpan
+                ),
                 onActualDeleted: { actualID in
                     if selectedTimelineItem?.actualID == actualID {
                         selectedTimelineItem = nil
@@ -350,6 +358,22 @@ struct ScheduleView: View {
         .onDisappear {
             playheadDetailGate.cancel()
         }
+        .sheet(isPresented: $showsAirQualityDetails) {
+            if let weather = closestWeather,
+               let airQuality = weather.airQuality {
+                AirQualityDetailSheet(
+                    weather: weather,
+                    airQuality: airQuality
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+        }
+    }
+
+    private func selectScaleFromTopBar(_ scale: TimeScale) {
+        model.selectScale(scale)
+        dayZoom = TimelineZoomPreset.defaultPreset(for: scale)
     }
 
     private func requestPlayheadDetailUpdate(at date: Date) {
@@ -485,7 +509,11 @@ struct ScheduleView: View {
         switch model.selectedScale {
         case .day:
             if let weather = closestWeather {
-                "\(weather.temperatureCelsius.rounded().formatted())° · \(weather.condition)"
+                if let air = weather.airQuality {
+                    "\(weather.temperatureCelsius.rounded().formatted())° · 미세 \(air.overallGrade.displayName)"
+                } else {
+                    "\(weather.temperatureCelsius.rounded().formatted())° · \(weather.condition)"
+                }
             } else {
                 ""
             }
@@ -525,6 +553,122 @@ struct ScheduleView: View {
                 abs($0.observedAt.timeIntervalSince(model.selectedDate))
                     < abs($1.observedAt.timeIntervalSince(model.selectedDate))
             }
+    }
+}
+
+private struct AirQualityDetailSheet: View {
+    let weather: WeatherContext
+    let airQuality: AirQualityContext
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 10) {
+                        Image(systemName: weather.symbolName)
+                            .font(.taption(size: 25, weight: .semibold))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("\(weather.condition) · \(Int(weather.temperatureCelsius.rounded()))°")
+                                .font(.taption(size: 18, weight: .bold))
+                            Text("통합 미세먼지 \(airQuality.overallGrade.displayName)")
+                                .font(.taption(size: 14, weight: .semibold))
+                                .foregroundStyle(airQuality.overallGrade.displayColor)
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        pollutantCard(
+                            title: "PM10",
+                            value: airQuality.pm10MicrogramsPerCubicMeter,
+                            grade: airQuality.pm10Grade
+                        )
+                        pollutantCard(
+                            title: "PM2.5",
+                            value: airQuality.pm25MicrogramsPerCubicMeter,
+                            grade: airQuality.pm25Grade
+                        )
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        detailRow(
+                            "관측 시각",
+                            airQuality.observedAt.formatted(
+                                date: .abbreviated,
+                                time: .shortened
+                            )
+                        )
+                        if let stationName = airQuality.stationName {
+                            detailRow("측정소", stationName)
+                        }
+                        detailRow("제공원", airQuality.providerName)
+                        if airQuality.isFallback {
+                            Label(
+                                "대체 자료",
+                                systemImage: "arrow.triangle.2.circlepath"
+                            )
+                            .font(.taption(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.tpSecondary)
+                        }
+                    }
+                    .padding(14)
+                    .background(
+                        Color.tpBackground,
+                        in: RoundedRectangle(cornerRadius: 14)
+                    )
+                }
+                .padding(18)
+            }
+            .navigationTitle("날씨 · 미세먼지")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("완료") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func pollutantCard(
+        title: String,
+        value: Double,
+        grade: AirQualityGrade
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.taption(size: 13, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+            Text("\(Int(value.rounded())) μg/m³")
+                .font(.taption(size: 18, weight: .bold))
+            Text(grade.displayName)
+                .font(.taption(size: 12, weight: .bold))
+                .foregroundStyle(grade.displayColor)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func detailRow(_ title: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .foregroundStyle(Color.tpSecondary)
+            Spacer()
+            Text(value)
+                .multilineTextAlignment(.trailing)
+        }
+        .font(.taption(size: 13, weight: .medium))
+    }
+}
+
+private extension AirQualityGrade {
+    var displayColor: Color {
+        switch self {
+        case .good: Color(red: 0.20, green: 0.55, blue: 0.84)
+        case .moderate: Color(red: 0.22, green: 0.62, blue: 0.34)
+        case .bad: Color(red: 0.92, green: 0.55, blue: 0.12)
+        case .veryBad: Color(red: 0.86, green: 0.20, blue: 0.20)
+        }
     }
 }
 
@@ -592,68 +736,33 @@ private struct TimelineDetailPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5) {
-                    ForEach(TimelineDetailSection.allCases) { item in
-                        let isSelected = section == item
-                        let isHighlighted = highlightedSection == item
-                        Button {
-                            section = item
-                        } label: {
-                            Label(item.rawValue, systemImage: item.systemImage)
-                                .font(.taption(size: 9, weight: isSelected || isHighlighted ? .bold : .regular))
-                                .foregroundStyle(
-                                    isSelected
-                                        ? Color.white
-                                        : isHighlighted
-                                            ? Color.tpInk
-                                            : Color.tpSecondary
-                                )
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(
-                                    isSelected ? Color.tpInk : Color.clear,
-                                    in: Capsule()
-                                )
-                                .overlay {
-                                    if isHighlighted && !isSelected {
-                                        Capsule()
-                                            .stroke(
-                                                Color.tpInk.opacity(0.24),
-                                                lineWidth: 0.75
-                                            )
-                                    }
-                                }
+            detailContextHeader
+
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: true) {
+                    LazyVStack(spacing: 9) {
+                        ForEach(detailSectionOrder) { item in
+                            detailCard(for: item)
+                                .id(item)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(
-                            isSelected ? .isSelected : []
-                        )
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: 264,
+                    maxHeight: 340,
+                    alignment: .top
+                )
+                .background(Color.tpBackground)
+                .onChange(of: section) { _, newSection in
+                    withAnimation(.easeInOut(duration: 0.24)) {
+                        proxy.scrollTo(newSection, anchor: .top)
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
             }
-            .background(Color(red: 0.94, green: 0.94, blue: 0.95))
-
-            Group {
-                switch section {
-                case .map:
-                    routeContent
-                case .action:
-                    actionContent
-                case .photo:
-                    photoContent
-                case .event:
-                    eventContent
-                case .schedule:
-                    scheduleContent
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 264, maxHeight: 340, alignment: .top)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(Color.tpBackground)
         }
         .overlay(alignment: .top) {
             Rectangle().fill(Color.tpLine).frame(height: 0.5)
@@ -698,6 +807,101 @@ private struct TimelineDetailPanel: View {
         }
     }
 
+    private var detailSectionOrder: [TimelineDetailSection] {
+        [.map, .schedule, .action, .photo, .event]
+    }
+
+    private var detailContextHeader: some View {
+        HStack(spacing: 8) {
+            Image(systemName: highlightedSection?.systemImage ?? "rectangle.stack")
+                .font(.taption(size: 10, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .frame(width: 24, height: 24)
+                .background(
+                    Color.white,
+                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                )
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(selection?.title ?? "하루 상세")
+                    .font(.taption(size: 10.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(1)
+                Text(detailContextTimeLabel)
+                    .font(.taption(size: 7.8, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 6)
+
+            Label("세로 스크롤", systemImage: "arrow.down")
+                .font(.taption(size: 7.5, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color(red: 0.94, green: 0.94, blue: 0.95))
+    }
+
+    private var detailContextTimeLabel: String {
+        if let playheadDate {
+            return playheadDate.formatted(date: .abbreviated, time: .shortened)
+        }
+        if let selection {
+            let start = selection.span.start.formatted(
+                date: .abbreviated,
+                time: .shortened
+            )
+            let end = selection.span.end.formatted(
+                date: .omitted,
+                time: .shortened
+            )
+            return "\(start)–\(end)"
+        }
+        return model.selectedDate.formatted(date: .complete, time: .omitted)
+    }
+
+    @ViewBuilder
+    private func detailCard(
+        for item: TimelineDetailSection
+    ) -> some View {
+        let isFocused = highlightedSection == item || section == item
+        Group {
+            switch item {
+            case .map:
+                routeContent
+            case .action:
+                actionContent
+            case .photo:
+                photoContent
+            case .event:
+                eventContent
+            case .schedule:
+                scheduleContent
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            isFocused
+                ? Color.tpInk.opacity(0.035)
+                : Color.white,
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(
+                    isFocused
+                        ? Color.tpInk.opacity(0.34)
+                        : Color.tpLine.opacity(0.75),
+                    lineWidth: isFocused ? 1 : 0.5
+                )
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(item.rawValue) 상세")
+    }
+
     private var routeContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -712,6 +916,19 @@ private struct TimelineDetailPanel: View {
                     .font(.taption(size: 8))
                     .foregroundStyle(Color.tpSecondary)
             }
+            trackingControls
+            if let air = closestAirQuality {
+                HStack(spacing: 6) {
+                    Image(systemName: "aqi.medium")
+                    Text("PM10 \(Int(air.pm10MicrogramsPerCubicMeter.rounded()))")
+                    Text("PM2.5 \(Int(air.pm25MicrogramsPerCubicMeter.rounded()))")
+                    Spacer(minLength: 4)
+                    Text("\(air.stationName ?? air.providerName) · \(air.isFallback ? "대체값" : air.providerName)")
+                        .lineLimit(1)
+                }
+                .font(.taption(size: 7.8, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+            }
             if let travel = explicitlySelectedTravel {
                 travelModeEditor(for: travel)
             }
@@ -719,7 +936,7 @@ private struct TimelineDetailPanel: View {
                 Label("기록된 이동 경로가 없습니다", systemImage: "location.slash")
                     .font(.taption(size: 9, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
-                    .frame(maxWidth: .infinity, minHeight: 180)
+                    .frame(maxWidth: .infinity, minHeight: 84)
             } else {
                 Map(position: $mapPosition, content: {
                     ForEach(routeLocationPins) { pin in
@@ -801,6 +1018,53 @@ private struct TimelineDetailPanel: View {
         }
     }
 
+    private var trackingControls: some View {
+        HStack(spacing: 6) {
+            if let session = model.activeTrackingSession {
+                Label(
+                    "\(session.kind.displayName) 기록 중",
+                    systemImage: session.kind == .running
+                        ? "figure.run"
+                        : "figure.walk"
+                )
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpTransitDark)
+                Spacer(minLength: 4)
+                Button("종료") {
+                    Task { await model.stopTracking() }
+                }
+                .font(.taption(size: 8.5, weight: .bold))
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            } else {
+                Button {
+                    Task { await model.startTracking(.walking) }
+                } label: {
+                    Label("걷기 시작", systemImage: "figure.walk")
+                }
+                Button {
+                    Task { await model.startTracking(.running) }
+                } label: {
+                    Label("달리기 시작", systemImage: "figure.run")
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .font(.taption(size: 8.5, weight: .bold))
+        .buttonStyle(.bordered)
+    }
+
+    private var closestAirQuality: AirQualityContext? {
+        model.snapshot.weather
+            .compactMap { weather in
+                weather.airQuality.map { (weather.observedAt, $0) }
+            }
+            .min {
+                abs($0.0.timeIntervalSince(playheadDate ?? .now))
+                    < abs($1.0.timeIntervalSince(playheadDate ?? .now))
+            }?.1
+    }
+
     private var memoContent: some View {
         VStack(alignment: .leading, spacing: 7) {
             detailHeading("메모", systemImage: "note.text")
@@ -869,11 +1133,92 @@ private struct TimelineDetailPanel: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.tpInk)
             } else {
-                Text("액션아이템을 선택하면 메모가 표시됩니다")
-                    .font(.taption(size: 9))
-                    .foregroundStyle(Color.tpSecondary)
+                let plans = activeActionPlans
+                if plans.isEmpty {
+                    Text("이날 등록된 액션아이템이 없습니다")
+                        .font(.taption(size: 9))
+                        .foregroundStyle(Color.tpSecondary)
+                } else {
+                    ForEach(plans) { plan in
+                        Button {
+                            model.planEditorRequest = PlanEditorRequest(
+                                id: plan.id
+                            )
+                        } label: {
+                            HStack(spacing: 7) {
+                                RoundedRectangle(
+                                    cornerRadius: plan.origin == .repeatRule
+                                        ? 0
+                                        : 4
+                                )
+                                .fill(Color.tpInk.opacity(0.12))
+                                .frame(width: 5, height: 30)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(plan.title)
+                                        .font(.taption(size: 9.5, weight: .semibold))
+                                        .foregroundStyle(Color.tpInk)
+                                        .lineLimit(1)
+                                    Text(actionPlanTimeLabel(plan))
+                                        .font(.taption(size: 8))
+                                        .foregroundStyle(Color.tpSecondary)
+                                }
+                                Spacer(minLength: 4)
+                                let memoCount = model.memos(for: plan.id).count
+                                if memoCount > 0 {
+                                    Label("\(memoCount)", systemImage: "note.text")
+                                        .font(.taption(size: 7.5, weight: .bold))
+                                        .foregroundStyle(Color.tpSecondary)
+                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.taption(size: 7, weight: .bold))
+                                    .foregroundStyle(Color.tpSecondary)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(
+                                Color.white.opacity(0.82),
+                                in: RoundedRectangle(
+                                    cornerRadius: 9,
+                                    style: .continuous
+                                )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
+    }
+
+    private var activeActionPlans: [PlanRecord] {
+        if let planID = selection?.planID,
+           let plan = model.snapshot.plans.first(where: { $0.id == planID }) {
+            return [plan]
+        }
+        return model.snapshot.plans
+            .filter { plan in
+                plan.status != .skipped
+                    && plan.categoryID != "event"
+                    && plan.span.intersection(with: daySpan) != nil
+                    && !(
+                        plan.parentID == nil
+                            && plan.repeatRules?.isEmpty == false
+                    )
+            }
+            .sorted { $0.span.start < $1.span.start }
+    }
+
+    private func actionPlanTimeLabel(_ plan: PlanRecord) -> String {
+        let start = plan.span.start.formatted(
+            date: .omitted,
+            time: .shortened
+        )
+        let end = plan.span.end.formatted(
+            date: .omitted,
+            time: .shortened
+        )
+        return "\(start)–\(end)"
     }
 
     private var selectedActual: ActualRecord? {
@@ -943,16 +1288,16 @@ private struct TimelineDetailPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             detailHeading("이벤트", systemImage: "sparkles")
             let events = model.snapshot.plans.filter {
-                $0.span.intersection(with: selection?.span ?? daySpan) != nil
+                $0.span.intersection(with: daySpan) != nil
                     && $0.categoryID == "event"
                     && $0.parentID == nil
-            }
+            }.sorted { $0.span.start < $1.span.start }
             if events.isEmpty {
-                Text("선택한 시간의 이벤트가 없습니다")
+                Text("이날 등록된 이벤트가 없습니다")
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
             } else {
-                ForEach(events.prefix(4)) { event in
+                ForEach(events) { event in
                     HStack {
                         Text(event.title).font(.taption(size: 9, weight: .semibold))
                         Spacer()
@@ -962,7 +1307,7 @@ private struct TimelineDetailPanel: View {
                     }
                 }
             }
-            Text("애플·구글 캘린더에서 가져온 내용은 ‘일정’ 탭에 표시됩니다.")
+            Text("애플·구글 캘린더에서 가져온 내용은 ‘일정’ 카드에 표시됩니다.")
                 .font(.taption(size: 7.5, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
         }
@@ -1007,12 +1352,12 @@ private struct TimelineDetailPanel: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             } else {
                 ContentUnavailableView(
-                    "선택한 시간의 사진이 없습니다",
+                    "이날 기록된 사진이 없습니다",
                     systemImage: "photo"
                 )
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
-                .frame(maxWidth: .infinity, minHeight: 220)
+                .frame(maxWidth: .infinity, minHeight: 84)
             }
         }
     }
@@ -1021,14 +1366,14 @@ private struct TimelineDetailPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             detailHeading("일정", systemImage: "calendar")
             let calendarEvents = model.snapshot.calendarEvents.filter {
-                $0.span.intersection(with: selection?.span ?? daySpan) != nil
-            }
+                $0.span.intersection(with: daySpan) != nil
+            }.sorted { $0.span.start < $1.span.start }
             if calendarEvents.isEmpty {
-                Text("선택한 시간의 일정이 없습니다")
+                Text("이날 등록된 일정이 없습니다")
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
             } else {
-                ForEach(calendarEvents.prefix(4)) { event in
+                ForEach(calendarEvents) { event in
                     HStack(spacing: 7) {
                         Image(systemName: "calendar")
                             .font(.taption(size: 8, weight: .bold))
@@ -1103,18 +1448,28 @@ private struct TimelineDetailPanel: View {
     }
 
     private var activePhotoSpan: TimeSpan {
-        selection?.span ?? daySpan
+        selectedPhotoCluster?.detailSpan ?? daySpan
     }
 
     private var activePhotoCluster: PhotoCluster? {
         if let selectedPhotoCluster {
             return selectedPhotoCluster
         }
-        return PhotoClusterer.cluster(
-            model.snapshot.photos.filter {
-                activePhotoSpan.contains($0.capturedAt)
+        let photos = model.snapshot.photos
+            .filter {
+                !$0.isHiddenFromTimeline
+                    && activePhotoSpan.contains($0.capturedAt)
             }
-        ).first
+            .sorted { $0.capturedAt < $1.capturedAt }
+        guard let representative = photos.first(where: \.isFavorite)
+            ?? photos.first else {
+            return nil
+        }
+        return PhotoCluster(
+            id: "day-detail-\(representative.id)",
+            representative: representative,
+            photos: photos
+        )
     }
 
     private var routeTitle: String {
@@ -1615,7 +1970,7 @@ struct GroupGanttView: View {
                 title: selectedGroup?.title ?? "신제품 기획",
                 trailing: selectedGroup.map(periodText) ?? "7.27 – 8.2",
                 selectedScale: model.selectedScale,
-                onScaleChange: { model.selectScale($0) },
+                onScaleChange: selectScaleFromTopBar,
                 dayZoom: dayZoom,
                 onDayZoomChange: { dayZoom = $0 },
                 onBack: { model.closeCurrentGroup() }
@@ -1677,7 +2032,10 @@ struct GroupGanttView: View {
                 section: $detailSection,
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
-                routeReadings: routeReadings,
+                routeReadings: model.mergingLiveSensorReadings(
+                    routeReadings,
+                    in: routeReadingsSpan
+                ),
                 onActualDeleted: { actualID in
                     if selectedTimelineItem?.actualID == actualID {
                         selectedTimelineItem = nil
@@ -1698,6 +2056,11 @@ struct GroupGanttView: View {
         .onDisappear {
             playheadDetailGate.cancel()
         }
+    }
+
+    private func selectScaleFromTopBar(_ scale: TimeScale) {
+        model.selectScale(scale)
+        dayZoom = TimelineZoomPreset.defaultPreset(for: scale)
     }
 
     private func requestPlayheadDetailUpdate(at date: Date) {
@@ -1869,6 +2232,13 @@ private struct TimelineBoardLayoutKey: Equatable {
     let viewportEnd: Double
 }
 
+private struct TimelineWidgetDisplaySyncKey: Equatable {
+    let snapshotRevision: UInt64
+    let centerSecond: Int
+    let durationSecond: Int
+    let resolutionLabel: String
+}
+
 @MainActor
 private final class TimelineBoardLayoutCache {
     private var key: TimelineBoardLayoutKey?
@@ -1885,46 +2255,6 @@ private final class TimelineBoardLayoutCache {
         self.key = key
         self.snapshot = snapshot
         return snapshot
-    }
-}
-
-private struct TimelineBoardDataIndex {
-    let childCounts: [UUID: Int]
-    let parentPlanIDs: Set<UUID>
-    let categoryNames: [String: String]
-
-    init(
-        plans: [PlanRecord],
-        categories: [CategoryDefinition]
-    ) {
-        let parentIDs = plans.compactMap(\.parentID)
-        childCounts = Dictionary(
-            parentIDs.map { ($0, 1) },
-            uniquingKeysWith: +
-        )
-        parentPlanIDs = Set(parentIDs)
-        categoryNames = Dictionary(
-            categories.map { ($0.id, $0.name) },
-            uniquingKeysWith: { first, _ in first }
-        )
-    }
-}
-
-private struct PlanCategoryPathKey: Hashable {
-    let categoryID: String
-    let middleName: String?
-    let subName: String?
-
-    var isRoot: Bool {
-        middleName == nil && subName == nil
-    }
-
-    var stableID: String {
-        [
-            categoryID,
-            middleName ?? "_",
-            subName ?? "_",
-        ].joined(separator: "::")
     }
 }
 
@@ -2086,6 +2416,9 @@ private struct TimelineBoard: View {
                 resetViewport()
             }
         }
+        .task(id: widgetDisplaySyncKey) {
+            syncWidgetDisplayWithVisibleTimeline()
+        }
         .accessibilityHint(
             "간트 본문을 드래그해 이동하고 두 손가락으로 최대 1분 단위까지 확대합니다"
         )
@@ -2158,48 +2491,8 @@ private struct TimelineBoard: View {
 
     private func axis(markers: [TimelineAxisMarker]) -> some View {
         HStack(spacing: 0) {
-            if isContinuousDay {
-                Text(dayZoom.rawValue)
-                    .font(.taption(size: 8.5, weight: .bold))
-                    .foregroundStyle(Color.tpSecondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                .accessibilityLabel("일 타임라인 배율 \(dayZoom.rawValue), 위 상단 메뉴에서 변경")
+            resolutionMenu
                 .frame(width: scheduleLabelColumnWidth)
-            } else {
-                Button {
-                    resetViewport(withFeedback: true)
-                } label: {
-                    HStack(spacing: 3) {
-                        Text(currentZoomStage.label)
-                        if !viewport.isFull {
-                            Image(systemName: "arrow.counterclockwise")
-                        }
-                    }
-                    .font(.taption(size: 8.5, weight: .bold))
-                    .foregroundStyle(
-                        viewport.isFull
-                            ? Color.tpSecondary
-                            : Color.tpInk
-                    )
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(
-                        viewport.isFull
-                            ? Color.clear
-                            : Color(red: 0.94, green: 0.94, blue: 0.95),
-                        in: Capsule()
-                    )
-                }
-                .buttonStyle(.plain)
-                .frame(width: scheduleLabelColumnWidth)
-                .accessibilityLabel(
-                    viewport.isFull
-                        ? "현재 배율 \(currentZoomStage.label)"
-                        : "현재 배율 \(currentZoomStage.label), 전체 보기로 복귀"
-                )
-                .accessibilityIdentifier("schedule.zoom.level")
-            }
             GeometryReader { proxy in
                 ZStack(alignment: .topLeading) {
                     ForEach(markers) { marker in
@@ -2253,6 +2546,81 @@ private struct TimelineBoard: View {
         .contentShape(Rectangle())
     }
 
+    private var resolutionMenu: some View {
+        Menu {
+            Section("화면 해상도") {
+                ForEach(TimelineZoomPreset.allCases) { preset in
+                    Button {
+                        selectResolution(preset)
+                    } label: {
+                        HStack {
+                            Text(preset.rawValue)
+                            Spacer()
+                            Text(preset.detail)
+                                .foregroundStyle(.secondary)
+                            if preset == currentResolutionPreset {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            }
+            if !viewport.isFull {
+                Section {
+                    Button {
+                        resetViewport(withFeedback: true)
+                    } label: {
+                        Label(
+                            "현재 보기 전체로 맞춤",
+                            systemImage: "arrow.counterclockwise"
+                        )
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(currentResolutionPreset.rawValue)
+                Image(systemName: "chevron.down")
+                    .font(.taption(size: 6.5, weight: .bold))
+            }
+            .font(.taption(size: 8.5, weight: .bold))
+            .foregroundStyle(Color.tpSecondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("화면 해상도 \(currentResolutionPreset.rawValue)")
+        .accessibilityIdentifier("schedule.resolution.menu")
+    }
+
+    private var currentResolutionPreset: TimelineZoomPreset {
+        if isContinuousDay {
+            return dayZoom
+        }
+        return TimelineZoomPreset.nearest(to: currentZoomStage)
+    }
+
+    private func selectResolution(_ preset: TimelineZoomPreset) {
+        dayZoom = preset
+        viewport = .full
+        dragOrigin = nil
+        magnifyOrigin = nil
+        continuousDragOrigin = nil
+        continuousZoomDurationOrigin = nil
+        model.selectScale(preset.preferredScale)
+        if preset.preferredScale == .day {
+            continuousCenterDate = model.selectedDate
+            onPlayheadMove?(continuousCenterDate)
+        }
+        zoomFeedbackSequence += 1
+    }
+
+    private func selectScaleForResolution(_ targetScale: TimeScale) {
+        model.selectScale(targetScale)
+        dayZoom = TimelineZoomPreset.defaultPreset(for: targetScale)
+    }
+
     private func rows(
         in span: TimeSpan,
         index: TimelineBoardDataIndex
@@ -2264,7 +2632,7 @@ private struct TimelineBoard: View {
         }
 
         if isGroup {
-            return groupRows
+            return resolved
         }
 
         switch scale {
@@ -2405,11 +2773,36 @@ private struct TimelineBoard: View {
             )
         }
         return rows(
-            from: storedPlans.filter { $0.parentID == nil },
+            from: rootTimelinePlans,
             includesCalendar: true,
             visibleSpan: span,
             index: index
         )
+    }
+
+    private var rootTimelinePlans: [PlanRecord] {
+        let repeatGoalIDs = Set(
+            storedPlans
+                .filter {
+                    $0.parentID == nil
+                        && ($0.repeatRules?.isEmpty == false)
+                }
+                .map(\.id)
+        )
+        .union(
+            storedPlans
+                .filter { $0.origin == .repeatRule }
+                .compactMap(\.parentID)
+        )
+        return storedPlans.filter { plan in
+            if plan.origin == .repeatRule {
+                return true
+            }
+            if let _ = plan.parentID {
+                return false
+            }
+            return !repeatGoalIDs.contains(plan.id)
+        }
     }
 
     private func rows(
@@ -2488,14 +2881,19 @@ private struct TimelineBoard: View {
         }
         for definition in orderedCategories {
             if usesAutomaticDayRows,
-               definition.id == "movement" || definition.id == "location" {
-                continue
-            }
-            guard !definition.isHidden else {
+               GoalCategoryPolicy.systemSelectableCategoryIDs.contains(
+                   definition.id
+               ) {
                 continue
             }
             let categoryPlans = grouped[definition.id, default: []]
             let categoryActuals = actualsGrouped[definition.id, default: []]
+            if definition.isHidden,
+               !GoalCategoryPolicy.systemSelectableCategoryIDs.contains(
+                   definition.id
+               ) {
+                continue
+            }
             guard !categoryPlans.isEmpty
                 || !categoryActuals.isEmpty else {
                 continue
@@ -2503,7 +2901,7 @@ private struct TimelineBoard: View {
             let category = PlanCategory(categoryID: definition.id)
             let plansByPath = Dictionary(
                 grouping: categoryPlans,
-                by: planCategoryPath
+                by: PlanCategoryPathPresentation.key
             )
             let rootKey = PlanCategoryPathKey(
                 categoryID: definition.id,
@@ -2515,10 +2913,11 @@ private struct TimelineBoard: View {
                     .union(categoryActuals.isEmpty ? [] : [rootKey])
             )
             .sorted {
-                compareCategoryPath(
+                PlanCategoryPathPresentation.isOrderedBefore(
                     $0,
                     $1,
-                    categoryName: definition.name
+                    categoryName: definition.name,
+                    plansBeforeRoot: isGroup
                 )
             }
 
@@ -2567,7 +2966,7 @@ private struct TimelineBoard: View {
                 let sensorLaneCount = sensorBlocks.isEmpty ? 0 : 1
                 values.append(
                     TimelineRowModel(
-                        title: categoryPathTitle(
+                        title: PlanCategoryPathPresentation.title(
                             categoryName: definition.name,
                             key: key
                         ),
@@ -2646,56 +3045,6 @@ private struct TimelineBoard: View {
         return values
     }
 
-    private func planCategoryPath(
-        for plan: PlanRecord
-    ) -> PlanCategoryPathKey {
-        PlanCategoryPathKey(
-            categoryID: plan.categoryID,
-            middleName: normalizedCategoryPart(plan.middleCategoryName),
-            subName: normalizedCategoryPart(plan.subCategoryName)
-        )
-    }
-
-    private func normalizedCategoryPart(_ value: String?) -> String? {
-        let clean = value?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return clean?.isEmpty == false ? clean : nil
-    }
-
-    private func categoryPathParts(
-        categoryName: String,
-        key: PlanCategoryPathKey
-    ) -> [String] {
-        [categoryName, key.middleName, key.subName].compactMap { $0 }
-    }
-
-    private func categoryPathTitle(
-        categoryName: String,
-        key: PlanCategoryPathKey
-    ) -> String {
-        categoryPathParts(categoryName: categoryName, key: key)
-            .joined(separator: "\n")
-    }
-
-    private func categoryPathDetail(
-        categoryName: String,
-        key: PlanCategoryPathKey
-    ) -> String {
-        categoryPathParts(categoryName: categoryName, key: key)
-            .joined(separator: " › ")
-    }
-
-    private func compareCategoryPath(
-        _ lhs: PlanCategoryPathKey,
-        _ rhs: PlanCategoryPathKey,
-        categoryName: String
-    ) -> Bool {
-        if lhs.isRoot != rhs.isRoot {
-            return lhs.isRoot
-        }
-        return categoryPathDetail(categoryName: categoryName, key: lhs)
-            < categoryPathDetail(categoryName: categoryName, key: rhs)
-    }
-
     private func automaticDayRows(
         events: [CalendarRecord],
         plansByCategory: [String: [PlanRecord]],
@@ -2715,7 +3064,18 @@ private struct TimelineBoard: View {
                 visibleSpan: visibleSpan,
                 index: index
             ),
-            automaticActivityRow(actuals),
+            automaticSleepRow(
+                plans: plansByCategory["sleep", default: []],
+                actuals: actuals.filter(AutomaticRecordTimelineEngine.isSleep),
+                index: index
+            ),
+            automaticActivityRow(
+                plans: plansByCategory["activity", default: []],
+                actuals: actuals.filter {
+                    !AutomaticRecordTimelineEngine.isSleep($0)
+                },
+                index: index
+            ),
         ]
     }
 
@@ -2870,32 +3230,102 @@ private struct TimelineBoard: View {
     }
 
     private func automaticActivityRow(
-        _ actuals: [ActualRecord]
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        index: TimelineBoardDataIndex
     ) -> TimelineRowModel {
-        let allocation = laneAllocation(actuals, span: { $0.span() })
+        let planAllocation = laneAllocation(plans, span: \.span)
+        let actualAllocation = laneAllocation(actuals, span: { $0.span() })
+        let offset = planAllocation.count
+        let planBlocks = plans.map { plan in
+            timelineBlock(
+                plan: plan,
+                index: index,
+                top: compactAutomaticTop(
+                    planAllocation.lanes[plan.id, default: 0]
+                ),
+                height: 14
+            )
+        }
         return TimelineRowModel(
             title: "활동",
             id: "activity",
-            categoryID: "health",
+            category: .activity,
+            categoryID: "activity",
             dotColor: .tpHealthDark,
             fillColor: .tpHealthArea,
             actualColor: .tpHealthDark,
             isSystemAutomatic: true,
-            height: compactAutomaticHeight(allocation.count),
-            blocks: actuals.map { actual in
+            height: compactAutomaticHeight(
+                planAllocation.count + actualAllocation.count
+            ),
+            blocks: planBlocks + actuals.map { actual in
                 timelineBlock(
                     id: actual.id,
                     title: actual.title,
                     span: actual.span(),
                     top: compactAutomaticTop(
-                        allocation.lanes[actual.id, default: 0]
+                        offset + actualAllocation.lanes[actual.id, default: 0]
                     ),
                     height: 14,
                     isFixed: true,
                     status: .completed,
                     isActual: true,
                     detailText:
-                        "자동 활동 · \(actualSourceName(actual.source))"
+                        "자동 활동 · \(actualSourceName(actual.source))",
+                    categoryID: "activity",
+                    categoryName: "활동"
+                )
+            }
+        )
+    }
+
+    private func automaticSleepRow(
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        index: TimelineBoardDataIndex
+    ) -> TimelineRowModel {
+        let planAllocation = laneAllocation(plans, span: \.span)
+        let actualAllocation = laneAllocation(actuals, span: { $0.span() })
+        let offset = planAllocation.count
+        let planBlocks = plans.map { plan in
+            timelineBlock(
+                plan: plan,
+                index: index,
+                top: compactAutomaticTop(
+                    planAllocation.lanes[plan.id, default: 0]
+                ),
+                height: 14
+            )
+        }
+        return TimelineRowModel(
+            title: "수면",
+            id: "sleep",
+            category: .sleep,
+            categoryID: "sleep",
+            dotColor: .tpSleepDark,
+            fillColor: .tpSleep,
+            actualColor: .tpSleepDark,
+            isSystemAutomatic: true,
+            height: compactAutomaticHeight(
+                planAllocation.count + actualAllocation.count
+            ),
+            blocks: planBlocks + actuals.map { actual in
+                timelineBlock(
+                    id: actual.id,
+                    title: actual.title,
+                    span: actual.span(),
+                    top: compactAutomaticTop(
+                        offset + actualAllocation.lanes[actual.id, default: 0]
+                    ),
+                    height: 14,
+                    isFixed: true,
+                    status: .completed,
+                    isActual: true,
+                    detailText:
+                        "자동 수면 · \(actualSourceName(actual.source))",
+                    categoryID: "sleep",
+                    categoryName: "수면"
                 )
             }
         )
@@ -2957,9 +3387,9 @@ private struct TimelineBoard: View {
         let childCount = index.childCounts[plan.id, default: 0]
         let categoryName = index.categoryNames[plan.categoryID]
             ?? plan.categoryID
-        let categoryDetail = categoryPathDetail(
+        let categoryDetail = PlanCategoryPathPresentation.detail(
             categoryName: categoryName,
-            key: planCategoryPath(for: plan)
+            key: PlanCategoryPathPresentation.key(for: plan)
         )
         let isGoalPlan = isGoalPlan(
             plan,
@@ -2989,6 +3419,12 @@ private struct TimelineBoard: View {
     }
 
     private func isGoalPlan(_ plan: PlanRecord, childCount: Int) -> Bool {
+        // A timed segment generated from a repeating goal is still the goal's
+        // scheduled block on the main timeline. Keep only ordinary child
+        // plans rounded as execution items.
+        if plan.origin == .repeatRule {
+            return true
+        }
         guard plan.parentID == nil else { return false }
         if isExplicitGoalTitle(plan.title) {
             return true
@@ -3223,31 +3659,6 @@ private struct TimelineBoard: View {
             start: continuousCenterDate.addingTimeInterval(-halfDuration),
             end: continuousCenterDate.addingTimeInterval(halfDuration)
         )
-    }
-
-    private var groupRows: [TimelineRowModel] {
-        [
-            .init(
-                title: "조사",
-                dotColor: .clear,
-                blocks: [.init(title: "시장 조사", start: 0.02, length: 0.26)]
-            ),
-            .init(
-                title: "분석",
-                dotColor: .clear,
-                blocks: [.init(title: "경쟁사 분석", start: 0.16, length: 0.26)]
-            ),
-            .init(
-                title: "컨셉",
-                dotColor: .clear,
-                blocks: [.init(title: "컨셉 정리", start: 0.30, length: 0.28)]
-            ),
-            .init(
-                title: "초안",
-                dotColor: .clear,
-                blocks: [.init(title: "보고서 초안", start: 0.58, length: 0.26)]
-            ),
-        ]
     }
 
     @ViewBuilder
@@ -3620,6 +4031,32 @@ private struct TimelineBoard: View {
         )
     }
 
+    private var widgetDisplaySpan: TimeSpan {
+        isContinuousDay ? visibleSpan : viewportVisibleSpan
+    }
+
+    private var widgetDisplaySyncKey: TimelineWidgetDisplaySyncKey {
+        let span = widgetDisplaySpan
+        return TimelineWidgetDisplaySyncKey(
+            snapshotRevision: model.snapshotRevision,
+            centerSecond: Int(
+                span.start.addingTimeInterval(span.duration / 2)
+                    .timeIntervalSinceReferenceDate
+            ),
+            durationSecond: Int(span.duration),
+            resolutionLabel: currentResolutionPreset.rawValue
+        )
+    }
+
+    private func syncWidgetDisplayWithVisibleTimeline() {
+        let span = widgetDisplaySpan
+        model.syncWidgetTimelineDisplay(
+            center: span.start.addingTimeInterval(span.duration / 2),
+            duration: span.duration,
+            resolutionLabel: currentResolutionPreset.rawValue
+        )
+    }
+
     private func axisMarkers(in visibleSpan: TimeSpan) -> [TimelineAxisMarker] {
         if isContinuousDay {
             return continuousAxisMarkers
@@ -3887,11 +4324,11 @@ private struct TimelineBoard: View {
         model.selectedDate = bucket.span.start
         switch scale {
         case .week:
-            model.selectScale(.day)
+            selectScaleForResolution(.day)
         case .month:
-            model.selectScale(.week)
+            selectScaleForResolution(.week)
         case .year:
-            model.selectScale(.month)
+            selectScaleForResolution(.month)
         case .day:
             break
         }
@@ -4087,7 +4524,7 @@ private struct TimelineBoard: View {
             scale: scale
         )
         viewport = .full
-        model.selectScale(targetScale)
+        selectScaleForResolution(targetScale)
         zoomFeedbackSequence += 1
     }
 
@@ -4481,10 +4918,18 @@ private struct TimelineBar: View {
                 color
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: block.height <= 20 ? 10 : 7, style: .continuous))
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: blockCornerRadius,
+                style: .continuous
+            )
+        )
         .overlay {
             if block.isFixed {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: blockCornerRadius,
+                    style: .continuous
+                )
                     .stroke(
                         block.isActual
                             ? actualColor
@@ -4496,7 +4941,10 @@ private struct TimelineBar: View {
                         lineWidth: 1
                     )
             } else if block.isGoal {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(
+                    cornerRadius: blockCornerRadius,
+                    style: .continuous
+                )
                     .stroke(
                         color,
                         lineWidth: 1.1
@@ -4582,6 +5030,10 @@ private struct TimelineBar: View {
             <= GanttZoomStage.oneMinute.duration * 1.15
     }
 
+    private var blockCornerRadius: CGFloat {
+        block.isGoal ? 0 : (block.height <= 20 ? 10 : 7)
+    }
+
     private var primaryText: String {
         GanttPrecisionPresentation.label(
             title: block.title,
@@ -4600,36 +5052,6 @@ private struct TimelineBar: View {
                 Circle().stroke(Color.tpInk.opacity(0.65), lineWidth: 1.5)
             }
             .shadow(color: .black.opacity(0.16), radius: 2)
-    }
-}
-
-private struct GoalStripeBackground: View {
-    let tint: Color
-
-    var body: some View {
-        Canvas { context, size in
-            context.fill(
-                Path(CGRect(origin: .zero, size: size)),
-                with: .color(tint.opacity(0.22))
-            )
-
-            var path = Path()
-            var x: CGFloat = -size.height
-            while x < size.width + size.height {
-                path.move(to: CGPoint(x: x, y: size.height))
-                path.addLine(to: CGPoint(x: x + size.height, y: 0))
-                x += 10
-            }
-            context.stroke(
-                path,
-                with: .color(tint.opacity(0.6)),
-                style: StrokeStyle(
-                    lineWidth: 2.8,
-                    lineCap: .round,
-                    lineJoin: .round
-                )
-            )
-        }
     }
 }
 

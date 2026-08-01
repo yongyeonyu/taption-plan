@@ -325,6 +325,22 @@ final class AppleHealthService: @unchecked Sendable {
         }
     }
 
+    func startWatchWorkout(kind: TrackingKind) async throws -> Bool {
+        guard HKHealthStore.isHealthDataAvailable() else { return false }
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = kind == .running ? .running : .walking
+        configuration.locationType = .outdoor
+        return try await withCheckedThrowingContinuation { continuation in
+            store.startWatchApp(with: configuration) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: success)
+                }
+            }
+        }
+    }
+
     func startObservingChanges(
         onUpdate: @escaping @Sendable () async -> Void
     ) {
@@ -1077,6 +1093,253 @@ struct OpenMeteoWeatherCodePresentation: Equatable {
     }
 }
 
+actor AirQualityContextService {
+    private struct CachedContext {
+        var location: CLLocation
+        var context: AirQualityContext
+    }
+
+    private let session: URLSession
+    private let serviceKey: String?
+    private var stations: [AirKoreaStation] = []
+    private var stationsLoadedAt: Date?
+    private var cachedContext: CachedContext?
+
+    init(
+        session: URLSession = .shared,
+        serviceKey: String? = AirQualityContextService.configuredServiceKey()
+    ) {
+        self.session = session
+        self.serviceKey = serviceKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func context(
+        latitude: Double,
+        longitude: Double,
+        at date: Date = .now
+    ) async throws -> AirQualityContext {
+        let location = CLLocation(latitude: latitude, longitude: longitude)
+        if let cachedContext,
+           date.timeIntervalSince(cachedContext.context.observedAt) < 30 * 60,
+           location.distance(from: cachedContext.location) < 3_000 {
+            return cachedContext.context
+        }
+
+        if isInSouthKorea(latitude: latitude, longitude: longitude),
+           let key = serviceKey,
+           !key.isEmpty,
+           let context = try? await airKoreaContext(
+                latitude: latitude,
+                longitude: longitude,
+                serviceKey: key,
+                at: date
+           ) {
+            cachedContext = CachedContext(location: location, context: context)
+            return context
+        }
+
+        let context = try await openMeteoContext(
+            latitude: latitude,
+            longitude: longitude,
+            at: date
+        )
+        cachedContext = CachedContext(location: location, context: context)
+        return context
+    }
+
+    static func configuredServiceKey() -> String? {
+        if let environment = ProcessInfo.processInfo.environment[
+            "AIRKOREA_SERVICE_KEY"
+        ], !environment.isEmpty {
+            return environment
+        }
+        guard let bundled = Bundle.main.object(
+            forInfoDictionaryKey: "AIRKOREA_SERVICE_KEY"
+        ) as? String,
+        !bundled.isEmpty,
+        !bundled.hasPrefix("$(") else {
+            return nil
+        }
+        return bundled
+    }
+
+    private func airKoreaContext(
+        latitude: Double,
+        longitude: Double,
+        serviceKey: String,
+        at date: Date
+    ) async throws -> AirQualityContext {
+        if stations.isEmpty
+            || stationsLoadedAt.map({ date.timeIntervalSince($0) > 30 * 86_400 }) == true {
+            stations = try await loadStations(serviceKey: serviceKey)
+            stationsLoadedAt = date
+        }
+        let origin = CLLocation(latitude: latitude, longitude: longitude)
+        guard let station = stations.min(by: {
+            origin.distance(from: $0.location)
+                < origin.distance(from: $1.location)
+        }) else {
+            throw AirQualityServiceError.noStation
+        }
+
+        var components = URLComponents(
+            string: "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty"
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "serviceKey", value: serviceKey),
+            URLQueryItem(name: "returnType", value: "json"),
+            URLQueryItem(name: "numOfRows", value: "1"),
+            URLQueryItem(name: "pageNo", value: "1"),
+            URLQueryItem(name: "stationName", value: station.name),
+            URLQueryItem(name: "dataTerm", value: "DAILY"),
+            URLQueryItem(name: "ver", value: "1.3"),
+        ]
+        guard let url = components?.url else {
+            throw AirQualityServiceError.invalidRequest
+        }
+        let payload: AirKoreaEnvelope<AirKoreaMeasurement> = try await fetch(url)
+        guard let item = payload.response.body.items.first,
+              let pm10 = Double(item.pm10Value),
+              let pm25 = Double(item.pm25Value) else {
+            throw AirQualityServiceError.invalidResponse
+        }
+        return AirQualityContext(
+            pm10MicrogramsPerCubicMeter: pm10,
+            pm25MicrogramsPerCubicMeter: pm25,
+            observedAt: AirKoreaDateParser.date(item.dataTime) ?? date,
+            stationName: station.name,
+            providerName: "에어코리아",
+            isFallback: false
+        )
+    }
+
+    private func loadStations(serviceKey: String) async throws -> [AirKoreaStation] {
+        var components = URLComponents(
+            string: "https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList"
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "serviceKey", value: serviceKey),
+            URLQueryItem(name: "returnType", value: "json"),
+            URLQueryItem(name: "numOfRows", value: "1000"),
+            URLQueryItem(name: "pageNo", value: "1"),
+        ]
+        guard let url = components?.url else {
+            throw AirQualityServiceError.invalidRequest
+        }
+        let payload: AirKoreaEnvelope<AirKoreaStationPayload> = try await fetch(url)
+        return payload.response.body.items.compactMap { item in
+            guard let latitude = Double(item.dmX),
+                  let longitude = Double(item.dmY) else { return nil }
+            return AirKoreaStation(
+                name: item.stationName,
+                latitude: latitude,
+                longitude: longitude
+            )
+        }
+    }
+
+    private func openMeteoContext(
+        latitude: Double,
+        longitude: Double,
+        at date: Date
+    ) async throws -> AirQualityContext {
+        var components = URLComponents(
+            string: "https://air-quality-api.open-meteo.com/v1/air-quality"
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "latitude", value: String(latitude)),
+            URLQueryItem(name: "longitude", value: String(longitude)),
+            URLQueryItem(name: "current", value: "pm10,pm2_5"),
+            URLQueryItem(name: "timezone", value: "auto"),
+        ]
+        guard let url = components?.url else {
+            throw AirQualityServiceError.invalidRequest
+        }
+        let payload: OpenMeteoAirQualityResponse = try await fetch(url)
+        return AirQualityContext(
+            pm10MicrogramsPerCubicMeter: payload.current.pm10,
+            pm25MicrogramsPerCubicMeter: payload.current.pm25,
+            observedAt: date,
+            providerName: "Open-Meteo",
+            isFallback: true
+        )
+    }
+
+    private func fetch<T: Decodable>(_ url: URL) async throws -> T {
+        let (data, response) = try await session.data(from: url)
+        guard let response = response as? HTTPURLResponse,
+              (200..<300).contains(response.statusCode) else {
+            throw AirQualityServiceError.invalidResponse
+        }
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private func isInSouthKorea(latitude: Double, longitude: Double) -> Bool {
+        (32...39.5).contains(latitude) && (124...132).contains(longitude)
+    }
+}
+
+private enum AirQualityServiceError: Error {
+    case invalidRequest
+    case invalidResponse
+    case noStation
+}
+
+private struct AirKoreaEnvelope<Item: Decodable>: Decodable {
+    struct Response: Decodable {
+        struct Body: Decodable {
+            var items: [Item]
+        }
+        var body: Body
+    }
+    var response: Response
+}
+
+private struct AirKoreaStationPayload: Decodable {
+    var stationName: String
+    var dmX: String
+    var dmY: String
+}
+
+private struct AirKoreaStation {
+    var name: String
+    var latitude: Double
+    var longitude: Double
+
+    var location: CLLocation {
+        CLLocation(latitude: latitude, longitude: longitude)
+    }
+}
+
+private struct AirKoreaMeasurement: Decodable {
+    var dataTime: String
+    var pm10Value: String
+    var pm25Value: String
+}
+
+private enum AirKoreaDateParser {
+    static func date(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.date(from: value)
+    }
+}
+
+private struct OpenMeteoAirQualityResponse: Decodable {
+    struct Current: Decodable {
+        var pm10: Double
+        var pm25: Double
+
+        enum CodingKeys: String, CodingKey {
+            case pm10
+            case pm25 = "pm2_5"
+        }
+    }
+    var current: Current
+}
+
 // MARK: - Live sensor collection
 
 private struct AltimeterSensorUpdate: Sendable {
@@ -1156,6 +1419,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     private var continuation: AsyncStream<SensorReading>.Continuation?
     private var periodicEmissionTask: Task<Void, Never>?
+    private var movementCandidateTask: Task<Void, Never>?
+    private var stationaryStopTask: Task<Void, Never>?
     private var configuration: SensorCollectionConfiguration = .standard
     private var isCollecting = false
     private var lastEmissionAt: Date?
@@ -1174,6 +1439,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var latestAverageActivePace: Double?
     private var latestDeviceMotion: DeviceMotionSnapshot?
     private var deviceMotionAccumulator = DeviceMotionAccumulator()
+    private var activeTrackingSession: TrackingSession?
+    private var trackingSequence = 0
 
     override init() {
         super.init()
@@ -1259,6 +1526,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     func stop() {
         periodicEmissionTask?.cancel()
         periodicEmissionTask = nil
+        movementCandidateTask?.cancel()
+        movementCandidateTask = nil
+        stationaryStopTask?.cancel()
+        stationaryStopTask = nil
         locationManager.stopUpdatingLocation()
         locationManager.stopMonitoringVisits()
         locationManager.stopMonitoringSignificantLocationChanges()
@@ -1281,8 +1552,42 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestAverageActivePace = nil
         latestDeviceMotion = nil
         deviceMotionAccumulator.reset()
+        activeTrackingSession = nil
+        trackingSequence = 0
         continuation?.finish()
         continuation = nil
+    }
+
+    func beginTracking(
+        kind: TrackingKind,
+        linkedPlanID: UUID? = nil,
+        sessionID: UUID = UUID()
+    ) -> TrackingSession {
+        let session = TrackingSession(
+            id: sessionID,
+            kind: kind,
+            linkedPlanID: linkedPlanID,
+            wasAutomaticallyDetected: false
+        )
+        activeTrackingSession = session
+        trackingSequence = 0
+        movementCandidateTask?.cancel()
+        stationaryStopTask?.cancel()
+        applyLocationPolicy(isMoving: true)
+        emit(force: true)
+        return session
+    }
+
+    @discardableResult
+    func endTracking(at date: Date = .now) -> TrackingSession? {
+        guard var session = activeTrackingSession else { return nil }
+        session.endedAt = date
+        activeTrackingSession = nil
+        stationaryStopTask?.cancel()
+        stationaryStopTask = nil
+        applyLocationPolicy(isMoving: latestMotion != .stationary)
+        emit(force: true, completedSession: session)
+        return session
     }
 
     private func start() {
@@ -1309,6 +1614,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                     guard let self else { return }
                     self.latestMotion = Self.motionKind(activity)
                     self.latestMotionConfidence = Self.confidence(activity.confidence)
+                    self.updateAutomaticTracking(for: self.latestMotion)
                     if self.configuration.highAccuracyDuringMovement {
                         self.applyLocationPolicy(
                             isMoving: !activity.stationary
@@ -1434,7 +1740,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             $0.horizontalAccuracy >= 0
                 && abs($0.timestamp.timeIntervalSinceNow) < 5 * 60
         }
-        emit(force: isFirstLocationFix && latestLocation != nil)
+        let isUsableTrackingPoint = activeTrackingSession != nil
+            && (latestLocation?.horizontalAccuracy ?? .greatestFiniteMagnitude)
+                <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
+        emit(force: (isFirstLocationFix && latestLocation != nil) || isUsableTrackingPoint)
     }
 
     func locationManager(
@@ -1475,7 +1784,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
     }
 
-    private func emit(force: Bool = false) {
+    private func emit(
+        force: Bool = false,
+        completedSession: TrackingSession? = nil
+    ) {
         guard continuation != nil else { return }
         let now = Date.now
         if !force,
@@ -1495,6 +1807,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 verticalAccuracy: $0.verticalAccuracy
             )
         }
+        let session = completedSession ?? activeTrackingSession
+        if session != nil { trackingSequence += 1 }
         continuation?.yield(
             SensorReading(
                 timestamp: now,
@@ -1522,10 +1836,70 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 deviceMotion: latestDeviceMotion,
                 deviceMotionSummary: deviceMotionAccumulator.summary,
                 systemFloor: location?.floor?.level,
-                gpsAvailable: location != nil
+                gpsAvailable: location != nil,
+                trackingSessionID: session?.id,
+                trackingKind: session?.kind,
+                sourceDevice: .iPhone,
+                sequence: session == nil ? nil : trackingSequence,
+                trackingSessionEnded: completedSession != nil
             )
         )
         deviceMotionAccumulator.reset()
+    }
+
+    private func updateAutomaticTracking(for motion: MotionKind) {
+        if let session = activeTrackingSession,
+           session.wasAutomaticallyDetected {
+            if motion == .stationary {
+                guard stationaryStopTask == nil else { return }
+                stationaryStopTask = Task { [weak self] in
+                    try? await Task.sleep(
+                        for: .seconds(
+                            TrackingSessionPolicy.automaticStopStationaryDuration
+                        )
+                    )
+                    guard !Task.isCancelled, let self,
+                          self.latestMotion == .stationary,
+                          self.activeTrackingSession?.wasAutomaticallyDetected == true else {
+                        return
+                    }
+                    self.endTracking()
+                }
+            } else {
+                stationaryStopTask?.cancel()
+                stationaryStopTask = nil
+            }
+            return
+        }
+
+        guard activeTrackingSession == nil,
+              (motion == .walking || motion == .running),
+              latestMotionConfidence != .low else {
+            movementCandidateTask?.cancel()
+            movementCandidateTask = nil
+            return
+        }
+        guard movementCandidateTask == nil else { return }
+        movementCandidateTask = Task { [weak self] in
+            try? await Task.sleep(
+                for: .seconds(TrackingSessionPolicy.automaticStartDuration)
+            )
+            guard !Task.isCancelled, let self,
+                  self.activeTrackingSession == nil,
+                  self.latestMotion == motion,
+                  self.latestMotionConfidence != .low else {
+                return
+            }
+            let kind: TrackingKind = motion == .running ? .running : .walking
+            self.activeTrackingSession = TrackingSession(
+                kind: kind,
+                wasAutomaticallyDetected: true
+            )
+            self.trackingSequence = 0
+            self.applyLocationPolicy(isMoving: true)
+            self.emit(force: true)
+            self.movementCandidateTask = nil
+        }
     }
 
     private func apply(_ update: AltimeterSensorUpdate) {
@@ -1548,6 +1922,15 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     private func applyLocationPolicy(isMoving: Bool) {
+        if activeTrackingSession != nil {
+            locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            locationManager.distanceFilter =
+                TrackingSessionPolicy.activeDistanceFilterMeters
+            locationManager.activityType = .fitness
+            locationManager.pausesLocationUpdatesAutomatically = false
+            return
+        }
+        locationManager.activityType = .other
         switch configuration.profile {
         case .batterySaver:
             locationManager.desiredAccuracy = kCLLocationAccuracyKilometer

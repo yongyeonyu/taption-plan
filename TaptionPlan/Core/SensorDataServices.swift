@@ -166,6 +166,125 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
     }
 }
 
+/// Stores active-session samples in small independent compressed files. A
+/// damaged or partially transferred chunk therefore never invalidates the
+/// rest of the month, while the legacy monthly archive remains readable.
+final class TrackingSessionChunkArchive: @unchecked Sendable {
+    private struct PendingChunk {
+        var startedAt: Date
+        var index: Int
+        var readings: [SensorReading]
+    }
+
+    private let rootDirectory: URL
+    private let lock = NSLock()
+    private let encoder = RawDeviceDataMonthlyArchive.payloadEncoder()
+    private var pending: [UUID: PendingChunk] = [:]
+    private let calendar: Calendar
+
+    init(rootDirectory: URL, calendar: Calendar = .autoupdatingCurrent) {
+        self.rootDirectory = rootDirectory
+        self.calendar = calendar
+    }
+
+    static func applicationSupport(
+        fileManager: FileManager = .default
+    ) throws -> TrackingSessionChunkArchive {
+        let root = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        return TrackingSessionChunkArchive(
+            rootDirectory: root.appendingPathComponent(
+                "TaptionPlan/RawData",
+                isDirectory: true
+            )
+        )
+    }
+
+    func append(_ reading: SensorReading) throws {
+        guard let sessionID = reading.trackingSessionID else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        var chunk = pending[sessionID] ?? PendingChunk(
+            startedAt: reading.timestamp,
+            index: 1,
+            readings: []
+        )
+        if reading.timestamp.timeIntervalSince(chunk.startedAt) >= 30,
+           !chunk.readings.isEmpty {
+            try write(chunk, sessionID: sessionID)
+            chunk = PendingChunk(
+                startedAt: reading.timestamp,
+                index: chunk.index + 1,
+                readings: []
+            )
+        }
+        if !chunk.readings.contains(where: { $0.id == reading.id }) {
+            chunk.readings.append(reading)
+        }
+        pending[sessionID] = chunk
+        if reading.trackingSessionEnded == true {
+            try write(chunk, sessionID: sessionID)
+            pending[sessionID] = nil
+        }
+    }
+
+    func flushAll() throws {
+        lock.lock()
+        defer { lock.unlock() }
+        for (sessionID, chunk) in pending where !chunk.readings.isEmpty {
+            try write(chunk, sessionID: sessionID)
+        }
+        pending.removeAll()
+    }
+
+    private func write(_ chunk: PendingChunk, sessionID: UUID) throws {
+        guard !chunk.readings.isEmpty else { return }
+        let components = calendar.dateComponents(
+            [.year, .month],
+            from: chunk.startedAt
+        )
+        let month = String(
+            format: "%04d-%02d",
+            components.year ?? 1970,
+            components.month ?? 1
+        )
+        let directory = rootDirectory
+            .appendingPathComponent(month, isDirectory: true)
+            .appendingPathComponent(sessionID.uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        let fileURL = directory.appendingPathComponent(
+            String(format: "%06d.jsonl.zlib", chunk.index)
+        )
+        var payload = Data()
+        for reading in chunk.readings.sorted(by: readingOrder) {
+            payload.append(try encoder.encode(reading))
+            payload.append(0x0A)
+        }
+        let compressed = try (payload as NSData).compressed(using: .zlib) as Data
+        try compressed.write(
+            to: fileURL,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
+        )
+    }
+
+    private func readingOrder(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
+        if lhs.sequence != rhs.sequence {
+            return (lhs.sequence ?? .max) < (rhs.sequence ?? .max)
+        }
+        return lhs.timestamp < rhs.timestamp
+    }
+}
+
 actor SensorReadingArchive {
     private static let logger = Logger(
         subsystem: "com.taption.plan",
@@ -176,16 +295,19 @@ actor SensorReadingArchive {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private let rawArchive: RawDeviceDataMonthlyArchive?
+    private let trackingChunkArchive: TrackingSessionChunkArchive?
     private var lastCompactionAt: Date?
 
     init(
         fileURL: URL,
         retentionInterval: TimeInterval = 7 * 86_400,
-        rawArchive: RawDeviceDataMonthlyArchive? = nil
+        rawArchive: RawDeviceDataMonthlyArchive? = nil,
+        trackingChunkArchive: TrackingSessionChunkArchive? = nil
     ) {
         self.fileURL = fileURL
         self.retentionInterval = max(86_400, retentionInterval)
         self.rawArchive = rawArchive
+        self.trackingChunkArchive = trackingChunkArchive
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
         encoder.dateEncodingStrategy = .secondsSince1970
@@ -207,12 +329,14 @@ actor SensorReadingArchive {
         )
         return SensorReadingArchive(
             fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
-            rawArchive: try? RawDeviceDataMonthlyArchive.applicationSupport()
+            rawArchive: try? RawDeviceDataMonthlyArchive.applicationSupport(),
+            trackingChunkArchive: try? TrackingSessionChunkArchive.applicationSupport()
         )
     }
 
     func append(_ reading: SensorReading, now: Date = .now) throws {
-        if let rawArchive {
+        try trackingChunkArchive?.append(reading)
+        if let rawArchive, reading.trackingSessionID == nil {
             do {
                 try rawArchive.append(
                     source: reading.point == nil ? .iPhoneSensor : .gps,
@@ -401,8 +525,49 @@ final class AppleSensorDataService {
         collector.stop()
     }
 
+    @discardableResult
+    func beginTracking(
+        kind: TrackingKind,
+        linkedPlanID: UUID? = nil,
+        sessionID: UUID = UUID()
+    ) -> TrackingSession {
+        collector.beginTracking(
+            kind: kind,
+            linkedPlanID: linkedPlanID,
+            sessionID: sessionID
+        )
+    }
+
+    @discardableResult
+    func endTracking() -> TrackingSession? {
+        collector.endTracking()
+    }
+
     func archivedReadings(in span: TimeSpan) async throws -> [SensorReading] {
         try await archive.readings(in: span)
+    }
+
+    func recordExternalReadings(_ readings: [SensorReading]) async throws {
+        guard let first = readings.min(by: { $0.timestamp < $1.timestamp }),
+              let last = readings.max(by: { $0.timestamp < $1.timestamp }) else {
+            return
+        }
+        let existingIDs = Set(
+            try await archive.readings(
+                in: TimeSpan(
+                    start: first.timestamp.addingTimeInterval(-1),
+                    end: last.timestamp.addingTimeInterval(1)
+                )
+            ).map(\.id)
+        )
+        var seen = Set<UUID>()
+        for reading in readings
+            .sorted(by: { $0.timestamp < $1.timestamp })
+            where !existingIDs.contains(reading.id)
+                && seen.insert(reading.id).inserted {
+            try await archive.append(reading)
+            onReadingPersisted?(reading)
+        }
     }
 
     func motionActivities(

@@ -4,18 +4,19 @@ enum CategoryCatalog {
     static let builtIn: [CategoryDefinition] = [
         category("movement", "이동", .travel, "#E8D3B3", "#A87A3D", "#C58C35", 0),
         category("location", "위치", .location, "#D5EAF5", "#4F87A7", "#4E9BC4", 1),
-        category("photo", "사진", .photo, "#EADDF3", "#8754A9", "#965CB9", 2),
-        category("project", "프로젝트", .briefcase, "#BEDAE3", "#4E8EA8", "#4E9CB8", 3),
-        category("exercise", "운동", .exercise, "#FED5CF", "#B4584D", "#E46252", 4),
-        category("study", "학습", .book, "#D3C7E6", "#7654A4", "#805BB1", 5),
-        category("hobby", "취미", .music, "#C4E9DA", "#477F69", "#4B9879", 6),
-        category("sleep", "수면", .sleep, "#C9D6E5", "#536F91", "#5B7EA8", 7),
-        category("routine", "생활", .home, "#F7E8B4", "#A98118", "#B58A12", 8),
-        category("relationship", "관계", .family, "#F9D9E1", "#A75B70", "#B9617B", 9),
-        category("rest", "휴식", .nature, "#E3E4E8", "#696D77", "#777C88", 10),
-        category("travel", "여행", .travel, "#CDE8F1", "#407F98", "#3F91AE", 11),
-        category("health", "건강", .health, "#D4E7D1", "#4D7A49", "#568D51", 12),
-        category("event", "이벤트", .event, "#F5DDEE", "#9D5D86", "#B86B9D", 13)
+        category("activity", "활동", .exercise, "#D4E7D1", "#4D7A49", "#568D51", 2),
+        category("photo", "사진", .photo, "#EADDF3", "#8754A9", "#965CB9", 3),
+        category("project", "프로젝트", .briefcase, "#BEDAE3", "#4E8EA8", "#4E9CB8", 4),
+        category("exercise", "운동", .exercise, "#FED5CF", "#B4584D", "#E46252", 5),
+        category("study", "학습", .book, "#D3C7E6", "#7654A4", "#805BB1", 6),
+        category("hobby", "취미", .music, "#C4E9DA", "#477F69", "#4B9879", 7),
+        category("sleep", "수면", .sleep, "#C9D6E5", "#536F91", "#5B7EA8", 8),
+        category("routine", "생활", .home, "#F7E8B4", "#A98118", "#B58A12", 9),
+        category("relationship", "관계", .family, "#F9D9E1", "#A75B70", "#B9617B", 10),
+        category("rest", "휴식", .nature, "#E3E4E8", "#696D77", "#777C88", 11),
+        category("travel", "여행", .travel, "#CDE8F1", "#407F98", "#3F91AE", 12),
+        category("health", "건강", .health, "#D4E7D1", "#4D7A49", "#568D51", 13),
+        category("event", "이벤트", .event, "#F5DDEE", "#9D5D86", "#B86B9D", 14)
     ]
 
     static func makeCustom(
@@ -201,6 +202,9 @@ enum CategoryHierarchyCatalog {
         ],
         "location": [
             "집", "회사", "학교", "학원", "운동시설", "식당·카페",
+        ],
+        "activity": [
+            "수면", "운동", "명상", "회복", "걸음", "스트레칭",
         ],
         "photo": [
             "일상", "사람", "장소", "음식", "기록", "작품",

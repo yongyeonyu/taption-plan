@@ -14,6 +14,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         "TaptionPlan.pendingWatchSensorSummaries"
     private var pendingSensorSummaries: [TaptionWatchSensorSummary] = []
     private var widgetReloadFollowupTask: Task<Void, Never>?
+    private var handledWorkoutRequestIDs = Set<UUID>()
+    var onWorkoutRequest: ((TaptionWatchWorkoutRequest) -> Void)?
 
     override init() {
         super.init()
@@ -151,8 +153,12 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         didReceiveMessage message: [String: Any]
     ) {
         let data = message[TaptionWatchEnvelope.payloadKey] as? Data
+        let workoutData = message[
+            TaptionWatchEnvelope.workoutRequestKey
+        ] as? Data
         Task { @MainActor [weak self] in
             if let data { self?.apply(data: data) }
+            if let workoutData { self?.applyWorkoutRequest(data: workoutData) }
         }
     }
 
@@ -161,9 +167,26 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         didReceiveUserInfo userInfo: [String: Any] = [:]
     ) {
         let data = userInfo[TaptionWatchEnvelope.payloadKey] as? Data
+        let workoutData = userInfo[
+            TaptionWatchEnvelope.workoutRequestKey
+        ] as? Data
         Task { @MainActor [weak self] in
             if let data { self?.apply(data: data) }
+            if let workoutData { self?.applyWorkoutRequest(data: workoutData) }
         }
+    }
+
+    private func applyWorkoutRequest(data: Data) {
+        guard let request = try? decoder.decode(
+            TaptionWatchWorkoutRequest.self,
+            from: data
+        ), handledWorkoutRequestIDs.insert(request.id).inserted else {
+            return
+        }
+        if handledWorkoutRequestIDs.count > 100 {
+            handledWorkoutRequestIDs = [request.id]
+        }
+        onWorkoutRequest?(request)
     }
 
     private func apply(data: Data) {

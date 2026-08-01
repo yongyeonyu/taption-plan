@@ -45,6 +45,7 @@ final class PlanItem {
 enum PlanCategory: String, CaseIterable, Identifiable {
     case movement = "이동"
     case location = "위치"
+    case activity = "활동"
     case photo = "사진"
     case project = "프로젝트"
     case exercise = "운동"
@@ -64,6 +65,7 @@ enum PlanCategory: String, CaseIterable, Identifiable {
         switch categoryID {
         case "movement": self = .movement
         case "location": self = .location
+        case "activity": self = .activity
         case "photo": self = .photo
         case "exercise": self = .exercise
         case "study": self = .study
@@ -83,6 +85,7 @@ enum PlanCategory: String, CaseIterable, Identifiable {
         switch self {
         case .movement: "movement"
         case .location: "location"
+        case .activity: "activity"
         case .photo: "photo"
         case .project: "project"
         case .exercise: "exercise"

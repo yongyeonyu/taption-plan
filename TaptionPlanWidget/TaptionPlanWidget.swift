@@ -77,6 +77,7 @@ struct TaptionScheduleWidget: Widget {
             provider: TaptionScheduleProvider()
         ) { entry in
             TaptionScheduleWidgetView(entry: entry)
+                .unredacted()
                 .containerBackground(.white, for: .widget)
         }
         .configurationDisplayName("Taption 시간표")
@@ -209,6 +210,14 @@ private struct TaptionScheduleWidgetView: View {
             let payload = freshestPayload
             let playbackDate = max(entry.date, context.date)
             let metrics = TaptionScheduleWidgetMetrics(family: family)
+            let trackDate = timelineCenterDate(
+                payload: payload,
+                playbackDate: playbackDate
+            )
+            let trackDuration = timelineWindowDuration(
+                payload: payload,
+                metrics: metrics
+            )
             VStack(spacing: 0) {
                 header(
                     at: playbackDate,
@@ -223,19 +232,46 @@ private struct TaptionScheduleWidgetView: View {
                     )
                 )
 
-                PrototypeWidgetTrack(
-                    payload: payload,
-                    date: playbackDate,
-                    visibleRowLimit: metrics.visibleRowLimit,
-                    maxItemsPerLane: metrics.maxItemsPerLane,
-                    windowDuration: metrics.windowDuration
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if payload.items.isEmpty {
+                    emptyWidgetState
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    PrototypeWidgetTrack(
+                        payload: payload,
+                        date: trackDate,
+                        visibleRowLimit: metrics.visibleRowLimit,
+                        maxItemsPerLane: metrics.maxItemsPerLane,
+                        windowDuration: trackDuration,
+                        resolutionLabel: payload.displayResolutionLabel
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .padding(.horizontal, TaptionScheduleWidgetMetrics(family: family).horizontalPadding)
         .padding(.vertical, TaptionScheduleWidgetMetrics(family: family).verticalPadding)
         .widgetURL(deepLinkURL(payload: freshestPayload, at: .now))
+    }
+
+    private var emptyWidgetState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "arrow.trianglehead.2.clockwise")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(WidgetPalette.secondary)
+            Text("앱을 열어 오늘 기록을 동기화하세요")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(WidgetPalette.ink)
+                .multilineTextAlignment(.center)
+            Text("일정 · 위치 · 이동 · 활동이 여기에 표시됩니다")
+                .font(.system(size: 8.5, weight: .semibold))
+                .foregroundStyle(WidgetPalette.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(12)
+        .background(
+            WidgetPalette.automaticFill,
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
     }
 
     private func header(
@@ -374,10 +410,33 @@ private struct TaptionScheduleWidgetView: View {
         payload: TaptionWidgetPayload,
         at date: Date
     ) -> URL? {
-        guard let item = actionItem(at: date, payload: payload) else {
+        let linkDate = timelineCenterDate(payload: payload, playbackDate: date)
+        guard let item = actionItem(at: linkDate, payload: payload) else {
             return URL(string: "taptionplan://today")
         }
         return URL(string: "taptionplan://plan/\(item.id.uuidString)")
+    }
+
+    private func timelineCenterDate(
+        payload: TaptionWidgetPayload,
+        playbackDate: Date
+    ) -> Date {
+        guard let center = payload.displayCenterDate else {
+            return playbackDate
+        }
+        let followsNow =
+            abs(center.timeIntervalSince(payload.generatedAt)) < 120
+        return followsNow ? playbackDate : center
+    }
+
+    private func timelineWindowDuration(
+        payload: TaptionWidgetPayload,
+        metrics: TaptionScheduleWidgetMetrics
+    ) -> TimeInterval {
+        guard let duration = payload.displayDuration else {
+            return metrics.windowDuration
+        }
+        return max(60, duration)
     }
 
     private var playbackInterval: TimeInterval {
@@ -393,6 +452,7 @@ private struct PrototypeWidgetTrack: View {
     let visibleRowLimit: Int
     let maxItemsPerLane: Int
     let windowDuration: TimeInterval
+    let resolutionLabel: String?
 
     var body: some View {
         GeometryReader { proxy in
@@ -401,8 +461,8 @@ private struct PrototypeWidgetTrack: View {
                 at: date,
                 windowDuration: windowDuration
             )
-            let labelWidth: CGFloat = 48
-            let axisHeight: CGFloat = 14
+            let labelWidth: CGFloat = 62
+            let axisHeight: CGFloat = 17
             let trackWidth = max(1, proxy.size.width - labelWidth)
             let viewportHeight = max(1, proxy.size.height - axisHeight)
             let visibleRowCount = max(
@@ -413,7 +473,7 @@ private struct PrototypeWidgetTrack: View {
                 )
             )
             let rowHeight = max(
-                17,
+                23,
                 viewportHeight / CGFloat(visibleRowCount)
             )
             let contentHeight = rowHeight * CGFloat(lanes.count)
@@ -559,21 +619,21 @@ private struct PrototypeWidgetTrack: View {
     ) -> some View {
         ZStack(alignment: .topLeading) {
             Text(windowDurationLabel)
-                .font(.system(size: 7.5, weight: .bold))
+                .font(.system(size: 8.5, weight: .bold))
                 .foregroundStyle(WidgetPalette.secondary)
                 .frame(width: labelWidth - 4, alignment: .leading)
                 .offset(x: 2)
             Text(windowStart.formatted(date: .omitted, time: .shortened))
-                .font(.system(size: 7, weight: .semibold))
+                .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(WidgetPalette.secondary)
                 .offset(x: labelWidth)
             Text(date.formatted(date: .omitted, time: .shortened))
-                .font(.system(size: 7.5, weight: .bold))
+                .font(.system(size: 8.5, weight: .bold))
                 .foregroundStyle(WidgetPalette.now)
                 .frame(width: 54)
                 .offset(x: labelWidth + trackWidth / 2 - 27)
             Text(windowEnd.formatted(date: .omitted, time: .shortened))
-                .font(.system(size: 7, weight: .semibold))
+                .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(WidgetPalette.secondary)
                 .frame(width: 45, alignment: .trailing)
                 .offset(x: labelWidth + trackWidth - 45)
@@ -581,6 +641,9 @@ private struct PrototypeWidgetTrack: View {
     }
 
     private var windowDurationLabel: String {
+        if let resolutionLabel {
+            return resolutionLabel
+        }
         let hours = Int(windowDuration / 3_600)
         guard hours < 24 else { return "24시간" }
         return "\(max(1, hours))시간"
@@ -607,8 +670,8 @@ private struct PrototypeWidgetTrack: View {
 
     private func laneLabel(_ lane: TaptionWidgetLane) -> some View {
         Label(lane.title, systemImage: lane.systemImage)
-            .font(.system(size: 7.5, weight: .bold))
-            .foregroundStyle(WidgetPalette.ink.opacity(0.72))
+            .font(.system(size: 9.2, weight: .bold))
+            .foregroundStyle(WidgetPalette.ink.opacity(0.9))
             .lineLimit(1)
             .minimumScaleFactor(0.8)
     }
@@ -624,13 +687,13 @@ private struct PrototypeWidgetTrack: View {
         let width = max(4, trackWidth * max(0.012, end - start))
         let active = item.startsAt <= date && date < item.endsAt
         return RoundedRectangle(cornerRadius: 5)
-            .fill(categoryColor(item, lane: lane).opacity(active ? 1 : 0.72))
+            .fill(categoryColor(item, lane: lane).opacity(active ? 1 : 0.86))
             .frame(width: width, height: barHeight(rowHeight))
             .overlay(alignment: .leading) {
-                if width >= 27 {
+                if width >= 34 {
                     Text(item.title)
-                        .font(.system(size: 7.5, weight: active ? .bold : .semibold))
-                        .foregroundStyle(WidgetPalette.ink.opacity(0.72))
+                        .font(.system(size: 9, weight: active ? .bold : .semibold))
+                        .foregroundStyle(WidgetPalette.ink.opacity(0.9))
                         .lineLimit(1)
                         .padding(.horizontal, 4)
                 }
@@ -644,7 +707,7 @@ private struct PrototypeWidgetTrack: View {
     }
 
     private func barHeight(_ rowHeight: CGFloat) -> CGFloat {
-        min(14, max(10, rowHeight - 5))
+        min(20, max(14, rowHeight - 7))
     }
 
     private func fraction(_ value: Date) -> CGFloat {
@@ -674,6 +737,8 @@ private struct PrototypeWidgetTrack: View {
             return Color(red: 0.63, green: 0.83, blue: 0.92)
         case .movement:
             return Color(red: 0.82, green: 0.68, blue: 0.46)
+        case .sleep:
+            return Color(red: 0.79, green: 0.84, blue: 0.90)
         case .activity:
             return Color(red: 0.49, green: 0.68, blue: 0.51)
         case .action:
@@ -681,6 +746,7 @@ private struct PrototypeWidgetTrack: View {
         }
         return switch item.categoryID {
         case "exercise": Color(red: 0.996, green: 0.835, blue: 0.812)
+        case "activity": Color(red: 0.784, green: 0.875, blue: 0.765)
         case "study": Color(red: 0.827, green: 0.780, blue: 0.902)
         case "hobby": Color(red: 0.769, green: 0.914, blue: 0.855)
         case "sleep": Color(red: 0.851, green: 0.867, blue: 0.918)
@@ -1887,8 +1953,8 @@ private struct CatPalette {
 private enum WidgetPalette {
     static let ink = Color(red: 0.11, green: 0.11, blue: 0.12)
     static let secondary = Color(red: 0.43, green: 0.43, blue: 0.45)
-    static let line = Color(red: 0.93, green: 0.93, blue: 0.94)
-    static let automaticFill = Color(red: 0.96, green: 0.96, blue: 0.965)
+    static let line = Color(red: 0.87, green: 0.87, blue: 0.89)
+    static let automaticFill = Color(red: 0.935, green: 0.935, blue: 0.945)
     static let focusFill = Color(red: 1.00, green: 0.95, blue: 0.85)
     static let focusInk = Color(red: 0.57, green: 0.38, blue: 0.08)
     static let weather = Color(red: 0.31, green: 0.47, blue: 0.59)
@@ -1923,6 +1989,8 @@ struct TaptionWidgetActionIntent: AppIntent {
         }
 
         var command = TaptionWidgetCommand(planID: id, kind: action)
+        let previousPayload = TaptionWidgetSharedStore.readPayload()
+        var refreshedPayload: TaptionWidgetPayload?
         do {
             let repository = try FilePlanRepository.appGroup()
             let source = try await repository.load()
@@ -1931,16 +1999,26 @@ struct TaptionWidgetActionIntent: AppIntent {
                 to: source
             )
             try await repository.save(updated)
+            refreshedPayload = TaptionWidgetPayloadFactory.make(
+                from: updated,
+                displayCenterDate: previousPayload.displayCenterDate,
+                displayDuration: previousPayload.displayDuration,
+                displayResolutionLabel: previousPayload.displayResolutionLabel
+            )
             command.appliedToSharedRepository = true
         } catch {
             command.appliedToSharedRepository = false
         }
 
-        var payload = TaptionWidgetSharedStore.readPayload()
-        if let index = payload.items.firstIndex(where: { $0.id == id }) {
-            apply(action, to: &payload.items[index], in: payload)
-            payload.generatedAt = .now
-            try TaptionWidgetSharedStore.writePayload(payload)
+        if let refreshedPayload {
+            try TaptionWidgetSharedStore.writePayload(refreshedPayload)
+        } else {
+            var payload = previousPayload
+            if let index = payload.items.firstIndex(where: { $0.id == id }) {
+                apply(action, to: &payload.items[index], in: payload)
+                payload.generatedAt = .now
+                try TaptionWidgetSharedStore.writePayload(payload)
+            }
         }
         try TaptionWidgetSharedStore.appendCommand(command)
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)

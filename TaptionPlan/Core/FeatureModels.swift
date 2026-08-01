@@ -18,11 +18,21 @@ enum PlanStatus: String, Codable, CaseIterable, Sendable {
 
 enum PlanOrigin: String, Codable, CaseIterable, Sendable {
     case user
+    case repeatRule
     case calendar
     case health
     case photo
     case location
     case motion
+}
+
+enum GoalCategoryPolicy {
+    static let systemSelectableCategoryIDs: Set<String> = [
+        "movement",
+        "location",
+        "sleep",
+        "activity",
+    ]
 }
 
 enum ActualSource: String, Codable, CaseIterable, Sendable {
@@ -170,6 +180,7 @@ struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
     var categoryID: String
     var middleCategoryName: String?
     var subCategoryName: String?
+    var repeatRules: [GoalRepeatRule]?
     var parentID: UUID?
     var status: PlanStatus
     var origin: PlanOrigin
@@ -187,6 +198,7 @@ struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
         categoryID: String,
         middleCategoryName: String? = nil,
         subCategoryName: String? = nil,
+        repeatRules: [GoalRepeatRule]? = nil,
         parentID: UUID? = nil,
         status: PlanStatus = .planned,
         origin: PlanOrigin = .user,
@@ -203,6 +215,7 @@ struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
         self.categoryID = categoryID
         self.middleCategoryName = middleCategoryName
         self.subCategoryName = subCategoryName
+        self.repeatRules = repeatRules?.isEmpty == false ? repeatRules : nil
         self.parentID = parentID
         self.status = status
         self.origin = origin
@@ -212,6 +225,28 @@ struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
         self.externalEventID = externalEventID
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+}
+
+struct GoalRepeatRule: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var name: String?
+    var weekdays: Set<Int>
+    var startMinuteOfDay: Int
+    var endMinuteOfDay: Int
+
+    init(
+        id: UUID = UUID(),
+        name: String? = nil,
+        weekdays: Set<Int>,
+        startMinuteOfDay: Int,
+        endMinuteOfDay: Int
+    ) {
+        self.id = id
+        self.name = name
+        self.weekdays = weekdays
+        self.startMinuteOfDay = startMinuteOfDay
+        self.endMinuteOfDay = endMinuteOfDay
     }
 }
 
@@ -435,6 +470,73 @@ struct PhotoCluster: Identifiable, Codable, Hashable, Sendable {
     var additionalCount: Int { max(0, photos.count - 1) }
 }
 
+enum AirQualityGrade: Int, Codable, CaseIterable, Comparable, Hashable, Sendable {
+    case good = 0
+    case moderate
+    case bad
+    case veryBad
+
+    static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+
+    var displayName: String {
+        switch self {
+        case .good: "좋음"
+        case .moderate: "보통"
+        case .bad: "나쁨"
+        case .veryBad: "매우 나쁨"
+        }
+    }
+
+    static func pm10(_ value: Double) -> Self {
+        switch value {
+        case ...30: .good
+        case ...80: .moderate
+        case ...150: .bad
+        default: .veryBad
+        }
+    }
+
+    static func pm25(_ value: Double) -> Self {
+        switch value {
+        case ...15: .good
+        case ...35: .moderate
+        case ...75: .bad
+        default: .veryBad
+        }
+    }
+}
+
+struct AirQualityContext: Codable, Hashable, Sendable {
+    var pm10MicrogramsPerCubicMeter: Double
+    var pm25MicrogramsPerCubicMeter: Double
+    var pm10Grade: AirQualityGrade
+    var pm25Grade: AirQualityGrade
+    var overallGrade: AirQualityGrade
+    var observedAt: Date
+    var stationName: String?
+    var providerName: String
+    var isFallback: Bool
+
+    init(
+        pm10MicrogramsPerCubicMeter: Double,
+        pm25MicrogramsPerCubicMeter: Double,
+        observedAt: Date,
+        stationName: String? = nil,
+        providerName: String,
+        isFallback: Bool
+    ) {
+        self.pm10MicrogramsPerCubicMeter = pm10MicrogramsPerCubicMeter
+        self.pm25MicrogramsPerCubicMeter = pm25MicrogramsPerCubicMeter
+        pm10Grade = .pm10(pm10MicrogramsPerCubicMeter)
+        pm25Grade = .pm25(pm25MicrogramsPerCubicMeter)
+        overallGrade = max(pm10Grade, pm25Grade)
+        self.observedAt = observedAt
+        self.stationName = stationName
+        self.providerName = providerName
+        self.isFallback = isFallback
+    }
+}
+
 struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var observedAt: Date
@@ -446,6 +548,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var placeName: String?
     var point: GeoPoint?
     var isContextOnly: Bool
+    var airQuality: AirQualityContext?
 
     init(
         id: UUID = UUID(),
@@ -457,7 +560,8 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         placeID: UUID? = nil,
         placeName: String? = nil,
         point: GeoPoint? = nil,
-        isContextOnly: Bool = true
+        isContextOnly: Bool = true,
+        airQuality: AirQualityContext? = nil
     ) {
         self.id = id
         self.observedAt = observedAt
@@ -469,6 +573,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         self.placeName = placeName
         self.point = point
         self.isContextOnly = isContextOnly
+        self.airQuality = airQuality
     }
 }
 
@@ -842,6 +947,71 @@ enum MotionKind: String, Codable, CaseIterable, Sendable {
     case unknown
 }
 
+enum TrackingKind: String, Codable, CaseIterable, Hashable, Sendable {
+    case automatic
+    case walking
+    case running
+
+    var displayName: String {
+        switch self {
+        case .automatic: "자동 감지"
+        case .walking: "걷기"
+        case .running: "달리기"
+        }
+    }
+}
+
+enum TrackingDevice: String, Codable, Hashable, Sendable {
+    case iPhone
+    case appleWatch
+}
+
+struct TrackingSession: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var kind: TrackingKind
+    var startedAt: Date
+    var endedAt: Date?
+    var linkedPlanID: UUID?
+    var sourceDevice: TrackingDevice
+    var iPhoneActive: Bool
+    var watchActive: Bool
+    var wasAutomaticallyDetected: Bool
+
+    init(
+        id: UUID = UUID(),
+        kind: TrackingKind,
+        startedAt: Date = .now,
+        endedAt: Date? = nil,
+        linkedPlanID: UUID? = nil,
+        sourceDevice: TrackingDevice = .iPhone,
+        iPhoneActive: Bool = true,
+        watchActive: Bool = false,
+        wasAutomaticallyDetected: Bool = false
+    ) {
+        self.id = id
+        self.kind = kind
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.linkedPlanID = linkedPlanID
+        self.sourceDevice = sourceDevice
+        self.iPhoneActive = iPhoneActive
+        self.watchActive = watchActive
+        self.wasAutomaticallyDetected = wasAutomaticallyDetected
+    }
+}
+
+struct LiveRouteState: Hashable, Sendable {
+    var session: TrackingSession?
+    var readings: [SensorReading]
+    var lastUpdatedAt: Date?
+
+    static let empty = LiveRouteState(
+        session: nil,
+        readings: [],
+        lastUpdatedAt: nil
+    )
+}
+
 struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var timestamp: Date
@@ -875,6 +1045,11 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var nearPort: Bool
     var onWater: Bool
     var watchWorkoutKind: String?
+    var trackingSessionID: UUID?
+    var trackingKind: TrackingKind?
+    var sourceDevice: TrackingDevice?
+    var sequence: Int?
+    var trackingSessionEnded: Bool?
 
     init(
         id: UUID = UUID(),
@@ -908,7 +1083,12 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         nearAirport: Bool = false,
         nearPort: Bool = false,
         onWater: Bool = false,
-        watchWorkoutKind: String? = nil
+        watchWorkoutKind: String? = nil,
+        trackingSessionID: UUID? = nil,
+        trackingKind: TrackingKind? = nil,
+        sourceDevice: TrackingDevice? = nil,
+        sequence: Int? = nil,
+        trackingSessionEnded: Bool? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -943,6 +1123,11 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.nearPort = nearPort
         self.onWater = onWater
         self.watchWorkoutKind = watchWorkoutKind
+        self.trackingSessionID = trackingSessionID
+        self.trackingKind = trackingKind
+        self.sourceDevice = sourceDevice
+        self.sequence = sequence
+        self.trackingSessionEnded = trackingSessionEnded
     }
 }
 

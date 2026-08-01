@@ -1,4 +1,5 @@
 import CoreMotion
+import CoreLocation
 import Foundation
 import HealthKit
 
@@ -17,6 +18,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private let motionManager = CMMotionManager()
     private let altimeter = CMAltimeter()
     private let pedometer = CMPedometer()
+    private let locationManager = CLLocationManager()
     private let sensorQueue: OperationQueue = {
         let queue = OperationQueue()
         queue.name = "com.taption.plan.watch-sensors"
@@ -50,6 +52,15 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var latestFloorsDescended: Int?
     private var averageHeartRate: Double?
     private var maximumHeartRate: Double?
+    private var pendingRoutePoints: [TaptionWatchLocationPoint] = []
+
+    override init() {
+        super.init()
+        locationManager.delegate = self
+        locationManager.activityType = .fitness
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = 5
+    }
 
     func dismissError() {
         errorMessage = nil
@@ -57,7 +68,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     func start(
         kind: TaptionWatchWorkoutKind,
-        linkedPlan: TaptionWatchPlanItem?
+        linkedPlan: TaptionWatchPlanItem?,
+        sessionID requestedSessionID: UUID? = nil
     ) async -> Bool {
         guard !isActive, HKHealthStore.isHealthDataAvailable() else {
             return false
@@ -81,7 +93,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             newBuilder.delegate = self
 
             let start = Date.now
-            let sensorSessionID = UUID()
+            let sensorSessionID = requestedSessionID ?? UUID()
             session = newSession
             builder = newBuilder
             self.linkedPlan = linkedPlan
@@ -249,6 +261,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         latestFloorsDescended = nil
         averageHeartRate = nil
         maximumHeartRate = nil
+        pendingRoutePoints = []
         sensorSampleCount = 0
 
         let updateInterval: TimeInterval = 0.1
@@ -344,6 +357,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
+        if locationManager.authorizationStatus == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+        }
+        if locationManager.authorizationStatus == .authorizedAlways
+            || locationManager.authorizationStatus == .authorizedWhenInUse {
+            locationManager.startUpdatingLocation()
+        }
 
         sensorSummaryTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -352,6 +372,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 self.emitSensorSummary(isFinal: false)
             }
         }
+        emitSensorSummary(isFinal: false)
     }
 
     private func recordAccelerometer(_ value: TaptionWatchSensorVector3) {
@@ -375,6 +396,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
         onSensorSummary?(summary)
+        pendingRoutePoints.removeAll(keepingCapacity: true)
     }
 
     private func stopSensorCollection(
@@ -396,6 +418,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         motionManager.stopDeviceMotionUpdates()
         altimeter.stopRelativeAltitudeUpdates()
         pedometer.stopUpdates()
+        locationManager.stopUpdatingLocation()
     }
 
     private func makeSensorSummary(
@@ -448,8 +471,56 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             maximumHeartRate: maximumHeartRate,
             activeEnergyKilocalories: activeEnergyKilocalories > 0
                 ? activeEnergyKilocalories
-                : nil
+                : nil,
+            routePoints: pendingRoutePoints
         )
+    }
+}
+
+extension WatchWorkoutManager: CLLocationManagerDelegate {
+    nonisolated func locationManager(
+        _ manager: CLLocationManager,
+        didUpdateLocations locations: [CLLocation]
+    ) {
+        let points = locations
+            .filter {
+                $0.horizontalAccuracy >= 0
+                    && $0.horizontalAccuracy <= 50
+                    && abs($0.timestamp.timeIntervalSinceNow) < 5 * 60
+            }
+            .map {
+                TaptionWatchLocationPoint(
+                    id: UUID(),
+                    capturedAt: $0.timestamp,
+                    latitude: $0.coordinate.latitude,
+                    longitude: $0.coordinate.longitude,
+                    altitude: $0.altitude,
+                    horizontalAccuracy: $0.horizontalAccuracy,
+                    verticalAccuracy: $0.verticalAccuracy,
+                    speedMetersPerSecond: $0.speed >= 0 ? $0.speed : nil,
+                    courseDegrees: $0.course >= 0 ? $0.course : nil
+                )
+            }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            for point in points where !self.pendingRoutePoints.contains(
+                where: { $0.capturedAt == point.capturedAt }
+            ) {
+                self.pendingRoutePoints.append(point)
+            }
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(
+        _ manager: CLLocationManager
+    ) {
+        Task { @MainActor [weak self] in
+            guard let self, self.isActive else { return }
+            if self.locationManager.authorizationStatus == .authorizedAlways
+                || self.locationManager.authorizationStatus == .authorizedWhenInUse {
+                self.locationManager.startUpdatingLocation()
+            }
+        }
     }
 }
 

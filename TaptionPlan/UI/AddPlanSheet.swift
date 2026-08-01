@@ -7,9 +7,12 @@ struct AddPlanSheet: View {
     @State private var title = ""
     @State private var categoryID = "study"
     @State private var middleCategoryName = ""
-    @State private var subCategoryName = ""
+    @State private var memoText = ""
     @State private var durationMinutes = 30
     @State private var goalDurationMonths = 12
+    @State private var usesCustomGoalRange = false
+    @State private var goalEndAt = Date.now
+    @State private var goalRepeatRules: [GoalRepeatRule] = []
     @State private var startAt = Date.now
     @State private var timelineWindowStart = Date.now
     @State private var parentID: UUID?
@@ -32,7 +35,7 @@ struct AddPlanSheet: View {
                             ) {
                                 categoryID = category.id
                                 middleCategoryName = ""
-                                subCategoryName = ""
+                                memoText = ""
                                 path.removeAll()
                                 selectedDetent = .large
                             }
@@ -63,10 +66,10 @@ struct AddPlanSheet: View {
                         from: model.selectedDate
                     )
                 ) ?? model.selectedDate
+                goalEndAt = defaultGoalEndDate(from: startAt)
             } else if let parent = selectedParent {
                 categoryID = parent.categoryID
                 middleCategoryName = parent.middleCategoryName ?? ""
-                subCategoryName = parent.subCategoryName ?? ""
                 let proposed = QuickPlanDraftEngine.roundedUpToHalfHour(.now)
                 let latestStart = parent.span.end.addingTimeInterval(
                     -QuickPlanDraftEngine.defaultDuration
@@ -78,12 +81,16 @@ struct AddPlanSheet: View {
             durationMinutes = Int(QuickPlanDraftEngine.defaultDuration / 60)
             timelineWindowStart = makeTimelineWindowStart(around: startAt)
             if selectedCategory.isHidden,
+               !isGoalSelectableSystemCategory(selectedCategory.id),
                let firstVisible = model.snapshot.categories.first(where: {
                    !$0.isHidden
                }) {
                 categoryID = firstVisible.id
             }
-            titleFocused = model.addPlanContext.isGoal
+            if model.addPlanContext.isGoal {
+                autofillGoalTitleIfNeeded(replacing: "")
+            }
+            titleFocused = false
         }
     }
 
@@ -132,20 +139,17 @@ struct AddPlanSheet: View {
         VStack(alignment: .leading, spacing: 13) {
             recentMiddleCategorySection
 
-            if !rootPlans.isEmpty {
-                goalPicker
-            }
-
+            goalConnectionPicker
             categoryQuickPicker
             middleCategoryPicker
 
-            hierarchyTextField(
-                label: "소분류",
-                placeholder: "직접 입력 · 예: 청계천 산책",
-                text: $subCategoryName
+            memoTextField(
+                label: "메모",
+                placeholder: "예: 청계천 산책, 준비물, 체크포인트",
+                text: $memoText
             )
 
-            Text("비워두면 ‘\(middleCategoryName.isEmpty ? "중분류" : middleCategoryName)’ 이름으로 추가됩니다.")
+            Text("계획명은 중분류 이름으로 추가되고, 입력한 내용은 액션 메모에 연결됩니다.")
                 .font(.taption(size: 8.5, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.top, -8)
@@ -165,12 +169,38 @@ struct AddPlanSheet: View {
 
     private var goalSheetContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 0) {
+            categoryQuickPicker
+
+            goalTitleField
+
+            goalDurationPicker
+
+            if usesCustomGoalRange {
+                customGoalRangeCalendars
+            }
+
+            GoalRepeatRulesEditor(rules: $goalRepeatRules)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var goalTitleField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("목표 이름")
+                    .font(.taption(size: 10.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Text("비워두면 \(selectedCategory.name)")
+                    .font(.taption(size: 7.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+
+            HStack(spacing: 7) {
                 Text("목표:")
-                    .font(.taption(size: 17, weight: .semibold))
+                    .font(.taption(size: 15, weight: .semibold))
                     .foregroundStyle(Color.tpInk.opacity(0.72))
                 TextField("목표 이름", text: $title)
-                    .font(.taption(size: 17, weight: .semibold))
+                    .font(.taption(size: 15, weight: .semibold))
                     .focused($titleFocused)
                     .submitLabel(.done)
                     .onSubmit(addPlan)
@@ -185,14 +215,17 @@ struct AddPlanSheet: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 2)
+            .padding(.horizontal, 10)
             .padding(.vertical, 9)
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(Color.tpInk).frame(height: 2)
-            }
+            .background(
+                Color(red: 0.965, green: 0.965, blue: 0.975),
+                in: RoundedRectangle(cornerRadius: 10)
+            )
+        }
+    }
 
-            categoryQuickPicker
-
+    private var goalDurationPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 7) {
                 DraftChip(
                     title: startAt.formatted(
@@ -206,13 +239,67 @@ struct AddPlanSheet: View {
                 ForEach([1, 3, 6, 12], id: \.self) { months in
                     DraftChip(
                         title: months == 12 ? "1년" : "\(months)개월",
-                        selected: goalDurationMonths == months
+                        selected: !usesCustomGoalRange
+                            && goalDurationMonths == months
                     )
-                    .onTapGesture { goalDurationMonths = months }
+                    .onTapGesture {
+                        usesCustomGoalRange = false
+                        goalDurationMonths = months
+                        goalEndAt = defaultGoalEndDate(from: startAt)
+                    }
+                }
+                DraftChip(
+                    title: "직접지정",
+                    selected: usesCustomGoalRange
+                )
+                .onTapGesture {
+                    usesCustomGoalRange = true
+                    if goalEndAt <= startAt {
+                        goalEndAt = defaultGoalEndDate(from: startAt)
+                    }
                 }
             }
         }
-        .padding(.vertical, 4)
+    }
+
+    private var customGoalRangeCalendars: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text("목표 기간 직접 지정")
+                .font(.taption(size: 10.5, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+
+            goalCalendarCard(
+                title: "시작일",
+                selection: goalStartDayBinding
+            )
+            goalCalendarCard(
+                title: "종료일",
+                selection: goalEndDayBinding
+            )
+        }
+    }
+
+    private func goalCalendarCard(
+        title: String,
+        selection: Binding<Date>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.taption(size: 9.5, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+            DatePicker(
+                title,
+                selection: selection,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.graphical)
+            .labelsHidden()
+        }
+        .padding(10)
+        .background(
+            Color(red: 0.965, green: 0.965, blue: 0.975),
+            in: RoundedRectangle(cornerRadius: 12)
+        )
     }
 
     private var recentMiddleCategorySection: some View {
@@ -231,7 +318,6 @@ struct AddPlanSheet: View {
                                 titleFocused = false
                                 categoryID = recent.categoryID
                                 middleCategoryName = recent.name
-                                subCategoryName = ""
                             } label: {
                                 Label(
                                     recent.name,
@@ -257,21 +343,35 @@ struct AddPlanSheet: View {
         }
     }
 
-    private var goalPicker: some View {
+    private var goalConnectionPicker: some View {
         VStack(alignment: .leading, spacing: 5) {
-            sectionLabel("목표", caption: "연결할 목표가 있으면 선택")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(rootPlans) { plan in
+            sectionLabel("목표 연결", caption: "상위 목표 아래에 계획을 붙입니다")
+            if rootPlans.isEmpty {
+                Text("연결할 목표가 없습니다")
+                    .font(.taption(size: 10.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.vertical, 5)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
                         Button {
-                            parentID = parentID == plan.id ? nil : plan.id
+                            parentID = nil
                         } label: {
-                            DraftChip(
-                                title: goalDisplayTitle(plan.title),
-                                selected: parentID == plan.id
-                            )
+                            DraftChip(title: "연결 안 함", selected: parentID == nil)
                         }
                         .buttonStyle(.plain)
+
+                        ForEach(rootPlans) { plan in
+                            Button {
+                                parentID = parentID == plan.id ? nil : plan.id
+                            } label: {
+                                DraftChip(
+                                    title: goalDisplayTitle(plan.title),
+                                    selected: parentID == plan.id
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
             }
@@ -322,15 +422,24 @@ struct AddPlanSheet: View {
     private func addPlan() {
         guard let cleanTitle = resolvedPlanTitle else { return }
 
-        model.addPlan(
+        let planID = model.addPlan(
             title: cleanTitle,
             categoryID: categoryID,
             middleCategoryName: middleCategoryName,
-            subCategoryName: subCategoryName,
+            subCategoryName: nil,
             startAt: startAt,
             duration: selectedDuration,
-            parentID: model.addPlanContext.isGoal ? nil : parentID
+            parentID: model.addPlanContext.isGoal ? nil : parentID,
+            repeatRules: model.addPlanContext.isGoal ? goalRepeatRules : nil
         )
+        if !model.addPlanContext.isGoal,
+           let planID {
+            model.addMemo(
+                text: memoText,
+                kind: .idea,
+                to: planID
+            )
+        }
         dismiss()
     }
 
@@ -341,15 +450,19 @@ struct AddPlanSheet: View {
     }
 
     private var resolvedQuickTitle: String? {
-        QuickPlanDraftEngine.resolvedTitle(
-            subcategory: subCategoryName,
-            middleCategory: middleCategoryName
+        let middleCategory = middleCategoryName.trimmingCharacters(
+            in: .whitespacesAndNewlines
         )
+        return middleCategory.isEmpty ? nil : middleCategory
     }
 
     private var resolvedPlanTitle: String? {
         if model.addPlanContext.isGoal {
-            let cleanGoal = cleanGoalTitleInput(title)
+            let cleanGoal = cleanGoalTitleInput(
+                title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? selectedCategory.name
+                    : title
+            )
             return cleanGoal.isEmpty ? nil : cleanGoal
         }
         return resolvedQuickTitle
@@ -376,8 +489,15 @@ struct AddPlanSheet: View {
 
     private var visibleCategories: [CategoryDefinition] {
         model.snapshot.categories
-            .filter { !$0.isHidden }
+            .filter {
+                !$0.isHidden || isGoalSelectableSystemCategory($0.id)
+            }
             .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    private func isGoalSelectableSystemCategory(_ id: String) -> Bool {
+        model.addPlanContext.isGoal
+            && GoalCategoryPolicy.systemSelectableCategoryIDs.contains(id)
     }
 
     private var categoryQuickPicker: some View {
@@ -530,30 +650,53 @@ struct AddPlanSheet: View {
 
     private func selectCategory(_ newCategoryID: String) {
         titleFocused = false
+        let previousCategoryName = selectedCategory.name
         guard categoryID != newCategoryID else { return }
         categoryID = newCategoryID
+        if model.addPlanContext.isGoal {
+            autofillGoalTitleIfNeeded(replacing: previousCategoryName)
+        }
         middleCategoryName = ""
-        subCategoryName = ""
+        memoText = ""
     }
 
-    private func hierarchyTextField(
+    private func autofillGoalTitleIfNeeded(replacing oldCategoryName: String) {
+        let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let unprefixed: String
+        if clean.hasPrefix("목표:") {
+            unprefixed = clean.dropFirst("목표:".count)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            unprefixed = clean
+        }
+        if unprefixed.isEmpty || unprefixed == oldCategoryName {
+            title = selectedCategory.name
+        }
+    }
+
+    private func memoTextField(
         label: String,
         placeholder: String,
         text: Binding<String>
     ) -> some View {
-        HStack(spacing: 8) {
-            Text(label)
-                .font(.taption(size: 10.5, weight: .semibold))
-                .foregroundStyle(Color.tpSecondary)
-                .frame(width: 44, alignment: .leading)
-            TextField(placeholder, text: text)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(label)
+                    .font(.taption(size: 10.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Spacer()
+                Text("선택한 액션에 연결")
+                    .font(.taption(size: 7.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            TextField(placeholder, text: text, axis: .vertical)
                 .font(.taption(size: 11.5, weight: .semibold))
-                .textInputAutocapitalization(.never)
+                .lineLimit(2...4)
+                .textInputAutocapitalization(.sentences)
                 .submitLabel(.done)
-                .multilineTextAlignment(.trailing)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.vertical, 9)
         .background(
             Color(red: 0.965, green: 0.965, blue: 0.975),
             in: RoundedRectangle(cornerRadius: 10)
@@ -572,10 +715,7 @@ struct AddPlanSheet: View {
                       plan.status != .skipped else {
                     return false
                 }
-                return plan.span.duration >= 86_400
-                    || model.snapshot.plans.contains {
-                        $0.parentID == plan.id
-                    }
+                return GoalRecordPolicy.isGoal(plan)
             }
             .sorted { $0.updatedAt > $1.updatedAt }
             .prefix(8)
@@ -609,6 +749,17 @@ struct AddPlanSheet: View {
 
     private var selectedDuration: TimeInterval {
         if model.addPlanContext.isGoal {
+            if usesCustomGoalRange {
+                let calendar = Calendar.autoupdatingCurrent
+                let start = calendar.startOfDay(for: startAt)
+                let endInclusive = calendar.startOfDay(for: goalEndAt)
+                let endExclusive = calendar.date(
+                    byAdding: .day,
+                    value: 1,
+                    to: max(start, endInclusive)
+                ) ?? max(start, endInclusive).addingTimeInterval(86_400)
+                return max(86_400, endExclusive.timeIntervalSince(start))
+            }
             let end = Calendar.autoupdatingCurrent.date(
                 byAdding: .month,
                 value: goalDurationMonths,
@@ -619,6 +770,41 @@ struct AddPlanSheet: View {
             return max(86_400, end.timeIntervalSince(startAt))
         }
         return TimeInterval(durationMinutes * 60)
+    }
+
+    private var goalStartDayBinding: Binding<Date> {
+        Binding(
+            get: { startAt },
+            set: { newStart in
+                let calendar = Calendar.autoupdatingCurrent
+                startAt = calendar.startOfDay(for: newStart)
+                if goalEndAt < startAt {
+                    goalEndAt = startAt
+                }
+            }
+        )
+    }
+
+    private var goalEndDayBinding: Binding<Date> {
+        Binding(
+            get: { goalEndAt },
+            set: { newEnd in
+                let calendar = Calendar.autoupdatingCurrent
+                goalEndAt = max(
+                    calendar.startOfDay(for: newEnd),
+                    calendar.startOfDay(for: startAt)
+                )
+            }
+        )
+    }
+
+    private func defaultGoalEndDate(from start: Date) -> Date {
+        Calendar.autoupdatingCurrent.date(
+            byAdding: .month,
+            value: goalDurationMonths,
+            to: Calendar.autoupdatingCurrent.startOfDay(for: start)
+        ) ?? Calendar.autoupdatingCurrent.startOfDay(for: start)
+            .addingTimeInterval(TimeInterval(goalDurationMonths * 30 * 86_400))
     }
 
     private var selectedDayBinding: Binding<Date> {
@@ -688,6 +874,290 @@ private struct RecentMiddleCategory: Identifiable {
 
     var id: String { "\(category.id)|\(name)" }
     var categoryID: String { category.id }
+}
+
+struct GoalRepeatRulesEditor: View {
+    @Binding var rules: [GoalRepeatRule]
+
+    private let weekdayOrder: [(value: Int, label: String)] = [
+        (2, "월"), (3, "화"), (4, "수"), (5, "목"),
+        (6, "금"), (7, "토"), (1, "일"),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Text("반복")
+                    .font(.taption(size: 10.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Text("요일별 · 시간별")
+                    .font(.taption(size: 7.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+
+            if rules.isEmpty {
+                Text("예: 주중 23:00 취침 → 다음날 06:30 기상, 주말 01:00 → 10:00")
+                    .font(.taption(size: 8.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 6) {
+                presetButton("주중", weekdays: [2, 3, 4, 5, 6],
+                             start: 23 * 60, end: 6 * 60 + 30)
+                presetButton("주말", weekdays: [7, 1],
+                             start: 1 * 60, end: 10 * 60)
+                presetButton("매일", weekdays: [1, 2, 3, 4, 5, 6, 7],
+                             start: 9 * 60, end: 10 * 60)
+            }
+
+            ForEach(rules.indices, id: \.self) { index in
+                repeatRuleCard(
+                    rule: ruleBinding(index),
+                    index: index
+                )
+            }
+        }
+        .padding(11)
+        .draftCard(radius: 13)
+    }
+
+    private func presetButton(
+        _ title: String,
+        weekdays: Set<Int>,
+        start: Int,
+        end: Int
+    ) -> some View {
+        Button {
+            rules.append(
+                GoalRepeatRule(
+                    name: title,
+                    weekdays: weekdays,
+                    startMinuteOfDay: start,
+                    endMinuteOfDay: end
+                )
+            )
+        } label: {
+            Label(title, systemImage: "repeat")
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    Color(red: 0.965, green: 0.965, blue: 0.975),
+                    in: RoundedRectangle(cornerRadius: 9)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func repeatRuleCard(
+        rule: Binding<GoalRepeatRule>,
+        index: Int
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Text(GoalRepeatRuleFormatter.summary(rule.wrappedValue))
+                    .font(.taption(size: 9.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(2)
+                Spacer(minLength: 4)
+                Button {
+                    rules.remove(at: index)
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.taption(size: 9.5, weight: .bold))
+                        .foregroundStyle(Color.red.opacity(0.78))
+                }
+                .buttonStyle(.plain)
+            }
+
+            TextField("반복 이름 · 예: 주중 수면", text: nameBinding(rule))
+                .font(.taption(size: 9.5, weight: .semibold))
+                .textInputAutocapitalization(.sentences)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 7)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
+
+            HStack(spacing: 4) {
+                ForEach(weekdayOrder, id: \.value) { day in
+                    Button {
+                        toggle(day.value, in: rule)
+                    } label: {
+                        Text(day.label)
+                            .font(.taption(size: 8.5, weight: .black))
+                            .foregroundStyle(
+                                rule.wrappedValue.weekdays.contains(day.value)
+                                    ? Color.white
+                                    : Color.tpSecondary
+                            )
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .background(
+                                rule.wrappedValue.weekdays.contains(day.value)
+                                    ? Color.tpInk
+                                    : Color.white,
+                                in: RoundedRectangle(cornerRadius: 8)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack(spacing: 8) {
+                repeatTimePicker(
+                    title: "시작",
+                    selection: timeBinding(rule, isStart: true)
+                )
+                repeatTimePicker(
+                    title: "종료",
+                    selection: timeBinding(rule, isStart: false)
+                )
+            }
+        }
+        .padding(9)
+        .background(
+            Color(red: 0.965, green: 0.965, blue: 0.975),
+            in: RoundedRectangle(cornerRadius: 11)
+        )
+    }
+
+    private func repeatTimePicker(
+        title: String,
+        selection: Binding<Date>
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.taption(size: 8.2, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+            DatePicker(
+                title,
+                selection: selection,
+                displayedComponents: .hourAndMinute
+            )
+            .labelsHidden()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func ruleBinding(_ index: Int) -> Binding<GoalRepeatRule> {
+        Binding(
+            get: { rules[index] },
+            set: { rules[index] = $0 }
+        )
+    }
+
+    private func nameBinding(
+        _ rule: Binding<GoalRepeatRule>
+    ) -> Binding<String> {
+        Binding(
+            get: { rule.wrappedValue.name ?? "" },
+            set: { newValue in
+                var value = rule.wrappedValue
+                let clean = newValue.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                value.name = clean.isEmpty ? nil : clean
+                rule.wrappedValue = value
+            }
+        )
+    }
+
+    private func timeBinding(
+        _ rule: Binding<GoalRepeatRule>,
+        isStart: Bool
+    ) -> Binding<Date> {
+        Binding(
+            get: {
+                date(fromMinute: isStart
+                     ? rule.wrappedValue.startMinuteOfDay
+                     : rule.wrappedValue.endMinuteOfDay)
+            },
+            set: { date in
+                var value = rule.wrappedValue
+                let minute = minuteOfDay(from: date)
+                if isStart {
+                    value.startMinuteOfDay = minute
+                } else {
+                    value.endMinuteOfDay = minute
+                }
+                rule.wrappedValue = value
+            }
+        )
+    }
+
+    private func toggle(
+        _ weekday: Int,
+        in rule: Binding<GoalRepeatRule>
+    ) {
+        var value = rule.wrappedValue
+        if value.weekdays.contains(weekday) {
+            value.weekdays.remove(weekday)
+        } else {
+            value.weekdays.insert(weekday)
+        }
+        rule.wrappedValue = value
+    }
+
+    private func date(fromMinute minute: Int) -> Date {
+        let clamped = min(23 * 60 + 59, max(0, minute))
+        let calendar = Calendar.autoupdatingCurrent
+        return calendar.date(
+            bySettingHour: clamped / 60,
+            minute: clamped % 60,
+            second: 0,
+            of: .now
+        ) ?? .now
+    }
+
+    private func minuteOfDay(from date: Date) -> Int {
+        let calendar = Calendar.autoupdatingCurrent
+        return calendar.component(.hour, from: date) * 60
+            + calendar.component(.minute, from: date)
+    }
+}
+
+enum GoalRepeatRuleFormatter {
+    static func summary(_ rules: [GoalRepeatRule]?) -> String? {
+        let rules = rules ?? []
+        guard !rules.isEmpty else { return nil }
+        let visible = rules.prefix(2).map(summary)
+        let suffix = rules.count > 2 ? " 외 \(rules.count - 2)개" : ""
+        return visible.joined(separator: " · ") + suffix
+    }
+
+    static func summary(_ rule: GoalRepeatRule) -> String {
+        let name = rule.name.map { "\($0) · " } ?? ""
+        let start = timeText(rule.startMinuteOfDay)
+        let end = timeText(rule.endMinuteOfDay)
+        let endPrefix = rule.endMinuteOfDay <= rule.startMinuteOfDay
+            ? "다음날 "
+            : ""
+        return "\(name)\(weekdayText(rule.weekdays)) \(start)→\(endPrefix)\(end)"
+    }
+
+    static func weekdayText(_ weekdays: Set<Int>) -> String {
+        let normalized = Set(weekdays.filter { (1...7).contains($0) })
+        if normalized == [1, 2, 3, 4, 5, 6, 7] { return "매일" }
+        if normalized == [2, 3, 4, 5, 6] { return "주중" }
+        if normalized == [1, 7] { return "주말" }
+        let labels = [
+            2: "월", 3: "화", 4: "수", 5: "목",
+            6: "금", 7: "토", 1: "일",
+        ]
+        return [2, 3, 4, 5, 6, 7, 1]
+            .filter { normalized.contains($0) }
+            .compactMap { labels[$0] }
+            .joined(separator: "·")
+    }
+
+    static func timeText(_ minute: Int) -> String {
+        let clamped = min(23 * 60 + 59, max(0, minute))
+        return String(format: "%02d:%02d", clamped / 60, clamped % 60)
+    }
 }
 
 private struct MiniTimeSliceEditor: View {

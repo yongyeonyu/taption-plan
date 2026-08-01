@@ -32,13 +32,13 @@ struct AppShellView: View {
                let url = URL(
                     string: "taptionplan://plan/\(planID.uuidString)"
                ) {
-                model.openDeepLink(url)
+                await model.openDeepLink(url)
             }
         }
         .onOpenURL { url in
             Task { @MainActor in
                 await model.bootstrap()
-                model.openDeepLink(url)
+                await model.openDeepLink(url)
             }
         }
         .onReceive(
@@ -57,7 +57,7 @@ struct AppShellView: View {
             }
             Task { @MainActor in
                 await model.bootstrap()
-                model.openDeepLink(url)
+                await model.openDeepLink(url)
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -93,6 +93,8 @@ struct AppShellView: View {
             switch detail {
             case .group:
                 GroupGanttView(model: model)
+            case .goal:
+                GoalDetailView(model: model)
             case .locationTimeline:
                 LocationTimelineView(model: model)
             case .memo:

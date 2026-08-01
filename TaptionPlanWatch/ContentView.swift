@@ -42,6 +42,7 @@ struct WatchContentView: View {
                 reducesMotion: connectivity.payload?.reducesMotion ?? false,
                 isRunning: current != nil
             )
+            quickWorkoutControls
             if let current {
                 currentCard(current, at: date)
             } else {
@@ -57,6 +58,68 @@ struct WatchContentView: View {
             }
             todaySummaryCard(at: date)
         }
+    }
+
+    private var quickWorkoutControls: some View {
+        Group {
+            if workout.isActive {
+                Button(role: .destructive) {
+                    Task { _ = await workout.stop() }
+                } label: {
+                    Label("운동 종료", systemImage: "stop.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            } else {
+                HStack(spacing: 5) {
+                    Button {
+                        Task {
+                            _ = await workout.start(
+                                kind: .walking,
+                                linkedPlan: matchingCurrentExercise(
+                                    for: .walking
+                                )
+                            )
+                        }
+                    } label: {
+                        Label("걷기", systemImage: "figure.walk")
+                    }
+                    Button {
+                        Task {
+                            _ = await workout.start(
+                                kind: .running,
+                                linkedPlan: matchingCurrentExercise(
+                                    for: .running
+                                )
+                            )
+                        }
+                    } label: {
+                        Label("달리기", systemImage: "figure.run")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .font(.caption2.weight(.bold))
+            }
+        }
+    }
+
+    private func matchingCurrentExercise(
+        for kind: TaptionWatchWorkoutKind
+    ) -> TaptionWatchPlanItem? {
+        let now = Date.now
+        let keyword = kind == .running ? "달리" : "걷"
+        return connectivity.orderedItems
+            .filter {
+                $0.startsAt <= now && now < $0.endsAt
+                    && ["exercise", "activity", "movement"].contains($0.categoryID)
+            }
+            .sorted {
+                let lhs = $0.title.contains(keyword)
+                let rhs = $1.title.contains(keyword)
+                return lhs && !rhs
+            }
+            .first
     }
 
     private var syncHeader: some View {

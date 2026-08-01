@@ -43,6 +43,7 @@ enum AddPlanContext: Equatable {
 
 enum AppDetail: Equatable {
     case group
+    case goal
     case locationTimeline
     case memo
     case inference

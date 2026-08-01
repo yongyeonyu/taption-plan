@@ -1272,7 +1272,10 @@ struct InferenceDetailView: View {
            })?.point {
             points.append(point)
         }
-        points.append(contentsOf: routeReadings
+        points.append(contentsOf: model.mergingLiveSensorReadings(
+            routeReadings,
+            in: daySpan
+        )
             .filter { group.span.contains($0.timestamp) }
             .sorted { $0.timestamp < $1.timestamp }
             .compactMap(\.point)

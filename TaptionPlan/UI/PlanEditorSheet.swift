@@ -13,6 +13,7 @@ struct PlanEditorSheet: View {
     @State private var endAt: Date
     @State private var parentID: UUID?
     @State private var isImportant: Bool
+    @State private var repeatRules: [GoalRepeatRule]
     @State private var showsDeleteConfirmation = false
 
     init(model: AppModel, planID: UUID) {
@@ -37,6 +38,7 @@ struct PlanEditorSheet: View {
         )
         _parentID = State(initialValue: plan?.parentID)
         _isImportant = State(initialValue: plan?.isImportant ?? false)
+        _repeatRules = State(initialValue: plan?.repeatRules ?? [])
     }
 
     var body: some View {
@@ -47,6 +49,9 @@ struct PlanEditorSheet: View {
                     categoryCard
                     categoryHierarchyCard
                     timeCard
+                    if showsGoalRepeatEditor {
+                        GoalRepeatRulesEditor(rules: $repeatRules)
+                    }
                     hierarchyCard
                     Toggle("중요 계획", isOn: $isImportant)
                         .font(.taption(size: 10.5, weight: .bold))
@@ -75,35 +80,6 @@ struct PlanEditorSheet: View {
                         }
                         .buttonStyle(.plain)
                     }
-
-                    Button {
-                        save()
-                    } label: {
-                        Text("변경 저장")
-                            .font(.taption(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 11)
-                            .background(
-                                Color.tpInk,
-                                in: RoundedRectangle(cornerRadius: 12)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(
-                        title.trimmingCharacters(
-                            in: .whitespacesAndNewlines
-                        ).isEmpty || endAt <= startAt
-                    )
-
-                    Button(role: .destructive) {
-                        showsDeleteConfirmation = true
-                    } label: {
-                        Text("계획 삭제")
-                            .font(.taption(size: 10.5, weight: .bold))
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
                 }
                 .padding(13)
             }
@@ -111,8 +87,18 @@ struct PlanEditorSheet: View {
             .navigationTitle("계획 편집")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItemGroup(placement: .cancellationAction) {
                     Button("취소") { dismiss() }
+                    Button("삭제", role: .destructive) {
+                        showsDeleteConfirmation = true
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("저장") {
+                        save()
+                    }
+                    .font(.taption(size: 10.5, weight: .bold))
+                    .disabled(isSaveDisabled)
                 }
             }
         }
@@ -138,7 +124,16 @@ struct PlanEditorSheet: View {
 
     private var visibleCategories: [CategoryDefinition] {
         model.snapshot.categories
-            .filter { !$0.isHidden || $0.id == categoryID }
+            .filter {
+                !$0.isHidden
+                    || $0.id == categoryID
+                    || (
+                        showsGoalRepeatEditor
+                            && GoalCategoryPolicy
+                                .systemSelectableCategoryIDs
+                                .contains($0.id)
+                    )
+            }
             .sorted { $0.sortOrder < $1.sortOrder }
     }
 
@@ -165,6 +160,11 @@ struct PlanEditorSheet: View {
             of: planID,
             in: model.snapshot.plans
         ).count) ?? 0
+    }
+
+    private var isSaveDisabled: Bool {
+        title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || endAt <= startAt
     }
 
     private var deleteMessage: String {
@@ -286,6 +286,12 @@ struct PlanEditorSheet: View {
         .draftCard(radius: 13)
     }
 
+    private var showsGoalRepeatEditor: Bool {
+        parentID == nil
+            && title.trimmingCharacters(in: .whitespacesAndNewlines)
+                .hasPrefix("목표:")
+    }
+
     private func save() {
         model.updatePlan(
             planID,
@@ -295,7 +301,8 @@ struct PlanEditorSheet: View {
             subCategoryName: subCategoryName,
             span: TimeSpan(start: startAt, end: endAt),
             parentID: parentID,
-            isImportant: isImportant
+            isImportant: isImportant,
+            repeatRules: showsGoalRepeatEditor ? repeatRules : nil
         )
         dismiss()
     }

@@ -120,7 +120,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(rollup.descendantCount, 3)
         XCTAssertEqual(rollup.actualDuration, hour)
-        XCTAssertEqual(rollup.plannedDuration, month.span.duration + week.span.duration + day.span.duration)
+        XCTAssertEqual(rollup.plannedDuration, month.span.duration)
     }
 
     func testHierarchyRejectsCycle() throws {
@@ -572,7 +572,7 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     func testAllCustomCategoryRequirementsExist() throws {
-        XCTAssertEqual(CategoryCatalog.builtIn.count, 14)
+        XCTAssertEqual(CategoryCatalog.builtIn.count, 15)
         XCTAssertGreaterThanOrEqual(CategoryIcon.allCases.count, 24)
         let custom = try CategoryCatalog.makeCustom(
             name: "봉사",
@@ -1764,6 +1764,44 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(augustValues[0].source, .appleWatch)
     }
 
+    func testTrackingSessionArchiveWritesIndependentCompressedChunks() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taption-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let archive = TrackingSessionChunkArchive(rootDirectory: directory)
+        let sessionID = UUID()
+        let start = makeDate(2026, 8, 1, 9, 0)
+        try archive.append(
+            SensorReading(
+                timestamp: start,
+                motion: .walking,
+                trackingSessionID: sessionID,
+                trackingKind: .walking,
+                sourceDevice: .iPhone,
+                sequence: 1
+            )
+        )
+        try archive.append(
+            SensorReading(
+                timestamp: start.addingTimeInterval(12),
+                motion: .walking,
+                trackingSessionID: sessionID,
+                trackingKind: .walking,
+                sourceDevice: .iPhone,
+                sequence: 2,
+                trackingSessionEnded: true
+            )
+        )
+        let file = directory
+            .appendingPathComponent("2026-08")
+            .appendingPathComponent(sessionID.uuidString)
+            .appendingPathComponent("000001.jsonl.zlib")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        let compressed = try Data(contentsOf: file)
+        let payload = try (compressed as NSData).decompressed(using: .zlib) as Data
+        XCTAssertEqual(payload.split(separator: 0x0A).count, 2)
+    }
+
     func testSensorCollectionProfilesUseRequestedIntervalsAndPowerPolicy() {
         XCTAssertEqual(
             SensorCollectionProfile.batterySaver.interval,
@@ -1804,6 +1842,51 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertTrue(balanced.collectsDeviceMotion)
         XCTAssertEqual(balanced.minimumEmissionInterval, 5 * 60)
+    }
+
+    func testAutomaticTrackingPromotionAndStopPolicy() {
+        XCTAssertFalse(
+            TrackingSessionPolicy.shouldAutomaticallyStart(
+                motion: .walking,
+                confidence: .medium,
+                sustainedFor: 9.9
+            )
+        )
+        XCTAssertTrue(
+            TrackingSessionPolicy.shouldAutomaticallyStart(
+                motion: .walking,
+                confidence: .medium,
+                sustainedFor: 10
+            )
+        )
+        XCTAssertTrue(
+            TrackingSessionPolicy.shouldAutomaticallyStart(
+                motion: .running,
+                confidence: .high,
+                sustainedFor: 15
+            )
+        )
+        XCTAssertFalse(
+            TrackingSessionPolicy.shouldAutomaticallyStart(
+                motion: .automotive,
+                confidence: .high,
+                sustainedFor: 30
+            )
+        )
+        XCTAssertFalse(
+            TrackingSessionPolicy.shouldAutomaticallyStop(
+                motion: .stationary,
+                stationaryFor: 119
+            )
+        )
+        XCTAssertTrue(
+            TrackingSessionPolicy.shouldAutomaticallyStop(
+                motion: .stationary,
+                stationaryFor: 120
+            )
+        )
+        XCTAssertEqual(TrackingSessionPolicy.activeDistanceFilterMeters, 5)
+        XCTAssertEqual(TrackingSessionPolicy.activeHorizontalAccuracyLimit, 50)
     }
 
     func testHealthRefreshUsesFiveMinuteForegroundAndImmediateBackgroundPolicy() {
@@ -2323,7 +2406,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testWidgetPlaybackAlwaysKeepsFourAutomaticLanes() {
+    func testWidgetPlaybackAlwaysKeepsFiveAutomaticLanes() {
         let base = makeDate(2026, 8, 1, 12, 0)
 
         XCTAssertEqual(
@@ -2331,7 +2414,7 @@ final class FeatureEngineTests: XCTestCase {
                 for: [],
                 at: base
             ),
-            [.schedule, .location, .movement, .activity]
+            [.schedule, .location, .movement, .sleep, .activity]
         )
 
         let action = TaptionWidgetItem(
@@ -2349,7 +2432,7 @@ final class FeatureEngineTests: XCTestCase {
                 for: [action],
                 at: base
             ),
-            [.schedule, .location, .movement, .activity, .action]
+            [.schedule, .location, .movement, .sleep, .activity, .action]
         )
         XCTAssertEqual(
             TaptionWidgetPlaybackEngine.activeItems(
@@ -2645,7 +2728,7 @@ final class FeatureEngineTests: XCTestCase {
         try await repository.save(snapshot)
         let restored = try await repository.load()
 
-        XCTAssertEqual(restored.categories.count, 14)
+        XCTAssertEqual(restored.categories.count, 15)
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
     }
 
@@ -2918,6 +3001,220 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(heavyRain.symbolName, "cloud.heavyrain.fill")
     }
 
+    func testDomesticAirQualityGradeBoundaries() {
+        XCTAssertEqual(AirQualityGrade.pm10(30), .good)
+        XCTAssertEqual(AirQualityGrade.pm10(31), .moderate)
+        XCTAssertEqual(AirQualityGrade.pm10(80), .moderate)
+        XCTAssertEqual(AirQualityGrade.pm10(81), .bad)
+        XCTAssertEqual(AirQualityGrade.pm10(151), .veryBad)
+        XCTAssertEqual(AirQualityGrade.pm25(15), .good)
+        XCTAssertEqual(AirQualityGrade.pm25(16), .moderate)
+        XCTAssertEqual(AirQualityGrade.pm25(36), .bad)
+        XCTAssertEqual(AirQualityGrade.pm25(76), .veryBad)
+
+        let context = AirQualityContext(
+            pm10MicrogramsPerCubicMeter: 45,
+            pm25MicrogramsPerCubicMeter: 80,
+            observedAt: .now,
+            providerName: "test",
+            isFallback: false
+        )
+        XCTAssertEqual(context.overallGrade, .veryBad)
+    }
+
+    func testAirKoreaUsesNearestStationAndCachesContext() async throws {
+        AirQualityURLProtocolStub.requestCount = 0
+        AirQualityURLProtocolStub.handler = { request in
+            let path = try XCTUnwrap(request.url?.path)
+            let json: String
+            if path.contains("getMsrstnList") {
+                json = """
+                {"response":{"body":{"items":[
+                  {"stationName":"가까운역","dmX":"37.5001","dmY":"127.0001"},
+                  {"stationName":"먼역","dmX":"35.1000","dmY":"129.0000"}
+                ]}}}
+                """
+            } else {
+                XCTAssertTrue(
+                    request.url?.absoluteString.contains(
+                        "stationName=%EA%B0%80%EA%B9%8C%EC%9A%B4%EC%97%AD"
+                    ) == true
+                )
+                json = """
+                {"response":{"body":{"items":[
+                  {"dataTime":"2026-08-01 18:00","pm10Value":"42","pm25Value":"18"}
+                ]}}}
+                """
+            }
+            return (200, Data(json.utf8))
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [AirQualityURLProtocolStub.self]
+        let service = AirQualityContextService(
+            session: URLSession(configuration: configuration),
+            serviceKey: "local-test-key"
+        )
+        let first = try await service.context(
+            latitude: 37.5,
+            longitude: 127,
+            at: makeDate(2026, 8, 1, 18)
+        )
+        let second = try await service.context(
+            latitude: 37.5002,
+            longitude: 127.0002,
+            at: first.observedAt.addingTimeInterval(10 * 60)
+        )
+        XCTAssertEqual(first.stationName, "가까운역")
+        XCTAssertEqual(first.providerName, "에어코리아")
+        XCTAssertFalse(first.isFallback)
+        XCTAssertEqual(first.pm10MicrogramsPerCubicMeter, 42)
+        XCTAssertEqual(first.pm25MicrogramsPerCubicMeter, 18)
+        XCTAssertEqual(second, first)
+        XCTAssertEqual(AirQualityURLProtocolStub.requestCount, 2)
+    }
+
+    func testAirQualityFallsBackToOpenMeteoWithoutKey() async throws {
+        AirQualityURLProtocolStub.requestCount = 0
+        AirQualityURLProtocolStub.handler = { request in
+            XCTAssertTrue(
+                request.url?.host?.contains("open-meteo.com") == true
+            )
+            return (
+                200,
+                Data("{\"current\":{\"pm10\":21.5,\"pm2_5\":8.25}}".utf8)
+            )
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [AirQualityURLProtocolStub.self]
+        let service = AirQualityContextService(
+            session: URLSession(configuration: configuration),
+            serviceKey: nil
+        )
+        let context = try await service.context(
+            latitude: 37.5,
+            longitude: 127
+        )
+        XCTAssertTrue(context.isFallback)
+        XCTAssertEqual(context.providerName, "Open-Meteo")
+        XCTAssertEqual(context.pm10MicrogramsPerCubicMeter, 21.5)
+        XCTAssertEqual(context.pm25MicrogramsPerCubicMeter, 8.25)
+        XCTAssertEqual(AirQualityURLProtocolStub.requestCount, 1)
+    }
+
+    func testGoalDetailBranchesAndDeduplicatesOverlappingTime() {
+        let start = makeDate(2026, 8, 1, 9)
+        let repeatGoal = PlanRecord(
+            title: "수면",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(30 * 86_400)),
+            categoryID: "sleep",
+            repeatRules: [
+                GoalRepeatRule(
+                    weekdays: [2, 3, 4, 5, 6],
+                    startMinuteOfDay: 23 * 60,
+                    endMinuteOfDay: 6 * 60 + 30
+                ),
+            ]
+        )
+        XCTAssertEqual(
+            GoalDetailEngine.make(
+                goal: repeatGoal,
+                plans: [repeatGoal],
+                actuals: [],
+                referenceDate: start,
+                calendar: utcCalendar
+            ).mode,
+            .habit
+        )
+
+        let projectGoal = PlanRecord(
+            title: "자격증",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(10 * 86_400)),
+            categoryID: "study"
+        )
+        let child = PlanRecord(
+            title: "강의 듣기",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            categoryID: "study",
+            parentID: projectGoal.id
+        )
+        XCTAssertEqual(
+            GoalDetailEngine.make(
+                goal: projectGoal,
+                plans: [projectGoal, child],
+                actuals: [],
+                referenceDate: start,
+                calendar: utcCalendar
+            ).mode,
+            .project
+        )
+        XCTAssertEqual(
+            GoalDetailEngine.make(
+                goal: projectGoal,
+                plans: [projectGoal],
+                actuals: [],
+                referenceDate: start,
+                calendar: utcCalendar
+            ).mode,
+            .empty
+        )
+        XCTAssertEqual(
+            GoalDetailEngine.unionDuration([
+                TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+                TimeSpan(
+                    start: start.addingTimeInterval(30 * 60),
+                    end: start.addingTimeInterval(2 * hour)
+                ),
+            ]),
+            2 * hour
+        )
+    }
+
+    func testGoalRecordPolicyKeepsOrdinaryPlansOutOfGoalTab() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let goal = PlanRecord(
+            title: "목표:달리기",
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(86_400)
+            ),
+            categoryID: "exercise"
+        )
+        let ordinaryPlan = PlanRecord(
+            title: "청계천 달리기",
+            span: TimeSpan(
+                start: start.addingTimeInterval(3_600),
+                end: start.addingTimeInterval(5_400)
+            ),
+            categoryID: "exercise"
+        )
+        let childPlan = PlanRecord(
+            title: "인터벌 훈련",
+            span: TimeSpan(
+                start: start.addingTimeInterval(7_200),
+                end: start.addingTimeInterval(9_000)
+            ),
+            categoryID: "exercise",
+            parentID: goal.id
+        )
+        let skippedGoal = PlanRecord(
+            title: "목표:지난 목표",
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(3_600)
+            ),
+            categoryID: "exercise",
+            status: .skipped
+        )
+
+        let visible = GoalRecordPolicy.visibleGoals(
+            in: [ordinaryPlan, childPlan, skippedGoal, goal]
+        )
+
+        XCTAssertEqual(visible.map(\.id), [goal.id])
+        XCTAssertFalse(GoalRecordPolicy.isGoal(ordinaryPlan))
+        XCTAssertFalse(GoalRecordPolicy.isGoal(childPlan))
+    }
+
     func testScheduleHeaderUsesKoreanCalendarTitles() {
         let date = makeDate(2026, 7, 31)
         let formatter = ScheduleHeaderFormatter(calendar: utcCalendar)
@@ -3088,4 +3385,45 @@ final class FeatureEngineTests: XCTestCase {
 private struct RawArchiveWatchFixture: Codable, Hashable {
     var sampleCount: Int
     var mode: String
+}
+
+private final class AirQualityURLProtocolStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler:
+        ((URLRequest) throws -> (Int, Data))?
+    nonisolated(unsafe) static var requestCount = 0
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(
+        for request: URLRequest
+    ) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        Self.requestCount += 1
+        guard let handler = Self.handler else {
+            client?.urlProtocol(
+                self,
+                didFailWithError: URLError(.badServerResponse)
+            )
+            return
+        }
+        do {
+            let (status, data) = try handler(request)
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: status,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: data)
+            client?.urlProtocolDidFinishLoading(self)
+        } catch {
+            client?.urlProtocol(self, didFailWithError: error)
+        }
+    }
+
+    override func stopLoading() {}
 }

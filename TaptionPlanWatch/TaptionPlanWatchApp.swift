@@ -11,6 +11,27 @@ struct TaptionPlanWatchApp: App {
         workout.onSensorSummary = { [weak connectivity] summary in
             connectivity?.sendSensorSummary(summary)
         }
+        connectivity.onWorkoutRequest = {
+            [weak connectivity, weak workout] request in
+            guard let workout else { return }
+            Task { @MainActor in
+                switch request.action {
+                case .start:
+                    let linkedPlan = request.linkedPlanID.flatMap { planID in
+                        connectivity?.orderedItems.first { $0.id == planID }
+                    }
+                    _ = await workout.start(
+                        kind: request.kind,
+                        linkedPlan: linkedPlan,
+                        sessionID: request.sessionID
+                    )
+                case .stop:
+                    if workout.isActive {
+                        _ = await workout.stop()
+                    }
+                }
+            }
+        }
         _connectivity = StateObject(wrappedValue: connectivity)
         _workout = StateObject(wrappedValue: workout)
     }

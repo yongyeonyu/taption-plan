@@ -146,6 +146,13 @@ enum TimelineLaneAllocator {
 }
 
 enum AutomaticRecordTimelineEngine {
+    static func isSleep(_ actual: ActualRecord) -> Bool {
+        actual.categoryID == "sleep"
+            || actual.title.localizedCaseInsensitiveContains("수면")
+            || actual.title.localizedCaseInsensitiveContains("취침")
+            || actual.title.localizedCaseInsensitiveContains("sleep")
+    }
+
     static func activities(
         from actuals: [ActualRecord],
         inside span: TimeSpan,
@@ -192,7 +199,7 @@ struct TimelineAggregationEngine: Sendable {
         }
         let descendants = try PlanHierarchy.descendants(of: goalID, in: plans)
         let scopedPlans = descendants.isEmpty ? [goal] : descendants
-        let scopedIDs = Set(scopedPlans.map(\.id))
+        let scopedIDs = Set([goal.id] + descendants.map(\.id))
 
         let plannedByCategory = accumulate(
             scopedPlans.map { ($0.categoryID, $0.span) },
@@ -211,8 +218,16 @@ struct TimelineAggregationEngine: Sendable {
         return GoalRollup(
             goalID: goalID,
             descendantCount: descendants.count,
-            plannedDuration: plannedByCategory.values.reduce(0, +),
-            actualDuration: actualByCategory.values.reduce(0, +),
+            plannedDuration: mergedDuration(
+                scopedPlans.map(\.span),
+                inside: goal.span
+            ),
+            actualDuration: mergedDuration(
+                actuals
+                    .filter { $0.planID.map(scopedIDs.contains) == true }
+                    .map { $0.span(asOf: asOf) },
+                inside: goal.span
+            ),
             categories: mergeDurations(
                 planned: plannedByCategory,
                 actual: actualByCategory
@@ -344,10 +359,33 @@ struct TimelineAggregationEngine: Sendable {
         _ entries: [(String, TimeSpan)],
         inside bucket: TimeSpan
     ) -> [String: TimeInterval] {
-        entries.reduce(into: [:]) { partial, entry in
-            guard let overlap = entry.1.intersection(with: bucket) else { return }
-            partial[entry.0, default: 0] += overlap.duration
+        let grouped = Dictionary(grouping: entries, by: \.0)
+        return grouped.reduce(into: [:]) { partial, pair in
+            partial[pair.key] = mergedDuration(
+                pair.value.map(\.1),
+                inside: bucket
+            )
         }
+    }
+
+    private func mergedDuration(
+        _ spans: [TimeSpan],
+        inside bucket: TimeSpan
+    ) -> TimeInterval {
+        let ordered = spans
+            .compactMap { $0.intersection(with: bucket) }
+            .sorted { $0.start < $1.start }
+        guard var current = ordered.first else { return 0 }
+        var total: TimeInterval = 0
+        for span in ordered.dropFirst() {
+            if span.start <= current.end {
+                current.end = max(current.end, span.end)
+            } else {
+                total += current.duration
+                current = span
+            }
+        }
+        return total + current.duration
     }
 
     private func mergeDurations(
@@ -751,11 +789,14 @@ struct ReviewEngine: Sendable {
         var contexts: [ReviewContext] = weather
             .filter { span.contains($0.observedAt) }
             .map {
-                ReviewContext(
+                let airQualityText = $0.airQuality.map {
+                    " · 미세 \($0.overallGrade.displayName) (PM10 \(Int($0.pm10MicrogramsPerCubicMeter.rounded())) / PM2.5 \(Int($0.pm25MicrogramsPerCubicMeter.rounded())))"
+                } ?? ""
+                return ReviewContext(
                     id: "weather-\($0.id.uuidString)",
                     date: $0.observedAt,
                     symbolName: $0.symbolName,
-                    text: "\($0.condition) · \(Int($0.temperatureCelsius.rounded()))°",
+                    text: "\($0.condition) · \(Int($0.temperatureCelsius.rounded()))°\(airQualityText)",
                     linkedPlanID: nil
                 )
             }
@@ -798,6 +839,26 @@ struct ReviewEngine: Sendable {
             unplannedActualDuration: unplanned,
             contexts: contexts.sorted { $0.date < $1.date }
         )
+    }
+}
+
+enum GoalRecordPolicy {
+    static func isGoal(_ plan: PlanRecord) -> Bool {
+        guard plan.parentID == nil else { return false }
+        return plan.title
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .hasPrefix("목표:")
+    }
+
+    static func visibleGoals(in plans: [PlanRecord]) -> [PlanRecord] {
+        plans
+            .filter { isGoal($0) && $0.status != .skipped }
+            .sorted { lhs, rhs in
+                if lhs.span.start == rhs.span.start {
+                    return lhs.createdAt < rhs.createdAt
+                }
+                return lhs.span.start < rhs.span.start
+            }
     }
 }
 
