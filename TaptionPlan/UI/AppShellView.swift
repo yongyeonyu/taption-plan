@@ -27,7 +27,7 @@ struct AppShellView: View {
         .tint(.tpInk)
         .preferredColorScheme(.light)
         .task {
-            await model.bootstrap()
+            await model.sceneBecameActive()
             if let planID = TaptionPlanAppDelegate.takePendingPlanID(),
                let url = URL(
                     string: "taptionplan://plan/\(planID.uuidString)"

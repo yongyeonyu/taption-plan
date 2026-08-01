@@ -29,6 +29,9 @@ final class TaptionPlanAppDelegate:
             [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        AppleHealthService.shared.startObservingChanges {
+            await HealthBackgroundRefreshCoordinator.shared.receiveUpdate()
+        }
         return true
     }
 

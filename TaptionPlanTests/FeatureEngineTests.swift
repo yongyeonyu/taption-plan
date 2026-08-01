@@ -584,6 +584,101 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(custom.lightHex, "#AABBCC")
     }
 
+    func testEveryBuiltInCategoryProvidesMiddleCategorySuggestions() {
+        XCTAssertEqual(
+            Set(CategoryHierarchyCatalog.middleSuggestionsByCategoryID.keys),
+            Set(CategoryCatalog.builtIn.map(\.id))
+        )
+
+        for category in CategoryCatalog.builtIn {
+            let suggestions = CategoryHierarchyCatalog.middleSuggestions(
+                for: category.id
+            )
+            XCTAssertGreaterThanOrEqual(
+                suggestions.count,
+                4,
+                "\(category.name) 중분류 추천이 부족합니다."
+            )
+            XCTAssertEqual(Set(suggestions).count, suggestions.count)
+            XCTAssertTrue(suggestions.allSatisfy {
+                !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            })
+        }
+
+        XCTAssertEqual(
+            CategoryHierarchyCatalog.middleSuggestions(
+                for: "custom.volunteer"
+            ),
+            CategoryHierarchyCatalog.defaultMiddleSuggestions
+        )
+    }
+
+    func testQuickPlanDraftUsesHalfHourDefaultsAndTitleFallback() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let input = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 1,
+                hour: 12,
+                minute: 57
+            )
+        )!
+        let rounded = QuickPlanDraftEngine.roundedUpToHalfHour(input)
+
+        XCTAssertEqual(calendar.component(.hour, from: rounded), 13)
+        XCTAssertEqual(calendar.component(.minute, from: rounded), 0)
+        XCTAssertEqual(QuickPlanDraftEngine.defaultDuration, 30 * 60)
+        XCTAssertEqual(QuickPlanDraftEngine.adjustmentStep, 5 * 60)
+        XCTAssertEqual(
+            QuickPlanDraftEngine.resolvedTitle(
+                subcategory: "청계천 산책",
+                middleCategory: "산책"
+            ),
+            "청계천 산책"
+        )
+        XCTAssertEqual(
+            QuickPlanDraftEngine.resolvedTitle(
+                subcategory: "   ",
+                middleCategory: "산책"
+            ),
+            "산책"
+        )
+        XCTAssertNil(
+            QuickPlanDraftEngine.resolvedTitle(
+                subcategory: "",
+                middleCategory: ""
+            )
+        )
+    }
+
+    func testMiniGanttAdjustmentSnapsToFiveMinutes() {
+        let base = makeDate(2026, 8, 1).addingTimeInterval(13 * hour)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(30 * 60)
+        )
+        let resized = TimeSliderEngine.adjust(
+            span,
+            handle: .end,
+            delta: 8 * 60,
+            snapInterval: QuickPlanDraftEngine.adjustmentStep,
+            minimumDuration: QuickPlanDraftEngine.adjustmentStep
+        )
+        let moved = TimeSliderEngine.adjust(
+            span,
+            handle: .body,
+            delta: 12 * 60,
+            snapInterval: QuickPlanDraftEngine.adjustmentStep,
+            minimumDuration: QuickPlanDraftEngine.adjustmentStep
+        )
+
+        XCTAssertEqual(resized.duration, 40 * 60)
+        XCTAssertEqual(moved.start, base.addingTimeInterval(10 * 60))
+        XCTAssertEqual(moved.duration, span.duration)
+    }
+
     func testDeletingCustomCategoryReassignsRecords() throws {
         let custom = try CategoryCatalog.makeCustom(
             name: "봉사",
@@ -1709,6 +1804,21 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertTrue(balanced.collectsDeviceMotion)
         XCTAssertEqual(balanced.minimumEmissionInterval, 5 * 60)
+    }
+
+    func testHealthRefreshUsesFiveMinuteForegroundAndImmediateBackgroundPolicy() {
+        XCTAssertEqual(
+            HealthRefreshPolicy.foregroundInterval,
+            5 * 60
+        )
+        XCTAssertEqual(
+            HealthRefreshPolicy.periodicLookback,
+            2 * 86_400
+        )
+        XCTAssertEqual(
+            HealthRefreshPolicy.backgroundFrequency,
+            .immediate
+        )
     }
 
     func testAppleDeviceMotionHistoryOverridesAppSensorEstimate() {

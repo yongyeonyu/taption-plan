@@ -190,6 +190,62 @@ enum CategoryCatalog {
     }
 }
 
+enum CategoryHierarchyCatalog {
+    static let defaultMiddleSuggestions = [
+        "준비", "진행", "정리", "기록",
+    ]
+
+    static let middleSuggestionsByCategoryID: [String: [String]] = [
+        "movement": [
+            "걷기", "달리기", "자전거", "대중교통", "자동차", "장거리 이동",
+        ],
+        "location": [
+            "집", "회사", "학교", "학원", "운동시설", "식당·카페",
+        ],
+        "photo": [
+            "일상", "사람", "장소", "음식", "기록", "작품",
+        ],
+        "project": [
+            "기획", "회의", "제작", "문서", "검토", "운영",
+        ],
+        "exercise": [
+            "달리기", "사이클", "등산", "산책", "근력", "수영", "구기", "스트레칭",
+        ],
+        "study": [
+            "수업", "복습", "과제", "시험", "자격증", "독서",
+        ],
+        "hobby": [
+            "음악", "게임", "만들기", "관람", "수집", "동호회",
+        ],
+        "sleep": [
+            "밤잠", "낮잠", "취침 준비", "수면 회복",
+        ],
+        "routine": [
+            "식사", "집안일", "개인관리", "장보기", "행정", "반려동물",
+        ],
+        "relationship": [
+            "가족", "친구", "연인", "동료", "모임", "육아",
+        ],
+        "rest": [
+            "휴식", "산책", "명상", "영상", "음악", "아무것도 안 하기",
+        ],
+        "travel": [
+            "계획", "예약", "이동", "관광", "숙소", "식사",
+        ],
+        "health": [
+            "진료", "약", "재활", "검사", "건강관리", "영양",
+        ],
+        "event": [
+            "기념일", "공연", "전시", "모임", "행사 준비", "경조사",
+        ],
+    ]
+
+    static func middleSuggestions(for categoryID: String) -> [String] {
+        middleSuggestionsByCategoryID[categoryID]
+            ?? defaultMiddleSuggestions
+    }
+}
+
 enum CategoryError: Error, Equatable {
     case emptyName
     case duplicateName

@@ -324,11 +324,87 @@ enum TimeSliderEngine {
         return TimeSpan(start: start, end: end)
     }
 
+    static func adjust(
+        _ span: TimeSpan,
+        handle: TimeSliderHandle,
+        delta: TimeInterval,
+        snapInterval: TimeInterval,
+        bounds: TimeSpan? = nil,
+        minimumDuration: TimeInterval = 60
+    ) -> TimeSpan {
+        let step = max(60, snapInterval)
+        let snappedDelta = (delta / step).rounded() * step
+        var start = span.start
+        var end = span.end
+
+        switch handle {
+        case .start:
+            start = min(
+                start.addingTimeInterval(snappedDelta),
+                end.addingTimeInterval(-minimumDuration)
+            )
+        case .body:
+            start = start.addingTimeInterval(snappedDelta)
+            end = end.addingTimeInterval(snappedDelta)
+        case .end:
+            end = max(
+                end.addingTimeInterval(snappedDelta),
+                start.addingTimeInterval(minimumDuration)
+            )
+        }
+
+        if let bounds {
+            if start < bounds.start {
+                let correction = bounds.start.timeIntervalSince(start)
+                start = start.addingTimeInterval(correction)
+                if handle == .body {
+                    end = end.addingTimeInterval(correction)
+                }
+            }
+            if end > bounds.end {
+                let correction = bounds.end.timeIntervalSince(end)
+                end = end.addingTimeInterval(correction)
+                if handle == .body {
+                    start = start.addingTimeInterval(correction)
+                }
+            }
+        }
+        return TimeSpan(start: start, end: end)
+    }
+
     static func crossedTenMinuteTick(
         previous: Date,
         current: Date
     ) -> Bool {
         Int(previous.timeIntervalSince1970 / 600)
             != Int(current.timeIntervalSince1970 / 600)
+    }
+}
+
+enum QuickPlanDraftEngine {
+    static let defaultDuration: TimeInterval = 30 * 60
+    static let adjustmentStep: TimeInterval = 5 * 60
+
+    static func roundedUpToHalfHour(_ date: Date) -> Date {
+        let interval = defaultDuration
+        return Date(
+            timeIntervalSinceReferenceDate:
+                ceil(date.timeIntervalSinceReferenceDate / interval) * interval
+        )
+    }
+
+    static func resolvedTitle(
+        subcategory: String,
+        middleCategory: String
+    ) -> String? {
+        let subcategory = subcategory.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        if !subcategory.isEmpty { return subcategory }
+
+        let middleCategory = middleCategory.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        return middleCategory.isEmpty ? nil : middleCategory
     }
 }

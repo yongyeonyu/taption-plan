@@ -243,9 +243,61 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
 
 // MARK: - Health and Apple Watch data mirrored to iPhone
 
+enum HealthRefreshPolicy {
+    static let foregroundInterval: TimeInterval = 5 * 60
+    static let periodicLookback: TimeInterval = 2 * 86_400
+    static let backgroundFrequency: HKUpdateFrequency = .immediate
+}
+
+actor HealthBackgroundRefreshCoordinator {
+    typealias Handler = @Sendable () async -> Void
+
+    static let shared = HealthBackgroundRefreshCoordinator()
+
+    private var handler: Handler?
+    private var pendingHandlerWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func register(_ handler: @escaping Handler) {
+        self.handler = handler
+        let waiters = pendingHandlerWaiters
+        pendingHandlerWaiters.removeAll()
+        guard !waiters.isEmpty else { return }
+        Task {
+            await handler()
+            waiters.forEach { $0.resume() }
+        }
+    }
+
+    func receiveUpdate() async {
+        guard let handler else {
+            await withCheckedContinuation { continuation in
+                pendingHandlerWaiters.append(continuation)
+            }
+            return
+        }
+        await handler()
+    }
+}
+
+private final class HealthObserverCompletion: @unchecked Sendable {
+    private let callback: () -> Void
+
+    init(_ callback: @escaping () -> Void) {
+        self.callback = callback
+    }
+
+    func callAsFunction() {
+        callback()
+    }
+}
+
 final class AppleHealthService: @unchecked Sendable {
+    static let shared = AppleHealthService()
+
     private let store: HKHealthStore
     private let sleepEngine: SleepAnalysisEngine
+    private let observerLock = NSLock()
+    private var observerQueries: [HKObserverQuery] = []
 
     init(
         store: HKHealthStore = HKHealthStore(),
@@ -270,6 +322,52 @@ final class AppleHealthService: @unchecked Sendable {
                     continuation.resume(returning: success)
                 }
             }
+        }
+    }
+
+    func startObservingChanges(
+        onUpdate: @escaping @Sendable () async -> Void
+    ) {
+        observerLock.lock()
+        guard observerQueries.isEmpty else {
+            observerLock.unlock()
+            return
+        }
+        let queries = observedSampleTypes().map { sampleType in
+            HKObserverQuery(
+                sampleType: sampleType,
+                predicate: nil
+            ) { _, completion, error in
+                let completion = HealthObserverCompletion(completion)
+                Task {
+                    if error == nil {
+                        await onUpdate()
+                    }
+                    completion()
+                }
+            }
+        }
+        observerQueries = queries
+        observerLock.unlock()
+
+        queries.forEach(store.execute)
+    }
+
+    func enableBackgroundDelivery() async throws {
+        for sampleType in observedSampleTypes() {
+            try await setBackgroundDelivery(
+                enabled: true,
+                for: sampleType
+            )
+        }
+    }
+
+    func disableBackgroundDelivery() async {
+        for sampleType in observedSampleTypes() {
+            try? await setBackgroundDelivery(
+                enabled: false,
+                for: sampleType
+            )
         }
     }
 
@@ -630,6 +728,55 @@ final class AppleHealthService: @unchecked Sendable {
             HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
             HKObjectType.quantityType(forIdentifier: .heartRate)
         ].compactMap { $0 }
+    }
+
+    private func observedSampleTypes() -> [HKSampleType] {
+        [
+            HKObjectType.workoutType(),
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
+            HKObjectType.categoryType(forIdentifier: .mindfulSession),
+        ].compactMap { $0 }
+    }
+
+    private func setBackgroundDelivery(
+        enabled: Bool,
+        for sampleType: HKObjectType
+    ) async throws {
+        try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Void, Error>) in
+            let completion: @Sendable (Bool, Error?) -> Void = {
+                success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume(returning: ())
+                } else {
+                    continuation.resume(
+                        throwing: HealthBackgroundDeliveryError.registrationFailed
+                    )
+                }
+            }
+            if enabled {
+                store.enableBackgroundDelivery(
+                    for: sampleType,
+                    frequency: HealthRefreshPolicy.backgroundFrequency,
+                    withCompletion: completion
+                )
+            } else {
+                store.disableBackgroundDelivery(
+                    for: sampleType,
+                    withCompletion: completion
+                )
+            }
+        }
+    }
+}
+
+private enum HealthBackgroundDeliveryError: LocalizedError {
+    case registrationFailed
+
+    var errorDescription: String? {
+        "HealthKit 백그라운드 전달을 등록하지 못했습니다."
     }
 }
 

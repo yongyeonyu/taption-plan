@@ -50,6 +50,7 @@ final class AppModel {
     private(set) var latestSensorReading: SensorReading?
     private(set) var latestAltitudeEstimate: CalibratedAltitudeEstimate?
     private(set) var sleepSessions: [SleepSession] = []
+    private(set) var lastHealthRefreshAt: Date?
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
     var userFacingError: String?
 
@@ -73,12 +74,17 @@ final class AppModel {
         RawDeviceDataMonthlyArchive?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
+    @ObservationIgnored private var foregroundHealthRefreshTask:
+        Task<Void, Never>?
+    @ObservationIgnored private var isSceneActive = false
+    @ObservationIgnored private var isHealthRefreshRunning = false
+    @ObservationIgnored private var isHealthBackgroundDeliveryConfigured = false
 
     init(
         repository: (any PlanDataRepository)? = nil,
         calendarService: AppleCalendarService = AppleCalendarService(),
         photoService: ApplePhotoLibraryService = ApplePhotoLibraryService(),
-        healthService: AppleHealthService = AppleHealthService(),
+        healthService: AppleHealthService = .shared,
         sensorService: AppleSensorDataService? = nil,
         weatherService: AppleWeatherContextService =
             AppleWeatherContextService(),
@@ -160,6 +166,12 @@ final class AppModel {
                 }
             }
         )
+        Task { [weak self] in
+            await HealthBackgroundRefreshCoordinator.shared.register {
+                [weak self] in
+                await self?.handleObservedHealthChange()
+            }
+        }
     }
 
     var showsBottomBar: Bool {
@@ -208,7 +220,7 @@ final class AppModel {
             $0.source == .healthKit || $0.source == .appleWatch
         }
         let health = settings.healthEnabled
-            ? "건강 기록 \(deviceRecords.count)건 동기화"
+            ? "건강 기록 \(deviceRecords.count)건 · 5분 갱신"
             : "건강 연결 꺼짐"
         return "\(appleWatchConnectionState.settingsLabel) · \(health)"
     }
@@ -387,8 +399,11 @@ final class AppModel {
     }
 
     func sceneBecameActive() async {
+        isSceneActive = true
         await bootstrap()
         watchConnectivityService.refreshConnectionState()
+        await configureHealthBackgroundDeliveryIfNeeded(showErrors: false)
+        startForegroundHealthRefreshIfNeeded()
         if let lastForegroundRefreshAt,
            Date.now.timeIntervalSince(lastForegroundRefreshAt) < 5 {
             return
@@ -405,6 +420,9 @@ final class AppModel {
     }
 
     func sceneEnteredBackground() async {
+        isSceneActive = false
+        foregroundHealthRefreshTask?.cancel()
+        foregroundHealthRefreshTask = nil
         await persist()
     }
 
@@ -475,6 +493,10 @@ final class AppModel {
             snapshot.settings.permissions[.health] = granted ? .authorized : .denied
             if granted {
                 await refreshHealthData()
+                await configureHealthBackgroundDeliveryIfNeeded(
+                    showErrors: true
+                )
+                startForegroundHealthRefreshIfNeeded()
             }
             await persist()
         } catch {
@@ -491,8 +513,13 @@ final class AppModel {
             return
         }
         snapshot.settings.healthEnabled = false
+        foregroundHealthRefreshTask?.cancel()
+        foregroundHealthRefreshTask = nil
+        await healthService.disableBackgroundDelivery()
+        isHealthBackgroundDeliveryConfigured = false
         snapshot.actuals.removeAll { $0.source == .healthKit }
         sleepSessions = []
+        lastHealthRefreshAt = nil
         await persist()
     }
 
@@ -2229,42 +2256,137 @@ final class AppModel {
         snapshot.calendarEvents.sort { $0.span.start < $1.span.start }
     }
 
-    private func refreshHealthData() async {
+    private func refreshHealthData(
+        in requestedSpan: TimeSpan? = nil,
+        showErrors: Bool = true
+    ) async {
+        guard !isHealthRefreshRunning else { return }
+        isHealthRefreshRunning = true
+        defer { isHealthRefreshRunning = false }
+
         do {
-            let span = recentHealthSpan
+            let span = requestedSpan ?? recentHealthSpan
             async let actualValues = healthService.actuals(in: span)
             async let sessions = healthService.sleepSessions(in: span)
             let (freshActuals, freshSessions) = try await (actualValues, sessions)
-            archiveRawDeviceData(
-                source: .healthKit,
-                kind: "health-actuals",
-                payload: freshActuals,
-                capturedAt: span.end
-            )
-            archiveRawDeviceData(
-                source: .healthKit,
-                kind: "sleep-sessions",
-                payload: freshSessions,
-                capturedAt: span.end
-            )
+            let visibleFreshActuals = ActualRecordSuppressionEngine
+                .visibleRecords(
+                    from: freshActuals,
+                    suppressedIDs: snapshot.settings.suppressedActualIDs
+                )
+            let existingHealthActuals = snapshot.actuals.filter {
+                $0.source == .healthKit
+                    && $0.span(asOf: span.end).intersection(with: span) != nil
+            }
+            let existingSleepSessions = sleepSessions.filter {
+                $0.span.intersection(with: span) != nil
+            }
+            if Set(existingHealthActuals) != Set(visibleFreshActuals) {
+                archiveRawDeviceData(
+                    source: .healthKit,
+                    kind: "health-actuals",
+                    payload: freshActuals,
+                    capturedAt: span.end
+                )
+            }
+            if Set(existingSleepSessions) != Set(freshSessions) {
+                archiveRawDeviceData(
+                    source: .healthKit,
+                    kind: "sleep-sessions",
+                    payload: freshSessions,
+                    capturedAt: span.end
+                )
+            }
             snapshot.actuals = AppleDeviceGroundTruthEngine
                 .replacingHealthKitActuals(
                     existing: snapshot.actuals,
-                    with: ActualRecordSuppressionEngine.visibleRecords(
-                        from: freshActuals,
-                        suppressedIDs: snapshot.settings.suppressedActualIDs
-                    ),
+                    with: visibleFreshActuals,
                     inside: span
                 )
-            sleepSessions = freshSessions
+            sleepSessions.removeAll {
+                $0.span.intersection(with: span) != nil
+            }
+            sleepSessions.append(contentsOf: freshSessions)
+            sleepSessions.sort { $0.span.start < $1.span.start }
+            lastHealthRefreshAt = .now
             Self.integrationLogger.notice(
-                "HealthKit refresh completed: actuals=\(freshActuals.count, privacy: .public), sleepSessions=\(freshSessions.count, privacy: .public)"
+                "HealthKit refresh completed: actuals=\(freshActuals.count, privacy: .public), sleepSessions=\(freshSessions.count, privacy: .public), periodic=\(requestedSpan != nil, privacy: .public)"
             )
         } catch {
             Self.integrationLogger.error(
                 "HealthKit refresh failed: \(error.localizedDescription, privacy: .public)"
             )
-            userFacingError = "건강 데이터를 읽지 못했습니다. \(error.localizedDescription)"
+            if showErrors {
+                userFacingError =
+                    "건강 데이터를 읽지 못했습니다. \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func handleObservedHealthChange() async {
+        await bootstrap()
+        guard settings.healthEnabled else { return }
+        await refreshHealthData(
+            in: periodicHealthSpan,
+            showErrors: false
+        )
+        logAutomaticRecordSummary()
+        await persistDeviceLocalSnapshot()
+    }
+
+    private func startForegroundHealthRefreshIfNeeded() {
+        foregroundHealthRefreshTask?.cancel()
+        foregroundHealthRefreshTask = nil
+        guard isSceneActive, settings.healthEnabled else { return }
+
+        foregroundHealthRefreshTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(
+                        for: .seconds(
+                            HealthRefreshPolicy.foregroundInterval
+                        )
+                    )
+                } catch {
+                    return
+                }
+                guard let self, !Task.isCancelled,
+                      self.isSceneActive,
+                      self.settings.healthEnabled else {
+                    return
+                }
+                await self.refreshHealthData(
+                    in: self.periodicHealthSpan,
+                    showErrors: false
+                )
+                self.logAutomaticRecordSummary()
+                await self.persistDeviceLocalSnapshot()
+            }
+        }
+    }
+
+    private func configureHealthBackgroundDeliveryIfNeeded(
+        showErrors: Bool
+    ) async {
+        guard settings.healthEnabled,
+              !isHealthBackgroundDeliveryConfigured else {
+            return
+        }
+        do {
+            try await healthService.enableBackgroundDelivery()
+            isHealthBackgroundDeliveryConfigured = true
+            Self.integrationLogger.notice(
+                "HealthKit background delivery enabled for activity and sleep"
+            )
+        } catch {
+            Self.integrationLogger.error(
+                "HealthKit background delivery failed: \(error.localizedDescription, privacy: .public)"
+            )
+            if showErrors {
+                userFacingError =
+                    "건강 데이터 자동 갱신을 켜지 못했습니다. "
+                    + error.localizedDescription
+            }
         }
     }
 
@@ -2664,6 +2786,16 @@ final class AppModel {
             to: Calendar.autoupdatingCurrent.startOfDay(for: now)
         ) ?? now.addingTimeInterval(-31 * 86_400)
         return TimeSpan(start: start, end: now)
+    }
+
+    private var periodicHealthSpan: TimeSpan {
+        let now = Date.now
+        return TimeSpan(
+            start: now.addingTimeInterval(
+                -HealthRefreshPolicy.periodicLookback
+            ),
+            end: now
+        )
     }
 
     private func persist() async {
