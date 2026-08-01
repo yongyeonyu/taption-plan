@@ -34,20 +34,29 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         (payload?.items ?? []).sorted { $0.startsAt < $1.startsAt }
     }
 
+    /// The payload can be cached while the Watch is offline. Re-apply the
+    /// live-window policy at read time so a stale cache never resurrects a
+    /// completed or already-ended item on the Watch.
+    func liveItems(at date: Date = .now) -> [TaptionWatchPlanItem] {
+        orderedItems.filter {
+            TaptionWatchLiveItemPolicy.isLive($0, at: date)
+        }
+    }
+
+    func currentItems(at date: Date = .now) -> [TaptionWatchPlanItem] {
+        TaptionWatchLiveItemPolicy.current(liveItems(at: date), at: date)
+    }
+
+    func upcomingItems(at date: Date = .now) -> [TaptionWatchPlanItem] {
+        TaptionWatchLiveItemPolicy.upcoming(liveItems(at: date), at: date)
+    }
+
     func currentItem(at date: Date = .now) -> TaptionWatchPlanItem? {
-        orderedItems.first { $0.status == "running" }
-            ?? orderedItems.first {
-                $0.status == "planned"
-                    && $0.startsAt <= date
-                    && date < $0.endsAt
-            }
+        currentItems(at: date).first
     }
 
     func nextItem(at date: Date = .now) -> TaptionWatchPlanItem? {
-        let currentID = currentItem(at: date)?.id
-        return orderedItems.first {
-            $0.id != currentID && $0.endsAt > date && $0.status == "planned"
-        }
+        upcomingItems(at: date).first
     }
 
     func send(_ kind: TaptionWatchCommandKind, for planID: UUID) {

@@ -2159,6 +2159,103 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testWatchLiveItemPolicyDropsPastItemsAndKeepsParallelCurrentItems() {
+        let now = makeDate(2026, 8, 1, 10, 0)
+        let past = TaptionWatchPlanItem(
+            id: UUID(),
+            title: "지난 계획",
+            categoryID: "project",
+            startsAt: now.addingTimeInterval(-2 * hour),
+            endsAt: now.addingTimeInterval(-hour),
+            status: PlanStatus.planned.rawValue,
+            actualStartedAt: nil,
+            categoryName: "프로젝트",
+            categoryHex: "#5C81B1"
+        )
+        let goal = TaptionWatchPlanItem(
+            id: UUID(),
+            title: "목표: 운동",
+            categoryID: "exercise",
+            startsAt: now.addingTimeInterval(-30 * 60),
+            endsAt: now.addingTimeInterval(90 * 60),
+            status: PlanStatus.planned.rawValue,
+            actualStartedAt: nil,
+            categoryName: "운동",
+            categoryHex: "#4E8E63",
+            isGoal: true
+        )
+        let plan = TaptionWatchPlanItem(
+            id: UUID(),
+            title: "달리기",
+            categoryID: "exercise",
+            startsAt: now,
+            endsAt: now.addingTimeInterval(30 * 60),
+            status: PlanStatus.running.rawValue,
+            actualStartedAt: now,
+            categoryName: "운동",
+            categoryHex: "#4E8E63",
+            parentID: goal.id
+        )
+        let completed = TaptionWatchPlanItem(
+            id: UUID(),
+            title: "완료된 계획",
+            categoryID: "project",
+            startsAt: now.addingTimeInterval(-15 * 60),
+            endsAt: now.addingTimeInterval(15 * 60),
+            status: PlanStatus.completed.rawValue,
+            actualStartedAt: nil,
+            categoryName: "프로젝트",
+            categoryHex: "#5C81B1"
+        )
+        let upcoming = TaptionWatchPlanItem(
+            id: UUID(),
+            title: "다음 계획",
+            categoryID: "project",
+            startsAt: now.addingTimeInterval(2 * hour),
+            endsAt: now.addingTimeInterval(3 * hour),
+            status: PlanStatus.planned.rawValue,
+            actualStartedAt: nil,
+            categoryName: "프로젝트",
+            categoryHex: "#5C81B1"
+        )
+
+        let items = [past, goal, plan, completed, upcoming]
+        XCTAssertEqual(
+            TaptionWatchLiveItemPolicy.current(items, at: now).map(\.id),
+            [goal.id, plan.id]
+        )
+        XCTAssertEqual(
+            TaptionWatchLiveItemPolicy.upcoming(items, at: now).map(\.id),
+            [upcoming.id]
+        )
+        XCTAssertFalse(TaptionWatchLiveItemPolicy.isLive(past, at: now))
+        XCTAssertFalse(
+            TaptionWatchLiveItemPolicy.isLive(completed, at: now)
+        )
+    }
+
+    func testWatchPlanItemDecodesPayloadWithoutNewGoalFields() throws {
+        let id = UUID()
+        let base = makeDate(2026, 8, 1, 10)
+        let legacy: [String: Any] = [
+            "id": id.uuidString,
+            "title": "기존 워치 계획",
+            "categoryID": "project",
+            "startsAt": base.timeIntervalSince1970,
+            "endsAt": base.addingTimeInterval(hour).timeIntervalSince1970,
+            "status": PlanStatus.planned.rawValue,
+            "categoryName": "프로젝트",
+            "categoryHex": "#5C81B1"
+        ]
+        let data = try JSONSerialization.data(withJSONObject: legacy)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let item = try decoder.decode(TaptionWatchPlanItem.self, from: data)
+        XCTAssertFalse(item.isGoal)
+        XCTAssertNil(item.parentID)
+        XCTAssertEqual(item.id, id)
+    }
+
     func testWatchDaySummaryMergesOverlappingActuals() {
         let base = makeDate(2026, 7, 30, 9)
         let plans = [
@@ -2461,6 +2558,10 @@ final class FeatureEngineTests: XCTestCase {
             TaptionWidgetPlaybackEngine.defaultResolutionLabel
         )
         XCTAssertEqual(payload.displayDuration, 6 * hour)
+        XCTAssertEqual(
+            payload.sourceFingerprint,
+            TaptionWidgetSyncFingerprint.make(items: payload.items)
+        )
 
         let oldOffice = TaptionWidgetItem(
             id: UUID(),
@@ -2508,6 +2609,75 @@ final class FeatureEngineTests: XCTestCase {
                 at: now
             ).isEmpty
         )
+    }
+
+    func testWidgetRejectsNewerLegacyCacheWithoutGroundTruthFingerprint() {
+        let now = makeDate(2026, 8, 1, 18, 0)
+        var groundTruth = TaptionWidgetPayloadFactory.make(
+            from: .empty,
+            now: now
+        )
+        groundTruth.sourceFingerprint = "ground-truth"
+        var legacyCache = groundTruth
+        legacyCache.generatedAt = now.addingTimeInterval(60)
+        legacyCache.sourceFingerprint = nil
+        legacyCache.items = [
+            TaptionWidgetItem(
+                id: UUID(),
+                title: "회사",
+                categoryID: "location",
+                startsAt: now.addingTimeInterval(-hour),
+                endsAt: now.addingTimeInterval(hour),
+                status: "recorded",
+                isFixed: true,
+                lane: .location
+            )
+        ]
+
+        XCTAssertEqual(
+            TaptionWidgetPayloadSyncPolicy.freshest(
+                groundTruth: groundTruth,
+                cached: legacyCache
+            ),
+            groundTruth
+        )
+
+        var staleCache = groundTruth
+        staleCache.generatedAt = now.addingTimeInterval(120)
+        staleCache.sourceSnapshotUpdatedAt = now.addingTimeInterval(-hour)
+        groundTruth.sourceSnapshotUpdatedAt = now
+        XCTAssertEqual(
+            TaptionWidgetPayloadSyncPolicy.freshest(
+                groundTruth: groundTruth,
+                cached: staleCache
+            ),
+            groundTruth
+        )
+    }
+
+    func testWidgetPayloadDecodesLegacyCacheWithoutSyncMetadata() throws {
+        let payload = TaptionWidgetPayloadFactory.make(
+            from: .empty,
+            now: makeDate(2026, 8, 1, 18, 0)
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        let encoded = try encoder.encode(payload)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object.removeValue(forKey: "sourceSnapshotUpdatedAt")
+        object.removeValue(forKey: "sourceFingerprint")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let decoded = try decoder.decode(
+            TaptionWidgetPayload.self,
+            from: legacyData
+        )
+
+        XCTAssertNil(decoded.sourceSnapshotUpdatedAt)
+        XCTAssertNil(decoded.sourceFingerprint)
     }
 
     func testWidgetAutomaticallyScrollsOverflowingRowsAndReturns() {

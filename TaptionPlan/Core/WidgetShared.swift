@@ -610,6 +610,8 @@ enum TaptionWidgetCommandEngine {
 
 struct TaptionWidgetPayload: Codable, Hashable, Sendable {
     var generatedAt: Date
+    var sourceSnapshotUpdatedAt: Date?
+    var sourceFingerprint: String?
     var viewportStart: Date
     var viewportEnd: Date
     var displayCenterDate: Date?
@@ -627,6 +629,8 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
         let day = calendar.startOfDay(for: .now)
         return TaptionWidgetPayload(
             generatedAt: .now,
+            sourceSnapshotUpdatedAt: nil,
+            sourceFingerprint: nil,
             viewportStart: day,
             viewportEnd: day.addingTimeInterval(86_400),
             displayCenterDate: .now,
@@ -647,6 +651,8 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
         let now = Date.now
         return TaptionWidgetPayload(
             generatedAt: .now,
+            sourceSnapshotUpdatedAt: nil,
+            sourceFingerprint: nil,
             viewportStart: day,
             viewportEnd: day.addingTimeInterval(86_400),
             displayCenterDate: now,
@@ -723,11 +729,79 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
     }
 }
 
+enum TaptionWidgetSyncFingerprint {
+    static func make(items: [TaptionWidgetItem]) -> String {
+        let canonical = items
+            .sorted {
+                if $0.resolvedLane == $1.resolvedLane {
+                    if $0.startsAt == $1.startsAt {
+                        return $0.id.uuidString < $1.id.uuidString
+                    }
+                    return $0.startsAt < $1.startsAt
+                }
+                return $0.resolvedLane.rawValue < $1.resolvedLane.rawValue
+            }
+            .map { item in
+                [
+                    item.id.uuidString,
+                    item.resolvedLane.rawValue,
+                    item.title,
+                    item.categoryID,
+                    String(Int64(item.startsAt.timeIntervalSince1970 * 1_000)),
+                    String(Int64(item.endsAt.timeIntervalSince1970 * 1_000)),
+                    item.status,
+                ].joined(separator: "|")
+            }
+            .joined(separator: "\n")
+
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in canonical.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 1_099_511_628_211
+        }
+        return String(hash, radix: 16)
+    }
+}
+
+enum TaptionWidgetPayloadSyncPolicy {
+    static func freshest(
+        groundTruth: TaptionWidgetPayload,
+        cached: TaptionWidgetPayload
+    ) -> TaptionWidgetPayload {
+        guard cached.generatedAt >= groundTruth.generatedAt else {
+            return groundTruth
+        }
+        if groundTruth.sourceFingerprint != nil,
+           cached.sourceFingerprint == nil {
+            return groundTruth
+        }
+        if let groundTruthUpdatedAt = groundTruth.sourceSnapshotUpdatedAt,
+           let cachedUpdatedAt = cached.sourceSnapshotUpdatedAt,
+           cachedUpdatedAt < groundTruthUpdatedAt {
+            return groundTruth
+        }
+        return cached
+    }
+}
+
 enum TaptionWidgetSharedStore {
     static let appGroupIdentifier = "group.com.taption.plan"
 
     private static let payloadFileName = "widget-payload-v1.json"
     private static let commandsFileName = "widget-commands-v1.json"
+    private static let snapshotFileName = "taption-data-v1.json"
+
+    static func readGroundTruthPayload(
+        now: Date = .now
+    ) -> TaptionWidgetPayload {
+        guard let snapshot = readGroundTruthSnapshot() else {
+            return readPayload()
+        }
+        return TaptionWidgetPayloadFactory.make(
+            from: snapshot,
+            now: now
+        )
+    }
 
     static func readPayload() -> TaptionWidgetPayload {
         guard let data = try? Data(contentsOf: fileURL(payloadFileName)),
@@ -770,6 +844,18 @@ enum TaptionWidgetSharedStore {
             return []
         }
         return commands
+    }
+
+    private static func readGroundTruthSnapshot() -> TaptionDataSnapshot? {
+        guard let data = try? Data(contentsOf: fileURL(snapshotFileName)),
+              let snapshot = try? decoder.decode(
+                TaptionDataSnapshot.self,
+                from: data
+              ),
+              snapshot.updatedAt != .distantPast else {
+            return nil
+        }
+        return snapshot
     }
 
     private static func fileURL(_ name: String) -> URL {

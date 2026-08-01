@@ -92,7 +92,7 @@ private struct TaptionWatchWidgetView: View {
             HStack(spacing: 4) {
                 Image(systemName: "cat.fill")
                     .font(.caption2.weight(.bold))
-                Text(currentItem == nil ? "Taption Plan" : "지금")
+                Text(currentItem == nil ? "Taption Plan" : currentItems.count > 1 ? "지금 \(currentItems.count)개" : "지금")
                     .font(.caption2.weight(.semibold))
                 Spacer(minLength: 2)
                 Text(playbackDate, style: .time)
@@ -179,7 +179,11 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var items: [TaptionWatchPlanItem] {
-        (freshestPayload?.items ?? []).sorted { $0.startsAt < $1.startsAt }
+        return (freshestPayload?.items ?? [])
+            .filter {
+                TaptionWatchLiveItemPolicy.isLive($0, at: playbackDate)
+            }
+            .sorted { $0.startsAt < $1.startsAt }
     }
 
     private var freshestPayload: TaptionWatchPayload? {
@@ -197,21 +201,15 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var currentItem: TaptionWatchPlanItem? {
-        items.first { $0.status == "running" }
-            ?? items.first {
-                $0.status == "planned"
-                    && $0.startsAt <= playbackDate
-                    && playbackDate < $0.endsAt
-            }
+        currentItems.first
+    }
+
+    private var currentItems: [TaptionWatchPlanItem] {
+        TaptionWatchLiveItemPolicy.current(items, at: playbackDate)
     }
 
     private var nextItem: TaptionWatchPlanItem? {
-        let currentID = currentItem?.id
-        return items.first {
-            $0.id != currentID
-                && $0.status == "planned"
-                && playbackDate < $0.endsAt
-        }
+        TaptionWatchLiveItemPolicy.upcoming(items, at: playbackDate).first
     }
 
     private var summary: TaptionWatchDaySummary {

@@ -1,5 +1,6 @@
 import ActivityKit
 import AppIntents
+import OSLog
 import SwiftUI
 import WidgetKit
 
@@ -17,6 +18,11 @@ struct TaptionScheduleEntry: TimelineEntry {
 }
 
 struct TaptionScheduleProvider: TimelineProvider {
+    private static let logger = Logger(
+        subsystem: "com.taption.plan",
+        category: "WidgetSync"
+    )
+
     func placeholder(in context: Context) -> TaptionScheduleEntry {
         TaptionScheduleEntry(date: .now, payload: .placeholder)
     }
@@ -30,7 +36,7 @@ struct TaptionScheduleProvider: TimelineProvider {
                 date: .now,
                 payload: context.isPreview
                     ? .placeholder
-                    : TaptionWidgetSharedStore.readPayload()
+                    : groundTruthPayload()
             )
         )
     }
@@ -40,7 +46,7 @@ struct TaptionScheduleProvider: TimelineProvider {
         completion: @escaping (Timeline<TaptionScheduleEntry>) -> Void
     ) {
         let now = Date.now
-        let payload = TaptionWidgetSharedStore.readPayload()
+        let payload = groundTruthPayload(at: now)
         let horizon = now.addingTimeInterval(15 * 60)
         var refreshDates = TaptionWidgetPlaybackEngine.timelineDates(
             for: payload.items,
@@ -65,6 +71,24 @@ struct TaptionScheduleProvider: TimelineProvider {
                 )
             }
         completion(Timeline(entries: entries, policy: .after(horizon)))
+    }
+
+    private func groundTruthPayload(
+        at date: Date = .now
+    ) -> TaptionWidgetPayload {
+        let payload = TaptionWidgetSharedStore.readGroundTruthPayload(
+            now: date
+        )
+        let locationCount = payload.items.filter {
+            $0.resolvedLane == .location
+        }.count
+        let movementCount = payload.items.filter {
+            $0.resolvedLane == .movement
+        }.count
+        Self.logger.notice(
+            "Widget ground-truth read: fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public)"
+        )
+        return payload
     }
 }
 
@@ -311,9 +335,10 @@ private struct TaptionScheduleWidgetView: View {
 
     private var freshestPayload: TaptionWidgetPayload {
         let stored = TaptionWidgetSharedStore.readPayload()
-        return stored.generatedAt >= entry.payload.generatedAt
-            ? stored
-            : entry.payload
+        return TaptionWidgetPayloadSyncPolicy.freshest(
+            groundTruth: entry.payload,
+            cached: stored
+        )
     }
 
     private func visibleItems(
@@ -1969,7 +1994,6 @@ struct TaptionWidgetActionIntent: AppIntent {
         }
 
         var command = TaptionWidgetCommand(planID: id, kind: action)
-        let previousPayload = TaptionWidgetSharedStore.readPayload()
         var refreshedPayload: TaptionWidgetPayload?
         do {
             let repository = try FilePlanRepository.appGroup()
@@ -1989,16 +2013,6 @@ struct TaptionWidgetActionIntent: AppIntent {
 
         if let refreshedPayload {
             try TaptionWidgetSharedStore.writePayload(refreshedPayload)
-        } else {
-            var payload = previousPayload
-            if let index = payload.items.firstIndex(where: { $0.id == id }) {
-                apply(action, to: &payload.items[index], in: payload)
-                payload.generatedAt = .now
-                payload.displayCenterDate = .now
-                payload.displayDuration = TaptionWidgetPlaybackEngine.defaultWindowDuration
-                payload.displayResolutionLabel = TaptionWidgetPlaybackEngine.defaultResolutionLabel
-                try TaptionWidgetSharedStore.writePayload(payload)
-            }
         }
         try TaptionWidgetSharedStore.appendCommand(command)
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
@@ -2006,35 +2020,6 @@ struct TaptionWidgetActionIntent: AppIntent {
         return .result()
     }
 
-    private func apply(
-        _ action: TaptionWidgetCommandKind,
-        to item: inout TaptionWidgetItem,
-        in payload: TaptionWidgetPayload
-    ) {
-        switch action {
-        case .complete, .stopCurrentActivity:
-            item.status = "completed"
-        case .postponeThirtyMinutes:
-            item.startsAt = item.startsAt.addingTimeInterval(30 * 60)
-            item.endsAt = item.endsAt.addingTimeInterval(30 * 60)
-        case .moveToNextFreeTime:
-            let duration = max(60, item.endsAt.timeIntervalSince(item.startsAt))
-            let occupied = payload.items
-                .filter { $0.id != item.id && !$0.isCompleted }
-                .sorted { $0.startsAt < $1.startsAt }
-            var candidate = max(Date.now, item.startsAt)
-            for other in occupied {
-                if candidate.addingTimeInterval(duration) <= other.startsAt {
-                    break
-                }
-                if candidate < other.endsAt {
-                    candidate = other.endsAt
-                }
-            }
-            item.startsAt = candidate
-            item.endsAt = candidate.addingTimeInterval(duration)
-        }
-    }
 }
 
 private extension Color {

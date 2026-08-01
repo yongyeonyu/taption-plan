@@ -3240,7 +3240,6 @@ final class AppModel {
         )?.start ?? dayStart
         let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)
             ?? weekStart.addingTimeInterval(7 * 86_400)
-        let span = TimeSpan(start: weekStart, end: weekEnd)
         let categoriesByID = Dictionary(
             snapshot.categories.map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
@@ -3268,12 +3267,31 @@ final class AppModel {
         )
         do {
             try TaptionWidgetSharedStore.writePayload(payload)
+            let locationCount = payload.items.filter {
+                $0.resolvedLane == .location
+            }.count
+            let movementCount = payload.items.filter {
+                $0.resolvedLane == .movement
+            }.count
+            Self.integrationLogger.notice(
+                "Widget ground-truth publish: fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public)"
+            )
             requestImmediateWidgetRefresh()
         } catch {
             userFacingError = "위젯 데이터를 갱신하지 못했습니다. \(error.localizedDescription)"
         }
+        // Watch payloads are a live execution queue, not a copy of the
+        // historical timeline.  Keep a currently-running item even when it
+        // started before this moment, include upcoming items through the
+        // current week, and omit ended/completed/skipped records entirely.
         let watchItems = snapshot.plans
-            .filter { $0.span.intersection(with: span) != nil }
+            .filter { plan in
+                guard plan.span.end > now,
+                      plan.span.start < weekEnd else {
+                    return false
+                }
+                return plan.status == .planned || plan.status == .running
+            }
             .sorted { $0.span.start < $1.span.start }
             .map { plan in
                 let category = categoriesByID[plan.categoryID]
@@ -3287,12 +3305,14 @@ final class AppModel {
                     status: plan.status.rawValue,
                     actualStartedAt: activeActual?.startedAt,
                     categoryName: category?.name,
-                    categoryHex: category?.lightHex
+                    categoryHex: category?.lightHex,
+                    isGoal: GoalRecordPolicy.isGoal(plan),
+                    parentID: plan.parentID
                 )
             }
         let watchPayload = TaptionWatchPayload(
             generatedAt: .now,
-            viewportStart: weekStart,
+            viewportStart: now,
             viewportEnd: weekEnd,
             items: watchItems,
             catStyle: snapshot.settings.catStyle.rawValue,

@@ -137,23 +137,26 @@ enum TaptionWidgetPayloadFactory {
             abs($0.observedAt.timeIntervalSince(now))
                 < abs($1.observedAt.timeIntervalSince(now))
         }
+        let items = (
+            planItems
+                + calendarItems
+                + locationItems
+                + movementItems
+                + sleepItems
+                + activityItems
+        )
+        .sorted { $0.startsAt < $1.startsAt }
 
         return TaptionWidgetPayload(
             generatedAt: now,
+            sourceSnapshotUpdatedAt: snapshot.updatedAt,
+            sourceFingerprint: TaptionWidgetSyncFingerprint.make(items: items),
             viewportStart: widgetStart,
             viewportEnd: widgetEnd,
             displayCenterDate: now,
             displayDuration: TaptionWidgetPlaybackEngine.defaultWindowDuration,
             displayResolutionLabel: TaptionWidgetPlaybackEngine.defaultResolutionLabel,
-            items: (
-                planItems
-                    + calendarItems
-                    + locationItems
-                    + movementItems
-                    + sleepItems
-                    + activityItems
-            )
-            .sorted { $0.startsAt < $1.startsAt },
+            items: items,
             catStyle: snapshot.settings.catStyle.rawValue,
             hidesSensitiveContent: false,
             weatherSymbolName: weather?.symbolName,

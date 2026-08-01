@@ -33,30 +33,72 @@ struct WatchContentView: View {
     }
 
     private func dashboard(at date: Date) -> some View {
-        let current = connectivity.currentItem(at: date)
-        let next = connectivity.nextItem(at: date)
+        let currentItems = connectivity.currentItems(at: date)
+        let nextItems = Array(
+            connectivity.upcomingItems(at: date).prefix(3)
+        )
         return VStack(alignment: .leading, spacing: 8) {
             syncHeader
             WatchCatRunner(
                 style: connectivity.payload?.catStyle ?? "calico",
                 reducesMotion: connectivity.payload?.reducesMotion ?? false,
-                isRunning: current != nil
+                isRunning: !currentItems.isEmpty || workout.isActive
             )
             quickWorkoutControls
-            if let current {
-                currentCard(current, at: date)
-            } else {
+            if currentItems.isEmpty {
                 emptyCurrentCard
+            } else {
+                currentSection(currentItems, at: date)
             }
             if workout.isActive {
                 workoutMetrics(at: date)
             }
-            if let next, next.id != current?.id {
-                nextCard(next)
-            } else {
+            if nextItems.isEmpty {
                 emptyNextCard
+            } else {
+                upcomingSection(nextItems)
             }
             todaySummaryCard(at: date)
+        }
+    }
+
+    private func currentSection(
+        _ items: [TaptionWatchPlanItem],
+        at date: Date
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 4) {
+                Text("현재 진행")
+                    .font(.caption.weight(.bold))
+                Text("\(items.count)개")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.green)
+                Spacer()
+                Text("동시 실행 가능")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(items) { item in
+                currentCard(item, at: date)
+            }
+        }
+    }
+
+    private func upcomingSection(
+        _ items: [TaptionWatchPlanItem]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text("다음 항목")
+                    .font(.caption.weight(.bold))
+                Spacer()
+                Text("\(items.count)개")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(items) { item in
+                nextCard(item)
+            }
         }
     }
 
@@ -109,7 +151,7 @@ struct WatchContentView: View {
     ) -> TaptionWatchPlanItem? {
         let now = Date.now
         let keyword = kind == .running ? "달리" : "걷"
-        return connectivity.orderedItems
+        return connectivity.currentItems(at: now)
             .filter {
                 $0.startsAt <= now && now < $0.endsAt
                     && ["exercise", "activity", "movement"].contains($0.categoryID)
@@ -153,7 +195,7 @@ struct WatchContentView: View {
                 Circle()
                     .fill(color(hex: item.categoryHex))
                     .frame(width: 7, height: 7)
-                Text("현재 진행")
+                Text(item.isGoal ? "현재 목표" : "현재 진행")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.green)
                 Spacer()
@@ -165,7 +207,7 @@ struct WatchContentView: View {
                 .font(.headline)
                 .lineLimit(2)
             if let categoryName = item.categoryName {
-                Text(categoryName)
+                Text(item.isGoal ? "목표 · \(categoryName)" : categoryName)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
