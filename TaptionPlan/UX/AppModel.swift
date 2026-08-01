@@ -90,6 +90,7 @@ final class AppModel {
     @ObservationIgnored private var liveWeatherRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var lastLiveEnvironmentPoint: GeoPoint?
     @ObservationIgnored private var lastLiveEnvironmentAt: Date?
+    @ObservationIgnored private var lastLiveEnvironmentFailureAt: Date?
 
     init(
         repository: (any PlanDataRepository)? = nil,
@@ -2231,6 +2232,15 @@ final class AppModel {
                 "위치 기록을 읽지 못했습니다. \(error.localizedDescription)"
             return
         }
+        if Calendar.autoupdatingCurrent.isDate(span.start, inSameDayAs: .now),
+           let latest = archivedReadings.max(by: {
+               $0.timestamp < $1.timestamp
+           }) {
+            // Seed the live map anchor when the app is reopened before the
+            // next Core Location callback arrives. Historical-day refreshes
+            // must never replace the current-location anchor.
+            latestSensorReading = latest
+        }
         let motionActivities =
             (try? await sensorService.motionActivities(in: span)) ?? []
         let pedometer =
@@ -3025,10 +3035,12 @@ final class AppModel {
         let agedEnough = lastLiveEnvironmentAt.map {
             date.timeIntervalSince($0) >= 30 * 60
         } ?? true
+        let retryAllowed = lastLiveEnvironmentFailureAt.map {
+            date.timeIntervalSince($0) >= 60
+        } ?? true
         guard movedFarEnough || agedEnough,
+              retryAllowed,
               liveWeatherRefreshTask == nil else { return }
-        lastLiveEnvironmentPoint = point
-        lastLiveEnvironmentAt = date
         liveWeatherRefreshTask = Task { [weak self] in
             guard let self else { return }
             defer { self.liveWeatherRefreshTask = nil }
@@ -3045,6 +3057,9 @@ final class AppModel {
                     longitude: point.longitude,
                     at: date
                 )
+                self.lastLiveEnvironmentPoint = point
+                self.lastLiveEnvironmentAt = date
+                self.lastLiveEnvironmentFailureAt = nil
                 self.snapshot.weather.removeAll {
                     abs($0.observedAt.timeIntervalSince(date)) < 5 * 60
                         && $0.placeID == nil
@@ -3053,6 +3068,7 @@ final class AppModel {
                 self.snapshot.weather.sort { $0.observedAt < $1.observedAt }
                 await self.persistDeviceLocalSnapshot()
             } catch {
+                self.lastLiveEnvironmentFailureAt = date
                 Self.integrationLogger.info(
                     "Live weather context unavailable: \(error.localizedDescription, privacy: .public)"
                 )
@@ -3195,9 +3211,14 @@ final class AppModel {
             snapshot.weather.sort { $0.observedAt < $1.observedAt }
         }
 
+        // This refresh runs as part of automatic sensor analysis.  A weather
+        // provider outage must never interrupt an exercise session (or show a
+        // modal alert during background collection).  Keep existing context
+        // data and let the next refresh retry instead.
         if let firstError, contexts.isEmpty {
-            userFacingError =
-                "현재 날씨를 불러오지 못했습니다. \(firstError.localizedDescription)"
+            Self.integrationLogger.info(
+                "Stored weather refresh unavailable: \(firstError.localizedDescription, privacy: .public)"
+            )
         }
     }
 

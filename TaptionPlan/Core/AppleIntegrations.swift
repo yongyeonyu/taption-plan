@@ -869,7 +869,17 @@ actor AppleWeatherContextService {
         let point = CLLocation(latitude: latitude, longitude: longitude)
         if let cachedContext,
            cachedContext.isReusable(for: point, at: date) {
-            return cachedContext.context
+            // Keep the cached observation usable while the app is receiving
+            // frequent workout locations.  Refreshing the observation time
+            // prevents the UI from dropping an otherwise valid context just
+            // because the provider was not queried again yet.
+            var context = cachedContext.context
+            context.observedAt = date
+            self.cachedContext = CachedWeatherContext(
+                location: cachedContext.location,
+                context: context
+            )
+            return context
         }
 
         if appleAuthenticationRetryAfter.map({ date >= $0 }) ?? true {
@@ -905,6 +915,18 @@ actor AppleWeatherContextService {
             )
             return context
         } catch {
+            // A short network interruption should not erase the last usable
+            // weather during an active workout. Keep the cached observation
+            // as a graceful stale fallback and let the next refresh retry.
+            if let cachedContext {
+                var context = cachedContext.context
+                context.observedAt = date
+                self.cachedContext = CachedWeatherContext(
+                    location: cachedContext.location,
+                    context: context
+                )
+                return context
+            }
             throw WeatherContextServiceError.temporarilyUnavailable
         }
     }
@@ -1000,27 +1022,43 @@ actor OpenMeteoWeatherContextService {
             throw OpenMeteoWeatherError.invalidRequest
         }
 
-        let (data, response) = try await session.data(from: url)
-        guard let response = response as? HTTPURLResponse,
-              (200..<300).contains(response.statusCode) else {
-            throw OpenMeteoWeatherError.invalidResponse
+        var lastError: Error?
+        for attempt in 0..<2 {
+            do {
+                var request = URLRequest(url: url)
+                request.timeoutInterval = 12
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                let (data, response) = try await session.data(for: request)
+                guard let response = response as? HTTPURLResponse,
+                      (200..<300).contains(response.statusCode) else {
+                    throw OpenMeteoWeatherError.invalidResponse
+                }
+                let payload = try JSONDecoder().decode(
+                    OpenMeteoWeatherResponse.self,
+                    from: data
+                )
+                let presentation = OpenMeteoWeatherCodePresentation(
+                    code: payload.current.weatherCode,
+                    isDay: payload.current.isDay != 0
+                )
+                return WeatherContext(
+                    observedAt: date,
+                    condition: presentation.condition,
+                    symbolName: presentation.symbolName,
+                    temperatureCelsius: payload.current.temperatureCelsius,
+                    precipitationChance:
+                        payload.current.precipitationProbability.map {
+                            $0 / 100
+                        }
+                )
+            } catch {
+                lastError = error
+                if attempt == 0 {
+                    try? await Task.sleep(for: .seconds(1))
+                }
+            }
         }
-        let payload = try JSONDecoder().decode(
-            OpenMeteoWeatherResponse.self,
-            from: data
-        )
-        let presentation = OpenMeteoWeatherCodePresentation(
-            code: payload.current.weatherCode,
-            isDay: payload.current.isDay != 0
-        )
-        return WeatherContext(
-            observedAt: date,
-            condition: presentation.condition,
-            symbolName: presentation.symbolName,
-            temperatureCelsius: payload.current.temperatureCelsius,
-            precipitationChance:
-                payload.current.precipitationProbability.map { $0 / 100 }
-        )
+        throw lastError ?? OpenMeteoWeatherError.invalidResponse
     }
 }
 

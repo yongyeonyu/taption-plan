@@ -253,9 +253,11 @@ struct MemoDetailView: View {
                             .foregroundStyle(categoryColor)
                         Text(selectedPlan?.title ?? "계획을 선택해 주세요")
                             .font(.taption(size: 16, weight: .bold))
-                        Text(hierarchyText)
-                            .font(.taption(size: 10))
-                            .foregroundStyle(Color.tpSecondary)
+                        if let hierarchyText {
+                            Text(hierarchyText)
+                                .font(.taption(size: 10))
+                                .foregroundStyle(Color.tpSecondary)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
@@ -516,15 +518,13 @@ struct MemoDetailView: View {
         return "\(selectedCategory?.name ?? "계획") · \(date) \(time)"
     }
 
-    private var hierarchyText: String {
-        guard let plan = selectedPlan else {
-            return "시간표에서 액션 아이템을 먼저 선택하세요"
-        }
-        guard let parentID = plan.parentID,
+    private var hierarchyText: String? {
+        guard let plan = selectedPlan,
+              let parentID = plan.parentID,
               let parent = model.snapshot.plans.first(where: {
                   $0.id == parentID
               }) else {
-            return "상위 목표 없음"
+            return nil
         }
         return "\(parent.title) › \(plan.title)"
     }

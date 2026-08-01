@@ -777,6 +777,14 @@ private struct TimelineDetailPanel: View {
         .onChange(of: routeReadings) { _, _ in
             fitMapToRoutes()
         }
+        .onChange(of: model.latestSensorReading?.timestamp) { _, _ in
+            // A fresh GPS fix is the source of truth for the idle map center.
+            fitMapToRoutes()
+        }
+        .onChange(of: model.liveRouteState.lastUpdatedAt) { _, _ in
+            // Live tracking can update before the archived readings refresh.
+            fitMapToRoutes()
+        }
         .onChange(of: selectedPhotoCluster?.id) { _, _ in
             selectedPhotoIndex = 0
         }
@@ -1201,6 +1209,7 @@ private struct TimelineDetailPanel: View {
                 plan.status != .skipped
                     && plan.categoryID != "event"
                     && plan.span.intersection(with: daySpan) != nil
+                    && !GoalRecordPolicy.isGoal(plan)
                     && !(
                         plan.parentID == nil
                             && plan.repeatRules?.isEmpty == false
@@ -1622,6 +1631,32 @@ private struct TimelineDetailPanel: View {
                 }
             }
         }
+
+        // Outside timeline playback, the map is a live-location surface. Add
+        // the current iPhone/Watch fix even when there is no travel segment so
+        // the map remains available and has a concrete camera anchor.
+        if playheadDate == nil,
+           let coordinate = currentLocationCoordinate,
+           !pins.contains(where: {
+               CLLocation(
+                   latitude: $0.coordinate.latitude,
+                   longitude: $0.coordinate.longitude
+               ).distance(
+                   from: CLLocation(
+                       latitude: coordinate.latitude,
+                       longitude: coordinate.longitude
+                   )
+               ) < 8
+           }) {
+            pins.append(
+                RouteLocationPin(
+                    id: "current-location",
+                    coordinate: coordinate,
+                    title: "현재 위치",
+                    tint: Color.tpNow
+                )
+            )
+        }
         return pins
     }
 
@@ -1630,7 +1665,7 @@ private struct TimelineDetailPanel: View {
         return RouteLocationPin(
             id: "playhead-focus",
             coordinate: coordinate,
-            title: "플레이해드",
+            title: "현재 위치",
             tint: .tpNow
         )
     }
@@ -1652,6 +1687,16 @@ private struct TimelineDetailPanel: View {
         playheadRoutePin != nil
             || !routeLocationPins.isEmpty
             || !displayedRouteCoordinates.isEmpty
+    }
+
+    private var currentLocationCoordinate: CLLocationCoordinate2D? {
+        let point = model.latestSensorReading?.point
+            ?? model.liveRouteState.readings.last?.point
+        guard let point, isValidCoordinate(point) else { return nil }
+        return CLLocationCoordinate2D(
+            latitude: point.latitude,
+            longitude: point.longitude
+        )
     }
 
     private var playheadFocusCoordinate: CLLocationCoordinate2D? {
@@ -1903,7 +1948,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private func fitMapToRoutes() {
-        if let focus = playheadFocusCoordinate {
+        if playheadDate != nil, let focus = playheadFocusCoordinate {
             if let lastMapFocusCoordinate,
                CLLocation(
                    latitude: lastMapFocusCoordinate.latitude,
@@ -1926,6 +1971,40 @@ private struct TimelineDetailPanel: View {
                     )
                 )
             )
+            return
+        }
+
+        // When the timeline is idle, the live location is the camera anchor.
+        // Historical route selection must not pull the map away from the user.
+        if playheadDate == nil, let focus = currentLocationCoordinate {
+            if let lastMapFocusCoordinate,
+               CLLocation(
+                   latitude: lastMapFocusCoordinate.latitude,
+                   longitude: lastMapFocusCoordinate.longitude
+               ).distance(
+                   from: CLLocation(
+                       latitude: focus.latitude,
+                       longitude: focus.longitude
+                   )
+               ) < 5 {
+                return
+            }
+            lastMapFocusCoordinate = focus
+            mapPosition = .region(
+                MKCoordinateRegion(
+                    center: focus,
+                    span: MKCoordinateSpan(
+                        latitudeDelta: 0.004,
+                        longitudeDelta: 0.004
+                    )
+                )
+            )
+            return
+        }
+
+        // If playback has a timestamp but no coordinate yet, retain the last
+        // camera rather than jumping to an unrelated route midpoint.
+        if playheadDate != nil {
             return
         }
 
@@ -3381,10 +3460,7 @@ private struct TimelineBoard: View {
             categoryName: categoryName,
             key: PlanCategoryPathPresentation.key(for: plan)
         )
-        let isGoalPlan = isGoalPlan(
-            plan,
-            childCount: index.childCounts[plan.id, default: 0]
-        )
+        let isGoalPlan = isGoalPlan(plan)
         let displayTitle = isGoalPlan
             ? goalDisplayTitle(plan.title)
             : plan.title
@@ -3408,23 +3484,14 @@ private struct TimelineBoard: View {
         )
     }
 
-    private func isGoalPlan(_ plan: PlanRecord, childCount: Int) -> Bool {
-        // A timed segment generated from a repeating goal is still the goal's
-        // scheduled block on the main timeline. Keep only ordinary child
-        // plans rounded as execution items.
+    private func isGoalPlan(_ plan: PlanRecord) -> Bool {
+        // Only an explicit goal or a generated repeat segment gets goal
+        // styling. A regular plan having child items is still a plan; the
+        // mere existence of descendants must not invent a goal in details.
         if plan.origin == .repeatRule {
             return true
         }
-        guard plan.parentID == nil else { return false }
-        if isExplicitGoalTitle(plan.title) {
-            return true
-        }
-        return childCount > 0
-    }
-
-    private func isExplicitGoalTitle(_ raw: String) -> Bool {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.hasPrefix("목표:")
+        return GoalRecordPolicy.isGoal(plan)
     }
 
     private func goalDisplayTitle(_ title: String) -> String {
