@@ -81,12 +81,122 @@ struct TaptionScheduleWidget: Widget {
         }
         .configurationDisplayName("Taption 시간표")
         .description("현재선 중심의 시간표에서 계획을 바로 처리합니다.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemMedium, .systemLarge, .systemExtraLarge])
         .contentMarginsDisabled()
     }
 }
 
+private struct TaptionScheduleWidgetMetrics {
+    let family: WidgetFamily
+
+    var horizontalPadding: CGFloat {
+        switch family {
+        case .systemExtraLarge: 18
+        case .systemLarge: 15
+        default: 14
+        }
+    }
+
+    var verticalPadding: CGFloat {
+        switch family {
+        case .systemExtraLarge: 16
+        case .systemLarge: 14
+        default: 12
+        }
+    }
+
+    var headerHeight: CGFloat {
+        switch family {
+        case .systemExtraLarge: 26
+        case .systemLarge: 24
+        default: 20
+        }
+    }
+
+    var headerBottomSpacing: CGFloat {
+        switch family {
+        case .systemExtraLarge: 14
+        case .systemLarge: 12
+        default: 10
+        }
+    }
+
+    var titleFontSize: CGFloat {
+        switch family {
+        case .systemExtraLarge: 15
+        case .systemLarge: 14
+        default: 13
+        }
+    }
+
+    var badgeFontSize: CGFloat {
+        switch family {
+        case .systemExtraLarge: 9
+        case .systemLarge: 8.5
+        default: 8
+        }
+    }
+
+    var weatherIconSize: CGFloat {
+        switch family {
+        case .systemExtraLarge: 11
+        case .systemLarge: 10.5
+        default: 10
+        }
+    }
+
+    var weatherFontSize: CGFloat {
+        switch family {
+        case .systemExtraLarge: 10
+        case .systemLarge: 9.5
+        default: 9
+        }
+    }
+
+    var catWidth: CGFloat {
+        switch family {
+        case .systemExtraLarge: 116
+        case .systemLarge: 92
+        default: 74
+        }
+    }
+
+    var catHeight: CGFloat {
+        switch family {
+        case .systemExtraLarge: 36
+        case .systemLarge: 31
+        default: 25
+        }
+    }
+
+    var visibleRowLimit: Int {
+        switch family {
+        case .systemExtraLarge: 6
+        case .systemLarge: 5
+        default: 4
+        }
+    }
+
+    var maxItemsPerLane: Int {
+        switch family {
+        case .systemExtraLarge: 14
+        case .systemLarge: 10
+        default: 6
+        }
+    }
+
+    var windowDuration: TimeInterval {
+        switch family {
+        case .systemExtraLarge: 24 * 3_600
+        case .systemLarge: 12 * 3_600
+        default: TaptionWidgetPlaybackEngine.defaultWindowDuration
+        }
+    }
+}
+
 private struct TaptionScheduleWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+
     let entry: TaptionScheduleEntry
 
     var body: some View {
@@ -97,9 +207,11 @@ private struct TaptionScheduleWidgetView: View {
             )
         ) { context in
             let playbackDate = max(entry.date, context.date)
+            let metrics = TaptionScheduleWidgetMetrics(family: family)
             VStack(spacing: 0) {
                 header(
                     at: playbackDate,
+                    metrics: metrics,
                     walkPose: TaptionWidgetCatWalkEngine.pose(
                         at: playbackDate,
                         preferredAction: preferredCatAction(
@@ -110,27 +222,31 @@ private struct TaptionScheduleWidgetView: View {
 
                 PrototypeWidgetTrack(
                     payload: entry.payload,
-                    date: playbackDate
+                    date: playbackDate,
+                    visibleRowLimit: metrics.visibleRowLimit,
+                    maxItemsPerLane: metrics.maxItemsPerLane,
+                    windowDuration: metrics.windowDuration
                 )
-                .frame(height: 112)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, TaptionScheduleWidgetMetrics(family: family).horizontalPadding)
+        .padding(.vertical, TaptionScheduleWidgetMetrics(family: family).verticalPadding)
         .widgetURL(deepLinkURL)
     }
 
     private func header(
         at date: Date,
+        metrics: TaptionScheduleWidgetMetrics,
         walkPose: TaptionWidgetCatWalkPose
     ) -> some View {
         HStack(spacing: 0) {
             Text("지금의 시간표")
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: metrics.titleFontSize, weight: .bold))
                 .foregroundStyle(WidgetPalette.ink)
 
             Text(statusLabel(at: date))
-                .font(.system(size: 8, weight: .bold))
+                .font(.system(size: metrics.badgeFontSize, weight: .bold))
                 .foregroundStyle(WidgetPalette.focusInk)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -143,7 +259,7 @@ private struct TaptionScheduleWidgetView: View {
                     reducesMotion: entry.payload.reducesMotion ?? false,
                     pose: walkPose
                 )
-                .frame(width: 74, height: 25)
+                .frame(width: metrics.catWidth, height: metrics.catHeight)
             }
             .buttonStyle(.plain)
             .padding(.leading, 5)
@@ -152,15 +268,15 @@ private struct TaptionScheduleWidgetView: View {
 
             HStack(spacing: 3) {
                 Image(systemName: weatherSymbol)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: metrics.weatherIconSize, weight: .semibold))
                 Text(weatherAndTimeLabel(at: date))
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: metrics.weatherFontSize, weight: .bold))
                     .monospacedDigit()
             }
             .foregroundStyle(WidgetPalette.weather)
         }
-        .frame(height: 20)
-        .padding(.bottom, 10)
+        .frame(height: metrics.headerHeight)
+        .padding(.bottom, metrics.headerBottomSpacing)
     }
 
     private var visibleItems: [TaptionWidgetItem] {
@@ -243,12 +359,16 @@ private struct TaptionScheduleWidgetView: View {
 private struct PrototypeWidgetTrack: View {
     let payload: TaptionWidgetPayload
     let date: Date
+    let visibleRowLimit: Int
+    let maxItemsPerLane: Int
+    let windowDuration: TimeInterval
 
     var body: some View {
         GeometryReader { proxy in
             let lanes = TaptionWidgetPlaybackEngine.lanes(
                 for: payload.items,
-                at: date
+                at: date,
+                windowDuration: windowDuration
             )
             let labelWidth: CGFloat = 48
             let axisHeight: CGFloat = 14
@@ -257,7 +377,7 @@ private struct PrototypeWidgetTrack: View {
             let visibleRowCount = max(
                 1,
                 min(
-                    TaptionWidgetAutoScrollEngine.visibleRowCount,
+                    visibleRowLimit,
                     lanes.count
                 )
             )
@@ -307,7 +427,7 @@ private struct PrototypeWidgetTrack: View {
 
                     ForEach(Array(lanes.enumerated()), id: \.element) { index, lane in
                         let y = CGFloat(index) * rowHeight
-                        ForEach(trackItems(in: lane).prefix(6)) { item in
+                        ForEach(trackItems(in: lane).prefix(maxItemsPerLane)) { item in
                             itemBar(
                                 item,
                                 lane: lane,
@@ -384,11 +504,11 @@ private struct PrototypeWidgetTrack: View {
     }
 
     private var windowStart: Date {
-        date.addingTimeInterval(-3 * 3_600)
+        date.addingTimeInterval(-windowDuration / 2)
     }
 
     private var windowEnd: Date {
-        date.addingTimeInterval(3 * 3_600)
+        date.addingTimeInterval(windowDuration / 2)
     }
 
     private func trackItems(
@@ -397,7 +517,8 @@ private struct PrototypeWidgetTrack: View {
         TaptionWidgetPlaybackEngine.visibleItems(
             in: lane,
             from: payload.items,
-            at: date
+            at: date,
+            windowDuration: windowDuration
         )
     }
 
@@ -406,7 +527,7 @@ private struct PrototypeWidgetTrack: View {
         trackWidth: CGFloat
     ) -> some View {
         ZStack(alignment: .topLeading) {
-            Text("6시간")
+            Text(windowDurationLabel)
                 .font(.system(size: 7.5, weight: .bold))
                 .foregroundStyle(WidgetPalette.secondary)
                 .frame(width: labelWidth - 4, alignment: .leading)
@@ -426,6 +547,12 @@ private struct PrototypeWidgetTrack: View {
                 .frame(width: 45, alignment: .trailing)
                 .offset(x: labelWidth + trackWidth - 45)
         }
+    }
+
+    private var windowDurationLabel: String {
+        let hours = Int(windowDuration / 3_600)
+        guard hours < 24 else { return "24시간" }
+        return "\(max(1, hours))시간"
     }
 
     private func laneBackground(
@@ -1993,6 +2120,18 @@ private struct TaptionLiveActivityLockScreenView: View {
 
 #if DEBUG
 #Preview(as: .systemMedium) {
+    TaptionScheduleWidget()
+} timeline: {
+    TaptionScheduleEntry(date: .now, payload: .placeholder)
+}
+
+#Preview(as: .systemLarge) {
+    TaptionScheduleWidget()
+} timeline: {
+    TaptionScheduleEntry(date: .now, payload: .placeholder)
+}
+
+#Preview(as: .systemExtraLarge) {
     TaptionScheduleWidget()
 } timeline: {
     TaptionScheduleEntry(date: .now, payload: .placeholder)

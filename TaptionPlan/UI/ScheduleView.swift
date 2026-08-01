@@ -2905,21 +2905,51 @@ private struct TimelineBoard: View {
             categoryName: categoryName,
             key: planCategoryPath(for: plan)
         )
+        let isGoalPlan = isGoalPlan(
+            plan,
+            childCount: index.childCounts[plan.id, default: 0]
+        )
+        let displayTitle = isGoalPlan
+            ? goalDisplayTitle(plan.title)
+            : plan.title
         return timelineBlock(
             id: plan.id,
             planID: plan.id,
-            title: plan.title,
+            title: displayTitle,
             span: plan.span,
             top: top,
             height: height,
             isFixed: plan.isFixed,
             groupCount: childCount > 0 ? childCount : nil,
             status: plan.status,
-            detailText: ["계획", categoryDetail]
+            detailText: isGoalPlan
+                ? "목표 · \(categoryDetail)"
+                : ["계획", categoryDetail]
                 .joined(separator: " · "),
+            isGoal: isGoalPlan,
             categoryID: plan.categoryID,
             categoryName: categoryDetail
         )
+    }
+
+    private func isGoalPlan(_ plan: PlanRecord, childCount: Int) -> Bool {
+        guard plan.parentID == nil else { return false }
+        if isExplicitGoalTitle(plan.title) {
+            return true
+        }
+        return childCount > 0
+    }
+
+    private func isExplicitGoalTitle(_ raw: String) -> Bool {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.hasPrefix("목표:")
+    }
+
+    private func goalDisplayTitle(_ title: String) -> String {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+        if trimmed.hasPrefix("목표:") { return trimmed }
+        return "목표:\(trimmed)"
     }
 
     private func timelineBlock(
@@ -3076,6 +3106,7 @@ private struct TimelineBoard: View {
         isActual: Bool = false,
         opensLocationTimeline: Bool = false,
         detailText: String? = nil,
+        isGoal: Bool = false,
         categoryID: String? = nil,
         categoryName: String? = nil
     ) -> TimelineBlock {
@@ -3113,7 +3144,8 @@ private struct TimelineBoard: View {
             endsAt: span.end,
             detailText: detailText,
             categoryID: categoryID,
-            categoryName: categoryName
+            categoryName: categoryName,
+            isGoal: isGoal
         )
     }
 
@@ -4379,7 +4411,11 @@ private struct TimelineBar: View {
             alignment: .leading
         )
         .background {
-            if block.isFixed {
+            if block.isGoal {
+                GoalStripeBackground(
+                    tint: color.opacity(0.76)
+                )
+            } else if block.isFixed {
                 if block.isActual {
                     actualColor.opacity(0.82)
                 } else {
@@ -4402,6 +4438,12 @@ private struct TimelineBar: View {
                                 blue: 0.80
                             ),
                         lineWidth: 1
+                    )
+            } else if block.isGoal {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(
+                        color,
+                        lineWidth: 1.1
                     )
             }
         }
@@ -4505,6 +4547,36 @@ private struct TimelineBar: View {
     }
 }
 
+private struct GoalStripeBackground: View {
+    let tint: Color
+
+    var body: some View {
+        Canvas { context, size in
+            context.fill(
+                Path(CGRect(origin: .zero, size: size)),
+                with: .color(tint.opacity(0.22))
+            )
+
+            var path = Path()
+            var x: CGFloat = -size.height
+            while x < size.width + size.height {
+                path.move(to: CGPoint(x: x, y: size.height))
+                path.addLine(to: CGPoint(x: x + size.height, y: 0))
+                x += 10
+            }
+            context.stroke(
+                path,
+                with: .color(tint.opacity(0.6)),
+                style: StrokeStyle(
+                    lineWidth: 2.8,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
+        }
+    }
+}
+
 private struct TimelineRowModel: Identifiable {
     let id: String
     let title: String
@@ -4558,6 +4630,7 @@ private struct TimelineBlock: Identifiable {
     let id: UUID
     let planID: UUID?
     let title: String
+    let isGoal: Bool
     let start: CGFloat
     let length: CGFloat
     let top: CGFloat
@@ -4594,11 +4667,13 @@ private struct TimelineBlock: Identifiable {
         endsAt: Date? = nil,
         detailText: String? = nil,
         categoryID: String? = nil,
-        categoryName: String? = nil
+        categoryName: String? = nil,
+        isGoal: Bool = false
     ) {
         self.id = id
         self.planID = planID
         self.title = title
+        self.isGoal = isGoal
         self.start = start
         self.length = length
         self.top = top

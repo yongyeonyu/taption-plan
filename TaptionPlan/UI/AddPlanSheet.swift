@@ -166,6 +166,9 @@ struct AddPlanSheet: View {
     private var goalSheetContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 0) {
+                Text("목표:")
+                    .font(.taption(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.tpInk.opacity(0.72))
                 TextField("목표 이름", text: $title)
                     .font(.taption(size: 17, weight: .semibold))
                     .focused($titleFocused)
@@ -264,7 +267,7 @@ struct AddPlanSheet: View {
                             parentID = parentID == plan.id ? nil : plan.id
                         } label: {
                             DraftChip(
-                                title: plan.title,
+                                title: goalDisplayTitle(plan.title),
                                 selected: parentID == plan.id
                             )
                         }
@@ -346,12 +349,27 @@ struct AddPlanSheet: View {
 
     private var resolvedPlanTitle: String? {
         if model.addPlanContext.isGoal {
-            let cleanTitle = title.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-            return cleanTitle.isEmpty ? nil : cleanTitle
+            let cleanGoal = cleanGoalTitleInput(title)
+            return cleanGoal.isEmpty ? nil : cleanGoal
         }
         return resolvedQuickTitle
+    }
+
+    private func cleanGoalTitleInput(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "" }
+        if trimmed.hasPrefix("목표:") {
+            let withoutPrefix = trimmed.dropFirst("목표:".count)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return withoutPrefix.isEmpty ? "" : "목표:\(withoutPrefix)"
+        }
+        return "목표:\(trimmed)"
+    }
+
+    private func goalDisplayTitle(_ raw: String) -> String {
+        cleanGoalTitleInput(raw).isEmpty
+            ? raw
+            : cleanGoalTitleInput(raw)
     }
 
     private var canAddPlan: Bool { resolvedPlanTitle != nil }
