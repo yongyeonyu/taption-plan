@@ -4,10 +4,7 @@ enum TaptionWidgetPayloadFactory {
     static func make(
         from snapshot: TaptionDataSnapshot,
         now: Date = .now,
-        calendar: Calendar = .autoupdatingCurrent,
-        displayCenterDate: Date? = nil,
-        displayDuration: TimeInterval? = nil,
-        displayResolutionLabel: String? = nil
+        calendar: Calendar = .autoupdatingCurrent
     ) -> TaptionWidgetPayload {
         let dayStart = calendar.startOfDay(for: now)
         let widgetStart = calendar.date(
@@ -145,9 +142,9 @@ enum TaptionWidgetPayloadFactory {
             generatedAt: now,
             viewportStart: widgetStart,
             viewportEnd: widgetEnd,
-            displayCenterDate: displayCenterDate ?? now,
-            displayDuration: displayDuration,
-            displayResolutionLabel: displayResolutionLabel,
+            displayCenterDate: now,
+            displayDuration: TaptionWidgetPlaybackEngine.defaultWindowDuration,
+            displayResolutionLabel: TaptionWidgetPlaybackEngine.defaultResolutionLabel,
             items: (
                 planItems
                     + calendarItems

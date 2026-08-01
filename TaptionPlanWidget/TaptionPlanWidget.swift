@@ -187,11 +187,7 @@ private struct TaptionScheduleWidgetMetrics {
     }
 
     var windowDuration: TimeInterval {
-        switch family {
-        case .systemExtraLarge: 24 * 3_600
-        case .systemLarge: 12 * 3_600
-        default: TaptionWidgetPlaybackEngine.defaultWindowDuration
-        }
+        TaptionWidgetPlaybackEngine.defaultWindowDuration
     }
 }
 
@@ -210,14 +206,8 @@ private struct TaptionScheduleWidgetView: View {
             let payload = freshestPayload
             let playbackDate = max(entry.date, context.date)
             let metrics = TaptionScheduleWidgetMetrics(family: family)
-            let trackDate = timelineCenterDate(
-                payload: payload,
-                playbackDate: playbackDate
-            )
-            let trackDuration = timelineWindowDuration(
-                payload: payload,
-                metrics: metrics
-            )
+            let trackDate = timelineCenterDate(playbackDate: playbackDate)
+            let trackDuration = timelineWindowDuration(metrics: metrics)
             VStack(spacing: 0) {
                 header(
                     at: playbackDate,
@@ -242,7 +232,7 @@ private struct TaptionScheduleWidgetView: View {
                         visibleRowLimit: metrics.visibleRowLimit,
                         maxItemsPerLane: metrics.maxItemsPerLane,
                         windowDuration: trackDuration,
-                        resolutionLabel: payload.displayResolutionLabel
+                        resolutionLabel: TaptionWidgetPlaybackEngine.defaultResolutionLabel
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -410,7 +400,7 @@ private struct TaptionScheduleWidgetView: View {
         payload: TaptionWidgetPayload,
         at date: Date
     ) -> URL? {
-        let linkDate = timelineCenterDate(payload: payload, playbackDate: date)
+        let linkDate = timelineCenterDate(playbackDate: date)
         guard let item = actionItem(at: linkDate, payload: payload) else {
             return URL(string: "taptionplan://today")
         }
@@ -418,25 +408,15 @@ private struct TaptionScheduleWidgetView: View {
     }
 
     private func timelineCenterDate(
-        payload: TaptionWidgetPayload,
         playbackDate: Date
     ) -> Date {
-        guard let center = payload.displayCenterDate else {
-            return playbackDate
-        }
-        let followsNow =
-            abs(center.timeIntervalSince(payload.generatedAt)) < 120
-        return followsNow ? playbackDate : center
+        playbackDate
     }
 
     private func timelineWindowDuration(
-        payload: TaptionWidgetPayload,
         metrics: TaptionScheduleWidgetMetrics
     ) -> TimeInterval {
-        guard let duration = payload.displayDuration else {
-            return metrics.windowDuration
-        }
-        return max(60, duration)
+        metrics.windowDuration
     }
 
     private var playbackInterval: TimeInterval {
@@ -2000,10 +1980,7 @@ struct TaptionWidgetActionIntent: AppIntent {
             )
             try await repository.save(updated)
             refreshedPayload = TaptionWidgetPayloadFactory.make(
-                from: updated,
-                displayCenterDate: previousPayload.displayCenterDate,
-                displayDuration: previousPayload.displayDuration,
-                displayResolutionLabel: previousPayload.displayResolutionLabel
+                from: updated
             )
             command.appliedToSharedRepository = true
         } catch {
@@ -2017,6 +1994,9 @@ struct TaptionWidgetActionIntent: AppIntent {
             if let index = payload.items.firstIndex(where: { $0.id == id }) {
                 apply(action, to: &payload.items[index], in: payload)
                 payload.generatedAt = .now
+                payload.displayCenterDate = .now
+                payload.displayDuration = TaptionWidgetPlaybackEngine.defaultWindowDuration
+                payload.displayResolutionLabel = TaptionWidgetPlaybackEngine.defaultResolutionLabel
                 try TaptionWidgetSharedStore.writePayload(payload)
             }
         }

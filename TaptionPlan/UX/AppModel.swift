@@ -82,10 +82,6 @@ final class AppModel {
         Task<Void, Never>?
     @ObservationIgnored private var widgetReloadFollowupTask:
         Task<Void, Never>?
-    @ObservationIgnored private var widgetDisplayCenterDate: Date?
-    @ObservationIgnored private var widgetDisplayDuration: TimeInterval?
-    @ObservationIgnored private var widgetDisplayResolutionLabel: String?
-    @ObservationIgnored private var lastWidgetDisplayPublishKey: String?
     @ObservationIgnored private var isSceneActive = false
     @ObservationIgnored private var isHealthRefreshRunning = false
     @ObservationIgnored private var isHealthBackgroundDeliveryConfigured = false
@@ -291,28 +287,6 @@ final class AppModel {
             snapshot.settings.startScale = scale.timelineLevel
             Task { await persist() }
         }
-    }
-
-    func syncWidgetTimelineDisplay(
-        center: Date,
-        duration: TimeInterval,
-        resolutionLabel: String
-    ) {
-        let safeDuration = max(60, duration)
-        widgetDisplayCenterDate = center
-        widgetDisplayDuration = safeDuration
-        widgetDisplayResolutionLabel = resolutionLabel
-        let publishKey = [
-            "\(Int(center.timeIntervalSinceReferenceDate))",
-            "\(Int(safeDuration))",
-            resolutionLabel,
-            "\(snapshotRevision)",
-        ].joined(separator: "|")
-        guard publishKey != lastWidgetDisplayPublishKey else {
-            return
-        }
-        lastWidgetDisplayPublishKey = publishKey
-        publishWidgetPayload()
     }
 
     func shiftSelectedDate(by direction: Int) {
@@ -3290,10 +3264,7 @@ final class AppModel {
         let payload = TaptionWidgetPayloadFactory.make(
             from: snapshot,
             now: now,
-            calendar: calendar,
-            displayCenterDate: widgetDisplayCenterDate,
-            displayDuration: widgetDisplayDuration,
-            displayResolutionLabel: widgetDisplayResolutionLabel
+            calendar: calendar
         )
         do {
             try TaptionWidgetSharedStore.writePayload(payload)

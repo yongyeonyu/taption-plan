@@ -2232,13 +2232,6 @@ private struct TimelineBoardLayoutKey: Equatable {
     let viewportEnd: Double
 }
 
-private struct TimelineWidgetDisplaySyncKey: Equatable {
-    let snapshotRevision: UInt64
-    let centerSecond: Int
-    let durationSecond: Int
-    let resolutionLabel: String
-}
-
 @MainActor
 private final class TimelineBoardLayoutCache {
     private var key: TimelineBoardLayoutKey?
@@ -2415,9 +2408,6 @@ private struct TimelineBoard: View {
             } else {
                 resetViewport()
             }
-        }
-        .task(id: widgetDisplaySyncKey) {
-            syncWidgetDisplayWithVisibleTimeline()
         }
         .accessibilityHint(
             "간트 본문을 드래그해 이동하고 두 손가락으로 최대 1분 단위까지 확대합니다"
@@ -4028,32 +4018,6 @@ private struct TimelineBoard: View {
                 in: visibleSpan,
                 scale: scale
             )
-        )
-    }
-
-    private var widgetDisplaySpan: TimeSpan {
-        isContinuousDay ? visibleSpan : viewportVisibleSpan
-    }
-
-    private var widgetDisplaySyncKey: TimelineWidgetDisplaySyncKey {
-        let span = widgetDisplaySpan
-        return TimelineWidgetDisplaySyncKey(
-            snapshotRevision: model.snapshotRevision,
-            centerSecond: Int(
-                span.start.addingTimeInterval(span.duration / 2)
-                    .timeIntervalSinceReferenceDate
-            ),
-            durationSecond: Int(span.duration),
-            resolutionLabel: currentResolutionPreset.rawValue
-        )
-    }
-
-    private func syncWidgetDisplayWithVisibleTimeline() {
-        let span = widgetDisplaySpan
-        model.syncWidgetTimelineDisplay(
-            center: span.start.addingTimeInterval(span.duration / 2),
-            duration: span.duration,
-            resolutionLabel: currentResolutionPreset.rawValue
         )
     }
 

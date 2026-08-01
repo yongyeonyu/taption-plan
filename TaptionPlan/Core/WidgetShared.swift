@@ -145,6 +145,7 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
 
 enum TaptionWidgetPlaybackEngine {
     static let defaultWindowDuration: TimeInterval = 6 * 3_600
+    static let defaultResolutionLabel = "6시간"
 
     static func lanes(
         for items: [TaptionWidgetItem],
@@ -629,8 +630,8 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
             viewportStart: day,
             viewportEnd: day.addingTimeInterval(86_400),
             displayCenterDate: .now,
-            displayDuration: 24 * 60 * 60,
-            displayResolutionLabel: "1일",
+            displayDuration: TaptionWidgetPlaybackEngine.defaultWindowDuration,
+            displayResolutionLabel: TaptionWidgetPlaybackEngine.defaultResolutionLabel,
             items: [],
             catStyle: "calico",
             hidesSensitiveContent: true,
@@ -649,8 +650,8 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
             viewportStart: day,
             viewportEnd: day.addingTimeInterval(86_400),
             displayCenterDate: now,
-            displayDuration: 24 * 60 * 60,
-            displayResolutionLabel: "1일",
+            displayDuration: TaptionWidgetPlaybackEngine.defaultWindowDuration,
+            displayResolutionLabel: TaptionWidgetPlaybackEngine.defaultResolutionLabel,
             items: [
                 TaptionWidgetItem(
                     id: UUID(),

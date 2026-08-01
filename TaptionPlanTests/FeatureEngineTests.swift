@@ -2444,6 +2444,72 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testWidgetPayloadIsAlwaysCurrentCenteredAtSixHours() {
+        let now = makeDate(2026, 8, 1, 18, 0)
+        let payload = TaptionWidgetPayloadFactory.make(
+            from: .empty,
+            now: now
+        )
+
+        XCTAssertEqual(payload.displayCenterDate, now)
+        XCTAssertEqual(
+            payload.displayDuration,
+            TaptionWidgetPlaybackEngine.defaultWindowDuration
+        )
+        XCTAssertEqual(
+            payload.displayResolutionLabel,
+            TaptionWidgetPlaybackEngine.defaultResolutionLabel
+        )
+        XCTAssertEqual(payload.displayDuration, 6 * hour)
+
+        let oldOffice = TaptionWidgetItem(
+            id: UUID(),
+            title: "회사",
+            categoryID: "location",
+            startsAt: now.addingTimeInterval(-6 * hour),
+            endsAt: now.addingTimeInterval(-4 * hour),
+            status: "recorded",
+            isFixed: true,
+            lane: .location
+        )
+        let currentHome = TaptionWidgetItem(
+            id: UUID(),
+            title: "집",
+            categoryID: "location",
+            startsAt: now.addingTimeInterval(-hour),
+            endsAt: now.addingTimeInterval(hour),
+            status: "recorded",
+            isFixed: true,
+            lane: .location
+        )
+        let oldMovement = TaptionWidgetItem(
+            id: UUID(),
+            title: "자가용",
+            categoryID: "movement",
+            startsAt: now.addingTimeInterval(-5 * hour),
+            endsAt: now.addingTimeInterval(-4 * hour),
+            status: "recorded",
+            isFixed: true,
+            lane: .movement
+        )
+
+        XCTAssertEqual(
+            TaptionWidgetPlaybackEngine.visibleItems(
+                in: .location,
+                from: [oldOffice, currentHome, oldMovement],
+                at: now
+            ).map(\.title),
+            ["집"]
+        )
+        XCTAssertTrue(
+            TaptionWidgetPlaybackEngine.visibleItems(
+                in: .movement,
+                from: [oldOffice, currentHome, oldMovement],
+                at: now
+            ).isEmpty
+        )
+    }
+
     func testWidgetAutomaticallyScrollsOverflowingRowsAndReturns() {
         let reference = Date(timeIntervalSinceReferenceDate: 0)
 
