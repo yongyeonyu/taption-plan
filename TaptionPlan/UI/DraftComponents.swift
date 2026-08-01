@@ -520,6 +520,338 @@ struct RunningCatView: View {
     }
 }
 
+struct CatActionPreviewStage: View {
+    let coat: CatCoat
+    let action: TaptionWidgetCatAction
+    let reducesMotion: Bool
+
+    var body: some View {
+        TimelineView(
+            .animation(
+                minimumInterval: TaptionWidgetCatPreviewEngine.stepDuration,
+                paused: reducesMotion
+            )
+        ) { context in
+            let pose = TaptionWidgetCatPreviewEngine.pose(
+                at: context.date,
+                action: action,
+                reducesMotion: reducesMotion
+            )
+            GeometryReader { proxy in
+                let catWidth: CGFloat = 64
+                let travelWidth = max(0, proxy.size.width - catWidth)
+
+                ZStack(alignment: .topLeading) {
+                    Rectangle()
+                        .fill(.black.opacity(0.08))
+                        .frame(height: 1)
+                        .offset(y: proxy.size.height - 7)
+
+                    PreviewActionCat(
+                        coat: coat,
+                        pose: pose,
+                        reducesMotion: reducesMotion
+                    )
+                    .frame(width: catWidth, height: 48)
+                    .scaleEffect(x: pose.facesLeft ? -1 : 1, y: 1)
+                    .offset(
+                        x: action.movesAcrossTrack
+                            ? travelWidth * pose.progress
+                            : travelWidth / 2,
+                        y: max(0, (proxy.size.height - 48) / 2)
+                    )
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "\(coat.rawValue), \(action.previewTitle) 미리보기"
+        )
+    }
+}
+
+private struct PreviewActionCat: View {
+    let coat: CatCoat
+    let pose: TaptionWidgetCatWalkPose
+    let reducesMotion: Bool
+
+    var body: some View {
+        let action = pose.action
+        let phase = pose.legPhase
+
+        ZStack {
+            accessory(action, phase: phase)
+
+            HStack(spacing: -5) {
+                tail(action)
+
+                Ellipse()
+                    .fill(coat.baseColor)
+                    .frame(
+                        width: bodySize(action).width,
+                        height: bodySize(action).height
+                    )
+                    .overlay {
+                        Ellipse().stroke(outline.opacity(0.9), lineWidth: 1.2)
+                    }
+                    .overlay(alignment: .bottom) {
+                        legs(action, phase: phase)
+                    }
+                    .overlay(alignment: .trailing) {
+                        head(action, phase: phase)
+                            .rotationEffect(
+                                .degrees(
+                                    reducesMotion
+                                        ? 0
+                                        : pose.headTiltDegrees
+                                )
+                            )
+                            .offset(
+                                x: action == .sleeping ? 1 : 7,
+                                y: headOffset(action, phase: phase)
+                            )
+                    }
+            }
+            .rotationEffect(.degrees(action == .sleeping ? 4 : 0))
+            .offset(y: bounce(action, phase: phase))
+        }
+    }
+
+    private var outline: Color {
+        coat == .black
+            ? .black
+            : Color(red: 0.27, green: 0.28, blue: 0.30)
+    }
+
+    private var eye: Color {
+        coat == .black
+            ? Color(red: 0.96, green: 0.83, blue: 0.37)
+            : .tpInk
+    }
+
+    private func bodySize(_ action: TaptionWidgetCatAction) -> CGSize {
+        switch action {
+        case .sitting, .grooming:
+            CGSize(width: 25, height: 24)
+        case .sleeping:
+            CGSize(width: 34, height: 14)
+        case .startled:
+            CGSize(width: 26, height: 20)
+        default:
+            CGSize(width: 31, height: 17)
+        }
+    }
+
+    private func bounce(
+        _ action: TaptionWidgetCatAction,
+        phase: Int
+    ) -> CGFloat {
+        guard !reducesMotion else { return 0 }
+        return switch action {
+        case .running:
+            phase.isMultiple(of: 2) ? 1 : -3
+        case .walking, .ballPlay, .fishingPlay:
+            phase.isMultiple(of: 2) ? 0 : -1.5
+        case .startled:
+            -3
+        default:
+            0
+        }
+    }
+
+    private func headOffset(
+        _ action: TaptionWidgetCatAction,
+        phase: Int
+    ) -> CGFloat {
+        switch action {
+        case .eating:
+            phase.isMultiple(of: 2) ? 5 : 8
+        case .sleeping:
+            4
+        case .grooming:
+            phase.isMultiple(of: 2) ? -7 : -3
+        case .sitting:
+            -8
+        case .startled:
+            -5
+        default:
+            -4
+        }
+    }
+
+    private func tail(_ action: TaptionWidgetCatAction) -> some View {
+        Capsule()
+            .fill(action == .startled ? coat.baseColor : outline)
+            .overlay {
+                if action == .startled {
+                    Capsule().stroke(outline, lineWidth: 1.2)
+                }
+            }
+            .frame(
+                width: action == .startled ? 9 : 3,
+                height: action == .startled ? 30 : 22
+            )
+            .rotationEffect(
+                .degrees(
+                    action == .startled
+                        ? -18
+                        : -54 + (pose.tailSwing * 12)
+                )
+            )
+            .offset(
+                x: action == .startled ? 1 : 4,
+                y: action == .sleeping ? 4 : -2
+            )
+    }
+
+    private func head(
+        _ action: TaptionWidgetCatAction,
+        phase: Int
+    ) -> some View {
+        ZStack {
+            HStack(spacing: 7) {
+                Triangle().fill(coat.baseColor)
+                Triangle().fill(coat.baseColor)
+            }
+            .frame(width: 18, height: 9)
+            .offset(y: -7)
+
+            Circle()
+                .fill(coat.baseColor)
+                .overlay { Circle().stroke(outline.opacity(0.9), lineWidth: 1) }
+
+            HStack(spacing: 5) {
+                eyeShape(action)
+                eyeShape(action)
+            }
+            .offset(y: -1)
+
+            Circle()
+                .fill(Color(red: 1, green: 0.58, blue: 0.65))
+                .frame(width: 2.5, height: 2)
+                .offset(y: 3)
+
+            if action == .grooming {
+                Capsule()
+                    .fill(coat.baseColor)
+                    .overlay { Capsule().stroke(outline, lineWidth: 0.8) }
+                    .frame(width: 5, height: 13)
+                    .rotationEffect(
+                        .degrees(phase.isMultiple(of: 2) ? -28 : 8)
+                    )
+                    .offset(x: -7, y: 6)
+            }
+        }
+        .frame(width: 18, height: 18)
+    }
+
+    private func eyeShape(_ action: TaptionWidgetCatAction) -> some View {
+        Capsule()
+            .fill(eye)
+            .frame(
+                width: action == .sleeping ? 4 : 2,
+                height: action == .sleeping ? 1 : 2.5
+            )
+    }
+
+    @ViewBuilder
+    private func legs(
+        _ action: TaptionWidgetCatAction,
+        phase: Int
+    ) -> some View {
+        if action != .sleeping {
+            let spread = phase.isMultiple(of: 2) ? 22.0 : -22.0
+            HStack(spacing: action == .sitting ? 8 : 11) {
+                Capsule()
+                    .fill(outline)
+                    .frame(
+                        width: 2.5,
+                        height: action == .sitting ? 13 : 11
+                    )
+                    .rotationEffect(
+                        .degrees(action.movesAcrossTrack ? spread : 4)
+                    )
+                Capsule()
+                    .fill(outline)
+                    .frame(
+                        width: 2.5,
+                        height: action == .sitting ? 13 : 11
+                    )
+                    .rotationEffect(
+                        .degrees(action.movesAcrossTrack ? -spread : -4)
+                    )
+            }
+            .offset(y: action == .sitting ? 8 : 6)
+        }
+    }
+
+    @ViewBuilder
+    private func accessory(
+        _ action: TaptionWidgetCatAction,
+        phase: Int
+    ) -> some View {
+        switch action {
+        case .sleeping:
+            Text(phase.isMultiple(of: 2) ? "z" : "zZ")
+                .font(.system(size: 10, weight: .black, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+                .offset(x: 22, y: -15)
+        case .eating:
+            ZStack {
+                Capsule()
+                    .fill(Color(red: 0.89, green: 0.46, blue: 0.36))
+                    .frame(width: 20, height: 7)
+                HStack(spacing: 1) {
+                    Circle().fill(.brown).frame(width: 3, height: 3)
+                    Circle().fill(.brown).frame(width: 3, height: 3)
+                }
+                .offset(y: -3)
+            }
+            .offset(x: 21, y: 16)
+        case .startled:
+            Image(systemName: "exclamationmark")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Color.tpNow)
+                .offset(x: 21, y: -17)
+        case .ballPlay:
+            Circle()
+                .fill(Color(red: 0.38, green: 0.61, blue: 0.88))
+                .overlay { Circle().stroke(.white.opacity(0.9), lineWidth: 1) }
+                .frame(width: 11, height: 11)
+                .offset(
+                    x: phase.isMultiple(of: 2) ? 23 : 16,
+                    y: phase.isMultiple(of: 2) ? 15 : 8
+                )
+        case .fishingPlay:
+            ZStack {
+                Path { path in
+                    path.move(to: CGPoint(x: 16, y: 4))
+                    path.addLine(to: CGPoint(x: 45, y: 29))
+                }
+                .stroke(
+                    Color.tpSecondary,
+                    style: StrokeStyle(lineWidth: 1, dash: [2, 2])
+                )
+                Image(systemName: "fish.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(Color.tpPlaceDark)
+                    .offset(
+                        x: 21,
+                        y: 12 + CGFloat(phase % 2) * 3
+                    )
+            }
+            .frame(width: 64, height: 48)
+        case .grooming:
+            Image(systemName: "sparkles")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(Color.tpWeatherDark)
+                .offset(x: 20, y: -14)
+        default:
+            EmptyView()
+        }
+    }
+}
+
 private struct Triangle: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()

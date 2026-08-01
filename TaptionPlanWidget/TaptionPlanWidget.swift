@@ -101,7 +101,10 @@ private struct TaptionScheduleWidgetView: View {
                 header(
                     at: playbackDate,
                     walkPose: TaptionWidgetCatWalkEngine.pose(
-                        at: playbackDate
+                        at: playbackDate,
+                        preferredAction: preferredCatAction(
+                            at: playbackDate
+                        )
                     )
                 )
 
@@ -140,7 +143,7 @@ private struct TaptionScheduleWidgetView: View {
                     reducesMotion: entry.payload.reducesMotion ?? false,
                     pose: walkPose
                 )
-                .frame(width: 48, height: 22)
+                .frame(width: 74, height: 25)
             }
             .buttonStyle(.plain)
             .padding(.leading, 5)
@@ -181,6 +184,23 @@ private struct TaptionScheduleWidgetView: View {
         }
             ?? actionableItems.first(where: { date < $0.startsAt })
             ?? actionableItems.last
+    }
+
+    private func preferredCatAction(
+        at date: Date
+    ) -> TaptionWidgetCatAction? {
+        guard let item = visibleItems.first(where: {
+            $0.resolvedLane == .action
+                && !$0.isFixed
+                && $0.startsAt <= date
+                && date < $0.endsAt
+        }) else {
+            return nil
+        }
+        return TaptionWidgetCatActionSelector.preferredAction(
+            categoryID: item.categoryID,
+            title: item.title
+        )
     }
 
     private func statusLabel(at date: Date) -> String {
@@ -233,9 +253,34 @@ private struct PrototypeWidgetTrack: View {
             let labelWidth: CGFloat = 48
             let axisHeight: CGFloat = 14
             let trackWidth = max(1, proxy.size.width - labelWidth)
+            let viewportHeight = max(1, proxy.size.height - axisHeight)
+            let visibleRowCount = max(
+                1,
+                min(
+                    TaptionWidgetAutoScrollEngine.visibleRowCount,
+                    lanes.count
+                )
+            )
             let rowHeight = max(
                 17,
-                (proxy.size.height - axisHeight) / CGFloat(lanes.count)
+                viewportHeight / CGFloat(visibleRowCount)
+            )
+            let contentHeight = rowHeight * CGFloat(lanes.count)
+            let scrollProgress = TaptionWidgetAutoScrollEngine.progress(
+                at: date,
+                rowCount: lanes.count,
+                visibleRows: visibleRowCount,
+                reducesMotion: payload.reducesMotion ?? false
+            )
+            let scrollOffset = CGFloat(
+                TaptionWidgetAutoScrollEngine.offset(
+                    at: date,
+                    contentHeight: Double(contentHeight),
+                    viewportHeight: Double(viewportHeight),
+                    rowCount: lanes.count,
+                    visibleRows: visibleRowCount,
+                    reducesMotion: payload.reducesMotion ?? false
+                )
             )
             let nowX = labelWidth + trackWidth / 2
 
@@ -245,52 +290,71 @@ private struct PrototypeWidgetTrack: View {
                     trackWidth: trackWidth
                 )
 
-                ForEach(Array(lanes.enumerated()), id: \.element) { index, lane in
-                    let y = axisHeight + CGFloat(index) * rowHeight
-                    laneBackground(
-                        lane: lane,
-                        width: proxy.size.width,
-                        height: rowHeight
-                    )
-                    .offset(y: y)
+                ZStack(alignment: .topLeading) {
+                    ForEach(Array(lanes.enumerated()), id: \.element) { index, lane in
+                        let y = CGFloat(index) * rowHeight
+                        laneBackground(
+                            lane: lane,
+                            width: proxy.size.width,
+                            height: rowHeight
+                        )
+                        .offset(y: y)
 
-                    laneLabel(lane)
-                        .frame(width: labelWidth - 4, height: rowHeight)
-                        .offset(x: 2, y: y)
+                        laneLabel(lane)
+                            .frame(width: labelWidth - 4, height: rowHeight)
+                            .offset(x: 2, y: y)
+                    }
+
+                    ForEach(Array(lanes.enumerated()), id: \.element) { index, lane in
+                        let y = CGFloat(index) * rowHeight
+                        ForEach(trackItems(in: lane).prefix(6)) { item in
+                            itemBar(
+                                item,
+                                lane: lane,
+                                trackWidth: trackWidth,
+                                rowHeight: rowHeight
+                            )
+                            .offset(
+                                x: labelWidth
+                                    + trackWidth * fraction(item.startsAt),
+                                y: y
+                                    + max(
+                                        2,
+                                        (rowHeight - barHeight(rowHeight)) / 2
+                                    )
+                            )
+                        }
+                    }
                 }
+                .frame(
+                    width: proxy.size.width,
+                    height: contentHeight,
+                    alignment: .topLeading
+                )
+                .offset(y: -scrollOffset)
+                .frame(
+                    width: proxy.size.width,
+                    height: viewportHeight,
+                    alignment: .top
+                )
+                .clipped()
+                .offset(y: axisHeight)
 
                 ForEach([0.0, 0.25, 0.5, 0.75, 1.0], id: \.self) { fraction in
                     Rectangle()
                         .fill(WidgetPalette.line.opacity(fraction == 0.5 ? 0.9 : 0.55))
-                        .frame(width: 0.5, height: rowHeight * CGFloat(lanes.count))
+                        .frame(width: 0.5, height: viewportHeight)
                         .offset(
                             x: labelWidth + trackWidth * fraction,
                             y: axisHeight
                         )
                 }
 
-                ForEach(Array(lanes.enumerated()), id: \.element) { index, lane in
-                    let y = axisHeight + CGFloat(index) * rowHeight
-                    ForEach(trackItems(in: lane).prefix(6)) { item in
-                        itemBar(
-                            item,
-                            lane: lane,
-                            trackWidth: trackWidth,
-                            rowHeight: rowHeight
-                        )
-                        .offset(
-                            x: labelWidth + trackWidth * fraction(item.startsAt),
-                            y: y
-                                + max(2, (rowHeight - barHeight(rowHeight)) / 2)
-                        )
-                    }
-                }
-
                 Rectangle()
                     .fill(WidgetPalette.now)
                     .frame(
                         width: 1.5,
-                        height: rowHeight * CGFloat(lanes.count)
+                        height: viewportHeight
                     )
                     .offset(x: nowX - 0.75, y: axisHeight)
 
@@ -298,6 +362,22 @@ private struct PrototypeWidgetTrack: View {
                     .fill(WidgetPalette.now)
                     .frame(width: 6, height: 6)
                     .offset(x: nowX - 3, y: axisHeight - 3)
+
+                if contentHeight > viewportHeight {
+                    Capsule()
+                        .fill(WidgetPalette.line.opacity(0.65))
+                        .frame(width: 2, height: 15)
+                        .overlay(alignment: .top) {
+                            Circle()
+                                .fill(WidgetPalette.secondary.opacity(0.85))
+                                .frame(width: 3.5, height: 3.5)
+                                .offset(y: 11.5 * scrollProgress)
+                        }
+                        .offset(
+                            x: proxy.size.width - 2.5,
+                            y: axisHeight + 4
+                        )
+                }
             }
             .clipped()
         }
@@ -463,9 +543,16 @@ private struct WidgetWalkingCat: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let catWidth = min(31, proxy.size.width)
-            let available = max(0, proxy.size.width - catWidth)
+            let catWidth = min(34, proxy.size.width)
+            let visualInset = catWidth * 0.04
+            let available = max(
+                0,
+                proxy.size.width - catWidth + (visualInset * 2)
+            )
             let progress = reducesMotion ? 0.5 : pose.progress
+            let isMoving = !reducesMotion
+                && pose.action.movesAcrossTrack
+                && !pose.isAtEndpoint
 
             ZStack(alignment: .topLeading) {
                 HStack(spacing: 6) {
@@ -482,24 +569,44 @@ private struct WidgetWalkingCat: View {
                     }
                 }
                 .offset(x: 5, y: 19)
+                .opacity(isMoving ? 1 : 0)
 
                 WidgetCat(
                     style: style,
-                    isRunning: !reducesMotion,
+                    isRunning: isMoving,
                     reducesMotion: reducesMotion,
-                    animationPhase: pose.legPhase
+                    animationPhase: pose.legPhase,
+                    action: reducesMotion ? .sitting : pose.action,
+                    tailSwing: reducesMotion ? 0 : pose.tailSwing,
+                    headTiltDegrees: reducesMotion
+                        ? 0
+                        : pose.headTiltDegrees
                 )
-                .frame(width: catWidth, height: 22)
+                .frame(width: catWidth, height: 25)
                 .scaleEffect(
                     x: pose.facesLeft && !reducesMotion ? -1 : 1,
                     y: 1
                 )
-                .offset(x: available * progress)
+                .offset(x: (available * progress) - visualInset)
             }
         }
         .accessibilityLabel(
-            "\(CatPalette(style: style).name) 고양이가 걷는 중"
+            "\(CatPalette(style: style).name) 고양이가 \(actionLabel)"
         )
+    }
+
+    private var actionLabel: String {
+        switch reducesMotion ? .sitting : pose.action {
+        case .walking: "걷는 중"
+        case .running: "달리는 중"
+        case .sitting: "앉아 있는 중"
+        case .sleeping: "자는 중"
+        case .grooming: "그루밍하는 중"
+        case .eating: "밥 먹는 중"
+        case .startled: "놀란 상태"
+        case .ballPlay: "공을 잡고 노는 중"
+        case .fishingPlay: "낚싯대 장난감으로 노는 중"
+        }
     }
 }
 
@@ -508,6 +615,9 @@ private struct WidgetCat: View {
     var isRunning: Bool = true
     var reducesMotion: Bool = false
     var animationPhase: Int = 0
+    var action: TaptionWidgetCatAction = .walking
+    var tailSwing: Double = 0
+    var headTiltDegrees: Double = 0
 
     var body: some View {
         Canvas { rawContext, size in
@@ -519,7 +629,7 @@ private struct WidgetCat: View {
                 ? animationPhase
                 : 0
 
-            if isRunning && !reducesMotion {
+            if action == .running && !reducesMotion {
                 drawWalkingPuffs(in: &context, phase: effectivePhase)
             }
             drawShadow(in: &context)
@@ -583,18 +693,49 @@ private struct WidgetCat: View {
             lineJoin: .round
         )
         let runningPhase = phase % 4
-        let bodyLift = isRunning
-            ? (runningPhase == 1 || runningPhase == 3 ? -0.8 : 0.4)
-            : 0
-        let tailTip = runningPhase == 0 || runningPhase == 3
-            ? CGPoint(x: 4, y: 5)
-            : CGPoint(x: 3.5, y: 8.2)
-        let tailControl1 = runningPhase == 0 || runningPhase == 3
-            ? CGPoint(x: 5, y: 14)
-            : CGPoint(x: 5.2, y: 11.4)
-        let tailControl2 = runningPhase == 0 || runningPhase == 3
-            ? CGPoint(x: 2, y: 10)
-            : CGPoint(x: 1.8, y: 10.8)
+        let bodyLift: Double = switch action {
+        case .running:
+            runningPhase == 1 || runningPhase == 3 ? -1.2 : 0.55
+        case .walking:
+            runningPhase == 1 || runningPhase == 3 ? -0.65 : 0.3
+        case .startled:
+            -1.2
+        default:
+            0
+        }
+        let faceTiltSlope = max(
+            -12,
+            min(12, headTiltDegrees)
+        ) / 52
+        func faceY(_ x: Double, _ y: Double) -> Double {
+            y + bodyLift + ((x - 32.3) * faceTiltSlope)
+        }
+        let tailTip: CGPoint = switch action {
+        case .startled:
+            CGPoint(x: 4.2, y: 0.9)
+        case .sleeping:
+            CGPoint(x: 3.8, y: 17.2 + tailSwing)
+        case .sitting, .grooming, .eating, .ballPlay, .fishingPlay:
+            CGPoint(x: 3.8, y: 9.0 + tailSwing * 2.4)
+        default:
+            CGPoint(x: 3.8, y: 6.4 + tailSwing * 2.5)
+        }
+        let tailControl1: CGPoint = switch action {
+        case .startled:
+            CGPoint(x: 6.5, y: 10.0)
+        case .sleeping:
+            CGPoint(x: 8.0, y: 18.8)
+        default:
+            CGPoint(x: 5.0, y: 12.6 + tailSwing)
+        }
+        let tailControl2: CGPoint = switch action {
+        case .startled:
+            CGPoint(x: 1.8, y: 6.5)
+        case .sleeping:
+            CGPoint(x: 2.2, y: 19.2)
+        default:
+            CGPoint(x: 1.8, y: 10.0 + tailSwing * 1.3)
+        }
 
         var tail = Path()
         tail.move(to: CGPoint(x: 11, y: 12 + bodyLift))
@@ -607,7 +748,7 @@ private struct WidgetCat: View {
             tail,
             with: outline,
             style: StrokeStyle(
-                lineWidth: 4.1,
+                lineWidth: action == .startled ? 7.4 : 4.1,
                 lineCap: .round,
                 lineJoin: .round
             )
@@ -616,13 +757,24 @@ private struct WidgetCat: View {
             tail,
             with: .color(palette.base),
             style: StrokeStyle(
-                lineWidth: 2.75,
+                lineWidth: action == .startled ? 5.7 : 2.75,
                 lineCap: .round,
                 lineJoin: .round
             )
         )
 
-        if style == "mackerel" || style == "cheese" {
+        if action == .startled {
+            for y in [3.2, 6.0, 8.8] {
+                var raccoonBand = Path()
+                raccoonBand.move(to: CGPoint(x: 2.3, y: y))
+                raccoonBand.addLine(to: CGPoint(x: 6.6, y: y + 0.7))
+                context.stroke(
+                    raccoonBand,
+                    with: .color(palette.stripe.opacity(0.88)),
+                    style: StrokeStyle(lineWidth: 1.15, lineCap: .round)
+                )
+            }
+        } else if style == "mackerel" || style == "cheese" {
             for offset in [0.0, 2.2, 4.4] {
                 var tailStripe = Path()
                 tailStripe.move(
@@ -893,66 +1045,112 @@ private struct WidgetCat: View {
         )
         context.fill(muzzle, with: .color(Color.white.opacity(0.60)))
 
-        for eyeX in [27.7, 33.3] {
-            context.fill(
-                Path(
-                    ellipseIn: CGRect(
-                        x: eyeX,
-                        y: 7.1 + bodyLift,
-                        width: 1.7,
-                        height: 2.0
-                    )
-                ),
-                with: .color(palette.eye)
-            )
-            context.fill(
-                Path(
-                    ellipseIn: CGRect(
-                        x: eyeX + 0.68,
-                        y: 7.48 + bodyLift,
-                        width: 0.38,
-                        height: 1.15
-                    )
-                ),
-                with: .color(Color.black.opacity(0.88))
-            )
-            context.fill(
-                Path(
-                    ellipseIn: CGRect(
-                        x: eyeX + 0.42,
-                        y: 7.28 + bodyLift,
-                        width: 0.5,
-                        height: 0.58
-                    )
-                ),
-                with: .color(Color.white.opacity(0.92))
-            )
+        let closesEyes = action == .sleeping
+            || action == .eating
+            || (action == .grooming && runningPhase.isMultiple(of: 2))
+        for eyeX in [27.35, 33.15] {
+            let eyeY = faceY(eyeX, 6.85)
+            if closesEyes {
+                var closedEye = Path()
+                closedEye.move(to: CGPoint(x: eyeX, y: eyeY + 1.25))
+                closedEye.addCurve(
+                    to: CGPoint(x: eyeX + 2.15, y: eyeY + 1.25),
+                    control1: CGPoint(x: eyeX + 0.55, y: eyeY + 2.0),
+                    control2: CGPoint(x: eyeX + 1.55, y: eyeY + 2.0)
+                )
+                context.stroke(
+                    closedEye,
+                    with: .color(faceLine),
+                    style: StrokeStyle(lineWidth: 0.72, lineCap: .round)
+                )
+            } else {
+                context.fill(
+                    Path(
+                        ellipseIn: CGRect(
+                            x: eyeX,
+                            y: eyeY,
+                            width: 2.15,
+                            height: 2.45
+                        )
+                    ),
+                    with: .color(palette.eye)
+                )
+                context.fill(
+                    Path(
+                        ellipseIn: CGRect(
+                            x: eyeX + 0.86,
+                            y: eyeY + 0.48,
+                            width: 0.42,
+                            height: 1.45
+                        )
+                    ),
+                    with: .color(Color.black.opacity(0.90))
+                )
+                context.fill(
+                    Path(
+                        ellipseIn: CGRect(
+                            x: eyeX + 0.48,
+                            y: eyeY + 0.26,
+                            width: 0.62,
+                            height: 0.68
+                        )
+                    ),
+                    with: .color(Color.white.opacity(0.96))
+                )
+            }
         }
 
-        context.fill(
-            Path(
-                ellipseIn: CGRect(
-                    x: 31.65,
-                    y: 10.25 + bodyLift,
-                    width: 1.55,
-                    height: 1.15
-                )
-            ),
-            with: .color(pink)
+        var eyebrows = Path()
+        eyebrows.move(to: CGPoint(x: 27.4, y: faceY(27.4, 6.25)))
+        eyebrows.addCurve(
+            to: CGPoint(x: 29.4, y: faceY(29.4, 6.1)),
+            control1: CGPoint(x: 28.0, y: faceY(28.0, 5.9)),
+            control2: CGPoint(x: 28.8, y: faceY(28.8, 5.85))
+        )
+        eyebrows.move(to: CGPoint(x: 33.2, y: faceY(33.2, 6.1)))
+        eyebrows.addCurve(
+            to: CGPoint(x: 35.3, y: faceY(35.3, 6.3)),
+            control1: CGPoint(x: 33.8, y: faceY(33.8, 5.85)),
+            control2: CGPoint(x: 34.7, y: faceY(34.7, 5.95))
+        )
+        context.stroke(
+            eyebrows,
+            with: .color(detailLine.opacity(0.72)),
+            style: StrokeStyle(lineWidth: 0.42, lineCap: .round)
         )
 
-        var smile = Path()
-        smile.move(to: CGPoint(x: 32.42, y: 11.35 + bodyLift))
-        smile.addCurve(
-            to: CGPoint(x: 31.45, y: 12.15 + bodyLift),
-            control1: CGPoint(x: 32.2, y: 11.95 + bodyLift),
-            control2: CGPoint(x: 31.75, y: 12.15 + bodyLift)
+        let noseY = faceY(32.4, 10.15)
+        var nose = Path()
+        nose.move(to: CGPoint(x: 31.55, y: noseY + 0.18))
+        nose.addCurve(
+            to: CGPoint(x: 33.25, y: noseY + 0.18),
+            control1: CGPoint(x: 31.85, y: noseY - 0.35),
+            control2: CGPoint(x: 32.95, y: noseY - 0.35)
         )
-        smile.move(to: CGPoint(x: 32.42, y: 11.35 + bodyLift))
+        nose.addCurve(
+            to: CGPoint(x: 32.4, y: noseY + 1.05),
+            control1: CGPoint(x: 33.15, y: noseY + 0.65),
+            control2: CGPoint(x: 32.7, y: noseY + 0.95)
+        )
+        nose.addCurve(
+            to: CGPoint(x: 31.55, y: noseY + 0.18),
+            control1: CGPoint(x: 32.1, y: noseY + 0.95),
+            control2: CGPoint(x: 31.65, y: noseY + 0.65)
+        )
+        context.fill(nose, with: .color(pink))
+
+        var smile = Path()
+        smile.move(to: CGPoint(x: 32.4, y: noseY + 0.95))
         smile.addCurve(
-            to: CGPoint(x: 33.4, y: 12.15 + bodyLift),
-            control1: CGPoint(x: 32.65, y: 11.95 + bodyLift),
-            control2: CGPoint(x: 33.1, y: 12.15 + bodyLift)
+            to: CGPoint(x: 31.35, y: noseY + 1.78),
+            control1: CGPoint(x: 32.15, y: noseY + 1.55),
+            control2: CGPoint(x: 31.7, y: noseY + 1.78)
+        )
+        smile.move(to: CGPoint(x: 32.4, y: noseY + 0.95))
+        smile.addCurve(
+            to: CGPoint(x: 33.45, y: noseY + 1.78),
+            control1: CGPoint(x: 32.65, y: noseY + 1.55),
+            control2: CGPoint(x: 33.1, y: noseY + 1.78)
         )
         context.stroke(
             smile,
@@ -960,11 +1158,25 @@ private struct WidgetCat: View {
             style: StrokeStyle(lineWidth: 0.55, lineCap: .round)
         )
 
+        if action == .grooming && runningPhase == 1 {
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: 31.75,
+                        y: noseY + 1.45,
+                        width: 1.3,
+                        height: 1.5
+                    )
+                ),
+                with: .color(pink.opacity(0.90))
+            )
+        }
+
         context.fill(
             Path(
                 ellipseIn: CGRect(
                     x: 26.2,
-                    y: 10.65 + bodyLift,
+                    y: faceY(27.2, 10.65),
                     width: 2.1,
                     height: 1.2
                 )
@@ -975,7 +1187,7 @@ private struct WidgetCat: View {
             Path(
                 ellipseIn: CGRect(
                     x: 35.2,
-                    y: 10.65 + bodyLift,
+                    y: faceY(36.0, 10.65),
                     width: 1.8,
                     height: 1.2
                 )
@@ -984,10 +1196,10 @@ private struct WidgetCat: View {
         )
 
         for point in [
-            CGPoint(x: 29.7, y: 11.3 + bodyLift),
-            CGPoint(x: 29.9, y: 12.0 + bodyLift),
-            CGPoint(x: 34.8, y: 11.3 + bodyLift),
-            CGPoint(x: 34.6, y: 12.0 + bodyLift),
+            CGPoint(x: 29.7, y: faceY(29.7, 11.3)),
+            CGPoint(x: 29.9, y: faceY(29.9, 12.0)),
+            CGPoint(x: 34.8, y: faceY(34.8, 11.3)),
+            CGPoint(x: 34.6, y: faceY(34.6, 12.0)),
         ] {
             context.fill(
                 Path(
@@ -1003,28 +1215,46 @@ private struct WidgetCat: View {
         }
 
         var whiskers = Path()
-        whiskers.move(to: CGPoint(x: 29.5, y: 11.1 + bodyLift))
-        whiskers.addLine(to: CGPoint(x: 26.3, y: 10.4 + bodyLift))
-        whiskers.move(to: CGPoint(x: 29.5, y: 12.0 + bodyLift))
-        whiskers.addLine(to: CGPoint(x: 26.2, y: 12.4 + bodyLift))
-        whiskers.move(to: CGPoint(x: 35.0, y: 11.1 + bodyLift))
-        whiskers.addLine(to: CGPoint(x: 38.4, y: 10.4 + bodyLift))
-        whiskers.move(to: CGPoint(x: 35.0, y: 12.0 + bodyLift))
-        whiskers.addLine(to: CGPoint(x: 38.5, y: 12.5 + bodyLift))
+        whiskers.move(to: CGPoint(x: 29.5, y: faceY(29.5, 10.95)))
+        whiskers.addLine(to: CGPoint(x: 25.8, y: faceY(25.8, 9.9)))
+        whiskers.move(to: CGPoint(x: 29.5, y: faceY(29.5, 11.7)))
+        whiskers.addLine(to: CGPoint(x: 25.5, y: faceY(25.5, 11.7)))
+        whiskers.move(to: CGPoint(x: 29.6, y: faceY(29.6, 12.35)))
+        whiskers.addLine(to: CGPoint(x: 26.0, y: faceY(26.0, 13.2)))
+        whiskers.move(to: CGPoint(x: 35.0, y: faceY(35.0, 10.95)))
+        whiskers.addLine(to: CGPoint(x: 38.8, y: faceY(38.8, 9.9)))
+        whiskers.move(to: CGPoint(x: 35.0, y: faceY(35.0, 11.7)))
+        whiskers.addLine(to: CGPoint(x: 39.0, y: faceY(39.0, 11.8)))
+        whiskers.move(to: CGPoint(x: 34.9, y: faceY(34.9, 12.35)))
+        whiskers.addLine(to: CGPoint(x: 38.6, y: faceY(38.6, 13.25)))
         context.stroke(
             whiskers,
             with: .color(faceLine.opacity(0.72)),
             style: StrokeStyle(lineWidth: 0.55, lineCap: .round)
         )
 
-        let legPairs: [(CGPoint, CGPoint)] = isRunning
-            ? runningLegPairs(phase: runningPhase, lift: bodyLift)
-            : [
+        let legPairs: [(CGPoint, CGPoint)] = switch action {
+        case .walking:
+            runningLegPairs(phase: runningPhase, lift: bodyLift)
+        case .running:
+            sprintingLegPairs(phase: runningPhase, lift: bodyLift)
+        case .sleeping:
+            []
+        case .sitting, .grooming, .eating, .ballPlay, .fishingPlay:
+            [
+                (CGPoint(x: 18, y: 16), CGPoint(x: 18, y: 20.5)),
+                (CGPoint(x: 23, y: 16.5), CGPoint(x: 23, y: 20.5)),
+                (CGPoint(x: 27, y: 16.5), CGPoint(x: 27, y: 20.5)),
+                (CGPoint(x: 30, y: 15.5), CGPoint(x: 30, y: 20.0)),
+            ]
+        case .startled:
+            [
                 (CGPoint(x: 15, y: 16), CGPoint(x: 14, y: 20)),
                 (CGPoint(x: 20, y: 17), CGPoint(x: 20, y: 20)),
                 (CGPoint(x: 25, y: 17), CGPoint(x: 25, y: 20)),
                 (CGPoint(x: 30, y: 15.5), CGPoint(x: 30, y: 19.5)),
             ]
+        }
         for (start, end) in legPairs {
             var leg = Path()
             leg.move(to: start)
@@ -1067,6 +1297,332 @@ private struct WidgetCat: View {
                     )
                 )
             }
+        }
+
+        drawActionDetails(
+            in: &context,
+            palette: palette,
+            outline: outline,
+            faceLine: faceLine,
+            pink: pink,
+            phase: runningPhase,
+            bodyLift: bodyLift
+        )
+    }
+
+    private func drawActionDetails(
+        in context: inout GraphicsContext,
+        palette: CatPalette,
+        outline: GraphicsContext.Shading,
+        faceLine: Color,
+        pink: Color,
+        phase: Int,
+        bodyLift: Double
+    ) {
+        if action == .sitting
+            || action == .grooming
+            || action == .eating
+            || action == .ballPlay
+            || action == .fishingPlay
+        {
+            var chestTuft = Path()
+            chestTuft.move(to: CGPoint(x: 26.0, y: 13.7 + bodyLift))
+            chestTuft.addLine(to: CGPoint(x: 27.2, y: 16.9 + bodyLift))
+            chestTuft.addLine(to: CGPoint(x: 28.3, y: 15.8 + bodyLift))
+            chestTuft.addLine(to: CGPoint(x: 29.2, y: 17.2 + bodyLift))
+            chestTuft.addLine(to: CGPoint(x: 30.4, y: 14.1 + bodyLift))
+            chestTuft.closeSubpath()
+            context.fill(
+                chestTuft,
+                with: .color(Color.white.opacity(0.66))
+            )
+        }
+
+        switch action {
+        case .grooming:
+            let pawY = phase.isMultiple(of: 2) ? 9.2 : 10.4
+            var raisedArm = Path()
+            raisedArm.move(to: CGPoint(x: 27.8, y: 15.8 + bodyLift))
+            raisedArm.addCurve(
+                to: CGPoint(x: 34.6, y: pawY + bodyLift),
+                control1: CGPoint(x: 29.8, y: 13.2 + bodyLift),
+                control2: CGPoint(x: 32.2, y: 10.2 + bodyLift)
+            )
+            context.stroke(
+                raisedArm,
+                with: outline,
+                style: StrokeStyle(lineWidth: 3.0, lineCap: .round)
+            )
+            context.stroke(
+                raisedArm,
+                with: .color(palette.base),
+                style: StrokeStyle(lineWidth: 1.9, lineCap: .round)
+            )
+            let groomingPaw = Path(
+                ellipseIn: CGRect(
+                    x: 33.3,
+                    y: pawY - 1.1 + bodyLift,
+                    width: 3.0,
+                    height: 2.5
+                )
+            )
+            context.fill(groomingPaw, with: .color(palette.base))
+            context.stroke(
+                groomingPaw,
+                with: outline,
+                style: StrokeStyle(lineWidth: 0.6)
+            )
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: 34.25,
+                        y: pawY - 0.25 + bodyLift,
+                        width: 0.9,
+                        height: 0.65
+                    )
+                ),
+                with: .color(pink.opacity(0.62))
+            )
+
+        case .eating:
+            let bowl = Path(
+                roundedRect: CGRect(x: 28.2, y: 19.3, width: 10.5, height: 4.1),
+                cornerRadius: 1.5
+            )
+            context.fill(
+                bowl,
+                with: .color(Color(red: 0.45, green: 0.68, blue: 0.86))
+            )
+            context.stroke(
+                bowl,
+                with: outline,
+                style: StrokeStyle(lineWidth: 0.7)
+            )
+            context.fill(
+                Path(ellipseIn: CGRect(x: 28.5, y: 18.7, width: 9.9, height: 2.2)),
+                with: .color(Color(red: 0.61, green: 0.39, blue: 0.23))
+            )
+            for x in [31.0, 33.4, 35.8] {
+                context.fill(
+                    Path(ellipseIn: CGRect(x: x, y: 18.55, width: 1.3, height: 1.0)),
+                    with: .color(Color(red: 0.82, green: 0.58, blue: 0.31))
+                )
+            }
+
+        case .sleeping:
+            context.fill(
+                Path(ellipseIn: CGRect(x: 20.0, y: 16.1, width: 8.5, height: 4.2)),
+                with: .color(palette.base)
+            )
+            context.stroke(
+                Path(ellipseIn: CGRect(x: 20.0, y: 16.1, width: 8.5, height: 4.2)),
+                with: outline,
+                style: StrokeStyle(lineWidth: 0.65)
+            )
+            for origin in [CGPoint(x: 34.8, y: 3.1), CGPoint(x: 37.0, y: 0.8)] {
+                var sleepMark = Path()
+                sleepMark.move(to: origin)
+                sleepMark.addLine(to: CGPoint(x: origin.x + 2.0, y: origin.y))
+                sleepMark.addLine(
+                    to: CGPoint(x: origin.x, y: origin.y + 2.0)
+                )
+                sleepMark.addLine(
+                    to: CGPoint(x: origin.x + 2.0, y: origin.y + 2.0)
+                )
+                context.stroke(
+                    sleepMark,
+                    with: .color(faceLine.opacity(0.72)),
+                    style: StrokeStyle(lineWidth: 0.55, lineCap: .round)
+                )
+            }
+
+        case .startled:
+            for ray in [
+                (CGPoint(x: 37.2, y: 2.6), CGPoint(x: 39.0, y: 1.5)),
+                (CGPoint(x: 38.0, y: 4.2), CGPoint(x: 39.7, y: 4.0)),
+                (CGPoint(x: 35.6, y: 1.2), CGPoint(x: 36.0, y: 0.0)),
+            ] {
+                var surpriseRay = Path()
+                surpriseRay.move(to: ray.0)
+                surpriseRay.addLine(to: ray.1)
+                context.stroke(
+                    surpriseRay,
+                    with: .color(Color(red: 0.96, green: 0.61, blue: 0.12)),
+                    style: StrokeStyle(lineWidth: 0.9, lineCap: .round)
+                )
+            }
+
+        case .ballPlay:
+            var reachingPaw = Path()
+            reachingPaw.move(to: CGPoint(x: 29.0, y: 15.8 + bodyLift))
+            reachingPaw.addCurve(
+                to: CGPoint(x: 35.1, y: 18.2),
+                control1: CGPoint(x: 31.1, y: 15.5 + bodyLift),
+                control2: CGPoint(x: 33.1, y: 16.7)
+            )
+            context.stroke(
+                reachingPaw,
+                with: outline,
+                style: StrokeStyle(lineWidth: 2.7, lineCap: .round)
+            )
+            context.stroke(
+                reachingPaw,
+                with: .color(palette.base),
+                style: StrokeStyle(lineWidth: 1.7, lineCap: .round)
+            )
+
+            let ballOffset = phase.isMultiple(of: 2) ? -0.8 : 0.5
+            let ballRect = CGRect(
+                x: 34.0,
+                y: 18.1 + ballOffset,
+                width: 5.2,
+                height: 5.2
+            )
+            context.fill(
+                Path(ellipseIn: ballRect),
+                with: .color(Color(red: 0.97, green: 0.55, blue: 0.16))
+            )
+            context.stroke(
+                Path(ellipseIn: ballRect),
+                with: .color(Color(red: 0.62, green: 0.28, blue: 0.11)),
+                style: StrokeStyle(lineWidth: 0.65)
+            )
+            var ballSeam = Path()
+            ballSeam.move(
+                to: CGPoint(x: ballRect.minX + 1.0, y: ballRect.midY)
+            )
+            ballSeam.addCurve(
+                to: CGPoint(x: ballRect.maxX - 0.9, y: ballRect.midY),
+                control1: CGPoint(
+                    x: ballRect.midX - 0.8,
+                    y: ballRect.minY + 0.6
+                ),
+                control2: CGPoint(
+                    x: ballRect.midX + 0.8,
+                    y: ballRect.maxY - 0.6
+                )
+            )
+            context.stroke(
+                ballSeam,
+                with: .color(Color.white.opacity(0.76)),
+                style: StrokeStyle(lineWidth: 0.5, lineCap: .round)
+            )
+
+            for offset in [0.0, 1.8] {
+                var motionLine = Path()
+                motionLine.move(
+                    to: CGPoint(x: 37.0 + offset, y: 16.5 - offset * 0.25)
+                )
+                motionLine.addLine(
+                    to: CGPoint(x: 38.6 + offset, y: 15.5 - offset * 0.25)
+                )
+                context.stroke(
+                    motionLine,
+                    with: .color(Color(red: 0.96, green: 0.61, blue: 0.12)),
+                    style: StrokeStyle(lineWidth: 0.55, lineCap: .round)
+                )
+            }
+
+        case .fishingPlay:
+            var reachingPaw = Path()
+            reachingPaw.move(to: CGPoint(x: 28.8, y: 15.8 + bodyLift))
+            reachingPaw.addCurve(
+                to: CGPoint(x: 34.0, y: 13.0),
+                control1: CGPoint(x: 30.6, y: 15.0 + bodyLift),
+                control2: CGPoint(x: 32.2, y: 13.6)
+            )
+            context.stroke(
+                reachingPaw,
+                with: outline,
+                style: StrokeStyle(lineWidth: 2.7, lineCap: .round)
+            )
+            context.stroke(
+                reachingPaw,
+                with: .color(palette.base),
+                style: StrokeStyle(lineWidth: 1.7, lineCap: .round)
+            )
+
+            let rodTipY = phase.isMultiple(of: 2) ? 1.2 : 2.5
+            var rod = Path()
+            rod.move(to: CGPoint(x: 33.6, y: 13.1))
+            rod.addLine(to: CGPoint(x: 38.4, y: rodTipY))
+            context.stroke(
+                rod,
+                with: .color(Color(red: 0.51, green: 0.31, blue: 0.14)),
+                style: StrokeStyle(lineWidth: 0.8, lineCap: .round)
+            )
+
+            let toyX = phase.isMultiple(of: 2) ? 37.0 : 35.6
+            var string = Path()
+            string.move(to: CGPoint(x: 38.4, y: rodTipY))
+            string.addCurve(
+                to: CGPoint(x: toyX, y: 17.6),
+                control1: CGPoint(x: 40.0, y: 7.0),
+                control2: CGPoint(x: toyX + 1.5, y: 12.2)
+            )
+            context.stroke(
+                string,
+                with: .color(faceLine.opacity(0.72)),
+                style: StrokeStyle(lineWidth: 0.35, lineCap: .round)
+            )
+
+            var feather = Path()
+            feather.move(to: CGPoint(x: toyX, y: 17.2))
+            feather.addCurve(
+                to: CGPoint(x: toyX - 1.8, y: 21.8),
+                control1: CGPoint(x: toyX - 2.4, y: 18.1),
+                control2: CGPoint(x: toyX - 2.8, y: 20.7)
+            )
+            feather.addCurve(
+                to: CGPoint(x: toyX, y: 17.2),
+                control1: CGPoint(x: toyX + 0.2, y: 20.7),
+                control2: CGPoint(x: toyX + 0.6, y: 18.4)
+            )
+            context.fill(
+                feather,
+                with: .color(Color(red: 0.95, green: 0.32, blue: 0.46))
+            )
+            var secondFeather = Path()
+            secondFeather.move(to: CGPoint(x: toyX, y: 17.6))
+            secondFeather.addCurve(
+                to: CGPoint(x: toyX + 2.0, y: 21.1),
+                control1: CGPoint(x: toyX + 2.3, y: 18.2),
+                control2: CGPoint(x: toyX + 2.6, y: 20.1)
+            )
+            secondFeather.addCurve(
+                to: CGPoint(x: toyX, y: 17.6),
+                control1: CGPoint(x: toyX + 0.7, y: 20.8),
+                control2: CGPoint(x: toyX + 0.4, y: 18.6)
+            )
+            context.fill(
+                secondFeather,
+                with: .color(Color(red: 0.98, green: 0.74, blue: 0.17))
+            )
+
+        case .walking, .running, .sitting:
+            break
+        }
+    }
+
+    private func sprintingLegPairs(
+        phase: Int,
+        lift: Double
+    ) -> [(CGPoint, CGPoint)] {
+        switch phase {
+        case 0, 2:
+            [
+                (CGPoint(x: 14, y: 16 + lift), CGPoint(x: 8.5, y: 21.5)),
+                (CGPoint(x: 19, y: 17 + lift), CGPoint(x: 25, y: 21.5)),
+                (CGPoint(x: 25, y: 16 + lift), CGPoint(x: 19, y: 21.2)),
+                (CGPoint(x: 30, y: 15 + lift), CGPoint(x: 36, y: 19.5)),
+            ]
+        default:
+            [
+                (CGPoint(x: 14, y: 16 + lift), CGPoint(x: 20, y: 21.2)),
+                (CGPoint(x: 19, y: 17 + lift), CGPoint(x: 12.5, y: 21.6)),
+                (CGPoint(x: 25, y: 16 + lift), CGPoint(x: 32, y: 20.7)),
+                (CGPoint(x: 30, y: 15 + lift), CGPoint(x: 23, y: 20.5)),
+            ]
         }
     }
 

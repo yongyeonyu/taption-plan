@@ -680,6 +680,32 @@ enum PhotoClusterer {
         appendCluster(current)
         return clusters
     }
+
+    static func nearestCluster(
+        to date: Date,
+        in photos: [PhotoMoment],
+        tolerance: TimeInterval,
+        threshold: TimeInterval = 20 * 60
+    ) -> PhotoCluster? {
+        let searchRadius = max(0, tolerance) + max(0, threshold)
+        let candidates = photos.filter {
+            !$0.isHiddenFromTimeline
+                && abs($0.capturedAt.timeIntervalSince(date)) <= searchRadius
+        }
+        return cluster(candidates, threshold: threshold)
+            .filter { cluster in
+                guard let start = cluster.photos.first?.capturedAt,
+                      let end = cluster.photos.last?.capturedAt else {
+                    return false
+                }
+                return start.addingTimeInterval(-tolerance) <= date
+                    && date <= end.addingTimeInterval(tolerance)
+            }
+            .min {
+                abs($0.capturedAt.timeIntervalSince(date))
+                    < abs($1.capturedAt.timeIntervalSince(date))
+            }
+    }
 }
 
 struct ReviewEngine: Sendable {

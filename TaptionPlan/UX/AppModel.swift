@@ -30,7 +30,12 @@ final class AppModel {
     var pendingProfileSelection: ProfileSelection =
         TemplateCatalog.representativeSelections[0]
 
-    private(set) var snapshot: TaptionDataSnapshot = .empty
+    private(set) var snapshot: TaptionDataSnapshot = .empty {
+        didSet {
+            snapshotRevision &+= 1
+        }
+    }
+    @ObservationIgnored private(set) var snapshotRevision: UInt64 = 0
     private(set) var isBootstrapped = false
     private(set) var isRefreshingIntegrations = false
     private(set) var isSensorCollecting = false
@@ -67,6 +72,7 @@ final class AppModel {
     @ObservationIgnored private let rawDeviceDataArchive:
         RawDeviceDataMonthlyArchive?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
+    @ObservationIgnored private var lastForegroundRefreshAt: Date?
 
     init(
         repository: (any PlanDataRepository)? = nil,
@@ -365,6 +371,8 @@ final class AppModel {
                     includesCurrentDeviceDay: true
                 )
                 await refreshStore(showErrors: false)
+                await persist()
+                lastForegroundRefreshAt = .now
             } catch {
                 var fallback = TaptionDataSnapshot.empty
                 fallback.categories = CategoryCatalog.builtIn
@@ -381,6 +389,10 @@ final class AppModel {
     func sceneBecameActive() async {
         await bootstrap()
         watchConnectivityService.refreshConnectionState()
+        if let lastForegroundRefreshAt,
+           Date.now.timeIntervalSince(lastForegroundRefreshAt) < 5 {
+            return
+        }
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
         await refreshPermissionStates()
         resumeSensorCollectionIfNeeded()
@@ -389,6 +401,7 @@ final class AppModel {
         )
         await refreshStore(showErrors: false)
         await persist()
+        lastForegroundRefreshAt = .now
     }
 
     func sceneEnteredBackground() async {
@@ -2439,13 +2452,31 @@ final class AppModel {
         let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)
             ?? weekStart.addingTimeInterval(7 * 86_400)
         let span = TimeSpan(start: weekStart, end: weekEnd)
+        let categoriesByID = Dictionary(
+            snapshot.categories.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let activeActualPairs: [(UUID, ActualRecord)] = snapshot.actuals
+            .compactMap { actual in
+                guard let planID = actual.planID,
+                      actual.endedAt == nil else {
+                    return nil
+                }
+                return (planID, actual)
+            }
+        let activeActualsByPlanID = Dictionary(
+            activeActualPairs,
+            uniquingKeysWith: { current, candidate in
+                current.startedAt >= candidate.startedAt
+                    ? current
+                    : candidate
+            }
+        )
         let planItems = snapshot.plans
             .filter { $0.span.intersection(with: widgetSpan) != nil }
             .sorted { $0.span.start < $1.span.start }
             .map { plan in
-                let category = snapshot.categories.first {
-                    $0.id == plan.categoryID
-                }
+                let category = categoriesByID[plan.categoryID]
                 return TaptionWidgetItem(
                     id: plan.id,
                     title: snapshot.settings.showsPhotosInWidgets
@@ -2564,12 +2595,8 @@ final class AppModel {
             .filter { $0.span.intersection(with: span) != nil }
             .sorted { $0.span.start < $1.span.start }
             .map { plan in
-                let category = snapshot.categories.first {
-                    $0.id == plan.categoryID
-                }
-                let activeActual = snapshot.actuals.last {
-                    $0.planID == plan.id && $0.endedAt == nil
-                }
+                let category = categoriesByID[plan.categoryID]
+                let activeActual = activeActualsByPlanID[plan.id]
                 return TaptionWatchPlanItem(
                     id: plan.id,
                     title: plan.title,

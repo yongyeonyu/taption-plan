@@ -208,6 +208,62 @@ enum TaptionWidgetPlaybackEngine {
     }
 }
 
+enum TaptionWidgetAutoScrollEngine {
+    static let visibleRowCount = 4
+    static let cycleDuration: TimeInterval = 6
+
+    static func progress(
+        at date: Date,
+        rowCount: Int,
+        visibleRows: Int = visibleRowCount,
+        reducesMotion: Bool = false
+    ) -> Double {
+        guard rowCount > max(1, visibleRows) else { return 0 }
+        if reducesMotion {
+            let minute = Int(
+                floor(date.timeIntervalSinceReferenceDate / 60)
+            )
+            return minute.isMultiple(of: 2) ? 0 : 1
+        }
+
+        let rawPhase = date.timeIntervalSinceReferenceDate
+            .truncatingRemainder(dividingBy: cycleDuration)
+        let phase = rawPhase < 0 ? rawPhase + cycleDuration : rawPhase
+        switch phase {
+        case 0..<2:
+            return 0
+        case 2..<3:
+            return eased(phase - 2)
+        case 3..<5:
+            return 1
+        default:
+            return 1 - eased(phase - 5)
+        }
+    }
+
+    static func offset(
+        at date: Date,
+        contentHeight: Double,
+        viewportHeight: Double,
+        rowCount: Int,
+        visibleRows: Int = visibleRowCount,
+        reducesMotion: Bool = false
+    ) -> Double {
+        max(0, contentHeight - viewportHeight)
+            * progress(
+                at: date,
+                rowCount: rowCount,
+                visibleRows: visibleRows,
+                reducesMotion: reducesMotion
+            )
+    }
+
+    private static func eased(_ value: Double) -> Double {
+        let clamped = min(1, max(0, value))
+        return clamped * clamped * (3 - (2 * clamped))
+    }
+}
+
 enum TaptionWidgetContentPolicy {
     static func locationTitle(
         displayName: String,
@@ -222,33 +278,283 @@ enum TaptionWidgetContentPolicy {
     }
 }
 
+enum TaptionWidgetCatAction: String, CaseIterable, Equatable, Sendable {
+    case walking
+    case running
+    case sitting
+    case sleeping
+    case grooming
+    case eating
+    case startled
+    case ballPlay
+    case fishingPlay
+
+    var movesAcrossTrack: Bool {
+        self == .walking || self == .running
+    }
+
+    var previewTitle: String {
+        switch self {
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .sitting: "앉아있기"
+        case .sleeping: "잠자기"
+        case .grooming: "그루밍"
+        case .eating: "밥 먹기"
+        case .startled: "너구리 꼬리"
+        case .ballPlay: "공 잡는 놀이"
+        case .fishingPlay: "낚싯대 놀이"
+        }
+    }
+
+    var previewSystemImage: String {
+        switch self {
+        case .walking: "figure.walk"
+        case .running: "figure.run"
+        case .sitting: "pawprint.fill"
+        case .sleeping: "moon.zzz.fill"
+        case .grooming: "sparkles"
+        case .eating: "fork.knife"
+        case .startled: "exclamationmark.bubble.fill"
+        case .ballPlay: "circle.fill"
+        case .fishingPlay: "fish.fill"
+        }
+    }
+}
+
+enum TaptionWidgetCatActionSelector {
+    static func preferredAction(
+        categoryID: String,
+        title: String
+    ) -> TaptionWidgetCatAction? {
+        let category = categoryID.lowercased()
+        let normalizedTitle = title.lowercased()
+
+        if containsAny(
+            normalizedTitle,
+            ["밥", "식사", "간식", "요리", "카페"]
+        ) {
+            return .eating
+        }
+        if containsAny(normalizedTitle, ["잠", "수면", "취침", "낮잠"]) {
+            return .sleeping
+        }
+        if containsAny(normalizedTitle, ["달리", "러닝", "조깅"]) {
+            return .running
+        }
+        if containsAny(normalizedTitle, ["걷", "산책", "도보"]) {
+            return .walking
+        }
+        if containsAny(
+            normalizedTitle,
+            ["축구", "농구", "야구", "테니스", "공놀이", "헬스", "운동"]
+        ) {
+            return .ballPlay
+        }
+        if containsAny(
+            normalizedTitle,
+            ["낚시", "놀이", "게임", "음악", "사진", "여행"]
+        ) {
+            return .fishingPlay
+        }
+        if containsAny(
+            normalizedTitle,
+            ["샤워", "세면", "씻기", "미용", "단장", "청소"]
+        ) {
+            return .grooming
+        }
+
+        return switch category {
+        case "exercise", "health": .ballPlay
+        case "hobby", "travel", "photo", "event", "relationship":
+            .fishingPlay
+        case "sleep", "rest": .sleeping
+        case "routine": .grooming
+        case "movement": .walking
+        case "project", "study", "location": .sitting
+        default: nil
+        }
+    }
+
+    private static func containsAny(
+        _ value: String,
+        _ candidates: [String]
+    ) -> Bool {
+        candidates.contains { value.contains($0) }
+    }
+}
+
 struct TaptionWidgetCatWalkPose: Equatable, Sendable {
     var progress: Double
     var facesLeft: Bool
     var legPhase: Int
+    var isAtEndpoint: Bool
+    var action: TaptionWidgetCatAction
+    var tailSwing: Double
+    var headTiltDegrees: Double
 }
 
 enum TaptionWidgetCatWalkEngine {
-    static let defaultStepDuration: TimeInterval = 0.6
-    static let stepCount = 20
-    static let roundTripDuration = defaultStepDuration * Double(stepCount)
+    static let defaultStepDuration: TimeInterval = 0.5
+    static let movementStepCount = 20
+    static let stepCount = 40
+    static let roundTripDuration =
+        defaultStepDuration * Double(movementStepCount)
+    static let sequenceDuration = defaultStepDuration * Double(stepCount)
 
     static func pose(
         at date: Date,
-        stepDuration: TimeInterval = defaultStepDuration
+        stepDuration: TimeInterval = defaultStepDuration,
+        preferredAction: TaptionWidgetCatAction? = nil
     ) -> TaptionWidgetCatWalkPose {
         let duration = max(0.5, stepDuration)
         let rawStep = Int(date.timeIntervalSinceReferenceDate / duration)
         let step = ((rawStep % stepCount) + stepCount) % stepCount
-        let halfStepCount = stepCount / 2
-        let facesLeft = step >= halfStepCount
-        let progress = facesLeft
-            ? Double(stepCount - 1 - step) / Double(halfStepCount - 1)
-            : Double(step) / Double(halfStepCount - 1)
+        let cycle = Int(
+            floor(Double(rawStep) / Double(stepCount))
+        )
+        let progress: Double
+        let facesLeft: Bool
+        let isAtEndpoint: Bool
+        let action: TaptionWidgetCatAction
+
+        switch step {
+        case 0...9:
+            progress = Double(step) / 9
+            facesLeft = false
+            isAtEndpoint = step == 0 || step == 9
+            action = preferredAction == .running ? .running : .walking
+        case 10:
+            progress = 1
+            facesLeft = true
+            isAtEndpoint = true
+            action = .startled
+        case 11...19:
+            progress = Double(19 - step) / 8
+            facesLeft = true
+            isAtEndpoint = step == 11 || step == 19
+            action = preferredAction == .walking ? .walking : .running
+        default:
+            progress = 0
+            facesLeft = false
+            isAtEndpoint = true
+            action = restAction(
+                preferred: preferredAction,
+                cycle: cycle,
+                slot: (step - movementStepCount) / 4
+            )
+        }
+        let motion = motionDetails(for: action, phase: step % 4)
         return TaptionWidgetCatWalkPose(
             progress: min(1, max(0, progress)),
             facesLeft: facesLeft,
-            legPhase: step % 4
+            legPhase: step % 4,
+            isAtEndpoint: isAtEndpoint,
+            action: action,
+            tailSwing: motion.tailSwing,
+            headTiltDegrees: motion.headTiltDegrees
+        )
+    }
+
+    static func motionDetails(
+        for action: TaptionWidgetCatAction,
+        phase: Int
+    ) -> (tailSwing: Double, headTiltDegrees: Double) {
+        let tail = [-1.0, -0.35, 0.45, 1.0][phase]
+        let head = [-4.0, 1.5, 4.0, -1.5][phase]
+        return switch action {
+        case .walking:
+            (tail, head)
+        case .running:
+            (-tail, head * 1.45)
+        case .sitting:
+            (tail * 0.55, head * 1.25)
+        case .grooming:
+            (tail * 0.38, [-11.0, -5.0, 6.0, -4.0][phase])
+        case .startled:
+            (1, -7)
+        case .sleeping:
+            (tail * 0.16, 7)
+        case .eating:
+            (tail * 0.28, 12)
+        case .ballPlay:
+            (-tail * 0.85, head * 1.6)
+        case .fishingPlay:
+            (tail * 0.72, [-8.0, 7.0, -4.0, 9.0][phase])
+        }
+    }
+
+    private static func restAction(
+        preferred: TaptionWidgetCatAction?,
+        cycle: Int,
+        slot: Int
+    ) -> TaptionWidgetCatAction {
+        if let preferred {
+            return switch preferred {
+            case .walking, .running: .sitting
+            default: preferred
+            }
+        }
+        let actions: [TaptionWidgetCatAction] = [
+            .sitting,
+            .grooming,
+            .eating,
+            .sleeping,
+            .ballPlay,
+            .fishingPlay,
+        ]
+        let seed = abs((cycle &* 31) &+ (slot &* 17))
+        return actions[seed % actions.count]
+    }
+}
+
+enum TaptionWidgetCatPreviewEngine {
+    static let stepDuration: TimeInterval = 0.2
+    static let movementStepCount = 20
+
+    static func pose(
+        at date: Date,
+        action: TaptionWidgetCatAction,
+        reducesMotion: Bool = false
+    ) -> TaptionWidgetCatWalkPose {
+        let rawStep = Int(
+            floor(date.timeIntervalSinceReferenceDate / stepDuration)
+        )
+        let step = ((rawStep % movementStepCount) + movementStepCount)
+            % movementStepCount
+        let phase = reducesMotion ? 0 : step % 4
+        let motion = TaptionWidgetCatWalkEngine.motionDetails(
+            for: action,
+            phase: phase
+        )
+
+        guard action.movesAcrossTrack, !reducesMotion else {
+            return TaptionWidgetCatWalkPose(
+                progress: 0.5,
+                facesLeft: false,
+                legPhase: phase,
+                isAtEndpoint: true,
+                action: action,
+                tailSwing: reducesMotion ? 0 : motion.tailSwing,
+                headTiltDegrees: reducesMotion
+                    ? 0
+                    : motion.headTiltDegrees
+            )
+        }
+
+        let outward = step <= movementStepCount / 2
+        let distance = outward
+            ? Double(step) / Double(movementStepCount / 2)
+            : Double(movementStepCount - step)
+                / Double(movementStepCount / 2)
+        return TaptionWidgetCatWalkPose(
+            progress: min(1, max(0, distance)),
+            facesLeft: !outward,
+            legPhase: phase,
+            isAtEndpoint: step == 0 || step == movementStepCount / 2,
+            action: action,
+            tailSwing: motion.tailSwing,
+            headTiltDegrees: motion.headTiltDegrees
         )
     }
 }

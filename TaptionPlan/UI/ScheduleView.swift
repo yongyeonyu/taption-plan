@@ -78,6 +78,57 @@ private struct TimelineSelection: Equatable {
     }
 }
 
+@MainActor
+private final class TimelinePlayheadDetailGate {
+    private let minimumInterval: TimeInterval = 1.0 / 20.0
+    private var lastDeliveryUptime: TimeInterval = -.infinity
+    private var pendingDate: Date?
+    private var scheduledTask: Task<Void, Never>?
+
+    func submit(
+        _ date: Date,
+        deliver: @escaping @MainActor (Date) -> Void
+    ) {
+        pendingDate = date
+        let now = ProcessInfo.processInfo.systemUptime
+        let remaining = minimumInterval - (now - lastDeliveryUptime)
+        if remaining <= 0 {
+            scheduledTask?.cancel()
+            scheduledTask = nil
+            deliverPending(using: deliver)
+            return
+        }
+        guard scheduledTask == nil else { return }
+        scheduledTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(
+                    nanoseconds: UInt64(max(0, remaining) * 1_000_000_000)
+                )
+            } catch {
+                return
+            }
+            guard let self, !Task.isCancelled else { return }
+            self.scheduledTask = nil
+            self.deliverPending(using: deliver)
+        }
+    }
+
+    func cancel() {
+        scheduledTask?.cancel()
+        scheduledTask = nil
+        pendingDate = nil
+    }
+
+    private func deliverPending(
+        using deliver: @MainActor (Date) -> Void
+    ) {
+        guard let pendingDate else { return }
+        self.pendingDate = nil
+        lastDeliveryUptime = ProcessInfo.processInfo.systemUptime
+        deliver(pendingDate)
+    }
+}
+
 private extension TimelineSelection {
     var preferredDetailSection: TimelineDetailSection {
         if isRoute {
@@ -205,6 +256,7 @@ struct ScheduleView: View {
     @State private var routeReadings: [SensorReading] = []
     @State private var editingPlanID: UUID?
     @State private var mapPlayheadDate: Date?
+    @State private var playheadDetailGate = TimelinePlayheadDetailGate()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -233,22 +285,24 @@ struct ScheduleView: View {
                 dayZoom: $dayZoom,
                 editingPlanID: $editingPlanID,
                 onPlayheadMove: { date in
-                    mapPlayheadDate = date
-                    focusMapOnPlayhead(at: date)
+                    requestPlayheadDetailUpdate(at: date)
                 },
                 onSelection: { selection in
+                    playheadDetailGate.cancel()
                     mapPlayheadDate = nil
                     selectedTimelineItem = selection
                     selectedPhotoCluster = nil
                     detailSection = selection.preferredDetailSection
                 },
                 onFocus: { selection in
+                    playheadDetailGate.cancel()
                     mapPlayheadDate = nil
                     selectedTimelineItem = selection
                     selectedPhotoCluster = nil
                     detailSection = selection.preferredDetailSection
                 },
                 onPhotoSelection: { cluster in
+                    playheadDetailGate.cancel()
                     editingPlanID = nil
                     mapPlayheadDate = nil
                     selectedPhotoCluster = cluster
@@ -292,6 +346,16 @@ struct ScheduleView: View {
         .background(Color.white)
         .task(id: routeReadingsSpan) {
             routeReadings = await model.sensorReadings(in: routeReadingsSpan)
+        }
+        .onDisappear {
+            playheadDetailGate.cancel()
+        }
+    }
+
+    private func requestPlayheadDetailUpdate(at date: Date) {
+        playheadDetailGate.submit(date) { deliveredDate in
+            mapPlayheadDate = deliveredDate
+            focusMapOnPlayhead(at: deliveredDate)
         }
     }
 
@@ -393,20 +457,11 @@ struct ScheduleView: View {
     }
 
     private func photoCluster(at date: Date) -> PhotoCluster? {
-        let tolerance = photoPlayheadTolerance
-        return PhotoClusterer.cluster(model.snapshot.photos)
-            .filter { cluster in
-                let dates = cluster.photos.map(\.capturedAt)
-                guard let start = dates.min(), let end = dates.max() else {
-                    return false
-                }
-                return start.addingTimeInterval(-tolerance) <= date
-                    && date <= end.addingTimeInterval(tolerance)
-            }
-            .min {
-                abs($0.capturedAt.timeIntervalSince(date))
-                    < abs($1.capturedAt.timeIntervalSince(date))
-            }
+        PhotoClusterer.nearestCluster(
+            to: date,
+            in: model.snapshot.photos,
+            tolerance: photoPlayheadTolerance
+        )
     }
 
     private var photoPlayheadTolerance: TimeInterval {
@@ -533,6 +588,7 @@ private struct TimelineDetailPanel: View {
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var selectedPhotoIndex = 0
     @State private var pendingActualDeletionID: UUID?
+    @State private var lastMapFocusCoordinate: CLLocationCoordinate2D?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1467,6 +1523,19 @@ private struct TimelineDetailPanel: View {
 
     private func fitMapToRoutes() {
         if let focus = playheadFocusCoordinate {
+            if let lastMapFocusCoordinate,
+               CLLocation(
+                   latitude: lastMapFocusCoordinate.latitude,
+                   longitude: lastMapFocusCoordinate.longitude
+               ).distance(
+                   from: CLLocation(
+                       latitude: focus.latitude,
+                       longitude: focus.longitude
+                   )
+               ) < 5 {
+                return
+            }
+            lastMapFocusCoordinate = focus
             mapPosition = .region(
                 MKCoordinateRegion(
                     center: focus,
@@ -1478,6 +1547,8 @@ private struct TimelineDetailPanel: View {
             )
             return
         }
+
+        lastMapFocusCoordinate = nil
 
         let values = displayedRouteCoordinates
         guard !values.isEmpty else {
@@ -1510,6 +1581,7 @@ struct GroupGanttView: View {
     @State private var routeReadings: [SensorReading] = []
     @State private var editingPlanID: UUID?
     @State private var mapPlayheadDate: Date?
+    @State private var playheadDetailGate = TimelinePlayheadDetailGate()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1535,22 +1607,24 @@ struct GroupGanttView: View {
                 dayZoom: $dayZoom,
                 editingPlanID: $editingPlanID,
                 onPlayheadMove: { date in
-                    mapPlayheadDate = date
-                    focusMapOnPlayhead(at: date)
+                    requestPlayheadDetailUpdate(at: date)
                 },
                 onSelection: { selection in
+                    playheadDetailGate.cancel()
                     mapPlayheadDate = nil
                     selectedTimelineItem = selection
                     selectedPhotoCluster = nil
                     detailSection = selection.preferredDetailSection
                 },
                 onFocus: { selection in
+                    playheadDetailGate.cancel()
                     mapPlayheadDate = nil
                     selectedTimelineItem = selection
                     selectedPhotoCluster = nil
                     detailSection = selection.preferredDetailSection
                 },
                 onPhotoSelection: { cluster in
+                    playheadDetailGate.cancel()
                     editingPlanID = nil
                     mapPlayheadDate = nil
                     selectedPhotoCluster = cluster
@@ -1594,6 +1668,16 @@ struct GroupGanttView: View {
         .background(Color.white)
         .task(id: routeReadingsSpan) {
             routeReadings = await model.sensorReadings(in: routeReadingsSpan)
+        }
+        .onDisappear {
+            playheadDetailGate.cancel()
+        }
+    }
+
+    private func requestPlayheadDetailUpdate(at date: Date) {
+        playheadDetailGate.submit(date) { deliveredDate in
+            mapPlayheadDate = deliveredDate
+            focusMapOnPlayhead(at: deliveredDate)
         }
     }
 
@@ -1695,20 +1779,11 @@ struct GroupGanttView: View {
     }
 
     private func photoCluster(at date: Date) -> PhotoCluster? {
-        let tolerance = photoPlayheadTolerance
-        return PhotoClusterer.cluster(model.snapshot.photos)
-            .filter { cluster in
-                let dates = cluster.photos.map(\.capturedAt)
-                guard let start = dates.min(), let end = dates.max() else {
-                    return false
-                }
-                return start.addingTimeInterval(-tolerance) <= date
-                    && date <= end.addingTimeInterval(tolerance)
-            }
-            .min {
-                abs($0.capturedAt.timeIntervalSince(date))
-                    < abs($1.capturedAt.timeIntervalSince(date))
-            }
+        PhotoClusterer.nearestCluster(
+            to: date,
+            in: model.snapshot.photos,
+            tolerance: photoPlayheadTolerance
+        )
     }
 
     private var photoPlayheadTolerance: TimeInterval {
@@ -1757,6 +1832,58 @@ private struct TimelineBoardLayoutSnapshot {
     var contentHeight: CGFloat
 }
 
+private struct TimelineBoardLayoutKey: Equatable {
+    let snapshotRevision: UInt64
+    let scale: TimeScale
+    let isGroup: Bool
+    let selectedGroupPlanID: UUID?
+    let spanStart: TimeInterval
+    let spanEnd: TimeInterval
+    let viewportStart: Double
+    let viewportEnd: Double
+}
+
+@MainActor
+private final class TimelineBoardLayoutCache {
+    private var key: TimelineBoardLayoutKey?
+    private var snapshot: TimelineBoardLayoutSnapshot?
+
+    func value(
+        for key: TimelineBoardLayoutKey,
+        build: () -> TimelineBoardLayoutSnapshot
+    ) -> TimelineBoardLayoutSnapshot {
+        if self.key == key, let snapshot {
+            return snapshot
+        }
+        let snapshot = build()
+        self.key = key
+        self.snapshot = snapshot
+        return snapshot
+    }
+}
+
+private struct TimelineBoardDataIndex {
+    let childCounts: [UUID: Int]
+    let parentPlanIDs: Set<UUID>
+    let categoryNames: [String: String]
+
+    init(
+        plans: [PlanRecord],
+        categories: [CategoryDefinition]
+    ) {
+        let parentIDs = plans.compactMap(\.parentID)
+        childCounts = Dictionary(
+            parentIDs.map { ($0, 1) },
+            uniquingKeysWith: +
+        )
+        parentPlanIDs = Set(parentIDs)
+        categoryNames = Dictionary(
+            categories.map { ($0.id, $0.name) },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+}
+
 private struct PlanCategoryPathKey: Hashable {
     let categoryID: String
     let middleName: String?
@@ -1794,10 +1921,12 @@ private struct TimelineBoard: View {
     @State private var continuousZoomDurationOrigin: TimeInterval?
     @State private var zoomFeedbackSequence = 0
     @State private var selectedRowID: String?
+    @State private var layoutCache = TimelineBoardLayoutCache()
+    @State private var lastContinuousRenderUptime: TimeInterval = 0
     private let axisHeight: CGFloat = 32
 
     var body: some View {
-        let layout = makeLayoutSnapshot()
+        let layout = cachedLayoutSnapshot()
         GeometryReader { boardProxy in
             VStack(spacing: 0) {
                 axis(markers: layout.axisMarkers)
@@ -1942,9 +2071,31 @@ private struct TimelineBoard: View {
         )
     }
 
-    private func makeLayoutSnapshot() -> TimelineBoardLayoutSnapshot {
+    private func cachedLayoutSnapshot() -> TimelineBoardLayoutSnapshot {
         let span = visibleSpan
-        let rowModels = rows(in: span)
+        let key = TimelineBoardLayoutKey(
+            snapshotRevision: model.snapshotRevision,
+            scale: scale,
+            isGroup: isGroup,
+            selectedGroupPlanID: model.selectedGroupPlanID,
+            spanStart: span.start.timeIntervalSinceReferenceDate,
+            spanEnd: span.end.timeIntervalSinceReferenceDate,
+            viewportStart: viewport.start,
+            viewportEnd: viewport.end
+        )
+        return layoutCache.value(for: key) {
+            makeLayoutSnapshot(in: span)
+        }
+    }
+
+    private func makeLayoutSnapshot(
+        in span: TimeSpan
+    ) -> TimelineBoardLayoutSnapshot {
+        let index = TimelineBoardDataIndex(
+            plans: storedPlans,
+            categories: model.snapshot.categories
+        )
+        let rowModels = rows(in: span, index: index)
         let clusters = photoClusters(in: span)
         let buckets = summaryBuckets(in: span)
         let colors = summaryColors(for: buckets)
@@ -1952,7 +2103,10 @@ private struct TimelineBoard: View {
             $0.span().intersection(with: span) != nil
         }
         let actualDuration = visibleActualDuration(in: span)
-        let plannedDuration = visiblePlannedDuration(in: span)
+        let plannedDuration = visiblePlannedDuration(
+            in: span,
+            parentPlanIDs: index.parentPlanIDs
+        )
         let footerHeight: CGFloat
         if scale == .day {
             footerHeight = !isGroup && !clusters.isEmpty ? 65 : 0
@@ -2073,8 +2227,11 @@ private struct TimelineBoard: View {
         .contentShape(Rectangle())
     }
 
-    private func rows(in span: TimeSpan) -> [TimelineRowModel] {
-        let resolved = resolvedRows(in: span)
+    private func rows(
+        in span: TimeSpan,
+        index: TimelineBoardDataIndex
+    ) -> [TimelineRowModel] {
+        let resolved = resolvedRows(in: span, index: index)
         if (scale == .day && !isGroup && !resolved.isEmpty)
             || resolved.contains(where: { !$0.blocks.isEmpty }) {
             return resolved
@@ -2208,26 +2365,32 @@ private struct TimelineBoard: View {
         }
     }
 
-    private func resolvedRows(in span: TimeSpan) -> [TimelineRowModel] {
+    private func resolvedRows(
+        in span: TimeSpan,
+        index: TimelineBoardDataIndex
+    ) -> [TimelineRowModel] {
         if isGroup {
             guard let groupID = model.selectedGroupPlanID else { return [] }
             return rows(
                 from: PlanHierarchy.children(of: groupID, in: storedPlans),
                 includesCalendar: false,
-                visibleSpan: span
+                visibleSpan: span,
+                index: index
             )
         }
         return rows(
             from: storedPlans.filter { $0.parentID == nil },
             includesCalendar: true,
-            visibleSpan: span
+            visibleSpan: span,
+            index: index
         )
     }
 
     private func rows(
         from plans: [PlanRecord],
         includesCalendar: Bool,
-        visibleSpan span: TimeSpan
+        visibleSpan span: TimeSpan,
+        index: TimelineBoardDataIndex
     ) -> [TimelineRowModel] {
         let visiblePlans = plans
             .filter { $0.span.intersection(with: span) != nil }
@@ -2261,7 +2424,8 @@ private struct TimelineBoard: View {
                     events: events,
                     plansByCategory: grouped,
                     actuals: automaticActuals,
-                    visibleSpan: span
+                    visibleSpan: span,
+                    index: index
                 )
             )
         } else if includesCalendar {
@@ -2346,6 +2510,7 @@ private struct TimelineBoard: View {
                 let planBlocks = rowPlans.map { plan in
                     timelineBlock(
                         plan: plan,
+                        index: index,
                         top: 7 + CGFloat(
                             planAllocation.lanes[plan.id, default: 0]
                         ) * 28,
@@ -2355,6 +2520,7 @@ private struct TimelineBoard: View {
                 let actualBlocks = rowActuals.map { actual in
                     timelineBlock(
                         actual: actual,
+                        index: index,
                         top: 7
                             + CGFloat(planAllocation.count) * 28
                             + CGFloat(
@@ -2427,6 +2593,7 @@ private struct TimelineBoard: View {
                     blocks: categoryPlans.map { plan in
                         timelineBlock(
                             plan: plan,
+                            index: index,
                             top: 7 + CGFloat(
                                 planAllocation.lanes[plan.id, default: 0]
                             ) * 28,
@@ -2435,6 +2602,7 @@ private struct TimelineBoard: View {
                     } + categoryActuals.map { actual in
                         timelineBlock(
                             actual: actual,
+                            index: index,
                             top: 7
                                 + CGFloat(planAllocation.count) * 28
                                 + CGFloat(
@@ -2506,17 +2674,20 @@ private struct TimelineBoard: View {
         events: [CalendarRecord],
         plansByCategory: [String: [PlanRecord]],
         actuals: [ActualRecord],
-        visibleSpan: TimeSpan
+        visibleSpan: TimeSpan,
+        index: TimelineBoardDataIndex
     ) -> [TimelineRowModel] {
         [
             automaticScheduleRow(events),
             automaticLocationRow(
                 plans: plansByCategory["location", default: []],
-                visibleSpan: visibleSpan
+                visibleSpan: visibleSpan,
+                index: index
             ),
             automaticMovementRow(
                 plans: plansByCategory["movement", default: []],
-                visibleSpan: visibleSpan
+                visibleSpan: visibleSpan,
+                index: index
             ),
             automaticActivityRow(actuals),
         ]
@@ -2550,7 +2721,8 @@ private struct TimelineBoard: View {
 
     private func automaticLocationRow(
         plans: [PlanRecord],
-        visibleSpan: TimeSpan
+        visibleSpan: TimeSpan,
+        index: TimelineBoardDataIndex
     ) -> TimelineRowModel {
         let visiblePlaces = model.snapshot.places
             .filter { $0.span.intersection(with: visibleSpan) != nil }
@@ -2561,6 +2733,7 @@ private struct TimelineBoard: View {
         let planBlocks = plans.map { plan in
             timelineBlock(
                 plan: plan,
+                index: index,
                 top: compactAutomaticTop(
                     planAllocation.lanes[plan.id, default: 0]
                 ),
@@ -2618,7 +2791,8 @@ private struct TimelineBoard: View {
 
     private func automaticMovementRow(
         plans: [PlanRecord],
-        visibleSpan: TimeSpan
+        visibleSpan: TimeSpan,
+        index: TimelineBoardDataIndex
     ) -> TimelineRowModel {
         let visibleTravel = model.snapshot.travel
             .filter { $0.span.intersection(with: visibleSpan) != nil }
@@ -2629,6 +2803,7 @@ private struct TimelineBoard: View {
         let planBlocks = plans.map { plan in
             timelineBlock(
                 plan: plan,
+                index: index,
                 top: compactAutomaticTop(
                     planAllocation.lanes[plan.id, default: 0]
                 ),
@@ -2719,13 +2894,13 @@ private struct TimelineBoard: View {
 
     private func timelineBlock(
         plan: PlanRecord,
+        index: TimelineBoardDataIndex,
         top: CGFloat = 16,
         height: CGFloat = 26
     ) -> TimelineBlock {
-        let childCount = storedPlans.filter { $0.parentID == plan.id }.count
-        let categoryName = model.snapshot.categories.first {
-            $0.id == plan.categoryID
-        }?.name ?? plan.categoryID
+        let childCount = index.childCounts[plan.id, default: 0]
+        let categoryName = index.categoryNames[plan.categoryID]
+            ?? plan.categoryID
         let categoryDetail = categoryPathDetail(
             categoryName: categoryName,
             key: planCategoryPath(for: plan)
@@ -2749,6 +2924,7 @@ private struct TimelineBoard: View {
 
     private func timelineBlock(
         actual: ActualRecord,
+        index: TimelineBoardDataIndex,
         top: CGFloat = 16,
         height: CGFloat = 26
     ) -> TimelineBlock {
@@ -2764,9 +2940,7 @@ private struct TimelineBoard: View {
             detailText:
                 "실제 · \(actualSourceName(actual.source)) · \(confidenceName(actual.confidence))",
             categoryID: actual.categoryID,
-            categoryName: model.snapshot.categories.first {
-                $0.id == actual.categoryID
-            }?.name
+            categoryName: index.categoryNames[actual.categoryID]
         )
     }
 
@@ -3577,10 +3751,13 @@ private struct TimelineBoard: View {
         }
     }
 
-    private func visiblePlannedDuration(in visibleSpan: TimeSpan) -> TimeInterval {
+    private func visiblePlannedDuration(
+        in visibleSpan: TimeSpan,
+        parentPlanIDs: Set<UUID>
+    ) -> TimeInterval {
         let leafPlans = storedPlans.filter { plan in
             plan.span.intersection(with: visibleSpan) != nil
-                && !storedPlans.contains { $0.parentID == plan.id }
+                && !parentPlanIDs.contains(plan.id)
         }
         return leafPlans.reduce(0) { result, plan in
             result
@@ -3660,12 +3837,21 @@ private struct TimelineBoard: View {
                     if continuousDragOrigin == nil {
                         continuousDragOrigin = continuousCenterDate
                         editingPlanID = nil
+                        lastContinuousRenderUptime = 0
                     }
                     guard let continuousDragOrigin else { return }
                     let secondsPerPoint = dayZoom.duration / Double(max(1, width))
-                    continuousCenterDate = continuousDragOrigin.addingTimeInterval(
+                    let candidate = continuousDragOrigin.addingTimeInterval(
                         -Double(value.translation.width) * secondsPerPoint
                     )
+                    let uptime = ProcessInfo.processInfo.systemUptime
+                    guard lastContinuousRenderUptime == 0
+                        || uptime - lastContinuousRenderUptime >= 1.0 / 60.0
+                    else {
+                        return
+                    }
+                    lastContinuousRenderUptime = uptime
+                    continuousCenterDate = candidate
                     onPlayheadMove?(continuousCenterDate)
                 } else {
                     if dragOrigin == nil {
@@ -3678,10 +3864,20 @@ private struct TimelineBoard: View {
                     )
                 }
             }
-            .onEnded { _ in
+            .onEnded { value in
                 if isContinuousDay {
+                    if let continuousDragOrigin {
+                        let secondsPerPoint = dayZoom.duration
+                            / Double(max(1, width))
+                        continuousCenterDate = continuousDragOrigin
+                            .addingTimeInterval(
+                                -Double(value.translation.width)
+                                    * secondsPerPoint
+                            )
+                    }
                     model.selectedDate = continuousCenterDate
                     onPlayheadMove?(continuousCenterDate)
+                    lastContinuousRenderUptime = 0
                 }
                 dragOrigin = nil
                 continuousDragOrigin = nil

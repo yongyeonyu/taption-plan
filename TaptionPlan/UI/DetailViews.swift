@@ -617,6 +617,7 @@ private struct MemoPhotoThumbnail: View {
 
 struct CatPickerView: View {
     @Bindable var model: AppModel
+    @State private var previewAction: TaptionWidgetCatAction = .running
 
     var body: some View {
         VStack(spacing: 0) {
@@ -626,24 +627,55 @@ struct CatPickerView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 9) {
-                    Text("모양만 달라지고, 일정 위를 달리는 위치와 속도는 모두 같습니다.")
+                    Text("좌우 화살표로 위젯에서 사용하는 모든 고양이 동작을 미리 볼 수 있습니다.")
                         .font(.taption(size: 9))
                         .foregroundStyle(Color.tpSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 2)
 
                     VStack(spacing: 0) {
-                        ZStack {
-                            Rectangle()
-                                .fill(.black.opacity(0.08))
-                                .frame(height: 1)
-                                .offset(y: 14)
-                            RunningCatView(coat: model.selectedCatCoat)
+                        CatActionPreviewStage(
+                            coat: model.selectedCatCoat,
+                            action: previewAction,
+                            reducesMotion: model.settings.reduceMotion
+                        )
+                        .id(previewAction)
+                        .frame(height: 60)
+
+                        HStack(spacing: 12) {
+                            previewArrow(
+                                systemImage: "chevron.left",
+                                accessibilityLabel: "이전 동작"
+                            ) {
+                                movePreviewAction(by: -1)
+                            }
+
+                            VStack(spacing: 2) {
+                                Label(
+                                    previewAction.previewTitle,
+                                    systemImage: previewAction.previewSystemImage
+                                )
+                                .font(.taption(size: 11, weight: .bold))
+                                .foregroundStyle(Color.tpInk)
+                                Text(previewPositionLabel)
+                                    .font(.taption(size: 7.5, weight: .semibold))
+                                    .foregroundStyle(Color.tpSecondary)
+                                    .monospacedDigit()
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            previewArrow(
+                                systemImage: "chevron.right",
+                                accessibilityLabel: "다음 동작"
+                            ) {
+                                movePreviewAction(by: 1)
+                            }
                         }
-                        .frame(height: 45)
+                        .padding(.top, 4)
 
                         Text("\(model.selectedCatCoat.rawValue) · 위젯 미리보기")
-                            .font(.taption(size: 11, weight: .bold))
+                            .font(.taption(size: 9, weight: .semibold))
+                            .foregroundStyle(Color.tpSecondary)
                             .padding(.top, 7)
                         Text("선택한 모습이 홈 위젯 · 잠금 화면 · 앱에 함께 적용")
                             .font(.taption(size: 7.5))
@@ -735,6 +767,42 @@ struct CatPickerView: View {
             }
             .background(Color.tpBackground)
         }
+    }
+
+    private var previewPositionLabel: String {
+        guard let index = TaptionWidgetCatAction.allCases.firstIndex(
+            of: previewAction
+        ) else {
+            return ""
+        }
+        return "\(index + 1) / \(TaptionWidgetCatAction.allCases.count)"
+    }
+
+    private func movePreviewAction(by offset: Int) {
+        let actions = TaptionWidgetCatAction.allCases
+        guard let index = actions.firstIndex(of: previewAction) else {
+            previewAction = .running
+            return
+        }
+        let next = (index + offset + actions.count) % actions.count
+        previewAction = actions[next]
+    }
+
+    private func previewArrow(
+        systemImage: String,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.taption(size: 12, weight: .black))
+                .foregroundStyle(Color.tpInk)
+                .frame(width: 34, height: 34)
+                .background(.white.opacity(0.78), in: Circle())
+                .overlay { Circle().stroke(Color.tpLine, lineWidth: 1) }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 

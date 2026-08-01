@@ -499,6 +499,21 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(clusters.count, 1)
         XCTAssertEqual(clusters[0].representative.id, "2")
         XCTAssertEqual(clusters[0].additionalCount, 1)
+        XCTAssertEqual(
+            PhotoClusterer.nearestCluster(
+                to: base.addingTimeInterval(8 * 60),
+                in: photos,
+                tolerance: 10 * 60
+            )?.representative.id,
+            "2"
+        )
+        XCTAssertNil(
+            PhotoClusterer.nearestCluster(
+                to: base.addingTimeInterval(2 * 60 * 60),
+                in: photos,
+                tolerance: 10 * 60
+            )
+        )
     }
 
     func testReviewDescribesDifferenceInsteadOfScoring() {
@@ -2236,6 +2251,54 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testWidgetAutomaticallyScrollsOverflowingRowsAndReturns() {
+        let reference = Date(timeIntervalSinceReferenceDate: 0)
+
+        XCTAssertEqual(
+            TaptionWidgetAutoScrollEngine.progress(
+                at: reference,
+                rowCount: 4
+            ),
+            0,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            TaptionWidgetAutoScrollEngine.progress(
+                at: reference.addingTimeInterval(2.5),
+                rowCount: 5
+            ),
+            0.5,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            TaptionWidgetAutoScrollEngine.offset(
+                at: reference.addingTimeInterval(3.5),
+                contentHeight: 100,
+                viewportHeight: 80,
+                rowCount: 5
+            ),
+            20,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            TaptionWidgetAutoScrollEngine.progress(
+                at: reference.addingTimeInterval(5.5),
+                rowCount: 5
+            ),
+            0.5,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            TaptionWidgetAutoScrollEngine.progress(
+                at: reference.addingTimeInterval(60),
+                rowCount: 5,
+                reducesMotion: true
+            ),
+            1,
+            accuracy: 0.001
+        )
+    }
+
     func testWidgetPlaybackUsesMinuteTicksAndExactItemBoundaries() {
         let base = makeDate(2026, 8, 1, 12, 0)
         let startsAt = base.addingTimeInterval(95)
@@ -2293,24 +2356,143 @@ final class FeatureEngineTests: XCTestCase {
         let farEdge = TaptionWidgetCatWalkEngine.pose(
             at: reference.addingTimeInterval((step * 9) + 0.01)
         )
-        let returning = TaptionWidgetCatWalkEngine.pose(
+        let turnedAtFarEdge = TaptionWidgetCatWalkEngine.pose(
             at: reference.addingTimeInterval((step * 10) + 0.01)
+        )
+        let returning = TaptionWidgetCatWalkEngine.pose(
+            at: reference.addingTimeInterval((step * 12) + 0.01)
+        )
+        let nearEdge = TaptionWidgetCatWalkEngine.pose(
+            at: reference.addingTimeInterval((step * 19) + 0.01)
+        )
+        let sittingAtNearEdge = TaptionWidgetCatWalkEngine.pose(
+            at: reference.addingTimeInterval((step * 20) + 0.01),
+            preferredAction: .sitting
         )
         let looped = TaptionWidgetCatWalkEngine.pose(
             at: reference.addingTimeInterval(
-                TaptionWidgetCatWalkEngine.roundTripDuration + 0.01
+                TaptionWidgetCatWalkEngine.sequenceDuration + 0.01
             )
         )
 
-        XCTAssertEqual(TaptionWidgetCatWalkEngine.roundTripDuration, 12)
+        XCTAssertEqual(TaptionWidgetCatWalkEngine.roundTripDuration, 10)
+        XCTAssertEqual(TaptionWidgetCatWalkEngine.sequenceDuration, 20)
         XCTAssertEqual(start.progress, 0, accuracy: 0.001)
         XCTAssertFalse(start.facesLeft)
+        XCTAssertTrue(start.isAtEndpoint)
+        XCTAssertEqual(start.action, .walking)
         XCTAssertEqual(farEdge.progress, 1, accuracy: 0.001)
         XCTAssertFalse(farEdge.facesLeft)
-        XCTAssertEqual(returning.progress, 1, accuracy: 0.001)
+        XCTAssertTrue(farEdge.isAtEndpoint)
+        XCTAssertEqual(farEdge.action, .walking)
+        XCTAssertEqual(turnedAtFarEdge.progress, 1, accuracy: 0.001)
+        XCTAssertTrue(turnedAtFarEdge.facesLeft)
+        XCTAssertTrue(turnedAtFarEdge.isAtEndpoint)
+        XCTAssertEqual(turnedAtFarEdge.action, .startled)
+        XCTAssertLessThan(returning.progress, 1)
         XCTAssertTrue(returning.facesLeft)
+        XCTAssertFalse(returning.isAtEndpoint)
+        XCTAssertEqual(returning.action, .running)
+        XCTAssertEqual(nearEdge.progress, 0, accuracy: 0.001)
+        XCTAssertTrue(nearEdge.facesLeft)
+        XCTAssertTrue(nearEdge.isAtEndpoint)
+        XCTAssertEqual(nearEdge.action, .running)
+        XCTAssertEqual(sittingAtNearEdge.progress, 0, accuracy: 0.001)
+        XCTAssertFalse(sittingAtNearEdge.facesLeft)
+        XCTAssertTrue(sittingAtNearEdge.isAtEndpoint)
+        XCTAssertEqual(sittingAtNearEdge.action, .sitting)
         XCTAssertEqual(looped.progress, 0, accuracy: 0.001)
         XCTAssertFalse(looped.facesLeft)
+        XCTAssertTrue(looped.isAtEndpoint)
+        XCTAssertEqual(looped.action, .walking)
+    }
+
+    func testCatPickerPreviewIncludesAndAnimatesEveryWidgetAction() {
+        let reference = Date(timeIntervalSinceReferenceDate: 0)
+        let actions = TaptionWidgetCatAction.allCases
+
+        XCTAssertEqual(actions.count, 9)
+        XCTAssertEqual(Set(actions.map(\.previewTitle)).count, actions.count)
+        XCTAssertTrue(actions.allSatisfy { !$0.previewSystemImage.isEmpty })
+
+        let runningStart = TaptionWidgetCatPreviewEngine.pose(
+            at: reference,
+            action: .running
+        )
+        let runningEnd = TaptionWidgetCatPreviewEngine.pose(
+            at: reference.addingTimeInterval(2),
+            action: .running
+        )
+        let grooming = TaptionWidgetCatPreviewEngine.pose(
+            at: reference.addingTimeInterval(0.2),
+            action: .grooming
+        )
+        let reduced = TaptionWidgetCatPreviewEngine.pose(
+            at: reference.addingTimeInterval(1.8),
+            action: .fishingPlay,
+            reducesMotion: true
+        )
+
+        XCTAssertEqual(runningStart.progress, 0, accuracy: 0.001)
+        XCTAssertEqual(runningEnd.progress, 1, accuracy: 0.001)
+        XCTAssertEqual(grooming.progress, 0.5, accuracy: 0.001)
+        XCTAssertEqual(grooming.action, .grooming)
+        XCTAssertNotEqual(grooming.headTiltDegrees, 0)
+        XCTAssertEqual(reduced.progress, 0.5, accuracy: 0.001)
+        XCTAssertEqual(reduced.action, .fishingPlay)
+        XCTAssertEqual(reduced.tailSwing, 0, accuracy: 0.001)
+        XCTAssertEqual(reduced.headTiltDegrees, 0, accuracy: 0.001)
+    }
+
+    func testWidgetCatActionMatchesCurrentActionItemCategoryAndTitle() {
+        XCTAssertEqual(
+            TaptionWidgetCatActionSelector.preferredAction(
+                categoryID: "exercise",
+                title: "근력 운동"
+            ),
+            .ballPlay
+        )
+        XCTAssertEqual(
+            TaptionWidgetCatActionSelector.preferredAction(
+                categoryID: "hobby",
+                title: "기타 연습"
+            ),
+            .fishingPlay
+        )
+        XCTAssertEqual(
+            TaptionWidgetCatActionSelector.preferredAction(
+                categoryID: "routine",
+                title: "저녁 식사"
+            ),
+            .eating
+        )
+        XCTAssertEqual(
+            TaptionWidgetCatActionSelector.preferredAction(
+                categoryID: "sleep",
+                title: "낮잠"
+            ),
+            .sleeping
+        )
+        XCTAssertEqual(
+            TaptionWidgetCatActionSelector.preferredAction(
+                categoryID: "movement",
+                title: "아침 산책"
+            ),
+            .walking
+        )
+        XCTAssertEqual(
+            TaptionWidgetCatActionSelector.preferredAction(
+                categoryID: "exercise",
+                title: "러닝"
+            ),
+            .running
+        )
+        XCTAssertNil(
+            TaptionWidgetCatActionSelector.preferredAction(
+                categoryID: "custom-unknown",
+                title: "사용자 항목"
+            )
+        )
     }
 
     func testJSONCSVAndRepositoryRoundTrip() async throws {
