@@ -468,6 +468,7 @@ final class AppModel {
             }
         }
         migrateLegacyFloorCalibration(in: &loaded)
+        Self.normalizeRecordRelationships(in: &loaded)
         loaded.actuals = ActualRecordSuppressionEngine.visibleRecords(
             from: loaded.actuals,
             suppressedIDs: loaded.settings.suppressedActualIDs
@@ -488,12 +489,92 @@ final class AppModel {
             let key = [
                 plan.parentID?.uuidString ?? "-",
                 plan.categoryID,
-                plan.title,
-                String(plan.span.start.timeIntervalSinceReferenceDate),
-                String(plan.span.end.timeIntervalSinceReferenceDate),
+                String(Int(plan.span.start.timeIntervalSinceReferenceDate.rounded())),
+                String(Int(plan.span.end.timeIntervalSinceReferenceDate.rounded())),
             ].joined(separator: "|")
             return seen.insert(key).inserted
         }
+    }
+
+    /// Converts legacy action/routine pointers into the canonical relation
+    /// rules used by the timeline graph. Repeat segments are projections of a
+    /// root routine and therefore never remain as direct automatic links.
+    private static func normalizeRecordRelationships(
+        in snapshot: inout TaptionDataSnapshot
+    ) {
+        let plansByID = Dictionary(
+            snapshot.plans.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        func rootRoutineID(for id: UUID) -> UUID? {
+            var currentID: UUID? = id
+            var visited = Set<UUID>()
+            while let current = currentID,
+                  visited.insert(current).inserted,
+                  let plan = plansByID[current] {
+                if GoalRecordPolicy.isGoal(plan) { return plan.id }
+                currentID = plan.parentID
+            }
+            return nil
+        }
+
+        for index in snapshot.actuals.indices {
+            var actual = snapshot.actuals[index]
+            let linkedPlan = actual.planID.flatMap { plansByID[$0] }
+            let linkedRoutine = actual.routineID.flatMap(rootRoutineID)
+            if AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual) {
+                actual.routineID = linkedRoutine
+                    ?? linkedPlan.flatMap { rootRoutineID(for: $0.id) }
+                actual.planID = nil
+            } else if let linkedPlan {
+                if linkedPlan.origin == .repeatRule
+                    || GoalRecordPolicy.isGoal(linkedPlan) {
+                    actual.routineID = linkedRoutine
+                        ?? rootRoutineID(for: linkedPlan.id)
+                    actual.planID = nil
+                } else {
+                    actual.planID = linkedPlan.id
+                    actual.routineID = linkedRoutine
+                        ?? rootRoutineID(for: linkedPlan.id)
+                }
+            } else {
+                actual.planID = nil
+                actual.routineID = linkedRoutine
+            }
+            snapshot.actuals[index] = actual
+        }
+
+        func canonicalNodeID(_ raw: String) -> String? {
+            let prefixes = ["routine.", "action."]
+            guard let prefix = prefixes.first(where: { raw.hasPrefix($0) }) else {
+                return raw.hasPrefix("automatic.") ? raw : nil
+            }
+            guard let id = UUID(uuidString: String(raw.dropFirst(prefix.count))),
+                  let plan = plansByID[id] else {
+                return nil
+            }
+            if GoalRecordPolicy.isGoal(plan) || plan.origin == .repeatRule,
+               let root = rootRoutineID(for: plan.id) {
+                return "routine.\(root.uuidString)"
+            }
+            return "action.\(id.uuidString)"
+        }
+
+        var seen = Set<String>()
+        snapshot.recordLinks = snapshot.recordLinks
+            .sorted { $0.createdAt < $1.createdAt }
+            .compactMap { link in
+                guard let from = canonicalNodeID(link.fromNodeID),
+                      let to = canonicalNodeID(link.toNodeID),
+                      from != to else { return nil }
+                let key = "\(from)->\(to)"
+                guard seen.insert(key).inserted else { return nil }
+                var normalized = link
+                normalized.fromNodeID = from
+                normalized.toNodeID = to
+                return normalized
+            }
     }
 
     func bootstrap() async {
@@ -1597,7 +1678,8 @@ final class AppModel {
     ) async {
         guard let planIndex = snapshot.plans.firstIndex(where: {
             $0.id == planID
-        }), snapshot.plans.contains(where: { $0.id == goalID }) else {
+        }), let target = snapshot.plans.first(where: { $0.id == goalID }),
+              GoalRecordPolicy.isGoal(target) else {
             userFacingError = "연결할 루틴 또는 액션아이템을 찾지 못했습니다."
             return
         }
@@ -1663,6 +1745,12 @@ final class AppModel {
             return
         }
 
+        guard GoalRecordPolicy.isGoal(goal)
+                || (goal.origin != .repeatRule && goal.origin != .calendar) else {
+            userFacingError = "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다."
+            return
+        }
+
         guard !AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual)
                 || GoalRecordPolicy.isGoal(goal) else {
             userFacingError = "수면·활동 기록은 루틴에만 연결할 수 있습니다."
@@ -1678,6 +1766,9 @@ final class AppModel {
                 for: goal.id
             )
         }
+        snapshot.recordLinks.removeAll {
+            $0.fromNodeID == "automatic.actual.\(actualID.uuidString)"
+        }
         await persist()
     }
 
@@ -1691,6 +1782,11 @@ final class AppModel {
     ) async {
         guard let target = snapshot.plans.first(where: { $0.id == planID }) else {
             userFacingError = "연결할 루틴 또는 액션아이템을 찾지 못했습니다."
+            return
+        }
+        guard GoalRecordPolicy.isGoal(target)
+                || (target.origin != .repeatRule && target.origin != .calendar) else {
+            userFacingError = "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다."
             return
         }
         let targetNodeID = "\(GoalRecordPolicy.isGoal(target) ? "routine" : "action").\(planID.uuidString)"
@@ -1713,16 +1809,19 @@ final class AppModel {
             }
             if GoalRecordPolicy.isGoal(target) {
                 snapshot.actuals[actualIndex].routineID = planID
+                snapshot.actuals[actualIndex].planID = nil
             } else {
                 snapshot.actuals[actualIndex].planID = planID
                 snapshot.actuals[actualIndex].routineID = routineAncestorID(
                     for: planID
                 )
             }
+            snapshot.recordLinks.removeAll {
+                $0.fromNodeID == sourceNodeID
+            }
         } else {
             snapshot.recordLinks.removeAll {
                 $0.fromNodeID == sourceNodeID
-                    && $0.toNodeID == targetNodeID
             }
             snapshot.recordLinks.append(
                 RecordLink(fromNodeID: sourceNodeID, toNodeID: targetNodeID)
@@ -1984,6 +2083,10 @@ final class AppModel {
             }
             return preserved
         }
+        snapshot.recordLinks.removeAll { link in
+            recordNodePlanID(link.fromNodeID).map(deletedIDs.contains) == true
+                || recordNodePlanID(link.toNodeID).map(deletedIDs.contains) == true
+        }
         selectedMemoPlanID = nil
         selectedGroupPlanID = nil
         groupNavigationPath.removeAll {
@@ -1996,6 +2099,13 @@ final class AppModel {
         await persist()
     }
 
+    private func recordNodePlanID(_ nodeID: String) -> UUID? {
+        for prefix in ["routine.", "action."] where nodeID.hasPrefix(prefix) {
+            return UUID(uuidString: String(nodeID.dropFirst(prefix.count)))
+        }
+        return nil
+    }
+
     func deleteActual(_ actualID: UUID) async {
         guard let actual = snapshot.actuals.first(where: {
             $0.id == actualID
@@ -2006,6 +2116,10 @@ final class AppModel {
 
         snapshot.settings.suppressedActualIDs.insert(actualID)
         snapshot.actuals.removeAll { $0.id == actualID }
+        snapshot.recordLinks.removeAll {
+            $0.fromNodeID == "automatic.actual.\(actualID.uuidString)"
+                || $0.toNodeID == "automatic.actual.\(actualID.uuidString)"
+        }
 
         if actual.endedAt == nil,
            let planID = actual.planID,

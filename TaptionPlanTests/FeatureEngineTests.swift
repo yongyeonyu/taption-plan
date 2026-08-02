@@ -3754,6 +3754,165 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testRelationshipGraphResolvesNestedActionAndAutomaticEvidence() {
+        let start = makeDate(2026, 8, 2, 9)
+        let routine = PlanRecord(
+            title: "루틴:운동",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(4 * hour)),
+            categoryID: "activity"
+        )
+        let parentAction = PlanRecord(
+            title: "준비 운동",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            categoryID: "exercise",
+            parentID: routine.id
+        )
+        let nestedAction = PlanRecord(
+            title: "달리기",
+            span: TimeSpan(
+                start: start.addingTimeInterval(hour),
+                end: start.addingTimeInterval(3 * hour)
+            ),
+            categoryID: "exercise",
+            parentID: parentAction.id
+        )
+        let running = ActualRecord(
+            planID: nestedAction.id,
+            routineID: nil,
+            title: "달리기",
+            categoryID: "exercise",
+            startedAt: start.addingTimeInterval(75 * 60),
+            endedAt: start.addingTimeInterval(2 * hour),
+            source: .appleWatch
+        )
+
+        let graph = RecordRelationshipEngine.make(
+            inside: running.span(),
+            plans: [routine, parentAction, nestedAction],
+            actuals: [running],
+            calendarEvents: [],
+            places: [],
+            travel: [],
+            focusNodeID: "automatic.actual.\(running.id.uuidString)"
+        )
+
+        XCTAssertTrue(graph.edges.contains {
+            $0.from == "routine.\(routine.id.uuidString)"
+                && $0.to == "action.\(nestedAction.id.uuidString)"
+        })
+        XCTAssertTrue(graph.edges.contains {
+            $0.from == "automatic.actual.\(running.id.uuidString)"
+                && $0.to == "action.\(nestedAction.id.uuidString)"
+        })
+        XCTAssertTrue(graph.nodes.contains { $0.id == "routine.\(routine.id.uuidString)" })
+        XCTAssertTrue(graph.nodes.contains { $0.id == "action.\(nestedAction.id.uuidString)" })
+    }
+
+    func testRelationshipGraphOmitsRepeatSegmentsAndKeepsFocusedRoutineChain() {
+        let start = makeDate(2026, 8, 2, 22)
+        let routine = PlanRecord(
+            title: "루틴:수면",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(10 * hour)),
+            categoryID: "sleep"
+        )
+        let repeatSegment = PlanRecord(
+            title: "수면 · 주중",
+            span: TimeSpan(
+                start: start.addingTimeInterval(hour),
+                end: start.addingTimeInterval(8 * hour)
+            ),
+            categoryID: "sleep",
+            parentID: routine.id,
+            origin: .repeatRule
+        )
+        let action = PlanRecord(
+            title: "취침 준비",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            categoryID: "sleep",
+            parentID: routine.id
+        )
+        let sleep = ActualRecord(
+            planID: action.id,
+            routineID: routine.id,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start.addingTimeInterval(2 * hour),
+            endedAt: start.addingTimeInterval(7 * hour),
+            source: .healthKit
+        )
+
+        let graph = RecordRelationshipEngine.make(
+            inside: sleep.span(),
+            plans: [routine, repeatSegment, action],
+            actuals: [sleep],
+            calendarEvents: [],
+            places: [],
+            travel: [],
+            focusNodeID: "automatic.actual.\(sleep.id.uuidString)"
+        )
+
+        XCTAssertFalse(graph.nodes.contains { $0.id == "routine.\(repeatSegment.id.uuidString)" })
+        XCTAssertTrue(graph.edges.contains {
+            $0.from == "automatic.actual.\(sleep.id.uuidString)"
+                && $0.to == "routine.\(routine.id.uuidString)"
+        })
+        XCTAssertFalse(graph.edges.contains {
+            $0.from == "automatic.actual.\(sleep.id.uuidString)"
+                && $0.to == "action.\(action.id.uuidString)"
+        })
+        XCTAssertTrue(graph.edges.contains {
+            $0.from == "routine.\(routine.id.uuidString)"
+                && $0.to == "action.\(action.id.uuidString)"
+        })
+    }
+
+    func testRelationshipGraphCanonicalizesLegacyRepeatLink() {
+        let start = makeDate(2026, 8, 3, 8)
+        let routine = PlanRecord(
+            title: "루틴:출근",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(2 * hour)),
+            categoryID: "work"
+        )
+        let repeatSegment = PlanRecord(
+            title: "출근 · 월요일",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            categoryID: "work",
+            parentID: routine.id,
+            origin: .repeatRule
+        )
+        let place = PlaceStay(
+            id: UUID(),
+            placeKey: "company",
+            displayName: "회사",
+            floor: nil,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(30 * 60)),
+            confidence: .high,
+            point: nil
+        )
+        let graph = RecordRelationshipEngine.make(
+            inside: place.span,
+            plans: [routine, repeatSegment],
+            actuals: [],
+            calendarEvents: [],
+            places: [place],
+            travel: [],
+            recordLinks: [
+                RecordLink(
+                    fromNodeID: "automatic.place.\(place.id.uuidString)",
+                    toNodeID: "action.\(repeatSegment.id.uuidString)"
+                )
+            ]
+        )
+
+        XCTAssertTrue(graph.edges.contains {
+            $0.from == "automatic.place.\(place.id.uuidString)"
+                && $0.to == "routine.\(routine.id.uuidString)"
+        })
+        XCTAssertFalse(graph.edges.contains {
+            $0.to == "action.\(repeatSegment.id.uuidString)"
+        })
+    }
+
     func testGoalActivityMatchingCountsExplicitlyLinkedSleepOnly() {
         let start = makeDate(2026, 8, 1, 22)
         let routine = PlanRecord(

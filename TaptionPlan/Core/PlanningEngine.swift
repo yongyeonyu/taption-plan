@@ -1074,6 +1074,7 @@ struct RecordRelationshipGraph: Sendable {
     let nodes: [RecordGraphNode]
     let edges: [RecordGraphEdge]
     var isEmpty: Bool { nodes.isEmpty }
+    var hasConnections: Bool { !edges.isEmpty }
 }
 
 /// Keeps automatic evidence, a routine, and its concrete action as separate
@@ -1087,9 +1088,10 @@ enum RecordRelationshipEngine {
         calendarEvents: [CalendarRecord],
         places: [PlaceStay],
         travel: [TravelSegment],
-        recordLinks: [RecordLink] = []
+        recordLinks: [RecordLink] = [],
+        focusNodeID: String? = nil
     ) -> RecordRelationshipGraph {
-        var nodes: [RecordGraphNode] = []
+        var allNodes: [RecordGraphNode] = []
         var edges: [RecordGraphEdge] = []
         var nodeIDs = Set<String>()
         var edgeIDs = Set<String>()
@@ -1098,7 +1100,7 @@ enum RecordRelationshipEngine {
             uniquingKeysWith: { first, _ in first }
         )
 
-        nodes.reserveCapacity(
+        allNodes.reserveCapacity(
             calendarEvents.count
                 + places.count
                 + travel.count
@@ -1112,10 +1114,10 @@ enum RecordRelationshipEngine {
             edges.append(edge)
         }
 
-        func append(_ node: RecordGraphNode) {
-            guard node.span.intersection(with: span) != nil,
+        func append(_ node: RecordGraphNode, includeOutsideSpan: Bool = false) {
+            guard includeOutsideSpan || node.span.intersection(with: span) != nil,
                   nodeIDs.insert(node.id).inserted else { return }
-            nodes.append(node)
+            allNodes.append(node)
         }
 
         for event in calendarEvents {
@@ -1155,6 +1157,11 @@ enum RecordRelationshipEngine {
             ))
         }
 
+        // Repeat-rule segments are projections of a routine, not separate
+        // relationship nodes. Keeping them here made one routine appear as
+        // several duplicate cards and caused evidence to link to a phantom
+        // action. The root routine owns the rule; concrete actions remain
+        // separate nodes.
         for plan in plans where isRoutine(plan) {
             append(RecordGraphNode(
                 id: "routine.\(plan.id.uuidString)",
@@ -1162,7 +1169,7 @@ enum RecordRelationshipEngine {
                 title: GoalRecordPolicy.displayTitle(plan.title),
                 span: plan.span,
                 categoryID: plan.categoryID
-            ))
+            ), includeOutsideSpan: true)
         }
         for plan in plans where isAction(plan) {
             append(RecordGraphNode(
@@ -1171,42 +1178,43 @@ enum RecordRelationshipEngine {
                 title: plan.title,
                 span: plan.span,
                 categoryID: plan.categoryID
-            ))
+            ), includeOutsideSpan: true)
         }
 
-        let routines = nodes.filter { $0.layer == .routine }
-        let actions = nodes.filter { $0.layer == .action }
-        let routineNodesByPlanID = Dictionary(
-            routines.compactMap { node -> (UUID, RecordGraphNode)? in
-                let rawID = node.id.dropFirst("routine.".count)
-                guard let id = UUID(uuidString: String(rawID)) else {
-                    return nil
-                }
-                return (id, node)
-            },
-            uniquingKeysWith: { first, _ in first }
-        )
+        let routines = allNodes.filter { $0.layer == .routine }
+        let actions = allNodes.filter { $0.layer == .action }
         for action in actions {
             guard let actionID = UUID(
                 uuidString: action.id.replacingOccurrences(of: "action.", with: "")
-            ), let parentID = plansByID[actionID]?.parentID,
-                  let parent = routineNodesByPlanID[parentID] else {
+            ), let routineID = rootRoutineID(
+                for: actionID,
+                plansByID: plansByID
+            ) else {
                 continue
             }
-            appendEdge(from: parent.id, to: action.id)
+            let routineNodeID = "routine.\(routineID.uuidString)"
+            guard routines.contains(where: { $0.id == routineNodeID }) else {
+                continue
+            }
+            appendEdge(from: routineNodeID, to: action.id)
         }
 
         for actual in actuals {
             let actualNodeID = "automatic.actual.\(actual.id.uuidString)"
             guard nodeIDs.contains(actualNodeID) else { continue }
-            if let routineID = actual.routineID {
+            if let routineID = routineID(
+                for: actual,
+                plansByID: plansByID
+            ) {
                 let nodeID = "routine.\(routineID.uuidString)"
                 if nodeIDs.contains(nodeID) {
                     appendEdge(from: actualNodeID, to: nodeID)
                 }
             }
-            if let planID = actual.planID,
-               !AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual) {
+            if let planID = actionID(
+                for: actual,
+                plansByID: plansByID
+            ) {
                 let nodeID = "action.\(planID.uuidString)"
                 if nodeIDs.contains(nodeID) {
                     appendEdge(from: actualNodeID, to: nodeID)
@@ -1214,10 +1222,38 @@ enum RecordRelationshipEngine {
             }
         }
 
-        for link in recordLinks
-        where nodeIDs.contains(link.fromNodeID)
-            && nodeIDs.contains(link.toNodeID) {
-            appendEdge(from: link.fromNodeID, to: link.toNodeID)
+        for link in recordLinks {
+            let from = canonicalNodeID(link.fromNodeID, plansByID: plansByID)
+            let to = canonicalNodeID(link.toNodeID, plansByID: plansByID)
+            guard from != to,
+                  nodeIDs.contains(from),
+                  nodeIDs.contains(to) else { continue }
+            appendEdge(from: from, to: to)
+        }
+
+        let visibleIDs: Set<String>
+        if let focusNodeID {
+            let canonicalFocus = canonicalNodeID(focusNodeID, plansByID: plansByID)
+            var connected = Set([canonicalFocus])
+            var changed = true
+            while changed {
+                changed = false
+                for edge in edges where connected.contains(edge.from) || connected.contains(edge.to) {
+                    if connected.insert(edge.from).inserted { changed = true }
+                    if connected.insert(edge.to).inserted { changed = true }
+                }
+            }
+            visibleIDs = connected
+        } else {
+            visibleIDs = Set(
+                allNodes
+                    .filter { $0.span.intersection(with: span) != nil }
+                    .map(\.id)
+            )
+        }
+        let nodes = allNodes.filter { visibleIDs.contains($0.id) }
+        let visibleEdges = edges.filter {
+            visibleIDs.contains($0.from) && visibleIDs.contains($0.to)
         }
         return RecordRelationshipGraph(
             nodes: nodes.sorted { lhs, rhs in
@@ -1227,7 +1263,7 @@ enum RecordRelationshipEngine {
                     ? lhs.span.start < rhs.span.start
                     : leftLayer < rightLayer
             },
-            edges: edges
+            edges: visibleEdges
         )
     }
 
@@ -1240,11 +1276,73 @@ enum RecordRelationshipEngine {
     }
 
     private static func isRoutine(_ plan: PlanRecord) -> Bool {
-        GoalRecordPolicy.isGoal(plan) || plan.origin == .repeatRule
+        GoalRecordPolicy.isGoal(plan)
     }
 
     private static func isAction(_ plan: PlanRecord) -> Bool {
-        !isRoutine(plan) && plan.origin != .calendar
+        !GoalRecordPolicy.isGoal(plan)
+            && plan.origin != .repeatRule
+            && plan.origin != .calendar
+    }
+
+    private static func rootRoutineID(
+        for planID: UUID,
+        plansByID: [UUID: PlanRecord]
+    ) -> UUID? {
+        var currentID: UUID? = planID
+        var visited = Set<UUID>()
+        while let id = currentID,
+              visited.insert(id).inserted,
+              let plan = plansByID[id] {
+            if GoalRecordPolicy.isGoal(plan) {
+                return plan.id
+            }
+            currentID = plan.parentID
+        }
+        return nil
+    }
+
+    private static func routineID(
+        for actual: ActualRecord,
+        plansByID: [UUID: PlanRecord]
+    ) -> UUID? {
+        if let routineID = actual.routineID,
+           let rootID = rootRoutineID(for: routineID, plansByID: plansByID) {
+            return rootID
+        }
+        guard let planID = actual.planID else { return nil }
+        return rootRoutineID(for: planID, plansByID: plansByID)
+    }
+
+    private static func actionID(
+        for actual: ActualRecord,
+        plansByID: [UUID: PlanRecord]
+    ) -> UUID? {
+        guard !AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual),
+              let planID = actual.planID,
+              let plan = plansByID[planID],
+              isAction(plan) else {
+            return nil
+        }
+        return plan.id
+    }
+
+    private static func canonicalNodeID(
+        _ nodeID: String,
+        plansByID: [UUID: PlanRecord]
+    ) -> String {
+        let prefixes = ["routine.", "action."]
+        guard let prefix = prefixes.first(where: { nodeID.hasPrefix($0) }),
+              let id = UUID(uuidString: String(nodeID.dropFirst(prefix.count))) else {
+            return nodeID
+        }
+        guard let plan = plansByID[id] else { return nodeID }
+        if let rootID = rootRoutineID(for: plan.id, plansByID: plansByID) {
+            if prefix == "routine." || plan.origin == .repeatRule {
+                return "routine.\(rootID.uuidString)"
+            }
+        }
+        return nodeID
     }
 
     private static func travelTitle(_ mode: TravelMode) -> String {

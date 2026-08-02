@@ -322,6 +322,7 @@ private final class TimelineRelationshipGraphCache {
         let timelineRevision: UInt64
         let spanStart: TimeInterval
         let spanEnd: TimeInterval
+        let focusNodeID: String?
     }
 
     private var key: Key?
@@ -1929,6 +1930,12 @@ enum TimelineRouteDisplayPolicy {
 private struct RecordRelationshipView: View {
     let graph: RecordRelationshipGraph
 
+    private struct ConnectionChain: Identifiable {
+        let id: String
+        let titles: [String]
+        let layers: [RecordLayer]
+    }
+
     private let cardHeight: CGFloat = 27
     private let rowGap: CGFloat = 4
     private let columnGap: CGFloat = 12
@@ -1939,44 +1946,83 @@ private struct RecordRelationshipView: View {
         }
     }
 
-    /// Keep the relationship graph compact, but make the user-created link
-    /// immediately readable. The three columns are useful for inspection;
-    /// this line is the short answer to "which routine produced this action?".
-    private var linkedRoutineActions: [(routine: String, action: String)] {
+    /// Resolve the transitive chain once for the compact summary. Automatic
+    /// evidence may point at either a routine or an action; hierarchy edges
+    /// fill the missing hop so the user always sees the same structure.
+    private var connectionChains: [ConnectionChain] {
         let nodesByID = Dictionary(
             graph.nodes.map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
         )
-        var pairs: [(String, String)] = []
-        for edge in graph.edges {
-            guard let from = nodesByID[edge.from],
-                  let to = nodesByID[edge.to],
-                  from.layer == .routine,
-                  to.layer == .action else { continue }
-            pairs.append((from.title, to.title))
+        let outgoing = Dictionary(grouping: graph.edges, by: \.from)
+        let incoming = Dictionary(grouping: graph.edges, by: \.to)
+        var chains: [ConnectionChain] = []
+        var seen = Set<String>()
+
+        func add(_ nodes: [RecordGraphNode]) {
+            guard nodes.count >= 2 else { return }
+            let key = nodes.map(\.id).joined(separator: "|")
+            guard seen.insert(key).inserted else { return }
+            chains.append(
+                ConnectionChain(
+                    id: key,
+                    titles: nodes.map(\.title),
+                    layers: nodes.map(\.layer)
+                )
+            )
         }
-        // An automatic record can be explicitly linked to both layers even
-        // when the action is not a hierarchy child. Surface that direct
-        // pairing here as well, rather than making the user infer it from
-        // two separate graph lines.
-        for automatic in graph.nodes where automatic.layer == .automatic {
-            let outgoing = graph.edges
-                .filter { $0.from == automatic.id }
-                .compactMap { nodesByID[$0.to] }
-            let routines = outgoing.filter { $0.layer == .routine }
-            let actions = outgoing.filter { $0.layer == .action }
-            for routine in routines {
-                for action in actions {
-                    pairs.append((routine.title, action.title))
+
+        let routineActions = graph.edges.compactMap { edge -> (RecordGraphNode, RecordGraphNode)? in
+            guard let routine = nodesByID[edge.from],
+                  let action = nodesByID[edge.to],
+                  routine.layer == .routine,
+                  action.layer == .action else { return nil }
+            return (routine, action)
+        }
+        for (routine, action) in routineActions {
+            let automaticParents = incoming[action.id, default: []]
+                .compactMap { nodesByID[$0.from] }
+                .filter { $0.layer == .automatic }
+            if automaticParents.isEmpty {
+                add([routine, action])
+            } else {
+                for automatic in automaticParents {
+                    add([automatic, routine, action])
                 }
             }
         }
-        var seen = Set<String>()
-        return pairs.compactMap { routine, action in
-            let key = "\(routine)\u{1f}\(action)"
-            guard seen.insert(key).inserted else { return nil }
-            return (routine, action)
+
+        for automatic in graph.nodes where automatic.layer == .automatic {
+            let targets = outgoing[automatic.id, default: []]
+                .compactMap { nodesByID[$0.to] }
+            let routines = targets.filter { $0.layer == .routine }
+            let actions = targets.filter { $0.layer == .action }
+            for routine in routines {
+                let children = outgoing[routine.id, default: []]
+                    .compactMap { nodesByID[$0.to] }
+                    .filter { $0.layer == .action }
+                if children.isEmpty {
+                    add([automatic, routine])
+                } else {
+                    for action in children {
+                        add([automatic, routine, action])
+                    }
+                }
+            }
+            for action in actions {
+                let parents = incoming[action.id, default: []]
+                    .compactMap { nodesByID[$0.from] }
+                    .filter { $0.layer == .routine }
+                if parents.isEmpty {
+                    add([automatic, action])
+                } else {
+                    for routine in parents {
+                        add([automatic, routine, action])
+                    }
+                }
+            }
         }
+        return chains
     }
 
     var body: some View {
@@ -1984,7 +2030,7 @@ private struct RecordRelationshipView: View {
             HStack(spacing: 6) {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
                     .font(.taption(size: 10, weight: .bold))
-                Text("직접 연결한 기록 요약")
+                Text("연결 구조")
                     .font(.taption(size: 9.5, weight: .bold))
                 Spacer(minLength: 4)
                 Text("탭해서 루틴·액션 연결")
@@ -1992,14 +2038,19 @@ private struct RecordRelationshipView: View {
                     .foregroundStyle(Color.tpSecondary)
             }
 
-            if !linkedRoutineActions.isEmpty {
+            if !connectionChains.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
-                    ForEach(Array(linkedRoutineActions.enumerated()), id: \.offset) { _, pair in
+                    ForEach(connectionChains) { chain in
                         Label {
-                            Text("\(displayNodeTitle(pair.routine))  →  \(pair.action)")
+                            Text(chain.titles.enumerated().map { index, title in
+                                let clean = chain.layers[index] == .routine
+                                    ? displayNodeTitle(title)
+                                    : title
+                                return clean
+                            }.joined(separator: "  →  "))
                                 .lineLimit(1)
                         } icon: {
-                            Image(systemName: "link")
+                            Image(systemName: "arrow.triangle.branch")
                         }
                         .font(.taption(size: 8, weight: .semibold))
                         .foregroundStyle(Color.tpInk)
@@ -2334,13 +2385,18 @@ private struct TimelineDetailPanel: View {
         // graph for an empty playhead interval: that both violates the empty
         // detail-state contract and needlessly rebuilt all relationship nodes
         // on every 20 Hz scrub tick.
-        guard let selection = activeSelection else { return nil }
-        let span = selection.span
+        guard relationshipFocusNodeID != nil else { return nil }
+        let span = activeSelection?.span
+            ?? playheadDate.map {
+                TimeSpan(start: $0, end: $0.addingTimeInterval(1))
+            }
+            ?? daySpan
         let graph = relationshipGraphCache.value(
             for: .init(
                 timelineRevision: model.timelineRevision,
                 spanStart: span.start.timeIntervalSinceReferenceDate,
-                spanEnd: span.end.timeIntervalSinceReferenceDate
+                spanEnd: span.end.timeIntervalSinceReferenceDate,
+                focusNodeID: relationshipFocusNodeID
             )
         ) {
             RecordRelationshipEngine.make(
@@ -2350,10 +2406,55 @@ private struct TimelineDetailPanel: View {
                 calendarEvents: model.snapshot.calendarEvents,
                 places: model.snapshot.places,
                 travel: model.snapshot.travel,
-                recordLinks: model.snapshot.recordLinks
+                recordLinks: model.snapshot.recordLinks,
+                focusNodeID: relationshipFocusNodeID
             )
         }
-        return graph.isEmpty ? nil : graph
+        return graph.hasConnections ? graph : nil
+    }
+
+    /// The detail graph is anchored to the item under the playhead. A
+    /// repeated rule segment resolves to its root routine, so the panel shows
+    /// the complete routine → action → automatic evidence chain instead of a
+    /// detached one-off segment.
+    private var relationshipFocusNodeID: String? {
+        guard let selection = activeSelection else {
+            guard let routine = focusedRoutineForDetail else { return nil }
+            return "routine.\(routine.id.uuidString)"
+        }
+        if let nodeID = selection.recordNodeID {
+            return nodeID
+        }
+        if let actualID = selection.actualID {
+            return "automatic.actual.\(actualID.uuidString)"
+        }
+        if let travelID = selection.travelID {
+            return "automatic.travel.\(travelID.uuidString)"
+        }
+        guard let planID = selection.planID,
+              let plan = planIndexCache.plan(
+                  id: planID,
+                  timelineRevision: model.timelineRevision,
+                  plans: model.snapshot.plans
+              ) else { return nil }
+        var current = plan
+        var visited = Set<UUID>()
+        while visited.insert(current.id).inserted {
+            if GoalRecordPolicy.isGoal(current) {
+                return "routine.\(current.id.uuidString)"
+            }
+            guard current.origin == .repeatRule,
+                  let parentID = current.parentID,
+                  let parent = planIndexCache.plan(
+                      id: parentID,
+                      timelineRevision: model.timelineRevision,
+                      plans: model.snapshot.plans
+                  ) else { break }
+            current = parent
+        }
+        return current.origin == .repeatRule
+            ? nil
+            : "action.\(current.id.uuidString)"
     }
 
     private var availableDetailSections: [TimelineDetailSection] {
@@ -2909,6 +3010,7 @@ private struct TimelineDetailPanel: View {
                         .font(.taption(size: 8.5, weight: .semibold))
                         .foregroundStyle(Color.tpSleepDark)
                 }
+                relationshipSummaryView
 
                 let descendants = (try? PlanHierarchy.descendants(
                     of: routine.id,
@@ -3001,7 +3103,60 @@ private struct TimelineDetailPanel: View {
                actuals.contains(where: { $0.id == actual.id }) {
                 actualGoalLinkControl(actual)
             }
+            relationshipSummaryView
         }
+    }
+
+    @ViewBuilder
+    private var relationshipSummaryView: some View {
+        if let summary = focusedRelationshipSummary {
+            Label(summary, systemImage: "point.3.connected.trianglepath.dotted")
+                .font(.taption(size: 8, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(2)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(
+                    Color.tpBackground,
+                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                )
+        }
+    }
+
+    private var focusedRelationshipSummary: String? {
+        guard let graph = relationshipGraph,
+              let focus = relationshipFocusNodeID else { return nil }
+        var connectedIDs = Set([focus])
+        var changed = true
+        while changed {
+            changed = false
+            for edge in graph.edges where connectedIDs.contains(edge.from) || connectedIDs.contains(edge.to) {
+                if connectedIDs.insert(edge.from).inserted { changed = true }
+                if connectedIDs.insert(edge.to).inserted { changed = true }
+            }
+        }
+        let values = graph.nodes.filter { connectedIDs.contains($0.id) }
+        let automatic = values
+            .filter { $0.layer == .automatic }
+            .map(\.title)
+        let routines = values
+            .filter { $0.layer == .routine }
+            .map { displayRoutineTitle($0.title) }
+        let actions = values
+            .filter { $0.layer == .action }
+            .map(\.title)
+        var parts: [String] = []
+        if !automatic.isEmpty { parts.append(automatic.joined(separator: " · ")) }
+        if !routines.isEmpty { parts.append(routines.joined(separator: " · ")) }
+        if !actions.isEmpty { parts.append(actions.joined(separator: " · ")) }
+        guard parts.count >= 2 else { return nil }
+        return "연결 · " + parts.joined(separator: " → ")
+    }
+
+    private func displayRoutineTitle(_ title: String) -> String {
+        GoalRecordPolicy.displayTitle(title)
+            .replacingOccurrences(of: GoalRecordPolicy.currentPrefix, with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var actionContent: some View {
@@ -3038,6 +3193,7 @@ private struct TimelineDetailPanel: View {
                 .foregroundStyle(Color.tpSecondary)
                 actionMemoPreview(planID: plan.id)
                 routineLinkControl(for: plan)
+                relationshipSummaryView
             } else {
                 let plans = activeActionPlans
                 if plans.isEmpty {
@@ -3440,9 +3596,16 @@ private struct TimelineDetailPanel: View {
                 return $0.span.start < $1.span.start
             }
             .filter { plan in
+                let normalizedTitle = plan.title
+                    .split(whereSeparator: { $0.isWhitespace })
+                    .joined(separator: " ")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                // Repeat segments are generated projections. Their title can
+                // differ between legacy and current stores, but an identical
+                // slot is still one timeline segment.
                 let key = [
                     plan.categoryID,
-                    plan.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    plan.origin == .repeatRule ? "repeat" : normalizedTitle,
                     String(Int(plan.span.start.timeIntervalSinceReferenceDate.rounded())),
                     String(Int(plan.span.end.timeIntervalSinceReferenceDate.rounded())),
                 ].joined(separator: "|")
@@ -4852,6 +5015,8 @@ private final class GoalActualLinkCandidateCache {
             .filter {
                 !$0.isFixed
                     && $0.status != .skipped
+                    && $0.origin != .repeatRule
+                    && $0.origin != .calendar
                     && (!routinesOnly || GoalRecordPolicy.isGoal($0))
             }
             .map { plan -> GoalActualLinkCandidate in
@@ -4910,7 +5075,12 @@ private struct RecordNodeLinkSheet: View {
 
     private var candidates: [PlanRecord] {
         model.snapshot.plans
-            .filter { !$0.isFixed && $0.status != .skipped }
+            .filter {
+                !$0.isFixed
+                    && $0.status != .skipped
+                    && $0.origin != .repeatRule
+                    && $0.origin != .calendar
+            }
             .sorted {
                 if GoalRecordPolicy.isGoal($0) != GoalRecordPolicy.isGoal($1) {
                     return GoalRecordPolicy.isGoal($0)
