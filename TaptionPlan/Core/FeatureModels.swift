@@ -1195,6 +1195,15 @@ enum MotionKind: String, Codable, CaseIterable, Sendable {
         case .unknown: nil
         }
     }
+
+    var isMovement: Bool {
+        switch self {
+        case .walking, .running, .cycling, .automotive:
+            true
+        case .stationary, .unknown:
+            false
+        }
+    }
 }
 
 enum TrackingKind: String, Codable, CaseIterable, Hashable, Sendable {

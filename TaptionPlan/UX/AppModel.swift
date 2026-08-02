@@ -2620,8 +2620,30 @@ final class AppModel {
                  .exercise, .brushingTeeth, .eating, .typing, .sleep, .unknown:
                 .stationary
             }
+            let behaviorSegments = summary.behaviorSegments ?? []
+            func behaviorAt(_ date: Date) -> WatchBehaviorInference {
+                guard let segment = behaviorSegments.first(where: {
+                    $0.startedAt <= date && date < $0.endedAt
+                }) else { return behavior }
+                return WatchBehaviorInference(
+                    kind: segment.behavior,
+                    confidenceScore: segment.confidenceScore,
+                    evidence: segment.evidence,
+                    modelVersion: segment.modelVersion
+                )
+            }
+            func motionKind(for inference: WatchBehaviorInference) -> MotionKind {
+                switch inference.kind {
+                case .running: .running
+                case .walking, .stairsUp, .stairsDown: .walking
+                case .cycling: .cycling
+                case .automotive, .publicTransit, .subway: .automotive
+                default: .stationary
+                }
+            }
             var readings = routePoints.enumerated().map { offset, point in
-                SensorReading(
+                let pointBehavior = behaviorAt(point.capturedAt)
+                return SensorReading(
                     id: point.id,
                     timestamp: point.capturedAt,
                     point: GeoPoint(
@@ -2633,12 +2655,10 @@ final class AppModel {
                     ),
                     speedMetersPerSecond: point.speedMetersPerSecond,
                     courseDegrees: point.courseDegrees,
-                    motion: summary.workoutKind == .running
-                        ? .running
-                        : summary.workoutKind == .cycling
-                            ? .cycling
-                            : .walking,
-                    motionConfidence: .high,
+                    motion: motionKind(for: pointBehavior),
+                    motionConfidence: ConfidenceLevel(
+                        score: pointBehavior.confidenceScore
+                    ),
                     relativeAltitudeMeters: summary.relativeAltitudeMeters,
                     pressureKilopascals: summary.pressureKilopascals,
                     floorsAscended: summary.floorsAscended,
@@ -2652,10 +2672,10 @@ final class AppModel {
                         summary.accelerometerMeanJerkGPerSecond,
                     gpsAvailable: true,
                     watchWorkoutKind: summary.workoutKind.rawValue,
-                    behavior: behavior.kind.rawValue,
-                    behaviorConfidenceScore: behavior.confidenceScore,
-                    behaviorEvidence: behavior.evidence,
-                    behaviorModelVersion: behavior.modelVersion,
+                    behavior: pointBehavior.kind.rawValue,
+                    behaviorConfidenceScore: pointBehavior.confidenceScore,
+                    behaviorEvidence: pointBehavior.evidence,
+                    behaviorModelVersion: pointBehavior.modelVersion,
                     trackingSessionID: summary.sessionID,
                     trackingKind: summary.workoutKind == .running
                         ? .running

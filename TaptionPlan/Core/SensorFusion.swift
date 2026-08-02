@@ -1867,17 +1867,10 @@ enum AppleWatchSensorActivityEngine {
             $0.id == summary.sessionID
                 && ($0.source == .healthKit || $0.source == .appleWatch)
         }
+        let segments = summary.behaviorSegments ?? []
+        let planID = linkedPlan?.id ?? summary.linkedPlanID ?? previous?.planID
         let behaviorTitle = summary.behavior?.title
             ?? "Apple Watch \(summary.workoutKind.title)"
-        let title = linkedPlan?.title
-            ?? summary.linkedPlanTitle
-            ?? behaviorTitle
-        let categoryID = linkedPlan?.categoryID
-            ?? summary.linkedCategoryID
-            ?? (summary.behavior == .sleep ? "sleep" : "activity")
-        let confidence = summary.behaviorConfidenceScore.map {
-            ConfidenceLevel(score: $0)
-        } ?? (summary.accelerometerSampleCount > 0 ? .high : .medium)
         var evidence = summary.behaviorEvidence ?? []
         if evidence.isEmpty {
             evidence = ["Apple Watch 센서 청크"]
@@ -1888,9 +1881,82 @@ enum AppleWatchSensorActivityEngine {
         if summary.stepCount != nil {
             evidence.append("걸음·거리")
         }
+        if !segments.isEmpty {
+            let segmentIDs = Set(segments.map(\.id))
+            let kept = existing.filter { actual in
+                guard actual.source == .appleWatch else { return true }
+                if actual.id == summary.sessionID { return false }
+                guard actual.sensorChunkID == summary.sessionID else {
+                    return true
+                }
+                return !segmentIDs.contains(actual.id)
+            }
+            let records = segments.map { segment in
+                let categoryID: String = {
+                    if segment.behavior.isMovement { return "movement" }
+                    if segment.behavior == .sleep { return "sleep" }
+                    return linkedPlan?.categoryID == "sleep"
+                        || summary.linkedCategoryID == "sleep"
+                        ? "sleep"
+                        : "activity"
+                }()
+                let title = linkedPlan?.title
+                    ?? summary.linkedPlanTitle
+                    ?? segment.behavior.title
+                let segmentEvidence = Array(
+                    Set(evidence + segment.evidence + ["2.56초 IMU 창"])
+                ).sorted()
+                let previousSegment = existing.first { $0.id == segment.id }
+                return ActualRecord(
+                    id: segment.id,
+                    planID: planID,
+                    title: title,
+                    categoryID: categoryID,
+                    startedAt: segment.startedAt,
+                    endedAt: segment.endedAt,
+                    source: .appleWatch,
+                    confidence: ConfidenceLevel(
+                        score: segment.confidenceScore
+                    ),
+                    createdAt: previousSegment?.createdAt
+                        ?? segment.startedAt,
+                    behavior: segment.behavior.rawValue,
+                    evidence: segmentEvidence,
+                    sensorChunkID: summary.sessionID,
+                    modelVersion: segment.modelVersion
+                )
+            }
+            return (kept + records).sorted {
+                $0.startedAt < $1.startedAt
+            }
+        }
+
+        // Keep the existing window records when a final short chunk has no
+        // complete 2.56-second window yet.
+        if existing.contains(where: {
+            $0.source == .appleWatch
+                && $0.sensorChunkID == summary.sessionID
+                && $0.id != summary.sessionID
+        }) {
+            return existing.sorted { $0.startedAt < $1.startedAt }
+        }
+        let title = linkedPlan?.title
+            ?? summary.linkedPlanTitle
+            ?? behaviorTitle
+        let categoryID: String = {
+            if summary.behavior?.isMovement == true { return "movement" }
+            if summary.behavior == .sleep { return "sleep" }
+            return linkedPlan?.categoryID == "sleep"
+                || summary.linkedCategoryID == "sleep"
+                ? "sleep"
+                : "activity"
+        }()
+        let confidence = summary.behaviorConfidenceScore.map {
+            ConfidenceLevel(score: $0)
+        } ?? (summary.accelerometerSampleCount > 0 ? .high : .medium)
         let record = ActualRecord(
             id: summary.sessionID,
-            planID: linkedPlan?.id ?? summary.linkedPlanID ?? previous?.planID,
+            planID: planID,
             title: title,
             categoryID: categoryID,
             startedAt: summary.startedAt,
@@ -1945,7 +2011,9 @@ enum MotionActivityActualEngine {
                     planID: nil,
                     routineID: nil,
                     title: title,
-                    categoryID: "activity",
+                    categoryID: activity.motion.isMovement
+                        ? "movement"
+                        : "activity",
                     startedAt: activity.span.start,
                     endedAt: activity.span.end,
                     source: .motion,

@@ -192,6 +192,7 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
     }
 
     static let defaultOrder: [Self] = [
+        .map,
         .schedule,
         .location,
         .movement,
@@ -202,7 +203,6 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
         .action,
         .photo,
         .event,
-        .map,
     ]
 }
 
@@ -268,6 +268,203 @@ private struct TimelineSelection: Equatable {
         self.isRoute = isRoute
         self.categoryID = categoryID
         self.categoryName = categoryName
+    }
+}
+
+/// Keeps every detail card on the same instant as the red playhead.  The
+/// timeline and the detail panel used to run separate containment checks,
+/// which left the panel empty when an automatic record ended on a boundary.
+private enum TimelinePlayheadSynchronizer {
+    struct Match {
+        let plans: [PlanRecord]
+        let actuals: [ActualRecord]
+        let automaticActuals: [ActualRecord]
+        let places: [PlaceStay]
+        let travel: [TravelSegment]
+        let calendarEvents: [CalendarRecord]
+        let weather: [WeatherContext]
+        let photos: [PhotoCluster]
+
+        var hasTimelineItem: Bool {
+            !plans.isEmpty
+                || !actuals.isEmpty
+                || !places.isEmpty
+                || !travel.isEmpty
+                || !calendarEvents.isEmpty
+                || !weather.isEmpty
+                || !photos.isEmpty
+        }
+    }
+
+    enum Direction {
+        case forward
+        case backward
+    }
+
+    static func contains(
+        _ span: TimeSpan,
+        at date: Date,
+        tolerance: TimeInterval = 1
+    ) -> Bool {
+        date >= span.start.addingTimeInterval(-tolerance)
+            && date <= span.end.addingTimeInterval(tolerance)
+    }
+
+    static func match(
+        at date: Date,
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        places: [PlaceStay],
+        travel: [TravelSegment],
+        calendarEvents: [CalendarRecord],
+        weather: [WeatherContext],
+        photos: [PhotoCluster] = [],
+        photoTolerance: TimeInterval = 0
+    ) -> Match {
+        let isFuture = date > .now
+        let actualValues = isFuture
+            ? []
+            : actuals.filter {
+                contains($0.span(asOf: max(Date.now, date)), at: date)
+            }
+        let automaticValues = actualValues.filter {
+            switch $0.source {
+            case .healthKit, .appleWatch, .motion, .location:
+                true
+            default:
+                false
+            }
+        }
+        return Match(
+            plans: plans.filter {
+                contains($0.span, at: date)
+                    && !GoalRecordPolicy.isGoal($0)
+            },
+            actuals: actualValues,
+            automaticActuals: automaticValues,
+            places: isFuture
+                ? []
+                : places.filter { contains($0.span, at: date) },
+            travel: isFuture
+                ? []
+                : travel.filter { contains($0.span, at: date) },
+            calendarEvents: calendarEvents.filter {
+                contains($0.span, at: date)
+            },
+            weather: isFuture
+                ? []
+                : weather.filter {
+                    contains(
+                        weatherTimelineSpan($0),
+                        at: date,
+                        tolerance: 2
+                    )
+                },
+            photos: isFuture
+                ? []
+                : photos.filter { cluster in
+                    cluster.photos.contains {
+                        abs($0.capturedAt.timeIntervalSince(date))
+                            <= photoTolerance
+                    }
+                }
+        )
+    }
+
+    static func snapIfNeeded(
+        date: Date,
+        direction: Direction?,
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        places: [PlaceStay],
+        travel: [TravelSegment],
+        calendarEvents: [CalendarRecord],
+        weather: [WeatherContext],
+        photos: [PhotoCluster]
+    ) -> Date {
+        let match = match(
+            at: date,
+            plans: plans,
+            actuals: actuals,
+            places: places,
+            travel: travel,
+            calendarEvents: calendarEvents,
+            weather: weather,
+            photos: photos
+        )
+        guard !match.hasTimelineItem else { return date }
+
+        let spans = plans
+            .filter { !GoalRecordPolicy.isGoal($0) }
+            .map(\.span)
+            + actuals.map { $0.span(asOf: max(Date.now, date)) }
+            + places.map(\.span)
+            + travel.map(\.span)
+            + calendarEvents.map(\.span)
+            + weather.map { weatherTimelineSpan($0) }
+            + photos.map(\.detailSpan)
+        guard !spans.isEmpty else { return date }
+
+        let ordered = spans.sorted { $0.start < $1.start }
+        switch direction {
+        case .forward:
+            return ordered.first(where: { $0.start > date })?.start
+                ?? date
+        case .backward:
+            return ordered.last(where: { $0.end < date })?.end
+                ?? date
+        case nil:
+            return ordered.min {
+                abs($0.start.timeIntervalSince(date))
+                    < abs($1.start.timeIntervalSince(date))
+            }?.start ?? date
+        }
+    }
+}
+
+private func watchBehavior(_ actual: ActualRecord) -> WatchBehaviorKind? {
+    actual.behavior.flatMap(WatchBehaviorKind.init(rawValue:))
+}
+
+private func isMovementActual(_ actual: ActualRecord) -> Bool {
+    if actual.categoryID == "movement" { return true }
+    if watchBehavior(actual)?.isMovement == true { return true }
+    let title = actual.title.lowercased()
+    return [
+        "걷기", "걷", "달리기", "달리", "자전거", "차량", "자동차",
+        "버스", "지하철", "택시", "기차", "비행기", "배", "이동",
+    ].contains { title.contains($0) }
+}
+
+private func movementActualTitle(_ actual: ActualRecord) -> String {
+    watchBehavior(actual)?.isMovement == true
+        ? watchBehavior(actual)!.title
+        : actual.title
+}
+
+private func movementActualSymbol(_ actual: ActualRecord) -> String {
+    switch watchBehavior(actual) {
+    case .running: "figure.run"
+    case .cycling: "bicycle"
+    case .automotive: "car"
+    case .publicTransit, .subway: "tram"
+    case .stairsUp, .stairsDown: "stairs"
+    case .elevator: "arrow.up.and.down"
+    default: "figure.walk.motion"
+    }
+}
+
+private func restActualTitle(_ actual: ActualRecord) -> String {
+    switch watchBehavior(actual) {
+    case .stationary: "휴식 1"
+    case .sitting: "휴식 2"
+    case .standing: "휴식 3"
+    case .lying: "휴식 4"
+    default:
+        actual.title.localizedCaseInsensitiveContains("휴식")
+            || actual.title.localizedCaseInsensitiveContains("정지")
+            ? "휴식 1"
+            : actual.title
     }
 }
 
@@ -1106,6 +1303,7 @@ private final class TimelineDetailDataCache {
         let selectedManualActionPlan: PlanRecord?
         let places: [PlaceStay]
         let travel: [TravelSegment]
+        let movementActuals: [ActualRecord]
         let sleepPlans: [PlanRecord]
         let activityPlans: [PlanRecord]
         let sleepActuals: [ActualRecord]
@@ -1120,6 +1318,7 @@ private final class TimelineDetailDataCache {
             selectedManualActionPlan: nil,
             places: [],
             travel: [],
+            movementActuals: [],
             sleepPlans: [],
             activityPlans: [],
             sleepActuals: [],
@@ -1391,7 +1590,7 @@ struct TwoFingerPinchAttachment: UIViewRepresentable {
 
 struct ScheduleView: View {
     @Bindable var model: AppModel
-    @State private var dayZoom: TimelineZoomPreset = .oneDay
+    @State private var dayZoom: TimelineZoomPreset = .oneHour
     @State private var selectedTimelineItem: TimelineSelection?
     @State private var detailSection: TimelineDetailSection = .map
     @State private var selectedPhotoCluster: PhotoCluster?
@@ -1640,6 +1839,15 @@ struct ScheduleView: View {
             categories: model.snapshot.categories,
             actuals: model.snapshot.actuals
         )
+        let playheadMatch = TimelinePlayheadSynchronizer.match(
+            at: date,
+            plans: model.snapshot.plans,
+            actuals: model.snapshot.actuals,
+            places: model.snapshot.places,
+            travel: model.snapshot.travel,
+            calendarEvents: model.snapshot.calendarEvents,
+            weather: model.snapshot.weather
+        )
 
         if let cluster = photoCluster(at: date) {
             if selectedPhotoCluster?.id != cluster.id {
@@ -1668,8 +1876,14 @@ struct ScheduleView: View {
             )
         }
 
-        if let actual = selectionIndexCache.automaticActual(containing: date) {
-            let span = actual.span(asOf: max(.now, date))
+        if let actual = playheadMatch.automaticActuals.sorted(by: {
+            if $0.startedAt == $1.startedAt {
+                return $0.span(asOf: max(Date.now, date)).duration
+                    < $1.span(asOf: max(Date.now, date)).duration
+            }
+            return $0.startedAt < $1.startedAt
+        }).first {
+            let span = actual.span(asOf: max(Date.now, date))
             return TimelineSelection(
                 title: actual.title,
                 span: span,
@@ -1760,13 +1974,8 @@ struct ScheduleView: View {
     }
 
     private var photoPlayheadTolerance: TimeInterval {
-        guard model.selectedScale == .day else {
-            return 24 * 60 * 60
-        }
-        return min(
-            25 * 60,
-            max(60, dayZoom.duration * 0.035)
-        )
+        guard model.selectedScale == .day else { return 60 }
+        return min(60, max(5, dayZoom.duration * 0.01))
     }
 
     private var headerTitle: String {
@@ -2310,10 +2519,15 @@ private struct TimelineDetailPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             panelResizeHandle
-            if activeSelection != nil || !playheadDetailSections.isEmpty {
+            // During playback the map/location card is the primary surface.
+            // The old context header showed a stale selection above it and
+            // made an empty interval look like a selected routine.
+            if playheadDate == nil,
+               activeSelection != nil || !playheadDetailSections.isEmpty {
                 detailContextHeader
             }
-            if !TaptionProductScope.automaticLoggingOnly,
+            if playheadDate == nil,
+               !TaptionProductScope.automaticLoggingOnly,
                let selection,
                selection.recordNodeID != nil,
                selection.actualID == nil,
@@ -3110,6 +3324,23 @@ private struct TimelineDetailPanel: View {
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
+            ForEach(detailMovementActuals) { actual in
+                HStack(spacing: 7) {
+                    Image(
+                        systemName: movementActualSymbol(actual)
+                    )
+                    .font(.taption(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpHealthDark)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(movementActualTitle(actual))
+                            .font(.taption(size: 9, weight: .semibold))
+                        Text(actualDetailSubtitle(actual))
+                            .font(.taption(size: 7.5))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                    Spacer(minLength: 4)
+                }
+            }
             automaticNodeLinkControl(for: "movement")
         }
     }
@@ -3166,6 +3397,9 @@ private struct TimelineDetailPanel: View {
                         ))
                         .font(.taption(size: 7.5))
                         .foregroundStyle(Color.tpSecondary)
+                        Text(weatherMeasurementLocation(weather))
+                            .font(.taption(size: 7.5))
+                            .foregroundStyle(Color.tpSecondary)
                     }
                     Spacer(minLength: 4)
                     if let air = weather.airQuality {
@@ -3176,6 +3410,23 @@ private struct TimelineDetailPanel: View {
                 }
             }
         }
+    }
+
+    private func weatherMeasurementLocation(
+        _ weather: WeatherContext
+    ) -> String {
+        if let placeName = weather.placeName,
+           !placeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "측정 위치 · \(placeName)"
+        }
+        if let point = weather.point {
+            return String(
+                format: "측정 위치 · %.5f, %.5f",
+                point.latitude,
+                point.longitude
+            )
+        }
+        return "측정 위치 · 위치 정보 없음"
     }
 
     private var routineContent: some View {
@@ -3279,7 +3530,13 @@ private struct TimelineDetailPanel: View {
                         .font(.taption(size: 9, weight: .bold))
                         .foregroundStyle(tint)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(actual.title)
+                        Text(
+                            isMovementActual(actual)
+                                ? movementActualTitle(actual)
+                                : isSleepActual(actual)
+                                    ? actual.title
+                                    : restActualTitle(actual)
+                        )
                             .font(.taption(size: 9, weight: .semibold))
                         Text(
                             actualDetailSubtitle(actual)
@@ -3569,6 +3826,10 @@ private struct TimelineDetailPanel: View {
         detailData.travel
     }
 
+    private var detailMovementActuals: [ActualRecord] {
+        detailData.movementActuals
+    }
+
     private var detailSleepPlans: [PlanRecord] {
         detailData.sleepPlans
     }
@@ -3589,9 +3850,6 @@ private struct TimelineDetailPanel: View {
         let contentSpan = detailContentSpan
         let displaySpan = detailDisplaySpan
         let selection = activeSelection
-        if playheadDate != nil, selection == nil {
-            return .empty
-        }
         let cacheSpan = selection?.span ?? contentSpan
         let key = TimelineDetailDataCache.Key(
             timelineRevision: model.timelineRevision,
@@ -3619,8 +3877,23 @@ private struct TimelineDetailPanel: View {
             // an overnight repeat would otherwise show both adjacent days as
             // identical "23:00–06:30" rows.
             let focusedSpan = playheadDate.map {
-                TimeSpan(start: $0, end: $0.addingTimeInterval(1))
+                TimeSpan(
+                    start: $0.addingTimeInterval(-1),
+                    end: $0.addingTimeInterval(1)
+                )
             } ?? contentSpan
+            let playheadMatch = playheadDate.map { date in
+                TimelinePlayheadSynchronizer.match(
+                    at: date,
+                    plans: plans,
+                    actuals: actuals,
+                    places: model.snapshot.places,
+                    travel: model.snapshot.travel,
+                    calendarEvents: model.snapshot.calendarEvents,
+                    weather: model.snapshot.weather
+                )
+            }
+            let matchedPlans = playheadMatch?.plans ?? plans
             let selectedPlan = selection?.planID.flatMap { planID in
                 planIndexCache.plan(
                     id: planID,
@@ -3639,7 +3912,7 @@ private struct TimelineDetailPanel: View {
                 actionPlans = [selectedManual]
             } else {
                 actionPlans = deduplicatedPlans(
-                    plans
+                    matchedPlans
                         .filter { plan in
                             plan.status != .skipped
                                 && plan.categoryID != "event"
@@ -3658,25 +3931,25 @@ private struct TimelineDetailPanel: View {
                         .sorted { $0.span.start < $1.span.start }
                 )
             }
-            let places = model.snapshot.places
+            let places = (playheadMatch?.places ?? model.snapshot.places
                 .filter {
                     $0.span.intersection(with: focusedSpan) != nil
-                }
+                })
                 .sorted { $0.span.start < $1.span.start }
-            let travel = model.snapshot.travel
+            let travel = (playheadMatch?.travel ?? model.snapshot.travel
                 .filter {
                     $0.span.intersection(with: focusedSpan) != nil
-                }
+                })
                 .sorted { $0.span.start < $1.span.start }
             let sleepPlans = deduplicatedPlans(
-                plans.filter {
+                matchedPlans.filter {
                     $0.categoryID == "sleep"
                         && !GoalRecordPolicy.isGoal($0)
                         && $0.span.intersection(with: focusedSpan) != nil
                 }
             )
             let activityPlans = deduplicatedPlans(
-                plans.filter {
+                matchedPlans.filter {
                     $0.categoryID == "activity"
                         && !GoalRecordPolicy.isGoal($0)
                         && $0.span.intersection(with: focusedSpan) != nil
@@ -3686,10 +3959,11 @@ private struct TimelineDetailPanel: View {
             // Apple Watch evidence. Timer/manual activity records belong to
             // the action layer and must not appear here when they are absent
             // from the visible activity row.
-            let automaticActuals = AutomaticRecordTimelineEngine.activities(
-                from: actuals,
-                inside: focusedSpan
-            )
+            let automaticActuals = playheadMatch?.automaticActuals
+                ?? AutomaticRecordTimelineEngine.activities(
+                    from: actuals,
+                    inside: focusedSpan
+                )
             let sleepActuals = deduplicatedActuals(
                 automaticActuals
                     .filter { isSleepActual($0) }
@@ -3698,39 +3972,45 @@ private struct TimelineDetailPanel: View {
             let activityActuals = deduplicatedActuals(
                 automaticActuals
                     .filter {
-                        !isSleepActual($0)
+                        !isSleepActual($0) && !isMovementActual($0)
                     }
                     .sorted { $0.startedAt < $1.startedAt }
             )
-            let weather = model.snapshot.weather
+            let movementActuals = deduplicatedActuals(
+                automaticActuals
+                    .filter(isMovementActual)
+                    .sorted { $0.startedAt < $1.startedAt }
+            )
+            let weather = (playheadMatch?.weather ?? model.snapshot.weather
                 .filter {
                     $0.observedAt >= focusedSpan.start
                         && $0.observedAt <= focusedSpan.end
-                }
+                })
                 .sorted { $0.observedAt < $1.observedAt }
             let selectedActual = selection?.actualID.flatMap { actualID in
-                actuals.first { actual in
+                (playheadMatch?.actuals ?? actuals).first { actual in
                     actual.id == actualID
                         && actual.span().intersection(with: contentSpan) != nil
                 }
             }
-            let eventPlans = plans
+            let eventPlans = matchedPlans
                 .filter {
                     $0.span.intersection(with: displaySpan) != nil
                         && $0.categoryID == "event"
                         && $0.parentID == nil
                 }
                 .sorted { $0.span.start < $1.span.start }
-            let calendarEvents = model.snapshot.calendarEvents
-                .filter {
+            let calendarEvents = (playheadMatch?.calendarEvents
+                ?? model.snapshot.calendarEvents.filter {
                     $0.span.intersection(with: displaySpan) != nil
-                }
+                })
                 .sorted { $0.span.start < $1.span.start }
             return TimelineDetailDataCache.Value(
                 actionPlans: actionPlans,
                 selectedManualActionPlan: selectedManual,
                 places: places,
                 travel: travel,
+                movementActuals: movementActuals,
                 sleepPlans: sleepPlans,
                 activityPlans: activityPlans,
                 sleepActuals: sleepActuals,
@@ -3843,7 +4123,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var hasMovementContent: Bool {
-        !detailTravel.isEmpty
+        !detailTravel.isEmpty || !detailMovementActuals.isEmpty
     }
 
     private var hasSleepContent: Bool {
@@ -4170,7 +4450,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var photoDetailTolerance: TimeInterval {
-        return 25 * 60
+        60
     }
 
     private var routeTitle: String {
@@ -5324,6 +5604,7 @@ private struct DetailMemoField: View {
     let selection: TimelineSelection?
     let section: TimelineDetailSection
     @State private var text = ""
+    @State private var editingMemoID: UUID?
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -5331,15 +5612,25 @@ private struct DetailMemoField: View {
             Image(systemName: "note.text")
                 .font(.taption(size: 8.5, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
+            if memoCount > 0 {
+                Text("+\(memoCount)")
+                    .font(.taption(size: 7.5, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.tpProjectDark, in: Capsule())
+            }
             TextField("이 항목에 메모 입력…", text: $text, axis: .vertical)
                 .font(.taption(size: 9))
                 .lineLimit(1...3)
                 .textFieldStyle(.plain)
                 .focused($isFocused)
                 .onSubmit { save() }
-                .onChange(of: isFocused) { _, focused in
-                    if !focused { save() }
-                }
+            HStack(spacing: 3) {
+                memoAction("저장", systemImage: "checkmark", enabled: canSave) { save() }
+                memoAction("편집", systemImage: "pencil", enabled: latestMemo != nil) { edit() }
+                memoAction("삭제", systemImage: "trash", enabled: latestMemo != nil, destructive: true) { delete() }
+            }
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
@@ -5352,23 +5643,94 @@ private struct DetailMemoField: View {
                 .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.5)
         }
         .onChange(of: selection) { _, _ in
-            text = ""
-            isFocused = false
-        }
-        .onDisappear {
-            save()
+            reset()
         }
         .accessibilityLabel("\(section.rawValue) 메모")
     }
 
+    private var canSave: Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var existingMemoPlanID: UUID? {
+        if let planID = selection?.planID { return planID }
+        if let actualID = selection?.actualID,
+           let actual = model.snapshot.actuals.first(where: { $0.id == actualID }),
+           let planID = actual.planID {
+            return planID
+        }
+        guard let selection, let categoryID = selection.categoryID else { return nil }
+        return model.snapshot.plans
+            .filter {
+                $0.categoryID == categoryID
+                    && $0.title == "메모 - \(selection.categoryName ?? section.rawValue)"
+                    && Calendar.autoupdatingCurrent.isDate($0.span.start, inSameDayAs: selection.span.start)
+            }
+            .sorted { $0.span.start > $1.span.start }
+            .first?.id
+    }
+
+    private var latestMemo: ActionMemo? {
+        guard let planID = existingMemoPlanID else { return nil }
+        return model.memos(for: planID).last
+    }
+
+    private var memoCount: Int {
+        guard let planID = existingMemoPlanID else { return 0 }
+        return model.memos(for: planID).count
+    }
+
+    private func memoAction(
+        _ title: String,
+        systemImage: String,
+        enabled: Bool,
+        destructive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.taption(size: 8, weight: .bold))
+                .foregroundStyle(
+                    enabled
+                        ? (destructive ? Color.red : Color.tpInk)
+                        : Color.tpSecondary.opacity(0.35)
+                )
+                .frame(width: 22, height: 22)
+                .background(Color.white.opacity(enabled ? 0.8 : 0.35), in: RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(title)
+    }
+
+    private func edit() {
+        guard let memo = latestMemo else { return }
+        editingMemoID = memo.id
+        text = memo.text
+        isFocused = true
+    }
+
     private func save() {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty, let planID = memoTargetPlanID() else {
-            if clean.isEmpty { text = "" }
-            return
+        guard !clean.isEmpty else { return }
+        if let editingMemoID {
+            model.updateMemo(editingMemoID, text: clean, kind: .idea)
+        } else if let planID = memoTargetPlanID() {
+            model.addMemo(text: clean, kind: .idea, to: planID)
         }
-        model.addMemo(text: clean, kind: .idea, to: planID)
+        reset()
+    }
+
+    private func delete() {
+        guard let memo = latestMemo else { return }
+        model.deleteMemo(memo.id)
+        reset()
+    }
+
+    private func reset() {
         text = ""
+        editingMemoID = nil
+        isFocused = false
     }
 
     private func memoTargetPlanID() -> UUID? {
@@ -5394,7 +5756,7 @@ private struct DetailMemoField: View {
 
 struct GroupGanttView: View {
     @Bindable var model: AppModel
-    @State private var dayZoom: TimelineZoomPreset = .oneDay
+    @State private var dayZoom: TimelineZoomPreset = .oneHour
     @State private var selectedTimelineItem: TimelineSelection?
     @State private var detailSection: TimelineDetailSection = .map
     @State private var selectedPhotoCluster: PhotoCluster?
@@ -5560,6 +5922,15 @@ struct GroupGanttView: View {
             categories: model.snapshot.categories,
             actuals: model.snapshot.actuals
         )
+        let playheadMatch = TimelinePlayheadSynchronizer.match(
+            at: date,
+            plans: model.snapshot.plans,
+            actuals: model.snapshot.actuals,
+            places: model.snapshot.places,
+            travel: model.snapshot.travel,
+            calendarEvents: model.snapshot.calendarEvents,
+            weather: model.snapshot.weather
+        )
 
         if let cluster = photoCluster(at: date) {
             if selectedPhotoCluster?.id != cluster.id {
@@ -5588,8 +5959,14 @@ struct GroupGanttView: View {
             )
         }
 
-        if let actual = selectionIndexCache.automaticActual(containing: date) {
-            let span = actual.span(asOf: max(.now, date))
+        if let actual = playheadMatch.automaticActuals.sorted(by: {
+            if $0.startedAt == $1.startedAt {
+                return $0.span(asOf: max(Date.now, date)).duration
+                    < $1.span(asOf: max(Date.now, date)).duration
+            }
+            return $0.startedAt < $1.startedAt
+        }).first {
+            let span = actual.span(asOf: max(Date.now, date))
             return TimelineSelection(
                 title: actual.title,
                 span: span,
@@ -5676,13 +6053,8 @@ struct GroupGanttView: View {
     }
 
     private var photoPlayheadTolerance: TimeInterval {
-        guard model.selectedScale == .day else {
-            return 24 * 60 * 60
-        }
-        return min(
-            25 * 60,
-            max(60, dayZoom.duration * 0.035)
-        )
+        guard model.selectedScale == .day else { return 60 }
+        return min(60, max(5, dayZoom.duration * 0.01))
     }
 
     private var selectedGroup: PlanRecord? {
@@ -6159,7 +6531,7 @@ private struct TimelineBoard: View {
         case .week:
             model.selectedDate = date
             model.selectScale(.day)
-            dayZoom = .oneDay
+            dayZoom = .oneHour
         case .month:
             model.selectedDate = date
             model.selectScale(.week)
@@ -6332,8 +6704,12 @@ private struct TimelineBoard: View {
             .filter { $0.span.intersection(with: span) != nil }
             .sorted { $0.span.start < $1.span.start }
         let grouped = Dictionary(grouping: visiblePlans, by: \.categoryID)
+        let now = Date.now
         let visibleActuals = model.snapshot.actuals
-            .filter { $0.span().intersection(with: span) != nil }
+            .filter {
+                $0.startedAt <= now
+                    && $0.span(asOf: now).intersection(with: span) != nil
+            }
             .sorted { $0.startedAt < $1.startedAt }
         let usesAutomaticDayRows = scale == .day && includesCalendar
         let automaticActuals = AutomaticRecordTimelineEngine.activities(
@@ -6589,6 +6965,7 @@ private struct TimelineBoard: View {
             ),
             automaticMovementRow(
                 plans: plansByCategory["movement", default: []],
+                actuals: actuals.filter(isMovementActual),
                 visibleSpan: visibleSpan,
                 index: index
             ),
@@ -6601,6 +6978,7 @@ private struct TimelineBoard: View {
                 plans: plansByCategory["activity", default: []],
                 actuals: actuals.filter {
                     !AutomaticRecordTimelineEngine.isSleep($0)
+                        && !isMovementActual($0)
                 },
                 index: index
             ),
@@ -6611,8 +6989,11 @@ private struct TimelineBoard: View {
     private func automaticWeatherRow(
         visibleSpan: TimeSpan
     ) -> TimelineRowModel {
+        let now = Date.now
         let contexts = model.snapshot.weather
-            .filter { visibleSpan.contains($0.observedAt) }
+            .filter {
+                $0.observedAt <= now && visibleSpan.contains($0.observedAt)
+            }
             .sorted { $0.observedAt < $1.observedAt }
         let allocation = laneAllocation(contexts) { context in
             weatherTimelineSpan(context)
@@ -6680,13 +7061,24 @@ private struct TimelineBoard: View {
         visibleSpan: TimeSpan,
         index: TimelineBoardDataIndex
     ) -> TimelineRowModel {
+        let now = Date.now
+        let visiblePlans = plans.filter { $0.span.start <= now }
         let visiblePlaces = model.snapshot.places
+            .compactMap { place -> PlaceStay? in
+                guard place.span.start <= now,
+                      let clipped = place.span.intersection(
+                          with: TimeSpan(start: .distantPast, end: now)
+                      ) else { return nil }
+                var value = place
+                value.span = clipped
+                return value
+            }
             .filter { $0.span.intersection(with: visibleSpan) != nil }
             .sorted { $0.span.start < $1.span.start }
-        let planAllocation = laneAllocation(plans, span: \.span)
+        let planAllocation = laneAllocation(visiblePlans, span: \.span)
         let placeAllocation = laneAllocation(visiblePlaces, span: \.span)
         let offset = planAllocation.count
-        let planBlocks = plans.map { plan in
+        let planBlocks = visiblePlans.map { plan in
             timelineBlock(
                 plan: plan,
                 index: index,
@@ -6747,16 +7139,32 @@ private struct TimelineBoard: View {
 
     private func automaticMovementRow(
         plans: [PlanRecord],
+        actuals: [ActualRecord],
         visibleSpan: TimeSpan,
         index: TimelineBoardDataIndex
     ) -> TimelineRowModel {
+        let now = Date.now
+        let visiblePlans = plans.filter { $0.span.start <= now }
         let visibleTravel = model.snapshot.travel
+            .compactMap { travel -> TravelSegment? in
+                guard travel.span.start <= now,
+                      let clipped = travel.span.intersection(
+                          with: TimeSpan(
+                              start: .distantPast,
+                              end: now
+                          )
+                      ) else { return nil }
+                var value = travel
+                value.span = clipped
+                return value
+            }
             .filter { $0.span.intersection(with: visibleSpan) != nil }
             .sorted { $0.span.start < $1.span.start }
-        let planAllocation = laneAllocation(plans, span: \.span)
+        let planAllocation = laneAllocation(visiblePlans, span: \.span)
         let travelAllocation = laneAllocation(visibleTravel, span: \.span)
+        let actualAllocation = laneAllocation(actuals, span: { $0.span() })
         let offset = planAllocation.count
-        let planBlocks = plans.map { plan in
+        let planBlocks = visiblePlans.map { plan in
             timelineBlock(
                 plan: plan,
                 index: index,
@@ -6786,6 +7194,27 @@ private struct TimelineBoard: View {
                 categoryName: "이동"
             )
         }
+        let actualBlocks = actuals.map { actual in
+            timelineBlock(
+                id: actual.id,
+                title: movementActualTitle(actual),
+                span: actual.span(asOf: now),
+                top: compactAutomaticTop(
+                    offset
+                        + travelAllocation.count
+                        + actualAllocation.lanes[actual.id, default: 0]
+                ),
+                height: 14,
+                isFixed: true,
+                status: .completed,
+                isActual: true,
+                opensLocationTimeline: true,
+                detailText:
+                    "자동 이동 · \(actualSourceName(actual.source))",
+                categoryID: "movement",
+                categoryName: "이동"
+            )
+        }
         return TimelineRowModel(
             title: "이동",
             id: "movement",
@@ -6793,9 +7222,11 @@ private struct TimelineBoard: View {
             categoryID: "movement",
             isSystemAutomatic: true,
             height: compactAutomaticHeight(
-                planAllocation.count + travelAllocation.count
+                planAllocation.count
+                    + travelAllocation.count
+                    + actualAllocation.count
             ),
-            blocks: planBlocks + travelBlocks
+            blocks: planBlocks + travelBlocks + actualBlocks
         )
     }
 
@@ -6804,10 +7235,11 @@ private struct TimelineBoard: View {
         actuals: [ActualRecord],
         index: TimelineBoardDataIndex
     ) -> TimelineRowModel {
-        let planAllocation = laneAllocation(plans, span: \.span)
+        let visiblePlans = plans.filter { $0.span.start <= Date.now }
+        let planAllocation = laneAllocation(visiblePlans, span: \.span)
         let actualAllocation = laneAllocation(actuals, span: { $0.span() })
         let offset = planAllocation.count
-        let planBlocks = plans.map { plan in
+        let planBlocks = visiblePlans.map { plan in
             timelineBlock(
                 plan: plan,
                 index: index,
@@ -6855,10 +7287,11 @@ private struct TimelineBoard: View {
         actuals: [ActualRecord],
         index: TimelineBoardDataIndex
     ) -> TimelineRowModel {
-        let planAllocation = laneAllocation(plans, span: \.span)
+        let visiblePlans = plans.filter { $0.span.start <= Date.now }
+        let planAllocation = laneAllocation(visiblePlans, span: \.span)
         let actualAllocation = laneAllocation(actuals, span: { $0.span() })
         let offset = planAllocation.count
-        let planBlocks = plans.map { plan in
+        let planBlocks = visiblePlans.map { plan in
             timelineBlock(
                 plan: plan,
                 index: index,
@@ -7990,23 +8423,38 @@ private struct TimelineBoard: View {
             }
             .onEnded { value in
                 if isContinuousTimeline {
+                    var finalDate = continuousCenterDate
                     if let continuousDragOrigin {
                         let secondsPerPoint = activeContinuousDuration
                             * viewport.length
                             / Double(max(1, width))
-                        continuousCenterDate = continuousDragOrigin
+                        finalDate = continuousDragOrigin
                             .addingTimeInterval(
                                 -Double(value.translation.width)
                                     * secondsPerPoint
                             )
                     }
+                    let direction: TimelinePlayheadSynchronizer.Direction =
+                        value.translation.width < 0 ? .forward : .backward
+                    finalDate = TimelinePlayheadSynchronizer.snapIfNeeded(
+                        date: finalDate,
+                        direction: direction,
+                        plans: model.snapshot.plans,
+                        actuals: model.snapshot.actuals,
+                        places: model.snapshot.places,
+                        travel: model.snapshot.travel,
+                        calendarEvents: model.snapshot.calendarEvents,
+                        weather: model.snapshot.weather,
+                        photos: PhotoClusterer.cluster(model.snapshot.photos)
+                    )
+                    continuousCenterDate = finalDate
                     // Changing the selected date normally resets the
                     // viewport. A continuous drag is different: it pans the
                     // already zoomed range, so keep that zoom after commit.
                     preserveViewportAfterContinuousDrag = true
                     let preservedViewport = viewport
-                    model.selectedDate = continuousCenterDate
-                    onPlayheadMove?(continuousCenterDate)
+                    model.selectedDate = finalDate
+                    onPlayheadMove?(finalDate)
                     // Restore synchronously as well as in the selected-date
                     // observer. This covers the case where the parent view
                     // re-renders before that observer is delivered.
@@ -8246,7 +8694,7 @@ private struct TimelineBoard: View {
                 around: model.selectedDate
             )
             if isContinuousDay {
-                dayZoom = .oneDay
+                dayZoom = .oneHour
             }
             continuousDragOrigin = nil
         }

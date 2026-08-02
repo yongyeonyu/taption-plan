@@ -135,6 +135,12 @@ struct WatchBehaviorInput: Hashable, Sendable {
     var altitudeDeltaMeters: Double?
     var nearRailContext: Bool
     var repeatedStops: Bool
+    var accelerationBodyRMSG: Double?
+    var accelerationZeroCrossingRateHz: Double?
+    var dominantMotionFrequencyHz: Double?
+    var gyroscopeRMSG: Double?
+    var posturePitchRadians: Double?
+    var postureRollRadians: Double?
 
     init(
         workoutKind: TaptionWatchWorkoutKind? = nil,
@@ -154,7 +160,13 @@ struct WatchBehaviorInput: Hashable, Sendable {
         gpsLossRatio: Double = 1,
         altitudeDeltaMeters: Double? = nil,
         nearRailContext: Bool = false,
-        repeatedStops: Bool = false
+        repeatedStops: Bool = false,
+        accelerationBodyRMSG: Double? = nil,
+        accelerationZeroCrossingRateHz: Double? = nil,
+        dominantMotionFrequencyHz: Double? = nil,
+        gyroscopeRMSG: Double? = nil,
+        posturePitchRadians: Double? = nil,
+        postureRollRadians: Double? = nil
     ) {
         self.workoutKind = workoutKind
         self.duration = duration
@@ -174,6 +186,175 @@ struct WatchBehaviorInput: Hashable, Sendable {
         self.altitudeDeltaMeters = altitudeDeltaMeters
         self.nearRailContext = nearRailContext
         self.repeatedStops = repeatedStops
+        self.accelerationBodyRMSG = accelerationBodyRMSG
+        self.accelerationZeroCrossingRateHz = accelerationZeroCrossingRateHz
+        self.dominantMotionFrequencyHz = dominantMotionFrequencyHz
+        self.gyroscopeRMSG = gyroscopeRMSG
+        self.posturePitchRadians = posturePitchRadians
+        self.postureRollRadians = postureRollRadians
+    }
+}
+
+struct WatchMotionSample: Hashable, Sendable {
+    var capturedAt: Date
+    var acceleration: TaptionWatchSensorVector3
+    var rotationRate: TaptionWatchSensorVector3?
+    var gravity: TaptionWatchSensorVector3?
+
+    var accelerationMagnitude: Double {
+        sqrt(acceleration.x * acceleration.x
+            + acceleration.y * acceleration.y
+            + acceleration.z * acceleration.z)
+    }
+    var rotationMagnitude: Double {
+        guard let rotationRate else { return 0 }
+        return sqrt(rotationRate.x * rotationRate.x
+            + rotationRate.y * rotationRate.y
+            + rotationRate.z * rotationRate.z)
+    }
+}
+
+struct WatchBehaviorWindowFeatures: Hashable, Sendable {
+    var startedAt: Date
+    var endedAt: Date
+    var sampleCount: Int
+    var sampleRateHz: Double
+    var accelerationMeanG: Double
+    var accelerationStandardDeviationG: Double
+    var bodyAccelerationRMSG: Double
+    var jerkRMSGPerSecond: Double
+    var zeroCrossingRateHz: Double
+    var dominantFrequencyHz: Double?
+    var gyroscopeRMSGPerSecond: Double
+    var posturePitchRadians: Double?
+    var postureRollRadians: Double?
+
+    var duration: TimeInterval { endedAt.timeIntervalSince(startedAt) }
+}
+
+struct WatchBehaviorSegment: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var startedAt: Date
+    var endedAt: Date
+    var behavior: WatchBehaviorKind
+    var confidenceScore: Double
+    var evidence: [String]
+    var modelVersion: String
+
+    init(
+        id: UUID = UUID(),
+        startedAt: Date,
+        endedAt: Date,
+        behavior: WatchBehaviorKind,
+        confidenceScore: Double,
+        evidence: [String],
+        modelVersion: String
+    ) {
+        self.id = id
+        self.startedAt = startedAt
+        self.endedAt = max(startedAt, endedAt)
+        self.behavior = behavior
+        self.confidenceScore = min(1, max(0, confidenceScore))
+        self.evidence = Array(Set(evidence)).sorted()
+        self.modelVersion = modelVersion
+    }
+
+    var duration: TimeInterval { endedAt.timeIntervalSince(startedAt) }
+}
+
+enum WatchBehaviorWindowAnalyzer {
+    static let windowDuration: TimeInterval = 2.56
+    static let strideDuration: TimeInterval = 1.28
+
+    static func features(
+        from samples: [WatchMotionSample]
+    ) -> WatchBehaviorWindowFeatures? {
+        let ordered = samples.sorted { $0.capturedAt < $1.capturedAt }
+        guard let first = ordered.first, let last = ordered.last,
+              ordered.count >= 8 else { return nil }
+        let duration = last.capturedAt.timeIntervalSince(first.capturedAt)
+        guard duration >= 1.5 else { return nil }
+
+        let acceleration = ordered.map(\.accelerationMagnitude)
+        let body = acceleration.map { abs($0 - 1) }
+        let rotation = ordered.map(\.rotationMagnitude)
+        let sampleRate = Double(ordered.count - 1) / duration
+        let accelerationMean = mean(acceleration)
+        let accelerationStd = standardDeviation(acceleration)
+        let bodyRMS = sqrt(mean(body.map { $0 * $0 }))
+        let jerk = zip(body.dropFirst(), body).map { current, previous in
+            abs(current - previous) * sampleRate
+        }
+        let jerkRMS = jerk.isEmpty
+            ? 0
+            : sqrt(mean(jerk.map { $0 * $0 }))
+        let centered = body.map { $0 - mean(body) }
+        let crossings = zip(centered.dropFirst(), centered).reduce(0) {
+            $0 + (($1.0 >= 0) != ($1.1 >= 0) ? 1 : 0)
+        }
+        let pitch = ordered.compactMap { sample -> Double? in
+            guard let gravity = sample.gravity else { return nil }
+            return atan2(gravity.y, gravity.z)
+        }
+        let roll = ordered.compactMap { sample -> Double? in
+            guard let gravity = sample.gravity else { return nil }
+            return atan2(-gravity.x, sqrt(gravity.y * gravity.y + gravity.z * gravity.z))
+        }
+        return WatchBehaviorWindowFeatures(
+            startedAt: first.capturedAt,
+            endedAt: last.capturedAt,
+            sampleCount: ordered.count,
+            sampleRateHz: sampleRate,
+            accelerationMeanG: accelerationMean,
+            accelerationStandardDeviationG: accelerationStd,
+            bodyAccelerationRMSG: bodyRMS,
+            jerkRMSGPerSecond: jerkRMS,
+            zeroCrossingRateHz: Double(crossings) / duration / 2,
+            dominantFrequencyHz: dominantFrequency(body, sampleRate: sampleRate),
+            gyroscopeRMSGPerSecond: sqrt(mean(rotation.map { $0 * $0 })),
+            posturePitchRadians: pitch.isEmpty ? nil : mean(pitch),
+            postureRollRadians: roll.isEmpty ? nil : mean(roll)
+        )
+    }
+
+    private static func mean(_ values: [Double]) -> Double {
+        guard !values.isEmpty else { return 0 }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    private static func standardDeviation(_ values: [Double]) -> Double {
+        guard values.count > 1 else { return 0 }
+        let average = mean(values)
+        let variance = values.reduce(0) { partial, value in
+            partial + (value - average) * (value - average)
+        } / Double(values.count - 1)
+        return sqrt(max(0, variance))
+    }
+
+    private static func dominantFrequency(
+        _ values: [Double],
+        sampleRate: Double
+    ) -> Double? {
+        guard values.count >= 12, sampleRate > 0 else { return nil }
+        let centered = values.map { $0 - mean(values) }
+        let minimumLag = max(2, Int(sampleRate / 3.5))
+        let maximumLag = min(
+            centered.count / 2,
+            max(minimumLag, Int(sampleRate / 0.35))
+        )
+        guard minimumLag <= maximumLag else { return nil }
+        var bestLag = minimumLag
+        var bestCorrelation = -Double.infinity
+        for lag in minimumLag...maximumLag {
+            let lhs = centered.dropLast(lag)
+            let rhs = centered.dropFirst(lag)
+            let correlation = zip(lhs, rhs).reduce(0) { $0 + $1.0 * $1.1 }
+            if correlation > bestCorrelation {
+                bestCorrelation = correlation
+                bestLag = lag
+            }
+        }
+        return sampleRate / Double(bestLag)
     }
 }
 
@@ -182,7 +363,83 @@ struct WatchBehaviorInput: Hashable, Sendable {
 /// bundled Core ML model can be inserted before this fallback and report its
 /// own modelVersion/evidence.
 enum WatchBehaviorClassifier {
-    static let rulesVersion = "watch-rules-v1"
+    static let rulesVersion = "watch-har-v2"
+
+    static func classifyWindow(
+        _ features: WatchBehaviorWindowFeatures,
+        context: WatchBehaviorInput
+    ) -> WatchBehaviorInference {
+        let inference = classify(
+            WatchBehaviorInput(
+                // A workout session identifies the broad activity, but the
+                // 2.56-second window is what separates walking, stairs and
+                // hand actions inside that session.  Keep the workout kind
+                // as the final fallback in makeSensorSummary instead of
+                // short-circuiting this classifier.
+                workoutKind: nil,
+                duration: features.duration,
+                accelerometerSampleCount: features.sampleCount,
+                accelerometerStandardDeviationG:
+                    features.accelerationStandardDeviationG,
+                accelerometerMeanJerkGPerSecond:
+                    features.jerkRMSGPerSecond,
+                peakAccelerationG: nil,
+                peakRotationRateRadiansPerSecond:
+                    features.gyroscopeRMSGPerSecond,
+                steps: context.steps,
+                distanceMeters: context.distanceMeters,
+                floorsAscended: context.floorsAscended,
+                floorsDescended: context.floorsDescended,
+                averageHeartRate: context.averageHeartRate,
+                gpsAverageSpeedMetersPerSecond:
+                    context.gpsAverageSpeedMetersPerSecond,
+                gpsAvailable: context.gpsAvailable,
+                gpsLossRatio: context.gpsLossRatio,
+                altitudeDeltaMeters: context.altitudeDeltaMeters,
+                nearRailContext: context.nearRailContext,
+                repeatedStops: context.repeatedStops,
+                accelerationBodyRMSG: features.bodyAccelerationRMSG,
+                accelerationZeroCrossingRateHz: features.zeroCrossingRateHz,
+                dominantMotionFrequencyHz: features.dominantFrequencyHz,
+                gyroscopeRMSG: features.gyroscopeRMSGPerSecond,
+                posturePitchRadians: features.posturePitchRadians,
+                postureRollRadians: features.postureRollRadians
+            )
+        )
+        guard let workoutKind = context.workoutKind else { return inference }
+        let lowSignal = features.bodyAccelerationRMSG < 0.04
+            && features.gyroscopeRMSGPerSecond < 0.15
+        guard inference.kind == .unknown
+            || (inference.kind == .stationary && lowSignal) else {
+            return inference
+        }
+        let fallback: WatchBehaviorKind = switch workoutKind {
+        case .walking: .walking
+        case .running: .running
+        case .cycling: .cycling
+        }
+        return result(
+            fallback,
+            score: 0.72,
+            evidence: ["Apple Watch 운동 종류", "창 센서 근거 부족"]
+        )
+    }
+
+    static func aggregate(
+        _ segments: [WatchBehaviorSegment],
+        fallback: WatchBehaviorInference
+    ) -> WatchBehaviorInference {
+        guard let segment = segments.max(by: {
+            if $0.duration != $1.duration { return $0.duration < $1.duration }
+            return $0.confidenceScore < $1.confidenceScore
+        }) else { return fallback }
+        return WatchBehaviorInference(
+            kind: segment.behavior,
+            confidenceScore: segment.confidenceScore,
+            evidence: Array(Set(segment.evidence + ["2.56초 IMU 창"])).sorted(),
+            modelVersion: segment.modelVersion
+        )
+    }
 
     static func classify(_ input: WatchBehaviorInput) -> WatchBehaviorInference {
         if let workoutKind = input.workoutKind {
@@ -206,21 +463,34 @@ enum WatchBehaviorClassifier {
         let floorsUp = max(0, input.floorsAscended ?? 0)
         let floorsDown = max(0, input.floorsDescended ?? 0)
         let hasSteps = steps >= 4 || cadence >= 0.15
-        let acceleration = input.accelerometerStandardDeviationG ?? 0
+        let acceleration = input.accelerationBodyRMSG
+            ?? input.accelerometerStandardDeviationG
+            ?? 0
         let jerk = input.accelerometerMeanJerkGPerSecond ?? 0
+        let measuredFrequency = input.dominantMotionFrequencyHz ?? 0
+        // Magnitude-only IMU signals mirror each gait cycle, so the strongest
+        // autocorrelation peak can be the second harmonic. Fold it back to a
+        // cadence-like frequency before applying walking/running thresholds.
+        let cadenceHz = measuredFrequency > 2.8 && measuredFrequency < 5.5
+            ? measuredFrequency / 2
+            : measuredFrequency
+        let zeroCrossing = input.accelerationZeroCrossingRateHz ?? 0
+        let gyro = input.gyroscopeRMSG ?? 0
 
-        if floorsUp > 0 && hasSteps && altitude >= 1.2 {
+        if floorsUp > 0 && hasSteps && altitude >= 1.2
+            && (input.workoutKind == .walking || input.workoutKind == nil) {
             return result(
                 .stairsUp,
                 score: 0.84,
-                evidence: ["상대고도 상승", "걸음·층수 증가"]
+                evidence: ["상대고도 상승", "걸음·층수 증가", "창 기반 보행"]
             )
         }
-        if floorsDown > 0 && hasSteps && altitude >= 1.2 {
+        if floorsDown > 0 && hasSteps && altitude >= 1.2
+            && (input.workoutKind == .walking || input.workoutKind == nil) {
             return result(
                 .stairsDown,
                 score: 0.84,
-                evidence: ["상대고도 하강", "걸음·층수 감소"]
+                evidence: ["상대고도 하강", "걸음·층수 감소", "창 기반 보행"]
             )
         }
 
@@ -243,6 +513,14 @@ enum WatchBehaviorClassifier {
             )
         }
 
+        if speed >= 2.0, speed < 12, steps == 0, gyro >= 0.6 {
+            return result(
+                .cycling,
+                score: 0.62,
+                evidence: ["GPS 자전거 속도", "발걸음 없음", "손목 회전"]
+            )
+        }
+
         if speed >= 5.5 && !hasSteps {
             let kind: WatchBehaviorKind = input.repeatedStops
                 ? .publicTransit
@@ -255,18 +533,42 @@ enum WatchBehaviorClassifier {
             )
         }
 
-        if speed >= 2.2 || cadence >= 1.75 {
+        if speed >= 2.2 || cadence >= 1.75 || cadenceHz >= 2.2 {
             return result(
                 .running,
                 score: 0.81,
-                evidence: ["속도·케이던스 달리기 범위"]
+                evidence: ["속도·케이던스 달리기 범위", "IMU 주기성"]
             )
         }
-        if speed >= 0.5 || cadence >= 0.15 {
+        if speed >= 0.5 || cadence >= 0.15 || (cadenceHz >= 1.0 && acceleration >= 0.04) {
             return result(
                 .walking,
                 score: 0.79,
-                evidence: ["GPS·걸음 보행 범위"]
+                evidence: ["GPS·걸음 보행 범위", "IMU 보행 주기"]
+            )
+        }
+
+        if steps == 0, speed < 0.5, gyro >= 1.4, acceleration >= 0.025 {
+            return result(
+                .brushingTeeth,
+                score: 0.56,
+                evidence: ["반복 손목 회전", "걸음 없음", "저속"]
+            )
+        }
+        if steps == 0, speed < 0.5, gyro >= 0.15, acceleration < 0.12,
+           zeroCrossing >= 0.35 {
+            return result(
+                .typing,
+                score: 0.5,
+                evidence: ["미세 손목 움직임", "걸음 없음", "짧은 진동 창"]
+            )
+        }
+        if steps == 0, speed < 0.5, acceleration >= 0.025,
+           acceleration < 0.2, cadenceHz > 0.2, cadenceHz < 1.0 {
+            return result(
+                .eating,
+                score: 0.45,
+                evidence: ["느린 반복 손동작", "걸음 없음", "저속 주기성"]
             )
         }
 
@@ -541,6 +843,7 @@ struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
     var behaviorConfidenceScore: Double? = nil
     var behaviorEvidence: [String]? = nil
     var behaviorModelVersion: String? = nil
+    var behaviorSegments: [WatchBehaviorSegment]? = nil
 }
 
 enum TaptionWatchEnvelope {

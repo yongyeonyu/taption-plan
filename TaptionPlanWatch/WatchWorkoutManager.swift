@@ -58,6 +58,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var averageHeartRate: Double?
     private var maximumHeartRate: Double?
     private var pendingRoutePoints: [TaptionWatchLocationPoint] = []
+    private var motionSamples: [WatchMotionSample] = []
+    private var nextBehaviorWindowEnd: Date?
+    private var lastWindowStepCount = 0
+    private var lastWindowFloorsAscended: Int?
+    private var lastWindowFloorsDescended: Int?
+    private var lastWindowAltitudeMeters: Double?
+    private var lastGyroscopeSample: TaptionWatchSensorVector3?
+    private var pendingBehaviorSegments: [WatchBehaviorSegment] = []
+    private var lastBehaviorKind: WatchBehaviorKind?
+    private var lastBehaviorConfidence = 0.0
 
     override init() {
         super.init()
@@ -272,6 +282,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         averageHeartRate = nil
         maximumHeartRate = nil
         pendingRoutePoints = []
+        motionSamples = []
+        nextBehaviorWindowEnd = nil
+        lastWindowStepCount = 0
+        lastWindowFloorsAscended = nil
+        lastWindowFloorsDescended = nil
+        lastWindowAltitudeMeters = nil
+        lastGyroscopeSample = nil
+        pendingBehaviorSegments = []
+        lastBehaviorKind = nil
+        lastBehaviorConfidence = 0
         sensorSampleCount = 0
 
         // Activity-classifier windows need at least 25 Hz.  This is only
@@ -290,8 +310,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     z: data.acceleration.z
                 )
                 let timestamp = data.timestamp
+                let capturedAt = Date.now
                 Task { @MainActor [weak self] in
-                    self?.recordAccelerometer(value, timestamp: timestamp)
+                    self?.recordAccelerometer(
+                        value,
+                        timestamp: timestamp,
+                        capturedAt: capturedAt
+                    )
                 }
             }
         }
@@ -391,7 +416,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func recordAccelerometer(
         _ value: TaptionWatchSensorVector3,
-        timestamp: TimeInterval
+        timestamp: TimeInterval,
+        capturedAt: Date
     ) {
         accelerometerSum.add(value)
         accelerometerCount += 1
@@ -410,12 +436,154 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         previousAccelerationMagnitude = magnitude
         previousAccelerationSampleTime = timestamp
+        motionSamples.append(
+            WatchMotionSample(
+                capturedAt: capturedAt,
+                acceleration: value,
+                rotationRate: lastGyroscopeSample,
+                gravity: latestGravity
+            )
+        )
+        analyzeBehaviorWindows(at: capturedAt)
     }
 
     private func recordGyroscope(_ value: TaptionWatchSensorVector3) {
         gyroscopeSum.add(value)
         gyroscopeCount += 1
         peakRotationRate = max(peakRotationRate, value.magnitude)
+        lastGyroscopeSample = value
+    }
+
+    private func analyzeBehaviorWindows(at capturedAt: Date) {
+        if nextBehaviorWindowEnd == nil {
+            nextBehaviorWindowEnd = capturedAt
+                .addingTimeInterval(WatchBehaviorWindowAnalyzer.windowDuration)
+        }
+        while let windowEnd = nextBehaviorWindowEnd,
+              capturedAt >= windowEnd {
+            let windowStart = windowEnd.addingTimeInterval(
+                -WatchBehaviorWindowAnalyzer.windowDuration
+            )
+            let samples = motionSamples.filter {
+                $0.capturedAt >= windowStart && $0.capturedAt <= windowEnd
+            }
+            if let features = WatchBehaviorWindowAnalyzer.features(
+                from: samples
+            ) {
+                let steps = latestStepCount ?? 0
+                let floorsUp = latestFloorsAscended
+                let floorsDown = latestFloorsDescended
+                let altitude = latestRelativeAltitudeMeters
+                let stepDelta = max(0, steps - lastWindowStepCount)
+                let floorUpDelta = floorsUp.map {
+                    max(0, $0 - (lastWindowFloorsAscended ?? $0))
+                }
+                let floorDownDelta = floorsDown.map {
+                    max(0, $0 - (lastWindowFloorsDescended ?? $0))
+                }
+                let altitudeDelta = altitude.flatMap { current in
+                    lastWindowAltitudeMeters.map { current - $0 }
+                }
+                let speeds = pendingRoutePoints.compactMap(
+                    \.speedMetersPerSecond
+                ).filter { $0.isFinite && $0 >= 0 }
+                let averageSpeed = speeds.isEmpty
+                    ? nil
+                    : speeds.reduce(0, +) / Double(speeds.count)
+                let context = WatchBehaviorInput(
+                    workoutKind: workoutKind,
+                    duration: features.duration,
+                    accelerometerSampleCount: features.sampleCount,
+                    accelerometerStandardDeviationG:
+                        features.accelerationStandardDeviationG,
+                    accelerometerMeanJerkGPerSecond:
+                        features.jerkRMSGPerSecond,
+                    steps: stepDelta,
+                    floorsAscended: floorUpDelta,
+                    floorsDescended: floorDownDelta,
+                    averageHeartRate: averageHeartRate,
+                    gpsAverageSpeedMetersPerSecond: averageSpeed,
+                    gpsAvailable: !pendingRoutePoints.isEmpty,
+                    gpsLossRatio: pendingRoutePoints.isEmpty ? 1 : 0,
+                    altitudeDeltaMeters: altitudeDelta,
+                    accelerationBodyRMSG: features.bodyAccelerationRMSG,
+                    accelerationZeroCrossingRateHz:
+                        features.zeroCrossingRateHz,
+                    dominantMotionFrequencyHz:
+                        features.dominantFrequencyHz,
+                    gyroscopeRMSG: features.gyroscopeRMSGPerSecond,
+                    posturePitchRadians: features.posturePitchRadians,
+                    postureRollRadians: features.postureRollRadians
+                )
+                let inference = WatchBehaviorClassifier.classifyWindow(
+                    features,
+                    context: context
+                )
+                appendBehaviorSegment(
+                    inference,
+                    startedAt: features.startedAt,
+                    endedAt: features.endedAt
+                )
+                lastWindowStepCount = steps
+                lastWindowFloorsAscended = floorsUp
+                lastWindowFloorsDescended = floorsDown
+                lastWindowAltitudeMeters = altitude
+            }
+            nextBehaviorWindowEnd = windowEnd.addingTimeInterval(
+                WatchBehaviorWindowAnalyzer.strideDuration
+            )
+        }
+        let cutoff = (nextBehaviorWindowEnd ?? capturedAt)
+            .addingTimeInterval(-WatchBehaviorWindowAnalyzer.windowDuration * 2)
+        motionSamples.removeAll { $0.capturedAt < cutoff }
+    }
+
+    private func appendBehaviorSegment(
+        _ inference: WatchBehaviorInference,
+        startedAt: Date,
+        endedAt: Date
+    ) {
+        var stable = inference
+        if let lastBehaviorKind,
+           lastBehaviorKind != inference.kind,
+           inference.confidenceScore < lastBehaviorConfidence + 0.08 {
+            stable = WatchBehaviorInference(
+                kind: lastBehaviorKind,
+                confidenceScore: lastBehaviorConfidence,
+                evidence: inference.evidence + ["시간적 안정화"],
+                modelVersion: inference.modelVersion
+            )
+        }
+        lastBehaviorKind = stable.kind
+        lastBehaviorConfidence = stable.confidenceScore
+        if let index = pendingBehaviorSegments.indices.last,
+           pendingBehaviorSegments[index].behavior == stable.kind,
+           startedAt.timeIntervalSince(
+               pendingBehaviorSegments[index].endedAt
+           ) <= WatchBehaviorWindowAnalyzer.strideDuration * 1.5 {
+            pendingBehaviorSegments[index].endedAt = max(
+                pendingBehaviorSegments[index].endedAt,
+                endedAt
+            )
+            pendingBehaviorSegments[index].confidenceScore = max(
+                pendingBehaviorSegments[index].confidenceScore,
+                stable.confidenceScore
+            )
+            pendingBehaviorSegments[index].evidence = Array(
+                Set(pendingBehaviorSegments[index].evidence + stable.evidence)
+            ).sorted()
+            return
+        }
+        pendingBehaviorSegments.append(
+            WatchBehaviorSegment(
+                startedAt: startedAt,
+                endedAt: endedAt,
+                behavior: stable.kind,
+                confidenceScore: stable.confidenceScore,
+                evidence: stable.evidence,
+                modelVersion: stable.modelVersion
+            )
+        )
     }
 
     private func emitSensorSummary(isFinal: Bool) {
@@ -427,6 +595,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         onSensorSummary?(summary)
         pendingRoutePoints.removeAll(keepingCapacity: true)
+        pendingBehaviorSegments.removeAll(keepingCapacity: true)
     }
 
     private func stopSensorCollection(
@@ -495,7 +664,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             gpsAvailable: !pendingRoutePoints.isEmpty,
             gpsLossRatio: pendingRoutePoints.isEmpty ? 1 : 0
         )
-        let behavior = WatchBehaviorClassifier.classify(input)
+        let fallback = WatchBehaviorClassifier.classify(input)
+        let behavior = WatchBehaviorClassifier.aggregate(
+            pendingBehaviorSegments,
+            fallback: fallback
+        )
         return TaptionWatchSensorSummary(
             sessionID: sensorSessionID,
             sequence: sensorSequence,
@@ -550,7 +723,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             behavior: behavior.kind,
             behaviorConfidenceScore: behavior.confidenceScore,
             behaviorEvidence: behavior.evidence,
-            behaviorModelVersion: behavior.modelVersion
+            behaviorModelVersion: behavior.modelVersion,
+            behaviorSegments: pendingBehaviorSegments
         )
     }
 }

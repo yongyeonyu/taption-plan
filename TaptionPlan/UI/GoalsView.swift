@@ -1557,37 +1557,105 @@ struct InlineMemoField: View {
     let planID: UUID
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
+    @State private var editingMemoID: UUID?
 
     var body: some View {
-        TextField("메모를 입력…", text: $text, axis: .vertical)
-            .font(.taption(size: 9.5))
-            .lineLimit(2...4)
-            .textFieldStyle(.plain)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 8)
-            .background(
-                Color.tpBackground,
-                in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.5)
+        HStack(spacing: 5) {
+            TextField("메모를 입력…", text: $text, axis: .vertical)
+                .font(.taption(size: 9.5))
+                .lineLimit(2...4)
+                .textFieldStyle(.plain)
+                .focused(isFocused)
+                .onSubmit { save() }
+            if memoCount > 0 {
+                Text("+\(memoCount)")
+                    .font(.taption(size: 7.5, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.tpProjectDark, in: Capsule())
             }
-            .focused(isFocused)
-            .onSubmit { save() }
-            .onChange(of: isFocused.wrappedValue) { _, focused in
-                if !focused { save() }
+            HStack(spacing: 3) {
+                memoAction("저장", systemImage: "checkmark", enabled: canSave) { save() }
+                memoAction("편집", systemImage: "pencil", enabled: latestMemo != nil) { edit() }
+                memoAction("삭제", systemImage: "trash", enabled: latestMemo != nil, destructive: true) { delete() }
             }
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 8)
+        .background(
+            Color.tpBackground,
+            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.5)
+        }
+    }
+
+    private var canSave: Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var latestMemo: ActionMemo? {
+        model.memos(for: planID).last
+    }
+
+    private var memoCount: Int {
+        model.memos(for: planID).count
+    }
+
+    private func memoAction(
+        _ title: String,
+        systemImage: String,
+        enabled: Bool,
+        destructive: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.taption(size: 8, weight: .bold))
+                .foregroundStyle(
+                    enabled
+                        ? (destructive ? Color.red : Color.tpInk)
+                        : Color.tpSecondary.opacity(0.35)
+                )
+                .frame(width: 22, height: 22)
+                .background(Color.white.opacity(enabled ? 0.8 : 0.35), in: RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(title)
+    }
+
+    private func edit() {
+        guard let memo = latestMemo else { return }
+        editingMemoID = memo.id
+        text = memo.text
+        isFocused.wrappedValue = true
     }
 
     private func save() {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty else {
-            text = ""
-            return
+        guard !clean.isEmpty else { return }
+        if let editingMemoID {
+            model.updateMemo(editingMemoID, text: clean, kind: .idea)
+        } else {
+            model.addMemo(text: clean, kind: .idea, to: planID)
         }
-        model.addMemo(text: clean, kind: .idea, to: planID)
+        reset()
+    }
+
+    private func delete() {
+        guard let memo = latestMemo else { return }
+        model.deleteMemo(memo.id)
+        reset()
+    }
+
+    private func reset() {
         text = ""
+        editingMemoID = nil
+        isFocused.wrappedValue = false
     }
 }
 

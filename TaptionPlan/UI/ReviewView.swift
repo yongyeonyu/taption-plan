@@ -7,6 +7,18 @@ private struct ActualRecordItem: Identifiable {
     var id: UUID { record.id }
 }
 
+private struct ActualCategoryGroup: Identifiable {
+    let id: String
+    let name: String
+    let items: [ActualRecordItem]
+}
+
+private struct ActualPeriodGroup: Identifiable {
+    let id: String
+    let label: String
+    let categories: [ActualCategoryGroup]
+}
+
 struct ReviewView: View {
     @Bindable var model: AppModel
 
@@ -149,6 +161,7 @@ struct ReviewView: View {
 
     private var actualRecordsCard: some View {
         let records = actualRecordItems
+        let groups = actualPeriodGroups
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Label("실제 기록", systemImage: "checkmark.circle")
@@ -164,9 +177,35 @@ struct ReviewView: View {
                     .font(.taption(size: 10.5))
                     .foregroundStyle(Color.tpSecondary)
             } else {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(records) { item in
-                        actualRecordRow(item)
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(groups) { period in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(period.label)
+                                .font(.taption(size: 11, weight: .bold))
+                                .foregroundStyle(Color.tpInk)
+                                .padding(.top, 3)
+
+                            ForEach(period.categories) { category in
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Label(category.name, systemImage: PlanCategory(categoryID: category.id).systemImage)
+                                        .font(.taption(size: 9.5, weight: .semibold))
+                                        .foregroundStyle(PlanCategory(categoryID: category.id).darkColor)
+                                        .padding(.top, 2)
+                                    ForEach(category.items) { item in
+                                        actualRecordRow(item, showsCategory: false)
+                                    }
+                                }
+                                .padding(.leading, 5)
+                            }
+                        }
+                        .padding(.bottom, 3)
+                        .overlay(alignment: .bottom) {
+                            if period.id != groups.last?.id {
+                                Rectangle()
+                                    .fill(Color.tpLine.opacity(0.55))
+                                    .frame(height: 0.5)
+                            }
+                        }
                     }
                 }
             }
@@ -176,21 +215,25 @@ struct ReviewView: View {
         .background(Color.white, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
     }
 
-    private func actualRecordRow(_ item: ActualRecordItem) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: actualIcon(item.record))
+    private func actualRecordRow(
+        _ item: ActualRecordItem,
+        showsCategory: Bool = true
+    ) -> some View {
+        let categoryID = actualCategoryID(item.record)
+        return HStack(spacing: 8) {
+            Image(systemName: PlanCategory(categoryID: categoryID).systemImage)
                 .font(.taption(size: 12, weight: .semibold))
-                .foregroundStyle(actualTint(item.record))
+                .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
                 .frame(width: 18)
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.record.title.isEmpty
-                    ? categoryName(item.record.categoryID)
+                    ? categoryName(categoryID)
                     : item.record.title)
                     .font(.taption(size: 10.5, weight: .semibold))
                     .lineLimit(1)
                 Text(
-                    categoryName(item.record.categoryID)
-                        + " · " + actualSourceName(item.record.source)
+                    (showsCategory ? categoryName(categoryID) + " · " : "")
+                        + actualSourceName(item.record.source)
                 )
                 .font(.taption(size: 8.5))
                 .foregroundStyle(Color.tpSecondary)
@@ -371,8 +414,10 @@ struct ReviewView: View {
 
     private var actualRecordItems: [ActualRecordItem] {
         let now = Date.now
+        var seen = Set<UUID>()
         return model.snapshot.actuals
             .compactMap { actual in
+                guard seen.insert(actual.id).inserted else { return nil }
                 guard let span = actual.span(asOf: now)
                     .intersection(with: report.span) else {
                     return nil
@@ -387,12 +432,74 @@ struct ReviewView: View {
             }
     }
 
-    private func actualIcon(_ actual: ActualRecord) -> String {
-        PlanCategory(categoryID: actual.categoryID).systemImage
+    private var actualPeriodGroups: [ActualPeriodGroup] {
+        let calendar = Calendar.autoupdatingCurrent
+        let grouped = Dictionary(grouping: actualRecordItems) {
+            actualPeriodStart($0.span.start, calendar: calendar)
+        }
+        return grouped.keys.sorted().map { start in
+            let items = grouped[start, default: []]
+            let categories = Dictionary(grouping: items) { actualCategoryID($0.record) }
+                .map { id, values in
+                    ActualCategoryGroup(
+                        id: id,
+                        name: categoryName(id),
+                        items: values.sorted { $0.span.start < $1.span.start }
+                    )
+                }
+                .sorted { categoryOrder($0.id) == categoryOrder($1.id)
+                    ? $0.name < $1.name
+                    : categoryOrder($0.id) < categoryOrder($1.id) }
+            return ActualPeriodGroup(
+                id: start.formatted(.iso8601),
+                label: actualPeriodLabel(start, calendar: calendar),
+                categories: categories
+            )
+        }
     }
 
-    private func actualTint(_ actual: ActualRecord) -> Color {
-        PlanCategory(categoryID: actual.categoryID).darkColor
+    private func actualPeriodStart(_ date: Date, calendar: Calendar) -> Date {
+        switch model.reviewScale {
+        case .week:
+            return calendar.startOfDay(for: date)
+        case .month:
+            return calendar.dateInterval(of: .weekOfYear, for: date)?.start
+                ?? calendar.startOfDay(for: date)
+        case .year:
+            return calendar.dateInterval(of: .month, for: date)?.start
+                ?? calendar.startOfDay(for: date)
+        }
+    }
+
+    private func actualPeriodLabel(_ start: Date, calendar: Calendar) -> String {
+        switch model.reviewScale {
+        case .week:
+            let weekday = calendar.component(.weekday, from: start)
+            let names = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]
+            return "\(names[max(1, min(7, weekday)) - 1]) · \(calendar.component(.month, from: start))월 \(calendar.component(.day, from: start))일"
+        case .month:
+            let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
+            return "\(start.formatted(.dateTime.month().day()))–\(end.formatted(.dateTime.month().day()))"
+        case .year:
+            return "\(calendar.component(.month, from: start))월"
+        }
+    }
+
+    private func categoryOrder(_ id: String) -> Int {
+        ["schedule", "location", "movement", "sleep", "activity", "weather", "routine", "action", "photo", "event"]
+            .firstIndex(of: id) ?? 99
+    }
+
+    private func actualCategoryID(_ actual: ActualRecord) -> String {
+        guard actual.categoryID == "activity" else { return actual.categoryID }
+        let value = "\(actual.title) \(actual.behavior ?? "")".lowercased()
+        if value.contains("수면") { return "sleep" }
+        let movementWords = [
+            "걷", "달리", "러닝", "자전거", "사이클", "계단", "차량", "자동차",
+            "버스", "지하철", "택시", "기차", "비행기", "배", "이동", "walking",
+            "running", "cycling", "automotive", "subway", "transit"
+        ]
+        return movementWords.contains(where: value.contains) ? "movement" : "activity"
     }
 
     private func actualSourceName(_ source: ActualSource) -> String {

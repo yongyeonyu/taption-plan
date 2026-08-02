@@ -61,7 +61,7 @@ enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
 
     static func defaultPreset(for scale: TimeScale) -> Self {
         switch scale {
-        case .day: .oneDay
+        case .day: .oneHour
         case .week: .oneWeek
         case .month: .oneMonth
         case .year: .oneYear

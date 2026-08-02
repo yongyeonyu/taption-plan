@@ -2734,6 +2734,121 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(stairs.evidence.contains("걸음·층수 증가"))
     }
 
+    func testWatchHARWindowExtractsPeriodicWalkingFeatures() throws {
+        let start = makeDate(2026, 8, 2, 9)
+        let samples = (0..<65).map { index in
+            let elapsed = Double(index) / 25
+            let wave = sin(2 * .pi * 1.8 * elapsed) * 0.14
+            return WatchMotionSample(
+                capturedAt: start.addingTimeInterval(elapsed),
+                acceleration: TaptionWatchSensorVector3(
+                    x: 0,
+                    y: 0,
+                    z: 1 + wave
+                ),
+                rotationRate: TaptionWatchSensorVector3(x: 0.2, y: 0, z: 0),
+                gravity: TaptionWatchSensorVector3(x: 0, y: 0, z: 1)
+            )
+        }
+        let features = try XCTUnwrap(
+            WatchBehaviorWindowAnalyzer.features(from: samples)
+        )
+        XCTAssertGreaterThan(features.bodyAccelerationRMSG, 0.05)
+        XCTAssertGreaterThan(features.dominantFrequencyHz ?? 0, 1.2)
+        XCTAssertLessThan(features.dominantFrequencyHz ?? 0, 4.2)
+
+        let inference = WatchBehaviorClassifier.classifyWindow(
+            features,
+            context: WatchBehaviorInput(
+                duration: features.duration,
+                accelerometerSampleCount: features.sampleCount,
+                steps: 3,
+                gpsAvailable: false
+            )
+        )
+        XCTAssertEqual(inference.kind, .walking)
+        XCTAssertTrue(inference.evidence.contains("IMU 보행 주기"))
+        XCTAssertEqual(inference.modelVersion, WatchBehaviorClassifier.rulesVersion)
+    }
+
+    func testWatchHARWindowDistinguishesFineHandBehaviors() {
+        let typing = WatchBehaviorClassifier.classify(
+            WatchBehaviorInput(
+                duration: 2.56,
+                accelerometerSampleCount: 64,
+                steps: 0,
+                accelerationBodyRMSG: 0.06,
+                accelerationZeroCrossingRateHz: 0.8,
+                gyroscopeRMSG: 0.3
+            )
+        )
+        XCTAssertEqual(typing.kind, .typing)
+
+        let brushing = WatchBehaviorClassifier.classify(
+            WatchBehaviorInput(
+                duration: 2.56,
+                accelerometerSampleCount: 64,
+                steps: 0,
+                accelerationBodyRMSG: 0.08,
+                gyroscopeRMSG: 1.8
+            )
+        )
+        XCTAssertEqual(brushing.kind, .brushingTeeth)
+    }
+
+    func testWatchHARWindowRefinesBroadWorkoutWithoutLosingFallback() throws {
+        let start = makeDate(2026, 8, 2, 9)
+        let samples = (0..<65).map { index in
+            let elapsed = Double(index) / 25
+            let wave = sin(2 * .pi * 1.8 * elapsed) * 0.14
+            return WatchMotionSample(
+                capturedAt: start.addingTimeInterval(elapsed),
+                acceleration: TaptionWatchSensorVector3(
+                    x: 0,
+                    y: 0,
+                    z: 1 + wave
+                ),
+                rotationRate: nil,
+                gravity: TaptionWatchSensorVector3(x: 0, y: 0, z: 1)
+            )
+        }
+        let features = try XCTUnwrap(
+            WatchBehaviorWindowAnalyzer.features(from: samples)
+        )
+        let refined = WatchBehaviorClassifier.classifyWindow(
+            features,
+            context: WatchBehaviorInput(
+                workoutKind: .walking,
+                duration: features.duration,
+                steps: 3
+            )
+        )
+        XCTAssertEqual(refined.kind, .walking)
+
+        let fallback = WatchBehaviorClassifier.classifyWindow(
+            WatchBehaviorWindowFeatures(
+                startedAt: start,
+                endedAt: start.addingTimeInterval(2.56),
+                sampleCount: 64,
+                sampleRateHz: 25,
+                accelerationMeanG: 1,
+                accelerationStandardDeviationG: 0,
+                bodyAccelerationRMSG: 0,
+                jerkRMSGPerSecond: 0,
+                zeroCrossingRateHz: 0,
+                dominantFrequencyHz: nil,
+                gyroscopeRMSGPerSecond: 0,
+                posturePitchRadians: 0,
+                postureRollRadians: 0
+            ),
+            context: WatchBehaviorInput(
+                workoutKind: .cycling,
+                duration: 2.56
+            )
+        )
+        XCTAssertEqual(fallback.kind, .cycling)
+    }
+
     func testWatchSensorChunksUpdateTheSameImmutableActivity() {
         let base = makeDate(2026, 8, 2, 9)
         let sessionID = UUID()
