@@ -433,6 +433,39 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(recognitionCount, 1)
     }
 
+    @MainActor
+    func testTwoFingerPinchRecognizerIsInstalledAndDeliversScale() {
+        var changed: (CGFloat, CGFloat)?
+        var ended: (CGFloat, CGFloat)?
+        let coordinator = TwoFingerPinchAttachment.Coordinator(
+            onChanged: { scale, anchor in
+                changed = (scale, anchor)
+            },
+            onEnded: { scale, anchor in
+                ended = (scale, anchor)
+            }
+        )
+        let hostView = UIView(frame: CGRect(x: 0, y: 0, width: 400, height: 300))
+        let attachmentView = TwoFingerPinchAttachment.AttachmentView()
+        attachmentView.coordinator = coordinator
+
+        hostView.addSubview(attachmentView)
+        attachmentView.installRecognizerIfNeeded()
+
+        let recognizer = hostView.gestureRecognizers?
+            .compactMap { $0 as? UIPinchGestureRecognizer }
+            .first
+        XCTAssertNotNil(recognizer)
+        XCTAssertEqual(recognizer?.cancelsTouchesInView, false)
+
+        coordinator.onChanged(1.5, 0.25)
+        coordinator.onEnded(0.75, 0.75)
+        XCTAssertEqual(changed?.0 ?? 0, 1.5, accuracy: 0.0001)
+        XCTAssertEqual(changed?.1 ?? 0, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(ended?.0 ?? 0, 0.75, accuracy: 0.0001)
+        XCTAssertEqual(ended?.1 ?? 0, 0.75, accuracy: 0.0001)
+    }
+
     func testScheduleDragSnapsToFifteenMinutes() throws {
         let base = makeDate(2026, 7, 30, 9, 0)
         let plan = PlanRecord(

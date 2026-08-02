@@ -456,6 +456,7 @@ final class AppModel {
         _ source: TaptionDataSnapshot
     ) -> TaptionDataSnapshot {
         var loaded = source
+        loaded.plans = Self.deduplicatedGeneratedRepeatPlans(loaded.plans)
         if loaded.categories.isEmpty {
             loaded.categories = CategoryCatalog.builtIn
         } else {
@@ -472,6 +473,27 @@ final class AppModel {
             suppressedIDs: loaded.settings.suppressedActualIDs
         )
         return loaded
+    }
+
+    /// A repeat rule is materialized as one child plan per matching day. If
+    /// an older build saved the same generated child twice, keep the first
+    /// record and remove only the exact generated duplicate. User-created
+    /// overlapping plans remain untouched and continue to be shown separately.
+    private static func deduplicatedGeneratedRepeatPlans(
+        _ plans: [PlanRecord]
+    ) -> [PlanRecord] {
+        var seen = Set<String>()
+        return plans.filter { plan in
+            guard plan.origin == .repeatRule else { return true }
+            let key = [
+                plan.parentID?.uuidString ?? "-",
+                plan.categoryID,
+                plan.title,
+                String(plan.span.start.timeIntervalSinceReferenceDate),
+                String(plan.span.end.timeIntervalSinceReferenceDate),
+            ].joined(separator: "|")
+            return seen.insert(key).inserted
+        }
     }
 
     func bootstrap() async {

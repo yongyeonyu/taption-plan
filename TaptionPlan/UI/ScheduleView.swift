@@ -137,6 +137,7 @@ private struct TimelineFrameBudgetProbeView: UIViewRepresentable {
 
 private struct TimelineAxisMarker: Identifiable {
     let id: String
+    let date: Date?
     let fraction: Double
     let label: String
     let isCurrent: Bool
@@ -144,12 +145,14 @@ private struct TimelineAxisMarker: Identifiable {
 
     init(
         id: String,
+        date: Date? = nil,
         fraction: Double,
         label: String,
         isCurrent: Bool,
         holidayName: String? = nil
     ) {
         self.id = id
+        self.date = date
         self.fraction = fraction
         self.label = label
         self.isCurrent = isCurrent
@@ -1152,6 +1155,118 @@ struct TwoFingerDoubleTapAttachment: UIViewRepresentable {
     }
 }
 
+/// UIKit pinch recognizer used in addition to the SwiftUI timeline gestures.
+/// `ScrollView` can win the SwiftUI gesture arena on a physical device before
+/// `MagnifyGesture` receives a sample. Installing the recognizer on the same
+/// host view and allowing simultaneous recognition keeps pinch available over
+/// the whole gantt surface without disabling vertical scrolling or row taps.
+struct TwoFingerPinchAttachment: UIViewRepresentable {
+    let onChanged: (_ scale: CGFloat, _ anchor: CGFloat) -> Void
+    let onEnded: (_ scale: CGFloat, _ anchor: CGFloat) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChanged: onChanged, onEnded: onEnded)
+    }
+
+    func makeUIView(context: Context) -> AttachmentView {
+        let view = AttachmentView()
+        view.isUserInteractionEnabled = false
+        view.coordinator = context.coordinator
+        return view
+    }
+
+    func updateUIView(
+        _ uiView: AttachmentView,
+        context: Context
+    ) {
+        context.coordinator.onChanged = onChanged
+        context.coordinator.onEnded = onEnded
+        uiView.installRecognizerIfNeeded()
+    }
+
+    static func dismantleUIView(
+        _ uiView: AttachmentView,
+        coordinator: Coordinator
+    ) {
+        uiView.removeRecognizer()
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onChanged: (_ scale: CGFloat, _ anchor: CGFloat) -> Void
+        var onEnded: (_ scale: CGFloat, _ anchor: CGFloat) -> Void
+
+        init(
+            onChanged: @escaping (_ scale: CGFloat, _ anchor: CGFloat) -> Void,
+            onEnded: @escaping (_ scale: CGFloat, _ anchor: CGFloat) -> Void
+        ) {
+            self.onChanged = onChanged
+            self.onEnded = onEnded
+        }
+
+        @objc func didChange(_ recognizer: UIPinchGestureRecognizer) {
+            guard let view = recognizer.view else { return }
+            let width = max(view.bounds.width, 1)
+            let location = recognizer.location(in: view)
+            let anchor = min(1, max(0, location.x / width))
+            let scale = max(0.01, recognizer.scale)
+            switch recognizer.state {
+            case .began, .changed:
+                onChanged(scale, anchor)
+            case .ended, .cancelled, .failed:
+                onEnded(scale, anchor)
+            default:
+                break
+            }
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith
+                otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+    }
+
+    final class AttachmentView: UIView {
+        weak var coordinator: Coordinator?
+        private weak var installedSuperview: UIView?
+        private var recognizer: UIPinchGestureRecognizer?
+
+        override func didMoveToSuperview() {
+            super.didMoveToSuperview()
+            installRecognizerIfNeeded()
+        }
+
+        func installRecognizerIfNeeded() {
+            guard let superview, let coordinator else { return }
+            if installedSuperview === superview, recognizer != nil {
+                return
+            }
+            removeRecognizer()
+            let recognizer = UIPinchGestureRecognizer(
+                target: coordinator,
+                action: #selector(Coordinator.didChange(_:))
+            )
+            recognizer.cancelsTouchesInView = false
+            recognizer.delaysTouchesBegan = false
+            recognizer.delaysTouchesEnded = false
+            recognizer.delegate = coordinator
+            superview.addGestureRecognizer(recognizer)
+            installedSuperview = superview
+            self.recognizer = recognizer
+        }
+
+        func removeRecognizer() {
+            if let recognizer {
+                installedSuperview?.removeGestureRecognizer(recognizer)
+            }
+            recognizer = nil
+            installedSuperview = nil
+        }
+    }
+}
+
 struct ScheduleView: View {
     @Bindable var model: AppModel
     @State private var dayZoom: TimelineZoomPreset = .oneDay
@@ -1955,7 +2070,7 @@ private struct TimelineDetailPanel: View {
     @State private var panelDragStartHeight: CGFloat?
 
     private var maximumPanelHeight: CGFloat {
-        max(
+        return max(
             detailPanelCollapsedHeight,
             UIScreen.main.bounds.height - 72
         )
@@ -3055,20 +3170,20 @@ private struct TimelineDetailPanel: View {
                     $0.span.intersection(with: contentSpan) != nil
                 }
                 .sorted { $0.span.start < $1.span.start }
-            let sleepPlans = plans
-                .filter {
+            let sleepPlans = deduplicatedAutomaticPlans(
+                plans.filter {
                     $0.categoryID == "sleep"
                         && !GoalRecordPolicy.isGoal($0)
                         && $0.span.intersection(with: contentSpan) != nil
                 }
-                .sorted { $0.span.start < $1.span.start }
-            let activityPlans = plans
-                .filter {
+            )
+            let activityPlans = deduplicatedAutomaticPlans(
+                plans.filter {
                     $0.categoryID == "activity"
                         && !GoalRecordPolicy.isGoal($0)
                         && $0.span.intersection(with: contentSpan) != nil
                 }
-                .sorted { $0.span.start < $1.span.start }
+            )
             let sleepActuals = actuals
                 .filter {
                     isSleepActual($0)
@@ -3114,6 +3229,25 @@ private struct TimelineDetailPanel: View {
                 calendarEvents: calendarEvents
             )
         }
+    }
+
+    private func deduplicatedAutomaticPlans(
+        _ plans: [PlanRecord]
+    ) -> [PlanRecord] {
+        var seen = Set<String>()
+        return plans
+            .sorted { $0.span.start < $1.span.start }
+            .filter { plan in
+                guard plan.origin == .repeatRule else { return true }
+                let key = [
+                    plan.parentID?.uuidString ?? "-",
+                    plan.categoryID,
+                    plan.title,
+                    String(plan.span.start.timeIntervalSinceReferenceDate),
+                    String(plan.span.end.timeIntervalSinceReferenceDate),
+                ].joined(separator: "|")
+                return seen.insert(key).inserted
+            }
     }
 
     private var detailContentSpan: TimeSpan {
@@ -4997,7 +5131,6 @@ private struct TimelineBoard: View {
     // at render time; the wider window is rebuilt only when a drag starts or
     // ends.
     @State private var dragLayoutSpan: TimeSpan?
-    @State private var continuousZoomDurationOrigin: TimeInterval?
     @State private var zoomFeedbackSequence = 0
     @State private var selectedRowID: String?
     @State private var layoutCache = TimelineBoardLayoutCache()
@@ -5145,7 +5278,22 @@ private struct TimelineBoard: View {
                     )
                 )
             )
-            .simultaneousGesture(viewportMagnifyGesture)
+            .background {
+                TwoFingerPinchAttachment(
+                    onChanged: { scale, anchor in
+                        viewportMagnifyChanged(
+                            factor: Double(scale),
+                            anchor: Double(anchor)
+                        )
+                    },
+                    onEnded: { scale, anchor in
+                        viewportMagnifyEnded(
+                            factor: Double(scale),
+                            anchor: Double(anchor)
+                        )
+                    }
+                )
+            }
             .background {
                 TwoFingerDoubleTapAttachment {
                     resetViewport(withFeedback: true)
@@ -5303,14 +5451,16 @@ private struct TimelineBoard: View {
                             }
                         }
 
-                        VStack(spacing: 0) {
-                            Text(marker.label)
-                            if let holidayName = marker.holidayName {
-                                Text(holidayName)
-                                    .font(.taption(size: 6.5, weight: .semibold))
-                                    .foregroundStyle(Color.tpNow)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.55)
+                        Group {
+                            if marker.date != nil, scale != .day {
+                                Button {
+                                    drillDown(from: marker)
+                                } label: {
+                                    axisMarkerLabel(marker)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                axisMarkerLabel(marker)
                             }
                         }
                         .accessibilityLabel(
@@ -5348,6 +5498,44 @@ private struct TimelineBoard: View {
             Rectangle().fill(Color.tpLine).frame(height: 0.5)
         }
         .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func axisMarkerLabel(
+        _ marker: TimelineAxisMarker
+    ) -> some View {
+        VStack(spacing: 0) {
+            Text(marker.label)
+            if let holidayName = marker.holidayName {
+                Text(holidayName)
+                    .font(.taption(size: 6.5, weight: .semibold))
+                    .foregroundStyle(Color.tpNow)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.55)
+            }
+        }
+    }
+
+    private func drillDown(from marker: TimelineAxisMarker) {
+        guard let date = marker.date else { return }
+        switch scale {
+        case .week:
+            model.selectedDate = date
+            model.selectScale(.day)
+            dayZoom = .oneDay
+        case .month:
+            model.selectedDate = date
+            model.selectScale(.week)
+            dayZoom = .oneWeek
+        case .year:
+            model.selectedDate = date
+            model.selectScale(.month)
+            dayZoom = .oneMonth
+        case .day:
+            return
+        }
+        onPlayheadMove?(date)
+        zoomFeedbackSequence += 1
     }
 
     private var rulerMinorDivisionCount: Int {
@@ -5407,7 +5595,9 @@ private struct TimelineBoard: View {
 
     private var currentResolutionPreset: TimelineZoomPreset {
         if isContinuousDay {
-            return dayZoom
+            return TimelineZoomPreset.nearest(
+                to: visibleSpan.duration * viewport.length
+            )
         }
         return TimelineZoomPreset.nearest(to: currentZoomStage)
     }
@@ -5418,7 +5608,9 @@ private struct TimelineBoard: View {
         dragOrigin = nil
         magnifyOrigin = nil
         continuousDragOrigin = nil
-        continuousZoomDurationOrigin = nil
+        if preset.preferredScale == .day {
+            continuousTimelineDuration = preset.duration
+        }
         model.selectScale(preset.preferredScale)
         if preset.preferredScale == .day {
             continuousCenterDate = model.selectedDate
@@ -5430,6 +5622,7 @@ private struct TimelineBoard: View {
     private func selectScaleForResolution(_ targetScale: TimeScale) {
         model.selectScale(targetScale)
         dayZoom = TimelineZoomPreset.defaultPreset(for: targetScale)
+        continuousTimelineDuration = continuousDuration(around: model.selectedDate)
     }
 
     private func rows(
@@ -6329,7 +6522,10 @@ private struct TimelineBoard: View {
     }
 
     private var activeContinuousDuration: TimeInterval {
-        max(
+        if isContinuousDay {
+            return max(60, dayZoom.duration)
+        }
+        return max(
             60,
             continuousTimelineDuration > 0
                 ? continuousTimelineDuration
@@ -6759,6 +6955,7 @@ private struct TimelineBoard: View {
             ).map { bucket in
                 TimelineAxisMarker(
                     id: "full-\(bucket.id)",
+                    date: bucket.date,
                     fraction: Double(bucket.index) / Double(bucket.count),
                     label: bucket.label,
                     isCurrent: isCurrentBucket(bucket),
@@ -6779,6 +6976,7 @@ private struct TimelineBoard: View {
             markers.append(
                 TimelineAxisMarker(
                     id: "zoom-\(next)",
+                    date: date,
                     fraction: (next - start) / max(1, end - start),
                     label: axisTickLabel(date),
                     isCurrent: abs(date.timeIntervalSinceNow) < step / 2
@@ -6792,6 +6990,7 @@ private struct TimelineBoard: View {
             return [
                 TimelineAxisMarker(
                     id: "zoom-center-\(date.timeIntervalSinceReferenceDate)",
+                    date: date,
                     fraction: 0.5,
                     label: axisTickLabel(date),
                     isCurrent: span.contains(.now)
@@ -6805,13 +7004,14 @@ private struct TimelineBoard: View {
         in span: TimeSpan
     ) -> [TimelineAxisMarker] {
         let calendar = TimelineAxisGrid.normalizedCalendar()
+        let zoomDuration = span.duration
         let component: Calendar.Component
         let componentValue: Int
         let step: TimeInterval
         switch scale {
         case .day:
             component = .minute
-            switch dayZoom.duration {
+            switch zoomDuration {
             case ...Double(5 * 60): componentValue = 1
             case ...Double(15 * 60): componentValue = 5
             case ...Double(60 * 60): componentValue = 10
@@ -6873,6 +7073,7 @@ private struct TimelineBoard: View {
             markers.append(
                 TimelineAxisMarker(
                     id: "continuous-\(next)",
+                    date: date,
                     fraction: (next - start) / max(1, end - start),
                     label: label,
                     isCurrent: abs(date.timeIntervalSince(continuousCenterDate))
@@ -7195,74 +7396,46 @@ private struct TimelineBoard: View {
             }
     }
 
-    private var viewportMagnifyGesture: some Gesture {
-        MagnifyGesture(minimumScaleDelta: 0.01)
-            .onChanged { value in
-                if isContinuousDay {
-                    if continuousZoomDurationOrigin == nil {
-                        continuousZoomDurationOrigin = dayZoom.duration
-                        let currentSpan = visibleSpan
-                        dragLayoutSpan = TimeSpan(
-                            start: currentSpan.start.addingTimeInterval(
-                                -currentSpan.duration
-                            ),
-                            end: currentSpan.end.addingTimeInterval(
-                                currentSpan.duration
-                            )
-                        )
-                        editingPlanID = nil
-                    }
-                    guard let continuousZoomDurationOrigin else { return }
-                    let target = continuousZoomDurationOrigin
-                        / max(0.01, Double(value.magnification))
-                    dayZoom = TimelineZoomPreset.nearest(to: target)
-                    ensureContinuousLayoutWindow(around: continuousCenterDate)
-                    return
-                }
-                if magnifyOrigin == nil {
-                    magnifyOrigin = viewport
-                    editingPlanID = nil
-                }
-                guard let magnifyOrigin else { return }
-                let candidate = magnifyOrigin.magnifying(
-                    by: Double(value.magnification),
-                    anchor: Double(value.startAnchor.x),
-                    minimumLength: viewportMinimumLength
-                )
-                let uptime = ProcessInfo.processInfo.systemUptime
-                guard lastViewportRenderUptime == 0
-                    || uptime - lastViewportRenderUptime >= 1.0 / 60.0
-                else {
-                    return
-                }
-                lastViewportRenderUptime = uptime
-                viewport = candidate
-            }
-            .onEnded { value in
-                if isContinuousDay {
-                    continuousZoomDurationOrigin = nil
-                    dragLayoutSpan = nil
-                    zoomFeedbackSequence += 1
-                    return
-                }
-                finishSemanticMagnification(
-                    factor: Double(value.magnification),
-                    anchor: Double(value.startAnchor.x)
-                )
-                magnifyOrigin = nil
-                lastViewportRenderUptime = 0
-            }
+    private func viewportMagnifyChanged(
+        factor: Double,
+        anchor: Double
+    ) {
+        if magnifyOrigin == nil {
+            magnifyOrigin = viewport
+            editingPlanID = nil
+        }
+        guard let magnifyOrigin else { return }
+        let candidate = magnifyOrigin.magnifying(
+            by: factor,
+            anchor: anchor,
+            minimumLength: viewportMinimumLength
+        )
+        let uptime = ProcessInfo.processInfo.systemUptime
+        guard lastViewportRenderUptime == 0
+            || uptime - lastViewportRenderUptime >= 1.0 / 60.0
+        else {
+            return
+        }
+        lastViewportRenderUptime = uptime
+        viewport = candidate
+    }
+
+    private func viewportMagnifyEnded(
+        factor: Double,
+        anchor: Double
+    ) {
+        finishSemanticMagnification(
+            factor: factor,
+            anchor: anchor
+        )
+        magnifyOrigin = nil
+        lastViewportRenderUptime = 0
     }
 
     private func finishSemanticMagnification(
         factor: Double,
         anchor: Double
     ) {
-        if isContinuousDay {
-            continuousZoomDurationOrigin = nil
-            zoomFeedbackSequence += 1
-            return
-        }
         let origin = magnifyOrigin ?? viewport
         let zoomsIn = factor >= 1.15
         let zoomsOut = factor <= 0.85
@@ -7340,7 +7513,6 @@ private struct TimelineBoard: View {
         if isContinuousDay {
             dayZoom = .oneDay
             continuousDragOrigin = nil
-            continuousZoomDurationOrigin = nil
         }
         viewport = .full
         dragOrigin = nil
