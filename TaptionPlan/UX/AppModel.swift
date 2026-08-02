@@ -2643,7 +2643,8 @@ final class AppModel {
             }
             TrackingSessionRecoveryStore.clear()
             lastTrackingSessionRecoveryPersistAt = nil
-        } else if activeTrackingSession?.id != summary.sessionID {
+        } else if summary.isAmbient != true,
+                  activeTrackingSession?.id != summary.sessionID {
             let kind: TrackingKind = summary.workoutKind == .running
                 ? .running
                 : .walking
@@ -2681,7 +2682,7 @@ final class AppModel {
                     + error.localizedDescription
             }
         }
-        if let sensorService {
+        if summary.isAmbient != true, let sensorService {
             let routePoints = summary.routePoints ?? []
             let watchAccelerationAverageG = summary.accelerometerAverageG.map {
                 SensorVector3(x: $0.x, y: $0.y, z: $0.z)
@@ -2729,7 +2730,8 @@ final class AppModel {
             case .cycling: .cycling
             case .automotive, .publicTransit, .subway: .automotive
             case .stationary, .standing, .sitting, .lying, .elevator,
-                 .exercise, .brushingTeeth, .eating, .typing, .sleep, .unknown:
+                 .exercise, .brushingTeeth, .eating, .typing, .housework,
+                 .sleep, .unknown:
                 .stationary
             }
             let behaviorSegments = summary.behaviorSegments ?? []
@@ -2883,13 +2885,58 @@ final class AppModel {
         snapshot.actuals = AppleWatchSensorActivityEngine.upserting(
             summary,
             into: snapshot.actuals,
-            linkedPlan: linkedPlan
+            linkedPlan: linkedPlan,
+            atHome: isWatchSummaryAtHome(summary)
         )
         snapshot.actuals = ActualRecordSuppressionEngine.visibleRecords(
             from: snapshot.actuals,
             suppressedIDs: snapshot.settings.suppressedActualIDs
         )
         await persistDeviceLocalSnapshot()
+    }
+
+    private func isWatchSummaryAtHome(
+        _ summary: TaptionWatchSensorSummary
+    ) -> Bool {
+        let homes = snapshot.settings.frequentPlaces.filter {
+            $0.kind == .home && $0.point != nil
+                && $0.isAutomaticRecordingEnabled
+        }
+        guard !homes.isEmpty else { return false }
+        let span = TimeSpan(start: summary.startedAt, end: summary.endedAt)
+        if snapshot.places.contains(where: { place in
+            guard place.span.intersection(with: span) != nil else { return false }
+            return homes.contains { home in
+                place.displayName == home.name
+                    || place.placeKey == home.stablePlaceKey
+            }
+        }) {
+            return true
+        }
+        if summary.routePoints?.contains(where: { point in
+            let coordinate = GeoPoint(
+                latitude: point.latitude,
+                longitude: point.longitude,
+                altitude: point.altitude,
+                horizontalAccuracy: point.horizontalAccuracy,
+                verticalAccuracy: point.verticalAccuracy
+            )
+            return homes.contains {
+                guard let homePoint = $0.point else { return false }
+                return distanceMeters(coordinate, homePoint) <= $0.radiusMeters
+            }
+        }) == true {
+            return true
+        }
+        guard let latestSensorReading,
+              let point = latestSensorReading.point,
+              abs(latestSensorReading.timestamp.timeIntervalSince(summary.endedAt)) <= 10 * 60 else {
+            return false
+        }
+        return homes.contains {
+            guard let homePoint = $0.point else { return false }
+            return distanceMeters(point, homePoint) <= $0.radiusMeters
+        }
     }
 
     private func archiveRawDeviceData<T: Encodable>(

@@ -2978,6 +2978,78 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(finalActual[0].modelVersion, WatchBehaviorClassifier.rulesVersion)
     }
 
+    func testAmbientWatchMotionAtHomeCreatesHouseworkRecord() {
+        let base = makeDate(2026, 8, 2, 14)
+        let sessionID = UUID()
+        let first = TaptionWatchSensorSummary(
+            sessionID: sessionID,
+            sequence: 1,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: base,
+            endedAt: base.addingTimeInterval(30),
+            isFinal: false,
+            accelerometerSampleCount: 150,
+            accelerometerAverageG: nil,
+            peakAccelerationG: 1.2,
+            accelerometerStandardDeviationG: 0.08,
+            accelerometerMeanJerkGPerSecond: 0.2,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: nil,
+            distanceMeters: nil,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: nil,
+            averageHeartRate: nil,
+            maximumHeartRate: nil,
+            activeEnergyKilocalories: nil,
+            behavior: .stationary,
+            behaviorConfidenceScore: 0.7,
+            behaviorEvidence: ["지속 움직임"],
+            behaviorModelVersion: WatchBehaviorClassifier.rulesVersion,
+            isAmbient: true
+        )
+        var second = first
+        second.sequence = 2
+        second.endedAt = base.addingTimeInterval(60)
+
+        let firstActuals = AppleWatchSensorActivityEngine.upserting(
+            first,
+            into: [],
+            linkedPlan: nil,
+            atHome: true
+        )
+        let finalActuals = AppleWatchSensorActivityEngine.upserting(
+            second,
+            into: firstActuals,
+            linkedPlan: nil,
+            atHome: true
+        )
+
+        XCTAssertEqual(finalActuals.count, 1)
+        XCTAssertEqual(finalActuals[0].title, "집안일")
+        XCTAssertEqual(finalActuals[0].behavior, WatchBehaviorKind.housework.rawValue)
+        XCTAssertEqual(finalActuals[0].endedAt, second.endedAt)
+
+        let outsideHome = AppleWatchSensorActivityEngine.upserting(
+            second,
+            into: [],
+            linkedPlan: nil,
+            atHome: false
+        )
+        XCTAssertTrue(outsideHome.isEmpty)
+    }
+
     func testPlaceDetectionRequiresLongStay() {
         let base = makeDate(2026, 7, 30)
         let point = GeoPoint(

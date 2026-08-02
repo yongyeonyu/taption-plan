@@ -3,14 +3,111 @@ import CoreLocation
 import Foundation
 import HealthKit
 
+private struct WatchAccelerationArchiveSample: Codable, Sendable {
+    var sessionID: UUID?
+    var sequence: Int
+    var capturedAt: Date
+    var acceleration: TaptionWatchSensorVector3
+    var isAmbient: Bool
+}
+
+private actor WatchAccelerationArchive {
+    private let directoryURL: URL
+    private let encoder: JSONEncoder
+    private let calendar = Calendar(identifier: .gregorian)
+    private let retentionInterval: TimeInterval = 31 * 86_400
+
+    init(fileManager: FileManager = .default) {
+        let root = (try? fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )) ?? fileManager.urls(
+            for: .documentDirectory,
+            in: .userDomainMask
+        )[0]
+        directoryURL = root.appendingPathComponent(
+            "TaptionPlan/Acceleration",
+            isDirectory: true
+        )
+        encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+    }
+
+    func append(_ samples: [WatchAccelerationArchiveSample]) throws {
+        guard !samples.isEmpty else { return }
+        try FileManager.default.createDirectory(
+            at: directoryURL,
+            withIntermediateDirectories: true
+        )
+        let grouped = Dictionary(grouping: samples) {
+            monthKey(for: $0.capturedAt)
+        }
+        for (month, values) in grouped {
+            let url = directoryURL.appendingPathComponent(
+                "watch-acceleration-\(month).jsonl"
+            )
+            let lines = try values.map { sample in
+                var data = try encoder.encode(sample)
+                data.append(0x0A)
+                return data
+            }
+            let payload = lines.reduce(into: Data()) { result, line in
+                result.append(line)
+            }
+            if let handle = FileHandle(forWritingAtPath: url.path) {
+                handle.seekToEndOfFile()
+                handle.write(payload)
+                handle.closeFile()
+            } else {
+                try payload.write(to: url, options: .atomic)
+            }
+        }
+        try prune()
+    }
+
+    private func monthKey(for date: Date) -> String {
+        let components = calendar.dateComponents([.year, .month], from: date)
+        return String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
+    }
+
+    private func prune() throws {
+        let cutoff = Date.now.addingTimeInterval(-retentionInterval)
+        let files = try FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: nil
+        )
+        let parser = DateFormatter()
+        parser.calendar = calendar
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        for file in files where file.pathExtension == "jsonl" {
+            let name = file.deletingPathExtension().lastPathComponent
+            let parts = name.split(separator: "-")
+            guard parts.count >= 2 else { continue }
+            let month = "\(parts[parts.count - 2])-\(parts[parts.count - 1])"
+            guard let date = parser.date(from: "\(month)-01") else {
+                continue
+            }
+            let monthEnd = calendar.date(byAdding: .month, value: 1, to: date) ?? date
+            if monthEnd < cutoff {
+                try FileManager.default.removeItem(at: file)
+            }
+        }
+    }
+}
+
 @MainActor
 final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published private(set) var isActive = false
+    @Published private(set) var isMotionRecording = false
     @Published private(set) var startedAt: Date?
     @Published private(set) var heartRate = 0.0
     @Published private(set) var distanceMeters = 0.0
     @Published private(set) var activeEnergyKilocalories = 0.0
     @Published private(set) var sensorSampleCount = 0
+    @Published private(set) var archivedAccelerationSampleCount = 0
     @Published private(set) var latestRelativeAltitudeMeters: Double?
     @Published private(set) var errorMessage: String?
 
@@ -68,6 +165,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var pendingBehaviorSegments: [WatchBehaviorSegment] = []
     private var lastBehaviorKind: WatchBehaviorKind?
     private var lastBehaviorConfidence = 0.0
+    private let accelerationArchive = WatchAccelerationArchive()
+    private var pendingAccelerationSamples: [WatchAccelerationArchiveSample] = []
+    private var accelerationArchiveStride = 0
+    private var accelerationArchiveSequence = 0
+    private var isAmbientCapture = false
 
     override init() {
         super.init()
@@ -136,7 +238,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             isActive = true
             startSensorCollection(
                 sessionID: sensorSessionID,
-                startedAt: start
+                startedAt: start,
+                ambient: false
             )
             return true
         } catch {
@@ -161,6 +264,38 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             reset(with: "운동 저장을 완료하지 못했습니다. \(error.localizedDescription)")
         }
         return linkedPlan
+    }
+
+    /// Starts a low-power accelerometer archive without creating a HealthKit
+    /// workout.  It is intentionally explicit so the user can control Watch
+    /// battery usage while still collecting the motion evidence used for
+    /// home-activity classification.
+    @discardableResult
+    func startMotionRecording() -> Bool {
+        guard !isActive, !isMotionRecording else { return false }
+        let start = Date.now
+        let sessionID = UUID()
+        linkedPlan = nil
+        workoutKind = .walking
+        startedAt = start
+        isMotionRecording = true
+        startSensorCollection(
+            sessionID: sessionID,
+            startedAt: start,
+            ambient: true
+        )
+        return true
+    }
+
+    func stopMotionRecording() {
+        guard isMotionRecording else { return }
+        if let summary = stopSensorCollection(at: .now, isFinal: true) {
+            onSensorSummary?(summary)
+        }
+        isMotionRecording = false
+        startedAt = nil
+        workoutKind = nil
+        linkedPlan = nil
     }
 
     private func requestAuthorization() async throws {
@@ -246,14 +381,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         workoutKind = nil
         startedAt = nil
         isActive = false
+        isMotionRecording = false
+        isAmbientCapture = false
         sensorSampleCount = 0
+        archivedAccelerationSampleCount = 0
         latestRelativeAltitudeMeters = nil
         errorMessage = message
     }
 
     private func startSensorCollection(
         sessionID: UUID,
-        startedAt: Date
+        startedAt: Date,
+        ambient: Bool
     ) {
         stopSensorHardware()
         sensorSessionID = sessionID
@@ -293,11 +432,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         lastBehaviorKind = nil
         lastBehaviorConfidence = 0
         sensorSampleCount = 0
+        archivedAccelerationSampleCount = 0
+        pendingAccelerationSamples = []
+        accelerationArchiveStride = 0
+        accelerationArchiveSequence = 0
+        isAmbientCapture = ambient
 
-        // Activity-classifier windows need at least 25 Hz.  This is only
-        // enabled inside HKWorkoutSession; normal background collection keeps
-        // the app's configured low-power interval.
-        let updateInterval: TimeInterval = 0.04
+        // Activity windows use 25 Hz during a workout.  Ambient recording is
+        // deliberately 5 Hz: enough to detect sustained hand motion while
+        // keeping Watch battery and archive size bounded.
+        let updateInterval: TimeInterval = ambient ? 0.2 : 0.04
         if motionManager.isAccelerometerAvailable {
             motionManager.accelerometerUpdateInterval = updateInterval
             motionManager.startAccelerometerUpdates(
@@ -320,7 +464,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if motionManager.isGyroAvailable {
+        if !ambient, motionManager.isGyroAvailable {
             motionManager.gyroUpdateInterval = updateInterval
             motionManager.startGyroUpdates(
                 to: sensorQueue
@@ -336,7 +480,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if motionManager.isDeviceMotionAvailable {
+        if !ambient, motionManager.isDeviceMotionAvailable {
             motionManager.deviceMotionUpdateInterval = updateInterval
             motionManager.startDeviceMotionUpdates(
                 to: sensorQueue
@@ -370,7 +514,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if CMAltimeter.isRelativeAltitudeAvailable() {
+        if !ambient, CMAltimeter.isRelativeAltitudeAvailable() {
             altimeter.startRelativeAltitudeUpdates(
                 to: sensorQueue
             ) { [weak self] data, _ in
@@ -382,7 +526,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if CMPedometer.isStepCountingAvailable() {
+        if !ambient, CMPedometer.isStepCountingAvailable() {
             pedometer.startUpdates(from: startedAt) { [weak self] data, _ in
                 let steps = data?.numberOfSteps.intValue
                 let distance = data?.distance?.doubleValue
@@ -396,10 +540,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if locationManager.authorizationStatus == .notDetermined {
+        if !ambient, locationManager.authorizationStatus == .notDetermined {
             locationManager.requestWhenInUseAuthorization()
         }
-        if locationManager.authorizationStatus == .authorizedAlways
+        if !ambient,
+           locationManager.authorizationStatus == .authorizedAlways
             || locationManager.authorizationStatus == .authorizedWhenInUse {
             locationManager.startUpdatingLocation()
         }
@@ -436,6 +581,22 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         previousAccelerationMagnitude = magnitude
         previousAccelerationSampleTime = timestamp
+        accelerationArchiveStride += 1
+        let archiveStride = isAmbientCapture ? 1 : 5
+        if accelerationArchiveStride >= archiveStride {
+            accelerationArchiveStride = 0
+            accelerationArchiveSequence += 1
+            pendingAccelerationSamples.append(
+                WatchAccelerationArchiveSample(
+                    sessionID: sensorSessionID,
+                    sequence: accelerationArchiveSequence,
+                    capturedAt: capturedAt,
+                    acceleration: value,
+                    isAmbient: isAmbientCapture
+                )
+            )
+            archivedAccelerationSampleCount += 1
+        }
         motionSamples.append(
             WatchMotionSample(
                 capturedAt: capturedAt,
@@ -491,7 +652,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     ? nil
                     : speeds.reduce(0, +) / Double(speeds.count)
                 let context = WatchBehaviorInput(
-                    workoutKind: workoutKind,
+                    workoutKind: isAmbientCapture ? nil : workoutKind,
                     duration: features.duration,
                     accelerometerSampleCount: features.sampleCount,
                     accelerometerStandardDeviationG:
@@ -594,6 +755,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
         onSensorSummary?(summary)
+        flushAccelerationArchive()
         pendingRoutePoints.removeAll(keepingCapacity: true)
         pendingBehaviorSegments.removeAll(keepingCapacity: true)
     }
@@ -604,6 +766,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     ) -> TaptionWatchSensorSummary? {
         guard sensorSessionID != nil else { return nil }
         let summary = makeSensorSummary(at: endedAt, isFinal: isFinal)
+        flushAccelerationArchive()
         sensorSummaryTask?.cancel()
         sensorSummaryTask = nil
         stopSensorHardware()
@@ -618,6 +781,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         altimeter.stopRelativeAltitudeUpdates()
         pedometer.stopUpdates()
         locationManager.stopUpdatingLocation()
+    }
+
+    private func flushAccelerationArchive() {
+        guard !pendingAccelerationSamples.isEmpty else { return }
+        let samples = pendingAccelerationSamples
+        pendingAccelerationSamples.removeAll(keepingCapacity: true)
+        let archive = accelerationArchive
+        Task {
+            try? await archive.append(samples)
+        }
     }
 
     private func makeSensorSummary(
@@ -636,7 +809,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             ? nil
             : routeSpeeds.reduce(0, +) / Double(routeSpeeds.count)
         let input = WatchBehaviorInput(
-            workoutKind: workoutKind,
+            workoutKind: isAmbientCapture ? nil : workoutKind,
             duration: endedAt.timeIntervalSince(startedAt),
             accelerometerSampleCount: accelerometerCount,
             accelerometerStandardDeviationG: accelerometerCount > 1
@@ -724,7 +897,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             behaviorConfidenceScore: behavior.confidenceScore,
             behaviorEvidence: behavior.evidence,
             behaviorModelVersion: behavior.modelVersion,
-            behaviorSegments: pendingBehaviorSegments
+            behaviorSegments: pendingBehaviorSegments,
+            isAmbient: isAmbientCapture
         )
     }
 }

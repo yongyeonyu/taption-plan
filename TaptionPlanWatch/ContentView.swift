@@ -42,7 +42,9 @@ struct WatchContentView: View {
             WatchCatRunner(
                 style: connectivity.payload?.catStyle ?? "calico",
                 reducesMotion: connectivity.payload?.reducesMotion ?? false,
-                isRunning: !currentItems.isEmpty || workout.isActive
+                isRunning: !currentItems.isEmpty
+                    || workout.isActive
+                    || workout.isMotionRecording
             )
             quickWorkoutControls
             if currentItems.isEmpty {
@@ -113,6 +115,18 @@ struct WatchContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
+            } else if workout.isMotionRecording {
+                Button(role: .destructive) {
+                    workout.stopMotionRecording()
+                } label: {
+                    Label("가속도 기록 종료", systemImage: "stop.circle.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+                Text("손목 움직임을 저장하는 중 · (workout.archivedAccelerationSampleCount)개")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
             } else {
                 HStack(spacing: 5) {
                     Button {
@@ -138,6 +152,11 @@ struct WatchContentView: View {
                         }
                     } label: {
                         Label("달리기", systemImage: "figure.run")
+                    }
+                    Button {
+                        _ = workout.startMotionRecording()
+                    } label: {
+                        Label("가속도", systemImage: "waveform.path.ecg")
                     }
                 }
                 .buttonStyle(.bordered)

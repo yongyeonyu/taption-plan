@@ -1861,8 +1861,16 @@ enum AppleWatchSensorActivityEngine {
     static func upserting(
         _ summary: TaptionWatchSensorSummary,
         into existing: [ActualRecord],
-        linkedPlan: PlanRecord?
+        linkedPlan: PlanRecord?,
+        atHome: Bool = false
     ) -> [ActualRecord] {
+        if summary.isAmbient == true {
+            return upsertingAmbientHousework(
+                summary,
+                into: existing,
+                atHome: atHome
+            )
+        }
         let previous = existing.first {
             $0.id == summary.sessionID
                 && ($0.source == .healthKit || $0.source == .appleWatch)
@@ -1974,6 +1982,71 @@ enum AppleWatchSensorActivityEngine {
             existing.filter { $0.id != summary.sessionID }
                 + [record]
         ).sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private static func upsertingAmbientHousework(
+        _ summary: TaptionWatchSensorSummary,
+        into existing: [ActualRecord],
+        atHome: Bool
+    ) -> [ActualRecord] {
+        let previous = existing.first {
+            $0.id == summary.sessionID && $0.behavior == "housework"
+        }
+        guard atHome, sustainedMotion(summary) else {
+            return existing.sorted { $0.startedAt < $1.startedAt }
+        }
+
+        var evidence = summary.behaviorEvidence ?? []
+        evidence.append("Apple Watch 가속도 원시 기록")
+        evidence.append("집 위치 내 지속 움직임")
+        if let standardDeviation = summary.accelerometerStandardDeviationG {
+            evidence.append(String(format: "가속도 변동 %.2fg", standardDeviation))
+        }
+        let record = ActualRecord(
+            id: summary.sessionID,
+            planID: nil,
+            routineID: nil,
+            title: "집안일",
+            categoryID: "activity",
+            startedAt: previous?.startedAt ?? summary.startedAt,
+            endedAt: max(previous?.endedAt ?? summary.startedAt, summary.endedAt),
+            source: .appleWatch,
+            confidence: summary.behaviorConfidenceScore.map {
+                ConfidenceLevel(score: max(0.55, $0))
+            } ?? .medium,
+            createdAt: previous?.createdAt ?? summary.startedAt,
+            behavior: WatchBehaviorKind.housework.rawValue,
+            evidence: Array(Set(evidence)).sorted(),
+            sensorChunkID: summary.sessionID,
+            modelVersion: summary.behaviorModelVersion
+                ?? WatchBehaviorClassifier.rulesVersion
+        )
+        return (
+            existing.filter { $0.id != summary.sessionID }
+                + [record]
+        ).sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private static func sustainedMotion(
+        _ summary: TaptionWatchSensorSummary
+    ) -> Bool {
+        let duration = summary.endedAt.timeIntervalSince(summary.startedAt)
+        guard duration >= 20, summary.accelerometerSampleCount >= 40 else {
+            return false
+        }
+        let acceleration = max(
+            summary.accelerometerStandardDeviationG ?? 0,
+            summary.accelerometerMeanJerkGPerSecond ?? 0
+        )
+        let behaviorIsMotion = summary.behaviorSegments?.contains {
+            switch $0.behavior {
+            case .stationary, .standing, .sitting, .lying, .sleep, .unknown:
+                false
+            default:
+                true
+            }
+        } ?? false
+        return acceleration >= 0.018 || behaviorIsMotion
     }
 }
 

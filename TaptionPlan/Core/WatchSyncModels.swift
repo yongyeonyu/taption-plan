@@ -71,6 +71,7 @@ enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
     case brushingTeeth
     case eating
     case typing
+    case housework
     case sleep
     case unknown
 
@@ -93,6 +94,7 @@ enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
         case .brushingTeeth: "양치"
         case .eating: "식사"
         case .typing: "타이핑"
+        case .housework: "집안일"
         case .sleep: "수면"
         case .unknown: "활동"
         }
@@ -844,6 +846,9 @@ struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
     var behaviorEvidence: [String]? = nil
     var behaviorModelVersion: String? = nil
     var behaviorSegments: [WatchBehaviorSegment]? = nil
+    /// Low-power accelerometer capture outside an explicit workout session.
+    /// Optional so summaries queued by older Watch builds remain readable.
+    var isAmbient: Bool? = nil
 }
 
 enum TaptionWatchEnvelope {
