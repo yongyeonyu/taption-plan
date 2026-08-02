@@ -101,6 +101,19 @@ extension CategoryIcon {
         case .calendar: "calendar"
         case .event: "sparkles"
         case .memo: "note.text"
+        case .movement: "figure.walk.motion"
+        case .activity: "figure.run"
+        case .relationship: "heart"
+        case .work: "desktopcomputer"
+        case .community: "person.3"
+        case .student: "person.crop.rectangle"
+        case .exam: "checkmark.seal"
+        case .military: "shield.lefthalf.filled"
+        case .athlete: "figure.strengthtraining.traditional"
+        case .pregnancy: "figure.and.child.holdinghands"
+        case .caregiver: "hands.sparkles"
+        case .government: "building.columns"
+        case .food: "takeoutbag.and.cup.and.straw"
         }
     }
 }

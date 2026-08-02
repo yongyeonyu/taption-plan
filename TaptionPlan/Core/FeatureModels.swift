@@ -124,6 +124,19 @@ enum CategoryIcon: String, Codable, CaseIterable, Sendable {
     case calendar
     case event
     case memo
+    case movement
+    case activity
+    case relationship
+    case work
+    case community
+    case student
+    case exam
+    case military
+    case athlete
+    case pregnancy
+    case caregiver
+    case government
+    case food
 }
 
 enum PermissionFeature: String, Codable, CaseIterable, Sendable {
@@ -253,6 +266,10 @@ struct GoalRepeatRule: Identifiable, Codable, Hashable, Sendable {
 struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var planID: UUID?
+    /// The routine context for an action/automatic record.  `planID` remains
+    /// the concrete action or repeat segment; this second link keeps the
+    /// routine and action layers independently addressable.
+    var routineID: UUID?
     var title: String
     var categoryID: String
     var startedAt: Date
@@ -264,6 +281,7 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
     init(
         id: UUID = UUID(),
         planID: UUID?,
+        routineID: UUID? = nil,
         title: String,
         categoryID: String,
         startedAt: Date,
@@ -274,6 +292,7 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.planID = planID
+        self.routineID = routineID
         self.title = title
         self.categoryID = categoryID
         self.startedAt = startedAt
@@ -285,6 +304,29 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
 
     func span(asOf date: Date = .now) -> TimeSpan {
         TimeSpan(start: startedAt, end: endedAt ?? max(startedAt, date))
+    }
+}
+
+/// A user-created relationship between two timeline records. The node IDs
+/// use the stable prefixes emitted by `RecordRelationshipEngine`, allowing
+/// calendar/place/travel records to be linked without changing their source
+/// models.
+struct RecordLink: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var fromNodeID: String
+    var toNodeID: String
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        fromNodeID: String,
+        toNodeID: String,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.fromNodeID = fromNodeID
+        self.toNodeID = toNodeID
+        self.createdAt = createdAt
     }
 }
 
@@ -372,46 +414,6 @@ struct CategoryDefinition: Identifiable, Codable, Hashable, Sendable {
         self.isHidden = isHidden
         self.isBuiltIn = isBuiltIn
     }
-}
-
-enum ProfileComponentKind: String, Codable, Sendable {
-    case role
-    case situation
-    case goal
-}
-
-struct ProfileComponent: Identifiable, Codable, Hashable, Sendable {
-    var id: String
-    var kind: ProfileComponentKind
-    var name: String
-    var categoryIDs: [String]
-    var categoryDisplayNames: [String: String]
-    var quickAdds: [String]
-    var suggestedPermissions: [PermissionFeature: Bool]
-    var reviewFocus: [String]
-}
-
-struct ProfileSelection: Codable, Hashable, Sendable {
-    var roleID: String
-    var situationIDs: [String]
-    var goalIDs: [String]
-
-    init(roleID: String, situationIDs: [String] = [], goalIDs: [String] = []) {
-        self.roleID = roleID
-        self.situationIDs = situationIDs
-        self.goalIDs = goalIDs
-    }
-}
-
-struct TemplateApplication: Codable, Hashable, Sendable {
-    var selection: ProfileSelection
-    var displayName: String
-    var visibleCategoryIDs: [String]
-    var categoryDisplayNames: [String: String]
-    var quickAdds: [String]
-    var recommendedGoalTitles: [String]
-    var suggestedPermissions: [PermissionFeature: Bool]
-    var reviewFocus: [String]
 }
 
 // MARK: - Calendar, photo, health, weather
@@ -540,6 +542,10 @@ struct AirQualityContext: Codable, Hashable, Sendable {
 struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var observedAt: Date
+    /// Time at which the provider actually supplied this observation.
+    var fetchedAt: Date?
+    /// True when this is the last known value after a failed refresh.
+    var isStale: Bool?
     var condition: String
     var symbolName: String
     var temperatureCelsius: Double
@@ -553,6 +559,8 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     init(
         id: UUID = UUID(),
         observedAt: Date,
+        fetchedAt: Date? = nil,
+        isStale: Bool? = false,
         condition: String,
         symbolName: String,
         temperatureCelsius: Double,
@@ -565,6 +573,8 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.observedAt = observedAt
+        self.fetchedAt = fetchedAt
+        self.isStale = isStale
         self.condition = condition
         self.symbolName = symbolName
         self.temperatureCelsius = temperatureCelsius
@@ -574,6 +584,17 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         self.point = point
         self.isContextOnly = isContextOnly
         self.airQuality = airQuality
+    }
+
+    var freshnessLabel: String {
+        guard let fetchedAt else {
+            return isStale == true ? "이전" : "확인됨"
+        }
+        let minutes = max(0, Int(Date.now.timeIntervalSince(fetchedAt) / 60))
+        if minutes < 1 { return "방금" }
+        if minutes < 60 { return "\(minutes)분 전" }
+        let hours = minutes / 60
+        return "\(hours)시간 전"
     }
 }
 
@@ -679,6 +700,12 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     var referenceAltimeterSessionID: UUID?
     var floorCapturedAt: Date?
     var radiusMeters: Double
+    /// 건물마다 다른 층 높이를 고도 보정에 사용합니다. 기본값은 3m입니다.
+    var floorHeightMeters: Double
+    /// 장소로 확정하기 위해 머물러야 하는 최소 시간입니다.
+    var minimumDwellMinutes: Int
+    /// 끄면 이 장소는 자동 위치 분석에서 제외하고 수동 기록만 사용합니다.
+    var isAutomaticRecordingEnabled: Bool
     var createdAt: Date
     var updatedAt: Date
 
@@ -693,6 +720,9 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         referenceAltimeterSessionID: UUID? = nil,
         floorCapturedAt: Date? = nil,
         radiusMeters: Double = 120,
+        floorHeightMeters: Double = 3,
+        minimumDwellMinutes: Int = 10,
+        isAutomaticRecordingEnabled: Bool = true,
         createdAt: Date = .now,
         updatedAt: Date = .now
     ) {
@@ -708,8 +738,127 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         self.referenceAltimeterSessionID = referenceAltimeterSessionID
         self.floorCapturedAt = floorCapturedAt
         self.radiusMeters = radiusMeters
+        self.floorHeightMeters = min(max(floorHeightMeters, 2.2), 5.0)
+        self.minimumDwellMinutes = min(max(minimumDwellMinutes, 1), 240)
+        self.isAutomaticRecordingEnabled = isAutomaticRecordingEnabled
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case kind
+        case name
+        case point
+        case floor
+        case referenceRelativeAltitudeMeters
+        case referencePressureKilopascals
+        case referenceAltimeterSessionID
+        case floorCapturedAt
+        case radiusMeters
+        case floorHeightMeters
+        case minimumDwellMinutes
+        case isAutomaticRecordingEnabled
+        case createdAt
+        case updatedAt
+    }
+
+    /// 새 필드가 추가된 이전 저장 파일도 읽을 수 있도록 기본값을 적용합니다.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedKind = try values.decodeIfPresent(
+            FrequentPlaceKind.self,
+            forKey: .kind
+        ) ?? .custom
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        kind = decodedKind
+        name = try values.decodeIfPresent(String.self, forKey: .name)
+            ?? decodedKind.defaultName
+        point = try values.decodeIfPresent(GeoPoint.self, forKey: .point)
+        floor = try values.decodeIfPresent(Int.self, forKey: .floor)
+        referenceRelativeAltitudeMeters = try values.decodeIfPresent(
+            Double.self,
+            forKey: .referenceRelativeAltitudeMeters
+        )
+        referencePressureKilopascals = try values.decodeIfPresent(
+            Double.self,
+            forKey: .referencePressureKilopascals
+        )
+        referenceAltimeterSessionID = try values.decodeIfPresent(
+            UUID.self,
+            forKey: .referenceAltimeterSessionID
+        )
+        floorCapturedAt = try values.decodeIfPresent(
+            Date.self,
+            forKey: .floorCapturedAt
+        )
+        radiusMeters = min(
+            max(
+                try values.decodeIfPresent(Double.self, forKey: .radiusMeters)
+                    ?? 120,
+                30
+            ),
+            500
+        )
+        floorHeightMeters = min(
+            max(
+                try values.decodeIfPresent(
+                    Double.self,
+                    forKey: .floorHeightMeters
+                ) ?? 3,
+                2.2
+            ),
+            5.0
+        )
+        minimumDwellMinutes = min(
+            max(
+                try values.decodeIfPresent(
+                    Int.self,
+                    forKey: .minimumDwellMinutes
+                ) ?? 10,
+                1
+            ),
+            240
+        )
+        isAutomaticRecordingEnabled = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .isAutomaticRecordingEnabled
+        ) ?? true
+        createdAt = try values.decodeIfPresent(Date.self, forKey: .createdAt)
+            ?? .now
+        updatedAt = try values.decodeIfPresent(Date.self, forKey: .updatedAt)
+            ?? createdAt
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(kind, forKey: .kind)
+        try values.encode(name, forKey: .name)
+        try values.encodeIfPresent(point, forKey: .point)
+        try values.encodeIfPresent(floor, forKey: .floor)
+        try values.encodeIfPresent(
+            referenceRelativeAltitudeMeters,
+            forKey: .referenceRelativeAltitudeMeters
+        )
+        try values.encodeIfPresent(
+            referencePressureKilopascals,
+            forKey: .referencePressureKilopascals
+        )
+        try values.encodeIfPresent(
+            referenceAltimeterSessionID,
+            forKey: .referenceAltimeterSessionID
+        )
+        try values.encodeIfPresent(floorCapturedAt, forKey: .floorCapturedAt)
+        try values.encode(radiusMeters, forKey: .radiusMeters)
+        try values.encode(floorHeightMeters, forKey: .floorHeightMeters)
+        try values.encode(minimumDwellMinutes, forKey: .minimumDwellMinutes)
+        try values.encode(
+            isAutomaticRecordingEnabled,
+            forKey: .isAutomaticRecordingEnabled
+        )
+        try values.encode(createdAt, forKey: .createdAt)
+        try values.encode(updatedAt, forKey: .updatedAt)
     }
 
     static let defaults: [FrequentPlace] = [
@@ -730,7 +879,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         return FloorCalibration(
             placeName: name,
             referenceFloor: floor,
-            floorHeightMeters: 3,
+            floorHeightMeters: floorHeightMeters,
             referencePoint: point,
             referenceRelativeAltitudeMeters:
                 referenceRelativeAltitudeMeters,
@@ -1440,6 +1589,7 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
     var updatedAt: Date
     var plans: [PlanRecord]
     var actuals: [ActualRecord]
+    var recordLinks: [RecordLink]
     var memos: [ActionMemo]
     var categories: [CategoryDefinition]
     var photos: [PhotoMoment]
@@ -1448,8 +1598,6 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
     var places: [PlaceStay]
     var travel: [TravelSegment]
     var floorTransitions: [FloorTransition]
-    var profile: ProfileSelection?
-    var customProfileComponents: [ProfileComponent]
     var settings: AppFeatureSettings
 
     init(
@@ -1457,6 +1605,7 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         updatedAt: Date,
         plans: [PlanRecord],
         actuals: [ActualRecord],
+        recordLinks: [RecordLink] = [],
         memos: [ActionMemo],
         categories: [CategoryDefinition],
         photos: [PhotoMoment],
@@ -1465,14 +1614,13 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         places: [PlaceStay],
         travel: [TravelSegment],
         floorTransitions: [FloorTransition],
-        profile: ProfileSelection?,
-        customProfileComponents: [ProfileComponent] = [],
         settings: AppFeatureSettings
     ) {
         self.schemaVersion = schemaVersion
         self.updatedAt = updatedAt
         self.plans = plans
         self.actuals = actuals
+        self.recordLinks = recordLinks
         self.memos = memos
         self.categories = categories
         self.photos = photos
@@ -1481,8 +1629,6 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         self.places = places
         self.travel = travel
         self.floorTransitions = floorTransitions
-        self.profile = profile
-        self.customProfileComponents = customProfileComponents
         self.settings = settings
     }
 
@@ -1505,6 +1651,10 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
             [ActualRecord].self,
             forKey: .actuals
         ) ?? defaults.actuals
+        recordLinks = try values.decodeIfPresent(
+            [RecordLink].self,
+            forKey: .recordLinks
+        ) ?? defaults.recordLinks
         memos = try values.decodeIfPresent(
             [ActionMemo].self,
             forKey: .memos
@@ -1537,14 +1687,6 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
             [FloorTransition].self,
             forKey: .floorTransitions
         ) ?? defaults.floorTransitions
-        profile = try values.decodeIfPresent(
-            ProfileSelection.self,
-            forKey: .profile
-        )
-        customProfileComponents = try values.decodeIfPresent(
-            [ProfileComponent].self,
-            forKey: .customProfileComponents
-        ) ?? []
         settings = try values.decodeIfPresent(
             AppFeatureSettings.self,
             forKey: .settings
@@ -1556,6 +1698,7 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         updatedAt: .distantPast,
         plans: [],
         actuals: [],
+        recordLinks: [],
         memos: [],
         categories: [],
         photos: [],
@@ -1564,8 +1707,6 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         places: [],
         travel: [],
         floorTransitions: [],
-        profile: nil,
-        customProfileComponents: [],
         settings: .defaults
     )
 }

@@ -2,9 +2,9 @@ import Foundation
 
 enum CategoryCatalog {
     static let builtIn: [CategoryDefinition] = [
-        category("movement", "이동", .travel, "#E8D3B3", "#A87A3D", "#C58C35", 0),
+        category("movement", "이동", .movement, "#E8D3B3", "#A87A3D", "#C58C35", 0),
         category("location", "위치", .location, "#D5EAF5", "#4F87A7", "#4E9BC4", 1),
-        category("activity", "활동", .exercise, "#D4E7D1", "#4D7A49", "#568D51", 2),
+        category("activity", "활동", .activity, "#D4E7D1", "#4D7A49", "#568D51", 2),
         category("photo", "사진", .photo, "#EADDF3", "#8754A9", "#965CB9", 3),
         category("project", "프로젝트", .briefcase, "#BEDAE3", "#4E8EA8", "#4E9CB8", 4),
         category("exercise", "운동", .exercise, "#FED5CF", "#B4584D", "#E46252", 5),
@@ -12,11 +12,30 @@ enum CategoryCatalog {
         category("hobby", "취미", .music, "#C4E9DA", "#477F69", "#4B9879", 7),
         category("sleep", "수면", .sleep, "#C9D6E5", "#536F91", "#5B7EA8", 8),
         category("routine", "생활", .home, "#F7E8B4", "#A98118", "#B58A12", 9),
-        category("relationship", "관계", .family, "#F9D9E1", "#A75B70", "#B9617B", 10),
-        category("rest", "휴식", .nature, "#E3E4E8", "#696D77", "#777C88", 11),
+        category("relationship", "관계", .relationship, "#F9D9E1", "#A75B70", "#B9617B", 10),
+        category("rest", "휴식", .cafe, "#E3E4E8", "#696D77", "#777C88", 11),
         category("travel", "여행", .travel, "#CDE8F1", "#407F98", "#3F91AE", 12),
         category("health", "건강", .health, "#D4E7D1", "#4D7A49", "#568D51", 13),
-        category("event", "이벤트", .event, "#F5DDEE", "#9D5D86", "#B86B9D", 14)
+        category("event", "이벤트", .event, "#F5DDEE", "#9D5D86", "#B86B9D", 14),
+        // Role- and situation-neutral categories. Users choose the ones they
+        // need during start configuration; all remain available later.
+        category("work", "업무", .work, "#D9E5F2", "#496A8E", "#5A82A8", 15),
+        category("family", "가족", .family, "#F7DDE6", "#9A5A72", "#B56A84", 16),
+        category("parenting", "육아", .stroller, "#F8E2D0", "#A96C3E", "#C9844A", 17),
+        category("finance", "재정", .shopping, "#E4E8CF", "#68783A", "#82944A", 18),
+        category("housing", "주거", .building, "#E7DED2", "#78654E", "#987F60", 19),
+        category("career", "커리어", .target, "#E5D9F1", "#72518E", "#9067AD", 20),
+        category("creative", "창작·공연", .performance, "#F2D9E9", "#8B4F78", "#A9618D", 21),
+        category("pet", "반려동물", .pet, "#F5E2C4", "#94703C", "#B38A4D", 22),
+        category("community", "봉사·커뮤니티", .community, "#DDEBE6", "#4C7467", "#5B8D7D", 23),
+        category("student", "학생", .student, "#DCE7F7", "#4B6591", "#5877A8", 24),
+        category("exam", "수험", .exam, "#F4E1C6", "#94652B", "#AA7835", 25),
+        category("military", "군인", .military, "#DDE5D3", "#5D7040", "#6F8750", 26),
+        category("athlete", "운동선수", .athlete, "#F5D6D4", "#934A4B", "#A95758", 27),
+        category("pregnancy", "임신·출산", .pregnancy, "#F5DDE8", "#9A5875", "#B66887", 28),
+        category("caregiver", "돌봄", .caregiver, "#E6DDF3", "#69538D", "#7F67AA", 29),
+        category("government", "공공·공무", .government, "#DCE8EE", "#4D6E7A", "#5F8998", 30),
+        category("food", "식생활", .food, "#F5E4CB", "#976A38", "#AE7F43", 31)
     ]
 
     static func makeCustom(
@@ -242,6 +261,57 @@ enum CategoryHierarchyCatalog {
         "event": [
             "기념일", "공연", "전시", "모임", "행사 준비", "경조사",
         ],
+        "work": [
+            "회의", "집중업무", "문서", "결재", "출장", "당직", "정산",
+        ],
+        "family": [
+            "가족 일정", "병원", "식사", "돌봄", "모임", "기념일",
+        ],
+        "parenting": [
+            "수유", "목욕", "이유식", "등하원", "검진", "놀이·발달",
+        ],
+        "finance": [
+            "예산", "지출", "저축", "투자", "세금", "정산",
+        ],
+        "housing": [
+            "청소", "정리", "수리", "계약", "관리비", "이사",
+        ],
+        "career": [
+            "자격증", "취업", "이직", "포트폴리오", "면접", "네트워킹",
+        ],
+        "creative": [
+            "기획", "촬영", "제작", "리허설", "공연", "전시",
+        ],
+        "pet": [
+            "산책", "식사", "놀이", "미용", "병원", "훈련",
+        ],
+        "community": [
+            "봉사", "동호회", "모임", "운영", "준비", "회고",
+        ],
+        "student": [
+            "수업", "과제", "동아리", "시험", "통학", "생활관리",
+        ],
+        "exam": [
+            "기출", "모의고사", "오답", "암기", "강의", "컨디션",
+        ],
+        "military": [
+            "근무", "훈련", "정비", "점호", "휴가", "체력관리",
+        ],
+        "athlete": [
+            "훈련", "경기", "회복", "식단", "전술", "기록분석",
+        ],
+        "pregnancy": [
+            "진료", "운동", "영양", "약복용", "검사", "스트레스관리",
+        ],
+        "caregiver": [
+            "돌봄", "병원", "식사", "복약", "동행", "휴식",
+        ],
+        "government": [
+            "민원", "보고", "회의", "결재", "현장", "교육",
+        ],
+        "food": [
+            "식사", "장보기", "요리", "영양", "기록", "외식",
+        ],
     ]
 
     static func middleSuggestions(for categoryID: String) -> [String] {
@@ -266,621 +336,6 @@ struct CategoryDeletionResult: Sendable {
     var actuals: [ActualRecord]
 }
 
-enum TemplateError: Error, Equatable {
-    case roleMissing
-    case tooManySituations
-    case tooManyGoals
-    case unknownComponent(String)
-    case emptyComponentName
-    case duplicateComponentName
-    case unsupportedCustomComponent
-}
-
-enum TemplateCatalog {
-    struct SituationGoalTemplate: Hashable, Sendable {
-        var name: String
-        var categoryID: String
-    }
-
-    static let roles: [ProfileComponent] = [
-        component(
-            "student", .role, "학생",
-            ["study", "movement", "relationship", "hobby", "exercise", "sleep"],
-            ["study": "학업"],
-            ["수업", "과제", "시험", "발표", "동아리", "알바"],
-            [.calendar: true, .health: false],
-            ["학업과 휴식"]
-        ),
-        component(
-            "employee", .role, "회사원",
-            ["project", "movement", "health", "relationship", "rest", "sleep"],
-            ["project": "업무"],
-            ["회의", "집중업무", "보고서", "출장", "출퇴근"],
-            [.calendar: true, .health: false],
-            ["업무와 회복"]
-        ),
-        component(
-            "public-servant", .role, "공무원",
-            ["project", "movement", "study", "health", "rest", "sleep"],
-            ["project": "행정업무", "study": "교육"],
-            ["문서", "결재", "민원", "현장 점검", "교육", "당직"],
-            [.calendar: true, .location: false],
-            ["행정·현장 시간"]
-        ),
-        component(
-            "military", .role, "군인",
-            ["project", "exercise", "routine", "movement", "sleep", "rest"],
-            ["project": "근무", "exercise": "훈련"],
-            ["당직", "교육훈련", "체력단련", "개인정비", "외출·휴가"],
-            [.location: false, .calendar: false, .cloud: false],
-            ["근무와 회복"]
-        ),
-        component(
-            "athlete", .role, "운동선수",
-            ["exercise", "health", "sleep", "routine", "travel", "rest"],
-            ["exercise": "훈련", "routine": "식사"],
-            ["기술훈련", "웨이트", "재활", "경기", "원정"],
-            [.health: true, .calendar: true],
-            ["훈련과 회복"]
-        ),
-        component(
-            "performer", .role, "연예·공연",
-            ["project", "movement", "health", "rest", "travel", "sleep"],
-            ["project": "작품·활동"],
-            ["콜타임", "분장", "리허설", "촬영", "녹음", "공연"],
-            [.location: false, .calendar: false, .cloud: false],
-            ["활동과 대기"]
-        ),
-        component(
-            "freelancer", .role, "프리랜서·창작자",
-            ["project", "health", "routine", "relationship", "rest", "sleep"],
-            ["project": "창작·프로젝트"],
-            ["작업", "미팅", "영업", "정산", "콘텐츠 제작"],
-            [.calendar: true],
-            ["창작과 생활"]
-        ),
-        component(
-            "owner", .role, "자영업자",
-            ["project", "routine", "health", "relationship", "sleep", "rest"],
-            ["project": "영업·운영"],
-            ["오픈", "마감", "발주", "재고", "정산", "고객 응대"],
-            [.calendar: true],
-            ["영업과 회복"]
-        ),
-        component(
-            "shift-worker", .role, "교대·현장직",
-            ["project", "movement", "health", "sleep", "rest", "routine"],
-            ["project": "근무"],
-            ["주간근무", "야간근무", "인수인계", "회복"],
-            [.calendar: true, .health: true],
-            ["근무·수면 리듬"]
-        ),
-        component(
-            "caregiver", .role, "육아·가사",
-            ["routine", "relationship", "health", "movement", "rest", "sleep"],
-            ["routine": "돌봄·생활"],
-            ["등하원", "병원", "식사", "집안일", "가족 일정"],
-            [.calendar: true, .health: false],
-            ["돌봄과 개인 회복"]
-        )
-    ]
-
-    static let situations: [ProfileComponent] = [
-        situation(
-            "parenting", "육아",
-            ["routine", "relationship", "movement", "health", "rest", "sleep"],
-            ["routine": "돌봄"],
-            ["등하원", "수유", "병원", "가족 일정", "개인 회복"],
-            [.calendar: true],
-            ["업무·돌봄 균형"]
-        ),
-        situation(
-            "pregnancy", "임신·출산",
-            ["health", "rest", "exercise", "routine"],
-            ["health": "진료·회복"],
-            ["진료", "휴식", "운동", "출산 준비", "회복"],
-            [.health: false, .cloud: false],
-            ["건강과 회복"]
-        ),
-        situation(
-            "family-care", "가족돌봄·간병",
-            ["health", "relationship", "movement", "rest"],
-            [:],
-            ["병원", "약", "이동", "돌봄 교대", "휴식"],
-            [.cloud: false, .location: false],
-            ["돌봄과 휴식"]
-        ),
-        situation(
-            "rehabilitation", "치료·재활",
-            ["health", "exercise", "sleep", "rest"],
-            ["exercise": "재활운동"],
-            ["진료", "약", "재활운동", "통증 메모", "수면"],
-            [.health: true, .cloud: false],
-            ["회복 추세"]
-        ),
-        situation(
-            "job-change", "취업·이직",
-            ["project", "study", "relationship", "rest"],
-            ["project": "지원·준비"],
-            ["지원", "포트폴리오", "면접", "학습", "네트워킹"],
-            [.calendar: true],
-            ["지원 단계와 준비시간"]
-        ),
-        situation(
-            "startup", "창업준비",
-            ["project", "study", "relationship", "rest"],
-            ["project": "창업"],
-            ["제품", "고객 인터뷰", "행정", "자금", "영업"],
-            [.calendar: true],
-            ["본업과 창업 충돌"]
-        ),
-        situation(
-            "night-shift", "교대·야간",
-            ["project", "sleep", "health", "routine", "rest"],
-            [:],
-            ["야간근무", "이동", "수면", "식사", "회복"],
-            [.health: true],
-            ["근무·수면 리듬"]
-        ),
-        situation(
-            "leave", "휴직·방학",
-            ["rest", "study", "travel", "routine", "health"],
-            [:],
-            ["회복", "학습", "여행", "생활 재정비"],
-            [:],
-            ["생활 균형"]
-        ),
-        situation(
-            "relocation", "이사·정착",
-            ["project", "movement", "routine", "rest"],
-            ["project": "이사"],
-            ["계약", "짐", "행정", "이동", "생활 기반"],
-            [.location: false, .cloud: false],
-            ["정착 진행"]
-        ),
-        situation(
-            "long-trip", "장기출장·여행",
-            ["travel", "movement", "project", "rest", "sleep"],
-            [:],
-            ["이동", "예약", "업무", "시차", "휴식"],
-            [.calendar: true],
-            ["이동과 휴식"]
-        ),
-        situation(
-            "retirement", "은퇴·전환기",
-            ["health", "relationship", "hobby", "study", "rest"],
-            [:],
-            ["건강", "관계", "취미", "봉사", "학습"],
-            [.health: false],
-            ["생활 균형"]
-        ),
-        situation(
-            "side-job", "부업·투잡",
-            ["project", "movement", "routine", "rest", "sleep"],
-            ["project": "본업·부업"],
-            ["본업", "부업", "이동", "정산", "휴식"],
-            [.calendar: true],
-            ["역할별 시간과 과로"]
-        )
-    ]
-
-    static let goals: [ProfileComponent] = [
-        goal("exam-suneung", "수능", ["study", "health", "rest", "sleep"], ["study": "수험"], ["수업", "과목 공부", "기출", "모의고사"]),
-        goal("certificate", "자격증", ["study", "health", "rest"], [:], ["강의", "문제풀이", "복습", "시험"]),
-        goal("employment", "취업", ["project", "study", "relationship"], ["project": "취업 준비"], ["지원", "포트폴리오", "면접"]),
-        goal("career-change", "이직", ["project", "study", "relationship"], ["project": "이직 준비"], ["지원", "면접", "네트워킹"]),
-        goal("business", "창업", ["project", "study", "relationship"], ["project": "창업"], ["제품", "고객 인터뷰", "행정"]),
-        goal("competition", "대회", ["exercise", "health", "travel"], ["exercise": "대회 준비"], ["훈련", "리허설", "대회"]),
-        goal("trip-prep", "여행 준비", ["travel", "project", "movement"], [:], ["예약", "짐", "이동"]),
-        goal("wedding", "결혼 준비", ["project", "relationship", "routine"], ["project": "결혼 준비"], ["예약", "미팅", "가족 일정"]),
-        goal("moving", "이사", ["project", "movement", "routine"], ["project": "이사"], ["계약", "짐", "행정"])
-    ]
-
-    static let situationGoalTemplatesByID: [String: [SituationGoalTemplate]] = [
-        "parenting": [
-            situationGoal("수유", "routine"),
-            situationGoal("목욕", "routine"),
-            situationGoal("병원", "health"),
-            situationGoal("검진", "health"),
-            situationGoal("예방접종", "health"),
-            situationGoal("이유식", "routine"),
-            situationGoal("등하원", "movement"),
-            situationGoal("도우미", "relationship"),
-            situationGoal("놀이·발달", "relationship"),
-            situationGoal("낮잠·수면", "sleep"),
-            situationGoal("개인 회복", "rest"),
-        ],
-        "pregnancy": [
-            situationGoal("진료", "health"),
-            situationGoal("검진", "health"),
-            situationGoal("운동", "exercise"),
-            situationGoal("스트레스 관리", "rest"),
-            situationGoal("약 복용", "health"),
-            situationGoal("영양·식사", "routine"),
-            situationGoal("출산 준비", "project"),
-            situationGoal("태교·휴식", "rest"),
-            situationGoal("산후 회복", "health"),
-        ],
-        "family-care": [
-            situationGoal("병원 동행", "health"),
-            situationGoal("약 복용", "health"),
-            situationGoal("돌봄 교대", "relationship"),
-            situationGoal("이동 지원", "movement"),
-            situationGoal("간병 기록", "health"),
-            situationGoal("보호자 회복", "rest"),
-        ],
-        "rehabilitation": [
-            situationGoal("진료", "health"),
-            situationGoal("약 복용", "health"),
-            situationGoal("재활운동", "exercise"),
-            situationGoal("통증 기록", "health"),
-            situationGoal("수면 회복", "sleep"),
-            situationGoal("생활 복귀", "routine"),
-        ],
-        "job-change": [
-            situationGoal("지원", "project"),
-            situationGoal("포트폴리오", "project"),
-            situationGoal("면접", "relationship"),
-            situationGoal("학습", "study"),
-            situationGoal("네트워킹", "relationship"),
-            situationGoal("휴식 관리", "rest"),
-        ],
-        "startup": [
-            situationGoal("제품", "project"),
-            situationGoal("고객 인터뷰", "relationship"),
-            situationGoal("행정", "routine"),
-            situationGoal("자금", "project"),
-            situationGoal("영업", "relationship"),
-            situationGoal("본업 균형", "rest"),
-        ],
-        "night-shift": [
-            situationGoal("주간근무", "project"),
-            situationGoal("야간근무", "project"),
-            situationGoal("수면", "sleep"),
-            situationGoal("식사", "routine"),
-            situationGoal("이동", "movement"),
-            situationGoal("회복", "rest"),
-        ],
-        "leave": [
-            situationGoal("회복", "rest"),
-            situationGoal("학습", "study"),
-            situationGoal("여행", "travel"),
-            situationGoal("생활 재정비", "routine"),
-            situationGoal("건강관리", "health"),
-        ],
-        "relocation": [
-            situationGoal("계약", "project"),
-            situationGoal("짐 정리", "routine"),
-            situationGoal("행정", "routine"),
-            situationGoal("이동", "movement"),
-            situationGoal("생활 기반", "routine"),
-            situationGoal("동네 적응", "relationship"),
-        ],
-        "long-trip": [
-            situationGoal("이동", "movement"),
-            situationGoal("예약", "travel"),
-            situationGoal("업무", "project"),
-            situationGoal("시차 적응", "sleep"),
-            situationGoal("휴식", "rest"),
-            situationGoal("현지 생활", "routine"),
-        ],
-        "retirement": [
-            situationGoal("건강", "health"),
-            situationGoal("관계", "relationship"),
-            situationGoal("취미", "hobby"),
-            situationGoal("봉사", "relationship"),
-            situationGoal("학습", "study"),
-            situationGoal("생활 균형", "routine"),
-        ],
-        "side-job": [
-            situationGoal("본업", "project"),
-            situationGoal("부업", "project"),
-            situationGoal("이동", "movement"),
-            situationGoal("정산", "routine"),
-            situationGoal("수면", "sleep"),
-            situationGoal("휴식", "rest"),
-        ],
-    ]
-
-    static let representativeSelections: [ProfileSelection] = [
-        ProfileSelection(roleID: "employee", situationIDs: ["parenting"]),
-        ProfileSelection(roleID: "student", goalIDs: ["exam-suneung"]),
-        ProfileSelection(roleID: "employee", goalIDs: ["certificate"])
-    ]
-
-    static func roles(
-        including customComponents: [ProfileComponent]
-    ) -> [ProfileComponent] {
-        roles + customComponents.filter { $0.kind == .role }
-    }
-
-    static func situations(
-        including customComponents: [ProfileComponent]
-    ) -> [ProfileComponent] {
-        situations + customComponents.filter { $0.kind == .situation }
-    }
-
-    static func makeCustomComponent(
-        kind: ProfileComponentKind,
-        name: String,
-        existing: [ProfileComponent]
-    ) throws -> ProfileComponent {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw TemplateError.emptyComponentName }
-        guard kind == .role || kind == .situation else {
-            throw TemplateError.unsupportedCustomComponent
-        }
-        let sameKindComponents: [ProfileComponent] = switch kind {
-        case .role:
-            roles(including: existing)
-        case .situation:
-            situations(including: existing)
-        case .goal:
-            goals
-        }
-        guard !sameKindComponents.contains(where: {
-            $0.name.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
-        }) else {
-            throw TemplateError.duplicateComponentName
-        }
-
-        let idPrefix = kind == .role ? "custom.role" : "custom.situation"
-        let id = "\(idPrefix).\(UUID().uuidString.lowercased())"
-        switch kind {
-        case .role:
-            return component(
-                id, .role, trimmed,
-                ["project", "movement", "health", "relationship", "rest", "sleep"],
-                ["project": trimmed],
-                ["\(trimmed) 일정", "집중", "준비", "정리", "회복"],
-                [.calendar: true, .health: false],
-                ["\(trimmed) 시간"]
-            )
-        case .situation:
-            return component(
-                id, .situation, trimmed,
-                ["project", "routine", "health", "relationship", "movement", "rest", "sleep"],
-                [:],
-                ["\(trimmed) 기록", "준비", "진행", "이동", "휴식"],
-                [.calendar: true, .health: false],
-                ["\(trimmed) 관리"]
-            )
-        case .goal:
-            throw TemplateError.unsupportedCustomComponent
-        }
-    }
-
-    static func apply(
-        _ selection: ProfileSelection,
-        customComponents: [ProfileComponent] = []
-    ) throws -> TemplateApplication {
-        let availableRoles = roles(including: customComponents)
-        let availableSituations = situations(including: customComponents)
-        guard let role = availableRoles.first(where: {
-            $0.id == selection.roleID
-        }) else {
-            throw TemplateError.roleMissing
-        }
-        guard selection.situationIDs.count <= 2 else {
-            throw TemplateError.tooManySituations
-        }
-        guard selection.goalIDs.count <= 2 else {
-            throw TemplateError.tooManyGoals
-        }
-
-        let selectedSituations = try selection.situationIDs.map { id in
-            guard let value = availableSituations.first(where: {
-                $0.id == id
-            }) else {
-                throw TemplateError.unknownComponent(id)
-            }
-            return value
-        }
-        let selectedGoals = try selection.goalIDs.map { id in
-            guard let value = goals.first(where: { $0.id == id }) else {
-                throw TemplateError.unknownComponent(id)
-            }
-            return value
-        }
-        let components = [role] + selectedSituations + selectedGoals
-
-        var categories: [String] = []
-        var displayNames: [String: String] = [:]
-        var quickAdds: [String] = []
-        var recommendedGoalTitles: [String] = []
-        var permissions: [PermissionFeature: Bool] = [:]
-        var reviewFocus: [String] = []
-
-        for component in components {
-            appendUnique(component.categoryIDs, to: &categories)
-            displayNames.merge(component.categoryDisplayNames) { _, new in new }
-            appendUnique(component.quickAdds, to: &quickAdds)
-            for (feature, enabled) in component.suggestedPermissions {
-                if permissions[feature] == false { continue }
-                permissions[feature] = enabled
-            }
-            appendUnique(component.reviewFocus, to: &reviewFocus)
-        }
-        for situation in selectedSituations {
-            appendUnique(
-                situationGoalTemplates(for: situation).map {
-                    goalItemTitle(
-                        situationName: situation.name,
-                        goalName: $0.name
-                    )
-                },
-                to: &recommendedGoalTitles
-            )
-        }
-        appendUnique(
-            selectedGoals.map { goalItemTitle(goalName: $0.name) },
-            to: &recommendedGoalTitles
-        )
-
-        let suffixNames = (selectedSituations + selectedGoals).map(\.name)
-        let displayName = ([role.name] + suffixNames).joined(separator: " + ")
-        return TemplateApplication(
-            selection: selection,
-            displayName: displayName,
-            visibleCategoryIDs: categories,
-            categoryDisplayNames: displayNames,
-            quickAdds: quickAdds,
-            recommendedGoalTitles: recommendedGoalTitles,
-            suggestedPermissions: permissions,
-            reviewFocus: reviewFocus
-        )
-    }
-
-    static func makeGoalPlans(
-        for selection: ProfileSelection,
-        startingAt date: Date,
-        customComponents: [ProfileComponent] = [],
-        calendar: Calendar = .autoupdatingCurrent
-    ) throws -> [PlanRecord] {
-        let availableSituations = situations(including: customComponents)
-        let selectedSituations = try selection.situationIDs.map { id in
-            guard let situation = availableSituations.first(where: {
-                $0.id == id
-            }) else {
-                throw TemplateError.unknownComponent(id)
-            }
-            return situation
-        }
-        let selectedGoals = try selection.goalIDs.map { id in
-            guard let goal = goals.first(where: { $0.id == id }) else {
-                throw TemplateError.unknownComponent(id)
-            }
-            return goal
-        }
-        let end = calendar.date(byAdding: .year, value: 1, to: date)
-            ?? date.addingTimeInterval(365 * 86_400)
-
-        let situationPlans = selectedSituations.flatMap { situation in
-            situationGoalTemplates(for: situation).map { template in
-                PlanRecord(
-                    title: goalItemTitle(
-                        situationName: situation.name,
-                        goalName: template.name
-                    ),
-                    span: TimeSpan(start: date, end: end),
-                    categoryID: template.categoryID,
-                    middleCategoryName: situation.name,
-                    subCategoryName: template.name,
-                    isImportant: true
-                )
-            }
-        }
-        let explicitGoalPlans = selectedGoals.map { goal in
-            PlanRecord(
-                title: goalItemTitle(goalName: goal.name),
-                span: TimeSpan(start: date, end: end),
-                categoryID: goal.categoryIDs.first ?? "project",
-                isImportant: true
-            )
-        }
-        return situationPlans + explicitGoalPlans
-    }
-
-    static func matchesGoalTitle(_ lhs: String, _ rhs: String) -> Bool {
-        canonicalGoalTitle(lhs) == canonicalGoalTitle(rhs)
-    }
-
-    private static func situationGoalTemplates(
-        for situation: ProfileComponent
-    ) -> [SituationGoalTemplate] {
-        situationGoalTemplatesByID[situation.id] ?? situation.quickAdds.map {
-            SituationGoalTemplate(
-                name: $0,
-                categoryID: situation.categoryIDs.first ?? "project"
-            )
-        }
-    }
-
-    private static func goalItemTitle(
-        situationName: String? = nil,
-        goalName: String
-    ) -> String {
-        let cleanGoal = goalName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanSituation = situationName?.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        guard let cleanSituation, !cleanSituation.isEmpty else {
-            return "목표:\(cleanGoal)"
-        }
-        return "목표:\(cleanSituation) · \(cleanGoal)"
-    }
-
-    private static func canonicalGoalTitle(_ raw: String) -> String {
-        var value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if value.hasPrefix("목표:") {
-            value = String(value.dropFirst("목표:".count))
-        }
-        return value
-            .replacingOccurrences(of: " ", with: "")
-            .lowercased()
-    }
-
-    private static func component(
-        _ id: String,
-        _ kind: ProfileComponentKind,
-        _ name: String,
-        _ categories: [String],
-        _ names: [String: String],
-        _ quickAdds: [String],
-        _ permissions: [PermissionFeature: Bool],
-        _ review: [String]
-    ) -> ProfileComponent {
-        ProfileComponent(
-            id: id,
-            kind: kind,
-            name: name,
-            categoryIDs: categories,
-            categoryDisplayNames: names,
-            quickAdds: quickAdds,
-            suggestedPermissions: permissions,
-            reviewFocus: review
-        )
-    }
-
-    private static func situation(
-        _ id: String,
-        _ name: String,
-        _ categories: [String],
-        _ names: [String: String],
-        _ quickAdds: [String],
-        _ permissions: [PermissionFeature: Bool],
-        _ review: [String]
-    ) -> ProfileComponent {
-        component(id, .situation, name, categories, names, quickAdds, permissions, review)
-    }
-
-    private static func goal(
-        _ id: String,
-        _ name: String,
-        _ categories: [String],
-        _ names: [String: String],
-        _ quickAdds: [String]
-    ) -> ProfileComponent {
-        component(id, .goal, name, categories, names, quickAdds, [:], ["\(name) 준비시간"])
-    }
-
-    private static func situationGoal(
-        _ name: String,
-        _ categoryID: String
-    ) -> SituationGoalTemplate {
-        SituationGoalTemplate(name: name, categoryID: categoryID)
-    }
-
-    private static func appendUnique<T: Hashable>(
-        _ values: [T],
-        to result: inout [T]
-    ) {
-        var seen = Set(result)
-        for value in values where seen.insert(value).inserted {
-            result.append(value)
-        }
-    }
-}
 
 actor FeatureSettingsStore {
     private let defaults: UserDefaults

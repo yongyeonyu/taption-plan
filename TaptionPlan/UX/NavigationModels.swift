@@ -49,8 +49,7 @@ enum AppDetail: Equatable {
     case inference
     case catPicker
     case categoryManager
-    case onboarding
-    case templateReview
+    case categorySetup
     case widgetPreview
 }
 
@@ -88,7 +87,7 @@ enum ReviewScale: String, CaseIterable, Identifiable {
 
 enum RootTab: String, CaseIterable, Identifiable {
     case schedule = "시간표"
-    case goals = "목표"
+    case goals = "루틴"
     case review = "회고"
     case settings = "설정"
 
@@ -600,6 +599,18 @@ struct ScheduleHeaderFormatter {
             return format(date, pattern: "yyyy년 M월")
         case .year:
             return format(date, pattern: "yyyy년")
+        }
+    }
+
+    /// The title shown while the playhead is the primary navigation anchor.
+    /// The period remains visible in the scale picker/trailing metadata, so
+    /// this stays focused on the exact date under the playhead at every scale.
+    func playheadTitle(for date: Date, scale: TimeScale) -> String {
+        switch scale {
+        case .day:
+            return title(for: date, scale: scale)
+        case .week, .month, .year:
+            return format(date, pattern: "M월 d일 (E)")
         }
     }
 

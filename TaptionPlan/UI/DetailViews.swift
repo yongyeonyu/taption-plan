@@ -1001,9 +1001,16 @@ struct InferenceDetailView: View {
                 )
             }
 
-            ChipFlowLayout(spacing: 4) {
-                ForEach(group.evidence, id: \.self) { signal in
-                    signalChip(signal)
+            if !group.evidence.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("판정 근거")
+                        .font(.taption(size: 7.5, weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                    ChipFlowLayout(spacing: 4) {
+                        ForEach(group.evidence, id: \.self) { signal in
+                            signalChip(signal)
+                        }
+                    }
                 }
             }
 
@@ -2421,553 +2428,121 @@ struct WidgetPreviewView: View {
     }
 }
 
-private enum CustomProfileComponentField: Hashable {
-    case role
-    case situation
-}
 
-struct OnboardingView: View {
+struct CategorySetupView: View {
     @Bindable var model: AppModel
-    @State private var showsCustomCombination = false
-    @State private var isAddingCustomRole = false
-    @State private var isAddingCustomSituation = false
-    @State private var customRoleName = ""
-    @State private var customSituationName = ""
-    @FocusState private var customComponentFocus: CustomProfileComponentField?
+
+    private let automaticIDs: Set<String> = [
+        "movement", "location", "activity", "sleep", "photo"
+    ]
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 5) {
-                    Capsule().fill(Color.tpInk).frame(width: 34, height: 4)
-                    Capsule().fill(Color(red: 0.85, green: 0.85, blue: 0.87)).frame(width: 22, height: 4)
-                    Text(
-                        model.snapshot.profile == nil
-                            ? "1 / 2 · 나에게 맞게 시작"
-                            : "1 / 2 · 시작 구성 바꾸기"
-                    )
-                        .font(.taption(size: 9.5, weight: .bold))
-                        .foregroundStyle(Color.tpSecondary)
-                }
-
-                Text("나와 비슷한 시작점을\n골라보세요")
-                    .font(.taption(size: 20, weight: .bold))
-                Text("대표 조합만 먼저 보여드립니다. 선택한 뒤 언제든 역할·상황·목표를 바꿀 수 있습니다.")
-                    .font(.taption(size: 10.5))
-                    .foregroundStyle(Color.tpSecondary)
-
-                VStack(spacing: 7) {
-                    templateCardButton(
-                        TemplateCatalog.representativeSelections[0],
-                        icon: "briefcase",
-                        second: "stroller",
-                        title: "회사원 + 육아",
-                        tags: ["역할 · 회사원", "상황 · 육아"],
-                        caption: "회의 · 집중업무 · 등하원 · 가족 일정"
-                    )
-                    templateCardButton(
-                        TemplateCatalog.representativeSelections[1],
-                        icon: "graduationcap",
-                        second: "scope",
-                        title: "학생 + 수능",
-                        tags: ["역할 · 학생", "목표 · 수능"],
-                        caption: "수업 · 과목 공부 · 기출 · 모의고사"
-                    )
-                    templateCardButton(
-                        TemplateCatalog.representativeSelections[2],
-                        icon: "briefcase",
-                        second: "medal",
-                        title: "회사원 + 자격증",
-                        tags: ["역할 · 회사원", "목표 · 자격증"],
-                        caption: "회의 · 집중업무 · 강의 · 문제풀이"
-                    )
-                    Button {
-                        showsCustomCombination.toggle()
-                    } label: {
-                        personaCard(
-                            "plus",
-                            second: nil,
-                            title: "직접 조합",
-                            tags: [],
-                            caption: "역할 · 상황 · 목표를 각각 골라 만들기",
-                            selected: showsCustomCombination
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if showsCustomCombination {
-                    customCombination
-                }
-
-                Button {
-                    model.detail = .templateReview
-                } label: {
-                    Text(
-                        model.snapshot.profile == nil
-                            ? "\(model.pendingTemplateApplication?.displayName ?? "선택한 구성")으로 시작"
-                            : "다음"
-                    )
-                        .font(.taption(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 13))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(14)
-        }
-        .background(Color.tpBackground)
-        .safeAreaInset(edge: .top) {
+        VStack(spacing: 0) {
             HStack {
-                Button("닫기") { model.detail = nil }
+                Button("닫기") { model.cancelInitialCategorySelection() }
+                    .font(.taption(size: 11, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
                 Spacer()
+                Text("시작 구성")
+                    .font(.taption(size: 13, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Spacer()
+                Button("저장") {
+                    Task { await model.applyInitialCategorySelection() }
+                }
+                .font(.taption(size: 11, weight: .bold))
+                .foregroundStyle(
+                    model.selectedSetupCategoryCount > 0
+                        ? Color.tpInk
+                        : Color.tpSecondary.opacity(0.35)
+                )
+                .disabled(model.selectedSetupCategoryCount == 0)
             }
-            .font(.taption(size: 11, weight: .bold))
-            .foregroundStyle(Color.tpSecondary)
             .padding(.horizontal, 14)
-            .padding(.vertical, 5)
+            .padding(.vertical, 10)
+            .background(Color.white)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(Color.tpLine).frame(height: 0.5)
+            }
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("필요한 대분류만 골라보세요")
+                        .font(.taption(size: 21, weight: .bold))
+                    Text("역할·상황·루틴에 맞는 항목을 시간표와 추가 메뉴에 표시합니다. 자동 기록 항목도 여기서 켜고 끌 수 있습니다.")
+                        .font(.taption(size: 10.5))
+                        .foregroundStyle(Color.tpSecondary)
+
+                    LazyVGrid(
+                        columns: [GridItem(.flexible()), GridItem(.flexible())],
+                        spacing: 8
+                    ) {
+                        ForEach(model.setupCategories) { category in
+                            categoryCard(category)
+                        }
+                    }
+
+                    Text("선택 \(model.selectedSetupCategoryCount)개 · 나중에 설정 > 대분류 관리에서 추가·편집할 수 있습니다.")
+                        .font(.taption(size: 9, weight: .semibold))
+                        .foregroundStyle(Color.tpSecondary)
+                        .padding(.top, 2)
+
+                    Button {
+                        model.cancelInitialCategorySelection()
+                        model.selectedTab = .settings
+                    } label: {
+                        Label("자주가는 곳 설정", systemImage: "star.circle.fill")
+                            .font(.taption(size: 9.5, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Color.tpPlaceDark)
+                }
+                .padding(14)
+            }
             .background(Color.tpBackground)
         }
-    }
-
-    private func templateCardButton(
-        _ selection: ProfileSelection,
-        icon: String,
-        second: String?,
-        title: String,
-        tags: [String],
-        caption: String
-    ) -> some View {
-        Button {
-            model.selectTemplate(selection)
-            showsCustomCombination = false
-        } label: {
-            personaCard(
-                icon,
-                second: second,
-                title: title,
-                tags: tags,
-                caption: caption,
-                selected: model.pendingProfileSelection == selection
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var customCombination: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 7) {
-                componentSection("역할 · 1개") {
-                    ForEach(model.profileRoles) { component in
-                        componentChip(
-                            component.name,
-                            selected:
-                                model.pendingProfileSelection.roleID == component.id
-                        ) {
-                            model.selectTemplateRole(component.id)
-                        }
-                    }
-                    addComponentChip("역할 추가") {
-                        isAddingCustomRole = true
-                        customComponentFocus = .role
-                    }
-                }
-                if isAddingCustomRole {
-                    customComponentInput(
-                        placeholder: "예: 창작자",
-                        text: $customRoleName,
-                        focus: .role
-                    ) {
-                        if model.addCustomTemplateRole(name: customRoleName) != nil {
-                            customRoleName = ""
-                            isAddingCustomRole = false
-                        }
-                    } onCancel: {
-                        customRoleName = ""
-                        isAddingCustomRole = false
-                    }
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 7) {
-                componentSection("상황 · 최대 2개") {
-                    ForEach(model.profileSituations) { component in
-                        componentChip(
-                            component.name,
-                            selected: model.pendingProfileSelection.situationIDs
-                                .contains(component.id)
-                        ) {
-                            model.toggleTemplateSituation(component.id)
-                        }
-                    }
-                    addComponentChip("상황 추가") {
-                        isAddingCustomSituation = true
-                        customComponentFocus = .situation
-                    }
-                }
-                if isAddingCustomSituation {
-                    customComponentInput(
-                        placeholder: "예: 반려동물 돌봄",
-                        text: $customSituationName,
-                        focus: .situation
-                    ) {
-                        if model.addCustomTemplateSituation(
-                            name: customSituationName
-                        ) != nil {
-                            customSituationName = ""
-                            isAddingCustomSituation = false
-                        }
-                    } onCancel: {
-                        customSituationName = ""
-                        isAddingCustomSituation = false
-                    }
-                }
-            }
-
-            componentSection("목표 · 최대 2개") {
-                ForEach(model.profileGoals) { component in
-                    componentChip(
-                        component.name,
-                        selected: model.pendingProfileSelection.goalIDs
-                            .contains(component.id)
-                    ) {
-                        model.toggleTemplateGoal(component.id)
-                    }
-                }
-            }
-        }
-        .padding(11)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
-        .overlay {
-            RoundedRectangle(cornerRadius: 15).stroke(Color.tpLine)
-        }
-    }
-
-    private func addComponentChip(
-        _ title: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: "plus.circle.fill")
-                .font(.taption(size: 8.5, weight: .bold))
-                .foregroundStyle(Color.tpInk.opacity(0.72))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(
-                    Color(red: 0.96, green: 0.96, blue: 0.97),
-                    in: RoundedRectangle(cornerRadius: 8)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func customComponentInput(
-        placeholder: String,
-        text: Binding<String>,
-        focus: CustomProfileComponentField,
-        onSave: @escaping () -> Void,
-        onCancel: @escaping () -> Void
-    ) -> some View {
-        HStack(spacing: 7) {
-            TextField(placeholder, text: text)
-                .font(.taption(size: 10.5, weight: .bold))
-                .focused($customComponentFocus, equals: focus)
-                .submitLabel(.done)
-                .onSubmit(onSave)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 8)
-                .background(
-                    Color(red: 0.96, green: 0.96, blue: 0.97),
-                    in: RoundedRectangle(cornerRadius: 9)
-                )
-
-            Button("추가", action: onSave)
-                .font(.taption(size: 9.5, weight: .bold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(
-                    text.wrappedValue
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                        .isEmpty ? Color.tpLine : Color.tpInk,
-                    in: RoundedRectangle(cornerRadius: 9)
-                )
-                .disabled(
-                    text.wrappedValue
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                        .isEmpty
-                )
-
-            Button("취소", action: onCancel)
-                .font(.taption(size: 9.5, weight: .bold))
-                .foregroundStyle(Color.tpSecondary)
-        }
-    }
-
-    private func componentSection<Content: View>(
-        _ title: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.taption(size: 8.5, weight: .black))
-                .foregroundStyle(Color.tpSecondary)
-            ChipFlowLayout {
-                content()
-            }
-        }
-    }
-
-    private func componentChip(
-        _ title: String,
-        selected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.taption(size: 8.5, weight: .bold))
-                .foregroundStyle(selected ? Color.white : Color.tpSecondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(
-                    selected ? Color.tpInk : Color(red: 0.94, green: 0.94, blue: 0.95),
-                    in: RoundedRectangle(cornerRadius: 8)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func personaCard(
-        _ icon: String,
-        second: String?,
-        title: String,
-        tags: [String],
-        caption: String,
-        selected: Bool = false
-    ) -> some View {
-        HStack(spacing: 10) {
-            HStack(spacing: -5) {
-                Image(systemName: icon)
-                    .font(.taption(size: 15))
-                    .foregroundStyle(Color.tpProjectDark)
-                    .frame(width: 30, height: 30)
-                    .background(Color.tpProject, in: RoundedRectangle(cornerRadius: 10))
-                if let second {
-                    Image(systemName: second)
-                        .font(.taption(size: 15))
-                        .foregroundStyle(Color.tpRelationshipDark)
-                        .frame(width: 30, height: 30)
-                        .background(Color.tpRelationship, in: RoundedRectangle(cornerRadius: 10))
-                        .overlay { RoundedRectangle(cornerRadius: 10).stroke(.white, lineWidth: 2) }
-                }
-            }
-            .frame(width: 52)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.taption(size: 12, weight: .bold))
-                HStack(spacing: 4) {
-                    ForEach(tags, id: \.self) { tag in
-                        Text(tag)
-                            .font(.taption(size: 7.5, weight: .black))
-                            .foregroundStyle(tag.contains("역할") ? Color(red: 0.24, green: 0.44, blue: 0.53) : Color(red: 0.58, green: 0.32, blue: 0.47))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(tag.contains("역할") ? Color(red: 0.91, green: 0.95, blue: 0.97) : Color(red: 0.97, green: 0.91, blue: 0.95), in: Capsule())
-                    }
-                }
-                Text(caption)
-                    .font(.taption(size: 8.5))
-                    .foregroundStyle(Color.tpSecondary)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 10)
-        .frame(minHeight: second == nil ? 52 : 72)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(selected ? Color.tpInk : Color.tpLine, lineWidth: selected ? 2 : 1)
-        }
-    }
-}
-
-struct TemplateReviewView: View {
-    @Bindable var model: AppModel
-
-    var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 9) {
-                HStack(spacing: 5) {
-                    Capsule().fill(Color(red: 0.85, green: 0.85, blue: 0.87)).frame(width: 22, height: 4)
-                    Capsule().fill(Color.tpInk).frame(width: 34, height: 4)
-                    Text("2 / 2 · 시작 구성 확인")
-                        .font(.taption(size: 9.5, weight: .bold))
-                        .foregroundStyle(Color.tpSecondary)
-                }
-                Text(
-                    model.snapshot.profile == nil
-                        ? "이렇게 시작할게요"
-                        : "이 구성으로 바꿀게요"
-                )
-                .font(.taption(size: 20, weight: .bold))
-                Text("모두 제안일 뿐입니다. 지금 끄거나 나중에 다시 바꿀 수 있습니다.")
-                    .font(.taption(size: 10.5))
-                    .foregroundStyle(Color.tpSecondary)
-
-                VStack(alignment: .leading, spacing: 7) {
-                    Text("대표 조합").font(.taption(size: 8.5)).foregroundStyle(Color.tpSecondary)
-                    Text(application?.displayName ?? "시작 구성")
-                        .font(.taption(size: 16, weight: .bold))
-                    ChipFlowLayout {
-                        ForEach(visibleCategoryNames, id: \.self) { name in
-                            Text(name)
-                                .font(.taption(size: 8.5, weight: .semibold))
-                                .foregroundStyle(Color.tpSecondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 4)
-                                .background(Color(red: 0.94, green: 0.94, blue: 0.95), in: RoundedRectangle(cornerRadius: 7))
-                        }
-                    }
-                }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    LinearGradient(
-                        colors: [Color(red: 0.95, green: 0.94, blue: 0.97), Color(red: 0.97, green: 0.91, blue: 0.94)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    in: RoundedRectangle(cornerRadius: 16)
-                )
-
-                reviewSection("빠른 추가") {
-                    ChipFlowLayout {
-                        ForEach(application?.quickAdds ?? [], id: \.self) {
-                            Text($0)
-                                .font(.taption(size: 8.5, weight: .bold))
-                                .foregroundStyle(Color.tpSecondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(Color(red: 0.94, green: 0.94, blue: 0.95), in: RoundedRectangle(cornerRadius: 9))
-                        }
-                    }
-                }
-
-                if !recommendedGoalTitles.isEmpty {
-                    reviewSection("상황별 목표") {
-                        ChipFlowLayout {
-                            ForEach(recommendedGoalTitles, id: \.self) { title in
-                                Text(title)
-                                    .font(.taption(size: 8.3, weight: .bold))
-                                    .foregroundStyle(Color.tpInk.opacity(0.76))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        Color(red: 0.96, green: 0.94, blue: 0.98),
-                                        in: RoundedRectangle(cornerRadius: 9)
-                                    )
-                            }
-                        }
-                    }
-                }
-
-                reviewSection("연결과 개인정보") {
-                    VStack(spacing: 0) {
-                        reviewSetting(
-                            "캘린더 일정 불러오기",
-                            value: suggestionLabel(for: .calendar),
-                            off: !isSuggested(.calendar)
-                        )
-                        reviewSetting(
-                            "건강 수면·운동 비교",
-                            value: suggestionLabel(for: .health),
-                            off: !isSuggested(.health)
-                        )
-                        reviewSetting(
-                            "위치 오래 머문 장소",
-                            value: suggestionLabel(for: .location),
-                            off: !isSuggested(.location)
-                        )
-                        reviewSetting(
-                            "일정 공유",
-                            value: suggestionLabel(for: .cloud),
-                            off: !isSuggested(.cloud)
-                        )
-                    }
-                }
-
-                Button {
-                    Task {
-                        await model.applyPendingTemplate()
-                        model.detail = nil
-                    }
-                } label: {
-                    Text(
-                        model.snapshot.profile == nil
-                            ? "이 구성으로 시작"
-                            : "이 구성 적용"
-                    )
-                        .font(.taption(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                        .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 13))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(14)
-        }
         .background(Color.tpBackground)
     }
 
-    private var application: TemplateApplication? {
-        model.pendingTemplateApplication
-    }
-
-    private var visibleCategoryNames: [String] {
-        (application?.visibleCategoryIDs ?? []).compactMap { id in
-            application?.categoryDisplayNames[id]
-                ?? CategoryCatalog.builtIn.first { $0.id == id }?.name
+    private func categoryCard(_ category: CategoryDefinition) -> some View {
+        let selected = model.pendingSetupCategoryIDs.contains(category.id)
+        let tint = Color(hex: category.darkHex)
+        return Button {
+            model.toggleSetupCategory(category.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Image(systemName: category.icon.systemImage)
+                        .font(.taption(size: 16, weight: .bold))
+                        .foregroundStyle(tint)
+                    Spacer()
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .font(.taption(size: 15, weight: .bold))
+                        .foregroundStyle(selected ? tint : Color.tpLine)
+                }
+                Text(category.name)
+                    .font(.taption(size: 11, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(1)
+                Text(automaticIDs.contains(category.id) ? "자동 기록" : category.isBuiltIn ? "기본 대분류" : "직접 추가")
+                    .font(.taption(size: 8, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
+            .background(
+                selected ? Color(hex: category.lightHex).opacity(0.75) : Color.white,
+                in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(selected ? tint.opacity(0.65) : Color.tpLine, lineWidth: selected ? 1.5 : 0.8)
+            }
         }
-    }
-
-    private var recommendedGoalTitles: [String] {
-        application?.recommendedGoalTitles ?? []
-    }
-
-    private func isSuggested(_ feature: PermissionFeature) -> Bool {
-        application?.suggestedPermissions[feature] == true
-    }
-
-    private func suggestionLabel(for feature: PermissionFeature) -> String {
-        isSuggested(feature) ? "사용 제안" : "끔"
-    }
-
-    private func reviewSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.taption(size: 10, weight: .bold))
-            content()
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
-    }
-
-    private func reviewSetting(_ title: String, value: String, off: Bool = false) -> some View {
-        HStack {
-            Text(title).font(.taption(size: 9.5)).foregroundStyle(Color.tpSecondary)
-            Spacer()
-            Text(value)
-                .font(.taption(size: 8.5, weight: .bold))
-                .foregroundStyle(off ? Color(red: 0.54, green: 0.36, blue: 0.20) : Color(red: 0.31, green: 0.44, blue: 0.57))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(off ? Color(red: 1.00, green: 0.95, blue: 0.90) : Color(red: 0.92, green: 0.96, blue: 1.00), in: Capsule())
-        }
-        .padding(.vertical, 6)
-        .overlay(alignment: .top) { Rectangle().fill(Color.tpLine.opacity(0.6)).frame(height: 0.5) }
+        .buttonStyle(.plain)
+        .accessibilityLabel("대분류 \(category.name)")
+        .accessibilityValue(selected ? "선택됨" : "선택 안 됨")
     }
 }
 

@@ -23,7 +23,14 @@ enum TaptionWidgetPayloadFactory {
             uniquingKeysWith: { first, _ in first }
         )
 
+        // Goals are containers, not executable timeline items. Including a
+        // root goal together with its generated/repeating child made the
+        // widget draw two bars in the same action lane, which looked like an
+        // overlapping duplicate. The widget should show only actionable
+        // plans; the goal dashboard remains the place for goal summaries.
         let planItems = snapshot.plans
+            .filter { $0.status != .completed && $0.status != .skipped }
+            .filter { !GoalRecordPolicy.isGoal($0) }
             .filter { $0.span.intersection(with: widgetSpan) != nil }
             .sorted { $0.span.start < $1.span.start }
             .map { plan in

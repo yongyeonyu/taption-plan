@@ -873,11 +873,13 @@ struct FloorCalibrationEngine: Sendable {
         }
 
         let floorHeight = max(2.2, calibration.floorHeightMeters)
-        let floor = max(
-            1,
-            calibration.referenceFloor
-                + Int((delta / floorHeight).rounded())
-        )
+        let rawFloor = calibration.referenceFloor
+            + Int((delta / floorHeight).rounded())
+        // 지상 1층과 지하 1층 사이에 0층을 만들지 않습니다.
+        let normalizedFloor = rawFloor == 0
+            ? (delta < 0 ? -1 : 1)
+            : rawFloor
+        let floor = min(max(normalizedFloor, -20), 200)
         let verticalAccuracy = max(
             3,
             reading.point.flatMap {
@@ -962,7 +964,9 @@ struct FrequentPlaceResolutionEngine: Sendable {
         to detectedPlaces: [PlaceStay],
         readings: [SensorReading]
     ) -> [PlaceStay] {
-        let candidates = frequentPlaces.filter { $0.point != nil }
+        let candidates = frequentPlaces.filter {
+            $0.point != nil && $0.isAutomaticRecordingEnabled
+        }
         guard !candidates.isEmpty else { return detectedPlaces }
 
         return detectedPlaces.map { place in
@@ -971,6 +975,13 @@ struct FrequentPlaceResolutionEngine: Sendable {
                     to: point,
                     candidates: candidates
                   ) else {
+                return place
+            }
+
+            // 짧은 방문은 일반 장소로 남겨 두고, 설정한 체류 시간 이상일
+            // 때만 자주가는 곳으로 확정합니다.
+            guard place.span.duration
+                    >= TimeInterval(match.minimumDwellMinutes * 60) else {
                 return place
             }
 

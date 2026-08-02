@@ -53,14 +53,27 @@ struct TaptionScheduleProvider: TimelineProvider {
             from: now,
             horizon: horizon
         )
+        // WidgetKit may put a widget in its low-frequency rendering mode,
+        // where AnimationTimelineSchedule is evaluated only once.  Keep a
+        // short explicit playback window as a fallback so the cat still
+        // advances on the home screen.  The entries are limited to one walk
+        // cycle; real data boundaries continue to control the long timeline.
         if payload.reducesMotion != true {
-            refreshDates.append(
-                contentsOf: (1...60).map {
-                    now.addingTimeInterval(
-                        Double($0) * TaptionWidgetCatWalkEngine.defaultStepDuration
-                    )
-                }
+            let playbackEnd = min(
+                horizon,
+                now.addingTimeInterval(
+                    TaptionWidgetCatWalkEngine.sequenceDuration
+                )
             )
+            var frame = now.addingTimeInterval(
+                TaptionWidgetCatWalkEngine.defaultStepDuration
+            )
+            while frame <= playbackEnd {
+                refreshDates.append(frame)
+                frame = frame.addingTimeInterval(
+                    TaptionWidgetCatWalkEngine.defaultStepDuration
+                )
+            }
         }
         let entries = Array(Set(refreshDates))
             .sorted()
@@ -86,7 +99,7 @@ struct TaptionScheduleProvider: TimelineProvider {
             $0.resolvedLane == .movement
         }.count
         Self.logger.notice(
-            "Widget ground-truth read: fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public)"
+            "Widget ground-truth read: sourceUpdated=\(payload.sourceSnapshotUpdatedAt?.timeIntervalSince1970 ?? 0, privacy: .public), fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), items=\(payload.items.count, privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public), reducesMotion=\(payload.reducesMotion ?? false, privacy: .public)"
         )
         return payload
     }
@@ -115,19 +128,14 @@ private struct TaptionScheduleWidgetMetrics {
     let family: WidgetFamily
 
     var horizontalPadding: CGFloat {
-        switch family {
-        case .systemExtraLarge: 18
-        case .systemLarge: 15
-        default: 14
-        }
+        // WidgetKit's system margins are disabled below, so keep a small
+        // deliberate inset inside the widget card instead of letting the
+        // timeline touch the rounded edge.
+        12
     }
 
     var verticalPadding: CGFloat {
-        switch family {
-        case .systemExtraLarge: 16
-        case .systemLarge: 14
-        default: 12
-        }
+        8
     }
 
     var headerHeight: CGFloat {
@@ -140,9 +148,9 @@ private struct TaptionScheduleWidgetMetrics {
 
     var headerBottomSpacing: CGFloat {
         switch family {
-        case .systemExtraLarge: 14
-        case .systemLarge: 12
-        default: 10
+        case .systemExtraLarge: 4
+        case .systemLarge: 3
+        default: 2
         }
     }
 
@@ -219,15 +227,37 @@ private struct TaptionScheduleWidgetView: View {
     @Environment(\.widgetFamily) private var family
 
     let entry: TaptionScheduleEntry
+    @State private var renderPayload: TaptionWidgetPayload
+
+    init(entry: TaptionScheduleEntry) {
+        self.entry = entry
+
+        // Decode the app-group snapshot once when the widget view is created.
+        // Doing this on every animation tick blocks the main actor and makes
+        // the cat appear frozen when sensor data is large.
+        let groundTruth = TaptionWidgetSharedStore.readGroundTruthPayload(
+            now: .now
+        )
+        _renderPayload = State(
+            initialValue: TaptionWidgetPayloadSyncPolicy.freshest(
+                groundTruth: groundTruth,
+                cached: entry.payload
+            )
+        )
+    }
 
     var body: some View {
+        // Use a periodic schedule in addition to the explicit provider frames.
+        // AnimationTimelineSchedule is allowed to be reduced to a single
+        // frame by WidgetKit when the widget is rendered remotely; periodic
+        // playback keeps the pose and position changing in that mode too.
         TimelineView(
             .periodic(
                 from: entry.date,
                 by: playbackInterval
             )
         ) { context in
-            let payload = freshestPayload
+            let payload = renderPayload
             let playbackDate = max(entry.date, context.date)
             let metrics = TaptionScheduleWidgetMetrics(family: family)
             let trackDate = timelineCenterDate(playbackDate: playbackDate)
@@ -237,6 +267,8 @@ private struct TaptionScheduleWidgetView: View {
                     at: playbackDate,
                     payload: payload,
                     metrics: metrics,
+                    catStyle: payload.catStyle,
+                    reducesMotion: payload.reducesMotion ?? false,
                     walkPose: TaptionWidgetCatWalkEngine.pose(
                         at: playbackDate,
                         preferredAction: preferredCatAction(
@@ -264,7 +296,13 @@ private struct TaptionScheduleWidgetView: View {
         }
         .padding(.horizontal, TaptionScheduleWidgetMetrics(family: family).horizontalPadding)
         .padding(.vertical, TaptionScheduleWidgetMetrics(family: family).verticalPadding)
-        .widgetURL(deepLinkURL(payload: freshestPayload, at: .now))
+        .onChange(of: entry.payload) { _, newPayload in
+            renderPayload = TaptionWidgetPayloadSyncPolicy.freshest(
+                groundTruth: newPayload,
+                cached: renderPayload
+            )
+        }
+        .widgetURL(deepLinkURL(payload: renderPayload, at: .now))
     }
 
     private var emptyWidgetState: some View {
@@ -292,6 +330,8 @@ private struct TaptionScheduleWidgetView: View {
         at date: Date,
         payload: TaptionWidgetPayload,
         metrics: TaptionScheduleWidgetMetrics,
+        catStyle: String,
+        reducesMotion: Bool,
         walkPose: TaptionWidgetCatWalkPose
     ) -> some View {
         HStack(spacing: 0) {
@@ -309,8 +349,8 @@ private struct TaptionScheduleWidgetView: View {
 
             Link(destination: URL(string: "taptionplan://cats")!) {
                 WidgetWalkingCat(
-                    style: payload.catStyle,
-                    reducesMotion: payload.reducesMotion ?? false,
+                    style: catStyle,
+                    reducesMotion: reducesMotion,
                     pose: walkPose
                 )
                 .frame(width: metrics.catWidth, height: metrics.catHeight)
@@ -331,14 +371,6 @@ private struct TaptionScheduleWidgetView: View {
         }
         .frame(height: metrics.headerHeight)
         .padding(.bottom, metrics.headerBottomSpacing)
-    }
-
-    private var freshestPayload: TaptionWidgetPayload {
-        let stored = TaptionWidgetSharedStore.readPayload()
-        return TaptionWidgetPayloadSyncPolicy.freshest(
-            groundTruth: entry.payload,
-            cached: stored
-        )
     }
 
     private func visibleItems(
@@ -445,9 +477,10 @@ private struct TaptionScheduleWidgetView: View {
     }
 
     private var playbackInterval: TimeInterval {
-        freshestPayload.reducesMotion == true
-            ? 60
-            : TaptionWidgetCatWalkEngine.defaultStepDuration
+        // Use the same supported periodic clock for the chart and the cat.
+        // A nested TimelineView can be archived at its initial frame inside a
+        // widget, leaving the cat apparently stopped.
+        TaptionWidgetCatWalkEngine.defaultStepDuration
     }
 }
 
@@ -466,8 +499,11 @@ private struct PrototypeWidgetTrack: View {
                 at: date,
                 windowDuration: windowDuration
             )
-            let labelWidth: CGFloat = 62
-            let axisHeight: CGFloat = 17
+            // Keep the table flush to the widget edge.  The old 62pt label
+            // gutter plus outer widget padding hid the right side of the
+            // six-hour grid on compact families.
+            let labelWidth: CGFloat = 56
+            let axisHeight: CGFloat = 15
             let trackWidth = max(1, proxy.size.width - labelWidth)
             let viewportHeight = max(1, proxy.size.height - axisHeight)
             let visibleRowCount = max(
@@ -477,9 +513,15 @@ private struct PrototypeWidgetTrack: View {
                     lanes.count
                 )
             )
-            let rowHeight = max(
-                23,
-                viewportHeight / CGFloat(visibleRowCount)
+            // Keep the lanes compact.  The previous implementation expanded
+            // every row to fill the entire viewport, which made a few items
+            // look vertically disconnected and pushed the chart away from
+            // the header.  A capped row still scrolls when there are more
+            // lanes than fit in the widget.
+            let idealRowHeight = viewportHeight / CGFloat(visibleRowCount)
+            let rowHeight = min(
+                idealRowHeight,
+                visibleRowLimit >= 6 ? 28 : 30
             )
             let contentHeight = rowHeight * CGFloat(lanes.count)
             let scrollProgress = TaptionWidgetAutoScrollEngine.progress(
@@ -531,11 +573,11 @@ private struct PrototypeWidgetTrack: View {
                                 rowHeight: rowHeight
                             )
                             .offset(
-                                x: labelWidth
+                                    x: labelWidth
                                     + trackWidth * fraction(item.startsAt),
-                                y: y
+                                    y: y
                                     + max(
-                                        2,
+                                        1,
                                         (rowHeight - barHeight(rowHeight)) / 2
                                     )
                             )
@@ -712,7 +754,9 @@ private struct PrototypeWidgetTrack: View {
     }
 
     private func barHeight(_ rowHeight: CGFloat) -> CGFloat {
-        min(20, max(14, rowHeight - 7))
+        // Keep bars nearly flush inside each lane while retaining a 1–2pt
+        // separator so adjacent segments remain visually distinct.
+        min(22, max(14, rowHeight - 3))
     }
 
     private func fraction(_ value: Date) -> CGFloat {
@@ -779,9 +823,11 @@ private struct WidgetWalkingCat: View {
                 proxy.size.width - catWidth + (visualInset * 2)
             )
             let progress = reducesMotion ? 0.5 : pose.progress
-            let isMoving = !reducesMotion
-                && pose.action.movesAcrossTrack
-                && !pose.isAtEndpoint
+            // Keep the pose driver alive at the turnaround frames.  Pausing
+            // there made the cat appear frozen when WidgetKit coalesced one
+            // or two timeline entries around an endpoint.
+            let isAnimating = !reducesMotion
+            let isMoving = isAnimating && pose.action.movesAcrossTrack
 
             ZStack(alignment: .topLeading) {
                 HStack(spacing: 6) {
@@ -802,12 +848,16 @@ private struct WidgetWalkingCat: View {
 
                 WidgetCat(
                     style: style,
-                    isRunning: isMoving,
+                    // `isRunning` is the legacy name for the Canvas' phase
+                    // driver.  Non-walking actions (grooming, eating, sleep,
+                    // play) still need that phase so the cat does not look
+                    // frozen while performing the selected action.
+                    isRunning: isAnimating,
                     reducesMotion: reducesMotion,
-                    animationPhase: pose.legPhase,
+                    animationPhase: isAnimating ? pose.legPhase : 0,
                     action: reducesMotion ? .sitting : pose.action,
-                    tailSwing: reducesMotion ? 0 : pose.tailSwing,
-                    headTiltDegrees: reducesMotion
+                    tailSwing: !isAnimating ? 0 : pose.tailSwing,
+                    headTiltDegrees: !isAnimating
                         ? 0
                         : pose.headTiltDegrees
                 )

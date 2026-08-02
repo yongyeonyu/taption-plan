@@ -48,7 +48,7 @@ struct GoalsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DraftTopBar(title: "목표", trailing: "")
+            DraftTopBar(title: "루틴", trailing: "")
 
             List {
                 if goals.isEmpty {
@@ -165,10 +165,10 @@ struct GoalsView: View {
 
     private var emptyGoalState: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("아직 목표가 없습니다")
+            Text("아직 루틴이 없습니다")
                 .font(.taption(size: 12.5, weight: .bold))
                 .foregroundStyle(Color.tpInk)
-            Text("새 목표를 추가하거나 시작 구성에서 상황별 목표를 만들 수 있습니다.")
+            Text("새 루틴을 추가하거나 상황별 루틴을 만들 수 있습니다.")
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(2)
@@ -378,14 +378,7 @@ struct GoalsView: View {
     }
 
     private func goalDisplayTitle(_ raw: String) -> String {
-        let trimmed = raw.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        guard !trimmed.isEmpty else { return trimmed }
-        if trimmed.hasPrefix("목표:") {
-            return trimmed
-        }
-        return "목표:\(trimmed)"
+        GoalRecordPolicy.displayTitle(raw)
     }
 }
 
@@ -405,10 +398,14 @@ struct GoalHabitDay: Identifiable, Equatable {
 struct GoalDetailSnapshot: Equatable {
     var mode: GoalDetailMode
     var descendants: [PlanRecord]
+    var actualMatches: [GoalActualMatch]
     var plannedDuration: TimeInterval
     var actualDuration: TimeInterval
     var weekDays: [GoalHabitDay]
+    var missedDays: [GoalHabitDay]
     var nextPlan: PlanRecord?
+    var upcomingPlans: [PlanRecord]
+    var blockerMemos: [ActionMemo]
     var fourWeekActuals: [TimeInterval]
     var evidence: [String]
 }
@@ -418,6 +415,7 @@ enum GoalDetailEngine {
         goal: PlanRecord,
         plans: [PlanRecord],
         actuals: [ActualRecord],
+        memos: [ActionMemo] = [],
         referenceDate: Date = .now,
         calendar: Calendar = .autoupdatingCurrent
     ) -> GoalDetailSnapshot {
@@ -432,12 +430,13 @@ enum GoalDetailEngine {
             ? .habit
             : manualChildren.isEmpty ? .empty : .project
         let scopedIDs = Set([goal.id] + descendants.map(\.id))
-        let scopedActuals = matchedActuals(
+        let actualMatches = GoalActivityMatchingEngine.matches(
             goal: goal,
-            descendants: descendants,
+            plans: plans,
             actuals: actuals,
-            scopedIDs: scopedIDs
+            asOf: referenceDate
         )
+        let scopedActuals = actualMatches.map(\.actual)
         let plannedLeaves = descendants.isEmpty
             ? [goal]
             : descendants.filter { child in
@@ -493,10 +492,20 @@ enum GoalDetailEngine {
                 }
             )
         }
-        let nextPlan = descendants
+        let upcomingPlans = descendants
             .filter { $0.span.end >= referenceDate && $0.status != .skipped }
             .sorted { $0.span.start < $1.span.start }
-            .first
+        let nextPlan = upcomingPlans.first
+        let blockerMemos = memos
+            .filter {
+                scopedIDs.contains($0.planID)
+                    && $0.kind == .blocker
+                    && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            .sorted { $0.createdAt > $1.createdAt }
+        let missedDays = weekDays.filter {
+            $0.planned > 0 && $0.actual < 60
+        }
         let evidence = Array(Set(scopedActuals.map { actual in
             switch actual.source {
             case .healthKit: "HealthKit"
@@ -511,33 +520,17 @@ enum GoalDetailEngine {
         return GoalDetailSnapshot(
             mode: mode,
             descendants: descendants,
+            actualMatches: actualMatches,
             plannedDuration: plannedDuration,
             actualDuration: actualDuration,
             weekDays: weekDays,
+            missedDays: missedDays,
             nextPlan: nextPlan,
+            upcomingPlans: Array(upcomingPlans.prefix(3)),
+            blockerMemos: Array(blockerMemos.prefix(3)),
             fourWeekActuals: fourWeekActuals,
             evidence: evidence
         )
-    }
-
-    private static func matchedActuals(
-        goal: PlanRecord,
-        descendants: [PlanRecord],
-        actuals: [ActualRecord],
-        scopedIDs: Set<UUID>
-    ) -> [ActualRecord] {
-        let repeatPlans = descendants.filter { $0.origin == .repeatRule }
-        return actuals.filter { actual in
-            if let planID = actual.planID, scopedIDs.contains(planID) {
-                return true
-            }
-            guard actual.planID == nil,
-                  actual.categoryID == goal.categoryID else { return false }
-            let actualSpan = actual.span()
-            return repeatPlans.contains {
-                $0.span.intersection(with: actualSpan) != nil
-            }
-        }
     }
 
     static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
@@ -558,8 +551,185 @@ enum GoalDetailEngine {
     }
 }
 
+/// Two-handle interval control used by routine details.  The striped track is
+/// the plan and the solid track is the portion actually performed.
+private struct RoutineTimeRangeSlider: View {
+    let plan: PlanRecord
+    let actual: ActualRecord?
+    let onCommit: (Date, Date) -> Void
+
+    @State private var actualStart: Date
+    @State private var actualEnd: Date
+
+    private let minimumDuration: TimeInterval = 5 * 60
+
+    init(
+        plan: PlanRecord,
+        actual: ActualRecord?,
+        onCommit: @escaping (Date, Date) -> Void
+    ) {
+        self.plan = plan
+        self.actual = actual
+        self.onCommit = onCommit
+        let start = actual?.startedAt ?? plan.span.start
+        _actualStart = State(initialValue: start)
+        _actualEnd = State(
+            initialValue: actual?.endedAt ?? start.addingTimeInterval(5 * 60)
+        )
+    }
+
+    private var plannedDuration: TimeInterval { plan.span.duration }
+    private var actualDuration: TimeInterval {
+        max(0, actualEnd.timeIntervalSince(actualStart))
+    }
+    private var progress: Double {
+        guard plannedDuration > 0 else { return 0 }
+        return min(1, actualDuration / plannedDuration)
+    }
+    private var status: (String, Color, String) {
+        if actual == nil && actualDuration <= minimumDuration {
+            return ("미완료", Color.tpSecondary, "circle")
+        }
+        if progress >= 0.999 {
+            return ("완료", .green, "checkmark.circle.fill")
+        }
+        if actualDuration > 0 {
+            return ("부분 달성", .orange, "circle.lefthalf.filled")
+        }
+        return ("미완료", Color.tpSecondary, "circle")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Text("계획 (timeRange(plan.span.start, plan.span.end))")
+                Spacer(minLength: 4)
+                Label(status.0, systemImage: status.2)
+                    .foregroundStyle(status.1)
+            }
+            .font(.taption(size: 8, weight: .semibold))
+
+            GeometryReader { proxy in
+                let width = max(1, proxy.size.width)
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.tpLine.opacity(0.55))
+                        .overlay {
+                            Capsule()
+                                .strokeBorder(
+                                    Color.tpSecondary.opacity(0.22),
+                                    style: StrokeStyle(lineWidth: 1, dash: [3, 3])
+                                )
+                        }
+
+                    Capsule()
+                        .fill(PlanCategory(categoryID: plan.categoryID).darkColor.opacity(0.78))
+                        .frame(width: actualWidth(width), height: 12)
+                        .offset(x: actualX(width))
+
+                    handle(at: actualX(width), isStart: true)
+                        .gesture(handleGesture(.start, width: width))
+                    handle(at: actualX(width) + actualWidth(width), isStart: false)
+                        .gesture(handleGesture(.end, width: width))
+                }
+                .frame(height: 26)
+            }
+            .frame(height: 26)
+
+            HStack(spacing: 4) {
+                Text("실제 (timeRange(actualStart, actualEnd))")
+                Text("· (durationText(actualDuration))")
+                    .foregroundStyle(Color.tpSecondary)
+                Spacer()
+                Text("양끝을 드래그")
+                    .foregroundStyle(Color.tpSecondary.opacity(0.82))
+            }
+            .font(.taption(size: 7.5, weight: .semibold))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 9))
+        .onChange(of: actual?.startedAt) { _, value in
+            if let value { actualStart = value }
+        }
+        .onChange(of: actual?.endedAt) { _, value in
+            if let value { actualEnd = value }
+        }
+    }
+
+    private enum Handle { case start, end }
+
+    private func handle(at x: CGFloat, isStart: Bool) -> some View {
+        Circle()
+            .fill(Color.white)
+            .frame(width: 22, height: 22)
+            .overlay {
+                Circle().stroke(
+                    PlanCategory(categoryID: plan.categoryID).darkColor,
+                    lineWidth: 2
+                )
+            }
+            .shadow(color: .black.opacity(0.14), radius: 2)
+            .offset(x: x - 11)
+            .accessibilityLabel(isStart ? "실제 시작 시간" : "실제 종료 시간")
+    }
+
+    private func handleGesture(_ handle: Handle, width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let date = date(at: value.location.x, width: width)
+                switch handle {
+                case .start:
+                    actualStart = min(
+                        max(plan.span.start, date),
+                        actualEnd.addingTimeInterval(-minimumDuration)
+                    )
+                case .end:
+                    actualEnd = max(
+                        min(plan.span.end, date),
+                        actualStart.addingTimeInterval(minimumDuration)
+                    )
+                }
+            }
+            .onEnded { _ in
+                onCommit(actualStart, actualEnd)
+            }
+    }
+
+    private func fraction(_ date: Date) -> CGFloat {
+        guard plannedDuration > 0 else { return 0 }
+        return CGFloat(
+            min(1, max(0, date.timeIntervalSince(plan.span.start) / plannedDuration))
+        )
+    }
+
+    private func actualX(_ width: CGFloat) -> CGFloat { fraction(actualStart) * width }
+
+    private func actualWidth(_ width: CGFloat) -> CGFloat {
+        max(10, (fraction(actualEnd) - fraction(actualStart)) * width)
+    }
+
+    private func date(at x: CGFloat, width: CGFloat) -> Date {
+        let value = min(1, max(0, x / max(1, width)))
+        return plan.span.start.addingTimeInterval(plannedDuration * value)
+    }
+
+    private func timeRange(_ start: Date, _ end: Date) -> String {
+        "\(start.formatted(date: .omitted, time: .shortened))–\(end.formatted(date: .omitted, time: .shortened))"
+    }
+
+    private func durationText(_ value: TimeInterval) -> String {
+        let minutes = max(0, Int(value / 60))
+        return minutes >= 60 ? "\(minutes / 60)시간 \(minutes % 60)분" : "\(minutes)분"
+    }
+}
+
 struct GoalDetailView: View {
     @Bindable var model: AppModel
+    @State private var inlineMemoText = ""
+    @State private var showsDeleteConfirmation = false
+    @State private var showsActionLinkSheet = false
+    @FocusState private var inlineMemoFocused: Bool
 
     private var goal: PlanRecord? {
         guard let id = model.selectedGoalPlanID else { return nil }
@@ -571,7 +741,8 @@ struct GoalDetailView: View {
             GoalDetailEngine.make(
                 goal: $0,
                 plans: model.snapshot.plans,
-                actuals: model.snapshot.actuals
+                actuals: model.snapshot.actuals,
+                memos: model.snapshot.memos
             )
         }
     }
@@ -598,9 +769,34 @@ struct GoalDetailView: View {
                 .background(Color.tpBackground)
             } else {
                 ContentUnavailableView(
-                    "목표를 찾을 수 없습니다",
+                    "루틴을 찾을 수 없습니다",
                     systemImage: "scope"
                 )
+            }
+        }
+        .onChange(of: model.selectedGoalPlanID) { _, _ in
+            inlineMemoText = ""
+            inlineMemoFocused = false
+        }
+        .confirmationDialog(
+            "이 루틴을 삭제할까요?",
+            isPresented: $showsDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("루틴 삭제", role: .destructive) {
+                guard let goalID = goal?.id else { return }
+                Task {
+                    await model.deletePlan(goalID)
+                    model.closeGoalDetail()
+                }
+            }
+            Button("취소", role: .cancel) { }
+        } message: {
+            Text("루틴과 연결된 하위 계획이 함께 삭제됩니다.")
+        }
+        .sheet(isPresented: $showsActionLinkSheet) {
+            if let goal {
+                GoalActionLinkSheet(model: model, goal: goal)
             }
         }
     }
@@ -613,16 +809,10 @@ struct GoalDetailView: View {
                 Image(systemName: "chevron.left")
                     .font(.taption(size: 15, weight: .bold))
             }
-            Text(goal?.title ?? "목표 상세")
+            Text(goal.map { GoalRecordPolicy.displayTitle($0.title) } ?? "루틴 상세")
                 .font(.taption(size: 16, weight: .bold))
                 .lineLimit(1)
             Spacer()
-            if let goal {
-                Button("편집") {
-                    model.planEditorRequest = PlanEditorRequest(id: goal.id)
-                }
-                .font(.taption(size: 10, weight: .bold))
-            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -642,7 +832,7 @@ struct GoalDetailView: View {
         return VStack(alignment: .leading, spacing: 9) {
             HStack {
                 Label(
-                    detail.mode == .habit ? "습관 대시보드" : "목표 로드맵",
+                    detail.mode == .habit ? "습관 대시보드" : "루틴 로드맵",
                     systemImage: detail.mode == .habit
                         ? "repeat.circle.fill"
                         : "point.topleft.down.to.point.bottomright.curvepath"
@@ -654,12 +844,47 @@ struct GoalDetailView: View {
                     .foregroundStyle(Color.tpSecondary)
             }
             HStack {
-                metric("계획", duration(detail.plannedDuration))
-                metric("실제", duration(detail.actualDuration))
+                metric("루틴 목표", duration(detail.plannedDuration))
+                metric("연결 실적", duration(detail.actualDuration))
                 metric("진행", "\(Int(progress * 100))%")
             }
             ProgressView(value: progress)
                 .tint(PlanCategory(categoryID: goal.categoryID).darkColor)
+
+            HStack(spacing: 6) {
+                Image(systemName: achievementSymbol(progress))
+                Text(achievementLabel(progress))
+                Spacer()
+                if !detail.actualMatches.isEmpty {
+                    Text("활동 근거 \(detail.actualMatches.count)건")
+                }
+            }
+            .font(.taption(size: 8.5, weight: .bold))
+            .foregroundStyle(achievementColor(progress))
+
+            if detail.actualMatches.isEmpty {
+                Text("실적은 시간표에서 항목을 탭해 루틴 또는 액션에 연결하면 반영됩니다.")
+                    .font(.taption(size: 8))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+
+            actualEvidenceRows(detail.actualMatches)
+
+            if let repeatSummary = GoalRepeatRuleFormatter.summary(
+                goal.repeatRules
+            ) {
+                Label(
+                    "반복 시간 · \(repeatSummary)",
+                    systemImage: "clock.arrow.2.circlepath"
+                )
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpInk.opacity(0.72))
+                .lineLimit(2)
+            }
+
+            GoalActionControls(model: model, goal: goal) {
+                showsDeleteConfirmation = true
+            }
         }
         .padding(12)
         .draftCard()
@@ -676,18 +901,33 @@ struct GoalDetailView: View {
                 Text("\(next.span.start.formatted(date: .abbreviated, time: .shortened)) → \(next.span.end.formatted(date: .omitted, time: .shortened))")
                     .font(.taption(size: 9, weight: .semibold))
             }
-            Text("이번 주 계획과 실제")
+                Text("이번 주 루틴 목표와 연결 실적")
                 .font(.taption(size: 10, weight: .bold))
             ForEach(detail.weekDays) { day in
                 HStack {
                     Text(day.date.formatted(.dateTime.weekday(.abbreviated)))
                         .frame(width: 28, alignment: .leading)
-                    Text("계획 \(duration(day.planned))")
+                    Text("목표 \(duration(day.planned))")
                     Spacer()
-                    Text("실제 \(duration(day.actual))")
+                    Text("실적 \(duration(day.actual))")
                         .foregroundStyle(day.actual > 0 ? Color.tpInk : Color.tpSecondary)
                 }
                 .font(.taption(size: 8.5, weight: .semibold))
+            }
+            if !detail.missedDays.isEmpty {
+                HStack(spacing: 5) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                    Text(
+                        "놓친 날 " + detail.missedDays.map {
+                            $0.date.formatted(.dateTime.weekday(.abbreviated))
+                        }.joined(separator: " · ")
+                    )
+                }
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.orange)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
             }
             Text("4주 실제 추세")
                 .font(.taption(size: 9, weight: .bold))
@@ -712,6 +952,13 @@ struct GoalDetailView: View {
                 .font(.taption(size: 8, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
             }
+            let repeatPlans = detail.descendants
+                .filter { $0.origin == .repeatRule }
+                .prefix(7)
+            let dashboardPlans = repeatPlans.isEmpty
+                ? Array(detail.descendants.filter { $0.origin != .repeatRule }.prefix(7))
+                : Array(repeatPlans)
+            linkedActionRows(dashboardPlans, detail: detail)
         }
         .padding(12)
         .draftCard()
@@ -722,38 +969,207 @@ struct GoalDetailView: View {
         detail: GoalDetailSnapshot
     ) -> some View {
         let manual = detail.descendants.filter { $0.origin != .repeatRule }
+        let completedCount = manual.filter { $0.status == .completed }.count
         return VStack(alignment: .leading, spacing: 9) {
-            Label("목표 내리기", systemImage: "arrow.down.right.and.arrow.up.left")
+            Label("루틴 내리기", systemImage: "arrow.down.right.and.arrow.up.left")
                 .font(.taption(size: 10, weight: .bold))
+            if !manual.isEmpty {
+                Text("연결 액션 \(completedCount)/\(manual.count) 완료")
+                    .font(.taption(size: 8.5, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
             ForEach(manual) { plan in
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(PlanCategory(categoryID: plan.categoryID).darkColor)
-                        .frame(width: 7, height: 7)
-                    VStack(alignment: .leading, spacing: 2) {
+                let actual = matchingActual(for: plan, detail: detail)
+                let actualProgress = GoalActivityMatchingEngine.progress(
+                    for: plan,
+                    matches: detail.actualMatches
+                )
+                let isComplete = plan.status == .completed
+                    || actualProgress >= 0.999
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 7) {
+                        Button {
+                            guard !isComplete else { return }
+                            Task {
+                                await model.performQuickAction(
+                                    .complete,
+                                    planID: plan.id
+                                )
+                            }
+                        } label: {
+                            Image(systemName: isComplete
+                                ? "checkmark.circle.fill"
+                                : actualProgress > 0
+                                    ? "circle.lefthalf.filled"
+                                    : "circle")
+                                .font(.taption(size: 11, weight: .bold))
+                                .foregroundStyle(
+                                    isComplete
+                                        ? PlanCategory(categoryID: plan.categoryID).darkColor
+                                        : actualProgress > 0
+                                            ? Color.orange
+                                            : Color.tpSecondary
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(plan.title)
+                                .font(.taption(size: 9, weight: .bold))
+                            Text(plan.span.start.formatted(date: .abbreviated, time: .shortened))
+                                .font(.taption(size: 7.5))
+                                .foregroundStyle(Color.tpSecondary)
+                        }
+                        Spacer()
+                        Text(isComplete ? "완료" : actualProgress > 0 ? "부분 달성" : "미달성")
+                            .font(.taption(size: 7.5, weight: .bold))
+                            .foregroundStyle(
+                                isComplete
+                                    ? PlanCategory(categoryID: plan.categoryID).darkColor
+                                    : actualProgress > 0 ? Color.orange : Color.tpSecondary
+                            )
+                    }
+                    .padding(.leading, indentation(for: plan, in: manual))
+                    RoutineTimeRangeSlider(plan: plan, actual: actual) { start, end in
+                        Task {
+                            await model.updateRoutineActualInterval(
+                                planID: plan.id,
+                                actualID: actual?.id,
+                                startedAt: start,
+                                endedAt: end
+                            )
+                        }
+                    }
+                    .padding(.leading, indentation(for: plan, in: manual))
+                }
+            }
+            if !detail.upcomingPlans.isEmpty {
+                Text("이번 주 실행")
+                    .font(.taption(size: 9.5, weight: .bold))
+                    .padding(.top, 3)
+                ForEach(detail.upcomingPlans) { plan in
+                    HStack(spacing: 6) {
+                        Image(systemName: plan.status == .completed
+                            ? "checkmark.circle.fill"
+                            : "circle")
                         Text(plan.title)
-                            .font(.taption(size: 9, weight: .bold))
-                        Text(plan.span.start.formatted(date: .abbreviated, time: .shortened))
-                            .font(.taption(size: 7.5))
+                            .lineLimit(1)
+                        Spacer()
+                        Text(plan.span.start.formatted(.dateTime.month().day()))
                             .foregroundStyle(Color.tpSecondary)
                     }
-                    Spacer()
-                    Image(systemName: plan.status == .completed
-                        ? "checkmark.circle.fill"
-                        : "circle")
+                    .font(.taption(size: 8.5, weight: .semibold))
                 }
-                .padding(.leading, indentation(for: plan, in: manual))
+            }
+            if !detail.blockerMemos.isEmpty {
+                Label("막힌 메모", systemImage: "exclamationmark.triangle.fill")
+                    .font(.taption(size: 9.5, weight: .bold))
+                    .foregroundStyle(Color.orange)
+                    .padding(.top, 3)
+                ForEach(detail.blockerMemos) { memo in
+                    Text(memo.text)
+                        .font(.taption(size: 8.5, weight: .semibold))
+                        .foregroundStyle(Color.tpSecondary)
+                        .lineLimit(2)
+                        .padding(.leading, 4)
+                }
             }
         }
         .padding(12)
         .draftCard()
     }
 
+    @ViewBuilder
+    private func linkedActionRows(
+        _ plans: [PlanRecord],
+        detail: GoalDetailSnapshot
+    ) -> some View {
+        if !plans.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("연결 액션")
+                    .font(.taption(size: 9.5, weight: .bold))
+                    .padding(.top, 2)
+                ForEach(plans) { plan in
+                    let actual = matchingActual(for: plan, detail: detail)
+                    let actualProgress = GoalActivityMatchingEngine.progress(
+                        for: plan,
+                        matches: detail.actualMatches
+                    )
+                    let isComplete = plan.status == .completed
+                        || actualProgress >= 0.999
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 7) {
+                            Button {
+                                guard !isComplete else { return }
+                                Task {
+                                    await model.performQuickAction(
+                                        .complete,
+                                        planID: plan.id
+                                    )
+                                }
+                            } label: {
+                                Image(systemName: isComplete
+                                    ? "checkmark.circle.fill"
+                                    : actualProgress > 0
+                                        ? "circle.lefthalf.filled"
+                                        : "circle")
+                                    .font(.taption(size: 10.5, weight: .bold))
+                                    .foregroundStyle(
+                                        isComplete
+                                            ? PlanCategory(categoryID: plan.categoryID).darkColor
+                                            : actualProgress > 0
+                                                ? Color.orange
+                                                : Color.tpSecondary
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(plan.title)
+                                    .font(.taption(size: 8.5, weight: .semibold))
+                                    .lineLimit(1)
+                                Text(plan.span.start.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.taption(size: 7.5))
+                                    .foregroundStyle(Color.tpSecondary)
+                            }
+                            Spacer(minLength: 4)
+                            Text(isComplete ? "완료" : actualProgress > 0 ? "부분 달성" : "미달성")
+                                .font(.taption(size: 7.5, weight: .bold))
+                                .foregroundStyle(
+                                    isComplete
+                                        ? PlanCategory(categoryID: plan.categoryID).darkColor
+                                        : actualProgress > 0 ? Color.orange : Color.tpSecondary
+                                )
+                        }
+                        RoutineTimeRangeSlider(plan: plan, actual: actual) { start, end in
+                            Task {
+                                await model.updateRoutineActualInterval(
+                                    planID: plan.id,
+                                    actualID: actual?.id,
+                                    startedAt: start,
+                                    endedAt: end
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func matchingActual(
+        for plan: PlanRecord,
+        detail: GoalDetailSnapshot
+    ) -> ActualRecord? {
+        detail.actualMatches.first(where: {
+            $0.actual.planID == plan.id
+                || $0.actual.routineID == plan.id
+        })?.actual
+    }
+
     private func emptyDashboard(goal: PlanRecord) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("첫 실행 계획이 필요합니다", systemImage: "flag.checkered")
                 .font(.taption(size: 10, weight: .bold))
-            Text("목표를 월·주·일 계획으로 내려보내면 실제 기록이 다시 이 목표로 합쳐집니다.")
+            Text("루틴을 월·주·일 계획으로 내려보내면 실제 기록이 다시 이 루틴으로 합쳐집니다.")
                 .font(.taption(size: 8.5))
                 .foregroundStyle(Color.tpSecondary)
             Button("첫 하위 계획 만들기") {
@@ -777,15 +1193,33 @@ struct GoalDetailView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.tpInk)
+            Button {
+                showsActionLinkSheet = true
+            } label: {
+                Label("기존 액션아이템 연결", systemImage: "link")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
             HStack {
                 Button("시간표에서 보기") { model.openGroup(goal.id) }
-                Button("메모") { model.openMemo(for: goal.id) }
                 Button("반복 설정") {
                     model.planEditorRequest = PlanEditorRequest(id: goal.id)
                 }
             }
             .font(.taption(size: 8.5, weight: .bold))
             .buttonStyle(.bordered)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Label("메모", systemImage: "note.text")
+                    .font(.taption(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                InlineMemoField(
+                    model: model,
+                    planID: goal.id,
+                    text: $inlineMemoText,
+                    isFocused: $inlineMemoFocused
+                )
+            }
         }
     }
 
@@ -801,6 +1235,62 @@ struct GoalDetailView: View {
         }
         .font(.taption(size: 9))
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func actualEvidenceRows(_ matches: [GoalActualMatch]) -> some View {
+        if !matches.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("활동 근거")
+                    .font(.taption(size: 8.5, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                ForEach(Array(matches.prefix(3))) { match in
+                    HStack(spacing: 6) {
+                        Image(systemName: match.actual.endedAt == nil
+                            ? "clock.fill"
+                            : "checkmark.circle.fill")
+                            .font(.taption(size: 8.5, weight: .bold))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(match.actual.title)
+                                .font(.taption(size: 8.5, weight: .semibold))
+                                .lineLimit(1)
+                            Text(
+                                "\(match.kind.displayName) · "
+                                    + match.actual.startedAt.formatted(
+                                        date: .abbreviated,
+                                        time: .shortened
+                                    )
+                            )
+                            .font(.taption(size: 7.5))
+                            .foregroundStyle(Color.tpSecondary)
+                        }
+                        Spacer(minLength: 4)
+                        Text(match.actual.endedAt == nil ? "진행 중" : "기록")
+                            .font(.taption(size: 7.5, weight: .bold))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                }
+            }
+            .padding(.top, 2)
+        }
+    }
+
+    private func achievementLabel(_ progress: Double) -> String {
+        if progress >= 0.999 { return "완료" }
+        if progress > 0 { return "부분 달성" }
+        return "미달성"
+    }
+
+    private func achievementSymbol(_ progress: Double) -> String {
+        if progress >= 0.999 { return "checkmark.circle.fill" }
+        if progress > 0 { return "circle.lefthalf.filled" }
+        return "circle"
+    }
+
+    private func achievementColor(_ progress: Double) -> Color {
+        if progress >= 0.999 { return .green }
+        if progress > 0 { return .orange }
+        return Color.tpSecondary
     }
 
     private func duration(_ value: TimeInterval) -> String {
@@ -831,6 +1321,209 @@ struct GoalDetailView: View {
             parentID = parent.parentID
         }
         return CGFloat(min(depth, 3) * 12)
+    }
+}
+
+struct GoalActionLinkSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let goal: PlanRecord
+
+    private var existingChildIDs: Set<UUID> {
+        Set(
+            ((try? PlanHierarchy.descendants(
+                of: goal.id,
+                in: model.snapshot.plans
+            )) ?? []).map(\.id)
+        )
+    }
+
+    private var candidates: [PlanRecord] {
+        model.snapshot.plans
+            .filter { plan in
+                !existingChildIDs.contains(plan.id)
+                    && plan.id != goal.id
+                    && plan.origin != .repeatRule
+                    && !plan.isFixed
+                    && plan.status != .skipped
+                    && !GoalRecordPolicy.isGoal(plan)
+                    && plan.categoryID != "event"
+                    && plan.span.intersection(with: goal.span) != nil
+            }
+            .sorted { lhs, rhs in
+                if lhs.span.start == rhs.span.start {
+                    return lhs.title < rhs.title
+                }
+                return lhs.span.start < rhs.span.start
+            }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if candidates.isEmpty {
+                        ContentUnavailableView(
+                        "연결할 액션아이템이 없습니다",
+                        systemImage: "link.badge.plus",
+                        description: Text("루틴 기간과 겹치는 연결 가능한 액션아이템이 없습니다.")
+                    )
+                } else {
+                    List(candidates) { plan in
+                        Button {
+                            dismiss()
+                            Task {
+                                await model.connectActionItem(
+                                    plan.id,
+                                    toGoal: goal.id
+                                )
+                            }
+                        } label: {
+                            HStack(spacing: 9) {
+                                Image(systemName: "circle")
+                                    .font(.taption(size: 11, weight: .bold))
+                                    .foregroundStyle(Color.tpSecondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(plan.title)
+                                        .font(.taption(size: 10.5, weight: .semibold))
+                                        .foregroundStyle(Color.tpInk)
+                                    Text(
+                                        "\(plan.span.start.formatted(date: .abbreviated, time: .shortened))–\(plan.span.end.formatted(date: .omitted, time: .shortened))"
+                                    )
+                                    .font(.taption(size: 8))
+                                    .foregroundStyle(Color.tpSecondary)
+                                }
+                                Spacer(minLength: 4)
+                                Image(systemName: "link")
+                                    .font(.taption(size: 9, weight: .bold))
+                                    .foregroundStyle(Color.tpInk)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("액션아이템 연결")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("완료") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+/// Goal actions stay in the goal detail surface so the user can operate on
+/// the selected goal without opening a second menu or editor first.
+struct GoalActionControls: View {
+    @Bindable var model: AppModel
+    let goal: PlanRecord
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("루틴 제어")
+                .font(.taption(size: 9, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+
+            HStack(spacing: 5) {
+                Button {
+                    Task {
+                        if goal.status == .running {
+                            await model.pausePlan(goal.id)
+                        } else {
+                            await model.startPlan(goal.id)
+                        }
+                    }
+                } label: {
+                    Label(
+                        goal.status == .running ? "정지" : "시작",
+                        systemImage: goal.status == .running
+                            ? "pause.fill"
+                            : "play.fill"
+                    )
+                }
+                .disabled(goal.status == .completed)
+
+                Button {
+                    Task {
+                        await model.performQuickAction(
+                            .complete,
+                            planID: goal.id
+                        )
+                    }
+                } label: {
+                    Label("완료", systemImage: "checkmark")
+                }
+                .disabled(goal.status == .completed)
+
+                Button {
+                    model.planEditorRequest = PlanEditorRequest(id: goal.id)
+                } label: {
+                    Label("편집", systemImage: "pencil")
+                }
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("삭제", systemImage: "trash")
+                }
+            }
+            .font(.taption(size: 8.5, weight: .bold))
+            .buttonStyle(.borderedProminent)
+            .tint(.tpInk)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            Color.white,
+            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.5)
+        }
+    }
+}
+
+struct InlineMemoField: View {
+    @Bindable var model: AppModel
+    let planID: UUID
+    @Binding var text: String
+    var isFocused: FocusState<Bool>.Binding
+
+    var body: some View {
+        TextField("메모를 입력…", text: $text, axis: .vertical)
+            .font(.taption(size: 9.5))
+            .lineLimit(2...4)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 8)
+            .background(
+                Color.tpBackground,
+                in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.5)
+            }
+            .focused(isFocused)
+            .onSubmit { save() }
+            .onChange(of: isFocused.wrappedValue) { _, focused in
+                if !focused { save() }
+            }
+    }
+
+    private func save() {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else {
+            text = ""
+            return
+        }
+        model.addMemo(text: clean, kind: .idea, to: planID)
+        text = ""
     }
 }
 

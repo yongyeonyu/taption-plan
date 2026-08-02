@@ -28,15 +28,35 @@ final class AppModel {
     var selectedMemoPlanID: UUID?
     var selectedCatCoat: CatCoat = .calico
     var reviewScale: ReviewScale = .week
-    var pendingProfileSelection: ProfileSelection =
-        TemplateCatalog.representativeSelections[0]
+    private(set) var pendingSetupCategoryIDs: Set<String> = []
+    private(set) var isEditingSetupCategories = false
 
     private(set) var snapshot: TaptionDataSnapshot = .empty {
         didSet {
             snapshotRevision &+= 1
+
+            // Sensor/weather updates replace the snapshot frequently, but do
+            // not change the timeline geometry. Keep a separate revision for
+            // changes that can actually alter rows, blocks or their detail
+            // targets so the Gantt layout cache survives live collection.
+            let timestampOnly = timestampOnlySnapshotAssignment
+            timestampOnlySnapshotAssignment = false
+            if !timestampOnly
+                && (oldValue.plans != snapshot.plans
+                    || oldValue.actuals != snapshot.actuals
+                    || oldValue.travel != snapshot.travel
+                    || oldValue.places != snapshot.places
+                    || oldValue.calendarEvents != snapshot.calendarEvents
+                    || oldValue.photos != snapshot.photos
+                    || oldValue.categories != snapshot.categories
+                    || oldValue.recordLinks != snapshot.recordLinks) {
+                timelineRevision &+= 1
+            }
         }
     }
     @ObservationIgnored private(set) var snapshotRevision: UInt64 = 0
+    @ObservationIgnored private(set) var timelineRevision: UInt64 = 0
+    @ObservationIgnored private var timestampOnlySnapshotAssignment = false
     private(set) var isBootstrapped = false
     private(set) var isRefreshingIntegrations = false
     private(set) var isSensorCollecting = false
@@ -51,11 +71,27 @@ final class AppModel {
     private(set) var latestSensorReading: SensorReading?
     private(set) var liveRouteState: LiveRouteState = .empty
     private(set) var activeTrackingSession: TrackingSession?
+    private(set) var trackingSessionWasRecovered = false
     private(set) var latestAltitudeEstimate: CalibratedAltitudeEstimate?
     private(set) var sleepSessions: [SleepSession] = []
     private(set) var lastHealthRefreshAt: Date?
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
     var userFacingError: String?
+
+    var widgetSyncStatus: TaptionWidgetSyncStatus {
+        TaptionWidgetSyncStatus.compare(
+            groundTruth: TaptionWidgetSharedStore.readGroundTruthPayload(),
+            cached: TaptionWidgetSharedStore.readPayload()
+        )
+    }
+
+    var widgetSyncStatusText: String {
+        widgetSyncStatus.displayName
+    }
+
+    var widgetSyncDiagnosticsText: String {
+        TaptionWidgetSharedStore.diagnostics().summary
+    }
 
     @ObservationIgnored private let repository: any PlanDataRepository
     @ObservationIgnored private let calendarService: AppleCalendarService
@@ -91,6 +127,39 @@ final class AppModel {
     @ObservationIgnored private var lastLiveEnvironmentPoint: GeoPoint?
     @ObservationIgnored private var lastLiveEnvironmentAt: Date?
     @ObservationIgnored private var lastLiveEnvironmentFailureAt: Date?
+    @ObservationIgnored private var lastTrackingSessionRecoveryPersistAt: Date?
+    @ObservationIgnored private var lastDeviceSnapshotPersistAt: Date?
+    @ObservationIgnored private var liveMergeCacheKey: LiveMergeCacheKey?
+    @ObservationIgnored private var liveMergeCacheValue: [SensorReading] = []
+    @ObservationIgnored private var sensorRefreshFingerprints:
+        [Date: SensorRefreshFingerprint] = [:]
+
+    // Keep the live route bounded without shifting the whole array on every
+    // GPS tick.  Trimming in batches makes long running sessions amortized
+    // O(1) per append while preserving the same 4,000-point render limit.
+    private static let liveRouteHardLimit = 4_000
+    private static let liveRouteSoftLimit = 4_512
+
+    private struct LiveMergeCacheKey: Equatable {
+        let spanStart: TimeInterval
+        let spanEnd: TimeInterval
+        let archivedCount: Int
+        let archivedFirstID: UUID?
+        let archivedLastID: UUID?
+        let archivedFirstTimestamp: Date?
+        let archivedLastTimestamp: Date?
+        let liveCount: Int
+        let liveLastUpdatedAt: Date?
+    }
+
+    private struct SensorRefreshFingerprint: Hashable {
+        let readingCount: Int
+        let latestReadingID: UUID?
+        let latestMotionEnd: Date?
+        let pedometerEnd: Date?
+        let latestHealthEvidenceEnd: Date?
+        let settingsHash: Int
+    }
 
     init(
         repository: (any PlanDataRepository)? = nil,
@@ -116,8 +185,10 @@ final class AppModel {
         watchConnectivityService: AppleWatchConnectivityService =
             AppleWatchConnectivityService()
     ) {
+        let repositorySource: String
         if let repository {
             self.repository = repository
+            repositorySource = "injected"
         } else if let sharedRepository = try? FilePlanRepository.appGroup(),
                   let legacyRepository =
                     try? FilePlanRepository.applicationSupport() {
@@ -125,13 +196,17 @@ final class AppModel {
                 primary: sharedRepository,
                 legacy: legacyRepository
             )
+            repositorySource = "app-group+migration"
         } else if let sharedRepository =
                     try? FilePlanRepository.appGroup() {
             self.repository = sharedRepository
+            repositorySource = "app-group"
         } else if let fileRepository = try? FilePlanRepository.applicationSupport() {
             self.repository = fileRepository
+            repositorySource = "application-support"
         } else {
             self.repository = InMemoryPlanRepository()
+            repositorySource = "in-memory"
         }
         self.calendarService = calendarService
         self.photoService = photoService
@@ -151,6 +226,9 @@ final class AppModel {
             AppleWatchSensorActivityArchive.applicationSupport()
         self.rawDeviceDataArchive = try?
             RawDeviceDataMonthlyArchive.applicationSupport()
+        Self.integrationLogger.notice(
+            "Repository selected: \(repositorySource, privacy: .public), appGroupAvailable=\(TaptionWidgetSharedStore.diagnostics().appGroupAvailable, privacy: .public)"
+        )
         self.voiceMemoPlayer.onFinish = { [weak self] in
             self?.playingVoiceAttachmentID = nil
         }
@@ -417,12 +495,9 @@ final class AppModel {
                 publishWidgetPayload()
                 selectedScale = TimeScale(timelineLevel: loaded.settings.startScale)
                 selectedCatCoat = CatCoat(catStyle: loaded.settings.catStyle)
-                pendingProfileSelection =
-                    loaded.profile ?? TemplateCatalog.representativeSelections[0]
                 if loaded.updatedAt == .distantPast,
-                   loaded.profile == nil,
                    loaded.plans.isEmpty {
-                    detail = .onboarding
+                    openInitialSetup()
                 }
                 await applyPendingWidgetCommands(
                     repositoryAlreadyLoaded: true
@@ -431,6 +506,7 @@ final class AppModel {
                 await synchronizeCloud(showErrors: false)
                 await refreshPermissionStates()
                 resumeSensorCollectionIfNeeded()
+                await restoreTrackingSessionIfNeeded()
                 await refreshEnabledData(
                     includesCurrentDeviceDay: true
                 )
@@ -463,6 +539,7 @@ final class AppModel {
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
         await refreshPermissionStates()
         resumeSensorCollectionIfNeeded()
+        await restoreTrackingSessionIfNeeded()
         await refreshEnabledData(
             includesCurrentDeviceDay: true
         )
@@ -476,6 +553,21 @@ final class AppModel {
         foregroundHealthRefreshTask?.cancel()
         foregroundHealthRefreshTask = nil
         await persist()
+    }
+
+    /// Refreshes device-backed records and republishes the shared widget
+    /// payload when iOS wakes the app without presenting its UI.
+    func performBackgroundRefresh() async -> Bool {
+        Self.integrationLogger.notice("Background model refresh started")
+        await bootstrap()
+        await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
+        await refreshEnabledData(includesCurrentDeviceDay: true)
+        await persist()
+        let success = userFacingError == nil
+        Self.integrationLogger.notice(
+            "Background model refresh finished: success=\(success, privacy: .public), snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public)"
+        )
+        return success
     }
 
     func permissionState(for feature: PermissionFeature) -> PermissionState {
@@ -861,12 +953,17 @@ final class AppModel {
         if activeTrackingSession != nil {
             await stopTracking()
         }
-        let linkedPlanID = matchingExercisePlanID(for: kind, at: .now)
+        // Exercise records remain unlinked until the user taps an item in the
+        // detail panel. Time/category overlap is not an implicit relationship.
+        let linkedPlanID: UUID? = nil
         let session = sensorService.beginTracking(
             kind: kind,
             linkedPlanID: linkedPlanID
         )
         activeTrackingSession = session
+        trackingSessionWasRecovered = false
+        TrackingSessionRecoveryStore.save(session)
+        lastTrackingSessionRecoveryPersistAt = .now
         liveRouteState = LiveRouteState(
             session: session,
             readings: [],
@@ -899,6 +996,8 @@ final class AppModel {
             return
         }
         finalizeTrackingSession(completed)
+        TrackingSessionRecoveryStore.clear()
+        lastTrackingSessionRecoveryPersistAt = nil
         try? watchConnectivityService.requestWorkout(
             TaptionWatchWorkoutRequest(
                 sessionID: completed.id,
@@ -908,6 +1007,7 @@ final class AppModel {
             )
         )
         activeTrackingSession = nil
+        trackingSessionWasRecovered = false
         liveRouteState.session = nil
         scheduleSensorAnalysis(
             containing: completed.startedAt,
@@ -923,16 +1023,76 @@ final class AppModel {
         _ archived: [SensorReading],
         in span: TimeSpan
     ) -> [SensorReading] {
+        let cacheKey = LiveMergeCacheKey(
+            spanStart: span.start.timeIntervalSinceReferenceDate,
+            spanEnd: span.end.timeIntervalSinceReferenceDate,
+            archivedCount: archived.count,
+            archivedFirstID: archived.first?.id,
+            archivedLastID: archived.last?.id,
+            archivedFirstTimestamp: archived.first?.timestamp,
+            archivedLastTimestamp: archived.last?.timestamp,
+            liveCount: liveRouteState.readings.count,
+            liveLastUpdatedAt: liveRouteState.lastUpdatedAt
+        )
+        if liveMergeCacheKey == cacheKey {
+            return liveMergeCacheValue
+        }
+
+        let live = liveSensorReadings(in: span)
+        guard !live.isEmpty else {
+            liveMergeCacheKey = cacheKey
+            liveMergeCacheValue = archived
+            return archived
+        }
+
+        // Both sources are chronological: the archive reader and the live
+        // route append path preserve timestamp order. Merge them linearly so
+        // a live GPS tick does not sort and allocate the entire route again.
+        var merged: [SensorReading] = []
+        merged.reserveCapacity(archived.count + live.count)
         var seen = Set<UUID>()
-        return (archived + liveSensorReadings(in: span))
-            .sorted { $0.timestamp < $1.timestamp }
-            .filter { seen.insert($0.id).inserted }
+        seen.reserveCapacity(archived.count + live.count)
+        var archivedIndex = 0
+        var liveIndex = 0
+
+        while archivedIndex < archived.count || liveIndex < live.count {
+            let takeArchived: Bool
+            if liveIndex == live.count {
+                takeArchived = true
+            } else if archivedIndex == archived.count {
+                takeArchived = false
+            } else {
+                // Keep the archive first for equal timestamps, matching the
+                // previous stable-sort behavior when an ID is duplicated.
+                takeArchived = archived[archivedIndex].timestamp
+                    <= live[liveIndex].timestamp
+            }
+
+            let reading: SensorReading
+            if takeArchived {
+                reading = archived[archivedIndex]
+                archivedIndex += 1
+            } else {
+                reading = live[liveIndex]
+                liveIndex += 1
+            }
+            if seen.insert(reading.id).inserted {
+                merged.append(reading)
+            }
+        }
+        liveMergeCacheKey = cacheKey
+        liveMergeCacheValue = merged
+        return merged
     }
 
     func setWidgetPhotosVisible(_ visible: Bool) {
         snapshot.settings.showsPhotosInWidgets =
             visible && permissionState(for: .photos).isGranted
         Task { await persist() }
+    }
+
+    func refreshWidgetNow() {
+        publishWidgetPayload()
     }
 
     func exportSnapshotURL() throws -> URL {
@@ -956,6 +1116,10 @@ final class AppModel {
 
     func deleteAllUserData() async {
         sensorService?.stopCollection()
+        TrackingSessionRecoveryStore.clear()
+        activeTrackingSession = nil
+        trackingSessionWasRecovered = false
+        liveRouteState = .empty
         isSensorCollecting = false
         await notificationScheduler.cancelAllPlanReminders()
         var empty = TaptionDataSnapshot.empty
@@ -964,7 +1128,8 @@ final class AppModel {
         empty.settings.permissions[.cloud] =
             snapshot.settings.permissions[.cloud] ?? .notDetermined
         snapshot = empty
-        pendingProfileSelection = TemplateCatalog.representativeSelections[0]
+        pendingSetupCategoryIDs = Set(empty.categories.map(\.id))
+        isEditingSetupCategories = false
         selectedGroupPlanID = nil
         groupNavigationPath = []
         selectedMemoPlanID = nil
@@ -973,38 +1138,15 @@ final class AppModel {
         await persist()
     }
 
-    var pendingTemplateApplication: TemplateApplication? {
-        try? TemplateCatalog.apply(
-            pendingProfileSelection,
-            customComponents: snapshot.customProfileComponents
-        )
+    var setupCategories: [CategoryDefinition] {
+        snapshot.categories.sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    var currentProfileDisplayName: String {
-        guard let profile = snapshot.profile,
-              let application = try? TemplateCatalog.apply(
-                profile,
-                customComponents: snapshot.customProfileComponents
-              ) else {
-            return "미설정"
+    var selectedSetupCategoryCount: Int {
+        if !isEditingSetupCategories {
+            return snapshot.categories.filter { !$0.isHidden }.count
         }
-        return application.displayName
-    }
-
-    var profileRoles: [ProfileComponent] {
-        TemplateCatalog.roles(
-            including: snapshot.customProfileComponents
-        )
-    }
-
-    var profileSituations: [ProfileComponent] {
-        TemplateCatalog.situations(
-            including: snapshot.customProfileComponents
-        )
-    }
-
-    var profileGoals: [ProfileComponent] {
-        TemplateCatalog.goals
+        return pendingSetupCategoryIDs.count
     }
 
     var selectedMemoPlan: PlanRecord? {
@@ -1013,129 +1155,43 @@ final class AppModel {
     }
 
     func openInitialSetup() {
-        pendingProfileSelection =
-            snapshot.profile ?? TemplateCatalog.representativeSelections[0]
-        detail = .onboarding
+        let visibleIDs = Set(
+            snapshot.categories.filter { !$0.isHidden }.map(\.id)
+        )
+        pendingSetupCategoryIDs = visibleIDs.isEmpty
+            ? Set(snapshot.categories.map(\.id))
+            : visibleIDs
+        isEditingSetupCategories = true
+        detail = .categorySetup
     }
 
-    func selectTemplate(_ selection: ProfileSelection) {
-        pendingProfileSelection = selection
-    }
-
-    func selectTemplateRole(_ roleID: String) {
-        pendingProfileSelection.roleID = roleID
-    }
-
-    func toggleTemplateSituation(_ situationID: String) {
-        if let index = pendingProfileSelection.situationIDs.firstIndex(
-            of: situationID
-        ) {
-            pendingProfileSelection.situationIDs.remove(at: index)
-        } else if pendingProfileSelection.situationIDs.count < 2 {
-            pendingProfileSelection.situationIDs.append(situationID)
+    func toggleSetupCategory(_ categoryID: String) {
+        if pendingSetupCategoryIDs.contains(categoryID) {
+            pendingSetupCategoryIDs.remove(categoryID)
         } else {
-            userFacingError = "상황은 최대 2개까지 조합할 수 있습니다."
+            pendingSetupCategoryIDs.insert(categoryID)
         }
     }
 
-    func toggleTemplateGoal(_ goalID: String) {
-        if let index = pendingProfileSelection.goalIDs.firstIndex(of: goalID) {
-            pendingProfileSelection.goalIDs.remove(at: index)
-        } else if pendingProfileSelection.goalIDs.count < 2 {
-            pendingProfileSelection.goalIDs.append(goalID)
-        } else {
-            userFacingError = "목표는 최대 2개까지 조합할 수 있습니다."
+    func cancelInitialCategorySelection() {
+        isEditingSetupCategories = false
+        pendingSetupCategoryIDs = []
+        detail = nil
+    }
+
+    func applyInitialCategorySelection() async {
+        guard !pendingSetupCategoryIDs.isEmpty else {
+            userFacingError = "대분류를 하나 이상 선택해 주세요."
+            return
         }
-    }
-
-    @discardableResult
-    func addCustomTemplateRole(name: String) -> ProfileComponent? {
-        addCustomProfileComponent(kind: .role, name: name)
-    }
-
-    @discardableResult
-    func addCustomTemplateSituation(name: String) -> ProfileComponent? {
-        addCustomProfileComponent(kind: .situation, name: name)
-    }
-
-    @discardableResult
-    private func addCustomProfileComponent(
-        kind: ProfileComponentKind,
-        name: String
-    ) -> ProfileComponent? {
-        do {
-            let component = try TemplateCatalog.makeCustomComponent(
-                kind: kind,
-                name: name,
-                existing: snapshot.customProfileComponents
-            )
-            snapshot.customProfileComponents.append(component)
-            switch kind {
-            case .role:
-                pendingProfileSelection.roleID = component.id
-            case .situation:
-                if pendingProfileSelection.situationIDs.count < 2 {
-                    pendingProfileSelection.situationIDs.append(component.id)
-                } else {
-                    userFacingError =
-                        "상황은 추가됐지만 선택은 최대 2개까지 가능합니다."
-                }
-            case .goal:
-                break
-            }
-            Task { await persist() }
-            return component
-        } catch TemplateError.emptyComponentName {
-            userFacingError = "이름을 입력해 주세요."
-        } catch TemplateError.duplicateComponentName {
-            userFacingError = "같은 이름이 이미 있습니다."
-        } catch {
-            userFacingError = "항목을 추가하지 못했습니다."
+        snapshot.categories = snapshot.categories.map { category in
+            var updated = category
+            updated.isHidden = !pendingSetupCategoryIDs.contains(category.id)
+            return updated
         }
-        return nil
-    }
-
-    func applyPendingTemplate(at date: Date = .now) async {
-        do {
-            let application = try TemplateCatalog.apply(
-                pendingProfileSelection,
-                customComponents: snapshot.customProfileComponents
-            )
-            let visibleIDs = Set(application.visibleCategoryIDs)
-            snapshot.categories = snapshot.categories.map { category in
-                var updated = category
-                if category.isBuiltIn {
-                    updated.isHidden = !visibleIDs.contains(category.id)
-                    if let displayName =
-                        application.categoryDisplayNames[category.id] {
-                        updated.name = displayName
-                    } else if let original = CategoryCatalog.builtIn.first(
-                        where: { $0.id == category.id }
-                    ) {
-                        updated.name = original.name
-                    }
-                }
-                return updated
-            }
-
-            let goalPlans = try TemplateCatalog.makeGoalPlans(
-                for: pendingProfileSelection,
-                startingAt: Calendar.autoupdatingCurrent.startOfDay(for: date),
-                customComponents: snapshot.customProfileComponents
-            )
-            for goal in goalPlans where !snapshot.plans.contains(where: {
-                $0.parentID == nil
-                    && TemplateCatalog.matchesGoalTitle($0.title, goal.title)
-                    && $0.categoryID == goal.categoryID
-            }) {
-                snapshot.plans.append(goal)
-            }
-            snapshot.plans.sort { $0.span.start < $1.span.start }
-            snapshot.profile = pendingProfileSelection
-            await persist()
-        } catch {
-            userFacingError = "시작 구성을 적용하지 못했습니다. \(error.localizedDescription)"
-        }
+        await persist()
+        isEditingSetupCategories = false
+        detail = nil
     }
 
     func openMemo(for planID: UUID?) {
@@ -1379,7 +1435,7 @@ final class AppModel {
                     subCategoryName
                 )
             } catch {
-                userFacingError = "상위 목표 안에 계획을 배치하지 못했습니다."
+                userFacingError = "상위 루틴 안에 계획을 배치하지 못했습니다."
                 return nil
             }
         } else {
@@ -1494,11 +1550,210 @@ final class AppModel {
             }
             Task { await persist() }
         } catch PlanningError.parentCycle {
-            userFacingError = "계획을 자기 하위 목표 안으로 옮길 수 없습니다."
+            userFacingError = "계획을 자기 하위 루틴 안으로 옮길 수 없습니다."
         } catch {
             userFacingError =
                 "상위·하위 계획의 기간 안에서 시간을 정해 주세요."
         }
+    }
+
+    /// Attach an existing action item to a routine without creating a
+    /// duplicate plan. Re-selecting a routine moves an already grouped action
+    /// after validating the new parent, so the detail tab can expose a single
+    /// "루틴 연결/변경" action.
+    func connectActionItem(
+        _ planID: UUID,
+        toGoal goalID: UUID
+    ) async {
+        guard let planIndex = snapshot.plans.firstIndex(where: {
+            $0.id == planID
+        }), snapshot.plans.contains(where: { $0.id == goalID }) else {
+            userFacingError = "연결할 루틴 또는 액션아이템을 찾지 못했습니다."
+            return
+        }
+        let plan = snapshot.plans[planIndex]
+        guard plan.origin != .repeatRule,
+              !GoalRecordPolicy.isGoal(plan) else {
+            userFacingError = "반복 세그먼트와 루틴은 액션아이템으로 연결할 수 없습니다."
+            return
+        }
+        do {
+            var candidatePlans = snapshot.plans
+            if let planIndex = candidatePlans.firstIndex(where: { $0.id == planID }) {
+                // Clear the old parent first. PlanHierarchy.attach then
+                // validates the same action against the new routine's span.
+                candidatePlans[planIndex].parentID = nil
+            }
+            let attached = try PlanHierarchy.attach(
+                child: candidatePlans[planIndex],
+                to: goalID,
+                in: candidatePlans
+            )
+            candidatePlans[planIndex] = attached
+            try PlanHierarchy.validate(candidatePlans)
+            snapshot.plans = candidatePlans
+            snapshot.plans.sort { lhs, rhs in
+                if lhs.span.start == rhs.span.start {
+                    return lhs.createdAt < rhs.createdAt
+                }
+                return lhs.span.start < rhs.span.start
+            }
+            await persist()
+        } catch PlanningError.childOutsideParent {
+            userFacingError = "액션아이템의 시간이 루틴 기간 안에 있어야 합니다."
+        } catch PlanningError.parentCycle {
+            userFacingError = "루틴의 하위 항목을 다시 연결할 수 없습니다."
+        } catch {
+            userFacingError = "액션아이템을 루틴에 연결하지 못했습니다."
+        }
+    }
+
+    /// Attach an existing activity/actual record to a goal. This is a
+    /// lightweight evidence link; it deliberately does not move the record
+    /// or create a hierarchy child plan.
+    func connectActualRecord(
+        _ actualID: UUID,
+        toGoal goalID: UUID
+    ) async {
+        guard let actualIndex = snapshot.actuals.firstIndex(where: {
+            $0.id == actualID
+        }), let goal = snapshot.plans.first(where: {
+            $0.id == goalID && !$0.isFixed && $0.status != .skipped
+        }) else {
+            userFacingError = "연결할 실제 기록 또는 루틴을 찾지 못했습니다."
+            return
+        }
+
+        let actual = snapshot.actuals[actualIndex]
+        guard actual.span().intersection(with: goal.span) != nil else {
+            userFacingError = "실제 기록 시간이 루틴 기간 안에 있어야 합니다."
+            return
+        }
+
+        if GoalRecordPolicy.isGoal(goal) {
+            snapshot.actuals[actualIndex].routineID = goal.id
+            snapshot.actuals[actualIndex].planID = nil
+        } else {
+            snapshot.actuals[actualIndex].planID = goal.id
+            snapshot.actuals[actualIndex].routineID = routineAncestorID(
+                for: goal.id
+            )
+        }
+        await persist()
+    }
+
+    /// Create a relationship only after the user explicitly taps the source
+    /// record and chooses a routine/action. Activity records use their typed
+    /// fields so routine progress can count them; location/travel/calendar
+    /// records are retained as generic graph links.
+    func connectRecordNode(
+        _ sourceNodeID: String,
+        to planID: UUID
+    ) async {
+        guard let target = snapshot.plans.first(where: { $0.id == planID }) else {
+            userFacingError = "연결할 루틴 또는 액션아이템을 찾지 못했습니다."
+            return
+        }
+        let targetNodeID = "\(GoalRecordPolicy.isGoal(target) ? "routine" : "action").\(planID.uuidString)"
+        guard sourceNodeID != targetNodeID else {
+            userFacingError = "같은 항목에는 연결할 수 없습니다."
+            return
+        }
+
+        if sourceNodeID.hasPrefix("automatic.actual."),
+           let actualID = UUID(
+               uuidString: String(sourceNodeID.dropFirst("automatic.actual.".count))
+           ), let actualIndex = snapshot.actuals.firstIndex(where: {
+               $0.id == actualID
+           }) {
+            if GoalRecordPolicy.isGoal(target) {
+                snapshot.actuals[actualIndex].routineID = planID
+            } else {
+                snapshot.actuals[actualIndex].planID = planID
+                snapshot.actuals[actualIndex].routineID = routineAncestorID(
+                    for: planID
+                )
+            }
+        } else {
+            snapshot.recordLinks.removeAll {
+                $0.fromNodeID == sourceNodeID
+                    && $0.toNodeID == targetNodeID
+            }
+            snapshot.recordLinks.append(
+                RecordLink(fromNodeID: sourceNodeID, toNodeID: targetNodeID)
+            )
+        }
+        await persist()
+    }
+
+    /// Save the portion of a routine that was actually performed.  The
+    /// interval is deliberately kept as a separate ActualRecord so the
+    /// planned block remains intact and the dashboard can distinguish a full
+    /// completion from a partial run.
+    func updateRoutineActualInterval(
+        planID: UUID,
+        actualID: UUID? = nil,
+        startedAt: Date,
+        endedAt: Date?
+    ) async {
+        guard let planIndex = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
+            userFacingError = "루틴을 찾지 못했습니다."
+            return
+        }
+        let minimumEnd = startedAt.addingTimeInterval(60)
+        let normalizedEnd = endedAt.map { max(minimumEnd, $0) }
+        let existingIndex = actualID.flatMap { id in
+            snapshot.actuals.firstIndex(where: { $0.id == id })
+        } ?? snapshot.actuals.lastIndex(where: {
+            $0.planID == planID && $0.source == .manual
+        })
+        let routineID = routineAncestorID(for: planID)
+
+        if let actualIndex = existingIndex {
+            snapshot.actuals[actualIndex].planID = planID
+            snapshot.actuals[actualIndex].routineID = routineID
+            snapshot.actuals[actualIndex].startedAt = startedAt
+            snapshot.actuals[actualIndex].endedAt = normalizedEnd
+            snapshot.actuals[actualIndex].title = snapshot.plans[planIndex].title
+            snapshot.actuals[actualIndex].categoryID = snapshot.plans[planIndex].categoryID
+        } else {
+            snapshot.actuals.append(
+                ActualRecord(
+                    planID: planID,
+                    routineID: routineID,
+                    title: snapshot.plans[planIndex].title,
+                    categoryID: snapshot.plans[planIndex].categoryID,
+                    startedAt: startedAt,
+                    endedAt: normalizedEnd,
+                    source: .manual,
+                    confidence: .high
+                )
+            )
+        }
+
+        let performed = normalizedEnd.map {
+            max(0, $0.timeIntervalSince(startedAt))
+        } ?? 0
+        let planned = snapshot.plans[planIndex].span.duration
+        if planned > 0, performed >= planned * 0.999 {
+            snapshot.plans[planIndex].status = .completed
+        } else if snapshot.plans[planIndex].status == .completed {
+            snapshot.plans[planIndex].status = .planned
+        }
+        snapshot.plans[planIndex].updatedAt = .now
+        await persist()
+    }
+
+    private func routineAncestorID(for planID: UUID) -> UUID? {
+        var currentID: UUID? = planID
+        var visited = Set<UUID>()
+        while let id = currentID,
+              visited.insert(id).inserted,
+              let plan = snapshot.plans.first(where: { $0.id == id }) {
+            if GoalRecordPolicy.isGoal(plan) { return plan.id }
+            currentID = plan.parentID
+        }
+        return nil
     }
 
     private static func cleanGoalRepeatRules(
@@ -1524,8 +1779,9 @@ final class AppModel {
     }
 
     private static func isGoalTitle(_ title: String) -> Bool {
-        title.trimmingCharacters(in: .whitespacesAndNewlines)
-            .hasPrefix("목표:")
+        let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return clean.hasPrefix(GoalRecordPolicy.currentPrefix)
+            || clean.hasPrefix(GoalRecordPolicy.legacyPrefix)
     }
 
     private func repeatActionItems(
@@ -1609,8 +1865,15 @@ final class AppModel {
 
     private func cleanGoalDisplayName(_ title: String) -> String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.hasPrefix("목표:") else { return trimmed }
-        let clean = trimmed.dropFirst("목표:".count)
+        let prefix: String
+        if trimmed.hasPrefix(GoalRecordPolicy.currentPrefix) {
+            prefix = GoalRecordPolicy.currentPrefix
+        } else if trimmed.hasPrefix(GoalRecordPolicy.legacyPrefix) {
+            prefix = GoalRecordPolicy.legacyPrefix
+        } else {
+            return trimmed
+        }
+        let clean = trimmed.dropFirst(prefix.count)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return clean.isEmpty ? trimmed : String(clean)
     }
@@ -1663,11 +1926,17 @@ final class AppModel {
             deletedIDs.contains($0.planID)
         }
         snapshot.actuals = snapshot.actuals.map { actual in
-            guard actual.planID.map(deletedIDs.contains) == true else {
+            guard actual.planID.map(deletedIDs.contains) == true
+                || actual.routineID.map(deletedIDs.contains) == true else {
                 return actual
             }
             var preserved = actual
-            preserved.planID = nil
+            if preserved.planID.map(deletedIDs.contains) == true {
+                preserved.planID = nil
+            }
+            if preserved.routineID.map(deletedIDs.contains) == true {
+                preserved.routineID = nil
+            }
             return preserved
         }
         selectedMemoPlanID = nil
@@ -1788,7 +2057,7 @@ final class AppModel {
         } catch PlanningError.fixedPlan {
             userFacingError = "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다."
         } catch PlanningError.childOutsideParent {
-            userFacingError = "하위 계획은 상위 목표 기간 안에서만 옮길 수 있습니다."
+            userFacingError = "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다."
         } catch {
             userFacingError = "계획을 옮기지 못했습니다."
         }
@@ -2028,6 +2297,28 @@ final class AppModel {
         await persist()
     }
 
+    func pausePlan(_ planID: UUID, at date: Date = .now) async {
+        guard let index = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
+            userFacingError = "선택한 계획을 찾지 못했습니다."
+            return
+        }
+        snapshot.plans[index].status = .planned
+        snapshot.plans[index].updatedAt = date
+        if let actualIndex = snapshot.actuals.lastIndex(where: {
+            $0.planID == planID && $0.endedAt == nil
+        }) {
+            snapshot.actuals[actualIndex].endedAt = max(
+                snapshot.actuals[actualIndex].startedAt,
+                date
+            )
+        }
+        try? await liveActivityController.stop(
+            plan: snapshot.plans[index],
+            catStyle: snapshot.settings.catStyle
+        )
+        await persist()
+    }
+
     func skipPlan(_ planID: UUID) async {
         guard let index = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
             userFacingError = "선택한 계획을 찾지 못했습니다."
@@ -2070,8 +2361,11 @@ final class AppModel {
         if summary.isFinal {
             if activeTrackingSession?.id == summary.sessionID {
                 activeTrackingSession = nil
+                trackingSessionWasRecovered = false
                 liveRouteState.session = nil
             }
+            TrackingSessionRecoveryStore.clear()
+            lastTrackingSessionRecoveryPersistAt = nil
         } else if activeTrackingSession?.id != summary.sessionID {
             let kind: TrackingKind = summary.workoutKind == .running
                 ? .running
@@ -2092,6 +2386,8 @@ final class AppModel {
                 readings: [],
                 lastUpdatedAt: summary.endedAt
             )
+            TrackingSessionRecoveryStore.save(session)
+            lastTrackingSessionRecoveryPersistAt = summary.endedAt
         }
         archiveRawDeviceData(
             source: .appleWatch,
@@ -2254,6 +2550,20 @@ final class AppModel {
         } else {
             healthKitMovementEvidence = []
         }
+        let refreshFingerprint = SensorRefreshFingerprint(
+            readingCount: archivedReadings.count,
+            latestReadingID: archivedReadings.last?.id,
+            latestMotionEnd: motionActivities.map(\.span.end).max(),
+            pedometerEnd: pedometer?.span.end,
+            latestHealthEvidenceEnd: healthKitMovementEvidence
+                .map(\.span.end)
+                .max(),
+            settingsHash: settings.hashValue
+        )
+        if sensorRefreshFingerprints[span.start] == refreshFingerprint {
+            return
+        }
+        sensorRefreshFingerprints[span.start] = refreshFingerprint
         archiveRawDeviceData(
             source: .iPhoneMotion,
             kind: "motion-activities",
@@ -2566,6 +2876,53 @@ final class AppModel {
             updateFloorEstimate(with: latestSensorReading)
         } else {
             latestAltitudeEstimate = nil
+        }
+        Task {
+            await persist()
+            await refreshSensorTimeline(containing: selectedDate)
+        }
+    }
+
+    /// 자주가는 곳의 감지 반경과 건물별 층고를 저장합니다.
+    /// 층고는 기압/상대고도 차이를 층수로 환산할 때 사용됩니다.
+    func updateFrequentPlaceDetails(
+        _ placeID: UUID,
+        name: String,
+        radiusMeters: Double,
+        floorHeightMeters: Double,
+        minimumDwellMinutes: Int,
+        isAutomaticRecordingEnabled: Bool
+    ) {
+        guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+            $0.id == placeID
+        }) else {
+            return
+        }
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleanName.isEmpty {
+            snapshot.settings.frequentPlaces[index].name = cleanName
+        }
+        snapshot.settings.frequentPlaces[index].radiusMeters = min(
+            max(radiusMeters, 30),
+            500
+        )
+        snapshot.settings.frequentPlaces[index].floorHeightMeters = min(
+            max(floorHeightMeters, 2.2),
+            5.0
+        )
+        snapshot.settings.frequentPlaces[index].minimumDwellMinutes = min(
+            max(minimumDwellMinutes, 1),
+            240
+        )
+        snapshot.settings.frequentPlaces[index]
+            .isAutomaticRecordingEnabled = isAutomaticRecordingEnabled
+        snapshot.settings.frequentPlaces[index].updatedAt = .now
+        snapshot.settings.frequentPlaces =
+            AppFeatureSettings.mergedFrequentPlaces(
+                snapshot.settings.frequentPlaces
+            )
+        if let latestSensorReading {
+            updateFloorEstimate(with: latestSensorReading)
         }
         Task {
             await persist()
@@ -2913,6 +3270,51 @@ final class AppModel {
         isSensorCollecting = true
     }
 
+    private func restoreTrackingSessionIfNeeded() async {
+        guard activeTrackingSession == nil,
+              settings.locationEnabled,
+              permissionState(for: .location).isGranted,
+              let sensorService,
+              var session = TrackingSessionRecoveryStore.read() else {
+            return
+        }
+
+        let now = Date.now
+        // A running/walking session left open for more than a day is almost
+        // certainly a stale crash record rather than a real workout.
+        guard session.endedAt == nil,
+              now.timeIntervalSince(session.startedAt) <= 24 * 60 * 60 else {
+            TrackingSessionRecoveryStore.clear()
+            return
+        }
+
+        session.endedAt = nil
+        let restored = sensorService.resumeTracking(session)
+        activeTrackingSession = restored
+        trackingSessionWasRecovered = true
+        lastTrackingSessionRecoveryPersistAt = now
+        let readings = (try? await sensorService.archivedReadings(
+            for: restored,
+            through: now
+        )) ?? []
+        let routeReadings = readings
+            .filter {
+                guard let point = $0.point else { return false }
+                return point.horizontalAccuracy >= 0
+                    && point.horizontalAccuracy <= 50
+            }
+            .suffix(4_000)
+        liveRouteState = LiveRouteState(
+            session: restored,
+            readings: Array(routeReadings),
+            lastUpdatedAt: readings.last?.timestamp ?? restored.startedAt
+        )
+        TrackingSessionRecoveryStore.save(restored)
+        Self.integrationLogger.notice(
+            "Recovered tracking session \(restored.id.uuidString, privacy: .public) with \(readings.count, privacy: .public) archived samples"
+        )
+    }
+
     private func updateFloorEstimate(
         with reading: SensorReading
     ) {
@@ -2952,7 +3354,7 @@ final class AppModel {
                     id: sessionID,
                     kind: kind,
                     startedAt: reading.timestamp,
-                    linkedPlanID: matchingExercisePlanID(for: kind, at: reading.timestamp),
+                    linkedPlanID: nil,
                     sourceDevice: reading.sourceDevice ?? .iPhone,
                     wasAutomaticallyDetected: kind != .automatic
                         && reading.sourceDevice == .iPhone
@@ -2966,6 +3368,22 @@ final class AppModel {
             session = activeTrackingSession
         }
 
+        if let session {
+            let shouldPersistSession = reading.trackingSessionEnded == true
+                || lastTrackingSessionRecoveryPersistAt.map {
+                    reading.timestamp.timeIntervalSince($0) >= 30
+                } ?? true
+            if shouldPersistSession {
+                if reading.trackingSessionEnded == true {
+                    TrackingSessionRecoveryStore.clear()
+                    lastTrackingSessionRecoveryPersistAt = nil
+                } else {
+                    TrackingSessionRecoveryStore.save(session)
+                    lastTrackingSessionRecoveryPersistAt = reading.timestamp
+                }
+            }
+        }
+
         if let point = reading.point,
            point.horizontalAccuracy >= 0,
            point.horizontalAccuracy <= 50 {
@@ -2975,9 +3393,9 @@ final class AppModel {
             } ?? true
             if shouldAppend {
                 liveRouteState.readings.append(reading)
-                if liveRouteState.readings.count > 4_000 {
+                if liveRouteState.readings.count > Self.liveRouteSoftLimit {
                     liveRouteState.readings.removeFirst(
-                        liveRouteState.readings.count - 4_000
+                        liveRouteState.readings.count - Self.liveRouteHardLimit
                     )
                 }
             }
@@ -2996,6 +3414,7 @@ final class AppModel {
                 finalizeTrackingSession(completed)
             }
             activeTrackingSession = nil
+            trackingSessionWasRecovered = false
             liveRouteState.session = nil
             scheduleSensorAnalysis(
                 containing: reading.timestamp,
@@ -3099,27 +3518,6 @@ final class AppModel {
                 confidence: .high
             )
         )
-    }
-
-    private func matchingExercisePlanID(
-        for kind: TrackingKind,
-        at date: Date
-    ) -> UUID? {
-        let keyword = kind == .running ? "달리" : "걷"
-        return snapshot.plans
-            .filter {
-                $0.status != .skipped
-                    && $0.span.contains(date)
-                    && ["activity", "exercise", "movement"].contains($0.categoryID)
-            }
-            .sorted {
-                let lhsMatch = $0.title.contains(keyword)
-                let rhsMatch = $1.title.contains(keyword)
-                return lhsMatch == rhsMatch
-                    ? $0.span.duration < $1.span.duration
-                    : lhsMatch && !rhsMatch
-            }
-            .first?.id
     }
 
     private func migrateLegacyFloorCalibration(
@@ -3295,10 +3693,17 @@ final class AppModel {
                 $0.resolvedLane == .movement
             }.count
             Self.integrationLogger.notice(
-                "Widget ground-truth publish: fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public)"
+                "Widget ground-truth publish: snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public), generated=\(payload.generatedAt.timeIntervalSince1970, privacy: .public), fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), items=\(payload.items.count, privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public)"
             )
             requestImmediateWidgetRefresh()
+            let diagnostics = TaptionWidgetSharedStore.diagnostics(now: now)
+            Self.integrationLogger.notice(
+                "Widget sync after publish: \(diagnostics.summary, privacy: .public)"
+            )
         } catch {
+            Self.integrationLogger.error(
+                "Widget ground-truth publish failed: \(error.localizedDescription, privacy: .public)"
+            )
             userFacingError = "위젯 데이터를 갱신하지 못했습니다. \(error.localizedDescription)"
         }
         // Watch payloads are a live execution queue, not a copy of the
@@ -3350,6 +3755,7 @@ final class AppModel {
 
     private func requestImmediateWidgetRefresh() {
         widgetReloadFollowupTask?.cancel()
+        Self.integrationLogger.notice("Widget timeline reload requested")
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
         WidgetCenter.shared.reloadAllTimelines()
         widgetReloadFollowupTask = Task { @MainActor in
@@ -3359,6 +3765,7 @@ final class AppModel {
                 ofKind: TaptionWidgetKind.schedule
             )
             WidgetCenter.shared.reloadAllTimelines()
+            Self.integrationLogger.notice("Widget timeline reload follow-up requested")
         }
     }
 
@@ -3397,19 +3804,30 @@ final class AppModel {
         )
     }
 
+    private func assignTimestampOnlySnapshot(_ value: TaptionDataSnapshot) {
+        // Persisting a sensor snapshot updates only the envelope timestamp.
+        // Mark that assignment so didSet does not compare every historical
+        // plan, actual, place and route just to discover that the collections
+        // are unchanged.
+        timestampOnlySnapshotAssignment = true
+        snapshot = value
+    }
+
     private func persist() async {
         do {
             var value = snapshot
             value.updatedAt = .now
-            snapshot = value
+            assignTimestampOnlySnapshot(value)
             try await repository.save(value)
             if permissionState(for: .cloud).isGranted,
                let cloudSyncService {
                 let uploaded = try await cloudSyncService.upload(
                     cloudPortableSnapshot(value)
                 )
-                snapshot.updatedAt = uploaded.updatedAt
-                try await repository.save(snapshot)
+                var uploadedValue = snapshot
+                uploadedValue.updatedAt = uploaded.updatedAt
+                assignTimestampOnlySnapshot(uploadedValue)
+                try await repository.save(uploadedValue)
             }
             publishWidgetPayload()
             if permissionState(for: .notifications).isGranted,
@@ -3494,10 +3912,20 @@ final class AppModel {
     }
 
     private func persistDeviceLocalSnapshot() async {
+        // Location and HealthKit callbacks can converge at the same moment.
+        // Coalesce those device-only commits so one sensor tick does not
+        // trigger duplicate disk writes, widget serialization and timeline
+        // reload requests. The in-memory ground truth remains current and the
+        // next scheduled commit catches any change inside this short window.
+        if let lastDeviceSnapshotPersistAt,
+           Date.now.timeIntervalSince(lastDeviceSnapshotPersistAt) < 1.5 {
+            return
+        }
+        lastDeviceSnapshotPersistAt = .now
         do {
             var value = snapshot
             value.updatedAt = .now
-            snapshot = value
+            assignTimestampOnlySnapshot(value)
             try await repository.save(value)
             publishWidgetPayload()
         } catch {

@@ -875,6 +875,7 @@ actor AppleWeatherContextService {
             // because the provider was not queried again yet.
             var context = cachedContext.context
             context.observedAt = date
+            context.isStale = false
             self.cachedContext = CachedWeatherContext(
                 location: cachedContext.location,
                 context: context
@@ -921,6 +922,7 @@ actor AppleWeatherContextService {
             if let cachedContext {
                 var context = cachedContext.context
                 context.observedAt = date
+                context.isStale = true
                 self.cachedContext = CachedWeatherContext(
                     location: cachedContext.location,
                     context: context
@@ -945,6 +947,8 @@ actor AppleWeatherContextService {
         }
         return WeatherContext(
             observedAt: date,
+            fetchedAt: date,
+            isStale: false,
             condition: String(describing: current.condition),
             symbolName: current.symbolName,
             temperatureCelsius: current.temperature.converted(to: .celsius).value,
@@ -978,7 +982,12 @@ private struct CachedWeatherContext {
         for newLocation: CLLocation,
         at date: Date
     ) -> Bool {
-        abs(date.timeIntervalSince(context.observedAt)) < 10 * 60
+        context.isStale != true
+            && abs(
+                date.timeIntervalSince(
+                    context.fetchedAt ?? context.observedAt
+                )
+            ) < 10 * 60
             && newLocation.distance(from: location) < 1_000
     }
 }
@@ -1043,6 +1052,8 @@ actor OpenMeteoWeatherContextService {
                 )
                 return WeatherContext(
                     observedAt: date,
+                    fetchedAt: date,
+                    isStale: false,
                     condition: presentation.condition,
                     symbolName: presentation.symbolName,
                     temperatureCelsius: payload.current.temperatureCelsius,
@@ -1607,6 +1618,17 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             linkedPlanID: linkedPlanID,
             wasAutomaticallyDetected: false
         )
+        activeTrackingSession = session
+        trackingSequence = 0
+        movementCandidateTask?.cancel()
+        stationaryStopTask?.cancel()
+        applyLocationPolicy(isMoving: true)
+        emit(force: true)
+        return session
+    }
+
+    @discardableResult
+    func resumeTracking(_ session: TrackingSession) -> TrackingSession {
         activeTrackingSession = session
         trackingSequence = 0
         movementCandidateTask?.cancel()

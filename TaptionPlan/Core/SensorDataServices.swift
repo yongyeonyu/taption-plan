@@ -285,6 +285,32 @@ final class TrackingSessionChunkArchive: @unchecked Sendable {
     }
 }
 
+/// Keeps the small piece of state needed to recover an active workout after
+/// the iPhone app is terminated or relaunched. Route samples themselves stay
+/// in the compressed archive; this store only contains the session envelope.
+enum TrackingSessionRecoveryStore {
+    private static let key = "active-tracking-session-v1"
+    private static let appGroup = "group.com.taption.plan"
+
+    private static var defaults: UserDefaults {
+        UserDefaults(suiteName: appGroup) ?? .standard
+    }
+
+    static func read() -> TrackingSession? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(TrackingSession.self, from: data)
+    }
+
+    static func save(_ session: TrackingSession) {
+        guard let data = try? JSONEncoder().encode(session) else { return }
+        defaults.set(data, forKey: key)
+    }
+
+    static func clear() {
+        defaults.removeObject(forKey: key)
+    }
+}
+
 actor SensorReadingArchive {
     private static let logger = Logger(
         subsystem: "com.taption.plan",
@@ -539,12 +565,27 @@ final class AppleSensorDataService {
     }
 
     @discardableResult
+    func resumeTracking(_ session: TrackingSession) -> TrackingSession {
+        collector.resumeTracking(session)
+    }
+
+    @discardableResult
     func endTracking() -> TrackingSession? {
         collector.endTracking()
     }
 
     func archivedReadings(in span: TimeSpan) async throws -> [SensorReading] {
         try await archive.readings(in: span)
+    }
+
+    func archivedReadings(
+        for session: TrackingSession,
+        through date: Date = .now
+    ) async throws -> [SensorReading] {
+        let end = max(session.startedAt, session.endedAt ?? date)
+        return try await archive.readings(
+            in: TimeSpan(start: session.startedAt, end: end)
+        ).filter { $0.trackingSessionID == session.id }
     }
 
     func recordExternalReadings(_ readings: [SensorReading]) async throws {

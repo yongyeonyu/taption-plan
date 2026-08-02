@@ -165,6 +165,9 @@ private struct CategoryEditorSheet: View {
         .stroller, .family, .shield, .health, .exercise, .sleep,
         .performance, .music, .travel, .location, .home, .meal,
         .cafe, .pet, .shopping, .nature, .calendar, .memo,
+        .movement, .activity, .relationship, .work, .community,
+        .student, .exam, .military, .athlete, .pregnancy, .caregiver,
+        .government, .food,
     ]
     private let colorHexes = [
         "#BEDAE3", "#D9E6C7", "#FED5CF",

@@ -1,5 +1,6 @@
 import CloudKit
 import Foundation
+import OSLog
 
 protocol PlanDataRepository: Sendable {
     func load() async throws -> TaptionDataSnapshot
@@ -45,12 +46,19 @@ enum RepositoryError: Error, Equatable {
 }
 
 actor FilePlanRepository: PlanDataRepository {
+    private static let logger = Logger(
+        subsystem: "com.taption.plan",
+        category: "WidgetSyncRepository"
+    )
+
     private let fileURL: URL
+    private let storageLabel: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    init(fileURL: URL) {
+    init(fileURL: URL, storageLabel: String = "file") {
         self.fileURL = fileURL
+        self.storageLabel = storageLabel
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -70,7 +78,8 @@ actor FilePlanRepository: PlanDataRepository {
         let directory = root.appendingPathComponent("TaptionPlan", isDirectory: true)
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         return FilePlanRepository(
-            fileURL: directory.appendingPathComponent("taption-data-v1.json")
+            fileURL: directory.appendingPathComponent("taption-data-v1.json"),
+            storageLabel: "application-support"
         )
     }
 
@@ -86,37 +95,61 @@ actor FilePlanRepository: PlanDataRepository {
         return FilePlanRepository(
             fileURL: directory.appendingPathComponent(
                 "taption-data-v1.json"
-            )
+            ),
+            storageLabel: "app-group"
         )
     }
 
     func load() async throws -> TaptionDataSnapshot {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            Self.logger.notice(
+                "Repository load empty: storage=\(self.storageLabel, privacy: .public)"
+            )
             return .empty
         }
-        let data = try Data(contentsOf: fileURL)
-        let snapshot = try decoder.decode(TaptionDataSnapshot.self, from: data)
-        guard snapshot.schemaVersion <= TaptionDataSnapshot.empty.schemaVersion else {
-            throw RepositoryError.unsupportedSchema(snapshot.schemaVersion)
+        do {
+            let data = try Data(contentsOf: fileURL)
+            let snapshot = try decoder.decode(TaptionDataSnapshot.self, from: data)
+            guard snapshot.schemaVersion <= TaptionDataSnapshot.empty.schemaVersion else {
+                throw RepositoryError.unsupportedSchema(snapshot.schemaVersion)
+            }
+            Self.logger.debug(
+                "Repository load: storage=\(self.storageLabel, privacy: .public), bytes=\(data.count, privacy: .public), updated=\(snapshot.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(snapshot.plans.count, privacy: .public), places=\(snapshot.places.count, privacy: .public), travel=\(snapshot.travel.count, privacy: .public)"
+            )
+            return snapshot
+        } catch {
+            Self.logger.error(
+                "Repository load failed: storage=\(self.storageLabel, privacy: .public), error=\(error.localizedDescription, privacy: .public)"
+            )
+            throw error
         }
-        return snapshot
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         var value = snapshot
         value.updatedAt = .now
-        let data = try encoder.encode(value)
-        try FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try data.write(
-            to: fileURL,
-            options: [
-                .atomic,
-                .completeFileProtectionUntilFirstUserAuthentication,
-            ]
-        )
+        do {
+            let data = try encoder.encode(value)
+            try FileManager.default.createDirectory(
+                at: fileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(
+                to: fileURL,
+                options: [
+                    .atomic,
+                    .completeFileProtectionUntilFirstUserAuthentication,
+                ]
+            )
+            Self.logger.notice(
+                "Repository save: storage=\(self.storageLabel, privacy: .public), bytes=\(data.count, privacy: .public), updated=\(value.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(value.plans.count, privacy: .public), places=\(value.places.count, privacy: .public), travel=\(value.travel.count, privacy: .public)"
+            )
+        } catch {
+            Self.logger.error(
+                "Repository save failed: storage=\(self.storageLabel, privacy: .public), error=\(error.localizedDescription, privacy: .public)"
+            )
+            throw error
+        }
     }
 
     func deleteAll() async throws {
@@ -388,7 +421,7 @@ enum SnapshotExporter {
 
     static func plansCSV(_ snapshot: TaptionDataSnapshot) -> Data {
         var rows = [
-            "kind,id,parent_id,title,category,start,end,status,source,duration_seconds"
+            "kind,id,parent_id,routine_id,title,category,start,end,status,source,duration_seconds"
         ]
 
         for plan in snapshot.plans {
@@ -396,6 +429,7 @@ enum SnapshotExporter {
                 "plan",
                 plan.id.uuidString,
                 plan.parentID?.uuidString ?? "",
+                "",
                 plan.title,
                 plan.categoryID,
                 plan.span.start.ISO8601Format(),
@@ -412,6 +446,7 @@ enum SnapshotExporter {
                 "actual",
                 actual.id.uuidString,
                 actual.planID?.uuidString ?? "",
+                actual.routineID?.uuidString ?? "",
                 actual.title,
                 actual.categoryID,
                 span.start.ISO8601Format(),

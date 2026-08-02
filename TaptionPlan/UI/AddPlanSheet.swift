@@ -187,7 +187,7 @@ struct AddPlanSheet: View {
     private var goalTitleField: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Text("목표 이름")
+                Text("루틴 이름")
                     .font(.taption(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Text("비워두면 \(selectedCategory.name)")
@@ -196,10 +196,10 @@ struct AddPlanSheet: View {
             }
 
             HStack(spacing: 7) {
-                Text("목표:")
+                Text("루틴:")
                     .font(.taption(size: 15, weight: .semibold))
                     .foregroundStyle(Color.tpInk.opacity(0.72))
-                TextField("목표 이름", text: $title)
+                TextField("루틴 이름", text: $title)
                     .font(.taption(size: 15, weight: .semibold))
                     .focused($titleFocused)
                     .submitLabel(.done)
@@ -264,7 +264,7 @@ struct AddPlanSheet: View {
 
     private var customGoalRangeCalendars: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("목표 기간 직접 지정")
+            Text("루틴 기간 직접 지정")
                 .font(.taption(size: 10.5, weight: .bold))
                 .foregroundStyle(Color.tpInk)
 
@@ -345,9 +345,9 @@ struct AddPlanSheet: View {
 
     private var goalConnectionPicker: some View {
         VStack(alignment: .leading, spacing: 5) {
-            sectionLabel("목표 연결", caption: "상위 목표 아래에 계획을 붙입니다")
+            sectionLabel("루틴 연결", caption: "상위 루틴 아래에 계획을 붙입니다")
             if rootPlans.isEmpty {
-                Text("연결할 목표가 없습니다")
+                Text("연결할 루틴이 없습니다")
                     .font(.taption(size: 10.5, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.vertical, 5)
@@ -471,12 +471,7 @@ struct AddPlanSheet: View {
     private func cleanGoalTitleInput(_ raw: String) -> String {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return "" }
-        if trimmed.hasPrefix("목표:") {
-            let withoutPrefix = trimmed.dropFirst("목표:".count)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            return withoutPrefix.isEmpty ? "" : "목표:\(withoutPrefix)"
-        }
-        return "목표:\(trimmed)"
+        return GoalRecordPolicy.displayTitle(trimmed)
     }
 
     private func goalDisplayTitle(_ raw: String) -> String {
@@ -663,8 +658,11 @@ struct AddPlanSheet: View {
     private func autofillGoalTitleIfNeeded(replacing oldCategoryName: String) {
         let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let unprefixed: String
-        if clean.hasPrefix("목표:") {
-            unprefixed = clean.dropFirst("목표:".count)
+        if clean.hasPrefix(GoalRecordPolicy.currentPrefix) {
+            unprefixed = clean.dropFirst(GoalRecordPolicy.currentPrefix.count)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if clean.hasPrefix(GoalRecordPolicy.legacyPrefix) {
+            unprefixed = clean.dropFirst(GoalRecordPolicy.legacyPrefix.count)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         } else {
             unprefixed = clean
@@ -1393,6 +1391,9 @@ private struct CustomCategoryScreen: View {
         .stroller, .family, .shield, .health, .exercise, .sleep,
         .performance, .music, .travel, .location, .home, .meal,
         .cafe, .pet, .shopping, .nature, .calendar, .event, .memo,
+        .movement, .activity, .relationship, .work, .community,
+        .student, .exam, .military, .athlete, .pregnancy, .caregiver,
+        .government, .food,
     ]
     private let colors: [Color] = [
         .tpProject, Color(red: 0.85, green: 0.90, blue: 0.78), .tpExercise,
@@ -1435,7 +1436,7 @@ private struct CustomCategoryScreen: View {
                     .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
 
                     VStack(alignment: .leading, spacing: 9) {
-                        Text("아이콘 · 24개")
+                        Text("아이콘 · \(CategoryIcon.allCases.count)개")
                             .font(.taption(size: 11, weight: .bold))
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 5) {
                             ForEach(icons, id: \.self) { icon in

@@ -199,18 +199,20 @@ struct TimelineAggregationEngine: Sendable {
         }
         let descendants = try PlanHierarchy.descendants(of: goalID, in: plans)
         let scopedPlans = descendants.isEmpty ? [goal] : descendants
-        let scopedIDs = Set([goal.id] + descendants.map(\.id))
+        let goalMatches = GoalActivityMatchingEngine.matches(
+            goal: goal,
+            plans: plans,
+            actuals: actuals,
+            asOf: asOf
+        )
 
         let plannedByCategory = accumulate(
             scopedPlans.map { ($0.categoryID, $0.span) },
             inside: goal.span
         )
         let actualByCategory = accumulate(
-            actuals
-                .filter { actual in
-                    guard let planID = actual.planID else { return false }
-                    return scopedIDs.contains(planID)
-                }
+            goalMatches
+                .map(\.actual)
                 .map { ($0.categoryID, $0.span(asOf: asOf)) },
             inside: goal.span
         )
@@ -223,9 +225,7 @@ struct TimelineAggregationEngine: Sendable {
                 inside: goal.span
             ),
             actualDuration: mergedDuration(
-                actuals
-                    .filter { $0.planID.map(scopedIDs.contains) == true }
-                    .map { $0.span(asOf: asOf) },
+                goalMatches.map { $0.actual.span(asOf: asOf) },
                 inside: goal.span
             ),
             categories: mergeDurations(
@@ -843,11 +843,27 @@ struct ReviewEngine: Sendable {
 }
 
 enum GoalRecordPolicy {
+    static let currentPrefix = "루틴:"
+    static let legacyPrefix = "목표:"
+
     static func isGoal(_ plan: PlanRecord) -> Bool {
         guard plan.parentID == nil else { return false }
-        return plan.title
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .hasPrefix("목표:")
+        let title = plan.title.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        return title.hasPrefix(currentPrefix)
+            || title.hasPrefix(legacyPrefix)
+    }
+
+    static func displayTitle(_ raw: String) -> String {
+        let title = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if title.hasPrefix(currentPrefix) {
+            return title
+        }
+        if title.hasPrefix(legacyPrefix) {
+            return currentPrefix + title.dropFirst(legacyPrefix.count)
+        }
+        return currentPrefix + title
     }
 
     static func visibleGoals(in plans: [PlanRecord]) -> [PlanRecord] {
@@ -859,6 +875,321 @@ enum GoalRecordPolicy {
                 }
                 return lhs.span.start < rhs.span.start
             }
+    }
+}
+
+/// How an actual record was associated with a goal. Only explicit links count;
+/// category/time overlap is never promoted to progress.
+enum GoalActualMatchKind: String, Equatable, Hashable, Sendable {
+    case linked
+
+    var displayName: String {
+        switch self {
+        case .linked: "연결됨"
+        }
+    }
+}
+
+struct GoalActualMatch: Identifiable, Equatable, Hashable, Sendable {
+    let actual: ActualRecord
+    let kind: GoalActualMatchKind
+    let overlapDuration: TimeInterval
+
+    var id: UUID { actual.id }
+}
+
+/// Resolves activity evidence for a goal without inference. A record becomes
+/// evidence only after the user explicitly links it to this routine or one of
+/// its action items.
+enum GoalActivityMatchingEngine {
+    static func matches(
+        goal: PlanRecord,
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        asOf: Date = .now
+    ) -> [GoalActualMatch] {
+        let descendants = (try? PlanHierarchy.descendants(
+            of: goal.id,
+            in: plans
+        )) ?? []
+        let scopedIDs = Set([goal.id] + descendants.map(\.id))
+        return actuals.compactMap { actual in
+            if let planID = actual.planID {
+                // A record explicitly attached elsewhere must not be copied
+                // into another goal merely because its category/time match.
+                guard scopedIDs.contains(planID) else { return nil }
+                return GoalActualMatch(
+                    actual: actual,
+                    kind: .linked,
+                    overlapDuration: actual.span(asOf: asOf).duration
+                )
+            }
+
+            if let routineID = actual.routineID,
+               scopedIDs.contains(routineID) {
+                return GoalActualMatch(
+                    actual: actual,
+                    kind: .linked,
+                    overlapDuration: actual.span(asOf: asOf).duration
+                )
+            }
+
+            return nil
+        }
+        .sorted {
+            if $0.actual.startedAt == $1.actual.startedAt {
+                return $0.actual.id.uuidString < $1.actual.id.uuidString
+            }
+            return $0.actual.startedAt < $1.actual.startedAt
+        }
+    }
+
+    static func progress(
+        for plan: PlanRecord,
+        matches: [GoalActualMatch],
+        asOf: Date = .now
+    ) -> Double {
+        let spans = matches.compactMap { match -> TimeSpan? in
+            let actual = match.actual
+            if actual.planID == plan.id || actual.routineID == plan.id {
+                return actual.span(asOf: asOf).intersection(with: plan.span)
+            }
+            return nil
+        }
+        guard plan.span.duration > 0 else { return 0 }
+        let covered = unionDuration(spans)
+        return min(1, max(0, covered / plan.span.duration))
+    }
+
+    static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
+        let ordered = spans
+            .filter { $0.duration > 0 }
+            .sorted { $0.start < $1.start }
+        guard var current = ordered.first else { return 0 }
+        var total: TimeInterval = 0
+        for span in ordered.dropFirst() {
+            if span.start <= current.end {
+                current.end = max(current.end, span.end)
+            } else {
+                total += current.duration
+                current = span
+            }
+        }
+        return total + current.duration
+    }
+}
+
+// MARK: - Automatic · routine · action record graph
+
+enum RecordLayer: String, CaseIterable, Sendable {
+    case automatic = "자동"
+    case routine = "루틴"
+    case action = "액션"
+}
+
+struct RecordGraphNode: Identifiable, Hashable, Sendable {
+    let id: String
+    let layer: RecordLayer
+    let title: String
+    let span: TimeSpan
+    let categoryID: String?
+}
+
+struct RecordGraphEdge: Identifiable, Hashable, Sendable {
+    let from: String
+    let to: String
+    var id: String { "\(from)->\(to)" }
+}
+
+struct RecordRelationshipGraph: Sendable {
+    let nodes: [RecordGraphNode]
+    let edges: [RecordGraphEdge]
+    var isEmpty: Bool { nodes.isEmpty }
+}
+
+/// Keeps automatic evidence, a routine, and its concrete action as separate
+/// nodes while exposing only explicit relationships. Time/category overlap is
+/// deliberately not treated as a connection.
+enum RecordRelationshipEngine {
+    static func make(
+        inside span: TimeSpan,
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        calendarEvents: [CalendarRecord],
+        places: [PlaceStay],
+        travel: [TravelSegment],
+        recordLinks: [RecordLink] = []
+    ) -> RecordRelationshipGraph {
+        var nodes: [RecordGraphNode] = []
+        var edges: [RecordGraphEdge] = []
+        var nodeIDs = Set<String>()
+        var edgeIDs = Set<String>()
+        let plansByID = Dictionary(
+            plans.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        nodes.reserveCapacity(
+            calendarEvents.count
+                + places.count
+                + travel.count
+                + actuals.count
+                + plans.count
+        )
+
+        func appendEdge(from: String, to: String) {
+            let edge = RecordGraphEdge(from: from, to: to)
+            guard edgeIDs.insert(edge.id).inserted else { return }
+            edges.append(edge)
+        }
+
+        func append(_ node: RecordGraphNode) {
+            guard node.span.intersection(with: span) != nil,
+                  nodeIDs.insert(node.id).inserted else { return }
+            nodes.append(node)
+        }
+
+        for event in calendarEvents {
+            append(RecordGraphNode(
+                id: "automatic.calendar.\(event.id)",
+                layer: .automatic,
+                title: event.title,
+                span: event.span,
+                categoryID: "calendar"
+            ))
+        }
+        for place in places {
+            append(RecordGraphNode(
+                id: "automatic.place.\(place.id.uuidString)",
+                layer: .automatic,
+                title: place.floor.map { "\(place.displayName) · \($0)층" } ?? place.displayName,
+                span: place.span,
+                categoryID: "location"
+            ))
+        }
+        for segment in travel {
+            append(RecordGraphNode(
+                id: "automatic.travel.\(segment.id.uuidString)",
+                layer: .automatic,
+                title: travelTitle(segment.mode),
+                span: segment.span,
+                categoryID: "movement"
+            ))
+        }
+        for actual in actuals where isAutomaticActual(actual) {
+            append(RecordGraphNode(
+                id: "automatic.actual.\(actual.id.uuidString)",
+                layer: .automatic,
+                title: actual.title,
+                span: actual.span(),
+                categoryID: actual.categoryID
+            ))
+        }
+
+        for plan in plans where isRoutine(plan) {
+            append(RecordGraphNode(
+                id: "routine.\(plan.id.uuidString)",
+                layer: .routine,
+                title: GoalRecordPolicy.displayTitle(plan.title),
+                span: plan.span,
+                categoryID: plan.categoryID
+            ))
+        }
+        for plan in plans where isAction(plan) {
+            append(RecordGraphNode(
+                id: "action.\(plan.id.uuidString)",
+                layer: .action,
+                title: plan.title,
+                span: plan.span,
+                categoryID: plan.categoryID
+            ))
+        }
+
+        let routines = nodes.filter { $0.layer == .routine }
+        let actions = nodes.filter { $0.layer == .action }
+        let routineNodesByPlanID = Dictionary(
+            routines.compactMap { node -> (UUID, RecordGraphNode)? in
+                let rawID = node.id.dropFirst("routine.".count)
+                guard let id = UUID(uuidString: String(rawID)) else {
+                    return nil
+                }
+                return (id, node)
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for action in actions {
+            guard let actionID = UUID(
+                uuidString: action.id.replacingOccurrences(of: "action.", with: "")
+            ), let parentID = plansByID[actionID]?.parentID,
+                  let parent = routineNodesByPlanID[parentID] else {
+                continue
+            }
+            appendEdge(from: parent.id, to: action.id)
+        }
+
+        for actual in actuals {
+            let actualNodeID = "automatic.actual.\(actual.id.uuidString)"
+            guard nodeIDs.contains(actualNodeID) else { continue }
+            if let routineID = actual.routineID {
+                let nodeID = "routine.\(routineID.uuidString)"
+                if nodeIDs.contains(nodeID) {
+                    appendEdge(from: actualNodeID, to: nodeID)
+                }
+            }
+            if let planID = actual.planID {
+                let nodeID = "action.\(planID.uuidString)"
+                if nodeIDs.contains(nodeID) {
+                    appendEdge(from: actualNodeID, to: nodeID)
+                }
+            }
+        }
+
+        for link in recordLinks
+        where nodeIDs.contains(link.fromNodeID)
+            && nodeIDs.contains(link.toNodeID) {
+            appendEdge(from: link.fromNodeID, to: link.toNodeID)
+        }
+        return RecordRelationshipGraph(
+            nodes: nodes.sorted { lhs, rhs in
+                let leftLayer = RecordLayer.allCases.firstIndex(of: lhs.layer) ?? 0
+                let rightLayer = RecordLayer.allCases.firstIndex(of: rhs.layer) ?? 0
+                return leftLayer == rightLayer
+                    ? lhs.span.start < rhs.span.start
+                    : leftLayer < rightLayer
+            },
+            edges: edges
+        )
+    }
+
+    private static func isAutomaticActual(_ actual: ActualRecord) -> Bool {
+        actual.categoryID == "sleep"
+            || actual.categoryID == "activity"
+            || actual.source == .healthKit
+            || actual.source == .appleWatch
+            || actual.source == .location
+    }
+
+    private static func isRoutine(_ plan: PlanRecord) -> Bool {
+        GoalRecordPolicy.isGoal(plan) || plan.origin == .repeatRule
+    }
+
+    private static func isAction(_ plan: PlanRecord) -> Bool {
+        !isRoutine(plan) && plan.origin != .calendar
+    }
+
+    private static func travelTitle(_ mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .cycling: "자전거"
+        case .bus: "버스"
+        case .subway: "지하철"
+        case .taxi: "택시"
+        case .car: "자가용"
+        case .train: "기차"
+        case .airplane: "비행기"
+        case .ship: "배"
+        }
     }
 }
 

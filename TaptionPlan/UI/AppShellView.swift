@@ -105,10 +105,8 @@ struct AppShellView: View {
                 CatPickerView(model: model)
             case .categoryManager:
                 CategoryManagerView(model: model)
-            case .onboarding:
-                OnboardingView(model: model)
-            case .templateReview:
-                TemplateReviewView(model: model)
+            case .categorySetup:
+                CategorySetupView(model: model)
             case .widgetPreview:
                 WidgetPreviewView(model: model)
             }

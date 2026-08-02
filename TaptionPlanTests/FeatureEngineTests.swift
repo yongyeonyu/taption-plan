@@ -545,35 +545,14 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(report.actualDuration, hour)
     }
 
-    func testRepresentativeTemplatesAndPrivacyDefaults() throws {
-        XCTAssertEqual(TemplateCatalog.representativeSelections.count, 3)
-        let employeeParent = try TemplateCatalog.apply(
-            TemplateCatalog.representativeSelections[0]
-        )
-        XCTAssertTrue(employeeParent.visibleCategoryIDs.contains("routine"))
-        XCTAssertTrue(employeeParent.quickAdds.contains("등하원"))
-
-        let military = try TemplateCatalog.apply(
-            ProfileSelection(roleID: "military")
-        )
-        XCTAssertEqual(military.suggestedPermissions[.location], false)
-        XCTAssertEqual(military.suggestedPermissions[.calendar], false)
-
-        XCTAssertThrowsError(
-            try TemplateCatalog.apply(
-                ProfileSelection(
-                    roleID: "employee",
-                    situationIDs: ["parenting", "leave", "side-job"]
-                )
-            )
-        ) {
-            XCTAssertEqual($0 as? TemplateError, .tooManySituations)
-        }
-    }
-
     func testAllCustomCategoryRequirementsExist() throws {
-        XCTAssertEqual(CategoryCatalog.builtIn.count, 15)
-        XCTAssertGreaterThanOrEqual(CategoryIcon.allCases.count, 24)
+        XCTAssertEqual(CategoryCatalog.builtIn.count, 32)
+        XCTAssertGreaterThanOrEqual(CategoryIcon.allCases.count, 32)
+        XCTAssertEqual(
+            Set(CategoryCatalog.builtIn.map(\.icon)).count,
+            CategoryCatalog.builtIn.count,
+            "기본 대분류 아이콘은 서로 겹치지 않아야 합니다."
+        )
         let custom = try CategoryCatalog.makeCustom(
             name: "봉사",
             icon: .family,
@@ -1567,6 +1546,95 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(place.point)
         XCTAssertNil(place.floor)
         XCTAssertNil(place.floorCalibration)
+    }
+
+    func testFrequentPlaceFloorHeightPersistsAndFeedsCalibration() throws {
+        let base = makeDate(2026, 8, 1, 9)
+        let place = FrequentPlace(
+            kind: .company,
+            name: "사무실",
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 60,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            floor: 10,
+            referenceRelativeAltitudeMeters: 0,
+            floorCapturedAt: base,
+            floorHeightMeters: 4.2
+        )
+
+        let data = try JSONEncoder().encode(place)
+        let decoded = try JSONDecoder().decode(FrequentPlace.self, from: data)
+
+        XCTAssertEqual(decoded.floorHeightMeters, 4.2, accuracy: 0.001)
+        XCTAssertEqual(
+            decoded.floorCalibration?.floorHeightMeters ?? 0,
+            4.2,
+            accuracy: 0.001
+        )
+    }
+
+    func testFrequentPlaceAutomaticRecordingHonorsDwellAndToggle() {
+        let base = makeDate(2026, 8, 1, 9)
+        let anchor = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 60,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let shortStay = PlaceStay(
+            placeKey: "gps-short",
+            displayName: "자동 감지 장소",
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(5 * 60)
+            ),
+            confidence: .medium,
+            point: anchor
+        )
+        let longStay = PlaceStay(
+            placeKey: "gps-long",
+            displayName: "자동 감지 장소",
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(15 * 60)
+            ),
+            confidence: .medium,
+            point: anchor
+        )
+        let place = FrequentPlace(
+            kind: .company,
+            name: "회사",
+            point: anchor,
+            floor: 10,
+            minimumDwellMinutes: 10
+        )
+
+        let shortResolved = FrequentPlaceResolutionEngine().applying(
+            [place],
+            to: [shortStay],
+            readings: []
+        )
+        let longResolved = FrequentPlaceResolutionEngine().applying(
+            [place],
+            to: [longStay],
+            readings: []
+        )
+        var disabled = place
+        disabled.isAutomaticRecordingEnabled = false
+        let disabledResolved = FrequentPlaceResolutionEngine().applying(
+            [disabled],
+            to: [longStay],
+            readings: []
+        )
+
+        XCTAssertEqual(shortResolved.first?.displayName, "자동 감지 장소")
+        XCTAssertEqual(longResolved.first?.displayName, "회사")
+        XCTAssertEqual(disabledResolved.first?.displayName, "자동 감지 장소")
     }
 
     func testSleepAnalysisBuildsOneSessionWithoutDoubleCountingOverlaps() {
@@ -2611,6 +2679,49 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testWidgetFingerprintStaysStableWhileHealthActivityIsOpen() {
+        let startedAt = makeDate(2026, 8, 1, 18, 0)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = startedAt
+        snapshot.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "걷기",
+                categoryID: "walking",
+                startedAt: startedAt.addingTimeInterval(-10 * 60),
+                source: .healthKit
+            ),
+        ]
+
+        let first = TaptionWidgetPayloadFactory.make(
+            from: snapshot,
+            now: startedAt
+        )
+        let later = TaptionWidgetPayloadFactory.make(
+            from: snapshot,
+            now: startedAt.addingTimeInterval(5 * 60)
+        )
+
+        XCTAssertEqual(first.sourceFingerprint, later.sourceFingerprint)
+        XCTAssertEqual(
+            TaptionWidgetSyncStatus.compare(
+                groundTruth: later,
+                cached: first
+            ),
+            .synchronized(first.generatedAt)
+        )
+
+        var savedLater = later
+        savedLater.sourceSnapshotUpdatedAt = startedAt.addingTimeInterval(1)
+        XCTAssertEqual(
+            TaptionWidgetSyncStatus.compare(
+                groundTruth: savedLater,
+                cached: first
+            ),
+            .pending
+        )
+    }
+
     func testWidgetRejectsNewerLegacyCacheWithoutGroundTruthFingerprint() {
         let now = makeDate(2026, 8, 1, 18, 0)
         var groundTruth = TaptionWidgetPayloadFactory.make(
@@ -2652,6 +2763,45 @@ final class FeatureEngineTests: XCTestCase {
                 cached: staleCache
             ),
             groundTruth
+        )
+    }
+
+    func testWidgetGroundTruthWinsWhenFingerprintsDifferAtSameSourceRevision() {
+        let now = makeDate(2026, 8, 1, 18, 0)
+        var groundTruth = TaptionWidgetPayload.empty
+        groundTruth.generatedAt = now
+        groundTruth.sourceSnapshotUpdatedAt = now
+        groundTruth.sourceFingerprint = "app-ground-truth"
+        groundTruth.items = [
+            TaptionWidgetItem(
+                id: UUID(),
+                title: "집",
+                categoryID: "location",
+                startsAt: now.addingTimeInterval(-hour),
+                endsAt: now.addingTimeInterval(hour),
+                status: "recorded",
+                isFixed: true,
+                lane: .location
+            ),
+        ]
+        var cached = groundTruth
+        cached.generatedAt = now.addingTimeInterval(60)
+        cached.sourceFingerprint = "stale-cache"
+        cached.items = []
+
+        XCTAssertEqual(
+            TaptionWidgetPayloadSyncPolicy.selectionReason(
+                groundTruth: groundTruth,
+                cached: cached
+            ),
+            .groundTruth
+        )
+        XCTAssertEqual(
+            TaptionWidgetPayloadSyncPolicy.freshest(
+                groundTruth: groundTruth,
+                cached: cached
+            ).items.map(\.title),
+            ["집"]
         )
     }
 
@@ -2707,6 +2857,16 @@ final class FeatureEngineTests: XCTestCase {
                 rowCount: 5
             ),
             20,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            TaptionWidgetAutoScrollEngine.offset(
+                at: reference.addingTimeInterval(3.5),
+                contentHeight: 80,
+                viewportHeight: 100,
+                rowCount: 5
+            ),
+            0,
             accuracy: 0.001
         )
         XCTAssertEqual(
@@ -2798,6 +2958,14 @@ final class FeatureEngineTests: XCTestCase {
             at: reference.addingTimeInterval((step * 20) + 0.01),
             preferredAction: .sitting
         )
+        let movingAfterActionHold = TaptionWidgetCatWalkEngine.pose(
+            at: reference.addingTimeInterval((step * 24) + 0.01),
+            preferredAction: .sitting
+        )
+        let farActionHold = TaptionWidgetCatWalkEngine.pose(
+            at: reference.addingTimeInterval((step * 30) + 0.01),
+            preferredAction: .sleeping
+        )
         let looped = TaptionWidgetCatWalkEngine.pose(
             at: reference.addingTimeInterval(
                 TaptionWidgetCatWalkEngine.sequenceDuration + 0.01
@@ -2830,6 +2998,11 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(sittingAtNearEdge.facesLeft)
         XCTAssertTrue(sittingAtNearEdge.isAtEndpoint)
         XCTAssertEqual(sittingAtNearEdge.action, .sitting)
+        XCTAssertGreaterThan(movingAfterActionHold.progress, 0)
+        XCTAssertEqual(movingAfterActionHold.action, .walking)
+        XCTAssertEqual(farActionHold.progress, 1, accuracy: 0.001)
+        XCTAssertTrue(farActionHold.facesLeft)
+        XCTAssertEqual(farActionHold.action, .sleeping)
         XCTAssertEqual(looped.progress, 0, accuracy: 0.001)
         XCTAssertFalse(looped.facesLeft)
         XCTAssertTrue(looped.isAtEndpoint)
@@ -2964,7 +3137,7 @@ final class FeatureEngineTests: XCTestCase {
         try await repository.save(snapshot)
         let restored = try await repository.load()
 
-        XCTAssertEqual(restored.categories.count, 15)
+        XCTAssertEqual(restored.categories.count, CategoryCatalog.builtIn.count)
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
     }
 
@@ -3237,6 +3410,55 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(heavyRain.symbolName, "cloud.heavyrain.fill")
     }
 
+    func testWeatherFreshnessMetadataSurvivesRoundTrip() throws {
+        let fetchedAt = makeDate(2026, 8, 1, 18)
+        let context = WeatherContext(
+            observedAt: fetchedAt,
+            fetchedAt: fetchedAt,
+            isStale: true,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 28
+        )
+        let decoded = try JSONDecoder().decode(
+            WeatherContext.self,
+            from: JSONEncoder().encode(context)
+        )
+        XCTAssertEqual(decoded.fetchedAt, fetchedAt)
+        XCTAssertEqual(decoded.isStale, true)
+    }
+
+    func testWidgetSyncStatusUsesGroundTruthFingerprint() {
+        var groundTruth = TaptionWidgetPayload.empty
+        groundTruth.sourceFingerprint = "ground-truth"
+        var cached = groundTruth
+        cached.generatedAt = .now
+        XCTAssertEqual(
+            TaptionWidgetSyncStatus.compare(
+                groundTruth: groundTruth,
+                cached: cached
+            ),
+            .synchronized(cached.generatedAt)
+        )
+
+        cached.sourceFingerprint = "old"
+        XCTAssertEqual(
+            TaptionWidgetSyncStatus.compare(
+                groundTruth: groundTruth,
+                cached: cached
+            ),
+            .pending
+        )
+        groundTruth.sourceFingerprint = nil
+        XCTAssertEqual(
+            TaptionWidgetSyncStatus.compare(
+                groundTruth: groundTruth,
+                cached: cached
+            ),
+            .unavailable
+        )
+    }
+
     func testDomesticAirQualityGradeBoundaries() {
         XCTAssertEqual(AirQualityGrade.pm10(30), .good)
         XCTAssertEqual(AirQualityGrade.pm10(31), .moderate)
@@ -3405,6 +3627,94 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testSleepActualCanBeLinkedToRoutineAndActionInRelationshipGraph() {
+        let start = makeDate(2026, 8, 1, 22)
+        let routine = PlanRecord(
+            title: "루틴:수면",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(10 * hour)),
+            categoryID: "sleep"
+        )
+        let action = PlanRecord(
+            title: "취침 준비",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            categoryID: "sleep",
+            parentID: routine.id
+        )
+        let sleep = ActualRecord(
+            planID: action.id,
+            routineID: routine.id,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start.addingTimeInterval(15 * 60),
+            endedAt: start.addingTimeInterval(8 * hour),
+            source: .appleWatch
+        )
+
+        let graph = RecordRelationshipEngine.make(
+            inside: routine.span,
+            plans: [routine, action],
+            actuals: [sleep],
+            calendarEvents: [],
+            places: [],
+            travel: []
+        )
+
+        XCTAssertTrue(
+            graph.edges.contains {
+                $0.from == "automatic.actual.\(sleep.id.uuidString)"
+                    && $0.to == "routine.\(routine.id.uuidString)"
+            }
+        )
+        XCTAssertTrue(
+            graph.edges.contains {
+                $0.from == "automatic.actual.\(sleep.id.uuidString)"
+                    && $0.to == "action.\(action.id.uuidString)"
+            }
+        )
+        XCTAssertTrue(
+            graph.edges.contains {
+                $0.from == "routine.\(routine.id.uuidString)"
+                    && $0.to == "action.\(action.id.uuidString)"
+            }
+        )
+    }
+
+    func testGoalActivityMatchingCountsExplicitlyLinkedSleepOnly() {
+        let start = makeDate(2026, 8, 1, 22)
+        let routine = PlanRecord(
+            title: "루틴:수면",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(10 * hour)),
+            categoryID: "sleep"
+        )
+        let linked = ActualRecord(
+            planID: nil,
+            routineID: routine.id,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(7 * hour),
+            source: .healthKit
+        )
+        let unlinked = ActualRecord(
+            planID: nil,
+            routineID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(7 * hour),
+            source: .healthKit
+        )
+
+        XCTAssertEqual(
+            GoalActivityMatchingEngine.matches(
+                goal: routine,
+                plans: [routine],
+                actuals: [linked, unlinked]
+            ).map(\.actual.id),
+            [linked.id]
+        )
+    }
+
     func testGoalRecordPolicyKeepsOrdinaryPlansOutOfGoalTab() {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let goal = PlanRecord(
@@ -3470,6 +3780,18 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(
             formatter.title(for: date, scale: .year),
             "2026년"
+        )
+        XCTAssertEqual(
+            formatter.playheadTitle(for: date, scale: .week),
+            "7월 31일 (금)"
+        )
+        XCTAssertEqual(
+            formatter.playheadTitle(for: date, scale: .month),
+            "7월 31일 (금)"
+        )
+        XCTAssertEqual(
+            formatter.playheadTitle(for: date, scale: .year),
+            "7월 31일 (금)"
         )
     }
 

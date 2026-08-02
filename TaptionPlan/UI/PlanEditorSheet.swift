@@ -270,11 +270,11 @@ struct PlanEditorSheet: View {
 
     private var hierarchyCard: some View {
         HStack {
-            Text("상위 목표")
+            Text("상위 루틴")
                 .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
             Spacer()
-            Picker("상위 목표", selection: $parentID) {
+            Picker("상위 루틴", selection: $parentID) {
                 Text("없음").tag(UUID?.none)
                 ForEach(possibleParents) { plan in
                     Text(plan.title).tag(UUID?.some(plan.id))
@@ -289,7 +289,9 @@ struct PlanEditorSheet: View {
     private var showsGoalRepeatEditor: Bool {
         parentID == nil
             && title.trimmingCharacters(in: .whitespacesAndNewlines)
-                .hasPrefix("목표:")
+                .hasPrefix(GoalRecordPolicy.currentPrefix)
+                || title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .hasPrefix(GoalRecordPolicy.legacyPrefix)
     }
 
     private func save() {

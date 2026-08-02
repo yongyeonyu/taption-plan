@@ -17,8 +17,13 @@ struct SettingsView: View {
     @State private var sharedExport: ShareableURL?
     @State private var showsDeleteConfirmation = false
     @State private var customFrequentPlaceName = ""
-    @State private var floorPromptPlace: FrequentPlace?
-    @State private var frequentPlaceFloor = 1
+    @State private var selectedFrequentPlace: FrequentPlace?
+    @State private var expandedSettingsSections: Set<String> = [
+        "나에게 맞추기",
+        "화면과 동작",
+        "앱 연동",
+        "데이터와 개인정보",
+    ]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,7 +38,10 @@ struct SettingsView: View {
                     accountCard
                     proCard
 
-                    settingsSection("나에게 맞추기") {
+                    settingsSection(
+                        "나에게 맞추기",
+                        summary: "\(model.snapshot.categories.count)개 대분류"
+                    ) {
                         settingsRow(
                             icon: "person.crop.circle.badge.checkmark",
                             iconBackground: Color(
@@ -47,14 +55,17 @@ struct SettingsView: View {
                                 blue: 0.55
                             ),
                             title: "시작 구성",
-                            subtitle: "역할 · 상황 · 목표와 추천 대분류 설정",
-                            value: model.currentProfileDisplayName
+                            subtitle: "사용할 대분류를 선택하고 시간표에 표시",
+                            value: "(model.selectedSetupCategoryCount)개 선택"
                         ) {
                             model.openInitialSetup()
                         }
                     }
 
-                    settingsSection("화면과 동작") {
+                    settingsSection(
+                        "화면과 동작",
+                        summary: "현재 \(TimeScale(timelineLevel: model.settings.startScale).rawValue)"
+                    ) {
                         settingsScaleRow(
                             icon: "chart.bar.xaxis",
                             title: "시간표 시작 화면",
@@ -105,9 +116,13 @@ struct SettingsView: View {
                         ) {
                             model.detail = .categoryManager
                         }
+                        frequentPlacesRow
                     }
 
-                    settingsSection("앱 연동") {
+                    settingsSection(
+                        "앱 연동",
+                        summary: model.integrationStatusSummary
+                    ) {
                         settingsToggleRow(
                             icon: "photo",
                             iconBackground: .tpPhoto,
@@ -192,7 +207,6 @@ struct SettingsView: View {
                             )
                         )
                         locationIntegrationRow
-                        frequentPlacesRow
                         sensorCollectionProfileRow
                         settingsToggleRow(
                             icon: "cloud.sun",
@@ -209,9 +223,6 @@ struct SettingsView: View {
                                 }
                             )
                         )
-                    }
-
-                    settingsSection("데이터와 개인정보") {
                         settingsRow(
                             icon: "icloud",
                             iconBackground: Color(
@@ -235,6 +246,12 @@ struct SettingsView: View {
                                 await model.synchronizeCloud()
                             }
                         }
+                    }
+
+                    settingsSection(
+                        "데이터와 개인정보",
+                        summary: "기기 안에 안전하게 저장"
+                    ) {
                         settingsToggleRow(
                             icon: "lock.shield",
                             title: "위젯 개인정보",
@@ -489,10 +506,8 @@ struct SettingsView: View {
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
         }
-        .sheet(item: $floorPromptPlace) { place in
-            frequentPlaceFloorPicker(place)
-                .presentationDetents([.height(310)])
-                .presentationDragIndicator(.visible)
+        .sheet(item: $selectedFrequentPlace) { place in
+            FrequentPlaceDetailView(model: model, placeID: place.id)
         }
     }
 
@@ -504,146 +519,53 @@ struct SettingsView: View {
     }
 
     private func frequentPlaceChip(_ place: FrequentPlace) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 5) {
-                Image(systemName: place.kind.systemImage)
-                    .font(.taption(size: 9, weight: .bold))
-                    .foregroundStyle(Color.tpPlaceDark)
-                Text(place.name)
-                    .font(.taption(size: 8.8, weight: .bold))
-                    .foregroundStyle(Color.tpInk)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-                if place.point != nil {
-                    Image(systemName: "checkmark.circle.fill")
+        Button {
+            selectedFrequentPlace = place
+        } label: {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 5) {
+                    Image(systemName: place.kind.systemImage)
+                        .font(.taption(size: 9, weight: .bold))
+                        .foregroundStyle(Color.tpPlaceDark)
+                    Text(place.name)
                         .font(.taption(size: 8.8, weight: .bold))
-                        .foregroundStyle(Color.tpPlaceDark)
-                }
-            }
-
-            Text(frequentPlaceSubtitle(place))
-                .font(.taption(size: 7.2, weight: .semibold))
-                .foregroundStyle(Color.tpSecondary)
-                .lineLimit(1)
-
-            HStack(spacing: 4) {
-                Button {
-                    frequentPlaceFloor = place.floor ?? 1
-                    floorPromptPlace = place
-                } label: {
-                    Text("현재 위치 설정")
-                        .font(.taption(size: 7.5, weight: .bold))
-                        .foregroundStyle(Color.tpPlaceDark)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
-                        .background(
-                            Color.tpPlace,
-                            in: RoundedRectangle(cornerRadius: 7)
-                        )
-                }
-                .buttonStyle(.plain)
-
-                Button(role: .destructive) {
-                    model.clearFrequentPlaceLocation(place.id)
-                } label: {
-                    Text("위치 삭제")
-                        .font(.taption(size: 7.5, weight: .bold))
-                        .foregroundStyle(
-                            place.point == nil
-                                ? Color.tpSecondary.opacity(0.45)
-                                : Color(red: 0.72, green: 0.19, blue: 0.16)
-                        )
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
-                        .background(
-                            place.point == nil
-                                ? Color.tpBackground
-                                : Color(red: 1.00, green: 0.92, blue: 0.92),
-                            in: RoundedRectangle(cornerRadius: 7)
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(place.point == nil)
-
-                if place.kind == .custom {
-                    Button(role: .destructive) {
-                        model.deleteFrequentPlace(place.id)
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.taption(size: 8, weight: .bold))
-                            .foregroundStyle(
-                                Color(red: 0.72, green: 0.19, blue: 0.16)
-                            )
-                            .frame(width: 24, height: 23)
-                            .background(
-                                Color(red: 1.00, green: 0.92, blue: 0.92),
-                                in: RoundedRectangle(cornerRadius: 7)
-                            )
+                        .foregroundStyle(Color.tpInk)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    if place.point != nil {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.taption(size: 8.8, weight: .bold))
+                            .foregroundStyle(Color.tpPlaceDark)
                     }
-                    .buttonStyle(.plain)
+                    Image(systemName: "chevron.right")
+                        .font(.taption(size: 7.5, weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
                 }
+
+                Text(frequentPlaceSubtitle(place))
+                    .font(.taption(size: 7.2, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .lineLimit(1)
+
+                Text("탭하여 위치·층수·감지 범위 설정")
+                    .font(.taption(size: 6.8, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary.opacity(0.8))
+                    .lineLimit(1)
             }
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                Color.tpBackground,
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
         }
-        .padding(8)
-        .background(
-            Color.tpBackground,
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-        )
+        .buttonStyle(.plain)
     }
 
     private func frequentPlaceSubtitle(_ place: FrequentPlace) -> String {
         guard place.point != nil else { return "미지정" }
         let floor = place.floor.map { " · \($0)층" } ?? ""
         return "지정됨\(floor) · 반경 \(Int(place.radiusMeters))m"
-    }
-
-    private func frequentPlaceFloorPicker(
-        _ place: FrequentPlace
-    ) -> some View {
-        VStack(spacing: 12) {
-            Text("\(place.name) 현재 층")
-                .font(.taption(size: 15, weight: .bold))
-                .foregroundStyle(Color.tpInk)
-
-            Text("기준 층을 선택하면 같은 건물 안의 층간 이동을 센서로 구분합니다.")
-                .font(.taption(size: 9))
-                .foregroundStyle(Color.tpSecondary)
-                .multilineTextAlignment(.center)
-
-            Picker("층수", selection: $frequentPlaceFloor) {
-                ForEach(frequentPlaceFloorOptions, id: \.self) { floor in
-                    Text(floorName(floor)).tag(floor)
-                }
-            }
-            .pickerStyle(.wheel)
-            .frame(height: 120)
-
-            HStack(spacing: 8) {
-                Button("취소") {
-                    floorPromptPlace = nil
-                }
-                .buttonStyle(.bordered)
-
-                Button("현재 위치로 설정") {
-                    floorPromptPlace = nil
-                    model.setFrequentPlaceToCurrentLocation(
-                        place.id,
-                        floor: frequentPlaceFloor
-                    )
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .font(.taption(size: 10, weight: .bold))
-        }
-        .padding(18)
-    }
-
-    private var frequentPlaceFloorOptions: [Int] {
-        Array(-20 ... -1) + Array(1 ... 200)
-    }
-
-    private func floorName(_ floor: Int) -> String {
-        floor < 0 ? "지하 \(-floor)층" : "\(floor)층"
     }
 
     private var sensorCollectionProfileRow: some View {
@@ -905,22 +827,54 @@ struct SettingsView: View {
 
     private func settingsSection<Content: View>(
         _ title: String,
+        summary: String = "",
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(spacing: 0) {
-            Text(title)
-                .font(
-                    .taption(
-                        size: SettingsTypography.sectionTitle,
-                        weight: .black
-                    )
-                )
-                .foregroundStyle(Color.tpSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                withAnimation(.easeOut(duration: 0.18)) {
+                    if expandedSettingsSections.contains(title) {
+                        expandedSettingsSections.remove(title)
+                    } else {
+                        expandedSettingsSections.insert(title)
+                    }
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    Text(title)
+                        .font(
+                            .taption(
+                                size: SettingsTypography.sectionTitle,
+                                weight: .black
+                            )
+                        )
+                        .foregroundStyle(Color.tpInk)
+                    Spacer(minLength: 4)
+                    if !summary.isEmpty {
+                        Text(summary)
+                            .font(.taption(size: SettingsTypography.footnote))
+                            .foregroundStyle(Color.tpSecondary)
+                            .lineLimit(1)
+                    }
+                    Image(systemName: expandedSettingsSections.contains(title)
+                        ? "chevron.up"
+                        : "chevron.down")
+                        .font(.taption(size: 8, weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                }
                 .padding(.horizontal, 10)
-                .padding(.top, 8)
-                .padding(.bottom, 5)
-            content()
+                .padding(.vertical, 9)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(title) 설정")
+            .accessibilityValue(
+                expandedSettingsSections.contains(title) ? "펼침" : "접힘"
+            )
+
+            if expandedSettingsSections.contains(title) {
+                content()
+            }
         }
         .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -1101,6 +1055,357 @@ struct SettingsView: View {
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
         }
+    }
+}
+
+private struct FrequentPlaceDetailView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let placeID: UUID
+
+    @State private var name = ""
+    @State private var radiusMeters = 120.0
+    @State private var floorHeightMeters = 3.0
+    @State private var minimumDwellMinutes = 10
+    @State private var isAutomaticRecordingEnabled = true
+    @State private var selectedFloor = 1
+    @State private var showsFloorPicker = false
+    @State private var showsDeleteConfirmation = false
+
+    private var place: FrequentPlace? {
+        model.settings.frequentPlaces.first { $0.id == placeID }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 14) {
+                    if let place {
+                        identitySection(place)
+                        locationSection(place)
+                        detectionSection
+                        altitudeSection(place)
+                        dangerSection(place)
+                    } else {
+                        ContentUnavailableView(
+                            "장소를 찾을 수 없습니다",
+                            systemImage: "mappin.slash"
+                        )
+                    }
+                }
+                .padding(16)
+            }
+            .background(Color.tpBackground.ignoresSafeArea())
+            .navigationTitle("자주가는 곳 설정")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("취소") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("저장") {
+                        model.updateFrequentPlaceDetails(
+                            placeID,
+                            name: name,
+                            radiusMeters: radiusMeters,
+                            floorHeightMeters: floorHeightMeters,
+                            minimumDwellMinutes: minimumDwellMinutes,
+                            isAutomaticRecordingEnabled: isAutomaticRecordingEnabled
+                        )
+                        dismiss()
+                    }
+                    .fontWeight(.bold)
+                    .disabled(place == nil)
+                }
+            }
+            .onAppear(perform: loadPlace)
+            .sheet(isPresented: $showsFloorPicker) {
+                floorPicker
+                    .presentationDetents([.height(320)])
+                    .presentationDragIndicator(.visible)
+            }
+            .alert(
+                "자주가는 곳 삭제",
+                isPresented: $showsDeleteConfirmation
+            ) {
+                Button("취소", role: .cancel) {}
+                Button("삭제", role: .destructive) {
+                    model.deleteFrequentPlace(placeID)
+                    dismiss()
+                }
+            } message: {
+                Text("이 장소의 자동 위치·층수 기록 기준을 삭제합니다.")
+            }
+        }
+    }
+
+    private func loadPlace() {
+        guard let place else { return }
+        name = place.name
+        radiusMeters = place.radiusMeters
+        floorHeightMeters = place.floorHeightMeters
+        minimumDwellMinutes = place.minimumDwellMinutes
+        isAutomaticRecordingEnabled = place.isAutomaticRecordingEnabled
+        selectedFloor = place.floor ?? 1
+    }
+
+    private func identitySection(_ place: FrequentPlace) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Label {
+                Text("기본 정보")
+                    .font(.taption(size: 12, weight: .bold))
+            } icon: {
+                Image(systemName: place.kind.systemImage)
+                    .foregroundStyle(Color.tpPlaceDark)
+            }
+
+            TextField("장소 이름", text: $name)
+                .font(.taption(size: 12, weight: .semibold))
+                .textFieldStyle(.roundedBorder)
+
+            Text("이름은 시간표의 위치 라벨과 위젯에 표시됩니다.")
+                .font(.taption(size: 9))
+                .foregroundStyle(Color.tpSecondary)
+        }
+        .detailCard()
+    }
+
+    private func locationSection(_ place: FrequentPlace) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Label {
+                Text("위치·층수 기준")
+                    .font(.taption(size: 12, weight: .bold))
+            } icon: {
+                Image(systemName: "mappin.and.ellipse")
+                    .foregroundStyle(Color.tpPlaceDark)
+            }
+
+            if let point = place.point {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(
+                        "위도 \(point.latitude, specifier: "%.5f") · 경도 \(point.longitude, specifier: "%.5f")"
+                    )
+                    .font(.taption(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    Text(
+                        place.floor.map { "기준 \($0)층" } ?? "층수 미지정"
+                    )
+                    .font(.taption(size: 9))
+                    .foregroundStyle(Color.tpSecondary)
+                }
+            } else {
+                Text("아직 현재 위치가 지정되지 않았습니다.")
+                    .font(.taption(size: 10))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+
+            Button {
+                selectedFloor = place.floor ?? 1
+                showsFloorPicker = true
+            } label: {
+                Label(
+                    place.point == nil ? "현재 위치와 층수 지정" : "현재 위치로 재보정",
+                    systemImage: "location.fill"
+                )
+                .font(.taption(size: 10, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .foregroundStyle(.white)
+                .background(Color.tpPlaceDark, in: RoundedRectangle(cornerRadius: 9))
+            }
+            .buttonStyle(.plain)
+
+            if place.point != nil {
+                Button(role: .destructive) {
+                    model.clearFrequentPlaceLocation(placeID)
+                } label: {
+                    Label("위치 기준 삭제", systemImage: "trash")
+                        .font(.taption(size: 9, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .detailCard()
+    }
+
+    private var detectionSection: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Label {
+                Text("자동 감지 범위")
+                    .font(.taption(size: 12, weight: .bold))
+            } icon: {
+                Image(systemName: "dot.radiowaves.left.and.right")
+                    .foregroundStyle(Color.tpPlaceDark)
+            }
+            Toggle("자동 위치 기록", isOn: $isAutomaticRecordingEnabled)
+                .font(.taption(size: 10, weight: .semibold))
+                .tint(Color.tpPlaceDark)
+            Text("끄면 이 장소는 자동 분석에서 제외되고 수동 지정만 유지됩니다.")
+                .font(.taption(size: 9))
+                .foregroundStyle(Color.tpSecondary)
+
+            Divider()
+
+            HStack {
+                Text("반경")
+                Spacer()
+                Text("\(Int(radiusMeters.rounded()))m")
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.tpPlaceDark)
+            }
+            .font(.taption(size: 10))
+            Slider(value: $radiusMeters, in: 30...500, step: 10)
+                .tint(Color.tpPlaceDark)
+            HStack {
+                Text("30m · 건물 내부")
+                Spacer()
+                Text("500m · 넓은 구역")
+            }
+            .font(.taption(size: 8))
+            .foregroundStyle(Color.tpSecondary)
+            Text("GPS 오차와 건물 규모에 맞춰 위치로 인식할 범위를 정합니다.")
+                .font(.taption(size: 9))
+                .foregroundStyle(Color.tpSecondary)
+
+            HStack {
+                Text("최소 체류")
+                Spacer()
+                Text("\(minimumDwellMinutes)분")
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.tpPlaceDark)
+            }
+            .font(.taption(size: 10))
+            Slider(
+                value: Binding(
+                    get: { Double(minimumDwellMinutes) },
+                    set: { minimumDwellMinutes = Int($0.rounded()) }
+                ),
+                in: 5...120,
+                step: 5
+            )
+            .tint(Color.tpPlaceDark)
+            Text("이 시간보다 짧은 방문은 일반 장소로 남깁니다.")
+                .font(.taption(size: 9))
+                .foregroundStyle(Color.tpSecondary)
+        }
+        .detailCard()
+    }
+
+    private func altitudeSection(_ place: FrequentPlace) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Label {
+                Text("고도·층수 보정")
+                    .font(.taption(size: 12, weight: .bold))
+            } icon: {
+                Image(systemName: "building.2.crop.circle")
+                    .foregroundStyle(Color.tpPlaceDark)
+            }
+            HStack {
+                Text("층 높이")
+                Spacer()
+                Text("\(floorHeightMeters, specifier: "%.1f")m")
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.tpPlaceDark)
+            }
+            .font(.taption(size: 10))
+            Slider(value: $floorHeightMeters, in: 2.2...5.0, step: 0.1)
+                .tint(Color.tpPlaceDark)
+            Text("기압·상대고도 차이를 이 층 높이로 나눠 같은 건물의 층을 추정합니다.")
+                .font(.taption(size: 9))
+                .foregroundStyle(Color.tpSecondary)
+
+            Divider()
+
+            if let relative = place.referenceRelativeAltitudeMeters {
+                Text("기준 상대고도 \(relative, specifier: "%.1f")m")
+            }
+            if let pressure = place.referencePressureKilopascals {
+                Text("기준 기압 \(pressure, specifier: "%.2f")kPa")
+            }
+            if let capturedAt = place.floorCapturedAt {
+                Text(
+                    "마지막 보정 \(capturedAt, format: .dateTime.month().day().hour().minute())"
+                )
+            }
+            if let reading = model.latestSensorReading,
+               let relative = reading.relativeAltitudeMeters {
+                Text("현재 센서 · 상대고도 \(relative, specifier: "%.1f")m")
+            }
+            if let estimate = model.latestAltitudeEstimate {
+                Text(
+                    "현재 추정 · \(estimate.floor)층 · 해발 "
+                        + "\(Int(estimate.seaLevelAltitudeMeters.rounded()))m"
+                )
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.tpPlaceDark)
+            }
+            if place.referenceRelativeAltitudeMeters == nil,
+               place.referencePressureKilopascals == nil {
+                Text("위치와 층수를 지정하면 기압·고도 기준이 함께 저장됩니다.")
+            }
+        }
+        .font(.taption(size: 9))
+        .foregroundStyle(Color.tpSecondary)
+        .detailCard()
+    }
+
+    private func dangerSection(_ place: FrequentPlace) -> some View {
+        Group {
+            if place.kind == .custom {
+                Button(role: .destructive) {
+                    showsDeleteConfirmation = true
+                } label: {
+                    Label("자주가는 곳 삭제", systemImage: "trash")
+                        .font(.taption(size: 10, weight: .bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+                .background(
+                    Color(red: 1, green: 0.93, blue: 0.93),
+                    in: RoundedRectangle(cornerRadius: 10)
+                )
+            }
+        }
+    }
+
+    private var floorPicker: some View {
+        VStack(spacing: 12) {
+            Text("기준 층 선택")
+                .font(.taption(size: 15, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+            Text("현재 위치의 층을 기준으로 저장합니다.")
+                .font(.taption(size: 9))
+                .foregroundStyle(Color.tpSecondary)
+            Picker("층수", selection: $selectedFloor) {
+                ForEach(Array(-20 ... -1) + Array(1 ... 200), id: \.self) { floor in
+                    Text(floor < 0 ? "지하 \(-floor)층" : "\(floor)층")
+                        .tag(floor)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(height: 140)
+            Button("현재 위치로 저장") {
+                model.setFrequentPlaceToCurrentLocation(
+                    placeID,
+                    floor: selectedFloor
+                )
+                showsFloorPicker = false
+            }
+            .buttonStyle(.borderedProminent)
+            .font(.taption(size: 10, weight: .bold))
+        }
+        .padding(18)
+    }
+}
+
+private extension View {
+    func detailCard() -> some View {
+        self
+            .padding(13)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

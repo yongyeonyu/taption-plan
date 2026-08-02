@@ -279,7 +279,7 @@ struct DraftBottomNavigationBar: View {
     }
 
     private var mainAddButtonAccessibilityLabel: String {
-        if model.selectedTab == .goals { return "목표 추가" }
+        if model.selectedTab == .goals { return "루틴 추가" }
         return model.detail == .group ? "하위 계획 추가" : "계획 추가"
     }
 
