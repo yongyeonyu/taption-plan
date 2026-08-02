@@ -1511,6 +1511,9 @@ struct ScheduleView: View {
         .task(id: routeReadingsSpan) {
             routeReadings = await model.sensorReadings(in: routeReadingsSpan)
         }
+        .onChange(of: model.timelineRevision) { _, _ in
+            refreshPlayheadDetailAfterTimelineReload()
+        }
         .onDisappear {
             playheadDetailGate.cancel()
         }
@@ -1587,6 +1590,16 @@ struct ScheduleView: View {
             mapPlayheadDate = deliveredDate
             focusMapOnPlayhead(at: deliveredDate)
         }
+    }
+
+    private func refreshPlayheadDetailAfterTimelineReload() {
+        // The board can render its first playhead before the async sensor/
+        // calendar snapshot arrives. Re-run the same lookup once the data
+        // revision changes, otherwise the panel remains in the empty state.
+        let date = mapPlayheadDate
+            ?? (selectedTimelineItem == nil ? model.selectedDate : nil)
+        guard let date else { return }
+        requestPlayheadDetailUpdate(at: date)
     }
 
     private func focusMapOnPlayhead(at date: Date) {
@@ -3269,7 +3282,7 @@ private struct TimelineDetailPanel: View {
                         Text(actual.title)
                             .font(.taption(size: 9, weight: .semibold))
                         Text(
-                            "실제 · \(actual.startedAt.formatted(date: .omitted, time: .shortened))–\((actual.endedAt ?? .now).formatted(date: .omitted, time: .shortened)) · \(actualSourceLabel(actual.source))"
+                            actualDetailSubtitle(actual)
                         )
                         .font(.taption(size: 7.5))
                         .foregroundStyle(Color.tpSecondary)
@@ -3285,6 +3298,16 @@ private struct TimelineDetailPanel: View {
                 actualGoalLinkControl(actual)
             }
         }
+    }
+
+    private func actualDetailSubtitle(_ actual: ActualRecord) -> String {
+        let span = "실제 · \(actual.startedAt.formatted(date: .omitted, time: .shortened))–\((actual.endedAt ?? .now).formatted(date: .omitted, time: .shortened))"
+        let source = actualSourceLabel(actual.source)
+        guard let behavior = actual.behavior
+            .flatMap({ WatchBehaviorKind(rawValue: $0) }) else {
+            return "\(span) · \(source)"
+        }
+        return "\(span) · \(source) · \(behavior.title)"
     }
 
     private var actionContent: some View {
@@ -5474,6 +5497,9 @@ struct GroupGanttView: View {
         .task(id: routeReadingsSpan) {
             routeReadings = await model.sensorReadings(in: routeReadingsSpan)
         }
+        .onChange(of: model.timelineRevision) { _, _ in
+            refreshPlayheadDetailAfterTimelineReload()
+        }
         .onDisappear {
             playheadDetailGate.cancel()
         }
@@ -5492,6 +5518,13 @@ struct GroupGanttView: View {
             mapPlayheadDate = deliveredDate
             focusMapOnPlayhead(at: deliveredDate)
         }
+    }
+
+    private func refreshPlayheadDetailAfterTimelineReload() {
+        let date = mapPlayheadDate
+            ?? (selectedTimelineItem == nil ? model.selectedDate : nil)
+        guard let date else { return }
+        requestPlayheadDetailUpdate(at: date)
     }
 
     private func focusMapOnPlayhead(at date: Date) {

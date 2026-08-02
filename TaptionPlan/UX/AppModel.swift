@@ -2574,11 +2574,52 @@ final class AppModel {
             let watchAccelerationAverageG = summary.accelerometerAverageG.map {
                 SensorVector3(x: $0.x, y: $0.y, z: $0.z)
             }
-            let watchMotion: MotionKind = summary.workoutKind == .running
-                ? .running
-                : summary.workoutKind == .cycling
-                    ? .cycling
-                    : .walking
+            let routeSpeeds = routePoints.compactMap(\.speedMetersPerSecond)
+                .filter { $0.isFinite && $0 >= 0 }
+            let routeAverageSpeed = routeSpeeds.isEmpty
+                ? nil
+                : routeSpeeds.reduce(0, +) / Double(routeSpeeds.count)
+            let behavior = summary.behavior.map {
+                WatchBehaviorInference(
+                    kind: $0,
+                    confidenceScore: summary.behaviorConfidenceScore ?? 0.5,
+                    evidence: summary.behaviorEvidence ?? [],
+                    modelVersion: summary.behaviorModelVersion
+                        ?? WatchBehaviorClassifier.rulesVersion
+                )
+            } ?? WatchBehaviorClassifier.classify(
+                WatchBehaviorInput(
+                    workoutKind: summary.workoutKind,
+                    duration: summary.endedAt.timeIntervalSince(
+                        summary.startedAt
+                    ),
+                    accelerometerSampleCount: summary.accelerometerSampleCount,
+                    accelerometerStandardDeviationG:
+                        summary.accelerometerStandardDeviationG,
+                    accelerometerMeanJerkGPerSecond:
+                        summary.accelerometerMeanJerkGPerSecond,
+                    peakAccelerationG: summary.peakAccelerationG,
+                    peakRotationRateRadiansPerSecond:
+                        summary.peakRotationRateRadiansPerSecond,
+                    steps: summary.stepCount,
+                    distanceMeters: summary.distanceMeters,
+                    floorsAscended: summary.floorsAscended,
+                    floorsDescended: summary.floorsDescended,
+                    averageHeartRate: summary.averageHeartRate,
+                    gpsAverageSpeedMetersPerSecond: routeAverageSpeed,
+                    gpsAvailable: !routePoints.isEmpty,
+                    gpsLossRatio: routePoints.isEmpty ? 1 : 0
+                )
+            )
+            let watchMotion: MotionKind = switch behavior.kind {
+            case .running: .running
+            case .walking, .stairsUp, .stairsDown: .walking
+            case .cycling: .cycling
+            case .automotive, .publicTransit, .subway: .automotive
+            case .stationary, .standing, .sitting, .lying, .elevator,
+                 .exercise, .brushingTeeth, .eating, .typing, .sleep, .unknown:
+                .stationary
+            }
             var readings = routePoints.enumerated().map { offset, point in
                 SensorReading(
                     id: point.id,
@@ -2611,6 +2652,10 @@ final class AppModel {
                         summary.accelerometerMeanJerkGPerSecond,
                     gpsAvailable: true,
                     watchWorkoutKind: summary.workoutKind.rawValue,
+                    behavior: behavior.kind.rawValue,
+                    behaviorConfidenceScore: behavior.confidenceScore,
+                    behaviorEvidence: behavior.evidence,
+                    behaviorModelVersion: behavior.modelVersion,
                     trackingSessionID: summary.sessionID,
                     trackingKind: summary.workoutKind == .running
                         ? .running
@@ -2642,6 +2687,10 @@ final class AppModel {
                             summary.accelerometerMeanJerkGPerSecond,
                         gpsAvailable: false,
                         watchWorkoutKind: summary.workoutKind.rawValue,
+                        behavior: behavior.kind.rawValue,
+                        behaviorConfidenceScore: behavior.confidenceScore,
+                        behaviorEvidence: behavior.evidence,
+                        behaviorModelVersion: behavior.modelVersion,
                         trackingSessionID: summary.sessionID,
                         trackingKind: summary.workoutKind == .running
                             ? .running
@@ -2657,8 +2706,10 @@ final class AppModel {
                     SensorReading(
                         id: summary.sessionID,
                         timestamp: summary.endedAt,
-                        motion: .stationary,
-                        motionConfidence: .high,
+                        motion: watchMotion,
+                        motionConfidence: ConfidenceLevel(
+                            score: behavior.confidenceScore
+                        ),
                         relativeAltitudeMeters: summary.relativeAltitudeMeters,
                         pressureKilopascals: summary.pressureKilopascals,
                         floorsAscended: summary.floorsAscended,
@@ -2672,6 +2723,10 @@ final class AppModel {
                             summary.accelerometerMeanJerkGPerSecond,
                         gpsAvailable: false,
                         watchWorkoutKind: summary.workoutKind.rawValue,
+                        behavior: behavior.kind.rawValue,
+                        behaviorConfidenceScore: behavior.confidenceScore,
+                        behaviorEvidence: behavior.evidence,
+                        behaviorModelVersion: behavior.modelVersion,
                         trackingSessionID: summary.sessionID,
                         trackingKind: summary.workoutKind == .running
                             ? .running
@@ -3361,6 +3416,20 @@ final class AppModel {
                     from: freshActuals,
                     suppressedIDs: snapshot.settings.suppressedActualIDs
                 )
+                .map { actual in
+                    guard actual.categoryID == "sleep"
+                        || actual.title.localizedCaseInsensitiveContains("수면")
+                        || actual.title.localizedCaseInsensitiveContains("sleep") else {
+                        return actual
+                    }
+                    var value = actual
+                    value.behavior = WatchBehaviorKind.sleep.rawValue
+                    value.evidence = Array(
+                        Set(value.evidence + ["HealthKit 수면 기록"])
+                    ).sorted()
+                    value.modelVersion = "healthkit-sleep-v1"
+                    return value
+                }
             let existingHealthActuals = snapshot.actuals.filter {
                 ($0.source == .healthKit || $0.source == .appleWatch)
                     && $0.span(asOf: span.end).intersection(with: span) != nil

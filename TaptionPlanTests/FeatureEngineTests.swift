@@ -2707,6 +2707,122 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(reconciled, [healthActual])
     }
 
+    func testWatchBehaviorRulesPrioritizeWorkoutAndDetectStairs() {
+        let workout = WatchBehaviorClassifier.classify(
+            WatchBehaviorInput(
+                workoutKind: .running,
+                duration: 30,
+                steps: 20
+            )
+        )
+        XCTAssertEqual(workout.kind, .running)
+        XCTAssertGreaterThan(workout.confidenceScore, 0.9)
+        XCTAssertTrue(workout.evidence.contains("Apple Watch 운동 종류"))
+
+        let stairs = WatchBehaviorClassifier.classify(
+            WatchBehaviorInput(
+                duration: 120,
+                accelerometerSampleCount: 3_000,
+                accelerometerStandardDeviationG: 0.12,
+                accelerometerMeanJerkGPerSecond: 0.3,
+                steps: 140,
+                floorsAscended: 3,
+                altitudeDeltaMeters: 9
+            )
+        )
+        XCTAssertEqual(stairs.kind, .stairsUp)
+        XCTAssertTrue(stairs.evidence.contains("걸음·층수 증가"))
+    }
+
+    func testWatchSensorChunksUpdateTheSameImmutableActivity() {
+        let base = makeDate(2026, 8, 2, 9)
+        let sessionID = UUID()
+        let first = TaptionWatchSensorSummary(
+            sessionID: sessionID,
+            sequence: 1,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: base,
+            endedAt: base.addingTimeInterval(30),
+            isFinal: false,
+            accelerometerSampleCount: 750,
+            accelerometerAverageG: nil,
+            peakAccelerationG: 0.9,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: 40,
+            distanceMeters: 30,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: 90,
+            averageHeartRate: 88,
+            maximumHeartRate: 95,
+            activeEnergyKilocalories: 4,
+            behavior: .walking,
+            behaviorConfidenceScore: 0.8,
+            behaviorEvidence: ["걸음"],
+            behaviorModelVersion: WatchBehaviorClassifier.rulesVersion
+        )
+        let second = TaptionWatchSensorSummary(
+            sessionID: sessionID,
+            sequence: 2,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: base,
+            endedAt: base.addingTimeInterval(90),
+            isFinal: true,
+            accelerometerSampleCount: 2_250,
+            accelerometerAverageG: nil,
+            peakAccelerationG: 1.1,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: 130,
+            distanceMeters: 100,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: 98,
+            averageHeartRate: 92,
+            maximumHeartRate: 105,
+            activeEnergyKilocalories: 14,
+            behavior: .walking,
+            behaviorConfidenceScore: 0.9,
+            behaviorEvidence: ["걸음"],
+            behaviorModelVersion: WatchBehaviorClassifier.rulesVersion
+        )
+        let firstActual = AppleWatchSensorActivityEngine.upserting(
+            first,
+            into: [],
+            linkedPlan: nil
+        )
+        let finalActual = AppleWatchSensorActivityEngine.upserting(
+            second,
+            into: firstActual,
+            linkedPlan: nil
+        )
+        XCTAssertEqual(finalActual.count, 1)
+        XCTAssertEqual(finalActual[0].endedAt, second.endedAt)
+        XCTAssertEqual(finalActual[0].behavior, WatchBehaviorKind.walking.rawValue)
+        XCTAssertEqual(finalActual[0].modelVersion, WatchBehaviorClassifier.rulesVersion)
+    }
+
     func testPlaceDetectionRequiresLongStay() {
         let base = makeDate(2026, 7, 30)
         let point = GeoPoint(

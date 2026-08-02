@@ -49,6 +49,262 @@ enum TaptionWatchWorkoutKind: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// Fine-grained behavior labels shared by the Watch and iPhone.  The Watch
+/// emits a conservative label from the current sensor window; the iPhone can
+/// later replace it with a trained Core ML result without changing the archive
+/// format.
+enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
+    case stationary
+    case standing
+    case sitting
+    case lying
+    case walking
+    case running
+    case cycling
+    case stairsUp
+    case stairsDown
+    case elevator
+    case automotive
+    case publicTransit
+    case subway
+    case exercise
+    case brushingTeeth
+    case eating
+    case typing
+    case sleep
+    case unknown
+
+    var title: String {
+        switch self {
+        case .stationary: "정지·휴식"
+        case .standing: "서기"
+        case .sitting: "앉기"
+        case .lying: "눕기"
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .cycling: "자전거"
+        case .stairsUp: "계단 오르기"
+        case .stairsDown: "계단 내려가기"
+        case .elevator: "엘리베이터"
+        case .automotive: "자동차"
+        case .publicTransit: "대중교통"
+        case .subway: "지하철"
+        case .exercise: "운동"
+        case .brushingTeeth: "양치"
+        case .eating: "식사"
+        case .typing: "타이핑"
+        case .sleep: "수면"
+        case .unknown: "활동"
+        }
+    }
+
+    var isMovement: Bool {
+        switch self {
+        case .walking, .running, .cycling, .stairsUp, .stairsDown,
+             .elevator, .automotive, .publicTransit, .subway:
+            true
+        default:
+            false
+        }
+    }
+}
+
+struct WatchBehaviorInference: Codable, Hashable, Sendable {
+    var kind: WatchBehaviorKind
+    var confidenceScore: Double
+    var evidence: [String]
+    var modelVersion: String
+}
+
+struct WatchBehaviorInput: Hashable, Sendable {
+    var workoutKind: TaptionWatchWorkoutKind?
+    var duration: TimeInterval
+    var accelerometerSampleCount: Int
+    var accelerometerStandardDeviationG: Double?
+    var accelerometerMeanJerkGPerSecond: Double?
+    var peakAccelerationG: Double?
+    var peakRotationRateRadiansPerSecond: Double?
+    var steps: Int?
+    var distanceMeters: Double?
+    var floorsAscended: Int?
+    var floorsDescended: Int?
+    var averageHeartRate: Double?
+    var gpsAverageSpeedMetersPerSecond: Double?
+    var gpsAvailable: Bool
+    var gpsLossRatio: Double
+    var altitudeDeltaMeters: Double?
+    var nearRailContext: Bool
+    var repeatedStops: Bool
+
+    init(
+        workoutKind: TaptionWatchWorkoutKind? = nil,
+        duration: TimeInterval,
+        accelerometerSampleCount: Int = 0,
+        accelerometerStandardDeviationG: Double? = nil,
+        accelerometerMeanJerkGPerSecond: Double? = nil,
+        peakAccelerationG: Double? = nil,
+        peakRotationRateRadiansPerSecond: Double? = nil,
+        steps: Int? = nil,
+        distanceMeters: Double? = nil,
+        floorsAscended: Int? = nil,
+        floorsDescended: Int? = nil,
+        averageHeartRate: Double? = nil,
+        gpsAverageSpeedMetersPerSecond: Double? = nil,
+        gpsAvailable: Bool = false,
+        gpsLossRatio: Double = 1,
+        altitudeDeltaMeters: Double? = nil,
+        nearRailContext: Bool = false,
+        repeatedStops: Bool = false
+    ) {
+        self.workoutKind = workoutKind
+        self.duration = duration
+        self.accelerometerSampleCount = accelerometerSampleCount
+        self.accelerometerStandardDeviationG = accelerometerStandardDeviationG
+        self.accelerometerMeanJerkGPerSecond = accelerometerMeanJerkGPerSecond
+        self.peakAccelerationG = peakAccelerationG
+        self.peakRotationRateRadiansPerSecond = peakRotationRateRadiansPerSecond
+        self.steps = steps
+        self.distanceMeters = distanceMeters
+        self.floorsAscended = floorsAscended
+        self.floorsDescended = floorsDescended
+        self.averageHeartRate = averageHeartRate
+        self.gpsAverageSpeedMetersPerSecond = gpsAverageSpeedMetersPerSecond
+        self.gpsAvailable = gpsAvailable
+        self.gpsLossRatio = gpsLossRatio
+        self.altitudeDeltaMeters = altitudeDeltaMeters
+        self.nearRailContext = nearRailContext
+        self.repeatedStops = repeatedStops
+    }
+}
+
+/// A deterministic baseline that is safe to run on the Watch.  It deliberately
+/// prefers false negatives over inventing fine-grained actions.  A future
+/// bundled Core ML model can be inserted before this fallback and report its
+/// own modelVersion/evidence.
+enum WatchBehaviorClassifier {
+    static let rulesVersion = "watch-rules-v1"
+
+    static func classify(_ input: WatchBehaviorInput) -> WatchBehaviorInference {
+        if let workoutKind = input.workoutKind {
+            let kind: WatchBehaviorKind = switch workoutKind {
+            case .walking: .walking
+            case .running: .running
+            case .cycling: .cycling
+            }
+            return result(
+                kind,
+                score: 0.97,
+                evidence: ["Apple Watch 운동 종류", "HealthKit 운동 세션"]
+            )
+        }
+
+        let duration = max(1, input.duration)
+        let steps = max(0, input.steps ?? 0)
+        let cadence = Double(steps) / duration
+        let speed = input.gpsAverageSpeedMetersPerSecond ?? 0
+        let altitude = abs(input.altitudeDeltaMeters ?? 0)
+        let floorsUp = max(0, input.floorsAscended ?? 0)
+        let floorsDown = max(0, input.floorsDescended ?? 0)
+        let hasSteps = steps >= 4 || cadence >= 0.15
+        let acceleration = input.accelerometerStandardDeviationG ?? 0
+        let jerk = input.accelerometerMeanJerkGPerSecond ?? 0
+
+        if floorsUp > 0 && hasSteps && altitude >= 1.2 {
+            return result(
+                .stairsUp,
+                score: 0.84,
+                evidence: ["상대고도 상승", "걸음·층수 증가"]
+            )
+        }
+        if floorsDown > 0 && hasSteps && altitude >= 1.2 {
+            return result(
+                .stairsDown,
+                score: 0.84,
+                evidence: ["상대고도 하강", "걸음·층수 감소"]
+            )
+        }
+
+        if altitude >= 2.5 && !hasSteps && jerk < 0.16 {
+            return result(
+                .elevator,
+                score: 0.72,
+                evidence: ["상대고도 변화", "걸음 거의 없음", "저진동"]
+            )
+        }
+
+        if input.gpsLossRatio >= 0.45,
+           !hasSteps,
+           altitude >= 1.2,
+           input.nearRailContext || input.repeatedStops {
+            return result(
+                .subway,
+                score: 0.68,
+                evidence: ["GPS 단절", "지하·철도 문맥", "걸음 거의 없음"]
+            )
+        }
+
+        if speed >= 5.5 && !hasSteps {
+            let kind: WatchBehaviorKind = input.repeatedStops
+                ? .publicTransit
+                : .automotive
+            return result(
+                kind,
+                score: input.repeatedStops ? 0.64 : 0.78,
+                evidence: ["GPS 차량 속도", "걸음 거의 없음"]
+                    + (input.repeatedStops ? ["반복 정차"] : [])
+            )
+        }
+
+        if speed >= 2.2 || cadence >= 1.75 {
+            return result(
+                .running,
+                score: 0.81,
+                evidence: ["속도·케이던스 달리기 범위"]
+            )
+        }
+        if speed >= 0.5 || cadence >= 0.15 {
+            return result(
+                .walking,
+                score: 0.79,
+                evidence: ["GPS·걸음 보행 범위"]
+            )
+        }
+
+        if acceleration >= 0.08 || jerk >= 0.25,
+           (input.averageHeartRate ?? 0) >= 105 {
+            return result(
+                .exercise,
+                score: 0.58,
+                evidence: ["가속도 변화", "심박 상승"]
+            )
+        }
+        if input.accelerometerSampleCount > 0,
+           acceleration < 0.02,
+           jerk < 0.08,
+           !hasSteps {
+            return result(
+                .stationary,
+                score: 0.55,
+                evidence: ["저진동", "걸음 없음"]
+            )
+        }
+        return result(.unknown, score: 0.25, evidence: ["센서 근거 부족"])
+    }
+
+    private static func result(
+        _ kind: WatchBehaviorKind,
+        score: Double,
+        evidence: [String]
+    ) -> WatchBehaviorInference {
+        WatchBehaviorInference(
+            kind: kind,
+            confidenceScore: min(1, max(0, score)),
+            evidence: evidence,
+            modelVersion: rulesVersion
+        )
+    }
+}
+
 enum TaptionWatchWorkoutRequestAction: String, Codable, Sendable {
     case start
     case stop
@@ -279,6 +535,12 @@ struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
     var maximumHeartRate: Double?
     var activeEnergyKilocalories: Double?
     var routePoints: [TaptionWatchLocationPoint]?
+    /// Rule/Core ML output for this 30-second sensor chunk. Optional for
+    /// backwards compatibility with summaries already queued on either side.
+    var behavior: WatchBehaviorKind? = nil
+    var behaviorConfidenceScore: Double? = nil
+    var behaviorEvidence: [String]? = nil
+    var behaviorModelVersion: String? = nil
 }
 
 enum TaptionWatchEnvelope {

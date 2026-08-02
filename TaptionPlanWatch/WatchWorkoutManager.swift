@@ -42,6 +42,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var accelerationMagnitudeM2 = 0.0
     private var accelerationJerkSum = 0.0
     private var previousAccelerationMagnitude: Double?
+    private var previousAccelerationSampleTime: TimeInterval?
     private var gyroscopeSum = TaptionWatchSensorVector3.zero
     private var gyroscopeCount = 0
     private var peakRotationRate = 0.0
@@ -254,6 +255,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         accelerationMagnitudeM2 = 0
         accelerationJerkSum = 0
         previousAccelerationMagnitude = nil
+        previousAccelerationSampleTime = nil
         gyroscopeSum = .zero
         gyroscopeCount = 0
         peakRotationRate = 0
@@ -272,7 +274,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         pendingRoutePoints = []
         sensorSampleCount = 0
 
-        let updateInterval: TimeInterval = 0.1
+        // Activity-classifier windows need at least 25 Hz.  This is only
+        // enabled inside HKWorkoutSession; normal background collection keeps
+        // the app's configured low-power interval.
+        let updateInterval: TimeInterval = 0.04
         if motionManager.isAccelerometerAvailable {
             motionManager.accelerometerUpdateInterval = updateInterval
             motionManager.startAccelerometerUpdates(
@@ -284,8 +289,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     y: data.acceleration.y,
                     z: data.acceleration.z
                 )
+                let timestamp = data.timestamp
                 Task { @MainActor [weak self] in
-                    self?.recordAccelerometer(value)
+                    self?.recordAccelerometer(value, timestamp: timestamp)
                 }
             }
         }
@@ -383,7 +389,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         emitSensorSummary(isFinal: false)
     }
 
-    private func recordAccelerometer(_ value: TaptionWatchSensorVector3) {
+    private func recordAccelerometer(
+        _ value: TaptionWatchSensorVector3,
+        timestamp: TimeInterval
+    ) {
         accelerometerSum.add(value)
         accelerometerCount += 1
         sensorSampleCount = accelerometerCount
@@ -393,10 +402,14 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         let delta = magnitude - accelerationMagnitudeMean
         accelerationMagnitudeMean += delta / count
         accelerationMagnitudeM2 += delta * (magnitude - accelerationMagnitudeMean)
-        if let previousAccelerationMagnitude {
-            accelerationJerkSum += abs(magnitude - previousAccelerationMagnitude) * 10
+        if let previousAccelerationMagnitude,
+           let previousAccelerationSampleTime {
+            let elapsed = max(0.01, timestamp - previousAccelerationSampleTime)
+            accelerationJerkSum += abs(magnitude - previousAccelerationMagnitude)
+                / elapsed
         }
         previousAccelerationMagnitude = magnitude
+        previousAccelerationSampleTime = timestamp
     }
 
     private func recordGyroscope(_ value: TaptionWatchSensorVector3) {
@@ -448,6 +461,41 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             return nil
         }
         sensorSequence += 1
+        let routeSpeeds = pendingRoutePoints.compactMap(\.speedMetersPerSecond)
+            .filter { $0.isFinite && $0 >= 0 }
+        let routeAverageSpeed = routeSpeeds.isEmpty
+            ? nil
+            : routeSpeeds.reduce(0, +) / Double(routeSpeeds.count)
+        let input = WatchBehaviorInput(
+            workoutKind: workoutKind,
+            duration: endedAt.timeIntervalSince(startedAt),
+            accelerometerSampleCount: accelerometerCount,
+            accelerometerStandardDeviationG: accelerometerCount > 1
+                ? sqrt(
+                    max(0, accelerationMagnitudeM2)
+                        / Double(accelerometerCount - 1)
+                )
+                : nil,
+            accelerometerMeanJerkGPerSecond: accelerometerCount > 1
+                ? accelerationJerkSum / Double(accelerometerCount - 1)
+                : nil,
+            peakAccelerationG: accelerometerCount > 0
+                ? peakAccelerationG
+                : nil,
+            peakRotationRateRadiansPerSecond: gyroscopeCount > 0
+                ? peakRotationRate
+                : nil,
+            steps: latestStepCount,
+            distanceMeters: latestPedometerDistanceMeters
+                ?? (distanceMeters > 0 ? distanceMeters : nil),
+            floorsAscended: latestFloorsAscended,
+            floorsDescended: latestFloorsDescended,
+            averageHeartRate: averageHeartRate,
+            gpsAverageSpeedMetersPerSecond: routeAverageSpeed,
+            gpsAvailable: !pendingRoutePoints.isEmpty,
+            gpsLossRatio: pendingRoutePoints.isEmpty ? 1 : 0
+        )
+        let behavior = WatchBehaviorClassifier.classify(input)
         return TaptionWatchSensorSummary(
             sessionID: sensorSessionID,
             sequence: sensorSequence,
@@ -498,7 +546,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             activeEnergyKilocalories: activeEnergyKilocalories > 0
                 ? activeEnergyKilocalories
                 : nil,
-            routePoints: pendingRoutePoints
+            routePoints: pendingRoutePoints,
+            behavior: behavior.kind,
+            behaviorConfidenceScore: behavior.confidenceScore,
+            behaviorEvidence: behavior.evidence,
+            behaviorModelVersion: behavior.modelVersion
         )
     }
 }

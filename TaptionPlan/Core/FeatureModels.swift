@@ -287,6 +287,21 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
     var source: ActualSource
     var confidence: ConfidenceLevel
     var createdAt: Date
+    /// Optional provenance from the sensor-fusion pipeline.  These fields
+    /// were added after the first archive format, so older records decode with
+    /// their empty defaults and remain immutable.
+    var behavior: String?
+    var evidence: [String]
+    var routeID: UUID?
+    var sensorChunkID: UUID?
+    var modelVersion: String?
+    var manuallyCorrected: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case id, planID, routineID, title, categoryID, startedAt, endedAt
+        case source, confidence, createdAt, behavior, evidence, routeID
+        case sensorChunkID, modelVersion, manuallyCorrected
+    }
 
     init(
         id: UUID = UUID(),
@@ -298,7 +313,13 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         endedAt: Date? = nil,
         source: ActualSource,
         confidence: ConfidenceLevel = .high,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        behavior: String? = nil,
+        evidence: [String] = [],
+        routeID: UUID? = nil,
+        sensorChunkID: UUID? = nil,
+        modelVersion: String? = nil,
+        manuallyCorrected: Bool = false
     ) {
         self.id = id
         self.planID = planID
@@ -310,6 +331,65 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         self.source = source
         self.confidence = confidence
         self.createdAt = createdAt
+        self.behavior = behavior
+        self.evidence = evidence
+        self.routeID = routeID
+        self.sensorChunkID = sensorChunkID
+        self.modelVersion = modelVersion
+        self.manuallyCorrected = manuallyCorrected
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        planID = try values.decodeIfPresent(UUID.self, forKey: .planID)
+        routineID = try values.decodeIfPresent(UUID.self, forKey: .routineID)
+        title = try values.decode(String.self, forKey: .title)
+        categoryID = try values.decode(String.self, forKey: .categoryID)
+        startedAt = try values.decode(Date.self, forKey: .startedAt)
+        endedAt = try values.decodeIfPresent(Date.self, forKey: .endedAt)
+        source = try values.decode(ActualSource.self, forKey: .source)
+        confidence = try values.decode(
+            ConfidenceLevel.self,
+            forKey: .confidence
+        )
+        createdAt = try values.decode(Date.self, forKey: .createdAt)
+        behavior = try values.decodeIfPresent(String.self, forKey: .behavior)
+        evidence = try values.decodeIfPresent([String].self, forKey: .evidence)
+            ?? []
+        routeID = try values.decodeIfPresent(UUID.self, forKey: .routeID)
+        sensorChunkID = try values.decodeIfPresent(
+            UUID.self,
+            forKey: .sensorChunkID
+        )
+        modelVersion = try values.decodeIfPresent(
+            String.self,
+            forKey: .modelVersion
+        )
+        manuallyCorrected = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .manuallyCorrected
+        ) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encodeIfPresent(planID, forKey: .planID)
+        try values.encodeIfPresent(routineID, forKey: .routineID)
+        try values.encode(title, forKey: .title)
+        try values.encode(categoryID, forKey: .categoryID)
+        try values.encode(startedAt, forKey: .startedAt)
+        try values.encodeIfPresent(endedAt, forKey: .endedAt)
+        try values.encode(source, forKey: .source)
+        try values.encode(confidence, forKey: .confidence)
+        try values.encode(createdAt, forKey: .createdAt)
+        try values.encodeIfPresent(behavior, forKey: .behavior)
+        try values.encode(evidence, forKey: .evidence)
+        try values.encodeIfPresent(routeID, forKey: .routeID)
+        try values.encodeIfPresent(sensorChunkID, forKey: .sensorChunkID)
+        try values.encodeIfPresent(modelVersion, forKey: .modelVersion)
+        try values.encode(manuallyCorrected, forKey: .manuallyCorrected)
     }
 
     func span(asOf date: Date = .now) -> TimeSpan {
@@ -1218,6 +1298,12 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var nearPort: Bool
     var onWater: Bool
     var watchWorkoutKind: String?
+    /// Fine-grained behavior emitted by the Watch rule/model layer.  The
+    /// coarse `motion` value is retained for existing travel inference.
+    var behavior: String?
+    var behaviorConfidenceScore: Double?
+    var behaviorEvidence: [String]?
+    var behaviorModelVersion: String?
     var trackingSessionID: UUID?
     var trackingKind: TrackingKind?
     var sourceDevice: TrackingDevice?
@@ -1260,6 +1346,10 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         nearPort: Bool = false,
         onWater: Bool = false,
         watchWorkoutKind: String? = nil,
+        behavior: String? = nil,
+        behaviorConfidenceScore: Double? = nil,
+        behaviorEvidence: [String]? = nil,
+        behaviorModelVersion: String? = nil,
         trackingSessionID: UUID? = nil,
         trackingKind: TrackingKind? = nil,
         sourceDevice: TrackingDevice? = nil,
@@ -1304,6 +1394,10 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.nearPort = nearPort
         self.onWater = onWater
         self.watchWorkoutKind = watchWorkoutKind
+        self.behavior = behavior
+        self.behaviorConfidenceScore = behaviorConfidenceScore
+        self.behaviorEvidence = behaviorEvidence
+        self.behaviorModelVersion = behaviorModelVersion
         self.trackingSessionID = trackingSessionID
         self.trackingKind = trackingKind
         self.sourceDevice = sourceDevice

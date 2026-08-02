@@ -41,6 +41,45 @@ struct TravelModeClassifier: Sendable {
             )
         }
 
+        // A Watch behavior chunk may be the only source when HealthKit has
+        // not finished publishing the workout.  Respect explicit transit and
+        // vehicle labels before falling back to the broader score fusion.
+        if let watchBehavior = ordered
+            .reversed()
+            .compactMap({ reading in
+                reading.behavior.flatMap(WatchBehaviorKind.init(rawValue:))
+            })
+            .first {
+            switch watchBehavior {
+            case .subway:
+                return MovementInference(
+                    mode: .subway,
+                    confidence: .medium,
+                    score: 0.72,
+                    evidence: [
+                        "Apple Watch 행동 분류: 지하철",
+                        "GPS·고도·철도 문맥은 추가 확인 필요",
+                    ]
+                )
+            case .publicTransit:
+                return MovementInference(
+                    mode: .bus,
+                    confidence: .medium,
+                    score: 0.66,
+                    evidence: ["Apple Watch 행동 분류: 대중교통"]
+                )
+            case .automotive:
+                return MovementInference(
+                    mode: .car,
+                    confidence: .medium,
+                    score: 0.7,
+                    evidence: ["Apple Watch 행동 분류: 자동차"]
+                )
+            default:
+                break
+            }
+        }
+
         let speeds = speedSeries(for: ordered)
         let averageSpeed = trimmedMean(speeds)
         let maxSpeed = percentile(speeds, fraction: 0.9) ?? 0
@@ -1824,31 +1863,46 @@ enum AppleWatchSensorActivityEngine {
         into existing: [ActualRecord],
         linkedPlan: PlanRecord?
     ) -> [ActualRecord] {
-        if existing.contains(where: {
+        let previous = existing.first {
             $0.id == summary.sessionID
                 && ($0.source == .healthKit || $0.source == .appleWatch)
-        }) {
-            return existing
         }
-
+        let behaviorTitle = summary.behavior?.title
+            ?? "Apple Watch \(summary.workoutKind.title)"
         let title = linkedPlan?.title
             ?? summary.linkedPlanTitle
-            ?? "Apple Watch \(summary.workoutKind.title)"
+            ?? behaviorTitle
         let categoryID = linkedPlan?.categoryID
             ?? summary.linkedCategoryID
-            ?? "exercise"
+            ?? (summary.behavior == .sleep ? "sleep" : "activity")
+        let confidence = summary.behaviorConfidenceScore.map {
+            ConfidenceLevel(score: $0)
+        } ?? (summary.accelerometerSampleCount > 0 ? .high : .medium)
+        var evidence = summary.behaviorEvidence ?? []
+        if evidence.isEmpty {
+            evidence = ["Apple Watch 센서 청크"]
+        }
+        if summary.latestHeartRate != nil {
+            evidence.append("심박수")
+        }
+        if summary.stepCount != nil {
+            evidence.append("걸음·거리")
+        }
         let record = ActualRecord(
             id: summary.sessionID,
-            planID: linkedPlan?.id ?? summary.linkedPlanID,
+            planID: linkedPlan?.id ?? summary.linkedPlanID ?? previous?.planID,
             title: title,
             categoryID: categoryID,
             startedAt: summary.startedAt,
             endedAt: max(summary.startedAt, summary.endedAt),
             source: .appleWatch,
-            confidence: summary.accelerometerSampleCount > 0
-                ? .high
-                : .medium,
-            createdAt: summary.startedAt
+            confidence: confidence,
+            createdAt: previous?.createdAt ?? summary.startedAt,
+            behavior: summary.behavior?.rawValue,
+            evidence: Array(Set(evidence)).sorted(),
+            sensorChunkID: summary.sessionID,
+            modelVersion: summary.behaviorModelVersion
+                ?? WatchBehaviorClassifier.rulesVersion
         )
         return (
             existing.filter { $0.id != summary.sessionID }
@@ -1896,7 +1950,13 @@ enum MotionActivityActualEngine {
                     endedAt: activity.span.end,
                     source: .motion,
                     confidence: activity.confidence,
-                    createdAt: activity.span.start
+                    createdAt: activity.span.start,
+                    behavior: activity.motion.rawValue,
+                    evidence: [
+                        "iPhone Core Motion",
+                        "행동 구간 \(Int(activity.span.duration))초",
+                    ],
+                    modelVersion: "iphone-core-motion-v1"
                 )
             }
     }
