@@ -2874,16 +2874,26 @@ private struct TimelineDetailPanel: View {
                 .font(.taption(size: 8, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
 
-                Button {
-                    showsActionLinkSheet = true
-                } label: {
-                    Label("기존 액션아이템 연결", systemImage: "link")
-                        .frame(maxWidth: .infinity)
+                if !AutomaticRecordTimelineEngine.isRoutineOnlyCategory(
+                    routine.categoryID
+                ) {
+                    Button {
+                        showsActionLinkSheet = true
+                    } label: {
+                        Label("기존 액션아이템 연결", systemImage: "link")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .buttonStyle(.bordered)
 
                 if actions.isEmpty && linkedActuals.isEmpty {
-                    Text("아직 연결된 액션이나 실적이 없습니다. 기존 액션을 연결하거나 새 하위 계획을 만들어 주세요.")
+                    Text(
+                        AutomaticRecordTimelineEngine.isRoutineOnlyCategory(
+                            routine.categoryID
+                        )
+                            ? "수면·활동 실적은 자동 기록 카드에서 루틴으로 연결합니다."
+                            : "아직 연결된 액션이나 실적이 없습니다. 기존 액션을 연결하거나 새 하위 계획을 만들어 주세요."
+                    )
                         .font(.taption(size: 8.5, weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                         .padding(.top, 2)
@@ -3088,7 +3098,8 @@ private struct TimelineDetailPanel: View {
     }
 
     private func actualGoalLinkControl(_ actual: ActualRecord) -> some View {
-        HStack(spacing: 6) {
+        let routineOnly = AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual)
+        return HStack(spacing: 6) {
             if let goal = goalForActual(actual) {
                 Label(
                     "루틴 근거 · \(GoalRecordPolicy.displayTitle(goal.title).replacingOccurrences(of: GoalRecordPolicy.currentPrefix, with: ""))",
@@ -3106,7 +3117,11 @@ private struct TimelineDetailPanel: View {
             Button {
                 showsGoalLinkSheet = true
             } label: {
-                Text(goalForActual(actual) == nil ? "루틴·액션 연결" : "연결 변경")
+                Text(
+                    goalForActual(actual) == nil
+                        ? (routineOnly ? "루틴 연결" : "루틴·액션 연결")
+                        : "연결 변경"
+                )
                     .font(.taption(size: 8, weight: .bold))
             }
             .buttonStyle(.bordered)
@@ -3252,19 +3267,21 @@ private struct TimelineDetailPanel: View {
             if let selectedManual {
                 actionPlans = [selectedManual]
             } else {
-                actionPlans = plans
-                    .filter { plan in
-                        plan.status != .skipped
-                            && plan.categoryID != "event"
-                            && !automaticIDs.contains(plan.categoryID)
-                            && plan.span.intersection(with: displaySpan) != nil
-                            && !GoalRecordPolicy.isGoal(plan)
-                            && !(
-                                plan.parentID == nil
-                                    && plan.repeatRules?.isEmpty == false
-                            )
-                    }
-                    .sorted { $0.span.start < $1.span.start }
+                actionPlans = deduplicatedPlans(
+                    plans
+                        .filter { plan in
+                            plan.status != .skipped
+                                && plan.categoryID != "event"
+                                && !automaticIDs.contains(plan.categoryID)
+                                && plan.span.intersection(with: displaySpan) != nil
+                                && !GoalRecordPolicy.isGoal(plan)
+                                && !(
+                                    plan.parentID == nil
+                                        && plan.repeatRules?.isEmpty == false
+                                )
+                        }
+                        .sorted { $0.span.start < $1.span.start }
+                )
             }
             let places = model.snapshot.places
                 .filter {
@@ -3276,33 +3293,37 @@ private struct TimelineDetailPanel: View {
                     $0.span.intersection(with: contentSpan) != nil
                 }
                 .sorted { $0.span.start < $1.span.start }
-            let sleepPlans = deduplicatedAutomaticPlans(
+            let sleepPlans = deduplicatedPlans(
                 plans.filter {
                     $0.categoryID == "sleep"
                         && !GoalRecordPolicy.isGoal($0)
                         && $0.span.intersection(with: contentSpan) != nil
                 }
             )
-            let activityPlans = deduplicatedAutomaticPlans(
+            let activityPlans = deduplicatedPlans(
                 plans.filter {
                     $0.categoryID == "activity"
                         && !GoalRecordPolicy.isGoal($0)
                         && $0.span.intersection(with: contentSpan) != nil
                 }
             )
-            let sleepActuals = actuals
-                .filter {
-                    isSleepActual($0)
-                        && $0.span().intersection(with: contentSpan) != nil
-                }
-                .sorted { $0.startedAt < $1.startedAt }
-            let activityActuals = actuals
-                .filter {
-                    !isSleepActual($0)
-                        && $0.categoryID == "activity"
-                        && $0.span().intersection(with: contentSpan) != nil
-                }
-                .sorted { $0.startedAt < $1.startedAt }
+            let sleepActuals = deduplicatedActuals(
+                actuals
+                    .filter {
+                        isSleepActual($0)
+                            && $0.span().intersection(with: contentSpan) != nil
+                    }
+                    .sorted { $0.startedAt < $1.startedAt }
+            )
+            let activityActuals = deduplicatedActuals(
+                actuals
+                    .filter {
+                        !isSleepActual($0)
+                            && $0.categoryID == "activity"
+                            && $0.span().intersection(with: contentSpan) != nil
+                    }
+                    .sorted { $0.startedAt < $1.startedAt }
+            )
             let selectedActual = selection?.actualID.flatMap { actualID in
                 actuals.first { actual in
                     actual.id == actualID
@@ -3337,23 +3358,61 @@ private struct TimelineDetailPanel: View {
         }
     }
 
-    private func deduplicatedAutomaticPlans(
+    private func deduplicatedPlans(
         _ plans: [PlanRecord]
     ) -> [PlanRecord] {
         var seen = Set<String>()
         return plans
-            .sorted { $0.span.start < $1.span.start }
+            .sorted {
+                if ($0.origin == .repeatRule) != ($1.origin == .repeatRule) {
+                    return $0.origin != .repeatRule
+                }
+                return $0.span.start < $1.span.start
+            }
             .filter { plan in
-                guard plan.origin == .repeatRule else { return true }
                 let key = [
-                    plan.parentID?.uuidString ?? "-",
                     plan.categoryID,
-                    plan.title,
-                    String(plan.span.start.timeIntervalSinceReferenceDate),
-                    String(plan.span.end.timeIntervalSinceReferenceDate),
+                    plan.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    String(Int(plan.span.start.timeIntervalSinceReferenceDate.rounded())),
+                    String(Int(plan.span.end.timeIntervalSinceReferenceDate.rounded())),
                 ].joined(separator: "|")
                 return seen.insert(key).inserted
             }
+    }
+
+    private func deduplicatedActuals(
+        _ actuals: [ActualRecord]
+    ) -> [ActualRecord] {
+        var seen = Set<String>()
+        return actuals
+            .sorted {
+                if $0.startedAt == $1.startedAt {
+                    return actualSourcePriority($0.source)
+                        > actualSourcePriority($1.source)
+                }
+                return $0.startedAt < $1.startedAt
+            }
+            .filter { actual in
+                let end = actual.endedAt.map {
+                    String(Int($0.timeIntervalSinceReferenceDate.rounded()))
+                } ?? "open"
+                let key = [
+                    actual.categoryID,
+                    actual.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    String(Int(actual.startedAt.timeIntervalSinceReferenceDate.rounded())),
+                    end,
+                ].joined(separator: "|")
+                return seen.insert(key).inserted
+            }
+    }
+
+    private func actualSourcePriority(_ source: ActualSource) -> Int {
+        switch source {
+        case .healthKit, .appleWatch: 3
+        case .location: 2
+        case .timer, .manual: 1
+        case .calendar, .photo: 0
+        }
     }
 
     private var detailContentSpan: TimeSpan {
@@ -4541,11 +4600,16 @@ private struct GoalActualLinkSheet: View {
     let actual: ActualRecord
     @State private var candidateCache = GoalActualLinkCandidateCache()
 
+    private var routinesOnly: Bool {
+        AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual)
+    }
+
     private var candidates: [GoalActualLinkCandidate] {
         candidateCache.values(
             actual: actual,
             timelineRevision: model.timelineRevision,
-            plans: model.snapshot.plans
+            plans: model.snapshot.plans,
+            routinesOnly: routinesOnly
         )
     }
 
@@ -4554,9 +4618,13 @@ private struct GoalActualLinkSheet: View {
             Group {
                 if candidates.isEmpty {
                     ContentUnavailableView(
-                        "연결할 루틴·액션이 없습니다",
+                        routinesOnly ? "연결할 루틴이 없습니다" : "연결할 루틴·액션이 없습니다",
                         systemImage: "scope",
-                        description: Text("먼저 루틴 탭에서 루틴을 만들어 주세요.")
+                        description: Text(
+                            routinesOnly
+                                ? "수면·활동 기록은 시간을 포함하는 루틴에만 연결할 수 있습니다."
+                                : "먼저 루틴 탭에서 루틴을 만들어 주세요."
+                        )
                     )
                 } else {
                     List(candidates) { candidate in
@@ -4607,7 +4675,9 @@ private struct GoalActualLinkSheet: View {
                     .listStyle(.plain)
                 }
             }
-            .navigationTitle("기록을 루틴·액션에 연결")
+            .navigationTitle(
+                routinesOnly ? "기록을 루틴에 연결" : "기록을 루틴·액션에 연결"
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -4638,6 +4708,7 @@ private final class GoalActualLinkCandidateCache {
     private struct Key: Equatable {
         let timelineRevision: UInt64
         let actualID: UUID
+        let routinesOnly: Bool
     }
 
     private var key: Key?
@@ -4646,11 +4717,13 @@ private final class GoalActualLinkCandidateCache {
     func values(
         actual: ActualRecord,
         timelineRevision: UInt64,
-        plans: [PlanRecord]
+        plans: [PlanRecord],
+        routinesOnly: Bool
     ) -> [GoalActualLinkCandidate] {
         let newKey = Key(
             timelineRevision: timelineRevision,
-            actualID: actual.id
+            actualID: actual.id,
+            routinesOnly: routinesOnly
         )
         if key == newKey {
             return cached
@@ -4706,7 +4779,11 @@ private final class GoalActualLinkCandidateCache {
         }
 
         let values = plans
-            .filter { !$0.isFixed && $0.status != .skipped }
+            .filter {
+                !$0.isFixed
+                    && $0.status != .skipped
+                    && (!routinesOnly || GoalRecordPolicy.isGoal($0))
+            }
             .map { plan -> GoalActualLinkCandidate in
                 let overlaps = plan.span.intersection(with: actualSpan) != nil
                 let categoryMatches = categories(in: plan.id)

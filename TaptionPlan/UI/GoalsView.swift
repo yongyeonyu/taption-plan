@@ -898,7 +898,13 @@ struct GoalDetailView: View {
             .foregroundStyle(achievementColor(progress))
 
             if detail.actualMatches.isEmpty {
-                Text("실적은 시간표에서 항목을 탭해 루틴 또는 액션에 연결하면 반영됩니다.")
+                Text(
+                    AutomaticRecordTimelineEngine.isRoutineOnlyCategory(
+                        goal.categoryID
+                    )
+                        ? "Apple 건강·Watch 수면 기록은 반복 시간과 겹치면 자동 근거로 반영됩니다."
+                        : "실적은 시간표에서 항목을 탭해 루틴 또는 액션에 연결하면 반영됩니다."
+                )
                     .font(.taption(size: 8))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -1197,6 +1203,7 @@ struct GoalDetailView: View {
         detail.actualMatches.first(where: {
             $0.actual.planID == plan.id
                 || $0.actual.routineID == plan.id
+                || $0.matchedPlanID == plan.id
         })?.actual
     }
 
@@ -1296,6 +1303,8 @@ struct GoalDetailView: View {
                                 .lineLimit(1)
                             Text(
                                 "\(match.kind.displayName) · "
+                                    + evidenceSource(match.actual.source)
+                                    + " · "
                                     + match.actual.startedAt.formatted(
                                         date: .abbreviated,
                                         time: .shortened
@@ -1313,6 +1322,18 @@ struct GoalDetailView: View {
                 }
             }
             .padding(.top, 2)
+        }
+    }
+
+    private func evidenceSource(_ source: ActualSource) -> String {
+        switch source {
+        case .healthKit: "Apple 건강"
+        case .appleWatch: "Apple Watch"
+        case .location: "iPhone 센서"
+        case .timer: "앱 타이머"
+        case .manual: "직접 기록"
+        case .calendar: "캘린더"
+        case .photo: "사진"
         }
     }
 

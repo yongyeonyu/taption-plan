@@ -1603,7 +1603,10 @@ final class AppModel {
         }
         let plan = snapshot.plans[planIndex]
         guard plan.origin != .repeatRule,
-              !GoalRecordPolicy.isGoal(plan) else {
+              !GoalRecordPolicy.isGoal(plan),
+              !AutomaticRecordTimelineEngine.isRoutineOnlyCategory(
+                  plan.categoryID
+              ) else {
             userFacingError = "반복 세그먼트와 루틴은 액션아이템으로 연결할 수 없습니다."
             return
         }
@@ -1660,6 +1663,12 @@ final class AppModel {
             return
         }
 
+        guard !AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual)
+                || GoalRecordPolicy.isGoal(goal) else {
+            userFacingError = "수면·활동 기록은 루틴에만 연결할 수 있습니다."
+            return
+        }
+
         if GoalRecordPolicy.isGoal(goal) {
             snapshot.actuals[actualIndex].routineID = goal.id
             snapshot.actuals[actualIndex].planID = nil
@@ -1696,6 +1705,12 @@ final class AppModel {
            ), let actualIndex = snapshot.actuals.firstIndex(where: {
                $0.id == actualID
            }) {
+            guard !AutomaticRecordTimelineEngine.linksOnlyToRoutine(
+                snapshot.actuals[actualIndex]
+            ) || GoalRecordPolicy.isGoal(target) else {
+                userFacingError = "수면·활동 기록은 루틴에만 연결할 수 있습니다."
+                return
+            }
             if GoalRecordPolicy.isGoal(target) {
                 snapshot.actuals[actualIndex].routineID = planID
             } else {

@@ -165,6 +165,14 @@ enum AutomaticRecordTimelineEngine {
             || actual.title.localizedCaseInsensitiveContains("sleep")
     }
 
+    static func isRoutineOnlyCategory(_ categoryID: String) -> Bool {
+        categoryID == "sleep" || categoryID == "activity"
+    }
+
+    static func linksOnlyToRoutine(_ actual: ActualRecord) -> Bool {
+        isRoutineOnlyCategory(actual.categoryID)
+    }
+
     static func activities(
         from actuals: [ActualRecord],
         inside span: TimeSpan,
@@ -890,14 +898,15 @@ enum GoalRecordPolicy {
     }
 }
 
-/// How an actual record was associated with a goal. Only explicit links count;
-/// category/time overlap is never promoted to progress.
+/// How an actual record was associated with a goal.
 enum GoalActualMatchKind: String, Equatable, Hashable, Sendable {
     case linked
+    case automatic
 
     var displayName: String {
         switch self {
         case .linked: "연결됨"
+        case .automatic: "자동 근거"
         }
     }
 }
@@ -906,13 +915,13 @@ struct GoalActualMatch: Identifiable, Equatable, Hashable, Sendable {
     let actual: ActualRecord
     let kind: GoalActualMatchKind
     let overlapDuration: TimeInterval
+    let matchedPlanID: UUID?
 
     var id: UUID { actual.id }
 }
 
-/// Resolves activity evidence for a goal without inference. A record becomes
-/// evidence only after the user explicitly links it to this routine or one of
-/// its action items.
+/// Resolves explicit links first, then associates unlinked HealthKit/Watch
+/// sleep and activity records with the best overlapping repeat segment.
 enum GoalActivityMatchingEngine {
     static func matches(
         goal: PlanRecord,
@@ -925,7 +934,20 @@ enum GoalActivityMatchingEngine {
             in: plans
         )) ?? []
         let scopedIDs = Set([goal.id] + descendants.map(\.id))
-        return actuals.compactMap { actual in
+        var claimed = Set<UUID>()
+        let explicit = actuals.compactMap { actual -> GoalActualMatch? in
+            if AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual) {
+                guard let routineID = actual.routineID,
+                      scopedIDs.contains(routineID) else { return nil }
+                claimed.insert(actual.id)
+                return GoalActualMatch(
+                    actual: actual,
+                    kind: .linked,
+                    overlapDuration: actual.span(asOf: asOf).duration,
+                    matchedPlanID: routineID
+                )
+            }
+
             if let planID = actual.planID {
                 // A record explicitly attached elsewhere must not be copied
                 // into another goal merely because its category/time match.
@@ -933,7 +955,8 @@ enum GoalActivityMatchingEngine {
                 return GoalActualMatch(
                     actual: actual,
                     kind: .linked,
-                    overlapDuration: actual.span(asOf: asOf).duration
+                    overlapDuration: actual.span(asOf: asOf).duration,
+                    matchedPlanID: planID
                 )
             }
 
@@ -942,13 +965,45 @@ enum GoalActivityMatchingEngine {
                 return GoalActualMatch(
                     actual: actual,
                     kind: .linked,
-                    overlapDuration: actual.span(asOf: asOf).duration
+                    overlapDuration: actual.span(asOf: asOf).duration,
+                    matchedPlanID: routineID
                 )
             }
 
             return nil
         }
-        .sorted {
+        let repeatSegments = descendants.filter {
+            $0.origin == .repeatRule
+                && $0.categoryID == goal.categoryID
+        }
+        let automatic = actuals.compactMap { actual -> GoalActualMatch? in
+            guard !claimed.contains(actual.id),
+                  actual.planID == nil,
+                  actual.routineID == nil,
+                  (actual.source == .healthKit || actual.source == .appleWatch),
+                  AutomaticRecordTimelineEngine.isRoutineOnlyCategory(
+                      goal.categoryID
+                  ) else { return nil }
+            let actualSpan = actual.span(asOf: asOf)
+            let best = repeatSegments.compactMap { segment -> (PlanRecord, TimeInterval)? in
+                guard let overlap = actualSpan.intersection(with: segment.span) else {
+                    return nil
+                }
+                return (segment, overlap.duration)
+            }.max { lhs, rhs in
+                lhs.1 == rhs.1
+                    ? lhs.0.span.start > rhs.0.span.start
+                    : lhs.1 < rhs.1
+            }
+            guard let best else { return nil }
+            return GoalActualMatch(
+                actual: actual,
+                kind: .automatic,
+                overlapDuration: best.1,
+                matchedPlanID: best.0.id
+            )
+        }
+        return (explicit + automatic).sorted {
             if $0.actual.startedAt == $1.actual.startedAt {
                 return $0.actual.id.uuidString < $1.actual.id.uuidString
             }
@@ -963,7 +1018,9 @@ enum GoalActivityMatchingEngine {
     ) -> Double {
         let spans = matches.compactMap { match -> TimeSpan? in
             let actual = match.actual
-            if actual.planID == plan.id || actual.routineID == plan.id {
+            if actual.planID == plan.id
+                || actual.routineID == plan.id
+                || match.matchedPlanID == plan.id {
                 return actual.span(asOf: asOf).intersection(with: plan.span)
             }
             return nil
@@ -1148,7 +1205,8 @@ enum RecordRelationshipEngine {
                     appendEdge(from: actualNodeID, to: nodeID)
                 }
             }
-            if let planID = actual.planID {
+            if let planID = actual.planID,
+               !AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual) {
                 let nodeID = "action.\(planID.uuidString)"
                 if nodeIDs.contains(nodeID) {
                     appendEdge(from: actualNodeID, to: nodeID)

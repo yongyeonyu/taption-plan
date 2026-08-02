@@ -3690,7 +3690,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testSleepActualCanBeLinkedToRoutineAndActionInRelationshipGraph() {
+    func testSleepActualLinksToRoutineOnlyInRelationshipGraph() {
         let start = makeDate(2026, 8, 1, 22)
         let routine = PlanRecord(
             title: "루틴:수면",
@@ -3728,7 +3728,7 @@ final class FeatureEngineTests: XCTestCase {
                     && $0.to == "routine.\(routine.id.uuidString)"
             }
         )
-        XCTAssertTrue(
+        XCTAssertFalse(
             graph.edges.contains {
                 $0.from == "automatic.actual.\(sleep.id.uuidString)"
                     && $0.to == "action.\(action.id.uuidString)"
@@ -3775,6 +3775,57 @@ final class FeatureEngineTests: XCTestCase {
                 actuals: [linked, unlinked]
             ).map(\.actual.id),
             [linked.id]
+        )
+    }
+
+    func testAutomaticSleepEvidenceUsesBestOverlappingRepeatSegment() {
+        let routineStart = makeDate(2026, 8, 1, 22)
+        let routine = PlanRecord(
+            title: "루틴:수면",
+            span: TimeSpan(
+                start: routineStart,
+                end: routineStart.addingTimeInterval(10 * hour)
+            ),
+            categoryID: "sleep"
+        )
+        let repeatSegment = PlanRecord(
+            title: "수면 · 주중",
+            span: TimeSpan(
+                start: makeDate(2026, 8, 1, 23),
+                end: makeDate(2026, 8, 2, 6, 30)
+            ),
+            categoryID: "sleep",
+            parentID: routine.id,
+            origin: .repeatRule
+        )
+        let sleep = ActualRecord(
+            planID: nil,
+            routineID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: makeDate(2026, 8, 2, 2),
+            endedAt: makeDate(2026, 8, 2, 6),
+            source: .healthKit
+        )
+
+        let matches = GoalActivityMatchingEngine.matches(
+            goal: routine,
+            plans: [routine, repeatSegment],
+            actuals: [sleep],
+            asOf: makeDate(2026, 8, 2, 12)
+        )
+
+        XCTAssertEqual(matches.count, 1)
+        XCTAssertEqual(matches.first?.kind, .automatic)
+        XCTAssertEqual(matches.first?.matchedPlanID, repeatSegment.id)
+        XCTAssertEqual(
+            GoalActivityMatchingEngine.progress(
+                for: repeatSegment,
+                matches: matches,
+                asOf: makeDate(2026, 8, 2, 12)
+            ),
+            4 * hour / (7.5 * hour),
+            accuracy: 0.001
         )
     }
 
