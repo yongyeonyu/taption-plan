@@ -169,9 +169,9 @@ struct PlanEditorSheet: View {
 
     private var deleteMessage: String {
         if childCount == 0 {
-            return "실제 실행 기록은 회고를 위해 보존됩니다."
+            return "실제 실행 기록은 기록 화면을 위해 보존됩니다."
         }
-        return "하위 계획 \(childCount)개도 함께 삭제되며, 실제 실행 기록은 회고를 위해 보존됩니다."
+        return "하위 계획 \(childCount)개도 함께 삭제되며, 실제 실행 기록은 기록 화면을 위해 보존됩니다."
     }
 
     private var nameCard: some View {

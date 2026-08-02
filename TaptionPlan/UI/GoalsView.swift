@@ -510,6 +510,7 @@ enum GoalDetailEngine {
             switch actual.source {
             case .healthKit: "HealthKit"
             case .appleWatch: "Apple Watch"
+            case .motion: "iPhone Core Motion"
             case .location: "iPhone 위치·센서"
             case .timer: "앱 타이머"
             case .manual: "직접 기록"
@@ -1329,6 +1330,7 @@ struct GoalDetailView: View {
         switch source {
         case .healthKit: "Apple 건강"
         case .appleWatch: "Apple Watch"
+        case .motion: "iPhone Core Motion"
         case .location: "iPhone 센서"
         case .timer: "앱 타이머"
         case .manual: "직접 기록"

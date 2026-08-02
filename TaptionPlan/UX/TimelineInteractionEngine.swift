@@ -87,6 +87,38 @@ enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
                 < abs(log(max(60, duration) / $1.duration))
         } ?? .oneDay
     }
+
+    /// Formats the actual visible time span, including values between and
+    /// beyond the menu presets.  The ruler is a readout of the live pinch
+    /// result; it is not a second zoom constraint.
+    static func displayLabel(for duration: TimeInterval) -> String {
+        let minutes = max(1, Int((duration / 60).rounded()))
+        if minutes < 60 {
+            return "\(minutes)분"
+        }
+
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours < 24 {
+            return remainder == 0
+                ? "\(hours)시간"
+                : "\(hours)시간 \(remainder)분"
+        }
+
+        let days = Double(minutes) / (24 * 60)
+        if days < 30 {
+            let roundedDays = max(1, Int(days.rounded()))
+            return "\(roundedDays)일"
+        }
+
+        if days < 365 {
+            let months = max(1, Int((days / 30.4375).rounded()))
+            return "\(months)개월"
+        }
+
+        let years = max(1, Int((days / 365.25).rounded()))
+        return "\(years)년"
+    }
 }
 
 enum GanttZoomStage: Int, CaseIterable, Comparable, Sendable {

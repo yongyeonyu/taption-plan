@@ -55,11 +55,13 @@ struct SettingsView: View {
                                 blue: 0.55
                             ),
                             title: "시작 구성",
-                            subtitle: "사용할 대분류를 선택하고 시간표에 표시",
-                            value: "(model.selectedSetupCategoryCount)개 선택"
+                            subtitle: "현재 사용하지 않는 메뉴",
+                            value: "사용 안 함"
                         ) {
                             model.openInitialSetup()
                         }
+                        .disabled(true)
+                        .opacity(0.42)
                     }
 
                     settingsSection(
@@ -713,6 +715,8 @@ struct SettingsView: View {
             .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
+        .disabled(true)
+        .opacity(0.42)
     }
 
     private var proCard: some View {

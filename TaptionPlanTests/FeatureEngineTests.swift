@@ -247,6 +247,9 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(
             AutomaticRecordTimelineEngine.isImmutable(record(.location))
         )
+        XCTAssertTrue(
+            AutomaticRecordTimelineEngine.isImmutable(record(.motion))
+        )
         XCTAssertFalse(
             AutomaticRecordTimelineEngine.isImmutable(record(.manual))
         )
@@ -788,6 +791,53 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(result.evidence.contains("지하철 복합 신호 충족"))
     }
 
+    func testAppleWatchAccelerationAndUndergroundWindowIdentifySubway() {
+        let base = makeDate(2026, 7, 30, 8, 0)
+        let readings = (0..<6).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: index < 2 ? 14 : nil,
+                motion: .automotive,
+                motionConfidence: .high,
+                relativeAltitudeMeters: Double(index) * -0.8,
+                stepCount: 100,
+                watchAccelerationStandardDeviationG: 0.04,
+                watchAccelerationMeanJerkGPerSecond: 0.16,
+                gpsAvailable: index < 2,
+                frequentStops: true
+            )
+        }
+
+        let result = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertTrue(
+            result.evidence.contains("Apple Watch 3축 가속도 철도 진동")
+        )
+        XCTAssertTrue(result.evidence.contains("걸음 거의 없음 · 지하 구간"))
+    }
+
+    func testWatchVibrationWithoutUndergroundContextDoesNotBecomeSubway() {
+        let base = makeDate(2026, 7, 30, 8, 0)
+        let readings = (0..<4).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: 13,
+                motion: .automotive,
+                motionConfidence: .high,
+                stepCount: 20,
+                watchAccelerationStandardDeviationG: 0.04,
+                watchAccelerationMeanJerkGPerSecond: 0.16,
+                gpsAvailable: true
+            )
+        }
+
+        XCTAssertNotEqual(
+            TravelModeClassifier().classify(readings: readings).mode,
+            .subway
+        )
+    }
+
     func testDirectMotionAndShipClassification() {
         let base = makeDate(2026, 7, 30)
         let running = SensorReading(
@@ -836,6 +886,86 @@ final class FeatureEngineTests: XCTestCase {
             ),
             .running
         )
+    }
+
+    func testMotionActivityActualsExposeEveryPassiveBehaviorWithoutDuplicates() {
+        let base = makeDate(2026, 8, 1, 8)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(30 * 60)
+        )
+        let activities = [
+            MotionActivityRecord(
+                span: TimeSpan(start: base, end: base.addingTimeInterval(5 * 60)),
+                motion: .stationary,
+                confidence: .high
+            ),
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base.addingTimeInterval(5 * 60),
+                    end: base.addingTimeInterval(10 * 60)
+                ),
+                motion: .walking,
+                confidence: .high
+            ),
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base.addingTimeInterval(10 * 60),
+                    end: base.addingTimeInterval(15 * 60)
+                ),
+                motion: .running,
+                confidence: .medium
+            ),
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base.addingTimeInterval(15 * 60),
+                    end: base.addingTimeInterval(20 * 60)
+                ),
+                motion: .cycling,
+                confidence: .high
+            ),
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base.addingTimeInterval(20 * 60),
+                    end: base.addingTimeInterval(25 * 60)
+                ),
+                motion: .automotive,
+                confidence: .medium
+            ),
+        ]
+
+        let first = MotionActivityActualEngine.records(
+            from: activities,
+            existing: [],
+            inside: span
+        )
+        let second = MotionActivityActualEngine.records(
+            from: activities,
+            existing: [],
+            inside: span
+        )
+
+        XCTAssertEqual(
+            first.map(\.title),
+            ["정지·휴식", "걷기", "달리기", "자전거", "차량 탑승"]
+        )
+        XCTAssertEqual(first.map(\.id), second.map(\.id))
+        XCTAssertTrue(first.allSatisfy { $0.source == .motion })
+
+        let workout = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(5 * 60),
+            endedAt: base.addingTimeInterval(10 * 60),
+            source: .appleWatch
+        )
+        let withoutDuplicate = MotionActivityActualEngine.records(
+            from: activities,
+            existing: [workout],
+            inside: span
+        )
+        XCTAssertFalse(withoutDuplicate.contains { $0.title == "걷기" })
     }
 
     func testIPhoneStepIncreaseSeparatesWalkingFromAutomotiveMotion() {
@@ -2598,6 +2728,90 @@ final class FeatureEngineTests: XCTestCase {
             PlaceDetectionEngine().detectStays(readings: readings).count,
             1
         )
+    }
+
+    func testWalkingLocationEngineAddsConfirmedGPSLocations() {
+        let base = makeDate(2026, 7, 30, 18)
+        let sessionID = UUID()
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127,
+                    altitude: 30,
+                    horizontalAccuracy: 8,
+                    verticalAccuracy: 5
+                ),
+                motion: .walking,
+                trackingSessionID: sessionID,
+                trackingKind: .walking,
+                sourceDevice: .iPhone
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(45),
+                point: GeoPoint(
+                    latitude: 37.5002,
+                    longitude: 127.0002,
+                    altitude: 30,
+                    horizontalAccuracy: 8,
+                    verticalAccuracy: 5
+                ),
+                motion: .walking,
+                trackingSessionID: sessionID,
+                trackingKind: .walking,
+                sourceDevice: .iPhone
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(90),
+                point: GeoPoint(
+                    latitude: 37.5004,
+                    longitude: 127.0004,
+                    altitude: 30,
+                    horizontalAccuracy: 8,
+                    verticalAccuracy: 5
+                ),
+                motion: .walking,
+                trackingSessionID: sessionID,
+                trackingKind: .walking,
+                sourceDevice: .iPhone
+            )
+        ]
+
+        let locations = WalkingLocationEngine().build(readings: readings)
+
+        XCTAssertEqual(locations.count, 1)
+        XCTAssertEqual(locations.first?.displayName, "확인된 위치")
+        XCTAssertTrue(locations.first?.isConfirmed == true)
+        XCTAssertTrue(locations.first?.isWalkingLocation == true)
+        XCTAssertEqual(locations.first?.span.duration ?? 0, 90, accuracy: 0.001)
+    }
+
+    func testWalkingLocationEngineIgnoresInaccurateAndNonWalkingGPS() {
+        let base = makeDate(2026, 7, 30, 18)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 30,
+            horizontalAccuracy: 80,
+            verticalAccuracy: 5
+        )
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: point,
+                motion: .walking,
+                trackingKind: .walking
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                point: point,
+                motion: .stationary,
+                trackingKind: .automatic
+            )
+        ]
+
+        XCTAssertTrue(WalkingLocationEngine().build(readings: readings).isEmpty)
     }
 
     func testTimelineRouteUsesSameClockCoordinates() {

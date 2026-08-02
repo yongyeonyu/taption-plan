@@ -151,7 +151,7 @@ enum AutomaticRecordTimelineEngine {
     /// routine progress slider.
     static func isImmutable(_ actual: ActualRecord) -> Bool {
         switch actual.source {
-        case .healthKit, .appleWatch, .location:
+        case .healthKit, .appleWatch, .motion, .location:
             true
         case .manual, .timer, .calendar, .photo:
             false
@@ -180,7 +180,10 @@ enum AutomaticRecordTimelineEngine {
     ) -> [ActualRecord] {
         actuals
             .filter {
-                ($0.source == .healthKit || $0.source == .appleWatch)
+                ($0.source == .healthKit
+                    || $0.source == .appleWatch
+                    || $0.source == .motion
+                    || $0.source == .location)
                     && $0.span(asOf: asOf).intersection(with: span) != nil
             }
             .sorted {
@@ -980,7 +983,9 @@ enum GoalActivityMatchingEngine {
             guard !claimed.contains(actual.id),
                   actual.planID == nil,
                   actual.routineID == nil,
-                  (actual.source == .healthKit || actual.source == .appleWatch),
+                  (actual.source == .healthKit
+                      || actual.source == .appleWatch
+                      || actual.source == .motion),
                   AutomaticRecordTimelineEngine.isRoutineOnlyCategory(
                       goal.categoryID
                   ) else { return nil }
@@ -1272,6 +1277,7 @@ enum RecordRelationshipEngine {
             || actual.categoryID == "activity"
             || actual.source == .healthKit
             || actual.source == .appleWatch
+            || actual.source == .motion
             || actual.source == .location
     }
 

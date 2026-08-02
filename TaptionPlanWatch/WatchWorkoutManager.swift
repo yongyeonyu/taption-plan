@@ -38,6 +38,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var accelerometerSum = TaptionWatchSensorVector3.zero
     private var accelerometerCount = 0
     private var peakAccelerationG = 0.0
+    private var accelerationMagnitudeMean = 0.0
+    private var accelerationMagnitudeM2 = 0.0
+    private var accelerationJerkSum = 0.0
+    private var previousAccelerationMagnitude: Double?
     private var gyroscopeSum = TaptionWatchSensorVector3.zero
     private var gyroscopeCount = 0
     private var peakRotationRate = 0.0
@@ -246,6 +250,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         accelerometerSum = .zero
         accelerometerCount = 0
         peakAccelerationG = 0
+        accelerationMagnitudeMean = 0
+        accelerationMagnitudeM2 = 0
+        accelerationJerkSum = 0
+        previousAccelerationMagnitude = nil
         gyroscopeSum = .zero
         gyroscopeCount = 0
         peakRotationRate = 0
@@ -379,7 +387,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         accelerometerSum.add(value)
         accelerometerCount += 1
         sensorSampleCount = accelerometerCount
-        peakAccelerationG = max(peakAccelerationG, value.magnitude)
+        let magnitude = value.magnitude
+        peakAccelerationG = max(peakAccelerationG, magnitude)
+        let count = Double(accelerometerCount)
+        let delta = magnitude - accelerationMagnitudeMean
+        accelerationMagnitudeMean += delta / count
+        accelerationMagnitudeM2 += delta * (magnitude - accelerationMagnitudeMean)
+        if let previousAccelerationMagnitude {
+            accelerationJerkSum += abs(magnitude - previousAccelerationMagnitude) * 10
+        }
+        previousAccelerationMagnitude = magnitude
     }
 
     private func recordGyroscope(_ value: TaptionWatchSensorVector3) {
@@ -447,6 +464,15 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 : nil,
             peakAccelerationG: accelerometerCount > 0
                 ? peakAccelerationG
+                : nil,
+            accelerometerStandardDeviationG: accelerometerCount > 1
+                ? sqrt(
+                    max(0, accelerationMagnitudeM2)
+                        / Double(accelerometerCount - 1)
+                )
+                : nil,
+            accelerometerMeanJerkGPerSecond: accelerometerCount > 1
+                ? accelerationJerkSum / Double(accelerometerCount - 1)
                 : nil,
             gyroscopeSampleCount: gyroscopeCount,
             gyroscopeAverageRadiansPerSecond: gyroscopeCount > 0

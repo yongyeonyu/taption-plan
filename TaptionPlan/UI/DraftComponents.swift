@@ -238,32 +238,10 @@ struct DraftBottomNavigationBar: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             tabButton(.schedule)
-            tabButton(.goals)
-
-            Button {
-                if model.selectedTab == .goals {
-                    model.addPlanContext = .goal
-                } else if model.detail == .group,
-                   let parentID = model.selectedGroupPlanID {
-                    model.addPlanContext = .child(parentID)
-                } else {
-                    model.addPlanContext = .quick
-                }
-                model.isAddPlanPresented = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.taption(size: 23, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color.tpInk, in: Circle())
-                    .shadow(color: .black.opacity(0.28), radius: 7, y: 4)
+            if !TaptionProductScope.automaticLoggingOnly {
+                tabButton(.goals)
+                mainAddButton
             }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity)
-            .accessibilityLabel(
-                mainAddButtonAccessibilityLabel
-            )
-
             tabButton(.review)
             tabButton(.settings)
         }
@@ -276,6 +254,31 @@ struct DraftBottomNavigationBar: View {
                 .fill(Color.tpLine)
                 .frame(height: 0.5)
         }
+    }
+
+    @ViewBuilder
+    private var mainAddButton: some View {
+        Button {
+            if model.selectedTab == .goals {
+                model.addPlanContext = .goal
+            } else if model.detail == .group,
+                      let parentID = model.selectedGroupPlanID {
+                model.addPlanContext = .child(parentID)
+            } else {
+                model.addPlanContext = .quick
+            }
+            model.isAddPlanPresented = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.taption(size: 23, weight: .medium))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(Color.tpInk, in: Circle())
+                .shadow(color: .black.opacity(0.28), radius: 7, y: 4)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel(mainAddButtonAccessibilityLabel)
     }
 
     private var mainAddButtonAccessibilityLabel: String {

@@ -35,14 +35,14 @@ final class AppModel {
         didSet {
             snapshotRevision &+= 1
 
-            // Sensor/weather updates replace the snapshot frequently, but do
-            // not change the timeline geometry. Keep a separate revision for
-            // changes that can actually alter rows, blocks or their detail
-            // targets so the Gantt layout cache survives live collection.
+            // Device snapshots are frequent. Keep a separate revision for
+            // changes that alter rows, blocks or their detail targets so the
+            // Gantt layout cache survives ordinary live collection.
             let timestampOnly = timestampOnlySnapshotAssignment
             timestampOnlySnapshotAssignment = false
             if !timestampOnly
-                && (oldValue.plans != snapshot.plans
+                && (oldValue.weather != snapshot.weather
+                    || oldValue.plans != snapshot.plans
                     || oldValue.actuals != snapshot.actuals
                     || oldValue.travel != snapshot.travel
                     || oldValue.places != snapshot.places
@@ -315,6 +315,12 @@ final class AppModel {
     }
 
     func selectTab(_ tab: RootTab) {
+        if TaptionProductScope.automaticLoggingOnly, tab == .goals {
+            selectedTab = .schedule
+            detail = nil
+            groupNavigationPath = []
+            return
+        }
         selectedTab = tab
         detail = nil
         groupNavigationPath = []
@@ -2563,9 +2569,16 @@ final class AppModel {
                     + error.localizedDescription
             }
         }
-        if let sensorService,
-           summary.routePoints?.isEmpty == false || summary.isFinal {
+        if let sensorService {
             let routePoints = summary.routePoints ?? []
+            let watchAccelerationAverageG = summary.accelerometerAverageG.map {
+                SensorVector3(x: $0.x, y: $0.y, z: $0.z)
+            }
+            let watchMotion: MotionKind = summary.workoutKind == .running
+                ? .running
+                : summary.workoutKind == .cycling
+                    ? .cycling
+                    : .walking
             var readings = routePoints.enumerated().map { offset, point in
                 SensorReading(
                     id: point.id,
@@ -2591,6 +2604,11 @@ final class AppModel {
                     floorsDescended: summary.floorsDescended,
                     stepCount: summary.stepCount,
                     walkingRunningDistanceMeters: summary.distanceMeters,
+                    watchAccelerationAverageG: watchAccelerationAverageG,
+                    watchAccelerationStandardDeviationG:
+                        summary.accelerometerStandardDeviationG,
+                    watchAccelerationMeanJerkGPerSecond:
+                        summary.accelerometerMeanJerkGPerSecond,
                     gpsAvailable: true,
                     watchWorkoutKind: summary.workoutKind.rawValue,
                     trackingSessionID: summary.sessionID,
@@ -2600,6 +2618,38 @@ final class AppModel {
                     sourceDevice: .appleWatch,
                     sequence: summary.sequence * 10_000 + offset,
                     trackingSessionEnded: false
+                )
+            }
+            if readings.isEmpty,
+               summary.accelerometerSampleCount > 0,
+               !summary.isFinal {
+                readings.append(
+                    SensorReading(
+                        id: summary.isFinal ? summary.sessionID : UUID(),
+                        timestamp: summary.endedAt,
+                        motion: watchMotion,
+                        motionConfidence: .medium,
+                        relativeAltitudeMeters: summary.relativeAltitudeMeters,
+                        pressureKilopascals: summary.pressureKilopascals,
+                        floorsAscended: summary.floorsAscended,
+                        floorsDescended: summary.floorsDescended,
+                        stepCount: summary.stepCount,
+                        walkingRunningDistanceMeters: summary.distanceMeters,
+                        watchAccelerationAverageG: watchAccelerationAverageG,
+                        watchAccelerationStandardDeviationG:
+                            summary.accelerometerStandardDeviationG,
+                        watchAccelerationMeanJerkGPerSecond:
+                            summary.accelerometerMeanJerkGPerSecond,
+                        gpsAvailable: false,
+                        watchWorkoutKind: summary.workoutKind.rawValue,
+                        trackingSessionID: summary.sessionID,
+                        trackingKind: summary.workoutKind == .running
+                            ? .running
+                            : .walking,
+                        sourceDevice: .appleWatch,
+                        sequence: summary.sequence * 10_000,
+                        trackingSessionEnded: summary.isFinal
+                    )
                 )
             }
             if summary.isFinal {
@@ -2615,6 +2665,11 @@ final class AppModel {
                         floorsDescended: summary.floorsDescended,
                         stepCount: summary.stepCount,
                         walkingRunningDistanceMeters: summary.distanceMeters,
+                        watchAccelerationAverageG: watchAccelerationAverageG,
+                        watchAccelerationStandardDeviationG:
+                            summary.accelerometerStandardDeviationG,
+                        watchAccelerationMeanJerkGPerSecond:
+                            summary.accelerometerMeanJerkGPerSecond,
                         gpsAvailable: false,
                         watchWorkoutKind: summary.workoutKind.rawValue,
                         trackingSessionID: summary.sessionID,
@@ -2723,6 +2778,24 @@ final class AppModel {
             return
         }
         sensorRefreshFingerprints[span.start] = refreshFingerprint
+        if !motionActivities.isEmpty {
+            let existingAutomatic = snapshot.actuals.filter {
+                $0.source != .motion
+            }
+            let generatedMotionActuals = MotionActivityActualEngine.records(
+                from: motionActivities,
+                existing: existingAutomatic,
+                inside: span
+            ).filter {
+                !snapshot.settings.suppressedActualIDs.contains($0.id)
+            }
+            snapshot.actuals.removeAll {
+                $0.source == .motion
+                    && $0.span(asOf: span.end).intersection(with: span) != nil
+            }
+            snapshot.actuals.append(contentsOf: generatedMotionActuals)
+            snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        }
         archiveRawDeviceData(
             source: .iPhoneMotion,
             kind: "motion-activities",
@@ -2793,11 +2866,26 @@ final class AppModel {
             to: detectedPlaces,
             knownPlaces: knownPlaces
         )
-        let places = floorTimeline.places
+        let basePlaces = floorTimeline.places
+        let walkingLocations = WalkingLocationEngine()
+            .build(readings: readings)
+            .filter { walkingLocation in
+                !basePlaces.contains { place in
+                    guard let placePoint = place.point,
+                          let walkingPoint = walkingLocation.point,
+                          place.span.intersection(
+                              with: walkingLocation.span
+                          ) != nil else {
+                        return false
+                    }
+                    return distanceMeters(placePoint, walkingPoint) <= 100
+                }
+            }
+        let places = basePlaces + walkingLocations
         let floors = floorTimeline.transitions
         let inferredTravel = AppleDeviceGroundTruthEngine.mergingTravel(
             gpsSegments: MovementRouteBuilder().build(
-                stays: places,
+                stays: basePlaces,
                 readings: readings,
                 healthEvidence: healthMovementEvidence
             ),
@@ -2808,7 +2896,7 @@ final class AppModel {
         let travel = MovementCorrectionEngine.applying(
             snapshot.settings.movementCorrections,
             to: inferredTravel,
-            places: places
+            places: basePlaces
         )
 
         snapshot.travel.removeAll {
@@ -2829,8 +2917,8 @@ final class AppModel {
         snapshot.travel.sort { $0.span.start < $1.span.start }
         snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
 
-        if snapshot.settings.weatherEnabled {
-            await refreshWeather(for: places, in: span)
+        if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
+            await refreshWeather(for: basePlaces, in: span)
         }
     }
 
@@ -3274,7 +3362,7 @@ final class AppModel {
                     suppressedIDs: snapshot.settings.suppressedActualIDs
                 )
             let existingHealthActuals = snapshot.actuals.filter {
-                $0.source == .healthKit
+                ($0.source == .healthKit || $0.source == .appleWatch)
                     && $0.span(asOf: span.end).intersection(with: span) != nil
             }
             let existingSleepSessions = sleepSessions.filter {
@@ -3591,7 +3679,12 @@ final class AppModel {
         containing date: Date,
         immediately: Bool
     ) {
-        sensorAnalysisDebounceTask?.cancel()
+        if !immediately, sensorAnalysisDebounceTask != nil {
+            return
+        }
+        if immediately {
+            sensorAnalysisDebounceTask?.cancel()
+        }
         sensorAnalysisDebounceTask = Task { [weak self] in
             if !immediately {
                 try? await Task.sleep(for: .seconds(120))
@@ -3599,6 +3692,7 @@ final class AppModel {
             guard !Task.isCancelled, let self else { return }
             await self.refreshSensorTimeline(containing: date)
             await self.persistDeviceLocalSnapshot()
+            self.sensorAnalysisDebounceTask = nil
         }
     }
 
@@ -3606,7 +3700,11 @@ final class AppModel {
         point: GeoPoint,
         at date: Date
     ) {
-        guard settings.weatherEnabled else { return }
+        // Weather is part of the automatic sensor record. Location collection
+        // enables it even when the legacy weather toggle is still off.
+        guard settings.locationEnabled || settings.weatherEnabled else {
+            return
+        }
         let movedFarEnough = lastLiveEnvironmentPoint.map {
             distanceMeters($0, point) >= 3_000
         } ?? true
@@ -4010,7 +4108,9 @@ final class AppModel {
     ) -> TaptionDataSnapshot {
         var value = source
         value.actuals.removeAll {
-            $0.source == .healthKit || $0.source == .appleWatch
+            $0.source == .healthKit
+                || $0.source == .appleWatch
+                || $0.source == .motion
         }
         value.photos = []
         value.memos = value.memos.map { memo in
@@ -4035,7 +4135,9 @@ final class AppModel {
     ) -> TaptionDataSnapshot {
         var value = cloud
         let deviceActuals = local.actuals.filter {
-            $0.source == .healthKit || $0.source == .appleWatch
+            $0.source == .healthKit
+                || $0.source == .appleWatch
+                || $0.source == .motion
         }
         let cloudIDs = Set(value.actuals.map(\.id))
         value.actuals.append(contentsOf: deviceActuals.filter {
@@ -4057,6 +4159,9 @@ final class AppModel {
         value.settings.floorCalibration = nil
         value.settings.movementCorrections =
             local.settings.movementCorrections
+        // Weather is sampled with device location and remains device ground
+        // truth, just like the corresponding place and movement records.
+        value.weather = local.weather
         value.settings.suppressedActualIDs.formUnion(
             local.settings.suppressedActualIDs
         )

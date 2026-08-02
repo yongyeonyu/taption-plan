@@ -21,6 +21,21 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testPinchZoomRulerLabelsActualNonPresetSpans() {
+        XCTAssertEqual(
+            TimelineZoomPreset.displayLabel(for: 90 * 60),
+            "1시간 30분"
+        )
+        XCTAssertEqual(
+            TimelineZoomPreset.displayLabel(for: 10 * 24 * 60 * 60),
+            "10일"
+        )
+        XCTAssertEqual(
+            TimelineZoomPreset.displayLabel(for: 2 * 366 * 24 * 60 * 60),
+            "2년"
+        )
+    }
+
     func testDefaultPlanDurationIsNeverNegative() {
         let start = Date(timeIntervalSince1970: 100)
         let plan = PlanItem(

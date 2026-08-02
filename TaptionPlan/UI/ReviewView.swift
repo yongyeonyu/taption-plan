@@ -1,5 +1,12 @@
 import SwiftUI
 
+private struct ActualRecordItem: Identifiable {
+    let record: ActualRecord
+    let span: TimeSpan
+
+    var id: UUID { record.id }
+}
+
 struct ReviewView: View {
     @Bindable var model: AppModel
 
@@ -10,28 +17,9 @@ struct ReviewView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 10) {
                     recapHero
-
-                    LazyVGrid(
-                        columns: [GridItem(.flexible()), GridItem(.flexible())],
-                        spacing: 8
-                    ) {
-                        if report.categories.isEmpty {
-                            reviewCard(
-                                "기록 없음",
-                                value: "0분",
-                                caption: "계획을 실행하면 차이가 여기에 쌓입니다."
-                            )
-                        } else {
-                            ForEach(Array(report.categories.prefix(6))) { category in
-                                reviewCard(
-                                    categoryName(category.categoryID),
-                                    value: durationText(category.actual),
-                                    caption: differenceText(category)
-                                )
-                            }
-                        }
-                    }
-
+                    planBreakdownCard
+                    hierarchySummaryCard
+                    actualRecordsCard
                     contextCard
                 }
                 .padding(.horizontal, 14)
@@ -44,7 +32,7 @@ struct ReviewView: View {
     private var reviewHeader: some View {
         VStack(spacing: 7) {
             HStack(alignment: .firstTextBaseline) {
-                Text("\(model.reviewScale.periodName) 회고")
+                Text("\(model.reviewScale.periodName) 기록")
                     .font(.taption(size: 19, weight: .bold))
                 Spacer()
                 Text(periodText(report.span))
@@ -103,7 +91,7 @@ struct ReviewView: View {
             Text(difference == 0 ? "차이 없음" : signedDurationText(difference))
                 .font(.taption(size: 24, weight: .bold))
                 .padding(.vertical, 5)
-            Text("점수가 아니라 \(model.reviewScale.periodName) 시간의 차이")
+            Text("점수가 아니라 \(model.reviewScale.periodName) 계획과 실제")
                 .font(.taption(size: 10))
                 .foregroundStyle(Color(red: 0.68, green: 0.68, blue: 0.70))
 
@@ -123,23 +111,101 @@ struct ReviewView: View {
         .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private func reviewCard(_ title: String, value: String, caption: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(.taption(size: 10))
-                .foregroundStyle(Color.tpSecondary)
-            Text(value)
-                .font(.taption(size: 16, weight: .bold))
-                .padding(.top, 5)
-                .padding(.bottom, 2)
-            Text(caption)
-                .font(.taption(size: 10))
-                .foregroundStyle(Color.tpSecondary)
-                .lineLimit(2)
+    private var planBreakdownCard: some View {
+        let plannedCategories = report.categories
+            .filter { $0.planned > 0 }
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Label("계획", systemImage: "calendar.badge.clock")
+                .font(.taption(size: 11, weight: .bold))
+
+            if plannedCategories.isEmpty {
+                Text("이 기간에 등록된 계획이 없습니다.")
+                    .font(.taption(size: 10.5))
+                    .foregroundStyle(Color.tpSecondary)
+            } else {
+                ForEach(plannedCategories) { category in
+                    HStack(spacing: 8) {
+                        Text(categoryName(category.categoryID))
+                            .font(.taption(size: 10, weight: .semibold))
+                        Spacer(minLength: 4)
+                        Text("계획 \(durationText(category.planned))")
+                            .font(.taption(size: 9))
+                            .foregroundStyle(Color.tpSecondary)
+                        if category.actual > 0 {
+                            Text("실제 \(durationText(category.actual))")
+                                .font(.taption(size: 9, weight: .semibold))
+                                .foregroundStyle(Color.tpProjectDark)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 78, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(11)
         .background(Color.white, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+    }
+
+    private var actualRecordsCard: some View {
+        let records = actualRecordItems
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("실제 기록", systemImage: "checkmark.circle")
+                    .font(.taption(size: 11, weight: .bold))
+                Spacer()
+                Text("\(records.count)건")
+                    .font(.taption(size: 9))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+
+            if records.isEmpty {
+                Text("이 기간에 저장된 실제 데이터가 없습니다.")
+                    .font(.taption(size: 10.5))
+                    .foregroundStyle(Color.tpSecondary)
+            } else {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(records) { item in
+                        actualRecordRow(item)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(11)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+    }
+
+    private func actualRecordRow(_ item: ActualRecordItem) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: actualIcon(item.record))
+                .font(.taption(size: 12, weight: .semibold))
+                .foregroundStyle(actualTint(item.record))
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.record.title.isEmpty
+                    ? categoryName(item.record.categoryID)
+                    : item.record.title)
+                    .font(.taption(size: 10.5, weight: .semibold))
+                    .lineLimit(1)
+                Text(
+                    categoryName(item.record.categoryID)
+                        + " · " + actualSourceName(item.record.source)
+                )
+                .font(.taption(size: 8.5))
+                .foregroundStyle(Color.tpSecondary)
+            }
+            Spacer(minLength: 4)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(durationText(item.span.duration))
+                    .font(.taption(size: 9, weight: .semibold))
+                    .foregroundStyle(Color.tpProjectDark)
+                Text(timeText(item.span))
+                    .font(.taption(size: 8))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+        }
+        .padding(.vertical, 3)
     }
 
     private var contextCard: some View {
@@ -162,6 +228,136 @@ struct ReviewView: View {
         .background(Color.white, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
     }
 
+    private var hierarchySummaryCard: some View {
+        let buckets = hierarchySummaryBuckets
+        return VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .firstTextBaseline) {
+                Label(hierarchySummaryTitle, systemImage: "chart.bar.xaxis")
+                    .font(.taption(size: 11, weight: .bold))
+                Spacer()
+                Text("계획 · 실제")
+                    .font(.taption(size: 9))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+
+            if buckets.isEmpty {
+                Text("아직 요약할 기록이 없습니다.")
+                    .font(.taption(size: 10.5))
+                    .foregroundStyle(Color.tpSecondary)
+            } else {
+                let maximum = max(
+                    60,
+                    buckets
+                        .map { max($0.plannedDuration, $0.actualDuration) }
+                        .max() ?? 60
+                )
+                ForEach(buckets) { bucket in
+                    hierarchySummaryRow(bucket, maximum: maximum)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(11)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+    }
+
+    private func hierarchySummaryRow(
+        _ bucket: SummaryBucket,
+        maximum: TimeInterval
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 7) {
+                Text(hierarchyBucketLabel(bucket))
+                    .font(.taption(size: 10, weight: .semibold))
+                    .frame(width: 58, alignment: .leading)
+                Spacer(minLength: 0)
+                Text("계획 \(durationText(bucket.plannedDuration))")
+                    .font(.taption(size: 8.5))
+                    .foregroundStyle(Color.tpSecondary)
+                Text("실제 \(durationText(bucket.actualDuration))")
+                    .font(.taption(size: 8.5, weight: .semibold))
+                    .foregroundStyle(Color.tpProjectDark)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.tpLine.opacity(0.42))
+                    Capsule()
+                        .fill(Color.tpProjectDark.opacity(0.32))
+                        .frame(width: barWidth(
+                            bucket.plannedDuration,
+                            maximum: maximum,
+                            width: proxy.size.width
+                        ))
+                    Capsule()
+                        .fill(Color.tpProjectDark)
+                        .frame(width: barWidth(
+                            bucket.actualDuration,
+                            maximum: maximum,
+                            width: proxy.size.width
+                        ))
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(.vertical, 3)
+    }
+
+    private func barWidth(
+        _ duration: TimeInterval,
+        maximum: TimeInterval,
+        width: CGFloat
+    ) -> CGFloat {
+        guard maximum > 0 else { return 0 }
+        return min(width, width * CGFloat(max(0, duration) / maximum))
+    }
+
+    private var hierarchySummaryBuckets: [SummaryBucket] {
+        let level: TimelineLevel = switch model.reviewScale {
+        case .week: .day
+        case .month: .week
+        case .year: .month
+        }
+        return ReviewEngine()
+            .aggregation
+            .hierarchySummaries(
+                for: model.reviewScale.timelineLevel,
+                containing: model.selectedDate,
+                plans: model.snapshot.plans,
+                actuals: model.snapshot.actuals,
+                photos: model.snapshot.photos
+            )[level] ?? []
+    }
+
+    private var hierarchySummaryTitle: String {
+        switch model.reviewScale {
+        case .week: "이번 주 요일별 요약"
+        case .month: "이번 달 주별 요약"
+        case .year: "올해 월별 요약"
+        }
+    }
+
+    private func hierarchyBucketLabel(_ bucket: SummaryBucket) -> String {
+        let calendar = Calendar.autoupdatingCurrent
+        switch model.reviewScale {
+        case .week:
+            let weekday = bucket.span.start.formatted(
+                .dateTime.weekday(.abbreviated)
+            )
+            let day = bucket.span.start.formatted(.dateTime.day())
+            return "\(weekday) \(day)일"
+        case .month:
+            let start = bucket.span.start.formatted(.dateTime.month().day())
+            let end = bucket.span.end
+                .addingTimeInterval(-1)
+                .formatted(.dateTime.month().day())
+            return "\(start)–\(end)"
+        case .year:
+            return "\(calendar.component(.month, from: bucket.span.start))월"
+        }
+    }
+
     private func contextLine(_ image: String, _ text: String) -> some View {
         HStack(spacing: 7) {
             Image(systemName: image)
@@ -171,6 +367,51 @@ struct ReviewView: View {
             Text(text)
                 .font(.taption(size: 10.5))
         }
+    }
+
+    private var actualRecordItems: [ActualRecordItem] {
+        let now = Date.now
+        return model.snapshot.actuals
+            .compactMap { actual in
+                guard let span = actual.span(asOf: now)
+                    .intersection(with: report.span) else {
+                    return nil
+                }
+                return ActualRecordItem(record: actual, span: span)
+            }
+            .sorted {
+                if $0.span.start == $1.span.start {
+                    return $0.record.title < $1.record.title
+                }
+                return $0.span.start < $1.span.start
+            }
+    }
+
+    private func actualIcon(_ actual: ActualRecord) -> String {
+        PlanCategory(categoryID: actual.categoryID).systemImage
+    }
+
+    private func actualTint(_ actual: ActualRecord) -> Color {
+        PlanCategory(categoryID: actual.categoryID).darkColor
+    }
+
+    private func actualSourceName(_ source: ActualSource) -> String {
+        switch source {
+        case .manual: "직접 기록"
+        case .timer: "타이머"
+        case .healthKit: "Apple 건강"
+        case .appleWatch: "Apple Watch 센서"
+        case .motion: "iPhone 센서"
+        case .calendar: "캘린더"
+        case .location: "위치"
+        case .photo: "사진"
+        }
+    }
+
+    private func timeText(_ span: TimeSpan) -> String {
+        span.start.formatted(date: .omitted, time: .shortened)
+            + "–"
+            + span.end.formatted(date: .omitted, time: .shortened)
     }
 
     private var report: ReviewReport {
@@ -210,15 +451,6 @@ struct ReviewView: View {
         return prefix + durationText(abs(interval))
     }
 
-    private func differenceText(_ category: CategoryDuration) -> String {
-        let difference = category.actual - category.planned
-        if abs(difference) < 60 {
-            return "계획과 실제가 같습니다."
-        }
-        return difference > 0
-            ? "계획보다 \(durationText(difference)) 더 사용"
-            : "계획보다 \(durationText(abs(difference))) 적음"
-    }
 }
 
 private extension ReviewScale {

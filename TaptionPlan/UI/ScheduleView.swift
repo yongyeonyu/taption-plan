@@ -166,6 +166,7 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
     case movement = "이동"
     case sleep = "수면"
     case activity = "활동"
+    case weather = "날씨"
     case routine = "루틴"
     case action = "액션·메모"
     case photo = "사진"
@@ -181,6 +182,7 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
         case .movement: "figure.walk.motion"
         case .sleep: "moon.zzz"
         case .activity: "figure.run"
+        case .weather: "cloud.sun"
         case .routine: "repeat.circle"
         case .action: "checklist.checked"
         case .photo: "photo.on.rectangle"
@@ -195,12 +197,44 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
         .movement,
         .sleep,
         .activity,
+        .weather,
         .routine,
         .action,
         .photo,
         .event,
         .map,
     ]
+}
+
+private func weatherTimelineSpan(_ context: WeatherContext) -> TimeSpan {
+    TimeSpan(
+        start: context.observedAt,
+        end: context.observedAt.addingTimeInterval(15 * 60)
+    )
+}
+
+private func weatherTimelineTitle(_ context: WeatherContext) -> String {
+    let air = context.airQuality.map {
+        " · 미세 " + $0.overallGrade.displayName
+    } ?? ""
+    return Int(context.temperatureCelsius.rounded()).formatted()
+        + "° · " + context.condition + air
+}
+
+private func weatherTimelineDetail(_ context: WeatherContext) -> String {
+    var values = [
+        "자동 날씨",
+        context.observedAt.formatted(date: .omitted, time: .shortened),
+    ]
+    if let air = context.airQuality {
+        values.append(
+            "PM10 "
+                + Int(air.pm10MicrogramsPerCubicMeter.rounded()).formatted()
+                + " · PM2.5 "
+                + Int(air.pm25MicrogramsPerCubicMeter.rounded()).formatted()
+        )
+    }
+    return values.joined(separator: " · ")
 }
 
 private struct TimelineSelection: Equatable {
@@ -235,6 +269,32 @@ private struct TimelineSelection: Equatable {
         self.categoryID = categoryID
         self.categoryName = categoryName
     }
+}
+
+private func timelineWeatherSelection(
+    _ context: WeatherContext
+) -> TimelineSelection {
+    TimelineSelection(
+        title: weatherTimelineTitle(context),
+        span: weatherTimelineSpan(context),
+        planID: nil,
+        recordNodeID: "automatic.weather.\(context.id.uuidString)",
+        isRoute: false,
+        categoryID: "weather",
+        categoryName: "날씨"
+    )
+}
+
+private func timelineWeather(
+    at date: Date,
+    in contexts: [WeatherContext]
+) -> WeatherContext? {
+    contexts
+        .filter { weatherTimelineSpan($0).contains(date) }
+        .min {
+            abs($0.observedAt.timeIntervalSince(date))
+                < abs($1.observedAt.timeIntervalSince(date))
+        }
 }
 
 @MainActor
@@ -565,7 +625,11 @@ private final class TimelineSelectionIndexCache {
             $0.origin == .repeatRule && $0.status != .skipped
         }
         self.automaticActuals = actuals.filter {
-            $0.categoryID == "sleep"
+            if TaptionProductScope.automaticLoggingOnly {
+                return $0.source == .healthKit
+                    || $0.source == .appleWatch
+            }
+            return $0.categoryID == "sleep"
                 || $0.categoryID == "activity"
                 || $0.source == .healthKit
                 || $0.source == .appleWatch
@@ -1046,6 +1110,7 @@ private final class TimelineDetailDataCache {
         let activityPlans: [PlanRecord]
         let sleepActuals: [ActualRecord]
         let activityActuals: [ActualRecord]
+        let weather: [WeatherContext]
         let selectedActual: ActualRecord?
         let eventPlans: [PlanRecord]
         let calendarEvents: [CalendarRecord]
@@ -1059,6 +1124,7 @@ private final class TimelineDetailDataCache {
             activityPlans: [],
             sleepActuals: [],
             activityActuals: [],
+            weather: [],
             selectedActual: nil,
             eventPlans: [],
             calendarEvents: []
@@ -1092,6 +1158,10 @@ private extension TimelineSelection {
         case "sleep":
             return .sleep
         case "activity":
+            return .activity
+        case "weather":
+            return .weather
+        case "exercise", "workout":
             return .activity
         case "photo":
             return .photo
@@ -1601,10 +1671,15 @@ struct ScheduleView: View {
             )
         }
 
+        if let weather = timelineWeather(at: date, in: model.snapshot.weather) {
+            return timelineWeatherSelection(weather)
+        }
+
         // Generated repeat segments are rendered as concrete timeline blocks,
         // but they are not root action items. Include them in playhead
         // selection so a 23:00–06:30 routine remains visible after midnight.
-        if let routine = selectionIndexCache.routinePlan(containing: date) {
+        if !TaptionProductScope.automaticLoggingOnly,
+           let routine = selectionIndexCache.routinePlan(containing: date) {
             return TimelineSelection(
                 title: routine.title,
                 span: routine.span,
@@ -1620,7 +1695,8 @@ struct ScheduleView: View {
         // A calendar item can cover an entire day. Prefer the automatic
         // record at the playhead so the detail panel follows the visible
         // sleep/activity block instead of showing the all-day event.
-        if let event = selectionIndexCache.eventPlan(containing: date) {
+        if !TaptionProductScope.automaticLoggingOnly,
+           let event = selectionIndexCache.eventPlan(containing: date) {
             return TimelineSelection(
                 title: event.title,
                 span: event.span,
@@ -1643,7 +1719,8 @@ struct ScheduleView: View {
             )
         }
 
-        if let plan = selectionIndexCache.actionPlan(containing: date) {
+        if !TaptionProductScope.automaticLoggingOnly,
+           let plan = selectionIndexCache.actionPlan(containing: date) {
             return TimelineSelection(
                 title: plan.title,
                 span: plan.span,
@@ -2220,8 +2297,11 @@ private struct TimelineDetailPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             panelResizeHandle
-            detailContextHeader
-            if let selection,
+            if activeSelection != nil || !playheadDetailSections.isEmpty {
+                detailContextHeader
+            }
+            if !TaptionProductScope.automaticLoggingOnly,
+               let selection,
                selection.recordNodeID != nil,
                selection.actualID == nil,
                selection.categoryID != "location",
@@ -2232,10 +2312,6 @@ private struct TimelineDetailPanel: View {
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: true) {
                     LazyVStack(spacing: 9) {
-                        if let graph = relationshipGraph {
-                            RecordRelationshipView(graph: graph)
-                                .id("record-relationship-graph")
-                        }
                         ForEach(availableDetailSections) { item in
                             detailCard(for: item)
                                 .id(item)
@@ -2459,7 +2535,15 @@ private struct TimelineDetailPanel: View {
 
     private var availableDetailSections: [TimelineDetailSection] {
         TimelineDetailSection.defaultOrder.filter { section in
-            switch section {
+            if TaptionProductScope.automaticLoggingOnly {
+                switch section {
+                case .routine, .action, .event:
+                    return false
+                default:
+                    break
+                }
+            }
+            return switch section {
             case .schedule:
                 hasScheduleContent
             case .location:
@@ -2470,6 +2554,8 @@ private struct TimelineDetailPanel: View {
                 hasSleepContent
             case .activity:
                 hasActivityContent
+            case .weather:
+                hasWeatherContent
             case .routine:
                 hasRoutineContent
             case .action:
@@ -2492,6 +2578,50 @@ private struct TimelineDetailPanel: View {
     }
 
     private var detailContextHeader: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            if playheadDetailSections.isEmpty {
+                detailContextTitle
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 5) {
+                        ForEach(playheadDetailSections) { item in
+                            Button {
+                                section = item
+                            } label: {
+                                Label(item.rawValue, systemImage: item.systemImage)
+                                    .font(.taption(size: 8.5, weight: .semibold))
+                                    .foregroundStyle(
+                                        section == item
+                                            ? Color.white
+                                            : Color.tpInk
+                                    )
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 5)
+                                    .background(
+                                        section == item
+                                            ? Color.tpInk
+                                            : Color.white,
+                                        in: Capsule()
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("\(item.rawValue) 상세 보기")
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                }
+            }
+
+            if !playheadDetailSections.isEmpty {
+                detailContextTitle
+                    .padding(.horizontal, 10)
+            }
+        }
+        .padding(.vertical, 6)
+        .background(Color(red: 0.94, green: 0.94, blue: 0.95))
+    }
+
+    private var detailContextTitle: some View {
         HStack(spacing: 8) {
             Image(systemName: activeSelection?.preferredDetailSection.systemImage ?? "clock")
                 .font(.taption(size: 10, weight: .bold))
@@ -2503,7 +2633,7 @@ private struct TimelineDetailPanel: View {
                 )
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(activeSelection?.title ?? (playheadDate == nil ? "하루 상세" : "현재 시각"))
+                Text(activeSelection?.title ?? "하루 상세")
                     .font(.taption(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(1)
@@ -2514,11 +2644,11 @@ private struct TimelineDetailPanel: View {
             }
 
             Spacer(minLength: 6)
-
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color(red: 0.94, green: 0.94, blue: 0.95))
+    }
+
+    private var playheadDetailSections: [TimelineDetailSection] {
+        availableDetailSections.filter { $0 != .map }
     }
 
     private var detailContextTimeLabel: String {
@@ -2549,7 +2679,10 @@ private struct TimelineDetailPanel: View {
     /// payload. Resolve their parent here so the detail header still shows
     /// the configured clock time instead of the goal's date-only 00:00 span.
     private var selectedPlanForDetail: PlanRecord? {
-        guard let planID = activeSelection?.planID else { return nil }
+        guard let selection = activeSelection,
+              selection.actualID == nil,
+              selection.travelID == nil,
+              let planID = selection.planID else { return nil }
         return planIndexCache.plan(
             id: planID,
             timelineRevision: model.timelineRevision,
@@ -2631,6 +2764,20 @@ private struct TimelineDetailPanel: View {
     /// inspect its repeat rule and add the first action.
     private var activeSelection: TimelineSelection? {
         guard let selection else { return nil }
+        if TaptionProductScope.automaticLoggingOnly,
+           selection.planID != nil,
+           selection.actualID == nil,
+           selection.travelID == nil {
+            return nil
+        }
+        if TaptionProductScope.automaticLoggingOnly,
+           let actualID = selection.actualID,
+           let actual = model.snapshot.actuals.first(where: {
+               $0.id == actualID
+           }),
+           !AutomaticRecordTimelineEngine.isImmutable(actual) {
+            return nil
+        }
         if let playheadDate, !selection.span.contains(playheadDate) {
             return nil
         }
@@ -2675,6 +2822,8 @@ private struct TimelineDetailPanel: View {
                     sleepContent
                 case .activity:
                     activityContent
+                case .weather:
+                    weatherContent
                 case .routine:
                     routineContent
                 case .action:
@@ -2730,7 +2879,9 @@ private struct TimelineDetailPanel: View {
                     .font(.taption(size: 8))
                     .foregroundStyle(Color.tpSecondary)
             }
-            trackingControls
+            if !TaptionProductScope.automaticLoggingOnly {
+                trackingControls
+            }
             if let air = closestAirQuality {
                 HStack(spacing: 6) {
                     Image(systemName: "aqi.medium")
@@ -2743,7 +2894,8 @@ private struct TimelineDetailPanel: View {
                 .font(.taption(size: 7.8, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
             }
-            if let travel = explicitlySelectedTravel {
+            if !TaptionProductScope.automaticLoggingOnly,
+               let travel = explicitlySelectedTravel {
                 travelModeEditor(for: travel)
             }
             if !hasMapContent {
@@ -2776,12 +2928,10 @@ private struct TimelineDetailPanel: View {
                                         lineCap: .round,
                                         lineJoin: .round
                                     )
-                                )
+                            )
                         }
                     }
-                    if allowsFallbackRoutePath,
-                       routeSegments.isEmpty,
-                       fallbackRouteCoordinates.count >= 2 {
+                    if shouldDrawFallbackRoutePath {
                         MapPolyline(coordinates: fallbackRouteCoordinates)
                             .stroke(
                                 Color.tpTransitDark.opacity(0.45),
@@ -2953,7 +3103,8 @@ private struct TimelineDetailPanel: View {
 
     @ViewBuilder
     private func automaticNodeLinkControl(for categoryID: String) -> some View {
-        if let selection = activeSelection,
+        if !TaptionProductScope.automaticLoggingOnly,
+           let selection = activeSelection,
            selection.categoryID == categoryID,
            selection.actualID == nil,
            selection.recordNodeID != nil {
@@ -2980,6 +3131,37 @@ private struct TimelineDetailPanel: View {
                 actuals: detailActivityActuals,
                 tint: Color.tpHealthDark
             )
+        }
+    }
+
+    private var weatherContent: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            detailHeading("날씨", systemImage: "cloud.sun")
+            ForEach(detailData.weather) { weather in
+                HStack(spacing: 7) {
+                    Image(systemName: weather.symbolName)
+                        .font(.taption(size: 12, weight: .bold))
+                        .foregroundStyle(Color.tpWeatherDark)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(
+                            "\(weather.condition) · \(Int(weather.temperatureCelsius.rounded()))°"
+                        )
+                        .font(.taption(size: 9, weight: .semibold))
+                        Text(weather.observedAt.formatted(
+                            date: .omitted,
+                            time: .shortened
+                        ))
+                        .font(.taption(size: 7.5))
+                        .foregroundStyle(Color.tpSecondary)
+                    }
+                    Spacer(minLength: 4)
+                    if let air = weather.airQuality {
+                        Text("미세 \(air.overallGrade.displayName)")
+                            .font(.taption(size: 8, weight: .semibold))
+                            .foregroundStyle(Color.tpWeatherDark)
+                    }
+                }
+            }
         }
     }
 
@@ -3010,8 +3192,6 @@ private struct TimelineDetailPanel: View {
                         .font(.taption(size: 8.5, weight: .semibold))
                         .foregroundStyle(Color.tpSleepDark)
                 }
-                relationshipSummaryView
-
                 let descendants = (try? PlanHierarchy.descendants(
                     of: routine.id,
                     in: model.snapshot.plans
@@ -3099,64 +3279,12 @@ private struct TimelineDetailPanel: View {
             // Sleep and activity are both automatic evidence. Keep the same
             // explicit-link affordance for either type; only the currently
             // focused record gets a control so a list of records stays quiet.
-            if let actual = selectedActual,
+            if !TaptionProductScope.automaticLoggingOnly,
+               let actual = selectedActual,
                actuals.contains(where: { $0.id == actual.id }) {
                 actualGoalLinkControl(actual)
             }
-            relationshipSummaryView
         }
-    }
-
-    @ViewBuilder
-    private var relationshipSummaryView: some View {
-        if let summary = focusedRelationshipSummary {
-            Label(summary, systemImage: "point.3.connected.trianglepath.dotted")
-                .font(.taption(size: 8, weight: .semibold))
-                .foregroundStyle(Color.tpSecondary)
-                .lineLimit(2)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 5)
-                .background(
-                    Color.tpBackground,
-                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
-                )
-        }
-    }
-
-    private var focusedRelationshipSummary: String? {
-        guard let graph = relationshipGraph,
-              let focus = relationshipFocusNodeID else { return nil }
-        var connectedIDs = Set([focus])
-        var changed = true
-        while changed {
-            changed = false
-            for edge in graph.edges where connectedIDs.contains(edge.from) || connectedIDs.contains(edge.to) {
-                if connectedIDs.insert(edge.from).inserted { changed = true }
-                if connectedIDs.insert(edge.to).inserted { changed = true }
-            }
-        }
-        let values = graph.nodes.filter { connectedIDs.contains($0.id) }
-        let automatic = values
-            .filter { $0.layer == .automatic }
-            .map(\.title)
-        let routines = values
-            .filter { $0.layer == .routine }
-            .map { displayRoutineTitle($0.title) }
-        let actions = values
-            .filter { $0.layer == .action }
-            .map(\.title)
-        var parts: [String] = []
-        if !automatic.isEmpty { parts.append(automatic.joined(separator: " · ")) }
-        if !routines.isEmpty { parts.append(routines.joined(separator: " · ")) }
-        if !actions.isEmpty { parts.append(actions.joined(separator: " · ")) }
-        guard parts.count >= 2 else { return nil }
-        return "연결 · " + parts.joined(separator: " → ")
-    }
-
-    private func displayRoutineTitle(_ title: String) -> String {
-        GoalRecordPolicy.displayTitle(title)
-            .replacingOccurrences(of: GoalRecordPolicy.currentPrefix, with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var actionContent: some View {
@@ -3193,7 +3321,6 @@ private struct TimelineDetailPanel: View {
                 .foregroundStyle(Color.tpSecondary)
                 actionMemoPreview(planID: plan.id)
                 routineLinkControl(for: plan)
-                relationshipSummaryView
             } else {
                 let plans = activeActionPlans
                 if plans.isEmpty {
@@ -3459,7 +3586,9 @@ private struct TimelineDetailPanel: View {
             selectedCategoryID: selection?.categoryID
         )
         return detailDataCache.value(for: key) {
-            let plans = model.snapshot.plans
+            let plans = TaptionProductScope.automaticLoggingOnly
+                ? []
+                : model.snapshot.plans
             let actuals = model.snapshot.actuals
             let automaticIDs = automaticDetailCategoryIDs
             // Automatic records are time-local. When the playhead is moving,
@@ -3546,10 +3675,16 @@ private struct TimelineDetailPanel: View {
             let activityActuals = deduplicatedActuals(
                 automaticActuals
                     .filter {
-                        !isSleepActual($0) && $0.categoryID == "activity"
+                        !isSleepActual($0)
                     }
                     .sorted { $0.startedAt < $1.startedAt }
             )
+            let weather = model.snapshot.weather
+                .filter {
+                    $0.observedAt >= focusedSpan.start
+                        && $0.observedAt <= focusedSpan.end
+                }
+                .sorted { $0.observedAt < $1.observedAt }
             let selectedActual = selection?.actualID.flatMap { actualID in
                 actuals.first { actual in
                     actual.id == actualID
@@ -3577,6 +3712,7 @@ private struct TimelineDetailPanel: View {
                 activityPlans: activityPlans,
                 sleepActuals: sleepActuals,
                 activityActuals: activityActuals,
+                weather: weather,
                 selectedActual: selectedActual,
                 eventPlans: eventPlans,
                 calendarEvents: calendarEvents
@@ -3641,7 +3777,7 @@ private struct TimelineDetailPanel: View {
 
     private func actualSourcePriority(_ source: ActualSource) -> Int {
         switch source {
-        case .healthKit, .appleWatch: 3
+        case .healthKit, .appleWatch, .motion: 3
         case .location: 2
         case .timer, .manual: 1
         case .calendar, .photo: 0
@@ -3695,6 +3831,10 @@ private struct TimelineDetailPanel: View {
         !detailActivityPlans.isEmpty || !detailActivityActuals.isEmpty
     }
 
+    private var hasWeatherContent: Bool {
+        !detailData.weather.isEmpty
+    }
+
     private var hasRoutineContent: Bool {
         focusedRoutineForDetail != nil
     }
@@ -3744,6 +3884,7 @@ private struct TimelineDetailPanel: View {
         case .manual: "직접 기록"
         case .healthKit: "Apple 건강"
         case .appleWatch: "Apple Watch"
+        case .motion: "iPhone 모션"
         case .calendar: "캘린더"
         case .location: "위치"
         case .photo: "사진"
@@ -4011,7 +4152,7 @@ private struct TimelineDetailPanel: View {
 
     private var routeTitle: String {
         if playheadDate != nil {
-            return routeSegments.isEmpty
+            return routeSegments.isEmpty && fallbackRouteCoordinates.count < 2
                 ? "현재 위치"
                 : "현재 이동 경로"
         }
@@ -4237,12 +4378,22 @@ private struct TimelineDetailPanel: View {
         TimelineRouteDisplayPolicy.allowsFallbackPath(
             at: playheadDate,
             routeSegments: routeSegments
-        )
+        ) || fallbackRouteCoordinates.count >= 2
+    }
+
+    private var shouldDrawFallbackRoutePath: Bool {
+        guard allowsFallbackRoutePath,
+              fallbackRouteCoordinates.count >= 2 else {
+            return false
+        }
+        let segmentCoordinates = routeSegments.flatMap(coordinates(for:))
+        return routeSegments.isEmpty || segmentCoordinates.count < 2
     }
 
     private var isPlayheadLocationOnly: Bool {
         playheadDate != nil
             && routeSegments.isEmpty
+            && fallbackRouteCoordinates.count < 2
             && playheadRoutePin != nil
     }
 
@@ -4264,6 +4415,20 @@ private struct TimelineDetailPanel: View {
 
     private var playheadFocusCoordinate: CLLocationCoordinate2D? {
         guard let playheadDate else { return nil }
+
+        // A GPS fix is the moving source of truth during playback. PlaceStay
+        // is only a coarse fallback for gaps in the archived sensor stream.
+        let nearestReadingPoint = nearestRouteReadingPoint(
+            to: playheadDate,
+            inside: activeRouteSpan
+        )
+        if let point = nearestReadingPoint {
+            return CLLocationCoordinate2D(
+                latitude: point.latitude,
+                longitude: point.longitude
+            )
+        }
+
         let place = placeIndexCache.containing(
             date: playheadDate,
             timelineRevision: model.timelineRevision,
@@ -4272,18 +4437,6 @@ private struct TimelineDetailPanel: View {
         if let place,
            let point = place.point,
            isValidCoordinate(point) {
-            return CLLocationCoordinate2D(
-                latitude: point.latitude,
-                longitude: point.longitude
-            )
-        }
-
-        let nearestReadingPoint = nearestRouteReadingPoint(
-            to: playheadDate,
-            inside: activeRouteSpan
-        )
-
-        if let point = nearestReadingPoint {
             return CLLocationCoordinate2D(
                 latitude: point.latitude,
                 longitude: point.longitude
@@ -4594,16 +4747,6 @@ private struct TimelineDetailPanel: View {
             if fallback.count == 1 {
                 values = fallback
             }
-        }
-        if values.count == 1 {
-            let only = values[0]
-            return [
-                only,
-                CLLocationCoordinate2D(
-                    latitude: only.latitude + 0.00002,
-                    longitude: only.longitude + 0.00002
-                ),
-            ]
         }
         return values
     }
@@ -5428,7 +5571,12 @@ struct GroupGanttView: View {
             )
         }
 
-        if let routine = selectionIndexCache.routinePlan(containing: date) {
+        if let weather = timelineWeather(at: date, in: model.snapshot.weather) {
+            return timelineWeatherSelection(weather)
+        }
+
+        if !TaptionProductScope.automaticLoggingOnly,
+           let routine = selectionIndexCache.routinePlan(containing: date) {
             return TimelineSelection(
                 title: routine.title,
                 span: routine.span,
@@ -5443,7 +5591,8 @@ struct GroupGanttView: View {
 
         // Keep the group timeline selection order identical to the main
         // timeline: automatic records win over all-day calendar blocks.
-        if let event = selectionIndexCache.eventPlan(containing: date) {
+        if !TaptionProductScope.automaticLoggingOnly,
+           let event = selectionIndexCache.eventPlan(containing: date) {
             return TimelineSelection(
                 title: event.title,
                 span: event.span,
@@ -5466,7 +5615,8 @@ struct GroupGanttView: View {
             )
         }
 
-        if let plan = selectionIndexCache.actionPlan(containing: date) {
+        if !TaptionProductScope.automaticLoggingOnly,
+           let plan = selectionIndexCache.actionPlan(containing: date) {
             return TimelineSelection(
                 title: plan.title,
                 span: plan.span,
@@ -5532,9 +5682,6 @@ private struct TimelineBoardLayoutSnapshot {
     var photoClusters: [PhotoCluster]
     var summaryBuckets: [SummaryBucket]
     var summaryColors: [SummaryColor]
-    var hasVisibleActuals: Bool
-    var visibleActualDuration: TimeInterval
-    var visiblePlannedDuration: TimeInterval
     var contentHeight: CGFloat
 }
 
@@ -5566,6 +5713,12 @@ private final class TimelineBoardLayoutCache {
     }
 }
 
+private struct ContinuousMagnifyOrigin {
+    let duration: TimeInterval
+    let anchorDate: Date
+    let anchor: Double
+}
+
 private struct TimelineBoard: View {
     @Bindable var model: AppModel
     let scale: TimeScale
@@ -5591,6 +5744,7 @@ private struct TimelineBoard: View {
     // ends.
     @State private var dragLayoutSpan: TimeSpan?
     @State private var zoomFeedbackSequence = 0
+    @State private var continuousMagnifyOrigin: ContinuousMagnifyOrigin?
     @State private var selectedRowID: String?
     @State private var layoutCache = TimelineBoardLayoutCache()
     @State private var lastContinuousRenderUptime: TimeInterval = 0
@@ -5689,15 +5843,6 @@ private struct TimelineBoard: View {
                                         colors: layout.summaryColors
                                     )
                                 }
-
-                                if scale == .day, layout.hasVisibleActuals {
-                                    planActualStrip(
-                                        plannedDuration:
-                                            layout.visiblePlannedDuration,
-                                        actualDuration:
-                                            layout.visibleActualDuration
-                                    )
-                                }
                             }
 
                             gridLines(markers: displayAxisMarkers)
@@ -5791,17 +5936,26 @@ private struct TimelineBoard: View {
             onPlayheadMove?(newDate)
             let preserveViewport = preserveViewportAfterContinuousDrag
             preserveViewportAfterContinuousDrag = false
-            if continuousDragOrigin == nil, !preserveViewport {
-                continuousTimelineDuration = continuousDuration(around: newDate)
+            // A continuous drag changes the selected date, but it must not
+            // change the viewport that a preceding pinch established. Keep
+            // the current length as a fallback as well, because SwiftUI can
+            // deliver this callback after the gesture-end transaction.
+            let keepZoom = preserveViewport
+                || !viewport.isFull
+                || hasCustomContinuousDuration
+            if continuousDragOrigin == nil {
                 dragLayoutSpan = nil
-                resetViewport()
+                if !keepZoom {
+                    continuousTimelineDuration = continuousDuration(around: newDate)
+                    resetViewport()
+                }
             }
         }
         .accessibilityHint(
             "간트 본문을 드래그해 이동하고 두 손가락으로 최대 1분 단위까지 확대합니다"
         )
         .accessibilityIdentifier("schedule.timeline.board")
-        .accessibilityValue(currentZoomStage.label)
+        .accessibilityValue(currentResolutionLabel)
         .sensoryFeedback(
             .impact(weight: .light),
             trigger: zoomFeedbackSequence
@@ -5835,34 +5989,17 @@ private struct TimelineBoard: View {
         let clusters = photoClusters(in: span)
         let buckets = summaryBuckets(in: span)
         let colors = summaryColors(for: buckets)
-        let hasActuals = model.snapshot.actuals.contains {
-            $0.span().intersection(with: span) != nil
-        }
-        let actualDuration = visibleActualDuration(in: span)
-        let plannedDuration = visiblePlannedDuration(
-            in: span,
-            parentPlanIDs: index.parentPlanIDs
-        )
-        let footerHeight: CGFloat
-        if scale == .day {
-            footerHeight = !isGroup && !clusters.isEmpty ? 65 : 0
-        } else {
-            footerHeight = 46
-        }
-        let planActualHeight: CGFloat =
-            scale == .day && hasActuals ? 30 : 0
+        let footerHeight: CGFloat = scale == .day
+            ? (!isGroup && !clusters.isEmpty ? 65 : 0)
+            : 46
         return TimelineBoardLayoutSnapshot(
             rows: rowModels,
             axisMarkers: axisMarkers(in: span),
             photoClusters: clusters,
             summaryBuckets: buckets,
             summaryColors: colors,
-            hasVisibleActuals: hasActuals,
-            visibleActualDuration: actualDuration,
-            visiblePlannedDuration: plannedDuration,
             contentHeight: rowModels.reduce(0) { $0 + $1.height }
                 + footerHeight
-                + planActualHeight
         )
     }
 
@@ -6007,7 +6144,7 @@ private struct TimelineBoard: View {
 
     private var rulerMinorDivisionCount: Int {
         if isContinuousTimeline {
-            return dayZoom.duration <= 60 * 60 ? 5 : 4
+            return activeContinuousDuration <= 60 * 60 ? 5 : 4
         }
         return 2
     }
@@ -6031,7 +6168,7 @@ private struct TimelineBoard: View {
                     }
                 }
             }
-            if !viewport.isFull {
+            if !viewport.isFull || hasCustomContinuousDuration {
                 Section {
                     Button {
                         resetViewport(withFeedback: true)
@@ -6045,7 +6182,7 @@ private struct TimelineBoard: View {
             }
         } label: {
             HStack(spacing: 3) {
-                Text(currentResolutionPreset.rawValue)
+                Text(currentResolutionLabel)
                 Image(systemName: "chevron.down")
                     .font(.taption(size: 6.5, weight: .bold))
             }
@@ -6056,17 +6193,20 @@ private struct TimelineBoard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("화면 해상도 \(currentResolutionPreset.rawValue)")
+        .accessibilityLabel("화면 해상도 \(currentResolutionLabel)")
         .accessibilityIdentifier("schedule.resolution.menu")
     }
 
     private var currentResolutionPreset: TimelineZoomPreset {
-        if isContinuousDay {
-            return TimelineZoomPreset.nearest(
-                to: visibleSpan.duration * viewport.length
-            )
-        }
-        return TimelineZoomPreset.nearest(to: currentZoomStage)
+        TimelineZoomPreset.nearest(
+            to: visibleSpan.duration * viewport.length
+        )
+    }
+
+    private var currentResolutionLabel: String {
+        TimelineZoomPreset.displayLabel(
+            for: visibleSpan.duration * viewport.length
+        )
     }
 
     private func selectResolution(_ preset: TimelineZoomPreset) {
@@ -6074,10 +6214,9 @@ private struct TimelineBoard: View {
         viewport = .full
         dragOrigin = nil
         magnifyOrigin = nil
+        continuousMagnifyOrigin = nil
         continuousDragOrigin = nil
-        if preset.preferredScale == .day {
-            continuousTimelineDuration = preset.duration
-        }
+        continuousTimelineDuration = preset.duration
         model.selectScale(preset.preferredScale)
         if preset.preferredScale == .day {
             continuousCenterDate = model.selectedDate
@@ -6125,6 +6264,7 @@ private struct TimelineBoard: View {
     }
 
     private var rootTimelinePlans: [PlanRecord] {
+        guard !TaptionProductScope.automaticLoggingOnly else { return [] }
         let repeatGoalIDs = Set(
             storedPlans
                 .filter {
@@ -6167,11 +6307,16 @@ private struct TimelineBoard: View {
             from: visibleActuals,
             inside: span
         )
-        let categoryVisibleActuals = usesAutomaticDayRows
-            ? visibleActuals.filter {
+        let categoryVisibleActuals: [ActualRecord]
+        if usesAutomaticDayRows && TaptionProductScope.automaticLoggingOnly {
+            categoryVisibleActuals = []
+        } else if usesAutomaticDayRows {
+            categoryVisibleActuals = visibleActuals.filter {
                 $0.source != .healthKit && $0.source != .appleWatch
             }
-            : visibleActuals
+        } else {
+            categoryVisibleActuals = visibleActuals
+        }
         let actualsGrouped = Dictionary(
             grouping: categoryVisibleActuals,
             by: \.categoryID
@@ -6217,6 +6362,12 @@ private struct TimelineBoard: View {
                         }
                     )
                 )
+            }
+        }
+        if includesCalendar, !usesAutomaticDayRows {
+            let weatherRow = automaticWeatherRow(visibleSpan: span)
+            if !weatherRow.blocks.isEmpty {
+                values.append(weatherRow)
             }
         }
 
@@ -6420,7 +6571,47 @@ private struct TimelineBoard: View {
                 },
                 index: index
             ),
+            automaticWeatherRow(visibleSpan: visibleSpan),
         ]
+    }
+
+    private func automaticWeatherRow(
+        visibleSpan: TimeSpan
+    ) -> TimelineRowModel {
+        let contexts = model.snapshot.weather
+            .filter { visibleSpan.contains($0.observedAt) }
+            .sorted { $0.observedAt < $1.observedAt }
+        let allocation = laneAllocation(contexts) { context in
+            weatherTimelineSpan(context)
+        }
+        let blocks = contexts.map { context in
+            return timelineBlock(
+                id: context.id,
+                title: weatherTimelineTitle(context),
+                span: weatherTimelineSpan(context),
+                top: compactAutomaticTop(
+                    allocation.lanes[context.id, default: 0]
+                ),
+                height: 14,
+                isFixed: true,
+                status: .completed,
+                isActual: true,
+                detailText: weatherTimelineDetail(context),
+                categoryID: "weather",
+                categoryName: "날씨"
+            )
+        }
+        return TimelineRowModel(
+            title: "날씨",
+            id: "weather",
+            dotColor: .tpWeatherDark,
+            systemImage: contexts.first?.symbolName ?? "cloud.sun",
+            fillColor: .tpWeather,
+            actualColor: .tpWeatherDark,
+            isSystemAutomatic: true,
+            height: compactAutomaticHeight(allocation.count),
+            blocks: blocks
+        )
     }
 
     private func automaticScheduleRow(
@@ -6904,6 +7095,7 @@ private struct TimelineBoard: View {
         case .timer: "타이머"
         case .healthKit: "Apple 건강"
         case .appleWatch: "Apple Watch 센서"
+        case .motion: "iPhone Core Motion"
         case .calendar: "캘린더"
         case .location: "위치"
         case .photo: "사진"
@@ -6993,15 +7185,17 @@ private struct TimelineBoard: View {
     }
 
     private var activeContinuousDuration: TimeInterval {
-        if isContinuousDay {
-            return max(60, dayZoom.duration)
-        }
         return max(
             60,
             continuousTimelineDuration > 0
                 ? continuousTimelineDuration
                 : continuousDuration(around: continuousCenterDate)
         )
+    }
+
+    private var hasCustomContinuousDuration: Bool {
+        let standard = continuousDuration(around: continuousCenterDate)
+        return abs(activeContinuousDuration - standard) > 1
     }
 
     private var layoutDataSpan: TimeSpan {
@@ -7316,38 +7510,6 @@ private struct TimelineBoard: View {
         }
     }
 
-    private func planActualStrip(
-        plannedDuration: TimeInterval,
-        actualDuration: TimeInterval
-    ) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: "chart.bar.fill")
-                .font(.taption(size: 8, weight: .bold))
-                .foregroundStyle(Color.tpProjectDark)
-            Text("계획")
-                .foregroundStyle(Color.tpSecondary)
-            Text(durationLabel(plannedDuration))
-                .fontWeight(.black)
-            Text("· 실제")
-                .foregroundStyle(Color.tpSecondary)
-            Text(durationLabel(actualDuration))
-                .fontWeight(.black)
-                .foregroundStyle(Color.tpProjectDark)
-        }
-        .font(.taption(size: 9))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(
-            Color.tpProject.opacity(0.45),
-            in: Capsule()
-        )
-        .frame(maxWidth: .infinity, minHeight: 30)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(ganttTableLineColor).frame(height: 0.5)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
     private var summaryTitle: String {
         switch scale {
         case .week, .day: "일 요약"
@@ -7397,12 +7559,6 @@ private struct TimelineBoard: View {
     private var viewportMinimumLength: Double {
         GanttViewport.oneMinuteMinimumLength(
             for: visibleSpan.duration
-        )
-    }
-
-    private var currentZoomStage: GanttZoomStage {
-        GanttZoomStage.nearest(
-            to: visibleSpan.duration * viewport.length
         )
     }
 
@@ -7529,9 +7685,9 @@ private struct TimelineBoard: View {
         while next <= end, markers.count < 64 {
             let date = Date(timeIntervalSinceReferenceDate: next)
             let label: String
-            if scale == .day && dayZoom.duration <= 6 * 60 * 60 {
+            if scale == .day && zoomDuration <= 6 * 60 * 60 {
                 label = axisHourMinuteLabel(date, calendar: calendar)
-            } else if scale == .day && dayZoom.duration <= 24 * 60 * 60 {
+            } else if scale == .day && zoomDuration <= 24 * 60 * 60 {
                 let hour = calendar.component(.hour, from: date)
                 label = String(format: "%02d", hour)
             } else if scale == .year {
@@ -7688,37 +7844,6 @@ private struct TimelineBoard: View {
         )
     }
 
-    private func visibleActualDuration(in visibleSpan: TimeSpan) -> TimeInterval {
-        model.snapshot.actuals.reduce(0) { result, actual in
-            result
-                + (actual.span().intersection(with: visibleSpan)?.duration
-                    ?? 0)
-        }
-    }
-
-    private func visiblePlannedDuration(
-        in visibleSpan: TimeSpan,
-        parentPlanIDs: Set<UUID>
-    ) -> TimeInterval {
-        let leafPlans = storedPlans.filter { plan in
-            plan.span.intersection(with: visibleSpan) != nil
-                && !parentPlanIDs.contains(plan.id)
-        }
-        return leafPlans.reduce(0) { result, plan in
-            result
-                + (plan.span.intersection(with: visibleSpan)?.duration ?? 0)
-        }
-    }
-
-    private func durationLabel(_ interval: TimeInterval) -> String {
-        let minutes = max(0, Int(interval / 60))
-        let hours = minutes / 60
-        let remainder = minutes % 60
-        if hours == 0 { return "\(remainder)분" }
-        if remainder == 0 { return "\(hours)시간" }
-        return "\(hours)시간 \(remainder)분"
-    }
-
     private func summaryBuckets(in visibleSpan: TimeSpan) -> [SummaryBucket] {
         let childLevel: TimelineLevel
         switch scale {
@@ -7846,8 +7971,13 @@ private struct TimelineBoard: View {
                     // viewport. A continuous drag is different: it pans the
                     // already zoomed range, so keep that zoom after commit.
                     preserveViewportAfterContinuousDrag = true
+                    let preservedViewport = viewport
                     model.selectedDate = continuousCenterDate
                     onPlayheadMove?(continuousCenterDate)
+                    // Restore synchronously as well as in the selected-date
+                    // observer. This covers the case where the parent view
+                    // re-renders before that observer is delivered.
+                    viewport = preservedViewport
                     lastContinuousRenderUptime = 0
                     dragLayoutSpan = nil
                 } else if let dragOrigin {
@@ -7896,8 +8026,36 @@ private struct TimelineBoard: View {
         if magnifyOrigin == nil {
             magnifyOrigin = viewport
             editingPlanID = nil
+            if isContinuousTimeline {
+                let originSpan = visibleSpan
+                let clampedAnchor = min(1, max(0, anchor))
+                let anchorFraction = viewport.start
+                    + viewport.length * clampedAnchor
+                continuousMagnifyOrigin = ContinuousMagnifyOrigin(
+                    duration: max(
+                        60,
+                        originSpan.duration * viewport.length
+                    ),
+                    anchorDate: timelineDate(
+                        at: anchorFraction,
+                        in: originSpan
+                    ),
+                    anchor: clampedAnchor
+                )
+                // The live duration becomes the source of truth.  Do not
+                // leave a second viewport multiplier behind to quantize it.
+                viewport = .full
+                dragLayoutSpan = nil
+            }
         }
         guard let magnifyOrigin else { return }
+        if continuousMagnifyOrigin != nil {
+            applyContinuousMagnification(
+                factor: factor,
+                force: false
+            )
+            return
+        }
         let candidate = magnifyOrigin.magnifying(
             by: factor,
             anchor: anchor,
@@ -7930,6 +8088,18 @@ private struct TimelineBoard: View {
         factor: Double,
         anchor: Double
     ) {
+        if continuousMagnifyOrigin != nil {
+            applyContinuousMagnification(factor: factor, force: true)
+            let finalCenter = continuousCenterDate
+            continuousMagnifyOrigin = nil
+            viewport = .full
+            preserveViewportAfterContinuousDrag = true
+            model.selectedDate = finalCenter
+            onPlayheadMove?(finalCenter)
+            zoomFeedbackSequence += 1
+            return
+        }
+
         let origin = magnifyOrigin ?? viewport
         let zoomsIn = factor >= 1.15
         let zoomsOut = factor <= 0.85
@@ -8001,17 +8171,56 @@ private struct TimelineBoard: View {
         zoomFeedbackSequence += 1
     }
 
+    private func applyContinuousMagnification(
+        factor: Double,
+        force: Bool
+    ) {
+        guard let origin = continuousMagnifyOrigin else { return }
+        let uptime = ProcessInfo.processInfo.systemUptime
+        guard force
+            || lastViewportRenderUptime == 0
+            || uptime - lastViewportRenderUptime >= 1.0 / 60.0
+        else {
+            return
+        }
+        lastViewportRenderUptime = uptime
+
+        let safeFactor = max(0.01, factor)
+        let minimumDuration: TimeInterval = 60
+        let maximumDuration: TimeInterval = 10 * 366 * 24 * 60 * 60
+        let duration = min(
+            maximumDuration,
+            max(minimumDuration, origin.duration / safeFactor)
+        )
+        let center = origin.anchorDate.addingTimeInterval(
+            duration * (0.5 - origin.anchor)
+        )
+        if continuousTimelineDuration != duration {
+            continuousTimelineDuration = duration
+        }
+        if continuousCenterDate != center {
+            continuousCenterDate = center
+            onPlayheadMove?(center)
+        }
+        viewport = .full
+        ensureContinuousLayoutWindow(around: center)
+    }
+
     private func resetViewport(withFeedback: Bool = false) {
-        let changed = isContinuousDay
-            ? dayZoom != .oneDay
-            : !viewport.isFull
-        if isContinuousDay {
-            dayZoom = .oneDay
+        let changed = !viewport.isFull || hasCustomContinuousDuration
+        if isContinuousTimeline {
+            continuousTimelineDuration = continuousDuration(
+                around: model.selectedDate
+            )
+            if isContinuousDay {
+                dayZoom = .oneDay
+            }
             continuousDragOrigin = nil
         }
         viewport = .full
         dragOrigin = nil
         magnifyOrigin = nil
+        continuousMagnifyOrigin = nil
         editingPlanID = nil
         if withFeedback, changed {
             zoomFeedbackSequence += 1
@@ -8040,6 +8249,20 @@ private struct TimelineBoard: View {
                     isRoute: false,
                     categoryID: "calendar",
                     categoryName: "일정"
+                )
+            )
+            return
+        }
+        if TaptionProductScope.automaticLoggingOnly {
+            onSelection?(
+                TimelineSelection(
+                    title: row.title,
+                    span: visibleSpan,
+                    planID: nil,
+                    isRoute: categoryID == "movement"
+                        || categoryID == "location",
+                    categoryID: categoryID,
+                    categoryName: row.title
                 )
             )
             return
@@ -8162,6 +8385,9 @@ private struct TimelineBoard: View {
                     if block.categoryID == "location" {
                         return "automatic.place.\(block.id.uuidString)"
                     }
+                    if block.categoryID == "weather" {
+                        return "automatic.weather.\(block.id.uuidString)"
+                    }
                     return "automatic.actual.\(block.id.uuidString)"
                 }
                 if block.categoryID == "calendar" {
@@ -8216,7 +8442,12 @@ private struct TimelineRow: View {
         HStack(spacing: 0) {
             Button(action: onRowTap) {
                 HStack(spacing: 4) {
-                    if row.dotColor != .clear {
+                    if let iconName = row.iconName {
+                        Image(systemName: iconName)
+                            .font(.taption(size: 8.5, weight: .bold))
+                            .foregroundStyle(row.dotColor)
+                            .frame(width: 11, height: 11)
+                    } else if row.dotColor != .clear {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(row.dotColor)
                             .frame(width: 8, height: 8)
@@ -8585,6 +8816,7 @@ private struct TimelineRowModel: Identifiable {
     let category: PlanCategory?
     let categoryID: String?
     let dotColor: Color
+    let iconName: String?
     let customFillColor: Color?
     let customActualColor: Color?
     let isSystemAutomatic: Bool
@@ -8597,6 +8829,7 @@ private struct TimelineRowModel: Identifiable {
         category: PlanCategory? = nil,
         categoryID: String? = nil,
         dotColor: Color? = nil,
+        systemImage: String? = nil,
         fillColor: Color? = nil,
         actualColor: Color? = nil,
         isSystemAutomatic: Bool = false,
@@ -8608,6 +8841,7 @@ private struct TimelineRowModel: Identifiable {
         self.category = category
         self.categoryID = categoryID
         self.dotColor = dotColor ?? category?.darkColor ?? .clear
+        self.iconName = systemImage
         self.customFillColor = fillColor
         self.customActualColor = actualColor
         self.isSystemAutomatic = isSystemAutomatic

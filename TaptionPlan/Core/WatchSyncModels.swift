@@ -255,6 +255,10 @@ struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
     var accelerometerSampleCount: Int
     var accelerometerAverageG: TaptionWatchSensorVector3?
     var peakAccelerationG: Double?
+    /// Window statistics used to distinguish rail vibration from footsteps.
+    /// Optional so summaries written by older builds remain readable.
+    var accelerometerStandardDeviationG: Double? = nil
+    var accelerometerMeanJerkGPerSecond: Double? = nil
     var gyroscopeSampleCount: Int
     var gyroscopeAverageRadiansPerSecond: TaptionWatchSensorVector3?
     var peakRotationRateRadiansPerSecond: Double?

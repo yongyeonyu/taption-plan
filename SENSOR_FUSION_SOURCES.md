@@ -23,6 +23,16 @@ third-party source file or machine-learning model is copied into the app.
   - Documents that specific transport modes need local context and should
     fall back to a generic low-confidence transport result when evidence is
     insufficient.
+- [degtiarev/MotionCollector](https://github.com/degtiarev/MotionCollector) (MIT)
+  - Shows a Watch/iPhone collection pipeline for accelerometer and gyroscope
+    windows, with session IDs kept alongside exported samples.
+- [WWDCNotes Core Motion overview](https://github.com/WWDCNotes/Content/blob/main/content/notes/wwdc23/10179.md)
+  - Confirms the Watch accelerometer, gyroscope, magnetometer, and barometer
+    are intended to be fused; its batched-sensor notes support windowed
+    features instead of per-sample UI updates.
+- [Sweefties WatchOS Core Motion/CMPedometer example](https://github.com/Sweefties/WatchOS2-NewAPI-CoreMotion-CMPedometer-Example)
+  - Demonstrates Watch-side pedometer, cadence, pace, distance, and floor
+    readings that complement the accelerometer window.
 
 ## Apple platform references
 
@@ -49,3 +59,20 @@ third-party source file or machine-learning model is copied into the app.
   before selecting subway. Sensors alone do not reliably distinguish a bus,
   taxi, and private car, so those modes retain route, context, and user
   correction requirements.
+- For subway candidates, combine a sustained GPS-loss/altitude-down window,
+  low step cadence, rail speed or repeated-stop context, and Apple Watch
+  three-axis acceleration standard deviation plus jerk. A single drop in GPS
+  or a single acceleration spike never creates a subway segment.
+
+## Activity behavior references
+
+- [Aminoid/react-native-activity-recognition](https://github.com/Aminoid/react-native-activity-recognition/blob/master/ios/RNActivityRecognition.m)
+  - Uses `CMMotionActivity` to expose passive iPhone states: stationary,
+    walking, running, cycling, automotive and unknown.
+- [georgegreenoflondon/HKWorkoutActivityType-Descriptions](https://github.com/georgegreenoflondon/HKWorkoutActivityType-Descriptions)
+  - Provides a readable catalog for Apple Watch/HealthKit workout types. The
+    app maps the iOS SDK catalog to Korean names and keeps measured intervals.
+
+Core Motion records remain immutable. A passive interval is suppressed when a
+HealthKit/Watch workout or explicit tracking session covers it; unsupported
+sports are not inferred without a Watch workout record.

@@ -88,7 +88,7 @@ enum ReviewScale: String, CaseIterable, Identifiable {
 enum RootTab: String, CaseIterable, Identifiable {
     case schedule = "시간표"
     case goals = "루틴"
-    case review = "회고"
+    case review = "기록"
     case settings = "설정"
 
     var id: Self { self }

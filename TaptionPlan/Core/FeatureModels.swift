@@ -1,5 +1,12 @@
 import Foundation
 
+/// The first product surface is an automatic life log. Manual planning data
+/// remains in storage for compatibility, but is intentionally kept out of the
+/// primary iPhone and widget surfaces until the automatic timeline is stable.
+enum TaptionProductScope {
+    static let automaticLoggingOnly = true
+}
+
 // MARK: - Shared domain vocabulary
 
 enum TimelineLevel: String, Codable, CaseIterable, Sendable {
@@ -40,6 +47,9 @@ enum ActualSource: String, Codable, CaseIterable, Sendable {
     case timer
     case healthKit
     case appleWatch
+    /// Passive iPhone Core Motion classification. These records are derived
+    /// from the immutable motion history and are not user-editable.
+    case motion
     case calendar
     case location
     case photo
@@ -1094,6 +1104,17 @@ enum MotionKind: String, Codable, CaseIterable, Sendable {
     case cycling
     case automotive
     case unknown
+
+    var activityTitle: String? {
+        switch self {
+        case .stationary: "정지·휴식"
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .cycling: "자전거"
+        case .automotive: "차량 탑승"
+        case .unknown: nil
+        }
+    }
 }
 
 enum TrackingKind: String, Codable, CaseIterable, Hashable, Sendable {
@@ -1183,6 +1204,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var averageActivePaceSecondsPerMeter: Double?
     var deviceMotion: DeviceMotionSnapshot?
     var deviceMotionSummary: DeviceMotionSummary?
+    var watchAccelerationAverageG: SensorVector3?
+    var watchAccelerationStandardDeviationG: Double?
+    var watchAccelerationMeanJerkGPerSecond: Double?
     var systemFloor: Int?
     var gpsAvailable: Bool
     var nearbyStation: Bool
@@ -1222,6 +1246,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         averageActivePaceSecondsPerMeter: Double? = nil,
         deviceMotion: DeviceMotionSnapshot? = nil,
         deviceMotionSummary: DeviceMotionSummary? = nil,
+        watchAccelerationAverageG: SensorVector3? = nil,
+        watchAccelerationStandardDeviationG: Double? = nil,
+        watchAccelerationMeanJerkGPerSecond: Double? = nil,
         systemFloor: Int? = nil,
         gpsAvailable: Bool = true,
         nearbyStation: Bool = false,
@@ -1261,6 +1288,11 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
             averageActivePaceSecondsPerMeter
         self.deviceMotion = deviceMotion
         self.deviceMotionSummary = deviceMotionSummary
+        self.watchAccelerationAverageG = watchAccelerationAverageG
+        self.watchAccelerationStandardDeviationG =
+            watchAccelerationStandardDeviationG
+        self.watchAccelerationMeanJerkGPerSecond =
+            watchAccelerationMeanJerkGPerSecond
         self.systemFloor = systemFloor
         self.gpsAvailable = gpsAvailable
         self.nearbyStation = nearbyStation

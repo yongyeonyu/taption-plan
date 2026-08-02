@@ -28,26 +28,31 @@ enum TaptionWidgetPayloadFactory {
         // widget draw two bars in the same action lane, which looked like an
         // overlapping duplicate. The widget should show only actionable
         // plans; the goal dashboard remains the place for goal summaries.
-        let planItems = snapshot.plans
-            .filter { $0.status != .completed && $0.status != .skipped }
-            .filter { !GoalRecordPolicy.isGoal($0) }
-            .filter { $0.span.intersection(with: widgetSpan) != nil }
-            .sorted { $0.span.start < $1.span.start }
-            .map { plan in
-                let category = categoriesByID[plan.categoryID]
-                return TaptionWidgetItem(
-                    id: plan.id,
-                    title: plan.title,
-                    categoryID: plan.categoryID,
-                    startsAt: plan.span.start,
-                    endsAt: plan.span.end,
-                    status: plan.status.rawValue,
-                    isFixed: plan.isFixed,
-                    categoryName: category?.name,
-                    categoryHex: category?.lightHex,
-                    lane: .action
-                )
-            }
+        let planItems: [TaptionWidgetItem]
+        if TaptionProductScope.automaticLoggingOnly {
+            planItems = []
+        } else {
+            planItems = snapshot.plans
+                .filter { $0.status != .completed && $0.status != .skipped }
+                .filter { !GoalRecordPolicy.isGoal($0) }
+                .filter { $0.span.intersection(with: widgetSpan) != nil }
+                .sorted { $0.span.start < $1.span.start }
+                .map { plan in
+                    let category = categoriesByID[plan.categoryID]
+                    return TaptionWidgetItem(
+                        id: plan.id,
+                        title: plan.title,
+                        categoryID: plan.categoryID,
+                        startsAt: plan.span.start,
+                        endsAt: plan.span.end,
+                        status: plan.status.rawValue,
+                        isFixed: plan.isFixed,
+                        categoryName: category?.name,
+                        categoryHex: category?.lightHex,
+                        lane: .action
+                    )
+                }
+        }
 
         let calendarItems = snapshot.calendarEvents
             .filter { $0.span.intersection(with: widgetSpan) != nil }

@@ -189,6 +189,7 @@ struct TravelModeClassifier: Sendable {
         }
 
         let motionSignal = deviceMotionSignal(ordered)
+        let watchAcceleration = watchAccelerationSignal(ordered)
         if motionSignal.sampleCount >= 3 {
             if hasPedestrianCadence,
                motionSignal.meanAccelerationG >= 0.025,
@@ -239,6 +240,21 @@ struct TravelModeClassifier: Sendable {
         let portRatio = ratio(ordered, where: \.nearPort)
         let waterRatio = ratio(ordered, where: \.onWater)
 
+        let watchVibration = watchAcceleration.sampleCount >= 2
+            && watchAcceleration.standardDeviationG >= 0.012
+            && watchAcceleration.meanJerkGPerSecond >= 0.04
+        let lowStepSignal = !stepSignal.hasCoverage
+            || stepsPerMinute <= 5
+        let railSpeedSignal = averageSpeed >= 4
+            && averageSpeed <= 35
+            || maxSpeed >= 8
+                && maxSpeed <= 40
+        let railContext = stationRatio >= 0.2
+            || railRatio >= 0.25
+            || stopRatio >= 0.3 && railSpeedSignal
+        let undergroundSignal = gpsLossRatio >= 0.35
+            || altitudeDelta <= -2
+
         if stationRatio >= 0.25 {
             add(.subway, 0.16, "역 접근")
             add(.train, 0.1, "역 접근")
@@ -247,10 +263,10 @@ struct TravelModeClassifier: Sendable {
             add(.subway, 0.2, "철도 경로 일치")
             add(.train, 0.28, "철도 경로 일치")
         }
-        if gpsLossRatio >= 0.45 {
+        if gpsLossRatio >= 0.45 && (railContext || watchVibration) {
             add(.subway, 0.18, "GPS 약화")
         }
-        if altitudeDelta <= -2 {
+        if altitudeDelta <= -2 && (railContext || watchVibration) {
             add(.subway, 0.16, "상대고도 하강")
         }
         if stationRatio >= 0.25,
@@ -258,6 +274,15 @@ struct TravelModeClassifier: Sendable {
            gpsLossRatio >= 0.45,
            altitudeDelta <= -2 {
             add(.subway, 0.3, "지하철 복합 신호 충족")
+        }
+
+        if watchVibration && lowStepSignal && undergroundSignal
+            && (railContext || railSpeedSignal) {
+            add(.subway, 0.62, "Apple Watch 3축 가속도 철도 진동")
+            add(.subway, 0.18, "걸음 거의 없음 · 지하 구간")
+            if railContext {
+                add(.subway, 0.18, "역·철도·반복 정차 패턴")
+            }
         }
 
         if transitRatio >= 0.5 {
@@ -602,6 +627,27 @@ struct TravelModeClassifier: Sendable {
         return zip(values, values.dropFirst()).reduce(0) { total, pair in
             total + (pair.1 >= pair.0 ? pair.1 - pair.0 : pair.1)
         }
+    }
+
+    private struct WatchAccelerationSignal {
+        var sampleCount: Int
+        var standardDeviationG: Double
+        var meanJerkGPerSecond: Double
+    }
+
+    private func watchAccelerationSignal(
+        _ readings: [SensorReading]
+    ) -> WatchAccelerationSignal {
+        let deviations = readings.compactMap(\.watchAccelerationStandardDeviationG)
+            .filter { $0.isFinite && $0 >= 0 }
+        let jerks = readings.compactMap(\.watchAccelerationMeanJerkGPerSecond)
+            .filter { $0.isFinite && $0 >= 0 }
+        let sampleCount = max(deviations.count, jerks.count)
+        return WatchAccelerationSignal(
+            sampleCount: sampleCount,
+            standardDeviationG: mean(deviations),
+            meanJerkGPerSecond: mean(jerks)
+        )
     }
 
     private func modeName(_ mode: TravelMode?) -> String {
@@ -1219,6 +1265,104 @@ struct PlaceDetectionEngine: Sendable {
     }
 }
 
+extension PlaceStay {
+    var isWalkingLocation: Bool {
+        placeKey.hasPrefix("walking:")
+    }
+}
+
+struct WalkingLocationEngine: Sendable {
+    var radiusMeters: Double = 100
+    var maximumGap: TimeInterval = 2 * 60
+    var minimumDuration: TimeInterval = 30
+    var maximumAccuracy: Double = 50
+
+    func build(readings: [SensorReading]) -> [PlaceStay] {
+        let sorted = readings
+            .filter {
+                $0.trackingKind == .walking
+                    && $0.point != nil
+                    && ($0.point?.horizontalAccuracy ?? .infinity)
+                        >= 0
+                    && ($0.point?.horizontalAccuracy ?? .infinity)
+                        <= maximumAccuracy
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+        guard !sorted.isEmpty else { return [] }
+
+        var groups: [[SensorReading]] = []
+        var current: [SensorReading] = []
+        for reading in sorted {
+            let shouldSplit: Bool
+            if let first = current.first,
+               let anchor = first.point,
+               let point = reading.point {
+                shouldSplit = distanceMeters(anchor, point) > radiusMeters
+                    || reading.timestamp.timeIntervalSince(first.timestamp)
+                        > maximumGap
+                    || (first.trackingSessionID != nil
+                        && first.trackingSessionID
+                            != reading.trackingSessionID)
+            } else {
+                shouldSplit = false
+            }
+            if shouldSplit, !current.isEmpty {
+                groups.append(current)
+                current = []
+            }
+            current.append(reading)
+        }
+        if !current.isEmpty { groups.append(current) }
+
+        return groups.compactMap { group in
+            guard let first = group.first,
+                  let last = group.last,
+                  let point = representativePoint(group),
+                  last.timestamp.timeIntervalSince(first.timestamp)
+                    >= minimumDuration else {
+                return nil
+            }
+            let accuracy = group.map { $0.point?.horizontalAccuracy ?? 100 }
+                .reduce(0, +) / Double(group.count)
+            return PlaceStay(
+                placeKey: "walking:\(placeKey(for: point))",
+                displayName: "확인된 위치",
+                floor: stableFloor(in: group),
+                span: TimeSpan(start: first.timestamp, end: last.timestamp),
+                confidence: ConfidenceLevel(
+                    score: accuracy <= 30 ? 0.95 : 0.78
+                ),
+                point: point,
+                isConfirmed: true
+            )
+        }
+    }
+
+    private func representativePoint(_ readings: [SensorReading]) -> GeoPoint? {
+        let points = readings.compactMap(\.point)
+        guard !points.isEmpty else { return nil }
+        let count = Double(points.count)
+        return GeoPoint(
+            latitude: points.map(\.latitude).reduce(0, +) / count,
+            longitude: points.map(\.longitude).reduce(0, +) / count,
+            altitude: points.map(\.altitude).reduce(0, +) / count,
+            horizontalAccuracy: points.map(\.horizontalAccuracy)
+                .reduce(0, +) / count,
+            verticalAccuracy: points.map(\.verticalAccuracy)
+                .reduce(0, +) / count
+        )
+    }
+
+    private func stableFloor(in readings: [SensorReading]) -> Int? {
+        let counts = Dictionary(grouping: readings.compactMap(\.systemFloor), by: { $0 })
+        return counts.max { $0.value.count < $1.value.count }?.key
+    }
+
+    private func placeKey(for point: GeoPoint) -> String {
+        String(format: "%.4f,%.4f", point.latitude, point.longitude)
+    }
+}
+
 struct MovementRouteBuilder: Sendable {
     var classifier = TravelModeClassifier()
 
@@ -1622,7 +1766,8 @@ enum AppleDeviceGroundTruthEngine {
     ) -> [ActualRecord] {
         var seen = Set<UUID>()
         let uniqueFresh = fresh.filter {
-            $0.source == .healthKit && seen.insert($0.id).inserted
+            ($0.source == .healthKit || $0.source == .appleWatch)
+                && seen.insert($0.id).inserted
         }
         let freshIDs = Set(uniqueFresh.map(\.id))
         let linkedWorkouts = uniqueFresh.filter { $0.planID != nil }
@@ -1680,7 +1825,8 @@ enum AppleWatchSensorActivityEngine {
         linkedPlan: PlanRecord?
     ) -> [ActualRecord] {
         if existing.contains(where: {
-            $0.id == summary.sessionID && $0.source == .healthKit
+            $0.id == summary.sessionID
+                && ($0.source == .healthKit || $0.source == .appleWatch)
         }) {
             return existing
         }
@@ -1708,6 +1854,132 @@ enum AppleWatchSensorActivityEngine {
             existing.filter { $0.id != summary.sessionID }
                 + [record]
         ).sorted { $0.startedAt < $1.startedAt }
+    }
+}
+
+/// Turns the iPhone's passive Core Motion intervals into immutable activity
+/// records. A HealthKit workout or an explicit tracking session wins when it
+/// covers the same interval, so the activity lane never shows two copies of
+/// one workout.
+enum MotionActivityActualEngine {
+    static func records(
+        from activities: [MotionActivityRecord],
+        existing: [ActualRecord],
+        inside: TimeSpan,
+        minimumDuration: TimeInterval = 30
+    ) -> [ActualRecord] {
+        merged(activities, inside: inside)
+            .filter { $0.span.duration >= minimumDuration }
+            .compactMap { activity in
+                guard let title = activity.motion.activityTitle else {
+                    return nil
+                }
+                let covered = existing.contains { actual in
+                    guard isCompetingAutomaticRecord(actual),
+                          let overlap = actual.span(asOf: inside.end)
+                              .intersection(with: activity.span) else {
+                        return false
+                    }
+                    return overlap.duration >= min(
+                        activity.span.duration * 0.5,
+                        30
+                    )
+                }
+                guard !covered else { return nil }
+                return ActualRecord(
+                    id: stableID(for: activity),
+                    planID: nil,
+                    routineID: nil,
+                    title: title,
+                    categoryID: "activity",
+                    startedAt: activity.span.start,
+                    endedAt: activity.span.end,
+                    source: .motion,
+                    confidence: activity.confidence,
+                    createdAt: activity.span.start
+                )
+            }
+    }
+
+    private static func merged(
+        _ activities: [MotionActivityRecord],
+        inside: TimeSpan
+    ) -> [MotionActivityRecord] {
+        let clipped = activities.compactMap { activity -> MotionActivityRecord? in
+            guard let span = activity.span.intersection(with: inside),
+                  activity.motion != .unknown else { return nil }
+            return MotionActivityRecord(
+                id: activity.id,
+                span: span,
+                motion: activity.motion,
+                confidence: activity.confidence
+            )
+        }.sorted { $0.span.start < $1.span.start }
+
+        var result: [MotionActivityRecord] = []
+        for activity in clipped {
+            guard var last = result.last,
+                  last.motion == activity.motion,
+                  activity.span.start.timeIntervalSince(last.span.end) <= 30 else {
+                result.append(activity)
+                continue
+            }
+            last.span.end = max(last.span.end, activity.span.end)
+            last.confidence = stronger(last.confidence, activity.confidence)
+            result[result.count - 1] = last
+        }
+        return result
+    }
+
+    private static func isCompetingAutomaticRecord(
+        _ actual: ActualRecord
+    ) -> Bool {
+        guard actual.source == .healthKit
+                || actual.source == .appleWatch
+                || actual.source == .location else {
+            return false
+        }
+        return actual.categoryID == "exercise"
+            || actual.categoryID == "activity"
+            || actual.title.localizedCaseInsensitiveContains("걷")
+            || actual.title.localizedCaseInsensitiveContains("달리")
+            || actual.title.localizedCaseInsensitiveContains("자전거")
+            || actual.title.localizedCaseInsensitiveContains("러닝")
+    }
+
+    private static func stronger(
+        _ lhs: ConfidenceLevel,
+        _ rhs: ConfidenceLevel
+    ) -> ConfidenceLevel {
+        let rank: [ConfidenceLevel: Int] = [.low: 0, .medium: 1, .high: 2]
+        return (rank[lhs] ?? 0) >= (rank[rhs] ?? 0) ? lhs : rhs
+    }
+
+    private static func stableID(for activity: MotionActivityRecord) -> UUID {
+        let key = [
+            activity.motion.rawValue,
+            String(Int(activity.span.start.timeIntervalSinceReferenceDate.rounded())),
+            String(Int(activity.span.end.timeIntervalSinceReferenceDate.rounded()))
+        ].joined(separator: "|")
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        var bytes = [UInt8](repeating: 0, count: 16)
+        for byte in key.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 1_099_511_628_211
+        }
+        for index in bytes.indices {
+            hash ^= UInt64(index + 1) * 0x9E37_79B9
+            hash = hash &* 1_099_511_628_211
+            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 }
 
