@@ -146,6 +146,18 @@ enum TimelineLaneAllocator {
 }
 
 enum AutomaticRecordTimelineEngine {
+    /// Device/HealthKit records are ground truth. Their timestamps and
+    /// measured duration must never be changed by the plan editor or the
+    /// routine progress slider.
+    static func isImmutable(_ actual: ActualRecord) -> Bool {
+        switch actual.source {
+        case .healthKit, .appleWatch, .location:
+            true
+        case .manual, .timer, .calendar, .photo:
+            false
+        }
+    }
+
     static func isSleep(_ actual: ActualRecord) -> Bool {
         actual.categoryID == "sleep"
             || actual.title.localizedCaseInsensitiveContains("수면")

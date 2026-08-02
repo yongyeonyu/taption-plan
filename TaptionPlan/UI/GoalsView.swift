@@ -582,6 +582,9 @@ private struct RoutineTimeRangeSlider: View {
     private var actualDuration: TimeInterval {
         max(0, actualEnd.timeIntervalSince(actualStart))
     }
+    private var isLocked: Bool {
+        actual.map(AutomaticRecordTimelineEngine.isImmutable) ?? false
+    }
     private var progress: Double {
         guard plannedDuration > 0 else { return 0 }
         return min(1, actualDuration / plannedDuration)
@@ -602,12 +605,18 @@ private struct RoutineTimeRangeSlider: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
-                Text("계획 (timeRange(plan.span.start, plan.span.end))")
+                Text("계획 · \(timeRange(plan.span.start, plan.span.end))")
                 Spacer(minLength: 4)
                 Label(status.0, systemImage: status.2)
                     .foregroundStyle(status.1)
             }
             .font(.taption(size: 8, weight: .semibold))
+
+            if isLocked {
+                Label("자동 기록 · 수정 불가", systemImage: "lock.fill")
+                    .font(.taption(size: 7.5, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
 
             GeometryReader { proxy in
                 let width = max(1, proxy.size.width)
@@ -627,21 +636,27 @@ private struct RoutineTimeRangeSlider: View {
                         .frame(width: actualWidth(width), height: 12)
                         .offset(x: actualX(width))
 
-                    handle(at: actualX(width), isStart: true)
-                        .gesture(handleGesture(.start, width: width))
-                    handle(at: actualX(width) + actualWidth(width), isStart: false)
-                        .gesture(handleGesture(.end, width: width))
+                    handleControl(
+                        at: actualX(width),
+                        isStart: true,
+                        width: width
+                    )
+                    handleControl(
+                        at: actualX(width) + actualWidth(width),
+                        isStart: false,
+                        width: width
+                    )
                 }
                 .frame(height: 26)
             }
             .frame(height: 26)
 
             HStack(spacing: 4) {
-                Text("실제 (timeRange(actualStart, actualEnd))")
-                Text("· (durationText(actualDuration))")
+                Text("실제 · \(timeRange(actualStart, actualEnd))")
+                Text("· \(durationText(actualDuration))")
                     .foregroundStyle(Color.tpSecondary)
                 Spacer()
-                Text("양끝을 드래그")
+                Text(isLocked ? "Apple 건강 기록" : "양끝을 드래그")
                     .foregroundStyle(Color.tpSecondary.opacity(0.82))
             }
             .font(.taption(size: 7.5, weight: .semibold))
@@ -672,6 +687,22 @@ private struct RoutineTimeRangeSlider: View {
             .shadow(color: .black.opacity(0.14), radius: 2)
             .offset(x: x - 11)
             .accessibilityLabel(isStart ? "실제 시작 시간" : "실제 종료 시간")
+    }
+
+    @ViewBuilder
+    private func handleControl(
+        at x: CGFloat,
+        isStart: Bool,
+        width: CGFloat
+    ) -> some View {
+        if isLocked {
+            handle(at: x, isStart: isStart)
+                .opacity(0.42)
+                .accessibilityHint("자동 기록은 수정할 수 없습니다")
+        } else {
+            handle(at: x, isStart: isStart)
+                .gesture(handleGesture(isStart ? .start : .end, width: width))
+        }
     }
 
     private func handleGesture(_ handle: Handle, width: CGFloat) -> some Gesture {
@@ -777,6 +808,10 @@ struct GoalDetailView: View {
         .onChange(of: model.selectedGoalPlanID) { _, _ in
             inlineMemoText = ""
             inlineMemoFocused = false
+        }
+        .task(id: model.selectedGoalPlanID) {
+            guard model.selectedGoalPlanID != nil else { return }
+            await model.refreshConnectedRecordsNow()
         }
         .confirmationDialog(
             "이 루틴을 삭제할까요?",
@@ -1245,10 +1280,15 @@ struct GoalDetailView: View {
                     .font(.taption(size: 8.5, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
                 ForEach(Array(matches.prefix(3))) { match in
+                    let isLocked = AutomaticRecordTimelineEngine.isImmutable(
+                        match.actual
+                    )
                     HStack(spacing: 6) {
-                        Image(systemName: match.actual.endedAt == nil
-                            ? "clock.fill"
-                            : "checkmark.circle.fill")
+                        Image(systemName: isLocked
+                            ? "lock.fill"
+                            : match.actual.endedAt == nil
+                                ? "clock.fill"
+                                : "checkmark.circle.fill")
                             .font(.taption(size: 8.5, weight: .bold))
                         VStack(alignment: .leading, spacing: 1) {
                             Text(match.actual.title)
@@ -1265,7 +1305,8 @@ struct GoalDetailView: View {
                             .foregroundStyle(Color.tpSecondary)
                         }
                         Spacer(minLength: 4)
-                        Text(match.actual.endedAt == nil ? "진행 중" : "기록")
+                        Text(isLocked ? "자동 기록 · 수정 불가" :
+                            match.actual.endedAt == nil ? "진행 중" : "기록")
                             .font(.taption(size: 7.5, weight: .bold))
                             .foregroundStyle(Color.tpSecondary)
                     }

@@ -239,18 +239,20 @@ private struct TimelineSelection: Equatable {
 
 @MainActor
 private final class TimelinePlayheadDetailGate {
-    private let minimumInterval: TimeInterval = 1.0 / 20.0
+    private let defaultInterval: TimeInterval = 1.0 / 20.0
     private var lastDeliveryUptime: TimeInterval = -.infinity
     private var pendingDate: Date?
     private var scheduledTask: Task<Void, Never>?
 
     func submit(
         _ date: Date,
+        minimumInterval: TimeInterval? = nil,
         deliver: @escaping @MainActor (Date) -> Void
     ) {
         pendingDate = date
         let now = ProcessInfo.processInfo.systemUptime
-        let remaining = minimumInterval - (now - lastDeliveryUptime)
+        let interval = max(0.001, minimumInterval ?? defaultInterval)
+        let remaining = interval - (now - lastDeliveryUptime)
         if remaining <= 0 {
             scheduledTask?.cancel()
             scheduledTask = nil
@@ -285,6 +287,15 @@ private final class TimelinePlayheadDetailGate {
         self.pendingDate = nil
         lastDeliveryUptime = ProcessInfo.processInfo.systemUptime
         deliver(pendingDate)
+    }
+}
+
+private func playheadDetailInterval(for scale: TimeScale) -> TimeInterval {
+    switch scale {
+    case .day: 1.0 / 20.0
+    case .week: 1.0 / 15.0
+    case .month: 1.0 / 12.0
+    case .year: 1.0 / 10.0
     }
 }
 
@@ -519,10 +530,14 @@ private final class TimelineSelectionIndexCache {
     private var travel: [TravelSegment] = []
     private var eventPlans: [PlanRecord] = []
     private var calendarEvents: [CalendarRecord] = []
+    private var routinePlans: [PlanRecord] = []
+    private var automaticActuals: [ActualRecord] = []
     private var actionPlans: [PlanRecord] = []
     private var travelMaxEnds: [TimeInterval] = []
     private var eventPlanMaxEnds: [TimeInterval] = []
     private var calendarEventMaxEnds: [TimeInterval] = []
+    private var routinePlanMaxEnds: [TimeInterval] = []
+    private var automaticActualMaxEnds: [TimeInterval] = []
     private var actionPlanMaxEnds: [TimeInterval] = []
     private var categoryNames: [String: String] = [:]
     private var lastTravel: TravelSegment?
@@ -535,7 +550,8 @@ private final class TimelineSelectionIndexCache {
         plans: [PlanRecord],
         travel: [TravelSegment],
         calendarEvents: [CalendarRecord],
-        categories: [CategoryDefinition]
+        categories: [CategoryDefinition],
+        actuals: [ActualRecord] = []
     ) {
         guard self.timelineRevision != timelineRevision else { return }
         self.timelineRevision = timelineRevision
@@ -544,6 +560,15 @@ private final class TimelineSelectionIndexCache {
             $0.categoryID == "event" && $0.parentID == nil
         }
         self.calendarEvents = calendarEvents
+        self.routinePlans = plans.filter {
+            $0.origin == .repeatRule && $0.status != .skipped
+        }
+        self.automaticActuals = actuals.filter {
+            $0.categoryID == "sleep"
+                || $0.categoryID == "activity"
+                || $0.source == .healthKit
+                || $0.source == .appleWatch
+        }
         self.actionPlans = plans.filter {
             $0.categoryID != "event"
                 && $0.parentID == nil
@@ -552,10 +577,17 @@ private final class TimelineSelectionIndexCache {
         self.travel.sort { $0.span.start < $1.span.start }
         self.eventPlans.sort { $0.span.start < $1.span.start }
         self.calendarEvents.sort { $0.span.start < $1.span.start }
+        self.routinePlans.sort { $0.span.start < $1.span.start }
+        self.automaticActuals.sort { $0.startedAt < $1.startedAt }
         self.actionPlans.sort { $0.span.start < $1.span.start }
         self.travelMaxEnds = prefixMaximumEnds(in: self.travel, span: \.span)
         self.eventPlanMaxEnds = prefixMaximumEnds(in: self.eventPlans, span: \.span)
         self.calendarEventMaxEnds = prefixMaximumEnds(in: self.calendarEvents, span: \.span)
+        self.routinePlanMaxEnds = prefixMaximumEnds(in: self.routinePlans, span: \.span)
+        self.automaticActualMaxEnds = prefixMaximumEnds(
+            in: self.automaticActuals,
+            span: { $0.span() }
+        )
         self.actionPlanMaxEnds = prefixMaximumEnds(in: self.actionPlans, span: \.span)
         lastTravel = nil
         lastEventPlan = nil
@@ -621,6 +653,24 @@ private final class TimelineSelectionIndexCache {
         )
         lastActionPlan = value
         return value
+    }
+
+    func routinePlan(containing date: Date) -> PlanRecord? {
+        nearestContaining(
+            date,
+            in: routinePlans,
+            prefixMaximumEnds: routinePlanMaxEnds,
+            span: \.span
+        )
+    }
+
+    func automaticActual(containing date: Date) -> ActualRecord? {
+        nearestContaining(
+            date,
+            in: automaticActuals,
+            prefixMaximumEnds: automaticActualMaxEnds,
+            span: { $0.span() }
+        )
     }
 
     func categoryName(for categoryID: String) -> String? {
@@ -1458,7 +1508,10 @@ struct ScheduleView: View {
     }
 
     private func requestPlayheadDetailUpdate(at date: Date) {
-        playheadDetailGate.submit(date) { deliveredDate in
+        playheadDetailGate.submit(
+            date,
+            minimumInterval: playheadDetailInterval(for: model.selectedScale)
+        ) { deliveredDate in
             mapPlayheadDate = deliveredDate
             focusMapOnPlayhead(at: deliveredDate)
         }
@@ -1499,7 +1552,8 @@ struct ScheduleView: View {
             plans: model.snapshot.plans,
             travel: model.snapshot.travel,
             calendarEvents: model.snapshot.calendarEvents,
-            categories: model.snapshot.categories
+            categories: model.snapshot.categories,
+            actuals: model.snapshot.actuals
         )
 
         if let cluster = photoCluster(at: date) {
@@ -1549,6 +1603,38 @@ struct ScheduleView: View {
                 isRoute: false,
                 categoryID: "calendar",
                 categoryName: "일정"
+            )
+        }
+
+        if let actual = selectionIndexCache.automaticActual(containing: date) {
+            let span = actual.span(asOf: max(.now, date))
+            return TimelineSelection(
+                title: actual.title,
+                span: span,
+                planID: actual.routineID ?? actual.planID,
+                actualID: actual.id,
+                recordNodeID: "automatic.actual.\(actual.id.uuidString)",
+                isRoute: false,
+                categoryID: actual.categoryID,
+                categoryName: selectionIndexCache.categoryName(
+                    for: actual.categoryID
+                )
+            )
+        }
+
+        // Generated repeat segments are rendered as concrete timeline blocks,
+        // but they are not root action items. Include them in playhead
+        // selection so a 23:00–06:30 routine remains visible after midnight.
+        if let routine = selectionIndexCache.routinePlan(containing: date) {
+            return TimelineSelection(
+                title: routine.title,
+                span: routine.span,
+                planID: routine.id,
+                isRoute: false,
+                categoryID: routine.categoryID,
+                categoryName: selectionIndexCache.categoryName(
+                    for: routine.categoryID
+                )
             )
         }
 
@@ -2367,9 +2453,23 @@ private struct TimelineDetailPanel: View {
     }
 
     private var selectedRoutineForDetail: PlanRecord? {
-        guard let plan = selectedPlanForDetail,
-              GoalRecordPolicy.isGoal(plan) else { return nil }
-        return plan
+        guard var plan = selectedPlanForDetail else { return nil }
+        var visited = Set<UUID>()
+        while visited.insert(plan.id).inserted {
+            if GoalRecordPolicy.isGoal(plan) {
+                return plan
+            }
+            guard let parentID = plan.parentID,
+                  let parent = planIndexCache.plan(
+                      id: parentID,
+                      timelineRevision: model.timelineRevision,
+                      plans: model.snapshot.plans
+                  ) else {
+                break
+            }
+            plan = parent
+        }
+        return nil
     }
 
     /// A selected root routine is a valid detail target even when it has no
@@ -2854,13 +2954,19 @@ private struct TimelineDetailPanel: View {
                     .font(.taption(size: 8.5, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                 actualGoalLinkControl(actual)
-                Button(role: .destructive) {
-                    pendingActualDeletionID = actual.id
-                } label: {
-                    Label("실제 기록 삭제", systemImage: "trash")
+                if AutomaticRecordTimelineEngine.isImmutable(actual) {
+                    Label("자동 기록 · 수정 불가", systemImage: "lock.fill")
+                        .font(.taption(size: 8.5, weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                } else {
+                    Button(role: .destructive) {
+                        pendingActualDeletionID = actual.id
+                    } label: {
+                        Label("실제 기록 삭제", systemImage: "trash")
+                    }
+                    .font(.taption(size: 9, weight: .bold))
+                    .buttonStyle(.bordered)
                 }
-                .font(.taption(size: 9, weight: .bold))
-                .buttonStyle(.bordered)
             } else if let plan = selectedManualActionPlan {
                 Text(plan.title)
                     .font(.taption(size: 14, weight: .bold))
@@ -4919,7 +5025,10 @@ struct GroupGanttView: View {
     }
 
     private func requestPlayheadDetailUpdate(at date: Date) {
-        playheadDetailGate.submit(date) { deliveredDate in
+        playheadDetailGate.submit(
+            date,
+            minimumInterval: playheadDetailInterval(for: model.selectedScale)
+        ) { deliveredDate in
             mapPlayheadDate = deliveredDate
             focusMapOnPlayhead(at: deliveredDate)
         }
@@ -4955,7 +5064,8 @@ struct GroupGanttView: View {
             plans: model.snapshot.plans,
             travel: model.snapshot.travel,
             calendarEvents: model.snapshot.calendarEvents,
-            categories: model.snapshot.categories
+            categories: model.snapshot.categories,
+            actuals: model.snapshot.actuals
         )
 
         if let cluster = photoCluster(at: date) {
@@ -5005,6 +5115,35 @@ struct GroupGanttView: View {
                 isRoute: false,
                 categoryID: "calendar",
                 categoryName: "일정"
+            )
+        }
+
+        if let actual = selectionIndexCache.automaticActual(containing: date) {
+            let span = actual.span(asOf: max(.now, date))
+            return TimelineSelection(
+                title: actual.title,
+                span: span,
+                planID: actual.routineID ?? actual.planID,
+                actualID: actual.id,
+                recordNodeID: "automatic.actual.\(actual.id.uuidString)",
+                isRoute: false,
+                categoryID: actual.categoryID,
+                categoryName: selectionIndexCache.categoryName(
+                    for: actual.categoryID
+                )
+            )
+        }
+
+        if let routine = selectionIndexCache.routinePlan(containing: date) {
+            return TimelineSelection(
+                title: routine.title,
+                span: routine.span,
+                planID: routine.id,
+                isRoute: false,
+                categoryID: routine.categoryID,
+                categoryName: selectionIndexCache.categoryName(
+                    for: routine.categoryID
+                )
             )
         }
 
@@ -5125,6 +5264,7 @@ private struct TimelineBoard: View {
     @State private var continuousCenterDate: Date = .now
     @State private var continuousDragOrigin: Date?
     @State private var continuousTimelineDuration: TimeInterval = 86_400
+    @State private var preserveViewportAfterContinuousDrag = false
     // During a continuous-day drag, keep a slightly wider data window alive
     // so the rows are not rebuilt on every 240 Hz touch sample.  Blocks carry
     // their source dates and are reprojected against the moving display span
@@ -5278,6 +5418,11 @@ private struct TimelineBoard: View {
                     )
                 )
             )
+            // Keep SwiftUI's recognizer as a second path for devices where a
+            // UIScrollView consumes the UIKit pinch before the attached
+            // recognizer receives it. Both paths share the same guarded
+            // viewport state, so a single physical pinch is applied once.
+            .simultaneousGesture(viewportMagnifyGesture)
             .background {
                 TwoFingerPinchAttachment(
                     onChanged: { scale, anchor in
@@ -5313,6 +5458,7 @@ private struct TimelineBoard: View {
             onPlayheadMove?(continuousCenterDate)
         }
         .onChange(of: scale) { _, _ in
+            preserveViewportAfterContinuousDrag = false
             continuousCenterDate = model.selectedDate
             continuousTimelineDuration = continuousDuration(
                 around: model.selectedDate
@@ -5324,7 +5470,9 @@ private struct TimelineBoard: View {
         .onChange(of: model.selectedDate) { _, newDate in
             continuousCenterDate = newDate
             onPlayheadMove?(newDate)
-            if continuousDragOrigin == nil {
+            let preserveViewport = preserveViewportAfterContinuousDrag
+            preserveViewportAfterContinuousDrag = false
+            if continuousDragOrigin == nil, !preserveViewport {
                 continuousTimelineDuration = continuousDuration(around: newDate)
                 dragLayoutSpan = nil
                 resetViewport()
@@ -6281,7 +6429,11 @@ private struct TimelineBoard: View {
             span: plan.span,
             top: top,
             height: height,
-            isFixed: plan.isFixed,
+            isFixed: plan.isFixed
+                || plan.origin == .repeatRule
+                || plan.origin == .health
+                || plan.origin == .location
+                || plan.origin == .motion,
             groupCount: childCount > 0 ? childCount : nil,
             status: plan.status,
             detailText: isGoalPlan
@@ -7325,6 +7477,7 @@ private struct TimelineBoard: View {
                     }
                     guard let continuousDragOrigin else { return }
                     let secondsPerPoint = activeContinuousDuration
+                        * viewport.length
                         / Double(max(1, width))
                     let candidate = continuousDragOrigin.addingTimeInterval(
                         -Double(value.translation.width) * secondsPerPoint
@@ -7362,6 +7515,7 @@ private struct TimelineBoard: View {
                 if isContinuousTimeline {
                     if let continuousDragOrigin {
                         let secondsPerPoint = activeContinuousDuration
+                            * viewport.length
                             / Double(max(1, width))
                         continuousCenterDate = continuousDragOrigin
                             .addingTimeInterval(
@@ -7369,6 +7523,10 @@ private struct TimelineBoard: View {
                                     * secondsPerPoint
                             )
                     }
+                    // Changing the selected date normally resets the
+                    // viewport. A continuous drag is different: it pans the
+                    // already zoomed range, so keep that zoom after commit.
+                    preserveViewportAfterContinuousDrag = true
                     model.selectedDate = continuousCenterDate
                     onPlayheadMove?(continuousCenterDate)
                     lastContinuousRenderUptime = 0
@@ -7393,6 +7551,22 @@ private struct TimelineBoard: View {
                 dragOrigin = nil
                 continuousDragOrigin = nil
                 lastViewportRenderUptime = 0
+            }
+    }
+
+    private var viewportMagnifyGesture: some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.001)
+            .onChanged { value in
+                viewportMagnifyChanged(
+                    factor: Double(value.magnification),
+                    anchor: Double(value.startAnchor.x)
+                )
+            }
+            .onEnded { value in
+                viewportMagnifyEnded(
+                    factor: Double(value.magnification),
+                    anchor: Double(value.startAnchor.x)
+                )
             }
     }
 
@@ -7424,6 +7598,7 @@ private struct TimelineBoard: View {
         factor: Double,
         anchor: Double
     ) {
+        guard magnifyOrigin != nil else { return }
         finishSemanticMagnification(
             factor: factor,
             anchor: anchor
@@ -7440,7 +7615,8 @@ private struct TimelineBoard: View {
         let zoomsIn = factor >= 1.15
         let zoomsOut = factor <= 0.85
         guard zoomsIn || zoomsOut else {
-            viewport = origin
+            // The live viewport already follows the fingers. Do not snap a
+            // small but intentional pinch back to the pre-gesture range.
             return
         }
 
@@ -7988,7 +8164,7 @@ private struct TimelineBar: View {
             }
         }
         .overlay {
-            if isEditing, block.planID != nil {
+            if isEditing, block.planID != nil, !block.isFixed {
                 HStack {
                     resizeHandle
                         .gesture(
@@ -8028,18 +8204,23 @@ private struct TimelineBar: View {
         .onLongPressGesture(
             minimumDuration: 0.18,
             maximumDistance: 12,
-            perform: onEdit
+            perform: {
+                guard !block.isFixed else { return }
+                onEdit()
+            }
         )
         .simultaneousGesture(
             DragGesture(minimumDistance: 12)
                 .onEnded {
-                    guard isEditing, block.planID != nil else { return }
+                    guard isEditing,
+                          block.planID != nil,
+                          !block.isFixed else { return }
                     onMove($0.translation.width * secondsPerPoint)
                 }
         )
         .accessibilityHint(
             block.isFixed
-                ? "두 번 탭하면 일정에 맞춰 확대합니다"
+                ? "자동 기록은 수정할 수 없습니다. 두 번 탭하면 해당 시간으로 확대합니다"
                 : "두 번 탭하면 확대하고, 길게 누른 뒤 드래그하면 이동하며 양 끝점을 끌면 길이를 조절합니다"
         )
         .accessibilityElement(children: .combine)

@@ -879,6 +879,14 @@ final class AppModel {
         await persistDeviceLocalSnapshot()
     }
 
+    /// Publishes the latest HealthKit/Watch and sensor records before a
+    /// routine dashboard is shown. Automatic evidence is ground truth, so a
+    /// dashboard must not wait for the next foreground polling interval.
+    func refreshConnectedRecordsNow() async {
+        await bootstrap()
+        await refreshEnabledData(includesCurrentDeviceDay: true)
+    }
+
     func synchronizeCloud(showErrors: Bool = true) async {
         guard let cloudSyncService, !isCloudSyncing else {
             if cloudSyncService == nil {

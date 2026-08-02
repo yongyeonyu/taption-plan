@@ -225,6 +225,36 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(allocation.lanes[sleep.id], allocation.lanes[watch.id])
     }
 
+    func testAutomaticHealthAndSensorRecordsAreImmutable() {
+        let start = makeDate(2026, 8, 1, 9)
+        func record(_ source: ActualSource) -> ActualRecord {
+            ActualRecord(
+                planID: nil,
+                title: "활동",
+                categoryID: "activity",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(hour),
+                source: source
+            )
+        }
+
+        XCTAssertTrue(
+            AutomaticRecordTimelineEngine.isImmutable(record(.healthKit))
+        )
+        XCTAssertTrue(
+            AutomaticRecordTimelineEngine.isImmutable(record(.appleWatch))
+        )
+        XCTAssertTrue(
+            AutomaticRecordTimelineEngine.isImmutable(record(.location))
+        )
+        XCTAssertFalse(
+            AutomaticRecordTimelineEngine.isImmutable(record(.manual))
+        )
+        XCTAssertFalse(
+            AutomaticRecordTimelineEngine.isImmutable(record(.timer))
+        )
+    }
+
     func testGoalChildMustStayInsideParent() {
         let base = makeDate(2026, 1, 1)
         let parent = PlanRecord(
