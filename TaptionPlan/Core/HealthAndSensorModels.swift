@@ -234,6 +234,17 @@ enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
         Int(interval / 60)
     }
 
+    /// Hardware is awake only for this short sampling window. The interval
+    /// remains the time between sample starts; tracking sessions are the only
+    /// mode that intentionally keeps the streams alive.
+    var samplingWindowDuration: TimeInterval {
+        switch self {
+        case .batterySaver: 8
+        case .balanced: 10
+        case .accuracy: 12
+        }
+    }
+
     var displayName: String {
         switch self {
         case .batterySaver: "배터리 최소화"

@@ -1946,6 +1946,18 @@ final class FeatureEngineTests: XCTestCase {
             SensorCollectionProfile.accuracy.interval,
             60
         )
+        XCTAssertEqual(
+            SensorCollectionProfile.batterySaver.samplingWindowDuration,
+            8
+        )
+        XCTAssertEqual(
+            SensorCollectionProfile.balanced.samplingWindowDuration,
+            10
+        )
+        XCTAssertEqual(
+            SensorCollectionProfile.accuracy.samplingWindowDuration,
+            12
+        )
 
         let batterySaver = SensorCollectionConfiguration.configured(
             for: .batterySaver,

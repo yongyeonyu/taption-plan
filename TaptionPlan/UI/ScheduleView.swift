@@ -1028,6 +1028,7 @@ private final class TimelineDetailDataCache {
         let contentEnd: TimeInterval
         let displayStart: TimeInterval
         let displayEnd: TimeInterval
+        let playheadMinute: Int?
         let selectedPlanID: UUID?
         let selectedActualID: UUID?
         let selectedTravelID: UUID?
@@ -1583,29 +1584,6 @@ struct ScheduleView: View {
             )
         }
 
-        if let event = selectionIndexCache.eventPlan(containing: date) {
-            return TimelineSelection(
-                title: event.title,
-                span: event.span,
-                planID: event.id,
-                isRoute: false,
-                categoryID: "event",
-                categoryName: "이벤트"
-            )
-        }
-
-        if let calendarEvent = selectionIndexCache.calendarEvent(containing: date) {
-            return TimelineSelection(
-                title: calendarEvent.title,
-                span: calendarEvent.span,
-                planID: nil,
-                recordNodeID: "automatic.calendar.\(calendarEvent.id)",
-                isRoute: false,
-                categoryID: "calendar",
-                categoryName: "일정"
-            )
-        }
-
         if let actual = selectionIndexCache.automaticActual(containing: date) {
             let span = actual.span(asOf: max(.now, date))
             return TimelineSelection(
@@ -1635,6 +1613,32 @@ struct ScheduleView: View {
                 categoryName: selectionIndexCache.categoryName(
                     for: routine.categoryID
                 )
+            )
+        }
+
+        // A calendar item can cover an entire day. Prefer the automatic
+        // record at the playhead so the detail panel follows the visible
+        // sleep/activity block instead of showing the all-day event.
+        if let event = selectionIndexCache.eventPlan(containing: date) {
+            return TimelineSelection(
+                title: event.title,
+                span: event.span,
+                planID: event.id,
+                isRoute: false,
+                categoryID: "event",
+                categoryName: "이벤트"
+            )
+        }
+
+        if let calendarEvent = selectionIndexCache.calendarEvent(containing: date) {
+            return TimelineSelection(
+                title: calendarEvent.title,
+                span: calendarEvent.span,
+                planID: nil,
+                recordNodeID: "automatic.calendar.\(calendarEvent.id)",
+                isRoute: false,
+                categoryID: "calendar",
+                categoryName: "일정"
             )
         }
 
@@ -2276,7 +2280,7 @@ private struct TimelineDetailPanel: View {
             }
         }
         .sheet(isPresented: $showsActionLinkSheet) {
-            if let routine = selectedRoutineForDetail {
+            if let routine = focusedRoutineForDetail {
                 GoalActionLinkSheet(model: model, goal: routine)
             }
         }
@@ -2472,6 +2476,55 @@ private struct TimelineDetailPanel: View {
         return nil
     }
 
+    private var focusedRoutineForDetail: PlanRecord? {
+        if playheadDate == nil {
+            return selectedRoutineForDetail
+        }
+        guard let date = playheadDate else { return nil }
+        let repeatParentIDs = Set(
+            model.snapshot.plans
+                .filter {
+                    $0.origin == .repeatRule
+                        && $0.span.contains(date)
+                }
+                .compactMap(\.parentID)
+        )
+        let goals = model.snapshot.plans.filter {
+            GoalRecordPolicy.isGoal($0)
+                && ($0.span.contains(date) || repeatParentIDs.contains($0.id))
+        }
+        let preferredCategories: [String]
+        if activeSelection?.categoryID == "sleep"
+            || !detailSleepPlans.isEmpty
+            || !detailSleepActuals.isEmpty {
+            preferredCategories = ["sleep"]
+        } else if activeSelection?.categoryID == "activity"
+            || !detailActivityPlans.isEmpty
+            || !detailActivityActuals.isEmpty {
+            preferredCategories = ["activity"]
+        } else {
+            preferredCategories = ["sleep", "activity"]
+        }
+        for categoryID in preferredCategories {
+            if let goal = goals
+                .filter({ $0.categoryID == categoryID })
+                .min(by: focusedRoutineSort) {
+                return goal
+            }
+        }
+        return nil
+    }
+
+    private func focusedRoutineSort(
+        _ lhs: PlanRecord,
+        _ rhs: PlanRecord
+    ) -> Bool {
+        if lhs.span.duration == rhs.span.duration {
+            return lhs.createdAt < rhs.createdAt
+        }
+        return lhs.span.duration < rhs.span.duration
+    }
+
     /// A selected root routine is a valid detail target even when it has no
     /// child action yet. The routine card is the place where the user can
     /// inspect its repeat rule and add the first action.
@@ -2506,7 +2559,7 @@ private struct TimelineDetailPanel: View {
         for item: TimelineDetailSection
     ) -> some View {
         let isFocused = activeSelection?.preferredDetailSection == item
-            || (selectedRoutineForDetail != nil && item == .routine)
+            || (focusedRoutineForDetail != nil && item == .routine)
             || (activeSelection != nil && section == item)
         VStack(alignment: .leading, spacing: 7) {
             Group {
@@ -2832,7 +2885,7 @@ private struct TimelineDetailPanel: View {
     private var routineContent: some View {
         VStack(alignment: .leading, spacing: 7) {
             detailHeading("루틴", systemImage: "repeat.circle")
-            if let routine = selectedRoutineForDetail {
+            if let routine = focusedRoutineForDetail {
                 HStack(spacing: 8) {
                     Image(systemName: "repeat.circle.fill")
                         .font(.taption(size: 18, weight: .bold))
@@ -3240,6 +3293,9 @@ private struct TimelineDetailPanel: View {
             contentEnd: cacheSpan.end.timeIntervalSinceReferenceDate,
             displayStart: cacheSpan.start.timeIntervalSinceReferenceDate,
             displayEnd: cacheSpan.end.timeIntervalSinceReferenceDate,
+            playheadMinute: playheadDate.map {
+                Int(floor($0.timeIntervalSinceReferenceDate / 60))
+            },
             selectedPlanID: selection?.planID,
             selectedActualID: selection?.actualID,
             selectedTravelID: selection?.travelID,
@@ -3250,6 +3306,13 @@ private struct TimelineDetailPanel: View {
             let plans = model.snapshot.plans
             let actuals = model.snapshot.actuals
             let automaticIDs = automaticDetailCategoryIDs
+            // Automatic records are time-local. When the playhead is moving,
+            // use its instant instead of the selected event's whole-day span;
+            // an overnight repeat would otherwise show both adjacent days as
+            // identical "23:00–06:30" rows.
+            let focusedSpan = playheadDate.map {
+                TimeSpan(start: $0, end: $0.addingTimeInterval(1))
+            } ?? contentSpan
             let selectedPlan = selection?.planID.flatMap { planID in
                 planIndexCache.plan(
                     id: planID,
@@ -3273,7 +3336,11 @@ private struct TimelineDetailPanel: View {
                             plan.status != .skipped
                                 && plan.categoryID != "event"
                                 && !automaticIDs.contains(plan.categoryID)
-                                && plan.span.intersection(with: displaySpan) != nil
+                                && plan.span.intersection(
+                                    with: playheadDate == nil
+                                        ? displaySpan
+                                        : focusedSpan
+                                ) != nil
                                 && !GoalRecordPolicy.isGoal(plan)
                                 && !(
                                     plan.parentID == nil
@@ -3285,42 +3352,45 @@ private struct TimelineDetailPanel: View {
             }
             let places = model.snapshot.places
                 .filter {
-                    $0.span.intersection(with: contentSpan) != nil
+                    $0.span.intersection(with: focusedSpan) != nil
                 }
                 .sorted { $0.span.start < $1.span.start }
             let travel = model.snapshot.travel
                 .filter {
-                    $0.span.intersection(with: contentSpan) != nil
+                    $0.span.intersection(with: focusedSpan) != nil
                 }
                 .sorted { $0.span.start < $1.span.start }
             let sleepPlans = deduplicatedPlans(
                 plans.filter {
                     $0.categoryID == "sleep"
                         && !GoalRecordPolicy.isGoal($0)
-                        && $0.span.intersection(with: contentSpan) != nil
+                        && $0.span.intersection(with: focusedSpan) != nil
                 }
             )
             let activityPlans = deduplicatedPlans(
                 plans.filter {
                     $0.categoryID == "activity"
                         && !GoalRecordPolicy.isGoal($0)
-                        && $0.span.intersection(with: contentSpan) != nil
+                        && $0.span.intersection(with: focusedSpan) != nil
                 }
             )
+            // The day timeline's automatic rows contain only HealthKit and
+            // Apple Watch evidence. Timer/manual activity records belong to
+            // the action layer and must not appear here when they are absent
+            // from the visible activity row.
+            let automaticActuals = AutomaticRecordTimelineEngine.activities(
+                from: actuals,
+                inside: focusedSpan
+            )
             let sleepActuals = deduplicatedActuals(
-                actuals
-                    .filter {
-                        isSleepActual($0)
-                            && $0.span().intersection(with: contentSpan) != nil
-                    }
+                automaticActuals
+                    .filter { isSleepActual($0) }
                     .sorted { $0.startedAt < $1.startedAt }
             )
             let activityActuals = deduplicatedActuals(
-                actuals
+                automaticActuals
                     .filter {
-                        !isSleepActual($0)
-                            && $0.categoryID == "activity"
-                            && $0.span().intersection(with: contentSpan) != nil
+                        !isSleepActual($0) && $0.categoryID == "activity"
                     }
                     .sorted { $0.startedAt < $1.startedAt }
             )
@@ -3463,7 +3533,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var hasRoutineContent: Bool {
-        selectedRoutineForDetail != nil
+        focusedRoutineForDetail != nil
     }
 
     private var hasActionContent: Bool {
@@ -5172,29 +5242,6 @@ struct GroupGanttView: View {
             )
         }
 
-        if let event = selectionIndexCache.eventPlan(containing: date) {
-            return TimelineSelection(
-                title: event.title,
-                span: event.span,
-                planID: event.id,
-                isRoute: false,
-                categoryID: "event",
-                categoryName: "이벤트"
-            )
-        }
-
-        if let calendarEvent = selectionIndexCache.calendarEvent(containing: date) {
-            return TimelineSelection(
-                title: calendarEvent.title,
-                span: calendarEvent.span,
-                planID: nil,
-                recordNodeID: "automatic.calendar.\(calendarEvent.id)",
-                isRoute: false,
-                categoryID: "calendar",
-                categoryName: "일정"
-            )
-        }
-
         if let actual = selectionIndexCache.automaticActual(containing: date) {
             let span = actual.span(asOf: max(.now, date))
             return TimelineSelection(
@@ -5221,6 +5268,31 @@ struct GroupGanttView: View {
                 categoryName: selectionIndexCache.categoryName(
                     for: routine.categoryID
                 )
+            )
+        }
+
+        // Keep the group timeline selection order identical to the main
+        // timeline: automatic records win over all-day calendar blocks.
+        if let event = selectionIndexCache.eventPlan(containing: date) {
+            return TimelineSelection(
+                title: event.title,
+                span: event.span,
+                planID: event.id,
+                isRoute: false,
+                categoryID: "event",
+                categoryName: "이벤트"
+            )
+        }
+
+        if let calendarEvent = selectionIndexCache.calendarEvent(containing: date) {
+            return TimelineSelection(
+                title: calendarEvent.title,
+                span: calendarEvent.span,
+                planID: nil,
+                recordNodeID: "automatic.calendar.\(calendarEvent.id)",
+                isRoute: false,
+                categoryID: "calendar",
+                categoryName: "일정"
             )
         }
 

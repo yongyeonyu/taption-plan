@@ -589,7 +589,10 @@ struct SettingsView: View {
                             )
                         )
                         .foregroundStyle(Color.tpInk)
-                    Text("변경하면 위치·동작 수집에 바로 적용")
+                    Text(
+                        "\(model.settings.sensorCollectionProfile.intervalMinutes)분마다 "
+                            + "\(Int(model.settings.sensorCollectionProfile.samplingWindowDuration))초만 수집 · 사이에는 센서 종료"
+                    )
                         .font(
                             .taption(size: SettingsTypography.rowSubtitle)
                         )

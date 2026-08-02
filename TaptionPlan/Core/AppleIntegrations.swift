@@ -1467,11 +1467,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private let pedometer = CMPedometer()
 
     private var continuation: AsyncStream<SensorReading>.Continuation?
-    private var periodicEmissionTask: Task<Void, Never>?
+    private var samplingTask: Task<Void, Never>?
     private var movementCandidateTask: Task<Void, Never>?
     private var stationaryStopTask: Task<Void, Never>?
     private var configuration: SensorCollectionConfiguration = .standard
     private var isCollecting = false
+    private var sensorStreamsRunning = false
     private var lastEmissionAt: Date?
     private var latestLocation: CLLocation?
     private var latestMotion: MotionKind = .unknown
@@ -1573,20 +1574,16 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     func stop() {
-        periodicEmissionTask?.cancel()
-        periodicEmissionTask = nil
+        samplingTask?.cancel()
+        samplingTask = nil
         movementCandidateTask?.cancel()
         movementCandidateTask = nil
         stationaryStopTask?.cancel()
         stationaryStopTask = nil
-        locationManager.stopUpdatingLocation()
+        stopHardwareStreams()
         locationManager.stopMonitoringVisits()
         locationManager.stopMonitoringSignificantLocationChanges()
         locationManager.allowsBackgroundLocationUpdates = false
-        activityManager.stopActivityUpdates()
-        deviceMotionManager.stopDeviceMotionUpdates()
-        altimeter.stopRelativeAltitudeUpdates()
-        pedometer.stopUpdates()
         isCollecting = false
         lastEmissionAt = nil
         latestRelativeAltitude = nil
@@ -1623,6 +1620,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         movementCandidateTask?.cancel()
         stationaryStopTask?.cancel()
         applyLocationPolicy(isMoving: true)
+        startHardwareStreams()
         emit(force: true)
         return session
     }
@@ -1634,6 +1632,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         movementCandidateTask?.cancel()
         stationaryStopTask?.cancel()
         applyLocationPolicy(isMoving: true)
+        startHardwareStreams()
         emit(force: true)
         return session
     }
@@ -1645,8 +1644,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         activeTrackingSession = nil
         stationaryStopTask?.cancel()
         stationaryStopTask = nil
-        applyLocationPolicy(isMoving: latestMotion != .stationary)
         emit(force: true, completedSession: session)
+        stopHardwareStreams()
+        applyLocationPolicy(isMoving: latestMotion != .stationary)
+        restartSamplingTask()
         return session
     }
 
@@ -1657,12 +1658,64 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.allowsBackgroundLocationUpdates =
             configuration.allowsBackgroundLocation
             && locationManager.authorizationStatus == .authorizedAlways
-        if CLLocationManager.isMonitoringAvailable(for: CLVisit.self) {
-            locationManager.startMonitoringVisits()
+        restartSamplingTask()
+    }
+
+    private func restartSamplingTask() {
+        samplingTask?.cancel()
+        guard isCollecting, activeTrackingSession == nil else { return }
+        samplingTask = Task { [weak self] in
+            await self?.runSamplingLoop()
         }
-        if CLLocationManager.significantLocationChangeMonitoringAvailable() {
-            locationManager.startMonitoringSignificantLocationChanges()
+    }
+
+    private func runSamplingLoop() async {
+        while !Task.isCancelled, isCollecting {
+            if activeTrackingSession != nil {
+                try? await Task.sleep(for: .seconds(1))
+                continue
+            }
+
+            let startedAt = Date.now
+            await sampleOnce()
+            guard !Task.isCancelled, isCollecting else { break }
+            if activeTrackingSession != nil {
+                continue
+            }
+
+            let interval = max(1, configuration.minimumEmissionInterval)
+            let nextStart = startedAt.addingTimeInterval(interval)
+            let delay = max(0, nextStart.timeIntervalSinceNow)
+            if delay > 0 {
+                try? await Task.sleep(for: .seconds(delay))
+            }
         }
+    }
+
+    private func sampleOnce() async {
+        guard isCollecting, activeTrackingSession == nil else { return }
+        startHardwareStreams()
+        try? await Task.sleep(
+            for: .seconds(configuration.profile.samplingWindowDuration)
+        )
+        guard !Task.isCancelled else { return }
+
+        // Motion can promote this window to a tracking session. In that case
+        // the streams stay on and the route continues without a duty-cycle
+        // gap until the session ends.
+        guard activeTrackingSession == nil else { return }
+        emit(force: true)
+        stopHardwareStreams()
+        clearSampleState()
+    }
+
+    private func startHardwareStreams() {
+        guard !sensorStreamsRunning else { return }
+        sensorStreamsRunning = true
+        locationManager.allowsBackgroundLocationUpdates =
+            configuration.allowsBackgroundLocation
+            && locationManager.authorizationStatus == .authorizedAlways
+        applyLocationPolicy(isMoving: activeTrackingSession != nil)
         if permissionState() == .authorized {
             locationManager.startUpdatingLocation()
         }
@@ -1780,15 +1833,38 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 }
             pedometer.startUpdates(from: .now, withHandler: handler)
         }
+    }
 
-        let interval = max(1, configuration.minimumEmissionInterval)
-        periodicEmissionTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(interval))
-                guard !Task.isCancelled, let self else { break }
-                self.emit()
-            }
+    private func stopHardwareStreams() {
+        locationManager.stopUpdatingLocation()
+        locationManager.allowsBackgroundLocationUpdates = false
+        activityManager.stopActivityUpdates()
+        deviceMotionManager.stopDeviceMotionUpdates()
+        altimeter.stopRelativeAltitudeUpdates()
+        pedometer.stopUpdates()
+        sensorStreamsRunning = false
+        if activeTrackingSession == nil {
+            movementCandidateTask?.cancel()
+            movementCandidateTask = nil
         }
+    }
+
+    private func clearSampleState() {
+        latestLocation = nil
+        latestMotion = .unknown
+        latestMotionConfidence = .low
+        latestRelativeAltitude = nil
+        latestPressureKilopascals = nil
+        altimeterSessionID = nil
+        latestFloorsAscended = nil
+        latestFloorsDescended = nil
+        latestStepCount = nil
+        latestWalkingRunningDistance = nil
+        latestCurrentPace = nil
+        latestCurrentCadence = nil
+        latestAverageActivePace = nil
+        latestDeviceMotion = nil
+        deviceMotionAccumulator.reset()
     }
 
     func locationManager(
@@ -1831,7 +1907,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             manager.allowsBackgroundLocationUpdates =
                 configuration.allowsBackgroundLocation
                 && manager.authorizationStatus == .authorizedAlways
-            manager.startUpdatingLocation()
+            if activeTrackingSession != nil || sensorStreamsRunning {
+                manager.startUpdatingLocation()
+            } else {
+                restartSamplingTask()
+            }
         }
     }
 
@@ -1908,6 +1988,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     private func updateAutomaticTracking(for motion: MotionKind) {
+        guard sensorStreamsRunning else {
+            movementCandidateTask?.cancel()
+            movementCandidateTask = nil
+            return
+        }
         if let session = activeTrackingSession,
            session.wasAutomaticallyDetected {
             if motion == .stationary {
@@ -1946,6 +2031,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             )
             guard !Task.isCancelled, let self,
                   self.activeTrackingSession == nil,
+                  self.sensorStreamsRunning,
                   self.latestMotion == motion,
                   self.latestMotionConfidence != .low else {
                 return
