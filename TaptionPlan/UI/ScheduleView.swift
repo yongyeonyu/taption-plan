@@ -213,6 +213,14 @@ private func weatherTimelineSpan(_ context: WeatherContext) -> TimeSpan {
     )
 }
 
+private func automaticSpanThroughNow(
+    _ span: TimeSpan,
+    asOf now: Date = .now
+) -> TimeSpan? {
+    guard span.start <= now else { return nil }
+    return TimeSpan(start: span.start, end: min(span.end, now))
+}
+
 private func weatherTimelineTitle(_ context: WeatherContext) -> String {
     let air = context.airQuality.map {
         " · 미세 " + $0.overallGrade.displayName
@@ -329,7 +337,7 @@ private enum TimelinePlayheadSynchronizer {
             }
         let automaticValues = actualValues.filter {
             switch $0.source {
-            case .healthKit, .appleWatch, .motion, .location:
+            case .healthKit, .appleWatch, .motion, .location, .media, .call:
                 true
             default:
                 false
@@ -1348,6 +1356,25 @@ private final class TimelineDetailDataCache {
 }
 
 private extension TimelineSelection {
+    /// Memo identity follows the concrete timeline record, not its category.
+    /// This prevents two sleep/activity/location blocks on the same day from
+    /// sharing the same note storage.
+    var memoTargetID: String? {
+        if let recordNodeID, recordNodeID.hasPrefix("automatic.") {
+            return recordNodeID
+        }
+        if let actualID {
+            return "automatic.actual.\(actualID.uuidString)"
+        }
+        if let travelID {
+            return "automatic.travel.\(travelID.uuidString)"
+        }
+        if let planID {
+            return "plan.\(planID.uuidString)"
+        }
+        return recordNodeID
+    }
+
     var preferredDetailSection: TimelineDetailSection {
         switch categoryID {
         case "location":
@@ -1607,10 +1634,16 @@ struct ScheduleView: View {
     @State private var selectionIndexCache = TimelineSelectionIndexCache()
     @State private var weatherContextCache = TimelineWeatherContextCache()
     @State private var showsAirQualityDetails = false
-    @State private var detailPanelHeight = detailPanelCollapsedHeight
+    @State private var detailPanelHeight: CGFloat = 0
 
     var body: some View {
-        VStack(spacing: 0) {
+        GeometryReader { geometry in
+            let defaultPanelHeight = geometry.size.height * 0.5
+            let resolvedPanelHeight = detailPanelHeight > 0
+                ? min(detailPanelHeight, geometry.size.height)
+                : defaultPanelHeight
+            VStack(spacing: 0) {
+                VStack(spacing: 0) {
             DraftTopBar(
                 title: headerTitle,
                 trailing: headerTrailing,
@@ -1668,6 +1701,7 @@ struct ScheduleView: View {
                         title: "사진",
                         span: cluster.detailSpan,
                         planID: nil,
+                        recordNodeID: "automatic.photo.\(cluster.id)",
                         isRoute: false,
                         categoryID: "photo",
                         categoryName: "사진"
@@ -1680,6 +1714,12 @@ struct ScheduleView: View {
                 .onTapGesture {
                     editingPlanID = nil
                 }
+                }
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .top
+                )
             TimelineDetailPanel(
                 model: model,
                 selection: selectedTimelineItem,
@@ -1698,12 +1738,18 @@ struct ScheduleView: View {
                     }
                 }
             )
-            .frame(height: detailPanelHeight, alignment: .top)
+            .frame(height: resolvedPanelHeight, alignment: .top)
             .simultaneousGesture(
                 TapGesture().onEnded {
                     editingPlanID = nil
                 }
             )
+            }
+            .onAppear {
+                if detailPanelHeight == 0 {
+                    detailPanelHeight = defaultPanelHeight
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.white)
@@ -1857,6 +1903,7 @@ struct ScheduleView: View {
                 title: "사진",
                 span: cluster.detailSpan,
                 planID: nil,
+                recordNodeID: "automatic.photo.\(cluster.id)",
                 isRoute: false,
                 categoryID: "photo",
                 categoryName: "사진"
@@ -2519,11 +2566,10 @@ private struct TimelineDetailPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             panelResizeHandle
-            // During playback the map/location card is the primary surface.
-            // The old context header showed a stale selection above it and
-            // made an empty interval look like a selected routine.
-            if playheadDate == nil,
-               activeSelection != nil || !playheadDetailSections.isEmpty {
+            // Keep the selected item's icon visible while the playhead moves.
+            // Empty intervals still have no header because activeSelection is
+            // nil, so no stale routine title is invented.
+            if activeSelection != nil {
                 detailContextHeader
             }
             if playheadDate == nil,
@@ -3063,7 +3109,7 @@ private struct TimelineDetailPanel: View {
                     routeContent
                 }
             }
-            if activeSelection != nil {
+            if activeSelection?.preferredDetailSection == item {
                 DetailMemoField(
                     model: model,
                     selection: activeSelection,
@@ -4080,7 +4126,7 @@ private struct TimelineDetailPanel: View {
 
     private func actualSourcePriority(_ source: ActualSource) -> Int {
         switch source {
-        case .healthKit, .appleWatch, .motion: 3
+        case .healthKit, .appleWatch, .motion, .media, .call: 3
         case .location: 2
         case .timer, .manual: 1
         case .calendar, .photo: 0
@@ -4191,6 +4237,8 @@ private struct TimelineDetailPanel: View {
         case .calendar: "캘린더"
         case .location: "위치"
         case .photo: "사진"
+        case .media: "미디어 재생"
+        case .call: "통화"
         }
     }
 
@@ -5608,28 +5656,75 @@ private struct DetailMemoField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "note.text")
-                .font(.taption(size: 8.5, weight: .bold))
-                .foregroundStyle(Color.tpSecondary)
-            if memoCount > 0 {
-                Text("+\(memoCount)")
-                    .font(.taption(size: 7.5, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(Color.tpProjectDark, in: Capsule())
+        VStack(alignment: .leading, spacing: 6) {
+            if !savedMemos.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(savedMemos) { memo in
+                        HStack(alignment: .top, spacing: 5) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(memo.text)
+                                    .font(.taption(size: 8.5))
+                                    .foregroundStyle(Color.tpInk)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(memo.updatedAt.formatted(date: .omitted, time: .shortened))
+                                    .font(.taption(size: 7))
+                                    .foregroundStyle(Color.tpSecondary)
+                            }
+                            Spacer(minLength: 4)
+                            Button {
+                                edit(memo)
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.taption(size: 7, weight: .bold))
+                                    .foregroundStyle(Color.tpSecondary)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("메모 편집")
+                            Button {
+                                delete(memo)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.taption(size: 7, weight: .bold))
+                                    .foregroundStyle(Color.red)
+                                    .frame(width: 20, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("메모 삭제")
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(
+                            Color.white.opacity(0.75),
+                            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        )
+                    }
+                }
             }
-            TextField("이 항목에 메모 입력…", text: $text, axis: .vertical)
-                .font(.taption(size: 9))
-                .lineLimit(1...3)
-                .textFieldStyle(.plain)
-                .focused($isFocused)
-                .onSubmit { save() }
-            HStack(spacing: 3) {
-                memoAction("저장", systemImage: "checkmark", enabled: canSave) { save() }
-                memoAction("편집", systemImage: "pencil", enabled: latestMemo != nil) { edit() }
-                memoAction("삭제", systemImage: "trash", enabled: latestMemo != nil, destructive: true) { delete() }
+
+            HStack(spacing: 6) {
+                Image(systemName: "note.text")
+                    .font(.taption(size: 8.5, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                if memoCount > 0 {
+                    Text("+\(memoCount)")
+                        .font(.taption(size: 7.5, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.tpProjectDark, in: Capsule())
+                }
+                TextField("이 항목에 메모 입력…", text: $text, axis: .vertical)
+                    .font(.taption(size: 9))
+                    .lineLimit(1...3)
+                    .textFieldStyle(.plain)
+                    .focused($isFocused)
+                    .onSubmit { save() }
+                HStack(spacing: 3) {
+                    memoAction("저장", systemImage: "checkmark", enabled: canSave) { save() }
+                    memoAction("편집", systemImage: "pencil", enabled: latestMemo != nil) { edit() }
+                    memoAction("삭제", systemImage: "trash", enabled: latestMemo != nil, destructive: true) { delete() }
+                }
             }
         }
         .padding(.horizontal, 8)
@@ -5670,14 +5765,34 @@ private struct DetailMemoField: View {
             .first?.id
     }
 
+    private var savedMemos: [ActionMemo] {
+        guard let selection else {
+            return []
+        }
+        if let targetID = selection.memoTargetID {
+            let targetMemos = model.memos(forTargetID: targetID)
+            // Keep old plan-only notes visible after migrating a plan to the
+            // stable target key, without duplicating newly keyed entries.
+            guard targetID.hasPrefix("plan."), let planID = selection.planID else {
+                return targetMemos
+            }
+            return (targetMemos + model.memos(for: planID))
+                .reduce(into: [UUID: ActionMemo]()) { result, memo in
+                    result[memo.id] = memo
+                }
+                .values
+                .sorted { $0.createdAt < $1.createdAt }
+        }
+        guard let planID = existingMemoPlanID else { return [] }
+        return model.memos(for: planID)
+    }
+
     private var latestMemo: ActionMemo? {
-        guard let planID = existingMemoPlanID else { return nil }
-        return model.memos(for: planID).last
+        savedMemos.last
     }
 
     private var memoCount: Int {
-        guard let planID = existingMemoPlanID else { return 0 }
-        return model.memos(for: planID).count
+        savedMemos.count
     }
 
     private func memoAction(
@@ -5703,11 +5818,15 @@ private struct DetailMemoField: View {
         .accessibilityLabel(title)
     }
 
-    private func edit() {
-        guard let memo = latestMemo else { return }
+    private func edit(_ memo: ActionMemo) {
         editingMemoID = memo.id
         text = memo.text
         isFocused = true
+    }
+
+    private func edit() {
+        guard let memo = latestMemo else { return }
+        edit(memo)
     }
 
     private func save() {
@@ -5715,6 +5834,14 @@ private struct DetailMemoField: View {
         guard !clean.isEmpty else { return }
         if let editingMemoID {
             model.updateMemo(editingMemoID, text: clean, kind: .idea)
+        } else if let targetID = selection?.memoTargetID,
+                  let planID = memoTargetPlanID() {
+            model.addMemo(
+                text: clean,
+                kind: .idea,
+                toTargetID: targetID,
+                planID: planID
+            )
         } else if let planID = memoTargetPlanID() {
             model.addMemo(text: clean, kind: .idea, to: planID)
         }
@@ -5723,8 +5850,14 @@ private struct DetailMemoField: View {
 
     private func delete() {
         guard let memo = latestMemo else { return }
+        delete(memo)
+    }
+
+    private func delete(_ memo: ActionMemo) {
         model.deleteMemo(memo.id)
-        reset()
+        if editingMemoID == memo.id {
+            reset()
+        }
     }
 
     private func reset() {
@@ -5766,10 +5899,16 @@ struct GroupGanttView: View {
     @State private var playheadDetailGate = TimelinePlayheadDetailGate()
     @State private var photoClusterCache = TimelinePhotoClusterCache()
     @State private var selectionIndexCache = TimelineSelectionIndexCache()
-    @State private var detailPanelHeight = detailPanelCollapsedHeight
+    @State private var detailPanelHeight: CGFloat = 0
 
     var body: some View {
-        VStack(spacing: 0) {
+        GeometryReader { geometry in
+            let defaultPanelHeight = geometry.size.height * 0.5
+            let resolvedPanelHeight = detailPanelHeight > 0
+                ? min(detailPanelHeight, geometry.size.height)
+                : defaultPanelHeight
+            VStack(spacing: 0) {
+                VStack(spacing: 0) {
             DraftTopBar(
                 title: selectedGroup?.title ?? "그룹 간트",
                 trailing: selectedGroup.map(periodText) ?? "",
@@ -5817,6 +5956,7 @@ struct GroupGanttView: View {
                         title: "사진",
                         span: cluster.detailSpan,
                         planID: nil,
+                        recordNodeID: "automatic.photo.\(cluster.id)",
                         isRoute: false,
                         categoryID: "photo",
                         categoryName: "사진"
@@ -5829,6 +5969,12 @@ struct GroupGanttView: View {
                 .onTapGesture {
                     editingPlanID = nil
                 }
+                }
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .top
+                )
             TimelineDetailPanel(
                 model: model,
                 selection: selectedTimelineItem,
@@ -5847,12 +5993,18 @@ struct GroupGanttView: View {
                     }
                 }
             )
-            .frame(height: detailPanelHeight, alignment: .top)
+            .frame(height: resolvedPanelHeight, alignment: .top)
             .simultaneousGesture(
                 TapGesture().onEnded {
                     editingPlanID = nil
                 }
             )
+            }
+            .onAppear {
+                if detailPanelHeight == 0 {
+                    detailPanelHeight = defaultPanelHeight
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.white)
@@ -5940,6 +6092,7 @@ struct GroupGanttView: View {
                 title: "사진",
                 span: cluster.detailSpan,
                 planID: nil,
+                recordNodeID: "automatic.photo.\(cluster.id)",
                 isRoute: false,
                 categoryID: "photo",
                 categoryName: "사진"
@@ -6705,11 +6858,11 @@ private struct TimelineBoard: View {
             .sorted { $0.span.start < $1.span.start }
         let grouped = Dictionary(grouping: visiblePlans, by: \.categoryID)
         let now = Date.now
-        let visibleActuals = model.snapshot.actuals
-            .filter {
-                $0.startedAt <= now
-                    && $0.span(asOf: now).intersection(with: span) != nil
-            }
+        let visibleActuals = AutomaticRecordTimelineEngine.visibleThroughNow(
+            model.snapshot.actuals,
+            asOf: now
+        )
+            .filter { $0.span(asOf: now).intersection(with: span) != nil }
             .sorted { $0.startedAt < $1.startedAt }
         let usesAutomaticDayRows = scale == .day && includesCalendar
         let automaticActuals = AutomaticRecordTimelineEngine.activities(
@@ -6996,13 +7149,20 @@ private struct TimelineBoard: View {
             }
             .sorted { $0.observedAt < $1.observedAt }
         let allocation = laneAllocation(contexts) { context in
-            weatherTimelineSpan(context)
+            automaticSpanThroughNow(
+                weatherTimelineSpan(context),
+                asOf: now
+            ) ?? weatherTimelineSpan(context)
         }
         let blocks = contexts.map { context in
+            let span = automaticSpanThroughNow(
+                weatherTimelineSpan(context),
+                asOf: now
+            ) ?? weatherTimelineSpan(context)
             return timelineBlock(
                 id: context.id,
                 title: weatherTimelineTitle(context),
-                span: weatherTimelineSpan(context),
+                span: span,
                 top: compactAutomaticTop(
                     allocation.lanes[context.id, default: 0]
                 ),
@@ -7463,12 +7623,22 @@ private struct TimelineBoard: View {
         top: CGFloat,
         visibleSpan: TimeSpan
     ) -> [TimelineBlock] {
+        let now = Date.now
         switch categoryID {
         case "movement":
-            return model.snapshot.travel
-                .filter {
-                    $0.span.intersection(with: visibleSpan) != nil
+            let visibleTravel: [TravelSegment] = model.snapshot.travel.compactMap {
+                travel in
+                guard let clipped = automaticSpanThroughNow(
+                    travel.span,
+                    asOf: now
+                ), clipped.intersection(with: visibleSpan) != nil else {
+                    return nil
                 }
+                var value = travel
+                value.span = clipped
+                return value
+            }
+            return visibleTravel
                 .sorted { $0.span.start < $1.span.start }
                 .map { travel in
                     timelineBlock(
@@ -7488,10 +7658,19 @@ private struct TimelineBoard: View {
                     )
                 }
         case "location":
-            return model.snapshot.places
-                .filter {
-                    $0.span.intersection(with: visibleSpan) != nil
+            let visiblePlaces: [PlaceStay] = model.snapshot.places.compactMap {
+                place in
+                guard let clipped = automaticSpanThroughNow(
+                    place.span,
+                    asOf: now
+                ), clipped.intersection(with: visibleSpan) != nil else {
+                    return nil
                 }
+                var value = place
+                value.span = clipped
+                return value
+            }
+            return visiblePlaces
                 .sorted { $0.span.start < $1.span.start }
                 .map { place in
                     let title = place.floor.map {
@@ -7565,6 +7744,8 @@ private struct TimelineBoard: View {
         case .calendar: "캘린더"
         case .location: "위치"
         case .photo: "사진"
+        case .media: "미디어 재생"
+        case .call: "통화"
         }
     }
 

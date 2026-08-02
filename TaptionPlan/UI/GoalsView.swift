@@ -516,6 +516,8 @@ enum GoalDetailEngine {
             case .manual: "직접 기록"
             case .calendar: "캘린더"
             case .photo: "사진"
+            case .media: "미디어 재생"
+            case .call: "통화"
             }
         })).sorted()
         return GoalDetailSnapshot(
@@ -1336,6 +1338,8 @@ struct GoalDetailView: View {
         case .manual: "직접 기록"
         case .calendar: "캘린더"
         case .photo: "사진"
+        case .media: "미디어 재생"
+        case .call: "통화"
         }
     }
 

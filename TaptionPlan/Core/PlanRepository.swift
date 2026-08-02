@@ -1,4 +1,5 @@
 import CloudKit
+import Compression
 import Foundation
 import OSLog
 
@@ -45,6 +46,98 @@ enum RepositoryError: Error, Equatable {
     case appGroupUnavailable
 }
 
+/// Keeps the shared snapshot small without changing its on-disk path.  The
+/// decoder accepts the old plain JSON file so existing installs migrate on
+/// their next save.
+enum TaptionSnapshotCompression {
+    private static let magic: [UInt8] = [0x54, 0x50, 0x5A, 0x31]
+    private static let headerSize = magic.count + 8
+    private static let minimumSize = 4 * 1024
+
+    static func encode(_ json: Data) -> Data {
+        guard json.count >= minimumSize else { return json }
+        var compressed = Data(repeating: 0, count: json.count + 64)
+        let encodedCount: Int = json.withUnsafeBytes { source in
+            compressed.withUnsafeMutableBytes { destination in
+                guard let sourceBase = source.bindMemory(to: UInt8.self)
+                    .baseAddress,
+                    let destinationBase = destination.bindMemory(
+                        to: UInt8.self
+                    ).baseAddress else {
+                    return 0
+                }
+                return compression_encode_buffer(
+                    destinationBase,
+                    destination.count,
+                    sourceBase,
+                    json.count,
+                    nil,
+                    COMPRESSION_LZFSE
+                )
+            }
+        }
+        guard encodedCount > 0,
+              encodedCount + headerSize < json.count else {
+            return json
+        }
+
+        var result = Data(magic)
+        appendLittleEndian(UInt64(json.count), to: &result)
+        result.append(compressed.prefix(encodedCount))
+        return result
+    }
+
+    static func decode(_ data: Data) -> Data {
+        guard data.count > headerSize,
+              data.prefix(magic.count).elementsEqual(magic) else {
+            return data
+        }
+
+        let originalSize = readLittleEndian(
+            data.dropFirst(magic.count).prefix(8)
+        )
+        guard originalSize > 0,
+              originalSize <= UInt64(Int.max) else {
+            return data
+        }
+        let expectedSize = Int(originalSize)
+        var decoded = Data(repeating: 0, count: expectedSize)
+        let compressed = data.dropFirst(headerSize)
+        let decodedCount: Int = compressed.withUnsafeBytes { source in
+            decoded.withUnsafeMutableBytes { destination in
+                guard let sourceBase = source.bindMemory(to: UInt8.self)
+                    .baseAddress,
+                    let destinationBase = destination.bindMemory(
+                        to: UInt8.self
+                    ).baseAddress else {
+                    return 0
+                }
+                return compression_decode_buffer(
+                    destinationBase,
+                    destination.count,
+                    sourceBase,
+                    compressed.count,
+                    nil,
+                    COMPRESSION_LZFSE
+                )
+            }
+        }
+        return decodedCount == expectedSize ? decoded : data
+    }
+
+    private static func appendLittleEndian(_ value: UInt64, to data: inout Data) {
+        for shift in stride(from: 0, to: 64, by: 8) {
+            data.append(UInt8((value >> UInt64(shift)) & 0xFF))
+        }
+    }
+
+    private static func readLittleEndian(_ data: Data.SubSequence) -> UInt64 {
+        data.enumerated().reduce(into: UInt64(0)) { result, item in
+            result |= UInt64(item.element) << UInt64(item.offset * 8)
+        }
+    }
+}
+
 actor FilePlanRepository: PlanDataRepository {
     private static let logger = Logger(
         subsystem: "com.taption.plan",
@@ -61,7 +154,7 @@ actor FilePlanRepository: PlanDataRepository {
         self.storageLabel = storageLabel
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.sortedKeys]
         encoder.dateEncodingStrategy = .secondsSince1970
         decoder.dateDecodingStrategy = .secondsSince1970
     }
@@ -108,13 +201,17 @@ actor FilePlanRepository: PlanDataRepository {
             return .empty
         }
         do {
-            let data = try Data(contentsOf: fileURL)
-            let snapshot = try decoder.decode(TaptionDataSnapshot.self, from: data)
+            let storedData = try Data(contentsOf: fileURL)
+            let data = TaptionSnapshotCompression.decode(storedData)
+            let snapshot = try decoder.decode(
+                TaptionDataSnapshot.self,
+                from: data
+            )
             guard snapshot.schemaVersion <= TaptionDataSnapshot.empty.schemaVersion else {
                 throw RepositoryError.unsupportedSchema(snapshot.schemaVersion)
             }
             Self.logger.debug(
-                "Repository load: storage=\(self.storageLabel, privacy: .public), bytes=\(data.count, privacy: .public), updated=\(snapshot.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(snapshot.plans.count, privacy: .public), places=\(snapshot.places.count, privacy: .public), travel=\(snapshot.travel.count, privacy: .public)"
+                "Repository load: storage=\(self.storageLabel, privacy: .public), bytes=\(storedData.count, privacy: .public), jsonBytes=\(data.count, privacy: .public), updated=\(snapshot.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(snapshot.plans.count, privacy: .public), places=\(snapshot.places.count, privacy: .public), travel=\(snapshot.travel.count, privacy: .public)"
             )
             return snapshot
         } catch {
@@ -129,7 +226,8 @@ actor FilePlanRepository: PlanDataRepository {
         var value = snapshot
         value.updatedAt = .now
         do {
-            let data = try encoder.encode(value)
+            let json = try encoder.encode(value)
+            let data = TaptionSnapshotCompression.encode(json)
             try FileManager.default.createDirectory(
                 at: fileURL.deletingLastPathComponent(),
                 withIntermediateDirectories: true
@@ -142,7 +240,7 @@ actor FilePlanRepository: PlanDataRepository {
                 ]
             )
             Self.logger.notice(
-                "Repository save: storage=\(self.storageLabel, privacy: .public), bytes=\(data.count, privacy: .public), updated=\(value.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(value.plans.count, privacy: .public), places=\(value.places.count, privacy: .public), travel=\(value.travel.count, privacy: .public)"
+                "Repository save: storage=\(self.storageLabel, privacy: .public), bytes=\(data.count, privacy: .public), jsonBytes=\(json.count, privacy: .public), updated=\(value.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(value.plans.count, privacy: .public), places=\(value.places.count, privacy: .public), travel=\(value.travel.count, privacy: .public)"
             )
         } catch {
             Self.logger.error(

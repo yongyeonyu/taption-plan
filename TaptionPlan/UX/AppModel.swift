@@ -108,11 +108,13 @@ final class AppModel {
     @ObservationIgnored private let notificationScheduler: PlanNotificationScheduler
     @ObservationIgnored private let purchaseService: StoreKitPurchaseService
     @ObservationIgnored private let watchConnectivityService: AppleWatchConnectivityService
+    @ObservationIgnored private let airPodsActivityService: AirPodsActivityService
     @ObservationIgnored private let watchSensorArchive:
         AppleWatchSensorActivityArchive?
     @ObservationIgnored private let rawDeviceDataArchive:
         RawDeviceDataMonthlyArchive?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
+    @ObservationIgnored private var foregroundRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
     @ObservationIgnored private var foregroundHealthRefreshTask:
         Task<Void, Never>?
@@ -183,7 +185,9 @@ final class AppModel {
         purchaseService: StoreKitPurchaseService =
             StoreKitPurchaseService(),
         watchConnectivityService: AppleWatchConnectivityService =
-            AppleWatchConnectivityService()
+            AppleWatchConnectivityService(),
+        airPodsActivityService: AirPodsActivityService =
+            AirPodsActivityService()
     ) {
         let repositorySource: String
         if let repository {
@@ -222,12 +226,13 @@ final class AppModel {
         self.notificationScheduler = notificationScheduler
         self.purchaseService = purchaseService
         self.watchConnectivityService = watchConnectivityService
+        self.airPodsActivityService = airPodsActivityService
         self.watchSensorArchive = try?
             AppleWatchSensorActivityArchive.applicationSupport()
         self.rawDeviceDataArchive = try?
             RawDeviceDataMonthlyArchive.applicationSupport()
         Self.integrationLogger.notice(
-            "Repository selected: \(repositorySource, privacy: .public), appGroupAvailable=\(TaptionWidgetSharedStore.diagnostics().appGroupAvailable, privacy: .public)"
+            "Repository selected: \(repositorySource, privacy: .public)"
         )
         self.voiceMemoPlayer.onFinish = { [weak self] in
             self?.playingVoiceAttachmentID = nil
@@ -585,8 +590,6 @@ final class AppModel {
 
     func bootstrap() async {
         guard !isBootstrapped else {
-            await refreshPermissionStates()
-            resumeSensorCollectionIfNeeded()
             return
         }
         if let bootstrapTask {
@@ -597,11 +600,14 @@ final class AppModel {
         let task = Task { [weak self] in
             guard let self else { return }
             do {
-                var loaded = try await repository.load()
-                loaded = preparedLoadedSnapshot(loaded)
+                let source = try await repository.load()
+                snapshot = source
+                // Let the first frame render before migrations and device
+                // integrations touch the main actor. The foreground refresh
+                // persists the compressed snapshot after the frame gate.
+                await Task.yield()
+                let loaded = preparedLoadedSnapshot(source)
                 snapshot = loaded
-                try await repository.save(snapshot)
-                publishWidgetPayload()
                 selectedScale = TimeScale(timelineLevel: loaded.settings.startScale)
                 selectedCatCoat = CatCoat(catStyle: loaded.settings.catStyle)
                 if loaded.updatedAt == .distantPast,
@@ -612,16 +618,6 @@ final class AppModel {
                     repositoryAlreadyLoaded: true
                 )
                 isBootstrapped = true
-                await synchronizeCloud(showErrors: false)
-                await refreshPermissionStates()
-                resumeSensorCollectionIfNeeded()
-                await restoreTrackingSessionIfNeeded()
-                await refreshEnabledData(
-                    includesCurrentDeviceDay: true
-                )
-                await refreshStore(showErrors: false)
-                await persist()
-                lastForegroundRefreshAt = .now
             } catch {
                 var fallback = TaptionDataSnapshot.empty
                 fallback.categories = CategoryCatalog.builtIn
@@ -638,30 +634,102 @@ final class AppModel {
     func sceneBecameActive() async {
         isSceneActive = true
         await bootstrap()
-        watchConnectivityService.refreshConnectionState()
-        await configureHealthBackgroundDeliveryIfNeeded(showErrors: false)
-        startForegroundHealthRefreshIfNeeded()
-        if let lastForegroundRefreshAt,
-           Date.now.timeIntervalSince(lastForegroundRefreshAt) < 5 {
-            return
+        airPodsActivityService.start { [weak self] observation in
+            self?.applyAirPodsActivity(observation)
         }
-        await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
-        await refreshPermissionStates()
-        resumeSensorCollectionIfNeeded()
-        await restoreTrackingSessionIfNeeded()
-        await refreshEnabledData(
-            includesCurrentDeviceDay: true
-        )
-        await refreshStore(showErrors: false)
-        await persist()
-        lastForegroundRefreshAt = .now
+        scheduleForegroundRefresh()
     }
 
     func sceneEnteredBackground() async {
         isSceneActive = false
+        for observation in airPodsActivityService.stop(at: .now) {
+            applyAirPodsActivity(observation)
+        }
+        foregroundRefreshTask?.cancel()
+        foregroundRefreshTask = nil
         foregroundHealthRefreshTask?.cancel()
         foregroundHealthRefreshTask = nil
         await persist()
+    }
+
+    private func applyAirPodsActivity(
+        _ observation: AirPodsActivityObservation
+    ) {
+        guard !snapshot.settings.suppressedActualIDs.contains(observation.id)
+        else { return }
+        let source: ActualSource
+        let behavior: String
+        switch observation.kind {
+        case .music:
+            source = .media
+            behavior = "music"
+        case .call:
+            source = .call
+            behavior = "call"
+        }
+        let actual = ActualRecord(
+            id: observation.id,
+            planID: nil,
+            routineID: nil,
+            title: observation.title,
+            categoryID: "activity",
+            startedAt: observation.startedAt,
+            endedAt: observation.endedAt,
+            source: source,
+            confidence: .high,
+            createdAt: observation.startedAt,
+            behavior: behavior,
+            evidence: ["AirPods · (observation.routeName)"],
+            modelVersion: "airpods-observer-v1"
+        )
+        if let index = snapshot.actuals.firstIndex(where: {
+            $0.id == observation.id
+        }) {
+            guard snapshot.actuals[index] != actual else { return }
+            snapshot.actuals[index] = actual
+        } else {
+            snapshot.actuals.append(actual)
+        }
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        Task { await persistDeviceLocalSnapshot() }
+    }
+
+    private func scheduleForegroundRefresh() {
+        guard foregroundRefreshTask == nil else { return }
+        foregroundRefreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            // Two yields leave room for SwiftUI to commit the loaded snapshot
+            // and present the first timeline before integrations enumerate
+            // Photos, Calendar and HealthKit.
+            await Task.yield()
+            await Task.yield()
+            guard !Task.isCancelled, self.isSceneActive else {
+                self.foregroundRefreshTask = nil
+                return
+            }
+            self.watchConnectivityService.refreshConnectionState()
+            await self.configureHealthBackgroundDeliveryIfNeeded(
+                showErrors: false
+            )
+            self.startForegroundHealthRefreshIfNeeded()
+            if let lastForegroundRefreshAt = self.lastForegroundRefreshAt,
+               Date.now.timeIntervalSince(lastForegroundRefreshAt) < 5 {
+                self.foregroundRefreshTask = nil
+                return
+            }
+            await self.applyPendingWidgetCommands(
+                repositoryAlreadyLoaded: false
+            )
+            await self.refreshPermissionStates()
+            self.resumeSensorCollectionIfNeeded()
+            await self.restoreTrackingSessionIfNeeded()
+            await self.refreshEnabledData(includesCurrentDeviceDay: true)
+            await self.refreshStore(showErrors: false)
+            await self.persist()
+            await self.synchronizeCloud(showErrors: false)
+            self.lastForegroundRefreshAt = .now
+            self.foregroundRefreshTask = nil
+        }
     }
 
     /// Refreshes device-backed records and republishes the shared widget
@@ -927,11 +995,18 @@ final class AppModel {
         guard !isRefreshingIntegrations else { return }
         isRefreshingIntegrations = true
         defer { isRefreshingIntegrations = false }
-        if permissionState(for: .photos).isGranted, settings.showsPhotos {
-            refreshPhotos()
+        let photoSpan = permissionState(for: .photos).isGranted
+            && settings.showsPhotos
+            ? visibleDataSpan
+            : nil
+        let photoTask = photoSpan.map { span in
+            Task.detached(priority: .utility) { [photoService] in
+                photoService.moments(in: span)
+            }
         }
         if permissionState(for: .calendar).isGranted,
            !settings.selectedCalendarIDs.isEmpty {
+            await Task.yield()
             refreshCalendarEvents()
         }
         if settings.healthEnabled {
@@ -958,6 +1033,9 @@ final class AppModel {
                 || !Calendar.autoupdatingCurrent.isDateInToday(selectedDate) {
                 await refreshSensorTimeline(containing: selectedDate)
             }
+        }
+        if let photoTask, let photoSpan {
+            replacePhotos(await photoTask.value, in: photoSpan)
         }
         logAutomaticRecordSummary()
         // Calendar, HealthKit, Watch, location and motion records are device
@@ -1360,7 +1438,18 @@ final class AppModel {
     func memos(for planID: UUID?) -> [ActionMemo] {
         guard let planID else { return [] }
         return snapshot.memos
-            .filter { $0.planID == planID }
+            .filter {
+                $0.planID == planID
+                    && ($0.targetID == nil
+                        || $0.targetID == "plan.\(planID.uuidString)")
+            }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    func memos(forTargetID targetID: String?) -> [ActionMemo] {
+        guard let targetID, !targetID.isEmpty else { return [] }
+        return snapshot.memos
+            .filter { $0.targetID == targetID }
             .sorted { $0.createdAt < $1.createdAt }
     }
 
@@ -1377,6 +1466,29 @@ final class AppModel {
         }
         snapshot.memos.append(
             ActionMemo(planID: destination, kind: kind, text: cleanText)
+        )
+        Task { await persist() }
+    }
+
+    func addMemo(
+        text: String,
+        kind: MemoKind,
+        toTargetID targetID: String,
+        planID: UUID? = nil
+    ) {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let destination = planID ?? selectedMemoPlanID
+        guard !cleanText.isEmpty, !targetID.isEmpty, let destination,
+              snapshot.plans.contains(where: { $0.id == destination }) else {
+            return
+        }
+        snapshot.memos.append(
+            ActionMemo(
+                planID: destination,
+                targetID: targetID,
+                kind: kind,
+                text: cleanText
+            )
         )
         Task { await persist() }
     }
@@ -3395,7 +3507,10 @@ final class AppModel {
 
     private func refreshPhotos() {
         let span = visibleDataSpan
-        let fresh = photoService.moments(in: span)
+        replacePhotos(photoService.moments(in: span), in: span)
+    }
+
+    private func replacePhotos(_ fresh: [PhotoMoment], in span: TimeSpan) {
         snapshot.photos.removeAll { span.contains($0.capturedAt) }
         snapshot.photos.append(contentsOf: fresh)
         snapshot.photos.sort { $0.capturedAt < $1.capturedAt }
@@ -4042,10 +4157,6 @@ final class AppModel {
                 "Widget ground-truth publish: snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public), generated=\(payload.generatedAt.timeIntervalSince1970, privacy: .public), fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), items=\(payload.items.count, privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public)"
             )
             requestImmediateWidgetRefresh()
-            let diagnostics = TaptionWidgetSharedStore.diagnostics(now: now)
-            Self.integrationLogger.notice(
-                "Widget sync after publish: \(diagnostics.summary, privacy: .public)"
-            )
         } catch {
             Self.integrationLogger.error(
                 "Widget ground-truth publish failed: \(error.localizedDescription, privacy: .public)"
@@ -4200,6 +4311,8 @@ final class AppModel {
             $0.source == .healthKit
                 || $0.source == .appleWatch
                 || $0.source == .motion
+                || $0.source == .media
+                || $0.source == .call
         }
         value.photos = []
         value.memos = value.memos.map { memo in
@@ -4227,6 +4340,8 @@ final class AppModel {
             $0.source == .healthKit
                 || $0.source == .appleWatch
                 || $0.source == .motion
+                || $0.source == .media
+                || $0.source == .call
         }
         let cloudIDs = Set(value.actuals.map(\.id))
         value.actuals.append(contentsOf: deviceActuals.filter {

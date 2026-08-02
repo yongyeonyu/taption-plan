@@ -151,7 +151,7 @@ enum AutomaticRecordTimelineEngine {
     /// routine progress slider.
     static func isImmutable(_ actual: ActualRecord) -> Bool {
         switch actual.source {
-        case .healthKit, .appleWatch, .motion, .location:
+        case .healthKit, .appleWatch, .motion, .location, .media, .call:
             true
         case .manual, .timer, .calendar, .photo:
             false
@@ -178,12 +178,14 @@ enum AutomaticRecordTimelineEngine {
         inside span: TimeSpan,
         asOf: Date = .now
     ) -> [ActualRecord] {
-        actuals
+        visibleThroughNow(actuals, asOf: asOf)
             .filter {
                 ($0.source == .healthKit
                     || $0.source == .appleWatch
                     || $0.source == .motion
-                    || $0.source == .location)
+                    || $0.source == .location
+                    || $0.source == .media
+                    || $0.source == .call)
                     && $0.span(asOf: asOf).intersection(with: span) != nil
             }
             .sorted {
@@ -193,6 +195,23 @@ enum AutomaticRecordTimelineEngine {
                 }
                 return $0.startedAt < $1.startedAt
             }
+    }
+
+    /// Automatic records are observations, not forecasts.  Keep the source
+    /// record immutable while clipping the copy used by timelines/widgets to
+    /// the current instant.
+    static func visibleThroughNow(
+        _ actuals: [ActualRecord],
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        actuals.compactMap { actual in
+            guard actual.startedAt <= asOf else { return nil }
+            var visible = actual
+            if visible.endedAt == nil || visible.endedAt! > asOf {
+                visible.endedAt = asOf
+            }
+            return visible
+        }
     }
 }
 
@@ -985,7 +1004,9 @@ enum GoalActivityMatchingEngine {
                   actual.routineID == nil,
                   (actual.source == .healthKit
                       || actual.source == .appleWatch
-                      || actual.source == .motion),
+                      || actual.source == .motion
+                      || actual.source == .media
+                      || actual.source == .call),
                   AutomaticRecordTimelineEngine.isRoutineOnlyCategory(
                       goal.categoryID
                   ) else { return nil }
@@ -1279,6 +1300,8 @@ enum RecordRelationshipEngine {
             || actual.source == .appleWatch
             || actual.source == .motion
             || actual.source == .location
+            || actual.source == .media
+            || actual.source == .call
     }
 
     private static func isRoutine(_ plan: PlanRecord) -> Bool {

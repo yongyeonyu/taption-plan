@@ -1,10 +1,12 @@
 import SwiftUI
 
 private struct ActualRecordItem: Identifiable {
+    let id: String
     let record: ActualRecord
     let span: TimeSpan
-
-    var id: UUID { record.id }
+    let totalDuration: TimeInterval
+    let occurrenceCount: Int
+    let timeRanges: [TimeSpan]
 }
 
 private struct ActualCategoryGroup: Identifiable {
@@ -30,7 +32,9 @@ struct ReviewView: View {
                 VStack(spacing: 10) {
                     recapHero
                     planBreakdownCard
-                    hierarchySummaryCard
+                    if model.reviewScale != .week {
+                        hierarchySummaryCard
+                    }
                     actualRecordsCard
                     contextCard
                 }
@@ -162,12 +166,17 @@ struct ReviewView: View {
     private var actualRecordsCard: some View {
         let records = actualRecordItems
         let groups = actualPeriodGroups
+        let itemCount = groups.reduce(0) { total, period in
+            total + period.categories.reduce(0) { total, category in
+                total + category.items.count
+            }
+        }
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Label("실제 기록", systemImage: "checkmark.circle")
                     .font(.taption(size: 11, weight: .bold))
                 Spacer()
-                Text("\(records.count)건")
+                Text("\(itemCount)개 항목")
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -234,16 +243,19 @@ struct ReviewView: View {
                 Text(
                     (showsCategory ? categoryName(categoryID) + " · " : "")
                         + actualSourceName(item.record.source)
+                        + (item.occurrenceCount > 1
+                            ? " · \(item.occurrenceCount)회"
+                            : "")
                 )
                 .font(.taption(size: 8.5))
                 .foregroundStyle(Color.tpSecondary)
             }
             Spacer(minLength: 4)
             VStack(alignment: .trailing, spacing: 2) {
-                Text(durationText(item.span.duration))
+                Text(durationText(item.totalDuration))
                     .font(.taption(size: 9, weight: .semibold))
                     .foregroundStyle(Color.tpProjectDark)
-                Text(timeText(item.span))
+                Text(actualTimeText(item))
                     .font(.taption(size: 8))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -422,7 +434,14 @@ struct ReviewView: View {
                     .intersection(with: report.span) else {
                     return nil
                 }
-                return ActualRecordItem(record: actual, span: span)
+                return ActualRecordItem(
+                    id: actual.id.uuidString,
+                    record: actual,
+                    span: span,
+                    totalDuration: span.duration,
+                    occurrenceCount: 1,
+                    timeRanges: [span]
+                )
             }
             .sorted {
                 if $0.span.start == $1.span.start {
@@ -444,7 +463,7 @@ struct ReviewView: View {
                     ActualCategoryGroup(
                         id: id,
                         name: categoryName(id),
-                        items: values.sorted { $0.span.start < $1.span.start }
+                        items: mergedItems(values)
                     )
                 }
                 .sorted { categoryOrder($0.id) == categoryOrder($1.id)
@@ -456,6 +475,48 @@ struct ReviewView: View {
                 categories: categories
             )
         }
+    }
+
+    private func mergedItems(_ values: [ActualRecordItem]) -> [ActualRecordItem] {
+        let grouped = Dictionary(grouping: values) { item in
+            let title = item.record.title
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            return "\(actualCategoryID(item.record))|\(title)"
+        }
+        return grouped.values.compactMap { values in
+            guard let first = values.min(by: { $0.span.start < $1.span.start }) else {
+                return nil
+            }
+            let ordered = values.sorted { $0.span.start < $1.span.start }
+            let ranges = ordered.flatMap(\.timeRanges)
+            return ActualRecordItem(
+                id: "merged.\(first.record.id.uuidString)",
+                record: first.record,
+                span: TimeSpan(
+                    start: ranges.map(\.start).min() ?? first.span.start,
+                    end: ranges.map(\.end).max() ?? first.span.end
+                ),
+                totalDuration: ordered.reduce(0) {
+                    $0 + $1.totalDuration
+                },
+                occurrenceCount: ordered.reduce(0) {
+                    $0 + $1.occurrenceCount
+                },
+                timeRanges: ranges
+            )
+        }
+        .sorted { $0.span.start < $1.span.start }
+    }
+
+    private func actualTimeText(_ item: ActualRecordItem) -> String {
+        guard item.occurrenceCount > 1 else {
+            return timeText(item.span)
+        }
+        let first = item.timeRanges.first.map(timeText) ?? ""
+        return first.isEmpty
+            ? "합산 \(item.occurrenceCount)회"
+            : "\(first) 외"
     }
 
     private func actualPeriodStart(_ date: Date, calendar: Calendar) -> Date {
@@ -512,6 +573,8 @@ struct ReviewView: View {
         case .calendar: "캘린더"
         case .location: "위치"
         case .photo: "사진"
+        case .media: "미디어 재생"
+        case .call: "통화"
         }
     }
 

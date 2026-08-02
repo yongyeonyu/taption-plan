@@ -250,12 +250,50 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(
             AutomaticRecordTimelineEngine.isImmutable(record(.motion))
         )
+        XCTAssertTrue(
+            AutomaticRecordTimelineEngine.isImmutable(record(.media))
+        )
+        XCTAssertTrue(
+            AutomaticRecordTimelineEngine.isImmutable(record(.call))
+        )
         XCTAssertFalse(
             AutomaticRecordTimelineEngine.isImmutable(record(.manual))
         )
         XCTAssertFalse(
             AutomaticRecordTimelineEngine.isImmutable(record(.timer))
         )
+    }
+
+    func testAutomaticTimelineDoesNotForecastPastNow() {
+        let now = makeDate(2026, 8, 3, 12)
+        let ongoing = ActualRecord(
+            planID: nil,
+            title: "정지·휴식",
+            categoryID: "activity",
+            startedAt: now.addingTimeInterval(-hour),
+            endedAt: now.addingTimeInterval(hour),
+            source: .motion
+        )
+        let future = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "activity",
+            startedAt: now.addingTimeInterval(10 * 60),
+            endedAt: now.addingTimeInterval(20 * 60),
+            source: .appleWatch
+        )
+
+        let visible = AutomaticRecordTimelineEngine.activities(
+            from: [ongoing, future],
+            inside: TimeSpan(
+                start: now.addingTimeInterval(-2 * hour),
+                end: now.addingTimeInterval(2 * hour)
+            ),
+            asOf: now
+        )
+
+        XCTAssertEqual(visible.map(\.id), [ongoing.id])
+        XCTAssertEqual(visible[0].endedAt, now)
     }
 
     func testGoalChildMustStayInsideParent() {
@@ -1377,6 +1415,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         let original = ActionMemo(
             planID: UUID(),
+            targetID: "automatic.actual.item",
             kind: .idea,
             text: "초안",
             attachments: [attachment],
@@ -1395,6 +1434,7 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(updated.id, original.id)
         XCTAssertEqual(updated.planID, original.planID)
+        XCTAssertEqual(updated.targetID, original.targetID)
         XCTAssertEqual(updated.text, "다음 행동")
         XCTAssertEqual(updated.kind, .nextAction)
         XCTAssertEqual(updated.attachments, [attachment])
@@ -3659,6 +3699,17 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(restored.categories.count, CategoryCatalog.builtIn.count)
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
+    }
+
+    func testSnapshotCompressionRoundTripAndLegacyJSON() {
+        let json = Data(repeating: 0x41, count: 32 * 1024)
+        let stored = TaptionSnapshotCompression.encode(json)
+
+        XCTAssertLessThan(stored.count, json.count)
+        XCTAssertEqual(TaptionSnapshotCompression.decode(stored), json)
+
+        let legacy = Data("{\"schemaVersion\":1}".utf8)
+        XCTAssertEqual(TaptionSnapshotCompression.decode(legacy), legacy)
     }
 
     func testAppGroupRepositoryMigratesExistingDeviceSnapshotOnce() async throws {

@@ -53,6 +53,11 @@ enum ActualSource: String, Codable, CaseIterable, Sendable {
     case calendar
     case location
     case photo
+    /// Playback observed while an AirPods route is connected.
+    case media
+    /// An active phone/FaceTime call observed through CallKit while an
+    /// AirPods route is connected. CallKit does not expose call history.
+    case call
 }
 
 enum ConfidenceLevel: String, Codable, CaseIterable, Sendable {
@@ -442,6 +447,10 @@ struct MemoAttachment: Identifiable, Codable, Hashable, Sendable {
 struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var planID: UUID
+    /// Stable timeline item key. Plan-backed memos keep using `planID`, while
+    /// automatic records (location, travel, health, weather, photos, etc.)
+    /// use this key so two records in the same category never share notes.
+    var targetID: String?
     var kind: MemoKind
     var text: String
     var attachments: [MemoAttachment]
@@ -452,6 +461,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     init(
         id: UUID = UUID(),
         planID: UUID,
+        targetID: String? = nil,
         kind: MemoKind,
         text: String,
         attachments: [MemoAttachment] = [],
@@ -461,6 +471,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.planID = planID
+        self.targetID = targetID
         self.kind = kind
         self.text = text
         self.attachments = attachments

@@ -1113,7 +1113,7 @@ enum TaptionWidgetSharedStore {
         do {
             let snapshot = try decoder.decode(
                 TaptionDataSnapshot.self,
-                from: data
+                from: TaptionSnapshotCompression.decode(data)
             )
             guard snapshot.updatedAt != .distantPast else {
                 return (nil, "uninitialized")
