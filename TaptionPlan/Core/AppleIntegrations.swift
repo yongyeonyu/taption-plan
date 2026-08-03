@@ -2417,25 +2417,31 @@ final class AppleMotionHistoryService: @unchecked Sendable {
 
     func activities(in span: TimeSpan) async throws -> [MotionActivityRecord] {
         guard CMMotionActivityManager.isActivityAvailable() else { return [] }
+        // Core Motion returns the last activity up to the requested end date.
+        // For today's query that would incorrectly project walking/rest into
+        // the future and inflate the review totals. Historical days retain
+        // their original boundary.
+        let queryEnd = min(span.end, Date.now)
+        guard span.start < queryEnd else { return [] }
         return try await withCheckedThrowingContinuation { continuation in
             activityManager.queryActivityStarting(
                 from: span.start,
-                to: span.end,
+                to: queryEnd,
                 to: .main
             ) { activities, error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else {
                     let ordered = (activities ?? [])
-                        .filter { $0.startDate < span.end }
+                        .filter { $0.startDate < queryEnd }
                         .sorted { $0.startDate < $1.startDate }
                     let records = ordered.enumerated().compactMap {
                         index, activity -> MotionActivityRecord? in
                         let start = max(span.start, activity.startDate)
                         let nextStart = ordered.indices.contains(index + 1)
                             ? ordered[index + 1].startDate
-                            : span.end
-                        let end = min(span.end, max(start, nextStart))
+                            : queryEnd
+                        let end = min(queryEnd, max(start, nextStart))
                         guard start < end else { return nil }
                         return MotionActivityRecord(
                             span: TimeSpan(start: start, end: end),

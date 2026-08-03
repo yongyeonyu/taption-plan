@@ -398,7 +398,11 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
     }
 
     func span(asOf date: Date = .now) -> TimeSpan {
-        TimeSpan(start: startedAt, end: endedAt ?? max(startedAt, date))
+        guard startedAt < date else {
+            return TimeSpan(start: startedAt, end: startedAt)
+        }
+        let observedEnd = min(endedAt ?? date, date)
+        return TimeSpan(start: startedAt, end: max(startedAt, observedEnd))
     }
 }
 

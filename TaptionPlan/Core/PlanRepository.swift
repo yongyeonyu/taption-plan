@@ -42,6 +42,7 @@ enum RepositoryError: Error, Equatable {
     case invalidSnapshot
     case unsupportedSchema(Int)
     case cloudAccountUnavailable
+    case cloudSchemaUnavailable
     case cloudPayloadMissing
     case appGroupUnavailable
 }
@@ -280,6 +281,21 @@ enum CloudSyncDecision: Equatable, Sendable {
     case unchanged
 }
 
+enum CloudKitErrorPolicy {
+    static func isProductionSchemaUnavailable(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        let values = [
+            error.localizedDescription,
+            nsError.localizedFailureReason ?? "",
+            nsError.userInfo[NSLocalizedRecoverySuggestionErrorKey] as? String
+                ?? "",
+        ]
+        let message = values.joined(separator: " ").lowercased()
+        return message.contains("cannot create new type")
+            || message.contains("production schema")
+    }
+}
+
 actor CloudKitSnapshotSyncService {
     private static let containerIdentifier = "iCloud.com.taption.plan"
     private static let recordName = "taption-data-v1"
@@ -290,6 +306,7 @@ actor CloudKitSnapshotSyncService {
     private let database: CKDatabase
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private var schemaUnavailable = false
 
     nonisolated static func automatic() -> CloudKitSnapshotSyncService? {
 #if targetEnvironment(simulator)
@@ -345,6 +362,10 @@ actor CloudKitSnapshotSyncService {
         }
     }
 
+    func isSchemaUnavailable() -> Bool {
+        schemaUnavailable
+    }
+
     func synchronize(
         local: TaptionDataSnapshot
     ) async throws -> (TaptionDataSnapshot, CloudSyncDecision) {
@@ -394,6 +415,22 @@ actor CloudKitSnapshotSyncService {
 
     @discardableResult
     func upload(_ snapshot: TaptionDataSnapshot) async throws -> TaptionDataSnapshot {
+        guard !schemaUnavailable else {
+            throw RepositoryError.cloudSchemaUnavailable
+        }
+        do {
+            return try await uploadRecord(snapshot)
+        } catch {
+            if CloudKitErrorPolicy.isProductionSchemaUnavailable(error) {
+                schemaUnavailable = true
+            }
+            throw error
+        }
+    }
+
+    private func uploadRecord(
+        _ snapshot: TaptionDataSnapshot
+    ) async throws -> TaptionDataSnapshot {
         var value = snapshot
         value.updatedAt = .now
         let data = try encoder.encode(value)

@@ -114,7 +114,9 @@ final class AppModel {
     @ObservationIgnored private let rawDeviceDataArchive:
         RawDeviceDataMonthlyArchive?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
+    @ObservationIgnored private var bootstrapPreparationTask: Task<Void, Never>?
     @ObservationIgnored private var foregroundRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var deferredVisibleRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
     @ObservationIgnored private var foregroundHealthRefreshTask:
         Task<Void, Never>?
@@ -462,13 +464,13 @@ final class AppModel {
         guard var loaded = try? await repository.load() else {
             return nil
         }
-        loaded = preparedLoadedSnapshot(loaded)
+        loaded = Self.preparedLoadedSnapshot(loaded)
         snapshot = loaded
         publishWidgetPayload()
         return snapshot.plans.first { $0.id == planID }
     }
 
-    private func preparedLoadedSnapshot(
+    private nonisolated static func preparedLoadedSnapshot(
         _ source: TaptionDataSnapshot
     ) -> TaptionDataSnapshot {
         var loaded = source
@@ -483,7 +485,7 @@ final class AppModel {
                 loaded.categories.append(category)
             }
         }
-        migrateLegacyFloorCalibration(in: &loaded)
+        Self.migrateLegacyFloorCalibration(in: &loaded)
         Self.normalizeRecordRelationships(in: &loaded)
         loaded.actuals = ActualRecordSuppressionEngine.visibleRecords(
             from: loaded.actuals,
@@ -496,7 +498,7 @@ final class AppModel {
     /// an older build saved the same generated child twice, keep the first
     /// record and remove only the exact generated duplicate. User-created
     /// overlapping plans remain untouched and continue to be shown separately.
-    private static func deduplicatedGeneratedRepeatPlans(
+    private nonisolated static func deduplicatedGeneratedRepeatPlans(
         _ plans: [PlanRecord]
     ) -> [PlanRecord] {
         var seen = Set<String>()
@@ -515,7 +517,7 @@ final class AppModel {
     /// Converts legacy action/routine pointers into the canonical relation
     /// rules used by the timeline graph. Repeat segments are projections of a
     /// root routine and therefore never remain as direct automatic links.
-    private static func normalizeRecordRelationships(
+    private nonisolated static func normalizeRecordRelationships(
         in snapshot: inout TaptionDataSnapshot
     ) {
         let plansByID = Dictionary(
@@ -606,23 +608,18 @@ final class AppModel {
             guard let self else { return }
             do {
                 let source = try await repository.load()
+                // Publish the local snapshot first. Normalizing historical
+                // records and loading device integrations can be expensive;
+                // neither should hold the first timeline frame hostage.
                 snapshot = source
-                // Let the first frame render before migrations and device
-                // integrations touch the main actor. The foreground refresh
-                // persists the compressed snapshot after the frame gate.
-                await Task.yield()
-                let loaded = preparedLoadedSnapshot(source)
-                snapshot = loaded
-                selectedScale = TimeScale(timelineLevel: loaded.settings.startScale)
-                selectedCatCoat = CatCoat(catStyle: loaded.settings.catStyle)
-                if loaded.updatedAt == .distantPast,
-                   loaded.plans.isEmpty {
+                selectedScale = TimeScale(timelineLevel: source.settings.startScale)
+                selectedCatCoat = CatCoat(catStyle: source.settings.catStyle)
+                if source.updatedAt == .distantPast,
+                   source.plans.isEmpty {
                     openInitialSetup()
                 }
-                await applyPendingWidgetCommands(
-                    repositoryAlreadyLoaded: true
-                )
                 isBootstrapped = true
+                scheduleBootstrapPreparation()
             } catch {
                 var fallback = TaptionDataSnapshot.empty
                 fallback.categories = CategoryCatalog.builtIn
@@ -634,6 +631,37 @@ final class AppModel {
         }
         bootstrapTask = task
         await task.value
+    }
+
+    private func scheduleBootstrapPreparation() {
+        guard bootstrapPreparationTask == nil else { return }
+        bootstrapPreparationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            // Give SwiftUI a complete frame before touching the full record
+            // graph. This is intentionally a yield, not a fixed sleep.
+            await Task.yield()
+            guard !Task.isCancelled else {
+                self.bootstrapPreparationTask = nil
+                return
+            }
+            let source = snapshot
+            let loaded = await Task.detached(priority: .utility) {
+                Self.preparedLoadedSnapshot(source)
+            }.value
+            guard !Task.isCancelled else {
+                self.bootstrapPreparationTask = nil
+                return
+            }
+            snapshot = loaded
+            selectedScale = TimeScale(timelineLevel: loaded.settings.startScale)
+            selectedCatCoat = CatCoat(catStyle: loaded.settings.catStyle)
+            await applyPendingWidgetCommands(repositoryAlreadyLoaded: true)
+            bootstrapPreparationTask = nil
+        }
+    }
+
+    private func waitForBootstrapPreparation() async {
+        await bootstrapPreparationTask?.value
     }
 
     func sceneBecameActive() async {
@@ -652,6 +680,8 @@ final class AppModel {
         }
         foregroundRefreshTask?.cancel()
         foregroundRefreshTask = nil
+        deferredVisibleRefreshTask?.cancel()
+        deferredVisibleRefreshTask = nil
         foregroundHealthRefreshTask?.cancel()
         foregroundHealthRefreshTask = nil
         await persist()
@@ -722,18 +752,41 @@ final class AppModel {
                 self.foregroundRefreshTask = nil
                 return
             }
+            await self.refreshPermissionStates()
+            await self.waitForBootstrapPreparation()
             await self.applyPendingWidgetCommands(
                 repositoryAlreadyLoaded: false
             )
-            await self.refreshPermissionStates()
             self.resumeSensorCollectionIfNeeded()
             await self.restoreTrackingSessionIfNeeded()
-            await self.refreshEnabledData(includesCurrentDeviceDay: true)
+            await self.refreshEnabledData(
+                includesCurrentDeviceDay: true,
+                dataSpan: self.currentDeviceDataSpan
+            )
+            self.lastForegroundRefreshAt = .now
+            self.foregroundRefreshTask = nil
+            self.scheduleDeferredVisibleRefresh()
+        }
+    }
+
+    private func scheduleDeferredVisibleRefresh() {
+        guard deferredVisibleRefreshTask == nil else { return }
+        deferredVisibleRefreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await Task.yield()
+            await Task.yield()
+            guard !Task.isCancelled, self.isSceneActive else {
+                self.deferredVisibleRefreshTask = nil
+                return
+            }
+            await self.refreshEnabledData(
+                includesCurrentDeviceDay: true,
+                persistDeviceSnapshot: false
+            )
             await self.refreshStore(showErrors: false)
             await self.persist()
             await self.synchronizeCloud(showErrors: false)
-            self.lastForegroundRefreshAt = .now
-            self.foregroundRefreshTask = nil
+            self.deferredVisibleRefreshTask = nil
         }
     }
 
@@ -742,6 +795,7 @@ final class AppModel {
     func performBackgroundRefresh() async -> Bool {
         Self.integrationLogger.notice("Background model refresh started")
         await bootstrap()
+        await waitForBootstrapPreparation()
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
         await refreshEnabledData(includesCurrentDeviceDay: true)
         await persist()
@@ -995,14 +1049,18 @@ final class AppModel {
     }
 
     func refreshEnabledData(
-        includesCurrentDeviceDay: Bool = false
+        includesCurrentDeviceDay: Bool = false,
+        dataSpan: TimeSpan? = nil,
+        persistDeviceSnapshot: Bool = true
     ) async {
+        await waitForBootstrapPreparation()
         guard !isRefreshingIntegrations else { return }
         isRefreshingIntegrations = true
         defer { isRefreshingIntegrations = false }
+        let refreshSpan = dataSpan ?? visibleDataSpan
         let photoSpan = permissionState(for: .photos).isGranted
             && settings.showsPhotos
-            ? visibleDataSpan
+            ? refreshSpan
             : nil
         let photoTask = photoSpan.map { span in
             Task.detached(priority: .utility) { [photoService] in
@@ -1012,7 +1070,7 @@ final class AppModel {
         if permissionState(for: .calendar).isGranted,
            !settings.selectedCalendarIDs.isEmpty {
             await Task.yield()
-            refreshCalendarEvents()
+            refreshCalendarEvents(in: refreshSpan)
         }
         if settings.healthEnabled {
             do {
@@ -1030,7 +1088,7 @@ final class AppModel {
             }
             await refreshHealthData()
         }
-        if settings.locationEnabled || hasPhotoLocations(in: visibleDataSpan) {
+        if settings.locationEnabled || hasPhotoLocations(in: refreshSpan) {
             if includesCurrentDeviceDay {
                 await refreshSensorTimeline(containing: .now)
             }
@@ -1046,7 +1104,9 @@ final class AppModel {
         // Calendar, HealthKit, Watch, location and motion records are device
         // ground truth. Save them locally before any potentially slow cloud
         // request so opening the app always updates today's timeline first.
-        await persistDeviceLocalSnapshot()
+        if persistDeviceSnapshot {
+            await persistDeviceLocalSnapshot()
+        }
     }
 
     /// Publishes the latest HealthKit/Watch and sensor records before a
@@ -1065,6 +1125,11 @@ final class AppModel {
             return
         }
         isCloudSyncing = true
+        if await cloudSyncService.isSchemaUnavailable() {
+            snapshot.settings.permissions[.cloud] = .unavailable
+            isCloudSyncing = false
+            return
+        }
         let state = await cloudSyncService.accountState()
         snapshot.settings.permissions[.cloud] = state
         guard state.isGranted else {
@@ -1084,7 +1149,14 @@ final class AppModel {
             try await repository.save(snapshot)
             publishWidgetPayload()
         } catch {
-            if showErrors {
+            if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
+                || error is RepositoryError
+                    && (error as? RepositoryError) == .cloudSchemaUnavailable {
+                snapshot.settings.permissions[.cloud] = .unavailable
+                Self.integrationLogger.error(
+                    "CloudKit production schema is unavailable; local data remains authoritative"
+                )
+            } else if showErrors {
                 userFacingError =
                     "iCloud와 동기화하지 못했습니다. \(error.localizedDescription)"
             }
@@ -3062,8 +3134,11 @@ final class AppModel {
                 existing: existingAutomatic,
                 inside: span
             ).filter {
-                !snapshot.settings.suppressedActualIDs.contains($0.id)
+                    !snapshot.settings.suppressedActualIDs.contains($0.id)
             }
+            Self.integrationLogger.notice(
+                "Motion history refresh: activities=\(motionActivities.count, privacy: .public), generated=\(generatedMotionActuals.count, privacy: .public), spanStart=\(span.start.timeIntervalSince1970, privacy: .public), observationEnd=\(min(span.end, Date.now).timeIntervalSince1970, privacy: .public)"
+            )
             snapshot.actuals.removeAll {
                 $0.source == .motion
                     && $0.span(asOf: span.end).intersection(with: span) != nil
@@ -3605,7 +3680,10 @@ final class AppModel {
     }
 
     private func refreshCalendarEvents() {
-        let span = visibleDataSpan
+        refreshCalendarEvents(in: visibleDataSpan)
+    }
+
+    private func refreshCalendarEvents(in span: TimeSpan) {
         if !snapshot.settings.selectedCalendarIDs.isEmpty {
             snapshot.settings.selectedCalendarIDs =
                 calendarService.calendars().map(\.id)
@@ -4080,7 +4158,7 @@ final class AppModel {
         )
     }
 
-    private func migrateLegacyFloorCalibration(
+    private nonisolated static func migrateLegacyFloorCalibration(
         in snapshot: inout TaptionDataSnapshot
     ) {
         guard let calibration = snapshot.settings.floorCalibration else {
@@ -4346,6 +4424,13 @@ final class AppModel {
         return TimeSpan(start: start, end: end)
     }
 
+    private var currentDeviceDataSpan: TimeSpan {
+        TimelineAggregationEngine().interval(
+            for: .day,
+            containing: .now
+        )
+    }
+
     private var recentHealthSpan: TimeSpan {
         let now = Date.now
         let start = Calendar.autoupdatingCurrent.date(
@@ -4383,13 +4468,27 @@ final class AppModel {
             try await repository.save(value)
             if permissionState(for: .cloud).isGranted,
                let cloudSyncService {
-                let uploaded = try await cloudSyncService.upload(
-                    cloudPortableSnapshot(value)
-                )
-                var uploadedValue = snapshot
-                uploadedValue.updatedAt = uploaded.updatedAt
-                assignTimestampOnlySnapshot(uploadedValue)
-                try await repository.save(uploadedValue)
+                do {
+                    let uploaded = try await cloudSyncService.upload(
+                        cloudPortableSnapshot(value)
+                    )
+                    var uploadedValue = snapshot
+                    uploadedValue.updatedAt = uploaded.updatedAt
+                    assignTimestampOnlySnapshot(uploadedValue)
+                    try await repository.save(uploadedValue)
+                } catch {
+                    if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
+                        || error is RepositoryError
+                            && (error as? RepositoryError)
+                                == .cloudSchemaUnavailable {
+                        snapshot.settings.permissions[.cloud] = .unavailable
+                        Self.integrationLogger.error(
+                            "CloudKit production schema is unavailable; local save completed"
+                        )
+                    } else {
+                        throw error
+                    }
+                }
             }
             publishWidgetPayload()
             if permissionState(for: .notifications).isGranted,

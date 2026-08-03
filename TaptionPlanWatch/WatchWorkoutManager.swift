@@ -168,6 +168,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var pendingBehaviorSegments: [WatchBehaviorSegment] = []
     private var lastBehaviorKind: WatchBehaviorKind?
     private var lastBehaviorConfidence = 0.0
+#if canImport(CoreML)
+    private lazy var behaviorModel = WatchBehaviorModel.load()
+#endif
     private let accelerationArchive = WatchAccelerationArchive()
     private var pendingAccelerationSamples: [WatchAccelerationArchiveSample] = []
     private var accelerationArchiveStride = 0
@@ -942,9 +945,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     posturePitchRadians: features.posturePitchRadians,
                     postureRollRadians: features.postureRollRadians
                 )
+                let modelPrediction: WatchBehaviorInference?
+#if canImport(CoreML)
+                modelPrediction = behaviorModel?.predict(features: features)
+#else
+                modelPrediction = nil
+#endif
                 let inference = WatchBehaviorClassifier.classifyWindow(
                     features,
-                    context: context
+                    context: context,
+                    modelPrediction: modelPrediction
                 )
                 appendBehaviorSegment(
                     inference,

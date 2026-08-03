@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(CoreML)
+import CoreML
+#endif
 
 enum TaptionWatchCommandKind: String, Codable, CaseIterable, Sendable {
     case start
@@ -109,6 +112,16 @@ enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
             false
         }
     }
+
+    static func fromModelLabel(_ label: String) -> WatchBehaviorKind? {
+        let normalized = label
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return allCases.first {
+            $0.rawValue.lowercased() == normalized
+                || $0.title.lowercased() == normalized
+        }
+    }
 }
 
 struct WatchBehaviorInference: Codable, Hashable, Sendable {
@@ -117,6 +130,84 @@ struct WatchBehaviorInference: Codable, Hashable, Sendable {
     var evidence: [String]
     var modelVersion: String
 }
+
+#if canImport(CoreML)
+/// Optional Create ML/Core ML bridge. The app works without a bundled model;
+/// when `WatchActivityClassifier.mlmodelc` is present, its prediction wins
+/// over the conservative rule fallback for the same sensor window.
+@MainActor
+final class WatchBehaviorModel {
+    private let model: MLModel
+    let modelVersion: String
+
+    private init(model: MLModel, modelVersion: String) {
+        self.model = model
+        self.modelVersion = modelVersion
+    }
+
+    static func load(
+        bundle: Bundle = .main,
+        resource: String = "WatchActivityClassifier"
+    ) -> WatchBehaviorModel? {
+        guard let url = bundle.url(
+            forResource: resource,
+            withExtension: "mlmodelc"
+        ), let model = try? MLModel(contentsOf: url) else {
+            return nil
+        }
+        return WatchBehaviorModel(
+            model: model,
+            modelVersion: "core-ml-\(resource)"
+        )
+    }
+
+    func predict(
+        features: WatchBehaviorWindowFeatures
+    ) -> WatchBehaviorInference? {
+        guard let input = model.modelDescription.inputDescriptionsByName
+            .first(where: { $0.value.type == .multiArray }),
+            let array = try? MLMultiArray(
+                shape: [NSNumber(value: features.featureVector.count)],
+                dataType: .double
+            ) else {
+            return nil
+        }
+        for (index, value) in features.featureVector.enumerated() {
+            array[index] = NSNumber(value: value)
+        }
+        guard let provider = try? MLDictionaryFeatureProvider(
+            dictionary: [
+                input.key: MLFeatureValue(multiArray: array),
+            ]
+        ), let output = try? model.prediction(from: provider) else {
+            return nil
+        }
+
+        let label = output.featureValue(for: "classLabel")?.stringValue
+            ?? output.featureValue(for: "label")?.stringValue
+        let probabilities = output.featureValue(
+            for: "classLabelProbs"
+        )?.dictionaryValue.reduce(into: [String: Double]()) { result, item in
+            result[String(describing: item.key)] = item.value.doubleValue
+        }
+        let best = probabilities?.max { $0.value < $1.value }
+        let rawLabel = label ?? best?.key
+        guard let rawLabel,
+              let kind = WatchBehaviorKind.fromModelLabel(rawLabel) else {
+            return nil
+        }
+        return WatchBehaviorInference(
+            kind: kind,
+            confidenceScore: min(0.99, max(0, best?.value ?? 0.7)),
+            evidence: [
+                "Core ML 활동 모델",
+                "IMU 창 \(WatchBehaviorWindowFeatures.featureSchemaVersion)",
+            ],
+            modelVersion: modelVersion
+        )
+    }
+}
+#endif
 
 struct WatchBehaviorInput: Hashable, Sendable {
     var workoutKind: TaptionWatchWorkoutKind?
@@ -216,7 +307,7 @@ struct WatchMotionSample: Hashable, Sendable {
     }
 }
 
-struct WatchBehaviorWindowFeatures: Hashable, Sendable {
+struct WatchBehaviorWindowFeatures: Codable, Hashable, Sendable {
     var startedAt: Date
     var endedAt: Date
     var sampleCount: Int
@@ -232,6 +323,54 @@ struct WatchBehaviorWindowFeatures: Hashable, Sendable {
     var postureRollRadians: Double?
 
     var duration: TimeInterval { endedAt.timeIntervalSince(startedAt) }
+
+    /// Stable numeric layout shared with a future Create ML/Core ML model.
+    /// Missing device signals are encoded as zero for low-power windows.
+    var featureVector: [Double] {
+        [
+            duration,
+            sampleRateHz,
+            Double(sampleCount),
+            accelerationMeanG,
+            accelerationStandardDeviationG,
+            bodyAccelerationRMSG,
+            jerkRMSGPerSecond,
+            zeroCrossingRateHz,
+            dominantFrequencyHz ?? 0,
+            gyroscopeRMSGPerSecond,
+            posturePitchRadians ?? 0,
+            postureRollRadians ?? 0,
+        ]
+    }
+
+    static let featureSchemaVersion = "watch-har-window-v1"
+}
+
+/// A labelled window for personal calibration or Create ML training.
+/// Classifier guesses are never written back as labels.
+struct WatchBehaviorTrainingSample: Codable, Hashable, Sendable {
+    var id: UUID
+    var capturedAt: Date
+    var features: WatchBehaviorWindowFeatures
+    var label: WatchBehaviorKind
+    var source: String
+    var labelConfidence: Double
+
+    init(
+        id: UUID = UUID(),
+        capturedAt: Date,
+        features: WatchBehaviorWindowFeatures,
+        label: WatchBehaviorKind,
+        source: String,
+        labelConfidence: Double = 1
+    ) {
+        self.id = id
+        self.capturedAt = capturedAt
+        self.features = features
+        self.label = label
+        self.source = source
+        self.labelConfidence = min(1, max(0, labelConfidence))
+    }
 }
 
 struct WatchBehaviorSegment: Identifiable, Codable, Hashable, Sendable {
@@ -369,8 +508,13 @@ enum WatchBehaviorClassifier {
 
     static func classifyWindow(
         _ features: WatchBehaviorWindowFeatures,
-        context: WatchBehaviorInput
+        context: WatchBehaviorInput,
+        modelPrediction: WatchBehaviorInference? = nil
     ) -> WatchBehaviorInference {
+        if let modelPrediction,
+           modelPrediction.confidenceScore >= 0.55 {
+            return modelPrediction
+        }
         let inference = classify(
             WatchBehaviorInput(
                 // A workout session identifies the broad activity, but the
@@ -431,15 +575,38 @@ enum WatchBehaviorClassifier {
         _ segments: [WatchBehaviorSegment],
         fallback: WatchBehaviorInference
     ) -> WatchBehaviorInference {
-        guard let segment = segments.max(by: {
-            if $0.duration != $1.duration { return $0.duration < $1.duration }
-            return $0.confidenceScore < $1.confidenceScore
-        }) else { return fallback }
+        guard !segments.isEmpty else { return fallback }
+        let ordered = segments.sorted { $0.startedAt < $1.startedAt }
+        var weightedDurations: [WatchBehaviorKind: Double] = [:]
+        for segment in ordered {
+            let duration = max(0.25, segment.duration)
+            weightedDurations[segment.behavior, default: 0] +=
+                duration * (0.5 + segment.confidenceScore)
+        }
+        guard let winningKind = weightedDurations.max(by: {
+            if $0.value != $1.value { return $0.value < $1.value }
+            return $0.key.rawValue < $1.key.rawValue
+        })?.key else {
+            return fallback
+        }
+        let winningSegments = ordered.filter { $0.behavior == winningKind }
+        let totalWeight = winningSegments.reduce(0.0) { total, segment in
+            total + max(0.25, segment.duration)
+                * (0.5 + segment.confidenceScore)
+        }
+        let confidence = winningSegments.reduce(0.0) { total, segment in
+            total + segment.confidenceScore
+                * max(0.25, segment.duration)
+                * (0.5 + segment.confidenceScore)
+        } / max(0.25, totalWeight)
+        let evidence = winningSegments.reduce(into: Set<String>()) {
+            $0.formUnion($1.evidence)
+        }
         return WatchBehaviorInference(
-            kind: segment.behavior,
-            confidenceScore: segment.confidenceScore,
-            evidence: Array(Set(segment.evidence + ["2.56초 IMU 창"])).sorted(),
-            modelVersion: segment.modelVersion
+            kind: winningKind,
+            confidenceScore: min(0.99, max(0, confidence)),
+            evidence: Array(evidence + ["2.56초 IMU 창", "시간 가중 집계"]).sorted(),
+            modelVersion: ordered.last?.modelVersion ?? fallback.modelVersion
         )
     }
 

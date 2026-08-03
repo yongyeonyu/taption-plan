@@ -229,38 +229,47 @@ struct ReviewView: View {
         showsCategory: Bool = true
     ) -> some View {
         let categoryID = actualCategoryID(item.record)
-        return HStack(spacing: 8) {
-            Image(systemName: PlanCategory(categoryID: categoryID).systemImage)
-                .font(.taption(size: 12, weight: .semibold))
-                .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
-                .frame(width: 18)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.record.title.isEmpty
-                    ? categoryName(categoryID)
-                    : item.record.title)
-                    .font(.taption(size: 10.5, weight: .semibold))
-                    .lineLimit(1)
-                Text(
-                    (showsCategory ? categoryName(categoryID) + " · " : "")
-                        + actualSourceName(item.record.source)
-                        + (item.occurrenceCount > 1
-                            ? " · \(item.occurrenceCount)회"
-                            : "")
-                )
-                .font(.taption(size: 8.5))
-                .foregroundStyle(Color.tpSecondary)
-            }
-            Spacer(minLength: 4)
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(durationText(item.totalDuration))
-                    .font(.taption(size: 9, weight: .semibold))
-                    .foregroundStyle(Color.tpProjectDark)
-                Text(actualTimeText(item))
-                    .font(.taption(size: 8))
+        return Button {
+            model.detail = .actual(item.record.id)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: PlanCategory(categoryID: categoryID).systemImage)
+                    .font(.taption(size: 12, weight: .semibold))
+                    .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
+                    .frame(width: 18)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.record.title.isEmpty
+                        ? categoryName(categoryID)
+                        : item.record.title)
+                        .font(.taption(size: 10.5, weight: .semibold))
+                        .lineLimit(1)
+                    Text(
+                        (showsCategory ? categoryName(categoryID) + " · " : "")
+                            + actualSourceName(item.record.source)
+                            + (item.occurrenceCount > 1
+                                ? " · \(item.occurrenceCount)회"
+                                : "")
+                    )
+                    .font(.taption(size: 8.5))
                     .foregroundStyle(Color.tpSecondary)
+                }
+                Spacer(minLength: 4)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(durationText(item.totalDuration))
+                        .font(.taption(size: 9, weight: .semibold))
+                        .foregroundStyle(Color.tpProjectDark)
+                    Text(actualTimeText(item))
+                        .font(.taption(size: 8))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.taption(size: 8, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary.opacity(0.7))
             }
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 3)
+        .buttonStyle(.plain)
     }
 
     private var contextCard: some View {
@@ -425,12 +434,13 @@ struct ReviewView: View {
     }
 
     private var actualRecordItems: [ActualRecordItem] {
-        let now = Date.now
+        let asOf = min(Date.now, report.span.end)
         var seen = Set<UUID>()
         return model.snapshot.actuals
             .compactMap { actual in
                 guard seen.insert(actual.id).inserted else { return nil }
-                guard let span = actual.span(asOf: now)
+                guard actual.startedAt < asOf,
+                      let span = actual.span(asOf: asOf)
                     .intersection(with: report.span) else {
                     return nil
                 }
@@ -489,17 +499,23 @@ struct ReviewView: View {
                 return nil
             }
             let ordered = values.sorted { $0.span.start < $1.span.start }
-            let ranges = ordered.flatMap(\.timeRanges)
+            let ranges = ActualIntervalMergeEngine.union(
+                ordered.flatMap(\.timeRanges)
+            )
+            guard let firstRange = ranges.first,
+                  let lastRange = ranges.last else {
+                return nil
+            }
             return ActualRecordItem(
                 id: "merged.\(first.record.id.uuidString)",
                 record: first.record,
                 span: TimeSpan(
-                    start: ranges.map(\.start).min() ?? first.span.start,
-                    end: ranges.map(\.end).max() ?? first.span.end
+                    start: firstRange.start,
+                    end: lastRange.end
                 ),
-                totalDuration: ordered.reduce(0) {
-                    $0 + $1.totalDuration
-                },
+                totalDuration: ActualIntervalMergeEngine.duration(
+                    of: ordered.flatMap(\.timeRanges)
+                ),
                 occurrenceCount: ordered.reduce(0) {
                     $0 + $1.occurrenceCount
                 },
@@ -638,6 +654,175 @@ private extension ReviewScale {
         case .month: .month
         case .year: .year
         }
+    }
+}
+
+struct ActualRecordDetailView: View {
+    @Bindable var model: AppModel
+    let recordID: UUID
+
+    private var record: ActualRecord? {
+        model.snapshot.actuals.first { $0.id == recordID }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Button {
+                    model.detail = nil
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.taption(size: 18, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                Text("기록 상세")
+                    .font(.taption(size: 19, weight: .bold))
+                Spacer()
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .background(Color.white)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(Color.tpLine).frame(height: 0.5)
+            }
+
+            ScrollView(showsIndicators: false) {
+                if let record {
+                    detailContent(record)
+                        .padding(14)
+                } else {
+                    ContentUnavailableView(
+                        "기록을 찾을 수 없습니다",
+                        systemImage: "clock.badge.exclamationmark",
+                        description: Text("저장된 자동 기록이 변경되었을 수 있습니다.")
+                    )
+                    .padding(24)
+                }
+            }
+            .background(Color.tpBackground)
+        }
+    }
+
+    private func detailContent(_ record: ActualRecord) -> some View {
+        let categoryID = displayCategoryID(record)
+        let span = record.span(asOf: Date.now)
+        return VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
+                Label(
+                    record.title.isEmpty ? categoryName(categoryID) : record.title,
+                    systemImage: PlanCategory(categoryID: categoryID).systemImage
+                )
+                .font(.taption(size: 17, weight: .bold))
+                .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
+                Text("\(span.start.formatted(date: .abbreviated, time: .shortened)) – \(span.end.formatted(date: .omitted, time: .shortened))")
+                    .font(.taption(size: 11))
+                    .foregroundStyle(Color.tpSecondary)
+                Text(durationText(span.duration))
+                    .font(.taption(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.tpProjectDark)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
+
+            detailRow("데이터 출처", sourceName(record.source))
+            detailRow("신뢰도", record.confidence.rawValue)
+            let related = relatedRecords(for: record)
+            if related.count > 1 {
+                let total = ActualIntervalMergeEngine.duration(
+                    of: related.map { $0.span(asOf: Date.now) }
+                )
+                detailRow("같은 날 합산", "(durationText(total)) · (related.count)회")
+            }
+            if let behavior = record.behavior, !behavior.isEmpty {
+                detailRow("행동 분류", behavior)
+            }
+            if !record.evidence.isEmpty {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("측정 근거")
+                        .font(.taption(size: 10, weight: .bold))
+                    ForEach(record.evidence, id: \.self) { evidence in
+                        Text("· \(evidence)")
+                            .font(.taption(size: 10))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
+            }
+            if AutomaticRecordTimelineEngine.isImmutable(record) {
+                Label("센서·건강 데이터는 원본 보존을 위해 수정할 수 없습니다.", systemImage: "lock.fill")
+                    .font(.taption(size: 9))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.horizontal, 2)
+            }
+        }
+    }
+
+    private func detailRow(_ title: String, _ value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.taption(size: 10, weight: .semibold))
+            Spacer()
+            Text(value)
+                .font(.taption(size: 10))
+                .foregroundStyle(Color.tpSecondary)
+        }
+        .padding(12)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func displayCategoryID(_ record: ActualRecord) -> String {
+        guard record.categoryID == "activity" else { return record.categoryID }
+        let value = "\(record.title) \(record.behavior ?? "")".lowercased()
+        if value.contains("수면") || value.contains("sleep") { return "sleep" }
+        let movementWords = [
+            "걷", "달리", "차량", "자동차", "자전거", "버스", "지하철",
+            "walking", "running", "cycling", "automotive",
+        ]
+        return movementWords.contains(where: value.contains) ? "movement" : "activity"
+    }
+
+    private func categoryName(_ id: String) -> String {
+        model.snapshot.categories.first { $0.id == id }?.name
+            ?? PlanCategory(categoryID: id).rawValue
+    }
+
+    private func relatedRecords(for record: ActualRecord) -> [ActualRecord] {
+        let calendar = Calendar.autoupdatingCurrent
+        return model.snapshot.actuals.filter { candidate in
+            candidate.categoryID == record.categoryID
+                && candidate.title == record.title
+                && calendar.isDate(
+                    candidate.startedAt,
+                    inSameDayAs: record.startedAt
+                )
+        }
+    }
+
+    private func sourceName(_ source: ActualSource) -> String {
+        switch source {
+        case .manual: "직접 기록"
+        case .timer: "타이머"
+        case .healthKit: "Apple 건강"
+        case .appleWatch: "Apple Watch 센서"
+        case .motion: "iPhone 센서"
+        case .calendar: "캘린더"
+        case .location: "위치"
+        case .photo: "사진"
+        case .media: "미디어 재생"
+        case .call: "통화"
+        }
+    }
+
+    private func durationText(_ interval: TimeInterval) -> String {
+        let minutes = max(0, Int(interval / 60))
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours == 0 { return "\(remainder)분" }
+        if remainder == 0 { return "\(hours)시간" }
+        return "\(hours)시간 \(remainder)분"
     }
 }
 

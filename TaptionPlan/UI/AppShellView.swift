@@ -95,6 +95,8 @@ struct AppShellView: View {
                 GroupGanttView(model: model)
             case .goal:
                 GoalDetailView(model: model)
+            case .actual(let recordID):
+                ActualRecordDetailView(model: model, recordID: recordID)
             case .locationTimeline:
                 LocationTimelineView(model: model)
             case .memo:

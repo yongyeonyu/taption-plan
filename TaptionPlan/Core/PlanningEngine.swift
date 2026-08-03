@@ -107,6 +107,41 @@ struct TimelineLaneAllocation<ID: Hashable> {
     var count: Int
 }
 
+/// Combines overlapping measured intervals without changing the source records.
+/// Automatic sensors can emit the same activity from more than one device.
+enum ActualIntervalMergeEngine {
+    static func union(
+        _ spans: [TimeSpan],
+        mergeGap: TimeInterval = 1
+    ) -> [TimeSpan] {
+        let ordered = spans
+            .filter { $0.duration > 0 }
+            .sorted { $0.start < $1.start }
+        guard var current = ordered.first else { return [] }
+
+        var merged: [TimeSpan] = []
+        for span in ordered.dropFirst() {
+            if span.start <= current.end.addingTimeInterval(max(0, mergeGap)) {
+                current.end = max(current.end, span.end)
+            } else {
+                merged.append(current)
+                current = span
+            }
+        }
+        merged.append(current)
+        return merged
+    }
+
+    static func duration(
+        of spans: [TimeSpan],
+        mergeGap: TimeInterval = 1
+    ) -> TimeInterval {
+        union(spans, mergeGap: mergeGap).reduce(0) {
+            $0 + $1.duration
+        }
+    }
+}
+
 enum TimelineLaneAllocator {
     static func allocate<Item: Identifiable>(
         _ items: [Item],

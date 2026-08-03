@@ -2931,6 +2931,71 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(fallback.kind, .cycling)
     }
 
+    func testWatchHARFeatureVectorAndTemporalAggregation() throws {
+        let start = makeDate(2026, 8, 2, 9)
+        let samples = (0..<65).map { index in
+            let elapsed = Double(index) / 25
+            let wave = sin(2 * .pi * 1.8 * elapsed) * 0.14
+            return WatchMotionSample(
+                capturedAt: start.addingTimeInterval(elapsed),
+                acceleration: TaptionWatchSensorVector3(
+                    x: 0,
+                    y: 0,
+                    z: 1 + wave
+                ),
+                rotationRate: nil,
+                gravity: TaptionWatchSensorVector3(x: 0, y: 0, z: 1)
+            )
+        }
+        let features = try XCTUnwrap(
+            WatchBehaviorWindowAnalyzer.features(from: samples)
+        )
+        XCTAssertEqual(
+            features.featureVector.count,
+            12
+        )
+        XCTAssertEqual(
+            WatchBehaviorWindowFeatures.featureSchemaVersion,
+            "watch-har-window-v1"
+        )
+        XCTAssertEqual(
+            WatchBehaviorKind.fromModelLabel("달리기"),
+            .running
+        )
+        XCTAssertEqual(
+            WatchBehaviorKind.fromModelLabel("stairsUp"),
+            .stairsUp
+        )
+
+        let walking = WatchBehaviorSegment(
+            startedAt: start,
+            endedAt: start.addingTimeInterval(10),
+            behavior: .walking,
+            confidenceScore: 0.8,
+            evidence: ["보행"],
+            modelVersion: WatchBehaviorClassifier.rulesVersion
+        )
+        let stationary = WatchBehaviorSegment(
+            startedAt: start.addingTimeInterval(10),
+            endedAt: start.addingTimeInterval(18),
+            behavior: .stationary,
+            confidenceScore: 0.95,
+            evidence: ["저진동"],
+            modelVersion: WatchBehaviorClassifier.rulesVersion
+        )
+        let aggregate = WatchBehaviorClassifier.aggregate(
+            [walking, stationary],
+            fallback: WatchBehaviorInference(
+                kind: .unknown,
+                confidenceScore: 0.2,
+                evidence: [],
+                modelVersion: WatchBehaviorClassifier.rulesVersion
+            )
+        )
+        XCTAssertEqual(aggregate.kind, .walking)
+        XCTAssertTrue(aggregate.evidence.contains("시간 가중 집계"))
+    }
+
     func testWatchSensorChunksUpdateTheSameImmutableActivity() {
         let base = makeDate(2026, 8, 2, 9)
         let sessionID = UUID()
@@ -4068,6 +4133,72 @@ final class FeatureEngineTests: XCTestCase {
                     <array><string>iCloud.com.taption.plan</string></array>
                     """.utf8
                 )
+            )
+        )
+    }
+
+    func testActualIntervalMergeDoesNotDoubleCountOverlaps() {
+        let start = makeDate(2026, 8, 3, 9)
+        let spans = [
+            TimeSpan(start: start, end: start.addingTimeInterval(60 * 60)),
+            TimeSpan(
+                start: start.addingTimeInterval(30 * 60),
+                end: start.addingTimeInterval(90 * 60)
+            ),
+            TimeSpan(
+                start: start.addingTimeInterval(3 * 60 * 60),
+                end: start.addingTimeInterval(4 * 60 * 60)
+            ),
+        ]
+
+        XCTAssertEqual(
+            ActualIntervalMergeEngine.duration(of: spans),
+            2.5 * hour,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            ActualIntervalMergeEngine.union(spans).count,
+            2
+        )
+    }
+
+    func testAutomaticActualSpanStopsAtObservationTime() {
+        let observedAt = makeDate(2026, 8, 3, 18)
+        let actual = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: observedAt.addingTimeInterval(-hour),
+            endedAt: observedAt.addingTimeInterval(hour),
+            source: .motion
+        )
+
+        XCTAssertEqual(
+            actual.span(asOf: observedAt).end,
+            observedAt
+        )
+        XCTAssertEqual(
+            actual.span(asOf: observedAt).duration,
+            hour,
+            accuracy: 0.001
+        )
+    }
+
+    func testCloudKitProductionSchemaErrorIsHandledAsUnavailable() {
+        let error = NSError(
+            domain: "CKErrorDomain",
+            code: 15,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "Cannot create new type TaptionSnapshot in production schema"
+            ]
+        )
+        XCTAssertTrue(
+            CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
+        )
+        XCTAssertFalse(
+            CloudKitErrorPolicy.isProductionSchemaUnavailable(
+                NSError(domain: "CKErrorDomain", code: 3)
             )
         )
     }
