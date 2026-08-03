@@ -110,6 +110,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published private(set) var archivedAccelerationSampleCount = 0
     @Published private(set) var latestRelativeAltitudeMeters: Double?
     @Published private(set) var errorMessage: String?
+    @Published private(set) var accelerationSettings:
+        TaptionWatchAccelerationSettings?
+    @Published private(set) var dataSyncProfile: TaptionWatchDataSyncProfile = .off
 
     private let healthStore = HKHealthStore()
     private let motionManager = CMMotionManager()
@@ -170,6 +173,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var accelerationArchiveStride = 0
     private var accelerationArchiveSequence = 0
     private var isAmbientCapture = false
+    private var isScheduledMotionRecording = false
+    private var scheduledCaptureTask: Task<Void, Never>?
+    private var scheduledStopTask: Task<Void, Never>?
+    private var healthSyncTask: Task<Void, Never>?
+    private var didRequestHealthReadAuthorization = false
+    private var pendingAmbientSummaries: [TaptionWatchSensorSummary] = []
+    var onHealthSnapshot: ((TaptionWatchHealthSnapshot) -> Void)?
 
     override init() {
         super.init()
@@ -183,6 +193,27 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         errorMessage = nil
     }
 
+    func applySettings(
+        acceleration: TaptionWatchAccelerationSettings?,
+        dataSyncProfile: TaptionWatchDataSyncProfile?
+    ) {
+        let acceleration = acceleration
+            ?? TaptionWatchAccelerationSettings(profile: .off)
+        let dataSyncProfile = dataSyncProfile ?? .off
+        guard self.accelerationSettings != acceleration
+            || self.dataSyncProfile != dataSyncProfile else {
+            return
+        }
+        self.accelerationSettings = acceleration
+        self.dataSyncProfile = dataSyncProfile
+        restartAutomaticCapture()
+        restartHealthSync()
+    }
+
+    func syncNow() async {
+        await emitHealthSnapshot(forceFlush: true)
+    }
+
     func start(
         kind: TaptionWatchWorkoutKind,
         linkedPlan: TaptionWatchPlanItem?,
@@ -191,6 +222,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         guard !isActive, HKHealthStore.isHealthDataAvailable() else {
             return false
         }
+        stopScheduledCapture()
         do {
             try await requestAuthorization()
             let configuration = HKWorkoutConfiguration()
@@ -272,13 +304,34 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     /// home-activity classification.
     @discardableResult
     func startMotionRecording() -> Bool {
-        guard !isActive, !isMotionRecording else { return false }
+        guard !isActive, !isMotionRecording, !isScheduledMotionRecording else {
+            return false
+        }
+        scheduledCaptureTask?.cancel()
+        scheduledCaptureTask = nil
         let start = Date.now
+        return beginAmbientCapture(at: start, scheduled: false)
+    }
+
+    func stopMotionRecording() {
+        guard isMotionRecording else { return }
+        finishAmbientCapture()
+        restartAutomaticCapture()
+    }
+
+    private func beginAmbientCapture(
+        at start: Date,
+        scheduled: Bool
+    ) -> Bool {
+        guard !isActive, !isMotionRecording, !isScheduledMotionRecording else {
+            return false
+        }
         let sessionID = UUID()
         linkedPlan = nil
         workoutKind = .walking
         startedAt = start
-        isMotionRecording = true
+        isMotionRecording = !scheduled
+        isScheduledMotionRecording = scheduled
         startSensorCollection(
             sessionID: sessionID,
             startedAt: start,
@@ -287,15 +340,82 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         return true
     }
 
-    func stopMotionRecording() {
-        guard isMotionRecording else { return }
+    private func finishAmbientCapture() {
+        guard isMotionRecording || isScheduledMotionRecording else { return }
         if let summary = stopSensorCollection(at: .now, isFinal: true) {
-            onSensorSummary?(summary)
+            enqueueAmbientSummary(summary)
         }
         isMotionRecording = false
+        isScheduledMotionRecording = false
         startedAt = nil
         workoutKind = nil
         linkedPlan = nil
+    }
+
+    private func restartAutomaticCapture() {
+        stopScheduledCapture()
+        guard accelerationSettings?.isEnabled == true else { return }
+        scheduledCaptureTask = Task { [weak self] in
+            guard let self else { return }
+            while !Task.isCancelled {
+                self.startScheduledCapture()
+                let interval = self.accelerationSettings?.profile.interval ?? 0
+                guard interval > 0 else { return }
+                try? await Task.sleep(
+                    nanoseconds: UInt64(interval * 1_000_000_000)
+                )
+            }
+        }
+    }
+
+    private func startScheduledCapture() {
+        guard !isActive, !isMotionRecording, !isScheduledMotionRecording else {
+            return
+        }
+        guard beginAmbientCapture(at: .now, scheduled: true) else { return }
+        scheduledStopTask?.cancel()
+        let duration = Double(
+            accelerationSettings?.samplingWindowSeconds ?? 30
+        )
+        scheduledStopTask = Task { [weak self] in
+            try? await Task.sleep(
+                nanoseconds: UInt64(duration * 1_000_000_000)
+            )
+            guard !Task.isCancelled else { return }
+            self?.finishScheduledCapture()
+        }
+    }
+
+    private func finishScheduledCapture() {
+        guard isScheduledMotionRecording else { return }
+        finishAmbientCapture()
+    }
+
+    private func stopScheduledCapture() {
+        scheduledCaptureTask?.cancel()
+        scheduledCaptureTask = nil
+        scheduledStopTask?.cancel()
+        scheduledStopTask = nil
+        if isScheduledMotionRecording {
+            finishScheduledCapture()
+        }
+    }
+
+    private func restartHealthSync() {
+        healthSyncTask?.cancel()
+        healthSyncTask = nil
+        guard dataSyncProfile.interval > 0 else { return }
+        healthSyncTask = Task { [weak self] in
+            guard let self else { return }
+            while !Task.isCancelled {
+                await self.emitHealthSnapshot()
+                let interval = self.dataSyncProfile.interval
+                guard interval > 0 else { return }
+                try? await Task.sleep(
+                    nanoseconds: UInt64(interval * 1_000_000_000)
+                )
+            }
+        }
     }
 
     private func requestAuthorization() async throws {
@@ -335,6 +455,151 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             toShare: [workout],
             read: readTypes
         )
+    }
+
+    private func emitHealthSnapshot(forceFlush: Bool = false) async {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        if !didRequestHealthReadAuthorization {
+            try? await requestHealthReadAuthorization()
+            didRequestHealthReadAuthorization = true
+        }
+        let calendar = Calendar.current
+        let now = Date.now
+        let dayStart = calendar.startOfDay(for: now)
+        let span = DateInterval(start: dayStart, end: now)
+        async let energy = quantityTotal(
+            identifier: .activeEnergyBurned,
+            unit: .kilocalorie(),
+            span: span
+        )
+        async let exercise = quantityTotal(
+            identifier: .appleExerciseTime,
+            unit: .minute(),
+            span: span
+        )
+        async let stand = quantityTotal(
+            identifier: .appleStandTime,
+            unit: .minute(),
+            span: span
+        )
+        async let sleep = sleepMinutes(in: span)
+        async let workouts = workoutCount(in: span)
+        let snapshot = TaptionWatchHealthSnapshot(
+            capturedAt: now,
+            dayStart: dayStart,
+            activeEnergyKilocalories: await energy,
+            exerciseMinutes: await exercise,
+            standHours: (await stand).map { $0 / 60 },
+            sleepMinutes: await sleep,
+            workoutCount: await workouts,
+            source: "Apple Watch HealthKit"
+        )
+        onHealthSnapshot?(snapshot)
+        flushPendingAmbientSummaries(force: forceFlush)
+    }
+
+    private func requestHealthReadAuthorization() async throws {
+        var readTypes: Set<HKObjectType> = [
+            HKObjectType.workoutType(),
+        ]
+        for identifier in [
+            HKQuantityTypeIdentifier.activeEnergyBurned,
+            .appleExerciseTime,
+            .appleStandTime,
+        ] {
+            if let type = HKObjectType.quantityType(forIdentifier: identifier) {
+                readTypes.insert(type)
+            }
+        }
+        if let sleep = HKObjectType.categoryType(
+            forIdentifier: .sleepAnalysis
+        ) {
+            readTypes.insert(sleep)
+        }
+        try await healthStore.requestAuthorization(toShare: [], read: readTypes)
+    }
+
+    private func quantityTotal(
+        identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        span: DateInterval
+    ) async -> Double? {
+        guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
+            return nil
+        }
+        let predicate = HKQuery.predicateForSamples(
+            withStart: span.start,
+            end: span.end,
+            options: .strictStartDate
+        )
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum
+            ) { _, statistics, _ in
+                continuation.resume(
+                    returning: statistics?.sumQuantity()?.doubleValue(for: unit)
+                )
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    private func sleepMinutes(in span: DateInterval) async -> Double? {
+        guard let type = HKObjectType.categoryType(
+            forIdentifier: .sleepAnalysis
+        ) else { return nil }
+        let predicate = HKQuery.predicateForSamples(
+            withStart: span.start,
+            end: span.end,
+            options: .strictStartDate
+        )
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                let total = (samples ?? []).compactMap { sample -> TimeInterval? in
+                    guard let category = sample as? HKCategorySample else {
+                        return nil
+                    }
+                    // inBed and awake are context, not sleep duration.
+                    guard category.value == 1
+                        || category.value == 3
+                        || category.value == 4
+                        || category.value == 5 else {
+                        return nil
+                    }
+                    let start = max(category.startDate, span.start)
+                    let end = min(category.endDate, span.end)
+                    return end > start ? end.timeIntervalSince(start) : nil
+                }.reduce(0, +)
+                continuation.resume(returning: total > 0 ? total / 60 : nil)
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    private func workoutCount(in span: DateInterval) async -> Int {
+        let predicate = HKQuery.predicateForSamples(
+            withStart: span.start,
+            end: span.end,
+            options: .strictStartDate
+        )
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: HKObjectType.workoutType(),
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, _ in
+                continuation.resume(returning: samples?.count ?? 0)
+            }
+            healthStore.execute(query)
+        }
     }
 
     private func updateStatistics(for types: Set<HKSampleType>) {
@@ -387,6 +652,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         archivedAccelerationSampleCount = 0
         latestRelativeAltitudeMeters = nil
         errorMessage = message
+        restartAutomaticCapture()
     }
 
     private func startSensorCollection(
@@ -754,10 +1020,37 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         ) else {
             return
         }
-        onSensorSummary?(summary)
+        if summary.isAmbient == true {
+            enqueueAmbientSummary(summary)
+        } else {
+            onSensorSummary?(summary)
+        }
         flushAccelerationArchive()
         pendingRoutePoints.removeAll(keepingCapacity: true)
         pendingBehaviorSegments.removeAll(keepingCapacity: true)
+    }
+
+    private func flushPendingAmbientSummaries(force: Bool = false) {
+        guard (dataSyncProfile.interval > 0 || force),
+              !pendingAmbientSummaries.isEmpty else { return }
+        let pending = pendingAmbientSummaries
+        pendingAmbientSummaries.removeAll(keepingCapacity: true)
+        for summary in pending {
+            onSensorSummary?(summary)
+        }
+    }
+
+    private func enqueueAmbientSummary(_ summary: TaptionWatchSensorSummary) {
+        pendingAmbientSummaries.removeAll {
+            $0.sessionID == summary.sessionID
+                && $0.sequence == summary.sequence
+        }
+        pendingAmbientSummaries.append(summary)
+        if pendingAmbientSummaries.count > 40 {
+            pendingAmbientSummaries.removeFirst(
+                pendingAmbientSummaries.count - 40
+            )
+        }
     }
 
     private func stopSensorCollection(

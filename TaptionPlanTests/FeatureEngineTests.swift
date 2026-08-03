@@ -2157,6 +2157,48 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(balanced.minimumEmissionInterval, 5 * 60)
     }
 
+    func testWatchCollectionAndDataSyncProfilesAreIndependent() throws {
+        XCTAssertEqual(
+            TaptionWatchAccelerationProfile.batterySaver.interval,
+            15 * 60
+        )
+        XCTAssertEqual(
+            TaptionWatchAccelerationProfile.accuracy.interval,
+            60
+        )
+        XCTAssertEqual(
+            TaptionWatchDataSyncProfile.balanced.interval,
+            5 * 60
+        )
+        XCTAssertNil(TaptionWatchDataSyncProfile.off.intervalMinutes)
+
+        let settings = TaptionWatchAccelerationSettings(
+            profile: .accuracy,
+            samplingWindowSeconds: 90
+        )
+        XCTAssertEqual(settings.samplingWindowSeconds, 60)
+        XCTAssertTrue(settings.isEnabled)
+
+        let data = try JSONEncoder().encode(
+            TaptionWatchPayload(
+                generatedAt: .now,
+                viewportStart: .now,
+                viewportEnd: .now,
+                items: [],
+                catStyle: "calico",
+                reducesMotion: false,
+                accelerationSettings: settings,
+                dataSyncProfile: .batterySaver
+            )
+        )
+        let decoded = try JSONDecoder().decode(
+            TaptionWatchPayload.self,
+            from: data
+        )
+        XCTAssertEqual(decoded.accelerationSettings, settings)
+        XCTAssertEqual(decoded.dataSyncProfile, .batterySaver)
+    }
+
     func testAutomaticTrackingPromotionAndStopPolicy() {
         XCTAssertFalse(
             TrackingSessionPolicy.shouldAutomaticallyStart(

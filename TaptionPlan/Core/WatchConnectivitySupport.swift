@@ -122,6 +122,8 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
     private var sensorSummaryHandler:
         (@Sendable (TaptionWatchSensorSummary) -> Void)?
+    private var healthSnapshotHandler:
+        (@Sendable (TaptionWatchHealthSnapshot) -> Void)?
     private var statusHandler: (@Sendable (AppleWatchConnectionState) -> Void)?
 
     override init() {
@@ -134,10 +136,14 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         onSensorSummary: @escaping @Sendable (
             TaptionWatchSensorSummary
         ) -> Void,
+        onHealthSnapshot: @escaping @Sendable (
+            TaptionWatchHealthSnapshot
+        ) -> Void = { _ in },
         onStatusChange: @escaping @Sendable (AppleWatchConnectionState) -> Void
     ) {
         commandHandler = onCommand
         sensorSummaryHandler = onSensorSummary
+        healthSnapshotHandler = onHealthSnapshot
         statusHandler = onStatusChange
         guard WCSession.isSupported() else {
             onStatusChange(.unsupported)
@@ -190,6 +196,21 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 replyHandler: nil,
                 errorHandler: nil
             )
+        }
+    }
+
+    func requestWatchDataSync() {
+        guard WCSession.isSupported() else { return }
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.dataSyncRequestKey: true,
+        ]
+        let session = WCSession.default
+        guard session.activationState == .activated, session.isPaired else {
+            return
+        }
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
         }
     }
 
@@ -267,6 +288,16 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             // the archive and activity upsert are idempotent, while marking a
             // batch consumed before persistence could lose it on an app crash.
             sensorSummaryHandler?(summary)
+            accepted = true
+        }
+        if let data = envelope[
+            TaptionWatchEnvelope.healthSnapshotKey
+        ] as? Data,
+        let snapshot = try? decoder.decode(
+            TaptionWatchHealthSnapshot.self,
+            from: data
+        ) {
+            healthSnapshotHandler?(snapshot)
             accepted = true
         }
         return accepted

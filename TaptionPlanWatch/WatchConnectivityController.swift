@@ -12,15 +12,21 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private let cachedPayloadKey = "TaptionPlan.cachedWatchPayload"
     private let pendingSensorSummariesKey =
         "TaptionPlan.pendingWatchSensorSummaries"
+    private let pendingHealthSnapshotsKey =
+        "TaptionPlan.pendingWatchHealthSnapshots"
     private var pendingSensorSummaries: [TaptionWatchSensorSummary] = []
+    private var pendingHealthSnapshots: [TaptionWatchHealthSnapshot] = []
     private var widgetReloadFollowupTask: Task<Void, Never>?
     private var handledWorkoutRequestIDs = Set<UUID>()
     var onWorkoutRequest: ((TaptionWatchWorkoutRequest) -> Void)?
+    var onPayloadChange: ((TaptionWatchPayload) -> Void)?
+    var onDataSyncRequest: (() -> Void)?
 
     override init() {
         super.init()
         restoreCachedPayload()
         restorePendingSensorSummaries()
+        restorePendingHealthSnapshots()
         guard WCSession.isSupported() else {
             statusText = "연결을 지원하지 않음"
             return
@@ -108,6 +114,25 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         transfer(summary, through: session)
     }
 
+    func sendHealthSnapshot(_ snapshot: TaptionWatchHealthSnapshot) {
+        guard WCSession.isSupported(),
+              let data = try? encoder.encode(snapshot) else {
+            return
+        }
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.healthSnapshotKey: data,
+        ]
+        let session = WCSession.default
+        guard session.activationState == .activated else {
+            cachePending(snapshot)
+            return
+        }
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
+        }
+    }
+
     nonisolated func session(
         _ session: WCSession,
         activationDidCompleteWith activationState: WCSessionActivationState,
@@ -128,6 +153,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             }
             if activationState == .activated {
                 self?.flushPendingSensorSummaries(using: .default)
+                self?.flushPendingHealthSnapshots(using: .default)
                 self?.requestSync()
             }
         }
@@ -165,9 +191,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let workoutData = message[
             TaptionWatchEnvelope.workoutRequestKey
         ] as? Data
+        let dataSyncRequested = message[
+            TaptionWatchEnvelope.dataSyncRequestKey
+        ] as? Bool == true
         Task { @MainActor [weak self] in
             if let data { self?.apply(data: data) }
             if let workoutData { self?.applyWorkoutRequest(data: workoutData) }
+            if dataSyncRequested {
+                self?.onDataSyncRequest?()
+            }
         }
     }
 
@@ -179,9 +211,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let workoutData = userInfo[
             TaptionWatchEnvelope.workoutRequestKey
         ] as? Data
+        let dataSyncRequested = userInfo[
+            TaptionWatchEnvelope.dataSyncRequestKey
+        ] as? Bool == true
         Task { @MainActor [weak self] in
             if let data { self?.apply(data: data) }
             if let workoutData { self?.applyWorkoutRequest(data: workoutData) }
+            if dataSyncRequested {
+                self?.onDataSyncRequest?()
+            }
         }
     }
 
@@ -206,6 +244,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         payload = value
+        onPayloadChange?(value)
         UserDefaults.standard.set(data, forKey: cachedPayloadKey)
         publishToWidget(value)
     }
@@ -250,6 +289,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         payload = value
+        onPayloadChange?(value)
         publishToWidget(value)
     }
 
@@ -337,6 +377,49 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         for summary in pending {
             transfer(summary, through: session)
         }
+    }
+
+    private func cachePending(_ snapshot: TaptionWatchHealthSnapshot) {
+        pendingHealthSnapshots.removeAll { $0.capturedAt == snapshot.capturedAt }
+        pendingHealthSnapshots.append(snapshot)
+        pendingHealthSnapshots.sort { $0.capturedAt < $1.capturedAt }
+        if pendingHealthSnapshots.count > 20 {
+            pendingHealthSnapshots.removeFirst(pendingHealthSnapshots.count - 20)
+        }
+        persistPendingHealthSnapshots()
+    }
+
+    private func flushPendingHealthSnapshots(using session: WCSession) {
+        guard session.activationState == .activated,
+              !pendingHealthSnapshots.isEmpty else { return }
+        let pending = pendingHealthSnapshots
+        pendingHealthSnapshots = []
+        persistPendingHealthSnapshots()
+        for snapshot in pending {
+            sendHealthSnapshot(snapshot)
+        }
+    }
+
+    private func restorePendingHealthSnapshots() {
+        guard let data = UserDefaults.standard.data(
+            forKey: pendingHealthSnapshotsKey
+        ),
+        let values = try? decoder.decode(
+            [TaptionWatchHealthSnapshot].self,
+            from: data
+        ) else { return }
+        pendingHealthSnapshots = values
+    }
+
+    private func persistPendingHealthSnapshots() {
+        if pendingHealthSnapshots.isEmpty {
+            UserDefaults.standard.removeObject(forKey: pendingHealthSnapshotsKey)
+            return
+        }
+        guard let data = try? encoder.encode(pendingHealthSnapshots) else {
+            return
+        }
+        UserDefaults.standard.set(data, forKey: pendingHealthSnapshotsKey)
     }
 
     private func restorePendingSensorSummaries() {

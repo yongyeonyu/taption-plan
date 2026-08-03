@@ -210,6 +210,8 @@ struct SettingsView: View {
                         )
                         locationIntegrationRow
                         sensorCollectionProfileRow
+                        watchAccelerationCollectionRow
+                        watchDataSyncRow
                         settingsToggleRow(
                             icon: "cloud.sun",
                             iconBackground: .tpWeather,
@@ -658,6 +660,177 @@ struct SettingsView: View {
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
         }
+    }
+
+    private var watchAccelerationCollectionRow: some View {
+        VStack(spacing: 7) {
+            HStack(spacing: 8) {
+                Image(systemName: "waveform.path.ecg")
+                    .font(.taption(size: 14))
+                    .foregroundStyle(Color.tpHealthDark)
+                    .frame(width: 27, height: 27)
+                    .background(
+                        Color(red: 0.93, green: 0.96, blue: 0.91),
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Apple Watch 가속도 수집")
+                        .font(
+                            .taption(
+                                size: SettingsTypography.rowTitle,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(Color.tpInk)
+                    Text(
+                        "워치는 가속도만 "
+                            + model.settings.watchAccelerationProfile.subtitle
+                    )
+                        .font(.taption(size: SettingsTypography.rowSubtitle))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+
+                Spacer(minLength: 4)
+                Text(model.settings.watchAccelerationProfile.displayName)
+                    .font(
+                        .taption(
+                            size: SettingsTypography.value,
+                            weight: .bold
+                        )
+                    )
+                    .foregroundStyle(Color.tpHealthDark)
+            }
+
+            Slider(
+                value: Binding(
+                    get: {
+                        Double(model.settings.watchAccelerationProfile.rawValue)
+                    },
+                    set: { value in
+                        guard let profile = TaptionWatchAccelerationProfile(
+                            rawValue: Int(value.rounded())
+                        ) else { return }
+                        model.setWatchAccelerationProfile(profile)
+                    }
+                ),
+                in: 0...3,
+                step: 1
+            )
+            .tint(Color.tpHealthDark)
+            .accessibilityLabel("Apple Watch 가속도 수집 간격")
+            .accessibilityValue(
+                model.settings.watchAccelerationProfile.subtitle
+            )
+
+            HStack {
+                watchProfileLabel("끔", alignment: .leading)
+                watchProfileLabel("15분", alignment: .center)
+                watchProfileLabel("5분", alignment: .center)
+                watchProfileLabel("1분", alignment: .trailing)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .frame(height: 0.5)
+        }
+    }
+
+    private var watchDataSyncRow: some View {
+        VStack(spacing: 7) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.taption(size: 14))
+                    .foregroundStyle(Color.tpMovementDark)
+                    .frame(width: 27, height: 27)
+                    .background(
+                        Color.tpMovement,
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Apple Watch 데이터 가져오기")
+                        .font(
+                            .taption(
+                                size: SettingsTypography.rowTitle,
+                                weight: .bold
+                            )
+                        )
+                        .foregroundStyle(Color.tpInk)
+                    Text(model.settings.watchDataSyncProfile.subtitle)
+                        .font(.taption(size: SettingsTypography.rowSubtitle))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+
+                Spacer(minLength: 4)
+                Text(model.settings.watchDataSyncProfile.displayName)
+                    .font(
+                        .taption(
+                            size: SettingsTypography.value,
+                            weight: .bold
+                        )
+                    )
+                    .foregroundStyle(Color.tpMovementDark)
+            }
+
+            Slider(
+                value: Binding(
+                    get: {
+                        Double(model.settings.watchDataSyncProfile.rawValue)
+                    },
+                    set: { value in
+                        guard let profile = TaptionWatchDataSyncProfile(
+                            rawValue: Int(value.rounded())
+                        ) else { return }
+                        model.setWatchDataSyncProfile(profile)
+                    }
+                ),
+                in: 0...3,
+                step: 1
+            )
+            .tint(Color.tpMovementDark)
+            .accessibilityLabel("Apple Watch 데이터 가져오기 간격")
+            .accessibilityValue(model.settings.watchDataSyncProfile.subtitle)
+
+            HStack {
+                Text("건강·활동·가속도 최신값")
+                    .font(.taption(size: SettingsTypography.footnote))
+                    .foregroundStyle(Color.tpSecondary)
+                Spacer()
+                Button("지금 가져오기") {
+                    model.requestWatchDataSync()
+                }
+                .font(.taption(size: SettingsTypography.footnote, weight: .bold))
+                .foregroundStyle(Color.tpMovementDark)
+            }
+
+            HStack {
+                watchProfileLabel("끔", alignment: .leading)
+                watchProfileLabel("15분", alignment: .center)
+                watchProfileLabel("5분", alignment: .center)
+                watchProfileLabel("1분", alignment: .trailing)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .frame(height: 0.5)
+        }
+    }
+
+    private func watchProfileLabel(
+        _ text: String,
+        alignment: Alignment
+    ) -> some View {
+        Text(text)
+            .font(.taption(size: SettingsTypography.footnote))
+            .foregroundStyle(Color.tpSecondary)
+            .frame(maxWidth: .infinity, alignment: alignment)
     }
 
     private func sensorProfileLabel(

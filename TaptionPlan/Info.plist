@@ -33,12 +33,16 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>AIRKOREA_SERVICE_KEY</key>
 	<string>$(AIRKOREA_SERVICE_KEY)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>고정된 일정을 시간표에 표시하기 위해 캘린더 접근이 필요합니다.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>운동과 수면 단계의 실제 기록을 시간표와 비교하기 위해 건강 데이터 접근이 필요합니다.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>운동과 수면 기록을 앱의 시간표와 동기화하기 위해 건강 데이터 저장 권한이 필요합니다.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>방문 장소와 이동 구간을 저전력 방식으로 자동 기록하려면 백그라운드 위치 접근이 필요합니다.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

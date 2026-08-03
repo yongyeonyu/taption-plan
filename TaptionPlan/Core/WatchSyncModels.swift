@@ -769,6 +769,97 @@ struct TaptionWatchDaySummary: Codable, Hashable, Sendable {
     var activeMinutes: Int
 }
 
+/// iPhone-owned policy for low-power, periodic Watch motion sampling.
+/// The Watch receives this with the normal timeline payload so an offline
+/// payload remains safe and backward compatible.
+enum TaptionWatchAccelerationProfile: Int, Codable, CaseIterable, Hashable, Sendable {
+    case off = 0
+    case batterySaver = 1
+    case balanced = 2
+    case accuracy = 3
+
+    var interval: TimeInterval {
+        switch self {
+        case .off: 0
+        case .batterySaver: 15 * 60
+        case .balanced: 5 * 60
+        case .accuracy: 60
+        }
+    }
+
+    var intervalMinutes: Int? {
+        guard interval > 0 else { return nil }
+        return Int(interval / 60)
+    }
+
+    var displayName: String {
+        switch self {
+        case .off: "끔"
+        case .batterySaver: "배터리 최소화"
+        case .balanced: "균형"
+        case .accuracy: "정확도 최적화"
+        }
+    }
+
+    var subtitle: String {
+        guard let intervalMinutes else { return "자동 수집 안 함" }
+        return intervalMinutes.description + "분마다 30초 수집"
+    }
+}
+
+enum TaptionWatchDataSyncProfile: Int, Codable, CaseIterable, Hashable, Sendable {
+    case off = 0
+    case batterySaver = 1
+    case balanced = 2
+    case accuracy = 3
+
+    var interval: TimeInterval {
+        switch self {
+        case .off: 0
+        case .batterySaver: 15 * 60
+        case .balanced: 5 * 60
+        case .accuracy: 60
+        }
+    }
+
+    var intervalMinutes: Int? {
+        guard interval > 0 else { return nil }
+        return Int(interval / 60)
+    }
+
+    var displayName: String {
+        switch self {
+        case .off: "끔"
+        case .batterySaver: "배터리 최소화"
+        case .balanced: "균형"
+        case .accuracy: "최신 데이터 우선"
+        }
+    }
+
+    var subtitle: String {
+        guard let intervalMinutes else { return "자동 가져오기 안 함" }
+        return intervalMinutes.description + "분마다 건강·활동 데이터 가져오기"
+    }
+}
+
+struct TaptionWatchAccelerationSettings: Codable, Hashable, Sendable {
+    var profile: TaptionWatchAccelerationProfile
+    var samplingWindowSeconds: Int
+
+    init(
+        profile: TaptionWatchAccelerationProfile,
+        samplingWindowSeconds: Int = 30
+    ) {
+        self.profile = profile
+        self.samplingWindowSeconds = min(
+            60,
+            max(20, samplingWindowSeconds)
+        )
+    }
+
+    var isEnabled: Bool { profile != .off }
+}
+
 struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var generatedAt: Date
     var viewportStart: Date
@@ -777,6 +868,19 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var catStyle: String
     var reducesMotion: Bool
     var todaySummary: TaptionWatchDaySummary? = nil
+    var accelerationSettings: TaptionWatchAccelerationSettings? = nil
+    var dataSyncProfile: TaptionWatchDataSyncProfile? = nil
+}
+
+struct TaptionWatchHealthSnapshot: Codable, Hashable, Sendable {
+    var capturedAt: Date
+    var dayStart: Date
+    var activeEnergyKilocalories: Double?
+    var exerciseMinutes: Double?
+    var standHours: Double?
+    var sleepMinutes: Double?
+    var workoutCount: Int
+    var source: String
 }
 
 struct TaptionWatchSensorVector3: Codable, Hashable, Sendable {
@@ -855,8 +959,10 @@ enum TaptionWatchEnvelope {
     static let payloadKey = "taption.watch.payload"
     static let commandKey = "taption.watch.command"
     static let sensorSummaryKey = "taption.watch.sensor-summary"
+    static let healthSnapshotKey = "taption.watch.health-snapshot"
     static let workoutRequestKey = "taption.watch.workout-request"
     static let refreshRequestKey = "taption.watch.refresh-request"
+    static let dataSyncRequestKey = "taption.watch.data-sync-request"
     static let acceptedKey = "taption.watch.accepted"
 }
 

@@ -254,6 +254,11 @@ final class AppModel {
                     await self?.applyWatchSensorSummary(summary)
                 }
             },
+            onHealthSnapshot: { [weak self] snapshot in
+                Task { @MainActor [weak self] in
+                    await self?.applyWatchHealthSnapshot(snapshot)
+                }
+            },
             onStatusChange: { [weak self] state in
                 Task { @MainActor [weak self] in
                     self?.appleWatchConnectionState = state
@@ -1132,6 +1137,30 @@ final class AppModel {
             isSensorCollecting = true
         }
         Task { await persist() }
+    }
+
+    func setWatchAccelerationProfile(
+        _ profile: TaptionWatchAccelerationProfile
+    ) {
+        guard snapshot.settings.watchAccelerationProfile != profile else {
+            return
+        }
+        snapshot.settings.watchAccelerationProfile = profile
+        Task { await persist() }
+    }
+
+    func setWatchDataSyncProfile(
+        _ profile: TaptionWatchDataSyncProfile
+    ) {
+        guard snapshot.settings.watchDataSyncProfile != profile else {
+            return
+        }
+        snapshot.settings.watchDataSyncProfile = profile
+        Task { await persist() }
+    }
+
+    func requestWatchDataSync() {
+        watchConnectivityService.requestWatchDataSync()
     }
 
     func startTracking(_ kind: TrackingKind) async {
@@ -2895,6 +2924,18 @@ final class AppModel {
         await persistDeviceLocalSnapshot()
     }
 
+    private func applyWatchHealthSnapshot(
+        _ snapshot: TaptionWatchHealthSnapshot
+    ) async {
+        archiveRawDeviceData(
+            source: .appleWatch,
+            kind: "watch-health-snapshot",
+            payload: snapshot,
+            capturedAt: snapshot.capturedAt
+        )
+        await persistDeviceLocalSnapshot()
+    }
+
     private func isWatchSummaryAtHome(
         _ summary: TaptionWatchSensorSummary
     ) -> Bool {
@@ -3882,19 +3923,20 @@ final class AppModel {
             }
         }
 
-        if let point = reading.point,
-           point.horizontalAccuracy >= 0,
-           point.horizontalAccuracy <= 50 {
-            let lastPoint = liveRouteState.readings.last?.point
-            let shouldAppend = lastPoint.map {
-                distanceMeters($0, point) >= 2
-            } ?? true
-            if shouldAppend {
-                liveRouteState.readings.append(reading)
-                if liveRouteState.readings.count > Self.liveRouteSoftLimit {
-                    liveRouteState.readings.removeFirst(
-                        liveRouteState.readings.count - Self.liveRouteHardLimit
-                    )
+        if let point = reading.point {
+            if point.horizontalAccuracy >= 0,
+               point.horizontalAccuracy <= 50 {
+                let lastPoint = liveRouteState.readings.last?.point
+                let shouldAppend = lastPoint.map {
+                    distanceMeters($0, point) >= 2
+                } ?? true
+                if shouldAppend {
+                    liveRouteState.readings.append(reading)
+                    if liveRouteState.readings.count > Self.liveRouteSoftLimit {
+                        liveRouteState.readings.removeFirst(
+                            liveRouteState.readings.count - Self.liveRouteHardLimit
+                        )
+                    }
                 }
             }
             refreshCurrentEnvironmentIfNeeded(
@@ -3959,8 +4001,12 @@ final class AppModel {
         let movedFarEnough = lastLiveEnvironmentPoint.map {
             distanceMeters($0, point) >= 3_000
         } ?? true
+        // Keep environment samples on the same cadence as the configured
+        // GPS/sensor duty cycle.  The provider caches the value, so a one-
+        // minute accuracy profile does not imply a one-minute network call.
+        let collectionInterval = settings.sensorCollectionProfile.interval
         let agedEnough = lastLiveEnvironmentAt.map {
-            date.timeIntervalSince($0) >= 30 * 60
+            date.timeIntervalSince($0) >= collectionInterval
         } ?? true
         let retryAllowed = lastLiveEnvironmentFailureAt.map {
             date.timeIntervalSince($0) >= 60
@@ -3983,6 +4029,12 @@ final class AppModel {
                     latitude: point.latitude,
                     longitude: point.longitude,
                     at: date
+                )
+                self.archiveRawDeviceData(
+                    source: .gps,
+                    kind: "weather-context",
+                    payload: context,
+                    capturedAt: date
                 )
                 self.lastLiveEnvironmentPoint = point
                 self.lastLiveEnvironmentAt = date
@@ -4111,7 +4163,9 @@ final class AppModel {
 
         if !contexts.isEmpty {
             snapshot.weather.removeAll {
-                $0.observedAt >= span.start && $0.observedAt <= span.end
+                $0.placeID != nil
+                    && $0.observedAt >= span.start
+                    && $0.observedAt <= span.end
             }
             snapshot.weather.append(contentsOf: contexts)
             snapshot.weather.sort { $0.observedAt < $1.observedAt }
@@ -4252,7 +4306,11 @@ final class AppModel {
                 actuals: snapshot.actuals,
                 at: .now,
                 calendar: calendar
-            )
+            ),
+            accelerationSettings: TaptionWatchAccelerationSettings(
+                profile: snapshot.settings.watchAccelerationProfile
+            ),
+            dataSyncProfile: snapshot.settings.watchDataSyncProfile
         )
         try? watchConnectivityService.update(payload: watchPayload)
     }
@@ -4407,6 +4465,10 @@ final class AppModel {
             local.settings.backgroundPreciseLocationEnabled
         value.settings.sensorCollectionProfile =
             local.settings.sensorCollectionProfile
+        value.settings.watchAccelerationProfile =
+            local.settings.watchAccelerationProfile
+        value.settings.watchDataSyncProfile =
+            local.settings.watchDataSyncProfile
         value.settings.floorCalibration = nil
         value.settings.movementCorrections =
             local.settings.movementCorrections

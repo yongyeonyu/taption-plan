@@ -1542,6 +1542,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var locationEnabled: Bool
     var backgroundPreciseLocationEnabled: Bool
     var sensorCollectionProfile: SensorCollectionProfile
+    var watchAccelerationProfile: TaptionWatchAccelerationProfile
+    var watchDataSyncProfile: TaptionWatchDataSyncProfile
     var floorCalibration: FloorCalibration?
     var frequentPlaces: [FrequentPlace]
     var movementCorrections: [TravelModeCorrection]
@@ -1562,6 +1564,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         locationEnabled: false,
         backgroundPreciseLocationEnabled: false,
         sensorCollectionProfile: .balanced,
+        watchAccelerationProfile: .off,
+        watchDataSyncProfile: .off,
         floorCalibration: nil,
         frequentPlaces: FrequentPlace.defaults,
         movementCorrections: [],
@@ -1585,6 +1589,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         locationEnabled: Bool,
         backgroundPreciseLocationEnabled: Bool,
         sensorCollectionProfile: SensorCollectionProfile,
+        watchAccelerationProfile: TaptionWatchAccelerationProfile = .off,
+        watchDataSyncProfile: TaptionWatchDataSyncProfile = .off,
         floorCalibration: FloorCalibration? = nil,
         frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
         movementCorrections: [TravelModeCorrection] = [],
@@ -1604,6 +1610,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.locationEnabled = locationEnabled
         self.backgroundPreciseLocationEnabled = backgroundPreciseLocationEnabled
         self.sensorCollectionProfile = sensorCollectionProfile
+        self.watchAccelerationProfile = watchAccelerationProfile
+        self.watchDataSyncProfile = watchDataSyncProfile
         self.floorCalibration = floorCalibration
         self.frequentPlaces = Self.mergedFrequentPlaces(frequentPlaces)
         self.movementCorrections = movementCorrections
@@ -1625,6 +1633,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case locationEnabled
         case backgroundPreciseLocationEnabled
         case sensorCollectionProfile
+        case watchAccelerationProfile
+        case watchDataSyncProfile
         case floorCalibration
         case frequentPlaces
         case movementCorrections
@@ -1681,6 +1691,14 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             SensorCollectionProfile.self,
             forKey: .sensorCollectionProfile
         ) ?? defaults.sensorCollectionProfile
+        watchAccelerationProfile = try values.decodeIfPresent(
+            TaptionWatchAccelerationProfile.self,
+            forKey: .watchAccelerationProfile
+        ) ?? defaults.watchAccelerationProfile
+        watchDataSyncProfile = try values.decodeIfPresent(
+            TaptionWatchDataSyncProfile.self,
+            forKey: .watchDataSyncProfile
+        ) ?? defaults.watchDataSyncProfile
         floorCalibration = try values.decodeIfPresent(
             FloorCalibration.self,
             forKey: .floorCalibration

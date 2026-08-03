@@ -39,6 +39,7 @@ struct WatchContentView: View {
         )
         return VStack(alignment: .leading, spacing: 8) {
             syncHeader
+            watchCollectionStatus
             WatchCatRunner(
                 style: connectivity.payload?.catStyle ?? "calico",
                 reducesMotion: connectivity.payload?.reducesMotion ?? false,
@@ -161,6 +162,21 @@ struct WatchContentView: View {
                 }
                 .buttonStyle(.bordered)
                 .font(.caption2.weight(.bold))
+            }
+        }
+    }
+
+    private var watchCollectionStatus: some View {
+        Group {
+            if let settings = workout.accelerationSettings, settings.isEnabled {
+                Text(
+                    "아이폰 설정 · 가속도 "
+                        + settings.profile.subtitle
+                        + " · 데이터 "
+                        + workout.dataSyncProfile.subtitle
+                )
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
             }
         }
     }
