@@ -233,9 +233,13 @@ struct ReviewView: View {
             model.detail = .actual(item.record.id)
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: PlanCategory(categoryID: categoryID).systemImage)
+                Image(systemName: categoryID == "movement"
+                    ? MovementPresentation.symbol(for: item.record)
+                    : PlanCategory(categoryID: categoryID).systemImage)
                     .font(.taption(size: 12, weight: .semibold))
-                    .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
+                    .foregroundStyle(categoryID == "movement"
+                        ? Color.tpTransitDark
+                        : PlanCategory(categoryID: categoryID).darkColor)
                     .frame(width: 18)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.record.title.isEmpty
@@ -711,7 +715,9 @@ struct ActualRecordDetailView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Label(
                     record.title.isEmpty ? categoryName(categoryID) : record.title,
-                    systemImage: PlanCategory(categoryID: categoryID).systemImage
+                    systemImage: categoryID == "movement"
+                        ? MovementPresentation.symbol(for: record)
+                        : PlanCategory(categoryID: categoryID).systemImage
                 )
                 .font(.taption(size: 17, weight: .bold))
                 .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)

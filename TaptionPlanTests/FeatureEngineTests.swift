@@ -4246,6 +4246,15 @@ final class FeatureEngineTests: XCTestCase {
             ),
             ["calendar", "photo", "location", "movement", "sleep"]
         )
+        XCTAssertEqual(
+            TimelineRowOrder.moved(
+                rows,
+                sourceID: "calendar",
+                targetID: "movement",
+                savedIDs: saved
+            ),
+            ["location", "calendar", "movement", "sleep", "photo"]
+        )
     }
 
     func testDeletedActualRecordStaysSuppressedOnAutomaticRefresh() throws {

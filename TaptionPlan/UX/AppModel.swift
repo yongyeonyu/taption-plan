@@ -75,11 +75,13 @@ final class AppModel {
     private(set) var activeTrackingSession: TrackingSession?
     private(set) var trackingSessionWasRecovered = false
     private(set) var latestAltitudeEstimate: CalibratedAltitudeEstimate?
+    var floorCalibrationPrompt: FloorCalibrationPrompt? = nil
     private(set) var sleepSessions: [SleepSession] = []
     private(set) var lastHealthRefreshAt: Date?
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
     private(set) var appUsageAuthorizationState: ScreenTimeAuthorizationState = .unavailable
     var userFacingError: String?
+    @ObservationIgnored private var lastFloorCalibrationPromptKey: String? = nil
 
     var widgetSyncStatus: TaptionWidgetSyncStatus {
         TaptionWidgetSyncStatus.compare(
@@ -3529,6 +3531,8 @@ final class AppModel {
             from: reading,
             floor: floor
         )
+        floorCalibrationPrompt = nil
+        lastFloorCalibrationPromptKey = nil
         snapshot.settings.floorCalibration = nil
         snapshot.settings.frequentPlaces =
             AppFeatureSettings.mergedFrequentPlaces(
@@ -3553,6 +3557,8 @@ final class AppModel {
             return
         }
         snapshot.settings.frequentPlaces[index].clearLocation()
+        floorCalibrationPrompt = nil
+        lastFloorCalibrationPromptKey = nil
         if let latestSensorReading {
             updateFloorEstimate(with: latestSensorReading)
         } else {
@@ -3562,6 +3568,48 @@ final class AppModel {
             await persist()
             await refreshSensorTimeline(containing: selectedDate)
         }
+    }
+
+    func addFrequentPlaceFloorCalibration(
+        _ placeID: UUID,
+        floor: Int
+    ) {
+        guard (-20...200).contains(floor), floor != 0,
+              let reading = latestSensorReading,
+              reading.point != nil,
+              let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+                  $0.id == placeID
+              }) else {
+            userFacingError = "현재 위치·고도 센서를 읽은 뒤 다시 시도해 주세요."
+            return
+        }
+        snapshot.settings.frequentPlaces[index].addFloorCalibration(
+            from: reading,
+            floor: floor
+        )
+        floorCalibrationPrompt = nil
+        lastFloorCalibrationPromptKey = nil
+        snapshot.settings.frequentPlaces =
+            AppFeatureSettings.mergedFrequentPlaces(
+                snapshot.settings.frequentPlaces
+            )
+        updateFloorEstimate(with: reading)
+        Task {
+            await persist()
+            await refreshSensorTimeline(containing: selectedDate)
+        }
+    }
+
+    func acceptFloorCalibrationPrompt() {
+        guard let prompt = floorCalibrationPrompt else { return }
+        addFrequentPlaceFloorCalibration(
+            prompt.placeID,
+            floor: prompt.suggestedFloor
+        )
+    }
+
+    func dismissFloorCalibrationPrompt() {
+        floorCalibrationPrompt = nil
     }
 
     /// 자주가는 곳의 감지 반경과 건물별 층고를 저장합니다.
@@ -4040,6 +4088,22 @@ final class AppModel {
         latestAltitudeEstimate = FloorCalibrationEngine().estimate(
             reading: reading,
             calibration: calibration
+        )
+        guard let estimate = latestAltitudeEstimate else { return }
+        let knownFloors = calibration.knownFloors
+        guard !knownFloors.contains(estimate.floor),
+              abs(estimate.floor - calibration.referenceFloor) >= 1,
+              estimate.confidence != .low else {
+            return
+        }
+        let key = "\(match.id.uuidString):\(estimate.floor)"
+        guard lastFloorCalibrationPromptKey != key else { return }
+        lastFloorCalibrationPromptKey = key
+        floorCalibrationPrompt = FloorCalibrationPrompt(
+            placeID: match.id,
+            placeName: match.name,
+            suggestedFloor: estimate.floor,
+            measuredAltitudeMeters: estimate.seaLevelAltitudeMeters
         )
     }
 

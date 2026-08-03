@@ -60,7 +60,10 @@ enum TimelineRowOrder {
         }
         var result = current
         let value = result.remove(at: source)
-        result.insert(value, at: min(target, result.count))
+        // A drop on a row means "place before this row". Removing an item
+        // above the target shifts that target one slot to the left.
+        let destination = target > source ? target - 1 : target
+        result.insert(value, at: min(destination, result.count))
         return result
     }
 }
@@ -151,6 +154,97 @@ enum TravelMode: String, Codable, CaseIterable, Sendable {
     case train
     case airplane
     case ship
+}
+
+/// A single presentation source for movement results.  Automatic movement
+/// records can arrive with a generic title (for example "차량 탑승") while
+/// their classifier evidence contains the actual mode.  Keeping the mapping
+/// here prevents the timeline and 기록 화면 from choosing different icons.
+enum MovementPresentation {
+    static func mode(for actual: ActualRecord) -> TravelMode? {
+        if let behavior = actual.behavior.flatMap(WatchBehaviorKind.init(rawValue:)) {
+            switch behavior {
+            case .walking: return .walking
+            case .running: return .running
+            case .cycling: return .cycling
+            case .automotive: return .car
+            case .publicTransit: return .bus
+            case .subway: return .subway
+            case .stairsUp, .stairsDown, .elevator, .stationary, .sitting,
+                 .standing, .lying, .unknown:
+                break
+            default:
+                break
+            }
+        }
+
+        let text = ([actual.title, actual.behavior] + actual.evidence)
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .lowercased()
+        let keywords: [(TravelMode, [String])] = [
+            (.subway, ["지하철", "subway", "metro"]),
+            (.bus, ["버스", "대중교통", "정류장", "bus", "transit"]),
+            (.taxi, ["택시", "taxi"]),
+            (.car, ["자동차", "자가용", "차량", "차량 탑승", "car", "automotive", "driving"]),
+            (.train, ["기차", "열차", "train", "rail"]),
+            (.airplane, ["비행기", "항공", "airplane", "flight"]),
+            (.ship, ["배", "선박", "ship", "ferry"]),
+            (.cycling, ["자전거", "cycling", "bike"]),
+            (.running, ["달리기", "달리", "running", "run"]),
+            (.walking, ["걷기", "걷", "walking", "walk"]),
+        ]
+        return keywords.first { _, terms in
+            terms.contains { text.contains($0) }
+        }?.0
+    }
+
+    static func symbol(for actual: ActualRecord) -> String {
+        if let mode = mode(for: actual) { return symbol(for: mode) }
+        switch actual.behavior.flatMap(WatchBehaviorKind.init(rawValue:)) {
+        case .stairsUp, .stairsDown: return "stairs"
+        case .elevator: return "arrow.up.and.down"
+        default: return "figure.walk.motion"
+        }
+    }
+
+    static func symbol(for mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "figure.walk.motion"
+        case .running: "figure.run"
+        case .cycling: "bicycle"
+        case .bus: "bus.fill"
+        case .subway: "tram.fill"
+        case .taxi: "car.side.fill"
+        case .car: "car.fill"
+        case .train: "train.side.front.car"
+        case .airplane: "airplane"
+        case .ship: "ferry.fill"
+        }
+    }
+
+    static func title(for mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "걷기"
+        case .running: "달리기"
+        case .cycling: "자전거"
+        case .bus: "버스"
+        case .subway: "지하철"
+        case .taxi: "택시"
+        case .car: "자가용"
+        case .train: "기차"
+        case .airplane: "비행기"
+        case .ship: "배"
+        }
+    }
+
+    static func title(for actual: ActualRecord) -> String {
+        if let behavior = actual.behavior.flatMap(WatchBehaviorKind.init(rawValue:)),
+           behavior.isMovement {
+            return behavior.title
+        }
+        return mode(for: actual).map(title(for:)) ?? actual.title
+    }
 }
 
 enum CatStyle: String, Codable, CaseIterable, Sendable {
@@ -783,6 +877,15 @@ struct GeoPoint: Codable, Hashable, Sendable {
     var verticalAccuracy: Double
 }
 
+struct FloorCalibrationPoint: Codable, Hashable, Sendable {
+    var floor: Int
+    var point: GeoPoint
+    var relativeAltitudeMeters: Double?
+    var pressureKilopascals: Double?
+    var altimeterSessionID: UUID?
+    var capturedAt: Date
+}
+
 struct FloorCalibration: Codable, Hashable, Sendable {
     var placeName: String
     var referenceFloor: Int
@@ -792,6 +895,7 @@ struct FloorCalibration: Codable, Hashable, Sendable {
     var referencePressureKilopascals: Double?
     var referenceAltimeterSessionID: UUID?
     var capturedAt: Date?
+    var referencePoints: [FloorCalibrationPoint]
 
     static let homeTwentiethFloor = FloorCalibration(
         placeName: "집",
@@ -801,11 +905,75 @@ struct FloorCalibration: Codable, Hashable, Sendable {
         referenceRelativeAltitudeMeters: nil,
         referencePressureKilopascals: nil,
         referenceAltimeterSessionID: nil,
-        capturedAt: nil
+        capturedAt: nil,
+        referencePoints: []
     )
 
+    init(
+        placeName: String,
+        referenceFloor: Int,
+        floorHeightMeters: Double,
+        referencePoint: GeoPoint?,
+        referenceRelativeAltitudeMeters: Double?,
+        referencePressureKilopascals: Double?,
+        referenceAltimeterSessionID: UUID?,
+        capturedAt: Date?,
+        referencePoints: [FloorCalibrationPoint] = []
+    ) {
+        self.placeName = placeName
+        self.referenceFloor = referenceFloor
+        self.floorHeightMeters = floorHeightMeters
+        self.referencePoint = referencePoint
+        self.referenceRelativeAltitudeMeters = referenceRelativeAltitudeMeters
+        self.referencePressureKilopascals = referencePressureKilopascals
+        self.referenceAltimeterSessionID = referenceAltimeterSessionID
+        self.capturedAt = capturedAt
+        self.referencePoints = referencePoints
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case placeName, referenceFloor, floorHeightMeters, referencePoint
+        case referenceRelativeAltitudeMeters, referencePressureKilopascals
+        case referenceAltimeterSessionID, capturedAt, referencePoints
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        placeName = try values.decode(String.self, forKey: .placeName)
+        referenceFloor = try values.decode(Int.self, forKey: .referenceFloor)
+        floorHeightMeters = try values.decodeIfPresent(
+            Double.self,
+            forKey: .floorHeightMeters
+        ) ?? 3
+        referencePoint = try values.decodeIfPresent(
+            GeoPoint.self,
+            forKey: .referencePoint
+        )
+        referenceRelativeAltitudeMeters = try values.decodeIfPresent(
+            Double.self,
+            forKey: .referenceRelativeAltitudeMeters
+        )
+        referencePressureKilopascals = try values.decodeIfPresent(
+            Double.self,
+            forKey: .referencePressureKilopascals
+        )
+        referenceAltimeterSessionID = try values.decodeIfPresent(
+            UUID.self,
+            forKey: .referenceAltimeterSessionID
+        )
+        capturedAt = try values.decodeIfPresent(Date.self, forKey: .capturedAt)
+        referencePoints = try values.decodeIfPresent(
+            [FloorCalibrationPoint].self,
+            forKey: .referencePoints
+        ) ?? []
+    }
+
     var isCaptured: Bool {
-        referencePoint != nil && capturedAt != nil
+        (referencePoint != nil && capturedAt != nil) || !referencePoints.isEmpty
+    }
+
+    var knownFloors: Set<Int> {
+        Set([referenceFloor] + referencePoints.map(\.floor))
     }
 }
 
@@ -815,6 +983,14 @@ struct CalibratedAltitudeEstimate: Codable, Hashable, Sendable {
     var verticalAccuracyMeters: Double
     var confidence: ConfidenceLevel
     var evidence: [String]
+}
+
+struct FloorCalibrationPrompt: Identifiable, Equatable, Sendable {
+    var placeID: UUID
+    var placeName: String
+    var suggestedFloor: Int
+    var measuredAltitudeMeters: Double
+    var id: UUID { placeID }
 }
 
 enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
@@ -861,6 +1037,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     var referencePressureKilopascals: Double?
     var referenceAltimeterSessionID: UUID?
     var floorCapturedAt: Date?
+    var floorReferencePoints: [FloorCalibrationPoint]
     var radiusMeters: Double
     /// 건물마다 다른 층 높이를 고도 보정에 사용합니다. 기본값은 3m입니다.
     var floorHeightMeters: Double
@@ -881,6 +1058,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         referencePressureKilopascals: Double? = nil,
         referenceAltimeterSessionID: UUID? = nil,
         floorCapturedAt: Date? = nil,
+        floorReferencePoints: [FloorCalibrationPoint] = [],
         radiusMeters: Double = 120,
         floorHeightMeters: Double = 3,
         minimumDwellMinutes: Int = 10,
@@ -899,6 +1077,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
             referencePressureKilopascals
         self.referenceAltimeterSessionID = referenceAltimeterSessionID
         self.floorCapturedAt = floorCapturedAt
+        self.floorReferencePoints = floorReferencePoints
         self.radiusMeters = radiusMeters
         self.floorHeightMeters = min(max(floorHeightMeters, 2.2), 5.0)
         self.minimumDwellMinutes = min(max(minimumDwellMinutes, 1), 240)
@@ -917,6 +1096,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         case referencePressureKilopascals
         case referenceAltimeterSessionID
         case floorCapturedAt
+        case floorReferencePoints
         case radiusMeters
         case floorHeightMeters
         case minimumDwellMinutes
@@ -954,6 +1134,10 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
             Date.self,
             forKey: .floorCapturedAt
         )
+        floorReferencePoints = try values.decodeIfPresent(
+            [FloorCalibrationPoint].self,
+            forKey: .floorReferencePoints
+        ) ?? []
         radiusMeters = min(
             max(
                 try values.decodeIfPresent(Double.self, forKey: .radiusMeters)
@@ -1012,6 +1196,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
             forKey: .referenceAltimeterSessionID
         )
         try values.encodeIfPresent(floorCapturedAt, forKey: .floorCapturedAt)
+        try values.encode(floorReferencePoints, forKey: .floorReferencePoints)
         try values.encode(radiusMeters, forKey: .radiusMeters)
         try values.encode(floorHeightMeters, forKey: .floorHeightMeters)
         try values.encode(minimumDwellMinutes, forKey: .minimumDwellMinutes)
@@ -1048,7 +1233,8 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
             referencePressureKilopascals:
                 referencePressureKilopascals,
             referenceAltimeterSessionID: referenceAltimeterSessionID,
-            capturedAt: floorCapturedAt ?? updatedAt
+            capturedAt: floorCapturedAt ?? updatedAt,
+            referencePoints: floorReferencePoints
         )
     }
 
@@ -1056,12 +1242,46 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         from reading: SensorReading,
         floor: Int
     ) {
-        point = reading.point
+        guard let point = reading.point else { return }
+        self.point = point
         self.floor = floor
         referenceRelativeAltitudeMeters = reading.relativeAltitudeMeters
         referencePressureKilopascals = reading.pressureKilopascals
         referenceAltimeterSessionID = reading.altimeterSessionID
         floorCapturedAt = reading.timestamp
+        floorReferencePoints = [
+            FloorCalibrationPoint(
+                floor: floor,
+                point: point,
+                relativeAltitudeMeters: reading.relativeAltitudeMeters,
+                pressureKilopascals: reading.pressureKilopascals,
+                altimeterSessionID: reading.altimeterSessionID,
+                capturedAt: reading.timestamp
+            )
+        ]
+        updatedAt = .now
+    }
+
+    mutating func addFloorCalibration(
+        from reading: SensorReading,
+        floor: Int
+    ) {
+        guard let point = reading.point else { return }
+        let reference = FloorCalibrationPoint(
+            floor: floor,
+            point: point,
+            relativeAltitudeMeters: reading.relativeAltitudeMeters,
+            pressureKilopascals: reading.pressureKilopascals,
+            altimeterSessionID: reading.altimeterSessionID,
+            capturedAt: reading.timestamp
+        )
+        if let index = floorReferencePoints.firstIndex(where: {
+            $0.floor == floor
+        }) {
+            floorReferencePoints[index] = reference
+        } else {
+            floorReferencePoints.append(reference)
+        }
         updatedAt = .now
     }
 
@@ -1072,6 +1292,7 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         referencePressureKilopascals = nil
         referenceAltimeterSessionID = nil
         floorCapturedAt = nil
+        floorReferencePoints = []
         updatedAt = .now
     }
 }

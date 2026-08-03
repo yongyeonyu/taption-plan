@@ -194,7 +194,6 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
     }
 
     static let defaultOrder: [Self] = [
-        .map,
         .schedule,
         .location,
         .movement,
@@ -202,9 +201,10 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
         .activity,
         .appUsage,
         .weather,
+        .photo,
+        .map,
         .routine,
         .action,
-        .photo,
         .event,
     ]
 }
@@ -446,21 +446,11 @@ private func isMovementActual(_ actual: ActualRecord) -> Bool {
 }
 
 private func movementActualTitle(_ actual: ActualRecord) -> String {
-    watchBehavior(actual)?.isMovement == true
-        ? watchBehavior(actual)!.title
-        : actual.title
+    MovementPresentation.title(for: actual)
 }
 
 private func movementActualSymbol(_ actual: ActualRecord) -> String {
-    switch watchBehavior(actual) {
-    case .running: "figure.run"
-    case .cycling: "bicycle"
-    case .automotive: "car"
-    case .publicTransit, .subway: "tram"
-    case .stairsUp, .stairsDown: "stairs"
-    case .elevator: "arrow.up.and.down"
-    default: "figure.walk.motion"
-    }
+    MovementPresentation.symbol(for: actual)
 }
 
 private func restActualTitle(_ actual: ActualRecord) -> String {
@@ -2857,10 +2847,22 @@ private struct TimelineDetailPanel: View {
             id: { detailRowID(for: $0) ?? "" },
             savedIDs: model.snapshot.settings.timelineRowOrder
         )
-        let extras = visible.filter { detailRowID(for: $0) == nil }
-        return extras.filter { $0 == .map } + ordered + extras.filter {
-            $0 != .map
+        let extras = visible.filter {
+            detailRowID(for: $0) == nil && $0 != .map
         }
+        var result = ordered
+        if visible.contains(.map) {
+            // 지도는 별도 행이 아니라 위치·이동의 상세 내용이다. 상단
+            // 시간표에서 같은 행의 뒤에 삽입해 카드 순서를 유지한다.
+            let anchorID = activeSelection?.isRoute == true
+                ? "movement"
+                : "location"
+            let insertion = result.firstIndex {
+                detailRowID(for: $0) == anchorID
+            }.map { $0 + 1 } ?? result.count
+            result.insert(.map, at: min(insertion, result.count))
+        }
+        return result + extras
     }
 
     private func detailRowID(
@@ -3242,7 +3244,18 @@ private struct TimelineDetailPanel: View {
                             )
                         }
                     }
-                    if shouldDrawFallbackRoutePath {
+                    if routeSegments.isEmpty,
+                       displayedRouteCoordinates.count >= 2 {
+                        MapPolyline(coordinates: displayedRouteCoordinates)
+                            .stroke(
+                                Color.tpTransitDark.opacity(0.72),
+                                style: StrokeStyle(
+                                    lineWidth: 3,
+                                    lineCap: .round,
+                                    lineJoin: .round
+                                )
+                            )
+                    } else if shouldDrawFallbackRoutePath {
                         MapPolyline(coordinates: fallbackRouteCoordinates)
                             .stroke(
                                 Color.tpTransitDark.opacity(0.45),
@@ -3415,11 +3428,11 @@ private struct TimelineDetailPanel: View {
             detailHeading("이동", systemImage: "figure.walk.motion")
             ForEach(detailTravel) { travel in
                 HStack(spacing: 7) {
-                    Image(systemName: travel.mode == .running ? "figure.run" : "figure.walk")
+                    Image(systemName: routeModeSystemImage(travel.mode))
                         .font(.taption(size: 9, weight: .bold))
                         .foregroundStyle(routeColor(for: travel.mode))
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(timelineTravelModeName(travel.mode))
+                        Text("알고리즘 결과 · (timelineTravelModeName(travel.mode))")
                             .font(.taption(size: 9, weight: .semibold))
                         Text(
                             "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened)) · \(confidenceLabel(travel.confidence))"
@@ -3430,6 +3443,12 @@ private struct TimelineDetailPanel: View {
                             Text(location)
                                 .font(.taption(size: 7.5, weight: .medium))
                                 .foregroundStyle(Color.tpPlaceDark)
+                        }
+                        if !travel.evidence.isEmpty {
+                            Text(travel.evidence.prefix(2).joined(separator: " · "))
+                                .font(.taption(size: 7.2))
+                                .foregroundStyle(Color.tpSecondary)
+                                .lineLimit(1)
                         }
                     }
                     Spacer(minLength: 4)
@@ -3446,11 +3465,17 @@ private struct TimelineDetailPanel: View {
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpHealthDark)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(movementActualTitle(actual))
+                        Text("알고리즘 결과 · \(movementActualTitle(actual))")
                             .font(.taption(size: 9, weight: .semibold))
                         Text(actualDetailSubtitle(actual))
                             .font(.taption(size: 7.5))
                             .foregroundStyle(Color.tpSecondary)
+                        if !actual.evidence.isEmpty {
+                            Text(actual.evidence.prefix(2).joined(separator: " · "))
+                                .font(.taption(size: 7.2))
+                                .foregroundStyle(Color.tpSecondary)
+                                .lineLimit(1)
+                        }
                     }
                     Spacer(minLength: 4)
                 }
@@ -6465,7 +6490,6 @@ private struct TimelineBoard: View {
     @State private var zoomFeedbackSequence = 0
     @State private var continuousMagnifyOrigin: ContinuousMagnifyOrigin?
     @State private var selectedRowID: String?
-    @State private var draggingRowID: String?
     @State private var layoutCache = TimelineBoardLayoutCache()
     @State private var lastContinuousRenderUptime: TimeInterval = 0
     // Touch hardware can deliver 120/240 samples per second, while the
@@ -6513,17 +6537,13 @@ private struct TimelineBoard: View {
                                 ForEach(layout.rows) { row in
                                     if row.id == "photo" {
                                         photoRow(layout.photoClusters)
-                                            .onDrag {
-                                                draggingRowID = row.id
-                                                return NSItemProvider(
-                                                    object: row.id as NSString
-                                                )
-                                            }
-                                            .onDrop(
-                                                of: [.text],
-                                                isTargeted: nil
-                                            ) { _, _ in
-                                                finishRowDrop(
+                                            .draggable(row.id)
+                                            .dropDestination(for: String.self) {
+                                                sourceIDs, _ in
+                                                guard let sourceID = sourceIDs.first
+                                                else { return false }
+                                                return finishRowDrop(
+                                                    sourceID: sourceID,
                                                     targetID: row.id,
                                                     rows: layout.rows
                                                 )
@@ -6568,11 +6588,9 @@ private struct TimelineBoard: View {
                                                 )
                                             },
                                             onRowTap: { handleRowTap(row) },
-                                            onDragStart: {
-                                                draggingRowID = row.id
-                                            },
-                                            onDrop: {
+                                            onDrop: { sourceID in
                                                 finishRowDrop(
+                                                    sourceID: sourceID,
                                                     targetID: row.id,
                                                     rows: layout.rows
                                                 )
@@ -7004,11 +7022,10 @@ private struct TimelineBoard: View {
     }
 
     private func finishRowDrop(
+        sourceID: String,
         targetID: String,
         rows: [TimelineRowModel]
     ) -> Bool {
-        defer { draggingRowID = nil }
-        guard let sourceID = draggingRowID else { return false }
         let ids = rows.map(\.id)
         guard let ordered = TimelineRowOrder.moved(
             ids,
@@ -9370,8 +9387,7 @@ private struct TimelineRow: View {
     let onResizeStart: (TimelineBlock, TimeInterval) -> Void
     let onResizeEnd: (TimelineBlock, TimeInterval) -> Void
     let onRowTap: () -> Void
-    let onDragStart: () -> Void
-    let onDrop: () -> Bool
+    let onDrop: (String) -> Bool
 
     var body: some View {
         HStack(spacing: 0) {
@@ -9427,12 +9443,10 @@ private struct TimelineRow: View {
                     onEdit(nil)
                 }
             )
-            .onDrag {
-                onDragStart()
-                return NSItemProvider(object: row.id as NSString)
-            }
-            .onDrop(of: [.text], isTargeted: nil) { _, _ in
-                onDrop()
+            .draggable(row.id)
+            .dropDestination(for: String.self) { sourceIDs, _ in
+                guard let sourceID = sourceIDs.first else { return false }
+                return onDrop(sourceID)
             }
 
             GeometryReader { proxy in

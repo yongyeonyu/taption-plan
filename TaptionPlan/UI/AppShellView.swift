@@ -85,6 +85,21 @@ struct AppShellView: View {
         } message: {
             Text(model.userFacingError ?? "")
         }
+        .alert(item: $model.floorCalibrationPrompt) { prompt in
+            Alert(
+                title: Text("층수 보정이 필요합니다"),
+                message: Text(
+                    "(prompt.placeName)에서 다른 고도가 감지되었습니다. "
+                        + "현재 위치를 (prompt.suggestedFloor)층으로 저장할까요?"
+                ),
+                primaryButton: .default(Text("이 층 저장")) {
+                    model.acceptFloorCalibrationPrompt()
+                },
+                secondaryButton: .cancel(Text("나중에")) {
+                    model.dismissFloorCalibrationPrompt()
+                }
+            )
+        }
     }
 
     @ViewBuilder

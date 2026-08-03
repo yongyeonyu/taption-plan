@@ -44,37 +44,20 @@ struct TravelModeClassifier: Sendable {
         // A Watch behavior chunk may be the only source when HealthKit has
         // not finished publishing the workout.  Respect explicit transit and
         // vehicle labels before falling back to the broader score fusion.
-        if let watchBehavior = ordered
+        let explicitWatchBehavior = ordered
             .reversed()
             .compactMap({ reading in
                 reading.behavior.flatMap(WatchBehaviorKind.init(rawValue:))
             })
-            .first {
-            switch watchBehavior {
+            .first
+        if let explicitWatchBehavior {
+            switch explicitWatchBehavior {
             case .subway:
-                return MovementInference(
-                    mode: .subway,
-                    confidence: .medium,
-                    score: 0.72,
-                    evidence: [
-                        "Apple Watch 행동 분류: 지하철",
-                        "GPS·고도·철도 문맥은 추가 확인 필요",
-                    ]
-                )
-            case .publicTransit:
-                return MovementInference(
-                    mode: .bus,
-                    confidence: .medium,
-                    score: 0.66,
-                    evidence: ["Apple Watch 행동 분류: 대중교통"]
-                )
-            case .automotive:
-                return MovementInference(
-                    mode: .car,
-                    confidence: .medium,
-                    score: 0.7,
-                    evidence: ["Apple Watch 행동 분류: 자동차"]
-                )
+                // Keep the sensor fusion pass alive so altitude/route evidence
+                // can confirm or reject the Watch hint below.
+                break
+            case .publicTransit, .automotive:
+                break
             default:
                 break
             }
@@ -113,6 +96,17 @@ struct TravelModeClassifier: Sendable {
             current.0 += score
             current.1.append(evidence)
             candidates[mode] = current
+        }
+
+        switch explicitWatchBehavior {
+        case .subway:
+            add(.subway, 0.7, "Apple Watch 행동 분류: 지하철")
+        case .publicTransit:
+            add(.bus, 0.48, "Apple Watch 행동 분류: 대중교통")
+        case .automotive:
+            add(.car, 0.52, "Apple Watch 행동 분류: 자동차")
+        default:
+            break
         }
 
         switch dominantMotion {
@@ -297,6 +291,8 @@ struct TravelModeClassifier: Sendable {
             || stopRatio >= 0.3 && railSpeedSignal
         let undergroundSignal = gpsLossRatio >= 0.35
             || altitudeDelta <= -2
+        let displacementMeters = firstLastDisplacement(ordered)
+        let deepUndergroundRecovery = altitudeDropAndRecovery(ordered)
 
         if stationRatio >= 0.25 {
             add(.subway, 0.16, "역 접근")
@@ -319,6 +315,16 @@ struct TravelModeClassifier: Sendable {
             add(.subway, 0.3, "지하철 복합 신호 충족")
         }
 
+        if let profile = deepUndergroundRecovery,
+           profile.dropMeters >= 100,
+           profile.recoveryMeters >= 80,
+           displacementMeters >= 100,
+           lowStepSignal,
+           (railContext || gpsLossRatio >= 0.45) {
+            add(.subway, 0.9, "상대고도 100m 이상 하강 후 회복")
+            add(.subway, 0.24, "지하 구간 위치 변화 \(Int(displacementMeters.rounded()))m")
+        }
+
         if watchVibration && lowStepSignal && undergroundSignal
             && (railContext || railSpeedSignal) {
             add(.subway, 0.62, "Apple Watch 3축 가속도 철도 진동")
@@ -328,7 +334,13 @@ struct TravelModeClassifier: Sendable {
             }
         }
 
-        if transitRatio >= 0.5 {
+        let busStopPathSignal = transitRatio >= 0.5
+            && stopRatio >= 0.35
+            && stationRatio >= 0.2
+            && railRatio < 0.5
+        if busStopPathSignal {
+            add(.bus, 0.7, "버스정류장 인접 경로·정차")
+        } else if transitRatio >= 0.5 {
             add(.bus, 0.35, "대중교통 도로 경로 일치")
         }
         if stopRatio >= 0.35 {
@@ -368,6 +380,38 @@ struct TravelModeClassifier: Sendable {
         guard !readings.isEmpty else { return 0 }
         return Double(readings.filter { $0[keyPath: keyPath] }.count)
             / Double(readings.count)
+    }
+
+    private struct AltitudeRecoveryProfile {
+        var dropMeters: Double
+        var recoveryMeters: Double
+    }
+
+    private func altitudeDropAndRecovery(
+        _ readings: [SensorReading]
+    ) -> AltitudeRecoveryProfile? {
+        let values = readings.compactMap { reading in
+            reading.relativeAltitudeMeters.map { (reading.timestamp, $0) }
+        }
+        guard values.count >= 4,
+              let minimum = values.enumerated().min(by: { $0.element.1 < $1.element.1 }),
+              minimum.offset > 0,
+              minimum.offset < values.count - 1,
+              let first = values.first?.1,
+              let last = values.last?.1 else { return nil }
+        let drop = first - minimum.element.1
+        let recovery = last - minimum.element.1
+        guard drop.isFinite, recovery.isFinite else { return nil }
+        return AltitudeRecoveryProfile(
+            dropMeters: max(0, drop),
+            recoveryMeters: max(0, recovery)
+        )
+    }
+
+    private func firstLastDisplacement(_ readings: [SensorReading]) -> Double {
+        let points = readings.compactMap(\.point)
+        guard let first = points.first, let last = points.last else { return 0 }
+        return distanceMeters(first, last)
     }
 
     private func speedSeries(for readings: [SensorReading]) -> [Double] {
@@ -913,87 +957,102 @@ struct FloorCalibrationEngine: Sendable {
         reading: SensorReading,
         calibration: FloorCalibration
     ) -> CalibratedAltitudeEstimate? {
-        guard let referencePoint = calibration.referencePoint,
-              isNearReference(
-                reading.point,
-                referencePoint: referencePoint
-              ) else {
-            return nil
-        }
-
-        let delta: Double
-        let confidence: ConfidenceLevel
-        let evidence: [String]
-        if reading.altimeterSessionID
-                == calibration.referenceAltimeterSessionID,
-           let current = reading.relativeAltitudeMeters,
-           let reference =
-                calibration.referenceRelativeAltitudeMeters {
-            delta = current - reference
-            confidence = .high
-            evidence = [
-                "\(calibration.placeName) \(calibration.referenceFloor)층 사용자 기준",
-                "기압 상대고도",
-            ]
-        } else if let currentPressure =
-                    reading.pressureKilopascals,
-                  let referencePressure =
-                    calibration.referencePressureKilopascals,
-                  currentPressure > 0,
-                  referencePressure > 0 {
-            delta = 44_330
-                * (
-                    1
-                    - pow(
-                        currentPressure / referencePressure,
-                        0.1903
-                    )
-                )
-            confidence = .medium
-            evidence = [
-                "\(calibration.placeName) \(calibration.referenceFloor)층 사용자 기준",
-                "기압차 보정",
-            ]
-        } else if let point = reading.point {
-            delta = point.altitude - referencePoint.altitude
-            confidence = .low
-            evidence = [
-                "\(calibration.placeName) \(calibration.referenceFloor)층 사용자 기준",
-                "GPS 고도",
-            ]
-        } else {
-            return nil
-        }
-
-        let floorHeight = max(2.2, calibration.floorHeightMeters)
-        let rawFloor = calibration.referenceFloor
-            + Int((delta / floorHeight).rounded())
-        // 지상 1층과 지하 1층 사이에 0층을 만들지 않습니다.
-        let normalizedFloor = rawFloor == 0
-            ? (delta < 0 ? -1 : 1)
-            : rawFloor
-        let floor = min(max(normalizedFloor, -20), 200)
-        let verticalAccuracy = max(
-            3,
-            reading.point.flatMap {
-                $0.verticalAccuracy >= 0
-                    ? $0.verticalAccuracy
-                    : nil
+        let references: [FloorCalibrationPoint] = {
+            if !calibration.referencePoints.isEmpty {
+                return calibration.referencePoints
             }
-                ?? (
-                    referencePoint.verticalAccuracy >= 0
-                        ? referencePoint.verticalAccuracy
-                        : 20
+            guard let point = calibration.referencePoint else { return [] }
+            return [
+                FloorCalibrationPoint(
+                    floor: calibration.referenceFloor,
+                    point: point,
+                    relativeAltitudeMeters:
+                        calibration.referenceRelativeAltitudeMeters,
+                    pressureKilopascals:
+                        calibration.referencePressureKilopascals,
+                    altimeterSessionID:
+                        calibration.referenceAltimeterSessionID,
+                    capturedAt: calibration.capturedAt ?? .now
                 )
-        )
-        return CalibratedAltitudeEstimate(
-            floor: floor,
-            seaLevelAltitudeMeters:
-                referencePoint.altitude + delta,
-            verticalAccuracyMeters: verticalAccuracy,
-            confidence: confidence,
-            evidence: evidence
-        )
+            ]
+        }()
+        let candidates = references.compactMap { reference -> CalibratedAltitudeEstimate? in
+            guard isNearReference(
+                reading.point,
+                referencePoint: reference.point
+            ) else { return nil }
+
+            let delta: Double
+            let confidence: ConfidenceLevel
+            let source: String
+            if reading.altimeterSessionID == reference.altimeterSessionID,
+               let current = reading.relativeAltitudeMeters,
+               let baseline = reference.relativeAltitudeMeters {
+                delta = current - baseline
+                confidence = .high
+                source = "기압 상대고도"
+            } else if let current = reading.pressureKilopascals,
+                      let baseline = reference.pressureKilopascals,
+                      current > 0,
+                      baseline > 0 {
+                delta = 44_330 * (1 - pow(current / baseline, 0.1903))
+                confidence = .medium
+                source = "기압차 보정"
+            } else if let point = reading.point {
+                delta = point.altitude - reference.point.altitude
+                confidence = .low
+                source = "GPS 고도"
+            } else {
+                return nil
+            }
+
+            let floorHeight = max(2.2, calibration.floorHeightMeters)
+            let rawFloor = reference.floor + Int((delta / floorHeight).rounded())
+            let floor = min(
+                max(rawFloor == 0 ? (delta < 0 ? -1 : 1) : rawFloor, -20),
+                200
+            )
+            let verticalAccuracy = max(
+                3,
+                reading.point.flatMap {
+                    $0.verticalAccuracy >= 0 ? $0.verticalAccuracy : nil
+                } ?? (reference.point.verticalAccuracy >= 0
+                    ? reference.point.verticalAccuracy
+                    : 20)
+            )
+            return CalibratedAltitudeEstimate(
+                floor: floor,
+                seaLevelAltitudeMeters: reference.point.altitude + delta,
+                verticalAccuracyMeters: verticalAccuracy,
+                confidence: confidence,
+                evidence: [
+                    "\(calibration.placeName) \(reference.floor)층 사용자 기준",
+                    source,
+                ]
+            )
+        }
+        guard !candidates.isEmpty else { return nil }
+        let grouped = Dictionary(grouping: candidates, by: \.floor)
+        let winner = grouped.max { lhs, rhs in
+            if lhs.value.count != rhs.value.count {
+                return lhs.value.count < rhs.value.count
+            }
+            return lhs.key < rhs.key
+        }?.value ?? [candidates[0]]
+        var result = winner.max { confidenceRank($0.confidence) < confidenceRank($1.confidence) }
+            ?? candidates[0]
+        if references.count > 1 {
+            result.evidence.append("\(references.count)개 층 기준 교차 검증")
+        }
+        return result
+    }
+
+    private func confidenceRank(_ confidence: ConfidenceLevel) -> Int {
+        switch confidence {
+        case .low: 0
+        case .medium: 1
+        case .high: 2
+        }
     }
 
     func applying(
@@ -1089,20 +1148,20 @@ struct FrequentPlaceResolutionEngine: Sendable {
             // home/company floor jump on every refresh. Real floor changes
             // are handled separately by FloorTimelineEngine after they remain
             // stable across multiple samples.
-            if let floor = match.floor {
-                updated.floor = floor
-                updated.confidence = .high
-            } else if let calibration = match.floorCalibration,
-                      let reading = readings
+            if let calibration = match.floorCalibration,
+               let reading = readings
                         .filter({ place.span.contains($0.timestamp) })
                         .sorted(by: { $0.timestamp < $1.timestamp })
                         .first,
-                      let estimate = FloorCalibrationEngine().estimate(
+               let estimate = FloorCalibrationEngine().estimate(
                             reading: reading,
                             calibration: calibration
                       ) {
                 updated.floor = estimate.floor
                 updated.confidence = estimate.confidence
+            } else if let floor = match.floor {
+                updated.floor = floor
+                updated.confidence = .high
             }
             updated.isConfirmed = true
             return updated

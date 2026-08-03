@@ -1290,6 +1290,7 @@ private struct FrequentPlaceDetailView: View {
     @State private var isAutomaticRecordingEnabled = true
     @State private var selectedFloor = 1
     @State private var showsFloorPicker = false
+    @State private var addsCalibrationPoint = false
     @State private var showsDeleteConfirmation = false
 
     private var place: FrequentPlace? {
@@ -1421,6 +1422,7 @@ private struct FrequentPlaceDetailView: View {
 
             Button {
                 selectedFloor = place.floor ?? 1
+                addsCalibrationPoint = false
                 showsFloorPicker = true
             } label: {
                 Label(
@@ -1561,6 +1563,35 @@ private struct FrequentPlaceDetailView: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.tpPlaceDark)
             }
+            if !place.floorReferencePoints.isEmpty {
+                let references = place.floorReferencePoints
+                Text("저장된 층 기준")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.tpInk)
+                ForEach(
+                    references.sorted { $0.floor < $1.floor },
+                    id: \.floor
+                ) { reference in
+                    Text(
+                        reference.floor < 0
+                            ? "지하 \(-reference.floor)층 · \(reference.capturedAt, format: .dateTime.month().day().hour().minute())"
+                            : "\(reference.floor)층 · \(reference.capturedAt, format: .dateTime.month().day().hour().minute())"
+                    )
+                }
+            }
+            Button {
+                selectedFloor = model.latestAltitudeEstimate?.floor
+                    ?? place.floor
+                    ?? 1
+                addsCalibrationPoint = true
+                showsFloorPicker = true
+            } label: {
+                Label("현재 고도를 다른 층으로 보정", systemImage: "plus.circle")
+                    .font(.taption(size: 9, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.bordered)
             if place.referenceRelativeAltitudeMeters == nil,
                place.referencePressureKilopascals == nil {
                 Text("위치와 층수를 지정하면 기압·고도 기준이 함께 저장됩니다.")
@@ -1593,10 +1624,14 @@ private struct FrequentPlaceDetailView: View {
 
     private var floorPicker: some View {
         VStack(spacing: 12) {
-            Text("기준 층 선택")
+            Text(addsCalibrationPoint ? "추가 층 기준 저장" : "기준 층 선택")
                 .font(.taption(size: 15, weight: .bold))
                 .foregroundStyle(Color.tpInk)
-            Text("현재 위치의 층을 기준으로 저장합니다.")
+            Text(
+                addsCalibrationPoint
+                    ? "같은 건물의 현재 층을 추가해 고도 보정을 정확하게 합니다."
+                    : "현재 위치의 층을 기준으로 저장합니다."
+            )
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
             Picker("층수", selection: $selectedFloor) {
@@ -1608,10 +1643,17 @@ private struct FrequentPlaceDetailView: View {
             .pickerStyle(.wheel)
             .frame(height: 140)
             Button("현재 위치로 저장") {
-                model.setFrequentPlaceToCurrentLocation(
-                    placeID,
-                    floor: selectedFloor
-                )
+                if addsCalibrationPoint {
+                    model.addFrequentPlaceFloorCalibration(
+                        placeID,
+                        floor: selectedFloor
+                    )
+                } else {
+                    model.setFrequentPlaceToCurrentLocation(
+                        placeID,
+                        floor: selectedFloor
+                    )
+                }
                 showsFloorPicker = false
             }
             .buttonStyle(.borderedProminent)
