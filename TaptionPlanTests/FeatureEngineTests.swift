@@ -74,6 +74,42 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(tappedSegment.map(\.id), [nearby.id])
     }
 
+    func testMovementDisplayHidesRawRecordWhenTravelCoversIt() {
+        let start = makeDate(2026, 8, 1, 9)
+        let end = start.addingTimeInterval(20 * 60)
+        let raw = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: start,
+            endedAt: end,
+            source: .motion
+        )
+        let travel = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(start: start, end: end),
+            distanceMeters: 1_200,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+
+        XCTAssertTrue(
+            MovementDisplayEngine.visibleActuals(
+                [raw],
+                travel: [travel],
+                asOf: end
+            ).isEmpty
+        )
+        XCTAssertEqual(
+            MovementDisplayEngine.visibleActuals(
+                [raw],
+                travel: [],
+                asOf: end
+            ).map(\.id),
+            [raw.id]
+        )
+    }
+
     func testHierarchySupportsUnlimitedDescendantsAndRollup() throws {
         let base = makeDate(2026, 1, 1)
         let year = PlanRecord(

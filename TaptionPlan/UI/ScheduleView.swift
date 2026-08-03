@@ -3363,6 +3363,11 @@ private struct TimelineDetailPanel: View {
                         )
                         .font(.taption(size: 7.5))
                         .foregroundStyle(Color.tpSecondary)
+                        if let location = travelLocationLabel(travel) {
+                            Text(location)
+                                .font(.taption(size: 7.5, weight: .medium))
+                                .foregroundStyle(Color.tpPlaceDark)
+                        }
                     }
                     Spacer(minLength: 4)
                     Text(distanceLabel(travel.distanceMeters))
@@ -4010,20 +4015,26 @@ private struct TimelineDetailPanel: View {
                     from: actuals,
                     inside: focusedSpan
                 )
+            let displayedAutomaticActuals = MovementDisplayEngine
+                .visibleActuals(
+                    automaticActuals,
+                    travel: model.snapshot.travel,
+                    asOf: .now
+                )
             let sleepActuals = deduplicatedActuals(
-                automaticActuals
+                displayedAutomaticActuals
                     .filter { isSleepActual($0) }
                     .sorted { $0.startedAt < $1.startedAt }
             )
             let activityActuals = deduplicatedActuals(
-                automaticActuals
+                displayedAutomaticActuals
                     .filter {
                         !isSleepActual($0) && !isMovementActual($0)
                     }
                     .sorted { $0.startedAt < $1.startedAt }
             )
             let movementActuals = deduplicatedActuals(
-                automaticActuals
+                displayedAutomaticActuals
                     .filter(isMovementActual)
                     .sorted { $0.startedAt < $1.startedAt }
             )
@@ -4255,6 +4266,24 @@ private struct TimelineDetailPanel: View {
             return place.displayName + " · " + String(floor) + "층"
         }
         return place.displayName
+    }
+
+    private func travelPlaceTitle(_ placeID: UUID?) -> String? {
+        guard let placeID else { return nil }
+        return (detailPlaces + model.snapshot.places)
+            .first { $0.id == placeID }
+            .map(placeTitle)
+    }
+
+    private func travelLocationLabel(_ travel: TravelSegment) -> String? {
+        let from = travelPlaceTitle(travel.fromPlaceID)
+        let to = travelPlaceTitle(travel.toPlaceID)
+        switch (from, to) {
+        case let (from?, to?): return from + " → " + to
+        case let (from?, nil): return from + " → 위치 미확인"
+        case let (nil, to?): return "위치 미확인 → " + to
+        case (nil, nil): return nil
+        }
     }
 
     private func distanceLabel(_ meters: Double) -> String {
@@ -6864,20 +6893,25 @@ private struct TimelineBoard: View {
         )
             .filter { $0.span(asOf: now).intersection(with: span) != nil }
             .sorted { $0.startedAt < $1.startedAt }
+        let displayedVisibleActuals = MovementDisplayEngine.visibleActuals(
+            visibleActuals,
+            travel: model.snapshot.travel,
+            asOf: now
+        )
         let usesAutomaticDayRows = scale == .day && includesCalendar
         let automaticActuals = AutomaticRecordTimelineEngine.activities(
-            from: visibleActuals,
+            from: displayedVisibleActuals,
             inside: span
         )
         let categoryVisibleActuals: [ActualRecord]
         if usesAutomaticDayRows && TaptionProductScope.automaticLoggingOnly {
             categoryVisibleActuals = []
         } else if usesAutomaticDayRows {
-            categoryVisibleActuals = visibleActuals.filter {
+            categoryVisibleActuals = displayedVisibleActuals.filter {
                 $0.source != .healthKit && $0.source != .appleWatch
             }
         } else {
-            categoryVisibleActuals = visibleActuals
+            categoryVisibleActuals = displayedVisibleActuals
         }
         let actualsGrouped = Dictionary(
             grouping: categoryVisibleActuals,

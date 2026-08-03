@@ -142,6 +142,34 @@ enum ActualIntervalMergeEngine {
     }
 }
 
+/// Keeps measured movement records as raw evidence while showing one
+/// canonical travel segment when the route inference covers that interval.
+enum MovementDisplayEngine {
+    static func visibleActuals(
+        _ actuals: [ActualRecord],
+        travel: [TravelSegment],
+        asOf date: Date = .now
+    ) -> [ActualRecord] {
+        guard !travel.isEmpty else { return actuals }
+        let travelSpans = travel.map(\.span)
+        return actuals.filter { actual in
+            guard actual.categoryID == "movement" else { return true }
+            let actualSpan = actual.span(asOf: date)
+            guard actualSpan.duration > 0 else { return false }
+            let overlap = ActualIntervalMergeEngine.duration(
+                of: travelSpans.compactMap {
+                    $0.intersection(with: actualSpan)
+                }
+            )
+            let coverageThreshold = min(
+                30,
+                max(1, actualSpan.duration * 0.5)
+            )
+            return overlap < coverageThreshold
+        }
+    }
+}
+
 enum TimelineLaneAllocator {
     static func allocate<Item: Identifiable>(
         _ items: [Item],

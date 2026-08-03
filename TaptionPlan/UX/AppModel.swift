@@ -1088,7 +1088,9 @@ final class AppModel {
             }
             await refreshHealthData()
         }
-        if settings.locationEnabled || hasPhotoLocations(in: refreshSpan) {
+        if settings.locationEnabled
+            || settings.weatherEnabled
+            || hasPhotoLocations(in: refreshSpan) {
             if includesCurrentDeviceDay {
                 await refreshSensorTimeline(containing: .now)
             }
@@ -3121,7 +3123,23 @@ final class AppModel {
                 .max(),
             settingsHash: settings.hashValue
         )
-        if sensorRefreshFingerprints[span.start] == refreshFingerprint {
+        let latestReadingWithPoint = archivedReadings
+            .filter { $0.point != nil }
+            .max { $0.timestamp < $1.timestamp }
+        let fingerprintUnchanged =
+            sensorRefreshFingerprints[span.start] == refreshFingerprint
+        if fingerprintUnchanged {
+            guard (settings.locationEnabled || settings.weatherEnabled),
+                  weatherNeedsRefresh(for: latestReadingWithPoint) else {
+                return
+            }
+            await refreshWeather(
+                for: snapshot.places.filter {
+                    $0.span.intersection(with: span) != nil
+                },
+                in: span,
+                fallbackReading: latestReadingWithPoint
+            )
             return
         }
         sensorRefreshFingerprints[span.start] = refreshFingerprint
@@ -3268,7 +3286,11 @@ final class AppModel {
         snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
-            await refreshWeather(for: basePlaces, in: span)
+            await refreshWeather(
+                for: basePlaces,
+                in: span,
+                fallbackReading: latestReadingWithPoint
+            )
         }
     }
 
@@ -4208,8 +4230,35 @@ final class AppModel {
             calibration.capturedAt ?? .now
     }
 
-    private func refreshWeather(for places: [PlaceStay], in span: TimeSpan) async {
+    private func weatherNeedsRefresh(for reading: SensorReading?) -> Bool {
+        guard let reading, let point = reading.point else { return false }
+        let latest = snapshot.weather
+            .filter { context in
+                guard let contextPoint = context.point,
+                      context.placeID == nil else { return false }
+                return distanceMeters(contextPoint, point) < 1_000
+            }
+            .max { $0.observedAt < $1.observedAt }
+        guard let latest else { return true }
+        return reading.timestamp.timeIntervalSince(latest.observedAt)
+            >= settings.sensorCollectionProfile.interval
+    }
+
+    private func refreshWeather(
+        for places: [PlaceStay],
+        in span: TimeSpan,
+        fallbackReading: SensorReading? = nil
+    ) async {
         let locatedPlaces = places.filter { $0.point != nil }
+        if locatedPlaces.isEmpty,
+           let fallbackReading,
+           let point = fallbackReading.point {
+            await refreshWeather(
+                at: point,
+                observedAt: fallbackReading.timestamp
+            )
+            return
+        }
         guard !locatedPlaces.isEmpty else { return }
 
         var contexts: [WeatherContext] = []
@@ -4230,6 +4279,12 @@ final class AppModel {
                     latitude: point.latitude,
                     longitude: point.longitude,
                     at: place.span.end
+                )
+                archiveRawDeviceData(
+                    source: .gps,
+                    kind: "weather-context",
+                    payload: context,
+                    capturedAt: place.span.end
                 )
                 contexts.append(context)
             } catch {
@@ -4256,6 +4311,46 @@ final class AppModel {
         if let firstError, contexts.isEmpty {
             Self.integrationLogger.info(
                 "Stored weather refresh unavailable: \(firstError.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    private func refreshWeather(
+        at point: GeoPoint,
+        observedAt: Date,
+        placeID: UUID? = nil,
+        placeName: String? = "현재 위치"
+    ) async {
+        do {
+            var context = try await weatherService.context(
+                latitude: point.latitude,
+                longitude: point.longitude,
+                at: observedAt
+            )
+            context.observedAt = observedAt
+            context.placeID = placeID
+            context.placeName = placeName
+            context.point = point
+            context.airQuality = try? await airQualityService.context(
+                latitude: point.latitude,
+                longitude: point.longitude,
+                at: observedAt
+            )
+            archiveRawDeviceData(
+                source: .gps,
+                kind: "weather-context",
+                payload: context,
+                capturedAt: observedAt
+            )
+            snapshot.weather.removeAll {
+                $0.placeID == placeID
+                    && abs($0.observedAt.timeIntervalSince(observedAt)) < 5 * 60
+            }
+            snapshot.weather.append(context)
+            snapshot.weather.sort { $0.observedAt < $1.observedAt }
+        } catch {
+            Self.integrationLogger.info(
+                "Stored weather fallback unavailable: \(error.localizedDescription, privacy: .public)"
             )
         }
     }
