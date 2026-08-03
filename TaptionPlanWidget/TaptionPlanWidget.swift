@@ -790,6 +790,8 @@ private struct PrototypeWidgetTrack: View {
             return Color(red: 0.79, green: 0.84, blue: 0.90)
         case .activity:
             return Color(red: 0.49, green: 0.68, blue: 0.51)
+        case .appUsage:
+            return Color(red: 0.55, green: 0.48, blue: 0.72)
         case .action:
             break
         }
@@ -816,18 +818,16 @@ private struct WidgetWalkingCat: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let catWidth = min(34, proxy.size.width)
-            let visualInset = catWidth * 0.04
-            let available = max(
-                0,
-                proxy.size.width - catWidth + (visualInset * 2)
-            )
-            let progress = reducesMotion ? 0.5 : pose.progress
-            // Keep the pose driver alive at the turnaround frames.  Pausing
-            // there made the cat appear frozen when WidgetKit coalesced one
-            // or two timeline entries around an endpoint.
             let isAnimating = !reducesMotion
             let isMoving = isAnimating && pose.action.movesAcrossTrack
+            let sharedPose = TaptionCatAnimationEngine.pose(
+                from: (reducesMotion ? TaptionWidgetCatAction.sitting : pose.action).rawValue,
+                progress: reducesMotion ? 0.5 : pose.progress,
+                phase: isAnimating ? pose.legPhase : 0,
+                facesLeft: pose.facesLeft && isAnimating,
+                tailSwing: isAnimating ? pose.tailSwing : 0,
+                headTiltDegrees: isAnimating ? pose.headTiltDegrees : 0
+            )
 
             ZStack(alignment: .topLeading) {
                 HStack(spacing: 6) {
@@ -846,27 +846,11 @@ private struct WidgetWalkingCat: View {
                 .offset(x: 5, y: 19)
                 .opacity(isMoving ? 1 : 0)
 
-                WidgetCat(
+                TaptionCatAnimationView(
                     style: style,
-                    // `isRunning` is the legacy name for the Canvas' phase
-                    // driver.  Non-walking actions (grooming, eating, sleep,
-                    // play) still need that phase so the cat does not look
-                    // frozen while performing the selected action.
-                    isRunning: isAnimating,
-                    reducesMotion: reducesMotion,
-                    animationPhase: isAnimating ? pose.legPhase : 0,
-                    action: reducesMotion ? .sitting : pose.action,
-                    tailSwing: !isAnimating ? 0 : pose.tailSwing,
-                    headTiltDegrees: !isAnimating
-                        ? 0
-                        : pose.headTiltDegrees
+                    pose: sharedPose,
+                    reducesMotion: reducesMotion
                 )
-                .frame(width: catWidth, height: 25)
-                .scaleEffect(
-                    x: pose.facesLeft && !reducesMotion ? -1 : 1,
-                    y: 1
-                )
-                .offset(x: (available * progress) - visualInset)
             }
         }
         .accessibilityLabel(
@@ -899,21 +883,19 @@ private struct WidgetCat: View {
     var headTiltDegrees: Double = 0
 
     var body: some View {
-        Canvas { rawContext, size in
-            let scaleX = size.width / 40
-            let scaleY = size.height / 27
-            var context = rawContext
-            context.scaleBy(x: scaleX, y: scaleY)
-            let effectivePhase = isRunning && !reducesMotion
-                ? animationPhase
-                : 0
-
-            if action == .running && !reducesMotion {
-                drawWalkingPuffs(in: &context, phase: effectivePhase)
-            }
-            drawShadow(in: &context)
-            drawCat(in: &context, phase: effectivePhase)
-        }
+        let pose = TaptionCatAnimationEngine.pose(
+            from: (reducesMotion ? TaptionWidgetCatAction.sitting : action).rawValue,
+            progress: 0.5,
+            phase: isRunning && !reducesMotion ? animationPhase : 0,
+            facesLeft: false,
+            tailSwing: reducesMotion ? 0 : tailSwing,
+            headTiltDegrees: reducesMotion ? 0 : headTiltDegrees
+        )
+        TaptionCatAnimationView(
+            style: style,
+            pose: pose,
+            reducesMotion: reducesMotion
+        )
         .accessibilityLabel(accessibilityName)
     }
 

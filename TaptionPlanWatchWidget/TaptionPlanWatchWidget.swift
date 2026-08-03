@@ -90,8 +90,16 @@ private struct TaptionWatchWidgetView: View {
     private var rectangularView: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
-                Image(systemName: "cat.fill")
-                    .font(.caption2.weight(.bold))
+                TaptionCatAnimationView(
+                    style: freshestPayload?.catStyle ?? "calico",
+                    pose: TaptionCatAnimationEngine.pose(
+                        at: playbackDate,
+                        preferredAction: currentCatAction,
+                        reducesMotion: false
+                    ),
+                    reducesMotion: false
+                )
+                .frame(width: 25, height: 17)
                 Text(currentItem == nil ? "Taption Plan" : currentItems.count > 1 ? "지금 \(currentItems.count)개" : "지금")
                     .font(.caption2.weight(.semibold))
                 Spacer(minLength: 2)
@@ -202,6 +210,18 @@ private struct TaptionWatchWidgetView: View {
 
     private var currentItem: TaptionWatchPlanItem? {
         currentItems.first
+    }
+
+    private var currentCatAction: TaptionCatAnimationAction {
+        guard let item = currentItem else { return .sitting }
+        let title = item.title.lowercased()
+        if title.contains("달리") || title.contains("러닝") {
+            return .running
+        }
+        if title.contains("잠") || title.contains("수면") {
+            return .sleeping
+        }
+        return .walking
     }
 
     private var currentItems: [TaptionWatchPlanItem] {

@@ -208,6 +208,8 @@ struct SettingsView: View {
                                 }
                             )
                         )
+                        watchInstallRow
+                        appUsageRow
                         locationIntegrationRow
                         sensorCollectionProfileRow
                         watchAccelerationCollectionRow
@@ -318,6 +320,10 @@ struct SettingsView: View {
             .scrollBounceBehavior(.always)
             .background(Color.tpBackground)
         }
+        .onAppear {
+            model.refreshAppleWatchConnectionState()
+            model.refreshAppUsageAuthorizationState()
+        }
         .overlay {
             if model.isRefreshingIntegrations
                 || model.isCloudSyncing
@@ -348,6 +354,40 @@ struct SettingsView: View {
     private var cloudStatus: String {
         if model.isCloudSyncing { return "동기화 중" }
         return model.permissionState(for: .cloud).settingsLabel
+    }
+
+    private var watchInstallRow: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            settingsRow(
+                icon: "applewatch",
+                iconBackground: Color(red: 0.91, green: 0.92, blue: 0.95),
+                iconColor: Color.tpInk,
+                title: "Apple Watch 앱",
+                subtitle: model.appleWatchConnectionState.settingsLabel,
+                value: "설치 확인"
+            ) {
+                model.refreshAppleWatchConnectionState()
+            }
+            if model.appleWatchConnectionState == .appNotInstalled {
+                Text("iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → Taption Plan에서 설치")
+                    .font(.taption(size: SettingsTypography.footnote))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.leading, 37)
+            }
+        }
+    }
+
+    private var appUsageRow: some View {
+        settingsRow(
+            icon: "app.badge.clock",
+            iconBackground: Color(red: 0.93, green: 0.90, blue: 0.98),
+            iconColor: Color(red: 0.42, green: 0.34, blue: 0.64),
+            title: "앱 사용시간",
+            subtitle: "Screen Time 앱별 사용 기록",
+            value: model.appUsageAuthorizationState.displayName
+        ) {
+            Task { await model.requestAppUsageAuthorization() }
+        }
     }
 
     private var locationIntegrationRow: some View {

@@ -54,6 +54,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
     case movement
     case sleep
     case activity
+    case appUsage
     case action
 
     static let automatic: [Self] = [
@@ -62,6 +63,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
         .movement,
         .sleep,
         .activity,
+        .appUsage,
     ]
 
     var title: String {
@@ -71,6 +73,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
         case .movement: "이동"
         case .sleep: "수면"
         case .activity: "활동"
+        case .appUsage: "앱 사용"
         case .action: "액션"
         }
     }
@@ -82,6 +85,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
         case .movement: "arrow.trianglehead.swap"
         case .sleep: "moon.zzz"
         case .activity: "figure.run"
+        case .appUsage: "app.badge.clock"
         case .action: "checklist.checked"
         }
     }
@@ -139,6 +143,7 @@ struct TaptionWidgetItem: Identifiable, Codable, Hashable, Sendable {
         case "movement": .movement
         case "sleep": .sleep
         case "activity": .activity
+        case "appUsage": .appUsage
         default: .action
         }
     }

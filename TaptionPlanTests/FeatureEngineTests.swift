@@ -960,6 +960,16 @@ final class FeatureEngineTests: XCTestCase {
             ),
             .running
         )
+        XCTAssertEqual(
+            MotionKindResolver.resolve(
+                stationary: false,
+                walking: true,
+                running: false,
+                cycling: false,
+                automotive: true
+            ),
+            .automotive
+        )
     }
 
     func testMotionActivityActualsExposeEveryPassiveBehaviorWithoutDuplicates() {
@@ -1121,6 +1131,35 @@ final class FeatureEngineTests: XCTestCase {
             result.evidence.contains("차량 속도대와 자동차 모션 우선")
                 || result.evidence.contains("차량 가능 속도")
                 || result.evidence.contains("Core Motion 자동차 후보")
+        )
+    }
+
+    func testVehicleSpeedAndLowStepsOverrideWalkingMotionHistory() {
+        let base = makeDate(2026, 8, 2, 18, 0)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(90 * 60)
+        )
+        let readings = (0..<7).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 15 * 60),
+                speedMetersPerSecond: 11,
+                speedAccuracyMetersPerSecond: 0.8,
+                motion: .walking,
+                motionConfidence: .high,
+                stepCount: 200 + index
+            )
+        }
+
+        let result = TravelModeClassifier().classify(
+            readings: readings,
+            inside: span
+        )
+
+        XCTAssertEqual(result.mode, .car)
+        XCTAssertTrue(
+            result.evidence.contains("iPhone·Apple Watch 걸음 증가 거의 없음")
+                || result.evidence.contains("보행 불가능 속도와 걸음 신호 불일치")
         )
     }
 
@@ -1502,6 +1541,25 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(result?.fromFloor, 9)
         XCTAssertEqual(result?.toFloor, 10)
+    }
+
+    func testTimelineFloorEstimatorNeedsPersistentSamples() {
+        let base = makeDate(2026, 7, 30)
+        let readings = [
+            SensorReading(timestamp: base, relativeAltitudeMeters: 0),
+            SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                relativeAltitudeMeters: 3.1
+            ),
+        ]
+
+        XCTAssertNil(
+            FloorEstimator(minimumStableSampleCount: 3).estimate(
+                readings: readings,
+                placeKey: "home",
+                baselineFloor: 20
+            )
+        )
     }
 
     func testHomeFloorCalibrationUsesRelativeAltitudeAndShowsSeaLevelAltitude() {
@@ -2099,6 +2157,62 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(julyValues[0].payloadJSON.contains("\"automotive\""))
         XCTAssertEqual(augustValues.count, 1)
         XCTAssertEqual(augustValues[0].source, .appleWatch)
+        try archive.flushPendingWrites()
+        let chunks = directory
+            .appendingPathComponent("2026-08")
+            .appendingPathComponent("chunks")
+        let chunkFiles = try FileManager.default.contentsOfDirectory(
+            at: chunks,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertTrue(chunkFiles.contains { $0.pathExtension == "zlib" })
+    }
+
+    func testRawDeviceDataArchiveDoesNotRewriteLegacyMonthlyFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taption-raw-legacy-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let monthDirectory = directory.appendingPathComponent("2026-08")
+        try FileManager.default.createDirectory(
+            at: monthDirectory,
+            withIntermediateDirectories: true
+        )
+        let date = makeDate(2026, 8, 1, 12)
+        let legacyEnvelope = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .gps,
+            kind: "legacy",
+            payload: RawArchiveWatchFixture(sampleCount: 1, mode: "walk")
+        )
+        var legacyPayload = try RawDeviceDataMonthlyArchive
+            .payloadEncoder()
+            .encode(legacyEnvelope)
+        legacyPayload.append(0x0A)
+        let legacyData = try (legacyPayload as NSData).compressed(
+            using: .zlib
+        ) as Data
+        let legacyURL = monthDirectory.appendingPathComponent(
+            "taption-raw-2026-08.jsonl.zlib"
+        )
+        try legacyData.write(to: legacyURL)
+
+        let archive = RawDeviceDataMonthlyArchive(
+            rootDirectory: directory,
+            flushDelay: 3_600
+        )
+        try archive.append(
+            source: .healthKit,
+            kind: "new",
+            payload: RawArchiveWatchFixture(sampleCount: 2, mode: "run"),
+            capturedAt: date.addingTimeInterval(60)
+        )
+        try archive.flushPendingWrites()
+
+        XCTAssertEqual(try Data(contentsOf: legacyURL), legacyData)
+        XCTAssertEqual(
+            try archive.envelopes(inMonthContaining: date).map(\.kind),
+            ["legacy", "new"]
+        )
     }
 
     func testTrackingSessionArchiveWritesIndependentCompressedChunks() throws {
@@ -3346,7 +3460,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testWidgetPlaybackAlwaysKeepsFiveAutomaticLanes() {
+    func testWidgetPlaybackAlwaysKeepsAutomaticLanes() {
         let base = makeDate(2026, 8, 1, 12, 0)
 
         XCTAssertEqual(
@@ -3354,7 +3468,7 @@ final class FeatureEngineTests: XCTestCase {
                 for: [],
                 at: base
             ),
-            [.schedule, .location, .movement, .sleep, .activity]
+            [.schedule, .location, .movement, .sleep, .activity, .appUsage]
         )
 
         let action = TaptionWidgetItem(
@@ -3372,7 +3486,7 @@ final class FeatureEngineTests: XCTestCase {
                 for: [action],
                 at: base
             ),
-            [.schedule, .location, .movement, .sleep, .activity, .action]
+            [.schedule, .location, .movement, .sleep, .activity, .appUsage, .action]
         )
         XCTAssertEqual(
             TaptionWidgetPlaybackEngine.activeItems(
@@ -4108,6 +4222,30 @@ final class FeatureEngineTests: XCTestCase {
             migrated.permissions.count,
             PermissionFeature.allCases.count
         )
+        XCTAssertEqual(migrated.timelineRowOrder, TimelineRowOrder.defaults)
+    }
+
+    func testTimelineRowOrderMovesRowsAndKeepsUnknownRowsStable() {
+        let rows = ["calendar", "location", "movement", "sleep", "photo"]
+        let saved = TimelineRowOrder.defaults
+
+        XCTAssertEqual(
+            TimelineRowOrder.ordered(
+                rows,
+                id: { $0 },
+                savedIDs: saved
+            ),
+            rows
+        )
+        XCTAssertEqual(
+            TimelineRowOrder.moved(
+                rows,
+                sourceID: "photo",
+                targetID: "location",
+                savedIDs: saved
+            ),
+            ["calendar", "photo", "location", "movement", "sleep"]
+        )
     }
 
     func testDeletedActualRecordStaysSuppressedOnAutomaticRefresh() throws {
@@ -4278,6 +4416,81 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(decoded.fetchedAt, fetchedAt)
         XCTAssertEqual(decoded.isStale, true)
+    }
+
+    func testWeatherTimelineMergesEqualValuesAndSplitsOnChange() {
+        let start = makeDate(2026, 8, 1, 10)
+        let first = WeatherContext(
+            observedAt: start,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 26.1
+        )
+        let repeated = WeatherContext(
+            observedAt: start.addingTimeInterval(60 * 60),
+            condition: "맑음",
+            symbolName: "cloud.sun.fill",
+            temperatureCelsius: 26.4
+        )
+        let changed = WeatherContext(
+            observedAt: start.addingTimeInterval(2 * 60 * 60),
+            condition: "흐림",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 26.4
+        )
+
+        let merged = WeatherTimelineEngine.coalesced([
+            first,
+            repeated,
+            changed,
+        ])
+
+        XCTAssertEqual(merged.count, 2)
+        XCTAssertEqual(merged[0].observedAt, start)
+        XCTAssertEqual(
+            merged[0].validUntil,
+            changed.observedAt
+        )
+        XCTAssertEqual(
+            merged[1].validUntil,
+            changed.observedAt.addingTimeInterval(15 * 60)
+        )
+    }
+
+    func testWeatherTimelineKeepsSameDisplayedWeatherContinuous() {
+        let start = makeDate(2026, 8, 1, 10)
+        let first = WeatherContext(
+            observedAt: start,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 28,
+            airQuality: AirQualityContext(
+                pm10MicrogramsPerCubicMeter: 41,
+                pm25MicrogramsPerCubicMeter: 21,
+                observedAt: start,
+                providerName: "에어코리아",
+                isFallback: false
+            )
+        )
+        let repeated = WeatherContext(
+            observedAt: start.addingTimeInterval(60 * 60),
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 28.4,
+            airQuality: AirQualityContext(
+                pm10MicrogramsPerCubicMeter: 63,
+                pm25MicrogramsPerCubicMeter: 30,
+                observedAt: start.addingTimeInterval(60 * 60),
+                providerName: "Open-Meteo",
+                isFallback: true
+            )
+        )
+
+        let merged = WeatherTimelineEngine.coalesced([first, repeated])
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].validUntil, repeated.observedAt.addingTimeInterval(15 * 60))
+        XCTAssertEqual(merged[0].airQuality?.pm10MicrogramsPerCubicMeter, 63)
     }
 
     func testWidgetSyncStatusUsesGroundTruthFingerprint() {

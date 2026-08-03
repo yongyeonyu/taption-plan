@@ -49,7 +49,9 @@ final class AppModel {
                     || oldValue.calendarEvents != snapshot.calendarEvents
                     || oldValue.photos != snapshot.photos
                     || oldValue.categories != snapshot.categories
-                    || oldValue.recordLinks != snapshot.recordLinks) {
+                    || oldValue.recordLinks != snapshot.recordLinks
+                    || oldValue.settings.timelineRowOrder
+                        != snapshot.settings.timelineRowOrder) {
                 timelineRevision &+= 1
             }
         }
@@ -76,6 +78,7 @@ final class AppModel {
     private(set) var sleepSessions: [SleepSession] = []
     private(set) var lastHealthRefreshAt: Date?
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
+    private(set) var appUsageAuthorizationState: ScreenTimeAuthorizationState = .unavailable
     var userFacingError: String?
 
     var widgetSyncStatus: TaptionWidgetSyncStatus {
@@ -109,6 +112,7 @@ final class AppModel {
     @ObservationIgnored private let purchaseService: StoreKitPurchaseService
     @ObservationIgnored private let watchConnectivityService: AppleWatchConnectivityService
     @ObservationIgnored private let airPodsActivityService: AirPodsActivityService
+    @ObservationIgnored private let screenTimeUsageService: ScreenTimeUsageService
     @ObservationIgnored private let watchSensorArchive:
         AppleWatchSensorActivityArchive?
     @ObservationIgnored private let rawDeviceDataArchive:
@@ -189,7 +193,9 @@ final class AppModel {
         watchConnectivityService: AppleWatchConnectivityService =
             AppleWatchConnectivityService(),
         airPodsActivityService: AirPodsActivityService =
-            AirPodsActivityService()
+            AirPodsActivityService(),
+        screenTimeUsageService: ScreenTimeUsageService =
+            ScreenTimeUsageService()
     ) {
         let repositorySource: String
         if let repository {
@@ -214,10 +220,14 @@ final class AppModel {
             self.repository = InMemoryPlanRepository()
             repositorySource = "in-memory"
         }
+        let rawArchive = try? RawDeviceDataMonthlyArchive.applicationSupport()
         self.calendarService = calendarService
         self.photoService = photoService
         self.healthService = healthService
-        self.sensorService = sensorService ?? (try? AppleSensorDataService.applicationSupport())
+        self.sensorService = sensorService
+            ?? (try? AppleSensorDataService.applicationSupport(
+                rawArchive: rawArchive
+            ))
         self.weatherService = weatherService
         self.airQualityService = airQualityService
         self.cloudSyncService = cloudSyncService
@@ -229,10 +239,11 @@ final class AppModel {
         self.purchaseService = purchaseService
         self.watchConnectivityService = watchConnectivityService
         self.airPodsActivityService = airPodsActivityService
+        self.screenTimeUsageService = screenTimeUsageService
+        self.appUsageAuthorizationState = screenTimeUsageService.authorizationState
         self.watchSensorArchive = try?
             AppleWatchSensorActivityArchive.applicationSupport()
-        self.rawDeviceDataArchive = try?
-            RawDeviceDataMonthlyArchive.applicationSupport()
+        self.rawDeviceDataArchive = rawArchive
         Self.integrationLogger.notice(
             "Repository selected: \(repositorySource, privacy: .public)"
         )
@@ -379,10 +390,16 @@ final class AppModel {
     }
 
     func selectScale(_ scale: TimeScale) {
+        guard selectedScale != scale else { return }
         selectedScale = scale
         if settings.rememberLastScale {
             snapshot.settings.startScale = scale.timelineLevel
-            Task { await persist() }
+        }
+        Task {
+            await refreshEnabledData(persistDeviceSnapshot: false)
+            if settings.rememberLastScale {
+                await persist()
+            }
         }
     }
 
@@ -491,6 +508,7 @@ final class AppModel {
             from: loaded.actuals,
             suppressedIDs: loaded.settings.suppressedActualIDs
         )
+        loaded.weather = WeatherTimelineEngine.coalesced(loaded.weather)
         return loaded
     }
 
@@ -607,7 +625,8 @@ final class AppModel {
         let task = Task { [weak self] in
             guard let self else { return }
             do {
-                let source = try await repository.load()
+                var source = try await repository.load()
+                source.weather = WeatherTimelineEngine.coalesced(source.weather)
                 // Publish the local snapshot first. Normalizing historical
                 // records and loading device integrations can be expensive;
                 // neither should hold the first timeline frame hostage.
@@ -684,6 +703,11 @@ final class AppModel {
         deferredVisibleRefreshTask = nil
         foregroundHealthRefreshTask?.cancel()
         foregroundHealthRefreshTask = nil
+        if let rawDeviceDataArchive {
+            await Task.detached(priority: .utility) {
+                try? rawDeviceDataArchive.flushPendingWrites()
+            }.value
+        }
         await persist()
     }
 
@@ -738,6 +762,7 @@ final class AppModel {
             // Photos, Calendar and HealthKit.
             await Task.yield()
             await Task.yield()
+            try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled, self.isSceneActive else {
                 self.foregroundRefreshTask = nil
                 return
@@ -761,7 +786,8 @@ final class AppModel {
             await self.restoreTrackingSessionIfNeeded()
             await self.refreshEnabledData(
                 includesCurrentDeviceDay: true,
-                dataSpan: self.currentDeviceDataSpan
+                dataSpan: self.currentDeviceDataSpan,
+                healthSpan: self.startupHealthSpan
             )
             self.lastForegroundRefreshAt = .now
             self.foregroundRefreshTask = nil
@@ -773,19 +799,14 @@ final class AppModel {
         guard deferredVisibleRefreshTask == nil else { return }
         deferredVisibleRefreshTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            await Task.yield()
-            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(750))
             guard !Task.isCancelled, self.isSceneActive else {
                 self.deferredVisibleRefreshTask = nil
                 return
             }
-            await self.refreshEnabledData(
-                includesCurrentDeviceDay: true,
-                persistDeviceSnapshot: false
-            )
             await self.refreshStore(showErrors: false)
-            await self.persist()
             await self.synchronizeCloud(showErrors: false)
+            await self.persistDeviceLocalSnapshot()
             self.deferredVisibleRefreshTask = nil
         }
     }
@@ -808,6 +829,30 @@ final class AppModel {
 
     func permissionState(for feature: PermissionFeature) -> PermissionState {
         snapshot.settings.permissions[feature] ?? .notDetermined
+    }
+
+    func refreshAppUsageAuthorizationState() {
+        appUsageAuthorizationState = screenTimeUsageService.authorizationState
+        snapshot.settings.permissions[.appUsage] = switch appUsageAuthorizationState {
+        case .approved: .authorized
+        case .denied: .denied
+        case .notDetermined: .notDetermined
+        case .unavailable: .unavailable
+        }
+    }
+
+    func requestAppUsageAuthorization() async {
+        guard !isRefreshingIntegrations else { return }
+        isRefreshingIntegrations = true
+        do {
+            try await screenTimeUsageService.requestAuthorization()
+            refreshAppUsageAuthorizationState()
+            await persist()
+        } catch {
+            refreshAppUsageAuthorizationState()
+            userFacingError = "앱 사용시간 권한을 허용하지 못했습니다."
+        }
+        isRefreshingIntegrations = false
     }
 
     func requestPhotos() async {
@@ -1051,6 +1096,7 @@ final class AppModel {
     func refreshEnabledData(
         includesCurrentDeviceDay: Bool = false,
         dataSpan: TimeSpan? = nil,
+        healthSpan: TimeSpan? = nil,
         persistDeviceSnapshot: Bool = true
     ) async {
         await waitForBootstrapPreparation()
@@ -1086,7 +1132,7 @@ final class AppModel {
                     "HealthKit authorization refresh failed: \(error.localizedDescription, privacy: .public)"
                 )
             }
-            await refreshHealthData()
+            await refreshHealthData(in: healthSpan)
         }
         if settings.locationEnabled
             || settings.weatherEnabled
@@ -1235,6 +1281,10 @@ final class AppModel {
 
     func requestWatchDataSync() {
         watchConnectivityService.requestWatchDataSync()
+    }
+
+    func refreshAppleWatchConnectionState() {
+        watchConnectivityService.refreshConnectionState()
     }
 
     func startTracking(_ kind: TrackingKind) async {
@@ -2586,6 +2636,17 @@ final class AppModel {
         Task { await persist() }
     }
 
+    func setTimelineRowOrder(_ orderedIDs: [String]) {
+        let normalized = AppFeatureSettings.normalizedTimelineRowOrder(
+            orderedIDs
+        )
+        guard snapshot.settings.timelineRowOrder != normalized else {
+            return
+        }
+        snapshot.settings.timelineRowOrder = normalized
+        Task { await persist() }
+    }
+
     func deleteCustomCategory(
         _ categoryID: String,
         reassigningTo replacementID: String
@@ -3062,12 +3123,13 @@ final class AppModel {
     ) {
         guard let rawDeviceDataArchive else { return }
         do {
-            try rawDeviceDataArchive.append(
+            let envelope = try RawDeviceDataEnvelope(
+                capturedAt: capturedAt,
                 source: source,
                 kind: kind,
-                payload: payload,
-                capturedAt: capturedAt
+                payload: payload
             )
+            try rawDeviceDataArchive.append(envelopes: [envelope])
         } catch {
             Self.integrationLogger.error(
                 "Raw device data archive failed: \(kind, privacy: .public) \(error.localizedDescription, privacy: .public)"
@@ -4144,7 +4206,7 @@ final class AppModel {
                         && $0.placeID == nil
                 }
                 self.snapshot.weather.append(context)
-                self.snapshot.weather.sort { $0.observedAt < $1.observedAt }
+                self.coalesceWeatherSnapshot()
                 await self.persistDeviceLocalSnapshot()
             } catch {
                 self.lastLiveEnvironmentFailureAt = date
@@ -4301,7 +4363,7 @@ final class AppModel {
                     && $0.observedAt <= span.end
             }
             snapshot.weather.append(contentsOf: contexts)
-            snapshot.weather.sort { $0.observedAt < $1.observedAt }
+            coalesceWeatherSnapshot()
         }
 
         // This refresh runs as part of automatic sensor analysis.  A weather
@@ -4347,12 +4409,16 @@ final class AppModel {
                     && abs($0.observedAt.timeIntervalSince(observedAt)) < 5 * 60
             }
             snapshot.weather.append(context)
-            snapshot.weather.sort { $0.observedAt < $1.observedAt }
+            coalesceWeatherSnapshot()
         } catch {
             Self.integrationLogger.info(
                 "Stored weather fallback unavailable: \(error.localizedDescription, privacy: .public)"
             )
         }
+    }
+
+    private func coalesceWeatherSnapshot() {
+        snapshot.weather = WeatherTimelineEngine.coalesced(snapshot.weather)
     }
 
     private func applyPendingWidgetCommands(
@@ -4506,17 +4572,24 @@ final class AppModel {
 
     private var visibleDataSpan: TimeSpan {
         let calendar = Calendar.autoupdatingCurrent
-        let start = calendar.date(
-            byAdding: .month,
-            value: -1,
-            to: calendar.startOfDay(for: selectedDate)
-        ) ?? selectedDate.addingTimeInterval(-31 * 86_400)
-        let end = calendar.date(
-            byAdding: .month,
-            value: 13,
-            to: start
-        ) ?? selectedDate.addingTimeInterval(366 * 86_400)
-        return TimeSpan(start: start, end: end)
+        let level = selectedScale.timelineLevel
+        let aggregation = TimelineAggregationEngine(calendar: calendar)
+        let navigation = TimelinePeriodNavigationEngine(calendar: calendar)
+        let center = aggregation.interval(for: level, containing: selectedDate)
+        let previous = navigation.adjacentDate(
+            from: selectedDate,
+            level: level,
+            direction: -1
+        ).map { aggregation.interval(for: level, containing: $0) }
+        let next = navigation.adjacentDate(
+            from: selectedDate,
+            level: level,
+            direction: 1
+        ).map { aggregation.interval(for: level, containing: $0) }
+        return TimeSpan(
+            start: previous?.start ?? center.start,
+            end: next?.end ?? center.end
+        )
     }
 
     private var currentDeviceDataSpan: TimeSpan {
@@ -4524,6 +4597,18 @@ final class AppModel {
             for: .day,
             containing: .now
         )
+    }
+
+    private var startupHealthSpan: TimeSpan {
+        let calendar = Calendar.autoupdatingCurrent
+        let now = Date.now
+        let today = calendar.startOfDay(for: now)
+        let start = calendar.date(
+            byAdding: .day,
+            value: -1,
+            to: today
+        ) ?? now.addingTimeInterval(-2 * 86_400)
+        return TimeSpan(start: start, end: now)
     }
 
     private var recentHealthSpan: TimeSpan {
@@ -4663,12 +4748,16 @@ final class AppModel {
             local.settings.watchAccelerationProfile
         value.settings.watchDataSyncProfile =
             local.settings.watchDataSyncProfile
+        value.settings.timelineRowOrder =
+            AppFeatureSettings.normalizedTimelineRowOrder(
+                local.settings.timelineRowOrder
+            )
         value.settings.floorCalibration = nil
         value.settings.movementCorrections =
             local.settings.movementCorrections
         // Weather is sampled with device location and remains device ground
         // truth, just like the corresponding place and movement records.
-        value.weather = local.weather
+        value.weather = WeatherTimelineEngine.coalesced(local.weather)
         value.settings.suppressedActualIDs.formUnion(
             local.settings.suppressedActualIDs
         )

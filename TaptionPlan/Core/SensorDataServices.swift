@@ -38,15 +38,30 @@ struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
 }
 
 final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
+    private static let logger = Logger(
+        subsystem: "com.taption.plan",
+        category: "RawDeviceDataArchive"
+    )
     private let rootDirectory: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private let calendar: Calendar
     private let lock = NSLock()
+    private let compressionQueue = DispatchQueue(
+        label: "com.taption.plan.raw-archive-compression",
+        qos: .utility
+    )
+    private let flushDelay: TimeInterval
+    private var scheduledMonths = Set<String>()
 
-    init(rootDirectory: URL, calendar: Calendar = .autoupdatingCurrent) {
+    init(
+        rootDirectory: URL,
+        calendar: Calendar = .autoupdatingCurrent,
+        flushDelay: TimeInterval = 5 * 60
+    ) {
         self.rootDirectory = rootDirectory
         self.calendar = calendar
+        self.flushDelay = max(0, flushDelay)
         self.encoder = Self.payloadEncoder()
         self.decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .secondsSince1970
@@ -94,19 +109,144 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
 
     func append(envelopes: [RawDeviceDataEnvelope]) throws {
         guard !envelopes.isEmpty else { return }
+        var monthsToSchedule: [String] = []
+        lock.lock()
+        do {
+            let grouped = Dictionary(grouping: envelopes) {
+                monthKey(for: $0.capturedAt)
+            }
+            for (monthKey, values) in grouped {
+                let journalURL = try journalFileURL(for: monthKey)
+                var payload = Data()
+                for envelope in values.sorted(by: {
+                    $0.capturedAt < $1.capturedAt
+                }) {
+                    payload.append(try encoder.encode(envelope))
+                    payload.append(0x0A)
+                }
+                try append(payload, to: journalURL)
+                if scheduledMonths.insert(monthKey).inserted {
+                    monthsToSchedule.append(monthKey)
+                }
+            }
+            lock.unlock()
+        } catch {
+            lock.unlock()
+            throw error
+        }
+        for monthKey in monthsToSchedule {
+            compressionQueue.asyncAfter(
+                deadline: .now() + flushDelay
+            ) { [weak self] in
+                do {
+                    try self?.flush(monthKey: monthKey)
+                } catch {
+                    Self.logger.error(
+                        "Raw archive chunk flush failed: \(error.localizedDescription, privacy: .public)"
+                    )
+                }
+            }
+        }
+    }
+
+    func envelopes(inMonthContaining date: Date) throws
+        -> [RawDeviceDataEnvelope] {
         lock.lock()
         defer { lock.unlock() }
-        let grouped = Dictionary(grouping: envelopes) {
-            monthKey(for: $0.capturedAt)
+        let monthKey = monthKey(for: date)
+        let directory = try monthDirectory(for: monthKey)
+        var payloads: [Data] = []
+        let legacyURL = legacyCompressedFileURL(
+            in: directory,
+            monthKey: monthKey
+        )
+        if FileManager.default.fileExists(atPath: legacyURL.path),
+           let payload = try? existingPayload(at: legacyURL) {
+            payloads.append(payload)
         }
-        for (monthKey, values) in grouped {
-            let fileURL = try compressedFileURL(for: monthKey)
-            var payload = try existingPayload(at: fileURL)
-            for envelope in values.sorted(by: { $0.capturedAt < $1.capturedAt }) {
-                payload.append(try encoder.encode(envelope))
-                payload.append(0x0A)
+        let journalURL = journalFileURL(in: directory)
+        if let payload = try? Data(contentsOf: journalURL) {
+            payloads.append(payload)
+        }
+        let chunks = directory.appendingPathComponent(
+            "chunks",
+            isDirectory: true
+        )
+        if let files = try? FileManager.default.contentsOfDirectory(
+            at: chunks,
+            includingPropertiesForKeys: nil
+        ) {
+            for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+                guard let data = try? Data(contentsOf: file) else { continue }
+                if file.pathExtension == "zlib",
+                   let payload = try? decompress(data) {
+                    payloads.append(payload)
+                } else if file.lastPathComponent.hasSuffix(".jsonl.pending") {
+                    payloads.append(data)
+                }
             }
-            try compress(payload).write(
+        }
+        var seen = Set<UUID>()
+        return payloads
+            .flatMap { payload in
+                payload.split(separator: 0x0A).compactMap {
+                    try? decoder.decode(
+                        RawDeviceDataEnvelope.self,
+                        from: Data($0)
+                    )
+                }
+            }
+            .filter { seen.insert($0.id).inserted }
+            .sorted { $0.capturedAt < $1.capturedAt }
+    }
+
+    func flushPendingWrites() throws {
+        lock.lock()
+        let months = Array(scheduledMonths)
+        lock.unlock()
+        for monthKey in months {
+            try flush(monthKey: monthKey)
+        }
+        compressionQueue.sync {}
+    }
+
+    private func monthDirectory(for monthKey: String) throws -> URL {
+        let directory = rootDirectory.appendingPathComponent(
+            monthKey,
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        return directory
+    }
+
+    private func legacyCompressedFileURL(
+        in directory: URL,
+        monthKey: String
+    ) -> URL {
+        directory.appendingPathComponent(
+            "taption-raw-\(monthKey).jsonl.zlib"
+        )
+    }
+
+    private func journalFileURL(for monthKey: String) throws -> URL {
+        journalFileURL(in: try monthDirectory(for: monthKey))
+    }
+
+    private func journalFileURL(in directory: URL) -> URL {
+        directory.appendingPathComponent("current.jsonl")
+    }
+
+    private func append(_ payload: Data, to fileURL: URL) throws {
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            let handle = try FileHandle(forWritingTo: fileURL)
+            defer { try? handle.close() }
+            try handle.seekToEnd()
+            try handle.write(contentsOf: payload)
+        } else {
+            try payload.write(
                 to: fileURL,
                 options: [
                     .atomic,
@@ -116,29 +256,55 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         }
     }
 
-    func envelopes(inMonthContaining date: Date) throws
-        -> [RawDeviceDataEnvelope] {
+    private func flush(monthKey: String) throws {
+        let pendingURL: URL?
         lock.lock()
-        defer { lock.unlock() }
-        let fileURL = try compressedFileURL(for: monthKey(for: date))
-        let payload = try existingPayload(at: fileURL)
-        return payload.split(separator: 0x0A).compactMap {
-            try? decoder.decode(RawDeviceDataEnvelope.self, from: Data($0))
+        do {
+            scheduledMonths.remove(monthKey)
+            let directory = try monthDirectory(for: monthKey)
+            let journalURL = journalFileURL(in: directory)
+            guard FileManager.default.fileExists(atPath: journalURL.path) else {
+                lock.unlock()
+                return
+            }
+            let chunks = directory.appendingPathComponent(
+                "chunks",
+                isDirectory: true
+            )
+            try FileManager.default.createDirectory(
+                at: chunks,
+                withIntermediateDirectories: true
+            )
+            let name = String(
+                format: "%013lld-%@.jsonl.pending",
+                Int64(Date.now.timeIntervalSince1970 * 1_000),
+                UUID().uuidString
+            )
+            let destination = chunks.appendingPathComponent(name)
+            try FileManager.default.moveItem(
+                at: journalURL,
+                to: destination
+            )
+            pendingURL = destination
+            lock.unlock()
+        } catch {
+            lock.unlock()
+            throw error
         }
-    }
-
-    private func compressedFileURL(for monthKey: String) throws -> URL {
-        let directory = rootDirectory.appendingPathComponent(
-            monthKey,
-            isDirectory: true
+        guard let pendingURL else { return }
+        let payload = try Data(contentsOf: pendingURL)
+        let destination = pendingURL
+            .deletingPathExtension()
+            .deletingPathExtension()
+            .appendingPathExtension("jsonl.zlib")
+        try compress(payload).write(
+            to: destination,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
         )
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        return directory.appendingPathComponent(
-            "taption-raw-\(monthKey).jsonl.zlib"
-        )
+        try FileManager.default.removeItem(at: pendingURL)
     }
 
     private func existingPayload(at fileURL: URL) throws -> Data {
@@ -341,7 +507,8 @@ actor SensorReadingArchive {
     }
 
     static func applicationSupport(
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        rawArchive: RawDeviceDataMonthlyArchive? = nil
     ) throws -> SensorReadingArchive {
         let root = try fileManager.url(
             for: .applicationSupportDirectory,
@@ -355,7 +522,8 @@ actor SensorReadingArchive {
         )
         return SensorReadingArchive(
             fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
-            rawArchive: try? RawDeviceDataMonthlyArchive.applicationSupport(),
+            rawArchive: rawArchive
+                ?? (try? RawDeviceDataMonthlyArchive.applicationSupport()),
             trackingChunkArchive: try? TrackingSessionChunkArchive.applicationSupport()
         )
     }
@@ -491,9 +659,13 @@ final class AppleSensorDataService {
         self.history = history
     }
 
-    static func applicationSupport() throws -> AppleSensorDataService {
+    static func applicationSupport(
+        rawArchive: RawDeviceDataMonthlyArchive? = nil
+    ) throws -> AppleSensorDataService {
         AppleSensorDataService(
-            archive: try SensorReadingArchive.applicationSupport()
+            archive: try SensorReadingArchive.applicationSupport(
+                rawArchive: rawArchive
+            )
         )
     }
 

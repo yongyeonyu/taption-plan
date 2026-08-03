@@ -141,10 +141,10 @@ enum MotionKindResolver {
     ) -> MotionKind {
         if running { return .running }
         if cycling { return .cycling }
-        if walking { return .walking }
-        // Core Motion may report automotive and stationary together while a
-        // vehicle waits at a light. Preserve the enclosing vehicle segment.
+        // Core Motion flags are not mutually exclusive. Vehicle vibration can
+        // surface as walking, so keep automotive ahead of the pedestrian flag.
         if automotive { return .automotive }
+        if walking { return .walking }
         if stationary { return .stationary }
         return .unknown
     }

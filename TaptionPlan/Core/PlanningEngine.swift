@@ -214,7 +214,8 @@ enum AutomaticRecordTimelineEngine {
     /// routine progress slider.
     static func isImmutable(_ actual: ActualRecord) -> Bool {
         switch actual.source {
-        case .healthKit, .appleWatch, .motion, .location, .media, .call:
+        case .healthKit, .appleWatch, .motion, .location, .media, .call,
+             .appUsage:
             true
         case .manual, .timer, .calendar, .photo:
             false
@@ -248,7 +249,8 @@ enum AutomaticRecordTimelineEngine {
                     || $0.source == .motion
                     || $0.source == .location
                     || $0.source == .media
-                    || $0.source == .call)
+                    || $0.source == .call
+                    || $0.source == .appUsage)
                     && $0.span(asOf: asOf).intersection(with: span) != nil
             }
             .sorted {
@@ -1450,6 +1452,89 @@ enum RecordRelationshipEngine {
         case .airplane: "비행기"
         case .ship: "배"
         }
+    }
+}
+
+enum WeatherTimelineEngine {
+    static let defaultDuration: TimeInterval = 15 * 60
+
+    private struct Signature: Equatable {
+        let condition: String
+        let temperature: Int
+        let airGrade: AirQualityGrade?
+    }
+
+    static func span(
+        for context: WeatherContext,
+        defaultDuration: TimeInterval = 15 * 60
+    ) -> TimeSpan {
+        let fallbackEnd = context.observedAt.addingTimeInterval(defaultDuration)
+        return TimeSpan(
+            start: context.observedAt,
+            end: max(
+                context.observedAt.addingTimeInterval(1),
+                context.validUntil ?? fallbackEnd
+            )
+        )
+    }
+
+    static func coalesced(
+        _ contexts: [WeatherContext],
+        defaultDuration: TimeInterval = 15 * 60
+    ) -> [WeatherContext] {
+        var seen = Set<UUID>()
+        let ordered = contexts
+            .filter { seen.insert($0.id).inserted }
+            .sorted { $0.observedAt < $1.observedAt }
+        var result: [WeatherContext] = []
+        result.reserveCapacity(ordered.count)
+
+        for original in ordered {
+            var current = original
+            current.validUntil = span(
+                for: current,
+                defaultDuration: defaultDuration
+            ).end
+            guard let lastIndex = result.indices.last else {
+                result.append(current)
+                continue
+            }
+
+            let last = result[lastIndex]
+            let lastSpan = span(for: last, defaultDuration: defaultDuration)
+            if signature(last) == signature(current) {
+                result[lastIndex].validUntil = max(
+                    lastSpan.end,
+                    span(for: current, defaultDuration: defaultDuration).end
+                )
+                // Keep the most recent detail values while preserving one
+                // continuous block for the same displayed weather.
+                result[lastIndex].airQuality = current.airQuality
+                result[lastIndex].point = current.point ?? result[lastIndex].point
+                result[lastIndex].placeID = current.placeID ?? result[lastIndex].placeID
+                result[lastIndex].placeName = current.placeName ?? result[lastIndex].placeName
+                if let fetchedAt = current.fetchedAt,
+                   fetchedAt > (result[lastIndex].fetchedAt ?? .distantPast) {
+                    result[lastIndex].fetchedAt = fetchedAt
+                    result[lastIndex].isStale = current.isStale
+                }
+            } else {
+                result[lastIndex].validUntil = current.observedAt
+                result.append(current)
+            }
+        }
+        return result
+    }
+
+    private static func signature(_ context: WeatherContext) -> Signature {
+        Signature(
+            condition: context.condition,
+            temperature: Int(context.temperatureCelsius.rounded()),
+            // Merge by what the timeline shows.  Raw PM values, provider and
+            // fallback state belong to the detail view and must not split a
+            // visually identical weather run.
+            airGrade: context.airQuality?.overallGrade
+        )
     }
 }
 

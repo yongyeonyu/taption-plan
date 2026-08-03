@@ -129,7 +129,10 @@ enum TaptionWidgetPayloadFactory {
                 )
             }
         let activityItems = automaticHealthItems
-            .filter { !AutomaticRecordTimelineEngine.isSleep($0) }
+            .filter {
+                !AutomaticRecordTimelineEngine.isSleep($0)
+                    && $0.categoryID != "appUsage"
+            }
             .map { actual in
                 TaptionWidgetItem(
                     id: actual.id,
@@ -145,6 +148,23 @@ enum TaptionWidgetPayloadFactory {
                 )
             }
 
+        let appUsageItems = automaticHealthItems
+            .filter { $0.categoryID == "appUsage" }
+            .map { actual in
+                TaptionWidgetItem(
+                    id: actual.id,
+                    title: actual.title,
+                    categoryID: "appUsage",
+                    startsAt: actual.startedAt,
+                    endsAt: actual.endedAt ?? now,
+                    status: "recorded",
+                    isFixed: true,
+                    categoryName: "앱 사용",
+                    categoryHex: "#8C7AB8",
+                    lane: .appUsage
+                )
+            }
+
         let weather = snapshot.weather.min {
             abs($0.observedAt.timeIntervalSince(now))
                 < abs($1.observedAt.timeIntervalSince(now))
@@ -156,6 +176,7 @@ enum TaptionWidgetPayloadFactory {
                 + movementItems
                 + sleepItems
                 + activityItems
+                + appUsageItems
         )
         .sorted { $0.startsAt < $1.startsAt }
 

@@ -16,6 +16,55 @@ enum TimelineLevel: String, Codable, CaseIterable, Sendable {
     case year
 }
 
+/// Stable identifiers shared by the timeline row labels and detail cards.
+/// Keeping this order in the model lets the UI persist one ordering for both
+/// surfaces without coupling storage to SwiftUI view types.
+enum TimelineRowOrder {
+    static let defaults = [
+        "calendar",
+        "location",
+        "movement",
+        "sleep",
+        "activity",
+        "appUsage",
+        "weather",
+        "photo",
+    ]
+
+    static func ordered<T>(
+        _ values: [T],
+        id: (T) -> String,
+        savedIDs: [String]
+    ) -> [T] {
+        let rank = Dictionary(
+            uniqueKeysWithValues: savedIDs.enumerated().map { ($1, $0) }
+        )
+        return values.enumerated().sorted { lhs, rhs in
+            let left = rank[id(lhs.element)] ?? savedIDs.count + lhs.offset
+            let right = rank[id(rhs.element)] ?? savedIDs.count + rhs.offset
+            return left == right ? lhs.offset < rhs.offset : left < right
+        }.map(\.element)
+    }
+
+    static func moved(
+        _ values: [String],
+        sourceID: String,
+        targetID: String,
+        savedIDs: [String]
+    ) -> [String]? {
+        let current = ordered(values, id: { $0 }, savedIDs: savedIDs)
+        guard sourceID != targetID,
+              let source = current.firstIndex(of: sourceID),
+              let target = current.firstIndex(of: targetID) else {
+            return nil
+        }
+        var result = current
+        let value = result.remove(at: source)
+        result.insert(value, at: min(target, result.count))
+        return result
+    }
+}
+
 enum PlanStatus: String, Codable, CaseIterable, Sendable {
     case planned
     case running
@@ -58,6 +107,8 @@ enum ActualSource: String, Codable, CaseIterable, Sendable {
     /// An active phone/FaceTime call observed through CallKit while an
     /// AirPods route is connected. CallKit does not expose call history.
     case call
+    /// Screen Time usage reported through the Family Controls report.
+    case appUsage
 }
 
 enum ConfidenceLevel: String, Codable, CaseIterable, Sendable {
@@ -164,6 +215,7 @@ enum PermissionFeature: String, Codable, CaseIterable, Sendable {
     case microphone
     case notifications
     case cloud
+    case appUsage
 }
 
 enum PermissionState: String, Codable, CaseIterable, Sendable {
@@ -647,6 +699,9 @@ struct AirQualityContext: Codable, Hashable, Sendable {
 struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var observedAt: Date
+    /// End of the displayed weather run. Raw samples remain in the device
+    /// archive while equal consecutive values share one timeline segment.
+    var validUntil: Date?
     /// Time at which the provider actually supplied this observation.
     var fetchedAt: Date?
     /// True when this is the last known value after a failed refresh.
@@ -664,6 +719,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     init(
         id: UUID = UUID(),
         observedAt: Date,
+        validUntil: Date? = nil,
         fetchedAt: Date? = nil,
         isStale: Bool? = false,
         condition: String,
@@ -678,6 +734,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.observedAt = observedAt
+        self.validUntil = validUntil
         self.fetchedAt = fetchedAt
         self.isStale = isStale
         self.condition = condition
@@ -1555,6 +1612,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var weatherEnabled: Bool
     var notificationsEnabled: Bool
     var permissions: [PermissionFeature: PermissionState]
+    var timelineRowOrder: [String]
 
     static let defaults = AppFeatureSettings(
         startScale: .day,
@@ -1578,7 +1636,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         notificationsEnabled: false,
         permissions: Dictionary(
             uniqueKeysWithValues: PermissionFeature.allCases.map { ($0, .notDetermined) }
-        )
+        ),
+        timelineRowOrder: TimelineRowOrder.defaults
     )
 
     init(
@@ -1601,7 +1660,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         suppressedActualIDs: Set<UUID> = [],
         weatherEnabled: Bool,
         notificationsEnabled: Bool,
-        permissions: [PermissionFeature: PermissionState]
+        permissions: [PermissionFeature: PermissionState],
+        timelineRowOrder: [String] = TimelineRowOrder.defaults
     ) {
         self.startScale = startScale
         self.rememberLastScale = rememberLastScale
@@ -1623,6 +1683,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.weatherEnabled = weatherEnabled
         self.notificationsEnabled = notificationsEnabled
         self.permissions = permissions
+        self.timelineRowOrder = Self.normalizedTimelineRowOrder(timelineRowOrder)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1646,6 +1707,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case weatherEnabled
         case notificationsEnabled
         case permissions
+        case timelineRowOrder
     }
 
     init(from decoder: Decoder) throws {
@@ -1733,6 +1795,12 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             [PermissionFeature: PermissionState].self,
             forKey: .permissions
         ) ?? defaults.permissions
+        timelineRowOrder = Self.normalizedTimelineRowOrder(
+            try values.decodeIfPresent(
+                [String].self,
+                forKey: .timelineRowOrder
+            ) ?? defaults.timelineRowOrder
+        )
         for feature in PermissionFeature.allCases
         where permissions[feature] == nil {
             permissions[feature] = .notDetermined
@@ -1747,6 +1815,15 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             $0.kind == item.kind && $0.kind != .custom
         }) {
             result.append(item)
+        }
+        return result
+    }
+
+    static func normalizedTimelineRowOrder(_ ids: [String]) -> [String] {
+        var result: [String] = []
+        for id in ids + TimelineRowOrder.defaults
+        where !id.isEmpty && !result.contains(id) {
+            result.append(id)
         }
         return result
     }

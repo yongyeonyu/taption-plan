@@ -490,42 +490,23 @@ struct RunningCatView: View {
     @State private var hopping = false
 
     var body: some View {
-        HStack(spacing: -4) {
-            Capsule()
-                .stroke(outline, lineWidth: 2)
-                .frame(width: 14, height: 7)
-                .rotationEffect(.degrees(-28))
-            Ellipse()
-                .fill(coat.baseColor)
-                .frame(width: 25, height: 14)
-                .overlay(alignment: .trailing) {
-                    Circle()
-                        .fill(coat.baseColor)
-                        .frame(width: 13, height: 13)
-                        .overlay {
-                            Circle().fill(eye).frame(width: 2, height: 2).offset(x: 3, y: -1)
-                        }
-                        .offset(x: 5, y: -3)
-                }
-                .overlay(alignment: .bottom) {
-                    HStack(spacing: 7) {
-                        Capsule().fill(outline).frame(width: 2, height: 9).rotationEffect(.degrees(25))
-                        Capsule().fill(outline).frame(width: 2, height: 9).rotationEffect(.degrees(-25))
-                    }
-                    .offset(y: 6)
-                }
+        TimelineView(
+            .animation(
+                minimumInterval: TaptionCatAnimationEngine.stepDuration,
+                paused: reduceMotion
+            )
+        ) { context in
+            TaptionCatAnimationView(
+                style: coat.rawValue,
+                pose: TaptionCatAnimationEngine.pose(
+                    at: context.date,
+                    preferredAction: .running,
+                    reducesMotion: reduceMotion
+                ),
+                reducesMotion: reduceMotion
+            )
         }
-        .frame(width: 40, height: 27)
-        .offset(y: hopping ? -2 : 0)
-        .animation(
-            reduceMotion ? nil : .linear(duration: 0.21).repeatForever(autoreverses: true),
-            value: hopping
-        )
-        .onAppear {
-            if !reduceMotion {
-                hopping = true
-            }
-        }
+        .frame(width: 52, height: 32)
     }
 
     private var outline: Color {
@@ -555,28 +536,26 @@ struct CatActionPreviewStage: View {
                 reducesMotion: reducesMotion
             )
             GeometryReader { proxy in
-                let catWidth: CGFloat = 64
-                let travelWidth = max(0, proxy.size.width - catWidth)
-
                 ZStack(alignment: .topLeading) {
                     Rectangle()
                         .fill(.black.opacity(0.08))
                         .frame(height: 1)
                         .offset(y: proxy.size.height - 7)
 
-                    PreviewActionCat(
-                        coat: coat,
-                        pose: pose,
+                    TaptionCatAnimationView(
+                        style: coat.rawValue,
+                        pose: TaptionCatAnimationEngine.pose(
+                            from: pose.action.rawValue,
+                            progress: pose.progress,
+                            phase: pose.legPhase,
+                            facesLeft: pose.facesLeft,
+                            tailSwing: pose.tailSwing,
+                            headTiltDegrees: pose.headTiltDegrees
+                        ),
                         reducesMotion: reducesMotion
                     )
-                    .frame(width: catWidth, height: 48)
-                    .scaleEffect(x: pose.facesLeft ? -1 : 1, y: 1)
-                    .offset(
-                        x: action.movesAcrossTrack
-                            ? travelWidth * pose.progress
-                            : travelWidth / 2,
-                        y: max(0, (proxy.size.height - 48) / 2)
-                    )
+                    .frame(width: proxy.size.width, height: 48)
+                    .offset(y: max(0, (proxy.size.height - 48) / 2))
                 }
             }
         }

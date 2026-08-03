@@ -83,6 +83,7 @@ struct TravelModeClassifier: Sendable {
         let speeds = speedSeries(for: ordered)
         let averageSpeed = trimmedMean(speeds)
         let maxSpeed = percentile(speeds, fraction: 0.9) ?? 0
+        let hasVehicleSpeed = averageSpeed > 5.5 || maxSpeed > 8
         let gpsLossRatio = ordered.isEmpty
             ? 0
             : Double(ordered.filter { !$0.gpsAvailable }.count)
@@ -118,8 +119,10 @@ struct TravelModeClassifier: Sendable {
         case .walking:
             add(
                 .walking,
-                0.75 * dominantMotionWeight,
-                "Core Motion 보행"
+                (hasVehicleSpeed ? 0.2 : 0.75) * dominantMotionWeight,
+                hasVehicleSpeed
+                    ? "Core Motion 보행 · 차량 속도와 불일치"
+                    : "Core Motion 보행"
             )
         case .running:
             add(
@@ -186,7 +189,6 @@ struct TravelModeClassifier: Sendable {
         if (stepSignal.bestCount >= walkingStepThreshold
             && stepsPerMinute >= 10)
             || hasPedestrianCadence {
-            let hasVehicleSpeed = averageSpeed > 5.5 || maxSpeed > 8
             let stepScore = hasVehicleSpeed ? 0.18 : 0.58
             add(.walking, stepScore, stepSignal.gaitEvidence)
             if stepSignal.cadenceStepsPerSecond >= 2.15
@@ -203,6 +205,8 @@ struct TravelModeClassifier: Sendable {
             if dominantMotion == .automotive, hasVehicleSpeed {
                 add(.car, 0.56, "차량 속도대와 자동차 모션 우선")
                 add(.taxi, 0.18, "차량 속도대와 자동차 모션 우선")
+            } else if hasVehicleSpeed {
+                add(.car, 0.56, "보행 불가능 속도와 걸음 신호 불일치")
             }
         } else if stepSignal.hasCoverage,
                   inferenceSpan.duration >= 2 * 60,
@@ -708,6 +712,10 @@ struct TravelModeClassifier: Sendable {
 
 struct FloorEstimator: Sendable {
     var defaultFloorHeightMeters: Double = 3
+    /// Timeline segmentation needs a persistent target floor. Two samples
+    /// are enough for direct one-off estimates, but three consecutive samples
+    /// prevent barometer drift from creating a false floor change.
+    var minimumStableSampleCount: Int = 2
 
     func estimate(
         readings: [SensorReading],
@@ -854,7 +862,7 @@ struct FloorEstimator: Sendable {
         let stableSampleCount = offsets.reversed().prefix {
             $0 == floorDelta
         }.count
-        guard stableSampleCount >= 2
+        guard stableSampleCount >= minimumStableSampleCount
                 || pedometerDelta == floorDelta else {
             return nil
         }
@@ -1075,20 +1083,26 @@ struct FrequentPlaceResolutionEngine: Sendable {
             updated.displayName = match.name
             updated.buildingName = match.name
 
-            if let calibration = match.floorCalibration,
-               let reading = readings
-                .filter({ place.span.contains($0.timestamp) })
-                .sorted(by: { $0.timestamp < $1.timestamp })
-                .first,
-               let estimate = FloorCalibrationEngine().estimate(
-                    reading: reading,
-                    calibration: calibration
-               ) {
-                updated.floor = estimate.floor
-                updated.confidence = estimate.confidence
-            } else if let floor = match.floor {
+            // A user-confirmed floor is the building anchor. GPS altitude and
+            // barometric altitude drift by several metres while standing in
+            // one place, so recalculating from the first sample made a fixed
+            // home/company floor jump on every refresh. Real floor changes
+            // are handled separately by FloorTimelineEngine after they remain
+            // stable across multiple samples.
+            if let floor = match.floor {
                 updated.floor = floor
                 updated.confidence = .high
+            } else if let calibration = match.floorCalibration,
+                      let reading = readings
+                        .filter({ place.span.contains($0.timestamp) })
+                        .sorted(by: { $0.timestamp < $1.timestamp })
+                        .first,
+                      let estimate = FloorCalibrationEngine().estimate(
+                            reading: reading,
+                            calibration: calibration
+                      ) {
+                updated.floor = estimate.floor
+                updated.confidence = estimate.confidence
             }
             updated.isConfirmed = true
             return updated
@@ -1112,7 +1126,7 @@ struct FrequentPlaceResolutionEngine: Sendable {
 }
 
 struct FloorTimelineEngine: Sendable {
-    var estimator = FloorEstimator()
+    var estimator = FloorEstimator(minimumStableSampleCount: 3)
     var minimumPlaceSegmentDuration: TimeInterval = 60
 
     func apply(

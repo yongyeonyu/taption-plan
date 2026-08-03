@@ -14,10 +14,6 @@ struct TaptionPlanWatchApp: App {
         workout.onHealthSnapshot = { [weak connectivity] snapshot in
             connectivity?.sendHealthSnapshot(snapshot)
         }
-        workout.applySettings(
-            acceleration: connectivity.payload?.accelerationSettings,
-            dataSyncProfile: connectivity.payload?.dataSyncProfile
-        )
         connectivity.onPayloadChange = { [weak workout] payload in
             workout?.applySettings(
                 acceleration: payload.accelerationSettings,
@@ -50,6 +46,18 @@ struct TaptionPlanWatchApp: App {
                     }
                 }
             }
+        }
+        // Do not start Core Motion/HealthKit while SwiftUI is still creating
+        // the Watch scene.  A cached payload can enable capture, and starting
+        // the sensor queue from App.init races the first view transaction on
+        // watchOS and terminates the app with a dispatch precondition trap.
+        Task { @MainActor [weak connectivity, weak workout] in
+            await Task.yield()
+            guard let workout else { return }
+            workout.applySettings(
+                acceleration: connectivity?.payload?.accelerationSettings,
+                dataSyncProfile: connectivity?.payload?.dataSyncProfile
+            )
         }
         _connectivity = StateObject(wrappedValue: connectivity)
         _workout = StateObject(wrappedValue: workout)

@@ -591,6 +591,7 @@ struct ReviewView: View {
         case .photo: "사진"
         case .media: "미디어 재생"
         case .call: "통화"
+        case .appUsage: "앱 사용시간"
         }
     }
 
@@ -813,6 +814,7 @@ struct ActualRecordDetailView: View {
         case .photo: "사진"
         case .media: "미디어 재생"
         case .call: "통화"
+        case .appUsage: "앱 사용시간"
         }
     }
 

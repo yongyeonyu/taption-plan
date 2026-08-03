@@ -7,7 +7,7 @@ struct WatchContentView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
+                TimelineView(.periodic(from: .now, by: 0.5)) { context in
                     dashboard(at: context.date)
                 }
                 .padding(.horizontal, 4)
@@ -45,7 +45,8 @@ struct WatchContentView: View {
                 reducesMotion: connectivity.payload?.reducesMotion ?? false,
                 isRunning: !currentItems.isEmpty
                     || workout.isActive
-                    || workout.isMotionRecording
+                    || workout.isMotionRecording,
+                date: date
             )
             quickWorkoutControls
             if currentItems.isEmpty {
@@ -512,153 +513,21 @@ private struct WatchCatRunner: View {
     let style: String
     let reducesMotion: Bool
     let isRunning: Bool
+    let date: Date
 
     var body: some View {
-        Group {
-            if reducesMotion {
-                track(at: Date(timeIntervalSinceReferenceDate: 0))
-            } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { context in
-                    track(at: context.date)
-                }
-            }
-        }
+        let action: TaptionCatAnimationAction = isRunning ? .walking : .sitting
+        let pose = TaptionCatAnimationEngine.pose(
+            at: date,
+            preferredAction: action,
+            reducesMotion: reducesMotion
+        )
+        TaptionCatAnimationView(
+            style: style,
+            pose: pose,
+            reducesMotion: reducesMotion
+        )
         .frame(height: 30)
         .accessibilityLabel("작은 고양이 애니메이션")
-    }
-
-    private func track(at date: Date) -> some View {
-        GeometryReader { proxy in
-            let seconds = date.timeIntervalSinceReferenceDate
-            let cycle = (seconds * 20).truncatingRemainder(
-                dividingBy: proxy.size.width + 48
-            )
-            let x = isRunning ? cycle - 48 : (proxy.size.width - 48) / 2
-            let gait = reducesMotion ? 0 : sin(seconds * 12)
-            WatchCatFigure(style: style, gait: gait)
-                .offset(
-                    x: max(-48, min(proxy.size.width, x)),
-                    y: isRunning ? abs(gait) * -1.5 : gait * 0.6
-                )
-        }
-    }
-}
-
-private struct WatchCatFigure: View {
-    let style: String
-    let gait: Double
-
-    private var palette: WatchCatPalette {
-        WatchCatPalette(style: style)
-    }
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            Capsule()
-                .fill(palette.base)
-                .frame(width: 17, height: 4)
-                .overlay(Capsule().stroke(palette.outline, lineWidth: 0.8))
-                .rotationEffect(.degrees(-18 + gait * 12), anchor: .trailing)
-                .offset(x: 0, y: 11)
-            Capsule()
-                .fill(palette.base)
-                .frame(width: 30, height: 13)
-                .overlay(Capsule().stroke(palette.outline, lineWidth: 0.8))
-                .offset(x: 9, y: 8)
-            Circle()
-                .fill(palette.patch)
-                .frame(width: 8, height: 7)
-                .offset(x: 16, y: 10)
-            Circle()
-                .fill(palette.base)
-                .frame(width: 15, height: 15)
-                .overlay(Circle().stroke(palette.outline, lineWidth: 0.8))
-                .offset(x: 34, y: 5)
-            WatchCatEar()
-                .fill(palette.base)
-                .frame(width: 7, height: 7)
-                .overlay(WatchCatEar().stroke(palette.outline, lineWidth: 0.7))
-                .offset(x: 35, y: 2)
-            WatchCatEar()
-                .fill(palette.patch)
-                .frame(width: 7, height: 7)
-                .overlay(WatchCatEar().stroke(palette.outline, lineWidth: 0.7))
-                .offset(x: 42, y: 2)
-            Circle()
-                .fill(palette.eye)
-                .frame(width: 1.8, height: 1.8)
-                .offset(x: 43, y: 10)
-            Capsule()
-                .fill(palette.base)
-                .frame(width: 4, height: 9)
-                .overlay(Capsule().stroke(palette.outline, lineWidth: 0.7))
-                .rotationEffect(.degrees(gait * 15), anchor: .top)
-                .offset(x: 17, y: 17)
-            Capsule()
-                .fill(palette.base)
-                .frame(width: 4, height: 9)
-                .overlay(Capsule().stroke(palette.outline, lineWidth: 0.7))
-                .rotationEffect(.degrees(-gait * 15), anchor: .top)
-                .offset(x: 32, y: 17)
-        }
-        .frame(width: 50, height: 28)
-    }
-}
-
-private struct WatchCatEar: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
-        return path
-    }
-}
-
-private struct WatchCatPalette {
-    let base: Color
-    let patch: Color
-    let outline: Color
-    let eye: Color
-
-    init(style: String) {
-        switch style {
-        case "white":
-            base = Color(white: 0.98)
-            patch = Color(white: 0.86)
-            outline = Color(white: 0.62)
-            eye = .blue
-        case "mackerel":
-            base = Color(red: 0.58, green: 0.60, blue: 0.62)
-            patch = Color(red: 0.27, green: 0.29, blue: 0.31)
-            outline = Color(red: 0.18, green: 0.19, blue: 0.20)
-            eye = .yellow
-        case "black":
-            base = Color(white: 0.12)
-            patch = Color(white: 0.28)
-            outline = Color(white: 0.50)
-            eye = .yellow
-        case "gray":
-            base = Color(white: 0.58)
-            patch = Color(white: 0.43)
-            outline = Color(white: 0.28)
-            eye = .green
-        case "cheese":
-            base = Color(red: 0.92, green: 0.63, blue: 0.28)
-            patch = Color(red: 0.72, green: 0.39, blue: 0.12)
-            outline = Color(red: 0.48, green: 0.28, blue: 0.12)
-            eye = .green
-        case "cow":
-            base = Color(white: 0.98)
-            patch = Color(white: 0.10)
-            outline = Color(white: 0.48)
-            eye = .yellow
-        default:
-            base = Color(red: 0.96, green: 0.93, blue: 0.86)
-            patch = Color(red: 0.86, green: 0.47, blue: 0.20)
-            outline = Color(red: 0.35, green: 0.28, blue: 0.22)
-            eye = .green
-        }
     }
 }
