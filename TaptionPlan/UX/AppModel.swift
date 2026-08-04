@@ -3371,10 +3371,16 @@ final class AppModel {
             readings: readings
         )
         let travel = AppleDeviceGroundTruthEngine.coalescingTravel(
-            MovementCorrectionEngine.applying(
-                snapshot.settings.movementCorrections,
-                to: inferredTravel,
-                places: basePlaces
+            AppleDeviceGroundTruthEngine.resolvingOverlaps(
+                AppleDeviceGroundTruthEngine.enforcingMotionFamily(
+                    MovementCorrectionEngine.applying(
+                        snapshot.settings.movementCorrections,
+                        to: inferredTravel,
+                        places: basePlaces
+                    ),
+                    activities: motionActivities,
+                    readings: readings
+                )
             ),
             stays: basePlaces,
             maximumGap: max(

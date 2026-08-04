@@ -2036,6 +2036,98 @@ enum AppleDeviceGroundTruthEngine {
             .sorted { $0.span.start < $1.span.start }
     }
 
+    /// Core Motion이 자동차로 본 구간은 최종 결과에서도 동력 이동으로 남긴다.
+    /// 분류기 내부 점수 융합이 자전거·보행을 만들어 내는 일이 있어, 기록
+    /// 상세와 시간표가 서로 다른 수단을 보여주는 문제를 여기서 끊는다.
+    /// 걸음이 실제로 늘어난 구간은 라벨이 틀린 것이므로 건드리지 않는다.
+    static func enforcingMotionFamily(
+        _ segments: [TravelSegment],
+        activities: [MotionActivityRecord],
+        readings: [SensorReading]
+    ) -> [TravelSegment] {
+        let pedestrianModes: Set<TravelMode> = [.walking, .running, .cycling]
+        return segments.map { segment in
+            guard pedestrianModes.contains(segment.mode) else { return segment }
+            let automotive = activities
+                .filter { $0.motion == .automotive }
+                .compactMap { $0.span.intersection(with: segment.span)?.duration }
+                .reduce(0, +)
+            guard automotive >= segment.span.duration * 0.6,
+                  segment.span.duration >= 120 else {
+                return segment
+            }
+            let steps = readings
+                .filter { segment.span.contains($0.timestamp) }
+                .compactMap(\.stepCount)
+            let stepDelta = (steps.max() ?? 0) - (steps.min() ?? 0)
+            let minutes = max(1, segment.span.duration / 60)
+            guard Double(stepDelta) / minutes < 20 else { return segment }
+            var value = segment
+            value.mode = .car
+            value.evidence = Array(
+                Set(value.evidence + ["iPhone Core Motion 자동차"])
+            ).sorted()
+            return value
+        }
+    }
+
+    /// 같은 시각에 두 개 이상의 이동이 겹치면 시간표가 여러 줄로 쪼개져
+    /// 보인다. 신뢰도가 높고 긴 구간을 남기고, 나머지는 잘라내거나 버린다.
+    static func resolvingOverlaps(
+        _ segments: [TravelSegment]
+    ) -> [TravelSegment] {
+        let ordered = segments.sorted {
+            if $0.span.start == $1.span.start {
+                return $0.span.duration > $1.span.duration
+            }
+            return $0.span.start < $1.span.start
+        }
+        var result: [TravelSegment] = []
+        for segment in ordered {
+            guard let last = result.last,
+                  last.span.intersection(with: segment.span) != nil else {
+                result.append(segment)
+                continue
+            }
+            let keepsExisting = confidenceRank(last.confidence)
+                > confidenceRank(segment.confidence)
+                || (confidenceRank(last.confidence)
+                    == confidenceRank(segment.confidence)
+                    && last.span.duration >= segment.span.duration)
+            if keepsExisting {
+                // 뒤쪽만 남겨 이어 붙일 수 있으면 잘라서 유지한다.
+                guard segment.span.end.timeIntervalSince(last.span.end) >= 60
+                else { continue }
+                var trimmed = segment
+                trimmed.span = TimeSpan(
+                    start: last.span.end,
+                    end: segment.span.end
+                )
+                let retained = trimmed.span.duration
+                    / max(1, segment.span.duration)
+                trimmed.distanceMeters = segment.distanceMeters * retained
+                result.append(trimmed)
+            } else {
+                guard last.span.end.timeIntervalSince(segment.span.start) < 60
+                        || last.span.duration < 60 else {
+                    var trimmedLast = last
+                    trimmedLast.span = TimeSpan(
+                        start: last.span.start,
+                        end: segment.span.start
+                    )
+                    let retained = trimmedLast.span.duration
+                        / max(1, last.span.duration)
+                    trimmedLast.distanceMeters = last.distanceMeters * retained
+                    result[result.count - 1] = trimmedLast
+                    result.append(segment)
+                    continue
+                }
+                result[result.count - 1] = segment
+            }
+        }
+        return result
+    }
+
     /// 듀티사이클 샘플링이 만든 같은 모드의 이동 조각을 하나로 잇는다.
     /// 조각 사이에 체류가 감지되어 있으면 실제로 멈춘 것이므로 잇지 않는다.
     static func coalescingTravel(

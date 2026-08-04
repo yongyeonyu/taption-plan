@@ -1768,6 +1768,127 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(gate.accept(122))
     }
 
+    func testEnforcingMotionFamilyRewritesCyclingOverAutomotiveWindow() {
+        let base = makeDate(2026, 8, 4, 9, 26)
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(42 * 60))
+        let cycling = TravelSegment(
+            mode: .cycling,
+            span: span,
+            distanceMeters: 8_000,
+            confidence: .medium,
+            evidence: ["자전거 속도대"]
+        )
+        let activity = MotionActivityRecord(
+            span: span,
+            motion: .automotive,
+            confidence: .high
+        )
+        let readings = [
+            SensorReading(timestamp: base, stepCount: 120),
+            SensorReading(timestamp: span.end, stepCount: 128),
+        ]
+
+        let result = AppleDeviceGroundTruthEngine.enforcingMotionFamily(
+            [cycling],
+            activities: [activity],
+            readings: readings
+        )
+
+        XCTAssertEqual(result.first?.mode, .car)
+    }
+
+    func testEnforcingMotionFamilyKeepsWalkingWhenStepsIncrease() {
+        let base = makeDate(2026, 8, 4, 9, 26)
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(10 * 60))
+        let walking = TravelSegment(
+            mode: .walking,
+            span: span,
+            distanceMeters: 800,
+            confidence: .high,
+            evidence: ["Core Motion 보행"]
+        )
+        let activity = MotionActivityRecord(
+            span: span,
+            motion: .automotive,
+            confidence: .medium
+        )
+        let readings = [
+            SensorReading(timestamp: base, stepCount: 100),
+            SensorReading(timestamp: span.end, stepCount: 1_000),
+        ]
+
+        let result = AppleDeviceGroundTruthEngine.enforcingMotionFamily(
+            [walking],
+            activities: [activity],
+            readings: readings
+        )
+
+        XCTAssertEqual(result.first?.mode, .walking)
+    }
+
+    func testResolvingOverlapsKeepsOneSegmentPerMoment() {
+        let base = makeDate(2026, 8, 4, 9, 24)
+        let long = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(40 * 60)),
+            distanceMeters: 8_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+        let overlapping = TravelSegment(
+            mode: .cycling,
+            span: TimeSpan(
+                start: base.addingTimeInterval(10 * 60),
+                end: base.addingTimeInterval(20 * 60)
+            ),
+            distanceMeters: 900,
+            confidence: .low,
+            evidence: ["iPhone Core Motion 기록"]
+        )
+
+        let resolved = AppleDeviceGroundTruthEngine.resolvingOverlaps(
+            [long, overlapping]
+        )
+
+        XCTAssertEqual(resolved.count, 1)
+        XCTAssertEqual(resolved.first?.mode, .car)
+        for pair in zip(resolved, resolved.dropFirst()) {
+            XCTAssertNil(pair.0.span.intersection(with: pair.1.span))
+        }
+    }
+
+    func testResolvingOverlapsTrimsTrailingRemainder() {
+        let base = makeDate(2026, 8, 4, 9, 24)
+        let first = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(20 * 60)),
+            distanceMeters: 6_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+        let second = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base.addingTimeInterval(18 * 60),
+                end: base.addingTimeInterval(30 * 60)
+            ),
+            distanceMeters: 600,
+            confidence: .medium,
+            evidence: ["iPhone Core Motion 기록"]
+        )
+
+        let resolved = AppleDeviceGroundTruthEngine.resolvingOverlaps(
+            [first, second]
+        )
+
+        XCTAssertEqual(resolved.count, 2)
+        XCTAssertEqual(resolved[1].mode, .walking)
+        XCTAssertEqual(resolved[1].span.start, first.span.end)
+        XCTAssertNil(
+            resolved[0].span.intersection(with: resolved[1].span)
+        )
+    }
+
     func testCoalescingTravelMergesSameModeFragmentsAcrossSamplingGaps() {
         let base = makeDate(2026, 8, 4, 11, 40)
         let first = TravelSegment(

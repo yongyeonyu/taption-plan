@@ -41,10 +41,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             statusText = "연결을 지원하지 않음"
             return
         }
+        // WCSession.delegate는 weak 참조다. SwiftUI가 소유권을 넘기기 전에
+        // 해제되면 세션이 델리게이트 없는 상태로 남으므로 강한 참조를 둔다.
+        Self.activeDelegate = self
         let session = WCSession.default
         session.delegate = self
         session.activate()
     }
+
+    private static var activeDelegate: WatchConnectivityController?
 
     var orderedItems: [TaptionWatchPlanItem] {
         (payload?.items ?? []).sorted { $0.startsAt < $1.startsAt }
@@ -310,7 +315,6 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWatchWidgetKind.status)
-        WidgetCenter.shared.reloadAllTimelines()
         widgetReloadFollowupTask?.cancel()
         widgetReloadFollowupTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 700_000_000)
@@ -318,7 +322,6 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             WidgetCenter.shared.reloadTimelines(
                 ofKind: TaptionWatchWidgetKind.status
             )
-            WidgetCenter.shared.reloadAllTimelines()
         }
     }
 
