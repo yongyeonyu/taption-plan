@@ -1323,6 +1323,14 @@ struct FrequentPlaceResolutionEngine: Sendable {
         }
     }
 
+    /// `applying` 은 확정된 체류의 `placeKey` 를 자주가는 곳의 안정 키로
+    /// 바꾼다. 그 키로 장소 종류를 되찾아 정지 구간 문맥 추론에 넘긴다.
+    func kindsByPlaceKey(
+        _ frequentPlaces: [FrequentPlace]
+    ) -> [String: FrequentPlaceKind] {
+        frequentPlaces.reduce(into: [:]) { $0[$1.stablePlaceKey] = $1.kind }
+    }
+
     private func nearestMatch(
         to point: GeoPoint,
         candidates: [FrequentPlace]
@@ -2407,7 +2415,8 @@ enum AppleWatchSensorActivityEngine {
         ).sorted { $0.startedAt < $1.startedAt }
     }
 
-    private static func sustainedMotion(
+    /// 집안일 판정과 정지 구간 문맥 추론이 같은 기준을 쓰도록 공개한다.
+    static func sustainedMotion(
         _ summary: TaptionWatchSensorSummary
     ) -> Bool {
         let duration = summary.endedAt.timeIntervalSince(summary.startedAt)
@@ -2519,6 +2528,12 @@ enum MotionActivityActualEngine {
                 || actual.source == .appleWatch
                 || actual.source == .location else {
             return false
+        }
+        // 장소 문맥 기록이 덮은 구간은 "정지·휴식" 으로 다시 만들지 않는다.
+        if actual.source == .location,
+           let behavior = actual.behavior,
+           StationaryContextKind(rawValue: behavior) != nil {
+            return true
         }
         return actual.categoryID == "exercise"
             || actual.categoryID == "activity"

@@ -66,7 +66,9 @@ final class AppleCalendarService {
                 isAllDay: event.isAllDay,
                 calendarTitle: event.calendar.title,
                 calendarColorHex: Self.hex(event.calendar.cgColor),
-                sourceTitle: event.calendar.source.title
+                sourceTitle: event.calendar.source.title,
+                attendeeCount: event.attendees?.count,
+                isCancelled: event.status == .canceled
             )
         }
     }

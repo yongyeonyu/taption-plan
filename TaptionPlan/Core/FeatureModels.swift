@@ -727,6 +727,10 @@ struct CalendarRecord: Identifiable, Codable, Hashable, Sendable {
     var calendarTitle: String
     var calendarColorHex: String?
     var sourceTitle: String?
+    /// 정지 구간 문맥 추론에서 쓰는 EventKit 부가 정보. 이전 보관본은 값이
+    /// 없으므로 옵셔널로 둔다.
+    var attendeeCount: Int? = nil
+    var isCancelled: Bool? = nil
 }
 
 struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {

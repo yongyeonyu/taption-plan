@@ -491,6 +491,28 @@ final class AppModel {
         Task { await refreshEnabledData() }
     }
 
+    /// 기록 탭은 시간표와 배율이 따로다. 원형 시간표를 옆으로 넘길 때는
+    /// 기록 배율을 쓰되 데이터 경계는 시간표와 똑같이 지킨다.
+    func shiftReviewDate(by direction: Int) {
+        let navigation = TimelinePeriodNavigationEngine()
+        let level = reviewScale.timelineLevel
+        guard navigation.canNavigate(
+            from: selectedDate,
+            level: level,
+            direction: direction,
+            snapshot: snapshot
+        ),
+            let targetDate = navigation.adjacentDate(
+                from: selectedDate,
+                level: level,
+                direction: direction
+            ) else {
+            return
+        }
+        selectedDate = targetDate
+        Task { await refreshEnabledData() }
+    }
+
     private func canShiftSelectedDate(by direction: Int) -> Bool {
         TimelinePeriodNavigationEngine().canNavigate(
             from: selectedDate,
@@ -3267,6 +3289,49 @@ final class AppModel {
         }
     }
 
+    /// 정지 구간을 "정지·휴식" 한 덩어리로 남기지 않고 장소·캘린더·시간
+    /// 문맥으로 바꾼다. 새 권한이나 새 수집 없이 이미 모은 신호만 쓴다.
+    private func applyStationaryContextRecords(
+        stays: [PlaceStay],
+        readings: [SensorReading],
+        inside span: TimeSpan
+    ) async {
+        let watchSummaries: [TaptionWatchSensorSummary]
+        if let watchSensorArchive {
+            watchSummaries =
+                (try? await watchSensorArchive.summaries(in: span)) ?? []
+        } else {
+            watchSummaries = []
+        }
+        let contextRecords = StationaryContextActualEngine.records(
+            stays: stays,
+            placeKinds: FrequentPlaceResolutionEngine()
+                .kindsByPlaceKey(settings.frequentPlaces),
+            readings: readings,
+            calendarEvents: snapshot.calendarEvents,
+            actuals: snapshot.actuals,
+            travel: snapshot.travel.filter {
+                $0.span.intersection(with: span) != nil
+            },
+            watchSummaries: watchSummaries,
+            inside: span
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        snapshot.actuals.removeAll { actual in
+            actual.source == .location
+                && actual.modelVersion
+                    == StationaryContextClassifier.modelVersion
+                && actual.span(asOf: span.end).intersection(with: span) != nil
+        }
+        guard !contextRecords.isEmpty else { return }
+        snapshot.actuals = StationaryContextActualEngine
+            .suppressingStationaryMotion(
+                snapshot.actuals,
+                coveredBy: contextRecords,
+                asOf: span.end
+            ) + contextRecords
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+    }
+
     func refreshSensorTimeline(containing date: Date? = nil) async {
         guard let sensorService else { return }
         let span = TimelineAggregationEngine().interval(
@@ -3456,6 +3521,11 @@ final class AppModel {
                 }
             }
         let places = basePlaces + walkingLocations
+        await applyStationaryContextRecords(
+            stays: places,
+            readings: readings,
+            inside: span
+        )
         let floors = floorTimeline.transitions
         let inferredTravel = AppleDeviceGroundTruthEngine.mergingTravel(
             gpsSegments: MovementRouteBuilder().build(

@@ -169,13 +169,16 @@ struct TimelineAxisBucket: Identifiable, Equatable, Sendable {
 enum TimelineAxisGrid {
     static let weekdayLabels = ["월", "화", "수", "목", "금", "토", "일"]
 
+    private static let koreanLocale = Locale(identifier: "ko_KR")
+
     /// Returns a Korean, Monday-first calendar without changing the caller's
-    /// calendar value.
+    /// calendar value.  The ruler calls this on every drag frame, so the
+    /// locale is built once instead of per call.
     static func normalizedCalendar(
         _ calendar: Calendar = .autoupdatingCurrent
     ) -> Calendar {
         var value = calendar
-        value.locale = Locale(identifier: "ko_KR")
+        value.locale = koreanLocale
         value.firstWeekday = 2 // Monday
         value.minimumDaysInFirstWeek = 4
         return value

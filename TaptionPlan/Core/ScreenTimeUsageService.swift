@@ -51,10 +51,56 @@ enum ScreenTimeAuthorizationState: String, Sendable {
 enum ScreenTimeUsageNameSource: String, Codable, Hashable, Sendable {
     /// 실제 앱 이름을 읽었다.
     case application
+    /// 이름 문자열이 없어 번들 ID에서 유추했다.
+    case bundleIdentifier
     /// 앱 이름을 읽지 못해 카테고리 이름으로 묶었다.
     case category
     /// 앱도 카테고리도 읽지 못해 시간대 합계만 남았다.
     case unknown
+}
+
+/// iOS는 스크린 타임 앱 이름을 문자열로 내주지 않는다. 토큰을 그릴 수 있는
+/// 화면은 실제 이름을 쓰고, 문자열이 꼭 필요한 곳(기록 제목·내보내기·손쉬운
+/// 사용)에서만 번들 ID로 최선의 근사값을 만든다. 정확한 이름이 아니다.
+enum AppBundleDisplayName {
+    /// 역DNS로는 알 수 없는 국내 앱 몇 개만 손으로 적어 둔다. 목록이
+    /// 길어질 조짐이면 늘리지 말고 토큰 렌더링에 맡긴다.
+    private static let curated: [String: String] = [
+        "com.kakao.talk": "카카오톡",
+        "com.nhn.android.search": "네이버",
+        "com.navercorp.band": "밴드",
+        "com.coupang.mobile": "쿠팡",
+        "viva.republica.toss": "토스",
+        "com.daumkakao.map": "카카오맵",
+    ]
+
+    /// 플랫폼 접두어라 이름이 아닌 조각.
+    private static let noise = ["mobile", "ios", "iphone"]
+
+    static func displayName(forBundleIdentifier identifier: String) -> String? {
+        let trimmed = identifier.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !trimmed.isEmpty else { return nil }
+        if let known = curated[trimmed.lowercased()] { return known }
+
+        let parts = trimmed.split(separator: ".")
+        guard var name = parts.last.map(String.init) else { return nil }
+        if noise.contains(name.lowercased()), parts.count > 1 {
+            name = String(parts[parts.count - 2])
+        }
+        while let last = name.last, last.isNumber { name.removeLast() }
+        for prefix in noise
+        where name.count > prefix.count && name.lowercased().hasPrefix(prefix) {
+            name.removeFirst(prefix.count)
+            break
+        }
+        guard !name.isEmpty else { return nil }
+        guard name != name.lowercased() else {
+            return name.prefix(1).uppercased() + name.dropFirst()
+        }
+        return name
+    }
 }
 
 struct ScreenTimeUsageSample: Codable, Hashable, Sendable {
@@ -240,8 +286,12 @@ final class ScreenTimeUsageService {
                 guard duration > 0 else { continue }
                 hasApplication = true
                 let tokenData = encodedToken(app.application.token)
-                let name = app.application.localizedDisplayName
-                    ?? app.application.bundleIdentifier
+                // 이름 우선순위: 실제 이름 → 번들 ID 추정 → 카테고리 → "어플".
+                // 토큰이 있는 화면은 이 문자열 대신 실제 이름을 그린다.
+                let realName = app.application.localizedDisplayName
+                let derivedName = app.application.bundleIdentifier
+                    .flatMap(AppBundleDisplayName.displayName(forBundleIdentifier:))
+                let name = realName ?? derivedName
                 let sample = ScreenTimeUsageSample(
                     key: applicationKey(
                         bundleIdentifier: app.application.bundleIdentifier,
@@ -254,9 +304,11 @@ final class ScreenTimeUsageService {
                     duration: duration,
                     pickups: app.numberOfPickups,
                     notifications: app.numberOfNotifications,
-                    nameSource: name != nil
-                        ? .application
-                        : (categoryName != nil ? .category : .unknown),
+                    nameSource: nameSource(
+                        realName: realName,
+                        derivedName: derivedName,
+                        categoryName: categoryName
+                    ),
                     applicationTokenData: tokenData
                 )
                 merge(sample, into: &values)
@@ -293,6 +345,16 @@ final class ScreenTimeUsageService {
             notifications: 0,
             nameSource: .unknown
         )
+    }
+
+    private func nameSource(
+        realName: String?,
+        derivedName: String?,
+        categoryName: String?
+    ) -> ScreenTimeUsageNameSource {
+        if realName != nil { return .application }
+        if derivedName != nil { return .bundleIdentifier }
+        return categoryName != nil ? .category : .unknown
     }
 
     private func title(for name: String?) -> String {
@@ -465,6 +527,7 @@ enum ScreenTimeUsageRecordEngine {
     ) -> String? {
         switch source {
         case .application: nil
+        case .bundleIdentifier: "앱 이름 대신 번들 ID에서 유추한 이름입니다"
         case .category: "앱 이름을 읽을 수 없어 카테고리 단위로 묶었습니다"
         case .unknown: "앱 이름과 카테고리를 모두 읽을 수 없어 시간대 합계만 남겼습니다"
         }

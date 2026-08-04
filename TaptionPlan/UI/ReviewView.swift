@@ -21,6 +21,24 @@ private struct ReviewContent: Equatable {
     )
 }
 
+/// 눈금판을 깨우는 간격. 재생 중에는 화면 갱신 예산인 60Hz까지만 올리고,
+/// 멈춰 있을 때는 현재 시각 바늘이 흐르도록 분마다 한 번만 깨운다.
+private struct RecordClockSchedule: TimelineSchedule {
+    var isPlaying: Bool
+
+    func entries(
+        from startDate: Date,
+        mode: TimelineScheduleMode
+    ) -> AnyIterator<Date> {
+        let step = isPlaying ? RecordClockEngine.frameInterval : 60
+        var next = startDate
+        return AnyIterator {
+            defer { next = next.addingTimeInterval(step) }
+            return next
+        }
+    }
+}
+
 private struct ReviewContentKey: Equatable {
     let revision: UInt64
     let scale: TimeScale
@@ -30,37 +48,45 @@ private struct ReviewContentKey: Equatable {
 struct ReviewView: View {
     @Bindable var model: AppModel
 
+    /// 24시간 눈금 안쪽에 기록을 담는 띠. 하나만 두고 굵게 그린다.
+    private static let clockBandWidth: CGFloat = 20
+    private static let clockButtonSize: CGFloat = 44
+
     @State private var content = ReviewContent.empty
     @State private var collapsedGroupIDs: Set<String> = []
+    /// 범례에서 고른 카테고리. 원형·막대 모두 이 하나만 남기고 나머지를 죽인다.
     @State private var highlightedCategoryID: String?
+    /// 재생을 시작한 시각. nil이면 멈춘 상태다.
+    @State private var playStartedAt: Date?
 
     var body: some View {
         VStack(spacing: 0) {
             reviewHeader
 
-            ScrollViewReader { proxy in
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 10) {
-                        chartCard
-                        planBreakdownCard
-                        recordHierarchyCard
-                        contextCard
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.top, 12)
-                    // 하단 탭 막대 뒤로 마지막 줄이 숨지 않게 비워 둔다.
-                    .padding(.bottom, DraftBottomBarMetrics.contentInset)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 10) {
+                    chartCard
+                    planBreakdownCard
+                    recordHierarchyCard
+                    contextCard
                 }
-                .background(Color.tpBackground)
-                .onChange(of: highlightedCategoryID) { _, categoryID in
-                    guard let categoryID else { return }
-                    withAnimation(.easeInOut(duration: 0.22)) {
-                        proxy.scrollTo(anchorID(categoryID), anchor: .top)
-                    }
-                }
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
+                // 하단 탭 막대 뒤로 마지막 줄이 숨지 않게 비워 둔다.
+                .padding(.bottom, DraftBottomBarMetrics.contentInset)
             }
+            .background(Color.tpBackground)
         }
         .task(id: contentKey) { rebuildContent() }
+        .task(id: playStartedAt) { await stopPlaybackWhenSweepEnds() }
+    }
+
+    /// 한 바퀴를 다 돌면 스스로 멈춰 정적인 화면으로 돌아간다.
+    private func stopPlaybackWhenSweepEnds() async {
+        guard playStartedAt != nil else { return }
+        try? await Task.sleep(for: .seconds(RecordClockEngine.sweepDuration))
+        guard !Task.isCancelled else { return }
+        playStartedAt = nil
     }
 
     // MARK: - 머리말
@@ -140,16 +166,18 @@ struct ReviewView: View {
                     .foregroundStyle(Color.tpSecondary)
             }
 
-            if content.groups.isEmpty {
-                Text("이 기간에 저장된 실제 데이터가 없습니다.")
-                    .font(.taption(size: 10.5))
-                    .foregroundStyle(Color.tpSecondary)
-            } else {
-                if model.reviewScale == .day {
-                    dayClockChart
+            // 하루 눈금판은 기록이 없어도 남는다. 옆으로 넘길 자리가 있어야 한다.
+            if model.reviewScale == .day {
+                dayClockChart
+                if content.groups.isEmpty {
+                    emptyRecordText
                 } else {
-                    barChart
+                    categoryLegend
                 }
+            } else if content.groups.isEmpty {
+                emptyRecordText
+            } else {
+                barChart
                 categoryLegend
             }
         }
@@ -159,6 +187,12 @@ struct ReviewView: View {
             Color.white,
             in: RoundedRectangle(cornerRadius: 13, style: .continuous)
         )
+    }
+
+    private var emptyRecordText: some View {
+        Text("이 기간에 저장된 실제 데이터가 없습니다.")
+            .font(.taption(size: 10.5))
+            .foregroundStyle(Color.tpSecondary)
     }
 
     private var chartTitle: String {
@@ -178,71 +212,202 @@ struct ReviewView: View {
         content.groups.reduce(0) { $0 + $1.duration }
     }
 
-    /// 24시간 원형 시간표. 자정이 12시 방향이고 시계 방향으로 하루가 흐른다.
-    /// 카테고리마다 고리를 하나씩 만들어 같은 시각에 겹친 기록이 서로를
-    /// 가리지 않게 한다. 바깥 고리가 총 시간이 긴 카테고리다.
+    /// 24시간 눈금판. 자정이 12시 방향이고 시계 방향으로 하루가 흐른다.
+    /// 평소에는 눈금과 현재 시각 바늘만 두고, 기록은 재생하거나 범례에서
+    /// 카테고리를 고를 때만 안쪽 띠에 굵게 드러낸다.
     private var dayClockChart: some View {
-        let rings = Array(content.rings.prefix(6))
-        return GeometryReader { proxy in
+        // 고르기는 프레임마다가 아니라 본문이 다시 그려질 때 한 번만 한다.
+        let rings = RecordClockEngine.rings(
+            content.rings,
+            isolating: highlightedCategoryID
+        )
+        let span = content.span
+        return TimelineView(
+            RecordClockSchedule(isPlaying: playStartedAt != nil)
+        ) { timeline in
+            let progress = RecordClockEngine.progress(
+                start: playStartedAt,
+                now: timeline.date
+            )
             Canvas { context, size in
-            let side = min(size.width, size.height)
-            let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            // 시각 숫자가 캔버스 밖으로 잘리지 않도록 가장자리를 비워 둔다.
-            let outer = side / 2 - 24
-            drawClockFace(context: context, center: center, radius: outer + 9)
-
-            for (index, ring) in rings.enumerated() {
-                let radius = outer - CGFloat(index) * 13
-                guard radius > 16 else { break }
-                let tint = color(forCategoryID: ring.categoryID)
-                let isDimmed = highlightedCategoryID != nil
-                    && highlightedCategoryID != ring.categoryID
-                context.stroke(
-                    Path {
-                        $0.addArc(
-                            center: center,
-                            radius: radius,
-                            startAngle: .degrees(0),
-                            endAngle: .degrees(360),
-                            clockwise: false
-                        )
-                    },
-                    with: .color(tint.opacity(0.12)),
-                    lineWidth: 9
-                )
-                for arc in ring.arcs {
-                    context.stroke(
-                        Path {
-                            $0.addArc(
-                                center: center,
-                                radius: radius,
-                                startAngle: clockAngle(arc.startFraction),
-                                endAngle: clockAngle(
-                                    max(
-                                        arc.endFraction,
-                                        arc.startFraction + 0.0018
-                                    )
-                                ),
-                                clockwise: false
-                            )
-                        },
-                        with: .color(tint.opacity(isDimmed ? 0.22 : 1)),
-                        style: StrokeStyle(lineWidth: 9, lineCap: .butt)
+                drawClock(
+                    context: context,
+                    size: size,
+                    rings: rings,
+                    progress: progress,
+                    nowFraction: RecordClockEngine.nowFraction(
+                        in: span,
+                        asOf: timeline.date
                     )
-                }
-            }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { point in
-                highlightedCategoryID = ringCategory(
-                    at: point,
-                    in: proxy.size,
-                    rings: rings
                 )
             }
         }
         .frame(height: 226)
-        .accessibilityLabel("하루 24시간 원형 기록")
+        .overlay { playControl }
+        .contentShape(Rectangle())
+        // 목록을 위아래로 굴리는 손가락을 가로채지 않도록 함께 인식시킨다.
+        .simultaneousGesture(dateSwipeGesture)
+        .accessibilityLabel("하루 24시간 눈금판")
+    }
+
+    private var playControl: some View {
+        Button {
+            playStartedAt = playStartedAt == nil ? .now : nil
+        } label: {
+            Image(systemName: playStartedAt == nil ? "play.fill" : "pause.fill")
+                .font(.taption(size: 14, weight: .bold))
+                .foregroundStyle(Color.tpProjectDark)
+                .frame(
+                    width: Self.clockButtonSize,
+                    height: Self.clockButtonSize
+                )
+                .background(Color.white, in: Circle())
+                .overlay(Circle().stroke(Color.tpLine, lineWidth: 0.8))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(playStartedAt == nil ? "하루 기록 재생" : "재생 멈춤")
+    }
+
+    /// 옆으로 넘겨 날짜를 옮긴다. 끄는 동안에는 아무것도 다시 그리지 않고
+    /// 손을 뗄 때 한 번만 반영한다.
+    private var dateSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onEnded { value in
+                guard let step = RecordClockEngine.swipeStep(
+                    width: value.translation.width,
+                    height: value.translation.height
+                ) else {
+                    return
+                }
+                playStartedAt = nil
+                model.shiftReviewDate(by: step)
+            }
+    }
+
+    private func drawClock(
+        context: GraphicsContext,
+        size: CGSize,
+        rings: [RecordClockRing],
+        progress: Double?,
+        nowFraction: Double?
+    ) {
+        let side = min(size.width, size.height)
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        // 시각 숫자가 캔버스 밖으로 잘리지 않도록 가장자리를 비워 둔다.
+        let outer = side / 2 - 24
+        drawClockFace(context: context, center: center, radius: outer + 9)
+
+        let radius = outer - Self.clockBandWidth / 2
+        context.stroke(
+            arcPath(center: center, radius: radius, from: 0, to: 1),
+            with: .color(Color.tpLine.opacity(0.45)),
+            lineWidth: Self.clockBandWidth
+        )
+
+        let revealed = RecordClockEngine.rings(
+            rings,
+            revealedThrough: progress
+        )
+        let active = progress.map {
+            RecordClockEngine.categoryIDs(in: rings, at: $0)
+        } ?? Set<String>()
+        // 재생 중에는 재생머리가 지나는 기록만 살리고 나머지는 죽인다.
+        for pass in [false, true] {
+            for ring in revealed
+            where active.contains(ring.categoryID) == pass {
+                let tint = color(forCategoryID: ring.categoryID)
+                let width = pass
+                    ? Self.clockBandWidth + 6
+                    : Self.clockBandWidth
+                let opacity = progress == nil || pass ? 1.0 : 0.4
+                for arc in ring.arcs {
+                    context.stroke(
+                        arcPath(
+                            center: center,
+                            radius: radius,
+                            from: arc.startFraction,
+                            to: arc.endFraction
+                        ),
+                        with: .color(tint.opacity(opacity)),
+                        style: StrokeStyle(lineWidth: width, lineCap: .butt)
+                    )
+                }
+            }
+        }
+
+        if let progress {
+            drawHand(
+                context: context,
+                center: center,
+                radius: outer + 9,
+                fraction: progress,
+                tint: Color.tpInk,
+                width: 1.6
+            )
+        } else if let nowFraction {
+            drawHand(
+                context: context,
+                center: center,
+                radius: outer + 9,
+                fraction: nowFraction,
+                tint: Color.tpNow,
+                width: 1.6
+            )
+        }
+    }
+
+    private func arcPath(
+        center: CGPoint,
+        radius: CGFloat,
+        from: Double,
+        to: Double
+    ) -> Path {
+        Path {
+            $0.addArc(
+                center: center,
+                radius: radius,
+                startAngle: clockAngle(from),
+                endAngle: clockAngle(max(to, from + 0.0018)),
+                clockwise: false
+            )
+        }
+    }
+
+    private func drawHand(
+        context: GraphicsContext,
+        center: CGPoint,
+        radius: CGFloat,
+        fraction: Double,
+        tint: Color,
+        width: CGFloat
+    ) {
+        let angle = clockAngle(fraction)
+        // 가운데 재생 단추를 가리지 않도록 바늘은 단추 밖에서 시작한다.
+        let inner = point(
+            center: center,
+            radius: Self.clockButtonSize / 2 + 5,
+            angle: angle
+        )
+        let tip = point(center: center, radius: radius, angle: angle)
+        context.stroke(
+            Path {
+                $0.move(to: inner)
+                $0.addLine(to: tip)
+            },
+            with: .color(tint),
+            style: StrokeStyle(lineWidth: width, lineCap: .round)
+        )
+        context.fill(
+            Path(
+                ellipseIn: CGRect(
+                    x: tip.x - 3,
+                    y: tip.y - 3,
+                    width: 6,
+                    height: 6
+                )
+            ),
+            with: .color(tint)
+        )
     }
 
     private func drawClockFace(
@@ -291,24 +456,6 @@ struct ReviewView: View {
             x: center.x + radius * cos(angle.radians),
             y: center.y + radius * sin(angle.radians)
         )
-    }
-
-    /// 바깥에서 안쪽으로 13pt 간격의 고리다. 누른 지점의 반지름으로 몇 번째
-    /// 고리인지 되짚어 해당 카테고리를 아래 목록에서 강조한다.
-    private func ringCategory(
-        at point: CGPoint,
-        in size: CGSize,
-        rings: [RecordClockRing]
-    ) -> String? {
-        let side = min(size.width, size.height)
-        let center = CGPoint(x: size.width / 2, y: size.height / 2)
-        let outer = side / 2 - 24
-        let distance = hypot(point.x - center.x, point.y - center.y)
-        guard distance <= outer + 5 else { return nil }
-        let index = Int(((outer + 4.5) - distance) / 13)
-        guard index >= 0, index < rings.count else { return nil }
-        let categoryID = rings[index].categoryID
-        return highlightedCategoryID == categoryID ? nil : categoryID
     }
 
     private var barChart: some View {
@@ -486,7 +633,6 @@ struct ReviewView: View {
             } else {
                 ForEach(content.groups) { group in
                     categorySection(group)
-                        .id(anchorID(group.id))
                 }
             }
         }
@@ -559,9 +705,14 @@ struct ReviewView: View {
             model.detail = .actual(child.recordID)
         } label: {
             HStack(spacing: 7) {
-                Text(child.title)
-                    .font(.taption(size: 10, weight: .medium))
-                    .lineLimit(1)
+                if let tokenData = appUsageTokenData(for: child, in: group) {
+                    // 어플 기록만 시스템이 그리는 실제 앱 이름·아이콘을 쓴다.
+                    AppUsageNameLabel(tokenData: tokenData, size: 10)
+                } else {
+                    Text(child.title)
+                        .font(.taption(size: 10, weight: .medium))
+                        .lineLimit(1)
+                }
                 if child.occurrenceCount > 1 {
                     Text("\(child.occurrenceCount)회")
                         .font(.taption(size: 8))
@@ -589,6 +740,15 @@ struct ReviewView: View {
         .accessibilityLabel(
             "\(group.name) \(child.title) \(DurationText.korean(child.duration))"
         )
+    }
+
+    private func appUsageTokenData(
+        for child: RecordGroupChild,
+        in group: RecordCategoryGroup
+    ) -> Data? {
+        guard group.id == "appUsage" else { return nil }
+        let data = model.appUsageTokenIndex[child.recordID]
+        return AppUsageNameLabel.canRender(data) ? data : nil
     }
 
     private func groupTotalText(_ group: RecordCategoryGroup) -> String {
@@ -674,6 +834,11 @@ struct ReviewView: View {
             )
         }
 
+        // 보고 있는 기간이 바뀌면 재생하던 하루가 사라지므로 멈춘다.
+        if content.span != span || model.reviewScale != .day {
+            playStartedAt = nil
+        }
+
         content = ReviewContent(
             span: span,
             plannedCategories: report.categories,
@@ -696,10 +861,6 @@ struct ReviewView: View {
     }
 
     // MARK: - 표기
-
-    private func anchorID(_ categoryID: String) -> String {
-        "record.group.\(categoryID)"
-    }
 
     private func periodText(_ span: TimeSpan) -> String {
         span.start.formatted(.dateTime.month().day())

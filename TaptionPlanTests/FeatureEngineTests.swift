@@ -5777,6 +5777,67 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testBundleIdentifierDisplayNameDropsReverseDNSPrefix() {
+        let name = AppBundleDisplayName.displayName(forBundleIdentifier:)
+        XCTAssertEqual(name("com.burbn.instagram"), "Instagram")
+        XCTAssertEqual(name("com.google.ios.youtube"), "Youtube")
+        XCTAssertEqual(name("net.whatsapp.WhatsApp"), "WhatsApp")
+        // "com."만 떼면 "burbn.instagram"이 남는다. 마지막 조각만 써야 한다.
+        XCTAssertNotEqual(name("com.burbn.instagram"), "burbn.instagram")
+    }
+
+    func testBundleIdentifierDisplayNameStripsPlatformNoise() {
+        let name = AppBundleDisplayName.displayName(forBundleIdentifier:)
+        XCTAssertEqual(name("com.apple.mobilesafari"), "Safari")
+        XCTAssertEqual(name("com.apple.mobilemail"), "Mail")
+        XCTAssertEqual(name("com.apple.MobileSMS"), "SMS")
+        XCTAssertEqual(name("com.atebits.Tweetie2"), "Tweetie")
+        XCTAssertEqual(name("com.example.player.ios"), "Player")
+    }
+
+    func testBundleIdentifierDisplayNameUsesCuratedKoreanNames() {
+        let name = AppBundleDisplayName.displayName(forBundleIdentifier:)
+        XCTAssertEqual(name("com.kakao.talk"), "카카오톡")
+        XCTAssertEqual(name("viva.republica.toss"), "토스")
+        XCTAssertEqual(name("COM.KAKAO.TALK"), "카카오톡")
+    }
+
+    func testBundleIdentifierDisplayNameRejectsEmptyInput() {
+        let name = AppBundleDisplayName.displayName(forBundleIdentifier:)
+        XCTAssertNil(name(""))
+        XCTAssertNil(name("   "))
+        XCTAssertNil(name("123"))
+    }
+
+    func testScreenTimeUsageNamesBundleFallbackAsEstimate() {
+        let start = makeDate(2026, 8, 3, 14)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(hour))
+        let records = ScreenTimeUsageRecordEngine.records(
+            from: [
+                ScreenTimeUsageSample(
+                    key: "bundle:com.burbn.instagram",
+                    title: "어플 · Instagram",
+                    span: span,
+                    duration: 12 * 60,
+                    pickups: 0,
+                    notifications: 0,
+                    nameSource: .bundleIdentifier
+                ),
+            ],
+            suppressedIDs: []
+        )
+
+        XCTAssertEqual(records.first?.title, "어플 · Instagram")
+        XCTAssertEqual(
+            records.first?.evidence,
+            [
+                "Screen Time 시간대 합계",
+                "사용 12분",
+                "앱 이름 대신 번들 ID에서 유추한 이름입니다",
+            ]
+        )
+    }
+
     // MARK: - 기록 계층·차트
 
     private func makeActual(
@@ -6017,6 +6078,151 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(buckets.map(\.total).reduce(0, +), 6 * hour)
     }
 
+    func testClockNowHandOnlyAppearsInsideTheShownDay() {
+        let day = makeDate(2026, 8, 4)
+        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
+
+        XCTAssertEqual(
+            RecordClockEngine.nowFraction(
+                in: span,
+                asOf: day.addingTimeInterval(6 * hour)
+            ) ?? -1,
+            0.25,
+            accuracy: 0.0001
+        )
+        XCTAssertNil(
+            RecordClockEngine.nowFraction(
+                in: span,
+                asOf: day.addingTimeInterval(-1)
+            )
+        )
+        XCTAssertNil(
+            RecordClockEngine.nowFraction(
+                in: span,
+                asOf: day.addingTimeInterval(24 * hour)
+            )
+        )
+    }
+
+    func testClockPlaybackProgressSpansTheWholeDayOnce() {
+        let start = makeDate(2026, 8, 4, 9)
+
+        XCTAssertNil(RecordClockEngine.progress(start: nil, now: start))
+        XCTAssertEqual(
+            RecordClockEngine.progress(start: start, now: start) ?? -1,
+            0,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            RecordClockEngine.progress(
+                start: start,
+                now: start.addingTimeInterval(
+                    RecordClockEngine.sweepDuration / 2
+                )
+            ) ?? -1,
+            0.5,
+            accuracy: 0.0001
+        )
+        // 한 바퀴를 넘겨도 1을 넘지 않는다.
+        XCTAssertEqual(
+            RecordClockEngine.progress(
+                start: start,
+                now: start.addingTimeInterval(
+                    RecordClockEngine.sweepDuration * 3
+                )
+            ) ?? -1,
+            1,
+            accuracy: 0.0001
+        )
+    }
+
+    func testClockPlaybackRevealsArcsAsThePlayheadPassesThem() {
+        let day = makeDate(2026, 8, 4)
+        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
+        let rings = RecordChartEngine.clockRings(
+            actuals: [
+                makeActual("수면", "sleep", start: day, minutes: 6 * 60),
+                makeActual(
+                    "걷기",
+                    "movement",
+                    start: day.addingTimeInterval(12 * hour),
+                    minutes: 60
+                ),
+            ],
+            in: span,
+            asOf: day.addingTimeInterval(24 * hour)
+        )
+
+        // 재생 전에는 자르지 않는다.
+        XCTAssertEqual(
+            RecordClockEngine.rings(rings, revealedThrough: nil).count,
+            2
+        )
+
+        // 재생머리가 수면 한가운데면 수면만, 그것도 절반만 보인다.
+        let half = RecordClockEngine.rings(rings, revealedThrough: 0.125)
+        XCTAssertEqual(half.map(\.categoryID), ["sleep"])
+        XCTAssertEqual(half[0].arcs[0].endFraction, 0.125, accuracy: 0.0001)
+        XCTAssertEqual(
+            RecordClockEngine.categoryIDs(in: rings, at: 0.125),
+            ["sleep"]
+        )
+
+        // 다 지나가면 원래 원호가 그대로 남는다.
+        let whole = RecordClockEngine.rings(rings, revealedThrough: 1)
+        XCTAssertEqual(whole.map(\.categoryID), ["sleep", "movement"])
+        XCTAssertEqual(whole[0].arcs[0].endFraction, 0.25, accuracy: 0.0001)
+        XCTAssertTrue(
+            RecordClockEngine.categoryIDs(in: rings, at: 0.4).isEmpty
+        )
+    }
+
+    func testClockLegendKeepsOnlyTheChosenCategory() {
+        let day = makeDate(2026, 8, 4)
+        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
+        let rings = RecordChartEngine.clockRings(
+            actuals: [
+                makeActual("수면", "sleep", start: day, minutes: 6 * 60),
+                makeActual(
+                    "걷기",
+                    "movement",
+                    start: day.addingTimeInterval(12 * hour),
+                    minutes: 60
+                ),
+            ],
+            in: span,
+            asOf: day.addingTimeInterval(24 * hour)
+        )
+
+        XCTAssertEqual(
+            RecordClockEngine.rings(rings, isolating: nil).count,
+            2
+        )
+        XCTAssertEqual(
+            RecordClockEngine.rings(rings, isolating: "movement")
+                .map(\.categoryID),
+            ["movement"]
+        )
+        XCTAssertTrue(
+            RecordClockEngine.rings(rings, isolating: "sleepless").isEmpty
+        )
+    }
+
+    func testClockSwipeMovesADayOnlyOnADeliberateHorizontalDrag() {
+        XCTAssertEqual(
+            RecordClockEngine.swipeStep(width: -80, height: 10),
+            1
+        )
+        XCTAssertEqual(
+            RecordClockEngine.swipeStep(width: 80, height: -10),
+            -1
+        )
+        // 짧게 흔든 손가락은 날짜를 넘기지 않는다.
+        XCTAssertNil(RecordClockEngine.swipeStep(width: -20, height: 4))
+        // 세로가 더 길면 목록을 굴리는 중이다.
+        XCTAssertNil(RecordClockEngine.swipeStep(width: -60, height: 120))
+    }
+
     func testAutomaticRowVocabularyIsSharedByEverySurface() {
         XCTAssertEqual(TimelineRowKind.appUsage.title, "어플")
         XCTAssertEqual(ScreenTimeUsageRecordEngine.laneTitle, "어플")
@@ -6050,6 +6256,309 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(DurationText.korean(2 * hour), "2시간")
         XCTAssertEqual(DurationText.korean(2 * hour + 14 * 60), "2시간 14분")
         XCTAssertEqual(DurationText.signedKorean(-90 * 60), "－1시간 30분")
+    }
+
+    // MARK: - Stationary context
+
+    func testStationaryContextCallOutranksCalendarAndPlaceSignals() {
+        // 2026-08-04는 화요일이다.
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let end = start.addingTimeInterval(105 * 60)
+        let stay = makeContextStay(start: start, end: end)
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: stay,
+                placeKind: .company,
+                calendarEvents: [
+                    makeContextEvent(title: "주간 회의", start: start, end: end)
+                ],
+                actuals: [
+                    makeContextActual(
+                        source: .call,
+                        start: start,
+                        end: end
+                    )
+                ],
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+
+        XCTAssertEqual(inference.kind, .call)
+        XCTAssertEqual(inference.kind.title, "통화")
+        XCTAssertEqual(inference.confidence, .high)
+        XCTAssertTrue(inference.evidence.contains("CallKit 통화 기록"))
+    }
+
+    func testStationaryContextMeetingNeverReachesHighConfidence() {
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let end = start.addingTimeInterval(2 * hour)
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .company,
+                readings: [
+                    makeContextReading(at: start, flat: true),
+                    makeContextReading(
+                        at: start.addingTimeInterval(hour),
+                        flat: true
+                    ),
+                    makeContextReading(
+                        at: start.addingTimeInterval(90 * 60),
+                        flat: true
+                    ),
+                ],
+                calendarEvents: [
+                    makeContextEvent(
+                        title: "분기 리뷰",
+                        start: start,
+                        end: end,
+                        attendeeCount: 5
+                    )
+                ],
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+
+        XCTAssertEqual(inference.kind, .meeting)
+        XCTAssertEqual(inference.kind.title, "회의")
+        XCTAssertGreaterThan(inference.score, 0.75)
+        XCTAssertEqual(inference.confidence, .medium)
+    }
+
+    func testStationaryContextCompanyPlaceOnWeekdayBecomesWork() {
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let end = start.addingTimeInterval(2 * hour)
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .company,
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+
+        XCTAssertEqual(inference.kind, .work)
+        XCTAssertEqual(inference.kind.title, "근무")
+        XCTAssertEqual(inference.kind.categoryID, "work")
+        XCTAssertEqual(inference.confidence, .medium)
+        XCTAssertTrue(inference.evidence.contains("평일 09–18시"))
+    }
+
+    func testStationaryContextShortStayBetweenTravelsBecomesWaiting() {
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let end = start.addingTimeInterval(10 * 60)
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: nil,
+                travel: [
+                    TravelSegment(
+                        mode: .walking,
+                        span: TimeSpan(
+                            start: start.addingTimeInterval(-10 * 60),
+                            end: start
+                        ),
+                        distanceMeters: 500,
+                        confidence: .medium,
+                        evidence: ["걸음 수"]
+                    ),
+                    TravelSegment(
+                        mode: .subway,
+                        span: TimeSpan(
+                            start: end,
+                            end: end.addingTimeInterval(20 * 60)
+                        ),
+                        distanceMeters: 6_000,
+                        confidence: .medium,
+                        evidence: ["역 근처"]
+                    ),
+                ],
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+
+        XCTAssertEqual(inference.kind, .waiting)
+        XCTAssertEqual(inference.kind.title, "대기")
+        XCTAssertTrue(inference.evidence.contains("이동 사이 정지"))
+    }
+
+    func testStationaryContextWithoutEvidenceStaysUnknownAtLowConfidence() {
+        // 2026-08-08은 토요일이라 평일 근무 가중치가 붙지 않는다.
+        let start = makeDate(2026, 8, 8, 14, 0)
+        let end = start.addingTimeInterval(30 * 60)
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: nil,
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+
+        XCTAssertEqual(inference.kind, .unknownStay)
+        XCTAssertEqual(inference.kind.title, "머무름")
+        XCTAssertEqual(inference.confidence, .low)
+        XCTAssertEqual(inference.evidence, ["장소 문맥 근거 부족"])
+    }
+
+    func testStationaryContextModifiersAttachWithoutChangingTheKind() {
+        let start = makeDate(2026, 8, 8, 13, 0)
+        let end = start.addingTimeInterval(2 * hour)
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .home,
+                readings: [
+                    makeContextReading(at: start, flat: true),
+                    makeContextReading(
+                        at: start.addingTimeInterval(hour),
+                        flat: true
+                    ),
+                    makeContextReading(
+                        at: start.addingTimeInterval(90 * 60),
+                        flat: true
+                    ),
+                ],
+                actuals: [
+                    makeContextActual(
+                        source: .appUsage,
+                        start: start,
+                        end: start.addingTimeInterval(hour)
+                    ),
+                    makeContextActual(
+                        source: .media,
+                        start: start,
+                        end: start.addingTimeInterval(90)
+                    ),
+                ],
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+
+        XCTAssertEqual(inference.kind, .homeRest)
+        XCTAssertEqual(inference.kind.title, "집에서 휴식")
+        XCTAssertTrue(inference.modifiers.contains(.screenUse))
+        XCTAssertTrue(inference.modifiers.contains(.mediaPlayback))
+        XCTAssertTrue(inference.modifiers.contains(.onDesk))
+        XCTAssertFalse(inference.modifiers.contains(.inPocket))
+    }
+
+    func testStationaryContextRecordsUseExistingCategoriesAndStableIDs() {
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let end = start.addingTimeInterval(2 * hour)
+        let span = TimeSpan(start: start, end: end.addingTimeInterval(hour))
+        let stay = makeContextStay(
+            start: start,
+            end: end,
+            placeKey: "frequent-office"
+        )
+        let makeRecords = {
+            StationaryContextActualEngine.records(
+                stays: [stay],
+                placeKinds: ["frequent-office": .company],
+                inside: span,
+                calendar: self.utcCalendar,
+                now: span.end
+            )
+        }
+        let records = makeRecords()
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records.first?.title, "근무")
+        XCTAssertEqual(records.first?.source, .location)
+        XCTAssertEqual(records.first?.behavior, "work")
+        XCTAssertEqual(records.first?.modelVersion, "stationary-context-v1")
+        XCTAssertEqual(records.first?.id, makeRecords().first?.id)
+
+        let catalogIDs = Set(CategoryCatalog.builtIn.map(\.id))
+        for kind in StationaryContextKind.allCases {
+            XCTAssertTrue(
+                catalogIDs.contains(kind.categoryID),
+                "\(kind.rawValue) → \(kind.categoryID) 가 카탈로그에 없다"
+            )
+        }
+    }
+
+    private func makeContextStay(
+        start: Date,
+        end: Date,
+        placeKey: String = "frequent-context"
+    ) -> PlaceStay {
+        PlaceStay(
+            placeKey: placeKey,
+            displayName: "장소",
+            span: TimeSpan(start: start, end: end),
+            confidence: .medium
+        )
+    }
+
+    private func makeContextEvent(
+        title: String,
+        start: Date,
+        end: Date,
+        attendeeCount: Int? = nil
+    ) -> CalendarRecord {
+        CalendarRecord(
+            id: title,
+            calendarID: "calendar",
+            title: title,
+            span: TimeSpan(start: start, end: end),
+            isAllDay: false,
+            calendarTitle: "업무",
+            attendeeCount: attendeeCount,
+            isCancelled: false
+        )
+    }
+
+    private func makeContextActual(
+        source: ActualSource,
+        start: Date,
+        end: Date
+    ) -> ActualRecord {
+        ActualRecord(
+            planID: nil,
+            title: "자동 기록",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: end,
+            source: source,
+            confidence: .medium,
+            createdAt: start
+        )
+    }
+
+    private func makeContextReading(
+        at timestamp: Date,
+        flat: Bool
+    ) -> SensorReading {
+        SensorReading(
+            timestamp: timestamp,
+            motion: .stationary,
+            motionConfidence: .high,
+            deviceMotion: DeviceMotionSnapshot(
+                gravity: SensorVector3(
+                    x: 0,
+                    y: flat ? 0 : -0.99,
+                    z: flat ? -0.99 : 0.02
+                ),
+                userAcceleration: SensorVector3(x: 0, y: 0, z: 0),
+                rotationRate: SensorVector3(x: 0, y: 0, z: 0),
+                attitudeRadians: SensorVector3(x: 0, y: 0, z: 0)
+            ),
+            deviceMotionSummary: DeviceMotionSummary(
+                sampleCount: 100,
+                meanUserAccelerationG: 0.001,
+                userAccelerationStandardDeviationG: 0.001,
+                peakUserAccelerationG: 0.004,
+                meanRotationRateRadiansPerSecond: 0.001,
+                rotationRateStandardDeviationRadiansPerSecond: 0.001,
+                peakRotationRateRadiansPerSecond: 0.003
+            )
+        )
     }
 
     private var utcCalendar: Calendar {

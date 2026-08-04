@@ -55,7 +55,7 @@ private final class TimelineFrameBudgetProbe: NSObject {
 
     private func writeSummary(force: Bool) {
         let now = ProcessInfo.processInfo.systemUptime
-        guard force || now - lastWriteAt >= 5 else { return }
+        guard force || now - lastWriteAt >= 4 else { return }
         lastWriteAt = now
         guard !intervals.isEmpty else { return }
 
@@ -7410,7 +7410,7 @@ private struct TimelineBoard: View {
         visibleSpan: TimeSpan,
         index: TimelineBoardDataIndex
     ) -> [TimelineRowModel] {
-        [
+        return [
             automaticScheduleRow(events),
             automaticLocationRow(
                 plans: plansByCategory["location", default: []],
@@ -7465,7 +7465,8 @@ private struct TimelineBoard: View {
                 isActual: true,
                 detailText: appUsageDetailText(actual),
                 categoryID: "appUsage",
-                categoryName: ScreenTimeUsageRecordEngine.laneTitle
+                categoryName: ScreenTimeUsageRecordEngine.laneTitle,
+                appUsageTokenData: model.appUsageTokenIndex[actual.id]
             )
         }
         return TimelineRowModel(
@@ -8133,7 +8134,8 @@ private struct TimelineBoard: View {
         detailText: String? = nil,
         isGoal: Bool = false,
         categoryID: String? = nil,
-        categoryName: String? = nil
+        categoryName: String? = nil,
+        appUsageTokenData: Data? = nil
     ) -> TimelineBlock {
         let overlap = span.intersection(with: layoutDataSpan) ?? span
         let start = CGFloat(
@@ -8162,7 +8164,8 @@ private struct TimelineBoard: View {
             detailText: detailText,
             categoryID: categoryID,
             categoryName: categoryName,
-            isGoal: isGoal
+            isGoal: isGoal,
+            appUsageTokenData: appUsageTokenData
         )
     }
 
@@ -8904,11 +8907,29 @@ private struct TimelineBoard: View {
     ) -> some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
-                guard editingPlanID == nil,
-                      abs(value.translation.width)
+                guard abs(value.translation.width)
                         > abs(value.translation.height) else {
                     return
                 }
+                viewportDragChanged(
+                    translationWidth: value.translation.width,
+                    width: width
+                )
+            }
+            .onEnded { value in
+                viewportDragEnded(
+                    translationWidth: value.translation.width,
+                    width: width
+                )
+            }
+    }
+
+    private func viewportDragChanged(
+        translationWidth: CGFloat,
+        width: CGFloat
+    ) {
+        guard editingPlanID == nil else { return }
+        do {
                 if isContinuousTimeline {
                     if continuousDragOrigin == nil {
                         continuousDragOrigin = continuousCenterDate
@@ -8930,7 +8951,7 @@ private struct TimelineBoard: View {
                         * viewport.length
                         / Double(max(1, width))
                     let candidate = continuousDragOrigin.addingTimeInterval(
-                        -Double(value.translation.width) * secondsPerPoint
+                        -Double(translationWidth) * secondsPerPoint
                     )
                     ensureContinuousLayoutWindow(around: candidate)
                     let uptime = ProcessInfo.processInfo.systemUptime
@@ -8948,7 +8969,7 @@ private struct TimelineBoard: View {
                     }
                     guard let dragOrigin else { return }
                     let candidate = dragOrigin.panning(
-                        translation: Double(value.translation.width),
+                        translation: Double(translationWidth),
                         viewportWidth: Double(width)
                     )
                     let uptime = ProcessInfo.processInfo.systemUptime
@@ -8960,8 +8981,14 @@ private struct TimelineBoard: View {
                     lastViewportRenderUptime = uptime
                     viewport = candidate
                 }
-            }
-            .onEnded { value in
+        }
+    }
+
+    private func viewportDragEnded(
+        translationWidth: CGFloat,
+        width: CGFloat
+    ) {
+        do {
                 if isContinuousTimeline {
                     var finalDate = continuousCenterDate
                     if let continuousDragOrigin {
@@ -8970,12 +8997,12 @@ private struct TimelineBoard: View {
                             / Double(max(1, width))
                         finalDate = continuousDragOrigin
                             .addingTimeInterval(
-                                -Double(value.translation.width)
+                                -Double(translationWidth)
                                     * secondsPerPoint
                             )
                     }
                     let direction: TimelinePlayheadSynchronizer.Direction =
-                        value.translation.width < 0 ? .forward : .backward
+                        translationWidth < 0 ? .forward : .backward
                     finalDate = TimelinePlayheadSynchronizer.snapIfNeeded(
                         date: finalDate,
                         direction: direction,
@@ -9005,23 +9032,23 @@ private struct TimelineBoard: View {
                     // Commit the final sample even when the last 240 Hz
                     // callback arrived inside the 60 Hz presentation gate.
                     viewport = dragOrigin.panning(
-                        translation: Double(value.translation.width),
+                        translation: Double(translationWidth),
                         viewportWidth: Double(width)
                     )
                     if dragOrigin.isFull,
-                       abs(value.translation.width) > width * 0.18 {
+                       abs(translationWidth) > width * 0.18 {
                         // At the default full-period view, a horizontal swipe
                         // crosses the period boundary instead of stopping at
                         // the edge. Zoomed views retain the existing free pan.
                         model.shiftSelectedDate(
-                            by: value.translation.width < 0 ? 1 : -1
+                            by: translationWidth < 0 ? 1 : -1
                         )
                     }
                 }
                 dragOrigin = nil
                 continuousDragOrigin = nil
                 lastViewportRenderUptime = 0
-            }
+        }
     }
 
     private var viewportMagnifyGesture: some Gesture {
@@ -9440,6 +9467,54 @@ private struct TimelineBoard: View {
 private struct TimelineBlockSlice {
     let centerX: CGFloat
     let width: CGFloat
+    /// 실제 시간 길이가 최소 너비보다 짧아 억지로 넓혀 그린 막대.  이런
+    /// 막대는 안쪽에 아무 글자도 담을 수 없다.
+    let isStub: Bool
+
+    var minX: CGFloat { centerX - width / 2 }
+    var maxX: CGFloat { centerX + width / 2 }
+}
+
+/// 한 줄에서 실제로 그려질 막대. 년·월처럼 기록이 촘촘한 배율에서는 수천
+/// 개의 막대가 같은 픽셀에 겹쳐 쌓이므로, 앞선 막대가 이미 덮은 자리를
+/// 반 포인트도 넓히지 못하는 막대는 뷰로 만들지 않는다.
+private struct TimelineRowBar: Identifiable {
+    let id: UUID
+    let block: TimelineBlock
+    let slice: TimelineBlockSlice
+    /// 합치기 전 본래 너비.  글자·아이콘을 그릴지 판단할 때는 합쳐진
+    /// 너비가 아니라 이 값을 본다.
+    let contentWidth: CGFloat
+}
+
+enum TimelineRowBarMerging {
+    static let isEnabled = true
+}
+
+/// 같은 칸에서 이어 붙는 중인 자투리 막대 묶음.
+private struct TimelineBarRun {
+    let lane: TimelineBarLane
+    let barIndex: Int
+    let minX: CGFloat
+    var maxX: CGFloat
+    let isStub: Bool
+}
+
+/// 겹침 판정을 같은 줄·같은 모양끼리만 하기 위한 열쇠.
+private struct TimelineBarLane: Equatable {
+    let top: CGFloat
+    let height: CGFloat
+    let isGoal: Bool
+    let isFixed: Bool
+    let isActual: Bool
+
+    init(_ block: TimelineBlock) {
+        top = block.top
+        height = block.height
+        isGoal = block.isGoal
+        isFixed = block.isFixed
+        isActual = block.isActual
+    }
 }
 
 private struct TimelineRow: View {
@@ -9534,16 +9609,14 @@ private struct TimelineRow: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
 
-                    ForEach(row.blocks) { block in
-                        if let slice = visibleSlice(
-                            for: block,
-                            width: proxy.size.width
-                        ) {
-                            TimelineBar(
+                    ForEach(visibleBars(width: proxy.size.width)) { bar in
+                        let block = bar.block
+                        TimelineBar(
                                 block: block,
                                 color: row.fillColor,
                                 actualColor: row.actualColor,
-                                width: slice.width,
+                                width: bar.slice.width,
+                                contentWidth: bar.contentWidth,
                                 isEditing: editingPlanID == block.planID,
                                 visibleDuration: visibleDuration,
                                 secondsPerPoint:
@@ -9567,11 +9640,10 @@ private struct TimelineRow: View {
                                     onResizeEnd(block, $0)
                                 }
                             )
-                                .position(
-                                    x: slice.centerX,
-                                    y: block.top + block.height / 2
-                                )
-                        }
+                            .position(
+                                x: bar.slice.centerX,
+                                y: block.top + block.height / 2
+                            )
                     }
                 }
             }
@@ -9588,6 +9660,64 @@ private struct TimelineRow: View {
                 .fill(ganttTableLineColor)
                 .frame(height: 0.5)
         }
+    }
+
+    /// 눈에 보이는 막대만 남긴다.  앞선 막대가 덮은 구간을 반 포인트도
+    /// 넓히지 못하는 막대는 같은 색·같은 칸에 그대로 묻히므로 건너뛴다.
+    /// 하루처럼 막대가 넓은 배율에서는 어떤 막대도 걸러지지 않는다.
+    private func visibleBars(width: CGFloat) -> [TimelineRowBar] {
+        var bars: [TimelineRowBar] = []
+        var runs: [TimelineBarRun] = []
+        for block in row.blocks {
+            guard let slice = visibleSlice(for: block, width: width) else {
+                continue
+            }
+            let lane = TimelineBarLane(block)
+            let runIndex = runs.firstIndex { $0.lane == lane }
+            if TimelineRowBarMerging.isEnabled,
+               slice.isStub,
+               let runIndex,
+               runs[runIndex].isStub,
+               slice.minX <= runs[runIndex].maxX {
+                // 이미 그려진 막대와 맞닿은 자투리 막대는 같은 자리를 다시
+                // 칠할 뿐이므로 앞 막대를 늘려 한 개로 합친다. 칠해지는
+                // 범위는 그대로다.
+                runs[runIndex].maxX = max(runs[runIndex].maxX, slice.maxX)
+                let run = runs[runIndex]
+                bars[run.barIndex] = TimelineRowBar(
+                    id: bars[run.barIndex].id,
+                    block: bars[run.barIndex].block,
+                    slice: TimelineBlockSlice(
+                        centerX: (run.minX + run.maxX) / 2,
+                        width: run.maxX - run.minX,
+                        isStub: true
+                    ),
+                    contentWidth: bars[run.barIndex].contentWidth
+                )
+                continue
+            }
+            let run = TimelineBarRun(
+                lane: lane,
+                barIndex: bars.count,
+                minX: slice.minX,
+                maxX: slice.maxX,
+                isStub: slice.isStub
+            )
+            if let runIndex {
+                runs[runIndex] = run
+            } else {
+                runs.append(run)
+            }
+            bars.append(
+                TimelineRowBar(
+                    id: block.id,
+                    block: block,
+                    slice: slice,
+                    contentWidth: slice.width
+                )
+            )
+        }
+        return bars
     }
 
     private func visibleSlice(
@@ -9627,7 +9757,8 @@ private struct TimelineRow: View {
         return TimelineBlockSlice(
             centerX:
                 width * CGFloat((startFraction + endFraction) / 2),
-            width: max(block.minimumWidth, naturalWidth)
+            width: max(block.minimumWidth, naturalWidth),
+            isStub: naturalWidth < block.minimumWidth
         )
     }
 }
@@ -9637,6 +9768,8 @@ private struct TimelineBar: View {
     let color: Color
     let actualColor: Color
     let width: CGFloat
+    /// 합치기 전 본래 너비.  글자와 앱 이름은 이 너비를 기준으로 그린다.
+    let contentWidth: CGFloat
     let isEditing: Bool
     let visibleDuration: TimeInterval
     let secondsPerPoint: TimeInterval
@@ -9649,17 +9782,32 @@ private struct TimelineBar: View {
 
     var body: some View {
         HStack(spacing: 3) {
-            Text(primaryText)
-                .font(.taption(size: block.height <= 20 ? 9.5 : 10.5, weight: .semibold))
-                .foregroundStyle(
-                    block.isActual
-                        ? Color.white
-                        : Color.tpInk.opacity(0.64)
+            if !showsContent {
+                EmptyView()
+            } else if showsApplicationName {
+                // 번들 ID가 아닌 실제 앱 이름·아이콘. 시스템만 그릴 수 있어서
+                // 문자열 제목 대신 토큰 라벨을 쓴다.
+                AppUsageNameLabel(
+                    tokenData: block.appUsageTokenData,
+                    size: textSize,
+                    tint: textColor
                 )
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                if showsMinuteDetails {
+                    Text(primaryText)
+                        .font(.taption(size: textSize, weight: .semibold))
+                        .foregroundStyle(textColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                }
+            } else {
+                Text(primaryText)
+                    .font(.taption(size: textSize, weight: .semibold))
+                    .foregroundStyle(textColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
 
-            if !showsMinuteDetails, let count = block.groupCount {
+            if showsContent, !showsMinuteDetails, let count = block.groupCount {
                 Spacer(minLength: 1)
                 Text("▸ \(count)")
                     .font(.taption(size: 8.5, weight: .bold))
@@ -9668,7 +9816,7 @@ private struct TimelineBar: View {
                     .padding(.vertical, 1)
                     .background(Color.white.opacity(0.70), in: Capsule())
             }
-            if !showsMinuteDetails, block.status == .completed {
+            if showsContent, !showsMinuteDetails, block.status == .completed {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(actualColor)
@@ -9778,22 +9926,16 @@ private struct TimelineBar: View {
                     }
                 }
         )
-        .onLongPressGesture(
-            minimumDuration: 0.18,
-            maximumDistance: 12,
-            perform: {
-                guard !block.isFixed else { return }
-                onEdit()
-            }
-        )
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 12)
-                .onEnded {
-                    guard isEditing,
-                          block.planID != nil,
-                          !block.isFixed else { return }
-                    onMove($0.translation.width * secondsPerPoint)
-                }
+        // 자동 기록은 옮기거나 길이를 바꿀 수 없다.  두 제스처 모두 안에서
+        // 곧바로 빠져나가므로 아예 붙이지 않는다.  촘촘한 배율에서는 한
+        // 프레임에 수백 개의 인식기를 만들던 자리다.
+        .modifier(
+            TimelineBarEditGestures(
+                isEnabled: !block.isFixed,
+                onEdit: onEdit,
+                onMove: { onMove($0 * secondsPerPoint) },
+                canMove: isEditing && block.planID != nil
+            )
         )
         .accessibilityHint(
             block.isFixed
@@ -9810,6 +9952,28 @@ private struct TimelineBar: View {
     private var showsMinuteDetails: Bool {
         visibleDuration
             <= GanttZoomStage.oneMinute.duration * 1.15
+    }
+
+    /// 아이콘과 이름이 잘리지 않고 들어갈 만큼 막대가 넓을 때만 토큰을 그린다.
+    /// 좁으면 최선의 추정 이름이 담긴 제목 문자열을 그대로 쓴다.
+    private var showsApplicationName: Bool {
+        contentWidth >= 58
+            && AppUsageNameLabel.canRender(block.appUsageTokenData)
+    }
+
+    /// 억지로 넓힌 자투리 막대에는 글자가 한 자도 들어가지 않는다.  글자와
+    /// 배지를 만들지 않으면 년·월처럼 막대가 촘촘한 배율에서 프레임마다
+    /// 수백 개의 글자 배치를 건너뛴다.
+    private var showsContent: Bool {
+        contentWidth >= 18
+    }
+
+    private var textSize: CGFloat {
+        block.height <= 20 ? 9.5 : 10.5
+    }
+
+    private var textColor: Color {
+        block.isActual ? Color.white : Color.tpInk.opacity(0.64)
     }
 
     private var blockCornerRadius: CGFloat {
@@ -9834,6 +9998,33 @@ private struct TimelineBar: View {
                 Circle().stroke(Color.tpInk.opacity(0.65), lineWidth: 1.5)
             }
             .shadow(color: .black.opacity(0.16), radius: 2)
+    }
+}
+
+private struct TimelineBarEditGestures: ViewModifier {
+    let isEnabled: Bool
+    let onEdit: () -> Void
+    let onMove: (CGFloat) -> Void
+    let canMove: Bool
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content
+                .onLongPressGesture(
+                    minimumDuration: 0.18,
+                    maximumDistance: 12,
+                    perform: onEdit
+                )
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 12)
+                        .onEnded {
+                            guard canMove else { return }
+                            onMove($0.translation.width)
+                        }
+                )
+        } else {
+            content
+        }
     }
 }
 
@@ -9910,6 +10101,8 @@ private struct TimelineBlock: Identifiable {
     let detailText: String?
     let categoryID: String?
     let categoryName: String?
+    /// 어플 줄 전용. 막대가 넓으면 이 토큰으로 실제 앱 이름을 그린다.
+    let appUsageTokenData: Data?
 
     init(
         id: UUID = UUID(),
@@ -9931,7 +10124,8 @@ private struct TimelineBlock: Identifiable {
         detailText: String? = nil,
         categoryID: String? = nil,
         categoryName: String? = nil,
-        isGoal: Bool = false
+        isGoal: Bool = false,
+        appUsageTokenData: Data? = nil
     ) {
         self.id = id
         self.planID = planID
@@ -9953,6 +10147,7 @@ private struct TimelineBlock: Identifiable {
         self.detailText = detailText
         self.categoryID = categoryID
         self.categoryName = categoryName
+        self.appUsageTokenData = appUsageTokenData
     }
 }
 
