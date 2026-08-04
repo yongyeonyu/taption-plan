@@ -281,6 +281,43 @@ enum CloudSyncDecision: Equatable, Sendable {
     case unchanged
 }
 
+enum CloudUnavailableReason: Sendable {
+    case unsupportedBuild
+    case signedOut
+    case restricted
+    case temporarilyUnavailable
+    case accountCheckFailed
+    case schemaMissing
+
+    var statusLabel: String {
+        switch self {
+        case .unsupportedBuild: "이 빌드 미지원"
+        case .signedOut: "iCloud 로그인 필요"
+        case .restricted: "기기에서 제한됨"
+        case .temporarilyUnavailable: "잠시 후 다시"
+        case .accountCheckFailed: "계정 확인 실패"
+        case .schemaMissing: "서버 준비 중"
+        }
+    }
+
+    var guidance: String {
+        switch self {
+        case .unsupportedBuild:
+            "이 빌드에는 iCloud 컨테이너가 없습니다. 기록은 이 기기에만 저장됩니다."
+        case .signedOut:
+            "설정 앱 → 맨 위 이름 → iCloud에서 로그인하고 iCloud Drive를 켠 뒤 이 줄을 눌러주세요."
+        case .restricted:
+            "스크린타임이나 기기 관리 정책이 iCloud를 막고 있습니다. 제한을 푼 뒤 다시 시도해주세요."
+        case .temporarilyUnavailable:
+            "iCloud 계정을 확인하는 중입니다. 잠시 뒤 이 줄을 눌러 다시 시도해주세요."
+        case .accountCheckFailed:
+            "iCloud 계정 상태를 확인하지 못했습니다. 네트워크를 확인한 뒤 이 줄을 눌러주세요."
+        case .schemaMissing:
+            "iCloud 서버 준비가 끝나지 않았습니다. 그동안 기록은 이 기기에 안전하게 저장됩니다."
+        }
+    }
+}
+
 enum CloudKitErrorPolicy {
     static func isProductionSchemaUnavailable(_ error: Error) -> Bool {
         let nsError = error as NSError
@@ -346,19 +383,29 @@ actor CloudKitSnapshotSyncService {
     }
 
     func accountState() async -> PermissionState {
+        await accountAvailability().0
+    }
+
+    /// 계정 로그인, 기기 제한, 서버 스키마는 사용자가 할 수 있는 조치가 서로
+    /// 다르다. 이유를 그대로 돌려주어 설정 화면이 안내할 수 있게 한다.
+    func accountAvailability() async -> (PermissionState, CloudUnavailableReason?) {
         do {
             switch try await container.accountStatus() {
             case .available:
-                return .authorized
+                return (.authorized, nil)
             case .couldNotDetermine:
-                return .notDetermined
-            case .noAccount, .restricted, .temporarilyUnavailable:
-                return .unavailable
+                return (.notDetermined, nil)
+            case .noAccount:
+                return (.unavailable, .signedOut)
+            case .restricted:
+                return (.unavailable, .restricted)
+            case .temporarilyUnavailable:
+                return (.unavailable, .temporarilyUnavailable)
             @unknown default:
-                return .unavailable
+                return (.unavailable, .accountCheckFailed)
             }
         } catch {
-            return .unavailable
+            return (.unavailable, .accountCheckFailed)
         }
     }
 

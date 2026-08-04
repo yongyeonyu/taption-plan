@@ -229,29 +229,7 @@ struct SettingsView: View {
                                 }
                             )
                         )
-                        settingsRow(
-                            icon: "icloud",
-                            iconBackground: Color(
-                                red: 0.90,
-                                green: 0.95,
-                                blue: 1.00
-                            ),
-                            iconColor: Color(
-                                red: 0.16,
-                                green: 0.45,
-                                blue: 0.75
-                            ),
-                            title: "iCloud 동기화",
-                            subtitle: "계획·분류·메모를 내 기기 사이에 보관",
-                            value: cloudStatus,
-                            valueIsOn: model.permissionState(
-                                for: .cloud
-                            ).isGranted
-                        ) {
-                            Task {
-                                await model.synchronizeCloud()
-                            }
-                        }
+                        cloudSyncRow
                     }
 
                     settingsSection(
@@ -353,9 +331,27 @@ struct SettingsView: View {
         }
     }
 
-    private var cloudStatus: String {
-        if model.isCloudSyncing { return "동기화 중" }
-        return model.permissionState(for: .cloud).settingsLabel
+    private var cloudSyncRow: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            settingsRow(
+                icon: "icloud",
+                iconBackground: Color(red: 0.90, green: 0.95, blue: 1.00),
+                iconColor: Color(red: 0.16, green: 0.45, blue: 0.75),
+                title: "iCloud 동기화",
+                subtitle: "계획·분류·메모를 내 기기 사이에 보관",
+                value: model.cloudStatusText,
+                valueIsOn: model.permissionState(for: .cloud).isGranted
+            ) {
+                Task { await model.synchronizeCloud() }
+            }
+            if let guidance = model.cloudStatusGuidance {
+                Text(guidance)
+                    .font(.taption(size: SettingsTypography.footnote))
+                    .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 37)
+            }
+        }
     }
 
     private var watchInstallRow: some View {
@@ -526,8 +522,12 @@ struct SettingsView: View {
             .last
         return VStack(alignment: .leading, spacing: 2) {
             Text("Taption Plan \(version) (빌드 \(build))")
-            if let watchBuild {
-                Text("Apple Watch 앱 빌드 \(watchBuild)")
+            if let watchBuild, let reportedAt = model.watchLaunchReport?.receivedAt {
+                // 워치가 마지막으로 보고한 값이다. 지금 설치된 빌드와 다를 수
+                // 있어 언제 보고된 값인지 함께 보여준다.
+                Text(
+                    "Apple Watch 앱 빌드 \(watchBuild) · \(reportedAt, format: .dateTime.month().day().hour().minute()) 보고"
+                )
             }
         }
         .font(.taption(size: SettingsTypography.footnote))

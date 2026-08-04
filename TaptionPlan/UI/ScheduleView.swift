@@ -1664,6 +1664,9 @@ struct ScheduleView: View {
             if let session = model.activeTrackingSession {
                 liveTrackingBanner(session)
             }
+            if let missing = model.timelineIntegrationNotice {
+                integrationNotice(missing)
+            }
             TimelineBoard(
                 model: model,
                 scale: model.selectedScale,
@@ -1817,6 +1820,36 @@ struct ScheduleView: View {
         .background(Color.tpTransit.opacity(0.22))
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.tpTransitDark.opacity(0.18)).frame(height: 0.5)
+        }
+    }
+
+    private func integrationNotice(_ missing: [String]) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.circle")
+                .font(.taption(size: 13, weight: .bold))
+                .foregroundStyle(Color.tpPlaceDark)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("아직 자동으로 기록된 하루가 없습니다")
+                    .font(.taption(size: 9.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Text("\(missing.joined(separator: " · ")) 연결이 꺼져 있어요")
+                    .font(.taption(size: 7.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 4)
+            Button("설정 열기") {
+                model.selectTab(.settings)
+            }
+            .font(.taption(size: 8, weight: .bold))
+            .buttonStyle(.borderedProminent)
+            .tint(Color.tpPlaceDark)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Color.tpPlace.opacity(0.22))
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Color.tpPlaceDark.opacity(0.18)).frame(height: 0.5)
         }
     }
 

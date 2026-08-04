@@ -28,6 +28,7 @@ final class AppModel {
     var selectedMemoPlanID: UUID?
     var selectedCatCoat: CatCoat = .calico
     var reviewScale: ReviewScale = .week
+    var isPermissionOnboardingPresented = false
     private(set) var pendingSetupCategoryIDs: Set<String> = []
     private(set) var isEditingSetupCategories = false
 
@@ -63,6 +64,7 @@ final class AppModel {
     private(set) var isRefreshingIntegrations = false
     private(set) var isSensorCollecting = false
     private(set) var isCloudSyncing = false
+    private(set) var cloudUnavailableReason: CloudUnavailableReason?
     private(set) var isRecordingVoiceMemo = false
     private(set) var playingVoiceAttachmentID: UUID?
     private(set) var isStoreLoading = false
@@ -110,6 +112,42 @@ final class AppModel {
         }
         guard lastAppUsageRefreshAt != nil else { return "동기화 대기" }
         return appUsageRecordCount == 0 ? "오늘 기록 없음" : "오늘 \(appUsageRecordCount)개"
+    }
+
+    var cloudStatusText: String {
+        if isCloudSyncing { return "동기화 중" }
+        if let cloudUnavailableReason { return cloudUnavailableReason.statusLabel }
+        return permissionState(for: .cloud).settingsLabel
+    }
+
+    var cloudStatusGuidance: String? {
+        isCloudSyncing ? nil : cloudUnavailableReason?.guidance
+    }
+
+    /// 자동 기록이 하나도 없고 필요한 연동이 꺼져 있을 때만 알린다. 연동은
+    /// 켜져 있는데 보이는 구간에만 기록이 없는 경우는 정상이므로 알리지
+    /// 않는다.
+    var timelineIntegrationNotice: [String]? {
+        guard snapshot.actuals.isEmpty,
+              snapshot.travel.isEmpty,
+              snapshot.places.isEmpty,
+              snapshot.calendarEvents.isEmpty,
+              snapshot.photos.isEmpty,
+              snapshot.plans.isEmpty else {
+            return nil
+        }
+        var missing: [String] = []
+        if !settings.locationEnabled
+            || !permissionState(for: .location).isGranted {
+            missing.append("위치·이동")
+        }
+        if !settings.healthEnabled { missing.append("건강·Apple Watch") }
+        if settings.selectedCalendarIDs.isEmpty { missing.append("캘린더") }
+        if !settings.showsPhotos { missing.append("사진") }
+        if appUsageAuthorizationState != .approved {
+            missing.append("앱 사용시간")
+        }
+        return missing.isEmpty ? nil : missing
     }
 
     @ObservationIgnored private let repository: any PlanDataRepository
@@ -165,6 +203,9 @@ final class AppModel {
     // O(1) per append while preserving the same 4,000-point render limit.
     private static let liveRouteHardLimit = 4_000
     private static let liveRouteSoftLimit = 4_512
+
+    private static let permissionOnboardingKey =
+        "taption.permission-onboarding.v1"
 
     private struct LiveMergeCacheKey: Equatable {
         let spanStart: TimeInterval
@@ -851,6 +892,23 @@ final class AppModel {
         snapshot.settings.permissions[feature] ?? .notDetermined
     }
 
+    /// 설치 후 첫 실행에서만 권한 안내를 띄운다. 권한은 기기마다 다르므로
+    /// iCloud로 오가는 스냅샷이 아니라 기기 저장소에 표시 여부를 남긴다.
+    func presentPermissionOnboardingIfNeeded() {
+        guard !UserDefaults.standard.bool(
+            forKey: Self.permissionOnboardingKey
+        ) else { return }
+        isPermissionOnboardingPresented = true
+    }
+
+    func finishPermissionOnboarding() async {
+        UserDefaults.standard.set(true, forKey: Self.permissionOnboardingKey)
+        isPermissionOnboardingPresented = false
+        await refreshPermissionStates()
+        refreshAppUsageAuthorizationState()
+        await persist()
+    }
+
     func refreshAppUsageAuthorizationState() {
         appUsageAuthorizationState = screenTimeUsageService.authorizationState
         snapshot.settings.permissions[.appUsage] = switch appUsageAuthorizationState {
@@ -1202,17 +1260,20 @@ final class AppModel {
         guard let cloudSyncService, !isCloudSyncing else {
             if cloudSyncService == nil {
                 snapshot.settings.permissions[.cloud] = .unavailable
+                cloudUnavailableReason = .unsupportedBuild
             }
             return
         }
         isCloudSyncing = true
         if await cloudSyncService.isSchemaUnavailable() {
             snapshot.settings.permissions[.cloud] = .unavailable
+            cloudUnavailableReason = .schemaMissing
             isCloudSyncing = false
             return
         }
-        let state = await cloudSyncService.accountState()
+        let (state, reason) = await cloudSyncService.accountAvailability()
         snapshot.settings.permissions[.cloud] = state
+        cloudUnavailableReason = reason
         guard state.isGranted else {
             isCloudSyncing = false
             return
@@ -1234,6 +1295,7 @@ final class AppModel {
                 || error is RepositoryError
                     && (error as? RepositoryError) == .cloudSchemaUnavailable {
                 snapshot.settings.permissions[.cloud] = .unavailable
+                cloudUnavailableReason = .schemaMissing
                 Self.integrationLogger.error(
                     "CloudKit production schema is unavailable; local data remains authoritative"
                 )
