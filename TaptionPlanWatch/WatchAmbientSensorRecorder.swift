@@ -80,6 +80,14 @@ actor WatchAmbientSensorRecorder {
     /// 통과시킨다. 워터마크는 실제로 처리한 마지막 표본 시각으로만 올려
     /// 같은 표본을 두 번 처리하지 않는다.
     func drain(now: Date = .now) -> WatchAmbientDrainResult {
+        // accelerometerData(from:to:)가 Objective-C 예외를 던져 앱이 중단된다
+        // (빌드 29 실기기 크래시로 확인). Swift에서는 이 예외를 잡을 수 없어
+        // 안전하게 읽는 방법이 마련될 때까지 조회를 멈춘다. 기록 자체는
+        // 계속되고 3일간 보관되므로 그때 한꺼번에 가져올 수 있다.
+        return WatchAmbientDrainResult()
+    }
+
+    private func drainUnsafe(now: Date = .now) -> WatchAmbientDrainResult {
         guard CMSensorRecorder.isAccelerometerRecordingAvailable(),
               CMSensorRecorder.authorizationStatus() == .authorized else {
             return WatchAmbientDrainResult()
