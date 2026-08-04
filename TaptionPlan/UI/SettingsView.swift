@@ -311,6 +311,8 @@ struct SettingsView: View {
                         .foregroundStyle(Color.tpSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 3)
+
+                    versionFooter
                 }
                 .padding(.horizontal, 13)
                 .padding(.top, 11)
@@ -506,6 +508,33 @@ struct SettingsView: View {
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
         }
+    }
+
+    /// 어느 빌드가 실제로 설치돼 있는지 앱 안에서 바로 확인할 수 있게 한다.
+    /// 워치는 별도로 업데이트되므로 워치가 보고한 빌드도 함께 보여준다.
+    private var versionFooter: some View {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "-"
+        let build = info?["CFBundleVersion"] as? String ?? "-"
+        let watchBuild = model.watchLaunchReport?.report
+            .split(separator: "\n")
+            .compactMap { line -> String? in
+                let parts = line.split(separator: " ")
+                guard parts.count >= 3, parts[1] == "build" else { return nil }
+                return String(parts[2])
+            }
+            .last
+        return VStack(alignment: .leading, spacing: 2) {
+            Text("Taption Plan \(version) (빌드 \(build))")
+            if let watchBuild {
+                Text("Apple Watch 앱 빌드 \(watchBuild)")
+            }
+        }
+        .font(.taption(size: SettingsTypography.footnote))
+        .foregroundStyle(Color.tpSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 3)
+        .textSelection(.enabled)
     }
 
     private var frequentPlacesRow: some View {
