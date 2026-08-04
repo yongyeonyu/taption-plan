@@ -153,6 +153,7 @@ final class AppModel {
     @ObservationIgnored private var lastLiveEnvironmentFailureAt: Date?
     @ObservationIgnored private var lastTrackingSessionRecoveryPersistAt: Date?
     @ObservationIgnored private var lastDeviceSnapshotPersistAt: Date?
+    @ObservationIgnored private var pendingDeviceLocalPersistTask: Task<Void, Never>?
     @ObservationIgnored private var liveMergeCacheKey: LiveMergeCacheKey?
     @ObservationIgnored private var liveMergeCacheValue: [SensorReading] = []
     @ObservationIgnored private var sensorRefreshFingerprints:
@@ -3352,7 +3353,8 @@ final class AppModel {
             ),
             motionActivities: motionActivities,
             pedometer: pedometer,
-            healthEvidence: healthMovementEvidence
+            healthEvidence: healthMovementEvidence,
+            readings: readings
         )
         let travel = AppleDeviceGroundTruthEngine.coalescingTravel(
             MovementCorrectionEngine.applying(
@@ -4974,12 +4976,15 @@ final class AppModel {
         // Location and HealthKit callbacks can converge at the same moment.
         // Coalesce those device-only commits so one sensor tick does not
         // trigger duplicate disk writes, widget serialization and timeline
-        // reload requests. The in-memory ground truth remains current and the
-        // next scheduled commit catches any change inside this short window.
+        // reload requests. The coalesced change must still reach disk, so a
+        // trailing write is scheduled instead of being dropped.
         if let lastDeviceSnapshotPersistAt,
            Date.now.timeIntervalSince(lastDeviceSnapshotPersistAt) < 1.5 {
+            scheduleTrailingDeviceLocalPersist()
             return
         }
+        pendingDeviceLocalPersistTask?.cancel()
+        pendingDeviceLocalPersistTask = nil
         lastDeviceSnapshotPersistAt = .now
         do {
             var value = snapshot
@@ -4990,6 +4995,16 @@ final class AppModel {
         } catch {
             userFacingError =
                 "센서 기록을 저장하지 못했습니다. \(error.localizedDescription)"
+        }
+    }
+
+    private func scheduleTrailingDeviceLocalPersist() {
+        guard pendingDeviceLocalPersistTask == nil else { return }
+        pendingDeviceLocalPersistTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled, let self else { return }
+            self.pendingDeviceLocalPersistTask = nil
+            await self.persistDeviceLocalSnapshot()
         }
     }
 }

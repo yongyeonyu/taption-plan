@@ -1271,18 +1271,26 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         referencePressureKilopascals = reading.pressureKilopascals
         referenceAltimeterSessionID = reading.altimeterSessionID
         floorCapturedAt = reading.timestamp
-        floorReferencePoints = [
-            FloorCalibrationPoint(
-                floor: floor,
-                point: point,
-                relativeAltitudeMeters: reading.relativeAltitudeMeters,
-                pressureKilopascals: reading.pressureKilopascals,
-                altimeterSessionID: reading.altimeterSessionID,
-                capturedAt: reading.timestamp
-            )
-        ]
+        let reference = FloorCalibrationPoint(
+            floor: floor,
+            point: point,
+            relativeAltitudeMeters: reading.relativeAltitudeMeters,
+            pressureKilopascals: reading.pressureKilopascals,
+            altimeterSessionID: reading.altimeterSessionID,
+            capturedAt: reading.timestamp
+        )
+        // 같은 건물에서 다시 지정한 경우 다른 층 기준을 유지한다.
+        // 위치를 멀리 옮겼다면 이전 층 기준은 더 이상 맞지 않으므로 버린다.
+        floorReferencePoints = floorReferencePoints.filter {
+            $0.floor != floor
+                && distanceMeters($0.point, point)
+                    <= Self.sameBuildingRadiusMeters
+        } + [reference]
+        floorReferencePoints.sort { $0.floor < $1.floor }
         updatedAt = .now
     }
+
+    static let sameBuildingRadiusMeters = 120.0
 
     mutating func addFloorCalibration(
         from reading: SensorReading,
@@ -2206,4 +2214,16 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         floorTransitions: [],
         settings: .defaults
     )
+}
+
+func distanceMeters(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Double {
+    let earthRadius = 6_371_000.0
+    let lat1 = lhs.latitude * .pi / 180
+    let lat2 = rhs.latitude * .pi / 180
+    let deltaLat = (rhs.latitude - lhs.latitude) * .pi / 180
+    let deltaLon = (rhs.longitude - lhs.longitude) * .pi / 180
+    let a = sin(deltaLat / 2) * sin(deltaLat / 2)
+        + cos(lat1) * cos(lat2)
+        * sin(deltaLon / 2) * sin(deltaLon / 2)
+    return earthRadius * 2 * atan2(sqrt(a), sqrt(1 - a))
 }

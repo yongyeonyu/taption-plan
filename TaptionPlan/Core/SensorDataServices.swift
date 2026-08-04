@@ -645,6 +645,8 @@ final class AppleSensorDataService {
     private let history: AppleMotionHistoryService
     private var collectionTask: Task<Void, Never>?
     private var activeConfiguration: SensorCollectionConfiguration?
+    private var collectionGeneration = 0
+    private var isCollectionStreamLive = false
 
     private(set) var lastPersistenceErrorDescription: String?
     var onReadingPersisted: ((SensorReading) -> Void)?
@@ -692,13 +694,20 @@ final class AppleSensorDataService {
     func startCollection(
         configuration: SensorCollectionConfiguration = .standard
     ) {
+        // A finished stream leaves a completed task behind. Restart in that
+        // case, otherwise recording never resumes after the reading stream
+        // ends (for example when location permission was revoked).
         if collectionTask != nil,
+           isCollectionStreamLive,
            activeConfiguration == configuration {
             return
         }
         stopCollection()
         lastPersistenceErrorDescription = nil
         activeConfiguration = configuration
+        collectionGeneration += 1
+        let generation = collectionGeneration
+        isCollectionStreamLive = true
         let stream = collector.readings(configuration: configuration)
         collectionTask = Task { [weak self] in
             for await reading in stream {
@@ -713,10 +722,16 @@ final class AppleSensorDataService {
                     )
                 }
             }
+            guard let self, self.collectionGeneration == generation else {
+                return
+            }
+            self.isCollectionStreamLive = false
         }
     }
 
     func stopCollection() {
+        collectionGeneration += 1
+        isCollectionStreamLive = false
         collectionTask?.cancel()
         collectionTask = nil
         activeConfiguration = nil

@@ -356,6 +356,29 @@ struct TravelModeClassifier: Sendable {
             add(.ship, 0.55, "항구·수상 경로")
         }
 
+        // 직선 변위만으로 계산한 최소 속도는 실제 경로보다 항상 과소평가된다.
+        // 이 값으로도 불가능한 이동 수단은 후보에서 제거한다. Core Motion이
+        // 차량 안의 흔들림을 보행으로 라벨링해도 여기서 걸러진다.
+        let displacementSpeed = inferenceSpan.duration >= 120
+            ? displacementMeters / inferenceSpan.duration
+            : 0
+        if displacementSpeed > 2.6 {
+            let note = "직선 변위 최소 속도 \(Int((displacementSpeed * 3.6).rounded()))km/h"
+            candidates.removeValue(forKey: .walking)
+            if displacementSpeed > 5.5 {
+                candidates.removeValue(forKey: .running)
+            }
+            if displacementSpeed > 8.5 {
+                candidates.removeValue(forKey: .cycling)
+                add(.car, 0.62, note)
+                add(.bus, 0.24, note)
+                add(.taxi, 0.24, note)
+            } else {
+                add(.cycling, 0.2, note)
+                add(.car, 0.26, note)
+            }
+        }
+
         let ranked = candidates.sorted { $0.value.0 > $1.value.0 }
         let winner = ranked.first
             ?? (.walking, (0.2, ["기본 저신뢰 보행 후보"]))
@@ -1821,7 +1844,8 @@ enum AppleDeviceGroundTruthEngine {
         gpsSegments: [TravelSegment],
         motionActivities: [MotionActivityRecord],
         pedometer: PedometerSummary?,
-        healthEvidence: [AppleMovementEvidence] = []
+        healthEvidence: [AppleMovementEvidence] = [],
+        readings: [SensorReading] = []
     ) -> [TravelSegment] {
         let watchSegments = healthEvidence
             .filter {
@@ -1861,14 +1885,23 @@ enum AppleDeviceGroundTruthEngine {
                 guard travelMode(for: activity.motion) != nil else {
                     return nil
                 }
-                let reading = SensorReading(
-                    timestamp: activity.span.start,
-                    motion: activity.motion,
-                    motionConfidence: activity.confidence,
-                    gpsAvailable: false
-                )
+                // 구간 안의 실제 표본을 함께 넘겨야 분류기가 속도를 볼 수 있다.
+                // 모션 라벨만 주면 차량 이동도 보행으로 남는다.
+                let inside = readings.filter {
+                    activity.span.contains($0.timestamp)
+                }
+                let context = inside.isEmpty
+                    ? [
+                        SensorReading(
+                            timestamp: activity.span.start,
+                            motion: activity.motion,
+                            motionConfidence: activity.confidence,
+                            gpsAvailable: false
+                        ),
+                    ]
+                    : inside
                 let inference = TravelModeClassifier().classify(
-                    readings: [reading],
+                    readings: context,
                     inside: activity.span,
                     healthEvidence: healthEvidence
                 )
@@ -2458,14 +2491,3 @@ enum LocationPrivacyFilter {
     }
 }
 
-func distanceMeters(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Double {
-    let earthRadius = 6_371_000.0
-    let lat1 = lhs.latitude * .pi / 180
-    let lat2 = rhs.latitude * .pi / 180
-    let deltaLat = (rhs.latitude - lhs.latitude) * .pi / 180
-    let deltaLon = (rhs.longitude - lhs.longitude) * .pi / 180
-    let a = sin(deltaLat / 2) * sin(deltaLat / 2)
-        + cos(lat1) * cos(lat2)
-        * sin(deltaLon / 2) * sin(deltaLon / 2)
-    return earthRadius * 2 * atan2(sqrt(a), sqrt(1 - a))
-}

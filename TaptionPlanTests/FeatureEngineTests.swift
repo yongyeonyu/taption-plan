@@ -1606,6 +1606,157 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(estimate?.confidence, .high)
     }
 
+    func testCoreMotionWalkingLabelLosesToImpossibleDisplacementSpeed() {
+        let base = makeDate(2026, 8, 4, 9, 24)
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(46 * 60))
+        // 부천 → 계양 약 8km. Core Motion은 보행으로 라벨링한 상태.
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.4870,
+                    longitude: 126.7830,
+                    altitude: 30,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                motion: .walking,
+                motionConfidence: .medium
+            ),
+            SensorReading(
+                timestamp: span.end,
+                point: GeoPoint(
+                    latitude: 37.5385,
+                    longitude: 126.8580,
+                    altitude: 25,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                motion: .walking,
+                motionConfidence: .medium
+            ),
+        ]
+
+        let inference = TravelModeClassifier().classify(
+            readings: readings,
+            inside: span
+        )
+
+        XCTAssertNotEqual(inference.mode, .walking)
+        XCTAssertNotEqual(inference.mode, .running)
+    }
+
+    func testShortSlowSegmentStaysWalking() {
+        let base = makeDate(2026, 8, 4, 9, 24)
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(10 * 60))
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.4870,
+                    longitude: 126.7830,
+                    altitude: 30,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                motion: .walking,
+                motionConfidence: .high
+            ),
+            SensorReading(
+                timestamp: span.end,
+                point: GeoPoint(
+                    latitude: 37.4900,
+                    longitude: 126.7845,
+                    altitude: 30,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                motion: .walking,
+                motionConfidence: .high
+            ),
+        ]
+
+        let inference = TravelModeClassifier().classify(
+            readings: readings,
+            inside: span
+        )
+
+        XCTAssertEqual(inference.mode, .walking)
+    }
+
+    func testRecalibrationKeepsOtherFloorsInSameBuilding() {
+        let base = makeDate(2026, 8, 4, 9)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 40,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        var place = FrequentPlace(kind: .home, name: "집")
+        place.setLocation(
+            from: SensorReading(timestamp: base, point: point),
+            floor: 1
+        )
+        place.addFloorCalibration(
+            from: SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                point: point
+            ),
+            floor: 20
+        )
+
+        place.setLocation(
+            from: SensorReading(
+                timestamp: base.addingTimeInterval(120),
+                point: point
+            ),
+            floor: 1
+        )
+
+        XCTAssertEqual(place.floorCalibration?.knownFloors, [1, 20])
+    }
+
+    func testRecalibrationInAnotherBuildingDropsStaleFloors() {
+        let base = makeDate(2026, 8, 4, 9)
+        let home = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 40,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        let elsewhere = GeoPoint(
+            latitude: 37.55,
+            longitude: 127.05,
+            altitude: 30,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        var place = FrequentPlace(kind: .home, name: "집")
+        place.setLocation(
+            from: SensorReading(timestamp: base, point: home),
+            floor: 1
+        )
+        place.addFloorCalibration(
+            from: SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                point: home
+            ),
+            floor: 20
+        )
+
+        place.setLocation(
+            from: SensorReading(
+                timestamp: base.addingTimeInterval(120),
+                point: elsewhere
+            ),
+            floor: 3
+        )
+
+        XCTAssertEqual(place.floorCalibration?.knownFloors, [3])
+    }
+
     func testAltitudeSpikeGateSkipsSingleSpikeAndAcceptsConfirmedChange() {
         var gate = AltitudeSpikeGate()
         XCTAssertTrue(gate.accept(80))

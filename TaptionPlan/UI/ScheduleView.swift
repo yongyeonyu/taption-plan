@@ -166,7 +166,7 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
     case movement = "이동"
     case sleep = "수면"
     case activity = "활동"
-    case appUsage = "앱 사용"
+    case appUsage = "앱"
     case weather = "날씨"
     case routine = "루틴"
     case action = "액션·메모"

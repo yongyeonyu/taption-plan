@@ -1744,6 +1744,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var stationaryStopTask: Task<Void, Never>?
     private var configuration: SensorCollectionConfiguration = .standard
     private var isCollecting = false
+    private var isLocationDenied = false
     private var sensorStreamsRunning = false
     private var lastEmissionAt: Date?
     private var latestLocation: CLLocation?
@@ -1857,6 +1858,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.stopMonitoringSignificantLocationChanges()
         locationManager.allowsBackgroundLocationUpdates = false
         isCollecting = false
+        isLocationDenied = false
         lastEmissionAt = nil
         latestRelativeAltitude = nil
         latestPressureKilopascals = nil
@@ -1926,6 +1928,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private func start() {
         guard !isCollecting else { return }
         isCollecting = true
+        isLocationDenied = false
         applyLocationPolicy(isMoving: false)
         locationManager.allowsBackgroundLocationUpdates =
             configuration.allowsBackgroundLocation
@@ -1953,7 +1956,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     private func restartSamplingTask() {
         samplingTask?.cancel()
-        guard isCollecting, activeTrackingSession == nil else { return }
+        guard isCollecting,
+              !isLocationDenied,
+              activeTrackingSession == nil else {
+            return
+        }
         samplingTask = Task { [weak self] in
             await self?.runSamplingLoop()
         }
@@ -2196,6 +2203,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         if permissionState() == .authorized {
+            isLocationDenied = false
             manager.allowsBackgroundLocationUpdates =
                 configuration.allowsBackgroundLocation
                 && manager.authorizationStatus == .authorizedAlways
@@ -2212,9 +2220,15 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         _ manager: CLLocationManager,
         didFailWithError error: Error
     ) {
-        if (error as? CLError)?.code == .denied {
-            stop()
-        }
+        guard (error as? CLError)?.code == .denied else { return }
+        // 스트림을 끝내면 권한을 다시 허용해도 수집이 재개되지 않는다.
+        // 하드웨어만 멈추고 권한 변경 콜백에서 다시 시작한다.
+        isLocationDenied = true
+        samplingTask?.cancel()
+        samplingTask = nil
+        stopHardwareStreams()
+        locationManager.stopMonitoringSignificantLocationChanges()
+        locationManager.stopMonitoringVisits()
     }
 
     private func emit(
@@ -2310,8 +2324,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             return
         }
 
+        // 차량·자전거 이동도 연속 추적으로 승격한다. 듀티사이클 표본만으로는
+        // 경로가 출발·도착을 잇는 직선으로만 남는다.
         guard activeTrackingSession == nil,
-              (motion == .walking || motion == .running),
+              motion == .walking
+                || motion == .running
+                || motion == .cycling
+                || motion == .automotive,
               latestMotionConfidence != .low else {
             movementCandidateTask?.cancel()
             movementCandidateTask = nil
@@ -2329,7 +2348,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                   self.latestMotionConfidence != .low else {
                 return
             }
-            let kind: TrackingKind = motion == .running ? .running : .walking
+            let kind: TrackingKind = switch motion {
+            case .running: .running
+            case .walking: .walking
+            default: .automatic
+            }
             self.activeTrackingSession = TrackingSession(
                 kind: kind,
                 wasAutomaticallyDetected: true
