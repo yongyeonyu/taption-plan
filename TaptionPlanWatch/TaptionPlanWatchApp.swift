@@ -7,6 +7,10 @@ struct TaptionPlanWatchApp: App {
 
     init() {
         WatchLaunchDiagnostics.installSignalHandlers()
+        // 워치 앱은 iPhone 앱과 별도로 업데이트되어 뒤처질 수 있다.
+        // 어느 빌드가 실제로 돌고 있는지 기록에 남긴다.
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        WatchLaunchDiagnostics.mark("build \(build ?? "unknown")")
         WatchLaunchDiagnostics.mark("app-init-begin")
         let connectivity = WatchConnectivityController()
         let workout = WatchWorkoutManager()

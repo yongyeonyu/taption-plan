@@ -59,6 +59,13 @@ final class ScreenTimeUsageService {
 
     func requestAuthorization() async throws {
 #if canImport(FamilyControls)
+        // 기본 승인만 남아 있으면 다시 요청해도 시스템이 프롬프트를 띄우지
+        // 않는다. 승인을 해제한 뒤 요청해야 앱 사용 데이터 접근까지 포함해
+        // 물어본다. 배포용 엔타이틀먼트가 없던 빌드에서 승인한 경우가 여기에
+        // 해당한다.
+        if authorizationState == .dataAccessUnavailable {
+            await revokeAuthorization()
+        }
         try await AuthorizationCenter.shared.requestAuthorization(
             for: .individual
         )
@@ -66,6 +73,16 @@ final class ScreenTimeUsageService {
         throw ScreenTimeUsageError.unavailable
 #endif
     }
+
+#if canImport(FamilyControls)
+    private func revokeAuthorization() async {
+        await withCheckedContinuation { continuation in
+            AuthorizationCenter.shared.revokeAuthorization { _ in
+                continuation.resume()
+            }
+        }
+    }
+#endif
 
     func usage(in span: TimeSpan) async throws -> [ScreenTimeUsageSample] {
         switch authorizationState {

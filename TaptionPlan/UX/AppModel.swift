@@ -867,9 +867,8 @@ final class AppModel {
         isRefreshingIntegrations = true
         defer { isRefreshingIntegrations = false }
         do {
-            if screenTimeUsageService.authorizationState == .dataAccessUnavailable {
-                throw ScreenTimeUsageError.dataAccessUnavailable
-            }
+            // 데이터 접근이 없는 승인 상태에서도 재요청을 막지 않는다.
+            // 서비스가 승인을 해제한 뒤 다시 물어본다.
             if screenTimeUsageService.authorizationState != .approved {
                 try await screenTimeUsageService.requestAuthorization()
             }
