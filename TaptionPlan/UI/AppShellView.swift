@@ -167,6 +167,7 @@ private struct PermissionOnboardingStep: Identifiable {
 struct PermissionOnboardingSheet: View {
     @Bindable var model: AppModel
     @State private var index = 0
+    @State private var isRequesting = false
     @State private var skipped: Set<String> = []
 
     private static let steps: [PermissionOnboardingStep] = [
@@ -252,10 +253,16 @@ struct PermissionOnboardingSheet: View {
                     .tint(Color.tpInk)
                     .frame(maxWidth: .infinity)
             } else {
+                Button("모두 허용") { requestRemaining() }
+                    .font(.taption(size: 10, weight: .bold))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.tpInk)
+                    .disabled(isRequesting)
                 Button("전체 건너뛰기") { finish() }
                     .font(.taption(size: 10, weight: .bold))
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.tpSecondary)
+                    .disabled(isRequesting)
                 Spacer(minLength: 4)
                 Text("\(index + 1) / \(Self.steps.count)")
                     .font(.taption(size: 9, weight: .bold))
@@ -351,6 +358,19 @@ struct PermissionOnboardingSheet: View {
         // 상태 문구로 보여주고 안내 문구는 지운다.
         model.clearError()
         advance()
+    }
+
+    /// 남은 권한을 순서대로 한 번에 요청한다. 시스템 권한창은 한 번에 하나만
+    /// 뜨므로 순차로 진행하고, 중간에 버튼을 다시 누르지 못하게 막는다.
+    private func requestRemaining() {
+        guard !isRequesting else { return }
+        isRequesting = true
+        Task {
+            while index < Self.steps.count {
+                await request(Self.steps[index])
+            }
+            isRequesting = false
+        }
     }
 
     private func advance() {
