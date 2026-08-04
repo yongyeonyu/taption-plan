@@ -35,42 +35,8 @@ enum WatchLaunchDiagnostics {
         try? handle?.write(contentsOf: data)
     }
 
-    /// 치명적 신호를 받은 직후 async-signal-safe한 write로만 흔적을 남긴다.
-    static func installSignalHandlers() {
-        let url = fileURL
-        if !FileManager.default.fileExists(atPath: url.path) {
-            FileManager.default.createFile(atPath: url.path, contents: nil)
-        }
-        // 핸들러가 참조할 경로를 먼저 확보한다.
-        signalPath = strdup(url.path)
-        guard signalPath != nil else { return }
-        for number in [SIGTRAP, SIGABRT, SIGILL, SIGSEGV, SIGBUS, SIGFPE] {
-            signal(number) { received in
-                if let path = WatchLaunchDiagnostics.signalPath {
-                    let descriptor = open(
-                        path,
-                        O_WRONLY | O_APPEND | O_CREAT,
-                        0o644
-                    )
-                    if descriptor >= 0 {
-                        var text = "signal \(received)\n"
-                        text.withUTF8 { buffer in
-                            _ = write(
-                                descriptor,
-                                buffer.baseAddress,
-                                buffer.count
-                            )
-                        }
-                        close(descriptor)
-                    }
-                }
-                signal(received, SIG_DFL)
-                raise(received)
-            }
-        }
-    }
-
-    nonisolated(unsafe) fileprivate static var signalPath: UnsafeMutablePointer<CChar>?
+    // 신호 핸들러 설치는 시도했다가 앱 시작 자체를 죽여서 제거했다.
+    // 단계 기록만으로 실패 지점을 좁히기에 충분하다.
 
     /// 이전 실행에서 남은 기록. 새 실행 단계가 섞이지 않도록 먼저 읽는다.
     static func pendingReport() -> String? {
