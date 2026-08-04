@@ -1031,7 +1031,7 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(
             first.map(\.title),
-            ["정지·휴식", "걷기", "달리기", "자전거", "차량 탑승"]
+            ["정지·휴식", "걷기", "달리기", "자전거", "자동차"]
         )
         XCTAssertEqual(first.map(\.id), second.map(\.id))
         XCTAssertTrue(first.allSatisfy { $0.source == .motion })
@@ -3568,6 +3568,30 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testWidgetAutomotiveActualUsesMovementLaneAndAutomobileTitle() {
+        let now = makeDate(2026, 8, 1, 18, 0)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "차량 탑승",
+                categoryID: "movement",
+                startedAt: now.addingTimeInterval(-10 * 60),
+                endedAt: now,
+                source: .motion,
+                behavior: MotionKind.automotive.rawValue
+            ),
+        ]
+
+        let payload = TaptionWidgetPayloadFactory.make(from: snapshot, now: now)
+
+        XCTAssertEqual(
+            payload.items.filter { $0.resolvedLane == .movement }.map(\.title),
+            ["자동차"]
+        )
+        XCTAssertFalse(payload.items.contains { $0.resolvedLane == .activity })
+    }
+
     func testWidgetFingerprintStaysStableWhileHealthActivityIsOpen() {
         let startedAt = makeDate(2026, 8, 1, 18, 0)
         var snapshot = TaptionDataSnapshot.empty
@@ -3933,6 +3957,29 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(reduced.action, .fishingPlay)
         XCTAssertEqual(reduced.tailSwing, 0, accuracy: 0.001)
         XCTAssertEqual(reduced.headTiltDegrees, 0, accuracy: 0.001)
+    }
+
+    func testCatFrameClocksSupportWatchSizedIntOverflowDates() {
+        let currentEra = Date(timeIntervalSinceReferenceDate: 800_000_000)
+
+        XCTAssertTrue(
+            (0...3).contains(
+                TaptionCatAnimationEngine.pose(at: currentEra).phase
+            )
+        )
+        XCTAssertTrue(
+            (0...3).contains(
+                TaptionWidgetCatWalkEngine.pose(at: currentEra).legPhase
+            )
+        )
+        XCTAssertTrue(
+            (0...3).contains(
+                TaptionWidgetCatPreviewEngine.pose(
+                    at: currentEra,
+                    action: .walking
+                ).legPhase
+            )
+        )
     }
 
     func testWidgetCatActionMatchesCurrentActionItemCategoryAndTitle() {
@@ -5196,6 +5243,56 @@ final class FeatureEngineTests: XCTestCase {
                 snapshot: snapshot
             )
         )
+    }
+
+    func testScreenTimeUsageReplacesOnlyTheFetchedHours() {
+        let start = makeDate(2026, 8, 3, 9)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(hour))
+        let fresh = ScreenTimeUsageRecordEngine.records(
+            from: [
+                ScreenTimeUsageSample(
+                    key: "com.example.maps",
+                    title: "앱 사용 · 지도",
+                    span: span,
+                    duration: 20 * 60,
+                    pickups: 1,
+                    notifications: 2
+                )
+            ],
+            suppressedIDs: []
+        )
+        let stale = ActualRecord(
+            planID: nil,
+            title: "앱 사용 · 이전",
+            categoryID: "appUsage",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(5 * 60),
+            source: .appUsage
+        )
+        let outside = ActualRecord(
+            planID: nil,
+            title: "앱 사용 · 유지",
+            categoryID: "appUsage",
+            startedAt: start.addingTimeInterval(2 * hour),
+            endedAt: start.addingTimeInterval(2 * hour + 5 * 60),
+            source: .appUsage
+        )
+
+        let result = ScreenTimeUsageRecordEngine.replacing(
+            existing: [stale, outside],
+            with: fresh,
+            inside: span
+        )
+
+        XCTAssertEqual(result.count, 2)
+        XCTAssertEqual(result.map(\.title), ["앱 사용 · 지도", "앱 사용 · 유지"])
+        XCTAssertEqual(result[0].source, .appUsage)
+        XCTAssertEqual(result[0].span().duration, 20 * 60)
+        XCTAssertEqual(result[0].evidence, [
+            "Screen Time 시간대 합계",
+            "앱 열기 1회",
+            "알림 2회",
+        ])
     }
 
     private var utcCalendar: Calendar {

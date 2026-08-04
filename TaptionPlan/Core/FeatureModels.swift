@@ -231,7 +231,7 @@ enum MovementPresentation {
         case .bus: "버스"
         case .subway: "지하철"
         case .taxi: "택시"
-        case .car: "자가용"
+        case .car: "자동차"
         case .train: "기차"
         case .airplane: "비행기"
         case .ship: "배"
@@ -1484,7 +1484,7 @@ enum MotionKind: String, Codable, CaseIterable, Sendable {
         case .walking: "걷기"
         case .running: "달리기"
         case .cycling: "자전거"
-        case .automotive: "차량 탑승"
+        case .automotive: "자동차"
         case .unknown: nil
         }
     }

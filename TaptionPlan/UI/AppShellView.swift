@@ -85,20 +85,8 @@ struct AppShellView: View {
         } message: {
             Text(model.userFacingError ?? "")
         }
-        .alert(item: $model.floorCalibrationPrompt) { prompt in
-            Alert(
-                title: Text("층수 보정이 필요합니다"),
-                message: Text(
-                    "(prompt.placeName)에서 다른 고도가 감지되었습니다. "
-                        + "현재 위치를 (prompt.suggestedFloor)층으로 저장할까요?"
-                ),
-                primaryButton: .default(Text("이 층 저장")) {
-                    model.acceptFloorCalibrationPrompt()
-                },
-                secondaryButton: .cancel(Text("나중에")) {
-                    model.dismissFloorCalibrationPrompt()
-                }
-            )
+        .sheet(item: $model.floorCalibrationPrompt) { prompt in
+            FloorCalibrationPromptSheet(model: model, prompt: prompt)
         }
     }
 
@@ -143,6 +131,108 @@ struct AppShellView: View {
             ReviewView(model: model)
         case .settings:
             SettingsView(model: model)
+        }
+    }
+}
+
+private struct FloorCalibrationPromptSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let prompt: FloorCalibrationPrompt
+
+    @State private var selectedPlaceID: UUID
+    @State private var selectedFloor: Int
+
+    init(model: AppModel, prompt: FloorCalibrationPrompt) {
+        self.model = model
+        self.prompt = prompt
+        _selectedPlaceID = State(initialValue: prompt.placeID)
+        _selectedFloor = State(
+            initialValue: prompt.suggestedFloor == 0
+                ? 1
+                : prompt.suggestedFloor
+        )
+    }
+
+    private var availablePlaces: [FrequentPlace] {
+        model.snapshot.settings.frequentPlaces.filter { $0.point != nil }
+    }
+
+    private var floors: [Int] {
+        Array(-20 ... -1) + Array(1 ... 200)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text(
+                        "\(prompt.measuredAltitudeMeters, format: .number.precision(.fractionLength(1)))m 고도가 감지되었습니다."
+                    )
+                    .foregroundStyle(Color.tpSecondary)
+                } header: {
+                    Text("층수 보정이 필요합니다")
+                }
+
+                Section("보정할 위치") {
+                    if availablePlaces.isEmpty {
+                        Text("설정된 위치가 없습니다")
+                            .foregroundStyle(Color.tpSecondary)
+                    } else {
+                        Picker("위치", selection: $selectedPlaceID) {
+                            ForEach(availablePlaces) { place in
+                                Label(
+                                    place.name,
+                                    systemImage: place.kind.systemImage
+                                )
+                                    .tag(place.id)
+                            }
+                        }
+                    }
+                }
+
+                Section("감지된 층수") {
+                    Picker("층수", selection: $selectedFloor) {
+                        ForEach(floors, id: \.self) { floor in
+                            Text(floor < 0 ? "지하 \(-floor)층" : "\(floor)층")
+                                .tag(floor)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(height: 130)
+                }
+            }
+            .navigationTitle(prompt.placeName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("나중에") {
+                        model.dismissFloorCalibrationPrompt()
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("저장") {
+                        saveCalibration()
+                    }
+                    .disabled(availablePlaces.isEmpty)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func saveCalibration() {
+        guard availablePlaces.contains(where: { $0.id == selectedPlaceID }) else {
+            return
+        }
+        model.addFrequentPlaceFloorCalibration(
+            selectedPlaceID,
+            floor: selectedFloor
+        )
+        if model.floorCalibrationPrompt == nil {
+            dismiss()
         }
     }
 }

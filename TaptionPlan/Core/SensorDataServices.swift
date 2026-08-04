@@ -650,11 +650,11 @@ final class AppleSensorDataService {
     var onReadingPersisted: ((SensorReading) -> Void)?
 
     init(
-        collector: AppleSensorCollector = AppleSensorCollector(),
+        collector: AppleSensorCollector? = nil,
         archive: SensorReadingArchive,
         history: AppleMotionHistoryService = AppleMotionHistoryService()
     ) {
-        self.collector = collector
+        self.collector = collector ?? AppleSensorCollector()
         self.archive = archive
         self.history = history
     }

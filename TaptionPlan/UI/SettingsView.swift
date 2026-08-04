@@ -383,8 +383,8 @@ struct SettingsView: View {
             iconBackground: Color(red: 0.93, green: 0.90, blue: 0.98),
             iconColor: Color(red: 0.42, green: 0.34, blue: 0.64),
             title: "앱 사용시간",
-            subtitle: "Screen Time 앱별 사용 기록",
-            value: model.appUsageAuthorizationState.displayName
+            subtitle: "Screen Time 시간대별 사용 기록",
+            value: model.appUsageStatusText
         ) {
             Task { await model.requestAppUsageAuthorization() }
         }

@@ -1931,7 +1931,9 @@ struct ScheduleView: View {
         }).first {
             let span = actual.span(asOf: max(Date.now, date))
             return TimelineSelection(
-                title: actual.title,
+                title: isMovementActual(actual)
+                    ? movementActualTitle(actual)
+                    : actual.title,
                 span: span,
                 planID: actual.routineID ?? actual.planID,
                 actualID: actual.id,
@@ -2239,7 +2241,7 @@ private func timelineTravelModeName(_ mode: TravelMode) -> String {
     case .bus: "버스"
     case .subway: "지하철"
     case .taxi: "택시"
-    case .car: "자가용"
+    case .car: "자동차"
     case .train: "기차"
     case .airplane: "비행기"
     case .ship: "배"
@@ -5119,7 +5121,7 @@ private struct TimelineDetailPanel: View {
         case .taxi:
             "택시"
         case .car:
-            "자가용"
+            "자동차"
         case .train:
             "기차"
         case .airplane:
@@ -6307,7 +6309,9 @@ struct GroupGanttView: View {
         }).first {
             let span = actual.span(asOf: max(Date.now, date))
             return TimelineSelection(
-                title: actual.title,
+                title: isMovementActual(actual)
+                    ? movementActualTitle(actual)
+                    : actual.title,
                 span: span,
                 planID: actual.routineID ?? actual.planID,
                 actualID: actual.id,
@@ -8006,7 +8010,7 @@ private struct TimelineBoard: View {
         case .bus: "버스"
         case .subway: "지하철"
         case .taxi: "택시"
-        case .car: "자가용"
+        case .car: "자동차"
         case .train: "기차"
         case .airplane: "비행기"
         case .ship: "배"

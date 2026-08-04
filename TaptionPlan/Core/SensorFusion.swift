@@ -745,7 +745,7 @@ struct TravelModeClassifier: Sendable {
         case .bus: "버스"
         case .subway: "지하철"
         case .taxi: "택시"
-        case .car: "자가용"
+        case .car: "자동차"
         case .train: "기차"
         case .airplane: "비행기"
         case .ship: "배"

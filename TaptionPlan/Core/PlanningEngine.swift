@@ -1242,7 +1242,9 @@ enum RecordRelationshipEngine {
             append(RecordGraphNode(
                 id: "automatic.actual.\(actual.id.uuidString)",
                 layer: .automatic,
-                title: actual.title,
+                title: actual.categoryID == "movement"
+                    ? MovementPresentation.title(for: actual)
+                    : actual.title,
                 span: actual.span(),
                 categoryID: actual.categoryID
             ))
@@ -1447,7 +1449,7 @@ enum RecordRelationshipEngine {
         case .bus: "버스"
         case .subway: "지하철"
         case .taxi: "택시"
-        case .car: "자가용"
+        case .car: "자동차"
         case .train: "기차"
         case .airplane: "비행기"
         case .ship: "배"

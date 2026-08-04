@@ -91,7 +91,7 @@ enum TaptionWidgetPayloadFactory {
                 )
             }
 
-        let movementItems = snapshot.travel
+        let inferredMovementItems = snapshot.travel
             .filter { $0.span.intersection(with: widgetSpan) != nil }
             .map { travel in
                 TaptionWidgetItem(
@@ -108,11 +108,32 @@ enum TaptionWidgetPayloadFactory {
                 )
             }
 
-        let automaticHealthItems = AutomaticRecordTimelineEngine.activities(
-            from: snapshot.actuals,
-            inside: widgetSpan
+        let automaticItems = MovementDisplayEngine.visibleActuals(
+            AutomaticRecordTimelineEngine.activities(
+                from: snapshot.actuals,
+                inside: widgetSpan,
+                asOf: now
+            ),
+            travel: snapshot.travel,
+            asOf: now
         )
-        let sleepItems = automaticHealthItems
+        let movementItems = automaticItems
+            .filter { $0.categoryID == "movement" }
+            .map { actual in
+                TaptionWidgetItem(
+                    id: actual.id,
+                    title: MovementPresentation.title(for: actual),
+                    categoryID: "movement",
+                    startsAt: actual.startedAt,
+                    endsAt: actual.endedAt ?? now,
+                    status: "recorded",
+                    isFixed: true,
+                    categoryName: "이동",
+                    categoryHex: "#D2AE76",
+                    lane: .movement
+                )
+            }
+        let sleepItems = automaticItems
             .filter(AutomaticRecordTimelineEngine.isSleep)
             .map { actual in
                 TaptionWidgetItem(
@@ -128,9 +149,10 @@ enum TaptionWidgetPayloadFactory {
                     lane: .sleep
                 )
             }
-        let activityItems = automaticHealthItems
+        let activityItems = automaticItems
             .filter {
                 !AutomaticRecordTimelineEngine.isSleep($0)
+                    && $0.categoryID != "movement"
                     && $0.categoryID != "appUsage"
             }
             .map { actual in
@@ -148,7 +170,7 @@ enum TaptionWidgetPayloadFactory {
                 )
             }
 
-        let appUsageItems = automaticHealthItems
+        let appUsageItems = automaticItems
             .filter { $0.categoryID == "appUsage" }
             .map { actual in
                 TaptionWidgetItem(
@@ -173,6 +195,7 @@ enum TaptionWidgetPayloadFactory {
             planItems
                 + calendarItems
                 + locationItems
+                + inferredMovementItems
                 + movementItems
                 + sleepItems
                 + activityItems
@@ -206,7 +229,7 @@ enum TaptionWidgetPayloadFactory {
         case .bus: "버스"
         case .subway: "지하철"
         case .taxi: "택시"
-        case .car: "자가용"
+        case .car: "자동차"
         case .train: "기차"
         case .airplane: "비행기"
         case .ship: "배"

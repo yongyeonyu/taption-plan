@@ -429,11 +429,10 @@ enum TaptionWidgetCatWalkEngine {
         preferredAction: TaptionWidgetCatAction? = nil
     ) -> TaptionWidgetCatWalkPose {
         let duration = max(0.5, stepDuration)
-        let rawStep = Int(date.timeIntervalSinceReferenceDate / duration)
-        let step = ((rawStep % stepCount) + stepCount) % stepCount
-        let cycle = Int(
-            floor(Double(rawStep) / Double(stepCount))
-        )
+        let rawStep = Int64(date.timeIntervalSinceReferenceDate / duration)
+        let count = Int64(stepCount)
+        let step = Int(((rawStep % count) + count) % count)
+        let cycle = rawStep / count
         let progress: Double
         let facesLeft: Bool
         let isAtEndpoint: Bool
@@ -528,8 +527,8 @@ enum TaptionWidgetCatWalkEngine {
 
     private static func restAction(
         preferred: TaptionWidgetCatAction?,
-        cycle: Int,
-        slot: Int
+        cycle: Int64,
+        slot: Int64
     ) -> TaptionWidgetCatAction {
         if let preferred {
             return switch preferred {
@@ -546,7 +545,7 @@ enum TaptionWidgetCatWalkEngine {
             .fishingPlay,
         ]
         let seed = abs((cycle &* 31) &+ (slot &* 17))
-        return actions[seed % actions.count]
+        return actions[Int(seed % Int64(actions.count))]
     }
 }
 
@@ -559,11 +558,11 @@ enum TaptionWidgetCatPreviewEngine {
         action: TaptionWidgetCatAction,
         reducesMotion: Bool = false
     ) -> TaptionWidgetCatWalkPose {
-        let rawStep = Int(
+        let rawStep = Int64(
             floor(date.timeIntervalSinceReferenceDate / stepDuration)
         )
-        let step = ((rawStep % movementStepCount) + movementStepCount)
-            % movementStepCount
+        let count = Int64(movementStepCount)
+        let step = Int(((rawStep % count) + count) % count)
         let phase = reducesMotion ? 0 : step % 4
         let motion = TaptionWidgetCatWalkEngine.motionDetails(
             for: action,
@@ -717,7 +716,7 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
                 ),
                 TaptionWidgetItem(
                     id: UUID(),
-                    title: "자가용",
+                    title: "자동차",
                     categoryID: "movement",
                     startsAt: now.addingTimeInterval(-0.8 * 3_600),
                     endsAt: now.addingTimeInterval(-0.25 * 3_600),

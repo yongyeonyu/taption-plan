@@ -40,10 +40,11 @@ enum TaptionCatAnimationEngine {
         preferredAction: TaptionCatAnimationAction? = nil,
         reducesMotion: Bool = false
     ) -> TaptionCatAnimationPose {
-        let rawStep = Int(
+        let rawStep = Int64(
             floor(date.timeIntervalSinceReferenceDate / stepDuration)
         )
-        let step = ((rawStep % stepCount) + stepCount) % stepCount
+        let count = Int64(stepCount)
+        let step = Int(((rawStep % count) + count) % count)
         let phase = reducesMotion ? 0 : step % 4
         let action = preferredAction ?? .walking
         let moves = action.movesAcrossTrack && !reducesMotion

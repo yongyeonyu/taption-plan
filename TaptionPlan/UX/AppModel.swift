@@ -80,6 +80,8 @@ final class AppModel {
     private(set) var lastHealthRefreshAt: Date?
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
     private(set) var appUsageAuthorizationState: ScreenTimeAuthorizationState = .unavailable
+    private(set) var lastAppUsageRefreshAt: Date?
+    private(set) var appUsageRecordCount = 0
     var userFacingError: String?
     @ObservationIgnored private var lastFloorCalibrationPromptKey: String? = nil
 
@@ -96,6 +98,14 @@ final class AppModel {
 
     var widgetSyncDiagnosticsText: String {
         TaptionWidgetSharedStore.diagnostics().summary
+    }
+
+    var appUsageStatusText: String {
+        guard appUsageAuthorizationState == .approved else {
+            return appUsageAuthorizationState.displayName
+        }
+        guard lastAppUsageRefreshAt != nil else { return "동기화 대기" }
+        return appUsageRecordCount == 0 ? "오늘 기록 없음" : "오늘 \(appUsageRecordCount)개"
     }
 
     @ObservationIgnored private let repository: any PlanDataRepository
@@ -130,6 +140,7 @@ final class AppModel {
         Task<Void, Never>?
     @ObservationIgnored private var isSceneActive = false
     @ObservationIgnored private var isHealthRefreshRunning = false
+    @ObservationIgnored private var isAppUsageRefreshRunning = false
     @ObservationIgnored private var isHealthBackgroundDeliveryConfigured = false
     @ObservationIgnored private var sensorAnalysisDebounceTask: Task<Void, Never>?
     @ObservationIgnored private var finalizedTrackingSessionIDs = Set<UUID>()
@@ -173,7 +184,7 @@ final class AppModel {
 
     init(
         repository: (any PlanDataRepository)? = nil,
-        calendarService: AppleCalendarService = AppleCalendarService(),
+        calendarService: AppleCalendarService? = nil,
         photoService: ApplePhotoLibraryService = ApplePhotoLibraryService(),
         healthService: AppleHealthService = .shared,
         sensorService: AppleSensorDataService? = nil,
@@ -184,8 +195,8 @@ final class AppModel {
         cloudSyncService: CloudKitSnapshotSyncService? =
             CloudKitSnapshotSyncService.automatic(),
         placeNameResolver: PlaceNameResolver = PlaceNameResolver(),
-        voiceMemoRecorder: VoiceMemoRecorder = VoiceMemoRecorder(),
-        voiceMemoPlayer: VoiceMemoPlayer = VoiceMemoPlayer(),
+        voiceMemoRecorder: VoiceMemoRecorder? = nil,
+        voiceMemoPlayer: VoiceMemoPlayer? = nil,
         liveActivityController: TaptionLiveActivityController =
             TaptionLiveActivityController(),
         notificationScheduler: PlanNotificationScheduler =
@@ -196,8 +207,7 @@ final class AppModel {
             AppleWatchConnectivityService(),
         airPodsActivityService: AirPodsActivityService =
             AirPodsActivityService(),
-        screenTimeUsageService: ScreenTimeUsageService =
-            ScreenTimeUsageService()
+        screenTimeUsageService: ScreenTimeUsageService? = nil
     ) {
         let repositorySource: String
         if let repository {
@@ -223,7 +233,7 @@ final class AppModel {
             repositorySource = "in-memory"
         }
         let rawArchive = try? RawDeviceDataMonthlyArchive.applicationSupport()
-        self.calendarService = calendarService
+        self.calendarService = calendarService ?? AppleCalendarService()
         self.photoService = photoService
         self.healthService = healthService
         self.sensorService = sensorService
@@ -234,15 +244,17 @@ final class AppModel {
         self.airQualityService = airQualityService
         self.cloudSyncService = cloudSyncService
         self.placeNameResolver = placeNameResolver
-        self.voiceMemoRecorder = voiceMemoRecorder
-        self.voiceMemoPlayer = voiceMemoPlayer
+        self.voiceMemoRecorder = voiceMemoRecorder ?? VoiceMemoRecorder()
+        self.voiceMemoPlayer = voiceMemoPlayer ?? VoiceMemoPlayer()
         self.liveActivityController = liveActivityController
         self.notificationScheduler = notificationScheduler
         self.purchaseService = purchaseService
         self.watchConnectivityService = watchConnectivityService
         self.airPodsActivityService = airPodsActivityService
-        self.screenTimeUsageService = screenTimeUsageService
-        self.appUsageAuthorizationState = screenTimeUsageService.authorizationState
+        self.screenTimeUsageService =
+            screenTimeUsageService ?? ScreenTimeUsageService()
+        self.appUsageAuthorizationState =
+            self.screenTimeUsageService.authorizationState
         self.watchSensorArchive = try?
             AppleWatchSensorActivityArchive.applicationSupport()
         self.rawDeviceDataArchive = rawArchive
@@ -839,22 +851,32 @@ final class AppModel {
         case .approved: .authorized
         case .denied: .denied
         case .notDetermined: .notDetermined
-        case .unavailable: .unavailable
+        case .unavailable, .requiresCurrentSystem, .dataAccessUnavailable:
+            .unavailable
         }
     }
 
     func requestAppUsageAuthorization() async {
         guard !isRefreshingIntegrations else { return }
         isRefreshingIntegrations = true
+        defer { isRefreshingIntegrations = false }
         do {
-            try await screenTimeUsageService.requestAuthorization()
+            if screenTimeUsageService.authorizationState == .dataAccessUnavailable {
+                throw ScreenTimeUsageError.dataAccessUnavailable
+            }
+            if screenTimeUsageService.authorizationState != .approved {
+                try await screenTimeUsageService.requestAuthorization()
+            }
             refreshAppUsageAuthorizationState()
+            await refreshAppUsageData(
+                in: currentDeviceDataSpan,
+                showErrors: true
+            )
             await persist()
         } catch {
             refreshAppUsageAuthorizationState()
-            userFacingError = "앱 사용시간 권한을 허용하지 못했습니다."
+            userFacingError = error.localizedDescription
         }
-        isRefreshingIntegrations = false
     }
 
     func requestPhotos() async {
@@ -1136,6 +1158,10 @@ final class AppModel {
             }
             await refreshHealthData(in: healthSpan)
         }
+        let appUsageSpan = selectedScale == .day
+            ? refreshSpan
+            : currentDeviceDataSpan
+        await refreshAppUsageData(in: appUsageSpan)
         if settings.locationEnabled
             || settings.weatherEnabled
             || hasPhotoLocations(in: refreshSpan) {
@@ -3912,6 +3938,47 @@ final class AppModel {
         }
     }
 
+    private func refreshAppUsageData(
+        in span: TimeSpan,
+        showErrors: Bool = false
+    ) async {
+        refreshAppUsageAuthorizationState()
+        guard appUsageAuthorizationState == .approved,
+              !isAppUsageRefreshRunning else {
+            return
+        }
+        isAppUsageRefreshRunning = true
+        defer { isAppUsageRefreshRunning = false }
+
+        do {
+            let samples = try await screenTimeUsageService.usage(in: span)
+            let fresh = ScreenTimeUsageRecordEngine.records(
+                from: samples,
+                suppressedIDs: snapshot.settings.suppressedActualIDs
+            )
+            let updated = ScreenTimeUsageRecordEngine.replacing(
+                existing: snapshot.actuals,
+                with: fresh,
+                inside: span
+            )
+            if snapshot.actuals != updated {
+                snapshot.actuals = updated
+            }
+            appUsageRecordCount = fresh.count
+            lastAppUsageRefreshAt = .now
+            Self.integrationLogger.notice(
+                "Screen Time refresh completed: samples=\(samples.count, privacy: .public), records=\(fresh.count, privacy: .public)"
+            )
+        } catch {
+            Self.integrationLogger.error(
+                "Screen Time refresh failed: \(error.localizedDescription, privacy: .public)"
+            )
+            if showErrors {
+                userFacingError = "앱 사용시간을 읽지 못했습니다. \(error.localizedDescription)"
+            }
+        }
+    }
+
     private func handleObservedHealthChange() async {
         await bootstrap()
         guard settings.healthEnabled else { return }
@@ -4761,6 +4828,7 @@ final class AppModel {
                 || $0.source == .motion
                 || $0.source == .media
                 || $0.source == .call
+                || $0.source == .appUsage
         }
         value.photos = []
         value.memos = value.memos.map { memo in
@@ -4790,6 +4858,7 @@ final class AppModel {
                 || $0.source == .motion
                 || $0.source == .media
                 || $0.source == .call
+                || $0.source == .appUsage
         }
         let cloudIDs = Set(value.actuals.map(\.id))
         value.actuals.append(contentsOf: deviceActuals.filter {

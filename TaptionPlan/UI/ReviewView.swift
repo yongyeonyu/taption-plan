@@ -242,9 +242,7 @@ struct ReviewView: View {
                         : PlanCategory(categoryID: categoryID).darkColor)
                     .frame(width: 18)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.record.title.isEmpty
-                        ? categoryName(categoryID)
-                        : item.record.title)
+                    Text(displayTitle(item.record, categoryID: categoryID))
                         .font(.taption(size: 10.5, weight: .semibold))
                         .lineLimit(1)
                     Text(
@@ -493,10 +491,10 @@ struct ReviewView: View {
 
     private func mergedItems(_ values: [ActualRecordItem]) -> [ActualRecordItem] {
         let grouped = Dictionary(grouping: values) { item in
-            let title = item.record.title
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let categoryID = actualCategoryID(item.record)
+            let title = displayTitle(item.record, categoryID: categoryID)
                 .lowercased()
-            return "\(actualCategoryID(item.record))|\(title)"
+            return "\(categoryID)|\(title)"
         }
         return grouped.values.compactMap { values in
             guard let first = values.min(by: { $0.span.start < $1.span.start }) else {
@@ -628,6 +626,16 @@ struct ReviewView: View {
             ?? PlanCategory(categoryID: id).rawValue
     }
 
+    private func displayTitle(
+        _ record: ActualRecord,
+        categoryID: String
+    ) -> String {
+        if categoryID == "movement" {
+            return MovementPresentation.title(for: record)
+        }
+        return record.title.isEmpty ? categoryName(categoryID) : record.title
+    }
+
     private func durationText(_ interval: TimeInterval) -> String {
         let totalMinutes = max(0, Int(interval / 60))
         let hours = totalMinutes / 60
@@ -714,7 +722,7 @@ struct ActualRecordDetailView: View {
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 5) {
                 Label(
-                    record.title.isEmpty ? categoryName(categoryID) : record.title,
+                    displayTitle(record, categoryID: categoryID),
                     systemImage: categoryID == "movement"
                         ? MovementPresentation.symbol(for: record)
                         : PlanCategory(categoryID: categoryID).systemImage
@@ -739,7 +747,7 @@ struct ActualRecordDetailView: View {
                 let total = ActualIntervalMergeEngine.duration(
                     of: related.map { $0.span(asOf: Date.now) }
                 )
-                detailRow("같은 날 합산", "(durationText(total)) · (related.count)회")
+                detailRow("같은 날 합산", "\(durationText(total)) · \(related.count)회")
             }
             if let behavior = record.behavior, !behavior.isEmpty {
                 detailRow("행동 분류", behavior)
@@ -789,6 +797,16 @@ struct ActualRecordDetailView: View {
             "walking", "running", "cycling", "automotive",
         ]
         return movementWords.contains(where: value.contains) ? "movement" : "activity"
+    }
+
+    private func displayTitle(
+        _ record: ActualRecord,
+        categoryID: String
+    ) -> String {
+        if categoryID == "movement" {
+            return MovementPresentation.title(for: record)
+        }
+        return record.title.isEmpty ? categoryName(categoryID) : record.title
     }
 
     private func categoryName(_ id: String) -> String {
