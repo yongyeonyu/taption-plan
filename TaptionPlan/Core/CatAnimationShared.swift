@@ -40,9 +40,21 @@ enum TaptionCatAnimationEngine {
         preferredAction: TaptionCatAnimationAction? = nil,
         reducesMotion: Bool = false
     ) -> TaptionCatAnimationPose {
-        let rawStep = Int64(
-            floor(date.timeIntervalSinceReferenceDate / stepDuration)
-        )
+        // 유효하지 않은 날짜가 들어오면 Int64 변환 자체가 런타임 트랩이다.
+        let elapsed = date.timeIntervalSinceReferenceDate / stepDuration
+        guard elapsed.isFinite,
+              elapsed > -9e15,
+              elapsed < 9e15 else {
+            return TaptionCatAnimationPose(
+                progress: 0.5,
+                facesLeft: false,
+                phase: 0,
+                action: .sitting,
+                tailSwing: 0,
+                headTiltDegrees: 0
+            )
+        }
+        let rawStep = Int64(floor(elapsed))
         let count = Int64(stepCount)
         let step = Int(((rawStep % count) + count) % count)
         let phase = reducesMotion ? 0 : step % 4
@@ -110,8 +122,16 @@ struct TaptionCatAnimationView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let catWidth = min(52, proxy.size.width)
-            let available = max(0, proxy.size.width - catWidth)
+            // 컴플리케이션 초기 레이아웃에서 크기가 0이나 NaN으로 들어올 수
+            // 있다. 그대로 쓰면 프레임과 오프셋이 NaN이 된다.
+            let width = proxy.size.width.isFinite
+                ? max(0, proxy.size.width)
+                : 52
+            let catWidth = min(52, width)
+            let available = max(0, width - catWidth)
+            let progress = pose.progress.isFinite
+                ? min(1, max(0, pose.progress))
+                : 0.5
             let bounce: CGFloat = reducesMotion
                 ? 0
                 : (pose.action == .running
@@ -126,7 +146,7 @@ struct TaptionCatAnimationView: View {
             )
             .frame(width: catWidth, height: 32)
             .scaleEffect(x: pose.facesLeft ? -1 : 1, y: 1)
-            .offset(x: available * pose.progress, y: bounce)
+            .offset(x: available * progress, y: bounce)
         }
         .accessibilityLabel("고양이 애니메이션")
     }

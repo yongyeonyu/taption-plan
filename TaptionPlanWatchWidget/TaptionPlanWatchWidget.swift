@@ -47,9 +47,13 @@ private struct TaptionWatchWidgetProvider: TimelineProvider {
         dates.append(contentsOf: (payload?.items ?? []).flatMap {
             [$0.startsAt, $0.endsAt]
         })
-        let entries = Array(Set(dates.filter { now <= $0 && $0 <= horizon }))
+        var entries = Array(Set(dates.filter { now <= $0 && $0 <= horizon }))
             .sorted()
             .map { TaptionWatchWidgetEntry(date: $0, payload: payload) }
+        if entries.isEmpty {
+            // 항목이 없는 타임라인은 WidgetKit이 갱신을 멈추게 만든다.
+            entries = [TaptionWatchWidgetEntry(date: now, payload: payload)]
+        }
         completion(Timeline(entries: entries, policy: .after(horizon)))
     }
 }
@@ -75,6 +79,25 @@ private struct TaptionWatchStatusWidget: Widget {
 private struct TaptionWatchWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: TaptionWatchWidgetEntry
+
+    /// 저장소 읽기와 JSON 디코딩을 뷰 본문 평가마다 반복하면 컴플리케이션의
+    /// 좁은 실행 예산을 넘긴다. 한 번만 읽어 두고 재사용한다.
+    private let resolvedPayload: TaptionWatchPayload?
+
+    init(entry: TaptionWatchWidgetEntry) {
+        self.entry = entry
+        let stored = TaptionWatchWidgetStore.read()
+        switch (stored, entry.payload) {
+        case let (stored?, entryPayload?):
+            resolvedPayload = stored.generatedAt >= entryPayload.generatedAt
+                ? stored
+                : entryPayload
+        case let (stored?, nil):
+            resolvedPayload = stored
+        default:
+            resolvedPayload = entry.payload
+        }
+    }
 
     var body: some View {
         switch family {
@@ -194,15 +217,7 @@ private struct TaptionWatchWidgetView: View {
             .sorted { $0.startsAt < $1.startsAt }
     }
 
-    private var freshestPayload: TaptionWatchPayload? {
-        guard let stored = TaptionWatchWidgetStore.read() else {
-            return entry.payload
-        }
-        guard let entryPayload = entry.payload else { return stored }
-        return stored.generatedAt >= entryPayload.generatedAt
-            ? stored
-            : entryPayload
-    }
+    private var freshestPayload: TaptionWatchPayload? { resolvedPayload }
 
     private var playbackDate: Date {
         max(entry.date, .now)
