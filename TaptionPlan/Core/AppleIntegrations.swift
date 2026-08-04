@@ -579,6 +579,106 @@ final class AppleHealthService: @unchecked Sendable {
         }
     }
 
+    /// 다른 앱과 Apple Watch가 HealthKit에 저장한 운동 경로를 읽어
+    /// 표본으로 되돌린다. 우리 앱이 듀티사이클 때문에 남기지 못한 구간의
+    /// 실제 궤적을 사후에 채우는 유일한 정식 경로다.
+    func workoutRouteReadings(
+        in span: TimeSpan
+    ) async throws -> [SensorReading] {
+        let workouts = try await samples(
+            type: HKObjectType.workoutType(),
+            span: span
+        ).compactMap { $0 as? HKWorkout }
+        guard !workouts.isEmpty else { return [] }
+
+        var result: [SensorReading] = []
+        for workout in workouts {
+            let mode = workout.workoutActivityType.movementTravelMode
+            for route in try await routeSamples(for: workout) {
+                let locations = try await locations(in: route)
+                for location in locations
+                where location.horizontalAccuracy >= 0
+                    && span.contains(location.timestamp) {
+                    result.append(
+                        SensorReading(
+                            timestamp: location.timestamp,
+                            point: GeoPoint(
+                                latitude: location.coordinate.latitude,
+                                longitude: location.coordinate.longitude,
+                                altitude: location.altitude,
+                                horizontalAccuracy: location.horizontalAccuracy,
+                                verticalAccuracy: location.verticalAccuracy
+                            ),
+                            speedMetersPerSecond: location.speed >= 0
+                                ? location.speed
+                                : nil,
+                            courseDegrees: location.course >= 0
+                                ? location.course
+                                : nil,
+                            motion: Self.motionKind(for: mode),
+                            motionConfidence: .high
+                        )
+                    )
+                }
+            }
+        }
+        return result.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private static func motionKind(for mode: TravelMode?) -> MotionKind {
+        switch mode {
+        case .walking: .walking
+        case .running: .running
+        case .cycling: .cycling
+        case .car, .bus, .taxi, .subway, .train: .automotive
+        default: .unknown
+        }
+    }
+
+    private func routeSamples(
+        for workout: HKWorkout
+    ) async throws -> [HKWorkoutRoute] {
+        try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: HKSeriesType.workoutRoute(),
+                predicate: HKQuery.predicateForObjects(from: workout),
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, error in
+                if error != nil {
+                    // 권한이 없거나 경로가 없는 운동은 조용히 건너뛴다.
+                    continuation.resume(returning: [])
+                    return
+                }
+                continuation.resume(
+                    returning: (samples as? [HKWorkoutRoute]) ?? []
+                )
+            }
+            store.execute(query)
+        }
+    }
+
+    private func locations(
+        in route: HKWorkoutRoute
+    ) async throws -> [CLLocation] {
+        try await withCheckedThrowingContinuation { continuation in
+            var collected: [CLLocation] = []
+            let query = HKWorkoutRouteQuery(
+                route: route
+            ) { _, locations, done, error in
+                if error != nil {
+                    continuation.resume(returning: [])
+                    return
+                }
+                collected.append(contentsOf: locations ?? [])
+                if done {
+                    continuation.resume(returning: collected)
+                }
+            }
+            store.execute(query)
+        }
+    }
+
     private func workoutMovementEvidence(
         in span: TimeSpan
     ) async throws -> [AppleMovementEvidence] {
@@ -740,6 +840,9 @@ final class AppleHealthService: @unchecked Sendable {
     private func readTypes() -> [HKObjectType] {
         [
             HKObjectType.workoutType(),
+            // 다른 앱과 Apple Watch가 저장한 운동 GPS 궤적. 우리 앱이 표본을
+            // 남기지 못한 구간의 경로를 사후에 채우는 데 사용한다.
+            HKSeriesType.workoutRoute(),
             HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
             HKObjectType.categoryType(forIdentifier: .mindfulSession),
             HKObjectType.quantityType(forIdentifier: .stepCount),

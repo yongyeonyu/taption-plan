@@ -3284,8 +3284,19 @@ final class AppModel {
             in: span,
             existingReadings: archivedReadings
         )
+        // 다른 앱·Apple Watch가 HealthKit에 남긴 경로로 빈 구간을 채운다.
+        let healthRouteReadings: [SensorReading]
+        if settings.healthEnabled {
+            healthRouteReadings = HealthRouteMergeEngine.merging(
+                (try? await healthService.workoutRouteReadings(in: span)) ?? [],
+                into: archivedReadings
+            )
+        } else {
+            healthRouteReadings = []
+        }
         if archivedReadings.isEmpty,
            photoLocationReadings.isEmpty,
+           healthRouteReadings.isEmpty,
            motionActivities.isEmpty,
            healthMovementEvidence.isEmpty {
             return
@@ -3293,8 +3304,11 @@ final class AppModel {
 
         let readings = AppleDeviceGroundTruthEngine
             .applyingMotionHistory(
-                to: (archivedReadings + photoLocationReadings)
-                    .sorted { $0.timestamp < $1.timestamp },
+                to: (
+                    archivedReadings
+                        + photoLocationReadings
+                        + healthRouteReadings
+                ).sorted { $0.timestamp < $1.timestamp },
                 activities: motionActivities
             )
         let knownPlaces = snapshot.places

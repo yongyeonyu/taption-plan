@@ -26,7 +26,7 @@ private actor WatchAccelerationArchive {
         )) ?? fileManager.urls(
             for: .documentDirectory,
             in: .userDomainMask
-        )[0]
+        ).first ?? URL.temporaryDirectory
         directoryURL = root.appendingPathComponent(
             "TaptionPlan/Acceleration",
             isDirectory: true
@@ -114,11 +114,22 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         TaptionWatchAccelerationSettings?
     @Published private(set) var dataSyncProfile: TaptionWatchDataSyncProfile = .off
 
-    private let healthStore = HKHealthStore()
-    private let motionManager = CMMotionManager()
-    private let altimeter = CMAltimeter()
-    private let pedometer = CMPedometer()
-    private let locationManager = CLLocationManager()
+    // 이 클라이언트들은 각각 시스템 데몬과 연결을 열고 권한을 평가한다.
+    // 앱 시작 경로에서 한꺼번에 만들면 첫 프레임 전에 실기기에서만 실패할 수
+    // 있으므로, 실제로 필요할 때까지 만들지 않는다.
+    private lazy var healthStore = HKHealthStore()
+    private lazy var motionManager = CMMotionManager()
+    private lazy var altimeter = CMAltimeter()
+    private lazy var pedometer = CMPedometer()
+    private lazy var locationManager: CLLocationManager = {
+        let manager = CLLocationManager()
+        manager.delegate = self
+        manager.activityType = .fitness
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.distanceFilter = 5
+        return manager
+    }()
+    private var didStartSensorHardware = false
     private let sensorQueue: OperationQueue = {
         let queue = OperationQueue()
         queue.name = "com.taption.plan.watch-sensors"
@@ -171,7 +182,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 #if canImport(CoreML)
     private lazy var behaviorModel = WatchBehaviorModel.load()
 #endif
-    private let accelerationArchive = WatchAccelerationArchive()
+    private lazy var accelerationArchive = WatchAccelerationArchive()
     private var pendingAccelerationSamples: [WatchAccelerationArchiveSample] = []
     private var accelerationArchiveStride = 0
     private var accelerationArchiveSequence = 0
@@ -186,10 +197,6 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        locationManager.delegate = self
-        locationManager.activityType = .fitness
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 5
     }
 
     func dismissError() {
@@ -723,6 +730,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         // deliberately 5 Hz: enough to detect sustained hand motion while
         // keeping Watch battery and archive size bounded.
         let updateInterval: TimeInterval = ambient ? 0.2 : 0.04
+        didStartSensorHardware = true
         if motionManager.isAccelerometerAvailable {
             motionManager.accelerometerUpdateInterval = updateInterval
             motionManager.startAccelerometerUpdates(
@@ -1090,6 +1098,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func stopSensorHardware() {
+        // 한 번도 시작하지 않았다면 클라이언트를 만들지 않는다.
+        guard didStartSensorHardware else { return }
+        didStartSensorHardware = false
         motionManager.stopAccelerometerUpdates()
         motionManager.stopGyroUpdates()
         motionManager.stopDeviceMotionUpdates()

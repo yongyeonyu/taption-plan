@@ -357,26 +357,76 @@ struct TravelModeClassifier: Sendable {
         }
 
         // 직선 변위만으로 계산한 최소 속도는 실제 경로보다 항상 과소평가된다.
-        // 이 값으로도 불가능한 이동 수단은 후보에서 제거한다. Core Motion이
-        // 차량 안의 흔들림을 보행으로 라벨링해도 여기서 걸러진다.
+        // 이 값으로도 불가능한 수단은 어떤 신호보다 우선해 배제한다.
         let displacementSpeed = inferenceSpan.duration >= 120
             ? displacementMeters / inferenceSpan.duration
             : 0
-        if displacementSpeed > 2.6 {
-            let note = "직선 변위 최소 속도 \(Int((displacementSpeed * 3.6).rounded()))km/h"
-            candidates.removeValue(forKey: .walking)
-            if displacementSpeed > 5.5 {
-                candidates.removeValue(forKey: .running)
+        let displacementNote =
+            "직선 변위 최소 속도 \(Int((displacementSpeed * 3.6).rounded()))km/h"
+        // 걸음이 실제로 늘어나면 차량 안일 수 없고, 걸음 없이 차량 속도가
+        // 지속되면 보행일 수 없다. Core Motion 라벨을 뒤집는 유일한 근거다.
+        let pedestrianEvidence = hasPedestrianCadence || stepsPerMinute >= 40
+        let vehicleSpeedEvidence = hasVehicleSpeed && !pedestrianEvidence
+        var impossibleModes: Set<TravelMode> = []
+        if displacementSpeed > 2.6 || vehicleSpeedEvidence {
+            impossibleModes.insert(.walking)
+        }
+        if displacementSpeed > 5.5 || vehicleSpeedEvidence {
+            impossibleModes.insert(.running)
+        }
+        if displacementSpeed > 8.5
+            || (averageSpeed > 12 && !pedestrianEvidence) {
+            impossibleModes.insert(.cycling)
+        }
+
+        // Core Motion 라벨을 최종 권위로 사용한다. 점수 융합이 실제 기록과
+        // 다른 수단을 만들어 내는 문제가 있어, 물리적으로 불가능할 때만
+        // 무시한다. 자동차 라벨은 계열만 고정하고 세부 수단은 유지한다.
+        let coreMotionMode: TravelMode? = switch dominantMotion {
+        case .walking: .walking
+        case .running: .running
+        case .cycling: .cycling
+        case .automotive: .car
+        case .stationary, .unknown: nil
+        }
+        if let motionMode = coreMotionMode,
+           dominantMotionWeight >= 0.4,
+           !impossibleModes.contains(motionMode) {
+            switch dominantMotion {
+            case .walking, .running, .cycling:
+                let score = min(1, 0.7 + 0.3 * dominantMotionWeight)
+                return MovementInference(
+                    mode: motionMode,
+                    confidence: ConfidenceLevel(score: score),
+                    score: score,
+                    evidence: ["iPhone Core Motion \(modeName(motionMode))"]
+                )
+            case .automotive:
+                // 걸음이 계속 늘고 있으면 차량 라벨이 틀린 것이므로
+                // 계열을 고정하지 않는다.
+                if !pedestrianEvidence {
+                    let vehicles: Set<TravelMode> = [
+                        .car, .bus, .taxi, .subway, .train, .airplane, .ship,
+                    ]
+                    candidates = candidates.filter { vehicles.contains($0.key) }
+                    if candidates.isEmpty {
+                        add(.car, 0.62, "iPhone Core Motion 자동차")
+                    }
+                }
+            case .stationary, .unknown:
+                break
             }
-            if displacementSpeed > 8.5 {
-                candidates.removeValue(forKey: .cycling)
-                add(.car, 0.62, note)
-                add(.bus, 0.24, note)
-                add(.taxi, 0.24, note)
-            } else {
-                add(.cycling, 0.2, note)
-                add(.car, 0.26, note)
-            }
+        }
+
+        for mode in impossibleModes {
+            candidates.removeValue(forKey: mode)
+        }
+        if candidates.isEmpty {
+            add(
+                displacementSpeed > 8.5 ? .car : .cycling,
+                0.4,
+                displacementNote
+            )
         }
 
         let ranked = candidates.sorted { $0.value.0 > $1.value.0 }
@@ -992,6 +1042,45 @@ struct AltitudeSpikeGate: Sendable {
             pending = (meters, 1)
         }
         return false
+    }
+}
+
+/// HealthKit 운동 경로 표본을 기기 표본과 합친다. 우리 앱이 이미 같은 시각의
+/// 위치를 남겼다면 중복이므로 버리고, 비어 있는 구간만 채운다.
+enum HealthRouteMergeEngine {
+    static let minimumSpacingSeconds: TimeInterval = 20
+
+    static func merging(
+        _ routeReadings: [SensorReading],
+        into existing: [SensorReading]
+    ) -> [SensorReading] {
+        guard !routeReadings.isEmpty else { return [] }
+        let existingTimes = existing
+            .filter { $0.point != nil }
+            .map(\.timestamp)
+            .sorted()
+        var accepted: [Date] = []
+        var result: [SensorReading] = []
+        for reading in routeReadings.sorted(by: {
+            $0.timestamp < $1.timestamp
+        }) {
+            guard !hasNeighbor(reading.timestamp, in: existingTimes),
+                  !hasNeighbor(reading.timestamp, in: accepted) else {
+                continue
+            }
+            accepted.append(reading.timestamp)
+            result.append(reading)
+        }
+        return result
+    }
+
+    private static func hasNeighbor(
+        _ date: Date,
+        in sorted: [Date]
+    ) -> Bool {
+        sorted.contains {
+            abs($0.timeIntervalSince(date)) < minimumSpacingSeconds
+        }
     }
 }
 

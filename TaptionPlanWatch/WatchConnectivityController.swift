@@ -22,8 +22,18 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     var onPayloadChange: ((TaptionWatchPayload) -> Void)?
     var onDataSyncRequest: (() -> Void)?
 
+    private var didPrepare = false
+
     override init() {
         super.init()
+    }
+
+    /// 캐시 복원과 WatchConnectivity 활성화는 첫 화면이 그려진 뒤에 한다.
+    /// App.init에서 수행하면 실기기에서 첫 프레임 전에 위젯·앱그룹·WC
+    /// 데몬을 모두 건드리게 된다.
+    func prepare() {
+        guard !didPrepare else { return }
+        didPrepare = true
         restoreCachedPayload()
         restorePendingSensorSummaries()
         restorePendingHealthSnapshots()
@@ -74,6 +84,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         applyOptimistic(command)
         let envelope: [String: Any] = [TaptionWatchEnvelope.commandKey: data]
         let session = WCSession.default
+        // 활성화 전 전송은 예외를 던진다.
+        guard session.activationState == .activated else { return }
         session.transferUserInfo(envelope)
         if session.isReachable {
             session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)

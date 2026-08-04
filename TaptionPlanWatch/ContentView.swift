@@ -14,7 +14,10 @@ struct WatchContentView: View {
                 .padding(.bottom, 8)
             }
             .navigationTitle("Taption")
-            .task { workout.beginCaptureAfterFirstRender() }
+            .task {
+                connectivity.prepare()
+                workout.beginCaptureAfterFirstRender()
+            }
             .alert(
                 "확인해 주세요",
                 isPresented: Binding(
@@ -127,7 +130,7 @@ struct WatchContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
-                Text("손목 움직임을 저장하는 중 · (workout.archivedAccelerationSampleCount)개")
+                Text("손목 움직임을 저장하는 중 · \(workout.archivedAccelerationSampleCount)개")
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
             } else {
