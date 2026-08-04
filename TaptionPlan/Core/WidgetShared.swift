@@ -66,28 +66,17 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
         .appUsage,
     ]
 
+    /// The timetable row this lane mirrors. `action` has no automatic row.
+    var rowKind: TimelineRowKind? {
+        TimelineRowKind(categoryID: rawValue)
+    }
+
     var title: String {
-        switch self {
-        case .schedule: "일정"
-        case .location: "위치"
-        case .movement: "이동"
-        case .sleep: "수면"
-        case .activity: "활동"
-        case .appUsage: "어플"
-        case .action: "액션"
-        }
+        rowKind?.title ?? "액션"
     }
 
     var systemImage: String {
-        switch self {
-        case .schedule: "calendar"
-        case .location: "mappin.and.ellipse"
-        case .movement: "arrow.trianglehead.swap"
-        case .sleep: "moon.zzz"
-        case .activity: "figure.run"
-        case .appUsage: "app.badge.clock"
-        case .action: "checklist.checked"
-        }
+        rowKind?.systemImage ?? "checklist.checked"
     }
 }
 

@@ -146,6 +146,24 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         transfer(summary, through: session)
     }
 
+    func sendActivityConfirmation(
+        _ confirmation: TaptionWatchActivityConfirmation
+    ) {
+        guard WCSession.isSupported(),
+              let data = try? encoder.encode(confirmation) else {
+            return
+        }
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.activityConfirmationKey: data,
+        ]
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
+        }
+    }
+
     func sendHealthSnapshot(_ snapshot: TaptionWatchHealthSnapshot) {
         guard WCSession.isSupported(),
               let data = try? encoder.encode(snapshot) else {

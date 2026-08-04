@@ -16,20 +16,69 @@ enum TimelineLevel: String, Codable, CaseIterable, Sendable {
     case year
 }
 
+/// The automatic timeline rows.  Row identifier, Korean label and symbol live
+/// together here so every scale, every detail card and every widget reads the
+/// same vocabulary. Duplicating the label tables per surface is what produced
+/// English identifiers leaking into the week timetable.
+enum TimelineRowKind: String, CaseIterable, Sendable {
+    case calendar
+    case location
+    case movement
+    case sleep
+    case activity
+    case appUsage
+    case weather
+    case photo
+
+    var title: String {
+        switch self {
+        case .calendar: "일정"
+        case .location: "위치"
+        case .movement: "이동"
+        case .sleep: "수면"
+        case .activity: "활동"
+        case .appUsage: "어플"
+        case .weather: "날씨"
+        case .photo: "사진"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .calendar: "calendar"
+        case .location: "mappin.and.ellipse"
+        case .movement: "figure.walk.motion"
+        case .sleep: "moon.zzz"
+        case .activity: "figure.run"
+        case .appUsage: "app.badge.clock"
+        case .weather: "cloud.sun"
+        case .photo: "photo"
+        }
+    }
+
+    /// Records carry a category identifier, which is the row identifier for
+    /// every automatic lane except the calendar lane.
+    init?(categoryID: String) {
+        switch categoryID {
+        case "schedule": self = .calendar
+        default:
+            guard let value = TimelineRowKind(rawValue: categoryID) else {
+                return nil
+            }
+            self = value
+        }
+    }
+
+    static func title(forCategoryID id: String) -> String? {
+        TimelineRowKind(categoryID: id)?.title
+    }
+}
+
 /// Stable identifiers shared by the timeline row labels and detail cards.
 /// Keeping this order in the model lets the UI persist one ordering for both
 /// surfaces without coupling storage to SwiftUI view types.
 enum TimelineRowOrder {
-    static let defaults = [
-        "calendar",
-        "location",
-        "movement",
-        "sleep",
-        "activity",
-        "appUsage",
-        "weather",
-        "photo",
-    ]
+    static let defaults = TimelineRowKind.allCases.map(\.rawValue)
 
     static func ordered<T>(
         _ values: [T],

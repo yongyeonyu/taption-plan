@@ -27,7 +27,8 @@ final class AppModel {
     var groupNavigationPath: [UUID] = []
     var selectedMemoPlanID: UUID?
     var selectedCatCoat: CatCoat = .calico
-    var reviewScale: ReviewScale = .week
+    /// 기록 탭도 시간표와 같은 배율(일·주·월·년)을 쓴다.
+    var reviewScale: TimeScale = .week
     var isPermissionOnboardingPresented = false
     private(set) var pendingSetupCategoryIDs: Set<String> = []
     private(set) var isEditingSetupCategories = false
@@ -338,6 +339,11 @@ final class AppModel {
             onHealthSnapshot: { [weak self] snapshot in
                 Task { @MainActor [weak self] in
                     await self?.applyWatchHealthSnapshot(snapshot)
+                }
+            },
+            onActivityConfirmation: { [weak self] confirmation in
+                Task { @MainActor [weak self] in
+                    self?.applyWatchActivityConfirmation(confirmation)
                 }
             },
             onStatusChange: { [weak self] state in
@@ -3170,6 +3176,17 @@ final class AppModel {
             suppressedIDs: snapshot.settings.suppressedActualIDs
         )
         await persistDeviceLocalSnapshot()
+    }
+
+    /// 워치에서 온 확인·교정을 기록 원본과 별개로 보관한다. 자동 센서 기록은
+    /// 원본을 보존해야 하므로 여기서 기존 기록을 고치지 않는다.
+    private func applyWatchActivityConfirmation(
+        _ confirmation: TaptionWatchActivityConfirmation
+    ) {
+        WatchActivityConfirmationStore.append(confirmation)
+        Self.integrationLogger.notice(
+            "Watch activity confirmation received: correct=\(confirmation.isCorrect, privacy: .public)"
+        )
     }
 
     private func applyWatchHealthSnapshot(

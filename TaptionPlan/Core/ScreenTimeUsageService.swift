@@ -404,7 +404,7 @@ enum ScreenTimeUsageError: LocalizedError {
 
 enum ScreenTimeUsageRecordEngine {
     /// 시간표 행·기록 제목에 쓰는 사용자 표기.
-    static let laneTitle = "어플"
+    static let laneTitle = TimelineRowKind.appUsage.title
 
     static func recordID(for sample: ScreenTimeUsageSample) -> UUID {
         stableID(

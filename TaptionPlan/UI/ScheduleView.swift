@@ -176,20 +176,29 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
 
     var id: Self { self }
 
-    var systemImage: String {
+    /// 시간표 줄과 같은 기호를 쓴다. 표를 두 벌 두면 한쪽만 바뀐다.
+    var rowKind: TimelineRowKind? {
         switch self {
-        case .schedule: "calendar"
-        case .location: "mappin.and.ellipse"
-        case .movement: "figure.walk.motion"
-        case .sleep: "moon.zzz"
-        case .activity: "figure.run"
-        case .appUsage: "app.badge.clock"
-        case .weather: "cloud.sun"
-        case .routine: "repeat.circle"
-        case .action: "checklist.checked"
-        case .photo: "photo.on.rectangle"
-        case .event: "sparkles"
-        case .map: "map"
+        case .schedule: .calendar
+        case .location: .location
+        case .movement: .movement
+        case .sleep: .sleep
+        case .activity: .activity
+        case .appUsage: .appUsage
+        case .weather: .weather
+        case .photo: .photo
+        case .routine, .action, .event, .map: nil
+        }
+    }
+
+    var systemImage: String {
+        if let rowKind { return rowKind.systemImage }
+        switch self {
+        case .routine: return "repeat.circle"
+        case .action: return "checklist.checked"
+        case .event: return "sparkles"
+        case .map: return "map"
+        default: return "circle"
         }
     }
 
@@ -2628,6 +2637,9 @@ private struct TimelineDetailPanel: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 9)
+                    // 하단 탭 막대는 화면 위에 떠 있어 안전 영역을 넓혀 주지
+                    // 않는다. 마지막 카드가 막대 뒤로 숨지 않게 비워 둔다.
+                    .padding(.bottom, DraftBottomBarMetrics.contentInset)
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .frame(
@@ -2905,17 +2917,7 @@ private struct TimelineDetailPanel: View {
     private func detailRowID(
         for section: TimelineDetailSection
     ) -> String? {
-        switch section {
-        case .schedule: "calendar"
-        case .location: "location"
-        case .movement: "movement"
-        case .sleep: "sleep"
-        case .activity: "activity"
-        case .appUsage: "appUsage"
-        case .weather: "weather"
-        case .photo: "photo"
-        case .routine, .action, .event, .map: nil
-        }
+        section.rowKind?.rawValue
     }
 
     private func ensureVisibleDetailSection() {
@@ -6830,9 +6832,10 @@ private struct TimelineBoard: View {
         if scale == .day, !isGroup, !clusters.isEmpty {
             rowModels.append(
                 TimelineRowModel(
-                    title: "사진",
-                    id: "photo",
+                    title: TimelineRowKind.photo.title,
+                    id: TimelineRowKind.photo.rawValue,
                     dotColor: Color.tpPhotoDark,
+                    systemImage: TimelineRowKind.photo.systemImage,
                     isSystemAutomatic: true,
                     height: 65,
                     blocks: []
@@ -7186,7 +7189,10 @@ private struct TimelineBoard: View {
             travel: model.snapshot.travel,
             asOf: now
         )
-        let usesAutomaticDayRows = scale == .day && includesCalendar
+        // 일·주·월·년이 모두 같은 줄 목록을 쓴다. 예전에는 하루만 이 경로를
+        // 지나서 나머지 배율이 기록의 categoryID를 그대로 이름으로 찍었고
+        // (appUsage), 줄 순서도 시간표와 어긋났다.
+        let usesAutomaticDayRows = includesCalendar
         let automaticActuals = AutomaticRecordTimelineEngine.activities(
             from: displayedVisibleActuals,
             inside: span
@@ -7220,39 +7226,6 @@ private struct TimelineBoard: View {
                     index: index
                 )
             )
-        } else if includesCalendar {
-            if !events.isEmpty {
-                let allocation = laneAllocation(events, span: \.span)
-                values.append(
-                    TimelineRowModel(
-                        title: "일정",
-                        dotColor: Color(red: 0.56, green: 0.56, blue: 0.58),
-                        isSystemAutomatic: true,
-                        height: max(
-                            60,
-                            14 + CGFloat(allocation.count) * 28
-                        ),
-                        blocks: events.map { event in
-                            timelineBlock(
-                                title: event.title,
-                                span: event.span,
-                                top: 7 + CGFloat(
-                                    allocation.lanes[event.id, default: 0]
-                                ) * 28,
-                                height: 22,
-                                isFixed: true,
-                                detailText: calendarDetailText(event)
-                            )
-                        }
-                    )
-                )
-            }
-        }
-        if includesCalendar, !usesAutomaticDayRows {
-            let weatherRow = automaticWeatherRow(visibleSpan: span)
-            if !weatherRow.blocks.isEmpty {
-                values.append(weatherRow)
-            }
         }
 
         let orderedCategories = model.snapshot.categories.sorted {
@@ -7353,6 +7326,8 @@ private struct TimelineBoard: View {
                         category: category,
                         categoryID: definition.id,
                         dotColor: Color(hex: definition.darkHex),
+                        systemImage: TimelineRowKind(categoryID: definition.id)?
+                            .systemImage ?? definition.icon.systemImage,
                         fillColor: Color(hex: definition.lightHex),
                         actualColor: Color(hex: definition.actualHex),
                         height: max(
@@ -7385,9 +7360,13 @@ private struct TimelineBoard: View {
             )
             values.append(
                 TimelineRowModel(
-                    title: categoryID,
+                    // 사용자 카테고리에 없는 줄도 한글 이름으로 그린다.
+                    title: TimelineRowKind.title(forCategoryID: categoryID)
+                        ?? categoryID,
                     category: PlanCategory(categoryID: categoryID),
                     categoryID: categoryID,
+                    systemImage: TimelineRowKind(categoryID: categoryID)?
+                        .systemImage,
                     height: max(
                         60,
                         14
@@ -7490,10 +7469,10 @@ private struct TimelineBoard: View {
             )
         }
         return TimelineRowModel(
-            title: ScreenTimeUsageRecordEngine.laneTitle,
-            id: "appUsage",
+            title: TimelineRowKind.appUsage.title,
+            id: TimelineRowKind.appUsage.rawValue,
             dotColor: .tpProjectDark,
-            systemImage: "app.badge.clock",
+            systemImage: TimelineRowKind.appUsage.systemImage,
             fillColor: .tpProject,
             actualColor: .tpProjectDark,
             isSystemAutomatic: true,
@@ -7549,10 +7528,11 @@ private struct TimelineBoard: View {
             )
         }
         return TimelineRowModel(
-            title: "날씨",
-            id: "weather",
+            title: TimelineRowKind.weather.title,
+            id: TimelineRowKind.weather.rawValue,
             dotColor: .tpWeatherDark,
-            systemImage: contexts.first?.symbolName ?? "cloud.sun",
+            systemImage: contexts.first?.symbolName
+                ?? TimelineRowKind.weather.systemImage,
             fillColor: .tpWeather,
             actualColor: .tpWeatherDark,
             isSystemAutomatic: true,
@@ -7566,10 +7546,11 @@ private struct TimelineBoard: View {
     ) -> TimelineRowModel {
         let allocation = laneAllocation(events, span: \.span)
         return TimelineRowModel(
-            title: "일정",
-            id: "calendar",
-            categoryID: "calendar",
+            title: TimelineRowKind.calendar.title,
+            id: TimelineRowKind.calendar.rawValue,
+            categoryID: TimelineRowKind.calendar.rawValue,
             dotColor: Color(red: 0.56, green: 0.56, blue: 0.58),
+            systemImage: TimelineRowKind.calendar.systemImage,
             isSystemAutomatic: true,
             height: compactAutomaticHeight(allocation.count),
             blocks: events.map { event in
@@ -7658,10 +7639,11 @@ private struct TimelineBoard: View {
             )
         }
         return TimelineRowModel(
-            title: "위치",
-            id: "location",
+            title: TimelineRowKind.location.title,
+            id: TimelineRowKind.location.rawValue,
             category: .location,
-            categoryID: "location",
+            categoryID: TimelineRowKind.location.rawValue,
+            systemImage: TimelineRowKind.location.systemImage,
             isSystemAutomatic: true,
             height: compactAutomaticHeight(
                 planAllocation.count + placeAllocation.count
@@ -7749,10 +7731,11 @@ private struct TimelineBoard: View {
             )
         }
         return TimelineRowModel(
-            title: "이동",
-            id: "movement",
+            title: TimelineRowKind.movement.title,
+            id: TimelineRowKind.movement.rawValue,
             category: .movement,
-            categoryID: "movement",
+            categoryID: TimelineRowKind.movement.rawValue,
+            systemImage: TimelineRowKind.movement.systemImage,
             isSystemAutomatic: true,
             height: compactAutomaticHeight(
                 planAllocation.count
@@ -7783,11 +7766,12 @@ private struct TimelineBoard: View {
             )
         }
         return TimelineRowModel(
-            title: "활동",
-            id: "activity",
+            title: TimelineRowKind.activity.title,
+            id: TimelineRowKind.activity.rawValue,
             category: .activity,
-            categoryID: "activity",
+            categoryID: TimelineRowKind.activity.rawValue,
             dotColor: .tpHealthDark,
+            systemImage: TimelineRowKind.activity.systemImage,
             fillColor: .tpHealthArea,
             actualColor: .tpHealthDark,
             isSystemAutomatic: true,
@@ -7835,11 +7819,12 @@ private struct TimelineBoard: View {
             )
         }
         return TimelineRowModel(
-            title: "수면",
-            id: "sleep",
+            title: TimelineRowKind.sleep.title,
+            id: TimelineRowKind.sleep.rawValue,
             category: .sleep,
-            categoryID: "sleep",
+            categoryID: TimelineRowKind.sleep.rawValue,
             dotColor: .tpSleepDark,
+            systemImage: TimelineRowKind.sleep.systemImage,
             fillColor: .tpSleep,
             actualColor: .tpSleepDark,
             isSystemAutomatic: true,

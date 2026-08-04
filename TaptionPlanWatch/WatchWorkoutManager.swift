@@ -98,10 +98,19 @@ private actor WatchAccelerationArchive {
     }
 }
 
+/// 시스템이 지금 무엇을 하고 있다고 보는지. 워치 화면의 확인 카드가 이
+/// 값을 그대로 보여주고, 사용자의 정정 결과를 iPhone으로 돌려보낸다.
+struct WatchActivityObservation: Hashable, Sendable {
+    var behavior: WatchBehaviorKind
+    var confidenceScore: Double
+    var startedAt: Date
+    var endedAt: Date
+}
+
 @MainActor
 final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published private(set) var isActive = false
-    @Published private(set) var isMotionRecording = false
+    @Published private(set) var latestObservation: WatchActivityObservation?
     @Published private(set) var startedAt: Date?
     @Published private(set) var heartRate = 0.0
     @Published private(set) var distanceMeters = 0.0
@@ -183,13 +192,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private var pendingAccelerationSamples: [WatchAccelerationArchiveSample] = []
     private var accelerationArchiveStride = 0
     private var accelerationArchiveSequence = 0
-    private var isAmbientCapture = false
-    private var isScheduledMotionRecording = false
-    private var scheduledCaptureTask: Task<Void, Never>?
-    private var scheduledStopTask: Task<Void, Never>?
+    private let ambientRecorder = WatchAmbientSensorRecorder()
+    private var ambientDrainTask: Task<Void, Never>?
+    private var ambientArchiveSequence = 0
     private var healthSyncTask: Task<Void, Never>?
     private var didRequestHealthReadAuthorization = false
-    private var pendingAmbientSummaries: [TaptionWatchSensorSummary] = []
     var onHealthSnapshot: ((TaptionWatchHealthSnapshot) -> Void)?
 
     override init() {
@@ -213,12 +220,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         self.accelerationSettings = acceleration
         self.dataSyncProfile = dataSyncProfile
-        restartAutomaticCapture()
+        refreshAmbientRecording()
         restartHealthSync()
     }
 
     func syncNow() async {
-        await emitHealthSnapshot(forceFlush: true)
+        refreshAmbientRecording()
+        await emitHealthSnapshot()
     }
 
     func start(
@@ -229,7 +237,6 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         guard !isActive, HKHealthStore.isHealthDataAvailable() else {
             return false
         }
-        stopScheduledCapture()
         do {
             try await requestAuthorization()
             let configuration = HKWorkoutConfiguration()
@@ -277,8 +284,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             isActive = true
             startSensorCollection(
                 sessionID: sensorSessionID,
-                startedAt: start,
-                ambient: false
+                startedAt: start
             )
             return true
         } catch {
@@ -305,60 +311,6 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         return linkedPlan
     }
 
-    /// Starts a low-power accelerometer archive without creating a HealthKit
-    /// workout.  It is intentionally explicit so the user can control Watch
-    /// battery usage while still collecting the motion evidence used for
-    /// home-activity classification.
-    @discardableResult
-    func startMotionRecording() -> Bool {
-        guard !isActive, !isMotionRecording, !isScheduledMotionRecording else {
-            return false
-        }
-        scheduledCaptureTask?.cancel()
-        scheduledCaptureTask = nil
-        let start = Date.now
-        return beginAmbientCapture(at: start, scheduled: false)
-    }
-
-    func stopMotionRecording() {
-        guard isMotionRecording else { return }
-        finishAmbientCapture()
-        restartAutomaticCapture()
-    }
-
-    private func beginAmbientCapture(
-        at start: Date,
-        scheduled: Bool
-    ) -> Bool {
-        guard !isActive, !isMotionRecording, !isScheduledMotionRecording else {
-            return false
-        }
-        let sessionID = UUID()
-        linkedPlan = nil
-        workoutKind = .walking
-        startedAt = start
-        isMotionRecording = !scheduled
-        isScheduledMotionRecording = scheduled
-        startSensorCollection(
-            sessionID: sessionID,
-            startedAt: start,
-            ambient: true
-        )
-        return true
-    }
-
-    private func finishAmbientCapture() {
-        guard isMotionRecording || isScheduledMotionRecording else { return }
-        if let summary = stopSensorCollection(at: .now, isFinal: true) {
-            enqueueAmbientSummary(summary)
-        }
-        isMotionRecording = false
-        isScheduledMotionRecording = false
-        startedAt = nil
-        workoutKind = nil
-        linkedPlan = nil
-    }
-
     /// Sensor hardware must never start before the first scene transaction
     /// commits; the dispatch precondition trap it triggers kills the app at
     /// launch on real hardware. The first view flips this from its .task.
@@ -367,56 +319,54 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     func beginCaptureAfterFirstRender() {
         guard !isSceneReadyForCapture else { return }
         isSceneReadyForCapture = true
-        restartAutomaticCapture()
+        refreshAmbientRecording()
     }
 
-    private func restartAutomaticCapture() {
-        stopScheduledCapture()
+    /// 앱이 실행되는 모든 경로에서 호출한다. 기록 자체는 모션 데몬이 계속
+    /// 이어가므로 앱이 할 일은 (1) 기록을 다시 걸고 (2) 지난 실행 이후
+    /// 쌓인 표본을 비우는 것뿐이다.
+    private func refreshAmbientRecording() {
         guard isSceneReadyForCapture,
-              accelerationSettings?.isEnabled == true else { return }
-        scheduledCaptureTask = Task { [weak self] in
-            guard let self else { return }
-            while !Task.isCancelled {
-                self.startScheduledCapture()
-                let interval = self.accelerationSettings?.profile.interval ?? 0
-                guard interval > 0 else { return }
-                try? await Task.sleep(
-                    nanoseconds: UInt64(interval * 1_000_000_000)
-                )
-            }
-        }
-    }
-
-    private func startScheduledCapture() {
-        guard !isActive, !isMotionRecording, !isScheduledMotionRecording else {
+              accelerationSettings?.isEnabled == true,
+              ambientDrainTask == nil else {
             return
         }
-        guard beginAmbientCapture(at: .now, scheduled: true) else { return }
-        scheduledStopTask?.cancel()
-        let duration = Double(
-            accelerationSettings?.samplingWindowSeconds ?? 30
-        )
-        scheduledStopTask = Task { [weak self] in
-            try? await Task.sleep(
-                nanoseconds: UInt64(duration * 1_000_000_000)
-            )
-            guard !Task.isCancelled else { return }
-            self?.finishScheduledCapture()
+        ambientDrainTask = Task { [weak self] in
+            guard let self else { return }
+            let recorder = self.ambientRecorder
+            await recorder.arm()
+            let result = await recorder.drain()
+            self.applyAmbientDrain(result)
+            self.ambientDrainTask = nil
         }
     }
 
-    private func finishScheduledCapture() {
-        guard isScheduledMotionRecording else { return }
-        finishAmbientCapture()
-    }
-
-    private func stopScheduledCapture() {
-        scheduledCaptureTask?.cancel()
-        scheduledCaptureTask = nil
-        scheduledStopTask?.cancel()
-        scheduledStopTask = nil
-        if isScheduledMotionRecording {
-            finishScheduledCapture()
+    private func applyAmbientDrain(_ result: WatchAmbientDrainResult) {
+        if !result.archiveSamples.isEmpty {
+            let base = ambientArchiveSequence
+            let samples = result.archiveSamples.enumerated().map {
+                WatchAccelerationArchiveSample(
+                    sessionID: nil,
+                    sequence: base + $0.offset + 1,
+                    capturedAt: $0.element.capturedAt,
+                    acceleration: $0.element.acceleration,
+                    isAmbient: true
+                )
+            }
+            ambientArchiveSequence += result.archiveSamples.count
+            let archive = accelerationArchive
+            Task { try? await archive.append(samples) }
+        }
+        for summary in result.summaries {
+            onSensorSummary?(summary)
+        }
+        if let latest = result.summaries.last, let behavior = latest.behavior {
+            latestObservation = WatchActivityObservation(
+                behavior: behavior,
+                confidenceScore: latest.behaviorConfidenceScore ?? 0,
+                startedAt: latest.startedAt,
+                endedAt: latest.endedAt
+            )
         }
     }
 
@@ -476,7 +426,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         )
     }
 
-    private func emitHealthSnapshot(forceFlush: Bool = false) async {
+    private func emitHealthSnapshot() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         if !didRequestHealthReadAuthorization {
             try? await requestHealthReadAuthorization()
@@ -514,7 +464,6 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             source: "Apple Watch HealthKit"
         )
         onHealthSnapshot?(snapshot)
-        flushPendingAmbientSummaries(force: forceFlush)
     }
 
     private func requestHealthReadAuthorization() async throws {
@@ -665,19 +614,16 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         workoutKind = nil
         startedAt = nil
         isActive = false
-        isMotionRecording = false
-        isAmbientCapture = false
         sensorSampleCount = 0
         archivedAccelerationSampleCount = 0
         latestRelativeAltitudeMeters = nil
         errorMessage = message
-        restartAutomaticCapture()
+        refreshAmbientRecording()
     }
 
     private func startSensorCollection(
         sessionID: UUID,
-        startedAt: Date,
-        ambient: Bool
+        startedAt: Date
     ) {
         stopSensorHardware()
         sensorSessionID = sessionID
@@ -721,12 +667,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         pendingAccelerationSamples = []
         accelerationArchiveStride = 0
         accelerationArchiveSequence = 0
-        isAmbientCapture = ambient
 
-        // Activity windows use 25 Hz during a workout.  Ambient recording is
-        // deliberately 5 Hz: enough to detect sustained hand motion while
-        // keeping Watch battery and archive size bounded.
-        let updateInterval: TimeInterval = ambient ? 0.2 : 0.04
+        // 명시적 운동은 실시간 값이 필요하므로 25Hz 라이브 업데이트를 쓴다.
+        // 주변 기록은 CMSensorRecorder가 대신 맡는다.
+        let updateInterval: TimeInterval = 0.04
         didStartSensorHardware = true
         if motionManager.isAccelerometerAvailable {
             motionManager.accelerometerUpdateInterval = updateInterval
@@ -750,7 +694,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if !ambient, motionManager.isGyroAvailable {
+        if motionManager.isGyroAvailable {
             motionManager.gyroUpdateInterval = updateInterval
             motionManager.startGyroUpdates(
                 to: .main
@@ -766,7 +710,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if !ambient, motionManager.isDeviceMotionAvailable {
+        if motionManager.isDeviceMotionAvailable {
             motionManager.deviceMotionUpdateInterval = updateInterval
             motionManager.startDeviceMotionUpdates(
                 to: .main
@@ -800,7 +744,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if !ambient, CMAltimeter.isRelativeAltitudeAvailable() {
+        if CMAltimeter.isRelativeAltitudeAvailable() {
             altimeter.startRelativeAltitudeUpdates(
                 to: .main
             ) { @Sendable [weak self] data, _ in
@@ -812,7 +756,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if !ambient, CMPedometer.isStepCountingAvailable() {
+        if CMPedometer.isStepCountingAvailable() {
             pedometer.startUpdates(from: startedAt) { @Sendable [weak self] data, _ in
                 let steps = data?.numberOfSteps.intValue
                 let distance = data?.distance?.doubleValue
@@ -826,11 +770,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 }
             }
         }
-        if !ambient, locationManager.authorizationStatus == .notDetermined {
+        if locationManager.authorizationStatus == .notDetermined {
             locationManager.requestWhenInUseAuthorization()
         }
-        if !ambient,
-           locationManager.authorizationStatus == .authorizedAlways
+        if locationManager.authorizationStatus == .authorizedAlways
             || locationManager.authorizationStatus == .authorizedWhenInUse {
             locationManager.startUpdatingLocation()
         }
@@ -868,8 +811,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         previousAccelerationMagnitude = magnitude
         previousAccelerationSampleTime = timestamp
         accelerationArchiveStride += 1
-        let archiveStride = isAmbientCapture ? 1 : 5
-        if accelerationArchiveStride >= archiveStride {
+        if accelerationArchiveStride >= 5 {
             accelerationArchiveStride = 0
             accelerationArchiveSequence += 1
             pendingAccelerationSamples.append(
@@ -878,7 +820,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     sequence: accelerationArchiveSequence,
                     capturedAt: capturedAt,
                     acceleration: value,
-                    isAmbient: isAmbientCapture
+                    isAmbient: false
                 )
             )
             archivedAccelerationSampleCount += 1
@@ -938,7 +880,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     ? nil
                     : speeds.reduce(0, +) / Double(speeds.count)
                 let context = WatchBehaviorInput(
-                    workoutKind: isAmbientCapture ? nil : workoutKind,
+                    workoutKind: workoutKind,
                     duration: features.duration,
                     accelerometerSampleCount: features.sampleCount,
                     accelerometerStandardDeviationG:
@@ -1047,37 +989,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         ) else {
             return
         }
-        if summary.isAmbient == true {
-            enqueueAmbientSummary(summary)
-        } else {
-            onSensorSummary?(summary)
+        onSensorSummary?(summary)
+        if let behavior = summary.behavior {
+            latestObservation = WatchActivityObservation(
+                behavior: behavior,
+                confidenceScore: summary.behaviorConfidenceScore ?? 0,
+                startedAt: summary.startedAt,
+                endedAt: summary.endedAt
+            )
         }
         flushAccelerationArchive()
         pendingRoutePoints.removeAll(keepingCapacity: true)
         pendingBehaviorSegments.removeAll(keepingCapacity: true)
-    }
-
-    private func flushPendingAmbientSummaries(force: Bool = false) {
-        guard (dataSyncProfile.interval > 0 || force),
-              !pendingAmbientSummaries.isEmpty else { return }
-        let pending = pendingAmbientSummaries
-        pendingAmbientSummaries.removeAll(keepingCapacity: true)
-        for summary in pending {
-            onSensorSummary?(summary)
-        }
-    }
-
-    private func enqueueAmbientSummary(_ summary: TaptionWatchSensorSummary) {
-        pendingAmbientSummaries.removeAll {
-            $0.sessionID == summary.sessionID
-                && $0.sequence == summary.sequence
-        }
-        pendingAmbientSummaries.append(summary)
-        if pendingAmbientSummaries.count > 40 {
-            pendingAmbientSummaries.removeFirst(
-                pendingAmbientSummaries.count - 40
-            )
-        }
     }
 
     private func stopSensorCollection(
@@ -1132,7 +1055,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             ? nil
             : routeSpeeds.reduce(0, +) / Double(routeSpeeds.count)
         let input = WatchBehaviorInput(
-            workoutKind: isAmbientCapture ? nil : workoutKind,
+            workoutKind: workoutKind,
             duration: endedAt.timeIntervalSince(startedAt),
             accelerometerSampleCount: accelerometerCount,
             accelerometerStandardDeviationG: accelerometerCount > 1
@@ -1221,7 +1144,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             behaviorEvidence: behavior.evidence,
             behaviorModelVersion: behavior.modelVersion,
             behaviorSegments: pendingBehaviorSegments,
-            isAmbient: isAmbientCapture
+            isAmbient: false
         )
     }
 }

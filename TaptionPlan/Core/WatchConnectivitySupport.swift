@@ -117,6 +117,8 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private let decoder = JSONDecoder()
     private let commandDefaults: UserDefaults
     private let commandDefaultsKey = "TaptionPlan.appliedWatchCommandIDs"
+    private let confirmationDefaultsKey =
+        "TaptionPlan.appliedWatchConfirmationIDs"
     private let lock = NSLock()
     private var latestPayloadData: Data?
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
@@ -124,6 +126,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         (@Sendable (TaptionWatchSensorSummary) -> Void)?
     private var healthSnapshotHandler:
         (@Sendable (TaptionWatchHealthSnapshot) -> Void)?
+    /// 워치가 보낸 "맞아요 / 아니에요" 응답. AppModel이 별도로 연결한다.
+    private var activityConfirmationHandler:
+        (@Sendable (TaptionWatchActivityConfirmation) -> Void)?
     private var statusHandler: (@Sendable (AppleWatchConnectionState) -> Void)?
 
     override init() {
@@ -139,11 +144,15 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         onHealthSnapshot: @escaping @Sendable (
             TaptionWatchHealthSnapshot
         ) -> Void = { _ in },
+        onActivityConfirmation: @escaping @Sendable (
+            TaptionWatchActivityConfirmation
+        ) -> Void = { _ in },
         onStatusChange: @escaping @Sendable (AppleWatchConnectionState) -> Void
     ) {
         commandHandler = onCommand
         sensorSummaryHandler = onSensorSummary
         healthSnapshotHandler = onHealthSnapshot
+        activityConfirmationHandler = onActivityConfirmation
         statusHandler = onStatusChange
         guard WCSession.isSupported() else {
             onStatusChange(.unsupported)
@@ -306,6 +315,18 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             healthSnapshotHandler?(snapshot)
             accepted = true
         }
+        if let data = envelope[
+            TaptionWatchEnvelope.activityConfirmationKey
+        ] as? Data,
+        let confirmation = try? decoder.decode(
+            TaptionWatchActivityConfirmation.self,
+            from: data
+        ),
+        // 확인 응답은 실시간 메시지와 백그라운드 큐로 두 번 도착할 수 있다.
+        markAsNew(confirmation.id, key: confirmationDefaultsKey) {
+            activityConfirmationHandler?(confirmation)
+            accepted = true
+        }
         return accepted
     }
 
@@ -347,24 +368,24 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 TaptionWatchCommand.self,
                 from: data
               ),
-              markCommandAsNew(command.id) else {
+              markAsNew(command.id, key: commandDefaultsKey) else {
             return false
         }
         commandHandler?(command)
         return true
     }
 
-    private func markCommandAsNew(_ id: UUID) -> Bool {
+    private func markAsNew(_ id: UUID, key storeKey: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        var values = commandDefaults.stringArray(forKey: commandDefaultsKey) ?? []
+        var values = commandDefaults.stringArray(forKey: storeKey) ?? []
         let key = id.uuidString
         guard !values.contains(key) else { return false }
         values.append(key)
         if values.count > 100 {
             values.removeFirst(values.count - 100)
         }
-        commandDefaults.set(values, forKey: commandDefaultsKey)
+        commandDefaults.set(values, forKey: storeKey)
         return true
     }
 

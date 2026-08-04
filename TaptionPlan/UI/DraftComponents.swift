@@ -232,6 +232,13 @@ struct DraftScalePicker: View {
     }
 }
 
+enum DraftBottomBarMetrics {
+    /// 하단 탭 막대는 `safeAreaInset`으로 화면 위에 떠 있고, 그 인셋은
+    /// `NavigationStack` 안쪽 화면의 안전 영역까지 내려오지 않는다. 스크롤
+    /// 화면은 마지막 줄이 막대 뒤로 숨지 않도록 이만큼을 직접 비워 둔다.
+    static let contentInset: CGFloat = 104
+}
+
 struct DraftBottomNavigationBar: View {
     @Bindable var model: AppModel
 

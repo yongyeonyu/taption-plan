@@ -1,8 +1,26 @@
 import SwiftUI
 
+/// 워치 화면이 확인을 받는 대상. 진행 중인 계획이 있으면 계획이,
+/// 없으면 센서가 마지막으로 추정한 행동이 대상이 된다.
+private struct WatchConfirmationSubject: Identifiable, Hashable {
+    var id: String
+    var title: String
+    var detail: String
+    var planID: UUID?
+    var behavior: WatchBehaviorKind?
+    var startedAt: Date
+    var endedAt: Date
+
+    var isMovement: Bool { behavior?.isMovement ?? false }
+}
+
 struct WatchContentView: View {
     @EnvironmentObject private var connectivity: WatchConnectivityController
     @EnvironmentObject private var workout: WatchWorkoutManager
+
+    @State private var correctionSubject: WatchConfirmationSubject?
+    @State private var acknowledgedSubjectID: String?
+    @State private var acknowledgedLabel: String?
 
     var body: some View {
         NavigationStack {
@@ -20,6 +38,9 @@ struct WatchContentView: View {
                 WatchLaunchDiagnostics.mark("connectivity-prepared")
                 workout.beginCaptureAfterFirstRender()
                 WatchLaunchDiagnostics.mark("launch-complete")
+            }
+            .sheet(item: $correctionSubject) { subject in
+                correctionList(for: subject)
             }
             .alert(
                 "확인해 주세요",
@@ -44,25 +65,26 @@ struct WatchContentView: View {
         let nextItems = Array(
             connectivity.upcomingItems(at: date).prefix(3)
         )
+        let subject = subject(for: currentItems, at: date)
         return VStack(alignment: .leading, spacing: 8) {
             syncHeader
-            watchCollectionStatus
+            confirmationCard(for: subject)
             WatchCatRunner(
                 style: connectivity.payload?.catStyle ?? "calico",
                 reducesMotion: connectivity.payload?.reducesMotion ?? false,
                 isRunning: !currentItems.isEmpty
                     || workout.isActive
-                    || workout.isMotionRecording,
+                    || (subject?.isMovement ?? false),
                 date: date
             )
+            if workout.isActive {
+                workoutMetrics(at: date)
+            }
             quickWorkoutControls
             if currentItems.isEmpty {
                 emptyCurrentCard
             } else {
                 currentSection(currentItems, at: date)
-            }
-            if workout.isActive {
-                workoutMetrics(at: date)
             }
             if nextItems.isEmpty {
                 emptyNextCard
@@ -70,8 +92,197 @@ struct WatchContentView: View {
                 upcomingSection(nextItems)
             }
             todaySummaryCard(at: date)
+            watchCollectionStatus
         }
     }
+
+    // MARK: - 확인
+
+    private func subject(
+        for currentItems: [TaptionWatchPlanItem],
+        at date: Date
+    ) -> WatchConfirmationSubject? {
+        if let item = currentItems.first {
+            return WatchConfirmationSubject(
+                id: "plan-\(item.id.uuidString)",
+                title: item.title,
+                detail: item.categoryName.map { "계획 · \($0)" } ?? "계획",
+                planID: item.id,
+                behavior: nil,
+                startedAt: item.actualStartedAt ?? item.startsAt,
+                endedAt: min(date, item.endsAt)
+            )
+        }
+        guard let observation = workout.latestObservation else { return nil }
+        let percent = Int((observation.confidenceScore * 100).rounded())
+        return WatchConfirmationSubject(
+            id: "behavior-\(observation.behavior.rawValue)"
+                + "-\(Int(observation.endedAt.timeIntervalSince1970))",
+            title: observation.behavior.title,
+            detail: "센서 추정 · \(percent)%",
+            planID: nil,
+            behavior: observation.behavior,
+            startedAt: observation.startedAt,
+            endedAt: observation.endedAt
+        )
+    }
+
+    @ViewBuilder
+    private func confirmationCard(
+        for subject: WatchConfirmationSubject?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("지금 이거 맞나요?")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(subject?.title ?? "아직 모르겠어요")
+                .font(.title3.weight(.bold))
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+            Text(subject?.detail ?? "손목 움직임을 더 모으는 중")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            if let acknowledgedLabel,
+               acknowledgedSubjectID == subject?.id {
+                Label(acknowledgedLabel, systemImage: "checkmark.circle.fill")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.green)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 4)
+            } else {
+                HStack(spacing: 6) {
+                    if let subject {
+                        Button {
+                            confirm(subject)
+                        } label: {
+                            Label("맞아요", systemImage: "hand.thumbsup.fill")
+                                .font(.caption.weight(.bold))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                    }
+                    Button {
+                        correctionSubject = subject ?? unknownSubject()
+                    } label: {
+                        Label(
+                            subject == nil ? "알려주기" : "아니에요",
+                            systemImage: "pencil"
+                        )
+                        .font(.caption.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
+                }
+            }
+        }
+        .padding(11)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color.white.opacity(0.12),
+            in: RoundedRectangle(cornerRadius: 16)
+        )
+    }
+
+    private func unknownSubject() -> WatchConfirmationSubject {
+        let now = Date.now
+        return WatchConfirmationSubject(
+            id: "unknown-\(Int(now.timeIntervalSince1970))",
+            title: "아직 모르겠어요",
+            detail: "직접 알려주기",
+            planID: nil,
+            behavior: nil,
+            startedAt: now.addingTimeInterval(-5 * 60),
+            endedAt: now
+        )
+    }
+
+    private func correctionList(
+        for subject: WatchConfirmationSubject
+    ) -> some View {
+        NavigationStack {
+            List {
+                Section("실제로 무엇을 했나요?") {
+                    ForEach(Self.correctionOptions, id: \.self) { kind in
+                        Button {
+                            correct(subject, to: kind)
+                        } label: {
+                            Label(kind.title, systemImage: symbol(for: kind))
+                                .font(.body)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("정정")
+        }
+    }
+
+    /// 새 분류 체계를 만들지 않는다. 기존 `WatchBehaviorKind`에서 사용자가
+    /// 고를 수 없는 "활동(unknown)"만 뺀 목록이다.
+    private static let correctionOptions: [WatchBehaviorKind] =
+        WatchBehaviorKind.allCases.filter { $0 != .unknown }
+
+    private func symbol(for kind: WatchBehaviorKind) -> String {
+        switch kind {
+        case .walking: "figure.walk"
+        case .running: "figure.run"
+        case .cycling: "bicycle"
+        case .stairsUp: "figure.stairs"
+        case .stairsDown: "figure.stairs"
+        case .elevator: "arrow.up.arrow.down"
+        case .automotive: "car.fill"
+        case .publicTransit: "bus.fill"
+        case .subway: "tram.fill"
+        case .exercise: "dumbbell.fill"
+        case .brushingTeeth: "mouth.fill"
+        case .eating: "fork.knife"
+        case .typing: "keyboard"
+        case .housework: "house.fill"
+        case .sleep: "bed.double.fill"
+        case .lying: "bed.double"
+        case .sitting: "chair.fill"
+        case .standing: "figure.stand"
+        case .stationary, .unknown: "pause.circle"
+        }
+    }
+
+    private func confirm(_ subject: WatchConfirmationSubject) {
+        connectivity.sendActivityConfirmation(
+            TaptionWatchActivityConfirmation(
+                observedStartedAt: subject.startedAt,
+                observedEndedAt: subject.endedAt,
+                isCorrect: true,
+                observedPlanID: subject.planID,
+                observedPlanTitle: subject.planID == nil ? nil : subject.title,
+                observedBehavior: subject.behavior
+            )
+        )
+        acknowledgedSubjectID = subject.id
+        acknowledgedLabel = "고마워요"
+    }
+
+    private func correct(
+        _ subject: WatchConfirmationSubject,
+        to kind: WatchBehaviorKind
+    ) {
+        connectivity.sendActivityConfirmation(
+            TaptionWatchActivityConfirmation(
+                observedStartedAt: subject.startedAt,
+                observedEndedAt: subject.endedAt,
+                isCorrect: false,
+                observedPlanID: subject.planID,
+                observedPlanTitle: subject.planID == nil ? nil : subject.title,
+                observedBehavior: subject.behavior,
+                correctedBehavior: kind
+            )
+        )
+        acknowledgedSubjectID = subject.id
+        acknowledgedLabel = "\(kind.title)(으)로 바꿨어요"
+        correctionSubject = nil
+    }
+
+    // MARK: - 계획
 
     private func currentSection(
         _ items: [TaptionWatchPlanItem],
@@ -124,18 +335,6 @@ struct WatchContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
-            } else if workout.isMotionRecording {
-                Button(role: .destructive) {
-                    workout.stopMotionRecording()
-                } label: {
-                    Label("가속도 기록 종료", systemImage: "stop.circle.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
-                Text("손목 움직임을 저장하는 중 · \(workout.archivedAccelerationSampleCount)개")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
             } else {
                 HStack(spacing: 5) {
                     Button {
@@ -161,11 +360,6 @@ struct WatchContentView: View {
                         }
                     } label: {
                         Label("달리기", systemImage: "figure.run")
-                    }
-                    Button {
-                        _ = workout.startMotionRecording()
-                    } label: {
-                        Label("가속도", systemImage: "waveform.path.ecg")
                     }
                 }
                 .buttonStyle(.bordered)

@@ -78,14 +78,6 @@ struct PlanEditorRequest: Identifiable, Equatable {
     let id: UUID
 }
 
-enum ReviewScale: String, CaseIterable, Identifiable {
-    case week = "주"
-    case month = "월"
-    case year = "년"
-
-    var id: Self { self }
-}
-
 enum RootTab: String, CaseIterable, Identifiable {
     case schedule = "시간표"
     case goals = "루틴"

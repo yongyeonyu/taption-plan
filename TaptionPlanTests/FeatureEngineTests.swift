@@ -5777,6 +5777,281 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    // MARK: - 기록 계층·차트
+
+    private func makeActual(
+        _ title: String,
+        _ categoryID: String,
+        start: Date,
+        minutes: Double,
+        source: ActualSource = .motion,
+        behavior: String? = nil
+    ) -> ActualRecord {
+        ActualRecord(
+            planID: nil,
+            title: title,
+            categoryID: categoryID,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(minutes * 60),
+            source: source,
+            behavior: behavior
+        )
+    }
+
+    func testRecordGroupingSortsCategoriesByTotalAndChildrenByStart() {
+        let day = makeDate(2026, 8, 4)
+        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
+        let actuals = [
+            makeActual(
+                "Safari",
+                "appUsage",
+                start: day.addingTimeInterval(10 * hour),
+                minutes: 22,
+                source: .appUsage
+            ),
+            makeActual(
+                "카카오톡",
+                "appUsage",
+                start: day.addingTimeInterval(9 * hour),
+                minutes: 38,
+                source: .appUsage
+            ),
+            makeActual(
+                "수면",
+                "sleep",
+                start: day,
+                minutes: 7 * 60
+            ),
+        ]
+
+        let groups = ActualRecordGroupingEngine.groups(
+            actuals: actuals,
+            in: span,
+            categories: CategoryCatalog.builtIn,
+            asOf: day.addingTimeInterval(24 * hour)
+        )
+
+        XCTAssertEqual(groups.map(\.id), ["sleep", "appUsage"])
+        XCTAssertEqual(groups[0].name, "수면")
+        // 사용자 카테고리에 없는 자동 줄도 한글 이름을 갖는다.
+        XCTAssertEqual(groups[1].name, "어플")
+        XCTAssertEqual(groups[0].duration, 7 * hour)
+        XCTAssertEqual(groups[1].duration, 60 * 60)
+        XCTAssertEqual(groups[1].children.map(\.title), ["카카오톡", "Safari"])
+        XCTAssertEqual(groups[1].children.map(\.duration), [38 * 60, 22 * 60])
+    }
+
+    func testRecordGroupingMergesRepeatedTitlesAndClipsToSpan() {
+        let day = makeDate(2026, 8, 4)
+        let span = TimeSpan(
+            start: day.addingTimeInterval(9 * hour),
+            end: day.addingTimeInterval(12 * hour)
+        )
+        let actuals = [
+            // 기간 앞으로 삐져나온 기록은 겹치는 만큼만 센다.
+            makeActual(
+                "회의",
+                "work",
+                start: day.addingTimeInterval(8.5 * hour),
+                minutes: 60
+            ),
+            makeActual(
+                "회의",
+                "work",
+                start: day.addingTimeInterval(10 * hour),
+                minutes: 30
+            ),
+            // 같은 제목이 겹치면 한 번만 센다.
+            makeActual(
+                "회의",
+                "work",
+                start: day.addingTimeInterval(10 * hour + 15 * 60),
+                minutes: 30
+            ),
+        ]
+
+        let groups = ActualRecordGroupingEngine.groups(
+            actuals: actuals,
+            in: span,
+            categories: CategoryCatalog.builtIn,
+            asOf: day.addingTimeInterval(24 * hour)
+        )
+
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups[0].name, "업무")
+        XCTAssertEqual(groups[0].children.count, 1)
+        XCTAssertEqual(groups[0].children[0].occurrenceCount, 3)
+        XCTAssertEqual(groups[0].children[0].duration, 75 * 60)
+        XCTAssertEqual(groups[0].duration, 75 * 60)
+    }
+
+    func testRecordGroupingRoutesActivityRecordsToSleepAndMovement() {
+        let day = makeDate(2026, 8, 4)
+        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
+        let actuals = [
+            makeActual("수면 추정", "activity", start: day, minutes: 60),
+            makeActual(
+                "걷기",
+                "activity",
+                start: day.addingTimeInterval(9 * hour),
+                minutes: 30
+            ),
+            makeActual(
+                "서 있기",
+                "activity",
+                start: day.addingTimeInterval(11 * hour),
+                minutes: 10
+            ),
+        ]
+
+        let groups = ActualRecordGroupingEngine.groups(
+            actuals: actuals,
+            in: span,
+            categories: CategoryCatalog.builtIn,
+            asOf: day.addingTimeInterval(24 * hour)
+        )
+
+        XCTAssertEqual(
+            Set(groups.map(\.id)),
+            ["sleep", "movement", "activity"]
+        )
+        XCTAssertEqual(groups.first { $0.id == "sleep" }?.duration, 60 * 60)
+        XCTAssertEqual(groups.first { $0.id == "movement" }?.duration, 30 * 60)
+        XCTAssertEqual(groups.first { $0.id == "activity" }?.duration, 10 * 60)
+    }
+
+    func testClockRingsPlaceArcsAtTheirTimeOfDay() {
+        let day = makeDate(2026, 8, 4)
+        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
+        let actuals = [
+            makeActual("수면", "sleep", start: day, minutes: 6 * 60),
+            makeActual(
+                "걷기",
+                "movement",
+                start: day.addingTimeInterval(12 * hour),
+                minutes: 60
+            ),
+        ]
+
+        let rings = RecordChartEngine.clockRings(
+            actuals: actuals,
+            in: span,
+            asOf: day.addingTimeInterval(24 * hour)
+        )
+
+        XCTAssertEqual(rings.map(\.categoryID), ["sleep", "movement"])
+        XCTAssertEqual(rings[0].arcs.count, 1)
+        XCTAssertEqual(rings[0].arcs[0].startFraction, 0, accuracy: 0.0001)
+        XCTAssertEqual(rings[0].arcs[0].endFraction, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(rings[1].arcs[0].startFraction, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(
+            rings[1].arcs[0].endFraction,
+            0.5 + 1.0 / 24,
+            accuracy: 0.0001
+        )
+    }
+
+    func testChartBucketsSplitDurationAcrossDayBoundaries() {
+        let start = makeDate(2026, 8, 3)
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(7 * 24 * hour)
+        )
+        let actuals = [
+            // 자정을 넘긴 수면은 두 칸으로 갈린다.
+            makeActual(
+                "수면",
+                "sleep",
+                start: start.addingTimeInterval(23 * hour),
+                minutes: 4 * 60
+            ),
+            makeActual(
+                "걷기",
+                "movement",
+                start: start.addingTimeInterval(10 * hour),
+                minutes: 30
+            ),
+        ]
+
+        let buckets = RecordChartEngine.buckets(
+            actuals: actuals,
+            in: span,
+            unit: .day,
+            calendar: utcCalendar,
+            asOf: start.addingTimeInterval(7 * 24 * hour)
+        )
+
+        XCTAssertEqual(buckets.count, 7)
+        XCTAssertEqual(buckets[0].total, 90 * 60)
+        XCTAssertEqual(
+            buckets[0].slices.map(\.categoryID),
+            ["sleep", "movement"]
+        )
+        XCTAssertEqual(buckets[0].slices[0].duration, 60 * 60)
+        XCTAssertEqual(buckets[1].total, 3 * hour)
+        XCTAssertEqual(buckets[2].total, 0)
+    }
+
+    func testChartBucketsUseOneColumnPerMonthForTheYearScale() {
+        let start = makeDate(2026, 1, 1)
+        let span = TimeSpan(start: start, end: makeDate(2027, 1, 1))
+        let actuals = [
+            makeActual(
+                "수면",
+                "sleep",
+                start: makeDate(2026, 3, 2, 22),
+                minutes: 6 * 60
+            )
+        ]
+
+        let buckets = RecordChartEngine.buckets(
+            actuals: actuals,
+            in: span,
+            unit: .month,
+            calendar: utcCalendar,
+            asOf: makeDate(2027, 1, 1)
+        )
+
+        XCTAssertEqual(buckets.count, 12)
+        XCTAssertEqual(buckets[2].total, 6 * hour)
+        XCTAssertEqual(buckets.map(\.total).reduce(0, +), 6 * hour)
+    }
+
+    func testAutomaticRowVocabularyIsSharedByEverySurface() {
+        XCTAssertEqual(TimelineRowKind.appUsage.title, "어플")
+        XCTAssertEqual(ScreenTimeUsageRecordEngine.laneTitle, "어플")
+        XCTAssertEqual(TaptionWidgetLane.appUsage.title, "어플")
+        XCTAssertEqual(
+            TaptionWidgetLane.movement.systemImage,
+            TimelineRowKind.movement.systemImage
+        )
+        XCTAssertEqual(TaptionWidgetLane.schedule.title, "일정")
+        XCTAssertEqual(TaptionWidgetLane.action.title, "액션")
+        XCTAssertEqual(
+            TimelineRowOrder.defaults,
+            [
+                "calendar",
+                "location",
+                "movement",
+                "sleep",
+                "activity",
+                "appUsage",
+                "weather",
+                "photo",
+            ]
+        )
+        XCTAssertNil(TimelineRowKind(categoryID: "work"))
+        XCTAssertEqual(TimelineRowKind(categoryID: "schedule"), .calendar)
+    }
+
+    func testDurationTextMatchesTheScreenTimeWording() {
+        XCTAssertEqual(DurationText.korean(0), "0분")
+        XCTAssertEqual(DurationText.korean(38 * 60), "38분")
+        XCTAssertEqual(DurationText.korean(2 * hour), "2시간")
+        XCTAssertEqual(DurationText.korean(2 * hour + 14 * 60), "2시간 14분")
+        XCTAssertEqual(DurationText.signedKorean(-90 * 60), "－1시간 30분")
+    }
+
     private var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

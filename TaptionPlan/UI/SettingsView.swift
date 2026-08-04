@@ -294,7 +294,7 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 13)
                 .padding(.top, 11)
-                .padding(.bottom, 104)
+                .padding(.bottom, DraftBottomBarMetrics.contentInset)
             }
             .scrollDismissesKeyboard(.interactively)
             .scrollBounceBehavior(.always)
@@ -842,42 +842,24 @@ struct SettingsView: View {
                 }
 
                 Spacer(minLength: 4)
-                Text(model.settings.watchAccelerationProfile.displayName)
-                    .font(
-                        .taption(
-                            size: SettingsTypography.value,
-                            weight: .bold
-                        )
+                // CMSensorRecorder는 앱이 꺼져 있어도 시스템이 계속 기록하므로
+                // 수집 간격이라는 개념이 없다. 켬·끔만 남긴다.
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: {
+                            model.settings.watchAccelerationProfile != .off
+                        },
+                        set: { enabled in
+                            model.setWatchAccelerationProfile(
+                                enabled ? .balanced : .off
+                            )
+                        }
                     )
-                    .foregroundStyle(Color.tpHealthDark)
-            }
-
-            Slider(
-                value: Binding(
-                    get: {
-                        Double(model.settings.watchAccelerationProfile.rawValue)
-                    },
-                    set: { value in
-                        guard let profile = TaptionWatchAccelerationProfile(
-                            rawValue: Int(value.rounded())
-                        ) else { return }
-                        model.setWatchAccelerationProfile(profile)
-                    }
-                ),
-                in: 0...3,
-                step: 1
-            )
-            .tint(Color.tpHealthDark)
-            .accessibilityLabel("Apple Watch 가속도 수집 간격")
-            .accessibilityValue(
-                model.settings.watchAccelerationProfile.subtitle
-            )
-
-            HStack {
-                watchProfileLabel("끔", alignment: .leading)
-                watchProfileLabel("15분", alignment: .center)
-                watchProfileLabel("5분", alignment: .center)
-                watchProfileLabel("1분", alignment: .trailing)
+                )
+                .labelsHidden()
+                .tint(Color.tpHealthDark)
+                .accessibilityLabel("Apple Watch 가속도 수집")
             }
         }
         .padding(.horizontal, 10)

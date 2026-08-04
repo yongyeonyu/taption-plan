@@ -776,6 +776,47 @@ enum WatchBehaviorClassifier {
     }
 }
 
+/// 워치가 "지금 이걸 하고 있다"고 보여준 추정에 대한 사용자의 응답.
+/// 콤플리케이션은 모든 것을 보여주기엔 너무 작으므로, 워치 앱은 이 확인과
+/// 정정만 담당하고 실제 반영은 iPhone이 한다.
+struct TaptionWatchActivityConfirmation: Codable, Hashable, Sendable {
+    var id: UUID
+    var respondedAt: Date
+    /// 워치가 보여준 추정의 시간 범위.
+    var observedStartedAt: Date
+    var observedEndedAt: Date
+    var isCorrect: Bool
+    /// 계획 항목을 보여준 경우의 원본.
+    var observedPlanID: UUID?
+    var observedPlanTitle: String?
+    /// 센서 추정을 보여준 경우의 원본.
+    var observedBehavior: WatchBehaviorKind?
+    /// 사용자가 고른 실제 행동. `isCorrect`가 true면 nil이다.
+    var correctedBehavior: WatchBehaviorKind?
+
+    init(
+        id: UUID = UUID(),
+        respondedAt: Date = .now,
+        observedStartedAt: Date,
+        observedEndedAt: Date,
+        isCorrect: Bool,
+        observedPlanID: UUID? = nil,
+        observedPlanTitle: String? = nil,
+        observedBehavior: WatchBehaviorKind? = nil,
+        correctedBehavior: WatchBehaviorKind? = nil
+    ) {
+        self.id = id
+        self.respondedAt = respondedAt
+        self.observedStartedAt = observedStartedAt
+        self.observedEndedAt = max(observedStartedAt, observedEndedAt)
+        self.isCorrect = isCorrect
+        self.observedPlanID = observedPlanID
+        self.observedPlanTitle = observedPlanTitle
+        self.observedBehavior = observedBehavior
+        self.correctedBehavior = isCorrect ? nil : correctedBehavior
+    }
+}
+
 enum TaptionWatchWorkoutRequestAction: String, Codable, Sendable {
     case start
     case stop
@@ -936,9 +977,13 @@ struct TaptionWatchDaySummary: Codable, Hashable, Sendable {
     var activeMinutes: Int
 }
 
-/// iPhone-owned policy for low-power, periodic Watch motion sampling.
-/// The Watch receives this with the normal timeline payload so an offline
-/// payload remains safe and backward compatible.
+/// iPhone-owned policy for Watch motion sampling.  The Watch receives this
+/// with the normal timeline payload so an offline payload remains safe and
+/// backward compatible.
+///
+/// 주변 가속도 수집은 이제 `CMSensorRecorder`가 맡는다. 시스템이 앱과 무관하게
+/// 계속 기록하므로 `interval`은 워치의 듀티 사이클을 더 이상 결정하지 않고,
+/// 이 프로필은 사실상 켜기/끄기 스위치로 동작한다.
 enum TaptionWatchAccelerationProfile: Int, Codable, CaseIterable, Hashable, Sendable {
     case off = 0
     case batterySaver = 1
@@ -969,8 +1014,8 @@ enum TaptionWatchAccelerationProfile: Int, Codable, CaseIterable, Hashable, Send
     }
 
     var subtitle: String {
-        guard let intervalMinutes else { return "자동 수집 안 함" }
-        return intervalMinutes.description + "분마다 30초 수집"
+        guard interval > 0 else { return "자동 수집 안 함" }
+        return "앱이 꺼져 있어도 배경에서 계속 기록"
     }
 }
 
@@ -1128,6 +1173,7 @@ enum TaptionWatchEnvelope {
     static let sensorSummaryKey = "taption.watch.sensor-summary"
     static let healthSnapshotKey = "taption.watch.health-snapshot"
     static let workoutRequestKey = "taption.watch.workout-request"
+    static let activityConfirmationKey = "taption.watch.activity-confirmation"
     static let refreshRequestKey = "taption.watch.refresh-request"
     static let dataSyncRequestKey = "taption.watch.data-sync-request"
     static let acceptedKey = "taption.watch.accepted"
@@ -1136,6 +1182,36 @@ enum TaptionWatchEnvelope {
 
 /// Apple Watch가 보내온 직전 실행 기록. 워치 앱이 실행 중 종료될 때 어느
 /// 단계까지 갔는지 iPhone 설정 화면에서 확인하기 위한 저장소다.
+/// 워치에서 받은 "맞아요 / 아니에요" 응답을 원본과 별개로 모아 둔다.
+/// 자동 센서 기록은 원본을 보존해야 하므로 기록을 고치지 않고, 사용자가
+/// 붙인 라벨로만 쌓아 나중에 학습·교정에 쓴다.
+enum WatchActivityConfirmationStore {
+    private static let key = "TaptionPlan.watchActivityConfirmations"
+    private static let limit = 500
+
+    static func append(_ value: TaptionWatchActivityConfirmation) {
+        var all = read()
+        guard !all.contains(where: { $0.id == value.id }) else { return }
+        all.append(value)
+        if all.count > limit {
+            all.removeFirst(all.count - limit)
+        }
+        guard let data = try? JSONEncoder().encode(all) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func read() -> [TaptionWatchActivityConfirmation] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let values = try? JSONDecoder().decode(
+                [TaptionWatchActivityConfirmation].self,
+                from: data
+              ) else {
+            return []
+        }
+        return values
+    }
+}
+
 enum WatchLaunchReportStore {
     private static let key = "TaptionPlan.watchLaunchReport"
     private static let dateKey = "TaptionPlan.watchLaunchReportDate"
