@@ -3434,7 +3434,7 @@ private struct TimelineDetailPanel: View {
                         .font(.taption(size: 9, weight: .bold))
                         .foregroundStyle(routeColor(for: travel.mode))
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("알고리즘 결과 · (timelineTravelModeName(travel.mode))")
+                        Text("알고리즘 결과 · \(timelineTravelModeName(travel.mode))")
                             .font(.taption(size: 9, weight: .semibold))
                         Text(
                             "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened)) · \(confidenceLabel(travel.confidence))"

@@ -1930,7 +1930,25 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.allowsBackgroundLocationUpdates =
             configuration.allowsBackgroundLocation
             && locationManager.authorizationStatus == .authorizedAlways
+        updateBackgroundWakeMonitoring()
         restartSamplingTask()
+    }
+
+    /// 듀티사이클 사이에 앱이 suspend되어도 위치 이벤트로 다시 깨어나
+    /// 표본을 남길 수 있도록 저전력 모니터링을 켠다. 이것이 없으면
+    /// 예약된 간격 기록이 포그라운드에서만 동작한다.
+    private func updateBackgroundWakeMonitoring() {
+        guard isCollecting,
+              configuration.allowsBackgroundLocation,
+              locationManager.authorizationStatus == .authorizedAlways else {
+            locationManager.stopMonitoringSignificantLocationChanges()
+            locationManager.stopMonitoringVisits()
+            return
+        }
+        if CLLocationManager.significantLocationChangeMonitoringAvailable() {
+            locationManager.startMonitoringSignificantLocationChanges()
+        }
+        locationManager.startMonitoringVisits()
     }
 
     private func restartSamplingTask() {
@@ -2171,7 +2189,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestLocation = location
         latestMotion = .stationary
         latestMotionConfidence = .high
-        emit()
+        // 방문 이벤트는 백그라운드 웨이크업으로 드물게 도착하므로
+        // 발행 간격 제한 없이 즉시 기록한다.
+        emit(force: true)
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -2179,6 +2199,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             manager.allowsBackgroundLocationUpdates =
                 configuration.allowsBackgroundLocation
                 && manager.authorizationStatus == .authorizedAlways
+            updateBackgroundWakeMonitoring()
             if activeTrackingSession != nil || sensorStreamsRunning {
                 manager.startUpdatingLocation()
             } else {

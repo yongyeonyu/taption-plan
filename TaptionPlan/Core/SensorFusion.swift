@@ -929,6 +929,49 @@ struct FloorEstimator: Sendable {
     }
 }
 
+/// 연속 고도 표본 사이의 급격한 점프를 이상치로 걸러낸다. 실제 층 이동은
+/// 다음 표본이 같은 수준을 다시 확인하므로 한 표본 지연 후 수용된다.
+struct AltitudeSpikeGate: Sendable {
+    static let maximumJumpMeters = 12.0
+    static let confirmationCount = 2
+
+    private var lastAcceptedMeters: Double?
+    private var pending: (meters: Double, count: Int)?
+
+    mutating func reset() {
+        lastAcceptedMeters = nil
+        pending = nil
+    }
+
+    /// 표본이 사용 가능하면 true. 스파이크로 판정되면 false를 돌려주고
+    /// 같은 수준이 연속 확인될 때까지 보류한다.
+    mutating func accept(_ meters: Double) -> Bool {
+        guard meters.isFinite else { return false }
+        guard let last = lastAcceptedMeters else {
+            lastAcceptedMeters = meters
+            return true
+        }
+        if abs(meters - last) <= Self.maximumJumpMeters {
+            lastAcceptedMeters = meters
+            pending = nil
+            return true
+        }
+        if let held = pending,
+           abs(held.meters - meters) <= Self.maximumJumpMeters {
+            let count = held.count + 1
+            if count >= Self.confirmationCount {
+                lastAcceptedMeters = meters
+                pending = nil
+                return true
+            }
+            pending = (meters, count)
+        } else {
+            pending = (meters, 1)
+        }
+        return false
+    }
+}
+
 struct FloorCalibrationEngine: Sendable {
     var maximumReferenceDistanceMeters: Double = 120
 
@@ -1869,6 +1912,56 @@ enum AppleDeviceGroundTruthEngine {
 
         return (gpsSegments + watchSegments + motionSegments)
             .sorted { $0.span.start < $1.span.start }
+    }
+
+    /// 듀티사이클 샘플링이 만든 같은 모드의 이동 조각을 하나로 잇는다.
+    /// 조각 사이에 체류가 감지되어 있으면 실제로 멈춘 것이므로 잇지 않는다.
+    static func coalescingTravel(
+        _ segments: [TravelSegment],
+        stays: [PlaceStay],
+        maximumGap: TimeInterval
+    ) -> [TravelSegment] {
+        var result: [TravelSegment] = []
+        for segment in segments.sorted(by: { $0.span.start < $1.span.start }) {
+            guard var last = result.last,
+                  last.mode == segment.mode,
+                  segment.span.start.timeIntervalSince(last.span.end)
+                      <= maximumGap,
+                  !stays.contains(where: { stay in
+                      let gap = TimeSpan(
+                          start: last.span.end,
+                          end: segment.span.start
+                      )
+                      let overlap = stay.span.intersection(with: gap)
+                      return (overlap?.duration ?? 0) >= 180
+                  }) else {
+                result.append(segment)
+                continue
+            }
+            last.span = TimeSpan(
+                start: last.span.start,
+                end: max(last.span.end, segment.span.end)
+            )
+            last.distanceMeters += segment.distanceMeters
+            if confidenceRank(segment.confidence)
+                > confidenceRank(last.confidence) {
+                last.confidence = segment.confidence
+            }
+            last.evidence = Array(Set(last.evidence + segment.evidence))
+                .sorted()
+            last.isConfirmed = last.isConfirmed || segment.isConfirmed
+            last.toPlaceID = segment.toPlaceID ?? last.toPlaceID
+            result[result.count - 1] = last
+        }
+        return result
+    }
+
+    private static func confidenceRank(_ level: ConfidenceLevel) -> Int {
+        switch level {
+        case .low: 0
+        case .medium: 1
+        case .high: 2
+        }
     }
 
     static func replacingHealthKitActuals(

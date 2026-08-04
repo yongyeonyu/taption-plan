@@ -14,6 +14,7 @@ struct WatchContentView: View {
                 .padding(.bottom, 8)
             }
             .navigationTitle("Taption")
+            .task { workout.beginCaptureAfterFirstRender() }
             .alert(
                 "확인해 주세요",
                 isPresented: Binding(

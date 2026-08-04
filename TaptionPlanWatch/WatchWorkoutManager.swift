@@ -355,9 +355,21 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         linkedPlan = nil
     }
 
+    /// Sensor hardware must never start before the first scene transaction
+    /// commits; the dispatch precondition trap it triggers kills the app at
+    /// launch on real hardware. The first view flips this from its .task.
+    private var isSceneReadyForCapture = false
+
+    func beginCaptureAfterFirstRender() {
+        guard !isSceneReadyForCapture else { return }
+        isSceneReadyForCapture = true
+        restartAutomaticCapture()
+    }
+
     private func restartAutomaticCapture() {
         stopScheduledCapture()
-        guard accelerationSettings?.isEnabled == true else { return }
+        guard isSceneReadyForCapture,
+              accelerationSettings?.isEnabled == true else { return }
         scheduledCaptureTask = Task { [weak self] in
             guard let self else { return }
             while !Task.isCancelled {

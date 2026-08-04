@@ -6,8 +6,8 @@
 	<true/>
 	<key>com.apple.developer.healthkit.background-delivery</key>
 	<true/>
-	<!-- com.apple.developer.family-controls는 Apple의 배포용 승인 전까지
-	     App Store 프로필에 포함될 수 없어 Release에서 제외한다. Debug에는 유지. -->
+	<key>com.apple.developer.family-controls</key>
+	<true/>
 	<key>com.apple.developer.family-controls.app-and-website-usage</key>
 	<true/>
 	<key>com.apple.developer.icloud-container-identifiers</key>

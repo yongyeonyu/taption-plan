@@ -1606,6 +1606,102 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(estimate?.confidence, .high)
     }
 
+    func testAltitudeSpikeGateSkipsSingleSpikeAndAcceptsConfirmedChange() {
+        var gate = AltitudeSpikeGate()
+        XCTAssertTrue(gate.accept(80))
+        XCTAssertTrue(gate.accept(83))
+        XCTAssertFalse(gate.accept(140))
+        XCTAssertTrue(gate.accept(84))
+        XCTAssertFalse(gate.accept(120))
+        XCTAssertTrue(gate.accept(121))
+        XCTAssertTrue(gate.accept(122))
+    }
+
+    func testCoalescingTravelMergesSameModeFragmentsAcrossSamplingGaps() {
+        let base = makeDate(2026, 8, 4, 11, 40)
+        let first = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(120)),
+            distanceMeters: 100,
+            confidence: .medium,
+            evidence: ["iPhone Core Motion 기록"]
+        )
+        let second = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base.addingTimeInterval(360),
+                end: base.addingTimeInterval(480)
+            ),
+            distanceMeters: 150,
+            confidence: .high,
+            evidence: ["iPhone 걸음·거리 기록"]
+        )
+        let car = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base.addingTimeInterval(600),
+                end: base.addingTimeInterval(900)
+            ),
+            distanceMeters: 2_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+
+        let merged = AppleDeviceGroundTruthEngine.coalescingTravel(
+            [first, second, car],
+            stays: [],
+            maximumGap: 6 * 60
+        )
+
+        XCTAssertEqual(merged.count, 2)
+        XCTAssertEqual(merged[0].id, first.id)
+        XCTAssertEqual(
+            merged[0].span,
+            TimeSpan(start: base, end: base.addingTimeInterval(480))
+        )
+        XCTAssertEqual(merged[0].distanceMeters, 250)
+        XCTAssertEqual(merged[0].confidence, .high)
+        XCTAssertEqual(merged[1].mode, .car)
+    }
+
+    func testCoalescingTravelKeepsFragmentsSeparatedByStay() {
+        let base = makeDate(2026, 8, 4, 11, 40)
+        let first = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(120)),
+            distanceMeters: 100,
+            confidence: .medium,
+            evidence: ["iPhone Core Motion 기록"]
+        )
+        let second = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base.addingTimeInterval(360),
+                end: base.addingTimeInterval(480)
+            ),
+            distanceMeters: 150,
+            confidence: .high,
+            evidence: ["iPhone 걸음·거리 기록"]
+        )
+        let stay = PlaceStay(
+            placeKey: "cafe",
+            displayName: "카페",
+            span: TimeSpan(
+                start: base.addingTimeInterval(130),
+                end: base.addingTimeInterval(350)
+            ),
+            confidence: .high
+        )
+
+        let merged = AppleDeviceGroundTruthEngine.coalescingTravel(
+            [first, second],
+            stays: [stay],
+            maximumGap: 6 * 60
+        )
+
+        XCTAssertEqual(merged.count, 2)
+    }
+
     func testHomeFloorCalibrationRejectsFarAwayLocation() {
         let base = makeDate(2026, 7, 31, 18)
         let sessionID = UUID()

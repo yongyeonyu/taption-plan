@@ -542,6 +542,10 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            if !model.settings.floorCalibrationHistory.isEmpty {
+                calibrationHistoryList
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
@@ -553,6 +557,43 @@ struct SettingsView: View {
         .sheet(item: $selectedFrequentPlace) { place in
             FrequentPlaceDetailView(model: model, placeID: place.id)
         }
+    }
+
+    private var calibrationHistoryList: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("캘리브레이션 히스토리")
+                .font(.taption(size: 9, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+            ForEach(
+                model.settings.floorCalibrationHistory.suffix(10).reversed()
+            ) { event in
+                HStack(spacing: 5) {
+                    Image(
+                        systemName: event.isAutomatic
+                            ? "wand.and.stars"
+                            : "hand.tap"
+                    )
+                    .font(.taption(size: 8))
+                    .foregroundStyle(Color.tpPlaceDark)
+                    Text(
+                        "\(event.placeName) \(event.floor < 0 ? "지하 \(-event.floor)층" : "\(event.floor)층")"
+                    )
+                    .font(.taption(size: 8.5, weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    Text(event.isAutomatic ? "자동" : "수동")
+                        .font(.taption(size: 7.5))
+                        .foregroundStyle(Color.tpSecondary)
+                    Spacer(minLength: 4)
+                    Text(
+                        event.capturedAt,
+                        format: .dateTime.month().day().hour().minute()
+                    )
+                    .font(.taption(size: 7.5))
+                    .foregroundStyle(Color.tpSecondary)
+                }
+            }
+        }
+        .padding(.top, 3)
     }
 
     private var frequentPlacesSummary: String {

@@ -75,7 +75,7 @@ final class AppModel {
     private(set) var activeTrackingSession: TrackingSession?
     private(set) var trackingSessionWasRecovered = false
     private(set) var latestAltitudeEstimate: CalibratedAltitudeEstimate?
-    var floorCalibrationPrompt: FloorCalibrationPrompt? = nil
+    private(set) var floorCalibrationNotice: String? = nil
     private(set) var sleepSessions: [SleepSession] = []
     private(set) var lastHealthRefreshAt: Date?
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
@@ -83,7 +83,10 @@ final class AppModel {
     private(set) var lastAppUsageRefreshAt: Date?
     private(set) var appUsageRecordCount = 0
     var userFacingError: String?
-    @ObservationIgnored private var lastFloorCalibrationPromptKey: String? = nil
+    @ObservationIgnored private var lastAutoFloorCalibrationKey: String? = nil
+    @ObservationIgnored private var altitudeSpikeGate = AltitudeSpikeGate()
+    @ObservationIgnored private var altitudeGatePlaceID: UUID? = nil
+    @ObservationIgnored private var calibrationNoticeTask: Task<Void, Never>?
 
     var widgetSyncStatus: TaptionWidgetSyncStatus {
         TaptionWidgetSyncStatus.compare(
@@ -3351,10 +3354,17 @@ final class AppModel {
             pedometer: pedometer,
             healthEvidence: healthMovementEvidence
         )
-        let travel = MovementCorrectionEngine.applying(
-            snapshot.settings.movementCorrections,
-            to: inferredTravel,
-            places: basePlaces
+        let travel = AppleDeviceGroundTruthEngine.coalescingTravel(
+            MovementCorrectionEngine.applying(
+                snapshot.settings.movementCorrections,
+                to: inferredTravel,
+                places: basePlaces
+            ),
+            stays: basePlaces,
+            maximumGap: max(
+                5 * 60,
+                snapshot.settings.sensorCollectionProfile.interval + 60
+            )
         )
 
         snapshot.travel.removeAll {
@@ -3557,8 +3567,7 @@ final class AppModel {
             from: reading,
             floor: floor
         )
-        floorCalibrationPrompt = nil
-        lastFloorCalibrationPromptKey = nil
+        lastAutoFloorCalibrationKey = nil
         snapshot.settings.floorCalibration = nil
         snapshot.settings.frequentPlaces =
             AppFeatureSettings.mergedFrequentPlaces(
@@ -3583,8 +3592,7 @@ final class AppModel {
             return
         }
         snapshot.settings.frequentPlaces[index].clearLocation()
-        floorCalibrationPrompt = nil
-        lastFloorCalibrationPromptKey = nil
+        lastAutoFloorCalibrationKey = nil
         if let latestSensorReading {
             updateFloorEstimate(with: latestSensorReading)
         } else {
@@ -3602,40 +3610,72 @@ final class AppModel {
     ) {
         guard (-20...200).contains(floor), floor != 0,
               let reading = latestSensorReading,
-              reading.point != nil,
+              recordFloorCalibration(
+                  placeID: placeID,
+                  floor: floor,
+                  reading: reading,
+                  seaLevelAltitudeMeters:
+                      latestAltitudeEstimate?.seaLevelAltitudeMeters,
+                  isAutomatic: false
+              ) else {
+            userFacingError = "현재 위치·고도 센서를 읽은 뒤 다시 시도해 주세요."
+            return
+        }
+        lastAutoFloorCalibrationKey = nil
+        updateFloorEstimate(with: reading)
+    }
+
+    @discardableResult
+    private func recordFloorCalibration(
+        placeID: UUID,
+        floor: Int,
+        reading: SensorReading,
+        seaLevelAltitudeMeters: Double?,
+        isAutomatic: Bool
+    ) -> Bool {
+        guard reading.point != nil,
               let index = snapshot.settings.frequentPlaces.firstIndex(where: {
                   $0.id == placeID
               }) else {
-            userFacingError = "현재 위치·고도 센서를 읽은 뒤 다시 시도해 주세요."
-            return
+            return false
         }
         snapshot.settings.frequentPlaces[index].addFloorCalibration(
             from: reading,
             floor: floor
         )
-        floorCalibrationPrompt = nil
-        lastFloorCalibrationPromptKey = nil
+        snapshot.settings.floorCalibrationHistory.append(
+            FloorCalibrationEvent(
+                placeID: placeID,
+                placeName: snapshot.settings.frequentPlaces[index].name,
+                floor: floor,
+                seaLevelAltitudeMeters: seaLevelAltitudeMeters,
+                isAutomatic: isAutomatic,
+                capturedAt: reading.timestamp
+            )
+        )
+        let overflow = snapshot.settings.floorCalibrationHistory.count - 100
+        if overflow > 0 {
+            snapshot.settings.floorCalibrationHistory.removeFirst(overflow)
+        }
         snapshot.settings.frequentPlaces =
             AppFeatureSettings.mergedFrequentPlaces(
                 snapshot.settings.frequentPlaces
             )
-        updateFloorEstimate(with: reading)
         Task {
             await persist()
             await refreshSensorTimeline(containing: selectedDate)
         }
+        return true
     }
 
-    func acceptFloorCalibrationPrompt() {
-        guard let prompt = floorCalibrationPrompt else { return }
-        addFrequentPlaceFloorCalibration(
-            prompt.placeID,
-            floor: prompt.suggestedFloor
-        )
-    }
-
-    func dismissFloorCalibrationPrompt() {
-        floorCalibrationPrompt = nil
+    private func showFloorCalibrationNotice(_ text: String) {
+        calibrationNoticeTask?.cancel()
+        floorCalibrationNotice = text
+        calibrationNoticeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            self?.floorCalibrationNotice = nil
+        }
     }
 
     /// 자주가는 곳의 감지 반경과 건물별 층고를 저장합니다.
@@ -3808,9 +3848,10 @@ final class AppModel {
                 && sensorService.hasAlwaysLocationAuthorization()
             sensorAvailability = sensorService.hardwareAvailability()
             if !permissionState(for: .location).isGranted {
+                // 권한이 없는 동안 수집만 멈춘다. locationEnabled를 지우면
+                // iOS 설정에서 권한을 다시 허용해도 기록이 재개되지 않는다.
                 sensorService.stopCollection()
                 isSensorCollecting = false
-                snapshot.settings.locationEnabled = false
                 snapshot.settings.backgroundPreciseLocationEnabled = false
             }
         } else {
@@ -4138,7 +4179,8 @@ final class AppModel {
         guard let point = reading.point,
               let match = settings.frequentPlaces
                 .compactMap({ place -> (FrequentPlace, Double)? in
-                    guard let reference = place.point,
+                    guard place.isAutomaticRecordingEnabled,
+                          let reference = place.point,
                           place.floorCalibration != nil else {
                         return nil
                     }
@@ -4152,11 +4194,22 @@ final class AppModel {
             latestAltitudeEstimate = nil
             return
         }
-        latestAltitudeEstimate = FloorCalibrationEngine().estimate(
+        guard let estimate = FloorCalibrationEngine().estimate(
             reading: reading,
             calibration: calibration
-        )
-        guard let estimate = latestAltitudeEstimate else { return }
+        ) else {
+            latestAltitudeEstimate = nil
+            return
+        }
+        if altitudeGatePlaceID != match.id {
+            altitudeGatePlaceID = match.id
+            altitudeSpikeGate.reset()
+        }
+        // 튀는 고도 표본은 이상치로 스킵하고 직전 추정을 유지한다.
+        guard altitudeSpikeGate.accept(estimate.seaLevelAltitudeMeters) else {
+            return
+        }
+        latestAltitudeEstimate = estimate
         let knownFloors = calibration.knownFloors
         guard !knownFloors.contains(estimate.floor),
               abs(estimate.floor - calibration.referenceFloor) >= 1,
@@ -4164,14 +4217,24 @@ final class AppModel {
             return
         }
         let key = "\(match.id.uuidString):\(estimate.floor)"
-        guard lastFloorCalibrationPromptKey != key else { return }
-        lastFloorCalibrationPromptKey = key
-        floorCalibrationPrompt = FloorCalibrationPrompt(
+        guard lastAutoFloorCalibrationKey != key else { return }
+        lastAutoFloorCalibrationKey = key
+        // 보정은 사용자 확인 없이 감지된 위치의 장소에 바로 적용하고
+        // 결과만 알린다. 이미 알고 있는 층이면 위 guard에서 끝난다.
+        if recordFloorCalibration(
             placeID: match.id,
-            placeName: match.name,
-            suggestedFloor: estimate.floor,
-            measuredAltitudeMeters: estimate.seaLevelAltitudeMeters
-        )
+            floor: estimate.floor,
+            reading: reading,
+            seaLevelAltitudeMeters: estimate.seaLevelAltitudeMeters,
+            isAutomatic: true
+        ) {
+            let label = estimate.floor < 0
+                ? "지하 \(-estimate.floor)층"
+                : "\(estimate.floor)층"
+            showFloorCalibrationNotice(
+                "\(match.name) \(label) 고도 보정을 적용했습니다."
+            )
+        }
     }
 
     private func handleLiveSensorReading(_ reading: SensorReading) {
@@ -4843,6 +4906,7 @@ final class AppModel {
             return safe
         }
         value.settings.floorCalibration = nil
+        value.settings.floorCalibrationHistory = []
         value.settings.movementCorrections = []
         return value
     }
@@ -4886,6 +4950,8 @@ final class AppModel {
                 local.settings.timelineRowOrder
             )
         value.settings.floorCalibration = nil
+        value.settings.floorCalibrationHistory =
+            local.settings.floorCalibrationHistory
         value.settings.movementCorrections =
             local.settings.movementCorrections
         // Weather is sampled with device location and remains device ground

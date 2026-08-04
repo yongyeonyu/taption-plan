@@ -47,10 +47,9 @@ struct TaptionPlanWatchApp: App {
                 }
             }
         }
-        // Do not start Core Motion/HealthKit while SwiftUI is still creating
-        // the Watch scene.  A cached payload can enable capture, and starting
-        // the sensor queue from App.init races the first view transaction on
-        // watchOS and terminates the app with a dispatch precondition trap.
+        // Applies cached settings only; sensor capture itself stays gated
+        // until the first view's .task calls beginCaptureAfterFirstRender(),
+        // so the sensor queue can never race the first scene transaction.
         Task { @MainActor [weak connectivity, weak workout] in
             await Task.yield()
             guard let workout else { return }

@@ -985,12 +985,34 @@ struct CalibratedAltitudeEstimate: Codable, Hashable, Sendable {
     var evidence: [String]
 }
 
-struct FloorCalibrationPrompt: Identifiable, Equatable, Sendable {
+/// 자동·수동 층수 보정이 적용될 때마다 남는 이력. 층별 기준점과 달리
+/// 덮어쓰지 않고 시간순으로 쌓인다.
+struct FloorCalibrationEvent: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
     var placeID: UUID
     var placeName: String
-    var suggestedFloor: Int
-    var measuredAltitudeMeters: Double
-    var id: UUID { placeID }
+    var floor: Int
+    var seaLevelAltitudeMeters: Double?
+    var isAutomatic: Bool
+    var capturedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        placeID: UUID,
+        placeName: String,
+        floor: Int,
+        seaLevelAltitudeMeters: Double? = nil,
+        isAutomatic: Bool,
+        capturedAt: Date
+    ) {
+        self.id = id
+        self.placeID = placeID
+        self.placeName = placeName
+        self.floor = floor
+        self.seaLevelAltitudeMeters = seaLevelAltitudeMeters
+        self.isAutomatic = isAutomatic
+        self.capturedAt = capturedAt
+    }
 }
 
 enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
@@ -1827,6 +1849,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var watchAccelerationProfile: TaptionWatchAccelerationProfile
     var watchDataSyncProfile: TaptionWatchDataSyncProfile
     var floorCalibration: FloorCalibration?
+    var floorCalibrationHistory: [FloorCalibrationEvent]
     var frequentPlaces: [FrequentPlace]
     var movementCorrections: [TravelModeCorrection]
     var suppressedActualIDs: Set<UUID>
@@ -1850,6 +1873,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,
         floorCalibration: nil,
+        floorCalibrationHistory: [],
         frequentPlaces: FrequentPlace.defaults,
         movementCorrections: [],
         suppressedActualIDs: [],
@@ -1876,6 +1900,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         watchAccelerationProfile: TaptionWatchAccelerationProfile = .off,
         watchDataSyncProfile: TaptionWatchDataSyncProfile = .off,
         floorCalibration: FloorCalibration? = nil,
+        floorCalibrationHistory: [FloorCalibrationEvent] = [],
         frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
         movementCorrections: [TravelModeCorrection] = [],
         suppressedActualIDs: Set<UUID> = [],
@@ -1898,6 +1923,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.watchAccelerationProfile = watchAccelerationProfile
         self.watchDataSyncProfile = watchDataSyncProfile
         self.floorCalibration = floorCalibration
+        self.floorCalibrationHistory = floorCalibrationHistory
         self.frequentPlaces = Self.mergedFrequentPlaces(frequentPlaces)
         self.movementCorrections = movementCorrections
         self.suppressedActualIDs = suppressedActualIDs
@@ -1922,6 +1948,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case watchAccelerationProfile
         case watchDataSyncProfile
         case floorCalibration
+        case floorCalibrationHistory
         case frequentPlaces
         case movementCorrections
         case suppressedActualIDs
@@ -1990,6 +2017,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             FloorCalibration.self,
             forKey: .floorCalibration
         ) ?? defaults.floorCalibration
+        floorCalibrationHistory = try values.decodeIfPresent(
+            [FloorCalibrationEvent].self,
+            forKey: .floorCalibrationHistory
+        ) ?? defaults.floorCalibrationHistory
         frequentPlaces = Self.mergedFrequentPlaces(
             try values.decodeIfPresent(
                 [FrequentPlace].self,
