@@ -735,7 +735,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             motionManager.accelerometerUpdateInterval = updateInterval
             motionManager.startAccelerometerUpdates(
                 to: sensorQueue
-            ) { [weak self] data, _ in
+            ) { @Sendable [weak self] data, _ in
                 guard let data else { return }
                 let value = TaptionWatchSensorVector3(
                     x: data.acceleration.x,
@@ -757,7 +757,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             motionManager.gyroUpdateInterval = updateInterval
             motionManager.startGyroUpdates(
                 to: sensorQueue
-            ) { [weak self] data, _ in
+            ) { @Sendable [weak self] data, _ in
                 guard let data else { return }
                 let value = TaptionWatchSensorVector3(
                     x: data.rotationRate.x,
@@ -773,7 +773,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             motionManager.deviceMotionUpdateInterval = updateInterval
             motionManager.startDeviceMotionUpdates(
                 to: sensorQueue
-            ) { [weak self] data, _ in
+            ) { @Sendable [weak self] data, _ in
                 guard let data else { return }
                 let gravity = TaptionWatchSensorVector3(
                     x: data.gravity.x,
@@ -806,7 +806,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if !ambient, CMAltimeter.isRelativeAltitudeAvailable() {
             altimeter.startRelativeAltitudeUpdates(
                 to: sensorQueue
-            ) { [weak self] data, _ in
+            ) { @Sendable [weak self] data, _ in
                 let altitude = data?.relativeAltitude.doubleValue
                 let pressure = data?.pressure.doubleValue
                 Task { @MainActor [weak self] in
@@ -816,7 +816,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             }
         }
         if !ambient, CMPedometer.isStepCountingAvailable() {
-            pedometer.startUpdates(from: startedAt) { [weak self] data, _ in
+            pedometer.startUpdates(from: startedAt) { @Sendable [weak self] data, _ in
                 let steps = data?.numberOfSteps.intValue
                 let distance = data?.distance?.doubleValue
                 let up = data?.floorsAscended?.intValue

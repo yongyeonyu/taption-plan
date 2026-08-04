@@ -6,6 +6,8 @@ struct TaptionPlanWatchApp: App {
     @StateObject private var workout: WatchWorkoutManager
 
     init() {
+        WatchLaunchDiagnostics.installSignalHandlers()
+        WatchLaunchDiagnostics.mark("app-init-begin")
         let connectivity = WatchConnectivityController()
         let workout = WatchWorkoutManager()
         workout.onSensorSummary = { [weak connectivity] summary in
@@ -60,6 +62,7 @@ struct TaptionPlanWatchApp: App {
         }
         _connectivity = StateObject(wrappedValue: connectivity)
         _workout = StateObject(wrappedValue: workout)
+        WatchLaunchDiagnostics.mark("app-init-end")
     }
 
     var body: some Scene {

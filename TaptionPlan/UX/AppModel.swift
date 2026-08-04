@@ -76,6 +76,7 @@ final class AppModel {
     private(set) var trackingSessionWasRecovered = false
     private(set) var latestAltitudeEstimate: CalibratedAltitudeEstimate?
     private(set) var floorCalibrationNotice: String? = nil
+    private(set) var watchLaunchReport: (report: String, receivedAt: Date)?
     private(set) var sleepSessions: [SleepSession] = []
     private(set) var lastHealthRefreshAt: Date?
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
@@ -786,6 +787,7 @@ final class AppModel {
                 return
             }
             self.watchConnectivityService.refreshConnectionState()
+            self.refreshWatchLaunchReport()
             await self.configureHealthBackgroundDeliveryIfNeeded(
                 showErrors: false
             )
@@ -1317,6 +1319,16 @@ final class AppModel {
 
     func refreshAppleWatchConnectionState() {
         watchConnectivityService.refreshConnectionState()
+        refreshWatchLaunchReport()
+    }
+
+    func refreshWatchLaunchReport() {
+        watchLaunchReport = WatchLaunchReportStore.read()
+    }
+
+    func clearWatchLaunchReport() {
+        WatchLaunchReportStore.clear()
+        watchLaunchReport = nil
     }
 
     func startTracking(_ kind: TrackingKind) async {

@@ -15,8 +15,11 @@ struct WatchContentView: View {
             }
             .navigationTitle("Taption")
             .task {
+                WatchLaunchDiagnostics.mark("first-view-task")
                 connectivity.prepare()
+                WatchLaunchDiagnostics.mark("connectivity-prepared")
                 workout.beginCaptureAfterFirstRender()
+                WatchLaunchDiagnostics.mark("launch-complete")
             }
             .alert(
                 "확인해 주세요",

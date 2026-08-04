@@ -34,6 +34,10 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     func prepare() {
         guard !didPrepare else { return }
         didPrepare = true
+        // 이전 실행이 어디서 멈췄는지 먼저 확보한 뒤 새 기록을 시작한다.
+        pendingLaunchReport = WatchLaunchDiagnostics.pendingReport()
+        WatchLaunchDiagnostics.clear()
+        WatchLaunchDiagnostics.mark("prepare")
         restoreCachedPayload()
         restorePendingSensorSummaries()
         restorePendingHealthSnapshots()
@@ -50,6 +54,17 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     private static var activeDelegate: WatchConnectivityController?
+    private var pendingLaunchReport: String?
+
+    private func sendPendingLaunchReport() {
+        guard let report = pendingLaunchReport, !report.isEmpty else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        pendingLaunchReport = nil
+        session.transferUserInfo([
+            TaptionWatchEnvelope.launchDiagnosticsKey: report,
+        ])
+    }
 
     var orderedItems: [TaptionWatchPlanItem] {
         (payload?.items ?? []).sorted { $0.startsAt < $1.startsAt }
@@ -169,6 +184,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                 self?.apply(data: data)
             }
             if activationState == .activated {
+                self?.sendPendingLaunchReport()
                 self?.flushPendingSensorSummaries(using: .default)
                 self?.flushPendingHealthSnapshots(using: .default)
                 self?.requestSync()

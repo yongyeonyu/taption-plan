@@ -374,7 +374,47 @@ struct SettingsView: View {
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.leading, 37)
             }
+            if let launchReport = model.watchLaunchReport {
+                watchLaunchReportView(launchReport)
+            }
         }
+    }
+
+    private func watchLaunchReportView(
+        _ value: (report: String, receivedAt: Date)
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                Text("Watch 실행 기록")
+                    .font(.taption(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                Text(
+                    value.receivedAt,
+                    format: .dateTime.month().day().hour().minute()
+                )
+                .font(.taption(size: 8))
+                .foregroundStyle(Color.tpSecondary)
+                Spacer(minLength: 4)
+                Button("복사") {
+                    UIPasteboard.general.string = value.report
+                }
+                .font(.taption(size: 8, weight: .bold))
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.tpInk)
+                Button("지우기") {
+                    model.clearWatchLaunchReport()
+                }
+                .font(.taption(size: 8, weight: .bold))
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.tpSecondary)
+            }
+            Text(value.report)
+                .font(.system(size: 8, design: .monospaced))
+                .foregroundStyle(Color.tpInk)
+                .textSelection(.enabled)
+                .lineLimit(12)
+        }
+        .padding(.leading, 37)
     }
 
     private var appUsageRow: some View {

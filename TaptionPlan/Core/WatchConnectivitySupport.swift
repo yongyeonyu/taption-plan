@@ -276,6 +276,12 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             publishLatestPayload()
             accepted = true
         }
+        if let report = envelope[
+            TaptionWatchEnvelope.launchDiagnosticsKey
+        ] as? String {
+            WatchLaunchReportStore.save(report)
+            accepted = true
+        }
         if let data = envelope[
             TaptionWatchEnvelope.sensorSummaryKey
         ] as? Data,

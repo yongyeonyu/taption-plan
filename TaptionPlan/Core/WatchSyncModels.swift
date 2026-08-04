@@ -1131,6 +1131,33 @@ enum TaptionWatchEnvelope {
     static let refreshRequestKey = "taption.watch.refresh-request"
     static let dataSyncRequestKey = "taption.watch.data-sync-request"
     static let acceptedKey = "taption.watch.accepted"
+    static let launchDiagnosticsKey = "taption.watch.launch-diagnostics"
+}
+
+/// Apple Watch가 보내온 직전 실행 기록. 워치 앱이 실행 중 종료될 때 어느
+/// 단계까지 갔는지 iPhone 설정 화면에서 확인하기 위한 저장소다.
+enum WatchLaunchReportStore {
+    private static let key = "TaptionPlan.watchLaunchReport"
+    private static let dateKey = "TaptionPlan.watchLaunchReportDate"
+
+    static func save(_ report: String) {
+        UserDefaults.standard.set(report, forKey: key)
+        UserDefaults.standard.set(Date.now, forKey: dateKey)
+    }
+
+    static func read() -> (report: String, receivedAt: Date)? {
+        guard let report = UserDefaults.standard.string(forKey: key),
+              !report.isEmpty else {
+            return nil
+        }
+        let date = UserDefaults.standard.object(forKey: dateKey) as? Date
+        return (report, date ?? .now)
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+        UserDefaults.standard.removeObject(forKey: dateKey)
+    }
 }
 
 enum TaptionWatchHealthMetadata {
