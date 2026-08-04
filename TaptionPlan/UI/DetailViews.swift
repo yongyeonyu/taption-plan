@@ -2,6 +2,11 @@ import MapKit
 import PhotosUI
 import SwiftUI
 
+#if canImport(FamilyControls) && canImport(ManagedSettings)
+import FamilyControls
+import ManagedSettings
+#endif
+
 struct QuickActionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
@@ -2674,5 +2679,30 @@ private extension TimeInterval {
         if hours == 0 { return "\(minutes)분" }
         if minutes == 0 { return "\(hours)시간" }
         return "\(hours)시간 \(minutes)분"
+    }
+}
+
+/// 스크린 타임은 앱 이름 문자열을 늘 주지는 않는다. 토큰이 남아 있으면
+/// 시스템이 그리는 실제 앱 이름·아이콘으로 채우고, 없으면 아무것도 그리지
+/// 않아 기록 제목만 남긴다.
+struct AppUsageNameLabel: View {
+    let record: ActualRecord
+    let tokenIndex: [UUID: Data]
+    var size: CGFloat = 13
+
+    var body: some View {
+#if canImport(FamilyControls) && canImport(ManagedSettings)
+        if let data = tokenIndex[record.id],
+           let token = try? JSONDecoder().decode(
+               ApplicationToken.self,
+               from: data
+           ) {
+            Label(token)
+                .labelStyle(.titleAndIcon)
+                .font(.taption(size: size, weight: .semibold))
+                .foregroundStyle(Color.tpInk)
+                .lineLimit(1)
+        }
+#endif
     }
 }

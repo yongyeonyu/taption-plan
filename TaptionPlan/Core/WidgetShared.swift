@@ -73,7 +73,7 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
         case .movement: "이동"
         case .sleep: "수면"
         case .activity: "활동"
-        case .appUsage: "앱"
+        case .appUsage: "어플"
         case .action: "액션"
         }
     }

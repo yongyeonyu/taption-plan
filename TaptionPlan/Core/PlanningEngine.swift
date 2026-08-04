@@ -223,7 +223,9 @@ enum AutomaticRecordTimelineEngine {
     }
 
     static func isSleep(_ actual: ActualRecord) -> Bool {
-        actual.categoryID == "sleep"
+        // 앱 이름은 임의의 낱말이라 제목만 보고 수면으로 오인하면 안 된다.
+        if actual.categoryID == "appUsage" { return false }
+        return actual.categoryID == "sleep"
             || actual.title.localizedCaseInsensitiveContains("수면")
             || actual.title.localizedCaseInsensitiveContains("취침")
             || actual.title.localizedCaseInsensitiveContains("sleep")

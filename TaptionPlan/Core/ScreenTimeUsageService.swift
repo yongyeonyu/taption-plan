@@ -4,6 +4,10 @@ import Foundation
 import FamilyControls
 #endif
 
+#if canImport(ManagedSettings)
+import ManagedSettings
+#endif
+
 #if canImport(DeviceActivity) && canImport(SwiftUI)
 import DeviceActivity
 import SwiftUI
@@ -42,6 +46,17 @@ enum ScreenTimeAuthorizationState: String, Sendable {
     }
 }
 
+/// 어떤 수준까지 이름을 읽어냈는지. Screen Time은 앱 이름을 항상 주지
+/// 않으므로 화면에도 "무엇을 보여 주고 있는지"를 그대로 드러낸다.
+enum ScreenTimeUsageNameSource: String, Codable, Hashable, Sendable {
+    /// 실제 앱 이름을 읽었다.
+    case application
+    /// 앱 이름을 읽지 못해 카테고리 이름으로 묶었다.
+    case category
+    /// 앱도 카테고리도 읽지 못해 시간대 합계만 남았다.
+    case unknown
+}
+
 struct ScreenTimeUsageSample: Codable, Hashable, Sendable {
     var key: String
     var title: String
@@ -49,6 +64,11 @@ struct ScreenTimeUsageSample: Codable, Hashable, Sendable {
     var duration: TimeInterval
     var pickups: Int
     var notifications: Int
+    var nameSource: ScreenTimeUsageNameSource = .application
+    /// `ManagedSettings.ApplicationToken`을 인코딩한 값. 이름 문자열이
+    /// 없어도 SwiftUI `Label(token)`으로 실제 앱 이름·아이콘을 그릴 수 있다.
+    /// 민감 정보이므로 화면에만 쓰고 저장·로그에는 남기지 않는다.
+    var applicationTokenData: Data?
 }
 
 @MainActor
@@ -195,58 +215,126 @@ final class ScreenTimeUsageService {
                       segment.totalActivityDuration > 0 else {
                     continue
                 }
-                let apps = await applications(in: segment, span: span)
-                if apps.isEmpty {
-                    result.append(
-                        ScreenTimeUsageSample(
-                            key: "total",
-                            title: "앱 사용",
-                            span: span,
-                            duration: min(segment.totalActivityDuration, span.duration),
-                            pickups: segment.totalPickupsWithoutApplicationActivity,
-                            notifications: 0
-                        )
-                    )
-                } else {
-                    result.append(contentsOf: apps)
-                }
+                let perApp = await appSamples(in: segment, span: span)
+                result.append(contentsOf: perApp.isEmpty
+                    ? [segmentTotal(of: segment, span: span)]
+                    : perApp)
             }
         }
         return result
     }
 
+    /// 한 시간대(segment)를 카테고리 → 앱 순으로 펼쳐 앱마다 한 줄씩 만든다.
+    /// 앱을 하나도 못 읽은 카테고리는 카테고리 한 줄로 대신한다.
     @available(iOS 26.4, *)
-    private func applications(
+    private func appSamples(
         in segment: DeviceActivityData.ActivitySegment,
         span: TimeSpan
     ) async -> [ScreenTimeUsageSample] {
         var values: [String: ScreenTimeUsageSample] = [:]
         for await category in segment.categories {
+            let categoryName = category.category.localizedDisplayName
+            var hasApplication = false
             for await app in category.applications {
-                let name = app.application.localizedDisplayName
-                    ?? app.application.bundleIdentifier
-                    ?? "앱 사용"
-                let key = app.application.bundleIdentifier
-                    ?? app.application.localizedDisplayName
-                    ?? "unknown"
                 let duration = min(app.totalActivityDuration, span.duration)
                 guard duration > 0 else { continue }
+                hasApplication = true
+                let tokenData = encodedToken(app.application.token)
+                let name = app.application.localizedDisplayName
+                    ?? app.application.bundleIdentifier
                 let sample = ScreenTimeUsageSample(
-                    key: key,
-                    title: "앱 사용 · \(name)",
+                    key: applicationKey(
+                        bundleIdentifier: app.application.bundleIdentifier,
+                        tokenData: tokenData,
+                        name: name,
+                        categoryName: categoryName
+                    ),
+                    title: title(for: name ?? categoryName),
                     span: span,
                     duration: duration,
                     pickups: app.numberOfPickups,
-                    notifications: app.numberOfNotifications
+                    notifications: app.numberOfNotifications,
+                    nameSource: name != nil
+                        ? .application
+                        : (categoryName != nil ? .category : .unknown),
+                    applicationTokenData: tokenData
                 )
-                if let existing = values[key], existing.duration >= duration {
-                    continue
-                }
-                values[key] = sample
+                merge(sample, into: &values)
             }
+            let duration = min(category.totalActivityDuration, span.duration)
+            guard !hasApplication, duration > 0 else { continue }
+            merge(
+                ScreenTimeUsageSample(
+                    key: "category:\(categoryName ?? "unknown")",
+                    title: title(for: categoryName),
+                    span: span,
+                    duration: duration,
+                    pickups: 0,
+                    notifications: 0,
+                    nameSource: categoryName != nil ? .category : .unknown
+                ),
+                into: &values
+            )
         }
         return values.values.sorted { $0.title < $1.title }
     }
+
+    @available(iOS 26.4, *)
+    private func segmentTotal(
+        of segment: DeviceActivityData.ActivitySegment,
+        span: TimeSpan
+    ) -> ScreenTimeUsageSample {
+        ScreenTimeUsageSample(
+            key: "total",
+            title: title(for: nil),
+            span: span,
+            duration: min(segment.totalActivityDuration, span.duration),
+            pickups: segment.totalPickupsWithoutApplicationActivity,
+            notifications: 0,
+            nameSource: .unknown
+        )
+    }
+
+    private func title(for name: String?) -> String {
+        guard let name, !name.isEmpty else {
+            return ScreenTimeUsageRecordEngine.laneTitle
+        }
+        return "\(ScreenTimeUsageRecordEngine.laneTitle) · \(name)"
+    }
+
+    private func merge(
+        _ sample: ScreenTimeUsageSample,
+        into values: inout [String: ScreenTimeUsageSample]
+    ) {
+        guard let existing = values[sample.key] else {
+            values[sample.key] = sample
+            return
+        }
+        if sample.duration > existing.duration {
+            values[sample.key] = sample
+        }
+    }
+
+    /// 같은 앱이 시간대마다 같은 키를 갖도록 안정적인 식별자를 고른다.
+    /// 번들 ID가 없으면 토큰을, 그것도 없으면 이름을 쓴다.
+    private func applicationKey(
+        bundleIdentifier: String?,
+        tokenData: Data?,
+        name: String?,
+        categoryName: String?
+    ) -> String {
+        if let bundleIdentifier { return "bundle:\(bundleIdentifier)" }
+        if let tokenData { return "token:\(tokenData.base64EncodedString())" }
+        if let name { return "name:\(name)" }
+        return "category:\(categoryName ?? "unknown")"
+    }
+
+#if canImport(ManagedSettings)
+    private func encodedToken(_ token: ApplicationToken?) -> Data? {
+        guard let token else { return nil }
+        return try? JSONEncoder().encode(token)
+    }
+#endif
 
     private func clipped(
         _ interval: DateInterval,
@@ -299,7 +387,7 @@ enum ScreenTimeUsageError: LocalizedError {
         case .requiresCurrentSystem:
             "앱 사용시간 기록에는 iOS 26.4 이상이 필요합니다."
         case .dataAccessUnavailable:
-            "앱 사용 데이터 접근이 아직 승인되지 않았습니다. 설정 화면의 '앱 사용시간' 항목을 눌러 승인을 다시 받아 주세요."
+            "앱 사용 데이터 접근이 아직 승인되지 않았습니다. 설정 화면의 '어플' 항목을 눌러 승인을 다시 받아 주세요."
         case .dataAccessNotGranted:
             """
             앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.
@@ -315,6 +403,26 @@ enum ScreenTimeUsageError: LocalizedError {
 }
 
 enum ScreenTimeUsageRecordEngine {
+    /// 시간표 행·기록 제목에 쓰는 사용자 표기.
+    static let laneTitle = "어플"
+
+    static func recordID(for sample: ScreenTimeUsageSample) -> UUID {
+        stableID(
+            "\(sample.key)|\(Int(sample.span.start.timeIntervalSinceReferenceDate))"
+        )
+    }
+
+    /// 화면에 쓸 "N시간 N분" 문구. 0분이면 nil.
+    static func durationText(_ interval: TimeInterval) -> String? {
+        let minutes = Int(interval / 60)
+        guard minutes > 0 else { return nil }
+        if minutes < 60 { return "\(minutes)분" }
+        let remainder = minutes % 60
+        return remainder == 0
+            ? "\(minutes / 60)시간"
+            : "\(minutes / 60)시간 \(remainder)분"
+    }
+
     static func records(
         from samples: [ScreenTimeUsageSample],
         suppressedIDs: Set<UUID>
@@ -323,16 +431,16 @@ enum ScreenTimeUsageRecordEngine {
         return samples.compactMap { sample in
             let duration = min(sample.duration, sample.span.duration)
             guard duration > 0 else { return nil }
-            let id = stableID(
-                "\(sample.key)|\(Int(sample.span.start.timeIntervalSinceReferenceDate))"
-            )
+            let id = recordID(for: sample)
             guard seen.insert(id).inserted, !suppressedIDs.contains(id) else {
                 return nil
             }
             let evidence = [
                 "Screen Time 시간대 합계",
+                durationText(duration).map { "사용 \($0)" },
                 sample.pickups > 0 ? "앱 열기 \(sample.pickups)회" : nil,
                 sample.notifications > 0 ? "알림 \(sample.notifications)회" : nil,
+                nameSourceEvidence(sample.nameSource),
             ].compactMap { $0 }
             return ActualRecord(
                 id: id,
@@ -350,6 +458,27 @@ enum ScreenTimeUsageRecordEngine {
             )
         }
         .sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private static func nameSourceEvidence(
+        _ source: ScreenTimeUsageNameSource
+    ) -> String? {
+        switch source {
+        case .application: nil
+        case .category: "앱 이름을 읽을 수 없어 카테고리 단위로 묶었습니다"
+        case .unknown: "앱 이름과 카테고리를 모두 읽을 수 없어 시간대 합계만 남겼습니다"
+        }
+    }
+
+    /// 기록 ID → 앱 토큰. 이름 문자열이 없어도 상세 화면이 실제 앱 이름과
+    /// 아이콘을 그릴 수 있도록 메모리에만 들고 다닌다.
+    static func applicationTokenIndex(
+        from samples: [ScreenTimeUsageSample]
+    ) -> [UUID: Data] {
+        samples.reduce(into: [:]) { index, sample in
+            guard let data = sample.applicationTokenData else { return }
+            index[recordID(for: sample)] = data
+        }
     }
 
     static func replacing(

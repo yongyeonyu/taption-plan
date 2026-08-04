@@ -166,7 +166,7 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
     case movement = "이동"
     case sleep = "수면"
     case activity = "활동"
-    case appUsage = "앱"
+    case appUsage = "어플"
     case weather = "날씨"
     case routine = "루틴"
     case action = "액션·메모"
@@ -436,6 +436,8 @@ private func watchBehavior(_ actual: ActualRecord) -> WatchBehaviorKind? {
 }
 
 private func isMovementActual(_ actual: ActualRecord) -> Bool {
+    // 앱 이름은 임의의 낱말이라 제목만 보고 이동으로 오인하면 안 된다.
+    if actual.categoryID == "appUsage" { return false }
     if actual.categoryID == "movement" { return true }
     if watchBehavior(actual)?.isMovement == true { return true }
     let title = actual.title.lowercased()
@@ -3552,14 +3554,55 @@ private struct TimelineDetailPanel: View {
         }
     }
 
+    /// 앱 사용은 "어떤 앱을, 언제부터, 얼마나"가 전부다. 선택한 줄은 앱
+    /// 열기·알림 근거까지 펼쳐서 탭 한 번으로 전부 보이게 한다.
     private var appUsageContent: some View {
-        automaticRecordsContent(
-            title: "앱 사용",
-            systemImage: "app.badge.clock",
-            plans: [],
-            actuals: detailData.appUsageActuals,
-            tint: Color.tpProjectDark
-        )
+        VStack(alignment: .leading, spacing: 6) {
+            detailHeading(
+                ScreenTimeUsageRecordEngine.laneTitle,
+                systemImage: "app.badge.clock"
+            )
+            if detailData.appUsageActuals.isEmpty {
+                Text("이 구간에 남은 앱 사용 기록이 없습니다")
+                    .font(.taption(size: 9))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            ForEach(detailData.appUsageActuals) { actual in
+                appUsageRow(actual)
+            }
+        }
+    }
+
+    private func appUsageRow(_ actual: ActualRecord) -> some View {
+        let span = actual.span()
+        let isSelected = selectedActual?.id == actual.id
+        return HStack(alignment: .top, spacing: 7) {
+            Image(systemName: "app.badge.clock")
+                .font(.taption(size: 9, weight: .bold))
+                .foregroundStyle(Color.tpProjectDark)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(actual.title)
+                    .font(.taption(size: 9, weight: .semibold))
+                AppUsageNameLabel(
+                    record: actual,
+                    tokenIndex: model.appUsageTokenIndex,
+                    size: 9
+                )
+                Text(
+                    "\(span.start.formatted(date: .omitted, time: .shortened))–\(span.end.formatted(date: .omitted, time: .shortened)) · \(ScreenTimeUsageRecordEngine.durationText(span.duration) ?? "1분 미만")"
+                )
+                .font(.taption(size: 7.5))
+                .foregroundStyle(Color.tpSecondary)
+                if isSelected {
+                    ForEach(actual.evidence, id: \.self) { evidence in
+                        Text("· \(evidence)")
+                            .font(.taption(size: 7.5))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
     }
 
     private var weatherContent: some View {
@@ -4360,9 +4403,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private func isSleepActual(_ actual: ActualRecord) -> Bool {
-        actual.categoryID == "sleep"
-            || actual.title.localizedCaseInsensitiveContains("수면")
-            || actual.title.localizedCaseInsensitiveContains("sleep")
+        AutomaticRecordTimelineEngine.isSleep(actual)
     }
 
 
@@ -7443,13 +7484,13 @@ private struct TimelineBoard: View {
                 isFixed: true,
                 status: .completed,
                 isActual: true,
-                detailText: "자동 앱 사용 · (actualSourceName(actual.source))",
+                detailText: appUsageDetailText(actual),
                 categoryID: "appUsage",
-                categoryName: "앱 사용"
+                categoryName: ScreenTimeUsageRecordEngine.laneTitle
             )
         }
         return TimelineRowModel(
-            title: "앱 사용",
+            title: ScreenTimeUsageRecordEngine.laneTitle,
             id: "appUsage",
             dotColor: .tpProjectDark,
             systemImage: "app.badge.clock",
@@ -7459,6 +7500,14 @@ private struct TimelineBoard: View {
             height: compactAutomaticHeight(allocation.count),
             blocks: blocks
         )
+    }
+
+    private func appUsageDetailText(_ actual: ActualRecord) -> String {
+        guard let duration = ScreenTimeUsageRecordEngine
+            .durationText(actual.span().duration) else {
+            return actualSourceName(actual.source)
+        }
+        return "\(duration) · \(actualSourceName(actual.source))"
     }
 
     private func automaticWeatherRow(

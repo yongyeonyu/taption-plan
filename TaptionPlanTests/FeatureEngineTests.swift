@@ -5619,8 +5619,8 @@ final class FeatureEngineTests: XCTestCase {
         let fresh = ScreenTimeUsageRecordEngine.records(
             from: [
                 ScreenTimeUsageSample(
-                    key: "com.example.maps",
-                    title: "앱 사용 · 지도",
+                    key: "bundle:com.example.maps",
+                    title: "어플 · 지도",
                     span: span,
                     duration: 20 * 60,
                     pickups: 1,
@@ -5631,7 +5631,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         let stale = ActualRecord(
             planID: nil,
-            title: "앱 사용 · 이전",
+            title: "어플 · 이전",
             categoryID: "appUsage",
             startedAt: start,
             endedAt: start.addingTimeInterval(5 * 60),
@@ -5639,7 +5639,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         let outside = ActualRecord(
             planID: nil,
-            title: "앱 사용 · 유지",
+            title: "어플 · 유지",
             categoryID: "appUsage",
             startedAt: start.addingTimeInterval(2 * hour),
             endedAt: start.addingTimeInterval(2 * hour + 5 * 60),
@@ -5653,14 +5653,128 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         XCTAssertEqual(result.count, 2)
-        XCTAssertEqual(result.map(\.title), ["앱 사용 · 지도", "앱 사용 · 유지"])
+        XCTAssertEqual(result.map(\.title), ["어플 · 지도", "어플 · 유지"])
         XCTAssertEqual(result[0].source, .appUsage)
         XCTAssertEqual(result[0].span().duration, 20 * 60)
         XCTAssertEqual(result[0].evidence, [
             "Screen Time 시간대 합계",
+            "사용 20분",
             "앱 열기 1회",
             "알림 2회",
         ])
+    }
+
+    func testScreenTimeUsageKeepsOneRecordPerApplication() {
+        let start = makeDate(2026, 8, 3, 9)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(hour))
+        let records = ScreenTimeUsageRecordEngine.records(
+            from: [
+                ScreenTimeUsageSample(
+                    key: "bundle:com.example.maps",
+                    title: "어플 · 지도",
+                    span: span,
+                    duration: 12 * 60,
+                    pickups: 3,
+                    notifications: 0
+                ),
+                ScreenTimeUsageSample(
+                    key: "bundle:com.example.chat",
+                    title: "어플 · 메시지",
+                    span: span,
+                    duration: 25 * 60,
+                    pickups: 8,
+                    notifications: 4
+                ),
+                // 같은 시간대에 다시 나온 같은 앱은 한 줄로 합친다.
+                ScreenTimeUsageSample(
+                    key: "bundle:com.example.maps",
+                    title: "어플 · 지도",
+                    span: span,
+                    duration: 12 * 60,
+                    pickups: 3,
+                    notifications: 0
+                ),
+            ],
+            suppressedIDs: []
+        )
+
+        XCTAssertEqual(records.count, 2)
+        XCTAssertEqual(
+            Set(records.map(\.title)),
+            ["어플 · 지도", "어플 · 메시지"]
+        )
+        XCTAssertEqual(Set(records.map(\.id)).count, 2)
+        XCTAssertTrue(records.allSatisfy { $0.categoryID == "appUsage" })
+        XCTAssertTrue(records.allSatisfy { $0.startedAt == start })
+        XCTAssertEqual(
+            records.first { $0.title == "어플 · 메시지" }?.span().duration,
+            25 * 60
+        )
+        XCTAssertTrue(
+            records.allSatisfy { !$0.evidence.contains(where: {
+                $0.contains("카테고리")
+            }) }
+        )
+    }
+
+    func testScreenTimeUsageExplainsCategoryAndUnknownFallbacks() {
+        let start = makeDate(2026, 8, 3, 14)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(hour))
+        let records = ScreenTimeUsageRecordEngine.records(
+            from: [
+                ScreenTimeUsageSample(
+                    key: "category:소셜",
+                    title: "어플 · 소셜",
+                    span: span,
+                    duration: 18 * 60,
+                    pickups: 0,
+                    notifications: 0,
+                    nameSource: .category
+                ),
+                ScreenTimeUsageSample(
+                    key: "total",
+                    title: "어플",
+                    span: span,
+                    duration: 40 * 60,
+                    pickups: 2,
+                    notifications: 0,
+                    nameSource: .unknown
+                ),
+            ],
+            suppressedIDs: []
+        )
+
+        XCTAssertEqual(records.count, 2)
+        XCTAssertEqual(
+            records.first { $0.title == "어플 · 소셜" }?.evidence,
+            [
+                "Screen Time 시간대 합계",
+                "사용 18분",
+                "앱 이름을 읽을 수 없어 카테고리 단위로 묶었습니다",
+            ]
+        )
+        XCTAssertEqual(
+            records.first { $0.title == "어플" }?.evidence,
+            [
+                "Screen Time 시간대 합계",
+                "사용 40분",
+                "앱 열기 2회",
+                "앱 이름과 카테고리를 모두 읽을 수 없어 시간대 합계만 남겼습니다",
+            ]
+        )
+    }
+
+    func testScreenTimeUsageDurationTextMatchesSettingsRow() {
+        XCTAssertNil(ScreenTimeUsageRecordEngine.durationText(30))
+        XCTAssertEqual(ScreenTimeUsageRecordEngine.durationText(14 * 60), "14분")
+        XCTAssertEqual(
+            ScreenTimeUsageRecordEngine.durationText(2 * hour),
+            "2시간"
+        )
+        XCTAssertEqual(
+            ScreenTimeUsageRecordEngine.durationText(2 * hour + 14 * 60),
+            "2시간 14분"
+        )
     }
 
     private var utcCalendar: Calendar {

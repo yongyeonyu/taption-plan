@@ -723,12 +723,11 @@ struct ActualRecordDetailView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Label(
                     displayTitle(record, categoryID: categoryID),
-                    systemImage: categoryID == "movement"
-                        ? MovementPresentation.symbol(for: record)
-                        : PlanCategory(categoryID: categoryID).systemImage
+                    systemImage: symbolName(record, categoryID: categoryID)
                 )
                 .font(.taption(size: 17, weight: .bold))
                 .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
+                applicationNameLabel(record)
                 Text("\(span.start.formatted(date: .abbreviated, time: .shortened)) – \(span.end.formatted(date: .omitted, time: .shortened))")
                     .font(.taption(size: 11))
                     .foregroundStyle(Color.tpSecondary)
@@ -788,6 +787,13 @@ struct ActualRecordDetailView: View {
         .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
     }
 
+    private func applicationNameLabel(_ record: ActualRecord) -> some View {
+        AppUsageNameLabel(
+            record: record,
+            tokenIndex: model.appUsageTokenIndex
+        )
+    }
+
     private func displayCategoryID(_ record: ActualRecord) -> String {
         guard record.categoryID == "activity" else { return record.categoryID }
         let value = "\(record.title) \(record.behavior ?? "")".lowercased()
@@ -797,6 +803,17 @@ struct ActualRecordDetailView: View {
             "walking", "running", "cycling", "automotive",
         ]
         return movementWords.contains(where: value.contains) ? "movement" : "activity"
+    }
+
+    private func symbolName(
+        _ record: ActualRecord,
+        categoryID: String
+    ) -> String {
+        switch categoryID {
+        case "movement": MovementPresentation.symbol(for: record)
+        case "appUsage": "app.badge.clock"
+        default: PlanCategory(categoryID: categoryID).systemImage
+        }
     }
 
     private func displayTitle(
@@ -810,7 +827,8 @@ struct ActualRecordDetailView: View {
     }
 
     private func categoryName(_ id: String) -> String {
-        model.snapshot.categories.first { $0.id == id }?.name
+        if id == "appUsage" { return ScreenTimeUsageRecordEngine.laneTitle }
+        return model.snapshot.categories.first { $0.id == id }?.name
             ?? PlanCategory(categoryID: id).rawValue
     }
 

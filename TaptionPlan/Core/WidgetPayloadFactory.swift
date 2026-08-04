@@ -181,7 +181,7 @@ enum TaptionWidgetPayloadFactory {
                     endsAt: actual.endedAt ?? now,
                     status: "recorded",
                     isFixed: true,
-                    categoryName: "앱 사용",
+                    categoryName: "어플",
                     categoryHex: "#8C7AB8",
                     lane: .appUsage
                 )

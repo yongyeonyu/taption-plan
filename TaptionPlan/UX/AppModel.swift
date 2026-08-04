@@ -85,6 +85,10 @@ final class AppModel {
     private(set) var appUsageAuthorizationState: ScreenTimeAuthorizationState = .unavailable
     private(set) var lastAppUsageRefreshAt: Date?
     private(set) var appUsageRecordCount = 0
+    private(set) var appUsageTotalDuration: TimeInterval = 0
+    /// 기록 ID → 앱 토큰. 스크린 타임 데이터는 민감하므로 저장하지 않고
+    /// 새로 고칠 때마다 메모리에만 채운다.
+    private(set) var appUsageTokenIndex: [UUID: Data] = [:]
     var userFacingError: String?
     @ObservationIgnored private var lastAutoFloorCalibrationKey: String? = nil
     @ObservationIgnored private var altitudeSpikeGate = AltitudeSpikeGate()
@@ -111,7 +115,11 @@ final class AppModel {
             return appUsageAuthorizationState.displayName
         }
         guard lastAppUsageRefreshAt != nil else { return "동기화 대기" }
-        return appUsageRecordCount == 0 ? "오늘 기록 없음" : "오늘 \(appUsageRecordCount)개"
+        guard let total = ScreenTimeUsageRecordEngine
+            .durationText(appUsageTotalDuration) else {
+            return "오늘 기록 없음"
+        }
+        return "오늘 \(total) · \(appUsageRecordCount)개"
     }
 
     var cloudStatusText: String {
@@ -3639,14 +3647,9 @@ final class AppModel {
         Task { await persist() }
     }
 
-    func setFrequentPlaceToCurrentLocation(
-        _ placeID: UUID,
-        floor: Int
-    ) {
-        guard (-20...200).contains(floor), floor != 0 else {
-            userFacingError = "층수는 지하 20층부터 지상 200층 사이로 입력해 주세요."
-            return
-        }
+    /// 좌표만 잡아 준다. 기준 층은 사용자가 고르지 않고 현재 추정값 →
+    /// 기존 기준 → 1층 순으로 정하며, 이후 층은 자동 보정이 이어받는다.
+    func setFrequentPlaceToCurrentLocation(_ placeID: UUID) {
         guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
             $0.id == placeID
         }) else {
@@ -3658,6 +3661,9 @@ final class AppModel {
                 "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
             return
         }
+        let floor = latestAltitudeEstimate?.floor
+            ?? snapshot.settings.frequentPlaces[index].floor
+            ?? 1
         snapshot.settings.frequentPlaces[index].setLocation(
             from: reading,
             floor: floor
@@ -3699,34 +3705,13 @@ final class AppModel {
         }
     }
 
-    func addFrequentPlaceFloorCalibration(
-        _ placeID: UUID,
-        floor: Int
-    ) {
-        guard (-20...200).contains(floor), floor != 0,
-              let reading = latestSensorReading,
-              recordFloorCalibration(
-                  placeID: placeID,
-                  floor: floor,
-                  reading: reading,
-                  seaLevelAltitudeMeters:
-                      latestAltitudeEstimate?.seaLevelAltitudeMeters,
-                  isAutomatic: false
-              ) else {
-            userFacingError = "현재 위치·고도 센서를 읽은 뒤 다시 시도해 주세요."
-            return
-        }
-        lastAutoFloorCalibrationKey = nil
-        updateFloorEstimate(with: reading)
-    }
-
+    /// 층 보정은 사용자 조작 없이 이 경로로만 쌓인다.
     @discardableResult
     private func recordFloorCalibration(
         placeID: UUID,
         floor: Int,
         reading: SensorReading,
-        seaLevelAltitudeMeters: Double?,
-        isAutomatic: Bool
+        seaLevelAltitudeMeters: Double?
     ) -> Bool {
         guard reading.point != nil,
               let index = snapshot.settings.frequentPlaces.firstIndex(where: {
@@ -3744,7 +3729,7 @@ final class AppModel {
                 placeName: snapshot.settings.frequentPlaces[index].name,
                 floor: floor,
                 seaLevelAltitudeMeters: seaLevelAltitudeMeters,
-                isAutomatic: isAutomatic,
+                isAutomatic: true,
                 capturedAt: reading.timestamp
             )
         )
@@ -4101,6 +4086,11 @@ final class AppModel {
                 snapshot.actuals = updated
             }
             appUsageRecordCount = fresh.count
+            appUsageTotalDuration = fresh.reduce(into: 0) {
+                $0 += $1.span(asOf: span.end).duration
+            }
+            appUsageTokenIndex = ScreenTimeUsageRecordEngine
+                .applicationTokenIndex(from: samples)
             lastAppUsageRefreshAt = .now
             Self.integrationLogger.notice(
                 "Screen Time refresh completed: samples=\(samples.count, privacy: .public), records=\(fresh.count, privacy: .public)"
@@ -4320,8 +4310,7 @@ final class AppModel {
             placeID: match.id,
             floor: estimate.floor,
             reading: reading,
-            seaLevelAltitudeMeters: estimate.seaLevelAltitudeMeters,
-            isAutomatic: true
+            seaLevelAltitudeMeters: estimate.seaLevelAltitudeMeters
         ) {
             let label = estimate.floor < 0
                 ? "지하 \(-estimate.floor)층"
