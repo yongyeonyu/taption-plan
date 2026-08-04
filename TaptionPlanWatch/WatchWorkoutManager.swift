@@ -130,13 +130,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         return manager
     }()
     private var didStartSensorHardware = false
-    private let sensorQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "com.taption.plan.watch-sensors"
-        queue.qualityOfService = .userInitiated
-        queue.maxConcurrentOperationCount = 1
-        return queue
-    }()
+    // iPhone의 AppleSensorCollector와 동일하게 CoreMotion 콜백을 메인 큐로
+    // 받는다. 백그라운드 큐로 받으면 @MainActor 클래스 안에서 선언된 핸들러가
+    // 액터 격리 검사에 걸려 프로세스가 즉시 종료된다. 핸들러 본문은 값 하나를
+    // 만들어 넘기는 수준이라 메인 큐 부담이 없다.
     private var session: HKWorkoutSession?
     private var builder: HKLiveWorkoutBuilder?
     private(set) var linkedPlan: TaptionWatchPlanItem?
@@ -559,7 +556,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 quantityType: type,
                 quantitySamplePredicate: predicate,
                 options: .cumulativeSum
-            ) { _, statistics, _ in
+            ) { @Sendable _, statistics, _ in
                 continuation.resume(
                     returning: statistics?.sumQuantity()?.doubleValue(for: unit)
                 )
@@ -583,7 +580,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 predicate: predicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil
-            ) { _, samples, _ in
+            ) { @Sendable _, samples, _ in
                 let total = (samples ?? []).compactMap { sample -> TimeInterval? in
                     guard let category = sample as? HKCategorySample else {
                         return nil
@@ -617,7 +614,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 predicate: predicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil
-            ) { _, samples, _ in
+            ) { @Sendable _, samples, _ in
                 continuation.resume(returning: samples?.count ?? 0)
             }
             healthStore.execute(query)
@@ -734,7 +731,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if motionManager.isAccelerometerAvailable {
             motionManager.accelerometerUpdateInterval = updateInterval
             motionManager.startAccelerometerUpdates(
-                to: sensorQueue
+                to: .main
             ) { @Sendable [weak self] data, _ in
                 guard let data else { return }
                 let value = TaptionWatchSensorVector3(
@@ -756,7 +753,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if !ambient, motionManager.isGyroAvailable {
             motionManager.gyroUpdateInterval = updateInterval
             motionManager.startGyroUpdates(
-                to: sensorQueue
+                to: .main
             ) { @Sendable [weak self] data, _ in
                 guard let data else { return }
                 let value = TaptionWatchSensorVector3(
@@ -772,7 +769,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         if !ambient, motionManager.isDeviceMotionAvailable {
             motionManager.deviceMotionUpdateInterval = updateInterval
             motionManager.startDeviceMotionUpdates(
-                to: sensorQueue
+                to: .main
             ) { @Sendable [weak self] data, _ in
                 guard let data else { return }
                 let gravity = TaptionWatchSensorVector3(
@@ -805,7 +802,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
         if !ambient, CMAltimeter.isRelativeAltitudeAvailable() {
             altimeter.startRelativeAltitudeUpdates(
-                to: sensorQueue
+                to: .main
             ) { @Sendable [weak self] data, _ in
                 let altitude = data?.relativeAltitude.doubleValue
                 let pressure = data?.pressure.doubleValue
