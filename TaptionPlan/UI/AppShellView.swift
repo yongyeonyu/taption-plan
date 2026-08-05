@@ -24,7 +24,10 @@ struct AppShellView: View {
             PlanEditorSheet(model: model, planID: request.id)
         }
         .sheet(isPresented: $model.isPermissionOnboardingPresented) {
-            PermissionOnboardingSheet(model: model)
+            PermissionOnboardingSheet(
+                model: model,
+                initialFeature: model.permissionOnboardingStartFeature
+            )
                 .interactiveDismissDisabled()
         }
         .font(.taption(size: 17))
@@ -208,6 +211,15 @@ struct PermissionOnboardingSheet: View {
             detail: "시간대별 앱 사용 기록을 시간표에 더합니다."
         ),
     ]
+
+    init(model: AppModel, initialFeature: PermissionFeature? = nil) {
+        self.model = model
+        _index = State(
+            initialValue: initialFeature.flatMap { feature in
+                Self.steps.firstIndex { $0.feature == feature }
+            } ?? 0
+        )
+    }
 
     var body: some View {
         VStack(spacing: 0) {

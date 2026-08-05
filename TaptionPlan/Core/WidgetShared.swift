@@ -668,6 +668,7 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
     var temperatureCelsius: Double?
     var reducesMotion: Bool?
     var locationTrackingEnabled: Bool? = nil
+    var locationPermissionState: String? = nil
 
     static var empty: TaptionWidgetPayload {
         let calendar = Calendar.autoupdatingCurrent
@@ -776,6 +777,8 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
 
 enum TaptionLocationTrackingRequestStore {
     private static let key = "TaptionPlan.pendingLocationTrackingRequest"
+    private static let guidanceKey =
+        "TaptionPlan.pendingLocationTrackingGuidance"
 
     static func write(_ enabled: Bool) {
         UserDefaults(
@@ -792,6 +795,21 @@ enum TaptionLocationTrackingRequestStore {
         let value = defaults.bool(forKey: key)
         defaults.removeObject(forKey: key)
         return value
+    }
+
+    static func requestGuidance() {
+        UserDefaults(
+            suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+        )?.set(true, forKey: guidanceKey)
+    }
+
+    static func takeGuidanceRequest() -> Bool {
+        guard let defaults = UserDefaults(
+            suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+        ) else { return false }
+        let requested = defaults.bool(forKey: guidanceKey)
+        defaults.removeObject(forKey: guidanceKey)
+        return requested
     }
 }
 

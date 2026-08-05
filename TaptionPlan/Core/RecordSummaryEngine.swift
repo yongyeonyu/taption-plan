@@ -46,6 +46,15 @@ enum ActualRecordCategoryResolver {
     ]
 
     static func categoryID(for actual: ActualRecord) -> String {
+        if let context = actual.behavior.flatMap(
+            StationaryContextKind.init(rawValue:)
+        ) {
+            return context.categoryID
+        }
+        if actual.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            == StationaryContextKind.unknownStay.title {
+            return StationaryContextKind.unknownStay.categoryID
+        }
         guard actual.categoryID == "activity" else { return actual.categoryID }
         let value = "\(actual.title) \(actual.behavior ?? "")".lowercased()
         if value.contains("수면") || value.contains("sleep") { return "sleep" }

@@ -32,6 +32,7 @@ final class AppModel {
     /// 기록 탭도 시간표와 같은 배율(일·주·월·년)을 쓴다.
     var reviewScale: TimeScale = .week
     var isPermissionOnboardingPresented = false
+    private(set) var permissionOnboardingStartFeature: PermissionFeature?
     private(set) var pendingSetupCategoryIDs: Set<String> = []
     private(set) var isEditingSetupCategories = false
 
@@ -371,6 +372,11 @@ final class AppModel {
                     } else {
                         await self.disableLocationCollection()
                     }
+                }
+            },
+            onLocationTrackingGuidance: { [weak self] in
+                Task { @MainActor [weak self] in
+                    self?.presentPermissionOnboarding(for: .location)
                 }
             },
             onStatusChange: { [weak self] state in
@@ -811,6 +817,7 @@ final class AppModel {
         isSceneActive = true
         await bootstrap()
         await applyPendingLocationTrackingRequest()
+        applyPendingLocationTrackingGuidance()
         airPodsActivityService.start { [weak self] observation in
             self?.applyAirPodsActivity(observation)
         }
@@ -826,6 +833,13 @@ final class AppModel {
         } else {
             await disableLocationCollection()
         }
+    }
+
+    private func applyPendingLocationTrackingGuidance() {
+        guard TaptionLocationTrackingRequestStore.takeGuidanceRequest() else {
+            return
+        }
+        presentPermissionOnboarding(for: .location)
     }
 
     func sceneEnteredBackground() async {
@@ -974,12 +988,19 @@ final class AppModel {
         guard !UserDefaults.standard.bool(
             forKey: Self.permissionOnboardingKey
         ) else { return }
+        permissionOnboardingStartFeature = nil
+        isPermissionOnboardingPresented = true
+    }
+
+    func presentPermissionOnboarding(for feature: PermissionFeature) {
+        permissionOnboardingStartFeature = feature
         isPermissionOnboardingPresented = true
     }
 
     func finishPermissionOnboarding() async {
         UserDefaults.standard.set(true, forKey: Self.permissionOnboardingKey)
         isPermissionOnboardingPresented = false
+        permissionOnboardingStartFeature = nil
         await refreshPermissionStates()
         refreshAppUsageAuthorizationState()
         await persist()
@@ -5370,7 +5391,9 @@ final class AppModel {
                 profile: snapshot.settings.watchAccelerationProfile
             ),
             dataSyncProfile: snapshot.settings.watchDataSyncProfile,
-            locationTrackingEnabled: snapshot.settings.locationEnabled
+            locationTrackingEnabled: snapshot.settings.locationEnabled,
+            locationPermissionState:
+                snapshot.settings.permissions[.location]?.rawValue
         )
         try? watchConnectivityService.update(payload: watchPayload)
     }

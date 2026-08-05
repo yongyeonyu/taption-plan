@@ -213,6 +213,17 @@ struct SettingsView: View {
                         watchInstallRow
                         appUsageRow
                         locationIntegrationRow
+                        settingsRow(
+                            icon: "location.viewfinder",
+                            iconBackground: .tpPlace,
+                            iconColor: .tpPlaceDark,
+                            title: "GPS 트래킹 권한 안내",
+                            subtitle: "닫은 위치 권한 안내를 다시 열기",
+                            value: model.permissionState(for: .location)
+                                .settingsLabel
+                        ) {
+                            model.presentPermissionOnboarding(for: .location)
+                        }
                         sensorCollectionProfileRow
                         watchAccelerationCollectionRow
                         watchDataSyncRow

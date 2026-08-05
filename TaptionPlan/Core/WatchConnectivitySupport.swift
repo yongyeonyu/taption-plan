@@ -260,6 +260,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private var activityConfirmationHandler:
         (@Sendable (TaptionWatchActivityConfirmation) -> Void)?
     private var locationTrackingHandler: (@Sendable (Bool) -> Void)?
+    private var locationTrackingGuidanceHandler: (@Sendable () -> Void)?
     private var statusHandler: (@Sendable (AppleWatchConnectionState) -> Void)?
 
     override init() {
@@ -279,6 +280,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             TaptionWatchActivityConfirmation
         ) -> Void = { _ in },
         onLocationTracking: @escaping @Sendable (Bool) -> Void = { _ in },
+        onLocationTrackingGuidance: @escaping @Sendable () -> Void = {},
         onStatusChange: @escaping @Sendable (AppleWatchConnectionState) -> Void
     ) {
         commandHandler = onCommand
@@ -286,6 +288,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         healthSnapshotHandler = onHealthSnapshot
         activityConfirmationHandler = onActivityConfirmation
         locationTrackingHandler = onLocationTracking
+        locationTrackingGuidanceHandler = onLocationTrackingGuidance
         statusHandler = onStatusChange
         guard WCSession.isSupported() else {
             onStatusChange(.unsupported)
@@ -464,6 +467,12 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             TaptionWatchEnvelope.locationTrackingKey
         ] as? Bool {
             locationTrackingHandler?(enabled)
+            accepted = true
+        }
+        if envelope[
+            TaptionWatchEnvelope.locationTrackingGuidanceKey
+        ] as? Bool == true {
+            locationTrackingGuidanceHandler?()
             accepted = true
         }
         return accepted

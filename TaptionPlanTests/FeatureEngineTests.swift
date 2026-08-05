@@ -3268,7 +3268,8 @@ final class FeatureEngineTests: XCTestCase {
                 reducesMotion: false,
                 accelerationSettings: settings,
                 dataSyncProfile: .batterySaver,
-                locationTrackingEnabled: true
+                locationTrackingEnabled: true,
+                locationPermissionState: PermissionState.authorized.rawValue
             )
         )
         let decoded = try JSONDecoder().decode(
@@ -3278,6 +3279,10 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(decoded.accelerationSettings, settings)
         XCTAssertEqual(decoded.dataSyncProfile, .batterySaver)
         XCTAssertEqual(decoded.locationTrackingEnabled, true)
+        XCTAssertEqual(
+            decoded.locationPermissionState,
+            PermissionState.authorized.rawValue
+        )
     }
 
     func testAutomaticTrackingPromotionAndStopPolicy() {
@@ -4433,6 +4438,7 @@ final class FeatureEngineTests: XCTestCase {
         let now = makeDate(2026, 8, 1, 18, 0)
         var snapshot = TaptionDataSnapshot.empty
         snapshot.settings.locationEnabled = true
+        snapshot.settings.permissions[.location] = .authorized
         let payload = TaptionWidgetPayloadFactory.make(
             from: snapshot,
             now: now
@@ -4449,6 +4455,10 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(payload.displayDuration, 6 * hour)
         XCTAssertEqual(payload.locationTrackingEnabled, true)
+        XCTAssertEqual(
+            payload.locationPermissionState,
+            PermissionState.authorized.rawValue
+        )
         XCTAssertEqual(
             payload.sourceFingerprint,
             TaptionWidgetSyncFingerprint.make(items: payload.items)
@@ -4666,6 +4676,7 @@ final class FeatureEngineTests: XCTestCase {
         object.removeValue(forKey: "sourceSnapshotUpdatedAt")
         object.removeValue(forKey: "sourceFingerprint")
         object.removeValue(forKey: "locationTrackingEnabled")
+        object.removeValue(forKey: "locationPermissionState")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .secondsSince1970
@@ -4677,6 +4688,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(decoded.sourceSnapshotUpdatedAt)
         XCTAssertNil(decoded.sourceFingerprint)
         XCTAssertNil(decoded.locationTrackingEnabled)
+        XCTAssertNil(decoded.locationPermissionState)
     }
 
     func testWidgetAutomaticallyScrollsOverflowingRowsAndReturns() {
@@ -6787,6 +6799,34 @@ final class FeatureEngineTests: XCTestCase {
             endedAt: start.addingTimeInterval(minutes * 60),
             source: source,
             behavior: behavior
+        )
+    }
+
+    func testStationaryContextNeverAppearsAsMovementInActualRecords() {
+        let start = makeDate(2026, 8, 6, 10)
+        let legacyStay = makeActual(
+            "머무름",
+            "movement",
+            start: start,
+            minutes: 30,
+            source: .location,
+            behavior: StationaryContextKind.unknownStay.rawValue
+        )
+        let titledLegacyStay = makeActual(
+            "머무름",
+            "movement",
+            start: start.addingTimeInterval(hour),
+            minutes: 20,
+            source: .location
+        )
+
+        XCTAssertEqual(
+            ActualRecordCategoryResolver.categoryID(for: legacyStay),
+            "activity"
+        )
+        XCTAssertEqual(
+            ActualRecordCategoryResolver.categoryID(for: titledLegacyStay),
+            "activity"
         )
     }
 

@@ -221,7 +221,9 @@ enum TaptionWidgetPayloadFactory {
             weatherSymbolName: weather?.symbolName,
             temperatureCelsius: weather?.temperatureCelsius,
             reducesMotion: snapshot.settings.reduceMotion,
-            locationTrackingEnabled: snapshot.settings.locationEnabled
+            locationTrackingEnabled: snapshot.settings.locationEnabled,
+            locationPermissionState:
+                snapshot.settings.permissions[.location]?.rawValue
         )
     }
 

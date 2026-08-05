@@ -328,15 +328,15 @@ private struct TaptionCatFigure: View {
 
     var body: some View {
         ZStack {
+            Ellipse()
+                .fill(.black.opacity(0.13))
+                .frame(width: bodyWidth + 11, height: 4)
+                .blur(radius: 0.7)
+                .offset(x: 4, y: 13)
             accessory
             HStack(spacing: -5) {
                 tail
-                Ellipse()
-                    .fill(palette.base)
-                    .frame(width: bodyWidth, height: bodyHeight)
-                    .overlay { Ellipse().stroke(palette.outline, lineWidth: 1) }
-                    .overlay(alignment: .bottom) { legs }
-                    .overlay(alignment: .trailing) { head }
+                bodyShape
             }
             .scaleEffect(
                 x: 1,
@@ -346,6 +346,80 @@ private struct TaptionCatFigure: View {
             .rotationEffect(.degrees(bodyTiltDegrees))
         }
         .frame(width: 52, height: 32)
+    }
+
+    private var bodyShape: some View {
+        Ellipse()
+            .fill(palette.fur)
+            .frame(width: bodyWidth, height: bodyHeight)
+            .overlay { bodyMarkings }
+            .overlay {
+                Ellipse()
+                    .stroke(palette.outline.opacity(0.82), lineWidth: 0.85)
+            }
+            .overlay(alignment: .topLeading) {
+                Capsule()
+                    .fill(.white.opacity(palette.coat == .black ? 0.10 : 0.28))
+                    .frame(width: bodyWidth * 0.48, height: 1.3)
+                    .offset(x: bodyWidth * 0.20, y: bodyHeight * 0.16)
+            }
+            .overlay(alignment: .bottom) { legs }
+            .overlay(alignment: .trailing) { head }
+    }
+
+    @ViewBuilder
+    private var bodyMarkings: some View {
+        ZStack {
+            switch palette.coat {
+            case .white:
+                Ellipse()
+                    .fill(palette.patch.opacity(0.45))
+                    .frame(width: bodyWidth * 0.42, height: bodyHeight * 0.52)
+                    .offset(x: -bodyWidth * 0.20, y: bodyHeight * 0.20)
+            case .calico:
+                Ellipse()
+                    .fill(palette.patch)
+                    .frame(width: bodyWidth * 0.42, height: bodyHeight * 0.72)
+                    .rotationEffect(.degrees(-16))
+                    .offset(x: -bodyWidth * 0.18, y: -1)
+                Ellipse()
+                    .fill(palette.secondPatch)
+                    .frame(width: bodyWidth * 0.29, height: bodyHeight * 0.56)
+                    .rotationEffect(.degrees(22))
+                    .offset(x: bodyWidth * 0.27, y: 2)
+            case .tabby, .gray, .cheese:
+                HStack(spacing: 2.7) {
+                    ForEach(0..<4, id: \.self) { index in
+                        Capsule()
+                            .fill(palette.patch.opacity(0.88 - Double(index) * 0.08))
+                            .frame(width: 2.2, height: bodyHeight * 0.62)
+                            .rotationEffect(.degrees(index.isMultiple(of: 2) ? -15 : 13))
+                    }
+                }
+                .offset(y: -bodyHeight * 0.17)
+                Ellipse()
+                    .fill(palette.secondPatch.opacity(0.75))
+                    .frame(width: bodyWidth * 0.36, height: bodyHeight * 0.31)
+                    .offset(x: bodyWidth * 0.20, y: bodyHeight * 0.30)
+            case .black:
+                Ellipse()
+                    .fill(palette.patch.opacity(0.40))
+                    .frame(width: bodyWidth * 0.68, height: bodyHeight * 0.38)
+                    .offset(x: -1, y: -bodyHeight * 0.21)
+            case .cow:
+                Ellipse()
+                    .fill(palette.patch)
+                    .frame(width: bodyWidth * 0.38, height: bodyHeight * 0.66)
+                    .rotationEffect(.degrees(18))
+                    .offset(x: -bodyWidth * 0.22, y: 1)
+                Circle()
+                    .fill(palette.patch)
+                    .frame(width: bodyHeight * 0.48)
+                    .offset(x: bodyWidth * 0.29, y: -bodyHeight * 0.18)
+            }
+        }
+        .frame(width: bodyWidth, height: bodyHeight)
+        .clipShape(Ellipse())
     }
 
     private var bodyWidth: CGFloat {
@@ -390,27 +464,71 @@ private struct TaptionCatFigure: View {
     @ViewBuilder
     private var tail: some View {
         if action == .startled {
-            Capsule()
-                .fill(palette.base)
-                .overlay { Capsule().stroke(palette.outline, lineWidth: 1) }
-                .frame(width: 9, height: 30)
+            ZStack {
+                FluffyTailShape()
+                    .fill(palette.fur)
+                VStack(spacing: 3) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Capsule()
+                            .fill(palette.patch.opacity(0.78))
+                            .frame(width: 7, height: 2)
+                    }
+                }
+                .opacity(usesTailBands ? 1 : 0)
+                FluffyTailShape()
+                    .stroke(palette.outline.opacity(0.85), lineWidth: 0.8)
+            }
+                .frame(width: 11, height: 30)
                 .rotationEffect(.degrees(-18))
                 .offset(x: 1, y: -2)
         } else {
-            VStack(spacing: -1) {
-                Capsule()
-                    .fill(palette.outline)
-                    .frame(width: 3, height: 7)
-                    .rotationEffect(
-                        .degrees(idle.tailTip * 16),
-                        anchor: .bottom
+            ZStack {
+                CatTailCurve()
+                    .stroke(
+                        palette.outline.opacity(0.75),
+                        style: StrokeStyle(lineWidth: 5.2, lineCap: .round)
                     )
-                Capsule()
-                    .fill(palette.outline)
-                    .frame(width: 3, height: 16)
+                CatTailCurve()
+                    .stroke(
+                        palette.fur,
+                        style: StrokeStyle(lineWidth: 3.6, lineCap: .round)
+                    )
+                if usesTailBands {
+                    CatTailCurve()
+                        .trim(from: 0.05, to: 0.26)
+                        .stroke(
+                            palette.patch,
+                            style: StrokeStyle(lineWidth: 3.7, lineCap: .butt)
+                        )
+                    CatTailCurve()
+                        .trim(from: 0.42, to: 0.56)
+                        .stroke(
+                            palette.patch.opacity(0.9),
+                            style: StrokeStyle(lineWidth: 3.7, lineCap: .butt)
+                        )
+                } else if palette.coat == .calico || palette.coat == .cow {
+                    CatTailCurve()
+                        .trim(from: 0, to: 0.34)
+                        .stroke(
+                            palette.secondPatch,
+                            style: StrokeStyle(lineWidth: 3.7, lineCap: .round)
+                        )
+                }
             }
+            .frame(width: 13, height: 25)
+            .rotationEffect(
+                .degrees(idle.tailTip * 7),
+                anchor: .top
+            )
             .rotationEffect(.degrees(tailBaseDegrees))
-            .offset(x: 4, y: action == .sleeping ? 4 : -2)
+            .offset(x: 5, y: action == .sleeping ? 4 : -2)
+        }
+    }
+
+    private var usesTailBands: Bool {
+        switch palette.coat {
+        case .tabby, .gray, .cheese: true
+        default: false
         }
     }
 
@@ -425,20 +543,34 @@ private struct TaptionCatFigure: View {
         ZStack {
             ears
             Circle()
-                .fill(palette.base)
-                .overlay { Circle().stroke(palette.outline, lineWidth: 1) }
+                .fill(palette.fur)
+                .overlay { headMarkings }
+                .overlay {
+                    Circle()
+                        .stroke(palette.outline.opacity(0.82), lineWidth: 0.8)
+                }
             HStack(spacing: 5) {
                 eye
                 eye
             }
-            .offset(y: -1)
+            .offset(y: -1.5)
+            HStack(spacing: -0.8) {
+                Circle().fill(.white.opacity(0.72))
+                Circle().fill(.white.opacity(0.72))
+            }
+            .frame(width: 7.5, height: 4.3)
+            .offset(y: 2.7)
             whiskers
-            Circle()
-                .fill(Color(red: 1, green: 0.58, blue: 0.65))
-                .frame(width: 2.5, height: 2)
-                .offset(y: 3)
+            Triangle()
+                .fill(palette.nose)
+                .frame(width: 3.1, height: 2.2)
+                .rotationEffect(.degrees(180))
+                .offset(y: 2.4)
+            CatMouthShape()
+                .stroke(palette.outline.opacity(0.72), lineWidth: 0.65)
+                .frame(width: 6, height: 3.5)
+                .offset(y: 4.2)
             if action == .yawning {
-                // 이 크기에서 가장 크게 읽히는 부위가 머리다. 입을 벌린다.
                 Ellipse()
                     .fill(palette.outline)
                     .frame(
@@ -448,10 +580,10 @@ private struct TaptionCatFigure: View {
                     .offset(y: 5 + 1.6 * yawn)
             }
             if action == .grooming {
-                Capsule()
-                    .fill(palette.base)
-                    .overlay { Capsule().stroke(palette.outline, lineWidth: 0.8) }
-                    .frame(width: 5, height: 13)
+                CatLegShape()
+                    .fill(palette.fur)
+                    .overlay { CatLegShape().stroke(palette.outline, lineWidth: 0.6) }
+                    .frame(width: 6, height: 13)
                     .rotationEffect(.degrees(-10 + legSwing * 18))
                     .offset(x: -7, y: 6)
             }
@@ -462,6 +594,53 @@ private struct TaptionCatFigure: View {
             anchor: .bottom
         )
         .offset(x: headOffset.x, y: headOffset.y)
+    }
+
+    @ViewBuilder
+    private var headMarkings: some View {
+        ZStack {
+            switch palette.coat {
+            case .white:
+                Ellipse()
+                    .fill(palette.patch.opacity(0.4))
+                    .frame(width: 6, height: 11)
+                    .offset(x: -5, y: -1)
+            case .calico:
+                Circle()
+                    .fill(palette.patch)
+                    .frame(width: 9)
+                    .offset(x: -4.5, y: -4)
+                Ellipse()
+                    .fill(palette.secondPatch)
+                    .frame(width: 5, height: 8)
+                    .rotationEffect(.degrees(-18))
+                    .offset(x: 5, y: 1)
+            case .tabby, .gray, .cheese:
+                VStack(spacing: 1) {
+                    ForEach(0..<3, id: \.self) { index in
+                        Capsule()
+                            .fill(palette.patch)
+                            .frame(width: 1.5, height: 5.3 - CGFloat(index) * 0.5)
+                            .rotationEffect(.degrees(Double(index - 1) * 12))
+                    }
+                }
+                .rotationEffect(.degrees(90))
+                .offset(y: -5)
+            case .black:
+                Ellipse()
+                    .fill(palette.patch.opacity(0.45))
+                    .frame(width: 10, height: 4)
+                    .offset(x: -1, y: -5)
+            case .cow:
+                Ellipse()
+                    .fill(palette.patch)
+                    .frame(width: 10, height: 13)
+                    .rotationEffect(.degrees(18))
+                    .offset(x: -5, y: -2)
+            }
+        }
+        .frame(width: 18, height: 18)
+        .clipShape(Circle())
     }
 
     private var headOffset: (x: CGFloat, y: CGFloat) {
@@ -483,14 +662,12 @@ private struct TaptionCatFigure: View {
 
     private var ears: some View {
         HStack(spacing: 7) {
-            Triangle()
-                .fill(palette.base)
+            ear
                 .rotationEffect(
                     .degrees(idle.earFlick * -4 - Double(yawn) * 7),
                     anchor: .bottom
                 )
-            Triangle()
-                .fill(palette.base)
+            ear
                 .rotationEffect(
                     .degrees(idle.earFlick * 13 + Double(yawn) * 7),
                     anchor: .bottom
@@ -498,6 +675,18 @@ private struct TaptionCatFigure: View {
         }
         .frame(width: 18, height: 9)
         .offset(y: -7)
+    }
+
+    private var ear: some View {
+        Triangle()
+            .fill(palette.fur)
+            .overlay {
+                Triangle()
+                    .fill(palette.innerEar.opacity(0.72))
+                    .scaleEffect(0.54, anchor: .bottom)
+                    .offset(y: 1.5)
+            }
+            .overlay { Triangle().stroke(palette.outline, lineWidth: 0.7) }
     }
 
     /// 0이면 감은 눈, 1이면 뜬 눈.
@@ -513,27 +702,43 @@ private struct TaptionCatFigure: View {
     }
 
     private var eye: some View {
-        Capsule()
-            .fill(palette.eye)
+        ZStack {
+            Capsule()
+                .fill(eyeOpenness < 0.15 ? palette.outline : palette.eye)
+            if eyeOpenness >= 0.15 {
+                Capsule()
+                    .fill(Color.black.opacity(0.84))
+                    .frame(width: 0.8, height: 2.1)
+                Circle()
+                    .fill(.white.opacity(0.92))
+                    .frame(width: 0.7)
+                    .offset(x: -0.6, y: -0.7)
+            }
+        }
             .frame(
-                width: 2 + (1 - eyeOpenness) * 2,
-                height: 1 + eyeOpenness * 1.5
+                width: 2.8 + (1 - eyeOpenness) * 1.2,
+                height: 0.7 + eyeOpenness * 2.5
             )
     }
 
     private var whiskers: some View {
-        VStack(spacing: 2) {
-            Capsule()
-                .fill(palette.outline.opacity(0.65))
-                .frame(width: 9, height: 0.7)
-                .rotationEffect(.degrees(-8))
-            Capsule()
-                .fill(palette.outline.opacity(0.65))
-                .frame(width: 9, height: 0.7)
-                .rotationEffect(.degrees(8))
+        HStack(spacing: 5) {
+            whiskerSet.scaleEffect(x: -1, y: 1)
+            whiskerSet
         }
-        .offset(x: 7, y: 3)
+        .offset(y: 3)
         .opacity(action == .sleeping ? 0.35 : 0.9)
+    }
+
+    private var whiskerSet: some View {
+        VStack(spacing: 1.4) {
+            ForEach([-9.0, 0, 9], id: \.self) { angle in
+                Capsule()
+                    .fill(palette.outline.opacity(0.67))
+                    .frame(width: 6.2, height: 0.55)
+                    .rotationEffect(.degrees(angle))
+            }
+        }
     }
 
     @ViewBuilder
@@ -560,16 +765,29 @@ private struct TaptionCatFigure: View {
 
     private func leg(index: Int) -> some View {
         VStack(spacing: -1) {
-            Capsule()
-                .fill(palette.outline.opacity(index.isMultiple(of: 2) ? 0.72 : 1))
-                .frame(width: 2.5, height: legHeight(index: index))
-            Capsule()
-                .fill(palette.outline)
+            CatLegShape()
+                .fill(palette.fur)
+                .overlay {
+                    CatLegShape()
+                        .stroke(palette.outline.opacity(0.72), lineWidth: 0.55)
+                }
+                .frame(width: 3.7, height: legHeight(index: index))
+            ZStack {
+                Capsule()
+                    .fill(palette.shadow)
+                HStack(spacing: 0.7) {
+                    Capsule().fill(palette.outline.opacity(0.55))
+                    Capsule().fill(palette.outline.opacity(0.55))
+                }
+                .frame(width: 2.4, height: 0.55)
+                .offset(y: 0.4)
+            }
                 .frame(
-                    width: action == .kneading && index >= 2 ? 5.5 : 4.5,
-                    height: 2
+                    width: action == .kneading && index >= 2 ? 6.2 : 5.1,
+                    height: 2.5
                 )
         }
+        .opacity(index.isMultiple(of: 2) ? 0.76 : 1)
         .rotationEffect(.degrees(legRotation(index: index)))
         .offset(y: legOffsetY(index: index))
     }
@@ -672,43 +890,89 @@ private struct TaptionCatFigure: View {
 }
 
 private struct TaptionCatPalette {
+    enum Coat {
+        case white, calico, tabby, black, gray, cheese, cow
+    }
+
+    let coat: Coat
     let base: Color
+    let highlight: Color
+    let shadow: Color
     let patch: Color
+    let secondPatch: Color
     let outline: Color
     let eye: Color
+    let innerEar: Color
+    let nose: Color
+
+    var fur: LinearGradient {
+        LinearGradient(
+            colors: [highlight, base, shadow],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
 
     init(style: String) {
         let value = style.lowercased()
         switch value {
         case "white", "흰색 고양이":
-            base = Color(white: 0.98); patch = Color(white: 0.86)
-            outline = Color(white: 0.62); eye = .blue
+            coat = .white
+            base = Color(white: 0.97); highlight = .white
+            shadow = Color(white: 0.82); patch = Color(white: 0.88)
+            secondPatch = Color(white: 0.75)
+            outline = Color(white: 0.48); eye = Color(red: 0.28, green: 0.66, blue: 0.92)
         case "calico", "삼색 고양이":
+            coat = .calico
             base = Color(red: 0.97, green: 0.95, blue: 0.91)
+            highlight = .white; shadow = Color(red: 0.82, green: 0.78, blue: 0.71)
             patch = Color(red: 0.86, green: 0.47, blue: 0.20)
+            secondPatch = Color(red: 0.22, green: 0.19, blue: 0.17)
             outline = Color(red: 0.35, green: 0.28, blue: 0.22); eye = .green
         case "mackerel", "고등어 고양이":
+            coat = .tabby
             base = Color(red: 0.58, green: 0.60, blue: 0.62)
+            highlight = Color(red: 0.74, green: 0.75, blue: 0.76)
+            shadow = Color(red: 0.40, green: 0.42, blue: 0.44)
             patch = Color(red: 0.27, green: 0.29, blue: 0.31)
+            secondPatch = Color(red: 0.77, green: 0.73, blue: 0.66)
             outline = Color(red: 0.18, green: 0.19, blue: 0.20); eye = .yellow
         case "black", "검정 고양이":
-            base = Color(white: 0.12); patch = Color(white: 0.28)
-            outline = Color(white: 0.50); eye = .yellow
+            coat = .black
+            base = Color(white: 0.10); highlight = Color(white: 0.26)
+            shadow = Color(white: 0.035); patch = Color(white: 0.30)
+            secondPatch = Color(white: 0.42)
+            outline = Color(white: 0.06); eye = Color(red: 0.95, green: 0.78, blue: 0.22)
         case "gray", "회색 고양이":
-            base = Color(white: 0.58); patch = Color(white: 0.43)
+            coat = .gray
+            base = Color(white: 0.58); highlight = Color(white: 0.74)
+            shadow = Color(white: 0.40); patch = Color(white: 0.39)
+            secondPatch = Color(white: 0.82)
             outline = Color(white: 0.28); eye = .green
         case "cheese", "치즈 고양이":
+            coat = .cheese
             base = Color(red: 0.92, green: 0.63, blue: 0.28)
+            highlight = Color(red: 1.00, green: 0.78, blue: 0.43)
+            shadow = Color(red: 0.71, green: 0.39, blue: 0.12)
             patch = Color(red: 0.72, green: 0.39, blue: 0.12)
+            secondPatch = Color(red: 1.00, green: 0.88, blue: 0.67)
             outline = Color(red: 0.48, green: 0.28, blue: 0.12); eye = .green
         case "cow", "젖소무늬 고양이":
-            base = Color(white: 0.98); patch = Color(white: 0.10)
-            outline = Color(white: 0.48); eye = .yellow
+            coat = .cow
+            base = Color(white: 0.98); highlight = .white
+            shadow = Color(white: 0.82); patch = Color(white: 0.08)
+            secondPatch = Color(white: 0.22)
+            outline = Color(white: 0.36); eye = Color(red: 0.92, green: 0.73, blue: 0.20)
         default:
+            coat = .calico
             base = Color(red: 0.96, green: 0.93, blue: 0.86)
+            highlight = .white; shadow = Color(red: 0.82, green: 0.77, blue: 0.68)
             patch = Color(red: 0.86, green: 0.47, blue: 0.20)
+            secondPatch = Color(red: 0.23, green: 0.19, blue: 0.16)
             outline = Color(red: 0.35, green: 0.28, blue: 0.22); eye = .green
         }
+        innerEar = Color(red: 0.92, green: 0.57, blue: 0.60)
+        nose = Color(red: 0.62, green: 0.31, blue: 0.34)
     }
 }
 
@@ -719,6 +983,83 @@ private struct Triangle: Shape {
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
         path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
         path.closeSubpath()
+        return path
+    }
+}
+
+private struct CatTailCurve: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.maxX * 0.78, y: rect.maxY))
+        path.addCurve(
+            to: CGPoint(x: rect.maxX * 0.36, y: rect.minY + rect.height * 0.08),
+            control1: CGPoint(x: rect.maxX * 0.22, y: rect.maxY * 0.76),
+            control2: CGPoint(x: rect.minX, y: rect.maxY * 0.28)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.maxX * 0.77, y: rect.minY + rect.height * 0.18),
+            control1: CGPoint(x: rect.maxX * 0.48, y: rect.minY),
+            control2: CGPoint(x: rect.maxX * 0.68, y: rect.minY)
+        )
+        return path
+    }
+}
+
+private struct FluffyTailShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let points = [
+            CGPoint(x: 0.50, y: 0.00), CGPoint(x: 0.78, y: 0.06),
+            CGPoint(x: 0.72, y: 0.14), CGPoint(x: 0.91, y: 0.22),
+            CGPoint(x: 0.78, y: 0.31), CGPoint(x: 0.93, y: 0.43),
+            CGPoint(x: 0.79, y: 0.52), CGPoint(x: 0.89, y: 0.66),
+            CGPoint(x: 0.72, y: 0.73), CGPoint(x: 0.78, y: 0.89),
+            CGPoint(x: 0.57, y: 1.00), CGPoint(x: 0.35, y: 0.91),
+            CGPoint(x: 0.39, y: 0.76), CGPoint(x: 0.19, y: 0.68),
+            CGPoint(x: 0.31, y: 0.54), CGPoint(x: 0.12, y: 0.43),
+            CGPoint(x: 0.29, y: 0.32), CGPoint(x: 0.14, y: 0.20),
+            CGPoint(x: 0.34, y: 0.13), CGPoint(x: 0.27, y: 0.05)
+        ]
+        var path = Path()
+        guard let first = points.first else { return path }
+        path.move(to: CGPoint(x: rect.minX + first.x * rect.width, y: rect.minY + first.y * rect.height))
+        for point in points.dropFirst() {
+            path.addLine(to: CGPoint(x: rect.minX + point.x * rect.width, y: rect.minY + point.y * rect.height))
+        }
+        path.closeSubpath()
+        return path
+    }
+}
+
+private struct CatLegShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.20, y: rect.minY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + rect.width * 0.25, y: rect.maxY),
+            control: CGPoint(x: rect.minX + rect.width * 0.05, y: rect.midY)
+        )
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX + rect.width * 0.80, y: rect.minY),
+            control: CGPoint(x: rect.maxX, y: rect.midY)
+        )
+        path.closeSubpath()
+        return path
+    }
+}
+
+private struct CatMouthShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX, y: rect.maxY * 0.68),
+            control: CGPoint(x: rect.width * 0.34, y: rect.maxY)
+        )
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.maxY * 0.68),
+            control: CGPoint(x: rect.width * 0.66, y: rect.maxY)
+        )
         return path
     }
 }

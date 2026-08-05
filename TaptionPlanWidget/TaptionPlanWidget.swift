@@ -334,7 +334,11 @@ private struct TaptionScheduleWidgetView: View {
         reducesMotion: Bool,
         walkPose: TaptionWidgetCatWalkPose
     ) -> some View {
-        HStack(spacing: 0) {
+        let needsLocationPermission = payload.locationTrackingEnabled == true
+            && !["authorized", "limited"].contains(
+                payload.locationPermissionState ?? ""
+            )
+        return HStack(spacing: 0) {
             Text("지금의 시간표")
                 .font(.system(size: metrics.titleFontSize, weight: .bold))
                 .foregroundStyle(WidgetPalette.ink)
@@ -358,32 +362,41 @@ private struct TaptionScheduleWidgetView: View {
             .buttonStyle(.plain)
             .padding(.leading, 5)
 
-            Button(
-                intent: TaptionWidgetLocationTrackingIntent(
-                    enabled: !(payload.locationTrackingEnabled ?? false)
-                )
-            ) {
-                Image(
-                    systemName: payload.locationTrackingEnabled == true
-                        ? "location.fill"
-                        : "location.slash"
-                )
-                .font(.system(size: metrics.weatherIconSize, weight: .bold))
-                .foregroundStyle(
+            if needsLocationPermission {
+                Button(intent: TaptionWidgetLocationGuidanceIntent()) {
+                    trackingIcon(
+                        "exclamationmark.triangle.fill",
+                        color: WidgetPalette.focusInk,
+                        metrics: metrics
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 4)
+                .accessibilityLabel("GPS 트래킹 권한 안내 열기")
+            } else {
+                Button(
+                    intent: TaptionWidgetLocationTrackingIntent(
+                        enabled: !(payload.locationTrackingEnabled ?? false)
+                    )
+                ) {
+                    trackingIcon(
+                        payload.locationTrackingEnabled == true
+                            ? "location.fill"
+                            : "location.slash",
+                        color: payload.locationTrackingEnabled == true
+                            ? WidgetPalette.weather
+                            : WidgetPalette.secondary,
+                        metrics: metrics
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 4)
+                .accessibilityLabel(
                     payload.locationTrackingEnabled == true
-                        ? WidgetPalette.weather
-                        : WidgetPalette.secondary
+                        ? "이동 위치 트래킹 끄기"
+                        : "이동 위치 트래킹 켜기"
                 )
-                .frame(width: 22, height: 22)
-                .background(WidgetPalette.automaticFill, in: Circle())
             }
-            .buttonStyle(.plain)
-            .padding(.leading, 4)
-            .accessibilityLabel(
-                payload.locationTrackingEnabled == true
-                    ? "이동 위치 트래킹 끄기"
-                    : "이동 위치 트래킹 켜기"
-            )
 
             Spacer(minLength: 4)
 
@@ -398,6 +411,18 @@ private struct TaptionScheduleWidgetView: View {
         }
         .frame(height: metrics.headerHeight)
         .padding(.bottom, metrics.headerBottomSpacing)
+    }
+
+    private func trackingIcon(
+        _ systemName: String,
+        color: Color,
+        metrics: TaptionScheduleWidgetMetrics
+    ) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: metrics.weatherIconSize, weight: .bold))
+            .foregroundStyle(color)
+            .frame(width: 22, height: 22)
+            .background(WidgetPalette.automaticFill, in: Circle())
     }
 
     private func visibleItems(
@@ -2117,6 +2142,17 @@ struct TaptionWidgetLocationTrackingIntent: AppIntent {
             try? TaptionWidgetSharedStore.writePayload(payload)
         }
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
+        return .result()
+    }
+}
+
+struct TaptionWidgetLocationGuidanceIntent: AppIntent {
+    static let title: LocalizedStringResource = "GPS 트래킹 권한 안내"
+    static let description = IntentDescription("아이폰에서 위치 권한 안내를 다시 엽니다.")
+    static let openAppWhenRun = true
+
+    func perform() async throws -> some IntentResult {
+        TaptionLocationTrackingRequestStore.requestGuidance()
         return .result()
     }
 }

@@ -481,6 +481,22 @@ struct WatchContentView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            if connectivity.payload?.locationTrackingEnabled == true,
+               !["authorized", "limited"].contains(
+                    connectivity.payload?.locationPermissionState ?? ""
+               ) {
+                Button {
+                    connectivity.requestLocationTrackingGuidance()
+                } label: {
+                    Label(
+                        "GPS 권한 안내를 iPhone에서 열기",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+            }
             if workout.isActive {
                 statusRow(
                     "이번 세션 표본",

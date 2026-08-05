@@ -135,6 +135,19 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
     }
 
+    func requestLocationTrackingGuidance() {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.locationTrackingGuidanceKey: true,
+        ]
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
+        }
+    }
+
     func requestSync() {
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
