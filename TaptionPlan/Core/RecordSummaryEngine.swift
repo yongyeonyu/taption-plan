@@ -79,20 +79,38 @@ enum ActualRecordGroupingEngine {
         categories: [CategoryDefinition],
         asOf: Date = .now
     ) -> [RecordCategoryGroup] {
-        let limit = min(asOf, span.end)
+        groups(
+            actuals: actuals,
+            in: [span],
+            categories: categories,
+            asOf: asOf
+        )
+    }
+
+    /// 고른 칸이 여럿일 때도 목록은 하나다. 기록을 칸마다 잘라 담고 같은
+    /// 항목의 조각을 합쳐, 떨어진 칸을 골라도 합계가 겹쳐 세어지지 않는다.
+    static func groups(
+        actuals: [ActualRecord],
+        in spans: [TimeSpan],
+        categories: [CategoryDefinition],
+        asOf: Date = .now
+    ) -> [RecordCategoryGroup] {
         var seen = Set<UUID>()
         var byCategory: [String: [(record: ActualRecord, span: TimeSpan)]] = [:]
 
         for actual in actuals {
             guard seen.insert(actual.id).inserted else { continue }
-            guard actual.startedAt < limit,
-                  let visible = actual.span(asOf: limit)
-                      .intersection(with: span),
-                  visible.duration > 0 else {
-                continue
-            }
             let id = ActualRecordCategoryResolver.categoryID(for: actual)
-            byCategory[id, default: []].append((actual, visible))
+            for span in spans {
+                let limit = min(asOf, span.end)
+                guard actual.startedAt < limit,
+                      let visible = actual.span(asOf: limit)
+                          .intersection(with: span),
+                      visible.duration > 0 else {
+                    continue
+                }
+                byCategory[id, default: []].append((actual, visible))
+            }
         }
 
         let definitions = Dictionary(
@@ -127,7 +145,8 @@ enum ActualRecordGroupingEngine {
     }
 
     /// 자동 기록은 같은 제목이 하루에 여러 번 끊겨 들어온다. 제목이 같으면
-    /// 한 줄로 합치고 겹치는 구간은 한 번만 센다.
+    /// 한 줄로 합치고 겹치는 구간은 한 번만 센다. 한 기록이 고른 칸 여럿에
+    /// 걸쳐 잘렸을 때는 조각이 아니라 기록을 센다.
     private static func mergedChildren(
         _ values: [(record: ActualRecord, span: TimeSpan)]
     ) -> [RecordGroupChild] {
@@ -144,7 +163,7 @@ enum ActualRecordGroupingEngine {
                     ),
                     start: first.span.start,
                     recordID: first.record.id,
-                    occurrenceCount: ordered.count
+                    occurrenceCount: Set(ordered.map(\.record.id)).count
                 )
             }
             .sorted {
@@ -174,6 +193,129 @@ enum ActualRecordGroupingEngine {
     }
 }
 
+// MARK: - 기간 고르기
+
+/// 기록 화면에서 손가락으로 켜고 끄는 한 칸.
+struct ReviewPeriodBucket: Identifiable, Equatable, Sendable {
+    let id: String
+    let label: String
+    let span: TimeSpan
+}
+
+/// 기록 화면이 읽을 구간을 정한다. 고른 칸이 없으면 기간 전체 하나이고,
+/// 고른 칸이 있으면 그 칸들의 합집합이다. 합계·눈금판·목록이 모두 이 한
+/// 값을 읽어야 서로 다른 숫자를 말하지 않는다.
+enum ReviewSelectionEngine {
+    /// 배율마다 고를 수 있는 칸의 크기. 하루는 나누지 않는다 — 하루는 늘
+    /// 통째로 본다.
+    static func bucketLevel(for level: TimelineLevel) -> TimelineLevel? {
+        switch level {
+        case .day: nil
+        case .week: .day
+        case .month: .week
+        case .year: .month
+        }
+    }
+
+    static func buckets(
+        for level: TimelineLevel,
+        in period: TimeSpan,
+        calendar: Calendar
+    ) -> [ReviewPeriodBucket] {
+        guard let bucketLevel = bucketLevel(for: level) else { return [] }
+        let component = component(for: bucketLevel)
+        var result: [ReviewPeriodBucket] = []
+        var cursor = period.start
+
+        while cursor < period.end {
+            guard let interval = calendar.dateInterval(
+                of: component,
+                for: cursor
+            ) else {
+                break
+            }
+            let span = TimeSpan(
+                start: max(interval.start, period.start),
+                end: min(interval.end, period.end)
+            )
+            if span.duration > 0 {
+                result.append(
+                    ReviewPeriodBucket(
+                        id: identifier(of: span.start, calendar: calendar),
+                        label: label(
+                            of: span,
+                            level: bucketLevel,
+                            index: result.count,
+                            calendar: calendar
+                        ),
+                        span: span
+                    )
+                )
+            }
+            guard interval.end > cursor else { break }
+            cursor = interval.end.addingTimeInterval(0.001)
+        }
+        return result
+    }
+
+    /// 고른 칸이 없거나 지금 기간에 없는 칸만 남았으면 기간 전체로 돌아간다.
+    /// 화면이 아무것도 가리키지 않는 상태에 빠지지 않게 하는 마지막 방어다.
+    static func spans(
+        period: TimeSpan,
+        buckets: [ReviewPeriodBucket],
+        selectedIDs: Set<String>
+    ) -> [TimeSpan] {
+        let chosen = buckets
+            .filter { selectedIDs.contains($0.id) }
+            .map(\.span)
+        guard !chosen.isEmpty else { return [period] }
+        return ActualIntervalMergeEngine.union(chosen, mergeGap: 0)
+    }
+
+    private static func component(
+        for level: TimelineLevel
+    ) -> Calendar.Component {
+        switch level {
+        case .day: .day
+        case .week: .weekOfYear
+        case .month: .month
+        case .year: .year
+        }
+    }
+
+    private static func identifier(
+        of start: Date,
+        calendar: Calendar
+    ) -> String {
+        ISO8601DateFormatter.string(
+            from: start,
+            timeZone: calendar.timeZone,
+            formatOptions: [.withInternetDateTime]
+        )
+    }
+
+    private static let weekdayNames = ["일", "월", "화", "수", "목", "금", "토"]
+
+    private static func label(
+        of span: TimeSpan,
+        level: TimelineLevel,
+        index: Int,
+        calendar: Calendar
+    ) -> String {
+        switch level {
+        case .day:
+            let weekday = calendar.component(.weekday, from: span.start)
+            return weekdayNames[max(1, min(7, weekday)) - 1]
+        case .week:
+            return "\(index + 1)주"
+        case .month:
+            return "\(calendar.component(.month, from: span.start))월"
+        case .year:
+            return "\(calendar.component(.year, from: span.start))년"
+        }
+    }
+}
+
 // MARK: - 기록 차트
 
 struct RecordClockArc: Identifiable, Equatable, Sendable {
@@ -189,6 +331,28 @@ struct RecordClockRing: Identifiable, Equatable, Sendable {
     let categoryID: String
     let duration: TimeInterval
     let arcs: [RecordClockArc]
+}
+
+/// 하루 눈금판 안쪽에 덧대는 띠. 바깥 고리가 "무엇을 했는가"라면 이 띠는
+/// 그 안의 결을 보여 준다. 한 띠에는 종류가 다른 조각이 이어 붙는다.
+enum RecordClockDetailKind: String, Equatable, Sendable {
+    case sleepStage
+    case travel
+}
+
+struct RecordClockDetailArc: Identifiable, Equatable, Sendable {
+    let id: String
+    /// 색과 이름을 고르는 열쇠. 수면은 `SleepStage`, 이동은 `TravelMode`의
+    /// 원시값이다.
+    let token: String
+    let startFraction: Double
+    let endFraction: Double
+}
+
+struct RecordClockDetailRing: Identifiable, Equatable, Sendable {
+    let id: String
+    let kind: RecordClockDetailKind
+    let arcs: [RecordClockDetailArc]
 }
 
 struct RecordChartSlice: Identifiable, Equatable, Sendable {
@@ -371,6 +535,182 @@ enum RecordChartEngine {
     }
 }
 
+/// 눈금판 안쪽 띠의 조각을 만든다. 이미 받아 둔 수면 단계와 이동 구간만
+/// 읽고, 건강 데이터를 새로 묻지 않는다.
+enum RecordClockDetailEngine {
+    /// 이보다 짧은 조각은 띠 굵기보다 얇게 그려져 보이지도 않으면서 그리는
+    /// 값만 늘린다. 하루의 0.4%는 약 6분이다.
+    static let minimumArcFraction: Double = 0.004
+
+    /// 한 띠가 가질 수 있는 조각 수의 상한. 넘으면 기준을 넓혀 더 합친다.
+    /// 재생 중에는 이 띠를 프레임마다 다시 그리므로 상한이 곧 예산이다.
+    static let maximumArcCount = 32
+
+    /// 수면 단계 띠. HealthKit은 같은 시각에 여러 단계를 겹쳐 보내므로
+    /// 경계마다 한 단계를 골라 한 줄로 편다.
+    static func sleepRing(
+        sessions: [SleepSession],
+        in span: TimeSpan
+    ) -> RecordClockDetailRing? {
+        var seen = Set<UUID>()
+        var clipped: [(stage: SleepStage, span: TimeSpan)] = []
+        for session in sessions {
+            for segment in session.segments {
+                guard seen.insert(segment.id).inserted else { continue }
+                guard let visible = segment.span.intersection(with: span),
+                      visible.duration > 0 else {
+                    continue
+                }
+                clipped.append((segment.stage, visible))
+            }
+        }
+        return ring(
+            kind: .sleepStage,
+            pieces: resolvedStages(clipped),
+            in: span
+        )
+    }
+
+    /// 이동 구간 띠. 같은 이동 수단이 이어지면 한 조각으로 붙인다.
+    static func travelRing(
+        segments: [TravelSegment],
+        in span: TimeSpan
+    ) -> RecordClockDetailRing? {
+        var seen = Set<UUID>()
+        var pieces: [(token: String, span: TimeSpan)] = []
+        for segment in segments.sorted(by: { $0.span.start < $1.span.start }) {
+            guard seen.insert(segment.id).inserted else { continue }
+            guard let visible = segment.span.intersection(with: span),
+                  visible.duration > 0 else {
+                continue
+            }
+            // 겹쳐 들어온 구간도 한 줄에 그려야 하므로 앞 조각 뒤로 민다.
+            let start = max(visible.start, pieces.last?.span.end ?? visible.start)
+            guard start < visible.end else { continue }
+            pieces.append(
+                (
+                    segment.mode.rawValue,
+                    TimeSpan(start: start, end: visible.end)
+                )
+            )
+        }
+        return ring(kind: .travel, pieces: pieces, in: span)
+    }
+
+    /// 겹친 단계 가운데 구체적인 관측이 이긴다. 경계마다 한 단계만 남겨
+    /// 띠가 서로를 가리지 않게 한다.
+    private static func resolvedStages(
+        _ segments: [(stage: SleepStage, span: TimeSpan)]
+    ) -> [(token: String, span: TimeSpan)] {
+        let boundaries = Array(
+            Set(segments.flatMap { [$0.span.start, $0.span.end] })
+        ).sorted()
+        guard boundaries.count >= 2 else { return [] }
+
+        var result: [(token: String, span: TimeSpan)] = []
+        for (start, end) in zip(boundaries, boundaries.dropFirst()) {
+            guard start < end else { continue }
+            let winner = segments
+                .filter { $0.span.start < end && start < $0.span.end }
+                .max { $0.stage.overlapPriority < $1.stage.overlapPriority }
+            guard let winner else { continue }
+            result.append(
+                (winner.stage.rawValue, TimeSpan(start: start, end: end))
+            )
+        }
+        return result
+    }
+
+    private static func ring(
+        kind: RecordClockDetailKind,
+        pieces: [(token: String, span: TimeSpan)],
+        in span: TimeSpan
+    ) -> RecordClockDetailRing? {
+        let total = span.duration
+        guard total > 0, !pieces.isEmpty else { return nil }
+
+        var minimum = minimumArcFraction
+        var condensed = condensed(pieces, minimumDuration: minimum * total)
+        while condensed.count > maximumArcCount, minimum < 0.05 {
+            minimum *= 2
+            condensed = self.condensed(
+                pieces,
+                minimumDuration: minimum * total
+            )
+        }
+        guard !condensed.isEmpty else { return nil }
+
+        return RecordClockDetailRing(
+            id: kind.rawValue,
+            kind: kind,
+            arcs: condensed.enumerated().map { offset, piece in
+                RecordClockDetailArc(
+                    id: "\(kind.rawValue).\(offset)",
+                    token: piece.token,
+                    startFraction: min(
+                        1,
+                        piece.span.start.timeIntervalSince(span.start) / total
+                    ),
+                    endFraction: min(
+                        1,
+                        piece.span.end.timeIntervalSince(span.start) / total
+                    )
+                )
+            }
+        )
+    }
+
+    /// 눈에 띄지 않을 만큼 짧은 조각은 그리지 않고 이웃에 합친다. 화소보다
+    /// 얇은 조각을 수백 개 그리면 화면이 멈춘다. 붙어 있는 이웃이 없으면
+    /// 최소 길이까지만 늘려 하나로 남긴다.
+    private static func condensed(
+        _ pieces: [(token: String, span: TimeSpan)],
+        minimumDuration: TimeInterval
+    ) -> [(token: String, span: TimeSpan)] {
+        var merged: [(token: String, span: TimeSpan)] = []
+        for piece in pieces.sorted(by: { $0.span.start < $1.span.start }) {
+            guard let last = merged.last else {
+                merged.append(piece)
+                continue
+            }
+            let gap = piece.span.start.timeIntervalSince(last.span.end)
+            guard gap < minimumDuration else {
+                merged.append(piece)
+                continue
+            }
+            if last.token == piece.token
+                || piece.span.duration < minimumDuration {
+                merged[merged.count - 1] = (
+                    last.token,
+                    TimeSpan(
+                        start: last.span.start,
+                        end: max(last.span.end, piece.span.end)
+                    )
+                )
+            } else if last.span.duration < minimumDuration {
+                // 앞 조각이 너무 짧으면 뒤 조각이 그 자리를 이어받는다.
+                merged[merged.count - 1] = (
+                    piece.token,
+                    TimeSpan(start: last.span.start, end: piece.span.end)
+                )
+            } else {
+                merged.append(piece)
+            }
+        }
+
+        return merged.map { piece in
+            guard piece.span.duration < minimumDuration else { return piece }
+            return (
+                piece.token,
+                TimeSpan(
+                    start: piece.span.start,
+                    end: piece.span.start.addingTimeInterval(minimumDuration)
+                )
+            )
+        }
+    }
+}
+
 // MARK: - 하루 원형 시간표의 재생·고르기
 
 /// 원형 시간표는 재생 중 매 프레임 다시 그린다. 그때마다 하루를 다시 집계하면
@@ -433,6 +773,31 @@ enum RecordClockEngine {
                 categoryID: ring.categoryID,
                 duration: ring.duration,
                 arcs: arcs
+            )
+        }
+    }
+
+    /// 안쪽 띠도 재생머리를 따라 드러난다. 아직 아무것도 지나지 않았어도
+    /// 띠 자체는 남겨야 눈금판에서 줄이 사라졌다 나타나지 않는다.
+    static func detailRings(
+        _ rings: [RecordClockDetailRing],
+        revealedThrough progress: Double?
+    ) -> [RecordClockDetailRing] {
+        guard let progress else { return rings }
+        return rings.map { ring in
+            RecordClockDetailRing(
+                id: ring.id,
+                kind: ring.kind,
+                arcs: ring.arcs.compactMap { arc in
+                    guard arc.startFraction < progress else { return nil }
+                    guard arc.endFraction > progress else { return arc }
+                    return RecordClockDetailArc(
+                        id: arc.id,
+                        token: arc.token,
+                        startFraction: arc.startFraction,
+                        endFraction: progress
+                    )
+                }
             )
         }
     }

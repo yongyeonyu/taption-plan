@@ -548,6 +548,40 @@ struct TimelineAggregationEngine: Sendable {
         }
     }
 
+    /// 구간 하나를 통째로 요약한다. 배율이 정한 칸이 아니라 사용자가 고른
+    /// 칸의 합집합처럼 달력 경계와 어긋난 구간도 같은 규칙으로 잰다.
+    func summary(
+        of span: TimeSpan,
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        photos: [PhotoMoment],
+        asOf: Date = .now
+    ) -> SummaryBucket {
+        let planned = distribute(
+            plans.map { ($0.categoryID, $0.span) },
+            over: [span]
+        )
+        let actual = distribute(
+            actuals.map { ($0.categoryID, $0.span(asOf: asOf)) },
+            over: [span]
+        )
+        let visiblePhotos = photos.filter {
+            !$0.isHiddenFromTimeline && span.contains($0.capturedAt)
+        }
+        return SummaryBucket(
+            id: "span-\(span.start.timeIntervalSince1970)",
+            span: span,
+            categories: mergeDurations(
+                planned: planned[0],
+                actual: actual[0]
+            ),
+            photoCount: visiblePhotos.count,
+            representativePhotoID: visiblePhotos
+                .min { $0.capturedAt < $1.capturedAt }?
+                .id
+        )
+    }
+
     private func distribute(
         _ entries: [(String, TimeSpan)],
         over buckets: [TimeSpan]
@@ -1145,31 +1179,85 @@ struct ReviewEngine: Sendable {
         memos: [ActionMemo],
         asOf: Date = .now
     ) -> ReviewReport {
-        let span = aggregation.interval(for: level, containing: date)
-        let bucket = aggregation.buckets(
-            of: level,
-            inside: span,
+        report(
+            over: [aggregation.interval(for: level, containing: date)],
             plans: plans,
             actuals: actuals,
+            weather: weather,
             photos: photos,
+            memos: memos,
             asOf: asOf
-        ).first ?? SummaryBucket(
-            id: "empty",
-            span: span,
-            categories: [],
-            photoCount: 0,
-            representativePhotoID: nil
         )
+    }
+
+    /// 떨어져 있는 여러 칸을 한 번에 본다. 칸마다 잰 값을 더하므로 사이의
+    /// 빈 시간은 어디에도 들어가지 않는다. 구간은 서로 겹치지 않는다고 본다.
+    func report(
+        over spans: [TimeSpan],
+        plans: [PlanRecord],
+        actuals: [ActualRecord],
+        weather: [WeatherContext],
+        photos: [PhotoMoment],
+        memos: [ActionMemo],
+        asOf: Date = .now
+    ) -> ReviewReport {
+        let ordered = spans.sorted { $0.start < $1.start }
+        guard let first = ordered.first, let last = ordered.last else {
+            return ReviewReport(
+                span: TimeSpan(start: asOf, end: asOf),
+                plannedDuration: 0,
+                actualDuration: 0,
+                categories: [],
+                unplannedActualDuration: 0,
+                contexts: []
+            )
+        }
+        let hull = TimeSpan(start: first.start, end: last.end)
+
+        var planned: [String: TimeInterval] = [:]
+        var actual: [String: TimeInterval] = [:]
+        for span in ordered {
+            let bucket = aggregation.summary(
+                of: span,
+                plans: plans,
+                actuals: actuals,
+                photos: photos,
+                asOf: asOf
+            )
+            for category in bucket.categories {
+                planned[category.categoryID, default: 0] += category.planned
+                actual[category.categoryID, default: 0] += category.actual
+            }
+        }
+        let categories = Set(planned.keys).union(actual.keys)
+            .map {
+                CategoryDuration(
+                    categoryID: $0,
+                    planned: planned[$0, default: 0],
+                    actual: actual[$0, default: 0]
+                )
+            }
+            .sorted {
+                max($0.actual, $0.planned) > max($1.actual, $1.planned)
+            }
+
         let knownPlanIDs = Set(plans.map(\.id))
         let unplanned = actuals.reduce(0) { partial, actual in
             guard actual.planID == nil || !knownPlanIDs.contains(actual.planID!) else {
                 return partial
             }
-            return partial + (actual.span(asOf: asOf).intersection(with: span)?.duration ?? 0)
+            let measured = actual.span(asOf: asOf)
+            return partial + ordered.reduce(0) {
+                $0 + (measured.intersection(with: $1)?.duration ?? 0)
+            }
+        }
+
+        func isSelected(_ date: Date) -> Bool {
+            ordered.contains { $0.contains(date) }
         }
 
         var contexts: [ReviewContext] = weather
-            .filter { span.contains($0.observedAt) }
+            .filter { isSelected($0.observedAt) }
             .map {
                 let airQualityText = $0.airQuality.map {
                     " · 미세 \($0.overallGrade.displayName) (PM10 \(Int($0.pm10MicrogramsPerCubicMeter.rounded())) / PM2.5 \(Int($0.pm25MicrogramsPerCubicMeter.rounded())))"
@@ -1184,12 +1272,12 @@ struct ReviewEngine: Sendable {
             }
 
         let visiblePhotos = photos.filter {
-            span.contains($0.capturedAt) && !$0.isHiddenFromTimeline
+            isSelected($0.capturedAt) && !$0.isHiddenFromTimeline
         }
         if let first = visiblePhotos.first {
             contexts.append(
                 ReviewContext(
-                    id: "photos-\(span.start.timeIntervalSince1970)",
+                    id: "photos-\(hull.start.timeIntervalSince1970)",
                     date: first.capturedAt,
                     symbolName: "photo",
                     text: "기억으로 남긴 사진 \(visiblePhotos.count)장",
@@ -1198,15 +1286,16 @@ struct ReviewEngine: Sendable {
             )
         }
 
+        // 메모가 놓이는 자리는 적은 시각이 아니라 그 메모가 말하는 시각이다.
+        // 오늘 적은 지난 화요일 이야기는 지난 화요일에 남는다.
         contexts.append(contentsOf: memos
             .filter {
-                $0.isHighlightedInReview
-                    && span.contains($0.createdAt)
+                $0.isHighlightedInReview && isSelected($0.occurredAt)
             }
             .map {
                 ReviewContext(
                     id: "memo-\($0.id.uuidString)",
-                    date: $0.createdAt,
+                    date: $0.occurredAt,
                     symbolName: "note.text",
                     text: $0.text,
                     linkedPlanID: $0.planID
@@ -1214,10 +1303,10 @@ struct ReviewEngine: Sendable {
             })
 
         return ReviewReport(
-            span: span,
-            plannedDuration: bucket.plannedDuration,
-            actualDuration: bucket.actualDuration,
-            categories: bucket.categories,
+            span: hull,
+            plannedDuration: categories.reduce(0) { $0 + $1.planned },
+            actualDuration: categories.reduce(0) { $0 + $1.actual },
+            categories: categories,
             unplannedActualDuration: unplanned,
             contexts: contexts.sorted { $0.date < $1.date }
         )

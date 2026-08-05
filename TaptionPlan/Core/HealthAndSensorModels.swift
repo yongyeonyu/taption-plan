@@ -29,6 +29,20 @@ enum SleepStage: String, Codable, CaseIterable, Hashable, Sendable {
         case .asleepUnspecified: "수면"
         }
     }
+
+    /// HealthKit은 같은 시각에 여러 단계를 겹쳐 보낸다(침대에 있음이 밤 전체를
+    /// 덮고 그 위에 코어·깊은 수면이 얹힌다). 겹친 구간을 한 단계로 정할 때
+    /// 쓰는 우선순위로, 구체적인 관측이 포괄적인 관측을 이긴다.
+    var overlapPriority: Int {
+        switch self {
+        case .awake: 60
+        case .deep: 50
+        case .rem: 40
+        case .core: 30
+        case .asleepUnspecified: 20
+        case .inBed: 10
+        }
+    }
 }
 
 struct SleepSegment: Identifiable, Codable, Hashable, Sendable {

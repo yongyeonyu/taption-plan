@@ -30,19 +30,21 @@ struct WatchAmbientDrainResult: Sendable {
 /// - 기록은 최대 3일 보관된다.
 /// - `accelerometerData(from:to:)`는 한 번에 최대 12시간을 요청할 수 있다.
 /// - 표본은 최대 3분 늦게 조회 가능해진다.
+///
+/// 한계를 벗어난 요청에 `accelerometerData(from:to:)`는 nil이 아니라
+/// Objective-C 예외로 답한다(빌드 29 실기기 크래시). 그래서 범위는
+/// `WatchSensorQueryPlan`이 먼저 검사하고, 그래도 남는 위험은
+/// `WatchObjCExceptionCatcher`가 받아낸다.
 actor WatchAmbientSensorRecorder {
     /// `recordAccelerometer(forDuration:)`가 허용하는 최대 창.
     static let maximumRecordingDuration: TimeInterval = 12 * 3_600
-    private static let retentionDuration: TimeInterval = 3 * 86_400
-    private static let availabilityLag: TimeInterval = 3 * 60
-    /// 조회 자체는 12시간까지 허용되지만, 한 번에 12시간(=216만 표본)을
-    /// 열거하면 목록 객체가 그대로 메모리에 남는다. 30분씩 끊어 읽는다.
-    private static let queryChunk: TimeInterval = 30 * 60
     private static let rearmMargin: TimeInterval = 30 * 60
 
     private let defaults: UserDefaults
     private let highWaterKey = "TaptionPlan.watchSensorRecorderHighWater"
     private let armedUntilKey = "TaptionPlan.watchSensorRecorderArmedUntil"
+    private let armedAtKey = "TaptionPlan.watchSensorRecorderArmedAt"
+    private let failureCountKey = "TaptionPlan.watchSensorRecorderDrainFailures"
     private lazy var recorder = CMSensorRecorder()
 
     init(defaults: UserDefaults = .standard) {
@@ -74,49 +76,97 @@ actor WatchAmbientSensorRecorder {
             now.addingTimeInterval(Self.maximumRecordingDuration),
             forKey: armedUntilKey
         )
+        // 조회 하한선. 처음 건 시각만 남기고 재무장 때는 덮어쓰지 않는다.
+        // 이전 창에 쌓인 표본도 보관 기간 안에서는 여전히 읽어야 한다.
+        if defaults.object(forKey: armedAtKey) == nil {
+            defaults.set(now, forKey: armedAtKey)
+        }
     }
 
-    /// 마지막으로 처리한 시각 이후의 표본만 읽어 기존 특징 파이프라인에
-    /// 통과시킨다. 워터마크는 실제로 처리한 마지막 표본 시각으로만 올려
-    /// 같은 표본을 두 번 처리하지 않는다.
+    /// 마지막으로 처리한 지점 이후의 표본만 읽어 기존 특징 파이프라인에
+    /// 통과시킨다.
     func drain(now: Date = .now) -> WatchAmbientDrainResult {
-        // accelerometerData(from:to:)가 Objective-C 예외를 던져 앱이 중단된다
-        // (빌드 29 실기기 크래시로 확인). Swift에서는 이 예외를 잡을 수 없어
-        // 안전하게 읽는 방법이 마련될 때까지 조회를 멈춘다. 기록 자체는
-        // 계속되고 3일간 보관되므로 그때 한꺼번에 가져올 수 있다.
-        return WatchAmbientDrainResult()
-    }
-
-    private func drainUnsafe(now: Date = .now) -> WatchAmbientDrainResult {
         guard CMSensorRecorder.isAccelerometerRecordingAvailable(),
               CMSensorRecorder.authorizationStatus() == .authorized else {
             return WatchAmbientDrainResult()
         }
-        // 최근 3분은 아직 데몬에 남아 있을 수 있으므로 다음 실행으로 미룬다.
-        let end = now.addingTimeInterval(-Self.availabilityLag)
-        let earliest = now.addingTimeInterval(-Self.retentionDuration)
-        let highWater = defaults.object(forKey: highWaterKey) as? Date
-        var cursor = max(highWater ?? earliest, earliest)
-        guard end.timeIntervalSince(cursor)
-            >= WatchBehaviorWindowAnalyzer.windowDuration else {
-            return WatchAmbientDrainResult()
-        }
+        let highWater = WatchSensorQueryPlan.sanitizedHighWater(
+            defaults.object(forKey: highWaterKey) as? Date,
+            now: now
+        )
+        let windows = WatchSensorQueryPlan.windows(
+            now: now,
+            armedAt: armedAt(),
+            highWater: highWater
+        )
+        guard !windows.isEmpty else { return WatchAmbientDrainResult() }
 
+        let recorder = self.recorder
         var pipeline = WatchAmbientBehaviorPipeline(sessionID: UUID())
-        while cursor < end {
-            let chunkEnd = min(end, cursor.addingTimeInterval(Self.queryChunk))
-            if let list = recorder.accelerometerData(from: cursor, to: chunkEnd) {
-                for case let sample as CMRecordedAccelerometerData in list {
-                    pipeline.ingest(sample)
+        var ledger = WatchSensorDrainLedger(highWater: highWater)
+        for window in windows {
+            do {
+                // 조회와 열거를 한 @try 안에 넣는다. CMSensorDataList는
+                // 지연 목록이라 실제 읽기는 열거할 때 일어나고, 예외도
+                // 그때 올라올 수 있다.
+                try WatchObjCExceptionCatcher.catching {
+                    guard let list = recorder.accelerometerData(
+                        from: window.start,
+                        to: window.end
+                    ) else { return }
+                    for case let sample as CMRecordedAccelerometerData in list {
+                        pipeline.ingest(sample)
+                    }
                 }
+                ledger.succeeded(window)
+            } catch {
+                ledger.failed(window)
+                reportDrainFailure(window, error: error)
             }
-            cursor = chunkEnd
+            if ledger.isExhausted { break }
         }
-        let result = pipeline.finish()
-        // 표본이 하나도 없어도 워터마크는 조회 끝까지 올린다. 그렇지 않으면
-        // 손목을 차지 않은 구간을 매번 다시 훑게 된다.
-        defaults.set(pipeline.latestSampleDate ?? end, forKey: highWaterKey)
-        return result
+        if ledger.failureCount == 0 {
+            defaults.removeObject(forKey: failureCountKey)
+        }
+        // 표본이 하나도 없어도 워터마크는 조회한 끝까지 올린다. 그렇지
+        // 않으면 손목을 차지 않은 구간을 매번 다시 훑게 된다.
+        if let highWater = ledger.highWater {
+            defaults.set(highWater, forKey: highWaterKey)
+        }
+        return pipeline.finish()
+    }
+
+    /// 기록을 처음 건 시각. 이보다 앞은 표본이 존재할 수 없다.
+    private func armedAt() -> Date? {
+        if let stored = defaults.object(forKey: armedAtKey) as? Date {
+            return stored
+        }
+        // 이 키가 생기기 전 빌드에서 이미 기록을 걸어둔 기기. 무장 종료
+        // 시각에서 창 길이를 빼면 마지막으로 건 시각이 나온다. 첫 무장보다
+        // 늦은 값이라 조회 범위가 좁아질 뿐 앞서 나가지 않는다.
+        guard let armedUntil = defaults.object(forKey: armedUntilKey) as? Date
+        else {
+            return nil
+        }
+        let derived = armedUntil.addingTimeInterval(-Self.maximumRecordingDuration)
+        defaults.set(derived, forKey: armedAtKey)
+        return derived
+    }
+
+    /// 예외는 건너뛰고 넘어가지만 조용히 넘어가지는 않는다. 실행 진단
+    /// 파일은 다음 실행 때 iPhone 설정 화면으로 그대로 전달된다.
+    private func reportDrainFailure(
+        _ window: WatchSensorQueryWindow,
+        error: Error
+    ) {
+        let total = defaults.integer(forKey: failureCountKey) + 1
+        defaults.set(total, forKey: failureCountKey)
+        let span = Int(window.duration.rounded())
+        WatchLaunchDiagnostics.mark(
+            "ambient-drain-exception total=\(total)"
+                + " from=\(Int(window.start.timeIntervalSince1970))"
+                + " span=\(span)s \(error.localizedDescription)"
+        )
     }
 }
 

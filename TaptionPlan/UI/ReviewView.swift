@@ -4,20 +4,35 @@ import SwiftUI
 /// 화면 본문에서 계산하면 스크롤·제스처마다 기간 전체를 다시 훑게 된다.
 /// 데이터·배율·기준일이 바뀔 때 한 번만 만들어 두고 그대로 그린다.
 private struct ReviewContent: Equatable {
-    var span: TimeSpan
+    /// 배율이 정한 기간 전체. 막대의 가로 범위와 옆으로 넘기기가 이 값을 쓴다.
+    var period: TimeSpan
+    /// 합계·눈금판·목록이 함께 읽는 단 하나의 구간 묶음. 고른 칸이 없으면
+    /// `[period]` 하나뿐이라 지금까지의 화면과 똑같다.
+    var spans: [TimeSpan]
+    /// 손가락으로 켜고 끌 수 있는 칸. 하루 배율에서는 비어 있다.
+    var pickableBuckets: [ReviewPeriodBucket]
+    var selectedBucketCount: Int
     var plannedCategories: [CategoryDuration]
     var contexts: [ReviewContext]
     var groups: [RecordCategoryGroup]
     var rings: [RecordClockRing]
-    var buckets: [RecordChartBucket]
+    var detailRings: [RecordClockDetailRing]
+    var chartBuckets: [RecordChartBucket]
+    /// 고른 구간에 걸친 막대. 비어 있으면 모두 고른 것과 같다.
+    var selectedChartBucketIDs: Set<String>
 
     static let empty = ReviewContent(
-        span: TimeSpan(start: .now, end: .now),
+        period: TimeSpan(start: .now, end: .now),
+        spans: [],
+        pickableBuckets: [],
+        selectedBucketCount: 0,
         plannedCategories: [],
         contexts: [],
         groups: [],
         rings: [],
-        buckets: []
+        detailRings: [],
+        chartBuckets: [],
+        selectedChartBucketIDs: []
     )
 }
 
@@ -43,6 +58,8 @@ private struct ReviewContentKey: Equatable {
     let revision: UInt64
     let scale: TimeScale
     let date: Date
+    let selectedBucketIDs: Set<String>
+    let healthRefreshedAt: Date?
 }
 
 struct ReviewView: View {
@@ -50,10 +67,16 @@ struct ReviewView: View {
 
     /// 24시간 눈금 안쪽에 기록을 담는 띠. 하나만 두고 굵게 그린다.
     private static let clockBandWidth: CGFloat = 20
+    /// 바깥 띠 안쪽에 겹쳐 두는 결 띠(수면 단계·이동 구간). 작은 화면에서도
+    /// 서로 붙어 보이지 않을 만큼만 벌린다.
+    private static let detailBandWidth: CGFloat = 8
+    private static let detailBandGap: CGFloat = 3.5
     private static let clockButtonSize: CGFloat = 44
 
     @State private var content = ReviewContent.empty
     @State private var collapsedGroupIDs: Set<String> = []
+    /// 켜 둔 칸. 비어 있으면 기간 전체를 본다.
+    @State private var selectedBucketIDs: Set<String> = []
     /// 범례에서 고른 카테고리. 원형·막대 모두 이 하나만 남기고 나머지를 죽인다.
     @State private var highlightedCategoryID: String?
     /// 재생을 시작한 시각. nil이면 멈춘 상태다.
@@ -97,7 +120,7 @@ struct ReviewView: View {
                 Text("기록")
                     .font(.taption(size: 19, weight: .bold))
                 Spacer()
-                Text(periodText(content.span))
+                Text(periodText(content.period))
                     .font(.taption(size: 12))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -143,6 +166,10 @@ struct ReviewView: View {
                 Color(red: 0.93, green: 0.93, blue: 0.94),
                 in: RoundedRectangle(cornerRadius: 9)
             )
+
+            if !content.pickableBuckets.isEmpty {
+                bucketPicker
+            }
         }
         .padding(.horizontal, 10)
         .padding(.top, 5)
@@ -150,6 +177,86 @@ struct ReviewView: View {
         .background(Color.white)
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.tpLine).frame(height: 0.5)
+        }
+    }
+
+    /// 칸을 눌러 켜고 끈다. 여러 칸을 켜면 합쳐서 보고, 모두 끄면 기간
+    /// 전체로 돌아간다. 따로 "고르기 모드"로 들어가지 않는다.
+    private var bucketPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 5) {
+                if !selectedBucketIDs.isEmpty {
+                    Button {
+                        selectedBucketIDs = []
+                    } label: {
+                        bucketChipLabel(
+                            "전체",
+                            isSelected: false,
+                            symbol: "arrow.uturn.backward"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("고른 칸 모두 끄기")
+                }
+
+                ForEach(content.pickableBuckets) { bucket in
+                    let isSelected = selectedBucketIDs.contains(bucket.id)
+                    Button {
+                        toggle(bucket)
+                    } label: {
+                        bucketChipLabel(bucket.label, isSelected: isSelected)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(bucket.label)
+                    .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+                }
+            }
+            .padding(.horizontal, 1)
+            .padding(.vertical, 1)
+        }
+        .frame(height: 30)
+    }
+
+    private func bucketChipLabel(
+        _ text: String,
+        isSelected: Bool,
+        symbol: String? = nil
+    ) -> some View {
+        HStack(spacing: 3) {
+            if let symbol {
+                Image(systemName: symbol)
+                    .font(.taption(size: 8, weight: .bold))
+            }
+            Text(text)
+                .font(
+                    .taption(
+                        size: 10,
+                        weight: isSelected ? .bold : .regular
+                    )
+                )
+        }
+        .foregroundStyle(isSelected ? Color.tpProjectDark : Color.tpSecondary)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(
+            isSelected
+                ? Color.tpProjectDark.opacity(0.16)
+                : Color(red: 0.95, green: 0.95, blue: 0.96),
+            in: Capsule()
+        )
+        .overlay {
+            Capsule().stroke(
+                isSelected ? Color.tpProjectDark.opacity(0.55) : .clear,
+                lineWidth: 1
+            )
+        }
+    }
+
+    private func toggle(_ bucket: ReviewPeriodBucket) {
+        if selectedBucketIDs.contains(bucket.id) {
+            selectedBucketIDs.remove(bucket.id)
+        } else {
+            selectedBucketIDs.insert(bucket.id)
         }
     }
 
@@ -173,6 +280,9 @@ struct ReviewView: View {
                     emptyRecordText
                 } else {
                     categoryLegend
+                }
+                if !content.detailRings.isEmpty {
+                    detailRingLegend
                 }
             } else if content.groups.isEmpty {
                 emptyRecordText
@@ -221,7 +331,8 @@ struct ReviewView: View {
             content.rings,
             isolating: highlightedCategoryID
         )
-        let span = content.span
+        let detailRings = content.detailRings
+        let span = content.period
         return TimelineView(
             RecordClockSchedule(isPlaying: playStartedAt != nil)
         ) { timeline in
@@ -234,6 +345,7 @@ struct ReviewView: View {
                     context: context,
                     size: size,
                     rings: rings,
+                    detailRings: detailRings,
                     progress: progress,
                     nowFraction: RecordClockEngine.nowFraction(
                         in: span,
@@ -288,6 +400,7 @@ struct ReviewView: View {
         context: GraphicsContext,
         size: CGSize,
         rings: [RecordClockRing],
+        detailRings: [RecordClockDetailRing],
         progress: Double?,
         nowFraction: Double?
     ) {
@@ -335,6 +448,16 @@ struct ReviewView: View {
             }
         }
 
+        drawDetailRings(
+            context: context,
+            center: center,
+            outerEdge: radius - Self.clockBandWidth / 2,
+            rings: RecordClockEngine.detailRings(
+                detailRings,
+                revealedThrough: progress
+            )
+        )
+
         if let progress {
             drawHand(
                 context: context,
@@ -354,6 +477,112 @@ struct ReviewView: View {
                 width: 1.6
             )
         }
+    }
+
+    /// 바깥 고리 안쪽에 결 띠를 한 줄씩 안으로 쌓는다. 가운데 단추를 덮을
+    /// 만큼 안으로 들어가면 더 그리지 않는다.
+    private func drawDetailRings(
+        context: GraphicsContext,
+        center: CGPoint,
+        outerEdge: CGFloat,
+        rings: [RecordClockDetailRing]
+    ) {
+        var edge = outerEdge - Self.detailBandGap
+        for ring in rings {
+            let radius = edge - Self.detailBandWidth / 2
+            guard radius - Self.detailBandWidth / 2
+                > Self.clockButtonSize / 2 + 4 else {
+                return
+            }
+            context.stroke(
+                arcPath(center: center, radius: radius, from: 0, to: 1),
+                with: .color(Color.tpLine.opacity(0.4)),
+                lineWidth: Self.detailBandWidth
+            )
+            for arc in ring.arcs {
+                context.stroke(
+                    arcPath(
+                        center: center,
+                        radius: radius,
+                        from: arc.startFraction,
+                        to: arc.endFraction
+                    ),
+                    with: .color(detailColor(ring.kind, token: arc.token)),
+                    style: StrokeStyle(
+                        lineWidth: Self.detailBandWidth,
+                        lineCap: .butt
+                    )
+                )
+            }
+            edge -= Self.detailBandWidth + Self.detailBandGap
+        }
+    }
+
+    /// 수면 단계는 깊이가 짙기 순서로 읽히고, 깨어 있음만 따뜻한 색으로
+    /// 떼어 놓는다. 이동은 수단별 색을 시간표와 같은 계열에서 가져온다.
+    private func detailColor(
+        _ kind: RecordClockDetailKind,
+        token: String
+    ) -> Color {
+        switch kind {
+        case .sleepStage:
+            switch SleepStage(rawValue: token) {
+            case .deep: return Color(red: 0.23, green: 0.26, blue: 0.41)
+            case .core: return .tpSleepDark
+            case .rem: return Color(red: 0.55, green: 0.58, blue: 0.70)
+            case .asleepUnspecified:
+                return Color(red: 0.66, green: 0.68, blue: 0.76)
+            case .awake: return Color(red: 0.88, green: 0.66, blue: 0.54)
+            case .inBed, .none:
+                return Color(red: 0.89, green: 0.90, blue: 0.92)
+            }
+        case .travel:
+            switch TravelMode(rawValue: token) {
+            case .running: return .tpExerciseDark
+            case .cycling: return .tpHobbyDark
+            case .car, .taxi: return .tpTravelDark
+            case .bus, .subway, .train: return .tpProjectDark
+            case .airplane, .ship: return .tpPlaceDark
+            case .walking, .none: return .tpHealthDark
+            }
+        }
+    }
+
+    private func detailName(
+        _ kind: RecordClockDetailKind,
+        token: String
+    ) -> String {
+        switch kind {
+        case .sleepStage:
+            return SleepStage(rawValue: token)?.displayName ?? token
+        case .travel:
+            return TravelMode(rawValue: token).map(MovementPresentation.title)
+                ?? token
+        }
+    }
+
+    /// 안쪽 띠의 색이 무엇을 뜻하는지 적는다. 띠가 없으면 아무것도 두지
+    /// 않는다.
+    private var detailRingLegend: some View {
+        ChipFlowLayout(spacing: 5) {
+            ForEach(content.detailRings) { ring in
+                ForEach(detailTokens(of: ring), id: \.self) { token in
+                    HStack(spacing: 4) {
+                        Capsule()
+                            .fill(detailColor(ring.kind, token: token))
+                            .frame(width: 10, height: 6)
+                        Text(detailName(ring.kind, token: token))
+                            .font(.taption(size: 8.5))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func detailTokens(of ring: RecordClockDetailRing) -> [String] {
+        var seen = Set<String>()
+        return ring.arcs.map(\.token).filter { seen.insert($0).inserted }
     }
 
     private func arcPath(
@@ -460,7 +689,7 @@ struct ReviewView: View {
 
     private var barChart: some View {
         Chart {
-            ForEach(content.buckets) { bucket in
+            ForEach(content.chartBuckets) { bucket in
                 ForEach(bucket.slices) { slice in
                     BarMark(
                         x: .value("구간", bucket.span.start, unit: barUnit),
@@ -468,18 +697,13 @@ struct ReviewView: View {
                     )
                     .foregroundStyle(
                         color(forCategoryID: slice.categoryID)
-                            .opacity(
-                                highlightedCategoryID == nil
-                                    || highlightedCategoryID == slice.categoryID
-                                    ? 1
-                                    : 0.2
-                            )
+                            .opacity(barOpacity(bucket, slice))
                     )
                 }
             }
         }
         // 기록이 없는 날도 칸을 차지해야 요일·날짜가 전부 보인다.
-        .chartXScale(domain: content.span.start...content.span.end)
+        .chartXScale(domain: content.period.start...content.period.end)
         .chartXAxis {
             AxisMarks(values: .stride(by: barUnit, count: barLabelStride)) {
                 value in
@@ -507,6 +731,20 @@ struct ReviewView: View {
             }
         }
         .frame(height: 168)
+    }
+
+    /// 고른 칸 밖의 막대는 남겨 두되 흐리게 죽인다. 합계·목록이 세지 않은
+    /// 시간이 눈에는 그대로 보이면 두 값이 어긋나 보이기 때문이다.
+    private func barOpacity(
+        _ bucket: RecordChartBucket,
+        _ slice: RecordChartSlice
+    ) -> Double {
+        if !content.selectedChartBucketIDs.isEmpty,
+           !content.selectedChartBucketIDs.contains(bucket.id) {
+            return 0.14
+        }
+        guard let highlightedCategoryID else { return 1 }
+        return highlightedCategoryID == slice.categoryID ? 1 : 0.2
     }
 
     private var barUnit: Calendar.Component {
@@ -803,7 +1041,9 @@ struct ReviewView: View {
         ReviewContentKey(
             revision: model.timelineRevision,
             scale: model.reviewScale,
-            date: model.selectedDate
+            date: model.selectedDate,
+            selectedBucketIDs: selectedBucketIDs,
+            healthRefreshedAt: model.lastHealthRefreshAt
         )
     }
 
@@ -815,46 +1055,97 @@ struct ReviewView: View {
         let actuals = RestSleepDisplayEngine.visibleActuals(
             model.snapshot.actuals
         )
+        let level = model.reviewScale.timelineLevel
+        let period = engine.aggregation.interval(
+            for: level,
+            containing: model.selectedDate
+        )
+        let pickable = ReviewSelectionEngine.buckets(
+            for: level,
+            in: period,
+            calendar: engine.aggregation.calendar
+        )
+        // 다른 기간의 칸을 고른 채로 넘어왔다면 버린다. 남은 칸이 없으면
+        // 아래에서 기간 전체로 돌아간다.
+        let selected = selectedBucketIDs.intersection(
+            Set(pickable.map(\.id))
+        )
+        if selected != selectedBucketIDs { selectedBucketIDs = selected }
+
+        // 합계·눈금판·목록이 함께 읽는 단 하나의 구간 묶음.
+        let spans = ReviewSelectionEngine.spans(
+            period: period,
+            buckets: pickable,
+            selectedIDs: selected
+        )
         let report = engine.report(
-            for: model.reviewScale.timelineLevel,
-            containing: model.selectedDate,
+            over: spans,
             plans: model.snapshot.plans,
             actuals: actuals,
             weather: model.snapshot.weather,
             photos: model.snapshot.photos,
             memos: model.snapshot.memos
         )
-        let span = report.span
 
         var rings: [RecordClockRing] = []
-        var buckets: [RecordChartBucket] = []
-        if model.reviewScale == .day {
-            rings = RecordChartEngine.clockRings(actuals: actuals, in: span)
+        var detailRings: [RecordClockDetailRing] = []
+        var chartBuckets: [RecordChartBucket] = []
+        var selectedChartBucketIDs: Set<String> = []
+        if model.reviewScale == .day, let day = spans.first {
+            rings = RecordChartEngine.clockRings(actuals: actuals, in: day)
+            // 수면 단계와 이동 구간은 이미 받아 둔 값이다. 건강 데이터를
+            // 새로 묻지 않는다.
+            detailRings = [
+                RecordClockDetailEngine.sleepRing(
+                    sessions: model.sleepSessions,
+                    in: day
+                ),
+                RecordClockDetailEngine.travelRing(
+                    segments: model.snapshot.travel,
+                    in: day
+                ),
+            ].compactMap { $0 }
         } else {
-            buckets = RecordChartEngine.buckets(
+            chartBuckets = RecordChartEngine.buckets(
                 actuals: actuals,
-                in: span,
+                in: period,
                 unit: model.reviewScale == .year ? .month : .day,
                 calendar: engine.aggregation.calendar
             )
+            if !selected.isEmpty {
+                selectedChartBucketIDs = Set(
+                    chartBuckets
+                        .filter { bucket in
+                            spans.contains {
+                                $0.intersection(with: bucket.span) != nil
+                            }
+                        }
+                        .map(\.id)
+                )
+            }
         }
 
         // 보고 있는 기간이 바뀌면 재생하던 하루가 사라지므로 멈춘다.
-        if content.span != span || model.reviewScale != .day {
+        if content.period != period || model.reviewScale != .day {
             playStartedAt = nil
         }
 
         content = ReviewContent(
-            span: span,
+            period: period,
+            spans: spans,
+            pickableBuckets: pickable,
+            selectedBucketCount: selected.count,
             plannedCategories: report.categories,
             contexts: report.contexts,
             groups: ActualRecordGroupingEngine.groups(
                 actuals: actuals,
-                in: span,
+                in: spans,
                 categories: model.snapshot.categories
             ),
             rings: rings,
-            buckets: buckets
+            detailRings: detailRings,
+            chartBuckets: chartBuckets,
+            selectedChartBucketIDs: selectedChartBucketIDs
         )
         collapsedGroupIDs = collapsedGroupIDs.intersection(
             Set(content.groups.map(\.id))
@@ -868,9 +1159,11 @@ struct ReviewView: View {
     // MARK: - 표기
 
     private func periodText(_ span: TimeSpan) -> String {
-        span.start.formatted(.dateTime.month().day())
+        let period = span.start.formatted(.dateTime.month().day())
             + " – "
             + span.end.addingTimeInterval(-1).formatted(.dateTime.month().day())
+        guard content.selectedBucketCount > 0 else { return period }
+        return "\(period) · \(content.selectedBucketCount)칸"
     }
 
     private func categoryName(_ id: String) -> String {

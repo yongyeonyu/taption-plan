@@ -124,13 +124,6 @@ struct SleepAnalysisEngine: Sendable {
     }
 
     private func stagePriority(_ stage: SleepStage) -> Int {
-        switch stage {
-        case .awake: 60
-        case .deep: 50
-        case .rem: 40
-        case .core: 30
-        case .asleepUnspecified: 20
-        case .inBed: 10
-        }
+        stage.overlapPriority
     }
 }

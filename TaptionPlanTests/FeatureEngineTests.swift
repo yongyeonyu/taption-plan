@@ -7336,6 +7336,400 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(memo.occurredAt, createdAt)
     }
 
+    // MARK: - 기록 화면에서 여러 칸 고르기
+
+    /// 떨어져 있는 두 주를 고르면 그 사이의 주는 어디에도 들어가지 않는다.
+    /// 합계와 목록이 같은 구간 묶음을 읽으므로 두 값이 어긋나지 않는다.
+    func testNonContiguousBucketSelectionAddsOnlyChosenBuckets() {
+        let engine = TimelineAggregationEngine(calendar: utcCalendar)
+        let asOf = makeDate(2026, 9, 1)
+        let period = engine.interval(
+            for: .month,
+            containing: makeDate(2026, 8, 15)
+        )
+        let buckets = ReviewSelectionEngine.buckets(
+            for: .month,
+            in: period,
+            calendar: engine.calendar
+        )
+        XCTAssertEqual(buckets.map(\.label), ["1주", "2주", "3주", "4주", "5주", "6주"])
+        XCTAssertEqual(buckets[1].span.start, makeDate(2026, 8, 3))
+        XCTAssertEqual(buckets[3].span.start, makeDate(2026, 8, 17))
+
+        let chosen = ActualRecord(
+            planID: nil,
+            title: "학습",
+            categoryID: "study",
+            startedAt: makeDate(2026, 8, 4, 9, 0),
+            endedAt: makeDate(2026, 8, 4, 11, 0),
+            source: .manual
+        )
+        let skipped = ActualRecord(
+            planID: nil,
+            title: "학습",
+            categoryID: "study",
+            startedAt: makeDate(2026, 8, 12, 9, 0),
+            endedAt: makeDate(2026, 8, 12, 10, 0),
+            source: .manual
+        )
+        let alsoChosen = ActualRecord(
+            planID: nil,
+            title: "달리기",
+            categoryID: "exercise",
+            startedAt: makeDate(2026, 8, 18, 9, 0),
+            endedAt: makeDate(2026, 8, 18, 12, 0),
+            source: .manual
+        )
+        let actuals = [chosen, skipped, alsoChosen]
+
+        let spans = ReviewSelectionEngine.spans(
+            period: period,
+            buckets: buckets,
+            selectedIDs: [buckets[1].id, buckets[3].id]
+        )
+        XCTAssertEqual(spans, [buckets[1].span, buckets[3].span])
+
+        let report = ReviewEngine(calendar: utcCalendar).report(
+            over: spans,
+            plans: [],
+            actuals: actuals,
+            weather: [],
+            photos: [],
+            memos: [],
+            asOf: asOf
+        )
+        XCTAssertEqual(report.actualDuration, 5 * hour)
+
+        let groups = ActualRecordGroupingEngine.groups(
+            actuals: actuals,
+            in: spans,
+            categories: [],
+            asOf: asOf
+        )
+        XCTAssertEqual(
+            groups.reduce(0) { $0 + $1.duration },
+            report.actualDuration
+        )
+        XCTAssertEqual(Set(groups.map(\.id)), ["study", "exercise"])
+        XCTAssertEqual(groups.first { $0.id == "study" }?.duration, 2 * hour)
+        XCTAssertFalse(
+            groups.contains { $0.children.contains { $0.recordID == skipped.id } }
+        )
+
+        // 붙어 있는 칸을 고르면 하나의 구간으로 이어진다.
+        let adjacent = ReviewSelectionEngine.spans(
+            period: period,
+            buckets: buckets,
+            selectedIDs: [buckets[1].id, buckets[2].id]
+        )
+        XCTAssertEqual(
+            adjacent,
+            [TimeSpan(start: buckets[1].span.start, end: buckets[2].span.end)]
+        )
+    }
+
+    /// 고른 칸을 모두 끄면 지금까지의 화면(기간 하나)으로 돌아간다. 지난
+    /// 기간의 칸만 남아 있을 때도 마찬가지라 빈 화면에 갇히지 않는다.
+    func testClearingBucketSelectionRestoresWholePeriod() {
+        let engine = TimelineAggregationEngine(calendar: utcCalendar)
+        let asOf = makeDate(2026, 9, 1)
+        let date = makeDate(2026, 8, 15)
+        let period = engine.interval(for: .month, containing: date)
+        let buckets = ReviewSelectionEngine.buckets(
+            for: .month,
+            in: period,
+            calendar: engine.calendar
+        )
+        let actual = ActualRecord(
+            planID: nil,
+            title: "학습",
+            categoryID: "study",
+            startedAt: makeDate(2026, 8, 12, 9, 0),
+            endedAt: makeDate(2026, 8, 12, 10, 0),
+            source: .manual
+        )
+
+        XCTAssertEqual(
+            ReviewSelectionEngine.spans(
+                period: period,
+                buckets: buckets,
+                selectedIDs: []
+            ),
+            [period]
+        )
+        XCTAssertEqual(
+            ReviewSelectionEngine.spans(
+                period: period,
+                buckets: buckets,
+                selectedIDs: ["지난 달에 고른 칸"]
+            ),
+            [period]
+        )
+
+        let review = ReviewEngine(calendar: utcCalendar)
+        let cleared = review.report(
+            over: [period],
+            plans: [],
+            actuals: [actual],
+            weather: [],
+            photos: [],
+            memos: [],
+            asOf: asOf
+        )
+        let single = review.report(
+            for: .month,
+            containing: date,
+            plans: [],
+            actuals: [actual],
+            weather: [],
+            photos: [],
+            memos: [],
+            asOf: asOf
+        )
+        XCTAssertEqual(cleared.span, single.span)
+        XCTAssertEqual(cleared.categories, single.categories)
+        XCTAssertEqual(cleared.actualDuration, single.actualDuration)
+        XCTAssertEqual(cleared.actualDuration, hour)
+    }
+
+    /// 하루는 나눠 고르지 않는다. 어떤 칸을 고른 척해도 하루 전체를 읽는다.
+    func testDayScaleKeepsSinglePeriodBehaviour() {
+        let engine = TimelineAggregationEngine(calendar: utcCalendar)
+        let asOf = makeDate(2026, 8, 5)
+        let day = engine.interval(
+            for: .day,
+            containing: makeDate(2026, 8, 4, 10, 0)
+        )
+        XCTAssertNil(ReviewSelectionEngine.bucketLevel(for: .day))
+        XCTAssertTrue(
+            ReviewSelectionEngine.buckets(
+                for: .day,
+                in: day,
+                calendar: engine.calendar
+            ).isEmpty
+        )
+        XCTAssertEqual(
+            ReviewSelectionEngine.spans(
+                period: day,
+                buckets: [],
+                selectedIDs: ["주에서 고른 칸"]
+            ),
+            [day]
+        )
+
+        let actual = ActualRecord(
+            planID: nil,
+            title: "학습",
+            categoryID: "study",
+            startedAt: makeDate(2026, 8, 4, 9, 0),
+            endedAt: makeDate(2026, 8, 4, 11, 0),
+            source: .manual
+        )
+        XCTAssertEqual(
+            ActualRecordGroupingEngine.groups(
+                actuals: [actual],
+                in: [day],
+                categories: [],
+                asOf: asOf
+            ),
+            ActualRecordGroupingEngine.groups(
+                actuals: [actual],
+                in: day,
+                categories: [],
+                asOf: asOf
+            )
+        )
+    }
+
+    // MARK: - 하루 눈금판 안쪽 띠
+
+    /// 겹쳐 들어온 수면 단계는 한 줄로 펴고, 화소보다 얇게 그려질 3분짜리
+    /// 각성은 이웃에 합친다. 조각을 그대로 그리면 눈에 보이지도 않으면서
+    /// 그리는 값만 늘어난다.
+    func testSleepStageRingFlattensOverlapAndMergesTooShortStage() throws {
+        let dayStart = makeDate(2026, 8, 4)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        func segment(
+            _ stage: SleepStage,
+            _ from: Double,
+            _ to: Double
+        ) -> SleepSegment {
+            SleepSegment(
+                stage: stage,
+                span: TimeSpan(
+                    start: dayStart.addingTimeInterval(from * hour),
+                    end: dayStart.addingTimeInterval(to * hour)
+                ),
+                sourceName: "Apple Watch"
+            )
+        }
+        let sessions = SleepAnalysisEngine().sessions(
+            from: [
+                segment(.inBed, 0, 7),
+                segment(.core, 0, 1),
+                segment(.deep, 1, 2),
+                segment(.awake, 2, 2 + 3.0 / 60),
+                segment(.core, 2 + 3.0 / 60, 4),
+                segment(.rem, 4, 5),
+            ]
+        )
+        XCTAssertEqual(sessions.count, 1)
+
+        let ring = try XCTUnwrap(
+            RecordClockDetailEngine.sleepRing(sessions: sessions, in: day)
+        )
+        XCTAssertEqual(ring.kind, .sleepStage)
+        XCTAssertEqual(
+            ring.arcs.map(\.token),
+            ["core", "deep", "core", "rem", "inBed"]
+        )
+        // 3분짜리 각성은 앞 조각에 흡수돼 사라진다.
+        XCTAssertEqual(
+            ring.arcs[1].endFraction,
+            (2 * hour + 180) / (24 * hour),
+            accuracy: 1e-9
+        )
+        assertRingHasNoSlivers(ring)
+    }
+
+    /// 같은 이동 수단이 이어지면 하나로 붙이고, 너무 짧은 구간은 이웃에
+    /// 합치되 이웃이 없으면 최소 길이로 넓혀 남긴다.
+    func testTravelRingJoinsSameModeAndCondensesShortSegments() throws {
+        let dayStart = makeDate(2026, 8, 4)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        func travel(
+            _ mode: TravelMode,
+            _ from: Double,
+            _ to: Double
+        ) -> TravelSegment {
+            TravelSegment(
+                mode: mode,
+                span: TimeSpan(
+                    start: dayStart.addingTimeInterval(from * hour),
+                    end: dayStart.addingTimeInterval(to * hour)
+                ),
+                distanceMeters: 500,
+                confidence: .high,
+                evidence: ["GPS"]
+            )
+        }
+        let ring = try XCTUnwrap(
+            RecordClockDetailEngine.travelRing(
+                segments: [
+                    travel(.walking, 8, 8 + 20.0 / 60),
+                    travel(.walking, 8 + 20.0 / 60, 8.5),
+                    travel(.car, 9, 9 + 40.0 / 60),
+                    travel(.subway, 9 + 40.0 / 60, 9 + 42.0 / 60),
+                    travel(.running, 12, 12 + 2.0 / 60),
+                ],
+                in: day
+            )
+        )
+        XCTAssertEqual(ring.kind, .travel)
+        XCTAssertEqual(ring.arcs.map(\.token), ["walking", "car", "running"])
+        XCTAssertEqual(
+            ring.arcs[0].endFraction,
+            8.5 / 24,
+            accuracy: 1e-9
+        )
+        // 2분짜리 지하철은 앞선 자동차 구간에 합쳐진다.
+        XCTAssertEqual(
+            ring.arcs[1].endFraction,
+            (9 * hour + 42 * 60) / (24 * hour),
+            accuracy: 1e-9
+        )
+        assertRingHasNoSlivers(ring)
+
+        XCTAssertNil(
+            RecordClockDetailEngine.travelRing(segments: [], in: day)
+        )
+        XCTAssertNil(
+            RecordClockDetailEngine.sleepRing(sessions: [], in: day)
+        )
+    }
+
+    private func assertRingHasNoSlivers(
+        _ ring: RecordClockDetailRing?,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard let ring else {
+            XCTFail("띠가 없습니다.", file: file, line: line)
+            return
+        }
+        var previousEnd = 0.0
+        for arc in ring.arcs {
+            XCTAssertGreaterThanOrEqual(
+                arc.startFraction,
+                previousEnd - 1e-9,
+                "조각이 겹칩니다.",
+                file: file,
+                line: line
+            )
+            XCTAssertGreaterThanOrEqual(
+                arc.endFraction - arc.startFraction,
+                RecordClockDetailEngine.minimumArcFraction - 1e-9,
+                "화소보다 얇은 조각이 남았습니다.",
+                file: file,
+                line: line
+            )
+            previousEnd = arc.endFraction
+        }
+        XCTAssertLessThanOrEqual(
+            ring.arcs.count,
+            RecordClockDetailEngine.maximumArcCount,
+            file: file,
+            line: line
+        )
+    }
+
+    /// 오늘 적은 지난주 이야기는 지난주에 남는다. 메모가 놓이는 자리는
+    /// 적은 시각이 아니라 그 메모가 말하는 시각이다.
+    func testHighlightedMemoLandsOnTheWeekItIsAbout() {
+        let occurredAt = makeDate(2026, 8, 4, 15, 0)
+        let createdAt = makeDate(2026, 8, 20, 9, 0)
+        let memo = ActionMemo(
+            categoryID: "activity",
+            occurredAt: occurredAt,
+            kind: .decision,
+            text: "무릎이 아팠던 날",
+            createdAt: createdAt,
+            updatedAt: createdAt
+        )
+        let engine = ReviewEngine(calendar: utcCalendar)
+
+        let aboutWeek = engine.report(
+            for: .week,
+            containing: occurredAt,
+            plans: [],
+            actuals: [],
+            weather: [],
+            photos: [],
+            memos: [memo],
+            asOf: createdAt
+        )
+        XCTAssertEqual(aboutWeek.contexts.map(\.text), ["무릎이 아팠던 날"])
+        XCTAssertEqual(aboutWeek.contexts.first?.date, occurredAt)
+
+        let writtenWeek = engine.report(
+            for: .week,
+            containing: createdAt,
+            plans: [],
+            actuals: [],
+            weather: [],
+            photos: [],
+            memos: [memo],
+            asOf: createdAt
+        )
+        XCTAssertTrue(writtenWeek.contexts.isEmpty)
+    }
+
     private var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
