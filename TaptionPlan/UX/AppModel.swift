@@ -3354,6 +3354,21 @@ final class AppModel {
         }
     }
 
+    /// 이번 갱신이 실제로 신호를 들여다본 구간. 사진·건강 앱에서 메운 점은
+    /// 연속 수집이 아니라 드문드문한 복원이므로 근거로 세지 않는다.
+    private static func sensorEvidenceSpan(
+        readings: [SensorReading],
+        activities: [MotionActivityRecord],
+        inside span: TimeSpan
+    ) -> TimeSpan? {
+        let moments = readings.map(\.timestamp)
+            + activities.flatMap { [$0.span.start, $0.span.end] }
+        guard let start = moments.min(), let end = moments.max() else {
+            return nil
+        }
+        return TimeSpan(start: start, end: end).intersection(with: span)
+    }
+
     /// 정지 구간을 "정지·휴식" 한 덩어리로 남기지 않고 장소·캘린더·시간
     /// 문맥으로 바꾼다. 새 권한이나 새 수집 없이 이미 모은 신호만 쓴다.
     private func applyStationaryContextRecords(
@@ -3361,6 +3376,7 @@ final class AppModel {
         stationarySpans: [TimeSpan],
         travel: [TravelSegment],
         readings: [SensorReading],
+        evidence: TimeSpan?,
         inside span: TimeSpan
     ) async {
         let watchSummaries: [TaptionWatchSensorSummary]
@@ -3386,11 +3402,21 @@ final class AppModel {
             watchSummaries: watchSummaries,
             inside: span
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        // 판독은 7일만 남는다. 그보다 오래된 날을 열면 문맥을 다시 만들 근거가
+        // 없는데, 그때 저장된 기록까지 지우면 되살릴 길이 없다. 이번 갱신이
+        // 실제로 들여다본 구간과 새로 만든 기록의 구간만 갈아끼운다.
+        let refreshed = contextRecords.map { $0.span(asOf: span.end) }
+            + [evidence].compactMap { $0?.intersection(with: span) }
         snapshot.actuals.removeAll { actual in
-            actual.source == .location
-                && actual.modelVersion
-                    == StationaryContextClassifier.modelVersion
-                && actual.span(asOf: span.end).intersection(with: span) != nil
+            guard actual.source == .location,
+                  actual.modelVersion
+                    == StationaryContextClassifier.modelVersion else {
+                return false
+            }
+            let stored = actual.span(asOf: span.end)
+            return refreshed.contains {
+                $0.intersection(with: stored) != nil
+            }
         }
         guard !contextRecords.isEmpty else { return }
         snapshot.actuals = StationaryContextActualEngine
@@ -3649,6 +3675,11 @@ final class AppModel {
                 .map(\.span),
             travel: travel,
             readings: readings,
+            evidence: Self.sensorEvidenceSpan(
+                readings: archivedReadings,
+                activities: motionActivities,
+                inside: span
+            ),
             inside: span
         )
 

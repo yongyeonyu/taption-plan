@@ -10849,6 +10849,84 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    /// 판독은 7일만 보관한다. 보관 기간이 지난 날을 열면 문맥을 다시 만들
+    /// 근거가 없는데, 그렇다고 저장된 근무·수업 기록까지 지우면 되살릴 원본이
+    /// 없다. 근거가 없는 갱신은 아무것도 지우지 않는다.
+    @MainActor
+    func testRefreshingADayWithoutArchivedReadingsKeepsStoredContextRecords()
+        async throws {
+        let day = makeDate(2026, 6, 1)
+        let stored = ActualRecord(
+            planID: nil,
+            title: "근무",
+            categoryID: "work",
+            startedAt: makeDate(2026, 6, 1, 10),
+            endedAt: makeDate(2026, 6, 1, 18),
+            source: .location,
+            confidence: .medium,
+            createdAt: makeDate(2026, 6, 1, 10),
+            behavior: "work",
+            modelVersion: StationaryContextClassifier.modelVersion
+        )
+        var snapshot = makeSnapshot(actuals: [stored])
+        snapshot.updatedAt = day
+        snapshot.settings.locationEnabled = false
+        snapshot.settings.weatherEnabled = false
+        snapshot.settings.healthEnabled = false
+        // 사진에 남은 위치 한 점만으로도 갱신은 판독 없이 끝까지 진행한다.
+        snapshot.photos = [
+            PhotoMoment(
+                id: "photo-1",
+                capturedAt: makeDate(2026, 6, 1, 12),
+                pixelWidth: 100,
+                pixelHeight: 100,
+                isFavorite: false,
+                isHiddenFromTimeline: false,
+                location: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127.0,
+                    altitude: 30,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 10
+                )
+            ),
+        ]
+
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: snapshot),
+            sensorService: AppleSensorDataService(
+                archive: SensorReadingArchive(
+                    fileURL: directory
+                        .appendingPathComponent("sensor-readings.jsonl")
+                )
+            ),
+            cloudSyncService: nil
+        )
+        await model.bootstrap()
+        // 불러오기 뒷정리가 끝난 뒤에 갱신해야 결과가 되돌려지지 않는다.
+        let deadline = Date.now.addingTimeInterval(10)
+        while model.snapshot.categories.isEmpty, Date.now < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertFalse(model.snapshot.categories.isEmpty)
+
+        await model.refreshSensorTimeline(containing: day)
+
+        XCTAssertEqual(
+            model.snapshot.actuals
+                .filter { $0.source == .location }
+                .map(\.id),
+            [stored.id]
+        )
+    }
+
     private var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
