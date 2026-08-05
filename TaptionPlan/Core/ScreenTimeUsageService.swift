@@ -136,7 +136,11 @@ final class ScreenTimeUsageService {
 #endif
     }
 
-    func requestAuthorization() async throws {
+    /// - Parameter forceRetry: 빌드당 한 번으로 묶인 자동 재시도 한도를
+    ///   무시하고 해제·재요청을 한 번 더 시도한다. 이 함수의 호출부는 전부
+    ///   사용자가 직접 누른 동작이라(설정 행, 온보딩 버튼), 자동 재시도가
+    ///   이미 실패해 소진됐어도 사람이 다시 누르면 다시 시도하는 게 맞다.
+    func requestAuthorization(forceRetry: Bool = false) async throws {
 #if canImport(FamilyControls)
         switch authorizationState {
         case .approved:
@@ -152,7 +156,7 @@ final class ScreenTimeUsageService {
             // 고르며, 이미 승인 기록이 있으면 requestAuthorization(for:)는
             // 프롬프트 없이 즉시 반환한다. 따라서 승인을 해제하고 데몬이
             // 실제로 상태를 되돌린 뒤에 다시 요청해야 한다.
-            guard DataAccessRetryMarker.canRetry else {
+            guard forceRetry || DataAccessRetryMarker.canRetry else {
                 // 이 빌드에서 이미 재승인을 시도했는데도 기본 승인만
                 // 남았다면 다시 해제해 봐야 결과가 같다. 멀쩡한 승인을
                 // 날리는 대신 원인과 다음 단계를 알려 준다.

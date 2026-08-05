@@ -980,9 +980,13 @@ final class AppModel {
         defer { isRefreshingIntegrations = false }
         do {
             // 데이터 접근이 없는 승인 상태에서도 재요청을 막지 않는다.
-            // 서비스가 승인을 해제한 뒤 다시 물어본다.
+            // 서비스가 승인을 해제한 뒤 다시 물어본다. 이 함수는 사용자가
+            // 직접 누른 동작으로만 호출되므로, 이 빌드에서 자동 재시도가
+            // 이미 실패했더라도 다시 누르면 다시 시도한다.
             if screenTimeUsageService.authorizationState != .approved {
-                try await screenTimeUsageService.requestAuthorization()
+                try await screenTimeUsageService.requestAuthorization(
+                    forceRetry: true
+                )
             }
             refreshAppUsageAuthorizationState()
             await refreshAppUsageData(
