@@ -29,6 +29,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
     case appUsage
     case weather
     case photo
+    case memo
 
     var title: String {
         switch self {
@@ -40,6 +41,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
         case .appUsage: "어플"
         case .weather: "날씨"
         case .photo: "사진"
+        case .memo: "메모"
         }
     }
 
@@ -53,6 +55,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
         case .appUsage: "app.badge.clock"
         case .weather: "cloud.sun"
         case .photo: "photo"
+        case .memo: "note.text"
         }
     }
 
@@ -990,6 +993,101 @@ struct FloorCalibrationPoint: Codable, Hashable, Sendable {
     var capturedAt: Date
 }
 
+/// 두 관측 사이의 고도 차이를 구하는 단 하나의 규칙. 같은 기압 세션의
+/// 상대고도가 가장 정확하고, 기압차, GPS 고도 순으로 내려간다. 층 추정과 층
+/// 높이 계산이 이 규칙을 함께 쓴다.
+enum AltitudeDelta {
+    enum Source: Sendable {
+        case relativeAltitude
+        case pressure
+        case gps
+    }
+
+    struct Sample: Sendable {
+        var altimeterSessionID: UUID?
+        var relativeAltitudeMeters: Double?
+        var pressureKilopascals: Double?
+        var altitudeMeters: Double?
+
+        init(_ reading: SensorReading) {
+            altimeterSessionID = reading.altimeterSessionID
+            relativeAltitudeMeters = reading.relativeAltitudeMeters
+            pressureKilopascals = reading.pressureKilopascals
+            altitudeMeters = reading.point?.altitude
+        }
+
+        init(_ reference: FloorCalibrationPoint) {
+            altimeterSessionID = reference.altimeterSessionID
+            relativeAltitudeMeters = reference.relativeAltitudeMeters
+            pressureKilopascals = reference.pressureKilopascals
+            altitudeMeters = reference.point.altitude
+        }
+    }
+
+    static func between(
+        _ baseline: Sample,
+        and current: Sample
+    ) -> (meters: Double, source: Source)? {
+        if baseline.altimeterSessionID == current.altimeterSessionID,
+           let start = baseline.relativeAltitudeMeters,
+           let end = current.relativeAltitudeMeters {
+            return (end - start, .relativeAltitude)
+        }
+        if let start = baseline.pressureKilopascals,
+           let end = current.pressureKilopascals,
+           start > 0,
+           end > 0 {
+            return (44_330 * (1 - pow(end / start, 0.1903)), .pressure)
+        }
+        if let start = baseline.altitudeMeters,
+           let end = current.altitudeMeters {
+            return (end - start, .gps)
+        }
+        return nil
+    }
+}
+
+/// 층 높이는 사용자가 맞추는 값이 아니다. "지금 몇 층인지"는 사람이 알고
+/// 미터는 기기가 잰다. 서로 다른 층에서 받아 둔 기준점의 고도 차이를 층수로
+/// 나눠 이 건물의 층 높이를 구한다. 기준이 한 층뿐이면 잴 것이 없으므로 nil을
+/// 돌려주고 쓰던 값을 그대로 둔다.
+enum FloorHeightEstimator {
+    static let minimumMeters = 2.2
+    static let maximumMeters = 5.0
+
+    static func metersPerFloor(
+        from references: [FloorCalibrationPoint]
+    ) -> Double? {
+        let sorted = references.sorted { $0.floor < $1.floor }
+        var heights: [Double] = []
+        for (index, base) in sorted.enumerated() {
+            for target in sorted.dropFirst(index + 1) {
+                let floors = target.floor - base.floor
+                guard floors > 0,
+                      let delta = AltitudeDelta.between(
+                        AltitudeDelta.Sample(base),
+                        and: AltitudeDelta.Sample(target)
+                      ) else {
+                    continue
+                }
+                let height = abs(delta.meters) / Double(floors)
+                // 범위를 벗어난 짝은 잘못 잰 것이다. 억지로 끌어다 맞추면
+                // 멀쩡한 다른 기준까지 망가지므로 그냥 버린다.
+                guard height >= minimumMeters, height <= maximumMeters else {
+                    continue
+                }
+                heights.append(height)
+            }
+        }
+        guard !heights.isEmpty else { return nil }
+        let ordered = heights.sorted()
+        let middle = ordered.count / 2
+        return ordered.count.isMultiple(of: 2)
+            ? (ordered[middle - 1] + ordered[middle]) / 2
+            : ordered[middle]
+    }
+}
+
 struct FloorCalibration: Codable, Hashable, Sendable {
     var placeName: String
     var referenceFloor: Int
@@ -1078,6 +1176,13 @@ struct FloorCalibration: Codable, Hashable, Sendable {
 
     var knownFloors: Set<Int> {
         Set([referenceFloor] + referencePoints.map(\.floor))
+    }
+}
+
+/// 지하는 음수 층으로 저장하고 화면에는 "지하 N층"으로 적는다.
+enum FloorLabel {
+    static func korean(_ floor: Int) -> String {
+        floor < 0 ? "지하 \(-floor)층" : "\(floor)층"
     }
 }
 
@@ -1415,6 +1520,28 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
             floorReferencePoints[index] = reference
         } else {
             floorReferencePoints.append(reference)
+        }
+        updatedAt = .now
+    }
+
+    /// 사용자가 알려 주는 값은 "지금 몇 층인지" 하나뿐이다. 층 높이는 묻지
+    /// 않고, 서로 다른 층 기준이 둘 이상 모이면 그 사이의 고도 차이로 앱이
+    /// 다시 구한다. 위치나 기준 층이 아직 없으면 이번 기준으로 자리를 잡고,
+    /// 있으면 자리는 두고 이 층만 더한다.
+    mutating func calibrateCurrentFloor(
+        to floor: Int,
+        from reading: SensorReading
+    ) {
+        guard reading.point != nil else { return }
+        if point == nil || self.floor == nil {
+            setLocation(from: reading, floor: floor)
+        } else {
+            addFloorCalibration(from: reading, floor: floor)
+        }
+        if let height = FloorHeightEstimator.metersPerFloor(
+            from: floorReferencePoints
+        ) {
+            floorHeightMeters = height
         }
         updatedAt = .now
     }

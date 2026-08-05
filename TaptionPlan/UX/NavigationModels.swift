@@ -41,6 +41,13 @@ enum AddPlanContext: Equatable {
     }
 }
 
+/// 메모 입력 화면이 아는 전부. 계획도 기록도 없이 순간 하나와, 그 순간에 이미
+/// 놓여 있던 메모만 들고 있다.
+struct MemoEntry: Equatable, Sendable {
+    var occurredAt: Date
+    var memoIDs: [UUID] = []
+}
+
 enum AppDetail: Equatable {
     case group
     case goal

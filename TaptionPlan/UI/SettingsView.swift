@@ -644,9 +644,7 @@ struct SettingsView: View {
                     )
                     .font(.taption(size: 8))
                     .foregroundStyle(Color.tpPlaceDark)
-                    Text(
-                        "\(event.placeName) \(event.floor < 0 ? "지하 \(-event.floor)층" : "\(event.floor)층")"
-                    )
+                    Text("\(event.placeName) \(FloorLabel.korean(event.floor))")
                     .font(.taption(size: 8.5, weight: .semibold))
                     .foregroundStyle(Color.tpInk)
                     Text(event.isAutomatic ? "자동" : "수동")
@@ -1377,7 +1375,7 @@ private struct FrequentPlaceDetailView: View {
 
     @State private var name = ""
     @State private var radiusMeters = 120.0
-    @State private var floorHeightMeters = 3.0
+    @State private var currentFloor = 1
     @State private var minimumDwellMinutes = 10
     @State private var isAutomaticRecordingEnabled = true
     @State private var showsDeleteConfirmation = false
@@ -1418,7 +1416,6 @@ private struct FrequentPlaceDetailView: View {
                             placeID,
                             name: name,
                             radiusMeters: radiusMeters,
-                            floorHeightMeters: floorHeightMeters,
                             minimumDwellMinutes: minimumDwellMinutes,
                             isAutomaticRecordingEnabled: isAutomaticRecordingEnabled
                         )
@@ -1448,7 +1445,9 @@ private struct FrequentPlaceDetailView: View {
         guard let place else { return }
         name = place.name
         radiusMeters = place.radiusMeters
-        floorHeightMeters = place.floorHeightMeters
+        currentFloor = place.floor
+            ?? model.latestAltitudeEstimate?.floor
+            ?? 1
         minimumDwellMinutes = place.minimumDwellMinutes
         isAutomaticRecordingEnabled = place.isAutomaticRecordingEnabled
     }
@@ -1511,7 +1510,7 @@ private struct FrequentPlaceDetailView: View {
             }
             .buttonStyle(.plain)
 
-            Text("층수는 지정할 필요가 없습니다. 이 위치에 머무는 동안 고도 변화를 읽어 자동으로 보정합니다.")
+            Text("이 자리를 장소의 기준점으로 삼습니다. 층수는 아래 '현재 층수'에서 알려 주면 되고, 머무는 동안의 고도 변화는 자동으로 따라갑니다.")
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
 
@@ -1596,28 +1595,47 @@ private struct FrequentPlaceDetailView: View {
     private func altitudeSection(_ place: FrequentPlace) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             Label {
-                Text("층 높이")
+                Text("현재 층수")
                     .font(.taption(size: 12, weight: .bold))
             } icon: {
                 Image(systemName: "building.2.crop.circle")
                     .foregroundStyle(Color.tpPlaceDark)
             }
-            HStack {
-                Text("층 높이")
-                Spacer()
-                Text("\(floorHeightMeters, specifier: "%.1f")m")
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.tpPlaceDark)
+            Stepper(value: $currentFloor, in: -10...100) {
+                HStack {
+                    Text("지금 있는 층")
+                    Spacer()
+                    Text(FloorLabel.korean(currentFloor))
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.tpPlaceDark)
+                }
+                .font(.taption(size: 10))
             }
-            .font(.taption(size: 10))
-            Slider(value: $floorHeightMeters, in: 2.2...5.0, step: 0.1)
-                .tint(Color.tpPlaceDark)
-            Text("기압·상대고도 차이를 이 층 높이로 나눠 같은 건물의 층을 추정합니다. 보정은 이 값만 맞춰 두면 자동으로 이뤄집니다.")
+            .tint(Color.tpPlaceDark)
+
+            Button {
+                model.calibrateFrequentPlaceFloor(placeID, floor: currentFloor)
+            } label: {
+                Label("이 층으로 보정", systemImage: "building.2.fill")
+                    .font(.taption(size: 10, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 9)
+                    .foregroundStyle(.white)
+                    .background(Color.tpPlaceDark, in: RoundedRectangle(cornerRadius: 9))
+            }
+            .buttonStyle(.plain)
+
+            Text("지금 있는 층만 알려 주면 그 자리의 기압을 이 건물의 기준으로 삼습니다. 층 높이는 서로 다른 층에서 두 번 이상 알려 줄 때 그 차이로 앱이 스스로 맞춥니다.")
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
 
             Divider()
 
+            if place.floorReferencePoints.count > 1 {
+                Text(
+                    "이 건물 층 높이 · \(place.floorHeightMeters, specifier: "%.1f")m · 기준 \(place.floorReferencePoints.count)개 층"
+                )
+            }
             if let reading = model.latestSensorReading,
                let relative = reading.relativeAltitudeMeters {
                 Text("현재 센서 · 상대고도 \(relative, specifier: "%.1f")m")

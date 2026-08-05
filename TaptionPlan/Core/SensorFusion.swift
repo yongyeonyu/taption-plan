@@ -1137,28 +1137,23 @@ struct FloorCalibrationEngine: Sendable {
                 referencePoint: reference.point
             ) else { return nil }
 
-            let delta: Double
+            guard let measured = AltitudeDelta.between(
+                AltitudeDelta.Sample(reference),
+                and: AltitudeDelta.Sample(reading)
+            ) else { return nil }
+            let delta = measured.meters
             let confidence: ConfidenceLevel
             let source: String
-            if reading.altimeterSessionID == reference.altimeterSessionID,
-               let current = reading.relativeAltitudeMeters,
-               let baseline = reference.relativeAltitudeMeters {
-                delta = current - baseline
+            switch measured.source {
+            case .relativeAltitude:
                 confidence = .high
                 source = "기압 상대고도"
-            } else if let current = reading.pressureKilopascals,
-                      let baseline = reference.pressureKilopascals,
-                      current > 0,
-                      baseline > 0 {
-                delta = 44_330 * (1 - pow(current / baseline, 0.1903))
+            case .pressure:
                 confidence = .medium
                 source = "기압차 보정"
-            } else if let point = reading.point {
-                delta = point.altitude - reference.point.altitude
+            case .gps:
                 confidence = .low
                 source = "GPS 고도"
-            } else {
-                return nil
             }
 
             let floorHeight = max(2.2, calibration.floorHeightMeters)

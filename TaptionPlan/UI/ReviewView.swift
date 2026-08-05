@@ -962,7 +962,7 @@ struct ReviewView: View {
                 )
                 .font(.taption(size: 8))
                 .foregroundStyle(Color.tpSecondary)
-                Text(DurationText.korean(child.duration))
+                Text(DurationText.koreanAtLeastAMinute(child.duration))
                     .font(.taption(size: 9, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(minWidth: 52, alignment: .trailing)
@@ -976,7 +976,7 @@ struct ReviewView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(group.name) \(child.title) \(DurationText.korean(child.duration))"
+            "\(group.name) \(child.title) \(DurationText.koreanAtLeastAMinute(child.duration))"
         )
     }
 

@@ -3189,7 +3189,7 @@ private struct TimelineDetailPanel: View {
                 }
             }
             if activeSelection?.preferredDetailSection == item {
-                DetailMemoField(
+                DetailMemoList(
                     model: model,
                     selection: activeSelection,
                     section: item
@@ -5909,104 +5909,61 @@ private struct RecordNodeLinkSheet: View {
     }
 }
 
-private struct DetailMemoField: View {
+/// 이 항목에 남아 있는 메모를 보여 주기만 한다. 입력은 시간표의 메모 줄
+/// 하나로 모았다. 항목마다 입력칸을 두던 시절에는 메모를 남기려면 먼저 맞는
+/// 줄과 기록을 찾아 눌러야 했고, 어떤 항목에서는 아예 열리지 않았다.
+private struct DetailMemoList: View {
     @Bindable var model: AppModel
     let selection: TimelineSelection?
     let section: TimelineDetailSection
-    @State private var text = ""
-    @State private var editingMemoID: UUID?
-    @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if !savedMemos.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(savedMemos) { memo in
-                        HStack(alignment: .top, spacing: 5) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(memo.text)
-                                    .font(.taption(size: 8.5))
-                                    .foregroundStyle(Color.tpInk)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(memo.updatedAt.formatted(date: .omitted, time: .shortened))
-                                    .font(.taption(size: 7))
-                                    .foregroundStyle(Color.tpSecondary)
-                            }
-                            Spacer(minLength: 4)
-                            Button {
-                                edit(memo)
-                            } label: {
-                                Image(systemName: "pencil")
-                                    .font(.taption(size: 7, weight: .bold))
-                                    .foregroundStyle(Color.tpSecondary)
-                                    .frame(width: 20, height: 20)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("메모 편집")
-                            Button {
-                                delete(memo)
-                            } label: {
-                                Image(systemName: "trash")
-                                    .font(.taption(size: 7, weight: .bold))
-                                    .foregroundStyle(Color.red)
-                                    .frame(width: 20, height: 20)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("메모 삭제")
+        if savedMemos.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(savedMemos) { memo in
+                    HStack(alignment: .top, spacing: 5) {
+                        Image(systemName: TimelineRowKind.memo.systemImage)
+                            .font(.taption(size: 8, weight: .bold))
+                            .foregroundStyle(Color.tpSecondary)
+                            .padding(.top, 1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(memo.text)
+                                .font(.taption(size: 8.5))
+                                .foregroundStyle(Color.tpInk)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(
+                                memo.occurredAt.formatted(
+                                    date: .omitted,
+                                    time: .shortened
+                                )
+                            )
+                            .font(.taption(size: 7))
+                            .foregroundStyle(Color.tpSecondary)
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .background(
-                            Color.white.opacity(0.75),
-                            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        )
+                        Spacer(minLength: 4)
                     }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(
+                        Color.white.opacity(0.75),
+                        in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    )
                 }
             }
-
-            HStack(spacing: 6) {
-                Image(systemName: "note.text")
-                    .font(.taption(size: 8.5, weight: .bold))
-                    .foregroundStyle(Color.tpSecondary)
-                if memoCount > 0 {
-                    Text("+\(memoCount)")
-                        .font(.taption(size: 7.5, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(Color.tpProjectDark, in: Capsule())
-                }
-                TextField("이 항목에 메모 입력…", text: $text, axis: .vertical)
-                    .font(.taption(size: 9))
-                    .lineLimit(1...3)
-                    .textFieldStyle(.plain)
-                    .focused($isFocused)
-                    .onSubmit { save() }
-                HStack(spacing: 3) {
-                    memoAction("저장", systemImage: "checkmark", enabled: canSave) { save() }
-                    memoAction("편집", systemImage: "pencil", enabled: latestMemo != nil) { edit() }
-                    memoAction("삭제", systemImage: "trash", enabled: latestMemo != nil, destructive: true) { delete() }
-                }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .background(
+                Color.tpBackground,
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.5)
             }
+            .accessibilityLabel("\(section.rawValue) 메모")
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .background(
-            Color.tpBackground,
-            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.5)
-        }
-        .onChange(of: selection) { _, _ in
-            reset()
-        }
-        .accessibilityLabel("\(section.rawValue) 메모")
-    }
-
-    private var canSave: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var savedMemos: [ActionMemo] {
@@ -6031,102 +5988,6 @@ private struct DetailMemoField: View {
             forCategoryID: selection.categoryID,
             on: selection.span.start
         )
-    }
-
-    private var latestMemo: ActionMemo? {
-        savedMemos.last
-    }
-
-    private var memoCount: Int {
-        savedMemos.count
-    }
-
-    private func memoAction(
-        _ title: String,
-        systemImage: String,
-        enabled: Bool,
-        destructive: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.taption(size: 8, weight: .bold))
-                .foregroundStyle(
-                    enabled
-                        ? (destructive ? Color.red : Color.tpInk)
-                        : Color.tpSecondary.opacity(0.35)
-                )
-                .frame(width: 22, height: 22)
-                .background(Color.white.opacity(enabled ? 0.8 : 0.35), in: RoundedRectangle(cornerRadius: 5))
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .accessibilityLabel(title)
-    }
-
-    private func edit(_ memo: ActionMemo) {
-        editingMemoID = memo.id
-        text = memo.text
-        isFocused = true
-    }
-
-    private func edit() {
-        guard let memo = latestMemo else { return }
-        edit(memo)
-    }
-
-    private func save() {
-        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty, let selection else { return }
-        if let editingMemoID {
-            model.updateMemo(editingMemoID, text: clean, kind: .idea)
-        } else if let targetID = selection.memoTargetID {
-            model.addMemo(
-                text: clean,
-                kind: .idea,
-                toTargetID: targetID,
-                planID: linkedPlanID(),
-                categoryID: selection.categoryID,
-                occurredAt: selection.span.start
-            )
-        } else if let categoryID = selection.categoryID {
-            model.addMemo(
-                text: clean,
-                kind: .idea,
-                categoryID: categoryID,
-                on: selection.span.start
-            )
-        }
-        reset()
-    }
-
-    private func delete() {
-        guard let memo = latestMemo else { return }
-        delete(memo)
-    }
-
-    private func delete(_ memo: ActionMemo) {
-        model.deleteMemo(memo.id)
-        if editingMemoID == memo.id {
-            reset()
-        }
-    }
-
-    private func reset() {
-        text = ""
-        editingMemoID = nil
-        isFocused = false
-    }
-
-    /// The plan this note happens to sit on, if any. A note never creates one.
-    private func linkedPlanID() -> UUID? {
-        if let planID = selection?.planID {
-            return planID
-        }
-        guard let actualID = selection?.actualID else { return nil }
-        return model.snapshot.actuals
-            .first { $0.id == actualID }?
-            .planID
     }
 }
 
@@ -7462,8 +7323,56 @@ private struct TimelineBoard: View {
                 index: index
             ),
             automaticWeatherRow(visibleSpan: visibleSpan),
+            memoRow(visibleSpan: visibleSpan),
         ]
     }
+
+    /// 메모 줄. 다른 줄과 달리 손으로 남긴 기록이라 자동 줄의 회색 바탕을
+    /// 쓰지 않고, 줄 이름을 누르면 곧바로 메모 입력이 열린다.
+    ///
+    /// 메모는 순간이라 길이가 없다. 순간마다 눈에 걸리는 최소 길이의 표식을
+    /// 만들고, 배율이 넓어져 서로 구분되지 않는 표식은 `MemoTimelineEngine`
+    /// 이 미리 하나로 합쳐 준다. 합쳐도 남는 자투리 너비는 막대 쪽의
+    /// `minimumWidth`·`TimelineRowBarMerging` 이 다시 받아 준다.
+    private func memoRow(visibleSpan: TimeSpan) -> TimelineRowModel {
+        let markers = MemoTimelineEngine.markers(
+            from: model.timelineMemos(in: visibleSpan),
+            in: visibleSpan,
+            visibleDuration: visibleSpan.duration
+        )
+        return TimelineRowModel(
+            title: TimelineRowKind.memo.title,
+            id: TimelineRowKind.memo.rawValue,
+            categoryID: TimelineRowKind.memo.rawValue,
+            dotColor: .tpStudyDark,
+            systemImage: TimelineRowKind.memo.systemImage,
+            fillColor: .tpStudy,
+            actualColor: .tpStudyDark,
+            height: compactAutomaticHeight(1),
+            blocks: markers.map { marker in
+                timelineBlock(
+                    id: marker.id,
+                    title: marker.title,
+                    span: marker.span,
+                    top: compactAutomaticTop(0),
+                    height: 16,
+                    isFixed: true,
+                    groupCount: marker.count > 1 ? marker.count : nil,
+                    isActual: true,
+                    minimumWidth: memoMarkerMinimumWidth,
+                    detailText: marker.span.start.formatted(
+                        date: .omitted,
+                        time: .shortened
+                    ),
+                    categoryID: TimelineRowKind.memo.rawValue,
+                    categoryName: TimelineRowKind.memo.title
+                )
+            }
+        )
+    }
+
+    /// 순간을 그린 표식이 손가락보다 좁아지지 않게 하는 하한.
+    private var memoMarkerMinimumWidth: CGFloat { 22 }
 
     private func automaticAppUsageRow(
         actuals: [ActualRecord],
@@ -8155,6 +8064,7 @@ private struct TimelineBoard: View {
         status: PlanStatus = .planned,
         isActual: Bool = false,
         opensLocationTimeline: Bool = false,
+        minimumWidth: CGFloat = 18,
         detailText: String? = nil,
         isGoal: Bool = false,
         categoryID: String? = nil,
@@ -8183,6 +8093,7 @@ private struct TimelineBoard: View {
             status: status,
             isActual: isActual,
             opensLocationTimeline: opensLocationTimeline,
+            minimumWidth: minimumWidth,
             startsAt: span.start,
             endsAt: span.end,
             detailText: detailText,
@@ -9332,6 +9243,17 @@ private struct TimelineBoard: View {
 
     private func handleRowTap(_ row: TimelineRowModel) {
         selectedRowID = row.id
+        // 메모 줄의 이름표가 곧 메모 아이콘이다. 계획도 기록도 고르지 않고
+        // 여기서 바로 입력이 열린다.
+        if row.id == TimelineRowKind.memo.rawValue {
+            model.openMemoEntry(
+                at: MemoTimelineEngine.entryDate(
+                    now: .now,
+                    visibleSpan: visibleSpan
+                )
+            )
+            return
+        }
         let selectableBlocks = row.blocks
             .filter { !$0.isActual && $0.planID != nil }
             .sorted {
@@ -9415,6 +9337,22 @@ private struct TimelineBoard: View {
     }
 
     private func handleTap(_ block: TimelineBlock) {
+        // 메모 표식은 여러 개가 합쳐진 것일 수 있으므로 표식이 덮은 구간의
+        // 메모를 모두 열어 준다.
+        if block.categoryID == MemoTimelineEngine.categoryID {
+            let span = TimeSpan(
+                start: block.startsAt ?? visibleSpan.start,
+                end: block.endsAt ?? visibleSpan.end
+            )
+            model.openMemoEntry(
+                at: span.start,
+                memoIDs: MemoTimelineEngine.memoIDs(
+                    in: span,
+                    from: model.snapshot.memos
+                )
+            )
+            return
+        }
         onSelection?(
             selectionFromBlock(block)
         )

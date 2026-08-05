@@ -6499,10 +6499,19 @@ final class FeatureEngineTests: XCTestCase {
                 "appUsage",
                 "weather",
                 "photo",
+                "memo",
             ]
         )
         XCTAssertNil(TimelineRowKind(categoryID: "work"))
         XCTAssertEqual(TimelineRowKind(categoryID: "schedule"), .calendar)
+        // 메모도 일정·위치·수면과 같은 자격의 줄이다.
+        XCTAssertEqual(TimelineRowKind.memo.title, "메모")
+        XCTAssertEqual(TimelineRowKind.memo.systemImage, "note.text")
+        XCTAssertEqual(TimelineRowKind(categoryID: "memo"), .memo)
+        XCTAssertEqual(
+            MemoTimelineEngine.categoryID,
+            TimelineRowKind.memo.rawValue
+        )
     }
 
     func testDurationTextMatchesTheScreenTimeWording() {
@@ -6511,6 +6520,23 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(DurationText.korean(2 * hour), "2시간")
         XCTAssertEqual(DurationText.korean(2 * hour + 14 * 60), "2시간 14분")
         XCTAssertEqual(DurationText.signedKorean(-90 * 60), "－1시간 30분")
+    }
+
+    /// 같은 앱 사용 기록이 시간표 상세에서는 "1분 미만", 기록 목록에서는
+    /// "0분"으로 읽히던 자리. 두 화면이 같은 문구를 쓴다.
+    func testSubMinuteAppUsageReadsTheSameOnBothSurfaces() {
+        // 시간표 상세는 durationText 가 nil 이면 "1분 미만"을 적는다.
+        XCTAssertNil(ScreenTimeUsageRecordEngine.durationText(45))
+        XCTAssertEqual(DurationText.koreanAtLeastAMinute(45), "1분 미만")
+        XCTAssertEqual(DurationText.koreanAtLeastAMinute(59), "1분 미만")
+        // 아무 일도 없던 0초까지 부풀리지는 않는다.
+        XCTAssertEqual(DurationText.koreanAtLeastAMinute(0), "0분")
+        XCTAssertEqual(DurationText.koreanAtLeastAMinute(60), "1분")
+        XCTAssertEqual(DurationText.koreanAtLeastAMinute(2 * hour), "2시간")
+        XCTAssertEqual(
+            DurationText.koreanAtLeastAMinute(2 * hour + 14 * 60),
+            "2시간 14분"
+        )
     }
 
     // MARK: - Stationary context
@@ -7275,6 +7301,220 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(saved.first?.planID)
     }
 
+    // MARK: - 메모 줄
+
+    /// 메모 입력의 입구는 하나뿐이다. 계획도 기록도 카테고리도 고르지 않고
+    /// 순간 하나만 받아 저장하며, 그 순간이 곧 메모 줄에서의 자리다.
+    @MainActor
+    func testGlobalMemoEntryHasNoHostAndLandsOnTheMemoRowAtOccurredAt() async throws {
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil
+        )
+        let instant = makeDate(2026, 8, 4, 14, 12)
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 4),
+            end: makeDate(2026, 8, 5)
+        )
+
+        model.openMemoEntry(at: instant)
+        XCTAssertEqual(model.detail, .memo)
+        XCTAssertEqual(model.memoEntry?.occurredAt, instant)
+        model.addMemoAtEntryInstant(text: "여기서 막혔다", kind: .blocker)
+
+        XCTAssertTrue(model.snapshot.plans.isEmpty)
+        let saved = try XCTUnwrap(model.snapshot.memos.first)
+        XCTAssertEqual(model.snapshot.memos.count, 1)
+        XCTAssertNil(saved.planID)
+        XCTAssertNil(saved.targetID)
+        XCTAssertEqual(saved.categoryID, MemoTimelineEngine.categoryID)
+        XCTAssertEqual(saved.occurredAt, instant)
+
+        let markers = MemoTimelineEngine.markers(
+            from: model.timelineMemos(in: day),
+            in: day,
+            visibleDuration: day.duration
+        )
+        XCTAssertEqual(markers.map(\.span.start), [instant])
+        XCTAssertEqual(markers.map(\.title), ["여기서 막혔다"])
+        XCTAssertEqual(markers.map(\.memoIDs), [[saved.id]])
+
+        // 표식을 다시 누르면 그 자리의 메모가 열린다.
+        let marker = try XCTUnwrap(markers.first)
+        model.openMemoEntry(
+            at: marker.span.start,
+            memoIDs: MemoTimelineEngine.memoIDs(
+                in: marker.span,
+                from: model.snapshot.memos
+            )
+        )
+        XCTAssertEqual(model.memoEntryMemos.map(\.id), [saved.id])
+        model.deleteMemo(saved.id)
+        XCTAssertTrue(model.memoEntryMemos.isEmpty)
+        XCTAssertEqual(model.memoEntry?.memoIDs, [])
+    }
+
+    /// 메모를 더해도 시간표가 다시 그려지지 않으면 새 메모가 줄에 나타나지
+    /// 않는다. 배치 캐시를 깨우는 개정 번호가 메모까지 본다.
+    @MainActor
+    func testSavingAMemoInvalidatesTheTimelineLayout() async {
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil
+        )
+        let before = model.timelineRevision
+        model.openMemoEntry(at: makeDate(2026, 8, 4, 14, 12))
+        model.addMemoAtEntryInstant(text: "여기서 막혔다", kind: .blocker)
+        XCTAssertNotEqual(model.timelineRevision, before)
+    }
+
+    /// 순간을 그리는 표식이 화소보다 얇아지면 안 된다. 붙어 있는 메모는 낱개로
+    /// 그리지 않고 하나로 합친다 — 눈금판 띠와 같은 기준을 쓴다.
+    func testClusteredMemosMergeIntoOneMarkerInsteadOfSlivers() throws {
+        let base = makeDate(2026, 8, 4, 9, 0)
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 4),
+            end: makeDate(2026, 8, 5)
+        )
+        let clustered = (0..<5).map { offset in
+            memoFixture(at: base.addingTimeInterval(Double(offset) * 60))
+        }
+
+        let merged = MemoTimelineEngine.markers(
+            from: clustered,
+            in: day,
+            visibleDuration: day.duration
+        )
+        let marker = try XCTUnwrap(merged.first)
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(marker.count, 5)
+        XCTAssertEqual(marker.title, "메모 5개")
+        XCTAssertEqual(marker.span.start, base)
+        // 합쳐도 표식 하나 길이 아래로는 내려가지 않는다.
+        XCTAssertGreaterThanOrEqual(
+            marker.span.duration,
+            MemoTimelineEngine.markerDuration
+        )
+        XCTAssertEqual(
+            MemoTimelineEngine.memoIDs(in: marker.span, from: clustered),
+            clustered.map(\.id)
+        )
+
+        // 표식 하나 길이보다 멀리 떨어진 메모는 합쳐지지 않는다.
+        let apart = clustered + [
+            memoFixture(at: base.addingTimeInterval(3_600)),
+        ]
+        let separate = MemoTimelineEngine.markers(
+            from: apart,
+            in: day,
+            visibleDuration: day.duration
+        )
+        XCTAssertEqual(separate.map(\.count), [5, 1])
+        // 이웃 표식의 메모를 끌어오지 않는다.
+        XCTAssertEqual(
+            MemoTimelineEngine.memoIDs(
+                in: try XCTUnwrap(separate.first).span,
+                from: apart
+            )
+            .count,
+            5
+        )
+    }
+
+    /// 주·월·년으로 넓힐수록 표식은 더 크게 뭉친다. 하루에서 30분씩 떨어져
+    /// 보이던 메모 셋은 주 배율에서 이미 한 표식이다.
+    func testMemoRowCollapsesFurtherAsTheScaleWidens() throws {
+        let base = makeDate(2026, 8, 4, 9, 0)
+        let memos = (0..<3).map { offset in
+            memoFixture(at: base.addingTimeInterval(Double(offset) * 30 * 60))
+        }
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 4),
+            end: makeDate(2026, 8, 5)
+        )
+        let week = TimeSpan(
+            start: makeDate(2026, 8, 3),
+            end: makeDate(2026, 8, 10)
+        )
+        let month = TimeSpan(
+            start: makeDate(2026, 8, 1),
+            end: makeDate(2026, 9, 1)
+        )
+        let year = TimeSpan(
+            start: makeDate(2026, 1, 1),
+            end: makeDate(2027, 1, 1)
+        )
+
+        func markers(_ span: TimeSpan) -> [MemoTimelineEngine.Marker] {
+            MemoTimelineEngine.markers(
+                from: memos,
+                in: span,
+                visibleDuration: span.duration
+            )
+        }
+
+        XCTAssertEqual(markers(day).map(\.count), [1, 1, 1])
+        XCTAssertEqual(markers(week).map(\.count), [3])
+        XCTAssertEqual(markers(month).map(\.count), [3])
+        XCTAssertEqual(markers(year).map(\.count), [3])
+        XCTAssertEqual(markers(year).map(\.title), ["메모 3개"])
+        // 넓은 배율일수록 더 많이 합친다.
+        let intervals = [day, week, month, year].map {
+            MemoTimelineEngine.clusterInterval(visibleDuration: $0.duration)
+        }
+        XCTAssertEqual(intervals, intervals.sorted())
+        XCTAssertEqual(intervals.first, MemoTimelineEngine.markerDuration)
+        // 기간 밖의 메모는 그 줄에 오르지 않는다.
+        XCTAssertTrue(
+            MemoTimelineEngine.markers(
+                from: memos,
+                in: TimeSpan(
+                    start: makeDate(2026, 8, 5),
+                    end: makeDate(2026, 8, 6)
+                ),
+                visibleDuration: 86_400
+            )
+            .isEmpty
+        )
+    }
+
+    /// 메모는 "지금" 남기는 것이 기본이지만, 지난 기간을 펼쳐 두었다면 그
+    /// 기간에 남는다. 어제에 남긴 메모는 어제에 남는다.
+    func testMemoEntryInstantFollowsTheTimelineNotTheWallClock() {
+        let now = makeDate(2026, 8, 4, 14, 0)
+        XCTAssertEqual(
+            MemoTimelineEngine.entryDate(
+                now: now,
+                visibleSpan: TimeSpan(
+                    start: makeDate(2026, 8, 4),
+                    end: makeDate(2026, 8, 5)
+                )
+            ),
+            now
+        )
+        XCTAssertEqual(
+            MemoTimelineEngine.entryDate(
+                now: now,
+                visibleSpan: TimeSpan(
+                    start: makeDate(2026, 8, 3),
+                    end: makeDate(2026, 8, 4)
+                )
+            ),
+            makeDate(2026, 8, 3, 12, 0)
+        )
+    }
+
+    private func memoFixture(at instant: Date) -> ActionMemo {
+        ActionMemo(
+            categoryID: MemoTimelineEngine.categoryID,
+            occurredAt: instant,
+            kind: .idea,
+            text: "메모 \(instant.timeIntervalSinceReferenceDate)",
+            createdAt: instant,
+            updatedAt: instant
+        )
+    }
+
     func testStandaloneMemoSurvivesRepositoryRoundTrip() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -7728,6 +7968,399 @@ final class FeatureEngineTests: XCTestCase {
             asOf: createdAt
         )
         XCTAssertTrue(writtenWeek.contexts.isEmpty)
+    }
+
+    // MARK: - 현재 층수로 보정하기
+
+    /// 주어진 고도 차이를 만드는 기압. 층 높이 계산이 쓰는 기압 공식의 역함수다.
+    private func pressure(
+        _ baseline: Double,
+        risingBy meters: Double
+    ) -> Double {
+        baseline * pow(1 - meters / 44_330, 1 / 0.1903)
+    }
+
+    private func makeAltitudeReading(
+        at date: Date,
+        latitude: Double = 37.5,
+        longitude: Double = 127,
+        altitude: Double = 82,
+        pressureKilopascals: Double
+    ) -> SensorReading {
+        SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: latitude,
+                longitude: longitude,
+                altitude: altitude,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 6
+            ),
+            pressureKilopascals: pressureKilopascals,
+            // 앱을 다시 켠 뒤라 상대고도 세션이 끊겼다. 실제 기기에서 가장
+            // 흔한 경우이므로 기압차 경로를 그대로 태운다.
+            altimeterSessionID: UUID()
+        )
+    }
+
+    /// 사용자는 "지금 몇 층인지"만 알려 준다. 층 높이는 서로 다른 두 층의
+    /// 고도 차이에서 앱이 스스로 구한다.
+    func testCurrentFloorCalibrationDerivesFloorHeightFromTwoFloors() throws {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .company)
+        XCTAssertEqual(place.floorHeightMeters, 3, accuracy: 0.001)
+
+        place.calibrateCurrentFloor(
+            to: 1,
+            from: makeAltitudeReading(
+                at: base,
+                pressureKilopascals: groundPressure
+            )
+        )
+        // 기준이 한 층뿐이면 잴 것이 없으므로 쓰던 값을 그대로 둔다.
+        XCTAssertEqual(place.floorHeightMeters, 3, accuracy: 0.001)
+        XCTAssertEqual(place.floor, 1)
+
+        let upstairs = makeAltitudeReading(
+            at: base.addingTimeInterval(600),
+            latitude: 37.5002,
+            pressureKilopascals: pressure(groundPressure, risingBy: 13.6)
+        )
+        place.calibrateCurrentFloor(to: 5, from: upstairs)
+
+        XCTAssertEqual(place.floorHeightMeters, 3.4, accuracy: 0.05)
+        XCTAssertEqual(place.floorReferencePoints.map(\.floor).sorted(), [1, 5])
+        // 자리는 처음 잡은 기준점 그대로다. 층만 더한다.
+        XCTAssertEqual(place.point?.latitude, 37.5)
+
+        let estimate = FloorCalibrationEngine().estimate(
+            reading: upstairs,
+            calibration: try XCTUnwrap(place.floorCalibration)
+        )
+        XCTAssertEqual(estimate?.floor, 5)
+    }
+
+    /// 같은 층을 다시 알려 주면 그 층 기준만 갱신하고 다른 층은 남긴다.
+    func testCurrentFloorCalibrationKeepsOtherFloors() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .home)
+        place.calibrateCurrentFloor(
+            to: 1,
+            from: makeAltitudeReading(
+                at: base,
+                pressureKilopascals: groundPressure
+            )
+        )
+        place.calibrateCurrentFloor(
+            to: 5,
+            from: makeAltitudeReading(
+                at: base.addingTimeInterval(600),
+                pressureKilopascals: pressure(groundPressure, risingBy: 13.6)
+            )
+        )
+        place.calibrateCurrentFloor(
+            to: 5,
+            from: makeAltitudeReading(
+                at: base.addingTimeInterval(1_200),
+                pressureKilopascals: pressure(groundPressure, risingBy: 12.8)
+            )
+        )
+
+        XCTAssertEqual(place.floorReferencePoints.map(\.floor).sorted(), [1, 5])
+        XCTAssertEqual(place.floorHeightMeters, 3.2, accuracy: 0.05)
+    }
+
+    /// 잘못 잰 짝은 층 높이 계산에서 버린다. 억지로 끌어다 맞추면 멀쩡한
+    /// 다른 기준까지 망가진다.
+    func testFloorHeightEstimatorDropsImpossiblePairs() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 82,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        let references = [
+            FloorCalibrationPoint(
+                floor: 1,
+                point: point,
+                relativeAltitudeMeters: nil,
+                pressureKilopascals: 101.0,
+                altimeterSessionID: UUID(),
+                capturedAt: base
+            ),
+            FloorCalibrationPoint(
+                floor: 5,
+                point: point,
+                relativeAltitudeMeters: nil,
+                pressureKilopascals: pressure(101.0, risingBy: 60),
+                altimeterSessionID: UUID(),
+                capturedAt: base.addingTimeInterval(600)
+            ),
+        ]
+
+        XCTAssertNil(FloorHeightEstimator.metersPerFloor(from: references))
+        XCTAssertNil(
+            FloorHeightEstimator.metersPerFloor(from: [references[0]])
+        )
+    }
+
+    // MARK: - 어플 목록에서 iOS 내부 서비스 감추기
+
+    private func makeUsageSample(
+        key: String,
+        title: String,
+        nameSource: ScreenTimeUsageNameSource,
+        start: Date,
+        minutes: Double = 12
+    ) -> ScreenTimeUsageSample {
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(3_600))
+        return ScreenTimeUsageSample(
+            key: key,
+            title: title,
+            span: span,
+            duration: minutes * 60,
+            pickups: 2,
+            notifications: 1,
+            nameSource: nameSource
+        )
+    }
+
+    /// 스크린 타임은 화면에 뜨지 않는 iOS 서비스 프로세스까지 앱으로 올려
+    /// 준다. 애플 번들 ID인데 시스템이 이름을 내주지 않은 줄만 감춘다.
+    func testAppUsageRecordsHideAppleInternalServices() {
+        let start = makeDate(2026, 8, 5, 9, 0)
+        let samples = [
+            makeUsageSample(
+                key: "bundle:com.apple.ScreenshotServicesService",
+                title: "ScreenshotServicesService",
+                nameSource: .bundleIdentifier,
+                start: start
+            ),
+            makeUsageSample(
+                key: "bundle:com.apple.LocalAuthenticationUIService",
+                title: "LocalAuthenticationUIService",
+                nameSource: .bundleIdentifier,
+                start: start
+            ),
+            makeUsageSample(
+                key: "bundle:com.apple.mobilesafari",
+                title: "Safari",
+                nameSource: .application,
+                start: start
+            ),
+            makeUsageSample(
+                key: "bundle:com.apple.Maps",
+                title: "지도",
+                nameSource: .application,
+                start: start
+            ),
+            makeUsageSample(
+                key: "bundle:com.jumpdesktop.ios",
+                title: "Jumpdesktop",
+                nameSource: .bundleIdentifier,
+                start: start
+            ),
+            makeUsageSample(
+                key: "category:생산성",
+                title: "생산성",
+                nameSource: .category,
+                start: start
+            ),
+            makeUsageSample(
+                key: "total",
+                title: "어플",
+                nameSource: .unknown,
+                start: start
+            ),
+        ]
+
+        let records = ScreenTimeUsageRecordEngine.records(
+            from: samples,
+            suppressedIDs: []
+        )
+
+        // 이름이 온 애플 앱, 다른 회사 앱, 카테고리·합계 줄은 그대로 남는다.
+        XCTAssertEqual(
+            Set(records.map(\.title)),
+            ["Safari", "지도", "Jumpdesktop", "생산성", "어플"]
+        )
+        XCTAssertTrue(
+            samples
+                .filter(ScreenTimeUsageRecordEngine.isHiddenSystemService)
+                .map(\.title)
+                .sorted()
+                == ["LocalAuthenticationUIService", "ScreenshotServicesService"]
+        )
+    }
+
+    /// 번들 ID가 없는 줄에는 이 규칙을 적용할 근거가 없다.
+    func testHiddenSystemServiceRuleNeedsBothAppleBundleAndDerivedName() {
+        let start = makeDate(2026, 8, 5, 9, 0)
+        // 이름을 받은 애플 앱은 번들 ID가 애플이어도 남는다.
+        XCTAssertFalse(
+            ScreenTimeUsageRecordEngine.isHiddenSystemService(
+                makeUsageSample(
+                    key: "bundle:com.apple.MobileSMS",
+                    title: "메시지",
+                    nameSource: .application,
+                    start: start
+                )
+            )
+        )
+        // 다른 회사 앱은 이름을 못 받아도 사용자가 직접 설치한 앱이다.
+        XCTAssertFalse(
+            ScreenTimeUsageRecordEngine.isHiddenSystemService(
+                makeUsageSample(
+                    key: "bundle:com.openai.chat",
+                    title: "Chat",
+                    nameSource: .bundleIdentifier,
+                    start: start
+                )
+            )
+        )
+        // 토큰만 있는 줄은 번들 ID를 모르므로 판단하지 않는다.
+        XCTAssertNil(
+            ScreenTimeUsageRecordEngine.bundleIdentifier(
+                of: makeUsageSample(
+                    key: "token:abcd",
+                    title: "Slideshow",
+                    nameSource: .bundleIdentifier,
+                    start: start
+                )
+            )
+        )
+    }
+
+    // MARK: - 메모 이관이 메모를 잃지 않는지
+
+    /// 실기기 모양 그대로: 카테고리 줄에 남긴 메모는 껍데기 계획에만 붙어
+    /// 있었고 분류도 시각도 저장돼 있지 않았다. 이관 뒤에도 같은 분류·같은
+    /// 날에서 찾을 수 있어야 하고, 기록 탭의 "이 기간을 설명한 기록"에도
+    /// 그대로 떠야 한다.
+    func testMemoShellMigrationKeepsLegacyMemoReachableAndRendered() throws {
+        let start = makeDate(2026, 8, 4, 9, 30)
+        let shell = makeMemoShellPlan(start: start)
+        let legacyMemo = ActionMemo(
+            planID: shell.id,
+            categoryID: nil,
+            occurredAt: nil,
+            kind: .idea,
+            text: "운동",
+            createdAt: start,
+            updatedAt: start
+        )
+        var snapshot = makeSnapshot(plans: [shell], memos: [legacyMemo])
+
+        MemoShellPlanMigration.apply(to: &snapshot)
+
+        XCTAssertTrue(snapshot.plans.isEmpty)
+        let lifted = try XCTUnwrap(snapshot.memos.first)
+        XCTAssertEqual(snapshot.memos.count, 1)
+        XCTAssertEqual(lifted.id, legacyMemo.id)
+        XCTAssertEqual(lifted.text, "운동")
+        XCTAssertNil(lifted.planID)
+        XCTAssertNil(lifted.targetID)
+        XCTAssertEqual(lifted.categoryID, "activity")
+        XCTAssertEqual(lifted.occurredAt, start)
+
+        // 기록 탭의 맥락 줄을 만드는 바로 그 엔진.
+        let report = ReviewEngine(calendar: utcCalendar).report(
+            for: .day,
+            containing: start,
+            plans: snapshot.plans,
+            actuals: [],
+            weather: [],
+            photos: [],
+            memos: snapshot.memos,
+            asOf: start.addingTimeInterval(hour)
+        )
+        XCTAssertEqual(report.contexts.map(\.text), ["운동"])
+        XCTAssertEqual(report.contexts.map(\.symbolName), ["note.text"])
+    }
+
+    /// 자동 기록 줄에 남긴 메모는 껍데기 계획과 기록 키를 함께 들고 있었다.
+    /// 이관은 계획 고리만 끊고 기록 키는 그대로 둬야 한다.
+    func testMemoShellMigrationKeepsAutomaticRecordTargetKey() throws {
+        let start = makeDate(2026, 8, 4, 9, 30)
+        let shell = makeMemoShellPlan(start: start)
+        let targetID = "automatic.actual.\(UUID().uuidString)"
+        var snapshot = makeSnapshot(
+            plans: [shell],
+            memos: [
+                ActionMemo(
+                    planID: shell.id,
+                    targetID: targetID,
+                    kind: .idea,
+                    text: "무릎 상태 확인",
+                    createdAt: start,
+                    updatedAt: start
+                ),
+            ]
+        )
+
+        MemoShellPlanMigration.apply(to: &snapshot)
+
+        let lifted = try XCTUnwrap(snapshot.memos.first)
+        XCTAssertNil(lifted.planID)
+        XCTAssertEqual(lifted.targetID, targetID)
+        XCTAssertEqual(lifted.categoryID, "activity")
+        XCTAssertEqual(lifted.occurredAt, start)
+
+        let report = ReviewEngine(calendar: utcCalendar).report(
+            for: .day,
+            containing: start,
+            plans: snapshot.plans,
+            actuals: [],
+            weather: [],
+            photos: [],
+            memos: snapshot.memos,
+            asOf: start.addingTimeInterval(hour)
+        )
+        XCTAssertEqual(report.contexts.map(\.text), ["무릎 상태 확인"])
+    }
+
+    /// 저장소에서 불러오는 실제 경로를 그대로 태운다. 껍데기 계획은 사라지고
+    /// 메모는 분류 줄에서 다시 찾을 수 있어야 한다.
+    @MainActor
+    func testMemoShellMigrationSurvivesAppLoad() async {
+        let start = makeDate(2026, 8, 4, 9, 30)
+        let shell = makeMemoShellPlan(start: start)
+        var stored = makeSnapshot(
+            plans: [shell],
+            memos: [
+                ActionMemo(
+                    planID: shell.id,
+                    kind: .idea,
+                    text: "운동",
+                    createdAt: start,
+                    updatedAt: start
+                ),
+            ]
+        )
+        stored.updatedAt = start
+        stored.categories = CategoryCatalog.builtIn
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            cloudSyncService: nil
+        )
+
+        await model.bootstrap()
+        // 이관은 첫 화면을 붙잡지 않도록 별도 작업에서 돈다.
+        let deadline = Date.now.addingTimeInterval(10)
+        while !model.snapshot.plans.isEmpty, Date.now < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+
+        XCTAssertTrue(model.snapshot.plans.isEmpty)
+        XCTAssertEqual(model.snapshot.memos.count, 1)
+        XCTAssertEqual(
+            model.memos(forCategoryID: "activity", on: start).map(\.text),
+            ["운동"]
+        )
     }
 
     private var utcCalendar: Calendar {

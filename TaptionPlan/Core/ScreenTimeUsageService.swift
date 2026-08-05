@@ -486,6 +486,30 @@ enum ScreenTimeUsageRecordEngine {
             : "\(minutes / 60)시간 \(remainder)분"
     }
 
+    private static let bundleKeyPrefix = "bundle:"
+    private static let appleBundlePrefix = "com.apple."
+
+    /// 표본은 번들 ID를 따로 들고 다니지 않는다. 안정 키가 곧 `bundle:<ID>` 다.
+    static func bundleIdentifier(of sample: ScreenTimeUsageSample) -> String? {
+        guard sample.key.hasPrefix(bundleKeyPrefix) else { return nil }
+        let identifier = String(sample.key.dropFirst(bundleKeyPrefix.count))
+        return identifier.isEmpty ? nil : identifier
+    }
+
+    /// 스크린 타임은 화면에 뜨지 않는 iOS 자체 서비스 프로세스까지 앱처럼
+    /// 올려 준다. 사용자가 쓰는 앱이면 시스템이 이름을 내주고, 내부 서비스면
+    /// 내주지 않는다. 그래서 "애플이 만든 번들 ID인데 이름을 받지 못해 번들
+    /// ID에서 지어낸" 줄만 감춘다. 사파리·지도·메시지처럼 이름이 오는 애플 앱은
+    /// 그대로 남고, 다른 회사 앱은 이름을 못 받아도 사용자가 직접 설치한
+    /// 앱이므로 남긴다. 원본 표본은 그대로 두고 목록에서만 뺀다.
+    static func isHiddenSystemService(_ sample: ScreenTimeUsageSample) -> Bool {
+        guard sample.nameSource == .bundleIdentifier,
+              let identifier = bundleIdentifier(of: sample) else {
+            return false
+        }
+        return identifier.lowercased().hasPrefix(appleBundlePrefix)
+    }
+
     static func records(
         from samples: [ScreenTimeUsageSample],
         suppressedIDs: Set<UUID>
@@ -493,7 +517,9 @@ enum ScreenTimeUsageRecordEngine {
         var seen = Set<UUID>()
         return samples.compactMap { sample in
             let duration = min(sample.duration, sample.span.duration)
-            guard duration > 0 else { return nil }
+            guard duration > 0, !isHiddenSystemService(sample) else {
+                return nil
+            }
             let id = recordID(for: sample)
             guard seen.insert(id).inserted, !suppressedIDs.contains(id) else {
                 return nil

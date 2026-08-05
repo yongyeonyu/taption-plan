@@ -25,7 +25,9 @@ final class AppModel {
     var selectedGroupPlanID: UUID?
     var selectedGoalPlanID: UUID?
     var groupNavigationPath: [UUID] = []
-    var selectedMemoPlanID: UUID?
+    /// 메모 입력은 항목을 먼저 고르지 않는다. 시간표 메모 줄에서 바로 열리며,
+    /// 새 메모가 놓일 순간과 그 자리에 이미 있던 메모만 들고 있으면 된다.
+    private(set) var memoEntry: MemoEntry?
     var selectedCatCoat: CatCoat = .calico
     /// 기록 탭도 시간표와 같은 배율(일·주·월·년)을 쓴다.
     var reviewScale: TimeScale = .week
@@ -52,6 +54,7 @@ final class AppModel {
                     || oldValue.photos != snapshot.photos
                     || oldValue.categories != snapshot.categories
                     || oldValue.recordLinks != snapshot.recordLinks
+                    || oldValue.memos != snapshot.memos
                     || oldValue.settings.timelineRowOrder
                         != snapshot.settings.timelineRowOrder) {
                 timelineRevision &+= 1
@@ -1622,7 +1625,7 @@ final class AppModel {
         isEditingSetupCategories = false
         selectedGroupPlanID = nil
         groupNavigationPath = []
-        selectedMemoPlanID = nil
+        memoEntry = nil
         sleepSessions = []
         try? await sensorService?.deleteArchivedReadings()
         await persist()
@@ -1637,11 +1640,6 @@ final class AppModel {
             return snapshot.categories.filter { !$0.isHidden }.count
         }
         return pendingSetupCategoryIDs.count
-    }
-
-    var selectedMemoPlan: PlanRecord? {
-        guard let selectedMemoPlanID else { return nil }
-        return snapshot.plans.first { $0.id == selectedMemoPlanID }
     }
 
     func openInitialSetup() {
@@ -1684,11 +1682,80 @@ final class AppModel {
         detail = nil
     }
 
-    func openMemo(for planID: UUID?) {
-        selectedMemoPlanID = planID
-            ?? selectedGroupPlanID
-            ?? snapshot.plans.first?.id
+    /// 메모 입력의 유일한 입구. 계획도 기록도 고르지 않고 순간만 받는다.
+    /// `memoIDs` 가 비어 있지 않으면 그 자리에 이미 있던 메모를 펼친다.
+    func openMemoEntry(at instant: Date, memoIDs: [UUID] = []) {
+        memoEntry = MemoEntry(occurredAt: instant, memoIDs: memoIDs)
         detail = .memo
+    }
+
+    func closeMemoEntry() {
+        memoEntry = nil
+        detail = nil
+    }
+
+    /// 메모가 놓일 순간을 옮긴다. 손가락으로만 움직이므로 키보드는 메모 글에만
+    /// 쓰인다.
+    func moveMemoEntry(to instant: Date) {
+        guard memoEntry?.occurredAt != instant else { return }
+        memoEntry?.occurredAt = instant
+    }
+
+    var memoEntryMemos: [ActionMemo] {
+        guard let memoEntry, !memoEntry.memoIDs.isEmpty else { return [] }
+        let ids = Set(memoEntry.memoIDs)
+        return snapshot.memos
+            .filter { ids.contains($0.id) }
+            .sorted { $0.occurredAt < $1.occurredAt }
+    }
+
+    /// 시간표 메모 줄이 읽는 값. 항목에 붙은 메모도 결국 한 순간에 놓이므로
+    /// 줄 하나가 그 기간의 메모를 전부 보여 준다.
+    func timelineMemos(in span: TimeSpan) -> [ActionMemo] {
+        snapshot.memos.filter {
+            $0.occurredAt >= span.start && $0.occurredAt < span.end
+        }
+    }
+
+    @discardableResult
+    func addMemoAtEntryInstant(text: String, kind: MemoKind) -> UUID? {
+        guard let entry = memoEntry,
+              let id = addMemo(
+                  text: text,
+                  kind: kind,
+                  categoryID: MemoTimelineEngine.categoryID,
+                  on: entry.occurredAt
+              ) else {
+            return nil
+        }
+        memoEntry?.memoIDs.append(id)
+        return id
+    }
+
+    func addAttachmentMemoAtEntryInstant(
+        kind: MemoKind,
+        attachmentKind: AttachmentKind,
+        localIdentifier: String,
+        text: String? = nil
+    ) {
+        guard let entry = memoEntry else { return }
+        let fallbackText = attachmentKind == .photo ? "사진 메모" : "음성 메모"
+        let memo = ActionMemo(
+            categoryID: MemoTimelineEngine.categoryID,
+            occurredAt: entry.occurredAt,
+            kind: kind,
+            text: text?.trimmingCharacters(in: .whitespacesAndNewlines)
+                .nilIfEmpty ?? fallbackText,
+            attachments: [
+                MemoAttachment(
+                    kind: attachmentKind,
+                    localIdentifier: localIdentifier
+                ),
+            ]
+        )
+        snapshot.memos.append(memo)
+        memoEntry?.memoIDs.append(memo.id)
+        Task { await persist() }
     }
 
     func memos(for planID: UUID?) -> [ActionMemo] {
@@ -1727,18 +1794,17 @@ final class AppModel {
     func addMemo(
         text: String,
         kind: MemoKind,
-        to planID: UUID? = nil
+        to planID: UUID
     ) {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let destination = planID ?? selectedMemoPlanID
-        guard !cleanText.isEmpty, let destination,
-              let plan = snapshot.plans.first(where: { $0.id == destination })
+        guard !cleanText.isEmpty,
+              let plan = snapshot.plans.first(where: { $0.id == planID })
         else {
             return
         }
         snapshot.memos.append(
             ActionMemo(
-                planID: destination,
+                planID: planID,
                 categoryID: plan.categoryID,
                 occurredAt: plan.span.start,
                 kind: kind,
@@ -1748,53 +1814,29 @@ final class AppModel {
         Task { await persist() }
     }
 
-    func addMemo(
-        text: String,
-        kind: MemoKind,
-        toTargetID targetID: String,
-        planID: UUID? = nil,
-        categoryID: String? = nil,
-        occurredAt: Date? = nil
-    ) {
-        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty, !targetID.isEmpty else { return }
-        let destination = planID.flatMap { candidate in
-            snapshot.plans.contains { $0.id == candidate } ? candidate : nil
-        }
-        snapshot.memos.append(
-            ActionMemo(
-                planID: destination,
-                targetID: targetID,
-                categoryID: categoryID,
-                occurredAt: occurredAt,
-                kind: kind,
-                text: cleanText
-            )
-        )
-        Task { await persist() }
-    }
-
+    @discardableResult
     func addMemo(
         text: String,
         kind: MemoKind,
         categoryID: String,
         on date: Date
-    ) {
+    ) -> UUID? {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty, !categoryID.isEmpty else { return }
-        snapshot.memos.append(
-            ActionMemo(
-                categoryID: categoryID,
-                occurredAt: date,
-                kind: kind,
-                text: cleanText
-            )
+        guard !cleanText.isEmpty, !categoryID.isEmpty else { return nil }
+        let memo = ActionMemo(
+            categoryID: categoryID,
+            occurredAt: date,
+            kind: kind,
+            text: cleanText
         )
+        snapshot.memos.append(memo)
         Task { await persist() }
+        return memo.id
     }
 
     func deleteMemo(_ memoID: UUID) {
         snapshot.memos.removeAll { $0.id == memoID }
+        memoEntry?.memoIDs.removeAll { $0 == memoID }
         Task { await persist() }
     }
 
@@ -1816,48 +1858,10 @@ final class AppModel {
         Task { await persist() }
     }
 
-    func addAttachmentMemo(
-        kind: MemoKind,
-        attachmentKind: AttachmentKind,
-        localIdentifier: String,
-        text: String? = nil,
-        to planID: UUID? = nil
-    ) {
-        let destination = planID ?? selectedMemoPlanID
-        guard let destination,
-              let plan = snapshot.plans.first(where: { $0.id == destination })
-        else {
-            return
-        }
-        let fallbackText = attachmentKind == .photo ? "사진 메모" : "음성 메모"
-        snapshot.memos.append(
-            ActionMemo(
-                planID: destination,
-                categoryID: plan.categoryID,
-                occurredAt: plan.span.start,
-                kind: kind,
-                text: text?.trimmingCharacters(in: .whitespacesAndNewlines)
-                    .nilIfEmpty ?? fallbackText,
-                attachments: [
-                    MemoAttachment(
-                        kind: attachmentKind,
-                        localIdentifier: localIdentifier
-                    ),
-                ]
-            )
-        )
-        Task { await persist() }
-    }
-
-    func toggleVoiceMemo(
-        kind: MemoKind,
-        to planID: UUID? = nil
-    ) async {
-        let destination = planID ?? selectedMemoPlanID
-        guard destination != nil else {
-            userFacingError = "음성 메모를 연결할 계획을 먼저 선택해 주세요."
-            return
-        }
+    /// 음성 메모도 붙일 항목을 찾지 않는다. 메모 입력이 열려 있으면 그 순간에
+    /// 놓인다.
+    func toggleVoiceMemo(kind: MemoKind) async {
+        guard memoEntry != nil else { return }
 
         if isRecordingVoiceMemo {
             guard let url = voiceMemoRecorder.stop() else {
@@ -1865,11 +1869,10 @@ final class AppModel {
                 return
             }
             isRecordingVoiceMemo = false
-            addAttachmentMemo(
+            addAttachmentMemoAtEntryInstant(
                 kind: kind,
                 attachmentKind: .audio,
-                localIdentifier: url.path,
-                to: destination
+                localIdentifier: url.path
             )
             return
         }
@@ -2508,7 +2511,6 @@ final class AppModel {
             recordNodePlanID(link.fromNodeID).map(deletedIDs.contains) == true
                 || recordNodePlanID(link.toNodeID).map(deletedIDs.contains) == true
         }
-        selectedMemoPlanID = nil
         selectedGroupPlanID = nil
         groupNavigationPath.removeAll {
             deletedIDs.contains($0)
@@ -3811,7 +3813,57 @@ final class AppModel {
         }
     }
 
-    /// 층 보정은 사용자 조작 없이 이 경로로만 쌓인다.
+    /// 사용자가 "지금 이 층"이라고 알려 주면 그 자리의 기압을 이 장소의
+    /// 기준으로 삼는다. 층 높이는 묻지 않는다. 서로 다른 층 기준이 둘 이상
+    /// 모이면 `FrequentPlace.calibrateCurrentFloor` 가 그 차이로 구한다.
+    func calibrateFrequentPlaceFloor(_ placeID: UUID, floor: Int) {
+        guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+            $0.id == placeID
+        }) else {
+            return
+        }
+        guard let reading = latestSensorReading,
+              reading.point != nil else {
+            userFacingError =
+                "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
+            return
+        }
+        snapshot.settings.frequentPlaces[index].calibrateCurrentFloor(
+            to: floor,
+            from: reading
+        )
+        appendFloorCalibrationEvent(
+            FloorCalibrationEvent(
+                placeID: placeID,
+                placeName: snapshot.settings.frequentPlaces[index].name,
+                floor: floor,
+                seaLevelAltitudeMeters: reading.point?.altitude,
+                isAutomatic: false,
+                capturedAt: reading.timestamp
+            )
+        )
+        lastAutoFloorCalibrationKey = nil
+        snapshot.settings.floorCalibration = nil
+        snapshot.settings.frequentPlaces =
+            AppFeatureSettings.mergedFrequentPlaces(
+                snapshot.settings.frequentPlaces
+            )
+        updateFloorEstimate(with: reading)
+        Task {
+            await persist()
+            await refreshSensorTimeline(containing: selectedDate)
+        }
+    }
+
+    private func appendFloorCalibrationEvent(_ event: FloorCalibrationEvent) {
+        snapshot.settings.floorCalibrationHistory.append(event)
+        let overflow = snapshot.settings.floorCalibrationHistory.count - 100
+        if overflow > 0 {
+            snapshot.settings.floorCalibrationHistory.removeFirst(overflow)
+        }
+    }
+
+    /// 자동 층 보정은 사용자 조작 없이 이 경로로만 쌓인다.
     @discardableResult
     private func recordFloorCalibration(
         placeID: UUID,
@@ -3829,7 +3881,7 @@ final class AppModel {
             from: reading,
             floor: floor
         )
-        snapshot.settings.floorCalibrationHistory.append(
+        appendFloorCalibrationEvent(
             FloorCalibrationEvent(
                 placeID: placeID,
                 placeName: snapshot.settings.frequentPlaces[index].name,
@@ -3839,10 +3891,6 @@ final class AppModel {
                 capturedAt: reading.timestamp
             )
         )
-        let overflow = snapshot.settings.floorCalibrationHistory.count - 100
-        if overflow > 0 {
-            snapshot.settings.floorCalibrationHistory.removeFirst(overflow)
-        }
         snapshot.settings.frequentPlaces =
             AppFeatureSettings.mergedFrequentPlaces(
                 snapshot.settings.frequentPlaces
@@ -3864,13 +3912,12 @@ final class AppModel {
         }
     }
 
-    /// 자주가는 곳의 감지 반경과 건물별 층고를 저장합니다.
-    /// 층고는 기압/상대고도 차이를 층수로 환산할 때 사용됩니다.
+    /// 자주가는 곳의 이름과 감지 범위를 저장합니다. 건물의 층 높이는 여기서
+    /// 받지 않습니다. 사용자가 알려 준 현재 층수에서 앱이 직접 구합니다.
     func updateFrequentPlaceDetails(
         _ placeID: UUID,
         name: String,
         radiusMeters: Double,
-        floorHeightMeters: Double,
         minimumDwellMinutes: Int,
         isAutomaticRecordingEnabled: Bool
     ) {
@@ -3886,10 +3933,6 @@ final class AppModel {
         snapshot.settings.frequentPlaces[index].radiusMeters = min(
             max(radiusMeters, 30),
             500
-        )
-        snapshot.settings.frequentPlaces[index].floorHeightMeters = min(
-            max(floorHeightMeters, 2.2),
-            5.0
         )
         snapshot.settings.frequentPlaces[index].minimumDwellMinutes = min(
             max(minimumDwellMinutes, 1),
@@ -4418,11 +4461,8 @@ final class AppModel {
             reading: reading,
             seaLevelAltitudeMeters: estimate.seaLevelAltitudeMeters
         ) {
-            let label = estimate.floor < 0
-                ? "지하 \(-estimate.floor)층"
-                : "\(estimate.floor)층"
             showFloorCalibrationNotice(
-                "\(match.name) \(label) 고도 보정을 적용했습니다."
+                "\(match.name) \(FloorLabel.korean(estimate.floor)) 고도 보정을 적용했습니다."
             )
         }
     }
