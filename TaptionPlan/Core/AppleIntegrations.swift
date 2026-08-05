@@ -1869,6 +1869,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var deviceMotionAccumulator = DeviceMotionAccumulator()
     private var activeTrackingSession: TrackingSession?
     private var trackingSequence = 0
+    /// nil이 아니면 층 보정용 표본을 모으는 중이다.
+    private var altitudeBurstSamples: [AltitudeBurstSample]?
 
     override init() {
         super.init()
@@ -2107,6 +2109,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         // gap until the session ends.
         guard activeTrackingSession == nil else { return }
         emit(force: true)
+        // 층 보정 표본을 모으는 중이면 이 창을 끄지 않는다. 끄면 사용자가
+        // 기다리는 동안 표본이 끊긴다.
+        guard altitudeBurstSamples == nil else { return }
         stopHardwareStreams()
         clearSampleState()
     }
@@ -2473,7 +2478,52 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestRelativeAltitude = update.relativeAltitudeMeters
         latestPressureKilopascals = update.pressureKilopascals
         altimeterSessionID = update.sessionID
+        if altitudeBurstSamples != nil {
+            altitudeBurstSamples?.append(
+                AltitudeBurstSample(
+                    relativeAltitudeMeters: update.relativeAltitudeMeters,
+                    pressureKilopascals: update.pressureKilopascals,
+                    altimeterSessionID: update.sessionID,
+                    timestamp: .now
+                )
+            )
+        }
         emit()
+    }
+
+    /// 층 보정은 한 표본이 아니라 짧은 묶음으로 잰다. 기압 갱신은 약 1초에
+    /// 한 번 오므로 듀티사이클로 꺼져 있던 센서를 이 동안만 켜고, 끝나면
+    /// 원래 주기로 돌려준다.
+    func captureAltitudeBurst(
+        count: Int,
+        timeout: TimeInterval,
+        onProgress: @MainActor (Int) -> Void = { _ in }
+    ) async -> [AltitudeBurstSample] {
+        guard CMAltimeter.isRelativeAltitudeAvailable(),
+              altitudeBurstSamples == nil else {
+            return []
+        }
+        let wasRunning = sensorStreamsRunning
+        altitudeBurstSamples = []
+        if !wasRunning { startHardwareStreams() }
+        let deadline = Date.now.addingTimeInterval(timeout)
+        var reported = 0
+        while !Task.isCancelled, Date.now < deadline {
+            let collected = altitudeBurstSamples?.count ?? 0
+            if collected != reported {
+                reported = collected
+                onProgress(collected)
+            }
+            if collected >= count { break }
+            try? await Task.sleep(for: .milliseconds(200))
+        }
+        let samples = altitudeBurstSamples ?? []
+        altitudeBurstSamples = nil
+        if !wasRunning, activeTrackingSession == nil {
+            stopHardwareStreams()
+            clearSampleState()
+        }
+        return samples
     }
 
     private func apply(_ update: PedometerSensorUpdate) {

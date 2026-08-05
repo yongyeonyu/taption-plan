@@ -991,6 +991,49 @@ struct FloorCalibrationPoint: Codable, Hashable, Sendable {
     var pressureKilopascals: Double?
     var altimeterSessionID: UUID?
     var capturedAt: Date
+    /// 사용자가 "지금 이 층"이라고 직접 확인한 기준점. 자동 추정은 이 기준을
+    /// 덮거나 지우지 못한다. 그래야 사용자가 자기 데이터를 고칠 수 있다.
+    var isManual: Bool
+
+    init(
+        floor: Int,
+        point: GeoPoint,
+        relativeAltitudeMeters: Double?,
+        pressureKilopascals: Double?,
+        altimeterSessionID: UUID?,
+        capturedAt: Date,
+        isManual: Bool = false
+    ) {
+        self.floor = floor
+        self.point = point
+        self.relativeAltitudeMeters = relativeAltitudeMeters
+        self.pressureKilopascals = pressureKilopascals
+        self.altimeterSessionID = altimeterSessionID
+        self.capturedAt = capturedAt
+        self.isManual = isManual
+    }
+
+    /// 이전 저장 파일에는 `isManual` 이 없다. 알 수 없는 출처는 자동으로 본다.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        floor = try values.decode(Int.self, forKey: .floor)
+        point = try values.decode(GeoPoint.self, forKey: .point)
+        relativeAltitudeMeters = try values.decodeIfPresent(
+            Double.self,
+            forKey: .relativeAltitudeMeters
+        )
+        pressureKilopascals = try values.decodeIfPresent(
+            Double.self,
+            forKey: .pressureKilopascals
+        )
+        altimeterSessionID = try values.decodeIfPresent(
+            UUID.self,
+            forKey: .altimeterSessionID
+        )
+        capturedAt = try values.decode(Date.self, forKey: .capturedAt)
+        isManual = try values.decodeIfPresent(Bool.self, forKey: .isManual)
+            ?? false
+    }
 }
 
 /// 두 관측 사이의 고도 차이를 구하는 단 하나의 규칙. 같은 기압 세션의
@@ -1028,7 +1071,11 @@ enum AltitudeDelta {
         _ baseline: Sample,
         and current: Sample
     ) -> (meters: Double, source: Source)? {
-        if baseline.altimeterSessionID == current.altimeterSessionID,
+        // 상대고도의 0점은 기압 세션마다 새로 잡힌다. 세션을 모르는 표본끼리
+        // (양쪽 다 nil) 비교하면 서로 다른 0점을 같은 기준으로 착각해 수십
+        // 미터가 그대로 층수 오차가 된다. 그때는 절대 기압으로 내려간다.
+        if let session = baseline.altimeterSessionID,
+           session == current.altimeterSessionID,
            let start = baseline.relativeAltitudeMeters,
            let end = current.relativeAltitudeMeters {
             return (end - start, .relativeAltitude)
@@ -1058,7 +1105,7 @@ enum FloorHeightEstimator {
     static func metersPerFloor(
         from references: [FloorCalibrationPoint]
     ) -> Double? {
-        let sorted = references.sorted { $0.floor < $1.floor }
+        let sorted = newestPerFloor(references).sorted { $0.floor < $1.floor }
         var heights: [Double] = []
         for (index, base) in sorted.enumerated() {
             for target in sorted.dropFirst(index + 1) {
@@ -1070,7 +1117,11 @@ enum FloorHeightEstimator {
                       ) else {
                     continue
                 }
-                let height = abs(delta.meters) / Double(floors)
+                // 위층은 아래층보다 높아야 한다. 부호가 뒤집힌 짝은 둘 중
+                // 하나가 오염된 것이므로, abs로 부호를 감춰 멀쩡한 값처럼
+                // 만들지 않는다.
+                guard delta.meters > 0 else { continue }
+                let height = delta.meters / Double(floors)
                 // 범위를 벗어난 짝은 잘못 잰 것이다. 억지로 끌어다 맞추면
                 // 멀쩡한 다른 기준까지 망가지므로 그냥 버린다.
                 guard height >= minimumMeters, height <= maximumMeters else {
@@ -1080,11 +1131,196 @@ enum FloorHeightEstimator {
             }
         }
         guard !heights.isEmpty else { return nil }
-        let ordered = heights.sorted()
+        return median(heights)
+    }
+
+    /// 같은 층 기준이 여러 개 남아 있으면 최근 것만 쓴다. 오래된 중복은 같은
+    /// 층을 두 번 세어 중앙값을 한쪽으로 끌어당긴다.
+    private static func newestPerFloor(
+        _ references: [FloorCalibrationPoint]
+    ) -> [FloorCalibrationPoint] {
+        var newest: [Int: FloorCalibrationPoint] = [:]
+        for reference in references {
+            if let held = newest[reference.floor],
+               held.capturedAt >= reference.capturedAt {
+                continue
+            }
+            newest[reference.floor] = reference
+        }
+        return Array(newest.values)
+    }
+
+    static func median(_ values: [Double]) -> Double? {
+        guard !values.isEmpty else { return nil }
+        let ordered = values.sorted()
         let middle = ordered.count / 2
         return ordered.count.isMultiple(of: 2)
             ? (ordered[middle - 1] + ordered[middle]) / 2
             : ordered[middle]
+    }
+}
+
+/// 기압계 한 표본은 흔들린다. 그 한 번을 영구 기준점으로 박으면 흔들림이
+/// 이 건물의 모든 층 추정에 그대로 남는다. 그래서 수동 보정은 여러 표본을
+/// 모아 하나로 줄인 뒤에만 기준을 남긴다.
+struct AltitudeBurstSample: Hashable, Sendable {
+    var relativeAltitudeMeters: Double?
+    var pressureKilopascals: Double?
+    var altimeterSessionID: UUID?
+    var timestamp: Date
+
+    init(
+        relativeAltitudeMeters: Double? = nil,
+        pressureKilopascals: Double? = nil,
+        altimeterSessionID: UUID? = nil,
+        timestamp: Date
+    ) {
+        self.relativeAltitudeMeters = relativeAltitudeMeters
+        self.pressureKilopascals = pressureKilopascals
+        self.altimeterSessionID = altimeterSessionID
+        self.timestamp = timestamp
+    }
+
+    var isUsable: Bool {
+        relativeAltitudeMeters != nil || pressureKilopascals != nil
+    }
+}
+
+/// 표본 묶음을 기준점 하나로 줄이는 규칙. CoreMotion을 모른다.
+enum AltitudeBurstReducer {
+    /// 기압계 상대고도는 약 1초에 한 번 도착한다. 12개면 약 12초, 사용자가
+    /// 가만히 서 있기를 요구할 수 있는 상한이다.
+    static let requestedSampleCount = 12
+    /// 절반 넘게 모이면 중앙값이 흔들림을 이긴다. 그보다 적으면 버린다.
+    static let minimumSampleCount = 7
+    /// 한 층은 최소 2.2m다. 그 절반보다 넉넉히 아래로 잡는다. 가만히 선
+    /// 기기의 기압계 잡음은 수십 cm이므로, 이보다 벌어졌다면 사람이
+    /// 움직였거나 센서를 믿을 수 없다는 뜻이다.
+    static let maximumSpreadMeters = 1.0
+
+    enum Outcome: Equatable, Sendable {
+        case reduced(AltitudeBurstSample, spreadMeters: Double)
+        case tooFewSamples(collected: Int)
+        case tooNoisy(spreadMeters: Double)
+    }
+
+    /// 평균 대신 중앙값을 쓴다. 최대·최소를 버린 뒤 남는 표본이 열 개뿐이라
+    /// 그 위에 다시 이상치 규칙을 얹으면 임계값 하나에 결과가 흔들린다.
+    /// 중앙값은 조정할 값 없이 같은 강건함을 한 번에 얻는다. 버린 양끝은
+    /// 값 대신 품질 판정에 쓴다.
+    static func reduce(_ samples: [AltitudeBurstSample]) -> Outcome {
+        let ordered = samples.filter(\.isUsable).sorted {
+            $0.timestamp < $1.timestamp
+        }
+        // 기압 세션이 중간에 끊기면 상대고도의 0점이 새로 잡힌다. 그 앞뒤를
+        // 섞어 평균 내면 없던 층이 생긴다. 마지막 세션만 남긴다.
+        let session = ordered.last?.altimeterSessionID
+        let usable = ordered.filter { $0.altimeterSessionID == session }
+        guard usable.count >= minimumSampleCount else {
+            return .tooFewSamples(collected: usable.count)
+        }
+        let spread = trimmedSpreadMeters(usable)
+        guard spread <= maximumSpreadMeters else {
+            return .tooNoisy(spreadMeters: spread)
+        }
+        let reduced = AltitudeBurstSample(
+            relativeAltitudeMeters: FloorHeightEstimator.median(
+                usable.compactMap(\.relativeAltitudeMeters)
+            ),
+            pressureKilopascals: FloorHeightEstimator.median(
+                usable.compactMap(\.pressureKilopascals)
+            ),
+            altimeterSessionID: session,
+            timestamp: usable[usable.count / 2].timestamp
+        )
+        return .reduced(reduced, spreadMeters: spread)
+    }
+
+    /// 최대·최소 하나씩을 덜어 낸 뒤 남는 폭. 표본이 얼마나 서로 맞는지를
+    /// 미터로 말한다.
+    static func trimmedSpreadMeters(_ samples: [AltitudeBurstSample]) -> Double {
+        let ordered = metersSeries(samples).sorted()
+        guard ordered.count > 2 else {
+            return (ordered.last ?? 0) - (ordered.first ?? 0)
+        }
+        return ordered[ordered.count - 2] - ordered[1]
+    }
+
+    /// 상대고도가 있으면 그대로, 없으면 절대 기압을 미터로 바꿔 비교한다.
+    private static func metersSeries(
+        _ samples: [AltitudeBurstSample]
+    ) -> [Double] {
+        let relative = samples.compactMap(\.relativeAltitudeMeters)
+        if relative.count >= minimumSampleCount { return relative }
+        let pressures = samples.compactMap(\.pressureKilopascals).filter {
+            $0 > 0
+        }
+        guard let reference = pressures.first else { return relative }
+        return pressures.map {
+            44_330 * (1 - pow($0 / reference, 0.1903))
+        }
+    }
+}
+
+extension SensorReading {
+    /// 묶음에서 줄인 고도로 이 표본의 고도만 바꾼다. 위치는 그대로 두고
+    /// 시각은 실제로 잰 때로 맞춘다.
+    func replacingAltitude(with sample: AltitudeBurstSample) -> SensorReading {
+        var value = self
+        value.relativeAltitudeMeters = sample.relativeAltitudeMeters
+        value.pressureKilopascals = sample.pressureKilopascals
+        value.altimeterSessionID = sample.altimeterSessionID
+        value.timestamp = sample.timestamp
+        return value
+    }
+}
+
+/// 층 보정은 사용자가 실제로 고른 값에만 적용한다. 화면이 미리 채워 둔 값을
+/// 그대로 확인해 버리면 고치려던 오차가 영구 기준으로 굳는다. 그래서 값을
+/// 한 번 더 눌러 확인하기 전에는 보정이 잠겨 있다.
+struct FloorCalibrationPrompt: Equatable, Sendable {
+    static let range = -10...100
+
+    private(set) var floor: Int
+    /// 사용자가 화면에 뜬 층수를 눈으로 확인하고 한 번 더 누른 상태.
+    private(set) var isArmed = false
+
+    /// 미리 채우는 값은 이 장소에서 사용자가 마지막으로 확인한 층뿐이다.
+    /// 앱이 추정한 층을 넣으면 고치려는 값이 곧 기본값이 된다.
+    init(lastConfirmedFloor: Int? = nil) {
+        floor = Self.clamped(lastConfirmedFloor ?? 1)
+    }
+
+    var canCommit: Bool { isArmed }
+
+    mutating func select(_ value: Int) {
+        let next = Self.clamped(value)
+        guard next != floor else { return }
+        floor = next
+        // 값이 바뀌면 확인은 무효다. 확인한 값과 보정할 값은 늘 같아야 한다.
+        isArmed = false
+    }
+
+    mutating func arm() { isArmed = true }
+
+    mutating func disarm() { isArmed = false }
+
+    private static func clamped(_ value: Int) -> Int {
+        min(max(value, range.lowerBound), range.upperBound)
+    }
+}
+
+/// 보정 표본을 모으는 동안의 진행 상태. 다 모이기 전에는 아무것도 기록되지
+/// 않는다.
+struct FloorCalibrationSampling: Equatable, Sendable {
+    var placeID: UUID
+    var floor: Int
+    var collected: Int
+    var target: Int
+
+    var progress: Double {
+        guard target > 0 else { return 0 }
+        return min(1, Double(collected) / Double(target))
     }
 }
 
@@ -1471,7 +1707,8 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
 
     mutating func setLocation(
         from reading: SensorReading,
-        floor: Int
+        floor: Int,
+        isManual: Bool = false
     ) {
         guard let point = reading.point else { return }
         self.point = point
@@ -1486,7 +1723,8 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
             relativeAltitudeMeters: reading.relativeAltitudeMeters,
             pressureKilopascals: reading.pressureKilopascals,
             altimeterSessionID: reading.altimeterSessionID,
-            capturedAt: reading.timestamp
+            capturedAt: reading.timestamp,
+            isManual: isManual
         )
         // 같은 건물에서 다시 지정한 경우 다른 층 기준을 유지한다.
         // 위치를 멀리 옮겼다면 이전 층 기준은 더 이상 맞지 않으므로 버린다.
@@ -1500,28 +1738,67 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     }
 
     static let sameBuildingRadiusMeters = 120.0
+    static let defaultFloorHeightMeters = 3.0
 
+    /// 서로 다른 층이라면 최소 층 높이(2.2m)만큼은 떨어져 있어야 한다. 그
+    /// 절반보다 가까운 두 기준점은 같은 높이를 가리키므로 둘 다 참일 수 없다.
+    /// 가만히 선 기기의 기압계 잡음(수십 cm)보다는 넉넉하다.
+    static let conflictingAltitudeToleranceMeters = 1.0
+
+    @discardableResult
     mutating func addFloorCalibration(
         from reading: SensorReading,
-        floor: Int
-    ) {
-        guard let point = reading.point else { return }
+        floor: Int,
+        isManual: Bool = false
+    ) -> Bool {
+        guard let point = reading.point else { return false }
         let reference = FloorCalibrationPoint(
             floor: floor,
             point: point,
             relativeAltitudeMeters: reading.relativeAltitudeMeters,
             pressureKilopascals: reading.pressureKilopascals,
             altimeterSessionID: reading.altimeterSessionID,
-            capturedAt: reading.timestamp
+            capturedAt: reading.timestamp,
+            isManual: isManual
         )
-        if let index = floorReferencePoints.firstIndex(where: {
-            $0.floor == floor
-        }) {
-            floorReferencePoints[index] = reference
-        } else {
-            floorReferencePoints.append(reference)
+        let conflicts = conflictingReferenceIndices(with: reference)
+        // 사용자가 확인한 기준을 자동 추정이 밀어내면, 틀린 추정이 사용자의
+        // 정정을 곧바로 되돌린다. 그때는 이번 자동 기준을 버린다.
+        if !isManual,
+           conflicts.contains(where: { floorReferencePoints[$0].isManual }) {
+            return false
         }
+        var kept = floorReferencePoints.enumerated()
+            .filter { !conflicts.contains($0.offset) }
+            .map(\.element)
+        if let index = kept.firstIndex(where: { $0.floor == floor }) {
+            kept[index] = reference
+        } else {
+            kept.append(reference)
+        }
+        kept.sort { $0.floor < $1.floor }
+        floorReferencePoints = kept
         updatedAt = .now
+        return true
+    }
+
+    /// 같은 높이에서 잰 다른 층 기준은 이번 기준과 함께 참일 수 없다. 층수만
+    /// 맞춰 덮어쓰면 0m 떨어진 17층 차이 같은 모순이 그대로 남는다.
+    private func conflictingReferenceIndices(
+        with reference: FloorCalibrationPoint
+    ) -> Set<Int> {
+        var indices: Set<Int> = []
+        for (index, existing) in floorReferencePoints.enumerated()
+        where existing.floor != reference.floor {
+            guard let delta = AltitudeDelta.between(
+                AltitudeDelta.Sample(existing),
+                and: AltitudeDelta.Sample(reference)
+            ) else { continue }
+            if abs(delta.meters) <= Self.conflictingAltitudeToleranceMeters {
+                indices.insert(index)
+            }
+        }
+        return indices
     }
 
     /// 사용자가 알려 주는 값은 "지금 몇 층인지" 하나뿐이다. 층 높이는 묻지
@@ -1534,16 +1811,48 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     ) {
         guard reading.point != nil else { return }
         if point == nil || self.floor == nil {
-            setLocation(from: reading, floor: floor)
+            setLocation(from: reading, floor: floor, isManual: true)
         } else {
-            addFloorCalibration(from: reading, floor: floor)
+            addFloorCalibration(from: reading, floor: floor, isManual: true)
+            // 방금 확인한 층이 이 장소의 기준 층이 된다. 새 보정값을 넣었으면
+            // 그 뒤의 모든 계산이 그것을 기준으로 다시 서야 한다.
+            self.floor = floor
+            referenceRelativeAltitudeMeters = reading.relativeAltitudeMeters
+            referencePressureKilopascals = reading.pressureKilopascals
+            referenceAltimeterSessionID = reading.altimeterSessionID
+            floorCapturedAt = reading.timestamp
         }
-        if let height = FloorHeightEstimator.metersPerFloor(
-            from: floorReferencePoints
-        ) {
-            floorHeightMeters = height
-        }
+        refreshFloorHeight()
         updatedAt = .now
+    }
+
+    /// 잘못 들어간 기준점 하나만 지운다. 나머지 기준과 이 장소의 위치는
+    /// 그대로 둔다.
+    @discardableResult
+    mutating func removeFloorReference(floor target: Int) -> Bool {
+        let kept = floorReferencePoints.filter { $0.floor != target }
+        guard kept.count != floorReferencePoints.count else { return false }
+        floorReferencePoints = kept
+        if self.floor == target {
+            let anchor = kept.last(where: \.isManual) ?? kept.last
+            self.floor = anchor?.floor
+            referenceRelativeAltitudeMeters = anchor?.relativeAltitudeMeters
+            referencePressureKilopascals = anchor?.pressureKilopascals
+            referenceAltimeterSessionID = anchor?.altimeterSessionID
+            floorCapturedAt = anchor?.capturedAt
+        }
+        refreshFloorHeight()
+        updatedAt = .now
+        return true
+    }
+
+    /// 층 높이는 기준점에서 나온 파생값이다. 기준이 바뀌면 다시 구하고, 잴
+    /// 짝이 하나도 남지 않으면 기본값으로 되돌린다. 지운 기준점에서 나온
+    /// 값을 계속 쓰는 것이 더 위험하다.
+    private mutating func refreshFloorHeight() {
+        floorHeightMeters = FloorHeightEstimator.metersPerFloor(
+            from: floorReferencePoints
+        ) ?? Self.defaultFloorHeightMeters
     }
 
     mutating func clearLocation() {

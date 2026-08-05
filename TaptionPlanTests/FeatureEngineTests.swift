@@ -8080,6 +8080,380 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    // MARK: - 하루 눈금판 바깥의 일과 고리
+
+    /// 여느 출퇴근 날은 취침 → 출근 → 업무 → 퇴근 → 저녁 순서로 읽힌다.
+    /// 이름은 도착지가 정하므로 사용자가 고를 일이 없다.
+    func testDayPhaseRingTellsACommuteDayInOrder() throws {
+        let day = dayPhaseDay()
+        let phases = DayPhaseEngine.phases(
+            actuals: [
+                sleepActual(0, 7, on: day),
+                stationaryContext(.homeRest, 7, 8, on: day),
+                stationaryContext(.work, 8.75, 18, on: day),
+                stationaryContext(.homeRest, 18.75, 24, on: day),
+            ],
+            travel: [
+                travelLeg(.walking, 8, 8.25, on: day),
+                travelLeg(.subway, 8.25, 8.75, on: day),
+                travelLeg(.subway, 18, 18.5, on: day),
+                travelLeg(.walking, 18.5, 18.75, on: day),
+            ],
+            stays: [],
+            homePlaceKeys: [],
+            in: day,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(
+            phases.map(\.phase.title),
+            ["취침", "출근", "업무", "퇴근", "저녁"]
+        )
+        // 걷고 타는 두 다리는 한 번의 출근이다.
+        XCTAssertEqual(phases[1].span.start, day.start.addingTimeInterval(8 * hour))
+        XCTAssertEqual(
+            phases[1].span.end,
+            day.start.addingTimeInterval(8.75 * hour)
+        )
+        assertPhasesPartitionTheDay(phases, in: day)
+    }
+
+    /// 회사가 아니라 학교에 닿으면 같은 모양의 하루를 등교·수업·하교라고
+    /// 부른다. 도착해서 무엇이 시작되는지만 보고 정한다.
+    func testDayPhaseRingSaysSchoolWordsWhenArrivingAtStudy() throws {
+        let day = dayPhaseDay()
+        let homeKey = "frequent-home"
+        let phases = DayPhaseEngine.phases(
+            actuals: [
+                sleepActual(0, 6.5, on: day),
+                stationaryContext(.study, 8.2, 16, on: day),
+            ],
+            travel: [
+                travelLeg(.walking, 7, 7.5, on: day),
+                travelLeg(.bus, 7.5, 8, on: day),
+                travelLeg(.bus, 16, 16.5, on: day),
+            ],
+            // 집이라는 사실은 자주가는 곳으로 확정된 체류에서도 온다.
+            stays: [
+                homeStay(0, 7, key: homeKey, on: day),
+                homeStay(16.5, 24, key: homeKey, on: day),
+            ],
+            homePlaceKeys: [homeKey],
+            in: day,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(
+            phases.map(\.phase.title),
+            ["취침", "등교", "수업", "하교", "저녁"]
+        )
+        assertPhasesPartitionTheDay(phases, in: day)
+    }
+
+    /// 오감이 없는 날은 빈칸으로 남는다. 주말도 재택도 지어낸 이름을 갖지
+    /// 않고, 그래도 화면이 망가진 것처럼 보이지 않는다.
+    func testDayPhaseRingLeavesGapsWhenThereIsNoCommute() throws {
+        let day = dayPhaseDay()
+        let weekend = DayPhaseEngine.phases(
+            actuals: [
+                sleepActual(0, 8, on: day),
+                stationaryContext(.homeRest, 8, 12, on: day),
+                stationaryContext(.housework, 12, 13, on: day),
+                stationaryContext(.homeRest, 13, 24, on: day),
+            ],
+            travel: [],
+            stays: [],
+            homePlaceKeys: [],
+            in: day,
+            asOf: day.end
+        )
+        // 집에 있었다는 사실만으로는 저녁이 되지 않는다. 돌아온 길이 없다.
+        XCTAssertEqual(weekend.map(\.phase), [.sleep])
+        assertPhasesPartitionTheDay(weekend, in: day)
+
+        let workedFromHome = DayPhaseEngine.phases(
+            actuals: [
+                sleepActual(0, 7, on: day),
+                stationaryContext(.homeRest, 7, 9, on: day),
+                stationaryContext(.work, 9, 18, on: day),
+                stationaryContext(.homeRest, 18, 24, on: day),
+            ],
+            travel: [],
+            stays: [],
+            homePlaceKeys: [],
+            in: day,
+            asOf: day.end
+        )
+        XCTAssertEqual(workedFromHome.map(\.phase), [.sleep, .work])
+        assertPhasesPartitionTheDay(workedFromHome, in: day)
+    }
+
+    /// 회사에서 잔 낮잠은 바깥 고리에서 업무다. 같은 시각을 안쪽 카테고리
+    /// 고리는 그대로 수면으로 보여 준다 — 두 고리는 일부러 다른 말을 한다.
+    func testDayPhaseRingKeepsWorkOverANapAtTheOffice() throws {
+        let day = dayPhaseDay()
+        let nap = sleepActual(13, 13.75, on: day)
+        let actuals = [
+            sleepActual(0, 7, on: day),
+            stationaryContext(.homeRest, 7, 8, on: day),
+            stationaryContext(.work, 8.75, 18, on: day),
+            nap,
+            stationaryContext(.homeRest, 18.75, 24, on: day),
+        ]
+        let travel = [
+            travelLeg(.subway, 8, 8.75, on: day),
+            travelLeg(.subway, 18, 18.75, on: day),
+        ]
+        let phases = DayPhaseEngine.phases(
+            actuals: actuals,
+            travel: travel,
+            stays: [],
+            homePlaceKeys: [],
+            in: day,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(
+            phases.map(\.phase.title),
+            ["취침", "출근", "업무", "퇴근", "저녁"]
+        )
+        let napMiddle = day.start.addingTimeInterval(13.5 * hour)
+        XCTAssertEqual(
+            phases.first { $0.span.contains(napMiddle) }?.phase,
+            .work
+        )
+        assertPhasesPartitionTheDay(phases, in: day)
+
+        // 카테고리 고리는 낮잠을 감추지 않는다.
+        let sleepRing = RecordChartEngine.clockRings(
+            actuals: actuals,
+            in: day,
+            asOf: day.end
+        )
+        .first { $0.categoryID == "sleep" }
+        XCTAssertEqual(
+            try XCTUnwrap(sleepRing).arcs.map(\.startFraction),
+            [0, 13.0 / 24]
+        )
+    }
+
+    /// 조각이 화소보다 얇으면 그리지 않고 이웃에 합친다. 안쪽 띠와 같은
+    /// 기준을 쓰므로 눈금판에 규칙이 두 벌 생기지 않는다.
+    func testDayPhaseRingMergesShortPhasesInsteadOfDrawingSlivers() throws {
+        let day = dayPhaseDay()
+        let actuals = [
+            sleepActual(0, 7, on: day),
+            stationaryContext(.homeRest, 7, 8, on: day),
+            stationaryContext(.work, 8.75, 12, on: day),
+            // 근무 사이에 낀 3.6분짜리 수업. 그리면 보이지도 않는다.
+            stationaryContext(.study, 12, 12.06, on: day),
+            stationaryContext(.work, 12.06, 18, on: day),
+            stationaryContext(.homeRest, 18.75, 24, on: day),
+        ]
+        let travel = [
+            travelLeg(.subway, 8, 8.75, on: day),
+            travelLeg(.subway, 18, 18.75, on: day),
+        ]
+        let phases = DayPhaseEngine.phases(
+            actuals: actuals,
+            travel: travel,
+            stays: [],
+            homePlaceKeys: [],
+            in: day,
+            asOf: day.end
+        )
+        // 나누기 단계에서는 짧은 수업도 제 자리를 지킨다.
+        XCTAssertEqual(
+            phases.map(\.phase),
+            [.sleep, .commuteToWork, .work, .study, .work,
+             .commuteHomeFromWork, .evening]
+        )
+        assertPhasesPartitionTheDay(phases, in: day)
+
+        let ring = try XCTUnwrap(
+            RecordClockDetailEngine.phaseRing(
+                actuals: actuals,
+                travel: travel,
+                stays: [],
+                homePlaceKeys: [],
+                in: day,
+                asOf: day.end
+            )
+        )
+        XCTAssertEqual(ring.kind, .dayPhase)
+        // 그릴 때는 앞선 업무가 그 자리를 이어받는다.
+        XCTAssertEqual(
+            ring.arcs.map(\.token),
+            ["sleep", "commuteToWork", "work", "commuteHomeFromWork",
+             "evening"]
+        )
+        XCTAssertEqual(ring.arcs[2].endFraction, 18.0 / 24, accuracy: 1e-9)
+        assertRingHasNoSlivers(ring)
+    }
+
+    /// 하루보다 넓은 기간에서는 여러 날의 줄거리가 같은 각도에 겹쳐 뭉개진다.
+    /// 그때는 아무것도 그리지 않는다.
+    func testDayPhaseRingStaysAtTheDayScale() {
+        let day = dayPhaseDay()
+        let week = TimeSpan(
+            start: day.start,
+            end: day.start.addingTimeInterval(7 * 24 * hour)
+        )
+        let actuals = [
+            sleepActual(0, 7, on: day),
+            stationaryContext(.homeRest, 7, 8, on: day),
+            stationaryContext(.work, 8.75, 18, on: day),
+        ]
+        let travel = [travelLeg(.subway, 8, 8.75, on: day)]
+
+        XCTAssertTrue(
+            DayPhaseEngine.phases(
+                actuals: actuals,
+                travel: travel,
+                stays: [],
+                homePlaceKeys: [],
+                in: week,
+                asOf: week.end
+            )
+            .isEmpty
+        )
+        XCTAssertNil(
+            RecordClockDetailEngine.phaseRing(
+                actuals: actuals,
+                travel: travel,
+                stays: [],
+                homePlaceKeys: [],
+                in: week,
+                asOf: week.end
+            )
+        )
+        XCTAssertNil(
+            RecordClockDetailEngine.phaseRing(
+                actuals: [],
+                travel: [],
+                stays: [],
+                homePlaceKeys: [],
+                in: day,
+                asOf: day.end
+            )
+        )
+    }
+
+    private func dayPhaseDay() -> TimeSpan {
+        let start = makeDate(2026, 8, 4)
+        return TimeSpan(start: start, end: start.addingTimeInterval(24 * hour))
+    }
+
+    private func stationaryContext(
+        _ kind: StationaryContextKind,
+        _ from: Double,
+        _ to: Double,
+        on day: TimeSpan
+    ) -> ActualRecord {
+        ActualRecord(
+            planID: nil,
+            title: kind.title,
+            categoryID: kind.categoryID,
+            startedAt: day.start.addingTimeInterval(from * hour),
+            endedAt: day.start.addingTimeInterval(to * hour),
+            source: .location,
+            confidence: .medium,
+            behavior: kind.rawValue,
+            modelVersion: StationaryContextClassifier.modelVersion
+        )
+    }
+
+    private func sleepActual(
+        _ from: Double,
+        _ to: Double,
+        on day: TimeSpan
+    ) -> ActualRecord {
+        ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: day.start.addingTimeInterval(from * hour),
+            endedAt: day.start.addingTimeInterval(to * hour),
+            source: .healthKit
+        )
+    }
+
+    private func travelLeg(
+        _ mode: TravelMode,
+        _ from: Double,
+        _ to: Double,
+        on day: TimeSpan
+    ) -> TravelSegment {
+        TravelSegment(
+            mode: mode,
+            span: TimeSpan(
+                start: day.start.addingTimeInterval(from * hour),
+                end: day.start.addingTimeInterval(to * hour)
+            ),
+            distanceMeters: 4_000,
+            confidence: .medium,
+            evidence: ["GPS"]
+        )
+    }
+
+    private func homeStay(
+        _ from: Double,
+        _ to: Double,
+        key: String,
+        on day: TimeSpan
+    ) -> PlaceStay {
+        PlaceStay(
+            placeKey: key,
+            displayName: "집",
+            span: TimeSpan(
+                start: day.start.addingTimeInterval(from * hour),
+                end: day.start.addingTimeInterval(to * hour)
+            ),
+            confidence: .high,
+            isConfirmed: true
+        )
+    }
+
+    /// 이 고리는 겹칠 수 없는 한 줄이다. 조각은 시간 순서대로 놓이고, 서로
+    /// 겹치지 않으며, 하루 밖으로 나가지 않는다.
+    private func assertPhasesPartitionTheDay(
+        _ phases: [DayPhaseSpan],
+        in day: TimeSpan,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        var previousEnd = day.start
+        for piece in phases {
+            XCTAssertGreaterThanOrEqual(
+                piece.span.start,
+                previousEnd,
+                "줄거리가 겹칩니다.",
+                file: file,
+                line: line
+            )
+            XCTAssertGreaterThan(piece.span.duration, 0, file: file, line: line)
+            previousEnd = piece.span.end
+        }
+        XCTAssertGreaterThanOrEqual(
+            phases.first?.span.start ?? day.start,
+            day.start,
+            file: file,
+            line: line
+        )
+        XCTAssertLessThanOrEqual(
+            previousEnd,
+            day.end,
+            file: file,
+            line: line
+        )
+        XCTAssertLessThanOrEqual(
+            phases.reduce(0) { $0 + $1.span.duration },
+            day.duration,
+            file: file,
+            line: line
+        )
+    }
+
     /// 오늘 적은 지난주 이야기는 지난주에 남는다. 메모가 놓이는 자리는
     /// 적은 시각이 아니라 그 메모가 말하는 시각이다.
     func testHighlightedMemoLandsOnTheWeekItIsAbout() {
@@ -8257,6 +8631,471 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(
             FloorHeightEstimator.metersPerFloor(from: [references[0]])
         )
+    }
+
+    /// 위층이 아래층보다 낮게 잰 짝은 둘 중 하나가 오염된 것이다. 부호를
+    /// 감추면 그 오염이 3m짜리 멀쩡한 값으로 둔갑한다.
+    func testFloorHeightEstimatorRejectsInvertedPair() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 82,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        let references = [
+            FloorCalibrationPoint(
+                floor: 1,
+                point: point,
+                relativeAltitudeMeters: nil,
+                pressureKilopascals: 101.0,
+                altimeterSessionID: UUID(),
+                capturedAt: base
+            ),
+            FloorCalibrationPoint(
+                floor: 5,
+                point: point,
+                relativeAltitudeMeters: nil,
+                pressureKilopascals: pressure(101.0, risingBy: -12),
+                altimeterSessionID: UUID(),
+                capturedAt: base.addingTimeInterval(600)
+            ),
+        ]
+
+        XCTAssertNil(FloorHeightEstimator.metersPerFloor(from: references))
+    }
+
+    /// 같은 높이에 두 층이 있다고 적힌 짝. 층 높이 계산은 여기서 아무 값도
+    /// 내놓지 않아야 하고, 장소의 층 높이는 기본값 그대로여야 한다.
+    func testPoisonedFloorPairKeepsFloorHeightSane() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 82,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        let references = [
+            FloorCalibrationPoint(
+                floor: 2,
+                point: point,
+                relativeAltitudeMeters: nil,
+                pressureKilopascals: 101.0,
+                altimeterSessionID: UUID(),
+                capturedAt: base
+            ),
+            FloorCalibrationPoint(
+                floor: 19,
+                point: point,
+                relativeAltitudeMeters: nil,
+                pressureKilopascals: pressure(101.0, risingBy: 0.3),
+                altimeterSessionID: UUID(),
+                capturedAt: base.addingTimeInterval(600)
+            ),
+        ]
+
+        XCTAssertNil(FloorHeightEstimator.metersPerFloor(from: references))
+
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 19,
+            from: makeAltitudeReading(at: base, pressureKilopascals: 101.0)
+        )
+        XCTAssertEqual(place.floorHeightMeters, 3, accuracy: 0.001)
+    }
+
+    /// 상대고도의 0점은 기압 세션마다 새로 잡힌다. 세션을 모르는 표본끼리
+    /// 비교하면 없던 수십 미터가 생긴다. 그때는 절대 기압으로 내려간다.
+    func testRelativeAltitudeIsIgnoredWithoutAKnownSession() throws {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 82,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        let older = FloorCalibrationPoint(
+            floor: 2,
+            point: point,
+            relativeAltitudeMeters: 0,
+            pressureKilopascals: 101.0,
+            altimeterSessionID: nil,
+            capturedAt: base
+        )
+        let newer = FloorCalibrationPoint(
+            floor: 2,
+            point: point,
+            relativeAltitudeMeters: 51,
+            pressureKilopascals: 101.0,
+            altimeterSessionID: nil,
+            capturedAt: base.addingTimeInterval(86_400)
+        )
+
+        let delta = try XCTUnwrap(
+            AltitudeDelta.between(
+                AltitudeDelta.Sample(older),
+                and: AltitudeDelta.Sample(newer)
+            )
+        )
+        XCTAssertEqual(delta.meters, 0, accuracy: 0.01)
+    }
+
+    /// 같은 높이에서 잰 두 층 기준은 함께 참일 수 없다. 새로 보정하면
+    /// 모순되는 옛 기준은 남지 않는다. 남으면 사용자는 자기 데이터를 고칠
+    /// 방법이 없다.
+    func testCalibratingSameAltitudeReplacesContradictingReference() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .company)
+        // 앱이 스스로 19층이라고 적어 둔 기준점. 실제로는 2층에서 잰 값이다.
+        place.calibrateCurrentFloor(
+            to: 19,
+            from: makeAltitudeReading(
+                at: base,
+                pressureKilopascals: groundPressure
+            )
+        )
+        XCTAssertEqual(place.floorReferencePoints.map(\.floor), [19])
+
+        place.calibrateCurrentFloor(
+            to: 2,
+            from: makeAltitudeReading(
+                at: base.addingTimeInterval(60),
+                pressureKilopascals: pressure(groundPressure, risingBy: 0.2)
+            )
+        )
+
+        XCTAssertEqual(place.floorReferencePoints.map(\.floor), [2])
+        XCTAssertEqual(place.floor, 2)
+        XCTAssertEqual(place.floorHeightMeters, 3, accuracy: 0.001)
+    }
+
+    /// 자동 추정은 사용자가 확인한 기준을 밀어내지 못한다. 밀어낼 수 있으면
+    /// 틀린 추정이 사용자의 정정을 즉시 되돌린다.
+    func testAutomaticCalibrationCannotOverrideConfirmedFloor() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 2,
+            from: makeAltitudeReading(
+                at: base,
+                pressureKilopascals: groundPressure
+            )
+        )
+
+        let accepted = place.addFloorCalibration(
+            from: makeAltitudeReading(
+                at: base.addingTimeInterval(300),
+                pressureKilopascals: pressure(groundPressure, risingBy: 0.4)
+            ),
+            floor: 19
+        )
+
+        XCTAssertFalse(accepted)
+        XCTAssertEqual(place.floorReferencePoints.map(\.floor), [2])
+    }
+
+    /// 미리 채워 둔 층수는 사용자가 고른 값이 아니다. 눈으로 보고 한 번 더
+    /// 누르기 전에는 보정이 잠겨 있어야 한다.
+    func testFloorCalibrationPromptNeedsDeliberateConfirmation() {
+        var prompt = FloorCalibrationPrompt(lastConfirmedFloor: 19)
+        XCTAssertEqual(prompt.floor, 19)
+        XCTAssertFalse(prompt.canCommit)
+
+        prompt.select(2)
+        XCTAssertEqual(prompt.floor, 2)
+        XCTAssertFalse(prompt.canCommit)
+
+        prompt.arm()
+        XCTAssertTrue(prompt.canCommit)
+
+        // 값이 바뀌면 확인은 무효다. 확인한 값과 보정할 값은 늘 같아야 한다.
+        prompt.select(3)
+        XCTAssertFalse(prompt.canCommit)
+
+        // 확인한 적 없는 기본 프롬프트도 잠겨 있다.
+        XCTAssertFalse(FloorCalibrationPrompt().canCommit)
+        XCTAssertEqual(FloorCalibrationPrompt().floor, 1)
+    }
+
+    /// 틀린 기준점 하나만 지운다. 나머지 기준과 위치는 그대로 남고, 층
+    /// 높이는 남은 기준으로 다시 구한다.
+    func testRemovingFloorReferenceKeepsTheOthers() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 1,
+            from: makeAltitudeReading(
+                at: base,
+                pressureKilopascals: groundPressure
+            )
+        )
+        place.calibrateCurrentFloor(
+            to: 5,
+            from: makeAltitudeReading(
+                at: base.addingTimeInterval(600),
+                pressureKilopascals: pressure(groundPressure, risingBy: 13.6)
+            )
+        )
+        XCTAssertEqual(place.floorHeightMeters, 3.4, accuracy: 0.05)
+
+        // 자동 추정이 엉뚱한 층 기준을 끼워 넣었다.
+        place.addFloorCalibration(
+            from: makeAltitudeReading(
+                at: base.addingTimeInterval(1_200),
+                pressureKilopascals: pressure(groundPressure, risingBy: 51)
+            ),
+            floor: 19
+        )
+        XCTAssertEqual(place.floorReferencePoints.map(\.floor), [1, 5, 19])
+
+        XCTAssertTrue(place.removeFloorReference(floor: 19))
+
+        XCTAssertEqual(place.floorReferencePoints.map(\.floor), [1, 5])
+        XCTAssertEqual(place.floorHeightMeters, 3.4, accuracy: 0.05)
+        // 마지막으로 확인한 층이 여전히 이 장소의 기준 층이다.
+        XCTAssertEqual(place.floor, 5)
+        XCTAssertNotNil(place.point)
+        // 없는 기준을 다시 지우려 해도 아무 일도 일어나지 않는다.
+        XCTAssertFalse(place.removeFloorReference(floor: 19))
+    }
+
+    /// 기준 층을 지우면 남은 기준 중 하나가 그 자리를 잇는다. 기준이 하나도
+    /// 남지 않으면 이 장소는 층을 말하지 않는다. 위치는 그대로 둔다.
+    func testRemovingAnchorFloorReferenceRebasesOrClearsFloor() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 1,
+            from: makeAltitudeReading(
+                at: base,
+                pressureKilopascals: groundPressure
+            )
+        )
+        place.calibrateCurrentFloor(
+            to: 5,
+            from: makeAltitudeReading(
+                at: base.addingTimeInterval(600),
+                pressureKilopascals: pressure(groundPressure, risingBy: 13.6)
+            )
+        )
+        XCTAssertEqual(place.floor, 5)
+
+        XCTAssertTrue(place.removeFloorReference(floor: 5))
+        XCTAssertEqual(place.floor, 1)
+        // 층 높이는 지운 기준점에서 나온 값이었다. 잴 짝이 없으면 기본값으로
+        // 되돌린다.
+        XCTAssertEqual(place.floorHeightMeters, 3, accuracy: 0.001)
+
+        XCTAssertTrue(place.removeFloorReference(floor: 1))
+        XCTAssertNil(place.floor)
+        XCTAssertNil(place.floorCalibration)
+        XCTAssertNotNil(place.point)
+    }
+
+    /// 새 기준점은 그 자리에서 바로 기준이 된다. 다음 센서 주기를 기다리면
+    /// 사용자는 방금 고친 값이 반영되지 않았다고 본다.
+    func testNewReferenceTakesEffectImmediately() throws {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 19,
+            from: makeAltitudeReading(
+                at: base,
+                pressureKilopascals: groundPressure
+            )
+        )
+        let here = makeAltitudeReading(
+            at: base.addingTimeInterval(60),
+            pressureKilopascals: pressure(groundPressure, risingBy: 0.2)
+        )
+        XCTAssertEqual(
+            FloorCalibrationEngine().estimate(
+                reading: here,
+                calibration: try XCTUnwrap(place.floorCalibration)
+            )?.floor,
+            19
+        )
+
+        place.calibrateCurrentFloor(to: 2, from: here)
+
+        XCTAssertEqual(
+            FloorCalibrationEngine().estimate(
+                reading: here,
+                calibration: try XCTUnwrap(place.floorCalibration)
+            )?.floor,
+            2
+        )
+    }
+
+    /// 기준을 고치면 그 기준으로 매긴 지난 기록도 다시 매긴다. 원본 표본이
+    /// 남아 있는 기록만 손댄다.
+    func testReapplyingFloorsRecomputesStoredStayFromNewReference() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .company)
+        let here = makeAltitudeReading(
+            at: base,
+            pressureKilopascals: groundPressure
+        )
+        place.calibrateCurrentFloor(to: 2, from: here)
+
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(3_600))
+        let stay = PlaceStay(
+            placeKey: place.stablePlaceKey,
+            displayName: "회사",
+            floor: 19,
+            span: span,
+            confidence: .high,
+            point: here.point,
+            isConfirmed: true
+        )
+        let elsewhere = PlaceStay(
+            placeKey: "other",
+            displayName: "다른 곳",
+            floor: 19,
+            span: span,
+            confidence: .high,
+            point: here.point,
+            isConfirmed: true
+        )
+
+        let recomputed = FrequentPlaceResolutionEngine().reapplyingFloors(
+            of: place,
+            to: [stay, elsewhere],
+            readings: [here]
+        )
+
+        XCTAssertEqual(recomputed[0].floor, 2)
+        // 다른 장소의 기록은 이 보정과 무관하다.
+        XCTAssertEqual(recomputed[1].floor, 19)
+    }
+
+    /// 원본 표본이 이미 지워진 기록은 다시 구할 방법이 없다. 지어내느니
+    /// 그대로 둔다.
+    func testReapplyingFloorsLeavesRecordsWithoutRawSamplesAlone() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 2,
+            from: makeAltitudeReading(at: base, pressureKilopascals: 101.0)
+        )
+        let old = PlaceStay(
+            placeKey: place.stablePlaceKey,
+            displayName: "회사",
+            floor: 19,
+            span: TimeSpan(
+                start: base.addingTimeInterval(-30 * 86_400),
+                end: base.addingTimeInterval(-30 * 86_400 + 3_600)
+            ),
+            confidence: .high,
+            isConfirmed: true
+        )
+
+        let recomputed = FrequentPlaceResolutionEngine().reapplyingFloors(
+            of: place,
+            to: [old],
+            readings: []
+        )
+
+        XCTAssertEqual(recomputed, [old])
+    }
+
+    // MARK: - 고도 표본 묶음
+
+    private func burstSamples(
+        _ values: [Double],
+        session: UUID,
+        from start: Date
+    ) -> [AltitudeBurstSample] {
+        values.enumerated().map { index, meters in
+            AltitudeBurstSample(
+                relativeAltitudeMeters: meters,
+                pressureKilopascals: pressure(101.0, risingBy: meters),
+                altimeterSessionID: session,
+                timestamp: start.addingTimeInterval(Double(index))
+            )
+        }
+    }
+
+    /// 표본 하나가 튀어도 가운데값은 흔들리지 않는다. 튄 값은 양끝을 덜어 낸
+    /// 품질 판정에서도 빠진다.
+    func testAltitudeBurstReducerTakesMedianAndSurvivesOneOutlier() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let samples = burstSamples(
+            [0.02, -0.03, 0, 0.05, -0.01, 0.03, 0.01, 12, -0.02, 0, 0.04, -0.04],
+            session: UUID(),
+            from: base
+        )
+
+        guard case let .reduced(reduced, spread) =
+            AltitudeBurstReducer.reduce(samples) else {
+            return XCTFail("한 표본이 튀었다고 묶음 전체를 버리면 안 된다")
+        }
+        XCTAssertEqual(reduced.relativeAltitudeMeters ?? 99, 0.005, accuracy: 0.001)
+        XCTAssertLessThan(spread, 0.2)
+    }
+
+    /// 계단을 오르며 잰 묶음처럼 표본이 서로 어긋나면 기준으로 남기지
+    /// 않는다. 잘못 박힌 기준점은 이 건물의 모든 층 추정을 망친다.
+    func testAltitudeBurstReducerRejectsMovingBurst() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let samples = burstSamples(
+            [0, 0.4, 0.9, 1.4, 1.9, 2.4, 2.9, 3.4, 3.9, 4.4, 4.9, 5.4],
+            session: UUID(),
+            from: base
+        )
+
+        guard case let .tooNoisy(spread) =
+            AltitudeBurstReducer.reduce(samples) else {
+            return XCTFail("흔들리는 묶음을 기준으로 남기면 안 된다")
+        }
+        XCTAssertGreaterThan(spread, AltitudeBurstReducer.maximumSpreadMeters)
+    }
+
+    /// 표본이 모자라면 아무것도 기록하지 않는다. 한두 표본으로 남긴 기준은
+    /// 고치기 전 동작과 다르지 않다.
+    func testAltitudeBurstReducerNeedsEnoughSamples() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let samples = burstSamples([0, 0.01, -0.01, 0], session: UUID(), from: base)
+
+        XCTAssertEqual(
+            AltitudeBurstReducer.reduce(samples),
+            .tooFewSamples(collected: 4)
+        )
+        XCTAssertEqual(
+            AltitudeBurstReducer.reduce([]),
+            .tooFewSamples(collected: 0)
+        )
+    }
+
+    /// 기압 세션이 끊기면 상대고도의 0점이 새로 잡힌다. 앞뒤를 섞어 평균
+    /// 내면 없던 층이 생기므로 마지막 세션만 쓴다.
+    func testAltitudeBurstReducerDropsSamplesFromAnEarlierSession() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let stale = burstSamples(
+            [50, 50.1, 49.9, 50, 50.2, 49.8, 50],
+            session: UUID(),
+            from: base
+        )
+        let fresh = burstSamples(
+            [0, 0.1, -0.1, 0, 0.2, -0.2, 0, 0.1],
+            session: UUID(),
+            from: base.addingTimeInterval(60)
+        )
+
+        guard case let .reduced(reduced, _) =
+            AltitudeBurstReducer.reduce(stale + fresh) else {
+            return XCTFail("마지막 세션만으로도 충분한 표본이 있다")
+        }
+        XCTAssertEqual(reduced.relativeAltitudeMeters ?? 99, 0, accuracy: 0.001)
     }
 
     // MARK: - 어플 목록에서 iOS 내부 서비스 감추기

@@ -756,6 +756,20 @@ final class AppleSensorDataService {
         collector.resumeTracking(session)
     }
 
+    /// 층 보정용 기압 표본 묶음. 기록 스트림과 달리 듀티사이클을 기다리지
+    /// 않고 그 자리에서 잰다.
+    func captureAltitudeBurst(
+        count: Int = AltitudeBurstReducer.requestedSampleCount,
+        timeout: TimeInterval = 20,
+        onProgress: @MainActor (Int) -> Void = { _ in }
+    ) async -> [AltitudeBurstSample] {
+        await collector.captureAltitudeBurst(
+            count: count,
+            timeout: timeout,
+            onProgress: onProgress
+        )
+    }
+
     @discardableResult
     func endTracking() -> TrackingSession? {
         collector.endTracking()

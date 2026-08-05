@@ -1375,10 +1375,12 @@ private struct FrequentPlaceDetailView: View {
 
     @State private var name = ""
     @State private var radiusMeters = 120.0
-    @State private var currentFloor = 1
+    @State private var floorPrompt = FloorCalibrationPrompt()
     @State private var minimumDwellMinutes = 10
     @State private var isAutomaticRecordingEnabled = true
     @State private var showsDeleteConfirmation = false
+    @State private var referenceDeletionFloor: Int?
+    @State private var calibrationTask: Task<Void, Never>?
 
     private var place: FrequentPlace? {
         model.settings.frequentPlaces.first { $0.id == placeID }
@@ -1426,6 +1428,34 @@ private struct FrequentPlaceDetailView: View {
                 }
             }
             .onAppear(perform: loadPlace)
+            // 화면을 떠나면 재던 표본은 버린다. 절반만 잰 값으로 기준을
+            // 남기지 않는다.
+            .onDisappear {
+                calibrationTask?.cancel()
+                calibrationTask = nil
+            }
+            .confirmationDialog(
+                "이 기준점을 지울까요?",
+                isPresented: Binding(
+                    get: { referenceDeletionFloor != nil },
+                    set: { if !$0 { referenceDeletionFloor = nil } }
+                ),
+                presenting: referenceDeletionFloor
+            ) { floor in
+                Button(
+                    "\(FloorLabel.korean(floor)) 기준 삭제",
+                    role: .destructive
+                ) {
+                    model.deleteFrequentPlaceFloorReference(
+                        placeID,
+                        floor: floor
+                    )
+                    referenceDeletionFloor = nil
+                }
+                Button("취소", role: .cancel) { referenceDeletionFloor = nil }
+            } message: { floor in
+                Text("\(FloorLabel.korean(floor)) 기준점을 지웁니다. 이 장소의 위치와 다른 층 기준은 그대로 남습니다.")
+            }
             .alert(
                 "자주가는 곳 삭제",
                 isPresented: $showsDeleteConfirmation
@@ -1445,9 +1475,13 @@ private struct FrequentPlaceDetailView: View {
         guard let place else { return }
         name = place.name
         radiusMeters = place.radiusMeters
-        currentFloor = place.floor
-            ?? model.latestAltitudeEstimate?.floor
-            ?? 1
+        // 앱이 추정한 층은 미리 채우지 않는다. 고치려는 값이 기본값이 되면
+        // 사용자는 틀린 층을 그대로 확인해 영구 기준으로 만든다.
+        floorPrompt = FloorCalibrationPrompt(
+            lastConfirmedFloor: model.lastManuallyConfirmedFloor(
+                forPlaceID: placeID
+            )
+        )
         minimumDwellMinutes = place.minimumDwellMinutes
         isAutomaticRecordingEnabled = place.isAutomaticRecordingEnabled
     }
@@ -1592,6 +1626,14 @@ private struct FrequentPlaceDetailView: View {
         .detailCard()
     }
 
+    private var sampling: FloorCalibrationSampling? {
+        guard let sampling = model.floorCalibrationSampling,
+              sampling.placeID == placeID else {
+            return nil
+        }
+        return sampling
+    }
+
     private func altitudeSection(_ place: FrequentPlace) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             Label {
@@ -1601,36 +1643,36 @@ private struct FrequentPlaceDetailView: View {
                 Image(systemName: "building.2.crop.circle")
                     .foregroundStyle(Color.tpPlaceDark)
             }
-            Stepper(value: $currentFloor, in: -10...100) {
+            Stepper(
+                value: Binding(
+                    get: { floorPrompt.floor },
+                    set: { floorPrompt.select($0) }
+                ),
+                in: FloorCalibrationPrompt.range
+            ) {
                 HStack {
                     Text("지금 있는 층")
                     Spacer()
-                    Text(FloorLabel.korean(currentFloor))
+                    Text(FloorLabel.korean(floorPrompt.floor))
                         .fontWeight(.bold)
                         .foregroundStyle(Color.tpPlaceDark)
                 }
                 .font(.taption(size: 10))
             }
             .tint(Color.tpPlaceDark)
+            .disabled(sampling != nil)
 
-            Button {
-                model.calibrateFrequentPlaceFloor(placeID, floor: currentFloor)
-            } label: {
-                Label("이 층으로 보정", systemImage: "building.2.fill")
-                    .font(.taption(size: 10, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .foregroundStyle(.white)
-                    .background(Color.tpPlaceDark, in: RoundedRectangle(cornerRadius: 9))
-            }
-            .buttonStyle(.plain)
+            calibrateButton
 
-            Text("지금 있는 층만 알려 주면 그 자리의 기압을 이 건물의 기준으로 삼습니다. 층 높이는 서로 다른 층에서 두 번 이상 알려 줄 때 그 차이로 앱이 스스로 맞춥니다.")
+            Text(calibrationGuidance)
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
 
             Divider()
 
+            if !place.floorReferencePoints.isEmpty {
+                floorReferenceList(place)
+            }
             if place.floorReferencePoints.count > 1 {
                 Text(
                     "이 건물 층 높이 · \(place.floorHeightMeters, specifier: "%.1f")m · 기준 \(place.floorReferencePoints.count)개 층"
@@ -1654,6 +1696,98 @@ private struct FrequentPlaceDetailView: View {
         .font(.taption(size: 9))
         .foregroundStyle(Color.tpSecondary)
         .detailCard()
+    }
+
+    /// 한 번 눌러 값을 확인하고, 다시 눌러야 잰다. 미리 채워 둔 값을 한 번에
+    /// 확정할 수 있으면 고치려던 층이 그대로 기준으로 굳는다.
+    private var calibrateButton: some View {
+        Button {
+            if floorPrompt.canCommit {
+                let floor = floorPrompt.floor
+                floorPrompt.disarm()
+                calibrationTask = Task {
+                    await model.calibrateFrequentPlaceFloor(
+                        placeID,
+                        floor: floor
+                    )
+                }
+            } else {
+                floorPrompt.arm()
+            }
+        } label: {
+            Group {
+                if let sampling {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.mini)
+                            .tint(.white)
+                        Text("재는 중 · \(sampling.collected)/\(sampling.target)")
+                    }
+                } else if floorPrompt.canCommit {
+                    Label(
+                        "\(FloorLabel.korean(floorPrompt.floor)) 맞습니다 · 다시 눌러 보정",
+                        systemImage: "checkmark.circle.fill"
+                    )
+                } else {
+                    Label("이 층으로 보정", systemImage: "building.2.fill")
+                }
+            }
+            .font(.taption(size: 10, weight: .bold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .foregroundStyle(.white)
+            .background(
+                floorPrompt.canCommit ? Color.tpInk : Color.tpPlaceDark,
+                in: RoundedRectangle(cornerRadius: 9)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(sampling != nil)
+    }
+
+    private var calibrationGuidance: String {
+        if sampling != nil {
+            return "한자리에 선 채로 기다려 주세요. 다 재기 전에는 아무것도 기록되지 않습니다."
+        }
+        if floorPrompt.canCommit {
+            return "다시 누르면 약 12초 동안 기압을 재서 이 층을 이 건물의 기준으로 남깁니다."
+        }
+        return "지금 있는 층을 맞춘 뒤 누르세요. 한 번 더 눌러 확인해야 기록합니다. 층 높이는 서로 다른 층에서 두 번 이상 알려 줄 때 그 차이로 앱이 스스로 맞춥니다."
+    }
+
+    private func floorReferenceList(_ place: FrequentPlace) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("이 건물 층 기준")
+                .font(.taption(size: 9, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+            ForEach(place.floorReferencePoints, id: \.floor) { reference in
+                HStack(spacing: 6) {
+                    Text(FloorLabel.korean(reference.floor))
+                        .font(.taption(size: 9.5, weight: .bold))
+                        .foregroundStyle(Color.tpInk)
+                    Text(reference.isManual ? "직접 확인" : "자동")
+                        .font(.taption(size: 8))
+                    Spacer(minLength: 4)
+                    Text(
+                        reference.capturedAt,
+                        format: .dateTime.month().day().hour().minute()
+                    )
+                    .font(.taption(size: 8))
+                    Button {
+                        referenceDeletionFloor = reference.floor
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.taption(size: 9, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.78, green: 0.24, blue: 0.24))
+                            .padding(.leading, 4)
+                            .frame(minWidth: 30, minHeight: 30)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Text("틀린 기준점은 지울 수 있습니다. 나머지 기준과 이 장소의 위치는 그대로 남습니다.")
+                .font(.taption(size: 8.5))
+        }
     }
 
     private func dangerSection(_ place: FrequentPlace) -> some View {

@@ -82,6 +82,9 @@ final class AppModel {
     private(set) var trackingSessionWasRecovered = false
     private(set) var latestAltitudeEstimate: CalibratedAltitudeEstimate?
     private(set) var floorCalibrationNotice: String? = nil
+    /// 층 보정 표본을 모으는 중일 때만 값이 있다. 화면은 이 값으로 진행을
+    /// 보여 주고, 끝나기 전에는 아무것도 기록되지 않는다.
+    private(set) var floorCalibrationSampling: FloorCalibrationSampling?
     private(set) var watchLaunchReport: (report: String, receivedAt: Date)?
     private(set) var sleepSessions: [SleepSession] = []
     private(set) var lastHealthRefreshAt: Date?
@@ -3769,8 +3772,11 @@ final class AppModel {
                 "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
             return
         }
-        let floor = latestAltitudeEstimate?.floor
-            ?? snapshot.settings.frequentPlaces[index].floor
+        // 층수는 앱의 추정에서 가져오지 않는다. 추정이 틀린 상태에서 자리를
+        // 다시 잡으면 그 틀린 층이 곧 이 건물의 기준으로 굳는다. 층은 아래
+        // "이 층으로 보정"에서 사용자가 직접 확인한 값만 받는다.
+        let floor = snapshot.settings.frequentPlaces[index].floor
+            ?? lastManuallyConfirmedFloor(forPlaceID: placeID)
             ?? 1
         snapshot.settings.frequentPlaces[index].setLocation(
             from: reading,
@@ -3813,19 +3819,85 @@ final class AppModel {
         }
     }
 
+    /// 스테퍼가 미리 채울 값. 앱이 추정한 층은 절대 쓰지 않는다. 고치려는
+    /// 값이 곧 기본값이 되면 사용자는 틀린 층을 그대로 확인하게 된다.
+    /// 사용자가 직접 확인한 기준점이 없으면 미리 채울 값도 없다. 이력에 남은
+    /// 옛 "수동" 기록은 이 화면이 추정값을 미리 채워 주던 시절의 것이라
+    /// 사용자가 골랐다고 믿을 수 없다.
+    func lastManuallyConfirmedFloor(forPlaceID placeID: UUID) -> Int? {
+        settings.frequentPlaces
+            .first { $0.id == placeID }?
+            .floorReferencePoints
+            .last(where: \.isManual)?
+            .floor
+    }
+
     /// 사용자가 "지금 이 층"이라고 알려 주면 그 자리의 기압을 이 장소의
     /// 기준으로 삼는다. 층 높이는 묻지 않는다. 서로 다른 층 기준이 둘 이상
     /// 모이면 `FrequentPlace.calibrateCurrentFloor` 가 그 차이로 구한다.
-    func calibrateFrequentPlaceFloor(_ placeID: UUID, floor: Int) {
-        guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+    ///
+    /// 기압계 한 표본은 흔들린다. 그 한 번으로 영구 기준을 박으면 흔들림이
+    /// 이 건물의 모든 층 추정에 남으므로, 짧은 묶음을 모아 중앙값으로 줄인
+    /// 뒤에만 기록한다. 묶음이 모자라거나 흔들리면 아무것도 남기지 않는다.
+    func calibrateFrequentPlaceFloor(_ placeID: UUID, floor: Int) async {
+        guard snapshot.settings.frequentPlaces.contains(where: {
             $0.id == placeID
         }) else {
             return
         }
-        guard let reading = latestSensorReading,
-              reading.point != nil else {
+        guard latestSensorReading?.point != nil else {
             userFacingError =
                 "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
+            return
+        }
+        guard let sensorService else { return }
+        guard floorCalibrationSampling == nil else { return }
+        floorCalibrationSampling = FloorCalibrationSampling(
+            placeID: placeID,
+            floor: floor,
+            collected: 0,
+            target: AltitudeBurstReducer.requestedSampleCount
+        )
+        let samples = await sensorService.captureAltitudeBurst { collected in
+            self.floorCalibrationSampling?.collected = collected
+        }
+        floorCalibrationSampling = nil
+        // 사용자가 화면을 떠났으면 조용히 접는다. 절반만 잰 값으로 기준을
+        // 남기지도, 뒤늦게 오류를 띄우지도 않는다.
+        guard !Task.isCancelled else { return }
+        guard let anchor = latestSensorReading, anchor.point != nil else {
+            userFacingError =
+                "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
+            return
+        }
+        switch AltitudeBurstReducer.reduce(samples) {
+        case let .tooFewSamples(collected):
+            userFacingError = collected == 0
+                ? "기압 센서를 읽지 못해 보정을 취소했습니다. 위치 기록을 켠 뒤 다시 시도해 주세요."
+                : "표본이 \(collected)개뿐이라 보정을 취소했습니다. 잠시 후 다시 시도해 주세요."
+        case let .tooNoisy(spread):
+            userFacingError = String(
+                format:
+                    "고도가 %.1fm나 흔들려 보정을 취소했습니다. 한자리에 선 채로 다시 시도해 주세요.",
+                spread
+            )
+        case let .reduced(sample, _):
+            commitFloorCalibration(
+                placeID,
+                floor: floor,
+                reading: anchor.replacingAltitude(with: sample)
+            )
+        }
+    }
+
+    private func commitFloorCalibration(
+        _ placeID: UUID,
+        floor: Int,
+        reading: SensorReading
+    ) {
+        guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+            $0.id == placeID
+        }) else {
             return
         }
         snapshot.settings.frequentPlaces[index].calibrateCurrentFloor(
@@ -3848,11 +3920,71 @@ final class AppModel {
             AppFeatureSettings.mergedFrequentPlaces(
                 snapshot.settings.frequentPlaces
             )
+        // 기준이 바뀌면 직전 고도와의 연속성 판정은 무효다. 새 기준의 첫
+        // 추정이 스파이크로 걸리면 화면이 옛 층에 그대로 머문다.
+        altitudeGatePlaceID = nil
         updateFloorEstimate(with: reading)
         Task {
             await persist()
+            await reapplyStoredFloors(forPlaceID: placeID)
             await refreshSensorTimeline(containing: selectedDate)
         }
+    }
+
+    /// 잘못 들어간 기준점 하나를 지운다. 이 장소의 위치와 나머지 기준은
+    /// 그대로 둔다.
+    func deleteFrequentPlaceFloorReference(_ placeID: UUID, floor: Int) {
+        guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+            $0.id == placeID
+        }), snapshot.settings.frequentPlaces[index].removeFloorReference(
+            floor: floor
+        ) else {
+            return
+        }
+        lastAutoFloorCalibrationKey = nil
+        snapshot.settings.floorCalibration = nil
+        altitudeGatePlaceID = nil
+        if let latestSensorReading {
+            updateFloorEstimate(with: latestSensorReading)
+        } else {
+            latestAltitudeEstimate = nil
+        }
+        Task {
+            await persist()
+            await reapplyStoredFloors(forPlaceID: placeID)
+            await refreshSensorTimeline(containing: selectedDate)
+        }
+    }
+
+    /// 기준점을 고치면 그 기준으로 매긴 지난 기록도 다시 매겨야 한다. 원본
+    /// 표본은 그대로 두고 파생된 층수만 다시 구한다. 표본이 이미 지워진
+    /// 기록은 되살릴 방법이 없으므로 손대지 않는다.
+    func reapplyStoredFloors(forPlaceID placeID: UUID) async {
+        guard let sensorService,
+              let place = settings.frequentPlaces.first(where: {
+                  $0.id == placeID
+              }) else {
+            return
+        }
+        let affected = snapshot.places.filter {
+            $0.placeKey == place.stablePlaceKey
+        }
+        guard let start = affected.map(\.span.start).min(),
+              let end = affected.map(\.span.end).max() else {
+            return
+        }
+        let readings = (try? await sensorService.archivedReadings(
+            in: TimeSpan(start: start, end: end)
+        )) ?? []
+        guard !readings.isEmpty else { return }
+        let recomputed = FrequentPlaceResolutionEngine().reapplyingFloors(
+            of: place,
+            to: snapshot.places,
+            readings: readings
+        )
+        guard recomputed != snapshot.places else { return }
+        snapshot.places = recomputed
+        await persist()
     }
 
     private func appendFloorCalibrationEvent(_ event: FloorCalibrationEvent) {
@@ -3877,10 +4009,14 @@ final class AppModel {
               }) else {
             return false
         }
-        snapshot.settings.frequentPlaces[index].addFloorCalibration(
+        // 사용자가 확인한 기준과 같은 높이를 다른 층이라고 주장하는 자동
+        // 보정은 거절된다. 그때는 이력도 알림도 남기지 않는다.
+        guard snapshot.settings.frequentPlaces[index].addFloorCalibration(
             from: reading,
             floor: floor
-        )
+        ) else {
+            return false
+        }
         appendFloorCalibrationEvent(
             FloorCalibrationEvent(
                 placeID: placeID,

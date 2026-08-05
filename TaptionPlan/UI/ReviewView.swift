@@ -16,6 +16,8 @@ private struct ReviewContent: Equatable {
     var contexts: [ReviewContext]
     var groups: [RecordCategoryGroup]
     var rings: [RecordClockRing]
+    /// 가장 바깥의 일과 고리. 하루 배율에서만 만들어진다.
+    var phaseRing: RecordClockDetailRing?
     var detailRings: [RecordClockDetailRing]
     var chartBuckets: [RecordChartBucket]
     /// 고른 구간에 걸친 막대. 비어 있으면 모두 고른 것과 같다.
@@ -30,6 +32,7 @@ private struct ReviewContent: Equatable {
         contexts: [],
         groups: [],
         rings: [],
+        phaseRing: nil,
         detailRings: [],
         chartBuckets: [],
         selectedChartBucketIDs: []
@@ -67,11 +70,17 @@ struct ReviewView: View {
 
     /// 24시간 눈금 안쪽에 기록을 담는 띠. 하나만 두고 굵게 그린다.
     private static let clockBandWidth: CGFloat = 20
+    /// 카테고리 띠 바깥에 두르는 일과 띠. 밖에서 안으로 줄거리 → 카테고리 →
+    /// 결 순서로 읽힌다.
+    private static let phaseBandWidth: CGFloat = 12
     /// 바깥 띠 안쪽에 겹쳐 두는 결 띠(수면 단계·이동 구간). 작은 화면에서도
     /// 서로 붙어 보이지 않을 만큼만 벌린다.
     private static let detailBandWidth: CGFloat = 8
     private static let detailBandGap: CGFloat = 3.5
     private static let clockButtonSize: CGFloat = 44
+    /// 일과 띠를 두르면서 안쪽 띠가 가운데 단추와 읽음창에 밀리지 않도록
+    /// 눈금판을 키웠다. 카드 너비(약 343pt)보다 작아 가로로 넘치지 않는다.
+    private static let clockHeight: CGFloat = 268
 
     @State private var content = ReviewContent.empty
     @State private var collapsedGroupIDs: Set<String> = []
@@ -79,6 +88,8 @@ struct ReviewView: View {
     @State private var selectedBucketIDs: Set<String> = []
     /// 범례에서 고른 카테고리. 원형·막대 모두 이 하나만 남기고 나머지를 죽인다.
     @State private var highlightedCategoryID: String?
+    /// 눈금판이나 범례에서 짚어 둔 일과. 이름이 읽음창에 뜨고 나머지는 죽는다.
+    @State private var highlightedPhaseToken: String?
     /// 재생을 시작한 시각. nil이면 멈춘 상태다.
     @State private var playStartedAt: Date?
 
@@ -276,6 +287,10 @@ struct ReviewView: View {
             // 하루 눈금판은 기록이 없어도 남는다. 옆으로 넘길 자리가 있어야 한다.
             if model.reviewScale == .day {
                 dayClockChart
+                // 범례도 고리와 같은 순서로 밖에서 안으로 읽힌다.
+                if let phaseRing = content.phaseRing {
+                    phaseLegend(phaseRing)
+                }
                 if content.groups.isEmpty {
                     emptyRecordText
                 } else {
@@ -332,6 +347,8 @@ struct ReviewView: View {
             isolating: highlightedCategoryID
         )
         let detailRings = content.detailRings
+        let phaseRing = content.phaseRing
+        let phaseToken = highlightedPhaseToken
         let span = content.period
         return TimelineView(
             RecordClockSchedule(isPlaying: playStartedAt != nil)
@@ -345,6 +362,8 @@ struct ReviewView: View {
                     context: context,
                     size: size,
                     rings: rings,
+                    phaseRing: phaseRing,
+                    highlightedPhaseToken: phaseToken,
                     detailRings: detailRings,
                     progress: progress,
                     nowFraction: RecordClockEngine.nowFraction(
@@ -354,12 +373,47 @@ struct ReviewView: View {
                 )
             }
         }
-        .frame(height: 226)
+        .frame(height: Self.clockHeight)
+        .overlay { phaseTapLayer }
         .overlay { playControl }
         .contentShape(Rectangle())
         // 목록을 위아래로 굴리는 손가락을 가로채지 않도록 함께 인식시킨다.
         .simultaneousGesture(dateSwipeGesture)
         .accessibilityLabel("하루 24시간 눈금판")
+    }
+
+    /// 일과 띠를 짚으면 그 줄거리의 이름이 눈금판 가운데에 뜬다. 재생 단추가
+    /// 이 층 위에 덮여 있어 단추 누르기를 가로채지 않는다.
+    private var phaseTapLayer: some View {
+        GeometryReader { proxy in
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { location in
+                    highlightPhase(at: location, in: proxy.size)
+                }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func highlightPhase(at location: CGPoint, in size: CGSize) {
+        guard let ring = content.phaseRing else { return }
+        let side = min(size.width, size.height)
+        let outer = side / 2 - 24
+        let dx = location.x - size.width / 2
+        let dy = location.y - size.height / 2
+        let distance = sqrt(dx * dx + dy * dy)
+        guard distance >= outer - Self.phaseBandWidth - 4,
+              distance <= outer + 6 else {
+            highlightedPhaseToken = nil
+            return
+        }
+        var fraction = (Angle(radians: atan2(dy, dx)).degrees + 90) / 360
+        fraction -= floor(fraction)
+        guard let token = RecordClockEngine.token(in: ring, at: fraction) else {
+            highlightedPhaseToken = nil
+            return
+        }
+        highlightedPhaseToken = highlightedPhaseToken == token ? nil : token
     }
 
     private var playControl: some View {
@@ -400,6 +454,8 @@ struct ReviewView: View {
         context: GraphicsContext,
         size: CGSize,
         rings: [RecordClockRing],
+        phaseRing: RecordClockDetailRing?,
+        highlightedPhaseToken: String?,
         detailRings: [RecordClockDetailRing],
         progress: Double?,
         nowFraction: Double?
@@ -410,7 +466,27 @@ struct ReviewView: View {
         let outer = side / 2 - 24
         drawClockFace(context: context, center: center, radius: outer + 9)
 
-        let radius = outer - Self.clockBandWidth / 2
+        // 일과 띠는 자리를 늘 지킨다. 근거가 없는 날에도 눈금판이 하루마다
+        // 커졌다 작아지지 않아야 한다.
+        let revealedPhases = RecordClockEngine.detailRing(
+            phaseRing,
+            revealedThrough: progress
+        )
+        let focusedPhaseToken = highlightedPhaseToken
+            ?? progress.flatMap { RecordClockEngine.token(in: phaseRing, at: $0) }
+        drawPhaseRing(
+            context: context,
+            center: center,
+            radius: outer - Self.phaseBandWidth / 2,
+            ring: revealedPhases,
+            focusedToken: focusedPhaseToken,
+            isDimmingOthers: highlightedPhaseToken != nil || progress != nil
+        )
+
+        let radius = outer
+            - Self.phaseBandWidth
+            - Self.detailBandGap
+            - Self.clockBandWidth / 2
         context.stroke(
             arcPath(center: center, radius: radius, from: 0, to: 1),
             with: .color(Color.tpLine.opacity(0.45)),
@@ -477,6 +553,82 @@ struct ReviewView: View {
                 width: 1.6
             )
         }
+
+        if let focusedPhaseToken {
+            drawPhaseReadout(
+                context: context,
+                center: center,
+                token: focusedPhaseToken
+            )
+        }
+    }
+
+    /// 가장 바깥의 일과 띠. 조각이 없어도 빈 자리는 남겨, 오감이 없던 날에도
+    /// 눈금판의 크기가 흔들리지 않게 한다.
+    private func drawPhaseRing(
+        context: GraphicsContext,
+        center: CGPoint,
+        radius: CGFloat,
+        ring: RecordClockDetailRing?,
+        focusedToken: String?,
+        isDimmingOthers: Bool
+    ) {
+        context.stroke(
+            arcPath(center: center, radius: radius, from: 0, to: 1),
+            with: .color(Color.tpLine.opacity(0.35)),
+            lineWidth: Self.phaseBandWidth
+        )
+        guard let ring else { return }
+        // 짚어 둔 줄거리를 마지막에 그려 이웃 조각에 가려지지 않게 한다.
+        for pass in [false, true] {
+            for arc in ring.arcs where (arc.token == focusedToken) == pass {
+                let isFocused = pass && focusedToken != nil
+                context.stroke(
+                    arcPath(
+                        center: center,
+                        radius: radius,
+                        from: arc.startFraction,
+                        to: arc.endFraction
+                    ),
+                    with: .color(
+                        detailColor(.dayPhase, token: arc.token)
+                            .opacity(isDimmingOthers && !isFocused ? 0.3 : 1)
+                    ),
+                    style: StrokeStyle(
+                        lineWidth: isFocused
+                            ? Self.phaseBandWidth + 4
+                            : Self.phaseBandWidth,
+                        lineCap: .butt
+                    )
+                )
+            }
+        }
+    }
+
+    /// 띠가 좁아 글자를 얹을 수 없으므로, 짚었거나 재생머리가 지나는 줄거리의
+    /// 이름만 가운데 단추 아래에 띄운다. 눈금판 바깥 크기는 건드리지 않는다.
+    private func drawPhaseReadout(
+        context: GraphicsContext,
+        center: CGPoint,
+        token: String
+    ) {
+        let tint = detailColor(.dayPhase, token: token)
+        let label = context.resolve(
+            Text(detailName(.dayPhase, token: token))
+                .font(.taption(size: 9, weight: .bold))
+                .foregroundStyle(tint)
+        )
+        let size = label.measure(in: CGSize(width: 120, height: 40))
+        let box = CGRect(
+            x: center.x - size.width / 2 - 9,
+            y: center.y + Self.clockButtonSize / 2 + 5,
+            width: size.width + 18,
+            height: size.height + 5
+        )
+        let pill = Path(roundedRect: box, cornerRadius: box.height / 2)
+        context.fill(pill, with: .color(.white))
+        context.stroke(pill, with: .color(tint.opacity(0.5)), lineWidth: 0.9)
+        context.draw(label, at: CGPoint(x: box.midX, y: box.midY))
     }
 
     /// 바깥 고리 안쪽에 결 띠를 한 줄씩 안으로 쌓는다. 가운데 단추를 덮을
@@ -520,11 +672,23 @@ struct ReviewView: View {
 
     /// 수면 단계는 깊이가 짙기 순서로 읽히고, 깨어 있음만 따뜻한 색으로
     /// 떼어 놓는다. 이동은 수단별 색을 시간표와 같은 계열에서 가져온다.
+    /// 일과는 오감을 같은 주황 계열로 묶어 하루의 두 매듭이 한눈에 보이게 한다.
     private func detailColor(
         _ kind: RecordClockDetailKind,
         token: String
     ) -> Color {
         switch kind {
+        case .dayPhase:
+            switch DayPhase(rawValue: token) {
+            case .sleep: return .tpSleepDark
+            case .commuteToWork, .commuteToSchool: return .tpTravelDark
+            case .commuteHomeFromWork, .commuteHomeFromSchool:
+                return Color(red: 0.78, green: 0.55, blue: 0.29)
+            case .work: return .tpProjectDark
+            case .study: return .tpStudyDark
+            case .evening: return .tpRestDark
+            case .none: return Color(red: 0.89, green: 0.90, blue: 0.92)
+            }
         case .sleepStage:
             switch SleepStage(rawValue: token) {
             case .deep: return Color(red: 0.23, green: 0.26, blue: 0.41)
@@ -553,11 +717,59 @@ struct ReviewView: View {
         token: String
     ) -> String {
         switch kind {
+        case .dayPhase:
+            return DayPhase(rawValue: token)?.title ?? token
         case .sleepStage:
             return SleepStage(rawValue: token)?.displayName ?? token
         case .travel:
             return TravelMode(rawValue: token).map(MovementPresentation.title)
                 ?? token
+        }
+    }
+
+    /// 일과 띠의 색이 무엇을 뜻하는지 적는다. 카테고리 범례처럼 눌러서 하나만
+    /// 살릴 수 있고, 그때 눈금판 가운데에도 같은 이름이 뜬다.
+    private func phaseLegend(_ ring: RecordClockDetailRing) -> some View {
+        ChipFlowLayout(spacing: 5) {
+            Text("일과")
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+                .padding(.vertical, 4)
+            ForEach(detailTokens(of: ring), id: \.self) { token in
+                Button {
+                    highlightedPhaseToken =
+                        highlightedPhaseToken == token ? nil : token
+                } label: {
+                    HStack(spacing: 4) {
+                        Capsule()
+                            .fill(detailColor(.dayPhase, token: token))
+                            .frame(width: 10, height: 6)
+                        Text(detailName(.dayPhase, token: token))
+                            .font(
+                                .taption(
+                                    size: 8.5,
+                                    weight: highlightedPhaseToken == token
+                                        ? .bold
+                                        : .regular
+                                )
+                            )
+                            .foregroundStyle(Color.tpInk)
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(
+                        highlightedPhaseToken == token
+                            ? detailColor(.dayPhase, token: token).opacity(0.16)
+                            : Color(red: 0.95, green: 0.95, blue: 0.96),
+                        in: Capsule()
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(detailName(.dayPhase, token: token))
+                .accessibilityAddTraits(
+                    highlightedPhaseToken == token ? [.isSelected] : []
+                )
+            }
         }
     }
 
@@ -1088,11 +1300,25 @@ struct ReviewView: View {
         )
 
         var rings: [RecordClockRing] = []
+        var phaseRing: RecordClockDetailRing?
         var detailRings: [RecordClockDetailRing] = []
         var chartBuckets: [RecordChartBucket] = []
         var selectedChartBucketIDs: Set<String> = []
         if model.reviewScale == .day, let day = spans.first {
             rings = RecordChartEngine.clockRings(actuals: actuals, in: day)
+            // 일과 고리도 이미 만들어 둔 수면·정지 문맥·이동만 읽는다. 집이
+            // 아직 좌표를 갖지 않았으면 오감을 만들 수 없어 그만큼 빈다.
+            phaseRing = RecordClockDetailEngine.phaseRing(
+                actuals: actuals,
+                travel: model.snapshot.travel,
+                stays: model.snapshot.places,
+                homePlaceKeys: Set(
+                    model.snapshot.settings.frequentPlaces
+                        .filter { $0.kind == .home }
+                        .map(\.stablePlaceKey)
+                ),
+                in: day
+            )
             // 수면 단계와 이동 구간은 이미 받아 둔 값이다. 건강 데이터를
             // 새로 묻지 않는다.
             detailRings = [
@@ -1143,6 +1369,7 @@ struct ReviewView: View {
                 categories: model.snapshot.categories
             ),
             rings: rings,
+            phaseRing: phaseRing,
             detailRings: detailRings,
             chartBuckets: chartBuckets,
             selectedChartBucketIDs: selectedChartBucketIDs
@@ -1153,6 +1380,10 @@ struct ReviewView: View {
         if let highlighted = highlightedCategoryID,
            !content.groups.contains(where: { $0.id == highlighted }) {
             highlightedCategoryID = nil
+        }
+        if let highlighted = highlightedPhaseToken,
+           phaseRing?.arcs.contains(where: { $0.token == highlighted }) != true {
+            highlightedPhaseToken = nil
         }
     }
 

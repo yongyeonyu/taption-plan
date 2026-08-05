@@ -339,9 +339,11 @@ struct RecordClockRing: Identifiable, Equatable, Sendable {
     let arcs: [RecordClockArc]
 }
 
-/// 하루 눈금판 안쪽에 덧대는 띠. 바깥 고리가 "무엇을 했는가"라면 이 띠는
-/// 그 안의 결을 보여 준다. 한 띠에는 종류가 다른 조각이 이어 붙는다.
+/// 하루 눈금판에 덧대는 띠. 카테고리 고리가 "무엇을 했는가"라면, 그 바깥의
+/// `dayPhase` 는 "어떤 하루였는가"이고 안쪽 띠들은 그 안의 결이다. 한 띠에는
+/// 종류가 다른 조각이 이어 붙는다.
 enum RecordClockDetailKind: String, Equatable, Sendable {
+    case dayPhase
     case sleepStage
     case travel
 }
@@ -673,8 +675,336 @@ enum MemoTimelineEngine {
     }
 }
 
-/// 눈금판 안쪽 띠의 조각을 만든다. 이미 받아 둔 수면 단계와 이동 구간만
-/// 읽고, 건강 데이터를 새로 묻지 않는다.
+// MARK: - 하루의 줄거리
+
+/// 눈금판 가장 바깥 고리가 말하는 하루의 큰 줄거리. 이름은 도착지가 정한다
+/// — 회사에 닿으면 출근·업무, 학교나 학원에 닿으면 등교·수업이라 사용자가
+/// 고를 일이 없다.
+enum DayPhase: String, CaseIterable, Sendable {
+    case sleep
+    case commuteToWork
+    case commuteToSchool
+    case work
+    case study
+    case commuteHomeFromWork
+    case commuteHomeFromSchool
+    case evening
+
+    var title: String {
+        switch self {
+        case .sleep: "취침"
+        case .commuteToWork: "출근"
+        case .commuteToSchool: "등교"
+        case .work: "업무"
+        case .study: "수업"
+        case .commuteHomeFromWork: "퇴근"
+        case .commuteHomeFromSchool: "하교"
+        case .evening: "저녁"
+        }
+    }
+
+    /// 같은 시각을 두 줄거리가 주장할 때 큰 값이 이긴다. 이 고리는 겹칠 수
+    /// 없는 한 줄이라 순서를 못 박아 둔다.
+    ///
+    /// 1. 오갔다는 사실이 가장 세다. 지하철에서 졸아도 그 시간은 출근이다.
+    /// 2. 그다음이 일터에 있었다는 사실이다. 회사에서 잔 낮잠은 이 고리에서
+    ///    업무로 읽힌다 — 안쪽 카테고리 고리는 같은 시각을 그대로 수면으로
+    ///    보여 주며, 두 고리는 일부러 다른 말을 한다.
+    /// 3. 취침은 위 둘이 비운 자리에서만 이긴다.
+    /// 4. 저녁은 가장 약해, 퇴근 뒤 남은 자리만 채운다.
+    var precedence: Int {
+        switch self {
+        case .commuteToWork, .commuteToSchool,
+             .commuteHomeFromWork, .commuteHomeFromSchool: 4
+        case .work, .study: 3
+        case .sleep: 2
+        case .evening: 1
+        }
+    }
+}
+
+struct DayPhaseSpan: Equatable, Sendable {
+    let phase: DayPhase
+    let span: TimeSpan
+}
+
+/// 이미 만들어 둔 수면 기록·정지 문맥·이동 구간만 읽어 하루를 겹치지 않는
+/// 줄거리로 나눈다. 새로 수집하는 값은 없고, 근거가 없는 시간에는 이름을
+/// 지어내지 않는다 — 주말이나 재택처럼 오감이 없는 날은 그냥 빈칸이다.
+enum DayPhaseEngine {
+    /// 하루보다 넓은 기간에서는 여러 날의 줄거리가 같은 각도에 겹쳐 뭉개진다.
+    /// 그때는 아무것도 만들지 않는다.
+    static let maximumSpanDuration: TimeInterval = 26 * 3_600
+
+    /// 이동과 앞뒤 머무름이 이만큼 안에서 맞닿으면 한 오감으로 본다.
+    static let joinTolerance: TimeInterval = 15 * 60
+
+    /// 갈아타는 사이의 기다림. 이보다 짧게 끊긴 이동은 한 번의 오감이다.
+    static let transferGap: TimeInterval = 20 * 60
+
+    static func phases(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        homePlaceKeys: Set<String>,
+        in span: TimeSpan,
+        asOf: Date = .now
+    ) -> [DayPhaseSpan] {
+        guard span.duration > 0, span.duration <= maximumSpanDuration else {
+            return []
+        }
+        // 자정 직전에 시작한 오감의 도착지를 놓치지 않도록 하루 앞뒤를 조금
+        // 넓혀 근거를 읽고, 조각은 마지막에 하루로 자른다.
+        let margin = joinTolerance + transferGap
+        let window = TimeSpan(
+            start: span.start.addingTimeInterval(-margin),
+            end: span.end.addingTimeInterval(margin)
+        )
+        let contexts = stationaryContexts(actuals, in: window, asOf: asOf)
+        let workBlocks = (
+            mergedBlocks(contexts, kind: .work, as: .work)
+                + mergedBlocks(contexts, kind: .study, as: .study)
+        )
+        .sorted { $0.span.start < $1.span.start }
+        let homeSpans = ActualIntervalMergeEngine.union(
+            contexts
+                .filter { $0.kind == .homeRest || $0.kind == .housework }
+                .map(\.span)
+                + stays
+                    .filter { homePlaceKeys.contains($0.placeKey) }
+                    .compactMap { $0.span.intersection(with: window) },
+            mergeGap: 60
+        )
+        let sleepSpans = ActualIntervalMergeEngine.union(
+            actuals
+                .filter(AutomaticRecordTimelineEngine.isSleep)
+                .compactMap { $0.span(asOf: asOf).intersection(with: window) },
+            mergeGap: 0
+        )
+        let commutes = commutes(
+            travel: travel,
+            contexts: contexts,
+            window: window,
+            workBlocks: workBlocks,
+            homeSpans: homeSpans
+        )
+
+        let candidates = workBlocks
+            + commutes
+            + sleepSpans.map { DayPhaseSpan(phase: .sleep, span: $0) }
+            + evenings(after: commutes, homeSpans: homeSpans, in: span)
+        return resolved(
+            candidates.compactMap { value in
+                value.span.intersection(with: span).map {
+                    DayPhaseSpan(phase: value.phase, span: $0)
+                }
+            }
+        )
+    }
+
+    // MARK: - 근거 모으기
+
+    private static func stationaryContexts(
+        _ actuals: [ActualRecord],
+        in window: TimeSpan,
+        asOf: Date
+    ) -> [(kind: StationaryContextKind, span: TimeSpan)] {
+        var seen = Set<UUID>()
+        return actuals.compactMap { actual in
+            guard actual.source == .location,
+                  let behavior = actual.behavior,
+                  let kind = StationaryContextKind(rawValue: behavior),
+                  seen.insert(actual.id).inserted,
+                  let visible = actual.span(asOf: asOf)
+                      .intersection(with: window) else {
+                return nil
+            }
+            return (kind, visible)
+        }
+    }
+
+    /// 층이 바뀌어 둘로 갈린 체류처럼 맞닿은 같은 문맥만 하나로 붙인다.
+    /// 점심처럼 사이가 벌어진 시간은 메우지 않고 빈칸으로 남긴다.
+    private static func mergedBlocks(
+        _ contexts: [(kind: StationaryContextKind, span: TimeSpan)],
+        kind: StationaryContextKind,
+        as phase: DayPhase
+    ) -> [DayPhaseSpan] {
+        ActualIntervalMergeEngine.union(
+            contexts.filter { $0.kind == kind }.map(\.span),
+            mergeGap: 60
+        )
+        .map { DayPhaseSpan(phase: phase, span: $0) }
+    }
+
+    // MARK: - 오감
+
+    /// 걷고·타고·걷는 한 번의 오감은 이동 구간 여럿으로 들어온다. 사이가
+    /// 짧고 그 사이에 들른 곳이 없으면 한 줄로 잇는다.
+    private static func chains(
+        travel: [TravelSegment],
+        contexts: [(kind: StationaryContextKind, span: TimeSpan)],
+        window: TimeSpan
+    ) -> [TimeSpan] {
+        var result: [TimeSpan] = []
+        for leg in travel
+            .compactMap({ $0.span.intersection(with: window) })
+            .sorted(by: { $0.start < $1.start }) {
+            guard var current = result.popLast() else {
+                result.append(leg)
+                continue
+            }
+            let gap = TimeSpan(
+                start: current.end,
+                end: max(current.end, leg.start)
+            )
+            if leg.start <= current.end.addingTimeInterval(transferGap),
+               !visited(during: gap, contexts: contexts) {
+                current.end = max(current.end, leg.end)
+                result.append(current)
+            } else {
+                result.append(current)
+                result.append(leg)
+            }
+        }
+        return result
+    }
+
+    /// 갈아타며 기다린 시간은 아직 오는 길이지만, 카페나 운동시설처럼 들른
+    /// 곳이 있으면 거기서 오감이 끊긴다. 대기·머무름은 갈 곳을 가리키지
+    /// 않으므로 길을 끊지 않는다.
+    private static func visited(
+        during gap: TimeSpan,
+        contexts: [(kind: StationaryContextKind, span: TimeSpan)]
+    ) -> Bool {
+        guard gap.duration > 0 else { return false }
+        return contexts.contains {
+            $0.kind != .waiting
+                && $0.kind != .unknownStay
+                && $0.span.intersection(with: gap) != nil
+        }
+    }
+
+    /// 오감의 이름은 어디서 떠나 어디에 닿았는지가 정한다. 집에서 떠나 근무나
+    /// 수업이 시작되는 곳에 닿으면 출근·등교이고, 그 반대가 퇴근·하교다. 둘
+    /// 중 어느 쪽도 아니면 이름을 붙이지 않는다.
+    private static func commutes(
+        travel: [TravelSegment],
+        contexts: [(kind: StationaryContextKind, span: TimeSpan)],
+        window: TimeSpan,
+        workBlocks: [DayPhaseSpan],
+        homeSpans: [TimeSpan]
+    ) -> [DayPhaseSpan] {
+        chains(travel: travel, contexts: contexts, window: window)
+        .compactMap { chain in
+            if left(homeSpans, at: chain.start),
+               let arrival = workBlocks.first(where: {
+                   $0.span.end > chain.end
+                       && $0.span.start
+                           <= chain.end.addingTimeInterval(joinTolerance)
+               }) {
+                return DayPhaseSpan(
+                    phase: arrival.phase == .work
+                        ? .commuteToWork
+                        : .commuteToSchool,
+                    span: chain
+                )
+            }
+            if let departure = workBlocks.last(where: {
+                $0.span.start < chain.start
+                    && $0.span.end
+                        >= chain.start.addingTimeInterval(-joinTolerance)
+            }), arrived(homeSpans, at: chain.end) {
+                return DayPhaseSpan(
+                    phase: departure.phase == .work
+                        ? .commuteHomeFromWork
+                        : .commuteHomeFromSchool,
+                    span: chain
+                )
+            }
+            return nil
+        }
+    }
+
+    private static func left(_ spans: [TimeSpan], at boundary: Date) -> Bool {
+        spans.contains {
+            $0.start < boundary
+                && $0.end >= boundary.addingTimeInterval(-joinTolerance)
+        }
+    }
+
+    private static func arrived(_ spans: [TimeSpan], at boundary: Date) -> Bool {
+        spans.contains {
+            $0.end > boundary
+                && $0.start <= boundary.addingTimeInterval(joinTolerance)
+        }
+    }
+
+    /// 저녁은 돌아온 뒤 집에 있었다는 근거에서만 나온다. 돌아온 길이 없으면
+    /// 저녁도 없다.
+    private static func evenings(
+        after commutes: [DayPhaseSpan],
+        homeSpans: [TimeSpan],
+        in span: TimeSpan
+    ) -> [DayPhaseSpan] {
+        guard let returned = commutes
+            .filter({
+                $0.phase == .commuteHomeFromWork
+                    || $0.phase == .commuteHomeFromSchool
+            })
+            .map(\.span.end)
+            .max() else {
+            return []
+        }
+        let evening = TimeSpan(start: returned, end: max(returned, span.end))
+        return homeSpans
+            .compactMap { $0.intersection(with: evening) }
+            .map { DayPhaseSpan(phase: .evening, span: $0) }
+    }
+
+    // MARK: - 한 줄로 펴기
+
+    /// 경계마다 우선순위가 가장 높은 줄거리 하나만 남겨 고리를 한 줄로 만든다.
+    /// 같은 줄거리가 이어지면 한 조각으로 붙인다.
+    private static func resolved(_ candidates: [DayPhaseSpan]) -> [DayPhaseSpan] {
+        let boundaries = Array(
+            Set(candidates.flatMap { [$0.span.start, $0.span.end] })
+        ).sorted()
+        guard boundaries.count >= 2 else { return [] }
+
+        var result: [DayPhaseSpan] = []
+        for (start, end) in zip(boundaries, boundaries.dropFirst()) {
+            guard start < end else { continue }
+            let winner = candidates
+                .filter { $0.span.start < end && start < $0.span.end }
+                .max {
+                    $0.phase.precedence == $1.phase.precedence
+                        ? $0.phase.rawValue < $1.phase.rawValue
+                        : $0.phase.precedence < $1.phase.precedence
+                }
+            guard let winner else { continue }
+            if let last = result.last,
+               last.phase == winner.phase,
+               last.span.end >= start {
+                result[result.count - 1] = DayPhaseSpan(
+                    phase: last.phase,
+                    span: TimeSpan(start: last.span.start, end: end)
+                )
+            } else {
+                result.append(
+                    DayPhaseSpan(
+                        phase: winner.phase,
+                        span: TimeSpan(start: start, end: end)
+                    )
+                )
+            }
+        }
+        return result
+    }
+}
+
+/// 눈금판에 덧대는 띠의 조각을 만든다. 이미 받아 둔 수면 단계와 이동 구간,
+/// 정지 문맥만 읽고 건강 데이터를 새로 묻지 않는다.
 enum RecordClockDetailEngine {
     /// 이보다 짧은 조각은 띠 굵기보다 얇게 그려져 보이지도 않으면서 그리는
     /// 값만 늘린다. 하루의 0.4%는 약 6분이다.
@@ -683,6 +1013,31 @@ enum RecordClockDetailEngine {
     /// 한 띠가 가질 수 있는 조각 수의 상한. 넘으면 기준을 넓혀 더 합친다.
     /// 재생 중에는 이 띠를 프레임마다 다시 그리므로 상한이 곧 예산이다.
     static let maximumArcCount = 32
+
+    /// 가장 바깥의 일과 띠. 조각을 만드는 규칙은 `DayPhaseEngine` 이 정하고,
+    /// 여기서는 안쪽 띠와 똑같은 기준으로 얇은 조각을 합쳐 그릴 값을 줄인다.
+    static func phaseRing(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        homePlaceKeys: Set<String>,
+        in span: TimeSpan,
+        asOf: Date = .now
+    ) -> RecordClockDetailRing? {
+        ring(
+            kind: .dayPhase,
+            pieces: DayPhaseEngine.phases(
+                actuals: actuals,
+                travel: travel,
+                stays: stays,
+                homePlaceKeys: homePlaceKeys,
+                in: span,
+                asOf: asOf
+            )
+            .map { ($0.phase.rawValue, $0.span) },
+            in: span
+        )
+    }
 
     /// 수면 단계 띠. HealthKit은 같은 시각에 여러 단계를 겹쳐 보내므로
     /// 경계마다 한 단계를 골라 한 줄로 편다.
@@ -938,6 +1293,26 @@ enum RecordClockEngine {
                 }
             )
         }
+    }
+
+    /// 띠 하나짜리 바깥 고리도 같은 규칙으로 드러난다.
+    static func detailRing(
+        _ ring: RecordClockDetailRing?,
+        revealedThrough progress: Double?
+    ) -> RecordClockDetailRing? {
+        guard let ring else { return nil }
+        return detailRings([ring], revealedThrough: progress).first
+    }
+
+    /// 재생머리가 지금 지나고 있는 조각의 열쇠. 이 조각만 굵게 그린다.
+    static func token(
+        in ring: RecordClockDetailRing?,
+        at fraction: Double
+    ) -> String? {
+        ring?.arcs.first {
+            $0.startFraction <= fraction && fraction < $0.endFraction
+        }?
+        .token
     }
 
     /// 재생머리가 지금 지나고 있는 카테고리. 이 기록만 굵게 그린다.

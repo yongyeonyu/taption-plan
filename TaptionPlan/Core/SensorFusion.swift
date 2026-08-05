@@ -1318,6 +1318,36 @@ struct FrequentPlaceResolutionEngine: Sendable {
         }
     }
 
+    /// 기준점을 고친 뒤, 이미 저장된 이 장소의 체류만 새 기준으로 다시
+    /// 매긴다. 원본 표본이 남아 있는 체류만 손댄다. 표본이 이미 지워진
+    /// 기록은 다시 구할 방법이 없으므로 그대로 둔다. 지어내는 것보다 낫다.
+    func reapplyingFloors(
+        of place: FrequentPlace,
+        to places: [PlaceStay],
+        readings: [SensorReading]
+    ) -> [PlaceStay] {
+        guard let calibration = place.floorCalibration else { return places }
+        let key = place.stablePlaceKey
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let engine = FloorCalibrationEngine()
+        return places.map { stay in
+            guard stay.placeKey == key,
+                  let reading = ordered.first(where: {
+                      stay.span.contains($0.timestamp)
+                  }),
+                  let estimate = engine.estimate(
+                    reading: reading,
+                    calibration: calibration
+                  ) else {
+                return stay
+            }
+            var updated = stay
+            updated.floor = estimate.floor
+            updated.confidence = estimate.confidence
+            return updated
+        }
+    }
+
     /// `applying` 은 확정된 체류의 `placeKey` 를 자주가는 곳의 안정 키로
     /// 바꾼다. 그 키로 장소 종류를 되찾아 정지 구간 문맥 추론에 넘긴다.
     func kindsByPlaceKey(
