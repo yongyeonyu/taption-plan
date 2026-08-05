@@ -677,17 +677,21 @@ enum MemoTimelineEngine {
 
 // MARK: - 하루의 줄거리
 
-/// 눈금판 가장 바깥 고리가 말하는 하루의 큰 줄거리. 이름은 도착지가 정한다
-/// — 회사에 닿으면 출근·업무, 학교나 학원에 닿으면 등교·수업이라 사용자가
-/// 고를 일이 없다.
+/// 눈금판 가장 바깥 고리가 말하는 하루의 큰 줄거리. 이름은 집 반대편에
+/// 등록해 둔 곳이 정한다 — 회사면 출근·퇴근, 학교면 등교·하교, 학원이면
+/// 등원·하원이라 사용자가 고를 일이 없다.
 enum DayPhase: String, CaseIterable, Sendable {
     case sleep
     case commuteToWork
     case commuteToSchool
+    case commuteToAcademy
+    case activityDeparture
     case work
     case study
     case commuteHomeFromWork
     case commuteHomeFromSchool
+    case commuteHomeFromAcademy
+    case activityReturn
     case evening
 
     var title: String {
@@ -695,18 +699,39 @@ enum DayPhase: String, CaseIterable, Sendable {
         case .sleep: "취침"
         case .commuteToWork: "출근"
         case .commuteToSchool: "등교"
+        case .commuteToAcademy: "등원"
+        case .activityDeparture: "시작"
         case .work: "업무"
         case .study: "수업"
         case .commuteHomeFromWork: "퇴근"
         case .commuteHomeFromSchool: "하교"
+        case .commuteHomeFromAcademy: "하원"
+        case .activityReturn: "종료"
         case .evening: "저녁"
+        }
+    }
+
+    /// 집 반대편에 등록해 둔 곳이 오가는 길의 이름을 정한다. 취미·운동은
+    /// 오가는 일이 아니라 그 자체가 하루의 한 대목이라 출퇴근 같은 말 대신
+    /// 시작·종료로 적는다. 집이나 이름 없는 곳은 여기서 아무 말도 만들지
+    /// 않고, 부르는 말을 정지 문맥에 넘긴다.
+    static func roundTrip(
+        to kind: FrequentPlaceKind
+    ) -> (there: DayPhase, back: DayPhase)? {
+        switch kind {
+        case .company: (.commuteToWork, .commuteHomeFromWork)
+        case .school: (.commuteToSchool, .commuteHomeFromSchool)
+        case .academy: (.commuteToAcademy, .commuteHomeFromAcademy)
+        case .hobby, .exercise: (.activityDeparture, .activityReturn)
+        case .home, .custom: nil
         }
     }
 
     /// 같은 시각을 두 줄거리가 주장할 때 큰 값이 이긴다. 이 고리는 겹칠 수
     /// 없는 한 줄이라 순서를 못 박아 둔다.
     ///
-    /// 1. 오갔다는 사실이 가장 세다. 지하철에서 졸아도 그 시간은 출근이다.
+    /// 1. 집을 나섰다는 사실이 가장 세다. 지하철에서 졸아도 그 시간은
+    ///    출근이고, 운동하러 나선 새벽도 취침이 아니라 시작이다.
     /// 2. 그다음이 일터에 있었다는 사실이다. 회사에서 잔 낮잠은 이 고리에서
     ///    업무로 읽힌다 — 안쪽 카테고리 고리는 같은 시각을 그대로 수면으로
     ///    보여 주며, 두 고리는 일부러 다른 말을 한다.
@@ -714,8 +739,10 @@ enum DayPhase: String, CaseIterable, Sendable {
     /// 4. 저녁은 가장 약해, 퇴근 뒤 남은 자리만 채운다.
     var precedence: Int {
         switch self {
-        case .commuteToWork, .commuteToSchool,
-             .commuteHomeFromWork, .commuteHomeFromSchool: 4
+        case .commuteToWork, .commuteToSchool, .commuteToAcademy,
+             .activityDeparture,
+             .commuteHomeFromWork, .commuteHomeFromSchool,
+             .commuteHomeFromAcademy, .activityReturn: 4
         case .work, .study: 3
         case .sleep: 2
         case .evening: 1
@@ -746,7 +773,7 @@ enum DayPhaseEngine {
         actuals: [ActualRecord],
         travel: [TravelSegment],
         stays: [PlaceStay],
-        homePlaceKeys: Set<String>,
+        placeKinds: [String: FrequentPlaceKind],
         in span: TimeSpan,
         asOf: Date = .now
     ) -> [DayPhaseSpan] {
@@ -771,7 +798,7 @@ enum DayPhaseEngine {
                 .filter { $0.kind == .homeRest || $0.kind == .housework }
                 .map(\.span)
                 + stays
-                    .filter { homePlaceKeys.contains($0.placeKey) }
+                    .filter { placeKinds[$0.placeKey] == .home }
                     .compactMap { $0.span.intersection(with: window) },
             mergeGap: 60
         )
@@ -786,7 +813,12 @@ enum DayPhaseEngine {
             contexts: contexts,
             window: window,
             workBlocks: workBlocks,
-            homeSpans: homeSpans
+            homeSpans: homeSpans,
+            destinations: destinations(
+                stays: stays,
+                placeKinds: placeKinds,
+                window: window
+            )
         )
 
         let candidates = workBlocks
@@ -885,63 +917,133 @@ enum DayPhaseEngine {
         }
     }
 
-    /// 오감의 이름은 어디서 떠나 어디에 닿았는지가 정한다. 집에서 떠나 근무나
-    /// 수업이 시작되는 곳에 닿으면 출근·등교이고, 그 반대가 퇴근·하교다. 둘
-    /// 중 어느 쪽도 아니면 이름을 붙이지 않는다.
+    /// 집 반대편에 등록해 둔 곳에 머문 시간. 오감의 이름을 여기서 가져온다.
+    private struct NamedDestination {
+        let there: DayPhase
+        let back: DayPhase
+        let span: TimeSpan
+    }
+
+    /// 자주가는 곳으로 확정된 체류만 이름을 갖는다. 집과 이름 없는 종류는
+    /// 여기 들어오지 않아 오감의 이름을 만들지 못한다.
+    private static func destinations(
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        window: TimeSpan
+    ) -> [NamedDestination] {
+        stays.compactMap { stay in
+            guard let kind = placeKinds[stay.placeKey],
+                  let pair = DayPhase.roundTrip(to: kind),
+                  let visible = stay.span.intersection(with: window) else {
+                return nil
+            }
+            return NamedDestination(
+                there: pair.there,
+                back: pair.back,
+                span: visible
+            )
+        }
+        .sorted { $0.span.start < $1.span.start }
+    }
+
+    /// 오감의 이름은 어디서 떠나 어디에 닿았는지가 정한다. 집을 나서 등록해
+    /// 둔 곳에 닿으면 그 곳의 종류가 이름을 정하고, 그 반대가 돌아오는 길이다.
+    /// 둘 중 어느 쪽도 아니면 이름을 붙이지 않는다.
     private static func commutes(
         travel: [TravelSegment],
         contexts: [(kind: StationaryContextKind, span: TimeSpan)],
         window: TimeSpan,
         workBlocks: [DayPhaseSpan],
-        homeSpans: [TimeSpan]
+        homeSpans: [TimeSpan],
+        destinations: [NamedDestination]
     ) -> [DayPhaseSpan] {
         chains(travel: travel, contexts: contexts, window: window)
         .compactMap { chain in
             if left(homeSpans, at: chain.start),
-               let arrival = workBlocks.first(where: {
-                   $0.span.end > chain.end
-                       && $0.span.start
-                           <= chain.end.addingTimeInterval(joinTolerance)
-               }) {
-                return DayPhaseSpan(
-                    phase: arrival.phase == .work
-                        ? .commuteToWork
-                        : .commuteToSchool,
-                    span: chain
-                )
+               let phase = phaseGoingOut(
+                   after: chain.end,
+                   destinations: destinations,
+                   workBlocks: workBlocks
+               ) {
+                return DayPhaseSpan(phase: phase, span: chain)
             }
-            if let departure = workBlocks.last(where: {
-                $0.span.start < chain.start
-                    && $0.span.end
-                        >= chain.start.addingTimeInterval(-joinTolerance)
-            }), arrived(homeSpans, at: chain.end) {
-                return DayPhaseSpan(
-                    phase: departure.phase == .work
-                        ? .commuteHomeFromWork
-                        : .commuteHomeFromSchool,
-                    span: chain
-                )
+            if arrived(homeSpans, at: chain.end),
+               let phase = phaseComingHome(
+                   before: chain.start,
+                   destinations: destinations,
+                   workBlocks: workBlocks
+               ) {
+                return DayPhaseSpan(phase: phase, span: chain)
             }
             return nil
         }
     }
 
-    private static func left(_ spans: [TimeSpan], at boundary: Date) -> Bool {
-        spans.contains {
-            $0.start < boundary
-                && $0.end >= boundary.addingTimeInterval(-joinTolerance)
+    /// 등록해 둔 곳에 닿았으면 그 종류가 이름을 정한다. 등록하지 않은 곳이나
+    /// 이름 없는 종류에 닿았으면 도착해서 무엇이 시작되는지를 보고 정하던
+    /// 예전 규칙으로 돌아가고, 그마저 없으면 이름을 짓지 않는다.
+    private static func phaseGoingOut(
+        after boundary: Date,
+        destinations: [NamedDestination],
+        workBlocks: [DayPhaseSpan]
+    ) -> DayPhase? {
+        if let arrival = destinations.first(where: {
+            follows($0.span, boundary)
+        }) {
+            return arrival.there
         }
+        guard let arrival = workBlocks.first(where: {
+            follows($0.span, boundary)
+        }) else {
+            return nil
+        }
+        return arrival.phase == .work ? .commuteToWork : .commuteToSchool
+    }
+
+    private static func phaseComingHome(
+        before boundary: Date,
+        destinations: [NamedDestination],
+        workBlocks: [DayPhaseSpan]
+    ) -> DayPhase? {
+        if let departure = destinations.last(where: {
+            precedes($0.span, boundary)
+        }) {
+            return departure.back
+        }
+        guard let departure = workBlocks.last(where: {
+            precedes($0.span, boundary)
+        }) else {
+            return nil
+        }
+        return departure.phase == .work
+            ? .commuteHomeFromWork
+            : .commuteHomeFromSchool
+    }
+
+    /// 그 경계 직전까지 이어지던 시간인지. 오차만큼은 맞닿은 것으로 본다.
+    private static func precedes(_ span: TimeSpan, _ boundary: Date) -> Bool {
+        span.start < boundary
+            && span.end >= boundary.addingTimeInterval(-joinTolerance)
+    }
+
+    /// 그 경계 직후부터 이어지는 시간인지.
+    private static func follows(_ span: TimeSpan, _ boundary: Date) -> Bool {
+        span.end > boundary
+            && span.start <= boundary.addingTimeInterval(joinTolerance)
+    }
+
+    private static func left(_ spans: [TimeSpan], at boundary: Date) -> Bool {
+        spans.contains { precedes($0, boundary) }
     }
 
     private static func arrived(_ spans: [TimeSpan], at boundary: Date) -> Bool {
-        spans.contains {
-            $0.end > boundary
-                && $0.start <= boundary.addingTimeInterval(joinTolerance)
-        }
+        spans.contains { follows($0, boundary) }
     }
 
-    /// 저녁은 돌아온 뒤 집에 있었다는 근거에서만 나온다. 돌아온 길이 없으면
-    /// 저녁도 없다.
+    /// 저녁은 그날의 일과를 마치고 돌아온 뒤 집에 있었다는 근거에서만 나온다.
+    /// 돌아온 길이 없으면 저녁도 없다. 취미·운동을 다녀온 길은 여기 들지
+    /// 않는다 — 저녁에 잠깐 나갔다 왔다고 그 전에 집에서 보낸 저녁이 없던
+    /// 일이 되면 안 된다.
     private static func evenings(
         after commutes: [DayPhaseSpan],
         homeSpans: [TimeSpan],
@@ -951,6 +1053,7 @@ enum DayPhaseEngine {
             .filter({
                 $0.phase == .commuteHomeFromWork
                     || $0.phase == .commuteHomeFromSchool
+                    || $0.phase == .commuteHomeFromAcademy
             })
             .map(\.span.end)
             .max() else {
@@ -1020,7 +1123,7 @@ enum RecordClockDetailEngine {
         actuals: [ActualRecord],
         travel: [TravelSegment],
         stays: [PlaceStay],
-        homePlaceKeys: Set<String>,
+        placeKinds: [String: FrequentPlaceKind],
         in span: TimeSpan,
         asOf: Date = .now
     ) -> RecordClockDetailRing? {
@@ -1030,7 +1133,7 @@ enum RecordClockDetailEngine {
                 actuals: actuals,
                 travel: travel,
                 stays: stays,
-                homePlaceKeys: homePlaceKeys,
+                placeKinds: placeKinds,
                 in: span,
                 asOf: asOf
             )
@@ -1304,15 +1407,42 @@ enum RecordClockEngine {
         return detailRings([ring], revealedThrough: progress).first
     }
 
-    /// 재생머리가 지금 지나고 있는 조각의 열쇠. 이 조각만 굵게 그린다.
-    static func token(
+    /// 재생머리가 지금 지나고 있는 조각. 이 조각만 굵게 그리고, 이름과 시각을
+    /// 읽음창에 적는다.
+    static func arc(
         in ring: RecordClockDetailRing?,
         at fraction: Double
-    ) -> String? {
+    ) -> RecordClockDetailArc? {
         ring?.arcs.first {
             $0.startFraction <= fraction && fraction < $0.endFraction
-        }?
-        .token
+        }
+    }
+
+    /// 조각이 가리키는 실제 시각. 각도는 하루를 0…1로 나눈 값이라 되돌릴 때
+    /// 초 단위로 반올림해야 8시 12분이 8시 11분 59초로 새지 않는다.
+    static func span(
+        of arc: RecordClockDetailArc,
+        in span: TimeSpan
+    ) -> TimeSpan {
+        TimeSpan(
+            start: date(at: arc.startFraction, in: span),
+            end: date(at: arc.endFraction, in: span)
+        )
+    }
+
+    /// 읽음창이 적는 시각. 기록 상세·목표 화면이 구간을 적을 때와 같은 표기라
+    /// 화면마다 시각을 다르게 읽지 않는다. 오전·오후를 떼면 눈금판이 24시간
+    /// 판인데 6시가 두 번 생겨 읽는 사람이 어느 쪽인지 알 수 없다.
+    static func timeRangeText(_ span: TimeSpan) -> String {
+        "\(clockText(span.start))–\(clockText(span.end))"
+    }
+
+    private static func clockText(_ date: Date) -> String {
+        date.formatted(date: .omitted, time: .shortened)
+    }
+
+    private static func date(at fraction: Double, in span: TimeSpan) -> Date {
+        span.start.addingTimeInterval((fraction * span.duration).rounded())
     }
 
     /// 재생머리가 지금 지나고 있는 카테고리. 이 기록만 굵게 그린다.

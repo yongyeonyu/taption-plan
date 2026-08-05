@@ -1065,6 +1065,15 @@ enum AltitudeDelta {
             pressureKilopascals = reference.pressureKilopascals
             altitudeMeters = reference.point.altitude
         }
+
+        /// 기록이 스스로 지닌 근거. GPS 고도는 기록에 남은 대표 좌표에서
+        /// 가져온다.
+        init(_ evidence: FloorEvidence, altitudeMeters: Double?) {
+            altimeterSessionID = evidence.altimeterSessionID
+            relativeAltitudeMeters = evidence.relativeAltitudeMeters
+            pressureKilopascals = evidence.pressureKilopascals
+            self.altitudeMeters = altitudeMeters
+        }
     }
 
     static func between(
@@ -1091,6 +1100,57 @@ enum AltitudeDelta {
             return (end - start, .gps)
         }
         return nil
+    }
+}
+
+/// 기록에 남은 층수는 관측에서 파생된 값이다. 그 관측의 원본 표본은 7일 뒤
+/// 지워지므로, 파생된 층수 옆에 근거가 된 숫자 몇 개를 함께 남긴다. 그래야
+/// 기준점을 뒤늦게 고쳐도 보관 기간과 상관없이 다시 매길 수 있다.
+///
+/// 상대고도의 0점은 기압 세션마다 새로 잡힌다. 세션 식별자를 함께 남겨야
+/// 다른 세션의 값을 같은 기준으로 착각해 빼는 일이 없다.
+struct FloorEvidence: Codable, Hashable, Sendable {
+    var measuredAt: Date
+    var relativeAltitudeMeters: Double?
+    var pressureKilopascals: Double?
+    var altimeterSessionID: UUID?
+    /// 잰 자리에서 이 기록까지의 층수 차이. 한 체류가 층 이동으로 쪼개지면
+    /// 뒤쪽 조각은 잰 자리보다 이만큼 위에 있다.
+    var floorOffset: Int
+
+    init(
+        measuredAt: Date,
+        relativeAltitudeMeters: Double? = nil,
+        pressureKilopascals: Double? = nil,
+        altimeterSessionID: UUID? = nil,
+        floorOffset: Int = 0
+    ) {
+        self.measuredAt = measuredAt
+        self.relativeAltitudeMeters = relativeAltitudeMeters
+        self.pressureKilopascals = pressureKilopascals
+        self.altimeterSessionID = altimeterSessionID
+        self.floorOffset = floorOffset
+    }
+
+    /// 기압을 재지 못한 관측은 근거가 되지 못한다. 없는 근거를 남겨 두면
+    /// 나중에 그 기록을 고칠 수 있다고 착각한다.
+    init?(_ reading: SensorReading) {
+        guard reading.relativeAltitudeMeters != nil
+                || reading.pressureKilopascals != nil else {
+            return nil
+        }
+        self.init(
+            measuredAt: reading.timestamp,
+            relativeAltitudeMeters: reading.relativeAltitudeMeters,
+            pressureKilopascals: reading.pressureKilopascals,
+            altimeterSessionID: reading.altimeterSessionID
+        )
+    }
+
+    func offset(by floors: Int) -> FloorEvidence {
+        var value = self
+        value.floorOffset += floors
+        return value
     }
 }
 
@@ -1867,6 +1927,21 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+/// 사용자가 "등록하지 않겠다"고 답한 자리. 같은 커피숍을 매주 다시 묻는 것이
+/// 한 번도 묻지 않는 것보다 나쁘므로 만료 없이 남긴다. 자주가는 곳에서 지운
+/// 자리도 같은 목록에 들어간다.
+struct DismissedPlaceSuggestion: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var point: GeoPoint
+    var dismissedAt: Date
+
+    init(id: UUID = UUID(), point: GeoPoint, dismissedAt: Date = .now) {
+        self.id = id
+        self.point = point
+        self.dismissedAt = dismissedAt
+    }
+}
+
 struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var placeKey: String
@@ -1877,6 +1952,9 @@ struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
     var confidence: ConfidenceLevel
     var point: GeoPoint?
     var isConfirmed: Bool
+    /// `floor` 를 만든 관측. 예전 빌드가 쓴 기록에는 없으므로 Optional 이다.
+    /// 없으면 그 기록은 다시 매기지 않고 있던 층수를 그대로 둔다.
+    var floorEvidence: FloorEvidence?
 
     init(
         id: UUID = UUID(),
@@ -1887,7 +1965,8 @@ struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
         span: TimeSpan,
         confidence: ConfidenceLevel,
         point: GeoPoint? = nil,
-        isConfirmed: Bool = false
+        isConfirmed: Bool = false,
+        floorEvidence: FloorEvidence? = nil
     ) {
         self.id = id
         self.placeKey = placeKey
@@ -1898,6 +1977,7 @@ struct PlaceStay: Identifiable, Codable, Hashable, Sendable {
         self.confidence = confidence
         self.point = point
         self.isConfirmed = isConfirmed
+        self.floorEvidence = floorEvidence
     }
 }
 
@@ -2030,6 +2110,9 @@ struct TravelModeCorrection: Identifiable, Codable, Hashable, Sendable {
 }
 
 struct FloorTransition: Identifiable, Codable, Hashable, Sendable {
+    /// 사용자가 직접 고른 도착 층. 자동 재계산은 이것을 덮지 않는다.
+    static let userConfirmedEvidence = "사용자 확인"
+
     var id: UUID
     var placeKey: String
     var fromFloor: Int?
@@ -2038,6 +2121,12 @@ struct FloorTransition: Identifiable, Codable, Hashable, Sendable {
     var span: TimeSpan
     var confidence: ConfidenceLevel
     var evidence: [String]
+    /// `fromFloor` 를 만든 관측. 예전 빌드가 쓴 기록에는 없다.
+    var floorEvidence: FloorEvidence?
+
+    var isUserConfirmed: Bool {
+        evidence.contains(Self.userConfirmedEvidence)
+    }
 }
 
 enum MotionKind: String, Codable, CaseIterable, Sendable {
@@ -2399,6 +2488,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var floorCalibration: FloorCalibration?
     var floorCalibrationHistory: [FloorCalibrationEvent]
     var frequentPlaces: [FrequentPlace]
+    /// 기기 위치 기록에서만 나오는 값이라 iCloud로 내보내지 않는다.
+    var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
     var movementCorrections: [TravelModeCorrection]
     var suppressedActualIDs: Set<UUID>
     var weatherEnabled: Bool
@@ -2423,6 +2514,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         floorCalibration: nil,
         floorCalibrationHistory: [],
         frequentPlaces: FrequentPlace.defaults,
+        dismissedPlaceSuggestions: [],
         movementCorrections: [],
         suppressedActualIDs: [],
         weatherEnabled: false,
@@ -2450,6 +2542,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         floorCalibration: FloorCalibration? = nil,
         floorCalibrationHistory: [FloorCalibrationEvent] = [],
         frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
+        dismissedPlaceSuggestions: [DismissedPlaceSuggestion] = [],
         movementCorrections: [TravelModeCorrection] = [],
         suppressedActualIDs: Set<UUID> = [],
         weatherEnabled: Bool,
@@ -2473,6 +2566,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.floorCalibration = floorCalibration
         self.floorCalibrationHistory = floorCalibrationHistory
         self.frequentPlaces = Self.mergedFrequentPlaces(frequentPlaces)
+        self.dismissedPlaceSuggestions = dismissedPlaceSuggestions
         self.movementCorrections = movementCorrections
         self.suppressedActualIDs = suppressedActualIDs
         self.weatherEnabled = weatherEnabled
@@ -2498,6 +2592,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case floorCalibration
         case floorCalibrationHistory
         case frequentPlaces
+        case dismissedPlaceSuggestions
         case movementCorrections
         case suppressedActualIDs
         case weatherEnabled
@@ -2575,6 +2670,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                 forKey: .frequentPlaces
             ) ?? defaults.frequentPlaces
         )
+        dismissedPlaceSuggestions = try values.decodeIfPresent(
+            [DismissedPlaceSuggestion].self,
+            forKey: .dismissedPlaceSuggestions
+        ) ?? defaults.dismissedPlaceSuggestions
         movementCorrections = try values.decodeIfPresent(
             [TravelModeCorrection].self,
             forKey: .movementCorrections

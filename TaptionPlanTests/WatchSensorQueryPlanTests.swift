@@ -267,3 +267,141 @@ final class WatchSensorQueryPlanTests: XCTestCase {
         XCTAssertEqual(ledger.highWater, plan.last?.end)
     }
 }
+
+/// 시뮬레이터에는 페어링된 워치가 없어 `WCSession`으로는 세 상태를 만들 수
+/// 없다. 상태 판단을 값 계산으로 떼어 두었으므로 여기서 그대로 확인한다.
+final class AppleWatchOnboardingTests: XCTestCase {
+    private func prompt(
+        _ state: AppleWatchConnectionState,
+        dismissed: Set<AppleWatchOnboardingPrompt> = [],
+        hasSeenWatchAppInstalled: Bool = false
+    ) -> AppleWatchOnboardingPrompt? {
+        AppleWatchOnboarding.prompt(
+            for: state,
+            dismissed: dismissed,
+            hasSeenWatchAppInstalled: hasSeenWatchAppInstalled
+        )
+    }
+
+    private func store() -> (AppleWatchOnboardingStore, UserDefaults) {
+        let name = "AppleWatchOnboardingTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        return (AppleWatchOnboardingStore(defaults: defaults), defaults)
+    }
+
+    func testPairedWatchWithoutAppInvitesInstall() {
+        XCTAssertEqual(prompt(.appNotInstalled), .installInvitation)
+    }
+
+    func testNoPairedWatchExplainsLimitations() {
+        XCTAssertEqual(prompt(.notPaired), .watchlessLimitations)
+    }
+
+    func testInstalledWatchAppShowsNeither() {
+        XCTAssertNil(prompt(.background))
+        XCTAssertNil(prompt(.reachable))
+    }
+
+    /// iPad이거나 세션이 아직 활성화되기 전이다. 워치가 없다고 단정하면
+    /// 거짓말이 되므로 아무것도 보여 주지 않는다.
+    func testUnsupportedSessionSaysNothing() {
+        XCTAssertNil(prompt(.unsupported))
+    }
+
+    func testDismissalSuppressesTheSamePromptForever() {
+        XCTAssertNil(
+            prompt(.notPaired, dismissed: [.watchlessLimitations])
+        )
+        XCTAssertNil(
+            prompt(.appNotInstalled, dismissed: [.installInvitation])
+        )
+    }
+
+    /// 워치가 없다는 안내를 닫은 뒤 다음 주에 워치를 사면, 설치 권유는
+    /// 새 이야기이므로 한 번 뜬다.
+    func testPairingAfterDismissingWatchlessNoticeInvitesInstall() {
+        XCTAssertEqual(
+            prompt(.appNotInstalled, dismissed: [.watchlessLimitations]),
+            .installInvitation
+        )
+    }
+
+    /// 설치를 확인한 뒤 사용자가 워치 앱을 지운 경우다. 스스로 지운 것을
+    /// 다시 권하면 잔소리가 된다.
+    func testInstallIsNeverInvitedAgainOnceSeenInstalled() {
+        XCTAssertNil(
+            prompt(.appNotInstalled, hasSeenWatchAppInstalled: true)
+        )
+    }
+
+    func testDismissalPersistsAcrossStoreInstances() {
+        let (store, defaults) = store()
+        XCTAssertTrue(store.dismissed.isEmpty)
+        store.dismiss(.watchlessLimitations)
+
+        let reopened = AppleWatchOnboardingStore(defaults: defaults)
+        XCTAssertEqual(reopened.dismissed, [.watchlessLimitations])
+        XCTAssertFalse(reopened.hasSeenWatchAppInstalled)
+        XCTAssertNil(
+            prompt(.notPaired, dismissed: reopened.dismissed)
+        )
+    }
+
+    func testInstalledMarkPersistsAcrossStoreInstances() {
+        let (store, defaults) = store()
+        store.markWatchAppInstalled()
+
+        let reopened = AppleWatchOnboardingStore(defaults: defaults)
+        XCTAssertTrue(reopened.hasSeenWatchAppInstalled)
+    }
+
+    /// 설정 줄은 사라지지 않고 문구만 바뀐다. 설치되지 않았을 때만 찾아가는
+    /// 길을 덧붙이고, 이미 설치된 사람에게 설치를 권하지 않는다.
+    func testCompanionRowHasOneWordingPerState() {
+        let watchless = AppleWatchOnboarding.companionRow(for: .notPaired)
+        let notInstalled = AppleWatchOnboarding.companionRow(for: .appNotInstalled)
+        let installed = AppleWatchOnboarding.companionRow(for: .reachable)
+
+        XCTAssertEqual(watchless.value, "안내")
+        XCTAssertEqual(notInstalled.value, "설치 필요")
+        XCTAssertEqual(installed.value, "설치됨")
+
+        XCTAssertEqual(
+            notInstalled.detail,
+            AppleWatchOnboarding.installInstruction
+        )
+        XCTAssertNil(installed.detail)
+        XCTAssertEqual(
+            watchless.detail?.contains(AppleWatchOnboarding.iPhoneOnlyCoverage),
+            true
+        )
+
+        // iPad처럼 확인할 수 없는 기기에서도 워치 앱이 있다는 사실은 알린다.
+        XCTAssertEqual(
+            AppleWatchOnboarding.companionRow(for: .unsupported),
+            watchless
+        )
+
+        XCTAssertEqual(
+            Set([watchless.subtitle, notInstalled.subtitle, installed.subtitle])
+                .count,
+            3
+        )
+    }
+
+    /// 아이폰이 이미 하는 일을 없다고 적으면 거짓말이 된다. 목록에 아이폰
+    /// 단독으로도 남는 기록이 섞이지 않았는지 지킨다.
+    func testWatchlessLimitationsDoNotClaimIPhoneOnlyFeaturesAreLost() {
+        let text = AppleWatchOnboarding.watchlessLimitations.joined(
+            separator: "\n"
+        )
+        for covered in ["장소", "날씨", "앱 사용시간", "사진", "캘린더", "층수"] {
+            XCTAssertFalse(
+                text.contains(covered),
+                "iPhone만으로 되는 \(covered)을(를) 제한으로 적었다"
+            )
+        }
+        XCTAssertFalse(AppleWatchOnboarding.watchlessLimitations.isEmpty)
+    }
+}

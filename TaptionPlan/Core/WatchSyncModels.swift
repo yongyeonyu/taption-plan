@@ -977,6 +977,224 @@ struct TaptionWatchDaySummary: Codable, Hashable, Sendable {
     var activeMinutes: Int
 }
 
+/// 지금 무엇이 워치를 재고 있는지.
+enum TaptionWatchMeasurementSource: String, Codable, Hashable, Sendable {
+    /// 명시적 운동 세션. 25Hz로 가속도·자이로·심박을 함께 받는다.
+    case workout
+    /// `CMSensorRecorder`가 앱과 무관하게 남기는 배경 가속도 기록.
+    case ambient
+    /// 자동 기록이 꺼져 있거나 아직 아무것도 재지 않는 상태.
+    case idle
+
+    var title: String {
+        switch self {
+        case .workout: "운동 측정 중"
+        case .ambient: "배경 기록 중"
+        case .idle: "측정 대기"
+        }
+    }
+}
+
+/// 워치 앱이 앱 그룹에 남기는 "지금 재고 있는 것" 스냅숏.
+///
+/// 워치 위젯은 별도 프로세스라 워치 앱의 관측 상태를 직접 볼 수 없다.
+/// 위젯이 현재 측정을 보여주려면 이 스냅숏만 읽으면 된다.
+struct TaptionWatchMeasurementSnapshot: Codable, Hashable, Sendable {
+    var updatedAt: Date
+    var source: TaptionWatchMeasurementSource
+    var behavior: WatchBehaviorKind?
+    var confidenceScore: Double
+    /// 마지막으로 분류된 구간의 끝. 위젯의 "n분 전"이 쓰는 값이다.
+    var measuredAt: Date?
+    /// iPhone 설정이 자동 가속도 기록을 켜 두었는가.
+    var isRecordingRequested: Bool
+    /// 이 워치에서 `CMSensorRecorder`를 실제로 쓸 수 있는가.
+    var isRecorderAvailable: Bool
+    var isMotionAccessDenied: Bool
+    /// 기록 읽기가 예외로 끊긴 횟수(`ambient-drain-exception`).
+    var drainFailureCount: Int
+    /// 운동·기록 실패 문구. 워치 화면과 위젯이 같은 문장을 쓴다.
+    var failureMessage: String?
+
+    init(
+        updatedAt: Date = .now,
+        source: TaptionWatchMeasurementSource = .idle,
+        behavior: WatchBehaviorKind? = nil,
+        confidenceScore: Double = 0,
+        measuredAt: Date? = nil,
+        isRecordingRequested: Bool = false,
+        isRecorderAvailable: Bool = false,
+        isMotionAccessDenied: Bool = false,
+        drainFailureCount: Int = 0,
+        failureMessage: String? = nil
+    ) {
+        self.updatedAt = updatedAt
+        self.source = source
+        self.behavior = behavior
+        self.confidenceScore = min(1, max(0, confidenceScore))
+        self.measuredAt = measuredAt
+        self.isRecordingRequested = isRecordingRequested
+        self.isRecorderAvailable = isRecorderAvailable
+        self.isMotionAccessDenied = isMotionAccessDenied
+        self.drainFailureCount = max(0, drainFailureCount)
+        self.failureMessage = failureMessage
+    }
+}
+
+enum TaptionWatchAlertKind: String, Codable, Hashable, Sendable, CaseIterable {
+    case recordingFailed
+    case motionAccessDenied
+    case recorderUnavailable
+    case recordingGap
+    case measurementStalled
+
+    var symbolName: String {
+        switch self {
+        case .recordingFailed: "exclamationmark.triangle.fill"
+        case .motionAccessDenied: "hand.raised.fill"
+        case .recorderUnavailable: "sensor.tag.radiowaves.forward.fill"
+        case .recordingGap: "chart.line.downtrend.xyaxis"
+        case .measurementStalled: "clock.badge.exclamationmark.fill"
+        }
+    }
+}
+
+struct TaptionWatchAlert: Identifiable, Codable, Hashable, Sendable {
+    var kind: TaptionWatchAlertKind
+    var title: String
+    var detail: String
+
+    var id: String { kind.rawValue }
+    var symbolName: String { kind.symbolName }
+}
+
+/// 워치가 사용자를 불러야 하는 상황만 고른다.
+///
+/// 새 알림 종류를 만들지 않는다. 이미 워치가 알고 있는 사실(기록 실패,
+/// 권한, 읽기 예외, 마지막 측정 시각)만 문장으로 옮긴다. 알림 권한을
+/// 새로 요구하지 않도록 결과는 화면과 위젯 안에서만 쓴다.
+enum TaptionWatchAlertPolicy {
+    /// `CMSensorRecorder`는 앱이 꺼져 있어도 계속 기록하지만, 쌓인 표본은
+    /// 워치 앱이 실행될 때만 비워진다. 이만큼 새 측정이 없으면 앱을 한 번
+    /// 열어야 한다는 뜻이다.
+    static let stalledMeasurementInterval: TimeInterval = 6 * 3_600
+
+    static func alerts(
+        for snapshot: TaptionWatchMeasurementSnapshot?,
+        now: Date = .now
+    ) -> [TaptionWatchAlert] {
+        // 워치 앱이 한 번도 실행되지 않았으면 상태를 단정할 근거가 없다.
+        guard let snapshot else { return [] }
+        var alerts: [TaptionWatchAlert] = []
+        if let message = snapshot.failureMessage, !message.isEmpty {
+            alerts.append(
+                TaptionWatchAlert(
+                    kind: .recordingFailed,
+                    title: "기록이 멈췄어요",
+                    detail: message
+                )
+            )
+        }
+        if snapshot.isMotionAccessDenied {
+            alerts.append(
+                TaptionWatchAlert(
+                    kind: .motionAccessDenied,
+                    title: "동작 권한 없음",
+                    detail: "워치 설정에서 동작 및 피트니스를 켜 주세요"
+                )
+            )
+        } else if snapshot.isRecordingRequested, !snapshot.isRecorderAvailable {
+            alerts.append(
+                TaptionWatchAlert(
+                    kind: .recorderUnavailable,
+                    title: "배경 기록 불가",
+                    detail: "이 워치에서 가속도 기록을 쓸 수 없어요"
+                )
+            )
+        }
+        if snapshot.drainFailureCount > 0 {
+            alerts.append(
+                TaptionWatchAlert(
+                    kind: .recordingGap,
+                    title: "기록 일부 유실",
+                    detail: "읽지 못한 구간 \(snapshot.drainFailureCount)회"
+                )
+            )
+        }
+        if isMeasurementStalled(snapshot, now: now) {
+            alerts.append(
+                TaptionWatchAlert(
+                    kind: .measurementStalled,
+                    title: "새 측정 없음",
+                    detail: "워치 앱을 한 번 열면 밀린 기록을 가져와요"
+                )
+            )
+        }
+        return alerts
+    }
+
+    static func primary(
+        for snapshot: TaptionWatchMeasurementSnapshot?,
+        now: Date = .now
+    ) -> TaptionWatchAlert? {
+        alerts(for: snapshot, now: now).first
+    }
+
+    private static func isMeasurementStalled(
+        _ snapshot: TaptionWatchMeasurementSnapshot,
+        now: Date
+    ) -> Bool {
+        guard snapshot.isRecordingRequested,
+              snapshot.isRecorderAvailable,
+              !snapshot.isMotionAccessDenied else {
+            return false
+        }
+        // 운동 세션이 도는 동안에는 30초마다 새 요약이 나온다.
+        guard snapshot.source != .workout else { return false }
+        // 측정이 한 번도 없었던 기기는 "끊겼다"고 말할 근거가 없다.
+        // 설치 직후를 경고로 만들지 않는다.
+        guard let measuredAt = snapshot.measuredAt else { return false }
+        return now.timeIntervalSince(measuredAt) >= stalledMeasurementInterval
+    }
+}
+
+/// 워치 위젯 새로고침은 시스템 예산을 쓴다. 실제로 보이는 값이 바뀌었을
+/// 때만 다시 그리고, 그렇지 않으면 최소 간격을 지킨다.
+enum TaptionWatchWidgetRefreshPolicy {
+    static let minimumInterval: TimeInterval = 5 * 60
+
+    static func shouldReload(
+        previous: TaptionWatchMeasurementSnapshot?,
+        next: TaptionWatchMeasurementSnapshot,
+        lastReloadedAt: Date?,
+        now: Date = .now
+    ) -> Bool {
+        guard let previous, let lastReloadedAt else { return true }
+        guard displayIdentity(previous) == displayIdentity(next) else {
+            return true
+        }
+        return now.timeIntervalSince(lastReloadedAt) >= minimumInterval
+    }
+
+    /// 위젯이 실제로 그리는 값만 모은다. 신뢰도는 10% 단위로 뭉쳐,
+    /// 30초마다 도착하는 같은 분류가 새로고침을 태우지 않게 한다.
+    static func displayIdentity(
+        _ snapshot: TaptionWatchMeasurementSnapshot
+    ) -> String {
+        let confidence = Int((snapshot.confidenceScore * 10).rounded())
+        let alerts = TaptionWatchAlertPolicy
+            .alerts(for: snapshot, now: snapshot.updatedAt)
+            .map(\.kind.rawValue)
+            .joined(separator: ",")
+        return [
+            snapshot.source.rawValue,
+            snapshot.behavior?.rawValue ?? "none",
+            String(confidence),
+            alerts,
+        ].joined(separator: "|")
+    }
+}
+
 /// iPhone-owned policy for Watch motion sampling.  The Watch receives this
 /// with the normal timeline payload so an offline payload remains safe and
 /// backward compatible.

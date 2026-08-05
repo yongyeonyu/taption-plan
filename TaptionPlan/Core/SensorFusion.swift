@@ -1112,6 +1112,39 @@ struct FloorCalibrationEngine: Sendable {
         reading: SensorReading,
         calibration: FloorCalibration
     ) -> CalibratedAltitudeEstimate? {
+        estimate(
+            sample: AltitudeDelta.Sample(reading),
+            at: reading.point,
+            calibration: calibration
+        )
+    }
+
+    /// 기록이 스스로 지닌 근거로 다시 매기는 입구. 원본 표본이 지워진 뒤에도
+    /// 살아 있는 표본과 똑같은 규칙을 태운다.
+    func estimate(
+        evidence: FloorEvidence,
+        at point: GeoPoint?,
+        calibration: FloorCalibration
+    ) -> CalibratedAltitudeEstimate? {
+        guard var result = estimate(
+            sample: AltitudeDelta.Sample(
+                evidence,
+                altitudeMeters: point?.altitude
+            ),
+            at: point,
+            calibration: calibration
+        ) else {
+            return nil
+        }
+        result.floor = min(max(result.floor + evidence.floorOffset, -20), 200)
+        return result
+    }
+
+    private func estimate(
+        sample: AltitudeDelta.Sample,
+        at point: GeoPoint?,
+        calibration: FloorCalibration
+    ) -> CalibratedAltitudeEstimate? {
         let references: [FloorCalibrationPoint] = {
             if !calibration.referencePoints.isEmpty {
                 return calibration.referencePoints
@@ -1133,13 +1166,13 @@ struct FloorCalibrationEngine: Sendable {
         }()
         let candidates = references.compactMap { reference -> CalibratedAltitudeEstimate? in
             guard isNearReference(
-                reading.point,
+                point,
                 referencePoint: reference.point
             ) else { return nil }
 
             guard let measured = AltitudeDelta.between(
                 AltitudeDelta.Sample(reference),
-                and: AltitudeDelta.Sample(reading)
+                and: sample
             ) else { return nil }
             let delta = measured.meters
             let confidence: ConfidenceLevel
@@ -1164,7 +1197,7 @@ struct FloorCalibrationEngine: Sendable {
             )
             let verticalAccuracy = max(
                 3,
-                reading.point.flatMap {
+                point.flatMap {
                     $0.verticalAccuracy >= 0 ? $0.verticalAccuracy : nil
                 } ?? (reference.point.verticalAccuracy >= 0
                     ? reference.point.verticalAccuracy
@@ -1292,6 +1325,16 @@ struct FrequentPlaceResolutionEngine: Sendable {
             updated.displayName = match.name
             updated.buildingName = match.name
 
+            let anchor = readings
+                .filter { place.span.contains($0.timestamp) }
+                .min { $0.timestamp < $1.timestamp }
+            // 층수는 이 관측에서 파생된다. 표본은 7일 뒤 지워지므로 근거가
+            // 된 숫자를 기록 옆에 남겨 둔다. 이번 새로고침에 표본이 없다면
+            // 이미 적어 둔 근거를 지우지 않는다.
+            if let evidence = anchor.flatMap({ FloorEvidence($0) }) {
+                updated.floorEvidence = evidence
+            }
+
             // A user-confirmed floor is the building anchor. GPS altitude and
             // barometric altitude drift by several metres while standing in
             // one place, so recalculating from the first sample made a fixed
@@ -1299,12 +1342,9 @@ struct FrequentPlaceResolutionEngine: Sendable {
             // are handled separately by FloorTimelineEngine after they remain
             // stable across multiple samples.
             if let calibration = match.floorCalibration,
-               let reading = readings
-                        .filter({ place.span.contains($0.timestamp) })
-                        .sorted(by: { $0.timestamp < $1.timestamp })
-                        .first,
+               let anchor,
                let estimate = FloorCalibrationEngine().estimate(
-                            reading: reading,
+                            reading: anchor,
                             calibration: calibration
                       ) {
                 updated.floor = estimate.floor
@@ -1318,9 +1358,10 @@ struct FrequentPlaceResolutionEngine: Sendable {
         }
     }
 
-    /// 기준점을 고친 뒤, 이미 저장된 이 장소의 체류만 새 기준으로 다시
-    /// 매긴다. 원본 표본이 남아 있는 체류만 손댄다. 표본이 이미 지워진
-    /// 기록은 다시 구할 방법이 없으므로 그대로 둔다. 지어내는 것보다 낫다.
+    /// 기준점을 고친 뒤, 이미 저장된 이 장소의 체류를 새 기준으로 다시
+    /// 매긴다. 기록이 스스로 지닌 근거를 먼저 쓰고, 그것이 없는 옛 기록만
+    /// 7일 보관분에서 표본을 찾는다. 둘 다 없으면 다시 구할 방법이 없으므로
+    /// 있던 층수를 그대로 둔다. 지어내는 것보다 낫다.
     func reapplyingFloors(
         of place: FrequentPlace,
         to places: [PlaceStay],
@@ -1331,19 +1372,61 @@ struct FrequentPlaceResolutionEngine: Sendable {
         let ordered = readings.sorted { $0.timestamp < $1.timestamp }
         let engine = FloorCalibrationEngine()
         return places.map { stay in
-            guard stay.placeKey == key,
-                  let reading = ordered.first(where: {
-                      stay.span.contains($0.timestamp)
-                  }),
-                  let estimate = engine.estimate(
+            guard stay.placeKey == key else { return stay }
+            let estimate: CalibratedAltitudeEstimate?
+            if let evidence = stay.floorEvidence {
+                estimate = engine.estimate(
+                    evidence: evidence,
+                    at: stay.point ?? place.point,
+                    calibration: calibration
+                )
+            } else if let reading = ordered.first(where: {
+                stay.span.contains($0.timestamp)
+            }) {
+                estimate = engine.estimate(
                     reading: reading,
                     calibration: calibration
-                  ) else {
-                return stay
+                )
+            } else {
+                estimate = nil
             }
+            guard let estimate else { return stay }
             var updated = stay
             updated.floor = estimate.floor
             updated.confidence = estimate.confidence
+            return updated
+        }
+    }
+
+    /// 층 이동 기록도 기준 층 위에 얹혀 있다. 오르내린 층수는 그대로 두고
+    /// 출발 층만 새 기준으로 다시 매겨 도착 층까지 함께 옮긴다. 사용자가
+    /// 직접 고른 도착 층은 건드리지 않는다.
+    func reapplyingFloors(
+        of place: FrequentPlace,
+        to transitions: [FloorTransition]
+    ) -> [FloorTransition] {
+        guard let calibration = place.floorCalibration else {
+            return transitions
+        }
+        let key = place.stablePlaceKey
+        let engine = FloorCalibrationEngine()
+        return transitions.map { transition in
+            guard transition.placeKey == key,
+                  !transition.isUserConfirmed,
+                  let evidence = transition.floorEvidence,
+                  let from = transition.fromFloor,
+                  let estimate = engine.estimate(
+                    evidence: evidence,
+                    at: place.point,
+                    calibration: calibration
+                  ) else {
+                return transition
+            }
+            var updated = transition
+            updated.fromFloor = estimate.floor
+            updated.toFloor = transition.toFloor.map {
+                $0 - from + estimate.floor
+            }
             return updated
         }
     }
@@ -1372,6 +1455,254 @@ struct FrequentPlaceResolutionEngine: Sendable {
     }
 }
 
+/// 등록되지 않았는데 반복해서 머문 자리. 앱은 이름을 지어내지 않고, 이미
+/// 역지오코딩으로 받아 둔 이름이 있으면 그것만 제안한다. 등록은 사용자가 한다.
+struct FrequentPlaceSuggestion: Identifiable, Hashable, Sendable {
+    enum Reason: Hashable, Sendable {
+        /// 한 주 안에 세 번 이상.
+        case weekly
+        /// 한 달 안에 열 번 이상.
+        case monthly
+    }
+
+    var id: String
+    var point: GeoPoint
+    var suggestedName: String?
+    var visitCount: Int
+    var firstVisitedAt: Date
+    var lastVisitedAt: Date
+    var reason: Reason
+}
+
+/// 저장된 체류에서 "자주 가는데 등록만 안 한 곳"을 찾는다. 새 위치 수집은
+/// 하지 않고 `PlaceDetectionEngine` 이 이미 만들어 둔 체류만 센다.
+struct UnregisteredPlaceSuggestionEngine: Sendable {
+    /// 한 번의 도착이 한 번의 방문이다. `PlaceDetectionEngine` 이 표본 묶음
+    /// 하나를 체류 하나로 이미 줄여 두므로 GPS 표본 수는 세지 않는다.
+    /// 층 이동으로 한 체류가 둘로 갈라진 경우와 잠깐 나갔다 곧 돌아온 경우만
+    /// 다시 한 번의 방문으로 합친다.
+    var sameVisitGap: TimeInterval = 30 * 60
+    /// 방문으로 인정할 최소 체류. 체류를 만들 때 쓴 기준을 그대로 따른다.
+    var minimumStayDuration: TimeInterval = PlaceDetectionEngine().minimumDwell
+    /// 같은 장소로 볼 반경. 체류를 묶을 때 쓴 반경과 같아야 한 자리가 두
+    /// 군집으로 갈라지지 않는다.
+    var clusterRadiusMeters: Double = PlaceDetectionEngine().radiusMeters
+    /// 거절은 건물 단위로 기억한다. 다음 주 중심점이 몇 미터 흔들렸다고
+    /// 같은 커피숍을 다시 묻지 않는다.
+    var dismissalRadiusMeters = FrequentPlace.sameBuildingRadiusMeters
+    var weeklyWindow: TimeInterval = 7 * 86_400
+    var weeklyThreshold = 3
+    /// 되돌아보는 범위이자 "한 달" 조건의 창. 반년 전에 세 번 갔던 곳을
+    /// 이제 와서 묻지 않는다.
+    var monthlyWindow: TimeInterval = 30 * 86_400
+    var monthlyThreshold = 10
+
+    /// 화면에는 한 번에 하나만 띄운다. 조건을 넘긴 자리가 여럿이면 가장 많이
+    /// 간 곳, 그다음 가장 최근에 간 곳을 고른다.
+    func suggestion(
+        places: [PlaceStay],
+        frequentPlaces: [FrequentPlace],
+        dismissed: [DismissedPlaceSuggestion],
+        now: Date = .now
+    ) -> FrequentPlaceSuggestion? {
+        suggestions(
+            places: places,
+            frequentPlaces: frequentPlaces,
+            dismissed: dismissed,
+            now: now
+        )
+        .max {
+            ($0.visitCount, $0.lastVisitedAt) < ($1.visitCount, $1.lastVisitedAt)
+        }
+    }
+
+    private func suggestions(
+        places: [PlaceStay],
+        frequentPlaces: [FrequentPlace],
+        dismissed: [DismissedPlaceSuggestion],
+        now: Date
+    ) -> [FrequentPlaceSuggestion] {
+        let cutoff = now.addingTimeInterval(-monthlyWindow)
+        let candidates = places
+            .filter {
+                $0.point != nil
+                    && !$0.isWalkingLocation
+                    && !$0.isRegisteredFrequentPlace
+                    && $0.span.end > cutoff
+                    && $0.span.start <= now
+            }
+            .sorted { $0.span.start < $1.span.start }
+        guard !candidates.isEmpty else { return [] }
+
+        return clusters(of: candidates)
+            .filter { !isKnown($0, frequentPlaces: frequentPlaces) }
+            .filter { !isDismissed($0, dismissed: dismissed) }
+            .compactMap(suggestion(from:))
+    }
+
+    // MARK: - 군집
+
+    /// 같은 장소라도 방문마다 GPS 평균이 조금씩 달라져 `placeKey` 가 바뀐다.
+    /// 그래서 키가 아니라 거리로 묶는다.
+    private struct Cluster {
+        var stays: [PlaceStay] = []
+        var center = GeoPoint(
+            latitude: 0,
+            longitude: 0,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+    }
+
+    private func clusters(of stays: [PlaceStay]) -> [Cluster] {
+        var result: [Cluster] = []
+        for stay in stays {
+            guard let point = stay.point else { continue }
+            let nearest = result.indices
+                .map { ($0, distanceMeters(result[$0].center, point)) }
+                .filter { $0.1 <= clusterRadiusMeters }
+                .min { $0.1 < $1.1 }?
+                .0
+            if let nearest {
+                result[nearest].stays.append(stay)
+                result[nearest].center = centroid(of: result[nearest].stays)
+            } else {
+                result.append(Cluster(stays: [stay], center: point))
+            }
+        }
+        return result
+    }
+
+    private func centroid(of stays: [PlaceStay]) -> GeoPoint {
+        let points = stays.compactMap(\.point)
+        let count = Double(max(points.count, 1))
+        return GeoPoint(
+            latitude: points.map(\.latitude).reduce(0, +) / count,
+            longitude: points.map(\.longitude).reduce(0, +) / count,
+            altitude: points.map(\.altitude).reduce(0, +) / count,
+            horizontalAccuracy: points.map(\.horizontalAccuracy)
+                .reduce(0, +) / count,
+            verticalAccuracy: points.map(\.verticalAccuracy)
+                .reduce(0, +) / count
+        )
+    }
+
+    // MARK: - 제외
+
+    private func isKnown(
+        _ cluster: Cluster,
+        frequentPlaces: [FrequentPlace]
+    ) -> Bool {
+        frequentPlaces.contains { place in
+            guard let point = place.point else { return false }
+            return distanceMeters(point, cluster.center)
+                <= max(place.radiusMeters, clusterRadiusMeters)
+        }
+    }
+
+    private func isDismissed(
+        _ cluster: Cluster,
+        dismissed: [DismissedPlaceSuggestion]
+    ) -> Bool {
+        dismissed.contains {
+            distanceMeters($0.point, cluster.center) <= dismissalRadiusMeters
+        }
+    }
+
+    // MARK: - 방문 세기
+
+    private func suggestion(from cluster: Cluster) -> FrequentPlaceSuggestion? {
+        let visits = self.visits(in: cluster.stays)
+        guard let first = visits.first, let last = visits.last else {
+            return nil
+        }
+        let starts = visits.map(\.start)
+        let reason: FrequentPlaceSuggestion.Reason
+        if hasWindow(starts, count: weeklyThreshold, within: weeklyWindow) {
+            reason = .weekly
+        } else if hasWindow(
+            starts,
+            count: monthlyThreshold,
+            within: monthlyWindow
+        ) {
+            reason = .monthly
+        } else {
+            return nil
+        }
+        return FrequentPlaceSuggestion(
+            id: String(
+                format: "suggested-%.4f,%.4f",
+                cluster.center.latitude,
+                cluster.center.longitude
+            ),
+            point: cluster.center,
+            suggestedName: suggestedName(in: cluster.stays),
+            visitCount: visits.count,
+            firstVisitedAt: first.start,
+            lastVisitedAt: last.end,
+            reason: reason
+        )
+    }
+
+    private func visits(in stays: [PlaceStay]) -> [TimeSpan] {
+        var merged: [TimeSpan] = []
+        for stay in stays.sorted(by: { $0.span.start < $1.span.start }) {
+            if let last = merged.last,
+               stay.span.start.timeIntervalSince(last.end) <= sameVisitGap {
+                merged[merged.count - 1] = TimeSpan(
+                    start: last.start,
+                    end: max(last.end, stay.span.end)
+                )
+            } else {
+                merged.append(stay.span)
+            }
+        }
+        return merged.filter { $0.duration >= minimumStayDuration }
+    }
+
+    /// 정렬된 시각에서 `count` 번이 `window` 안에 들어가는 구간이 있는지 본다.
+    private func hasWindow(
+        _ times: [Date],
+        count: Int,
+        within window: TimeInterval
+    ) -> Bool {
+        guard count > 0 else { return true }
+        guard times.count >= count else { return false }
+        for index in 0...(times.count - count)
+        where times[index + count - 1].timeIntervalSince(times[index])
+            <= window {
+            return true
+        }
+        return false
+    }
+
+    // MARK: - 이름
+
+    /// 이름은 지어내지 않는다. 역지오코딩이 이미 붙여 준 이름만 쓰고, 자동
+    /// 생성 자리표시자는 이름으로 치지 않는다.
+    private func suggestedName(in stays: [PlaceStay]) -> String? {
+        var counts: [String: Int] = [:]
+        for stay in stays where !Self.isPlaceholderName(stay.displayName) {
+            counts[stay.displayName, default: 0] += 1
+        }
+        return counts
+            .sorted {
+                $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value
+            }
+            .first?
+            .key
+    }
+
+    static func isPlaceholderName(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty
+            || trimmed == "자동 감지 장소"
+            || trimmed == "확인된 위치"
+            || trimmed.hasPrefix("장소 · ")
+    }
+}
+
 struct FloorTimelineEngine: Sendable {
     var estimator = FloorEstimator(minimumStableSampleCount: 3)
     var minimumPlaceSegmentDuration: TimeInterval = 60
@@ -1393,7 +1724,7 @@ struct FloorTimelineEngine: Sendable {
             }
             let baselineFloor =
                 place.floor ?? floorByPlaceKey[place.placeKey]
-            guard let transition = estimator.estimate(
+            guard var transition = estimator.estimate(
                 readings: relevant,
                 placeKey: place.placeKey,
                 baselineFloor: baselineFloor
@@ -1405,6 +1736,9 @@ struct FloorTimelineEngine: Sendable {
                 continue
             }
 
+            // 이동의 출발 층은 이 체류의 기준 층이다. 그 기준을 만든 근거를
+            // 함께 남겨야 나중에 기준을 고쳤을 때 출발·도착 층이 따라온다.
+            transition.floorEvidence = place.floorEvidence
             transitions.append(transition)
             guard let fromFloor = transition.fromFloor,
                   let toFloor = transition.toFloor else {
@@ -1422,6 +1756,8 @@ struct FloorTimelineEngine: Sendable {
                 resolvedPlaces.append(contentsOf: segments)
             } else {
                 place.floor = toFloor
+                place.floorEvidence = place.floorEvidence?
+                    .offset(by: toFloor - fromFloor)
                 place.confidence = transition.confidence
                 place.isConfirmed = false
                 resolvedPlaces.append(place)
@@ -1479,6 +1815,10 @@ struct FloorTimelineEngine: Sendable {
         var after = place
         after.id = UUID()
         after.floor = toFloor
+        // 근거를 잰 자리는 체류가 시작된 앞 조각이다. 뒤 조각은 그보다
+        // 오르내린 만큼 위에 있다.
+        after.floorEvidence = place.floorEvidence?
+            .offset(by: toFloor - fromFloor)
         after.span = TimeSpan(
             start: transition.span.end,
             end: place.span.end
@@ -1568,6 +1908,11 @@ struct PlaceDetectionEngine: Sendable {
 extension PlaceStay {
     var isWalkingLocation: Bool {
         placeKey.hasPrefix("walking:")
+    }
+
+    /// `FrequentPlaceResolutionEngine` 이 자주가는 곳으로 확정한 체류.
+    var isRegisteredFrequentPlace: Bool {
+        placeKey.hasPrefix("frequent-")
     }
 }
 

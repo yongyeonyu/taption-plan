@@ -17,6 +17,13 @@ struct WatchAmbientDrainResult: Sendable {
     var archiveSamples: [WatchAmbientArchiveSample] = []
 }
 
+/// 배경 기록이 실제로 살아 있는지. 워치 화면과 위젯이 같은 값을 본다.
+struct WatchAmbientRecorderStatus: Sendable {
+    var isAvailable: Bool
+    var isAccessDenied: Bool
+    var drainFailureCount: Int
+}
+
 /// 앱이 꺼져 있는 동안에도 손목 가속도를 남기는 주변 기록기.
 ///
 /// watchOS는 손목을 내리면 몇 초 안에 앱을 정지시키고 정지된 앱의
@@ -53,6 +60,18 @@ actor WatchAmbientSensorRecorder {
 
     var isAvailable: Bool {
         CMSensorRecorder.isAccelerometerRecordingAvailable()
+    }
+
+    /// 기록기 상태를 한 번에 읽는다. 실패 횟수는 `reportDrainFailure`가
+    /// 올려 둔 값이라, 워치를 다시 켜도 유실 구간이 있었다는 사실이 남는다.
+    func status() -> WatchAmbientRecorderStatus {
+        let authorization = CMSensorRecorder.authorizationStatus()
+        return WatchAmbientRecorderStatus(
+            isAvailable: CMSensorRecorder.isAccelerometerRecordingAvailable(),
+            isAccessDenied: authorization == .denied
+                || authorization == .restricted,
+            drainFailureCount: defaults.integer(forKey: failureCountKey)
+        )
     }
 
     /// 앱이 실행될 때마다 API가 허용하는 가장 먼 미래까지 기록을 다시 건다.

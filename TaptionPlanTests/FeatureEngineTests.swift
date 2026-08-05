@@ -1,5 +1,7 @@
 import XCTest
 import UIKit
+import CoreLocation
+import SwiftUI // TEMP-CAT-SHEET
 @testable import TaptionPlan
 
 final class FeatureEngineTests: XCTestCase {
@@ -72,6 +74,228 @@ final class FeatureEngineTests: XCTestCase {
             selectedTravelID: nearby.id
         )
         XCTAssertEqual(tappedSegment.map(\.id), [nearby.id])
+    }
+
+    func testRouteMapContextFollowsTheVisiblePeriodExceptAtYearScale() {
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 1),
+            end: makeDate(2026, 8, 2)
+        )
+        for level in [TimelineLevel.day, .week, .month] {
+            XCTAssertEqual(
+                TimelineRouteDisplayPolicy.contextSpan(
+                    for: level,
+                    visibleSpan: day
+                ),
+                day,
+                "\(level) 눈금은 보이는 기간 전체를 지도에 깔아야 한다"
+            )
+        }
+        XCTAssertNil(
+            TimelineRouteDisplayPolicy.contextSpan(
+                for: .year,
+                visibleSpan: day
+            ),
+            "년 눈금은 배경 경로를 깔지 않는다"
+        )
+    }
+
+    func testRouteContextKeepsEveryTripInOrderAndCapsTheLongestOnes() {
+        let day = makeDate(2026, 8, 1)
+        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
+        let trips = (0..<10).map { index in
+            TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: day.addingTimeInterval(Double(index) * hour),
+                    end: day.addingTimeInterval(Double(index) * hour + 600)
+                ),
+                distanceMeters: Double(index) * 100,
+                confidence: .high,
+                evidence: ["GPS"]
+            )
+        }
+        let outside = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: day.addingTimeInterval(-4 * hour),
+                end: day.addingTimeInterval(-3 * hour)
+            ),
+            distanceMeters: 50_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+
+        let all = TimelineRouteDisplayPolicy.contextSegments(
+            from: trips + [outside],
+            intersecting: span
+        )
+        XCTAssertEqual(all.map(\.id), trips.map(\.id))
+
+        let capped = TimelineRouteDisplayPolicy.contextSegments(
+            from: trips,
+            intersecting: span,
+            limit: 3
+        )
+        XCTAssertEqual(capped.count, 3)
+        XCTAssertEqual(
+            Set(capped.map(\.id)),
+            Set(trips.suffix(3).map(\.id)),
+            "상한을 넘으면 이동 거리가 긴 구간이 남는다"
+        )
+        XCTAssertEqual(
+            capped.map(\.span.start),
+            capped.map(\.span.start).sorted(),
+            "남은 구간은 시간 순서를 지킨다"
+        )
+    }
+
+    func testRouteReadingSpanStopsAtTheSensorRetentionWindow() {
+        let now = makeDate(2026, 8, 25, 15, 30)
+        let month = TimeSpan(
+            start: makeDate(2026, 8, 1),
+            end: makeDate(2026, 9, 1)
+        )
+        let fallback = TimeSpan(
+            start: makeDate(2026, 8, 25),
+            end: makeDate(2026, 8, 26)
+        )
+
+        let clamped = TimelineRouteDisplayPolicy.readingSpan(
+            context: month,
+            fallback: fallback,
+            now: now
+        )
+        XCTAssertEqual(clamped.end, month.end)
+        XCTAssertGreaterThan(clamped.start, month.start)
+        XCTAssertLessThanOrEqual(
+            now.timeIntervalSince(clamped.start),
+            TimelineRouteDisplayPolicy.readingRetentionWindow + 86_400
+        )
+
+        // 화면을 다시 그려도 구간이 흔들리면 기록 읽기가 끝없이 다시
+        // 시작한다. 같은 날 안에서는 같은 값이 나와야 한다.
+        XCTAssertEqual(
+            clamped,
+            TimelineRouteDisplayPolicy.readingSpan(
+                context: month,
+                fallback: fallback,
+                now: now.addingTimeInterval(7 * 60)
+            )
+        )
+
+        let ancient = TimeSpan(
+            start: makeDate(2025, 1, 1),
+            end: makeDate(2025, 2, 1)
+        )
+        XCTAssertEqual(
+            TimelineRouteDisplayPolicy.readingSpan(
+                context: ancient,
+                fallback: fallback,
+                now: now
+            ),
+            fallback,
+            "좌표가 남아 있지 않은 기간은 예전 구간 그대로 읽는다"
+        )
+        XCTAssertEqual(
+            TimelineRouteDisplayPolicy.readingSpan(
+                context: nil,
+                fallback: fallback,
+                now: now
+            ),
+            fallback
+        )
+    }
+
+    func testRouteDecimationDropsPointsKeepsEndsAndStaysWithinTolerance() {
+        let dense = makeWalkPolyline(pointCount: 900)
+        let simplified = RoutePolylineDecimator.decimate(
+            dense,
+            toleranceMeters: 5,
+            limit: 400
+        )
+
+        XCTAssertLessThan(simplified.count, dense.count)
+        XCTAssertGreaterThanOrEqual(simplified.count, 2)
+        XCTAssertEqual(simplified.first?.latitude, dense.first?.latitude)
+        XCTAssertEqual(simplified.first?.longitude, dense.first?.longitude)
+        XCTAssertEqual(simplified.last?.latitude, dense.last?.latitude)
+        XCTAssertEqual(simplified.last?.longitude, dense.last?.longitude)
+
+        let worst = dense.compactMap {
+            RoutePolylineDecimator.distanceMeters(from: $0, to: simplified)
+        }.max() ?? 0
+        XCTAssertLessThanOrEqual(
+            worst,
+            5.001,
+            "줄인 경로는 원래 모양에서 허용 오차보다 멀어지지 않는다"
+        )
+    }
+
+    func testRouteDecimationNeverDrawsMoreThanTheCap() {
+        // 5m 오차로는 하나도 못 줄이는 톱니 경로. 상한이 없으면 그대로
+        // 수천 점을 그리게 된다.
+        let zigzag = (0..<5_000).map { index in
+            CLLocationCoordinate2D(
+                latitude: 37.5 + Double(index) * 0.0005,
+                longitude: 127.0 + (index % 2 == 0 ? 0.0005 : -0.0005)
+            )
+        }
+        let simplified = RoutePolylineDecimator.decimate(
+            zigzag,
+            toleranceMeters: 5,
+            limit: 400
+        )
+        XCTAssertLessThanOrEqual(simplified.count, 400)
+        XCTAssertEqual(simplified.first?.latitude, zigzag.first?.latitude)
+        XCTAssertEqual(simplified.last?.latitude, zigzag.last?.latitude)
+    }
+
+    func testRouteSpacingDropsStandingJitterButKeepsArrival() {
+        var points = [CLLocationCoordinate2D](
+            repeating: CLLocationCoordinate2D(latitude: 37.5, longitude: 127.0),
+            count: 40
+        )
+        points.append(
+            CLLocationCoordinate2D(latitude: 37.5008, longitude: 127.0)
+        )
+        let spaced = RoutePolylineDecimator.spaced(points, minimumMeters: 3)
+        XCTAssertEqual(spaced.count, 2)
+        XCTAssertEqual(spaced.first?.latitude, points.first?.latitude)
+        XCTAssertEqual(spaced.last?.latitude, points.last?.latitude)
+    }
+
+    func testRouteHitTestMeasuresDistanceToTheDrawnLine() {
+        let line = [
+            CLLocationCoordinate2D(latitude: 37.5000, longitude: 127.0000),
+            CLLocationCoordinate2D(latitude: 37.5000, longitude: 127.0020),
+        ]
+        let onLine = RoutePolylineDecimator.distanceMeters(
+            from: CLLocationCoordinate2D(latitude: 37.5, longitude: 127.001),
+            to: line
+        ) ?? .infinity
+        XCTAssertLessThan(onLine, 1)
+
+        let offLine = RoutePolylineDecimator.distanceMeters(
+            from: CLLocationCoordinate2D(latitude: 37.5009, longitude: 127.001),
+            to: line
+        ) ?? 0
+        XCTAssertEqual(offLine, 100, accuracy: 5)
+        XCTAssertNil(RoutePolylineDecimator.distanceMeters(from: line[0], to: []))
+    }
+
+    /// 굽은 길을 1m 간격으로 찍은 뒤 GPS 흔들림을 얹은 경로.
+    private func makeWalkPolyline(pointCount: Int) -> [CLLocationCoordinate2D] {
+        (0..<pointCount).map { index in
+            let progress = Double(index) / Double(max(1, pointCount - 1))
+            let jitter = sin(Double(index) * 1.7) * 0.000004
+            return CLLocationCoordinate2D(
+                latitude: 37.5 + progress * 0.004 + jitter,
+                longitude: 127.0
+                    + sin(progress * .pi * 2) * 0.002
+                    + cos(Double(index) * 2.3) * 0.000004
+            )
+        }
     }
 
     func testMovementDisplayHidesRawRecordWhenTravelCoversIt() {
@@ -4631,7 +4855,7 @@ final class FeatureEngineTests: XCTestCase {
         let reference = Date(timeIntervalSinceReferenceDate: 0)
         let actions = TaptionWidgetCatAction.allCases
 
-        XCTAssertEqual(actions.count, 9)
+        XCTAssertEqual(actions.count, 12)
         XCTAssertEqual(Set(actions.map(\.previewTitle)).count, actions.count)
         XCTAssertTrue(actions.allSatisfy { !$0.previewSystemImage.isEmpty })
 
@@ -4666,19 +4890,20 @@ final class FeatureEngineTests: XCTestCase {
 
     func testCatFrameClocksSupportWatchSizedIntOverflowDates() {
         let currentEra = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let phases = 0...(TaptionCatAnimationEngine.phaseCount - 1)
 
         XCTAssertTrue(
-            (0...3).contains(
+            phases.contains(
                 TaptionCatAnimationEngine.pose(at: currentEra).phase
             )
         )
         XCTAssertTrue(
-            (0...3).contains(
+            phases.contains(
                 TaptionWidgetCatWalkEngine.pose(at: currentEra).legPhase
             )
         )
         XCTAssertTrue(
-            (0...3).contains(
+            phases.contains(
                 TaptionWidgetCatPreviewEngine.pose(
                     at: currentEra,
                     action: .walking
@@ -4686,6 +4911,359 @@ final class FeatureEngineTests: XCTestCase {
             )
         )
     }
+
+    func testReduceMotionFreezesEveryCatActionIncludingIdleDetail() {
+        let reference = Date(timeIntervalSinceReferenceDate: 0)
+        let samples = (0..<80).map {
+            reference.addingTimeInterval(
+                Double($0) * TaptionCatAnimationEngine.stepDuration
+            )
+        }
+
+        for action in TaptionCatAnimationAction.allCases {
+            for date in samples {
+                let pose = TaptionCatAnimationEngine.pose(
+                    at: date,
+                    preferredAction: action,
+                    reducesMotion: true
+                )
+                XCTAssertEqual(pose.action, .sitting)
+                XCTAssertEqual(pose.phase, 0)
+                XCTAssertEqual(pose.progress, 0.5, accuracy: 0.001)
+                XCTAssertFalse(pose.facesLeft)
+                XCTAssertEqual(pose.tailSwing, 0, accuracy: 0.0001)
+                XCTAssertEqual(pose.headTiltDegrees, 0, accuracy: 0.0001)
+                XCTAssertEqual(pose.legSwing, 0, accuracy: 0.0001)
+                XCTAssertEqual(pose.idle, .still)
+                XCTAssertEqual(pose.cycleEase, 0, accuracy: 0.0001)
+            }
+        }
+
+        for action in TaptionWidgetCatAction.allCases {
+            for date in samples {
+                let pose = TaptionWidgetCatPreviewEngine.pose(
+                    at: date,
+                    action: action,
+                    reducesMotion: true
+                )
+                XCTAssertEqual(pose.legPhase, 0)
+                XCTAssertEqual(pose.progress, 0.5, accuracy: 0.001)
+                XCTAssertFalse(pose.facesLeft)
+                XCTAssertEqual(pose.tailSwing, 0, accuracy: 0.0001)
+                XCTAssertEqual(pose.headTiltDegrees, 0, accuracy: 0.0001)
+                XCTAssertEqual(pose.legSwing, 0, accuracy: 0.0001)
+                XCTAssertEqual(pose.idle, .still)
+            }
+        }
+
+        XCTAssertEqual(
+            TaptionCatIdleBeat.beat(at: reference, reducesMotion: true),
+            .still
+        )
+        XCTAssertEqual(TaptionCatIdleBeat.still.eyeOpenness, 1, accuracy: 0.0001)
+        XCTAssertEqual(TaptionCatIdleBeat.still.earFlick, 0, accuracy: 0.0001)
+        XCTAssertEqual(TaptionCatIdleBeat.still.tailTip, 0, accuracy: 0.0001)
+    }
+
+    func testEveryCatActionHasFinitePoseAtEveryPhase() {
+        let phases = Array(-3...(TaptionCatAnimationEngine.phaseCount + 3))
+
+        for action in TaptionCatAnimationAction.allCases {
+            for phase in phases {
+                let motion = TaptionCatAnimationEngine.motionDetails(
+                    for: action,
+                    phase: phase
+                )
+                XCTAssertTrue(motion.tailSwing.isFinite, "\(action) \(phase)")
+                XCTAssertTrue(
+                    motion.headTiltDegrees.isFinite,
+                    "\(action) \(phase)"
+                )
+                XCTAssertTrue(motion.legSwing.isFinite, "\(action) \(phase)")
+                XCTAssertLessThanOrEqual(abs(motion.tailSwing), 1.01)
+                XCTAssertLessThanOrEqual(abs(motion.legSwing), 1.01)
+                XCTAssertLessThanOrEqual(abs(motion.headTiltDegrees), 24)
+
+                let pose = TaptionCatAnimationEngine.pose(
+                    from: action.rawValue,
+                    progress: 0.5,
+                    phase: phase,
+                    facesLeft: false,
+                    tailSwing: motion.tailSwing,
+                    headTiltDegrees: motion.headTiltDegrees,
+                    legSwing: motion.legSwing
+                )
+                XCTAssertEqual(pose.action, action)
+                XCTAssertTrue((0...1).contains(pose.cycleEase))
+            }
+        }
+
+        // 위젯이 도는 40스텝 시퀀스가 8위상 주기를 끊김 없이 채운다.
+        let walkPhases = (0..<40).map {
+            TaptionWidgetCatWalkEngine.pose(
+                at: Date(
+                    timeIntervalSinceReferenceDate:
+                        Double($0)
+                            * TaptionWidgetCatWalkEngine.defaultStepDuration
+                            + 0.01
+                )
+            ).legPhase
+        }
+        XCTAssertEqual(
+            Set(walkPhases),
+            Set(0..<TaptionCatAnimationEngine.phaseCount)
+        )
+    }
+
+    func testCatActionVocabulariesShareRawValuesAndTolerateUnknownStored() {
+        XCTAssertEqual(
+            Set(TaptionWidgetCatAction.allCases.map(\.rawValue)),
+            Set(TaptionCatAnimationAction.allCases.map(\.rawValue))
+        )
+        for action in TaptionWidgetCatAction.allCases {
+            XCTAssertEqual(action.animationAction.rawValue, action.rawValue)
+        }
+
+        // 옛 저장본이나 알 수 없는 동작 이름은 기본 동작으로 떨어진다.
+        XCTAssertNil(TaptionWidgetCatAction(rawValue: "zoomies"))
+        XCTAssertEqual(
+            TaptionCatAnimationEngine.pose(
+                from: "zoomies",
+                progress: 0.5,
+                phase: 0,
+                facesLeft: false,
+                tailSwing: 0,
+                headTiltDegrees: 0
+            ).action,
+            .walking
+        )
+        XCTAssertEqual(
+            TaptionCatAnimationEngine.pose(
+                from: "",
+                progress: 2,
+                phase: 0,
+                facesLeft: false,
+                tailSwing: 0,
+                headTiltDegrees: 0
+            ).progress,
+            1,
+            accuracy: 0.0001
+        )
+    }
+
+    func testStoredSettingsKeepCatChoiceWhenActionNamesAreUnknown() throws {
+        let legacy = """
+        {
+            "startScale": "day",
+            "rememberLastScale": true,
+            "catStyle": "cheese",
+            "reduceMotion": true,
+            "catAction": "zoomies",
+            "showsPhotos": false,
+            "showsPhotosInWidgets": false,
+            "selectedCalendarIDs": [],
+            "healthEnabled": false,
+            "locationEnabled": false,
+            "backgroundPreciseLocationEnabled": false,
+            "weatherEnabled": false,
+            "notificationsEnabled": false,
+            "permissions": []
+        }
+        """
+        let decoded = try JSONDecoder().decode(
+            AppFeatureSettings.self,
+            from: Data(legacy.utf8)
+        )
+
+        XCTAssertEqual(decoded.catStyle, .cheese)
+        XCTAssertTrue(decoded.reduceMotion)
+        XCTAssertTrue(decoded.rememberLastScale)
+        XCTAssertEqual(
+            decoded.sensorCollectionProfile,
+            AppFeatureSettings.defaults.sensorCollectionProfile
+        )
+    }
+
+    func testCatIdleBeatBlinksAndStirsAcrossOneMinute() {
+        let step = TaptionCatAnimationEngine.stepDuration
+        let beats = (0..<750).map {
+            TaptionCatIdleBeat.beat(
+                at: Date(timeIntervalSinceReferenceDate: Double($0) * step)
+            )
+        }
+
+        XCTAssertTrue(beats.allSatisfy {
+            $0.eyeOpenness.isFinite
+                && $0.earFlick.isFinite
+                && $0.tailTip.isFinite
+        })
+        XCTAssertTrue(beats.allSatisfy { (0...1).contains($0.eyeOpenness) })
+        XCTAssertTrue(beats.allSatisfy { abs($0.earFlick) <= 1 })
+        XCTAssertTrue(beats.allSatisfy { abs($0.tailTip) <= 1 })
+
+        let closedFrames = beats.filter { $0.eyeOpenness < 0.5 }.count
+        XCTAssertGreaterThan(closedFrames, 8)
+        // 눈을 감고 있는 시간이 뜨고 있는 시간을 넘으면 졸려 보인다.
+        XCTAssertLessThan(Double(closedFrames) / Double(beats.count), 0.15)
+        XCTAssertTrue(beats.contains { abs($0.earFlick) > 0.6 })
+        XCTAssertTrue(beats.contains { $0.tailTip > 0.7 })
+        XCTAssertTrue(beats.contains { $0.tailTip < -0.7 })
+
+        // 기준일 이전 날짜에서도 나머지 연산이 음수로 새지 않는다.
+        let past = (1...400).map {
+            TaptionCatIdleBeat.beat(
+                at: Date(timeIntervalSinceReferenceDate: Double(-$0) * step)
+            )
+        }
+        XCTAssertTrue(past.allSatisfy { (0...1).contains($0.eyeOpenness) })
+        XCTAssertTrue(past.allSatisfy { abs($0.earFlick) <= 1 })
+        XCTAssertTrue(past.allSatisfy { abs($0.tailTip) <= 1 })
+        XCTAssertTrue(past.contains { $0.eyeOpenness < 0.5 })
+
+        XCTAssertEqual(
+            TaptionCatIdleBeat.beat(at: Date(timeIntervalSinceReferenceDate: .nan)),
+            .still
+        )
+    }
+
+    // TEMP-CAT-SHEET-START
+    @MainActor
+    func testTempRenderCatContactSheet() throws {
+        let outputRoot = "/Users/u_mo_c/Documents/taption plan/.cat-visual-check"
+        try? FileManager.default.createDirectory(
+            atPath: outputRoot,
+            withIntermediateDirectories: true
+        )
+        let step = TaptionCatAnimationEngine.stepDuration
+        let phases = TaptionCatAnimationEngine.phaseCount
+
+        func poses(
+            for action: TaptionCatAnimationAction,
+            base: Double,
+            count: Int
+        ) -> [TaptionCatAnimationPose] {
+            (0..<count).map { index in
+                TaptionCatAnimationEngine.pose(
+                    at: Date(
+                        timeIntervalSinceReferenceDate: base + Double(index) * step
+                    ),
+                    preferredAction: action
+                )
+            }
+        }
+
+        func strip(
+            _ label: String,
+            _ list: [TaptionCatAnimationPose],
+            reduces: Bool = false
+        ) -> AnyView {
+            AnyView(
+                HStack(spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 9, weight: .bold))
+                        .frame(width: 78, alignment: .leading)
+                    ForEach(Array(list.enumerated()), id: \.offset) { _, pose in
+                        TaptionCatAnimationView(
+                            style: "calico",
+                            pose: pose,
+                            reducesMotion: reduces
+                        )
+                        .frame(width: 52, height: 32)
+                        .background(Color(white: 0.97))
+                        .border(Color(white: 0.85), width: 0.5)
+                    }
+                }
+            )
+        }
+
+        var rows: [AnyView] = []
+        for action in TaptionCatAnimationAction.allCases {
+            rows.append(
+                strip(
+                    action.rawValue,
+                    poses(for: action, base: 1.0, count: phases)
+                )
+            )
+        }
+        rows.append(
+            strip(
+                "idle 0.00~0.56s",
+                poses(for: .sitting, base: 0, count: phases)
+            )
+        )
+        rows.append(
+            strip(
+                "reduceMotion",
+                (0..<phases).map { index in
+                    TaptionCatAnimationEngine.pose(
+                        at: Date(
+                            timeIntervalSinceReferenceDate: Double(index) * step
+                        ),
+                        preferredAction: .running,
+                        reducesMotion: true
+                    )
+                },
+                reduces: true
+            )
+        )
+
+        let sheet = VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                row
+            }
+        }
+        .padding(6)
+        .background(Color.white)
+
+        for scale in [4.0, 3.0] {
+            let renderer = ImageRenderer(content: sheet)
+            renderer.scale = scale
+            guard let image = renderer.uiImage,
+                  let data = image.pngData() else {
+                XCTFail("렌더 실패")
+                return
+            }
+            try data.write(
+                to: URL(
+                    fileURLWithPath:
+                        "\(outputRoot)/cat_sheet_x\(Int(scale)).png"
+                )
+            )
+        }
+
+        // 위젯 실제 크기(@3x) 한 줄 스트립.
+        for action in TaptionCatAnimationAction.allCases {
+            let renderer = ImageRenderer(
+                content: HStack(spacing: 1) {
+                    ForEach(0..<phases, id: \.self) { index in
+                        TaptionCatAnimationView(
+                            style: "calico",
+                            pose: TaptionCatAnimationEngine.pose(
+                                at: Date(
+                                    timeIntervalSinceReferenceDate:
+                                        1.0 + Double(index) * step
+                                ),
+                                preferredAction: action
+                            ),
+                            reducesMotion: false
+                        )
+                        .frame(width: 52, height: 32)
+                    }
+                }
+                .background(Color(red: 1.0, green: 0.97, blue: 0.91))
+            )
+            renderer.scale = 3
+            if let data = renderer.uiImage?.pngData() {
+                try data.write(
+                    to: URL(
+                        fileURLWithPath:
+                            "\(outputRoot)/actual_\(action.rawValue).png"
+                    )
+                )
+            }
+        }
+    }
+    // TEMP-CAT-SHEET-END
 
     func testWidgetCatActionMatchesCurrentActionItemCategoryAndTitle() {
         XCTAssertEqual(
@@ -7055,6 +7633,472 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(regenerated.map(\.title), ["걷기"])
     }
 
+    // MARK: - 한 곳에 머문 시간 잇기
+
+    /// 사용자가 본 것: 회사에서 한 번도 나가지 않았는데 "근무 2회 · 4시간
+    /// 23분". 층이 바뀌면 체류가 둘로 갈리고(FloorTimelineEngine.split),
+    /// 자리를 옮겨 잠깐 걸으면 체류 묶음이 끊긴다(PlaceDetectionEngine).
+    /// 등록한 곳 반경 안이라면 어느 쪽도 "나갔다"가 아니다.
+    func testWorkStaysJoinAcrossAFloorChangeAtTheSamePlace() {
+        let officeStart = makeDate(2026, 8, 4, 9, 0)
+        let readings = officeReadings(
+            from: officeStart,
+            count: 25,
+            metersFromAnchor: { _ in 0 }
+        )
+        let stay = PlaceStay(
+            placeKey: officeKey,
+            displayName: "회사",
+            floor: 20,
+            span: TimeSpan(
+                start: officeStart,
+                end: officeStart.addingTimeInterval(4 * hour)
+            ),
+            confidence: .high,
+            point: officePoint(0),
+            isConfirmed: true,
+            floorEvidence: FloorEvidence(
+                measuredAt: officeStart,
+                relativeAltitudeMeters: 57
+            )
+        )
+        // 20층 → 2층. 같은 회사이므로 떠난 것이 아니다.
+        let timeline = FloorTimelineEngine().apply(
+            readings: floorChanging(readings, after: 12),
+            to: [stay],
+            knownPlaces: []
+        )
+        XCTAssertEqual(
+            timeline.places.count,
+            2,
+            "층 이동이 체류를 둘로 가르는 것이 쪼개짐의 원인이다"
+        )
+        XCTAssertEqual(Set(timeline.places.map(\.placeKey)).count, 1)
+
+        let records = officeRecords(stays: timeline.places, readings: readings)
+        XCTAssertEqual(records.map(\.title), ["근무"])
+        XCTAssertEqual(records.first?.startedAt, stay.span.start)
+        XCTAssertEqual(records.first?.endedAt, stay.span.end)
+        // 층 근거는 원본 체류에 그대로 남는다. 표시를 이었다고 근거를 지우지
+        // 않는다.
+        XCTAssertEqual(
+            timeline.places.compactMap(\.floorEvidence).count,
+            2
+        )
+        XCTAssertEqual(timeline.places.map(\.floor), [20, 2])
+    }
+
+    /// 실기기에서 "근무 2회"가 나온 길. 사무실 안에서 70m 넘게 자리를 옮기면
+    /// PlaceDetectionEngine 이 묶음을 끊고(SensorFusion 의 detectStays 는
+    /// 묶음 첫 점에서 잰 거리로만 자른다), 그 조각이 최소 체류 15분에 못
+    /// 미치면 통째로 버려져 앞뒤 근무 사이에 구멍이 남는다. 사용자가 맞춘
+    /// 반경 120m 안이므로 나간 것이 아니다.
+    func testOfficeStaysDetectedFromReadingsJoinIntoOneWorkRecord() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let morning = makeDate(2026, 8, 4, 9, 0)
+        // 09:00–18:00 사이 5분마다 한 점. 12:00–12:10 만 90m 떨어진 회의실.
+        let readings = (0..<109).map { step -> SensorReading in
+            let minutes = Double(step) * 5
+            return SensorReading(
+                timestamp: morning.addingTimeInterval(minutes * 60),
+                point: officePoint(
+                    minutes >= 180 && minutes < 195 ? 90 : 0
+                ),
+                motion: .stationary,
+                motionConfidence: .high
+            )
+        }
+        let office = FrequentPlace(
+            kind: .company,
+            name: "회사",
+            point: officePoint(0),
+            floor: 20,
+            radiusMeters: 120,
+            minimumDwellMinutes: 10
+        )
+        let detected = PlaceDetectionEngine().detectStays(readings: readings)
+        XCTAssertEqual(
+            detected.count,
+            2,
+            "70m 밖으로 옮긴 자리가 체류를 끊는 것이 쪼개짐의 원인이다"
+        )
+
+        let engine = FrequentPlaceResolutionEngine()
+        let resolved = engine.applying(
+            [office],
+            to: detected,
+            readings: readings
+        )
+        XCTAssertEqual(
+            Set(resolved.map(\.placeKey)),
+            [office.stablePlaceKey]
+        )
+
+        let records = StationaryContextActualEngine.records(
+            stays: resolved,
+            placeKinds: engine.kindsByPlaceKey([office]),
+            placeAnchors: engine.anchorsByPlaceKey([office]),
+            readings: readings,
+            inside: day,
+            calendar: utcCalendar,
+            now: day.end
+        )
+        XCTAssertEqual(records.map(\.title), ["근무"])
+        XCTAssertEqual(records.first?.startedAt, morning)
+        XCTAssertEqual(
+            records.first?.endedAt,
+            morning.addingTimeInterval(9 * hour)
+        )
+    }
+
+    /// 사용자가 말한 규칙 그대로: 등록한 장소 안에 계속 있으면 한 줄이다.
+    /// 층이 바뀌고, 점심때 자리를 떠나 건물 안을 돌아다녀도 이어진다.
+    func testWorkStaysJoinAcrossFloorChangeAndDeskBreakInsideThePlace() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let morning = makeDate(2026, 8, 4, 9, 0)
+        // 09:00–12:00 20층, 12:00–13:00 같은 건물 90m 지점(구내식당),
+        // 13:00–18:00 2층. 어느 것도 반경 120m를 벗어나지 않는다.
+        let stays = [
+            officeStay(
+                start: morning,
+                end: morning.addingTimeInterval(3 * hour),
+                floor: 20
+            ),
+            officeStay(
+                start: morning.addingTimeInterval(4 * hour),
+                end: morning.addingTimeInterval(9 * hour),
+                floor: 2
+            ),
+        ]
+        let readings = officeReadings(
+            from: morning,
+            count: 55,
+            metersFromAnchor: { step in
+                (step >= 18 && step < 24) ? 90 : 0
+            }
+        )
+        let records = officeRecords(
+            stays: stays,
+            readings: readings,
+            inside: day,
+            // 점심 사이 시간은 정지로 남아 예전에는 "머무름"이 되었다.
+            stationarySpans: [
+                TimeSpan(
+                    start: morning,
+                    end: morning.addingTimeInterval(9 * hour)
+                )
+            ]
+        )
+
+        XCTAssertEqual(records.map(\.title), ["근무"])
+        XCTAssertEqual(records.first?.startedAt, morning)
+        XCTAssertEqual(
+            records.first?.endedAt,
+            morning.addingTimeInterval(9 * hour)
+        )
+
+        // 기록 목록의 "N회"와 시간표 막대가 같은 값을 읽는다.
+        let groups = ActualRecordGroupingEngine.groups(
+            actuals: records,
+            in: day,
+            categories: CategoryCatalog.builtIn,
+            asOf: day.end
+        )
+        let work = groups.first { $0.id == "work" }
+        XCTAssertEqual(work?.children.map(\.title), ["근무"])
+        XCTAssertEqual(work?.children.first?.occurrenceCount, 1)
+        XCTAssertEqual(work?.duration, 9 * hour)
+    }
+
+    /// 건물을 나갔다 돌아오면 두 기록이어야 한다. 그러지 않으면 출근·퇴근과
+    /// 일과 고리가 뜻을 잃는다.
+    func testWorkStaysDoNotJoinWhenTheUserLeavesTheRegisteredRadius() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let morning = makeDate(2026, 8, 4, 9, 0)
+        let stays = [
+            officeStay(
+                start: morning,
+                end: morning.addingTimeInterval(3 * hour),
+                floor: 20
+            ),
+            officeStay(
+                start: morning.addingTimeInterval(4 * hour),
+                end: morning.addingTimeInterval(9 * hour),
+                floor: 20
+            ),
+        ]
+        // 12:00–13:00 사이에 600m 떨어진 곳에서 위치가 찍힌다.
+        let readings = officeReadings(
+            from: morning,
+            count: 55,
+            metersFromAnchor: { step in
+                (step >= 18 && step < 24) ? 600 : 0
+            }
+        )
+        let records = officeRecords(
+            stays: stays,
+            readings: readings,
+            inside: day
+        )
+
+        XCTAssertEqual(records.map(\.title), ["근무", "근무"])
+        XCTAssertEqual(records.first?.endedAt, stays[0].span.end)
+        XCTAssertEqual(records.last?.startedAt, stays[1].span.start)
+    }
+
+    /// 이어 붙여도 하루 합계는 그대로다. 예전에는 사이 시간이 "머무름"으로
+    /// 남았고, 이제는 그 시간을 근무가 한 번만 덮는다.
+    func testJoiningStaysKeepsTheMeasuredTotalUnchanged() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let morning = makeDate(2026, 8, 4, 9, 0)
+        let whole = TimeSpan(
+            start: morning,
+            end: morning.addingTimeInterval(9 * hour)
+        )
+        let stays = [
+            officeStay(
+                start: morning,
+                end: morning.addingTimeInterval(3 * hour),
+                floor: 20
+            ),
+            officeStay(
+                start: morning.addingTimeInterval(4 * hour),
+                end: whole.end,
+                floor: 2
+            ),
+        ]
+        let readings = officeReadings(
+            from: morning,
+            count: 55,
+            metersFromAnchor: { _ in 0 }
+        )
+        let split = StationaryContextActualEngine.records(
+            stays: stays,
+            placeKinds: [officeKey: .company],
+            stationarySpans: [whole],
+            readings: readings,
+            inside: day,
+            calendar: utcCalendar,
+            now: day.end
+        )
+        let joined = officeRecords(
+            stays: stays,
+            readings: readings,
+            inside: day,
+            stationarySpans: [whole]
+        )
+
+        // 반경을 모르면 사이 시간이 "머무름"으로 남는다.
+        XCTAssertEqual(split.map(\.title), ["근무", "머무름", "근무"])
+        XCTAssertEqual(joined.map(\.title), ["근무"])
+        XCTAssertEqual(
+            ActualIntervalMergeEngine.duration(
+                of: joined.map { $0.span(asOf: day.end) }
+            ),
+            ActualIntervalMergeEngine.duration(
+                of: split.map { $0.span(asOf: day.end) }
+            ),
+            "이어 붙이면서 시간을 잃거나 겹쳐 세면 안 된다"
+        )
+        XCTAssertEqual(
+            joined.reduce(0) { $0 + $1.span(asOf: day.end).duration },
+            whole.duration,
+            "이어진 기록끼리 겹치면 합계가 흐른 시간을 넘는다"
+        )
+    }
+
+    /// 일과 고리는 60초 안에서 맞닿은 근무만 붙인다. 기록이 이미 한 줄이면
+    /// 고리도 한 조각이라, 둘이 서로 다른 그림을 그리지 않는다.
+    func testJoinedWorkRecordGivesTheDayPhaseRingOneWorkArc() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let morning = makeDate(2026, 8, 4, 9, 0)
+        let stays = [
+            officeStay(
+                start: morning,
+                end: morning.addingTimeInterval(3 * hour),
+                floor: 20
+            ),
+            officeStay(
+                start: morning.addingTimeInterval(4 * hour),
+                end: morning.addingTimeInterval(9 * hour),
+                floor: 2
+            ),
+        ]
+        let readings = officeReadings(
+            from: morning,
+            count: 55,
+            metersFromAnchor: { _ in 0 }
+        )
+        let records = officeRecords(
+            stays: stays,
+            readings: readings,
+            inside: day
+        )
+        let phases = DayPhaseEngine.phases(
+            actuals: records,
+            travel: [],
+            stays: stays,
+            placeKinds: [officeKey: .company],
+            in: day,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(phases.filter { $0.phase == .work }.count, 1)
+        XCTAssertEqual(
+            phases.first { $0.phase == .work }?.span,
+            TimeSpan(
+                start: morning,
+                end: morning.addingTimeInterval(9 * hour)
+            )
+        )
+    }
+
+    /// 등록하지 않은 곳에는 사용자가 맞춘 반경이 없다. 층이 갈린 자국만
+    /// 메우고, 크게 벌어진 시간까지 지어내지 않는다.
+    func testUnregisteredPlaceJoinsOnlyTheShortSplit() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let start = makeDate(2026, 8, 4, 9, 0)
+        func records(gap: TimeInterval) -> [ActualRecord] {
+            StationaryContextActualEngine.records(
+                stays: [
+                    makeContextStay(
+                        start: start,
+                        end: start.addingTimeInterval(hour),
+                        placeKey: "somewhere"
+                    ),
+                    makeContextStay(
+                        start: start.addingTimeInterval(hour + gap),
+                        end: start.addingTimeInterval(3 * hour + gap),
+                        placeKey: "somewhere"
+                    ),
+                ],
+                placeKinds: [:],
+                inside: day,
+                calendar: utcCalendar,
+                now: day.end
+            )
+        }
+
+        XCTAssertEqual(records(gap: 90).map(\.title), ["머무름"])
+        XCTAssertEqual(
+            records(gap: 30 * 60).map(\.title),
+            ["머무름", "머무름"]
+        )
+    }
+
+    // MARK: - 한 곳에 머문 시간 잇기 · 재료
+
+    private var officeKey: String { "frequent-office" }
+
+    private func officePoint(_ metersNorth: Double) -> GeoPoint {
+        GeoPoint(
+            latitude: 37.5 + metersNorth / 111_320,
+            longitude: 127,
+            altitude: 40,
+            horizontalAccuracy: 12,
+            verticalAccuracy: 8
+        )
+    }
+
+    private func officeStay(
+        start: Date,
+        end: Date,
+        floor: Int
+    ) -> PlaceStay {
+        PlaceStay(
+            placeKey: officeKey,
+            displayName: "회사",
+            floor: floor,
+            span: TimeSpan(start: start, end: end),
+            confidence: .high,
+            point: officePoint(0),
+            isConfirmed: true,
+            floorEvidence: FloorEvidence(
+                measuredAt: start,
+                relativeAltitudeMeters: Double(floor) * 3
+            )
+        )
+    }
+
+    private func officeReadings(
+        from start: Date,
+        count: Int,
+        metersFromAnchor: (Int) -> Double
+    ) -> [SensorReading] {
+        (0..<count).map { step in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(step) * 600),
+                point: officePoint(metersFromAnchor(step)),
+                motion: .stationary,
+                motionConfidence: .high,
+                relativeAltitudeMeters: 0
+            )
+        }
+    }
+
+    private func floorChanging(
+        _ readings: [SensorReading],
+        after index: Int
+    ) -> [SensorReading] {
+        readings.enumerated().map { offset, reading in
+            var value = reading
+            value.systemFloor = offset < index ? 20 : 2
+            return value
+        }
+    }
+
+    /// 사용자가 설정에서 맞춘 반경 120m·최소 체류 10분을 그대로 쓴다.
+    private func officeRecords(
+        stays: [PlaceStay],
+        readings: [SensorReading],
+        inside: TimeSpan? = nil,
+        stationarySpans: [TimeSpan] = []
+    ) -> [ActualRecord] {
+        let span = inside ?? TimeSpan(
+            start: makeDate(2026, 8, 4, 0, 0),
+            end: makeDate(2026, 8, 5, 0, 0)
+        )
+        return StationaryContextActualEngine.records(
+            stays: stays,
+            placeKinds: [officeKey: .company],
+            placeAnchors: [
+                officeKey: FrequentPlaceAnchor(
+                    point: officePoint(0),
+                    radiusMeters: 120
+                )
+            ],
+            stationarySpans: stationarySpans,
+            readings: readings,
+            inside: span,
+            calendar: utcCalendar,
+            now: span.end
+        )
+    }
+
     private func makeContextStay(
         start: Date,
         end: Date,
@@ -8100,7 +9144,7 @@ final class FeatureEngineTests: XCTestCase {
                 travelLeg(.walking, 18.5, 18.75, on: day),
             ],
             stays: [],
-            homePlaceKeys: [],
+            placeKinds: [:],
             in: day,
             asOf: day.end
         )
@@ -8138,7 +9182,7 @@ final class FeatureEngineTests: XCTestCase {
                 homeStay(0, 7, key: homeKey, on: day),
                 homeStay(16.5, 24, key: homeKey, on: day),
             ],
-            homePlaceKeys: [homeKey],
+            placeKinds: [homeKey: .home],
             in: day,
             asOf: day.end
         )
@@ -8163,7 +9207,7 @@ final class FeatureEngineTests: XCTestCase {
             ],
             travel: [],
             stays: [],
-            homePlaceKeys: [],
+            placeKinds: [:],
             in: day,
             asOf: day.end
         )
@@ -8180,7 +9224,7 @@ final class FeatureEngineTests: XCTestCase {
             ],
             travel: [],
             stays: [],
-            homePlaceKeys: [],
+            placeKinds: [:],
             in: day,
             asOf: day.end
         )
@@ -8208,7 +9252,7 @@ final class FeatureEngineTests: XCTestCase {
             actuals: actuals,
             travel: travel,
             stays: [],
-            homePlaceKeys: [],
+            placeKinds: [:],
             in: day,
             asOf: day.end
         )
@@ -8258,7 +9302,7 @@ final class FeatureEngineTests: XCTestCase {
             actuals: actuals,
             travel: travel,
             stays: [],
-            homePlaceKeys: [],
+            placeKinds: [:],
             in: day,
             asOf: day.end
         )
@@ -8275,7 +9319,7 @@ final class FeatureEngineTests: XCTestCase {
                 actuals: actuals,
                 travel: travel,
                 stays: [],
-                homePlaceKeys: [],
+                placeKinds: [:],
                 in: day,
                 asOf: day.end
             )
@@ -8311,7 +9355,7 @@ final class FeatureEngineTests: XCTestCase {
                 actuals: actuals,
                 travel: travel,
                 stays: [],
-                homePlaceKeys: [],
+                placeKinds: [:],
                 in: week,
                 asOf: week.end
             )
@@ -8322,7 +9366,7 @@ final class FeatureEngineTests: XCTestCase {
                 actuals: actuals,
                 travel: travel,
                 stays: [],
-                homePlaceKeys: [],
+                placeKinds: [:],
                 in: week,
                 asOf: week.end
             )
@@ -8332,10 +9376,173 @@ final class FeatureEngineTests: XCTestCase {
                 actuals: [],
                 travel: [],
                 stays: [],
-                homePlaceKeys: [],
+                placeKinds: [:],
                 in: day,
                 asOf: day.end
             )
+        )
+    }
+
+    /// 오가는 길의 이름은 집 반대편에 등록해 둔 곳이 정한다. 학교와 학원은
+    /// 정지 문맥이 똑같이 "수업·학습"인데도 등교·하교와 등원·하원으로 갈린다.
+    /// 취미·운동은 오가는 일이 아니므로 시작·종료라고 적는다.
+    func testDayPhaseRingNamesTheRoundTripFromTheRegisteredPlace() {
+        let cases: [(FrequentPlaceKind, StationaryContextKind?, [String])] = [
+            (.company, .work, ["취침", "출근", "업무", "퇴근", "저녁"]),
+            (.school, .study, ["취침", "등교", "수업", "하교", "저녁"]),
+            (.academy, .study, ["취침", "등원", "수업", "하원", "저녁"]),
+            // 취미·운동을 다녀온 길은 저녁을 열지 않는다. 나갔다 왔다고 그
+            // 전에 집에서 보낸 저녁이 없던 일이 되면 안 된다.
+            (.hobby, nil, ["취침", "시작", "종료"]),
+            (.exercise, .gymFacility, ["취침", "시작", "종료"]),
+        ]
+        for (kind, context, titles) in cases {
+            let phases = roundTripPhases(to: kind, staying: context)
+            XCTAssertEqual(
+                phases.map(\.phase.title),
+                titles,
+                "\(kind.defaultName)에 다녀온 하루"
+            )
+        }
+    }
+
+    /// 등록해 두지 않은 곳에 다녀온 길은 이름을 지어내지 않는다. 도착해서
+    /// 근무나 수업이 시작되면 예전처럼 출근·퇴근이라 부르고, 그마저 없으면
+    /// 빈칸으로 남긴다.
+    func testDayPhaseRingFallsBackWhenTheFarEndIsNotRegistered() {
+        let known = roundTripPhases(
+            to: .company,
+            staying: .work,
+            registeringDestination: false
+        )
+        XCTAssertEqual(
+            known.map(\.phase.title),
+            ["취침", "출근", "업무", "퇴근", "저녁"]
+        )
+
+        let unknown = roundTripPhases(
+            to: .hobby,
+            staying: .cafe,
+            registeringDestination: false
+        )
+        XCTAssertEqual(unknown.map(\.phase.title), ["취침"])
+
+        // 등록은 했지만 종류에 이름이 없는 곳도 같은 자리로 떨어진다.
+        let custom = roundTripPhases(to: .custom, staying: .cafe)
+        XCTAssertEqual(custom.map(\.phase.title), ["취침"])
+    }
+
+    /// 읽음창은 짚은 조각의 진짜 시작·끝 시각을 적는다. 각도로 접었다 펴도
+    /// 8시 12분이 8시 11분으로 새지 않아야 한다.
+    func testPhaseReadoutReportsTheTrueStartAndEnd() throws {
+        let day = dayPhaseDay()
+        func at(_ hours: Int, _ minutes: Int) -> Date {
+            day.start.addingTimeInterval(
+                TimeInterval(hours * 3_600 + minutes * 60)
+            )
+        }
+        let leaving = TimeSpan(start: at(8, 12), end: at(8, 47))
+        let ring = try XCTUnwrap(
+            RecordClockDetailEngine.phaseRing(
+                actuals: [
+                    sleepActual(0, 7, on: day),
+                    ActualRecord(
+                        planID: nil,
+                        title: StationaryContextKind.work.title,
+                        categoryID: StationaryContextKind.work.categoryID,
+                        startedAt: leaving.end,
+                        endedAt: at(18, 0),
+                        source: .location,
+                        confidence: .medium,
+                        behavior: StationaryContextKind.work.rawValue,
+                        modelVersion: StationaryContextClassifier.modelVersion
+                    ),
+                ],
+                travel: [
+                    TravelSegment(
+                        mode: .subway,
+                        span: leaving,
+                        distanceMeters: 4_000,
+                        confidence: .medium,
+                        evidence: ["GPS"]
+                    ),
+                ],
+                stays: [
+                    PlaceStay(
+                        placeKey: "frequent-home",
+                        displayName: "집",
+                        span: TimeSpan(start: day.start, end: leaving.start),
+                        confidence: .high,
+                        isConfirmed: true
+                    ),
+                ],
+                placeKinds: ["frequent-home": .home],
+                in: day,
+                asOf: day.end
+            )
+        )
+
+        let arc = try XCTUnwrap(
+            ring.arcs.first { $0.token == DayPhase.commuteToWork.rawValue }
+        )
+        // 재생머리가 그 조각 위를 지날 때 읽는 조각도 같은 조각이다.
+        XCTAssertEqual(
+            RecordClockEngine.arc(
+                in: ring,
+                at: (arc.startFraction + arc.endFraction) / 2
+            ),
+            arc
+        )
+        let span = RecordClockEngine.span(of: arc, in: day)
+        XCTAssertEqual(span.start, leaving.start)
+        XCTAssertEqual(span.end, leaving.end)
+        XCTAssertEqual(
+            RecordClockEngine.timeRangeText(span),
+            "\(leaving.start.formatted(date: .omitted, time: .shortened))"
+                + "–"
+                + "\(leaving.end.formatted(date: .omitted, time: .shortened))"
+        )
+    }
+
+    /// 집을 나서 한 곳에 머물다 집으로 돌아오는 하루. 걷고 타는 두 다리가
+    /// 한 번의 오감이 되는 것은 여느 날과 같다.
+    private func roundTripPhases(
+        to kind: FrequentPlaceKind,
+        staying context: StationaryContextKind?,
+        registeringDestination: Bool = true
+    ) -> [DayPhaseSpan] {
+        let day = dayPhaseDay()
+        let homeKey = "frequent-home"
+        let awayKey = "frequent-away"
+        return DayPhaseEngine.phases(
+            actuals: [sleepActual(0, 7, on: day)]
+                + (context.map { [stationaryContext($0, 8.75, 18, on: day)] }
+                    ?? []),
+            travel: [
+                travelLeg(.walking, 8, 8.25, on: day),
+                travelLeg(.subway, 8.25, 8.75, on: day),
+                travelLeg(.subway, 18, 18.5, on: day),
+                travelLeg(.walking, 18.5, 18.75, on: day),
+            ],
+            stays: [
+                homeStay(0, 8, key: homeKey, on: day),
+                PlaceStay(
+                    placeKey: awayKey,
+                    displayName: kind.defaultName,
+                    span: TimeSpan(
+                        start: day.start.addingTimeInterval(8.75 * hour),
+                        end: day.start.addingTimeInterval(18 * hour)
+                    ),
+                    confidence: .high,
+                    isConfirmed: true
+                ),
+                homeStay(18.75, 24, key: homeKey, on: day),
+            ],
+            placeKinds: registeringDestination
+                ? [homeKey: .home, awayKey: kind]
+                : [homeKey: .home],
+            in: day,
+            asOf: day.end
         )
     }
 
@@ -9008,6 +10215,295 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(recomputed, [old])
     }
 
+    /// 기록이 스스로 근거를 지니고 있으면 원본 표본 보관 기간과 상관없이
+    /// 다시 매긴다. 근거가 없는 옆 기록은 그대로 둔다.
+    func testReapplyingFloorsPrefersStoredEvidenceOverArchive() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let groundPressure = 101.0
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 2,
+            from: makeAltitudeReading(
+                at: base,
+                pressureKilopascals: groundPressure
+            )
+        )
+
+        // 보관 기간(7일)을 훌쩍 넘긴 기록. 예전 기준으로 36층이 찍혀 있다.
+        let long = base.addingTimeInterval(-90 * 86_400)
+        let span = TimeSpan(start: long, end: long.addingTimeInterval(3_600))
+        let stay = PlaceStay(
+            placeKey: place.stablePlaceKey,
+            displayName: "회사",
+            floor: 36,
+            span: span,
+            confidence: .high,
+            point: place.point,
+            isConfirmed: true,
+            floorEvidence: FloorEvidence(
+                measuredAt: long,
+                pressureKilopascals: pressure(groundPressure, risingBy: 51)
+            )
+        )
+        // 근거도 표본도 없는 더 오래된 기록.
+        let older = long.addingTimeInterval(-110 * 86_400)
+        let legacy = PlaceStay(
+            placeKey: place.stablePlaceKey,
+            displayName: "회사",
+            floor: 36,
+            span: TimeSpan(start: older, end: older.addingTimeInterval(3_600)),
+            confidence: .high,
+            point: place.point,
+            isConfirmed: true
+        )
+        // 보관분에는 이 기록과 어긋나는 표본만 남아 있다.
+        let stale = makeAltitudeReading(
+            at: long.addingTimeInterval(60),
+            pressureKilopascals: groundPressure
+        )
+
+        let engine = FrequentPlaceResolutionEngine()
+        for readings: [SensorReading] in [[], [stale]] {
+            let recomputed = engine.reapplyingFloors(
+                of: place,
+                to: [stay, legacy],
+                readings: readings
+            )
+            // 2층 기준에서 51m 위, 층 높이 3m이면 19층이다. 보관분이 비어
+            // 있든 엉뚱한 표본이 남아 있든 답은 기록이 지닌 근거에서 나온다.
+            XCTAssertEqual(recomputed[0].floor, 19)
+            // 근거가 없는 옛 기록은 지어내지 않고 그대로 둔다.
+            XCTAssertEqual(recomputed[1], legacy)
+        }
+    }
+
+    /// 상대고도의 0점은 기압 세션마다 새로 잡힌다. 저장된 근거의 세션이
+    /// 기준점과 다르면 두 값을 빼서는 안 된다.
+    func testStoredFloorEvidenceIsNotDifferencedAcrossAltimeterSessions() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let session = UUID()
+        let anchor = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 82,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        var place = FrequentPlace(kind: .home)
+        place.calibrateCurrentFloor(
+            to: 3,
+            from: SensorReading(
+                timestamp: base,
+                point: anchor,
+                relativeAltitudeMeters: 0,
+                altimeterSessionID: session
+            )
+        )
+        var stay = PlaceStay(
+            placeKey: place.stablePlaceKey,
+            displayName: "집",
+            floor: 3,
+            span: TimeSpan(
+                start: base.addingTimeInterval(-40 * 86_400),
+                end: base.addingTimeInterval(-40 * 86_400 + 3_600)
+            ),
+            confidence: .high,
+            point: anchor,
+            isConfirmed: true
+        )
+        let engine = FrequentPlaceResolutionEngine()
+
+        // 같은 세션이면 51m 차이가 그대로 17층으로 읽힌다.
+        stay.floorEvidence = FloorEvidence(
+            measuredAt: stay.span.start,
+            relativeAltitudeMeters: 51,
+            altimeterSessionID: session
+        )
+        XCTAssertEqual(
+            engine.reapplyingFloors(of: place, to: [stay], readings: [])[0]
+                .floor,
+            20
+        )
+
+        // 세션이 다르면 그 51m는 견줄 수 없는 값이다. 남은 것은 GPS 고도뿐이고
+        // 두 지점의 고도가 같으므로 층수는 움직이지 않는다.
+        stay.floorEvidence = FloorEvidence(
+            measuredAt: stay.span.start,
+            relativeAltitudeMeters: 51,
+            altimeterSessionID: UUID()
+        )
+        XCTAssertEqual(
+            engine.reapplyingFloors(of: place, to: [stay], readings: [])[0]
+                .floor,
+            3
+        )
+    }
+
+    /// 층 이동으로 쪼개진 기록과 이동 자체도 기준 층에 얹혀 있다. 기준을
+    /// 고치면 오르내린 층수는 그대로 둔 채 함께 따라와야 한다.
+    func testRecalibrationMovesSplitStaysAndFloorTransitionTogether() {
+        let base = makeDate(2026, 8, 1, 9)
+        let session = UUID()
+        let anchor = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 60,
+            horizontalAccuracy: 6,
+            verticalAccuracy: 5
+        )
+        var frequent = FrequentPlace(
+            kind: .company,
+            name: "회사",
+            point: anchor,
+            floor: 9,
+            referenceRelativeAltitudeMeters: 0,
+            referencePressureKilopascals: 100.5,
+            referenceAltimeterSessionID: session,
+            floorCapturedAt: base
+        )
+        let detected = PlaceStay(
+            placeKey: "gps-cluster-1",
+            displayName: "자동 감지 장소",
+            span: TimeSpan(start: base, end: base.addingTimeInterval(30 * 60)),
+            confidence: .medium,
+            point: anchor
+        )
+        let readings = [0, 0.1, 3.0, 3.1, 3.1].enumerated().map {
+            index, altitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 5 * 60),
+                point: anchor,
+                relativeAltitudeMeters: altitude,
+                pressureKilopascals: 100.5 - altitude * 0.012,
+                altimeterSessionID: session
+            )
+        }
+
+        let engine = FrequentPlaceResolutionEngine()
+        let result = FloorTimelineEngine().apply(
+            readings: readings,
+            to: engine.applying([frequent], to: [detected], readings: readings),
+            knownPlaces: []
+        )
+
+        XCTAssertEqual(result.places.map(\.floor), [9, 10])
+        // 근거는 체류가 시작된 자리에서 잰다. 한 층 올라간 뒷조각은 그 자리
+        // 보다 한 층 위다.
+        XCTAssertEqual(result.places.map(\.floorEvidence?.floorOffset), [0, 1])
+        XCTAssertEqual(result.transitions.first?.floorEvidence?.floorOffset, 0)
+
+        // 사용자가 "여기는 1층"이라고 고쳐 준다.
+        frequent.calibrateCurrentFloor(to: 1, from: readings[0])
+        let places = engine.reapplyingFloors(
+            of: frequent,
+            to: result.places,
+            readings: []
+        )
+        let transitions = engine.reapplyingFloors(
+            of: frequent,
+            to: result.transitions
+        )
+
+        XCTAssertEqual(places.map(\.floor), [1, 2])
+        XCTAssertEqual(transitions.first?.fromFloor, 1)
+        XCTAssertEqual(transitions.first?.toFloor, 2)
+    }
+
+    /// 사용자가 직접 고른 도착 층은 기준을 고쳐도 덮지 않는다.
+    func testReapplyingFloorsKeepsUserConfirmedTransition() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 2,
+            from: makeAltitudeReading(at: base, pressureKilopascals: 101.0)
+        )
+        let confirmed = FloorTransition(
+            id: UUID(),
+            placeKey: place.stablePlaceKey,
+            fromFloor: 19,
+            toFloor: 20,
+            relativeAltitudeMeters: 3,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(60)),
+            confidence: .high,
+            evidence: [
+                "기압 고도 센서",
+                FloorTransition.userConfirmedEvidence,
+            ],
+            floorEvidence: FloorEvidence(
+                measuredAt: base,
+                pressureKilopascals: 101.0
+            )
+        )
+
+        XCTAssertEqual(
+            FrequentPlaceResolutionEngine().reapplyingFloors(
+                of: place,
+                to: [confirmed]
+            ),
+            [confirmed]
+        )
+    }
+
+    /// 예전 빌드가 쓴 보관 파일에는 근거 필드가 없다. 그대로 읽히고, 근거는
+    /// 없는 채로 남아야 한다.
+    func testPlaceRecordsDecodeArchivesWrittenBeforeFloorEvidence() throws {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(3_600))
+        let evidence = FloorEvidence(
+            measuredAt: base,
+            pressureKilopascals: 101.0,
+            altimeterSessionID: UUID()
+        )
+        let stay = PlaceStay(
+            placeKey: "frequent-1",
+            displayName: "회사",
+            floor: 19,
+            span: span,
+            confidence: .high,
+            isConfirmed: true,
+            floorEvidence: evidence
+        )
+        let transition = FloorTransition(
+            id: UUID(),
+            placeKey: "frequent-1",
+            fromFloor: 1,
+            toFloor: 19,
+            relativeAltitudeMeters: 54,
+            span: span,
+            confidence: .medium,
+            evidence: ["기압 고도 센서"],
+            floorEvidence: evidence
+        )
+
+        let decodedStay = try JSONDecoder().decode(
+            PlaceStay.self,
+            from: try legacyData(from: stay, without: "floorEvidence")
+        )
+        let decodedTransition = try JSONDecoder().decode(
+            FloorTransition.self,
+            from: try legacyData(from: transition, without: "floorEvidence")
+        )
+
+        XCTAssertNil(decodedStay.floorEvidence)
+        XCTAssertEqual(decodedStay.floor, 19)
+        XCTAssertEqual(decodedStay.displayName, "회사")
+        XCTAssertNil(decodedTransition.floorEvidence)
+        XCTAssertEqual(decodedTransition.fromFloor, 1)
+        XCTAssertEqual(decodedTransition.toFloor, 19)
+    }
+
+    private func legacyData(
+        from value: some Encodable,
+        without key: String
+    ) throws -> Data {
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
+                as? [String: Any]
+        )
+        XCTAssertNotNil(object.removeValue(forKey: key))
+        return try JSONSerialization.data(withJSONObject: object)
+    }
+
     // MARK: - 고도 표본 묶음
 
     private func burstSamples(
@@ -9358,6 +10854,388 @@ final class FeatureEngineTests: XCTestCase {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         calendar.firstWeekday = 2
         return calendar
+    }
+
+    // MARK: - 등록하지 않은 자주 가는 곳
+
+    private func makeVisitStay(
+        latitude: Double,
+        longitude: Double,
+        start: Date,
+        minutes: Double = 60,
+        displayName: String = "자동 감지 장소"
+    ) -> PlaceStay {
+        PlaceStay(
+            // `PlaceDetectionEngine` 과 같은 방식의 좌표 키. 방문마다 GPS
+            // 평균이 달라지므로 같은 자리라도 키가 갈린다.
+            placeKey: String(format: "%.4f,%.4f", latitude, longitude),
+            displayName: displayName,
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(minutes * 60)
+            ),
+            confidence: .medium,
+            point: GeoPoint(
+                latitude: latitude,
+                longitude: longitude,
+                altitude: 30,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 8
+            )
+        )
+    }
+
+    private func makeCafeVisits(
+        from base: Date,
+        dayOffsets: [Double]
+    ) -> [PlaceStay] {
+        // 좌표를 조금씩 흔들어 방문마다 `placeKey` 가 달라지게 한다. 같은
+        // 장소를 알아보는 것은 키가 아니라 거리여야 한다.
+        dayOffsets.enumerated().map { index, offset in
+            makeVisitStay(
+                latitude: 37.5000 + Double(index % 3) * 0.0002,
+                longitude: 127.0000 + Double(index % 2) * 0.0002,
+                start: base.addingTimeInterval(offset * 86_400)
+            )
+        }
+    }
+
+    /// 한 주에 세 번이면 조건 하나만으로 충분하다.
+    func testUnregisteredPlaceSuggestionTriggersOnThreeVisitsInOneWeek() {
+        let base = makeDate(2026, 8, 1, 10)
+        let stays = makeCafeVisits(from: base, dayOffsets: [0, 2, 4])
+
+        let suggestion = UnregisteredPlaceSuggestionEngine().suggestion(
+            places: stays,
+            frequentPlaces: FrequentPlace.defaults,
+            dismissed: [],
+            now: base.addingTimeInterval(4 * 86_400 + 2 * 3_600)
+        )
+
+        XCTAssertEqual(Set(stays.map(\.placeKey)).count, 3)
+        XCTAssertEqual(suggestion?.visitCount, 3)
+        XCTAssertEqual(suggestion?.reason, .weekly)
+        // 역지오코딩 이름이 없으면 이름을 지어내지 않는다.
+        XCTAssertNil(suggestion?.suggestedName)
+    }
+
+    /// 한 달에 열 번이면, 어느 한 주도 세 번에 못 미쳐도 조건을 넘긴다.
+    func testUnregisteredPlaceSuggestionTriggersOnTenMonthlyVisitsWithNoWeeklyRun() {
+        let base = makeDate(2026, 7, 1, 10)
+        let offsets = [
+            0.0, 0.25, 7.25, 7.5, 14.5, 14.75, 21.75, 22.0, 29.0, 29.25,
+        ]
+        let stays = makeCafeVisits(from: base, dayOffsets: offsets)
+
+        let engine = UnregisteredPlaceSuggestionEngine()
+        let now = base.addingTimeInterval(29.25 * 86_400 + 2 * 3_600)
+        let suggestion = engine.suggestion(
+            places: stays,
+            frequentPlaces: FrequentPlace.defaults,
+            dismissed: [],
+            now: now
+        )
+
+        // 어떤 7일 창에도 세 번이 들어가지 않는다는 것을 먼저 확인한다.
+        let starts = stays.map(\.span.start).sorted()
+        for index in 0...(starts.count - 3) {
+            XCTAssertGreaterThan(
+                starts[index + 2].timeIntervalSince(starts[index]),
+                engine.weeklyWindow
+            )
+        }
+        XCTAssertEqual(suggestion?.visitCount, 10)
+        XCTAssertEqual(suggestion?.reason, .monthly)
+    }
+
+    /// 한 주 두 번, 한 달 아홉 번은 어느 조건도 넘지 못한다.
+    func testUnregisteredPlaceSuggestionStaysSilentBelowBothThresholds() {
+        let base = makeDate(2026, 7, 1, 10)
+        let offsets = [0.0, 0.25, 7.25, 7.5, 14.5, 14.75, 21.75, 22.0, 29.0]
+        let stays = makeCafeVisits(from: base, dayOffsets: offsets)
+
+        let suggestion = UnregisteredPlaceSuggestionEngine().suggestion(
+            places: stays,
+            frequentPlaces: FrequentPlace.defaults,
+            dismissed: [],
+            now: base.addingTimeInterval(29.0 * 86_400 + 2 * 3_600)
+        )
+
+        XCTAssertEqual(stays.count, 9)
+        XCTAssertNil(suggestion)
+    }
+
+    /// 이미 등록한 곳은 묻지 않는다. 자동 기록을 꺼 두어 체류가 자주가는 곳
+    /// 키로 바뀌지 않는 경우에도 그렇다.
+    func testUnregisteredPlaceSuggestionSkipsAlreadyRegisteredPlace() {
+        let base = makeDate(2026, 8, 1, 10)
+        let stays = makeCafeVisits(from: base, dayOffsets: [0, 1, 2, 3, 4])
+        let now = base.addingTimeInterval(4 * 86_400 + 2 * 3_600)
+        let engine = UnregisteredPlaceSuggestionEngine()
+        let registered = FrequentPlace(
+            kind: .hobby,
+            point: GeoPoint(
+                latitude: 37.5001,
+                longitude: 127.0001,
+                altitude: 30,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 8
+            ),
+            floor: 1,
+            isAutomaticRecordingEnabled: false
+        )
+
+        XCTAssertNotNil(
+            engine.suggestion(
+                places: stays,
+                frequentPlaces: [],
+                dismissed: [],
+                now: now
+            )
+        )
+        XCTAssertNil(
+            engine.suggestion(
+                places: stays,
+                frequentPlaces: [registered],
+                dismissed: [],
+                now: now
+            )
+        )
+    }
+
+    /// 한 번 거절한 곳은 다시 묻지 않는다.
+    func testUnregisteredPlaceSuggestionNeverReturnsDismissedPlace() {
+        let base = makeDate(2026, 8, 1, 10)
+        let stays = makeCafeVisits(from: base, dayOffsets: [0, 1, 2, 3, 4])
+        let now = base.addingTimeInterval(4 * 86_400 + 2 * 3_600)
+        let engine = UnregisteredPlaceSuggestionEngine()
+        // 다음 주에 중심점이 몇십 미터 흔들려도 같은 거절이어야 한다.
+        let dismissed = DismissedPlaceSuggestion(
+            point: GeoPoint(
+                latitude: 37.5005,
+                longitude: 127.0000,
+                altitude: 30,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 8
+            ),
+            dismissedAt: base
+        )
+
+        XCTAssertNotNil(
+            engine.suggestion(
+                places: stays,
+                frequentPlaces: [],
+                dismissed: [],
+                now: now
+            )
+        )
+        XCTAssertNil(
+            engine.suggestion(
+                places: stays,
+                frequentPlaces: [],
+                dismissed: [dismissed],
+                now: now
+            )
+        )
+    }
+
+    /// 방문은 도착마다 하나다. GPS 표본이 몇 개든, 한 번 머문 것은 한 번이다.
+    func testUnregisteredPlaceSuggestionCountsArrivalsNotLocationSamples() {
+        let base = makeDate(2026, 8, 1, 9)
+        let cafe = GeoPoint(
+            latitude: 37.5000,
+            longitude: 127.0000,
+            altitude: 30,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 8
+        )
+        let home = GeoPoint(
+            latitude: 37.5200,
+            longitude: 127.0000,
+            altitude: 30,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 8
+        )
+        func readings(days: Int) -> [SensorReading] {
+            var values: [SensorReading] = []
+            for day in 0..<days {
+                let dayStart = base.addingTimeInterval(Double(day) * 86_400)
+                for step in 0..<24 {
+                    values.append(
+                        SensorReading(
+                            timestamp: dayStart
+                                .addingTimeInterval(Double(step) * 300),
+                            point: cafe,
+                            motion: .stationary,
+                            motionConfidence: .high
+                        )
+                    )
+                }
+                for step in 0..<24 {
+                    values.append(
+                        SensorReading(
+                            timestamp: dayStart.addingTimeInterval(
+                                8 * 3_600 + Double(step) * 300
+                            ),
+                            point: home,
+                            motion: .stationary,
+                            motionConfidence: .high
+                        )
+                    )
+                }
+            }
+            return values
+        }
+        // 집은 이미 등록했으므로 제안 후보가 아니다.
+        let registered = FrequentPlace(kind: .home, point: home)
+        let engine = UnregisteredPlaceSuggestionEngine()
+        let detector = PlaceDetectionEngine()
+
+        let oneArrival = detector.detectStays(readings: readings(days: 1))
+        let cafeStays = oneArrival.filter { stay in
+            guard let point = stay.point else { return false }
+            return distanceMeters(point, cafe) <= 70
+        }
+        XCTAssertEqual(
+            cafeStays.count,
+            1,
+            "표본 24개짜리 한 번의 체류는 체류 하나여야 한다"
+        )
+        XCTAssertNil(
+            engine.suggestion(
+                places: oneArrival,
+                frequentPlaces: [registered],
+                dismissed: [],
+                now: base.addingTimeInterval(12 * 3_600)
+            )
+        )
+
+        let threeArrivals = detector.detectStays(readings: readings(days: 3))
+        let suggestion = engine.suggestion(
+            places: threeArrivals,
+            frequentPlaces: [registered],
+            dismissed: [],
+            now: base.addingTimeInterval(3 * 86_400)
+        )
+        XCTAssertEqual(suggestion?.visitCount, 3)
+        XCTAssertEqual(
+            suggestion?.point.latitude ?? 0,
+            cafe.latitude,
+            accuracy: 0.0001
+        )
+    }
+
+    /// 층 이동으로 한 번의 체류가 여러 조각으로 갈라져도 방문은 한 번이다.
+    func testUnregisteredPlaceSuggestionMergesContiguousStaySegments() {
+        let base = makeDate(2026, 8, 1, 9)
+        let split = (0..<3).map { index in
+            makeVisitStay(
+                latitude: 37.5000,
+                longitude: 127.0000,
+                start: base.addingTimeInterval(Double(index) * 40 * 60),
+                minutes: 40
+            )
+        }
+        let other = makeVisitStay(
+            latitude: 37.5001,
+            longitude: 127.0001,
+            start: base.addingTimeInterval(2 * 86_400)
+        )
+
+        let suggestion = UnregisteredPlaceSuggestionEngine().suggestion(
+            places: split + [other],
+            frequentPlaces: [],
+            dismissed: [],
+            now: base.addingTimeInterval(2 * 86_400 + 2 * 3_600)
+        )
+
+        XCTAssertEqual(split.count + 1, 4)
+        XCTAssertNil(suggestion, "조각 세 개는 방문 한 번이므로 두 번뿐이다")
+    }
+
+    /// 역지오코딩으로 이미 받아 둔 이름만 제안한다.
+    func testUnregisteredPlaceSuggestionOffersOnlyReverseGeocodedNames() {
+        let base = makeDate(2026, 8, 1, 10)
+        var stays = makeCafeVisits(from: base, dayOffsets: [0, 2, 4])
+        stays[0].displayName = "장소 · 3층 추정"
+        stays[1].displayName = "동네 도서관"
+        stays[2].displayName = "동네 도서관"
+
+        let suggestion = UnregisteredPlaceSuggestionEngine().suggestion(
+            places: stays,
+            frequentPlaces: [],
+            dismissed: [],
+            now: base.addingTimeInterval(4 * 86_400 + 2 * 3_600)
+        )
+
+        XCTAssertEqual(suggestion?.suggestedName, "동네 도서관")
+    }
+
+    /// 자주가는 곳에서 지운 자리는 다시 제안하지 않는다.
+    @MainActor
+    func testDeletingFrequentPlaceRemembersItAsDismissedSuggestion() async {
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 30,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 8
+        )
+        var stored = TaptionDataSnapshot.empty
+        let place = FrequentPlace(kind: .hobby, name: "동네 도서관", point: point)
+        stored.settings.frequentPlaces = [place]
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            cloudSyncService: nil
+        )
+        await model.bootstrap()
+
+        model.deleteFrequentPlace(place.id)
+
+        XCTAssertEqual(
+            model.snapshot.settings.dismissedPlaceSuggestions.count,
+            1
+        )
+        XCTAssertNil(
+            UnregisteredPlaceSuggestionEngine().suggestion(
+                places: makeCafeVisits(
+                    from: makeDate(2026, 8, 1, 10),
+                    dayOffsets: [0, 1, 2, 3]
+                ),
+                frequentPlaces: [],
+                dismissed: model.snapshot.settings.dismissedPlaceSuggestions,
+                now: makeDate(2026, 8, 5, 10)
+            )
+        )
+    }
+
+    /// 거절 기록은 기기 위치 기록에서만 나온다. iCloud로 나가지 않고, 기기
+    /// 저장본에는 그대로 남는다.
+    func testDismissedPlaceSuggestionsSurviveSettingsEncoding() throws {
+        var settings = AppFeatureSettings.defaults
+        settings.dismissedPlaceSuggestions = [
+            DismissedPlaceSuggestion(
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127,
+                    altitude: 30,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                dismissedAt: makeDate(2026, 8, 1, 10)
+            )
+        ]
+
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(
+            AppFeatureSettings.self,
+            from: data
+        )
+
+        XCTAssertEqual(
+            decoded.dismissedPlaceSuggestions,
+            settings.dismissedPlaceSuggestions
+        )
     }
 
     private func makeDate(

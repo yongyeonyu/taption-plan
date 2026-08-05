@@ -2,6 +2,7 @@ import CoreMotion
 import CoreLocation
 import Foundation
 import HealthKit
+import WidgetKit
 
 private struct WatchAccelerationArchiveSample: Codable, Sendable {
     var sessionID: UUID?
@@ -122,6 +123,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     @Published private(set) var accelerationSettings:
         TaptionWatchAccelerationSettings?
     @Published private(set) var dataSyncProfile: TaptionWatchDataSyncProfile = .off
+    /// 지금 재고 있는 것. 화면과 위젯이 같은 값을 본다.
+    @Published private(set) var measurement = TaptionWatchMeasurementSnapshot()
 
     // 이 클라이언트들은 각각 시스템 데몬과 연결을 열고 권한을 평가한다.
     // 앱 시작 경로에서 한꺼번에 만들면 첫 프레임 전에 실기기에서만 실패할 수
@@ -195,6 +198,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private let ambientRecorder = WatchAmbientSensorRecorder()
     private var ambientDrainTask: Task<Void, Never>?
     private var ambientArchiveSequence = 0
+    private var recorderStatus = WatchAmbientRecorderStatus(
+        isAvailable: false,
+        isAccessDenied: false,
+        drainFailureCount: 0
+    )
+    private var lastPublishedMeasurement: TaptionWatchMeasurementSnapshot?
+    private var lastWidgetReloadAt: Date?
     private var healthSyncTask: Task<Void, Never>?
     private var didRequestHealthReadAuthorization = false
     var onHealthSnapshot: ((TaptionWatchHealthSnapshot) -> Void)?
@@ -205,6 +215,54 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     func dismissError() {
         errorMessage = nil
+        publishMeasurement()
+    }
+
+    private var measurementSource: TaptionWatchMeasurementSource {
+        if isActive { return .workout }
+        guard accelerationSettings?.isEnabled == true,
+              recorderStatus.isAvailable,
+              !recorderStatus.isAccessDenied else {
+            return .idle
+        }
+        return .ambient
+    }
+
+    /// 화면과 위젯이 같은 사실을 보게 만든다. 위젯 새로고침은 시스템 예산을
+    /// 쓰므로, 보이는 값이 바뀌었을 때만 태운다.
+    private func publishMeasurement(now: Date = .now) {
+        // 앱 그룹 쓰기와 위젯 새로고침도 첫 화면이 그려진 뒤로 미룬다.
+        // 실행 경로에서 앱그룹·위젯 데몬을 먼저 건드리면 실기기에서만
+        // 실패하는 종류의 문제가 되살아난다.
+        guard isSceneReadyForCapture else { return }
+        let snapshot = TaptionWatchMeasurementSnapshot(
+            updatedAt: now,
+            source: measurementSource,
+            behavior: latestObservation?.behavior,
+            confidenceScore: latestObservation?.confidenceScore ?? 0,
+            measuredAt: latestObservation?.endedAt,
+            isRecordingRequested: accelerationSettings?.isEnabled == true,
+            isRecorderAvailable: recorderStatus.isAvailable,
+            isMotionAccessDenied: recorderStatus.isAccessDenied,
+            drainFailureCount: recorderStatus.drainFailureCount,
+            failureMessage: errorMessage
+        )
+        measurement = snapshot
+        guard (try? TaptionWatchMeasurementStore.write(snapshot)) != nil else {
+            return
+        }
+        let shouldReload = TaptionWatchWidgetRefreshPolicy.shouldReload(
+            previous: lastPublishedMeasurement,
+            next: snapshot,
+            lastReloadedAt: lastWidgetReloadAt,
+            now: now
+        )
+        lastPublishedMeasurement = snapshot
+        guard shouldReload else { return }
+        lastWidgetReloadAt = now
+        WidgetCenter.shared.reloadTimelines(
+            ofKind: TaptionWatchWidgetKind.status
+        )
     }
 
     func applySettings(
@@ -326,17 +384,26 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     /// 이어가므로 앱이 할 일은 (1) 기록을 다시 걸고 (2) 지난 실행 이후
     /// 쌓인 표본을 비우는 것뿐이다.
     private func refreshAmbientRecording() {
-        guard isSceneReadyForCapture,
-              accelerationSettings?.isEnabled == true,
-              ambientDrainTask == nil else {
+        guard isSceneReadyForCapture, ambientDrainTask == nil else {
+            publishMeasurement()
             return
         }
+        // 기록이 꺼져 있어도 기록기 상태는 읽는다. 상태 조회는 클래스
+        // 메서드라 기록을 시작하지 않는다. 화면과 위젯이 "왜 안 재는지"를
+        // 말할 수 있어야 한다.
+        let isEnabled = accelerationSettings?.isEnabled == true
         ambientDrainTask = Task { [weak self] in
             guard let self else { return }
             let recorder = self.ambientRecorder
-            await recorder.arm()
-            let result = await recorder.drain()
-            self.applyAmbientDrain(result)
+            if isEnabled {
+                await recorder.arm()
+                let result = await recorder.drain()
+                self.recorderStatus = await recorder.status()
+                self.applyAmbientDrain(result)
+            } else {
+                self.recorderStatus = await recorder.status()
+                self.publishMeasurement()
+            }
             self.ambientDrainTask = nil
         }
     }
@@ -368,6 +435,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 endedAt: latest.endedAt
             )
         }
+        publishMeasurement()
     }
 
     private func restartHealthSync() {
@@ -998,6 +1066,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 endedAt: summary.endedAt
             )
         }
+        publishMeasurement()
         flushAccelerationArchive()
         pendingRoutePoints.removeAll(keepingCapacity: true)
         pendingBehaviorSegments.removeAll(keepingCapacity: true)

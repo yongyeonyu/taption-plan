@@ -1029,7 +1029,7 @@ private final class TimelineRoutePresentationCache {
         let includeImprecise: Bool
     }
 
-    private struct FallbackQuery: Hashable {
+    private struct SpanQuery: Hashable {
         let spanStart: TimeInterval
         let spanEnd: TimeInterval
     }
@@ -1037,7 +1037,8 @@ private final class TimelineRoutePresentationCache {
     private var baseKey: Key?
     private var segmentValues: [SegmentQuery: [TravelSegment]] = [:]
     private var coordinateValues: [CoordinateQuery: [CLLocationCoordinate2D]] = [:]
-    private var fallbackValues: [FallbackQuery: [CLLocationCoordinate2D]] = [:]
+    private var fallbackValues: [SpanQuery: [CLLocationCoordinate2D]] = [:]
+    private var contextValues: [SpanQuery: [TravelSegment]] = [:]
     private var lastPlayheadSpan: (start: TimeInterval, end: TimeInterval)?
     private var lastPlayheadSegments: [TravelSegment] = []
     private var indexedTimelineRevision: UInt64?
@@ -1201,7 +1202,7 @@ private final class TimelineRoutePresentationCache {
         build: () -> [CLLocationCoordinate2D]
     ) -> [CLLocationCoordinate2D] {
         prepare(for: key)
-        let query = FallbackQuery(
+        let query = SpanQuery(
             spanStart: span.start.timeIntervalSinceReferenceDate,
             spanEnd: span.end.timeIntervalSinceReferenceDate
         )
@@ -1213,12 +1214,33 @@ private final class TimelineRoutePresentationCache {
         return value
     }
 
+    /// 배경 경로는 기간이 같으면 답도 같다. 재생 머리가 20Hz로 움직여도
+    /// 기간은 그대로이므로 이동 목록을 다시 훑지 않는다.
+    func contextSegments(
+        for key: Key,
+        span: TimeSpan,
+        build: () -> [TravelSegment]
+    ) -> [TravelSegment] {
+        prepare(for: key)
+        let query = SpanQuery(
+            spanStart: span.start.timeIntervalSinceReferenceDate,
+            spanEnd: span.end.timeIntervalSinceReferenceDate
+        )
+        if let cached = contextValues[query] {
+            return cached
+        }
+        let value = build()
+        contextValues[query] = value
+        return value
+    }
+
     private func prepare(for key: Key) {
         guard baseKey != key else { return }
         baseKey = key
         segmentValues.removeAll(keepingCapacity: true)
         coordinateValues.removeAll(keepingCapacity: true)
         fallbackValues.removeAll(keepingCapacity: true)
+        contextValues.removeAll(keepingCapacity: true)
         lastPlayheadSpan = nil
         lastPlayheadSegments.removeAll(keepingCapacity: true)
     }
@@ -1622,6 +1644,9 @@ struct ScheduleView: View {
             if let missing = model.timelineIntegrationNotice {
                 integrationNotice(missing)
             }
+            if let prompt = model.appleWatchOnboardingPrompt {
+                appleWatchNotice(prompt)
+            }
             TimelineBoard(
                 model: model,
                 scale: model.selectedScale,
@@ -1693,6 +1718,13 @@ struct ScheduleView: View {
                     if selectedTimelineItem?.actualID == actualID {
                         selectedTimelineItem = nil
                     }
+                },
+                onRouteSelection: { selection in
+                    playheadDetailGate.cancel()
+                    mapPlayheadDate = nil
+                    selectedTimelineItem = selection
+                    selectedPhotoCluster = nil
+                    detailSection = .map
                 }
             )
             .frame(height: resolvedPanelHeight, alignment: .top)
@@ -1713,6 +1745,15 @@ struct ScheduleView: View {
         .task(id: routeReadingsSpan) {
             routeReadings = await model.sensorReadings(in: routeReadingsSpan)
         }
+        .task(id: model.timelineRevision) { // TPDEBUG
+            guard ProcessInfo.processInfo.environment["TP_DEBUG_TRAVEL_INDEX"] != nil else { return }
+            for step in 0..<24 {
+                tpDebugSelectTravel()
+                if step == 8 { detailSection = .weather }
+                if step == 10 { detailSection = .map }
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
         .onChange(of: model.timelineRevision) { _, _ in
             refreshPlayheadDetailAfterTimelineReload()
         }
@@ -1730,6 +1771,35 @@ struct ScheduleView: View {
                 .presentationDragIndicator(.visible)
             }
         }
+    }
+
+    // TPDEBUG
+    private func tpDebugSelectTravel() {
+        let environment = ProcessInfo.processInfo.environment
+        guard let raw = environment["TP_DEBUG_TRAVEL_INDEX"] else { return }
+        playheadDetailGate.cancel()
+        if mapPlayheadDate != nil { mapPlayheadDate = nil }
+        if selectedPhotoCluster != nil { selectedPhotoCluster = nil }
+        let day = daySpan
+        let todays = model.snapshot.travel
+            .filter { $0.span.intersection(with: day) != nil }
+            .sorted { $0.span.start < $1.span.start }
+        guard let index = Int(raw), index >= 0, index < todays.count else {
+            if selectedTimelineItem != nil { selectedTimelineItem = nil }
+            return
+        }
+        let picked = todays[index]
+        let wanted = TimelineSelection(
+            title: "이동",
+            span: picked.span,
+            planID: nil,
+            travelID: picked.id,
+            recordNodeID: "automatic.travel.\(picked.id.uuidString)",
+            isRoute: true,
+            categoryID: "movement",
+            categoryName: "이동"
+        )
+        if selectedTimelineItem != wanted { selectedTimelineItem = wanted }
     }
 
     private func selectScaleFromTopBar(_ scale: TimeScale) {
@@ -1808,6 +1878,71 @@ struct ScheduleView: View {
         }
     }
 
+    /// 첫 실행에 한 번 뜨는 Apple Watch 안내. 막아서지 않도록 시간표 위에
+    /// 얹고, 닫으면 그 안내는 다시 오지 않는다.
+    @ViewBuilder
+    private func appleWatchNotice(
+        _ prompt: AppleWatchOnboardingPrompt
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Image(systemName: "applewatch")
+                    .font(.taption(size: 13, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Text(
+                    prompt == .installInvitation
+                        ? "Apple Watch에도 Taption Plan이 있습니다"
+                        : "Apple Watch 없이도 하루는 기록됩니다"
+                )
+                .font(.taption(size: 9.5, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                Spacer(minLength: 4)
+                Button("닫기") {
+                    model.dismissAppleWatchPrompt(prompt)
+                }
+                .font(.taption(size: 8, weight: .bold))
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.tpSecondary)
+            }
+            switch prompt {
+            case .installInvitation:
+                Text("손목에 차고 있는 동안의 움직임까지 함께 적습니다. \(AppleWatchOnboarding.installInstruction)")
+                    .font(.taption(size: 7.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .watchlessLimitations:
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Apple Watch가 있어야 되는 것만 적어 둡니다.")
+                        .font(.taption(size: 7.5, weight: .semibold))
+                        .foregroundStyle(Color.tpSecondary)
+                    ForEach(
+                        AppleWatchOnboarding.watchlessLimitations,
+                        id: \.self
+                    ) { limitation in
+                        Text("· \(limitation)")
+                            .font(.taption(size: 7.5))
+                            .foregroundStyle(Color.tpSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text(AppleWatchOnboarding.iPhoneOnlyCoverage)
+                        .font(.taption(size: 7.5, weight: .semibold))
+                        .foregroundStyle(Color.tpInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Color.tpBackground)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.tpSecondary.opacity(0.18))
+                .frame(height: 0.5)
+        }
+    }
+
     private func relativeAgeText(_ date: Date) -> String {
         let seconds = max(0, Int(Date.now.timeIntervalSince(date)))
         if seconds < 60 { return "방금" }
@@ -1815,6 +1950,7 @@ struct ScheduleView: View {
     }
 
     private func requestPlayheadDetailUpdate(at date: Date) {
+        if ProcessInfo.processInfo.environment["TP_DEBUG_TRAVEL_INDEX"] != nil { return } // TPDEBUG
         playheadDetailGate.submit(
             date,
             minimumInterval: playheadDetailInterval(for: model.selectedScale)
@@ -2056,10 +2192,17 @@ struct ScheduleView: View {
     }
 
     private var routeReadingsSpan: TimeSpan {
-        if mapPlayheadDate != nil {
-            return daySpan
-        }
-        return selectedTimelineItem?.span ?? daySpan
+        // 지도는 고른 구간만이 아니라 보고 있는 기간 전체의 경로를 깐다.
+        // 좌표가 남아 있는 기간까지만 넓혀 읽는 양을 묶어 둔다.
+        TimelineRouteDisplayPolicy.readingSpan(
+            context: TimelineRouteDisplayPolicy.contextSpan(
+                for: model.selectedScale.timelineLevel,
+                visibleSpan: visibleSpan
+            ),
+            fallback: mapPlayheadDate != nil
+                ? daySpan
+                : (selectedTimelineItem?.span ?? daySpan)
+        )
     }
 
     private var closestWeather: WeatherContext? {
@@ -2259,6 +2402,262 @@ enum TimelineRouteDisplayPolicy {
         routeSegments: [TravelSegment]
     ) -> Bool {
         playheadDate == nil || !routeSegments.isEmpty
+    }
+
+    /// 지도에 함께 깔아 둘 기간. 시간표가 보여 주는 기간을 그대로 쓴다.
+    /// 년 눈금은 이동 수천 개가 한 화면에 뭉쳐 뜻을 잃으므로 배경을 깔지
+    /// 않고 고른 구간만 남긴다.
+    static func contextSpan(
+        for level: TimelineLevel,
+        visibleSpan: TimeSpan
+    ) -> TimeSpan? {
+        switch level {
+        case .day, .week, .month: visibleSpan
+        case .year: nil
+        }
+    }
+
+    /// 센서 기록은 7일만 보관한다. 그보다 오래된 구간을 읽어도 좌표가
+    /// 없으므로 지도용 기록 읽기 구간은 보관 기간까지만 넓힌다.
+    static let readingRetentionWindow: TimeInterval = 8 * 86_400
+
+    static func readingSpan(
+        context: TimeSpan?,
+        fallback: TimeSpan,
+        now: Date = .now
+    ) -> TimeSpan {
+        guard let context else { return fallback }
+        // 하루 경계로 끊어 두어야 이 구간이 화면을 다시 그릴 때마다
+        // 달라지지 않는다. 값이 흔들리면 기록 읽기 작업이 끝없이 다시
+        // 시작한다.
+        let earliest = Calendar.autoupdatingCurrent
+            .startOfDay(for: now)
+            .addingTimeInterval(-readingRetentionWindow)
+        guard context.end > earliest else { return fallback }
+        return TimeSpan(start: max(context.start, earliest), end: context.end)
+    }
+
+    /// 한 화면에 배경으로 깔 이동 구간 수. 한 달이면 수백 개가 나오는데
+    /// 짧은 구간은 서로 겹쳐 화소 아래로 사라지므로 거리가 긴 순서로만
+    /// 남긴다.
+    static let maximumContextSegments = 120
+
+    static func contextSegments(
+        from travel: [TravelSegment],
+        intersecting span: TimeSpan,
+        limit: Int = maximumContextSegments
+    ) -> [TravelSegment] {
+        let candidates = travel.filter {
+            $0.span.intersection(with: span) != nil
+        }
+        guard candidates.count > limit else {
+            return candidates.sorted { $0.span.start < $1.span.start }
+        }
+        return candidates
+            .sorted { lhs, rhs in
+                if lhs.distanceMeters == rhs.distanceMeters {
+                    return lhs.span.start < rhs.span.start
+                }
+                return lhs.distanceMeters > rhs.distanceMeters
+            }
+            .prefix(limit)
+            .sorted { $0.span.start < $1.span.start }
+    }
+}
+
+/// 그리기 직전에 경로 점을 줄인다. GPS 한 점은 보통 5m 안팎의 오차를 안고
+/// 있어 그보다 작은 굴곡은 지도에서 화소 아래로 사라진다. 하루에 수백 점,
+/// 한 주면 수천 점이라 줄이지 않으면 지도가 그대로 굳는다.
+enum RoutePolylineDecimator {
+    /// 지도를 가장 가깝게 당겨도 1pt가 약 2.5m다. 5m는 GPS 오차보다 작아
+    /// 모양이 눈에 띄게 달라지지 않는다.
+    static let defaultToleranceMeters: Double = 5
+    /// 한 구간을 아무리 길게 걸어도 이만큼만 그린다.
+    static let defaultLimit = 400
+    /// 서 있는 동안 흔들리는 좌표를 먼저 걷어 낸다.
+    static let minimumSpacingMeters: Double = 3
+
+    private typealias PlanarPoint = (x: Double, y: Double)
+
+    /// Douglas–Peucker. 양 끝점은 항상 남고, 결과가 상한을 넘으면 허용
+    /// 오차를 두 배씩 키워 다시 줄인다.
+    static func decimate(
+        _ coordinates: [CLLocationCoordinate2D],
+        toleranceMeters: Double = defaultToleranceMeters,
+        limit: Int = defaultLimit
+    ) -> [CLLocationCoordinate2D] {
+        guard coordinates.count > 2 else { return coordinates }
+        // Douglas–Peucker는 톱니처럼 줄일 것이 없는 경로에서 점 수의
+        // 제곱에 가깝게 느려진다. 실내에서 튀는 좌표가 그런 모양이라
+        // 먼저 상한의 네 배까지 고르게 솎아 계산량을 묶어 둔다.
+        let source = coordinates.count > limit * 4
+            ? uniformlySampled(coordinates, limit: limit * 4)
+            : coordinates
+        var tolerance = max(0, toleranceMeters)
+        var result = simplify(source, toleranceMeters: tolerance)
+        var attempts = 0
+        while result.count > limit, attempts < 8 {
+            tolerance = tolerance > 0 ? tolerance * 2 : 1
+            result = simplify(source, toleranceMeters: tolerance)
+            attempts += 1
+        }
+        return result.count > limit
+            ? uniformlySampled(result, limit: limit)
+            : result
+    }
+
+    /// 최소 간격보다 촘촘한 점을 걷어 낸다. 마지막 점은 도착 지점이라
+    /// 간격과 무관하게 남긴다.
+    static func spaced(
+        _ coordinates: [CLLocationCoordinate2D],
+        minimumMeters: Double = minimumSpacingMeters
+    ) -> [CLLocationCoordinate2D] {
+        guard coordinates.count > 2, minimumMeters > 0 else { return coordinates }
+        let scale = planarScale(at: coordinates[0].latitude)
+        let squaredMinimum = minimumMeters * minimumMeters
+        var result: [CLLocationCoordinate2D] = [coordinates[0]]
+        result.reserveCapacity(coordinates.count)
+        for coordinate in coordinates.dropFirst() {
+            let previous = result[result.count - 1]
+            let dx = (coordinate.longitude - previous.longitude) * scale.longitude
+            let dy = (coordinate.latitude - previous.latitude) * scale.latitude
+            if dx * dx + dy * dy >= squaredMinimum {
+                result.append(coordinate)
+            }
+        }
+        if let last = coordinates.last,
+           result.count == 1
+            || result[result.count - 1].latitude != last.latitude
+            || result[result.count - 1].longitude != last.longitude {
+            result.append(last)
+        }
+        return result
+    }
+
+    /// 탭한 좌표에서 경로까지의 거리. 지도 위 선을 골라내는 데 쓴다.
+    static func distanceMeters(
+        from coordinate: CLLocationCoordinate2D,
+        to polyline: [CLLocationCoordinate2D]
+    ) -> Double? {
+        guard let first = polyline.first else { return nil }
+        let scale = planarScale(at: first.latitude)
+        let origin = first
+        func project(_ value: CLLocationCoordinate2D) -> PlanarPoint {
+            (
+                x: (value.longitude - origin.longitude) * scale.longitude,
+                y: (value.latitude - origin.latitude) * scale.latitude
+            )
+        }
+        let target = project(coordinate)
+        guard polyline.count > 1 else {
+            let start = project(first)
+            let dx = target.x - start.x
+            let dy = target.y - start.y
+            return (dx * dx + dy * dy).squareRoot()
+        }
+        var best = Double.infinity
+        var previous = project(first)
+        for value in polyline.dropFirst() {
+            let current = project(value)
+            best = min(
+                best,
+                squaredDistance(target, from: previous, to: current)
+            )
+            previous = current
+        }
+        return best.squareRoot()
+    }
+
+    private static func planarScale(
+        at latitude: Double
+    ) -> (latitude: Double, longitude: Double) {
+        // 경로 한 구간은 지구 곡률을 무시할 만큼 짧다. 삼각 함수를 점마다
+        // 부르는 대신 위도 하나로 미터 평면을 만들어 둔다.
+        let metersPerDegree = 111_320.0
+        return (
+            latitude: metersPerDegree,
+            longitude: metersPerDegree * cos(latitude * .pi / 180)
+        )
+    }
+
+    private static func simplify(
+        _ coordinates: [CLLocationCoordinate2D],
+        toleranceMeters: Double
+    ) -> [CLLocationCoordinate2D] {
+        guard coordinates.count > 2, toleranceMeters > 0 else {
+            return coordinates
+        }
+        let origin = coordinates[0]
+        let scale = planarScale(at: origin.latitude)
+        let points: [PlanarPoint] = coordinates.map {
+            (
+                x: ($0.longitude - origin.longitude) * scale.longitude,
+                y: ($0.latitude - origin.latitude) * scale.latitude
+            )
+        }
+        var keep = [Bool](repeating: false, count: points.count)
+        keep[0] = true
+        keep[points.count - 1] = true
+        let squaredTolerance = toleranceMeters * toleranceMeters
+        var stack: [(Int, Int)] = [(0, points.count - 1)]
+        while let (first, last) = stack.popLast() {
+            guard last > first + 1 else { continue }
+            var farthest = first
+            var farthestDistance = -1.0
+            for index in (first + 1)..<last {
+                let distance = squaredDistance(
+                    points[index],
+                    from: points[first],
+                    to: points[last]
+                )
+                if distance > farthestDistance {
+                    farthestDistance = distance
+                    farthest = index
+                }
+            }
+            guard farthestDistance > squaredTolerance else { continue }
+            keep[farthest] = true
+            stack.append((first, farthest))
+            stack.append((farthest, last))
+        }
+        return zip(coordinates, keep).compactMap { $1 ? $0 : nil }
+    }
+
+    private static func squaredDistance(
+        _ point: PlanarPoint,
+        from start: PlanarPoint,
+        to end: PlanarPoint
+    ) -> Double {
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        let lengthSquared = dx * dx + dy * dy
+        guard lengthSquared > 0 else {
+            let ex = point.x - start.x
+            let ey = point.y - start.y
+            return ex * ex + ey * ey
+        }
+        var ratio = ((point.x - start.x) * dx + (point.y - start.y) * dy)
+            / lengthSquared
+        ratio = min(1, max(0, ratio))
+        let ex = point.x - (start.x + ratio * dx)
+        let ey = point.y - (start.y + ratio * dy)
+        return ex * ex + ey * ey
+    }
+
+    private static func uniformlySampled(
+        _ values: [CLLocationCoordinate2D],
+        limit: Int
+    ) -> [CLLocationCoordinate2D] {
+        guard limit >= 2, values.count > limit else { return values }
+        let step = Double(values.count - 1) / Double(limit - 1)
+        return (0..<limit).map { index in
+            values[
+                min(
+                    values.count - 1,
+                    Int((Double(index) * step).rounded())
+                )
+            ]
+        }
     }
 }
 
@@ -2514,7 +2913,11 @@ private struct TimelineDetailPanel: View {
     @Binding var selectedPhotoCluster: PhotoCluster?
     let routeReadings: [SensorReading]
     let onActualDeleted: (UUID) -> Void
+    let onRouteSelection: (TimelineSelection) -> Void
     @State private var mapPosition: MapCameraPosition = .automatic
+    // 지도에서 선을 골라내려면 지금 보이는 범위를 알아야 한다. 카메라가
+    // 멈출 때만 받아 두어 프레임마다 값이 바뀌지 않게 한다.
+    @State private var visibleMapRegion: MKCoordinateRegion?
     @State private var selectedPhotoIndex = 0
     @State private var pendingActualDeletionID: UUID?
     @State private var showsGoalLinkSheet = false
@@ -3207,6 +3610,7 @@ private struct TimelineDetailPanel: View {
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity, minHeight: 84)
             } else {
+                MapReader { proxy in
                 Map(position: $mapPosition, content: {
                     ForEach(routeLocationPins) { pin in
                         Marker(pin.title, systemImage: "mappin.circle.fill", coordinate: pin.coordinate)
@@ -3218,19 +3622,69 @@ private struct TimelineDetailPanel: View {
                             .tint(Color.tpNow)
                     }
 
-                    ForEach(routeSegments) { segment in
+                    // 기간 전체의 지난 경로를 먼저 옅게 깔고, 고른 구간을
+                    // 그 위에 진하게 얹는다. 순서가 바뀌면 강조가 배경에
+                    // 묻힌다.
+                    ForEach(dimmedRouteSegments) { segment in
                         let coordinates = coordinates(for: segment)
                         if coordinates.count >= 2 {
                             MapPolyline(coordinates: coordinates)
                                 .stroke(
-                                    routeColor(for: segment.mode).opacity(
-                                        selectedSegmentIDs.contains(segment.id) ? 1 : 0.44
-                                    ),
+                                    routeColor(for: segment.mode)
+                                        .opacity(dimmedRouteOpacity),
                                     style: StrokeStyle(
-                                        lineWidth: selectedSegmentIDs.contains(segment.id) ? 4 : 2.5,
+                                        lineWidth: dimmedRouteWidth,
                                         lineCap: .round,
                                         lineJoin: .round
                                     )
+                                )
+                        }
+                    }
+
+                    // 옅은 경로 위를 나란히 지나가도 구분되도록 강조 선
+                    // 아래에 흰 테두리를 한 겹 깐다. 지도는 그린 차례가
+                    // 아니라 겹 층으로 위아래를 정하므로, 테두리는 아래
+                    // 층에 두고 강조 선만 글자 위 층으로 올린다. 층을
+                    // 나누지 않으면 테두리가 강조 색을 덮어 선이 하얗게
+                    // 보인다.
+                    ForEach(haloedRouteSegments) { segment in
+                        let coordinates = coordinates(for: segment)
+                        if coordinates.count >= 2 {
+                            MapPolyline(coordinates: coordinates)
+                                .stroke(
+                                    Color.white.opacity(0.9),
+                                    style: StrokeStyle(
+                                        lineWidth: highlightedRouteWidth + 3,
+                                        lineCap: .round,
+                                        lineJoin: .round
+                                    )
+                                )
+                                .mapOverlayLevel(level: .aboveRoads)
+                        }
+                    }
+
+                    ForEach(routeSegments) { segment in
+                        let coordinates = coordinates(for: segment)
+                        if coordinates.count >= 2 {
+                            let isHighlighted = selectedSegmentIDs
+                                .contains(segment.id)
+                            MapPolyline(coordinates: coordinates)
+                                .stroke(
+                                    routeColor(for: segment.mode).opacity(
+                                        isHighlighted ? 1 : 0.44
+                                    ),
+                                    style: StrokeStyle(
+                                        lineWidth: isHighlighted
+                                            ? highlightedRouteWidth
+                                            : 2.5,
+                                        lineCap: .round,
+                                        lineJoin: .round
+                                    )
+                            )
+                            .mapOverlayLevel(
+                                level: isHighlighted
+                                    ? .aboveLabels
+                                    : .aboveRoads
                             )
                         }
                     }
@@ -3273,13 +3727,24 @@ private struct TimelineDetailPanel: View {
                     MapCompass()
                     MapScaleView()
                 }
-                .frame(height: 216)
+                .onMapCameraChange(frequency: .onEnd) { context in
+                    visibleMapRegion = context.region
+                }
+                .onTapGesture { location in
+                    guard let coordinate = proxy.convert(
+                        location,
+                        from: .local
+                    ) else { return }
+                    selectRouteSegment(near: coordinate)
+                }
+                .frame(height: routeMapHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
 
                 if displayedRouteCoordinates.count >= 2 {
                     HStack(spacing: 10) {
                         Label(
-                            "GPS \(displayedRouteCoordinates.count)개",
+                            "GPS \(recordedRouteFixCount)개",
                             systemImage: "location.fill"
                         )
                         Label(
@@ -4733,10 +5198,25 @@ private struct TimelineDetailPanel: View {
     }
 
     private var routeTitle: String {
+        if playheadDate != nil,
+           routeSegments.isEmpty,
+           fallbackRouteCoordinates.count < 2,
+           !hasDimmedRoutes {
+            return "현재 위치"
+        }
+        // 지도가 기간 전체의 지난 경로를 담고 있으면 제목도 그 기간을
+        // 말해야 한다. 년 눈금은 배경을 깔지 않아 예전 이름을 그대로 쓴다.
+        if let period = routePeriodName, !contextRouteSegments.isEmpty {
+            if playheadDate != nil {
+                return "\(period) 이동 경로 · 현재 구간"
+            }
+            if activeSelection?.isRoute == true {
+                return "\(period) 이동 경로 · 선택 구간"
+            }
+            return "\(period) 이동 경로"
+        }
         if playheadDate != nil {
-            return routeSegments.isEmpty && fallbackRouteCoordinates.count < 2
-                ? "현재 위치"
-                : "현재 이동 경로"
+            return "현재 이동 경로"
         }
         if activeSelection?.isRoute == true {
             return "선택된 이동 경로"
@@ -4808,6 +5288,101 @@ private struct TimelineDetailPanel: View {
         return routeSegments.first {
             $0.span.intersection(with: selection.span) != nil
         }
+    }
+
+    private var routeMapHeight: CGFloat { 216 }
+    /// 배경 경로는 읽히되 눈을 끌지 않아야 한다. Apple 지도 바탕색 위에서
+    /// 0.22까지 내리면 아예 보이지 않아 0.45로 잡았다. 강조 선은 진하기
+    /// 2.2배, 굵기 1.5배에 흰 테두리까지 둘러 한눈에 갈린다.
+    private var dimmedRouteOpacity: Double { 0.45 }
+    private var dimmedRouteWidth: CGFloat { 3 }
+    private var highlightedRouteWidth: CGFloat { 4.5 }
+
+    /// 지도에 함께 깔 기간. 시간표가 보여 주는 기간과 같다.
+    private var routeContextSpan: TimeSpan? {
+        TimelineRouteDisplayPolicy.contextSpan(
+            for: model.selectedScale.timelineLevel,
+            visibleSpan: TimelineAggregationEngine().interval(
+                for: model.selectedScale.timelineLevel,
+                containing: model.selectedDate
+            )
+        )
+    }
+
+    private var contextRouteSegments: [TravelSegment] {
+        guard let span = routeContextSpan else { return [] }
+        return routePresentationCache.contextSegments(
+            for: routePresentationCacheKey,
+            span: span
+        ) {
+            TimelineRouteDisplayPolicy.contextSegments(
+                from: model.snapshot.travel,
+                intersecting: span
+            )
+        }
+    }
+
+    private var dimmedRouteSegments: [TravelSegment] {
+        guard !contextRouteSegments.isEmpty else { return [] }
+        let highlighted = Set(routeSegments.map(\.id))
+        return contextRouteSegments.filter { !highlighted.contains($0.id) }
+    }
+
+    private var hasDimmedRoutes: Bool {
+        !dimmedRouteSegments.isEmpty
+    }
+
+    /// 흰 테두리를 두를 구간. 배경 경로가 없으면 두를 이유도 없다.
+    private var haloedRouteSegments: [TravelSegment] {
+        guard hasDimmedRoutes else { return [] }
+        return routeSegments.filter { selectedSegmentIDs.contains($0.id) }
+    }
+
+    private var routePeriodName: String? {
+        guard routeContextSpan != nil else { return nil }
+        switch model.selectedScale {
+        case .day: return "하루"
+        case .week: return "한 주"
+        case .month: return "한 달"
+        case .year: return nil
+        }
+    }
+
+    /// 옅게 깔린 경로를 눌러도 그 구간이 고른 구간이 된다. 시간표 막대를
+    /// 누른 것과 같은 선택을 만들어 올려 보내므로 선택 경로는 하나뿐이다.
+    private func selectRouteSegment(near coordinate: CLLocationCoordinate2D) {
+        guard let region = visibleMapRegion else { return }
+        // 손가락 하나가 닿는 넓이를 지금 배율의 거리로 바꾼다.
+        let metersPerPoint = region.span.latitudeDelta
+            * 111_320
+            / Double(max(1, routeMapHeight))
+        let toleranceMeters = max(12, metersPerPoint * 22)
+        var best: (segment: TravelSegment, distance: Double)?
+        for segment in dimmedRouteSegments {
+            let values = coordinates(for: segment)
+            guard values.count >= 2,
+                  let distance = RoutePolylineDecimator.distanceMeters(
+                      from: coordinate,
+                      to: values
+                  ),
+                  distance <= toleranceMeters else { continue }
+            if best == nil || distance < best!.distance {
+                best = (segment, distance)
+            }
+        }
+        guard let picked = best?.segment else { return }
+        onRouteSelection(
+            TimelineSelection(
+                title: timelineTravelModeName(picked.mode),
+                span: picked.span,
+                planID: nil,
+                travelID: picked.id,
+                recordNodeID: "automatic.travel.\(picked.id.uuidString)",
+                isRoute: true,
+                categoryID: "movement",
+                categoryName: "이동"
+            )
+        )
     }
 
     private struct RouteLocationPin: Identifiable {
@@ -4977,12 +5552,14 @@ private struct TimelineDetailPanel: View {
             && routeSegments.isEmpty
             && fallbackRouteCoordinates.count < 2
             && playheadRoutePin != nil
+            && !hasDimmedRoutes
     }
 
     private var hasMapContent: Bool {
         playheadRoutePin != nil
             || !routeLocationPins.isEmpty
             || !displayedRouteCoordinates.isEmpty
+            || hasDimmedRoutes
     }
 
     private var currentLocationCoordinate: CLLocationCoordinate2D? {
@@ -5125,8 +5702,7 @@ private struct TimelineDetailPanel: View {
     ) -> [CLLocationCoordinate2D] {
         // Archived readings and the live merge are chronological. Avoid a
         // full sort whenever a new GPS fix invalidates the route cache.
-        let readings = routeReadings
-            .filter { span.contains($0.timestamp) }
+        let readings = routeReadingSlice(in: span)
             .compactMap(\.point)
             .filter(isValidCoordinate)
         let precise = readings.filter {
@@ -5137,26 +5713,48 @@ private struct TimelineDetailPanel: View {
         )
     }
 
+    /// 기록은 시간 순서대로 쌓여 있다. 구간마다 전체를 훑는 대신 이진
+    /// 탐색으로 잘라 낸다. 한 주치 기록에 이동 100개를 그려도 훑는 양이
+    /// 기록 수에 비례해 늘지 않는다.
+    private func routeReadingSlice(
+        in span: TimeSpan
+    ) -> ArraySlice<SensorReading> {
+        guard !routeReadings.isEmpty else { return [] }
+        let lower = firstReadingIndex { $0.timestamp >= span.start }
+        let upper = firstReadingIndex { $0.timestamp > span.end }
+        guard lower < upper else { return [] }
+        return routeReadings[lower..<upper]
+    }
+
+    private func firstReadingIndex(
+        where predicate: (SensorReading) -> Bool
+    ) -> Int {
+        var low = 0
+        var high = routeReadings.count
+        while low < high {
+            let middle = (low + high) / 2
+            if predicate(routeReadings[middle]) {
+                high = middle
+            } else {
+                low = middle + 1
+            }
+        }
+        return low
+    }
+
     private func simplifiedRouteCoordinates(
         _ points: [GeoPoint]
     ) -> [CLLocationCoordinate2D] {
-        points.reduce(into: []) { result, point in
-            let coordinate = CLLocationCoordinate2D(
-                latitude: point.latitude,
-                longitude: point.longitude
+        RoutePolylineDecimator.decimate(
+            RoutePolylineDecimator.spaced(
+                points.map {
+                    CLLocationCoordinate2D(
+                        latitude: $0.latitude,
+                        longitude: $0.longitude
+                    )
+                }
             )
-            guard let previous = result.last else {
-                result.append(coordinate)
-                return
-            }
-            if CLLocation(latitude: previous.latitude, longitude: previous.longitude)
-                .distance(from: CLLocation(
-                    latitude: coordinate.latitude,
-                    longitude: coordinate.longitude
-                )) >= 3 {
-                result.append(coordinate)
-            }
-        }
+        )
     }
 
     private var displayedRouteCoordinates: [CLLocationCoordinate2D] {
@@ -5166,6 +5764,18 @@ private struct TimelineDetailPanel: View {
         }
         guard allowsFallbackRoutePath else { return [] }
         return fallbackRouteCoordinates
+    }
+
+    /// 그린 점이 아니라 실제로 받은 위치 수를 센다. 그리기 직전에 점을
+    /// 줄이므로 폴리라인 점 수를 그대로 쓰면 20분 걸은 기록이 "GPS 2개"로
+    /// 보인다.
+    private var recordedRouteFixCount: Int {
+        let recorded = routeReadingSlice(in: activeRouteSpan)
+            .lazy
+            .compactMap(\.point)
+            .filter(isValidCoordinate)
+            .count
+        return max(recorded, displayedRouteCoordinates.count)
     }
 
     private var recordedRouteDistanceMeters: Double {
@@ -5295,8 +5905,7 @@ private struct TimelineDetailPanel: View {
            isValidCoordinate(point) {
             points.append(point)
         }
-        let readings = routeReadings
-            .filter { segment.span.contains($0.timestamp) }
+        let readings = routeReadingSlice(in: segment.span)
             .compactMap(\.point)
             .filter(isValidCoordinate)
         let preferredReadings = includeImprecise
@@ -5414,8 +6023,16 @@ private struct TimelineDetailPanel: View {
             return
         }
 
-        // When the timeline is idle without a selected route, the live
-        // location remains the camera anchor.
+        // 고른 구간이 없으면 기간 전체가 이 카드의 주제다. 현재 위치를
+        // 따라다니는 대신 기간 경로를 담는다. 좌표만으로 범위를 잡으므로
+        // GPS가 들어와도 화면이 흔들리지 않는다.
+        if playheadDate == nil, let region = periodRouteRegion() {
+            lastMapFocusCoordinate = nil
+            mapPosition = .region(region)
+            return
+        }
+
+        // 그릴 경로가 아직 없을 때만 지도는 현재 위치를 따라간다.
         if playheadDate == nil, let focus = currentLocationCoordinate {
             if let lastMapFocusCoordinate,
                CLLocation(
@@ -5449,28 +6066,62 @@ private struct TimelineDetailPanel: View {
         }
 
         lastMapFocusCoordinate = nil
+        mapPosition = .automatic
+    }
 
-        let values = displayedRouteCoordinates
-        guard !values.isEmpty else {
-            mapPosition = .automatic
-            return
+    /// 기간 전체를 담는 화면 범위. 좌표를 새로 이어 붙이지 않고 최솟값과
+    /// 최댓값만 훑는다. 센서 알림마다 불릴 수 있어 할당을 만들지 않는다.
+    private func periodRouteRegion() -> MKCoordinateRegion? {
+        var minLatitude = Double.infinity
+        var maxLatitude = -Double.infinity
+        var minLongitude = Double.infinity
+        var maxLongitude = -Double.infinity
+        func extend(_ values: [CLLocationCoordinate2D]) {
+            for value in values {
+                minLatitude = min(minLatitude, value.latitude)
+                maxLatitude = max(maxLatitude, value.latitude)
+                minLongitude = min(minLongitude, value.longitude)
+                maxLongitude = max(maxLongitude, value.longitude)
+            }
         }
-        fitMap(to: values)
+        extend(displayedRouteCoordinates)
+        for segment in dimmedRouteSegments {
+            extend(coordinates(for: segment))
+        }
+        guard minLatitude <= maxLatitude else { return nil }
+        return region(
+            fromLatitudes: (minLatitude, maxLatitude),
+            longitudes: (minLongitude, maxLongitude)
+        )
     }
 
     private func fitMap(to values: [CLLocationCoordinate2D]) {
         let latitudes = values.map(\.latitude)
         let longitudes = values.map(\.longitude)
+        guard let minLatitude = latitudes.min(),
+              let maxLatitude = latitudes.max(),
+              let minLongitude = longitudes.min(),
+              let maxLongitude = longitudes.max() else { return }
         mapPosition = .region(
-            MKCoordinateRegion(
-                center: CLLocationCoordinate2D(
-                    latitude: (latitudes.min()! + latitudes.max()!) / 2,
-                    longitude: (longitudes.min()! + longitudes.max()!) / 2
-                ),
-                span: MKCoordinateSpan(
-                    latitudeDelta: max(0.005, (latitudes.max()! - latitudes.min()!) * 1.45),
-                    longitudeDelta: max(0.005, (longitudes.max()! - longitudes.min()!) * 1.45)
-                )
+            region(
+                fromLatitudes: (minLatitude, maxLatitude),
+                longitudes: (minLongitude, maxLongitude)
+            )
+        )
+    }
+
+    private func region(
+        fromLatitudes latitudes: (Double, Double),
+        longitudes: (Double, Double)
+    ) -> MKCoordinateRegion {
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: (latitudes.0 + latitudes.1) / 2,
+                longitude: (longitudes.0 + longitudes.1) / 2
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta: max(0.005, (latitudes.1 - latitudes.0) * 1.45),
+                longitudeDelta: max(0.005, (longitudes.1 - longitudes.0) * 1.45)
             )
         )
     }
@@ -6127,6 +6778,13 @@ struct GroupGanttView: View {
                     if selectedTimelineItem?.actualID == actualID {
                         selectedTimelineItem = nil
                     }
+                },
+                onRouteSelection: { selection in
+                    playheadDetailGate.cancel()
+                    mapPlayheadDate = nil
+                    selectedTimelineItem = selection
+                    selectedPhotoCluster = nil
+                    detailSection = .map
                 }
             )
             .frame(height: resolvedPanelHeight, alignment: .top)
@@ -6365,10 +7023,18 @@ struct GroupGanttView: View {
     }
 
     private var routeReadingsSpan: TimeSpan {
-        if mapPlayheadDate != nil {
-            return selectedDaySpan
-        }
-        return selectedTimelineItem?.span ?? selectedDaySpan
+        TimelineRouteDisplayPolicy.readingSpan(
+            context: TimelineRouteDisplayPolicy.contextSpan(
+                for: model.selectedScale.timelineLevel,
+                visibleSpan: TimelineAggregationEngine().interval(
+                    for: model.selectedScale.timelineLevel,
+                    containing: model.selectedDate
+                )
+            ),
+            fallback: mapPlayheadDate != nil
+                ? selectedDaySpan
+                : (selectedTimelineItem?.span ?? selectedDaySpan)
+        )
     }
 }
 

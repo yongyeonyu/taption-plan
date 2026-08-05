@@ -73,13 +73,12 @@
 		A1000000000000000000003D /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
 		A10000000000000000000040 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
 		A10000000000000000000041 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
-		A10000000000000000000042 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
-		A10000000000000000000043 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
 		A10000000000000000000044 /* ScreenTimeUsageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000041 /* ScreenTimeUsageService.swift */; };
 		A10000000000000000000072 /* WatchSensorQueryPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000072 /* WatchSensorQueryPlan.swift */; };
 		A10000000000000000000073 /* WatchSensorQueryPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000072 /* WatchSensorQueryPlan.swift */; };
 		A10000000000000000000074 /* WatchObjCExceptionCatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000074 /* WatchObjCExceptionCatcher.m */; };
 		A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */; };
+		A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000077 /* WatchMeasurementAlertTests.swift */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -225,6 +224,7 @@
 		F10000000000000000000074 /* WatchObjCExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchObjCExceptionCatcher.m; sourceTree = "<group>"; };
 		F10000000000000000000075 /* TaptionPlanWatch-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TaptionPlanWatch-Bridging-Header.h"; sourceTree = "<group>"; };
 		F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlanTests.swift; sourceTree = "<group>"; };
+		F10000000000000000000077 /* WatchMeasurementAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchMeasurementAlertTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -311,6 +311,7 @@
 				F1000000000000000000000C /* TimeScaleTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
+				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 			);
 			path = TaptionPlanTests;
 			sourceTree = "<group>";
@@ -692,6 +693,7 @@
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
+				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -725,7 +727,6 @@
 				A1000000000000000000002F /* ContentView.swift in Sources */,
 				A10000000000000000000030 /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000038 /* WatchWidgetShared.swift in Sources */,
-				A10000000000000000000042 /* CatAnimationShared.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -736,7 +737,6 @@
 				A10000000000000000000034 /* TaptionPlanWatchWidget.swift in Sources */,
 				A10000000000000000000035 /* WatchWidgetShared.swift in Sources */,
 				A10000000000000000000036 /* WatchSyncModels.swift in Sources */,
-				A10000000000000000000043 /* CatAnimationShared.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -888,7 +888,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlanDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -916,7 +916,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlan/Info.plist;
@@ -984,7 +984,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1011,7 +1011,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1038,7 +1038,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatchDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1072,7 +1072,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatch/Info.plist;
@@ -1105,7 +1105,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;
@@ -1133,7 +1133,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;

@@ -14,6 +14,8 @@ private struct WatchConfirmationSubject: Identifiable, Hashable {
     var isMovement: Bool { behavior?.isMovement ?? false }
 }
 
+/// 워치 앱은 계속 들여다보는 화면이 아니다. 계획을 넘겨 보는 일은 iPhone이
+/// 맡고, 이 화면은 "지금 무엇을 재고 있는지"와 "기록이 성한지"만 말한다.
 struct WatchContentView: View {
     @EnvironmentObject private var connectivity: WatchConnectivityController
     @EnvironmentObject private var workout: WatchWorkoutManager
@@ -25,13 +27,15 @@ struct WatchContentView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                TimelineView(.periodic(from: .now, by: 0.5)) { context in
+                // 고양이 애니메이션이 빠지면서 2Hz로 다시 그릴 이유가
+                // 없어졌다. 남은 값은 초 단위 경과 시간뿐이다.
+                TimelineView(.periodic(from: .now, by: 1)) { context in
                     dashboard(at: context.date)
                 }
                 .padding(.horizontal, 4)
                 .padding(.bottom, 8)
             }
-            .navigationTitle("Taption")
+            .navigationTitle("센서")
             .task {
                 WatchLaunchDiagnostics.mark("first-view-task")
                 connectivity.prepare()
@@ -61,42 +65,57 @@ struct WatchContentView: View {
     }
 
     private func dashboard(at date: Date) -> some View {
-        let currentItems = connectivity.currentItems(at: date)
-        let nextItems = Array(
-            connectivity.upcomingItems(at: date).prefix(3)
-        )
-        let subject = subject(for: currentItems, at: date)
+        let subject = subject(for: connectivity.currentItems(at: date), at: date)
         return VStack(alignment: .leading, spacing: 8) {
             syncHeader
-            confirmationCard(for: subject)
-            WatchCatRunner(
-                style: connectivity.payload?.catStyle ?? "calico",
-                reducesMotion: connectivity.payload?.reducesMotion ?? false,
-                isRunning: !currentItems.isEmpty
-                    || workout.isActive
-                    || (subject?.isMovement ?? false),
-                date: date
-            )
+            alertSection(at: date)
+            measurementCard(for: subject, at: date)
             if workout.isActive {
                 workoutMetrics(at: date)
             }
             quickWorkoutControls
-            if currentItems.isEmpty {
-                emptyCurrentCard
-            } else {
-                currentSection(currentItems, at: date)
-            }
-            if nextItems.isEmpty {
-                emptyNextCard
-            } else {
-                upcomingSection(nextItems)
-            }
-            todaySummaryCard(at: date)
-            watchCollectionStatus
+            recordingStatusCard(at: date)
         }
     }
 
-    // MARK: - 확인
+    // MARK: - 알림
+
+    /// 알림 권한을 새로 요구하지 않는다. 워치가 이미 알고 있는 사실만
+    /// 화면 맨 위에 올린다.
+    @ViewBuilder
+    private func alertSection(at date: Date) -> some View {
+        let alerts = TaptionWatchAlertPolicy.alerts(
+            for: workout.measurement,
+            now: date
+        )
+        if !alerts.isEmpty {
+            VStack(alignment: .leading, spacing: 5) {
+                ForEach(alerts.prefix(2)) { alert in
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: alert.symbolName)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(alert.title)
+                                .font(.caption.weight(.bold))
+                            Text(alert.detail)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(9)
+            .background(
+                Color.orange.opacity(0.16),
+                in: RoundedRectangle(cornerRadius: 12)
+            )
+        }
+    }
+
+    // MARK: - 지금 재는 것
 
     private func subject(
         for currentItems: [TaptionWatchPlanItem],
@@ -127,14 +146,23 @@ struct WatchContentView: View {
         )
     }
 
+    /// 무엇을 어떤 경로로 재고 있는지 먼저 말하고, 그 값이 맞는지 묻는다.
+    /// 사용자의 대답은 iPhone이 학습·교정에 쓰는 유일한 라벨이다.
     @ViewBuilder
-    private func confirmationCard(
-        for subject: WatchConfirmationSubject?
+    private func measurementCard(
+        for subject: WatchConfirmationSubject?,
+        at date: Date
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("지금 이거 맞나요?")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 5) {
+                Image(systemName: sourceSymbolName)
+                    .foregroundStyle(sourceTint)
+                Text(workout.measurement.source.title)
+                Spacer(minLength: 2)
+                Text(freshnessText(at: date))
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
             Text(subject?.title ?? "아직 모르겠어요")
                 .font(.title3.weight(.bold))
                 .lineLimit(2)
@@ -183,6 +211,28 @@ struct WatchContentView: View {
             Color.white.opacity(0.12),
             in: RoundedRectangle(cornerRadius: 16)
         )
+    }
+
+    private var sourceSymbolName: String {
+        switch workout.measurement.source {
+        case .workout: "figure.run.circle.fill"
+        case .ambient: "waveform.path.ecg"
+        case .idle: "pause.circle"
+        }
+    }
+
+    private var sourceTint: Color {
+        workout.measurement.source == .idle ? .secondary : .green
+    }
+
+    private func freshnessText(at date: Date) -> String {
+        guard let measuredAt = workout.measurement.measuredAt else {
+            return "측정 없음"
+        }
+        let seconds = Int(max(0, date.timeIntervalSince(measuredAt)))
+        if seconds < 60 { return "방금" }
+        if seconds < 3_600 { return "\(seconds / 60)분 전" }
+        return "\(seconds / 3_600)시간 전"
     }
 
     private func unknownSubject() -> WatchConfirmationSubject {
@@ -282,48 +332,10 @@ struct WatchContentView: View {
         correctionSubject = nil
     }
 
-    // MARK: - 계획
+    // MARK: - 측정 제어
 
-    private func currentSection(
-        _ items: [TaptionWatchPlanItem],
-        at date: Date
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 4) {
-                Text("현재 진행")
-                    .font(.caption.weight(.bold))
-                Text("\(items.count)개")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.green)
-                Spacer()
-                Text("동시 실행 가능")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
-            }
-            ForEach(items) { item in
-                currentCard(item, at: date)
-            }
-        }
-    }
-
-    private func upcomingSection(
-        _ items: [TaptionWatchPlanItem]
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text("다음 항목")
-                    .font(.caption.weight(.bold))
-                Spacer()
-                Text("\(items.count)개")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            ForEach(items) { item in
-                nextCard(item)
-            }
-        }
-    }
-
+    /// 운동 세션은 25Hz 가속도·자이로와 심박·경로를 함께 받는 유일한
+    /// 경로다. 손목에서 이걸 켜고 끄는 것은 기록 자체에 필요하다.
     private var quickWorkoutControls: some View {
         Group {
             if workout.isActive {
@@ -368,21 +380,6 @@ struct WatchContentView: View {
         }
     }
 
-    private var watchCollectionStatus: some View {
-        Group {
-            if let settings = workout.accelerationSettings, settings.isEnabled {
-                Text(
-                    "아이폰 설정 · 가속도 "
-                        + settings.profile.subtitle
-                        + " · 데이터 "
-                        + workout.dataSyncProfile.subtitle
-                )
-                .font(.system(size: 9))
-                .foregroundStyle(.secondary)
-            }
-        }
-    }
-
     private func matchingCurrentExercise(
         for kind: TaptionWatchWorkoutKind
     ) -> TaptionWatchPlanItem? {
@@ -423,145 +420,6 @@ struct WatchContentView: View {
         .accessibilityLabel("iPhone과 지금 동기화")
     }
 
-    private func currentCard(
-        _ item: TaptionWatchPlanItem,
-        at date: Date
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(color(hex: item.categoryHex))
-                    .frame(width: 7, height: 7)
-                Text(item.isGoal ? "현재 목표" : "현재 진행")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.green)
-                Spacer()
-                Text(timeRange(for: item))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            Text(item.title)
-                .font(.headline)
-                .lineLimit(2)
-            if let categoryName = item.categoryName {
-                Text(item.isGoal ? "목표 · \(categoryName)" : categoryName)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            ProgressView(value: progress(for: item, at: date))
-                .tint(color(hex: item.categoryHex))
-            Button {
-                toggle(item)
-            } label: {
-                Label(
-                    item.status == "running" ? "종료" : "시작",
-                    systemImage: item.status == "running"
-                        ? "stop.fill"
-                        : "play.fill"
-                )
-                .font(.caption.weight(.bold))
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(item.status == "running" ? .red : .green)
-        }
-        .padding(10)
-        .background(
-            Color.white.opacity(0.09),
-            in: RoundedRectangle(cornerRadius: 14)
-        )
-    }
-
-    private var emptyCurrentCard: some View {
-        HStack(spacing: 9) {
-            Image(systemName: "cup.and.saucer.fill")
-                .font(.title3)
-                .foregroundStyle(.green)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("지금은 빈 시간")
-                    .font(.headline)
-                Text("다음 항목 전까지 여유가 있어요")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(
-            Color.white.opacity(0.09),
-            in: RoundedRectangle(cornerRadius: 14)
-        )
-    }
-
-    private func nextCard(_ item: TaptionWatchPlanItem) -> some View {
-        HStack(spacing: 9) {
-            VStack(spacing: 1) {
-                Text(item.startsAt, style: .time)
-                    .font(.caption.weight(.bold))
-                    .monospacedDigit()
-                Image(systemName: "arrow.down")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.secondary)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("다음 항목")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                Text(item.title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
-            }
-            Spacer(minLength: 2)
-            Circle()
-                .fill(color(hex: item.categoryHex))
-                .frame(width: 8, height: 8)
-        }
-        .padding(9)
-        .background(
-            Color.white.opacity(0.06),
-            in: RoundedRectangle(cornerRadius: 12)
-        )
-    }
-
-    private var emptyNextCard: some View {
-        Label("오늘 남은 항목이 없습니다", systemImage: "checkmark.circle")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(9)
-            .background(
-                Color.white.opacity(0.06),
-                in: RoundedRectangle(cornerRadius: 12)
-            )
-    }
-
-    private func todaySummaryCard(at date: Date) -> some View {
-        let summary = summary(at: date)
-        return VStack(alignment: .leading, spacing: 7) {
-            Label("오늘 활동 요약", systemImage: "chart.bar.fill")
-                .font(.caption.weight(.semibold))
-            HStack(spacing: 4) {
-                summaryMetric(
-                    "완료",
-                    value: "\(summary.completedCount)/\(summary.scheduledCount)"
-                )
-                summaryMetric(
-                    "기록",
-                    value: compactDuration(summary.recordedMinutes)
-                )
-                summaryMetric(
-                    "활동",
-                    value: compactDuration(summary.activeMinutes)
-                )
-            }
-        }
-        .padding(9)
-        .background(
-            Color.white.opacity(0.09),
-            in: RoundedRectangle(cornerRadius: 12)
-        )
-    }
-
     private func workoutMetrics(at date: Date) -> some View {
         HStack(spacing: 5) {
             Image(systemName: workout.workoutKind?.symbolName ?? "figure.run")
@@ -586,35 +444,70 @@ struct WatchContentView: View {
         .accessibilityLabel("운동 센서 기록 중")
     }
 
-    private func toggle(_ item: TaptionWatchPlanItem) {
-        if item.status == "running" {
-            Task {
-                if workout.isActive,
-                   workout.linkedPlan?.id == item.id {
-                    _ = await workout.stop()
-                }
-                connectivity.send(.stopCurrentActivity, for: item.id)
-            }
-            return
-        }
-        connectivity.send(.start, for: item.id)
-        guard item.categoryID == "exercise" else { return }
-        Task {
-            _ = await workout.start(
-                kind: workoutKind(for: item.title),
-                linkedPlan: item
+    // MARK: - 기록 상태
+
+    private func recordingStatusCard(at date: Date) -> some View {
+        let measurement = workout.measurement
+        let summary = summary(at: date)
+        return VStack(alignment: .leading, spacing: 6) {
+            Label("기록 상태", systemImage: "externaldrive.badge.timemachine")
+                .font(.caption.weight(.semibold))
+            statusRow(
+                "배경 가속도",
+                value: backgroundRecordingText(measurement)
             )
+            statusRow("데이터 가져오기", value: workout.dataSyncProfile.subtitle)
+            if workout.isActive {
+                statusRow(
+                    "이번 세션 표본",
+                    value: "\(workout.sensorSampleCount)개"
+                )
+            }
+            if measurement.drainFailureCount > 0 {
+                statusRow(
+                    "읽지 못한 구간",
+                    value: "\(measurement.drainFailureCount)회"
+                )
+            }
+            HStack(spacing: 4) {
+                summaryMetric(
+                    "오늘 기록",
+                    value: compactDuration(summary.recordedMinutes)
+                )
+                summaryMetric(
+                    "활동",
+                    value: compactDuration(summary.activeMinutes)
+                )
+            }
         }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color.white.opacity(0.09),
+            in: RoundedRectangle(cornerRadius: 12)
+        )
     }
 
-    private func workoutKind(for title: String) -> TaptionWatchWorkoutKind {
-        if title.contains("달리") || title.localizedCaseInsensitiveContains("run") {
-            return .running
+    private func backgroundRecordingText(
+        _ measurement: TaptionWatchMeasurementSnapshot
+    ) -> String {
+        guard measurement.isRecordingRequested else { return "끔" }
+        if measurement.isMotionAccessDenied { return "동작 권한 없음" }
+        guard measurement.isRecorderAvailable else { return "이 워치에서 불가" }
+        return workout.accelerationSettings?.profile.displayName ?? "켬"
+    }
+
+    private func statusRow(_ title: String, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(title)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 2)
+            Text(value)
+                .multilineTextAlignment(.trailing)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
         }
-        if title.contains("자전거") || title.localizedCaseInsensitiveContains("cycling") {
-            return .cycling
-        }
-        return .walking
+        .font(.system(size: 10))
     }
 
     private func summary(at date: Date) -> TaptionWatchDaySummary {
@@ -656,19 +549,6 @@ struct WatchContentView: View {
         )
     }
 
-    private func progress(
-        for item: TaptionWatchPlanItem,
-        at date: Date
-    ) -> Double {
-        let start = item.actualStartedAt ?? item.startsAt
-        let duration = max(1, item.endsAt.timeIntervalSince(start))
-        return min(1, max(0, date.timeIntervalSince(start) / duration))
-    }
-
-    private func timeRange(for item: TaptionWatchPlanItem) -> String {
-        "\(item.startsAt.formatted(date: .omitted, time: .shortened))–\(item.endsAt.formatted(date: .omitted, time: .shortened))"
-    }
-
     private func elapsedText(at date: Date) -> String {
         let seconds = max(0, Int(date.timeIntervalSince(workout.startedAt ?? date)))
         return String(
@@ -692,43 +572,5 @@ struct WatchContentView: View {
         return remainder == 0
             ? "\(hours)시간"
             : "\(hours)h \(remainder)m"
-    }
-
-    private func color(hex: String?) -> Color {
-        guard let hex else { return .green }
-        let clean = hex.trimmingCharacters(
-            in: CharacterSet(charactersIn: "#")
-        )
-        guard let value = UInt64(clean, radix: 16), clean.count == 6 else {
-            return .green
-        }
-        return Color(
-            red: Double((value >> 16) & 0xFF) / 255,
-            green: Double((value >> 8) & 0xFF) / 255,
-            blue: Double(value & 0xFF) / 255
-        )
-    }
-}
-
-private struct WatchCatRunner: View {
-    let style: String
-    let reducesMotion: Bool
-    let isRunning: Bool
-    let date: Date
-
-    var body: some View {
-        let action: TaptionCatAnimationAction = isRunning ? .walking : .sitting
-        let pose = TaptionCatAnimationEngine.pose(
-            at: date,
-            preferredAction: action,
-            reducesMotion: reducesMotion
-        )
-        TaptionCatAnimationView(
-            style: style,
-            pose: pose,
-            reducesMotion: reducesMotion
-        )
-        .frame(height: 30)
-        .accessibilityLabel("작은 고양이 애니메이션")
     }
 }

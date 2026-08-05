@@ -112,6 +112,136 @@ enum AppleWatchConnectionState: String, Sendable {
     }
 }
 
+/// 첫 실행에서 한 번만 보여 주는 Apple Watch 안내.
+enum AppleWatchOnboardingPrompt: String, Sendable, CaseIterable {
+    /// 워치는 있는데 워치 앱이 없다. 설치를 권한다.
+    case installInvitation
+    /// 페어링된 워치가 없다. 워치가 있어야 되는 것만 알린다.
+    case watchlessLimitations
+}
+
+/// 연결 상태를 안내 한 줄로 옮기는 규칙. `WCSession` 값은 세션이 활성화된
+/// 뒤에야 뜻이 생기고 나중에 바뀌기도 해서, 판단을 값 계산으로 떼어내
+/// 화면과 저장은 이 결과만 본다. 시뮬레이터에는 페어링된 워치가 없으므로
+/// 테스트도 여기만 본다.
+enum AppleWatchOnboarding {
+    static func prompt(
+        for state: AppleWatchConnectionState,
+        dismissed: Set<AppleWatchOnboardingPrompt>,
+        hasSeenWatchAppInstalled: Bool
+    ) -> AppleWatchOnboardingPrompt? {
+        let candidate: AppleWatchOnboardingPrompt?
+        switch state {
+        // iPad이거나 아직 세션이 활성화되기 전이다. 워치가 없다고 단정할 수
+        // 없으므로 아무것도 말하지 않는다.
+        case .unsupported:
+            candidate = nil
+        case .notPaired:
+            candidate = .watchlessLimitations
+        // 한 번이라도 설치를 확인했다면 사용자가 직접 지운 것이다. 다시
+        // 권하지 않는다.
+        case .appNotInstalled:
+            candidate = hasSeenWatchAppInstalled ? nil : .installInvitation
+        case .background, .reachable:
+            candidate = nil
+        }
+        guard let candidate, !dismissed.contains(candidate) else { return nil }
+        return candidate
+    }
+
+    /// 워치가 없을 때 실제로 줄어드는 것. 아이폰이 이미 하는 일을 없다고
+    /// 적으면 거짓말이 되므로, 워치 신호에서만 나오는 것만 적는다.
+    static let watchlessLimitations = [
+        "계단·엘리베이터·양치·타이핑처럼 손목 움직임으로 나뉘는 세부 행동. iPhone만으로는 정지·걷기·달리기·자전거·자동차까지 구분합니다.",
+        "‘집안일’ 구분. 집에 머문 시간을 집안일과 휴식으로 가르지 못합니다.",
+        "심박수. 앱이 심박수를 읽을 수 있는 곳은 워치뿐입니다.",
+        "이동수단을 확정해 주는 워치 운동 기록. 대신 GPS·기압·걸음으로 추정합니다.",
+        "손목에서 바로 시작하는 기록과 되묻기.",
+    ]
+
+    /// 워치가 없어도 그대로인 것. 손해를 부풀리지 않기 위해 함께 보여 준다.
+    static let iPhoneOnlyCoverage =
+        "걸음·거리·층수, 걷기·달리기·자전거·자동차 구분, 장소와 이동 경로, 날씨, 앱 사용시간, 사진, 캘린더, 회의·통화·근무 같은 머문 자리 구분은 iPhone만으로 그대로 기록됩니다."
+
+    /// Watch 앱을 여는 공개 URL 스킴은 없다. 눌러도 아무 일이 없을 수 있는
+    /// 버튼 대신 찾아가는 길을 글로 적는다.
+    static let installInstruction =
+        "iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → Taption Plan에서 ‘설치’"
+
+    /// 설정에 늘 있는 줄. 안내를 닫았거나 못 본 사람도 워치 앱이 있다는 것을
+    /// 여기서 알 수 있어야 해서 사라지지 않고, 상태에 따라 문구만 바뀐다.
+    static func companionRow(
+        for state: AppleWatchConnectionState
+    ) -> AppleWatchCompanionRow {
+        switch state {
+        // 아직 워치를 못 찾았거나 확인할 수 없는 기기다. 있다는 사실과 무엇이
+        // 더해지는지만 알린다.
+        case .unsupported, .notPaired:
+            AppleWatchCompanionRow(
+                subtitle: "손목 센서로 하루를 함께 적는 워치 앱이 있습니다",
+                value: "안내",
+                detail: "Apple Watch를 연결하면 \(watchlessLimitations.count)가지가 더해집니다. \(iPhoneOnlyCoverage)"
+            )
+        case .appNotInstalled:
+            AppleWatchCompanionRow(
+                subtitle: "연결된 Apple Watch에 아직 설치되지 않았습니다",
+                value: "설치 필요",
+                detail: installInstruction
+            )
+        case .background, .reachable:
+            AppleWatchCompanionRow(
+                subtitle: "Apple Watch에 설치되어 손목 센서를 함께 기록합니다",
+                value: "설치됨",
+                detail: nil
+            )
+        }
+    }
+}
+
+struct AppleWatchCompanionRow: Sendable, Equatable {
+    let subtitle: String
+    let value: String
+    let detail: String?
+}
+
+/// 안내를 닫은 기록. 워치를 가진 기기가 어느 것인지는 계정이 아니라 기기의
+/// 성질이라서 iCloud 스냅샷이 아니라 기기 저장소에 남긴다. 덕분에
+/// `cloudPortableSnapshot` / `mergeDeviceLocalData`의 손으로 적은 목록에
+/// 새 항목을 더할 일이 없다.
+struct AppleWatchOnboardingStore {
+    private let defaults: UserDefaults
+    private let dismissedKey = "taption.apple-watch-onboarding.dismissed.v1"
+    private let installedKey = "taption.apple-watch-onboarding.installed.v1"
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    var dismissed: Set<AppleWatchOnboardingPrompt> {
+        Set(
+            (defaults.stringArray(forKey: dismissedKey) ?? [])
+                .compactMap(AppleWatchOnboardingPrompt.init(rawValue:))
+        )
+    }
+
+    var hasSeenWatchAppInstalled: Bool {
+        defaults.bool(forKey: installedKey)
+    }
+
+    func dismiss(_ prompt: AppleWatchOnboardingPrompt) {
+        var values = dismissed
+        values.insert(prompt)
+        defaults.set(
+            values.map(\.rawValue).sorted(),
+            forKey: dismissedKey
+        )
+    }
+
+    func markWatchAppInstalled() {
+        defaults.set(true, forKey: installedKey)
+    }
+}
+
 final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @unchecked Sendable {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()

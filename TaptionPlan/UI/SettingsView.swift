@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var showsDeleteConfirmation = false
     @State private var customFrequentPlaceName = ""
     @State private var selectedFrequentPlace: FrequentPlace?
+    @State private var showsSuggestedPlaceKinds = false
     @State private var expandedSettingsSections: Set<String> = [
         "나에게 맞추기",
         "화면과 동작",
@@ -303,6 +304,7 @@ struct SettingsView: View {
         .onAppear {
             model.refreshAppleWatchConnectionState()
             model.refreshAppUsageAuthorizationState()
+            model.refreshFrequentPlaceSuggestion()
         }
         .overlay {
             if model.isRefreshingIntegrations
@@ -361,15 +363,16 @@ struct SettingsView: View {
                 iconBackground: Color(red: 0.91, green: 0.92, blue: 0.95),
                 iconColor: Color.tpInk,
                 title: "Apple Watch 앱",
-                subtitle: model.appleWatchConnectionState.settingsLabel,
-                value: "설치 확인"
+                subtitle: model.appleWatchCompanionRow.subtitle,
+                value: model.appleWatchCompanionRow.value
             ) {
                 model.refreshAppleWatchConnectionState()
             }
-            if model.appleWatchConnectionState == .appNotInstalled {
-                Text("iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → Taption Plan에서 설치")
+            if let detail = model.appleWatchCompanionRow.detail {
+                Text(detail)
                     .font(.taption(size: SettingsTypography.footnote))
                     .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, 37)
             }
             if let launchReport = model.watchLaunchReport {
@@ -572,6 +575,10 @@ struct SettingsView: View {
                     .foregroundStyle(Color.tpPlaceDark)
             }
 
+            if let suggestion = model.frequentPlaceSuggestion {
+                suggestedPlaceCard(suggestion)
+            }
+
             LazyVGrid(
                 columns: [
                     GridItem(.flexible(), spacing: 6),
@@ -626,6 +633,102 @@ struct SettingsView: View {
         .sheet(item: $selectedFrequentPlace) { place in
             FrequentPlaceDetailView(model: model, placeID: place.id)
         }
+        .confirmationDialog(
+            "어떤 곳인가요?",
+            isPresented: $showsSuggestedPlaceKinds,
+            titleVisibility: .visible
+        ) {
+            ForEach(FrequentPlaceKind.allCases, id: \.self) { kind in
+                Button(kind.defaultName) {
+                    guard let placeID = model.registerFrequentPlaceSuggestion(
+                        as: kind
+                    ) else {
+                        return
+                    }
+                    selectedFrequentPlace = model.settings.frequentPlaces
+                        .first { $0.id == placeID }
+                }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("위치는 이미 채워져 있습니다. 이름과 감지 범위는 다음 화면에서 고칠 수 있습니다.")
+        }
+    }
+
+    /// 등록되지 않은 자리를 한 번만 조용히 묻는다. "아니요"는 영구히 기억한다.
+    private func suggestedPlaceCard(
+        _ suggestion: FrequentPlaceSuggestion
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 5) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.taption(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpPlaceDark)
+                Text("자주 가는데 등록되지 않은 곳")
+                    .font(.taption(size: 8.5, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                Spacer(minLength: 0)
+            }
+
+            Text(
+                suggestion.suggestedName
+                    ?? AppModel.coordinateLabel(suggestion.point)
+            )
+            .font(.taption(size: 9.5, weight: .bold))
+            .foregroundStyle(Color.tpInk)
+            .lineLimit(1)
+
+            Text(suggestedPlaceSummary(suggestion))
+                .font(.taption(size: 7.2, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(2)
+
+            HStack(spacing: 6) {
+                Button {
+                    showsSuggestedPlaceKinds = true
+                } label: {
+                    Text("등록")
+                        .font(.taption(size: 8.5, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Color.tpInk,
+                            in: RoundedRectangle(cornerRadius: 9)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    model.dismissFrequentPlaceSuggestion()
+                } label: {
+                    Text("아니요")
+                        .font(.taption(size: 8.5, weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.plain)
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color.tpBackground,
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
+    }
+
+    private func suggestedPlaceSummary(
+        _ suggestion: FrequentPlaceSuggestion
+    ) -> String {
+        let period = suggestion.reason == .weekly ? "최근 한 주" : "최근 한 달"
+        let coordinates = AppModel.coordinateLabel(suggestion.point)
+        guard suggestion.suggestedName != nil else {
+            return "\(period)에 \(suggestion.visitCount)번 머물렀습니다."
+        }
+        return "\(period)에 \(suggestion.visitCount)번 머물렀습니다 · \(coordinates)"
     }
 
     private var calibrationHistoryList: some View {

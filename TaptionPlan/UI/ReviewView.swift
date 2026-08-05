@@ -80,7 +80,14 @@ struct ReviewView: View {
     private static let clockButtonSize: CGFloat = 44
     /// 일과 띠를 두르면서 안쪽 띠가 가운데 단추와 읽음창에 밀리지 않도록
     /// 눈금판을 키웠다. 카드 너비(약 343pt)보다 작아 가로로 넘치지 않는다.
-    private static let clockHeight: CGFloat = 268
+    ///
+    /// 읽음창이 이름 옆에 "오전 11:12–오후 12:45"까지 적으면서 가운데 빈
+    /// 자리가 더 필요해졌다. 띠를 모두 두르고 한 칸 띄우면 남는 반지름은
+    /// `한 변/2 - 86`이고, 재생 단추 아래 알약은 가장 긴 문구일 때 가장 먼
+    /// 모서리가 중심에서 약 75pt 떨어진다. 324pt면 76pt가 남는다. 더 좁은
+    /// 화면에서는 한 변이 카드 너비에 묶이므로, 알약이 남은 자리에 맞춰
+    /// 스스로 줄어든다.
+    private static let clockHeight: CGFloat = 324
 
     @State private var content = ReviewContent.empty
     @State private var collapsedGroupIDs: Set<String> = []
@@ -88,8 +95,9 @@ struct ReviewView: View {
     @State private var selectedBucketIDs: Set<String> = []
     /// 범례에서 고른 카테고리. 원형·막대 모두 이 하나만 남기고 나머지를 죽인다.
     @State private var highlightedCategoryID: String?
-    /// 눈금판이나 범례에서 짚어 둔 일과. 이름이 읽음창에 뜨고 나머지는 죽는다.
-    @State private var highlightedPhaseToken: String?
+    /// 눈금판이나 범례에서 짚어 둔 일과 조각. 이름과 시각이 읽음창에 뜨고
+    /// 나머지는 죽는다.
+    @State private var highlightedPhaseArcID: String?
     /// 재생을 시작한 시각. nil이면 멈춘 상태다.
     @State private var playStartedAt: Date?
 
@@ -348,7 +356,7 @@ struct ReviewView: View {
         )
         let detailRings = content.detailRings
         let phaseRing = content.phaseRing
-        let phaseToken = highlightedPhaseToken
+        let pinnedPhaseArc = highlightedPhaseArc
         let span = content.period
         return TimelineView(
             RecordClockSchedule(isPlaying: playStartedAt != nil)
@@ -363,9 +371,10 @@ struct ReviewView: View {
                     size: size,
                     rings: rings,
                     phaseRing: phaseRing,
-                    highlightedPhaseToken: phaseToken,
+                    pinnedPhaseArc: pinnedPhaseArc,
                     detailRings: detailRings,
                     progress: progress,
+                    span: span,
                     nowFraction: RecordClockEngine.nowFraction(
                         in: span,
                         asOf: timeline.date
@@ -382,8 +391,16 @@ struct ReviewView: View {
         .accessibilityLabel("하루 24시간 눈금판")
     }
 
-    /// 일과 띠를 짚으면 그 줄거리의 이름이 눈금판 가운데에 뜬다. 재생 단추가
-    /// 이 층 위에 덮여 있어 단추 누르기를 가로채지 않는다.
+    /// 짚어 둔 조각. 범례에서 고른 경우에는 그 이름의 첫 조각을 짚는다.
+    private var highlightedPhaseArc: RecordClockDetailArc? {
+        guard let id = highlightedPhaseArcID else { return nil }
+        return content.phaseRing?.arcs.first { $0.id == id }
+    }
+
+    private var highlightedPhaseToken: String? { highlightedPhaseArc?.token }
+
+    /// 일과 띠를 짚으면 그 줄거리의 이름과 시각이 눈금판 가운데에 뜬다. 재생
+    /// 단추가 이 층 위에 덮여 있어 단추 누르기를 가로채지 않는다.
     private var phaseTapLayer: some View {
         GeometryReader { proxy in
             Color.clear
@@ -404,16 +421,16 @@ struct ReviewView: View {
         let distance = sqrt(dx * dx + dy * dy)
         guard distance >= outer - Self.phaseBandWidth - 4,
               distance <= outer + 6 else {
-            highlightedPhaseToken = nil
+            highlightedPhaseArcID = nil
             return
         }
         var fraction = (Angle(radians: atan2(dy, dx)).degrees + 90) / 360
         fraction -= floor(fraction)
-        guard let token = RecordClockEngine.token(in: ring, at: fraction) else {
-            highlightedPhaseToken = nil
+        guard let arc = RecordClockEngine.arc(in: ring, at: fraction) else {
+            highlightedPhaseArcID = nil
             return
         }
-        highlightedPhaseToken = highlightedPhaseToken == token ? nil : token
+        highlightedPhaseArcID = highlightedPhaseArcID == arc.id ? nil : arc.id
     }
 
     private var playControl: some View {
@@ -455,9 +472,10 @@ struct ReviewView: View {
         size: CGSize,
         rings: [RecordClockRing],
         phaseRing: RecordClockDetailRing?,
-        highlightedPhaseToken: String?,
+        pinnedPhaseArc: RecordClockDetailArc?,
         detailRings: [RecordClockDetailRing],
         progress: Double?,
+        span: TimeSpan,
         nowFraction: Double?
     ) {
         let side = min(size.width, size.height)
@@ -472,15 +490,16 @@ struct ReviewView: View {
             phaseRing,
             revealedThrough: progress
         )
-        let focusedPhaseToken = highlightedPhaseToken
-            ?? progress.flatMap { RecordClockEngine.token(in: phaseRing, at: $0) }
+        // 시각은 재생머리에 잘리지 않은 원래 조각에서 읽는다.
+        let focusedPhaseArc = pinnedPhaseArc
+            ?? progress.flatMap { RecordClockEngine.arc(in: phaseRing, at: $0) }
         drawPhaseRing(
             context: context,
             center: center,
             radius: outer - Self.phaseBandWidth / 2,
             ring: revealedPhases,
-            focusedToken: focusedPhaseToken,
-            isDimmingOthers: highlightedPhaseToken != nil || progress != nil
+            focusedToken: focusedPhaseArc?.token,
+            isDimmingOthers: pinnedPhaseArc != nil || progress != nil
         )
 
         let radius = outer
@@ -524,7 +543,7 @@ struct ReviewView: View {
             }
         }
 
-        drawDetailRings(
+        let innerEdge = drawDetailRings(
             context: context,
             center: center,
             outerEdge: radius - Self.clockBandWidth / 2,
@@ -554,11 +573,13 @@ struct ReviewView: View {
             )
         }
 
-        if let focusedPhaseToken {
+        if let focusedPhaseArc {
             drawPhaseReadout(
                 context: context,
                 center: center,
-                token: focusedPhaseToken
+                arc: focusedPhaseArc,
+                in: span,
+                within: innerEdge
             )
         }
     }
@@ -606,24 +627,46 @@ struct ReviewView: View {
     }
 
     /// 띠가 좁아 글자를 얹을 수 없으므로, 짚었거나 재생머리가 지나는 줄거리의
-    /// 이름만 가운데 단추 아래에 띄운다. 눈금판 바깥 크기는 건드리지 않는다.
+    /// 이름과 그 시작·끝 시각만 가운데 단추 아래에 띄운다. 눈금판 바깥 크기는
+    /// 건드리지 않는다.
     private func drawPhaseReadout(
         context: GraphicsContext,
         center: CGPoint,
-        token: String
+        arc: RecordClockDetailArc,
+        in span: TimeSpan,
+        within innerEdge: CGFloat
     ) {
-        let tint = detailColor(.dayPhase, token: token)
-        let label = context.resolve(
-            Text(detailName(.dayPhase, token: token))
-                .font(.taption(size: 9, weight: .bold))
-                .foregroundStyle(tint)
-        )
-        let size = label.measure(in: CGSize(width: 120, height: 40))
+        let tint = detailColor(.dayPhase, token: arc.token)
+        let name = Text(detailName(.dayPhase, token: arc.token))
+            .font(.taption(size: 9, weight: .bold))
+            .foregroundStyle(tint)
+        let withTimes = name
+            + Text(
+                " " + RecordClockEngine.timeRangeText(
+                    RecordClockEngine.span(of: arc, in: span)
+                )
+            )
+            .font(.taption(size: 7.5))
+            .foregroundStyle(Color.tpSecondary)
+
+        let top = Self.clockButtonSize / 2 + 4
+        var label = context.resolve(withTimes)
+        var size = label.measure(in: CGSize(width: 240, height: 40))
+        // 아주 좁은 화면에서는 가운데 빈 자리가 시각까지 담지 못한다. 그때는
+        // 띠 위로 넘어가느니 이름만 적는다.
+        if size.width + 16 > pillWidth(
+            height: size.height + 4,
+            top: top,
+            within: innerEdge
+        ) {
+            label = context.resolve(name)
+            size = label.measure(in: CGSize(width: 240, height: 40))
+        }
         let box = CGRect(
-            x: center.x - size.width / 2 - 9,
-            y: center.y + Self.clockButtonSize / 2 + 5,
-            width: size.width + 18,
-            height: size.height + 5
+            x: center.x - size.width / 2 - 8,
+            y: center.y + top,
+            width: size.width + 16,
+            height: size.height + 4
         )
         let pill = Path(roundedRect: box, cornerRadius: box.height / 2)
         context.fill(pill, with: .color(.white))
@@ -631,20 +674,35 @@ struct ReviewView: View {
         context.draw(label, at: CGPoint(x: box.midX, y: box.midY))
     }
 
-    /// 바깥 고리 안쪽에 결 띠를 한 줄씩 안으로 쌓는다. 가운데 단추를 덮을
-    /// 만큼 안으로 들어가면 더 그리지 않는다.
+    /// 알약이 안쪽 띠에 닿지 않는 최대 너비. 알약은 양 끝이 둥근 모양이라
+    /// 가장 먼 점은 모서리가 아니라 둥근 끝의 바깥이다.
+    private func pillWidth(
+        height: CGFloat,
+        top: CGFloat,
+        within innerEdge: CGFloat
+    ) -> CGFloat {
+        let radius = height / 2
+        let capCenterY = top + radius
+        let reach = innerEdge - radius
+        guard reach > capCenterY else { return 0 }
+        return 2 * (radius + sqrt(reach * reach - capCenterY * capCenterY))
+    }
+
+    /// 바깥 고리 안쪽에 결 띠를 한 줄씩 안으로 쌓고, 마지막 띠 안쪽 가장자리를
+    /// 돌려준다. 읽음창이 그 안에 들어가야 띠를 덮지 않는다. 가운데 단추를
+    /// 덮을 만큼 안으로 들어가면 더 그리지 않는다.
     private func drawDetailRings(
         context: GraphicsContext,
         center: CGPoint,
         outerEdge: CGFloat,
         rings: [RecordClockDetailRing]
-    ) {
+    ) -> CGFloat {
         var edge = outerEdge - Self.detailBandGap
         for ring in rings {
             let radius = edge - Self.detailBandWidth / 2
             guard radius - Self.detailBandWidth / 2
                 > Self.clockButtonSize / 2 + 4 else {
-                return
+                return edge
             }
             context.stroke(
                 arcPath(center: center, radius: radius, from: 0, to: 1),
@@ -668,6 +726,7 @@ struct ReviewView: View {
             }
             edge -= Self.detailBandWidth + Self.detailBandGap
         }
+        return edge
     }
 
     /// 수면 단계는 깊이가 짙기 순서로 읽히고, 깨어 있음만 따뜻한 색으로
@@ -681,8 +740,11 @@ struct ReviewView: View {
         case .dayPhase:
             switch DayPhase(rawValue: token) {
             case .sleep: return .tpSleepDark
-            case .commuteToWork, .commuteToSchool: return .tpTravelDark
-            case .commuteHomeFromWork, .commuteHomeFromSchool:
+            case .commuteToWork, .commuteToSchool, .commuteToAcademy,
+                 .activityDeparture:
+                return .tpTravelDark
+            case .commuteHomeFromWork, .commuteHomeFromSchool,
+                 .commuteHomeFromAcademy, .activityReturn:
                 return Color(red: 0.78, green: 0.55, blue: 0.29)
             case .work: return .tpProjectDark
             case .study: return .tpStudyDark
@@ -737,8 +799,9 @@ struct ReviewView: View {
                 .padding(.vertical, 4)
             ForEach(detailTokens(of: ring), id: \.self) { token in
                 Button {
-                    highlightedPhaseToken =
-                        highlightedPhaseToken == token ? nil : token
+                    highlightedPhaseArcID = highlightedPhaseToken == token
+                        ? nil
+                        : ring.arcs.first { $0.token == token }?.id
                 } label: {
                     HStack(spacing: 4) {
                         Capsule()
@@ -1312,11 +1375,8 @@ struct ReviewView: View {
                 actuals: actuals,
                 travel: model.snapshot.travel,
                 stays: model.snapshot.places,
-                homePlaceKeys: Set(
-                    model.snapshot.settings.frequentPlaces
-                        .filter { $0.kind == .home }
-                        .map(\.stablePlaceKey)
-                ),
+                placeKinds: FrequentPlaceResolutionEngine()
+                    .kindsByPlaceKey(model.snapshot.settings.frequentPlaces),
                 in: day
             )
             // 수면 단계와 이동 구간은 이미 받아 둔 값이다. 건강 데이터를
@@ -1355,6 +1415,9 @@ struct ReviewView: View {
         if content.period != period || model.reviewScale != .day {
             playStartedAt = nil
         }
+        // 조각의 id는 띠 안의 자리 번호라, 띠가 달라지면 같은 id가 다른
+        // 줄거리를 가리킨다. 띠가 바뀌면 짚어 둔 조각을 놓는다.
+        if content.phaseRing != phaseRing { highlightedPhaseArcID = nil }
 
         content = ReviewContent(
             period: period,
@@ -1380,10 +1443,6 @@ struct ReviewView: View {
         if let highlighted = highlightedCategoryID,
            !content.groups.contains(where: { $0.id == highlighted }) {
             highlightedCategoryID = nil
-        }
-        if let highlighted = highlightedPhaseToken,
-           phaseRing?.arcs.contains(where: { $0.token == highlighted }) != true {
-            highlightedPhaseToken = nil
         }
     }
 

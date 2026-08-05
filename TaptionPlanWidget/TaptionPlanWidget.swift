@@ -826,7 +826,9 @@ private struct WidgetWalkingCat: View {
                 phase: isAnimating ? pose.legPhase : 0,
                 facesLeft: pose.facesLeft && isAnimating,
                 tailSwing: isAnimating ? pose.tailSwing : 0,
-                headTiltDegrees: isAnimating ? pose.headTiltDegrees : 0
+                headTiltDegrees: isAnimating ? pose.headTiltDegrees : 0,
+                legSwing: isAnimating ? pose.legSwing : 0,
+                idle: isAnimating ? pose.idle : .still
             )
 
             ZStack(alignment: .topLeading) {
@@ -869,6 +871,9 @@ private struct WidgetWalkingCat: View {
         case .startled: "놀란 상태"
         case .ballPlay: "공을 잡고 노는 중"
         case .fishingPlay: "낚싯대 장난감으로 노는 중"
+        case .stretching: "기지개를 켜는 중"
+        case .kneading: "꾹꾹이를 하는 중"
+        case .yawning: "하품하는 중"
         }
     }
 }
@@ -1501,7 +1506,8 @@ private struct WidgetCat: View {
             sprintingLegPairs(phase: runningPhase, lift: bodyLift)
         case .sleeping:
             []
-        case .sitting, .grooming, .eating, .ballPlay, .fishingPlay:
+        case .sitting, .grooming, .eating, .ballPlay, .fishingPlay,
+             .stretching, .kneading, .yawning:
             [
                 (CGPoint(x: 18, y: 16), CGPoint(x: 18, y: 20.5)),
                 (CGPoint(x: 23, y: 16.5), CGPoint(x: 23, y: 20.5)),
@@ -1860,7 +1866,7 @@ private struct WidgetCat: View {
                 with: .color(Color(red: 0.98, green: 0.74, blue: 0.17))
             )
 
-        case .walking, .running, .sitting:
+        case .walking, .running, .sitting, .stretching, .kneading, .yawning:
             break
         }
     }

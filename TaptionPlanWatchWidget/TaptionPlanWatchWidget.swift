@@ -11,11 +11,23 @@ struct TaptionPlanWatchWidgetBundle: WidgetBundle {
 private struct TaptionWatchWidgetEntry: TimelineEntry {
     let date: Date
     let payload: TaptionWatchPayload?
+    let measurement: TaptionWatchMeasurementSnapshot?
 }
 
 private struct TaptionWatchWidgetProvider: TimelineProvider {
+    /// 워치 컴플리케이션은 연속 갱신이 없다. 항목을 미리 만들어 두고
+    /// 시스템이 그 시각에 다시 그린다. 여기서 늙는 값은 "몇 분 전"뿐이라
+    /// 5분 간격이면 표시가 어긋나지 않는다. 새 측정이 나오면 워치 앱이
+    /// 타임라인을 다시 불러 앞당긴다.
+    private static let step: TimeInterval = 5 * 60
+    private static let horizon: TimeInterval = 60 * 60
+
     func placeholder(in context: Context) -> TaptionWatchWidgetEntry {
-        TaptionWatchWidgetEntry(date: .now, payload: .widgetPlaceholder)
+        TaptionWatchWidgetEntry(
+            date: .now,
+            payload: .widgetPlaceholder,
+            measurement: .widgetPlaceholder
+        )
     }
 
     func getSnapshot(
@@ -27,7 +39,10 @@ private struct TaptionWatchWidgetProvider: TimelineProvider {
                 date: .now,
                 payload: context.isPreview
                     ? .widgetPlaceholder
-                    : TaptionWatchWidgetStore.read()
+                    : TaptionWatchWidgetStore.read(),
+                measurement: context.isPreview
+                    ? .widgetPlaceholder
+                    : TaptionWatchMeasurementStore.read()
             )
         )
     }
@@ -37,28 +52,41 @@ private struct TaptionWatchWidgetProvider: TimelineProvider {
         completion: @escaping (Timeline<TaptionWatchWidgetEntry>) -> Void
     ) {
         let now = Date.now
-        let horizon = now.addingTimeInterval(30 * 60)
+        let end = now.addingTimeInterval(Self.horizon)
         let payload = TaptionWatchWidgetStore.read()
-        var dates = stride(
-            from: now,
-            through: horizon,
-            by: 60
-        ).map { $0 }
-        dates.append(contentsOf: (payload?.items ?? []).flatMap {
-            [$0.startsAt, $0.endsAt]
-        })
-        var entries = Array(Set(dates.filter { now <= $0 && $0 <= horizon }))
-            .sorted()
-            .map { TaptionWatchWidgetEntry(date: $0, payload: payload) }
+        let measurement = TaptionWatchMeasurementStore.read()
+        // 알림 줄은 계획 시작 시각에 사라진다. 그 경계도 항목으로 넣어
+        // 5분 격자 때문에 늦게 지워지지 않게 한다.
+        let boundaries = TaptionWatchLiveItemPolicy
+            .upcoming(payload?.items ?? [], at: now)
+            .map(\.startsAt)
+            .filter { now < $0 && $0 <= end }
+        let dates = Set(
+            stride(from: now, through: end, by: Self.step) + boundaries
+        )
+        var entries = dates.sorted().map {
+            TaptionWatchWidgetEntry(
+                date: $0,
+                payload: payload,
+                measurement: measurement
+            )
+        }
         if entries.isEmpty {
             // 항목이 없는 타임라인은 WidgetKit이 갱신을 멈추게 만든다.
-            entries = [TaptionWatchWidgetEntry(date: now, payload: payload)]
+            entries = [
+                TaptionWatchWidgetEntry(
+                    date: now,
+                    payload: payload,
+                    measurement: measurement
+                ),
+            ]
         }
-        completion(Timeline(entries: entries, policy: .after(horizon)))
+        completion(Timeline(entries: entries, policy: .after(end)))
     }
 }
 
 private struct TaptionWatchStatusWidget: Widget {
+    // 이미 얹어 둔 컴플리케이션이 끊기지 않도록 kind는 바꾸지 않는다.
     let kind = TaptionWatchWidgetKind.status
 
     var body: some WidgetConfiguration {
@@ -66,8 +94,8 @@ private struct TaptionWatchStatusWidget: Widget {
             TaptionWatchWidgetView(entry: $0)
                 .containerBackground(.clear, for: .widget)
         }
-        .configurationDisplayName("Taption 지금")
-        .description("현재 항목, 다음 항목과 오늘 활동을 표시합니다.")
+        .configurationDisplayName("Taption 측정")
+        .description("지금 감지된 활동과 오늘 활동 요약을 표시합니다.")
         .supportedFamilies([
             .accessoryRectangular,
             .accessoryCircular,
@@ -83,19 +111,37 @@ private struct TaptionWatchWidgetView: View {
     /// 저장소 읽기와 JSON 디코딩을 뷰 본문 평가마다 반복하면 컴플리케이션의
     /// 좁은 실행 예산을 넘긴다. 한 번만 읽어 두고 재사용한다.
     private let resolvedPayload: TaptionWatchPayload?
+    private let resolvedMeasurement: TaptionWatchMeasurementSnapshot?
 
     init(entry: TaptionWatchWidgetEntry) {
         self.entry = entry
-        let stored = TaptionWatchWidgetStore.read()
-        switch (stored, entry.payload) {
-        case let (stored?, entryPayload?):
-            resolvedPayload = stored.generatedAt >= entryPayload.generatedAt
+        resolvedPayload = Self.freshest(
+            TaptionWatchWidgetStore.read(),
+            entry.payload,
+            date: \.generatedAt
+        )
+        resolvedMeasurement = Self.freshest(
+            TaptionWatchMeasurementStore.read(),
+            entry.measurement,
+            date: \.updatedAt
+        )
+    }
+
+    /// 앱이 방금 남긴 값과 타임라인 항목에 실려 온 값 중 새것을 고른다.
+    private static func freshest<Value>(
+        _ stored: Value?,
+        _ entryValue: Value?,
+        date: KeyPath<Value, Date>
+    ) -> Value? {
+        switch (stored, entryValue) {
+        case let (stored?, entryValue?):
+            stored[keyPath: date] >= entryValue[keyPath: date]
                 ? stored
-                : entryPayload
+                : entryValue
         case let (stored?, nil):
-            resolvedPayload = stored
+            stored
         default:
-            resolvedPayload = entry.payload
+            entryValue
         }
     }
 
@@ -111,64 +157,53 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var rectangularView: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
-                TaptionCatAnimationView(
-                    style: freshestPayload?.catStyle ?? "calico",
-                    pose: TaptionCatAnimationEngine.pose(
-                        at: playbackDate,
-                        preferredAction: currentCatAction,
-                        reducesMotion: false
-                    ),
-                    reducesMotion: false
-                )
-                .frame(width: 25, height: 17)
-                Text(currentItem == nil ? "Taption Plan" : currentItems.count > 1 ? "지금 \(currentItems.count)개" : "지금")
-                    .font(.caption2.weight(.semibold))
+                Image(systemName: sourceSymbolName)
+                    .font(.system(size: 9, weight: .bold))
+                Text(sourceTitle)
                 Spacer(minLength: 2)
-                Text(playbackDate, style: .time)
-                    .font(.caption2.monospacedDigit())
+                Text(freshnessText)
+                    .monospacedDigit()
             }
+            .font(.system(size: 10))
 
-            if let currentItem {
-                HStack(spacing: 4) {
-                    Image(systemName: symbol(for: currentItem))
-                        .font(.caption.weight(.semibold))
-                    Text(currentItem.title)
-                        .font(.headline)
+            // 행동 이름은 19개짜리 고정 목록에서 온다. 계획 제목과 달리
+            // 사용자가 쓴 글이 아니라 가려도 얻는 것이 없다.
+            Text(activityTitle)
+                .font(.headline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            if let alert {
+                HStack(spacing: 3) {
+                    Image(systemName: alert.symbolName)
+                    Text(alert.title)
+                        .lineLimit(1)
+                    Spacer(minLength: 1)
+                }
+                .font(.system(size: 10, weight: .semibold))
+            } else if let reminder = nextReminder {
+                HStack(spacing: 3) {
+                    Image(systemName: "alarm.fill")
+                    Text(reminder.startsAt, style: .time)
+                        .monospacedDigit()
+                    Text(reminder.title)
                         .lineLimit(1)
                         .privacySensitive()
-                    Spacer(minLength: 2)
-                    Text(currentItem.endsAt, style: .timer)
-                        .font(.caption2.monospacedDigit())
+                    Spacer(minLength: 1)
                 }
+                .font(.system(size: 10, weight: .semibold))
             } else {
-                Text("현재 진행 중인 항목 없음")
-                    .font(.headline)
+                Text(confidenceText)
+                    .font(.system(size: 10))
                     .lineLimit(1)
             }
 
-            HStack(spacing: 4) {
-                if let nextItem {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 8, weight: .bold))
-                    Text(nextItem.startsAt, style: .time)
-                        .monospacedDigit()
-                    Text(nextItem.title)
-                        .lineLimit(1)
-                        .privacySensitive()
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("오늘 남은 항목 없음")
-                }
-                Spacer(minLength: 2)
-            }
-            .font(.caption2)
-
             HStack(spacing: 5) {
                 Label(
-                    "\(summary.completedCount)/\(summary.scheduledCount)",
-                    systemImage: "checkmark"
+                    duration(summary.recordedMinutes),
+                    systemImage: "waveform"
                 )
                 Label(
                     duration(summary.activeMinutes),
@@ -179,110 +214,139 @@ private struct TaptionWatchWidgetView: View {
             .font(.system(size: 9, weight: .semibold))
         }
         .widgetAccentable()
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var circularView: some View {
-        Gauge(value: progress) {
-            Image(systemName: currentItem.map(symbol(for:)) ?? "cat.fill")
+        Gauge(value: alert == nil ? confidence : 0) {
+            Image(systemName: alert?.symbolName ?? activitySymbolName)
         } currentValueLabel: {
-            Text("\(Int((progress * 100).rounded()))")
+            Text(alert == nil ? "\(Int((confidence * 100).rounded()))" : "!")
                 .font(.caption2.monospacedDigit())
         }
         .gaugeStyle(.accessoryCircularCapacity)
         .widgetAccentable()
-        .accessibilityLabel(circularAccessibilityLabel)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var inlineView: some View {
         Label {
-            if let currentItem {
-                Text("\(currentItem.title) · ~\(currentItem.endsAt, style: .time)")
-                    .privacySensitive()
-            } else if let nextItem {
-                Text("다음 \(nextItem.startsAt, style: .time) · \(nextItem.title)")
-                    .privacySensitive()
+            if let alert {
+                Text(alert.title)
+            } else if measurement?.behavior != nil {
+                Text("\(activityTitle) · \(confidenceText)")
             } else {
-                Text("오늘 일정 완료")
+                Text(sourceTitle)
             }
         } icon: {
-            Image(systemName: currentItem.map(symbol(for:)) ?? "cat.fill")
+            Image(systemName: alert?.symbolName ?? activitySymbolName)
+        }
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    // MARK: - 값
+
+    private var measurement: TaptionWatchMeasurementSnapshot? {
+        resolvedMeasurement
+    }
+
+    private var playbackDate: Date { max(entry.date, .now) }
+
+    private var alert: TaptionWatchAlert? {
+        TaptionWatchAlertPolicy.primary(for: measurement, now: playbackDate)
+    }
+
+    private var sourceTitle: String {
+        measurement?.source.title ?? "측정 대기"
+    }
+
+    private var sourceSymbolName: String {
+        switch measurement?.source ?? .idle {
+        case .workout: "figure.run.circle.fill"
+        case .ambient: "waveform.path.ecg"
+        case .idle: "pause.circle"
         }
     }
 
-    private var items: [TaptionWatchPlanItem] {
-        return (freshestPayload?.items ?? [])
-            .filter {
-                TaptionWatchLiveItemPolicy.isLive($0, at: playbackDate)
+    private var activityTitle: String {
+        guard let behavior = measurement?.behavior else {
+            return measurement?.isRecordingRequested == false
+                ? "기록 꺼짐"
+                : "측정 대기"
+        }
+        return behavior.title
+    }
+
+    private var confidence: Double {
+        min(1, max(0, measurement?.confidenceScore ?? 0))
+    }
+
+    private var confidenceText: String {
+        guard measurement?.behavior != nil else {
+            return "손목 움직임을 모으는 중"
+        }
+        return "신뢰도 \(Int((confidence * 100).rounded()))%"
+    }
+
+    private var freshnessText: String {
+        guard let measuredAt = measurement?.measuredAt else { return "—" }
+        let seconds = Int(max(0, playbackDate.timeIntervalSince(measuredAt)))
+        if seconds < 60 { return "방금" }
+        if seconds < 3_600 { return "\(seconds / 60)분 전" }
+        return "\(seconds / 3_600)시간 전"
+    }
+
+    /// 곧 울릴 계획 알림. iPhone이 예약한 알림이 워치로 전달되기 전에도
+    /// "다음에 무엇이 시작되는지"는 여기서 볼 수 있어야 한다.
+    private var nextReminder: TaptionWatchPlanItem? {
+        TaptionWatchLiveItemPolicy
+            .upcoming(resolvedPayload?.items ?? [], at: playbackDate)
+            .first {
+                $0.startsAt.timeIntervalSince(playbackDate)
+                    <= Self.reminderHorizon
             }
-            .sorted { $0.startsAt < $1.startsAt }
     }
 
-    private var freshestPayload: TaptionWatchPayload? { resolvedPayload }
-
-    private var playbackDate: Date {
-        max(entry.date, .now)
-    }
-
-    private var currentItem: TaptionWatchPlanItem? {
-        currentItems.first
-    }
-
-    private var currentCatAction: TaptionCatAnimationAction {
-        guard let item = currentItem else { return .sitting }
-        let title = item.title.lowercased()
-        if title.contains("달리") || title.contains("러닝") {
-            return .running
-        }
-        if title.contains("잠") || title.contains("수면") {
-            return .sleeping
-        }
-        return .walking
-    }
-
-    private var currentItems: [TaptionWatchPlanItem] {
-        TaptionWatchLiveItemPolicy.current(items, at: playbackDate)
-    }
-
-    private var nextItem: TaptionWatchPlanItem? {
-        TaptionWatchLiveItemPolicy.upcoming(items, at: playbackDate).first
-    }
+    /// 이만큼 앞의 계획만 알림 줄에 올린다. 더 먼 일정은 iPhone이 보여준다.
+    private static let reminderHorizon: TimeInterval = 2 * 3_600
 
     private var summary: TaptionWatchDaySummary {
-        freshestPayload?.todaySummary
+        resolvedPayload?.todaySummary
             ?? TaptionWatchDaySummary(
                 date: playbackDate,
-                scheduledCount: items.count,
-                completedCount: items.filter { $0.status == "completed" }.count,
+                scheduledCount: 0,
+                completedCount: 0,
                 recordedMinutes: 0,
                 activeMinutes: 0
             )
     }
 
-    private var progress: Double {
-        guard let currentItem else { return 0 }
-        let duration = currentItem.endsAt.timeIntervalSince(currentItem.startsAt)
-        guard duration > 0 else { return 0 }
-        return min(
-            1,
-            max(0, playbackDate.timeIntervalSince(currentItem.startsAt) / duration)
-        )
+    private var accessibilityLabel: String {
+        if let alert { return "\(alert.title), \(alert.detail)" }
+        guard measurement?.behavior != nil else { return sourceTitle }
+        return "\(activityTitle), \(confidenceText), \(freshnessText)"
     }
 
-    private var circularAccessibilityLabel: String {
-        guard let currentItem else { return "현재 진행 중인 항목 없음" }
-        return "\(currentItem.title), \(Int((progress * 100).rounded()))퍼센트 진행"
-    }
-
-    private func symbol(for item: TaptionWatchPlanItem) -> String {
-        switch item.categoryID {
-        case "calendar": "calendar"
-        case "location": "mappin.and.ellipse"
-        case "movement": "arrow.triangle.swap"
-        case "activity", "exercise": "figure.run"
-        case "sleep": "bed.double.fill"
-        case "learning", "study": "book.fill"
-        case "travel": "airplane"
-        default: "circle.fill"
+    private var activitySymbolName: String {
+        switch measurement?.behavior {
+        case .walking: "figure.walk"
+        case .running: "figure.run"
+        case .cycling: "bicycle"
+        case .stairsUp, .stairsDown: "figure.stairs"
+        case .elevator: "arrow.up.arrow.down"
+        case .automotive: "car.fill"
+        case .publicTransit: "bus.fill"
+        case .subway: "tram.fill"
+        case .exercise: "dumbbell.fill"
+        case .brushingTeeth: "mouth.fill"
+        case .eating: "fork.knife"
+        case .typing: "keyboard"
+        case .housework: "house.fill"
+        case .sleep: "bed.double.fill"
+        case .lying: "bed.double"
+        case .sitting: "chair.fill"
+        case .standing: "figure.stand"
+        case .stationary, .unknown, .none: "waveform.path.ecg"
         }
     }
 
@@ -306,23 +370,12 @@ private extension TaptionWatchPayload {
                     id: UUID(),
                     title: "신제품 기획",
                     categoryID: "project",
-                    startsAt: now.addingTimeInterval(-15 * 60),
-                    endsAt: now.addingTimeInterval(45 * 60),
+                    startsAt: now.addingTimeInterval(45 * 60),
+                    endsAt: now.addingTimeInterval(105 * 60),
                     status: "planned",
                     actualStartedAt: nil,
                     categoryName: "프로젝트",
                     categoryHex: "7B57B2"
-                ),
-                TaptionWatchPlanItem(
-                    id: UUID(),
-                    title: "점심 이동",
-                    categoryID: "movement",
-                    startsAt: now.addingTimeInterval(60 * 60),
-                    endsAt: now.addingTimeInterval(90 * 60),
-                    status: "planned",
-                    actualStartedAt: nil,
-                    categoryName: "이동",
-                    categoryHex: "AD813F"
                 ),
             ],
             catStyle: "calico",
@@ -334,6 +387,21 @@ private extension TaptionWatchPayload {
                 recordedMinutes: 180,
                 activeMinutes: 45
             )
+        )
+    }
+}
+
+private extension TaptionWatchMeasurementSnapshot {
+    static var widgetPlaceholder: Self {
+        let now = Date.now
+        return TaptionWatchMeasurementSnapshot(
+            updatedAt: now,
+            source: .ambient,
+            behavior: .walking,
+            confidenceScore: 0.79,
+            measuredAt: now.addingTimeInterval(-120),
+            isRecordingRequested: true,
+            isRecorderAvailable: true
         )
     }
 }

@@ -293,6 +293,9 @@ enum TaptionWidgetCatAction: String, CaseIterable, Equatable, Sendable {
     case startled
     case ballPlay
     case fishingPlay
+    case stretching
+    case kneading
+    case yawning
 
     var movesAcrossTrack: Bool {
         self == .walking || self == .running
@@ -309,6 +312,9 @@ enum TaptionWidgetCatAction: String, CaseIterable, Equatable, Sendable {
         case .startled: "너구리 꼬리"
         case .ballPlay: "공 잡는 놀이"
         case .fishingPlay: "낚싯대 놀이"
+        case .stretching: "기지개"
+        case .kneading: "꾹꾹이"
+        case .yawning: "하품"
         }
     }
 
@@ -323,7 +329,15 @@ enum TaptionWidgetCatAction: String, CaseIterable, Equatable, Sendable {
         case .startled: "exclamationmark.bubble.fill"
         case .ballPlay: "circle.fill"
         case .fishingPlay: "fish.fill"
+        case .stretching: "figure.flexibility"
+        case .kneading: "hand.tap.fill"
+        case .yawning: "mouth.fill"
         }
+    }
+
+    /// 렌더러가 쓰는 동작 이름. 두 열거형의 rawValue는 항상 같아야 한다.
+    var animationAction: TaptionCatAnimationAction {
+        TaptionCatAnimationAction(rawValue: rawValue) ?? .walking
     }
 }
 
@@ -368,6 +382,12 @@ enum TaptionWidgetCatActionSelector {
         ) {
             return .grooming
         }
+        if containsAny(normalizedTitle, ["스트레칭", "요가", "기지개"]) {
+            return .stretching
+        }
+        if containsAny(normalizedTitle, ["명상", "휴식", "쉬기"]) {
+            return .kneading
+        }
 
         return switch category {
         case "exercise", "health": .ballPlay
@@ -397,6 +417,8 @@ struct TaptionWidgetCatWalkPose: Equatable, Sendable {
     var action: TaptionWidgetCatAction
     var tailSwing: Double
     var headTiltDegrees: Double
+    var legSwing: Double = 0
+    var idle: TaptionCatIdleBeat = .still
 }
 
 enum TaptionWidgetCatWalkEngine {
@@ -474,44 +496,29 @@ enum TaptionWidgetCatWalkEngine {
             isAtEndpoint = step == 39
             action = .running
         }
-        let motion = motionDetails(for: action, phase: step % 4)
+        let phase = step % TaptionCatAnimationEngine.phaseCount
+        let motion = motionDetails(for: action, phase: phase)
         return TaptionWidgetCatWalkPose(
             progress: min(1, max(0, progress)),
             facesLeft: facesLeft,
-            legPhase: step % 4,
+            legPhase: phase,
             isAtEndpoint: isAtEndpoint,
             action: action,
             tailSwing: motion.tailSwing,
-            headTiltDegrees: motion.headTiltDegrees
+            headTiltDegrees: motion.headTiltDegrees,
+            legSwing: motion.legSwing,
+            idle: TaptionCatIdleBeat.beat(at: date)
         )
     }
 
     static func motionDetails(
         for action: TaptionWidgetCatAction,
         phase: Int
-    ) -> (tailSwing: Double, headTiltDegrees: Double) {
-        let tail = [-1.0, -0.35, 0.45, 1.0][phase]
-        let head = [-4.0, 1.5, 4.0, -1.5][phase]
-        return switch action {
-        case .walking:
-            (tail, head)
-        case .running:
-            (-tail, head * 1.45)
-        case .sitting:
-            (tail * 0.55, head * 1.25)
-        case .grooming:
-            (tail * 0.38, [-11.0, -5.0, 6.0, -4.0][phase])
-        case .startled:
-            (1, -7)
-        case .sleeping:
-            (tail * 0.16, 7)
-        case .eating:
-            (tail * 0.28, 12)
-        case .ballPlay:
-            (-tail * 0.85, head * 1.6)
-        case .fishingPlay:
-            (tail * 0.72, [-8.0, 7.0, -4.0, 9.0][phase])
-        }
+    ) -> TaptionCatMotionDetails {
+        TaptionCatAnimationEngine.motionDetails(
+            for: action.animationAction,
+            phase: phase
+        )
     }
 
     private static func restAction(
@@ -532,6 +539,9 @@ enum TaptionWidgetCatWalkEngine {
             .sleeping,
             .ballPlay,
             .fishingPlay,
+            .stretching,
+            .kneading,
+            .yawning,
         ]
         let seed = abs((cycle &* 31) &+ (slot &* 17))
         return actions[Int(seed % Int64(actions.count))]
@@ -539,8 +549,8 @@ enum TaptionWidgetCatWalkEngine {
 }
 
 enum TaptionWidgetCatPreviewEngine {
-    static let stepDuration: TimeInterval = 0.2
-    static let movementStepCount = 20
+    static let stepDuration: TimeInterval = 0.1
+    static let movementStepCount = 40
 
     static func pose(
         at date: Date,
@@ -552,10 +562,16 @@ enum TaptionWidgetCatPreviewEngine {
         )
         let count = Int64(movementStepCount)
         let step = Int(((rawStep % count) + count) % count)
-        let phase = reducesMotion ? 0 : step % 4
+        let phase = reducesMotion
+            ? 0
+            : step % TaptionCatAnimationEngine.phaseCount
         let motion = TaptionWidgetCatWalkEngine.motionDetails(
             for: action,
             phase: phase
+        )
+        let idle = TaptionCatIdleBeat.beat(
+            at: date,
+            reducesMotion: reducesMotion
         )
 
         guard action.movesAcrossTrack, !reducesMotion else {
@@ -568,7 +584,9 @@ enum TaptionWidgetCatPreviewEngine {
                 tailSwing: reducesMotion ? 0 : motion.tailSwing,
                 headTiltDegrees: reducesMotion
                     ? 0
-                    : motion.headTiltDegrees
+                    : motion.headTiltDegrees,
+                legSwing: reducesMotion ? 0 : motion.legSwing,
+                idle: idle
             )
         }
 
@@ -584,7 +602,9 @@ enum TaptionWidgetCatPreviewEngine {
             isAtEndpoint: step == 0 || step == movementStepCount / 2,
             action: action,
             tailSwing: motion.tailSwing,
-            headTiltDegrees: motion.headTiltDegrees
+            headTiltDegrees: motion.headTiltDegrees,
+            legSwing: motion.legSwing,
+            idle: idle
         )
     }
 }

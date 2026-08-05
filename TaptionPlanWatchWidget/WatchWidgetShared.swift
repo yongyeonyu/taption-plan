@@ -26,3 +26,32 @@ enum TaptionWatchWidgetStore {
         defaults.set(data, forKey: payloadKey)
     }
 }
+
+/// 워치 앱이 남기고 워치 위젯이 읽는 "지금 재고 있는 것".
+enum TaptionWatchMeasurementStore {
+    private static let key = "TaptionPlan.watchMeasurementSnapshot"
+
+    static func read() -> TaptionWatchMeasurementSnapshot? {
+        guard
+            let defaults = UserDefaults(
+                suiteName: TaptionWatchWidgetStore.appGroupIdentifier
+            ),
+            let data = defaults.data(forKey: key)
+        else {
+            return nil
+        }
+        return try? JSONDecoder().decode(
+            TaptionWatchMeasurementSnapshot.self,
+            from: data
+        )
+    }
+
+    static func write(_ snapshot: TaptionWatchMeasurementSnapshot) throws {
+        guard let defaults = UserDefaults(
+            suiteName: TaptionWatchWidgetStore.appGroupIdentifier
+        ) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        defaults.set(try JSONEncoder().encode(snapshot), forKey: key)
+    }
+}

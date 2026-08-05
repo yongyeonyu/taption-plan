@@ -383,15 +383,48 @@ struct StationaryContextClassifier: Sendable {
     }
 }
 
+/// 사용자가 설정에서 직접 맞춘 자주가는 곳의 중심과 반경.
+struct FrequentPlaceAnchor: Hashable, Sendable {
+    var point: GeoPoint
+    var radiusMeters: Double
+}
+
+extension FrequentPlaceResolutionEngine {
+    /// `kindsByPlaceKey` 와 짝이다. 체류를 이을지 정할 때 쓰는 중심과 반경은
+    /// 사용자가 설정에서 맞춘 값 그대로이고, 여기서 새 거리를 만들지 않는다.
+    func anchorsByPlaceKey(
+        _ frequentPlaces: [FrequentPlace]
+    ) -> [String: FrequentPlaceAnchor] {
+        frequentPlaces.reduce(into: [String: FrequentPlaceAnchor]()) {
+            values, place in
+            guard let point = place.point else { return }
+            values[place.stablePlaceKey] = FrequentPlaceAnchor(
+                point: point,
+                radiusMeters: place.radiusMeters
+            )
+        }
+    }
+}
+
 /// 체류 하나를 문맥 기록 하나로 바꾼다. 자동 기록이므로 원본을 보존하고
 /// 사용자 편집은 허용하지 않는다.
 enum StationaryContextActualEngine {
     /// 장소 체류가 없는 정지 구간에 붙이는 키. 자주가는 곳과 겹치지 않는다.
     static let motionOnlyPlaceKey = "stationary-context-motion"
 
+    /// 등록하지 않은 곳에는 사용자가 맞춘 반경이 없다. 층이 갈려 둘로 나뉜
+    /// 자국이나 표본이 잠깐 빈 자국만 메우고, 그보다 벌어지면 잇지 않는다.
+    static let unregisteredJoinTolerance: TimeInterval = 5 * 60
+
+    /// 등록한 곳에서 위치가 한 점도 찍히지 않은 시간을 잇는 한계. 실내에서는
+    /// GPS가 통째로 끊기므로 머문 것도 벗어난 것도 보이지 않는다. 그때는
+    /// 이어 주되, 보이지 않는 하루를 통째로 지어내지는 않는다.
+    static let unprovenJoinLimit: TimeInterval = 60 * 60
+
     static func records(
         stays: [PlaceStay],
         placeKinds: [String: FrequentPlaceKind],
+        placeAnchors: [String: FrequentPlaceAnchor] = [:],
         stationarySpans: [TimeSpan] = [],
         readings: [SensorReading] = [],
         calendarEvents: [CalendarRecord] = [],
@@ -406,6 +439,9 @@ enum StationaryContextActualEngine {
         let classifier = StationaryContextClassifier()
         return contextStays(
             stays: stays,
+            placeAnchors: placeAnchors,
+            registeredKeys: Set(placeKinds.keys),
+            readings: readings,
             stationarySpans: stationarySpans,
             inside: inside,
             minimumDuration: minimumDuration
@@ -451,19 +487,31 @@ enum StationaryContextActualEngine {
     /// 지어내지 않고 "머무름"으로 남는다.
     private static func contextStays(
         stays: [PlaceStay],
+        placeAnchors: [String: FrequentPlaceAnchor],
+        registeredKeys: Set<String>,
+        readings: [SensorReading],
         stationarySpans: [TimeSpan],
         inside: TimeSpan,
         minimumDuration: TimeInterval
     ) -> [PlaceStay] {
-        let placed = stays.compactMap { stay -> PlaceStay? in
-            guard let span = stay.span.intersection(with: inside),
-                  span.duration >= minimumDuration else {
+        let clipped = stays.compactMap { stay -> PlaceStay? in
+            guard let span = stay.span.intersection(with: inside) else {
                 return nil
             }
-            var clipped = stay
-            clipped.span = span
-            return clipped
+            var value = stay
+            value.span = span
+            return value
         }
+        .sorted { $0.span.start < $1.span.start }
+        // 짧은 체류를 먼저 버리면 이어 붙일 조각까지 사라진다. 잇고 난 뒤에
+        // 재어야 한 곳에 오래 있었다는 사실이 그대로 남는다.
+        let placed = joiningContinuousStays(
+            clipped,
+            anchors: placeAnchors,
+            registeredKeys: registeredKeys,
+            readings: readings
+        )
+        .filter { $0.span.duration >= minimumDuration }
         let covered = ActualIntervalMergeEngine.union(placed.map(\.span))
         let uncovered = ActualIntervalMergeEngine.union(
             stationarySpans.compactMap { $0.intersection(with: inside) },
@@ -480,6 +528,93 @@ enum StationaryContextActualEngine {
             )
         }
         return (placed + uncovered).sorted { $0.span.start < $1.span.start }
+    }
+
+    /// 등록해 둔 곳 안에 계속 있었다면 시간표도 한 줄이어야 한다. 층이
+    /// 바뀌어도, 자리를 떠나 건물 안을 걸어 다녀도 그 곳을 벗어난 것이 아니다.
+    /// 반경 밖에서 찍힌 위치가 하나라도 있으면 그때는 나갔다 온 것이라 잇지
+    /// 않는다 — 그래야 출근·퇴근과 일과 고리가 뜻을 잃지 않는다.
+    private static func joiningContinuousStays(
+        _ stays: [PlaceStay],
+        anchors: [String: FrequentPlaceAnchor],
+        registeredKeys: Set<String>,
+        readings: [SensorReading]
+    ) -> [PlaceStay] {
+        guard stays.count > 1 else { return stays }
+        let located = readings
+            .filter { $0.point != nil }
+            .sorted { $0.timestamp < $1.timestamp }
+        var result: [PlaceStay] = []
+        for stay in stays {
+            guard let hostIndex = result.lastIndex(where: {
+                $0.placeKey == stay.placeKey
+            }), stayedThrough(
+                between: result[hostIndex],
+                and: stay,
+                passing: Array(result[(hostIndex + 1)...]),
+                anchor: anchors[stay.placeKey],
+                registeredKeys: registeredKeys,
+                readings: located
+            ) else {
+                result.append(stay)
+                continue
+            }
+            // 사이에 낀 조각은 이어진 구간이 덮어야 한다. 그 조각이 더 늦게
+            // 끝났다면 거기까지 늘려야 시간을 잃지 않는다. 원본 체류는
+            // snapshot.places 에 그대로 남아 근거를 잃지 않는다.
+            let ends = result[hostIndex...].map(\.span.end) + [stay.span.end]
+            result[hostIndex].span = TimeSpan(
+                start: result[hostIndex].span.start,
+                end: ends.max() ?? stay.span.end
+            )
+            result.removeSubrange((hostIndex + 1)...)
+        }
+        return result
+    }
+
+    /// 두 체류 사이에 그 곳을 벗어난 자취가 없는지 본다.
+    private static func stayedThrough(
+        between host: PlaceStay,
+        and next: PlaceStay,
+        passing: [PlaceStay],
+        anchor: FrequentPlaceAnchor?,
+        registeredKeys: Set<String>,
+        readings: [SensorReading]
+    ) -> Bool {
+        // 사이에 다른 등록된 곳에 머문 자국이 있으면 그리로 옮겨 간 것이다.
+        if passing.contains(where: {
+            $0.placeKey != host.placeKey && registeredKeys.contains($0.placeKey)
+        }) {
+            return false
+        }
+        let gap = TimeSpan(
+            start: host.span.end,
+            end: max(host.span.end, next.span.start)
+        )
+        guard let anchor else {
+            return passing.isEmpty
+                && gap.duration <= unregisteredJoinTolerance
+        }
+        // 사이에 낀 체류도 사용자가 맞춘 반경 안이어야 한다.
+        if passing.contains(where: { outside($0.point, anchor) }) {
+            return false
+        }
+        let sampled = readings.filter { gap.contains($0.timestamp) }
+        if sampled.contains(where: { outside($0.point, anchor) }) {
+            return false
+        }
+        // 반경 안에서 찍힌 위치가 있으면 얼마나 벌어졌든 머문 것이다.
+        // 점심을 먹으러 건물 안을 돌아다닌 시간이 여기에 들어온다.
+        if !sampled.isEmpty { return true }
+        return gap.duration <= unprovenJoinLimit
+    }
+
+    private static func outside(
+        _ point: GeoPoint?,
+        _ anchor: FrequentPlaceAnchor
+    ) -> Bool {
+        guard let point else { return false }
+        return distanceMeters(point, anchor.point) > anchor.radiusMeters
     }
 
     /// `covered` 는 시작 시각 순으로 정렬되고 서로 겹치지 않는다.

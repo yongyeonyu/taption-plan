@@ -86,9 +86,20 @@ final class AppModel {
     /// 보여 주고, 끝나기 전에는 아무것도 기록되지 않는다.
     private(set) var floorCalibrationSampling: FloorCalibrationSampling?
     private(set) var watchLaunchReport: (report: String, receivedAt: Date)?
+    /// 등록하지 않았는데 자주 간 자리 하나. 설정 화면을 열 때만 다시 구하고,
+    /// 한 번에 하나만 보여 준다.
+    private(set) var frequentPlaceSuggestion: FrequentPlaceSuggestion?
     private(set) var sleepSessions: [SleepSession] = []
     private(set) var lastHealthRefreshAt: Date?
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
+    /// 첫 실행 안내를 닫은 기록. 기기 저장소에서 읽어 오고, 바뀔 때만 다시
+    /// 넣어 화면이 갱신되게 한다.
+    private(set) var dismissedAppleWatchPrompts: Set<AppleWatchOnboardingPrompt> =
+        AppleWatchOnboardingStore().dismissed
+    private(set) var hasSeenWatchAppInstalled =
+        AppleWatchOnboardingStore().hasSeenWatchAppInstalled
+    @ObservationIgnored
+    private let watchOnboardingStore = AppleWatchOnboardingStore()
     private(set) var appUsageAuthorizationState: ScreenTimeAuthorizationState = .unavailable
     private(set) var lastAppUsageRefreshAt: Date?
     private(set) var appUsageRecordCount = 0
@@ -354,7 +365,7 @@ final class AppModel {
             },
             onStatusChange: { [weak self] state in
                 Task { @MainActor [weak self] in
-                    self?.appleWatchConnectionState = state
+                    self?.applyAppleWatchConnectionState(state)
                 }
             }
         )
@@ -1424,6 +1435,42 @@ final class AppModel {
     func refreshAppleWatchConnectionState() {
         watchConnectivityService.refreshConnectionState()
         refreshWatchLaunchReport()
+    }
+
+    /// 워치는 나중에 페어링될 수도, 앱이 나중에 설치될 수도 있다. 세션이
+    /// 상태를 알릴 때마다 여기로 들어와 안내가 따라 바뀐다.
+    func applyAppleWatchConnectionState(_ state: AppleWatchConnectionState) {
+        if appleWatchConnectionState != state {
+            appleWatchConnectionState = state
+        }
+        // 설치를 한 번 확인했으면 사용자가 나중에 지우더라도 다시 권하지 않는다.
+        guard state == .background || state == .reachable,
+              !hasSeenWatchAppInstalled else {
+            return
+        }
+        watchOnboardingStore.markWatchAppInstalled()
+        hasSeenWatchAppInstalled = true
+    }
+
+    /// 지금 보여 줄 첫 실행 안내. 없으면 아무것도 띄우지 않는다.
+    var appleWatchOnboardingPrompt: AppleWatchOnboardingPrompt? {
+        AppleWatchOnboarding.prompt(
+            for: appleWatchConnectionState,
+            dismissed: dismissedAppleWatchPrompts,
+            hasSeenWatchAppInstalled: hasSeenWatchAppInstalled
+        )
+    }
+
+    /// 설정에 늘 남는 워치 앱 줄.
+    var appleWatchCompanionRow: AppleWatchCompanionRow {
+        AppleWatchOnboarding.companionRow(for: appleWatchConnectionState)
+    }
+
+    /// 한 번 닫으면 그 안내는 다시 뜨지 않는다.
+    func dismissAppleWatchPrompt(_ prompt: AppleWatchOnboardingPrompt) {
+        guard !dismissedAppleWatchPrompts.contains(prompt) else { return }
+        watchOnboardingStore.dismiss(prompt)
+        dismissedAppleWatchPrompts.insert(prompt)
     }
 
     func refreshWatchLaunchReport() {
@@ -3323,6 +3370,8 @@ final class AppModel {
             stays: stays,
             placeKinds: FrequentPlaceResolutionEngine()
                 .kindsByPlaceKey(settings.frequentPlaces),
+            placeAnchors: FrequentPlaceResolutionEngine()
+                .anchorsByPlaceKey(settings.frequentPlaces),
             stationarySpans: stationarySpans,
             readings: readings,
             calendarEvents: snapshot.calendarEvents,
@@ -3806,6 +3855,9 @@ final class AppModel {
         }) else {
             return
         }
+        if let point = snapshot.settings.frequentPlaces[index].point {
+            rememberDismissedPlaceSuggestion(at: point)
+        }
         snapshot.settings.frequentPlaces[index].clearLocation()
         lastAutoFloorCalibrationKey = nil
         if let latestSensorReading {
@@ -3957,33 +4009,47 @@ final class AppModel {
     }
 
     /// 기준점을 고치면 그 기준으로 매긴 지난 기록도 다시 매겨야 한다. 원본
-    /// 표본은 그대로 두고 파생된 층수만 다시 구한다. 표본이 이미 지워진
-    /// 기록은 되살릴 방법이 없으므로 손대지 않는다.
+    /// 표본은 그대로 두고 파생된 층수만 다시 구한다. 기록이 스스로 근거를
+    /// 지녔으면 보관 기간과 무관하게 다시 매기고, 근거가 없는 옛 기록만
+    /// 7일 보관분을 뒤진다. 그마저 없으면 되살릴 방법이 없으므로 손대지 않고
+    /// 있던 층수를 그대로 남긴다.
     func reapplyStoredFloors(forPlaceID placeID: UUID) async {
-        guard let sensorService,
-              let place = settings.frequentPlaces.first(where: {
-                  $0.id == placeID
-              }) else {
+        guard let place = settings.frequentPlaces.first(where: {
+            $0.id == placeID
+        }) else {
             return
         }
-        let affected = snapshot.places.filter {
-            $0.placeKey == place.stablePlaceKey
+        let legacy = snapshot.places.filter {
+            $0.placeKey == place.stablePlaceKey && $0.floorEvidence == nil
         }
-        guard let start = affected.map(\.span.start).min(),
-              let end = affected.map(\.span.end).max() else {
-            return
+        var readings: [SensorReading] = []
+        if let sensorService,
+           let start = legacy.map(\.span.start).min(),
+           let end = legacy.map(\.span.end).max() {
+            readings = (try? await sensorService.archivedReadings(
+                in: TimeSpan(start: start, end: end)
+            )) ?? []
         }
-        let readings = (try? await sensorService.archivedReadings(
-            in: TimeSpan(start: start, end: end)
-        )) ?? []
-        guard !readings.isEmpty else { return }
-        let recomputed = FrequentPlaceResolutionEngine().reapplyingFloors(
+        let engine = FrequentPlaceResolutionEngine()
+        let recomputedPlaces = engine.reapplyingFloors(
             of: place,
             to: snapshot.places,
             readings: readings
         )
-        guard recomputed != snapshot.places else { return }
-        snapshot.places = recomputed
+        let recomputedTransitions = engine.reapplyingFloors(
+            of: place,
+            to: snapshot.floorTransitions
+        )
+        var changed = false
+        if recomputedPlaces != snapshot.places {
+            snapshot.places = recomputedPlaces
+            changed = true
+        }
+        if recomputedTransitions != snapshot.floorTransitions {
+            snapshot.floorTransitions = recomputedTransitions
+            changed = true
+        }
+        guard changed else { return }
         await persist()
     }
 
@@ -4130,6 +4196,9 @@ final class AppModel {
         }) else {
             return
         }
+        if let point = target.point {
+            rememberDismissedPlaceSuggestion(at: point)
+        }
         guard target.kind == .custom else {
             snapshot.settings.frequentPlaces =
                 snapshot.settings.frequentPlaces.map { place in
@@ -4143,6 +4212,107 @@ final class AppModel {
         Task { await persist() }
     }
 
+    // MARK: - 등록하지 않은 자주 가는 곳
+
+    /// 설정 화면을 열 때만 다시 구한다. 저장된 체류만 읽으므로 새 위치 수집도,
+    /// 새 권한도 필요 없다.
+    func refreshFrequentPlaceSuggestion() {
+        frequentPlaceSuggestion = UnregisteredPlaceSuggestionEngine()
+            .suggestion(
+                places: snapshot.places,
+                frequentPlaces: snapshot.settings.frequentPlaces,
+                dismissed: snapshot.settings.dismissedPlaceSuggestions
+            )
+    }
+
+    /// 제안한 자리를 사용자가 고른 종류로 등록한다. 좌표는 이미 모은 체류에서
+    /// 나오므로 사용자는 종류만 고르면 된다. 이름과 반경은 이어서 열리는 기존
+    /// 설정 화면에서 고친다.
+    @discardableResult
+    func registerFrequentPlaceSuggestion(
+        as kind: FrequentPlaceKind
+    ) -> UUID? {
+        guard let suggestion = frequentPlaceSuggestion else { return nil }
+        let reading = SensorReading(
+            timestamp: suggestion.lastVisitedAt,
+            point: suggestion.point
+        )
+        let index: Int
+        if kind != .custom,
+           let empty = snapshot.settings.frequentPlaces.firstIndex(where: {
+               $0.kind == kind && $0.point == nil
+           }) {
+            index = empty
+        } else {
+            // 이름을 지어내지 않는다. 역지오코딩이 붙여 준 이름이 없으면
+            // 좌표를 그대로 넣고 사용자가 고치게 둔다.
+            snapshot.settings.frequentPlaces.append(
+                FrequentPlace(
+                    kind: kind,
+                    name: suggestion.suggestedName
+                        ?? Self.coordinateLabel(suggestion.point)
+                )
+            )
+            index = snapshot.settings.frequentPlaces.count - 1
+        }
+        let floor = snapshot.settings.frequentPlaces[index].floor ?? 1
+        snapshot.settings.frequentPlaces[index].setLocation(
+            from: reading,
+            floor: floor
+        )
+        snapshot.settings.frequentPlaces =
+            AppFeatureSettings.mergedFrequentPlaces(
+                snapshot.settings.frequentPlaces
+            )
+        let placeID = snapshot.settings.frequentPlaces[index].id
+        snapshot.places = FrequentPlaceResolutionEngine().applying(
+            snapshot.settings.frequentPlaces,
+            to: snapshot.places,
+            readings: [reading]
+        )
+        frequentPlaceSuggestion = nil
+        Task {
+            await persist()
+            await refreshSensorTimeline(containing: selectedDate)
+        }
+        return placeID
+    }
+
+    /// 거절은 영구히 기억한다. 같은 곳을 매주 다시 묻는 것이 한 번도 묻지
+    /// 않는 것보다 나쁘다.
+    func dismissFrequentPlaceSuggestion() {
+        guard let suggestion = frequentPlaceSuggestion else { return }
+        rememberDismissedPlaceSuggestion(at: suggestion.point)
+        frequentPlaceSuggestion = nil
+        Task { await persist() }
+    }
+
+    static func coordinateLabel(_ point: GeoPoint) -> String {
+        String(
+            format: "%.5f, %.5f",
+            point.latitude,
+            point.longitude
+        )
+    }
+
+    /// 자주가는 곳에서 지운 자리도 같은 목록에 넣는다. 지우자마자 "등록할
+    /// 까요?"가 다시 뜨면 지운 것이 지워지지 않은 셈이다.
+    private func rememberDismissedPlaceSuggestion(at point: GeoPoint) {
+        let radius = UnregisteredPlaceSuggestionEngine().dismissalRadiusMeters
+        guard !snapshot.settings.dismissedPlaceSuggestions.contains(where: {
+            distanceMeters($0.point, point) <= radius
+        }) else {
+            return
+        }
+        snapshot.settings.dismissedPlaceSuggestions.append(
+            DismissedPlaceSuggestion(point: point)
+        )
+        if let suggestion = frequentPlaceSuggestion,
+           distanceMeters(suggestion.point, point) <= radius {
+            frequentPlaceSuggestion = nil
+        }
+    }
+
     func confirmFloorTransition(
         _ transitionID: UUID,
         toFloor: Int?
@@ -4154,8 +4324,10 @@ final class AppModel {
         }
         snapshot.floorTransitions[index].toFloor = toFloor
         snapshot.floorTransitions[index].confidence = .high
-        if !snapshot.floorTransitions[index].evidence.contains("사용자 확인") {
-            snapshot.floorTransitions[index].evidence.append("사용자 확인")
+        if !snapshot.floorTransitions[index].isUserConfirmed {
+            snapshot.floorTransitions[index].evidence.append(
+                FloorTransition.userConfirmedEvidence
+            )
         }
         if let toFloor,
            let placeIndex = snapshot.places.firstIndex(where: {
@@ -5282,6 +5454,9 @@ final class AppModel {
         value.settings.floorCalibration = nil
         value.settings.floorCalibrationHistory = []
         value.settings.movementCorrections = []
+        // 거절한 자리는 이 기기의 위치 기록에서만 나온 좌표다. 자주가는 곳
+        // 자체와 달리 사용자가 적은 값이 아니므로 기기에 남긴다.
+        value.settings.dismissedPlaceSuggestions = []
         return value
     }
 
@@ -5321,6 +5496,8 @@ final class AppModel {
             local.settings.floorCalibrationHistory
         value.settings.movementCorrections =
             local.settings.movementCorrections
+        value.settings.dismissedPlaceSuggestions =
+            local.settings.dismissedPlaceSuggestions
         // Weather is sampled with device location and remains device ground
         // truth, just like the corresponding place and movement records.
         value.weather = WeatherTimelineEngine.coalesced(local.weather)

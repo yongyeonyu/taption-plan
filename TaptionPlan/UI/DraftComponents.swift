@@ -557,7 +557,9 @@ struct CatActionPreviewStage: View {
                             phase: pose.legPhase,
                             facesLeft: pose.facesLeft,
                             tailSwing: pose.tailSwing,
-                            headTiltDegrees: pose.headTiltDegrees
+                            headTiltDegrees: pose.headTiltDegrees,
+                            legSwing: pose.legSwing,
+                            idle: pose.idle
                         ),
                         reducesMotion: reducesMotion
                     )
