@@ -5816,7 +5816,7 @@ final class FeatureEngineTests: XCTestCase {
             from: [
                 ScreenTimeUsageSample(
                     key: "bundle:com.burbn.instagram",
-                    title: "어플 · Instagram",
+                    title: "Instagram",
                     span: span,
                     duration: 12 * 60,
                     pickups: 0,
@@ -5827,7 +5827,7 @@ final class FeatureEngineTests: XCTestCase {
             suppressedIDs: []
         )
 
-        XCTAssertEqual(records.first?.title, "어플 · Instagram")
+        XCTAssertEqual(records.first?.title, "Instagram")
         XCTAssertEqual(
             records.first?.evidence,
             [
@@ -6483,6 +6483,206 @@ final class FeatureEngineTests: XCTestCase {
         }
     }
 
+    /// 실기기에서 종일 "정지·휴식"만 보이던 원인. 실내에서는 GPS가 끊겨
+    /// 장소 체류가 하나도 만들어지지 않는데, 예전에는 체류가 있어야만
+    /// 문맥 기록을 만들었다.
+    func testStationaryContextReplacesMotionRestWithoutAnyPlaceStay() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let restStart = makeDate(2026, 8, 4, 19, 0)
+        let restSpan = TimeSpan(
+            start: restStart,
+            end: restStart.addingTimeInterval(3 * hour)
+        )
+        let motionActuals = MotionActivityActualEngine.records(
+            from: [
+                MotionActivityRecord(
+                    span: restSpan,
+                    motion: .stationary,
+                    confidence: .high
+                )
+            ],
+            existing: [],
+            inside: day
+        )
+        XCTAssertEqual(motionActuals.map(\.title), ["정지·휴식"])
+
+        let contextRecords = StationaryContextActualEngine.records(
+            stays: [],
+            placeKinds: [:],
+            stationarySpans: [restSpan],
+            inside: day,
+            calendar: utcCalendar,
+            now: day.end
+        )
+
+        XCTAssertEqual(contextRecords.map(\.title), ["머무름"])
+        XCTAssertEqual(contextRecords.first?.confidence, .low)
+        XCTAssertEqual(contextRecords.first?.categoryID, "activity")
+        XCTAssertEqual(contextRecords.first?.startedAt, restSpan.start)
+        XCTAssertEqual(contextRecords.first?.endedAt, restSpan.end)
+
+        let merged = StationaryContextActualEngine.suppressingStationaryMotion(
+            motionActuals,
+            coveredBy: contextRecords,
+            asOf: day.end
+        ) + contextRecords
+        XCTAssertFalse(merged.contains { $0.title == "정지·휴식" })
+    }
+
+    func testStationaryContextFillsTheStationaryTimeAroundAPlaceStay() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let officeStart = makeDate(2026, 8, 4, 10, 0)
+        let stay = makeContextStay(
+            start: officeStart,
+            end: officeStart.addingTimeInterval(2 * hour),
+            placeKey: "frequent-office"
+        )
+        let records = StationaryContextActualEngine.records(
+            stays: [stay],
+            placeKinds: ["frequent-office": .company],
+            stationarySpans: [
+                TimeSpan(
+                    start: officeStart.addingTimeInterval(-hour),
+                    end: officeStart.addingTimeInterval(3 * hour)
+                )
+            ],
+            inside: day,
+            calendar: utcCalendar,
+            now: day.end
+        )
+
+        XCTAssertEqual(records.map(\.title), ["머무름", "근무", "머무름"])
+        XCTAssertEqual(records.first?.endedAt, stay.span.start)
+        XCTAssertEqual(records.last?.startedAt, stay.span.end)
+        XCTAssertEqual(
+            Set(records.map(\.id)).count,
+            records.count,
+            "같은 갱신에서 만든 기록의 식별자가 겹친다"
+        )
+    }
+
+    /// 시간대만으로는 근무를 만들지 않는다. 평일 낮의 집이 "근무"가 되면
+    /// 안 된다.
+    func testStationaryContextDoesNotInventWorkFromWeekdayHoursAlone() {
+        let start = makeDate(2026, 8, 4, 14, 0)
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(
+                    start: start,
+                    end: start.addingTimeInterval(2 * hour)
+                ),
+                placeKind: nil,
+                calendar: utcCalendar,
+                now: start.addingTimeInterval(3 * hour)
+            )
+        )
+
+        XCTAssertEqual(inference.kind, .unknownStay)
+        XCTAssertEqual(inference.confidence, .low)
+    }
+
+    /// "대기"가 이동 종류였을 때는 앞뒤 이동과 겹친다고 보고 화면에서
+    /// 지워졌다. 정지 문맥은 모두 활동 줄에 남아야 한다.
+    func testWaitingRecordSurvivesMovementDisplayFiltering() {
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let end = start.addingTimeInterval(10 * 60)
+        let travel = [
+            TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: start.addingTimeInterval(-10 * 60),
+                    end: start.addingTimeInterval(3 * 60)
+                ),
+                distanceMeters: 500,
+                confidence: .medium,
+                evidence: ["걸음 수"]
+            ),
+            TravelSegment(
+                mode: .subway,
+                span: TimeSpan(start: end, end: end.addingTimeInterval(20 * 60)),
+                distanceMeters: 6_000,
+                confidence: .medium,
+                evidence: ["역 근처"]
+            ),
+        ]
+        let records = StationaryContextActualEngine.records(
+            stays: [makeContextStay(start: start, end: end)],
+            placeKinds: [:],
+            travel: travel,
+            inside: TimeSpan(start: start, end: end.addingTimeInterval(hour)),
+            calendar: utcCalendar,
+            now: end.addingTimeInterval(hour)
+        )
+
+        XCTAssertEqual(records.map(\.title), ["대기"])
+        XCTAssertEqual(records.first?.categoryID, "activity")
+        XCTAssertEqual(
+            MovementDisplayEngine.visibleActuals(
+                records,
+                travel: travel,
+                asOf: end.addingTimeInterval(hour)
+            ).map(\.title),
+            ["대기"]
+        )
+    }
+
+    /// 문맥 기록은 "정지·휴식"만 대신한다. 같은 시간에 잡힌 걷기는 남는다.
+    func testStationaryContextDoesNotSwallowWalkingActivities() {
+        let dayStart = makeDate(2026, 8, 4, 0, 0)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let officeStart = makeDate(2026, 8, 4, 10, 0)
+        let context = StationaryContextActualEngine.records(
+            stays: [
+                makeContextStay(
+                    start: officeStart,
+                    end: officeStart.addingTimeInterval(3 * hour),
+                    placeKey: "frequent-office"
+                )
+            ],
+            placeKinds: ["frequent-office": .company],
+            inside: day,
+            calendar: utcCalendar,
+            now: day.end
+        )
+        XCTAssertEqual(context.map(\.title), ["근무"])
+
+        let regenerated = MotionActivityActualEngine.records(
+            from: [
+                MotionActivityRecord(
+                    span: TimeSpan(
+                        start: officeStart.addingTimeInterval(30 * 60),
+                        end: officeStart.addingTimeInterval(34 * 60)
+                    ),
+                    motion: .walking,
+                    confidence: .high
+                ),
+                MotionActivityRecord(
+                    span: TimeSpan(
+                        start: officeStart.addingTimeInterval(40 * 60),
+                        end: officeStart.addingTimeInterval(2 * hour)
+                    ),
+                    motion: .stationary,
+                    confidence: .high
+                ),
+            ],
+            existing: context,
+            inside: day
+        )
+
+        XCTAssertEqual(regenerated.map(\.title), ["걷기"])
+    }
+
     private func makeContextStay(
         start: Date,
         end: Date,
@@ -6559,6 +6759,106 @@ final class FeatureEngineTests: XCTestCase {
                 peakRotationRateRadiansPerSecond: 0.003
             )
         )
+    }
+
+    func testSummaryBucketsSplitRecordsAcrossDayBoundaries() {
+        let engine = TimelineAggregationEngine(calendar: utcCalendar)
+        let outer = TimeSpan(
+            start: makeDate(2026, 7, 1),
+            end: makeDate(2026, 7, 8)
+        )
+        let crossing = PlanRecord(
+            title: "밤샘",
+            span: TimeSpan(
+                start: makeDate(2026, 7, 2, 22, 0),
+                end: makeDate(2026, 7, 3, 4, 0)
+            ),
+            categoryID: "project"
+        )
+        let morning = PlanRecord(
+            title: "오전",
+            span: TimeSpan(
+                start: makeDate(2026, 7, 3, 9, 0),
+                end: makeDate(2026, 7, 3, 11, 0)
+            ),
+            categoryID: "project"
+        )
+        let overlapping = PlanRecord(
+            title: "겹침",
+            span: TimeSpan(
+                start: makeDate(2026, 7, 3, 10, 0),
+                end: makeDate(2026, 7, 3, 12, 0)
+            ),
+            categoryID: "project"
+        )
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: makeDate(2026, 7, 2, 23, 0),
+            endedAt: makeDate(2026, 7, 3, 5, 0),
+            source: .healthKit
+        )
+        let early = PhotoMoment(
+            id: "early",
+            capturedAt: makeDate(2026, 7, 3, 8, 0),
+            pixelWidth: 100,
+            pixelHeight: 100,
+            isFavorite: false,
+            isHiddenFromTimeline: false
+        )
+        let late = PhotoMoment(
+            id: "late",
+            capturedAt: makeDate(2026, 7, 3, 20, 0),
+            pixelWidth: 100,
+            pixelHeight: 100,
+            isFavorite: false,
+            isHiddenFromTimeline: false
+        )
+        let hidden = PhotoMoment(
+            id: "hidden",
+            capturedAt: makeDate(2026, 7, 3, 21, 0),
+            pixelWidth: 100,
+            pixelHeight: 100,
+            isFavorite: false,
+            isHiddenFromTimeline: true
+        )
+
+        let buckets = engine.buckets(
+            of: .day,
+            inside: outer,
+            plans: [crossing, morning, overlapping],
+            actuals: [sleep],
+            photos: [late, early, hidden]
+        )
+
+        XCTAssertEqual(buckets.count, 7)
+
+        func duration(
+            _ bucket: SummaryBucket,
+            _ categoryID: String
+        ) -> (planned: TimeInterval, actual: TimeInterval) {
+            guard let value = bucket.categories.first(where: {
+                $0.categoryID == categoryID
+            }) else {
+                return (0, 0)
+            }
+            return (value.planned, value.actual)
+        }
+
+        XCTAssertEqual(duration(buckets[1], "project").planned, 2 * hour)
+        XCTAssertEqual(duration(buckets[1], "sleep").actual, hour)
+        // 겹치는 계획은 합쳐서 센다. 22시–4시 중 4시간에 9시–12시 3시간.
+        XCTAssertEqual(duration(buckets[2], "project").planned, 7 * hour)
+        XCTAssertEqual(duration(buckets[2], "sleep").actual, 5 * hour)
+        XCTAssertEqual(buckets[2].photoCount, 2)
+        XCTAssertEqual(buckets[2].representativePhotoID, "early")
+
+        // 기록이 하나도 걸치지 않는 칸도 같은 분류 열쇠를 0으로 남긴다.
+        XCTAssertEqual(duration(buckets[0], "project").planned, 0)
+        XCTAssertEqual(duration(buckets[0], "sleep").actual, 0)
+        XCTAssertEqual(buckets[0].photoCount, 0)
+        XCTAssertNil(buckets[0].representativePhotoID)
     }
 
     private var utcCalendar: Calendar {

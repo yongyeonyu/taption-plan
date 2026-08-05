@@ -2457,7 +2457,10 @@ enum MotionActivityActualEngine {
                     return nil
                 }
                 let covered = existing.contains { actual in
-                    guard isCompetingAutomaticRecord(actual),
+                    guard isCompetingAutomaticRecord(
+                              actual,
+                              against: activity.motion
+                          ),
                           let overlap = actual.span(asOf: inside.end)
                               .intersection(with: activity.span) else {
                         return false
@@ -2522,7 +2525,8 @@ enum MotionActivityActualEngine {
     }
 
     private static func isCompetingAutomaticRecord(
-        _ actual: ActualRecord
+        _ actual: ActualRecord,
+        against motion: MotionKind
     ) -> Bool {
         guard actual.source == .healthKit
                 || actual.source == .appleWatch
@@ -2530,10 +2534,11 @@ enum MotionActivityActualEngine {
             return false
         }
         // 장소 문맥 기록이 덮은 구간은 "정지·휴식" 으로 다시 만들지 않는다.
+        // 대신 같은 시간에 걷기·달리기가 잡혔다면 그 기록은 남긴다.
         if actual.source == .location,
            let behavior = actual.behavior,
            StationaryContextKind(rawValue: behavior) != nil {
-            return true
+            return motion == .stationary
         }
         return actual.categoryID == "exercise"
             || actual.categoryID == "activity"

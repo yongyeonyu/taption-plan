@@ -3293,6 +3293,8 @@ final class AppModel {
     /// 문맥으로 바꾼다. 새 권한이나 새 수집 없이 이미 모은 신호만 쓴다.
     private func applyStationaryContextRecords(
         stays: [PlaceStay],
+        stationarySpans: [TimeSpan],
+        travel: [TravelSegment],
         readings: [SensorReading],
         inside span: TimeSpan
     ) async {
@@ -3307,10 +3309,11 @@ final class AppModel {
             stays: stays,
             placeKinds: FrequentPlaceResolutionEngine()
                 .kindsByPlaceKey(settings.frequentPlaces),
+            stationarySpans: stationarySpans,
             readings: readings,
             calendarEvents: snapshot.calendarEvents,
             actuals: snapshot.actuals,
-            travel: snapshot.travel.filter {
+            travel: travel.filter {
                 $0.span.intersection(with: span) != nil
             },
             watchSummaries: watchSummaries,
@@ -3521,11 +3524,6 @@ final class AppModel {
                 }
             }
         let places = basePlaces + walkingLocations
-        await applyStationaryContextRecords(
-            stays: places,
-            readings: readings,
-            inside: span
-        )
         let floors = floorTimeline.transitions
         let inferredTravel = AppleDeviceGroundTruthEngine.mergingTravel(
             gpsSegments: MovementRouteBuilder().build(
@@ -3574,6 +3572,18 @@ final class AppModel {
         snapshot.places.sort { $0.span.start < $1.span.start }
         snapshot.travel.sort { $0.span.start < $1.span.start }
         snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
+
+        // 이번 갱신에서 만든 이동과 장소를 모두 확정한 다음에 정지 구간
+        // 문맥을 붙인다. 예전 이동만 보고 있으면 "대기"를 찾을 수 없었다.
+        await applyStationaryContextRecords(
+            stays: places,
+            stationarySpans: motionActivities
+                .filter { $0.motion == .stationary }
+                .map(\.span),
+            travel: travel,
+            readings: readings,
+            inside: span
+        )
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(
@@ -5052,18 +5062,26 @@ final class AppModel {
         }
     }
 
+    /// 기기 센서에서만 만들어지는 자동 기록. iCloud로 내보내지 않고 기기
+    /// 저장본을 원본으로 유지한다. 새 자동 기록 종류를 더할 때 이 판단을
+    /// 두 곳에 나눠 적으면 한쪽이 빠지므로 한 자리에서 본다.
+    private nonisolated static func isDeviceLocalActual(
+        _ actual: ActualRecord
+    ) -> Bool {
+        switch actual.source {
+        case .healthKit, .appleWatch, .motion, .location, .media, .call,
+             .appUsage:
+            true
+        case .manual, .timer, .calendar, .photo:
+            false
+        }
+    }
+
     private func cloudPortableSnapshot(
         _ source: TaptionDataSnapshot
     ) -> TaptionDataSnapshot {
         var value = source
-        value.actuals.removeAll {
-            $0.source == .healthKit
-                || $0.source == .appleWatch
-                || $0.source == .motion
-                || $0.source == .media
-                || $0.source == .call
-                || $0.source == .appUsage
-        }
+        value.actuals.removeAll(where: Self.isDeviceLocalActual)
         value.photos = []
         value.memos = value.memos.map { memo in
             var portable = memo
@@ -5087,14 +5105,7 @@ final class AppModel {
         local: TaptionDataSnapshot
     ) -> TaptionDataSnapshot {
         var value = cloud
-        let deviceActuals = local.actuals.filter {
-            $0.source == .healthKit
-                || $0.source == .appleWatch
-                || $0.source == .motion
-                || $0.source == .media
-                || $0.source == .call
-                || $0.source == .appUsage
-        }
+        let deviceActuals = local.actuals.filter(Self.isDeviceLocalActual)
         let cloudIDs = Set(value.actuals.map(\.id))
         value.actuals.append(contentsOf: deviceActuals.filter {
             !cloudIDs.contains($0.id)

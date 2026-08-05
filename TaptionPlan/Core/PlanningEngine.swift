@@ -264,6 +264,28 @@ enum AutomaticRecordTimelineEngine {
             }
     }
 
+    /// 화면에 걸치는 기록만 잘라 낸다.  전체 기록을 먼저 복사한 뒤 걸러 내면
+    /// 배율을 바꿀 때마다 보이지도 않는 기록까지 구조체를 새로 만든다.
+    static func visibleThroughNow(
+        _ actuals: [ActualRecord],
+        intersecting span: TimeSpan,
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        actuals.compactMap { actual in
+            guard actual.startedAt < asOf,
+                  actual.startedAt < span.end else { return nil }
+            let observedEnd = min(actual.endedAt ?? asOf, asOf)
+            guard max(actual.startedAt, observedEnd) > span.start else {
+                return nil
+            }
+            var visible = actual
+            if visible.endedAt == nil || visible.endedAt! > asOf {
+                visible.endedAt = asOf
+            }
+            return visible
+        }
+    }
+
     /// Automatic records are observations, not forecasts.  Keep the source
     /// record immutable while clipping the copy used by timelines/widgets to
     /// the current instant.
@@ -352,31 +374,28 @@ struct TimelineAggregationEngine: Sendable {
         photos: [PhotoMoment],
         asOf: Date = .now
     ) -> [TimelineLevel: [SummaryBucket]] {
-        let childLevels: [TimelineLevel]
-        switch level {
-        case .day:
-            childLevels = []
-        case .week:
-            childLevels = [.day]
-        case .month:
-            childLevels = [.week, .day]
-        case .year:
-            childLevels = [.month, .week, .day]
+        let childLevels: [TimelineLevel] = switch level {
+        case .day: []
+        case .week: [.day]
+        case .month: [.week, .day]
+        case .year: [.month, .week, .day]
         }
-
-        return Dictionary(uniqueKeysWithValues: childLevels.map { childLevel in
-            (
-                childLevel,
-                buckets(
-                    of: childLevel,
-                    inside: interval(for: level, containing: date),
-                    plans: plans,
-                    actuals: actuals,
-                    photos: photos,
-                    asOf: asOf
+        let outer = interval(for: level, containing: date)
+        return Dictionary(
+            uniqueKeysWithValues: childLevels.map { childLevel in
+                (
+                    childLevel,
+                    buckets(
+                        of: childLevel,
+                        inside: outer,
+                        plans: plans,
+                        actuals: actuals,
+                        photos: photos,
+                        asOf: asOf
+                    )
                 )
-            )
-        })
+            }
+        )
     }
 
     func buckets(
@@ -387,26 +406,112 @@ struct TimelineAggregationEngine: Sendable {
         photos: [PhotoMoment],
         asOf: Date = .now
     ) -> [SummaryBucket] {
-        intervals(of: unit, inside: outerSpan).map { bucketSpan in
-            let planned = accumulate(
-                plans.map { ($0.categoryID, $0.span) },
-                inside: bucketSpan
-            )
-            let actual = accumulate(
-                actuals.map { ($0.categoryID, $0.span(asOf: asOf)) },
-                inside: bucketSpan
-            )
-            let bucketPhotos = photos
-                .filter { bucketSpan.contains($0.capturedAt) && !$0.isHiddenFromTimeline }
-                .sorted { $0.capturedAt < $1.capturedAt }
-            return SummaryBucket(
+        let bucketSpans = intervals(of: unit, inside: outerSpan)
+        guard !bucketSpans.isEmpty else { return [] }
+
+        // 칸마다 기록 전체를 다시 훑으면 칸 수 × 기록 수만큼 일한다.  기록을
+        // 한 번만 훑어 겹치는 칸에만 나눠 담는다.
+        let planned = distribute(
+            plans.map { ($0.categoryID, $0.span) },
+            over: bucketSpans
+        )
+        let actual = distribute(
+            actuals.map { ($0.categoryID, $0.span(asOf: asOf)) },
+            over: bucketSpans
+        )
+        var photoCounts = [Int](repeating: 0, count: bucketSpans.count)
+        var representatives = [(Date, String)?](
+            repeating: nil,
+            count: bucketSpans.count
+        )
+        for photo in photos where !photo.isHiddenFromTimeline {
+            guard let index = bucketIndex(
+                containing: photo.capturedAt,
+                in: bucketSpans
+            ) else { continue }
+            photoCounts[index] += 1
+            if let current = representatives[index],
+               current.0 <= photo.capturedAt {
+                continue
+            }
+            representatives[index] = (photo.capturedAt, photo.id)
+        }
+
+        return bucketSpans.enumerated().map { index, bucketSpan in
+            SummaryBucket(
                 id: "\(unit.rawValue)-\(bucketSpan.start.timeIntervalSince1970)",
                 span: bucketSpan,
-                categories: mergeDurations(planned: planned, actual: actual),
-                photoCount: bucketPhotos.count,
-                representativePhotoID: bucketPhotos.first?.id
+                categories: mergeDurations(
+                    planned: planned[index],
+                    actual: actual[index]
+                ),
+                photoCount: photoCounts[index],
+                representativePhotoID: representatives[index]?.1
             )
         }
+    }
+
+    private func distribute(
+        _ entries: [(String, TimeSpan)],
+        over buckets: [TimeSpan]
+    ) -> [[String: TimeInterval]] {
+        var spansByBucket = [[String: [TimeSpan]]](
+            repeating: [:],
+            count: buckets.count
+        )
+        var categoryIDs: Set<String> = []
+        for (categoryID, span) in entries {
+            categoryIDs.insert(categoryID)
+            var index = firstBucketIndex(endingAfter: span.start, in: buckets)
+            while index < buckets.count, buckets[index].start < span.end {
+                if let clipped = span.intersection(with: buckets[index]) {
+                    spansByBucket[index][categoryID, default: []]
+                        .append(clipped)
+                }
+                index += 1
+            }
+        }
+        // 원래 계산은 어느 칸에도 걸치지 않은 분류도 0으로 남겼다.  요약 띠의
+        // 색과 정렬이 그 빈 항목까지 보므로 같은 열쇠 집합을 유지한다.
+        return spansByBucket.enumerated().map { index, grouped in
+            var value = [String: TimeInterval](
+                minimumCapacity: categoryIDs.count
+            )
+            for categoryID in categoryIDs {
+                value[categoryID] = mergedDuration(
+                    grouped[categoryID] ?? [],
+                    inside: buckets[index]
+                )
+            }
+            return value
+        }
+    }
+
+    private func firstBucketIndex(
+        endingAfter date: Date,
+        in buckets: [TimeSpan]
+    ) -> Int {
+        var low = 0
+        var high = buckets.count
+        while low < high {
+            let middle = (low + high) / 2
+            if buckets[middle].end <= date {
+                low = middle + 1
+            } else {
+                high = middle
+            }
+        }
+        return low
+    }
+
+    private func bucketIndex(
+        containing date: Date,
+        in buckets: [TimeSpan]
+    ) -> Int? {
+        let index = firstBucketIndex(endingAfter: date, in: buckets)
+        guard index < buckets.count,
+              buckets[index].contains(date) else { return nil }
+        return index
     }
 
     func interval(

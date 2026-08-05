@@ -361,7 +361,8 @@ final class ScreenTimeUsageService {
         guard let name, !name.isEmpty else {
             return ScreenTimeUsageRecordEngine.laneTitle
         }
-        return "\(ScreenTimeUsageRecordEngine.laneTitle) · \(name)"
+        // 행 이름이 이미 "어플"이므로 제목에 접두어를 붙이지 않는다.
+        return name
     }
 
     private func merge(

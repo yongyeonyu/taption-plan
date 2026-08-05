@@ -6518,22 +6518,55 @@ private struct TimelineBoardLayoutKey: Equatable {
     let spanEnd: TimeInterval
 }
 
+/// 시간표는 멈춰 있을 때의 좁은 구간과 드래그용 넓은 구간을 번갈아 쓴다.
+/// 한 벌만 들고 있으면 드래그를 시작하고 끝낼 때마다 서로를 밀어내므로
+/// 두 벌을 남겨 둔다.
 @MainActor
 private final class TimelineBoardLayoutCache {
-    private var key: TimelineBoardLayoutKey?
-    private var snapshot: TimelineBoardLayoutSnapshot?
+    private var entries: [(
+        key: TimelineBoardLayoutKey,
+        snapshot: TimelineBoardLayoutSnapshot
+    )] = []
 
     func value(
         for key: TimelineBoardLayoutKey,
         build: () -> TimelineBoardLayoutSnapshot
     ) -> TimelineBoardLayoutSnapshot {
-        if self.key == key, let snapshot {
-            return snapshot
+        if let index = entries.firstIndex(where: { $0.key == key }) {
+            let entry = entries.remove(at: index)
+            entries.insert(entry, at: 0)
+            return entry.snapshot
         }
         let snapshot = build()
-        self.key = key
-        self.snapshot = snapshot
+        entries.insert((key, snapshot), at: 0)
+        if entries.count > 2 {
+            entries.removeLast(entries.count - 2)
+        }
         return snapshot
+    }
+}
+
+private struct TimelineSummaryKey: Equatable {
+    let timelineRevision: UInt64
+    let childLevel: TimelineLevel
+    let spanStart: TimeInterval
+    let spanEnd: TimeInterval
+}
+
+@MainActor
+private final class TimelineSummaryCache {
+    private var key: TimelineSummaryKey?
+    private var buckets: [SummaryBucket] = []
+
+    func value(
+        for key: TimelineSummaryKey,
+        build: () -> [SummaryBucket]
+    ) -> [SummaryBucket] {
+        if self.key == key { return buckets }
+        let buckets = build()
+        self.key = key
+        self.buckets = buckets
+        return buckets
     }
 }
 
@@ -6571,6 +6604,7 @@ private struct TimelineBoard: View {
     @State private var continuousMagnifyOrigin: ContinuousMagnifyOrigin?
     @State private var selectedRowID: String?
     @State private var layoutCache = TimelineBoardLayoutCache()
+    @State private var summaryCache = TimelineSummaryCache()
     @State private var lastContinuousRenderUptime: TimeInterval = 0
     // Touch hardware can deliver 120/240 samples per second, while the
     // timeline only needs to invalidate at the display cadence.  Keeping a
@@ -7180,9 +7214,9 @@ private struct TimelineBoard: View {
         let now = Date.now
         let visibleActuals = AutomaticRecordTimelineEngine.visibleThroughNow(
             model.snapshot.actuals,
+            intersecting: span,
             asOf: now
         )
-            .filter { $0.span(asOf: now).intersection(with: span) != nil }
             .sorted { $0.startedAt < $1.startedAt }
         let displayedVisibleActuals = MovementDisplayEngine.visibleActuals(
             visibleActuals,
@@ -7581,6 +7615,8 @@ private struct TimelineBoard: View {
         let visiblePlaces = model.snapshot.places
             .compactMap { place -> PlaceStay? in
                 guard place.span.start <= now,
+                      place.span.start < visibleSpan.end,
+                      place.span.end > visibleSpan.start,
                       let clipped = place.span.intersection(
                           with: TimeSpan(start: .distantPast, end: now)
                       ) else { return nil }
@@ -7664,6 +7700,8 @@ private struct TimelineBoard: View {
         let visibleTravel = model.snapshot.travel
             .compactMap { travel -> TravelSegment? in
                 guard travel.span.start <= now,
+                      travel.span.start < visibleSpan.end,
+                      travel.span.end > visibleSpan.start,
                       let clipped = travel.span.intersection(
                           with: TimeSpan(
                               start: .distantPast,
@@ -8211,6 +8249,28 @@ private struct TimelineBoard: View {
         dragLayoutSpan ?? visibleSpan
     }
 
+    /// 드래그하는 동안 쓰는 데이터 창.  손가락이 움직이는 도중에는 이 창을
+    /// 다시 만들지 않는다.  전체 기록을 한 번 더 계산하는 순간 그 프레임이
+    /// 통째로 사라지기 때문이다.  대신 보이는 구간의 다섯 배를 미리 담고,
+    /// 최종 위치는 제스처가 끝날 때 정확한 구간으로 다시 그린다.
+    ///
+    /// 창의 중심은 보이는 구간 길이의 격자에 맞춰 둔다.  손을 뗀 자리마다
+    /// 경계가 조금씩 달라지면 같은 곳을 다시 훑어도 캐시가 매번 빗나간다.
+    private var dragLayoutWindow: TimeSpan {
+        let currentSpan = visibleSpan
+        let unit = max(60, currentSpan.duration)
+        let center = currentSpan.start.timeIntervalSinceReferenceDate
+            + currentSpan.duration / 2
+        let snappedCenter = (center / unit).rounded() * unit
+        let half = unit * 2.5
+        return TimeSpan(
+            start: Date(
+                timeIntervalSinceReferenceDate: snappedCenter - half
+            ),
+            end: Date(timeIntervalSinceReferenceDate: snappedCenter + half)
+        )
+    }
+
     private func timelineFraction(
         of date: Date,
         in span: TimeSpan
@@ -8228,13 +8288,11 @@ private struct TimelineBoard: View {
         )
     }
 
-    private func ensureContinuousLayoutWindow(around center: Date) {
+    /// 확대·축소는 보이는 구간의 길이 자체가 바뀌므로 드래그처럼 창을 한 번만
+    /// 잡아 둘 수 없다.  여유 폭을 두고, 실제로 모자랄 때만 다시 잡는다.
+    private func ensureMagnifyLayoutWindow(around center: Date) {
         guard isContinuousTimeline else { return }
 
-        // Keep a hysteresis band around the cached window. A drag can cross
-        // several days, and a pinch can zoom out beyond the original span;
-        // recenter only when the current window is no longer sufficient so
-        // normal touch samples remain cache hits.
         let minimumWindowDuration = max(60, activeContinuousDuration * 3)
         if let current = dragLayoutSpan,
            current.duration >= minimumWindowDuration {
@@ -8853,6 +8911,9 @@ private struct TimelineBoard: View {
         )
     }
 
+    /// 요약 띠는 선택한 날짜의 달력 구간만 본다.  드래그는 재생 머리만
+    /// 움직이므로 띠 내용은 그대로다.  움직이는 데이터 창에 딸려 다시
+    /// 계산되지 않도록 따로 캐시한다.
     private func summaryBuckets(in visibleSpan: TimeSpan) -> [SummaryBucket] {
         let childLevel: TimelineLevel
         switch scale {
@@ -8865,13 +8926,26 @@ private struct TimelineBoard: View {
         case .year:
             childLevel = .month
         }
-        return TimelineAggregationEngine().hierarchySummaries(
+        let engine = TimelineAggregationEngine()
+        let outerSpan = engine.interval(
             for: scale.timelineLevel,
-            containing: model.selectedDate,
-            plans: model.snapshot.plans,
-            actuals: model.snapshot.actuals,
-            photos: model.snapshot.photos
-        )[childLevel] ?? []
+            containing: model.selectedDate
+        )
+        let key = TimelineSummaryKey(
+            timelineRevision: model.timelineRevision,
+            childLevel: childLevel,
+            spanStart: outerSpan.start.timeIntervalSinceReferenceDate,
+            spanEnd: outerSpan.end.timeIntervalSinceReferenceDate
+        )
+        return summaryCache.value(for: key) {
+            engine.buckets(
+                of: childLevel,
+                inside: outerSpan,
+                plans: model.snapshot.plans,
+                actuals: model.snapshot.actuals,
+                photos: model.snapshot.photos
+            )
+        }
     }
 
     private func zoomIntoSummary(_ bucket: SummaryBucket) {
@@ -8934,17 +9008,11 @@ private struct TimelineBoard: View {
                     if continuousDragOrigin == nil {
                         continuousDragOrigin = continuousCenterDate
                         continuousTimelineDuration = visibleSpan.duration
-                        let currentSpan = visibleSpan
-                        dragLayoutSpan = TimeSpan(
-                            start: currentSpan.start.addingTimeInterval(
-                                -currentSpan.duration
-                            ),
-                            end: currentSpan.end.addingTimeInterval(
-                                currentSpan.duration
-                            )
-                        )
                         editingPlanID = nil
                         lastContinuousRenderUptime = 0
+                    }
+                    if dragLayoutSpan == nil {
+                        dragLayoutSpan = dragLayoutWindow
                     }
                     guard let continuousDragOrigin else { return }
                     let secondsPerPoint = activeContinuousDuration
@@ -8953,7 +9021,6 @@ private struct TimelineBoard: View {
                     let candidate = continuousDragOrigin.addingTimeInterval(
                         -Double(translationWidth) * secondsPerPoint
                     )
-                    ensureContinuousLayoutWindow(around: candidate)
                     let uptime = ProcessInfo.processInfo.systemUptime
                     guard lastContinuousRenderUptime == 0
                         || uptime - lastContinuousRenderUptime >= 1.0 / 60.0
@@ -8961,6 +9028,7 @@ private struct TimelineBoard: View {
                         return
                     }
                     lastContinuousRenderUptime = uptime
+                    guard continuousCenterDate != candidate else { return }
                     continuousCenterDate = candidate
                     onPlayheadMove?(continuousCenterDate)
                 } else {
@@ -8979,6 +9047,7 @@ private struct TimelineBoard: View {
                         return
                     }
                     lastViewportRenderUptime = uptime
+                    guard viewport != candidate else { return }
                     viewport = candidate
                 }
         }
@@ -9251,7 +9320,7 @@ private struct TimelineBoard: View {
             onPlayheadMove?(center)
         }
         viewport = .full
-        ensureContinuousLayoutWindow(around: center)
+        ensureMagnifyLayoutWindow(around: center)
     }
 
     private func resetViewport(withFeedback: Bool = false) {

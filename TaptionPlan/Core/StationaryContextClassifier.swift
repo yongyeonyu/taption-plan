@@ -32,7 +32,9 @@ enum StationaryContextKind: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// CategoryCatalog.builtIn 에 이미 있는 id 만 사용한다.
+    /// CategoryCatalog.builtIn 에 이미 있는 id 만 사용한다. 정지 구간은
+    /// 모두 활동 줄에 남아야 하므로 "movement" 는 쓰지 않는다. 이동 종류로
+    /// 두면 MovementDisplayEngine 이 앞뒤 이동과 겹친다고 보고 숨긴다.
     var categoryID: String {
         switch self {
         case .work, .meeting: "work"
@@ -42,8 +44,7 @@ enum StationaryContextKind: String, Codable, CaseIterable, Sendable {
         case .gymFacility: "exercise"
         case .housework: "routine"
         case .call: "relationship"
-        case .waiting: "movement"
-        case .unknownStay: "activity"
+        case .waiting, .unknownStay: "activity"
         }
     }
 }
@@ -207,7 +208,10 @@ struct StationaryContextClassifier: Sendable {
         case nil:
             break
         }
-        if isWeekdayWorkHours(stay: stay, calendar: input.calendar) {
+        // 시간대만으로 근무를 만들어 내지 않는다. 장소나 일정이 이미 근무를
+        // 가리킬 때만 힘을 보탠다.
+        if candidates[.work] != nil,
+           isWeekdayWorkHours(stay: stay, calendar: input.calendar) {
             add(.work, 0.12, "평일 09–18시")
         }
         if stay.duration >= 90 * 60, let leader = leader(of: candidates) {
@@ -382,9 +386,13 @@ struct StationaryContextClassifier: Sendable {
 /// 체류 하나를 문맥 기록 하나로 바꾼다. 자동 기록이므로 원본을 보존하고
 /// 사용자 편집은 허용하지 않는다.
 enum StationaryContextActualEngine {
+    /// 장소 체류가 없는 정지 구간에 붙이는 키. 자주가는 곳과 겹치지 않는다.
+    static let motionOnlyPlaceKey = "stationary-context-motion"
+
     static func records(
         stays: [PlaceStay],
         placeKinds: [String: FrequentPlaceKind],
+        stationarySpans: [TimeSpan] = [],
         readings: [SensorReading] = [],
         calendarEvents: [CalendarRecord] = [],
         actuals: [ActualRecord] = [],
@@ -396,16 +404,15 @@ enum StationaryContextActualEngine {
         now: Date = .now
     ) -> [ActualRecord] {
         let classifier = StationaryContextClassifier()
-        return stays.compactMap { stay -> ActualRecord? in
-            guard let span = stay.span.intersection(with: inside),
-                  span.duration >= minimumDuration else {
-                return nil
-            }
-            var clipped = stay
-            clipped.span = span
+        return contextStays(
+            stays: stays,
+            stationarySpans: stationarySpans,
+            inside: inside,
+            minimumDuration: minimumDuration
+        ).map { stay in
             let inference = classifier.classify(
                 StationaryContextInput(
-                    stay: clipped,
+                    stay: stay,
                     placeKind: placeKinds[stay.placeKey],
                     readings: readings,
                     calendarEvents: calendarEvents,
@@ -421,21 +428,81 @@ enum StationaryContextActualEngine {
                 .filter { inference.modifiers.contains($0) }
                 .map(\.label))
             return ActualRecord(
-                id: stableID(placeKey: stay.placeKey, span: span),
+                id: stableID(placeKey: stay.placeKey, span: stay.span),
                 planID: nil,
                 routineID: nil,
                 title: inference.kind.title,
                 categoryID: inference.kind.categoryID,
-                startedAt: span.start,
-                endedAt: span.end,
+                startedAt: stay.span.start,
+                endedAt: stay.span.end,
                 source: .location,
                 confidence: inference.confidence,
-                createdAt: span.start,
+                createdAt: stay.span.start,
                 behavior: inference.kind.rawValue,
                 evidence: evidence,
                 modelVersion: inference.modelVersion
             )
         }
+    }
+
+    /// 문맥의 근거는 장소 체류지만, 실내처럼 GPS가 끊긴 시간에는 체류가
+    /// 아예 만들어지지 않는다. 그 시간이 "정지·휴식" 한 덩어리로 남지 않게
+    /// 체류가 덮지 못한 정지 구간도 후보로 넣는다. 근거가 없으면 분류를
+    /// 지어내지 않고 "머무름"으로 남는다.
+    private static func contextStays(
+        stays: [PlaceStay],
+        stationarySpans: [TimeSpan],
+        inside: TimeSpan,
+        minimumDuration: TimeInterval
+    ) -> [PlaceStay] {
+        let placed = stays.compactMap { stay -> PlaceStay? in
+            guard let span = stay.span.intersection(with: inside),
+                  span.duration >= minimumDuration else {
+                return nil
+            }
+            var clipped = stay
+            clipped.span = span
+            return clipped
+        }
+        let covered = ActualIntervalMergeEngine.union(placed.map(\.span))
+        let uncovered = ActualIntervalMergeEngine.union(
+            stationarySpans.compactMap { $0.intersection(with: inside) },
+            mergeGap: 60
+        )
+        .flatMap { subtracting(covered, from: $0) }
+        .filter { $0.duration >= minimumDuration }
+        .map {
+            PlaceStay(
+                placeKey: motionOnlyPlaceKey,
+                displayName: "정지 구간",
+                span: $0,
+                confidence: .low
+            )
+        }
+        return (placed + uncovered).sorted { $0.span.start < $1.span.start }
+    }
+
+    /// `covered` 는 시작 시각 순으로 정렬되고 서로 겹치지 않는다.
+    private static func subtracting(
+        _ covered: [TimeSpan],
+        from span: TimeSpan
+    ) -> [TimeSpan] {
+        var remaining: [TimeSpan] = []
+        var cursor = span.start
+        for block in covered where block.end > span.start
+            && block.start < span.end {
+            if block.start > cursor {
+                remaining.append(
+                    TimeSpan(start: cursor, end: min(block.start, span.end))
+                )
+            }
+            cursor = max(cursor, block.end)
+            if cursor >= span.end { break }
+        }
+        if cursor < span.end {
+            remaining.append(TimeSpan(start: cursor, end: span.end))
+        }
+        return remaining.filter { $0.duration > 0 }
     }
 
     /// 문맥 기록이 덮은 구간의 옛 "정지·휴식" 기록을 같은 갱신에서 걷어낸다.
