@@ -259,6 +259,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     /// 워치가 보낸 "맞아요 / 아니에요" 응답. AppModel이 별도로 연결한다.
     private var activityConfirmationHandler:
         (@Sendable (TaptionWatchActivityConfirmation) -> Void)?
+    private var locationTrackingHandler: (@Sendable (Bool) -> Void)?
     private var statusHandler: (@Sendable (AppleWatchConnectionState) -> Void)?
 
     override init() {
@@ -277,12 +278,14 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         onActivityConfirmation: @escaping @Sendable (
             TaptionWatchActivityConfirmation
         ) -> Void = { _ in },
+        onLocationTracking: @escaping @Sendable (Bool) -> Void = { _ in },
         onStatusChange: @escaping @Sendable (AppleWatchConnectionState) -> Void
     ) {
         commandHandler = onCommand
         sensorSummaryHandler = onSensorSummary
         healthSnapshotHandler = onHealthSnapshot
         activityConfirmationHandler = onActivityConfirmation
+        locationTrackingHandler = onLocationTracking
         statusHandler = onStatusChange
         guard WCSession.isSupported() else {
             onStatusChange(.unsupported)
@@ -455,6 +458,12 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         // 확인 응답은 실시간 메시지와 백그라운드 큐로 두 번 도착할 수 있다.
         markAsNew(confirmation.id, key: confirmationDefaultsKey) {
             activityConfirmationHandler?(confirmation)
+            accepted = true
+        }
+        if let enabled = envelope[
+            TaptionWatchEnvelope.locationTrackingKey
+        ] as? Bool {
+            locationTrackingHandler?(enabled)
             accepted = true
         }
         return accepted

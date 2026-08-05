@@ -457,6 +457,30 @@ struct WatchContentView: View {
                 value: backgroundRecordingText(measurement)
             )
             statusRow("데이터 가져오기", value: workout.dataSyncProfile.subtitle)
+            Button {
+                connectivity.sendLocationTracking(
+                    !(connectivity.payload?.locationTrackingEnabled ?? false)
+                )
+            } label: {
+                HStack(spacing: 5) {
+                    Image(
+                        systemName: connectivity.payload?.locationTrackingEnabled == true
+                            ? "location.fill"
+                            : "location.slash"
+                    )
+                    Text("이동·위치 트래킹")
+                    Spacer(minLength: 2)
+                    Text(
+                        connectivity.payload?.locationTrackingEnabled == true
+                            ? "켬"
+                            : "끔"
+                    )
+                        .foregroundStyle(.secondary)
+                }
+                .font(.system(size: 10, weight: .semibold))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
             if workout.isActive {
                 statusRow(
                     "이번 세션 표본",

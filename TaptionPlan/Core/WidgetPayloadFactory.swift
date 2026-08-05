@@ -220,7 +220,8 @@ enum TaptionWidgetPayloadFactory {
             hidesSensitiveContent: false,
             weatherSymbolName: weather?.symbolName,
             temperatureCelsius: weather?.temperatureCelsius,
-            reducesMotion: snapshot.settings.reduceMotion
+            reducesMotion: snapshot.settings.reduceMotion,
+            locationTrackingEnabled: snapshot.settings.locationEnabled
         )
     }
 

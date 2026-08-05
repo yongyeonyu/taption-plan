@@ -3267,7 +3267,8 @@ final class FeatureEngineTests: XCTestCase {
                 catStyle: "calico",
                 reducesMotion: false,
                 accelerationSettings: settings,
-                dataSyncProfile: .batterySaver
+                dataSyncProfile: .batterySaver,
+                locationTrackingEnabled: true
             )
         )
         let decoded = try JSONDecoder().decode(
@@ -3276,6 +3277,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(decoded.accelerationSettings, settings)
         XCTAssertEqual(decoded.dataSyncProfile, .batterySaver)
+        XCTAssertEqual(decoded.locationTrackingEnabled, true)
     }
 
     func testAutomaticTrackingPromotionAndStopPolicy() {
@@ -4429,8 +4431,10 @@ final class FeatureEngineTests: XCTestCase {
 
     func testWidgetPayloadIsAlwaysCurrentCenteredAtSixHours() {
         let now = makeDate(2026, 8, 1, 18, 0)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.settings.locationEnabled = true
         let payload = TaptionWidgetPayloadFactory.make(
-            from: .empty,
+            from: snapshot,
             now: now
         )
 
@@ -4444,6 +4448,7 @@ final class FeatureEngineTests: XCTestCase {
             TaptionWidgetPlaybackEngine.defaultResolutionLabel
         )
         XCTAssertEqual(payload.displayDuration, 6 * hour)
+        XCTAssertEqual(payload.locationTrackingEnabled, true)
         XCTAssertEqual(
             payload.sourceFingerprint,
             TaptionWidgetSyncFingerprint.make(items: payload.items)
@@ -4660,6 +4665,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         object.removeValue(forKey: "sourceSnapshotUpdatedAt")
         object.removeValue(forKey: "sourceFingerprint")
+        object.removeValue(forKey: "locationTrackingEnabled")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .secondsSince1970
@@ -4670,6 +4676,7 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertNil(decoded.sourceSnapshotUpdatedAt)
         XCTAssertNil(decoded.sourceFingerprint)
+        XCTAssertNil(decoded.locationTrackingEnabled)
     }
 
     func testWidgetAutomaticallyScrollsOverflowingRowsAndReturns() {
@@ -9737,6 +9744,43 @@ final class FeatureEngineTests: XCTestCase {
 
     /// 사용자는 "지금 몇 층인지"만 알려 준다. 층 높이는 서로 다른 두 층의
     /// 고도 차이에서 앱이 스스로 구한다.
+    func testMapLocationKeepsNearbyFloorAndClearsDistantCalibration() {
+        let original = GeoPoint(
+            latitude: 37.5,
+            longitude: 127.0,
+            altitude: 35,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        var place = FrequentPlace(
+            kind: .company,
+            point: original,
+            floor: 2
+        )
+        place.setMapLocation(
+            GeoPoint(
+                latitude: 37.5001,
+                longitude: 127.0001,
+                altitude: 35,
+                horizontalAccuracy: 25,
+                verticalAccuracy: -1
+            )
+        )
+        XCTAssertEqual(place.floor, 2)
+
+        place.setMapLocation(
+            GeoPoint(
+                latitude: 37.51,
+                longitude: 127.01,
+                altitude: 0,
+                horizontalAccuracy: 25,
+                verticalAccuracy: -1
+            )
+        )
+        XCTAssertNil(place.floor)
+        XCTAssertTrue(place.floorReferencePoints.isEmpty)
+    }
+
     func testCurrentFloorCalibrationDerivesFloorHeightFromTwoFloors() throws {
         let base = makeDate(2026, 8, 5, 9, 0)
         let groundPressure = 101.0

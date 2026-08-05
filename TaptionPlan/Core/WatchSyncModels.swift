@@ -1300,6 +1300,7 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var todaySummary: TaptionWatchDaySummary? = nil
     var accelerationSettings: TaptionWatchAccelerationSettings? = nil
     var dataSyncProfile: TaptionWatchDataSyncProfile? = nil
+    var locationTrackingEnabled: Bool? = nil
 }
 
 struct TaptionWatchHealthSnapshot: Codable, Hashable, Sendable {
@@ -1394,6 +1395,7 @@ enum TaptionWatchEnvelope {
     static let activityConfirmationKey = "taption.watch.activity-confirmation"
     static let refreshRequestKey = "taption.watch.refresh-request"
     static let dataSyncRequestKey = "taption.watch.data-sync-request"
+    static let locationTrackingKey = "taption.watch.location-tracking"
     static let acceptedKey = "taption.watch.accepted"
     static let launchDiagnosticsKey = "taption.watch.launch-diagnostics"
 }

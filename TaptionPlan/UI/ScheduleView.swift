@@ -3109,15 +3109,13 @@ private struct TimelineDetailPanel: View {
                         )
                     )
                 }
-                .onEnded { _ in
+                .onEnded { value in
                     panelDragStartHeight = nil
                     withAnimation(.snappy(duration: 0.2)) {
-                        if panelHeight < detailPanelCollapsedHeight - 36 {
-                            panelHeight = detailPanelMinimumHeight
-                        } else if panelHeight < detailPanelCollapsedHeight + 36 {
-                            panelHeight = detailPanelCollapsedHeight
-                        } else if panelHeight > maximumPanelHeight - 36 {
+                        if value.translation.height < -8 {
                             panelHeight = maximumPanelHeight
+                        } else if value.translation.height > 8 {
+                            panelHeight = detailPanelCollapsedHeight
                         }
                     }
                 }

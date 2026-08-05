@@ -112,6 +112,29 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
     }
 
+    func sendLocationTracking(_ enabled: Bool) {
+        guard WCSession.isSupported() else { return }
+        if var value = payload,
+           value.locationTrackingEnabled != enabled {
+            value.locationTrackingEnabled = enabled
+            value.generatedAt = .now
+            payload = value
+            if let data = try? encoder.encode(value) {
+                UserDefaults.standard.set(data, forKey: cachedPayloadKey)
+            }
+            publishToWidget(value)
+        }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.locationTrackingKey: enabled,
+        ]
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
+        }
+    }
+
     func requestSync() {
         guard WCSession.isSupported() else { return }
         let session = WCSession.default

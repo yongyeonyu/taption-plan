@@ -1,3 +1,4 @@
+import MapKit
 import SwiftUI
 
 private enum SettingsTypography {
@@ -449,7 +450,7 @@ struct SettingsView: View {
                         )
                     VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 3) {
-                            Text("위치 · 이동")
+                            Text("이동·위치 트래킹")
                                 .font(
                                     .taption(
                                         size: SettingsTypography.rowTitle,
@@ -1484,6 +1485,7 @@ private struct FrequentPlaceDetailView: View {
     @State private var showsDeleteConfirmation = false
     @State private var referenceDeletionFloor: Int?
     @State private var calibrationTask: Task<Void, Never>?
+    @State private var showsMapPicker = false
 
     private var place: FrequentPlace? {
         model.settings.frequentPlaces.first { $0.id == placeID }
@@ -1571,6 +1573,17 @@ private struct FrequentPlaceDetailView: View {
             } message: {
                 Text("이 장소의 자동 위치·층수 기록 기준을 삭제합니다.")
             }
+            .sheet(isPresented: $showsMapPicker) {
+                FrequentPlaceMapPicker(
+                    initialPoint: place?.point
+                ) { coordinate in
+                    model.setFrequentPlaceLocation(
+                        placeID,
+                        latitude: coordinate.latitude,
+                        longitude: coordinate.longitude
+                    )
+                }
+            }
         }
     }
 
@@ -1644,6 +1657,21 @@ private struct FrequentPlaceDetailView: View {
                 .padding(.vertical, 9)
                 .foregroundStyle(.white)
                 .background(Color.tpPlaceDark, in: RoundedRectangle(cornerRadius: 9))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                showsMapPicker = true
+            } label: {
+                Label("지도에서 지정", systemImage: "map.fill")
+                    .font(.taption(size: 10, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 9)
+                    .foregroundStyle(Color.tpPlaceDark)
+                    .background(
+                        Color.tpPlace,
+                        in: RoundedRectangle(cornerRadius: 9)
+                    )
             }
             .buttonStyle(.plain)
 
@@ -1913,6 +1941,78 @@ private struct FrequentPlaceDetailView: View {
         }
     }
 
+}
+
+private struct FrequentPlaceMapPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var cameraPosition: MapCameraPosition
+    @State private var selectedCoordinate: CLLocationCoordinate2D?
+
+    let onSave: (CLLocationCoordinate2D) -> Void
+
+    init(
+        initialPoint: GeoPoint?,
+        onSave: @escaping (CLLocationCoordinate2D) -> Void
+    ) {
+        let coordinate = CLLocationCoordinate2D(
+            latitude: initialPoint?.latitude ?? 37.5665,
+            longitude: initialPoint?.longitude ?? 126.9780
+        )
+        _cameraPosition = State(
+            initialValue: .region(
+                MKCoordinateRegion(
+                    center: coordinate,
+                    latitudinalMeters: 1_200,
+                    longitudinalMeters: 1_200
+                )
+            )
+        )
+        _selectedCoordinate = State(
+            initialValue: initialPoint == nil ? nil : coordinate
+        )
+        self.onSave = onSave
+    }
+
+    var body: some View {
+        NavigationStack {
+            MapReader { proxy in
+                Map(position: $cameraPosition) {
+                    if let selectedCoordinate {
+                        Marker("선택한 위치", coordinate: selectedCoordinate)
+                            .tint(Color.tpPlaceDark)
+                    }
+                }
+                .mapStyle(.standard(elevation: .realistic))
+                .onTapGesture { point in
+                    selectedCoordinate = proxy.convert(point, from: .local)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                Text("지도를 탭해 장소의 기준점을 선택하세요.")
+                    .font(.taption(size: 10, weight: .semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 18)
+            }
+            .navigationTitle("지도에서 지정")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("취소") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("저장") {
+                        guard let selectedCoordinate else { return }
+                        onSave(selectedCoordinate)
+                        dismiss()
+                    }
+                    .fontWeight(.bold)
+                    .disabled(selectedCoordinate == nil)
+                }
+            }
+        }
+    }
 }
 
 private extension View {

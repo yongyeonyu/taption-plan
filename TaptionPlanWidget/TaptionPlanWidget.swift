@@ -358,6 +358,33 @@ private struct TaptionScheduleWidgetView: View {
             .buttonStyle(.plain)
             .padding(.leading, 5)
 
+            Button(
+                intent: TaptionWidgetLocationTrackingIntent(
+                    enabled: !(payload.locationTrackingEnabled ?? false)
+                )
+            ) {
+                Image(
+                    systemName: payload.locationTrackingEnabled == true
+                        ? "location.fill"
+                        : "location.slash"
+                )
+                .font(.system(size: metrics.weatherIconSize, weight: .bold))
+                .foregroundStyle(
+                    payload.locationTrackingEnabled == true
+                        ? WidgetPalette.weather
+                        : WidgetPalette.secondary
+                )
+                .frame(width: 22, height: 22)
+                .background(WidgetPalette.automaticFill, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 4)
+            .accessibilityLabel(
+                payload.locationTrackingEnabled == true
+                    ? "이동 위치 트래킹 끄기"
+                    : "이동 위치 트래킹 켜기"
+            )
+
             Spacer(minLength: 4)
 
             HStack(spacing: 3) {
@@ -2058,6 +2085,40 @@ struct TaptionWidgetActionIntent: AppIntent {
         return .result()
     }
 
+}
+
+struct TaptionWidgetLocationTrackingIntent: AppIntent {
+    static let title: LocalizedStringResource = "이동 위치 트래킹"
+    static let description = IntentDescription("아이폰의 이동 위치 기록을 켜거나 끕니다.")
+    static let openAppWhenRun = true
+
+    @Parameter(title: "켜기")
+    var enabled: Bool
+
+    init() {
+        enabled = false
+    }
+
+    init(enabled: Bool) {
+        self.enabled = enabled
+    }
+
+    func perform() async throws -> some IntentResult {
+        TaptionLocationTrackingRequestStore.write(enabled)
+        if let repository = try? FilePlanRepository.appGroup(),
+           var snapshot = try? await repository.load() {
+            snapshot.settings.locationEnabled = enabled
+            if !enabled {
+                snapshot.settings.backgroundPreciseLocationEnabled = false
+            }
+            snapshot.updatedAt = .now
+            try? await repository.save(snapshot)
+            let payload = TaptionWidgetPayloadFactory.make(from: snapshot)
+            try? TaptionWidgetSharedStore.writePayload(payload)
+        }
+        WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
+        return .result()
+    }
 }
 
 private extension Color {

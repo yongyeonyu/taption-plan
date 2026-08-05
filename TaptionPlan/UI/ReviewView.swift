@@ -65,6 +65,11 @@ private struct ReviewContentKey: Equatable {
     let healthRefreshedAt: Date?
 }
 
+private struct ReviewDetailSelection: Equatable {
+    var kind: RecordClockDetailKind
+    var token: String
+}
+
 struct ReviewView: View {
     @Bindable var model: AppModel
 
@@ -98,6 +103,7 @@ struct ReviewView: View {
     /// 눈금판이나 범례에서 짚어 둔 일과 조각. 이름과 시각이 읽음창에 뜨고
     /// 나머지는 죽는다.
     @State private var highlightedPhaseArcID: String?
+    @State private var highlightedDetail: ReviewDetailSelection?
     /// 재생을 시작한 시각. nil이면 멈춘 상태다.
     @State private var playStartedAt: Date?
 
@@ -354,7 +360,7 @@ struct ReviewView: View {
             content.rings,
             isolating: highlightedCategoryID
         )
-        let detailRings = content.detailRings
+        let detailRings = filteredDetailRings
         let phaseRing = content.phaseRing
         let pinnedPhaseArc = highlightedPhaseArc
         let span = content.period
@@ -398,6 +404,21 @@ struct ReviewView: View {
     }
 
     private var highlightedPhaseToken: String? { highlightedPhaseArc?.token }
+
+    private var filteredDetailRings: [RecordClockDetailRing] {
+        guard let highlightedDetail else { return content.detailRings }
+        return content.detailRings.compactMap { ring in
+            guard ring.kind == highlightedDetail.kind else { return nil }
+            let arcs = ring.arcs.filter { $0.token == highlightedDetail.token }
+            return arcs.isEmpty
+                ? nil
+                : RecordClockDetailRing(
+                    id: ring.id,
+                    kind: ring.kind,
+                    arcs: arcs
+                )
+        }
+    }
 
     /// 일과 띠를 짚으면 그 줄거리의 이름과 시각이 눈금판 가운데에 뜬다. 재생
     /// 단추가 이 층 위에 덮여 있어 단추 누르기를 가로채지 않는다.
@@ -840,16 +861,50 @@ struct ReviewView: View {
     /// 않는다.
     private var detailRingLegend: some View {
         ChipFlowLayout(spacing: 5) {
+            Text("상세")
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+                .padding(.vertical, 4)
             ForEach(content.detailRings) { ring in
                 ForEach(detailTokens(of: ring), id: \.self) { token in
-                    HStack(spacing: 4) {
-                        Capsule()
-                            .fill(detailColor(ring.kind, token: token))
-                            .frame(width: 10, height: 6)
-                        Text(detailName(ring.kind, token: token))
-                            .font(.taption(size: 8.5))
-                            .foregroundStyle(Color.tpSecondary)
+                    let selection = ReviewDetailSelection(
+                        kind: ring.kind,
+                        token: token
+                    )
+                    Button {
+                        highlightedDetail = highlightedDetail == selection
+                            ? nil
+                            : selection
+                    } label: {
+                        HStack(spacing: 4) {
+                            Capsule()
+                                .fill(detailColor(ring.kind, token: token))
+                                .frame(width: 10, height: 6)
+                            Text(detailName(ring.kind, token: token))
+                                .font(
+                                    .taption(
+                                        size: 8.5,
+                                        weight: highlightedDetail == selection
+                                            ? .bold
+                                            : .regular
+                                    )
+                                )
+                                .foregroundStyle(Color.tpInk)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(
+                            highlightedDetail == selection
+                                ? detailColor(ring.kind, token: token)
+                                    .opacity(0.16)
+                                : Color(red: 0.95, green: 0.95, blue: 0.96),
+                            in: Capsule()
+                        )
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(
+                        highlightedDetail == selection ? [.isSelected] : []
+                    )
                 }
             }
         }
@@ -1051,6 +1106,12 @@ struct ReviewView: View {
 
     private var categoryLegend: some View {
         ChipFlowLayout(spacing: 5) {
+            if model.reviewScale == .day {
+                Text("활동")
+                    .font(.taption(size: 8.5, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.vertical, 4)
+            }
             ForEach(content.groups.prefix(8)) { group in
                 Button {
                     highlightedCategoryID =
@@ -1419,6 +1480,14 @@ struct ReviewView: View {
         // 줄거리를 가리킨다. 띠가 바뀌면 짚어 둔 조각을 놓는다.
         if content.phaseRing != phaseRing { highlightedPhaseArcID = nil }
 
+        let groups = ActualRecordGroupingEngine.groups(
+            actuals: actuals,
+            in: spans,
+            categories: model.snapshot.categories
+        )
+        let groupIDs = Set(groups.map(\.id))
+        let collapsesAllGroups = content.spans.isEmpty
+            || content.period != period
         content = ReviewContent(
             period: period,
             spans: spans,
@@ -1426,23 +1495,28 @@ struct ReviewView: View {
             selectedBucketCount: selected.count,
             plannedCategories: report.categories,
             contexts: report.contexts,
-            groups: ActualRecordGroupingEngine.groups(
-                actuals: actuals,
-                in: spans,
-                categories: model.snapshot.categories
-            ),
+            groups: groups,
             rings: rings,
             phaseRing: phaseRing,
             detailRings: detailRings,
             chartBuckets: chartBuckets,
             selectedChartBucketIDs: selectedChartBucketIDs
         )
-        collapsedGroupIDs = collapsedGroupIDs.intersection(
-            Set(content.groups.map(\.id))
-        )
+        collapsedGroupIDs = collapsesAllGroups
+            ? groupIDs
+            : collapsedGroupIDs.intersection(groupIDs)
         if let highlighted = highlightedCategoryID,
            !content.groups.contains(where: { $0.id == highlighted }) {
             highlightedCategoryID = nil
+        }
+        if let highlightedDetail,
+           !detailRings.contains(where: {
+               $0.kind == highlightedDetail.kind
+                   && $0.arcs.contains(where: {
+                       $0.token == highlightedDetail.token
+                   })
+           }) {
+            self.highlightedDetail = nil
         }
     }
 

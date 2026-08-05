@@ -667,6 +667,7 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
     var weatherSymbolName: String?
     var temperatureCelsius: Double?
     var reducesMotion: Bool?
+    var locationTrackingEnabled: Bool? = nil
 
     static var empty: TaptionWidgetPayload {
         let calendar = Calendar.autoupdatingCurrent
@@ -770,6 +771,27 @@ struct TaptionWidgetPayload: Codable, Hashable, Sendable {
             temperatureCelsius: 23,
             reducesMotion: false
         )
+    }
+}
+
+enum TaptionLocationTrackingRequestStore {
+    private static let key = "TaptionPlan.pendingLocationTrackingRequest"
+
+    static func write(_ enabled: Bool) {
+        UserDefaults(
+            suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+        )?.set(enabled, forKey: key)
+    }
+
+    static func take() -> Bool? {
+        guard let defaults = UserDefaults(
+            suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+        ), defaults.object(forKey: key) != nil else {
+            return nil
+        }
+        let value = defaults.bool(forKey: key)
+        defaults.removeObject(forKey: key)
+        return value
     }
 }
 

@@ -1797,6 +1797,36 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         updatedAt = .now
     }
 
+    mutating func setMapLocation(_ newPoint: GeoPoint) {
+        let previousPoint = point
+        let keepsFloorCalibration = previousPoint.map {
+            distanceMeters($0, newPoint) <= Self.sameBuildingRadiusMeters
+        } ?? false
+        if keepsFloorCalibration,
+           newPoint.verticalAccuracy < 0,
+           let previousPoint {
+            point = GeoPoint(
+                latitude: newPoint.latitude,
+                longitude: newPoint.longitude,
+                altitude: previousPoint.altitude,
+                horizontalAccuracy: newPoint.horizontalAccuracy,
+                verticalAccuracy: previousPoint.verticalAccuracy
+            )
+        } else {
+            point = newPoint
+        }
+        if !keepsFloorCalibration {
+            floor = nil
+            referenceRelativeAltitudeMeters = nil
+            referencePressureKilopascals = nil
+            referenceAltimeterSessionID = nil
+            floorCapturedAt = nil
+            floorReferencePoints = []
+            floorHeightMeters = Self.defaultFloorHeightMeters
+        }
+        updatedAt = .now
+    }
+
     static let sameBuildingRadiusMeters = 120.0
     static let defaultFloorHeightMeters = 3.0
 

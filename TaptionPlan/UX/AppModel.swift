@@ -363,6 +363,16 @@ final class AppModel {
                     self?.applyWatchActivityConfirmation(confirmation)
                 }
             },
+            onLocationTracking: { [weak self] enabled in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    if enabled {
+                        await self.enableLocationCollection()
+                    } else {
+                        await self.disableLocationCollection()
+                    }
+                }
+            },
             onStatusChange: { [weak self] state in
                 Task { @MainActor [weak self] in
                     self?.applyAppleWatchConnectionState(state)
@@ -800,10 +810,22 @@ final class AppModel {
     func sceneBecameActive() async {
         isSceneActive = true
         await bootstrap()
+        await applyPendingLocationTrackingRequest()
         airPodsActivityService.start { [weak self] observation in
             self?.applyAirPodsActivity(observation)
         }
         scheduleForegroundRefresh()
+    }
+
+    private func applyPendingLocationTrackingRequest() async {
+        guard let enabled = TaptionLocationTrackingRequestStore.take() else {
+            return
+        }
+        if enabled {
+            await enableLocationCollection()
+        } else {
+            await disableLocationCollection()
+        }
     }
 
     func sceneEnteredBackground() async {
@@ -3884,6 +3906,37 @@ final class AppModel {
         }
     }
 
+    func setFrequentPlaceLocation(
+        _ placeID: UUID,
+        latitude: Double,
+        longitude: Double
+    ) {
+        guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
+            $0.id == placeID
+        }) else {
+            return
+        }
+        snapshot.settings.frequentPlaces[index].setMapLocation(
+            GeoPoint(
+                latitude: latitude,
+                longitude: longitude,
+                altitude: 0,
+                horizontalAccuracy: 25,
+                verticalAccuracy: -1
+            )
+        )
+        lastAutoFloorCalibrationKey = nil
+        snapshot.settings.floorCalibration = nil
+        snapshot.settings.frequentPlaces =
+            AppFeatureSettings.mergedFrequentPlaces(
+                snapshot.settings.frequentPlaces
+            )
+        Task {
+            await persist()
+            await refreshSensorTimeline(containing: selectedDate)
+        }
+    }
+
     func clearFrequentPlaceLocation(_ placeID: UUID) {
         guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
             $0.id == placeID
@@ -5316,7 +5369,8 @@ final class AppModel {
             accelerationSettings: TaptionWatchAccelerationSettings(
                 profile: snapshot.settings.watchAccelerationProfile
             ),
-            dataSyncProfile: snapshot.settings.watchDataSyncProfile
+            dataSyncProfile: snapshot.settings.watchDataSyncProfile,
+            locationTrackingEnabled: snapshot.settings.locationEnabled
         )
         try? watchConnectivityService.update(payload: watchPayload)
     }
