@@ -171,6 +171,7 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
     case routine = "루틴"
     case action = "액션·메모"
     case photo = "사진"
+    case memo = "메모"
     case event = "이벤트"
     case map = "지도"
 
@@ -187,6 +188,7 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
         case .appUsage: .appUsage
         case .weather: .weather
         case .photo: .photo
+        case .memo: .memo
         case .routine, .action, .event, .map: nil
         }
     }
@@ -211,6 +213,7 @@ private enum TimelineDetailSection: String, CaseIterable, Identifiable {
         .appUsage,
         .weather,
         .photo,
+        .memo,
         .map,
         .routine,
         .action,
@@ -301,21 +304,6 @@ private enum TimelinePlayheadSynchronizer {
         let calendarEvents: [CalendarRecord]
         let weather: [WeatherContext]
         let photos: [PhotoCluster]
-
-        var hasTimelineItem: Bool {
-            !plans.isEmpty
-                || !actuals.isEmpty
-                || !places.isEmpty
-                || !travel.isEmpty
-                || !calendarEvents.isEmpty
-                || !weather.isEmpty
-                || !photos.isEmpty
-        }
-    }
-
-    enum Direction {
-        case forward
-        case backward
     }
 
     static func contains(
@@ -387,56 +375,6 @@ private enum TimelinePlayheadSynchronizer {
                     }
                 }
         )
-    }
-
-    static func snapIfNeeded(
-        date: Date,
-        direction: Direction?,
-        plans: [PlanRecord],
-        actuals: [ActualRecord],
-        places: [PlaceStay],
-        travel: [TravelSegment],
-        calendarEvents: [CalendarRecord],
-        weather: [WeatherContext],
-        photos: [PhotoCluster]
-    ) -> Date {
-        let match = match(
-            at: date,
-            plans: plans,
-            actuals: actuals,
-            places: places,
-            travel: travel,
-            calendarEvents: calendarEvents,
-            weather: weather,
-            photos: photos
-        )
-        guard !match.hasTimelineItem else { return date }
-
-        let spans = plans
-            .filter { !GoalRecordPolicy.isGoal($0) }
-            .map(\.span)
-            + actuals.map { $0.span(asOf: max(Date.now, date)) }
-            + places.map(\.span)
-            + travel.map(\.span)
-            + calendarEvents.map(\.span)
-            + weather.map { weatherTimelineSpan($0) }
-            + photos.map(\.detailSpan)
-        guard !spans.isEmpty else { return date }
-
-        let ordered = spans.sorted { $0.start < $1.start }
-        switch direction {
-        case .forward:
-            return ordered.first(where: { $0.start > date })?.start
-                ?? date
-        case .backward:
-            return ordered.last(where: { $0.end < date })?.end
-                ?? date
-        case nil:
-            return ordered.min {
-                abs($0.start.timeIntervalSince(date))
-                    < abs($1.start.timeIntervalSince(date))
-            }?.start ?? date
-        }
     }
 }
 
@@ -1302,6 +1240,8 @@ private final class TimelineDetailDataCache {
         let contentEnd: TimeInterval
         let displayStart: TimeInterval
         let displayEnd: TimeInterval
+        let memoStart: TimeInterval
+        let memoEnd: TimeInterval
         let playheadMinute: Int?
         let selectedPlanID: UUID?
         let selectedActualID: UUID?
@@ -1325,6 +1265,7 @@ private final class TimelineDetailDataCache {
         let selectedActual: ActualRecord?
         let eventPlans: [PlanRecord]
         let calendarEvents: [CalendarRecord]
+        let memos: [ActionMemo]
 
         static let empty = Value(
             actionPlans: [],
@@ -1340,7 +1281,8 @@ private final class TimelineDetailDataCache {
             weather: [],
             selectedActual: nil,
             eventPlans: [],
-            calendarEvents: []
+            calendarEvents: [],
+            memos: []
         )
     }
 
@@ -1397,6 +1339,8 @@ private extension TimelineSelection {
             return .activity
         case "photo":
             return .photo
+        case TimelineRowKind.memo.rawValue:
+            return .memo
         case "event":
             return .event
         case "schedule", "calendar":
@@ -2885,6 +2829,8 @@ private struct TimelineDetailPanel: View {
                 hasActionContent
             case .photo:
                 activePhotoCluster != nil
+            case .memo:
+                hasMemoContent
             case .event:
                 hasEventContent
             case .map:
@@ -3182,13 +3128,18 @@ private struct TimelineDetailPanel: View {
                     actionContent
                 case .photo:
                     photoContent
+                case .memo:
+                    memoContent
                 case .event:
                     eventContent
                 case .map:
                     routeContent
                 }
             }
-            if activeSelection?.preferredDetailSection == item {
+            // 메모 카드는 이미 그 구간의 메모를 전부 펴 놓았다. 여기서 또
+            // 붙이면 같은 메모가 두 번 나온다.
+            if item != .memo,
+               activeSelection?.preferredDetailSection == item {
                 DetailMemoList(
                     model: model,
                     selection: activeSelection,
@@ -3641,6 +3592,29 @@ private struct TimelineDetailPanel: View {
         }
     }
 
+    /// 메모 카드. 시간표 메모 줄이 표식으로 뭉쳐 보여 주는 것을 여기서는
+    /// 하나씩 편다. 눌러서 그 자리의 메모 입력을 연다.
+    private var memoContent: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            detailHeading(
+                TimelineRowKind.memo.title,
+                systemImage: TimelineRowKind.memo.systemImage
+            )
+            DetailMemoList(
+                model: model,
+                selection: nil,
+                section: .memo,
+                memos: detailData.memos,
+                onSelect: { memo in
+                    model.openMemoEntry(
+                        at: memo.occurredAt,
+                        memoIDs: [memo.id]
+                    )
+                }
+            )
+        }
+    }
+
     private func weatherMeasurementLocation(
         _ weather: WeatherContext
     ) -> String {
@@ -4085,12 +4059,15 @@ private struct TimelineDetailPanel: View {
         let displaySpan = detailDisplaySpan
         let selection = activeSelection
         let cacheSpan = selection?.span ?? contentSpan
+        let memoSpan = detailMemoSpan
         let key = TimelineDetailDataCache.Key(
             timelineRevision: model.timelineRevision,
             contentStart: cacheSpan.start.timeIntervalSinceReferenceDate,
             contentEnd: cacheSpan.end.timeIntervalSinceReferenceDate,
             displayStart: cacheSpan.start.timeIntervalSinceReferenceDate,
             displayEnd: cacheSpan.end.timeIntervalSinceReferenceDate,
+            memoStart: memoSpan.start.timeIntervalSinceReferenceDate,
+            memoEnd: memoSpan.end.timeIntervalSinceReferenceDate,
             playheadMinute: playheadDate.map {
                 Int(floor($0.timeIntervalSinceReferenceDate / 60))
             },
@@ -4267,10 +4244,29 @@ private struct TimelineDetailPanel: View {
                 weather: weather,
                 selectedActual: selectedActual,
                 eventPlans: eventPlans,
-                calendarEvents: calendarEvents
+                calendarEvents: calendarEvents,
+                memos: MemoTimelineEngine.detailList(
+                    in: memoSpan,
+                    from: model.snapshot.memos
+                )
             )
         }
     }
+
+    /// 메모 카드와 메모 알약이 읽는 구간. 시간표가 펼쳐 둔 기간을 그대로
+    /// 본다. 다른 줄은 재생 머리가 짚은 순간에 걸친 기록만 골라내지만
+    /// 메모는 길이가 없는 순간이라 그 방식으로는 영영 걸리지 않는다.
+    /// 시간표 메모 줄에 표식이 보이면 알약도 함께 나오는 것이 규칙이다.
+    private var detailMemoSpan: TimeSpan {
+        Self.periodEngine.interval(
+            for: model.selectedScale.timelineLevel,
+            containing: model.selectedDate
+        )
+    }
+
+    /// 달력을 고르는 값은 늘 같다. 재생 머리가 움직이는 동안 카드마다 이
+    /// 달력을 새로 세우지 않게 한 번만 만들어 둔다.
+    private static let periodEngine = TimelineAggregationEngine()
 
     private func deduplicatedPlans(
         _ plans: [PlanRecord]
@@ -4389,6 +4385,12 @@ private struct TimelineDetailPanel: View {
 
     private var hasWeatherContent: Bool {
         !detailData.weather.isEmpty
+    }
+
+    /// 다른 줄과 같은 규칙이다. 보고 있는 기간에 메모가 하나라도 있으면
+    /// 알약과 카드가 함께 나오고, 없으면 함께 빠진다.
+    private var hasMemoContent: Bool {
+        !detailData.memos.isEmpty
     }
 
     private var hasRoutineContent: Bool {
@@ -5916,40 +5918,33 @@ private struct DetailMemoList: View {
     @Bindable var model: AppModel
     let selection: TimelineSelection?
     let section: TimelineDetailSection
+    /// 이미 골라 둔 메모를 그대로 편다. 비워 두면 고른 항목에 달린 메모를
+    /// 스스로 찾는다.
+    var memos: [ActionMemo]?
+    /// 누를 수 있는 목록인지. 메모 카드에서만 쓰고, 항목에 딸린 목록은
+    /// 보여 주기만 한다.
+    var onSelect: ((ActionMemo) -> Void)?
 
     var body: some View {
-        if savedMemos.isEmpty {
+        let items = memos ?? savedMemos
+        if items.isEmpty {
             EmptyView()
         } else {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(savedMemos) { memo in
-                    HStack(alignment: .top, spacing: 5) {
-                        Image(systemName: TimelineRowKind.memo.systemImage)
-                            .font(.taption(size: 8, weight: .bold))
-                            .foregroundStyle(Color.tpSecondary)
-                            .padding(.top, 1)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(memo.text)
-                                .font(.taption(size: 8.5))
-                                .foregroundStyle(Color.tpInk)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(
-                                memo.occurredAt.formatted(
-                                    date: .omitted,
-                                    time: .shortened
-                                )
-                            )
-                            .font(.taption(size: 7))
-                            .foregroundStyle(Color.tpSecondary)
+                ForEach(items) { memo in
+                    if let onSelect {
+                        Button {
+                            onSelect(memo)
+                        } label: {
+                            memoRow(memo)
                         }
-                        Spacer(minLength: 4)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            "\(memo.text) 메모 열기"
+                        )
+                    } else {
+                        memoRow(memo)
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(
-                        Color.white.opacity(0.75),
-                        in: RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    )
                 }
             }
             .padding(.horizontal, 8)
@@ -5962,8 +5957,41 @@ private struct DetailMemoList: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.5)
             }
-            .accessibilityLabel("\(section.rawValue) 메모")
+            .accessibilityLabel(
+                section == .memo ? "메모 목록" : "\(section.rawValue) 메모"
+            )
         }
+    }
+
+    private func memoRow(_ memo: ActionMemo) -> some View {
+        HStack(alignment: .top, spacing: 5) {
+            Image(systemName: TimelineRowKind.memo.systemImage)
+                .font(.taption(size: 8, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(memo.text)
+                    .font(.taption(size: 8.5))
+                    .foregroundStyle(Color.tpInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(
+                    memo.occurredAt.formatted(
+                        date: .omitted,
+                        time: .shortened
+                    )
+                )
+                .font(.taption(size: 7))
+                .foregroundStyle(Color.tpSecondary)
+            }
+            Spacer(minLength: 4)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .background(
+            Color.white.opacity(0.75),
+            in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+        )
     }
 
     private var savedMemos: [ActionMemo] {
@@ -8967,19 +8995,10 @@ private struct TimelineBoard: View {
                                     * secondsPerPoint
                             )
                     }
-                    let direction: TimelinePlayheadSynchronizer.Direction =
-                        translationWidth < 0 ? .forward : .backward
-                    finalDate = TimelinePlayheadSynchronizer.snapIfNeeded(
-                        date: finalDate,
-                        direction: direction,
-                        plans: model.snapshot.plans,
-                        actuals: model.snapshot.actuals,
-                        places: model.snapshot.places,
-                        travel: model.snapshot.travel,
-                        calendarEvents: model.snapshot.calendarEvents,
-                        weather: model.snapshot.weather,
-                        photos: PhotoClusterer.cluster(model.snapshot.photos)
-                    )
+                    // 손을 뗀 자리가 곧 최종 자리다. 기록이 없는 구간에
+                    // 멈추면 그 빈 구간을 보여 준다. 예전에는 가장 가까운
+                    // 기록으로 끌어당겼는데, 아직 아무것도 없는 앞날을 펼쳐
+                    // 계획을 세우려 할 때마다 화면이 되돌아왔다.
                     continuousCenterDate = finalDate
                     // Changing the selected date normally resets the
                     // viewport. A continuous drag is different: it pans the

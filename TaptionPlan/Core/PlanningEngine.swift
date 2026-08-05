@@ -790,36 +790,6 @@ struct TimelinePeriodNavigationEngine: Sendable {
         ) != nil
     }
 
-    func containsTimelineData(
-        in span: TimeSpan,
-        snapshot: TaptionDataSnapshot,
-        asOf: Date = .now
-    ) -> Bool {
-        snapshot.plans.contains {
-            $0.span.intersection(with: span) != nil
-        }
-            || snapshot.actuals.contains {
-                $0.span(asOf: asOf).intersection(with: span) != nil
-            }
-            || snapshot.calendarEvents.contains {
-                $0.span.intersection(with: span) != nil
-            }
-            || snapshot.photos.contains {
-                !$0.isHiddenFromTimeline
-                    && span.start <= $0.capturedAt
-                    && $0.capturedAt < span.end
-            }
-            || snapshot.places.contains {
-                $0.span.intersection(with: span) != nil
-            }
-            || snapshot.travel.contains {
-                $0.span.intersection(with: span) != nil
-            }
-            || snapshot.floorTransitions.contains {
-                $0.span.intersection(with: span) != nil
-            }
-    }
-
     private func component(
         for level: TimelineLevel
     ) -> Calendar.Component {

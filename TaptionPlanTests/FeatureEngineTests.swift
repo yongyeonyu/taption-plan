@@ -5852,6 +5852,97 @@ final class FeatureEngineTests: XCTestCase {
         }
     }
 
+    /// 기록이 있는 곳으로 끌려가지 않는다. 빈 구간으로 넘어가면 그 빈 구간이
+    /// 그대로 나온다. 예전에는 손을 뗀 자리에 아무것도 없으면 가장 가까운
+    /// 기록으로 화면이 되돌아가, 아직 비어 있는 앞날을 펼쳐 둘 수 없었다.
+    func testPeriodNavigationLandsOnTheNeighborNotOnTheNearestRecord() throws {
+        let date = makeDate(2026, 7, 31, 12)
+        let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)
+        // 기록은 한참 뒤에만 있다. 어느 배율에서 한 칸을 움직여도 여기에
+        // 닿지 않는다.
+        let distant = makeDate(2027, 3, 2, 9)
+        let snapshot = makeSnapshot(
+            plans: [
+                PlanRecord(
+                    title: "먼 계획",
+                    span: TimeSpan(
+                        start: distant,
+                        end: distant.addingTimeInterval(hour)
+                    ),
+                    categoryID: "project"
+                ),
+            ]
+        )
+
+        for level in TimelineLevel.allCases {
+            let component: Calendar.Component = switch level {
+            case .day: .day
+            case .week: .weekOfYear
+            case .month: .month
+            case .year: .year
+            }
+            for direction in [-1, 1] {
+                XCTAssertTrue(
+                    engine.canNavigate(
+                        from: date,
+                        level: level,
+                        direction: direction,
+                        snapshot: snapshot
+                    )
+                )
+                XCTAssertEqual(
+                    engine.adjacentDate(
+                        from: date,
+                        level: level,
+                        direction: direction
+                    ),
+                    utcCalendar.date(
+                        byAdding: component,
+                        value: direction,
+                        to: date
+                    ),
+                    "\(level.rawValue) \(direction) should not seek data"
+                )
+            }
+        }
+    }
+
+    /// 배율마다 한 칸씩 넘긴 자리에 그대로 머문다. 되돌아오면 처음 자리다.
+    @MainActor
+    func testShiftingIntoAnEmptyPeriodStaysThereForEveryScale() {
+        let calendar = Calendar.autoupdatingCurrent
+        let anchor = makeDate(2026, 7, 31, 12)
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil
+        )
+
+        for scale in TimeScale.allCases {
+            let component: Calendar.Component = switch scale {
+            case .day: .day
+            case .week: .weekOfYear
+            case .month: .month
+            case .year: .year
+            }
+            model.selectedScale = scale
+            model.selectedDate = anchor
+
+            model.shiftSelectedDate(by: 1)
+            XCTAssertEqual(
+                model.selectedDate,
+                calendar.date(byAdding: component, value: 1, to: anchor),
+                "\(scale.rawValue) should stay on the empty next period"
+            )
+
+            model.shiftSelectedDate(by: -1)
+            XCTAssertEqual(
+                model.selectedDate,
+                anchor,
+                "\(scale.rawValue) should come back to where it started"
+            )
+        }
+    }
+
     func testPeriodNavigationStillRejectsZeroDirection() {
         let date = makeDate(2026, 7, 31, 12)
         let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)
@@ -7475,6 +7566,66 @@ final class FeatureEngineTests: XCTestCase {
                 visibleDuration: 86_400
             )
             .isEmpty
+        )
+    }
+
+    /// 하단 메모 카드는 보고 있는 기간의 메모를 시각 순서대로 편다. 표식과
+    /// 달리 합치지 않아야 하나씩 눌러 열 수 있다.
+    func testMemoDetailCardListsEveryMemoInTheVisibleSpanInOrder() {
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 4),
+            end: makeDate(2026, 8, 5)
+        )
+        let morning = memoFixture(at: makeDate(2026, 8, 4, 9, 0))
+        // 표식 하나로 합쳐질 만큼 붙어 있어도 카드에서는 따로 선다.
+        let alongside = memoFixture(at: makeDate(2026, 8, 4, 9, 1))
+        let evening = memoFixture(at: makeDate(2026, 8, 4, 21, 30))
+        let nextDay = memoFixture(at: makeDate(2026, 8, 5, 8, 0))
+
+        let listed = MemoTimelineEngine.detailList(
+            in: day,
+            from: [evening, nextDay, alongside, morning]
+        )
+        XCTAssertEqual(
+            listed.map(\.id),
+            [morning.id, alongside.id, evening.id]
+        )
+        XCTAssertEqual(
+            MemoTimelineEngine.markers(
+                from: listed,
+                in: day,
+                visibleDuration: day.duration
+            )
+            .count,
+            2
+        )
+    }
+
+    /// 메모가 없는 기간에서는 목록이 빈다. 하단의 메모 알약과 카드는 다른
+    /// 줄과 같은 규칙으로 이 값을 보고 함께 나타나고 함께 빠진다.
+    func testMemoDetailCardIsEmptyWhenTheVisibleSpanHasNoMemo() {
+        let memo = memoFixture(at: makeDate(2026, 8, 4, 9, 0))
+        let emptyDay = TimeSpan(
+            start: makeDate(2026, 8, 5),
+            end: makeDate(2026, 8, 6)
+        )
+        XCTAssertTrue(
+            MemoTimelineEngine.detailList(in: emptyDay, from: [memo]).isEmpty
+        )
+        XCTAssertTrue(
+            MemoTimelineEngine.detailList(in: emptyDay, from: []).isEmpty
+        )
+        // 같은 메모라도 그 메모가 놓인 기간에서는 카드에 오른다.
+        XCTAssertEqual(
+            MemoTimelineEngine.detailList(
+                in: TimeSpan(
+                    start: makeDate(2026, 8, 4),
+                    end: makeDate(2026, 8, 5)
+                ),
+                from: [memo]
+            )
+            .map(\.id),
+            [memo.id]
         )
     }
 

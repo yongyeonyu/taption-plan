@@ -623,6 +623,21 @@ enum MemoTimelineEngine {
             .map(\.id)
     }
 
+    /// 하단 메모 카드가 늘어놓는 메모. 표식과 달리 합치지 않고 시간 순서
+    /// 그대로 보여 준다. 구간이 반열림인 것은 표식과 같다.
+    static func detailList(
+        in span: TimeSpan,
+        from memos: [ActionMemo]
+    ) -> [ActionMemo] {
+        memos
+            .filter { $0.occurredAt >= span.start && $0.occurredAt < span.end }
+            .sorted {
+                $0.occurredAt == $1.occurredAt
+                    ? $0.createdAt < $1.createdAt
+                    : $0.occurredAt < $1.occurredAt
+            }
+    }
+
     /// 메모를 남길 순간. 시간표가 지금을 비추고 있으면 지금이고, 지난 기간을
     /// 펼쳐 둔 상태라면 화면 한가운데다. 어제에 남긴 메모는 어제에 남는다.
     static func entryDate(now: Date, visibleSpan: TimeSpan) -> Date {
