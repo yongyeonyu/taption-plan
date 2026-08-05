@@ -108,13 +108,16 @@ enum TaptionWidgetPayloadFactory {
                 )
             }
 
-        let automaticItems = MovementDisplayEngine.visibleActuals(
-            AutomaticRecordTimelineEngine.activities(
-                from: snapshot.actuals,
-                inside: widgetSpan,
+        let automaticItems = RestSleepDisplayEngine.visibleActuals(
+            MovementDisplayEngine.visibleActuals(
+                AutomaticRecordTimelineEngine.activities(
+                    from: snapshot.actuals,
+                    inside: widgetSpan,
+                    asOf: now
+                ),
+                travel: snapshot.travel,
                 asOf: now
             ),
-            travel: snapshot.travel,
             asOf: now
         )
         let movementItems = automaticItems

@@ -110,6 +110,343 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    // MARK: - 수면과 겹친 휴식
+
+    private func restSpans(
+        _ actuals: [ActualRecord],
+        asOf: Date
+    ) -> [TimeSpan] {
+        RestSleepDisplayEngine.visibleActuals(actuals, asOf: asOf)
+            .filter(RestSleepDisplayEngine.isRest)
+            .map { $0.span(asOf: asOf) }
+            .sorted { $0.start < $1.start }
+    }
+
+    /// 사용자 화면의 실제 값: 휴식 00:57 + 8시간 13분, 수면 02:43 + 4시간 50분.
+    /// 수면이 휴식 한가운데 들어 있으므로 휴식은 앞뒤 두 조각만 남는다.
+    func testSleepInsideRestLeavesTwoRestRemainders() {
+        let day = makeDate(2026, 8, 5)
+        let rest = makeActual(
+            "집에서 휴식",
+            "rest",
+            start: makeDate(2026, 8, 5, 0, 57),
+            minutes: 8 * 60 + 13,
+            source: .location
+        )
+        let sleep = makeActual(
+            "수면",
+            "sleep",
+            start: makeDate(2026, 8, 5, 2, 43),
+            minutes: 4 * 60 + 50,
+            source: .healthKit
+        )
+        let asOf = day.addingTimeInterval(24 * hour)
+
+        let trimmed = RestSleepDisplayEngine.visibleActuals(
+            [rest, sleep],
+            asOf: asOf
+        )
+        let rests = trimmed.filter(RestSleepDisplayEngine.isRest)
+
+        XCTAssertEqual(rests.count, 2)
+        XCTAssertEqual(rests.map(\.startedAt), [
+            makeDate(2026, 8, 5, 0, 57),
+            makeDate(2026, 8, 5, 7, 33),
+        ])
+        XCTAssertEqual(rests.map(\.endedAt), [
+            makeDate(2026, 8, 5, 2, 43),
+            makeDate(2026, 8, 5, 9, 10),
+        ])
+        // 첫 조각이 원본 식별자를 지켜야 기록 상세가 열린다.
+        XCTAssertEqual(rests.first?.id, rest.id)
+        XCTAssertEqual(Set(rests.map(\.id)).count, 2)
+        // 수면 기록 자체는 손대지 않는다.
+        XCTAssertEqual(
+            trimmed.filter { $0.categoryID == "sleep" }.map(\.id),
+            [sleep.id]
+        )
+        // 다시 잘라도 같은 값이라야 화면 갱신마다 선택이 풀리지 않는다.
+        XCTAssertEqual(
+            RestSleepDisplayEngine.visibleActuals([rest, sleep], asOf: asOf),
+            trimmed
+        )
+    }
+
+    func testRestFullyInsideSleepDisappears() {
+        let sleep = makeActual(
+            "수면",
+            "sleep",
+            start: makeDate(2026, 8, 5, 1),
+            minutes: 6 * 60,
+            source: .healthKit
+        )
+        let rest = makeActual(
+            "집에서 휴식",
+            "rest",
+            start: makeDate(2026, 8, 5, 2),
+            minutes: 90,
+            source: .location
+        )
+        let asOf = makeDate(2026, 8, 5, 12)
+
+        XCTAssertTrue(restSpans([rest, sleep], asOf: asOf).isEmpty)
+        XCTAssertEqual(
+            RestSleepDisplayEngine.visibleActuals([rest, sleep], asOf: asOf)
+                .map(\.id),
+            [sleep.id]
+        )
+    }
+
+    func testPartialSleepOverlapTrimsEachEdge() {
+        let asOf = makeDate(2026, 8, 5, 23)
+        let sleep = makeActual(
+            "수면",
+            "sleep",
+            start: makeDate(2026, 8, 5, 1),
+            minutes: 6 * 60,
+            source: .healthKit
+        )
+        // 휴식이 수면보다 늦게 시작하고 늦게 끝난다: 뒤쪽만 남는다.
+        let tail = makeActual(
+            "집에서 휴식",
+            "rest",
+            start: makeDate(2026, 8, 5, 5),
+            minutes: 4 * 60,
+            source: .location
+        )
+        XCTAssertEqual(
+            restSpans([tail, sleep], asOf: asOf),
+            [TimeSpan(
+                start: makeDate(2026, 8, 5, 7),
+                end: makeDate(2026, 8, 5, 9)
+            )]
+        )
+
+        // 휴식이 수면보다 먼저 시작하고 먼저 끝난다: 앞쪽만 남는다.
+        let head = makeActual(
+            "집에서 휴식",
+            "rest",
+            start: makeDate(2026, 8, 5, 0),
+            minutes: 3 * 60,
+            source: .location
+        )
+        let headRemainders = restSpans([head, sleep], asOf: asOf)
+        XCTAssertEqual(
+            headRemainders,
+            [TimeSpan(
+                start: makeDate(2026, 8, 5, 0),
+                end: makeDate(2026, 8, 5, 1)
+            )]
+        )
+        // 조각이 하나뿐이면 원본 식별자를 그대로 쓴다.
+        XCTAssertEqual(
+            RestSleepDisplayEngine.visibleActuals([head, sleep], asOf: asOf)
+                .first?.id,
+            head.id
+        )
+    }
+
+    func testRestNotOverlappingSleepIsUntouched() {
+        let asOf = makeDate(2026, 8, 5, 23)
+        let sleep = makeActual(
+            "수면",
+            "sleep",
+            start: makeDate(2026, 8, 5, 1),
+            minutes: 6 * 60,
+            source: .healthKit
+        )
+        let rest = makeActual(
+            "카페",
+            "rest",
+            start: makeDate(2026, 8, 5, 14),
+            minutes: 70,
+            source: .location
+        )
+        let input = [rest, sleep]
+
+        XCTAssertEqual(
+            RestSleepDisplayEngine.visibleActuals(input, asOf: asOf),
+            input
+        )
+        // 수면 기록이 없으면 휴식은 언제나 그대로다.
+        XCTAssertEqual(
+            RestSleepDisplayEngine.visibleActuals([rest], asOf: asOf),
+            [rest]
+        )
+    }
+
+    /// 근무·수업·통화·회의가 수면과 겹치면 감출 일이 아니라 따로 봐야 할
+    /// 잘못이다. 수면 우선 규칙은 휴식 분류에만 닿는다.
+    func testSleepDoesNotSwallowWorkOrMeetingRecords() {
+        let asOf = makeDate(2026, 8, 5, 23)
+        let sleep = makeActual(
+            "수면",
+            "sleep",
+            start: makeDate(2026, 8, 5, 1),
+            minutes: 6 * 60,
+            source: .healthKit
+        )
+        let others = [
+            makeActual(
+                "근무",
+                "work",
+                start: makeDate(2026, 8, 5, 2),
+                minutes: 60,
+                source: .location
+            ),
+            makeActual(
+                "수업·학습",
+                "study",
+                start: makeDate(2026, 8, 5, 3),
+                minutes: 60,
+                source: .location
+            ),
+            makeActual(
+                "통화",
+                "relationship",
+                start: makeDate(2026, 8, 5, 4),
+                minutes: 20,
+                source: .call
+            ),
+            makeActual(
+                "머무름",
+                "activity",
+                start: makeDate(2026, 8, 5, 5),
+                minutes: 30,
+                source: .location
+            ),
+        ]
+
+        XCTAssertEqual(
+            RestSleepDisplayEngine.visibleActuals(others + [sleep], asOf: asOf),
+            others + [sleep]
+        )
+    }
+
+    /// 화면에 보이는 목록·눈금판·합계가 모두 같은 값을 읽는지 본다. 세 값이
+    /// 흐른 시간(00:57–09:10)을 넘으면 안 된다.
+    func testRecordTotalsForOverlappingRestAndSleepMatchElapsedTime() {
+        let day = makeDate(2026, 8, 5)
+        let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
+        let asOf = day.addingTimeInterval(24 * hour)
+        let raw = [
+            makeActual(
+                "집에서 휴식",
+                "rest",
+                start: makeDate(2026, 8, 5, 0, 57),
+                minutes: 8 * 60 + 13,
+                source: .location
+            ),
+            makeActual(
+                "수면",
+                "sleep",
+                start: makeDate(2026, 8, 5, 2, 43),
+                minutes: 4 * 60 + 50,
+                source: .healthKit
+            ),
+        ]
+        let elapsed = makeDate(2026, 8, 5, 9, 10)
+            .timeIntervalSince(makeDate(2026, 8, 5, 0, 57))
+        let expectedRest: TimeInterval = (1 * 60 + 46) * 60
+            + (1 * 60 + 37) * 60
+        let expectedSleep: TimeInterval = (4 * 60 + 50) * 60
+
+        // 다듬기 전에는 두 값의 합이 흐른 시간을 넘는다.
+        XCTAssertGreaterThan(
+            ActualRecordGroupingEngine.groups(
+                actuals: raw,
+                in: span,
+                categories: CategoryCatalog.builtIn,
+                asOf: asOf
+            ).reduce(0) { $0 + $1.duration },
+            elapsed
+        )
+
+        let actuals = RestSleepDisplayEngine.visibleActuals(raw, asOf: asOf)
+        let groups = ActualRecordGroupingEngine.groups(
+            actuals: actuals,
+            in: span,
+            categories: CategoryCatalog.builtIn,
+            asOf: asOf
+        )
+        let byCategory = Dictionary(
+            groups.map { ($0.id, $0.duration) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        XCTAssertEqual(byCategory["sleep"], expectedSleep)
+        XCTAssertEqual(byCategory["rest"], expectedRest)
+        XCTAssertEqual(groups.reduce(0) { $0 + $1.duration }, elapsed)
+
+        // 잘린 두 조각은 제목이 같으므로 목록에서는 한 줄로 합쳐 보인다.
+        let restGroup = groups.first { $0.id == "rest" }
+        XCTAssertEqual(restGroup?.children.map(\.title), ["집에서 휴식"])
+        XCTAssertEqual(restGroup?.children.first?.occurrenceCount, 2)
+        XCTAssertEqual(
+            restGroup?.children.first?.start,
+            makeDate(2026, 8, 5, 0, 57)
+        )
+
+        // 눈금판(원형 시간표)도 같은 값을 읽는다.
+        let rings = RecordChartEngine.clockRings(
+            actuals: actuals,
+            in: span,
+            asOf: asOf
+        )
+        XCTAssertEqual(
+            rings.first { $0.categoryID == "rest" }?.duration,
+            expectedRest
+        )
+        XCTAssertEqual(
+            rings.first { $0.categoryID == "rest" }?.arcs.count,
+            2
+        )
+        XCTAssertEqual(
+            rings.reduce(0) { $0 + $1.duration },
+            groups.reduce(0) { $0 + $1.duration }
+        )
+    }
+
+    func testIntervalSubtractionKeepsOnlyUncoveredParts() {
+        let base = makeDate(2026, 8, 5)
+        func span(_ from: Double, _ to: Double) -> TimeSpan {
+            TimeSpan(
+                start: base.addingTimeInterval(from * hour),
+                end: base.addingTimeInterval(to * hour)
+            )
+        }
+
+        XCTAssertEqual(
+            ActualIntervalMergeEngine.subtracting(
+                [span(2, 3), span(5, 6)],
+                from: span(1, 8)
+            ),
+            [span(1, 2), span(3, 5), span(6, 8)]
+        )
+        XCTAssertEqual(
+            ActualIntervalMergeEngine.subtracting(
+                [span(0, 9)],
+                from: span(1, 8)
+            ),
+            []
+        )
+        XCTAssertEqual(
+            ActualIntervalMergeEngine.subtracting(
+                [span(9, 10)],
+                from: span(1, 8)
+            ),
+            [span(1, 8)]
+        )
+        // 맞닿기만 한 구간은 아무것도 덜어 내지 않는다.
+        XCTAssertEqual(
+            ActualIntervalMergeEngine.subtracting(
+                [span(0, 1), span(8, 9)],
+                from: span(1, 8)
+            ),
+            [span(1, 8)]
+        )
+    }
+
     func testHierarchySupportsUnlimitedDescendantsAndRollup() throws {
         let base = makeDate(2026, 1, 1)
         let year = PlanRecord(
@@ -5494,123 +5831,41 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testPeriodNavigationRequiresDataInAdjacentPeriodForEveryScale() throws {
+    func testPeriodNavigationAllowsEmptyAdjacentPeriodForEveryScale() throws {
         let date = makeDate(2026, 7, 31, 12)
         let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)
-        let aggregation = TimelineAggregationEngine(calendar: utcCalendar)
+
+        // 기록이 없는 날짜도 고를 수 있어야 한다. 빈 구간이라는 사실
+        // 자체를 확인하려면 일단 넘어갈 수 있어야 하기 때문이다.
+        for level in TimelineLevel.allCases {
+            for direction in [-1, 1] {
+                XCTAssertTrue(
+                    engine.canNavigate(
+                        from: date,
+                        level: level,
+                        direction: direction,
+                        snapshot: .empty
+                    ),
+                    "\(level.rawValue) should stay enabled without data"
+                )
+            }
+        }
+    }
+
+    func testPeriodNavigationStillRejectsZeroDirection() {
+        let date = makeDate(2026, 7, 31, 12)
+        let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)
 
         for level in TimelineLevel.allCases {
             XCTAssertFalse(
                 engine.canNavigate(
                     from: date,
                     level: level,
-                    direction: 1,
+                    direction: 0,
                     snapshot: .empty
-                ),
-                "\(level.rawValue) should be disabled without data"
-            )
-
-            let nextDate = try XCTUnwrap(
-                engine.adjacentDate(
-                    from: date,
-                    level: level,
-                    direction: 1
                 )
-            )
-            let nextSpan = aggregation.interval(
-                for: level,
-                containing: nextDate
-            )
-            var snapshot = TaptionDataSnapshot.empty
-            snapshot.plans = [
-                PlanRecord(
-                    title: "다음 기간 계획",
-                    span: TimeSpan(
-                        start: nextSpan.start.addingTimeInterval(60),
-                        end: nextSpan.start.addingTimeInterval(hour)
-                    ),
-                    categoryID: "project"
-                )
-            ]
-
-            XCTAssertTrue(
-                engine.canNavigate(
-                    from: date,
-                    level: level,
-                    direction: 1,
-                    snapshot: snapshot
-                ),
-                "\(level.rawValue) should be enabled with adjacent data"
-            )
-            XCTAssertFalse(
-                engine.canNavigate(
-                    from: date,
-                    level: level,
-                    direction: -1,
-                    snapshot: snapshot
-                ),
-                "\(level.rawValue) should not reuse next-period data"
             )
         }
-    }
-
-    func testPeriodNavigationUsesTimelineRecordsButNotWeatherContext() throws {
-        let date = makeDate(2026, 7, 31, 12)
-        let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)
-        let nextDate = try XCTUnwrap(
-            engine.adjacentDate(
-                from: date,
-                level: .day,
-                direction: 1
-            )
-        )
-
-        var snapshot = TaptionDataSnapshot.empty
-        snapshot.weather = [
-            WeatherContext(
-                observedAt: nextDate,
-                condition: "맑음",
-                symbolName: "sun.max.fill",
-                temperatureCelsius: 28
-            )
-        ]
-        XCTAssertFalse(
-            engine.canNavigate(
-                from: date,
-                level: .day,
-                direction: 1,
-                snapshot: snapshot
-            )
-        )
-
-        snapshot.photos = [
-            PhotoMoment(
-                id: "hidden-photo",
-                capturedAt: nextDate,
-                pixelWidth: 1_000,
-                pixelHeight: 1_000,
-                isFavorite: false,
-                isHiddenFromTimeline: true
-            )
-        ]
-        XCTAssertFalse(
-            engine.canNavigate(
-                from: date,
-                level: .day,
-                direction: 1,
-                snapshot: snapshot
-            )
-        )
-
-        snapshot.photos[0].isHiddenFromTimeline = false
-        XCTAssertTrue(
-            engine.canNavigate(
-                from: date,
-                level: .day,
-                direction: 1,
-                snapshot: snapshot
-            )
-        )
     }
 
     func testScreenTimeUsageReplacesOnlyTheFetchedHours() {
@@ -6859,6 +7114,226 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(duration(buckets[0], "sleep").actual, 0)
         XCTAssertEqual(buckets[0].photoCount, 0)
         XCTAssertNil(buckets[0].representativePhotoID)
+    }
+
+    // MARK: - 메모는 메모
+
+    /// The placeholder factory always produced exactly this plan.
+    private func makeMemoShellPlan(
+        categoryID: String = "activity",
+        categoryName: String = "활동",
+        start: Date
+    ) -> PlanRecord {
+        PlanRecord(
+            title: "메모 - \(categoryName)",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(60)),
+            categoryID: categoryID,
+            isImportant: false
+        )
+    }
+
+    private func makeSnapshot(
+        plans: [PlanRecord] = [],
+        actuals: [ActualRecord] = [],
+        recordLinks: [RecordLink] = [],
+        memos: [ActionMemo] = []
+    ) -> TaptionDataSnapshot {
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.plans = plans
+        snapshot.actuals = actuals
+        snapshot.recordLinks = recordLinks
+        snapshot.memos = memos
+        return snapshot
+    }
+
+    func testMemoShellMigrationLiftsMemoAndRemovesShellPlan() {
+        let start = makeDate(2026, 8, 4, 9, 30)
+        let shell = makeMemoShellPlan(start: start)
+        var snapshot = makeSnapshot(
+            plans: [shell],
+            memos: [
+                ActionMemo(planID: shell.id, kind: .idea, text: "회의 정리"),
+            ]
+        )
+
+        MemoShellPlanMigration.apply(to: &snapshot)
+
+        XCTAssertTrue(snapshot.plans.isEmpty)
+        XCTAssertEqual(snapshot.memos.count, 1)
+        let lifted = snapshot.memos[0]
+        XCTAssertNil(lifted.planID)
+        XCTAssertEqual(lifted.categoryID, "activity")
+        XCTAssertEqual(lifted.occurredAt, start)
+        XCTAssertEqual(lifted.text, "회의 정리")
+    }
+
+    func testMemoShellMigrationKeepsRealOneMinuteUserPlans() {
+        let start = makeDate(2026, 8, 4, 9, 30)
+        let sameShapeDifferentTitle = PlanRecord(
+            title: "약 먹기",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(60)),
+            categoryID: "health"
+        )
+        let importantShellLookalike = PlanRecord(
+            title: "메모 - 활동",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(60)),
+            categoryID: "activity",
+            isImportant: true
+        )
+        let longerShellLookalike = PlanRecord(
+            title: "메모 - 활동",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(120)),
+            categoryID: "activity"
+        )
+        let trackedShellLookalike = PlanRecord(
+            title: "메모 - 활동",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(60)),
+            categoryID: "activity"
+        )
+        let linkedShellLookalike = PlanRecord(
+            title: "메모 - 활동",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(60)),
+            categoryID: "activity"
+        )
+        var snapshot = makeSnapshot(
+            plans: [
+                sameShapeDifferentTitle,
+                importantShellLookalike,
+                longerShellLookalike,
+                trackedShellLookalike,
+                linkedShellLookalike,
+            ],
+            actuals: [
+                ActualRecord(
+                    planID: trackedShellLookalike.id,
+                    title: "메모 - 활동",
+                    categoryID: "activity",
+                    startedAt: start,
+                    endedAt: start.addingTimeInterval(60),
+                    source: .timer
+                ),
+            ],
+            recordLinks: [
+                RecordLink(
+                    fromNodeID: "action.\(linkedShellLookalike.id.uuidString)",
+                    toNodeID: "action.\(sameShapeDifferentTitle.id.uuidString)"
+                ),
+            ]
+        )
+        let before = snapshot.plans
+
+        MemoShellPlanMigration.apply(to: &snapshot)
+
+        XCTAssertEqual(snapshot.plans, before)
+    }
+
+    func testMemoShellMigrationIsIdempotent() {
+        let start = makeDate(2026, 8, 4, 9, 30)
+        let shell = makeMemoShellPlan(start: start)
+        let keeper = PlanRecord(
+            title: "논문 읽기",
+            span: TimeSpan(start: start, end: start.addingTimeInterval(3_600)),
+            categoryID: "study"
+        )
+        var snapshot = makeSnapshot(
+            plans: [shell, keeper],
+            memos: [
+                ActionMemo(planID: shell.id, kind: .idea, text: "회의 정리"),
+                ActionMemo(planID: keeper.id, kind: .idea, text: "3장까지"),
+            ]
+        )
+
+        MemoShellPlanMigration.apply(to: &snapshot)
+        let once = snapshot
+        MemoShellPlanMigration.apply(to: &snapshot)
+
+        XCTAssertEqual(snapshot, once)
+        XCTAssertEqual(snapshot.plans.map(\.id), [keeper.id])
+        XCTAssertEqual(
+            snapshot.memos.first { $0.text == "3장까지" }?.planID,
+            keeper.id
+        )
+    }
+
+    @MainActor
+    func testSavingCategoryMemoCreatesNoPlan() async {
+        let repository = InMemoryPlanRepository()
+        let model = AppModel(repository: repository, cloudSyncService: nil)
+        let day = makeDate(2026, 8, 4, 9, 30)
+
+        model.addMemo(
+            text: "무릎 상태 확인",
+            kind: .idea,
+            categoryID: "activity",
+            on: day
+        )
+
+        XCTAssertTrue(model.snapshot.plans.isEmpty)
+        XCTAssertEqual(model.snapshot.memos.count, 1)
+        let saved = model.memos(forCategoryID: "activity", on: day)
+        XCTAssertEqual(saved.map(\.text), ["무릎 상태 확인"])
+        XCTAssertNil(saved.first?.planID)
+    }
+
+    func testStandaloneMemoSurvivesRepositoryRoundTrip() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let repository = FilePlanRepository(
+            fileURL: directory.appendingPathComponent("taption-data-v1.json")
+        )
+        let occurredAt = makeDate(2026, 8, 4, 9, 30)
+        let memo = ActionMemo(
+            categoryID: "activity",
+            occurredAt: occurredAt,
+            kind: .idea,
+            text: "무릎 상태 확인",
+            createdAt: occurredAt,
+            updatedAt: occurredAt
+        )
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.memos = [memo]
+
+        try await repository.save(snapshot)
+        let loaded = try await repository.load()
+
+        XCTAssertTrue(loaded.plans.isEmpty)
+        XCTAssertEqual(loaded.memos, [memo])
+    }
+
+    /// Archives written before memos had their own identity carry a required
+    /// `planID` and neither `categoryID` nor `occurredAt`.
+    func testLegacyMemoDecodesWithPlanDerivedDefaults() throws {
+        let planID = UUID()
+        let createdAt = makeDate(2026, 8, 4, 9, 30)
+        let json = """
+        {
+          "id": "\(UUID().uuidString)",
+          "planID": "\(planID.uuidString)",
+          "kind": "idea",
+          "text": "예전 메모",
+          "attachments": [],
+          "isHighlightedInReview": true,
+          "createdAt": \(createdAt.timeIntervalSince1970),
+          "updatedAt": \(createdAt.timeIntervalSince1970)
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+
+        let memo = try decoder.decode(
+            ActionMemo.self,
+            from: Data(json.utf8)
+        )
+
+        XCTAssertEqual(memo.planID, planID)
+        XCTAssertNil(memo.categoryID)
+        XCTAssertEqual(memo.occurredAt, createdAt)
     }
 
     private var utcCalendar: Calendar {

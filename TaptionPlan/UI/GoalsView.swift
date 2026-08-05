@@ -498,7 +498,7 @@ enum GoalDetailEngine {
         let nextPlan = upcomingPlans.first
         let blockerMemos = memos
             .filter {
-                scopedIDs.contains($0.planID)
+                $0.planID.map(scopedIDs.contains) == true
                     && $0.kind == .blocker
                     && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }

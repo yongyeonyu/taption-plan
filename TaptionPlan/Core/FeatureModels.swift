@@ -643,13 +643,22 @@ struct MemoAttachment: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+/// A memo stands on its own. It may point at a plan or at an automatic
+/// record, but it never requires one: a note left on a category row keeps that
+/// category and the instant it belongs to, so no placeholder plan is needed.
 struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
-    var planID: UUID
+    /// Optional link to a user plan. `nil` for standalone memos.
+    var planID: UUID?
     /// Stable timeline item key. Plan-backed memos keep using `planID`, while
     /// automatic records (location, travel, health, weather, photos, etc.)
     /// use this key so two records in the same category never share notes.
     var targetID: String?
+    /// Category the memo belongs to. Always set for standalone memos.
+    var categoryID: String?
+    /// Instant on the timeline the memo belongs to, which is not necessarily
+    /// when it was typed: a note added to yesterday stays on yesterday.
+    var occurredAt: Date
     var kind: MemoKind
     var text: String
     var attachments: [MemoAttachment]
@@ -659,8 +668,10 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
 
     init(
         id: UUID = UUID(),
-        planID: UUID,
+        planID: UUID? = nil,
         targetID: String? = nil,
+        categoryID: String? = nil,
+        occurredAt: Date? = nil,
         kind: MemoKind,
         text: String,
         attachments: [MemoAttachment] = [],
@@ -671,12 +682,52 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
         self.id = id
         self.planID = planID
         self.targetID = targetID
+        self.categoryID = categoryID
+        self.occurredAt = occurredAt ?? createdAt
         self.kind = kind
         self.text = text
         self.attachments = attachments
         self.isHighlightedInReview = isHighlightedInReview
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, planID, targetID, categoryID, occurredAt, kind, text
+        case attachments, isHighlightedInReview, createdAt, updatedAt
+    }
+
+    /// `categoryID` and `occurredAt` arrived after the first archive format,
+    /// so records saved by older builds decode with their plan-derived values.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        planID = try values.decodeIfPresent(UUID.self, forKey: .planID)
+        targetID = try values.decodeIfPresent(String.self, forKey: .targetID)
+        categoryID = try values.decodeIfPresent(String.self, forKey: .categoryID)
+        kind = try values.decode(MemoKind.self, forKey: .kind)
+        text = try values.decode(String.self, forKey: .text)
+        attachments = try values.decodeIfPresent(
+            [MemoAttachment].self,
+            forKey: .attachments
+        ) ?? []
+        isHighlightedInReview = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .isHighlightedInReview
+        ) ?? true
+        let decodedCreatedAt = try values.decodeIfPresent(
+            Date.self,
+            forKey: .createdAt
+        ) ?? .now
+        createdAt = decodedCreatedAt
+        updatedAt = try values.decodeIfPresent(
+            Date.self,
+            forKey: .updatedAt
+        ) ?? decodedCreatedAt
+        occurredAt = try values.decodeIfPresent(
+            Date.self,
+            forKey: .occurredAt
+        ) ?? decodedCreatedAt
     }
 }
 

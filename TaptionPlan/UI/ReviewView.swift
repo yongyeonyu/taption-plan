@@ -809,16 +809,21 @@ struct ReviewView: View {
 
     private func rebuildContent() {
         let engine = ReviewEngine()
+        // 화면(원형·막대·목록)과 합계가 모두 이 한 값을 읽는다. 수면과 겹친
+        // 휴식을 여기서 한 번만 덜어 내야 보이는 시간과 더한 시간이 어긋나지
+        // 않는다.
+        let actuals = RestSleepDisplayEngine.visibleActuals(
+            model.snapshot.actuals
+        )
         let report = engine.report(
             for: model.reviewScale.timelineLevel,
             containing: model.selectedDate,
             plans: model.snapshot.plans,
-            actuals: model.snapshot.actuals,
+            actuals: actuals,
             weather: model.snapshot.weather,
             photos: model.snapshot.photos,
             memos: model.snapshot.memos
         )
-        let actuals = model.snapshot.actuals
         let span = report.span
 
         var rings: [RecordClockRing] = []

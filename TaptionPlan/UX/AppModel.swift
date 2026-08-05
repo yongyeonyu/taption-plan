@@ -599,6 +599,7 @@ final class AppModel {
             }
         }
         Self.migrateLegacyFloorCalibration(in: &loaded)
+        MemoShellPlanMigration.apply(to: &loaded)
         Self.normalizeRecordRelationships(in: &loaded)
         loaded.actuals = ActualRecordSuppressionEngine.visibleRecords(
             from: loaded.actuals,
@@ -1690,45 +1691,6 @@ final class AppModel {
         detail = .memo
     }
 
-    @discardableResult
-    func memoPlan(
-        forCategoryID categoryID: String,
-        categoryName: String,
-        near date: Date
-    ) -> PlanRecord {
-        let calendar = Calendar.autoupdatingCurrent
-        let dayStart = calendar.startOfDay(for: date)
-        let existing = snapshot.plans
-            .filter {
-                $0.categoryID == categoryID
-                    && $0.title == "메모 - \(categoryName)"
-                    && calendar.isDate($0.span.start, inSameDayAs: date)
-            }
-            .sorted { $0.createdAt < $1.createdAt }
-            .first
-        if let existing { return existing }
-
-        let minuteStart = calendar.date(
-            bySettingHour: calendar.component(.hour, from: date),
-            minute: calendar.component(.minute, from: date),
-            second: 0,
-            of: dayStart
-        ) ?? date
-        let plan = PlanRecord(
-            title: "메모 - \(categoryName)",
-            span: TimeSpan(
-                start: minuteStart,
-                end: minuteStart.addingTimeInterval(60)
-            ),
-            categoryID: categoryID,
-            isImportant: false
-        )
-        snapshot.plans.append(plan)
-        snapshot.plans.sort { $0.span.start < $1.span.start }
-        Task { await persist() }
-        return plan
-    }
-
     func memos(for planID: UUID?) -> [ActionMemo] {
         guard let planID else { return [] }
         return snapshot.memos
@@ -1747,6 +1709,21 @@ final class AppModel {
             .sorted { $0.createdAt < $1.createdAt }
     }
 
+    /// Notes left on a category row. They belong to the category and the day,
+    /// not to a plan, so nothing has to be invented to store them.
+    func memos(forCategoryID categoryID: String?, on date: Date) -> [ActionMemo] {
+        guard let categoryID, !categoryID.isEmpty else { return [] }
+        let calendar = Calendar.autoupdatingCurrent
+        return snapshot.memos
+            .filter {
+                $0.planID == nil
+                    && $0.targetID == nil
+                    && $0.categoryID == categoryID
+                    && calendar.isDate($0.occurredAt, inSameDayAs: date)
+            }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
     func addMemo(
         text: String,
         kind: MemoKind,
@@ -1755,11 +1732,18 @@ final class AppModel {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         let destination = planID ?? selectedMemoPlanID
         guard !cleanText.isEmpty, let destination,
-              snapshot.plans.contains(where: { $0.id == destination }) else {
+              let plan = snapshot.plans.first(where: { $0.id == destination })
+        else {
             return
         }
         snapshot.memos.append(
-            ActionMemo(planID: destination, kind: kind, text: cleanText)
+            ActionMemo(
+                planID: destination,
+                categoryID: plan.categoryID,
+                occurredAt: plan.span.start,
+                kind: kind,
+                text: cleanText
+            )
         )
         Task { await persist() }
     }
@@ -1768,18 +1752,40 @@ final class AppModel {
         text: String,
         kind: MemoKind,
         toTargetID targetID: String,
-        planID: UUID? = nil
+        planID: UUID? = nil,
+        categoryID: String? = nil,
+        occurredAt: Date? = nil
     ) {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let destination = planID ?? selectedMemoPlanID
-        guard !cleanText.isEmpty, !targetID.isEmpty, let destination,
-              snapshot.plans.contains(where: { $0.id == destination }) else {
-            return
+        guard !cleanText.isEmpty, !targetID.isEmpty else { return }
+        let destination = planID.flatMap { candidate in
+            snapshot.plans.contains { $0.id == candidate } ? candidate : nil
         }
         snapshot.memos.append(
             ActionMemo(
                 planID: destination,
                 targetID: targetID,
+                categoryID: categoryID,
+                occurredAt: occurredAt,
+                kind: kind,
+                text: cleanText
+            )
+        )
+        Task { await persist() }
+    }
+
+    func addMemo(
+        text: String,
+        kind: MemoKind,
+        categoryID: String,
+        on date: Date
+    ) {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty, !categoryID.isEmpty else { return }
+        snapshot.memos.append(
+            ActionMemo(
+                categoryID: categoryID,
+                occurredAt: date,
                 kind: kind,
                 text: cleanText
             )
@@ -1819,13 +1825,16 @@ final class AppModel {
     ) {
         let destination = planID ?? selectedMemoPlanID
         guard let destination,
-              snapshot.plans.contains(where: { $0.id == destination }) else {
+              let plan = snapshot.plans.first(where: { $0.id == destination })
+        else {
             return
         }
         let fallbackText = attachmentKind == .photo ? "사진 메모" : "음성 메모"
         snapshot.memos.append(
             ActionMemo(
                 planID: destination,
+                categoryID: plan.categoryID,
+                occurredAt: plan.span.start,
                 kind: kind,
                 text: text?.trimmingCharacters(in: .whitespacesAndNewlines)
                     .nilIfEmpty ?? fallbackText,
@@ -2479,7 +2488,7 @@ final class AppModel {
         let deletedIDs = Set([planID] + descendants.map(\.id))
         snapshot.plans.removeAll { deletedIDs.contains($0.id) }
         snapshot.memos.removeAll {
-            deletedIDs.contains($0.planID)
+            $0.planID.map(deletedIDs.contains) == true
         }
         snapshot.actuals = snapshot.actuals.map { actual in
             guard actual.planID.map(deletedIDs.contains) == true
@@ -5149,6 +5158,9 @@ final class AppModel {
             from: value.actuals,
             suppressedIDs: value.settings.suppressedActualIDs
         )
+        // iCloud can still hand back placeholder plans written by an older
+        // build on this or another device.
+        MemoShellPlanMigration.apply(to: &value)
         return value
     }
 

@@ -4198,11 +4198,13 @@ private struct TimelineDetailPanel: View {
                     from: actuals,
                     inside: focusedSpan
                 )
-            let displayedAutomaticActuals = MovementDisplayEngine
+            let displayedAutomaticActuals = RestSleepDisplayEngine
                 .visibleActuals(
-                    automaticActuals,
-                    travel: model.snapshot.travel,
-                    asOf: .now
+                    MovementDisplayEngine.visibleActuals(
+                        automaticActuals,
+                        travel: model.snapshot.travel,
+                        asOf: .now
+                    )
                 )
             let sleepActuals = deduplicatedActuals(
                 displayedAutomaticActuals
@@ -6007,24 +6009,6 @@ private struct DetailMemoField: View {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var existingMemoPlanID: UUID? {
-        if let planID = selection?.planID { return planID }
-        if let actualID = selection?.actualID,
-           let actual = model.snapshot.actuals.first(where: { $0.id == actualID }),
-           let planID = actual.planID {
-            return planID
-        }
-        guard let selection, let categoryID = selection.categoryID else { return nil }
-        return model.snapshot.plans
-            .filter {
-                $0.categoryID == categoryID
-                    && $0.title == "메모 - \(selection.categoryName ?? section.rawValue)"
-                    && Calendar.autoupdatingCurrent.isDate($0.span.start, inSameDayAs: selection.span.start)
-            }
-            .sorted { $0.span.start > $1.span.start }
-            .first?.id
-    }
-
     private var savedMemos: [ActionMemo] {
         guard let selection else {
             return []
@@ -6043,8 +6027,10 @@ private struct DetailMemoField: View {
                 .values
                 .sorted { $0.createdAt < $1.createdAt }
         }
-        guard let planID = existingMemoPlanID else { return [] }
-        return model.memos(for: planID)
+        return model.memos(
+            forCategoryID: selection.categoryID,
+            on: selection.span.start
+        )
     }
 
     private var latestMemo: ActionMemo? {
@@ -6091,19 +6077,25 @@ private struct DetailMemoField: View {
 
     private func save() {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty else { return }
+        guard !clean.isEmpty, let selection else { return }
         if let editingMemoID {
             model.updateMemo(editingMemoID, text: clean, kind: .idea)
-        } else if let targetID = selection?.memoTargetID,
-                  let planID = memoTargetPlanID() {
+        } else if let targetID = selection.memoTargetID {
             model.addMemo(
                 text: clean,
                 kind: .idea,
                 toTargetID: targetID,
-                planID: planID
+                planID: linkedPlanID(),
+                categoryID: selection.categoryID,
+                occurredAt: selection.span.start
             )
-        } else if let planID = memoTargetPlanID() {
-            model.addMemo(text: clean, kind: .idea, to: planID)
+        } else if let categoryID = selection.categoryID {
+            model.addMemo(
+                text: clean,
+                kind: .idea,
+                categoryID: categoryID,
+                on: selection.span.start
+            )
         }
         reset()
     }
@@ -6126,24 +6118,15 @@ private struct DetailMemoField: View {
         isFocused = false
     }
 
-    private func memoTargetPlanID() -> UUID? {
+    /// The plan this note happens to sit on, if any. A note never creates one.
+    private func linkedPlanID() -> UUID? {
         if let planID = selection?.planID {
             return planID
         }
-        if let actualID = selection?.actualID,
-           let actual = model.snapshot.actuals.first(where: { $0.id == actualID }),
-           let planID = actual.planID {
-            return planID
-        }
-        guard let selection,
-              let categoryID = selection.categoryID else {
-            return nil
-        }
-        return model.memoPlan(
-            forCategoryID: categoryID,
-            categoryName: selection.categoryName ?? section.rawValue,
-            near: selection.span.start
-        ).id
+        guard let actualID = selection?.actualID else { return nil }
+        return model.snapshot.actuals
+            .first { $0.id == actualID }?
+            .planID
     }
 }
 
@@ -7218,9 +7201,12 @@ private struct TimelineBoard: View {
             asOf: now
         )
             .sorted { $0.startedAt < $1.startedAt }
-        let displayedVisibleActuals = MovementDisplayEngine.visibleActuals(
-            visibleActuals,
-            travel: model.snapshot.travel,
+        let displayedVisibleActuals = RestSleepDisplayEngine.visibleActuals(
+            MovementDisplayEngine.visibleActuals(
+                visibleActuals,
+                travel: model.snapshot.travel,
+                asOf: now
+            ),
             asOf: now
         )
         // 일·주·월·년이 모두 같은 줄 목록을 쓴다. 예전에는 하루만 이 경로를
@@ -9370,30 +9356,11 @@ private struct TimelineBoard: View {
             )
             return
         }
-        if TaptionProductScope.automaticLoggingOnly {
-            onSelection?(
-                TimelineSelection(
-                    title: row.title,
-                    span: visibleSpan,
-                    planID: nil,
-                    isRoute: categoryID == "movement"
-                        || categoryID == "location",
-                    categoryID: categoryID,
-                    categoryName: row.title
-                )
-            )
-            return
-        }
-        let memoPlan = model.memoPlan(
-            forCategoryID: categoryID,
-            categoryName: row.title,
-            near: model.selectedDate
-        )
         onSelection?(
             TimelineSelection(
                 title: row.title,
-                span: memoPlan.span,
-                planID: memoPlan.id,
+                span: visibleSpan,
+                planID: nil,
                 isRoute: categoryID == "movement" || categoryID == "location",
                 categoryID: categoryID,
                 categoryName: row.title

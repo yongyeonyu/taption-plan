@@ -140,6 +140,31 @@ enum ActualIntervalMergeEngine {
             $0 + $1.duration
         }
     }
+
+    /// `span` 에서 `covered` 가 덮은 시간을 뺀 나머지 조각. 조각은 시작 시각
+    /// 순이고 서로 겹치지 않는다. `covered` 는 정렬돼 있지 않아도 된다.
+    static func subtracting(
+        _ covered: [TimeSpan],
+        from span: TimeSpan
+    ) -> [TimeSpan] {
+        guard span.duration > 0 else { return [] }
+        var remaining: [TimeSpan] = []
+        var cursor = span.start
+        for block in union(covered, mergeGap: 0)
+        where block.end > span.start && block.start < span.end {
+            if block.start > cursor {
+                remaining.append(
+                    TimeSpan(start: cursor, end: min(block.start, span.end))
+                )
+            }
+            cursor = max(cursor, block.end)
+            if cursor >= span.end { break }
+        }
+        if cursor < span.end {
+            remaining.append(TimeSpan(start: cursor, end: span.end))
+        }
+        return remaining.filter { $0.duration > 0 }
+    }
 }
 
 /// Keeps measured movement records as raw evidence while showing one
@@ -167,6 +192,78 @@ enum MovementDisplayEngine {
             )
             return overlap < coverageThreshold
         }
+    }
+}
+
+/// 잠든 시간은 정지 문맥에서도 "집에서 휴식"으로 잡힌다. 두 기록을 그대로
+/// 두면 같은 시각을 휴식과 수면이 각각 세어 하루 합계가 흐른 시간을 넘는다.
+/// 측정된 원본은 그대로 두고, 화면과 합계가 함께 읽는 값에서만 수면이 덮은
+/// 만큼을 덜어 낸다. 수면이 통째로 덮은 휴식만 사라지고 나머지는 남는다.
+enum RestSleepDisplayEngine {
+    /// 수면이 이기는 대상은 "쉬고 있었다"는 뜻뿐인 휴식 분류(집에서 휴식·
+    /// 카페·사용자 휴식)로 한정한다. 머무름·대기는 `activity`, 근무·수업·
+    /// 통화·회의는 각자의 분류라 여기에 들어오지 않는다. 그것들이 수면과
+    /// 겹친다면 감출 일이 아니라 따로 봐야 할 잘못이다.
+    static func isRest(_ actual: ActualRecord) -> Bool {
+        actual.categoryID == "rest"
+    }
+
+    static func visibleActuals(
+        _ actuals: [ActualRecord],
+        asOf date: Date = .now
+    ) -> [ActualRecord] {
+        guard actuals.contains(where: isRest) else { return actuals }
+        let sleepSpans = ActualIntervalMergeEngine.union(
+            actuals
+                .filter(AutomaticRecordTimelineEngine.isSleep)
+                .map { $0.span(asOf: date) },
+            mergeGap: 0
+        )
+        guard !sleepSpans.isEmpty else { return actuals }
+
+        return actuals.flatMap { actual -> [ActualRecord] in
+            guard isRest(actual) else { return [actual] }
+            let span = actual.span(asOf: date)
+            guard span.duration > 0 else { return [actual] }
+            let remainders = ActualIntervalMergeEngine.subtracting(
+                sleepSpans,
+                from: span
+            )
+            guard remainders != [span] else { return [actual] }
+            return remainders.enumerated().map { offset, remainder in
+                var trimmed = actual
+                // 첫 조각이 원본 식별자를 지켜야 기록 상세로 넘어갈 수 있고,
+                // 나머지 조각도 서로 다른 식별자라야 목록에서 지워지지 않는다.
+                trimmed.id = offset == 0
+                    ? actual.id
+                    : remainderID(of: actual.id, offset: offset)
+                trimmed.startedAt = remainder.start
+                trimmed.endedAt = actual.endedAt == nil && remainder.end >= date
+                    ? nil
+                    : remainder.end
+                return trimmed
+            }
+        }
+    }
+
+    /// 같은 기록을 다시 잘라도 같은 값이 나와야 화면 갱신마다 선택이 풀리지
+    /// 않는다. 자동 기록의 안정된 식별자와 같은 방식으로 만든다.
+    private static func remainderID(of id: UUID, offset: Int) -> UUID {
+        var bytes = withUnsafeBytes(of: id.uuid) { Array($0) }
+        var hash = UInt64(14_695_981_039_346_656_037) &+ UInt64(offset)
+        for index in bytes.indices {
+            hash ^= UInt64(bytes[index])
+            hash = hash &* 1_099_511_628_211
+            bytes[index] = UInt8(truncatingIfNeeded: hash >> 24)
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 }
 
@@ -648,22 +745,15 @@ struct TimelinePeriodNavigationEngine: Sendable {
         snapshot: TaptionDataSnapshot,
         asOf: Date = .now
     ) -> Bool {
-        guard direction != 0,
-              let targetDate = adjacentDate(
-                from: date,
-                level: level,
-                direction: direction
-              ) else {
-            return false
-        }
-        let targetSpan = TimelineAggregationEngine(
-            calendar: calendar
-        ).interval(for: level, containing: targetDate)
-        return containsTimelineData(
-            in: targetSpan,
-            snapshot: snapshot,
-            asOf: asOf
-        )
+        // 기록이 없는 날짜도 고를 수 있어야 한다. 계획을 세우려면 아직
+        // 아무것도 없는 앞날로 넘어가야 하고, 빈 날이라는 사실 자체도
+        // 확인할 수 있어야 한다. 달력이 날짜를 만들어 주는지만 본다.
+        guard direction != 0 else { return false }
+        return adjacentDate(
+            from: date,
+            level: level,
+            direction: direction
+        ) != nil
     }
 
     func containsTimelineData(
@@ -765,6 +855,84 @@ enum ActionMemoEditingEngine {
         value.kind = kind
         value.updatedAt = date
         return value
+    }
+}
+
+/// A memo used to need a host plan, so a note left on a category row created a
+/// one-minute placeholder titled `메모 - <카테고리>`. Those placeholders then
+/// showed up in the 기록 탭 계획 카드 as plans the user never made. This lifts
+/// their notes into standalone memos and removes only the placeholders.
+enum MemoShellPlanMigration {
+    static let titlePrefix = "메모 - "
+    private static let shellDuration: TimeInterval = 60
+
+    /// Deliberately strict: every condition is something the placeholder
+    /// factory always produced. A plan that fails even one of them is a plan
+    /// the user could have made by hand, so it is left alone.
+    static func isShell(
+        _ plan: PlanRecord,
+        actuals: [ActualRecord],
+        recordLinks: [RecordLink]
+    ) -> Bool {
+        guard plan.title.hasPrefix(titlePrefix),
+              plan.title.count > titlePrefix.count,
+              abs(plan.span.duration - shellDuration) < 0.5,
+              plan.parentID == nil,
+              plan.status == .planned,
+              plan.origin == .user,
+              !plan.isFixed,
+              !plan.isImportant,
+              plan.middleCategoryName == nil,
+              plan.subCategoryName == nil,
+              plan.repeatRules == nil,
+              plan.externalCalendarID == nil,
+              plan.externalEventID == nil else {
+            return false
+        }
+        // A placeholder was never started, completed or linked to anything.
+        guard !actuals.contains(where: {
+            $0.planID == plan.id || $0.routineID == plan.id
+        }) else {
+            return false
+        }
+        let nodeIDs: Set<String> = [
+            "action.\(plan.id.uuidString)",
+            "routine.\(plan.id.uuidString)",
+        ]
+        return !recordLinks.contains {
+            nodeIDs.contains($0.fromNodeID) || nodeIDs.contains($0.toNodeID)
+        }
+    }
+
+    /// Idempotent: once the placeholders are gone a second run finds nothing.
+    static func apply(to snapshot: inout TaptionDataSnapshot) {
+        let shells = snapshot.plans.filter {
+            isShell(
+                $0,
+                actuals: snapshot.actuals,
+                recordLinks: snapshot.recordLinks
+            )
+        }
+        guard !shells.isEmpty else { return }
+        let shellsByID = Dictionary(
+            shells.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        snapshot.memos = snapshot.memos.map { memo in
+            guard let planID = memo.planID,
+                  let shell = shellsByID[planID] else {
+                return memo
+            }
+            var lifted = memo
+            lifted.planID = nil
+            if lifted.targetID == "plan.\(planID.uuidString)" {
+                lifted.targetID = nil
+            }
+            lifted.categoryID = memo.categoryID ?? shell.categoryID
+            lifted.occurredAt = shell.span.start
+            return lifted
+        }
+        snapshot.plans.removeAll { shellsByID[$0.id] != nil }
     }
 }
 
