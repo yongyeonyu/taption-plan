@@ -1587,14 +1587,20 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testRecordClockRingPalettesStayDistinct() {
-        let sets = RecordRingPaletteStyle.allCases.map {
-            Set(RecordRingPalette.hexes[$0] ?? [])
+    func testRecordTimelineColorsStayDistinctWithinEachRing() {
+        let palettes = [
+            RecordTimelinePalette.categoryHexes,
+            RecordTimelinePalette.sleepStageHexes,
+            RecordTimelinePalette.travelHexes,
+            RecordTimelinePalette.dayPhaseHexes,
+        ]
+        for palette in palettes {
+            XCTAssertEqual(Set(palette.values).count, palette.count)
         }
-        XCTAssertTrue(sets.allSatisfy { $0.count >= 5 })
-        for pair in zip(sets, sets.dropFirst()) {
-            XCTAssertTrue(pair.0.isDisjoint(with: pair.1))
-        }
+        XCTAssertNotEqual(
+            RecordTimelinePalette.sleepStageHexes[SleepStage.core.rawValue],
+            RecordTimelinePalette.sleepStageHexes[SleepStage.deep.rawValue]
+        )
     }
 
     func testWatchVibrationWithoutUndergroundContextDoesNotBecomeSubway() {

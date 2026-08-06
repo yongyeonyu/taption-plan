@@ -551,10 +551,7 @@ struct ReviewView: View {
         for pass in [false, true] {
             for ring in revealed
             where active.contains(ring.categoryID) == pass {
-                let tint = RecordRingPalette.color(
-                    .complementary,
-                    token: ring.categoryID
-                )
+                let tint = color(forCategoryID: ring.categoryID)
                 let width = pass
                     ? Self.clockBandWidth + 6
                     : Self.clockBandWidth
@@ -760,21 +757,11 @@ struct ReviewView: View {
         return edge
     }
 
-    /// 수면 단계는 깊이가 짙기 순서로 읽히고, 깨어 있음만 따뜻한 색으로
-    /// 떼어 놓는다. 이동은 수단별 색을 시간표와 같은 계열에서 가져온다.
-    /// 일과는 오감을 같은 주황 계열로 묶어 하루의 두 매듭이 한눈에 보이게 한다.
     private func detailColor(
         _ kind: RecordClockDetailKind,
         token: String
     ) -> Color {
-        switch kind {
-        case .dayPhase:
-            return RecordRingPalette.color(.dark, token: token)
-        case .sleepStage:
-            return RecordRingPalette.color(.pastel, token: token)
-        case .travel:
-            return RecordRingPalette.color(.fluorescent, token: token)
-        }
+        RecordTimelinePalette.detailColor(kind, token: token)
     }
 
     private func detailName(
@@ -1579,16 +1566,10 @@ struct ReviewView: View {
     }
 
     private func color(forCategoryID id: String) -> Color {
-        if let hex = content.groups.first(where: { $0.id == id })?.colorHex {
-            return Color(hex: hex)
-        }
-        switch id {
-        case TimelineRowKind.appUsage.rawValue: return .tpProjectDark
-        case TimelineRowKind.weather.rawValue: return .tpWeatherDark
-        case TimelineRowKind.calendar.rawValue:
-            return Color(red: 0.56, green: 0.56, blue: 0.58)
-        default: return PlanCategory(categoryID: id).darkColor
-        }
+        RecordTimelinePalette.categoryColor(
+            id,
+            fallbackHex: content.groups.first { $0.id == id }?.colorHex
+        )
     }
 }
 

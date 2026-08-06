@@ -72,34 +72,75 @@ extension Color {
     }
 }
 
-enum RecordRingPaletteStyle: CaseIterable, Sendable {
-    case dark
-    case pastel
-    case complementary
-    case fluorescent
-}
-
-enum RecordRingPalette {
-    static let hexes: [RecordRingPaletteStyle: [String]] = [
-        .dark: ["#102A43", "#3D2645", "#1B4332", "#4A1D2F", "#243B53"],
-        .pastel: ["#A8DADC", "#FFD6A5", "#CDB4DB", "#BDE0FE", "#CAFFBF"],
-        .complementary: ["#0077B6", "#F77F00", "#7B2CBF", "#2A9D8F", "#D62828"],
-        .fluorescent: ["#00C2FF", "#FF2D95", "#70E000", "#FF9500", "#8A5CFF"],
+/// 기록 시간표와 바로 아래 범례·아이콘이 함께 쓰는 단일 색상표.
+/// 해시 팔레트는 서로 다른 항목이 같은 칸에 충돌할 수 있으므로, 자동 기록과
+/// 내장 카테고리는 고정 색을 갖는다.
+enum RecordTimelinePalette {
+    static let categoryHexes: [String: String] = [
+        "calendar": "#52525B", "location": "#0284C7",
+        "movement": "#D97706", "sleep": "#4F46E5",
+        "activity": "#16A34A", "appUsage": "#0891B2",
+        "weather": "#0EA5E9", "photo": "#9333EA", "memo": "#6B7280",
+        "project": "#0F766E", "exercise": "#DC2626", "study": "#4338CA",
+        "hobby": "#059669", "routine": "#CA8A04",
+        "relationship": "#DB2777", "rest": "#64748B",
+        "travel": "#EA580C", "health": "#0D9488", "event": "#C026D3",
+        "work": "#2563EB", "family": "#E11D48", "parenting": "#F97316",
+        "finance": "#65A30D", "housing": "#78716C", "career": "#7C3AED",
+        "creative": "#BE185D", "pet": "#A16207", "community": "#15803D",
+        "student": "#0369A1", "exam": "#B45309", "military": "#3F6212",
+        "athlete": "#B91C1C", "pregnancy": "#C2418C",
+        "caregiver": "#6D28D9", "government": "#334155", "food": "#C2410C",
     ]
 
-    static func color(
-        _ style: RecordRingPaletteStyle,
-        token: String
-    ) -> Color {
-        let values = hexes[style] ?? ["#111111"]
-        return Color(hex: values[stableIndex(token, count: values.count)])
+    static let sleepStageHexes: [String: String] = [
+        SleepStage.inBed.rawValue: "#94A3B8",
+        SleepStage.awake.rawValue: "#F59E0B",
+        SleepStage.core.rawValue: "#3B82F6",
+        SleepStage.deep.rawValue: "#312E81",
+        SleepStage.rem.rawValue: "#D946EF",
+        SleepStage.asleepUnspecified.rawValue: "#14B8A6",
+    ]
+
+    static let travelHexes: [String: String] = [
+        TravelMode.walking.rawValue: "#65A30D",
+        TravelMode.running.rawValue: "#DC2626",
+        TravelMode.cycling.rawValue: "#0891B2",
+        TravelMode.bus.rawValue: "#F97316",
+        TravelMode.subway.rawValue: "#7C3AED",
+        TravelMode.taxi.rawValue: "#EAB308",
+        TravelMode.car.rawValue: "#2563EB",
+        TravelMode.train.rawValue: "#BE123C",
+        TravelMode.airplane.rawValue: "#0EA5E9",
+        TravelMode.ship.rawValue: "#0F766E",
+    ]
+
+    static let dayPhaseHexes: [String: String] = [
+        DayPhase.sleep.rawValue: "#4338CA",
+        DayPhase.commuteToWork.rawValue: "#EA580C",
+        DayPhase.commuteToSchool.rawValue: "#0284C7",
+        DayPhase.commuteToAcademy.rawValue: "#7C3AED",
+        DayPhase.activityDeparture.rawValue: "#65A30D",
+        DayPhase.work.rawValue: "#1E3A8A",
+        DayPhase.study.rawValue: "#2563EB",
+        DayPhase.commuteHomeFromWork.rawValue: "#DC2626",
+        DayPhase.commuteHomeFromSchool.rawValue: "#0891B2",
+        DayPhase.commuteHomeFromAcademy.rawValue: "#DB2777",
+        DayPhase.activityReturn.rawValue: "#15803D",
+        DayPhase.evening.rawValue: "#CA8A04",
+    ]
+
+    static func categoryColor(_ id: String, fallbackHex: String? = nil) -> Color {
+        Color(hex: categoryHexes[id] ?? fallbackHex ?? "#475569")
     }
 
-    private static func stableIndex(_ token: String, count: Int) -> Int {
-        let hash = token.unicodeScalars.reduce(UInt64(5_381)) {
-            (($0 << 5) &+ $0) ^ UInt64($1.value)
+    static func detailColor(_ kind: RecordClockDetailKind, token: String) -> Color {
+        let hex = switch kind {
+        case .dayPhase: dayPhaseHexes[token]
+        case .sleepStage: sleepStageHexes[token]
+        case .travel: travelHexes[token]
         }
-        return Int(hash % UInt64(max(1, count)))
+        return Color(hex: hex ?? "#475569")
     }
 }
 
