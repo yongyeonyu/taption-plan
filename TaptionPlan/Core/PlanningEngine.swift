@@ -170,28 +170,107 @@ enum ActualIntervalMergeEngine {
 /// Keeps measured movement records as raw evidence while showing one
 /// canonical travel segment when the route inference covers that interval.
 enum MovementDisplayEngine {
+    static func reviewActuals(
+        _ actuals: [ActualRecord],
+        travel: [TravelSegment],
+        asOf date: Date = .now
+    ) -> [ActualRecord] {
+        let canonical = travel.compactMap { segment -> ActualRecord? in
+            let end = min(segment.span.end, date)
+            guard end > segment.span.start else { return nil }
+            return ActualRecord(
+                id: segment.id,
+                planID: nil,
+                title: MovementPresentation.title(for: segment.mode),
+                categoryID: "movement",
+                startedAt: segment.span.start,
+                endedAt: end,
+                source: .location,
+                confidence: segment.confidence,
+                createdAt: segment.span.start,
+                behavior: segment.mode.rawValue,
+                evidence: segment.evidence,
+                manuallyCorrected: segment.isConfirmed
+            )
+        }
+        return visibleActuals(actuals, travel: travel, asOf: date) + canonical
+    }
+
     static func visibleActuals(
         _ actuals: [ActualRecord],
         travel: [TravelSegment],
         asOf date: Date = .now
     ) -> [ActualRecord] {
-        guard !travel.isEmpty else { return actuals }
         let travelSpans = travel.map(\.span)
-        return actuals.filter { actual in
-            guard actual.categoryID == "movement" else { return true }
-            let actualSpan = actual.span(asOf: date)
-            guard actualSpan.duration > 0 else { return false }
-            let overlap = ActualIntervalMergeEngine.duration(
-                of: travelSpans.compactMap {
-                    $0.intersection(with: actualSpan)
-                }
+        return actuals.flatMap { actual -> [ActualRecord] in
+            guard isMovementRecord(actual) else {
+                return [actual]
+            }
+            guard isReliable(actual) else { return [] }
+            let span = actual.span(asOf: date)
+            guard span.duration > 0 else { return [] }
+            let remainders = ActualIntervalMergeEngine.subtracting(
+                travelSpans,
+                from: span
             )
-            let coverageThreshold = min(
-                30,
-                max(1, actualSpan.duration * 0.5)
-            )
-            return overlap < coverageThreshold
+            return remainders.enumerated().map { offset, remainder in
+                var value = actual
+                value.id = offset == 0
+                    ? actual.id
+                    : remainderID(actual.id, offset: offset)
+                value.startedAt = remainder.start
+                value.endedAt = remainder.end
+                return value
+            }
         }
+    }
+
+    /// 위치 체류에서 오래 이어진 보행 후보와 저신뢰 기본 후보는 이동 결과로
+    /// 쓰지 않는다. 걷기·달리기·자전거는 사용자 교정, 운동 기록 또는 높은
+    /// 신뢰도의 모션 판정이 있을 때만 남긴다.
+    private static func isReliable(_ actual: ActualRecord) -> Bool {
+        guard let mode = MovementPresentation.mode(for: actual) else {
+            return actual.confidence != .low
+        }
+        guard [.walking, .running, .cycling].contains(mode) else { return true }
+        if actual.manuallyCorrected || actual.source == .manual
+            || actual.source == .timer {
+            return true
+        }
+        guard actual.source != .location, actual.confidence == .high else {
+            return false
+        }
+        if actual.source == .healthKit || actual.source == .appleWatch {
+            return true
+        }
+        let evidence = actual.evidence.joined(separator: " ").lowercased()
+        return actual.source == .motion
+            || ["걸음", "cadence", "보폭", "pedometer", "gps", "core motion"]
+                .contains { evidence.contains($0) }
+    }
+
+    private static func isMovementRecord(_ actual: ActualRecord) -> Bool {
+        guard actual.categoryID != "appUsage" else { return false }
+        return actual.categoryID == "movement"
+            || MovementPresentation.mode(for: actual) != nil
+    }
+
+    private static func remainderID(_ id: UUID, offset: Int) -> UUID {
+        var bytes = withUnsafeBytes(of: id.uuid) { Array($0) }
+        var hash = UInt64(14_695_981_039_346_656_037) &+ UInt64(offset)
+        for index in bytes.indices {
+            hash ^= UInt64(bytes[index])
+            hash = hash &* 1_099_511_628_211
+            bytes[index] = UInt8(truncatingIfNeeded: hash >> 24)
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 }
 

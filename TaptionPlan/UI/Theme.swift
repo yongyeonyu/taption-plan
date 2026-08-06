@@ -81,6 +81,7 @@ enum RecordTimelinePalette {
         "movement": "#D97706", "sleep": "#4F46E5",
         "activity": "#16A34A", "appUsage": "#0891B2",
         "weather": "#0EA5E9", "photo": "#9333EA", "memo": "#6B7280",
+        "unconfirmed": "#CBD5E1",
         "project": "#0F766E", "exercise": "#DC2626", "study": "#4338CA",
         "hobby": "#059669", "routine": "#CA8A04",
         "relationship": "#DB2777", "rest": "#64748B",

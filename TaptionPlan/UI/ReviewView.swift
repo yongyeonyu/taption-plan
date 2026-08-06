@@ -1003,6 +1003,7 @@ struct ReviewView: View {
         }
         // 기록이 없는 날도 칸을 차지해야 요일·날짜가 전부 보인다.
         .chartXScale(domain: content.period.start...content.period.end)
+        .chartYScale(domain: 0...barMaximumHours)
         .chartXAxis {
             AxisMarks(values: .stride(by: barUnit, count: barLabelStride)) {
                 value in
@@ -1090,6 +1091,14 @@ struct ReviewView: View {
 
     private var barUnit: Calendar.Component {
         model.reviewScale == .year ? .month : .day
+    }
+
+    private var barMaximumHours: Double {
+        switch model.reviewScale {
+        case .week, .month: 24
+        case .year: RecordChartEngine.maxTotalHours(content.chartBuckets)
+        case .day: 24
+        }
     }
 
     private var barLabelStride: Int {
@@ -1397,10 +1406,16 @@ struct ReviewView: View {
 
     private func rebuildContent() {
         let engine = ReviewEngine()
+        let now = Date.now
         // 화면(원형·막대·목록)과 합계가 모두 이 한 값을 읽는다. 수면과 겹친
         // 휴식·생활을 여기서 한 번만 덜어 내야 보이는 시간과 합계가 맞는다.
         let actuals = RestSleepDisplayEngine.visibleActuals(
-            model.snapshot.actuals
+            MovementDisplayEngine.reviewActuals(
+                model.snapshot.actuals,
+                travel: model.snapshot.travel,
+                asOf: now
+            ),
+            asOf: now
         )
         let level = model.reviewScale.timelineLevel
         let period = engine.aggregation.interval(
@@ -1419,13 +1434,19 @@ struct ReviewView: View {
         )
         if selected != selectedBucketIDs { selectedBucketIDs = selected }
 
+        let periodActuals = ReviewCoverageEngine.records(
+            actuals: actuals,
+            in: [period],
+            asOf: now
+        )
         let chartBuckets = model.reviewScale == .day
             ? []
             : RecordChartEngine.buckets(
-                actuals: actuals,
+                actuals: periodActuals,
                 in: period,
                 unit: model.reviewScale == .year ? .month : .day,
-                calendar: engine.aggregation.calendar
+                calendar: engine.aggregation.calendar,
+                asOf: now
             )
         let selectedChartSpan = ReviewSelectionEngine.chartSpan(
             selectedChartBucketID,
@@ -1442,13 +1463,19 @@ struct ReviewView: View {
             selectedIDs: selected
         )
         let spans = selectedChartSpan.map { [$0] } ?? bucketSpans
+        let displayActuals = ReviewCoverageEngine.records(
+            actuals: actuals,
+            in: spans,
+            asOf: now
+        )
         let report = engine.report(
             over: spans,
             plans: model.snapshot.plans,
-            actuals: actuals,
+            actuals: displayActuals,
             weather: model.snapshot.weather,
             photos: model.snapshot.photos,
-            memos: model.snapshot.memos
+            memos: model.snapshot.memos,
+            asOf: now
         )
 
         var rings: [RecordClockRing] = []
@@ -1456,7 +1483,11 @@ struct ReviewView: View {
         var detailRings: [RecordClockDetailRing] = []
         var selectedChartBucketIDs: Set<String> = []
         if model.reviewScale == .day, let day = spans.first {
-            rings = RecordChartEngine.clockRings(actuals: actuals, in: day)
+            rings = RecordChartEngine.clockRings(
+                actuals: displayActuals,
+                in: day,
+                asOf: now
+            )
             // 일과 고리도 이미 만들어 둔 수면·정지 문맥·이동만 읽는다. 집이
             // 아직 좌표를 갖지 않았으면 오감을 만들 수 없어 그만큼 빈다.
             phaseRing = RecordClockDetailEngine.phaseRing(
@@ -1504,9 +1535,10 @@ struct ReviewView: View {
         if content.phaseRing != phaseRing { highlightedPhaseArcID = nil }
 
         let groups = ActualRecordGroupingEngine.groups(
-            actuals: actuals,
+            actuals: displayActuals,
             in: spans,
-            categories: model.snapshot.categories
+            categories: model.snapshot.categories,
+            asOf: now
         )
         let groupIDs = Set(groups.map(\.id))
         let collapsesAllGroups = content.spans.isEmpty
@@ -1554,13 +1586,17 @@ struct ReviewView: View {
     }
 
     private func categoryName(_ id: String) -> String {
-        model.snapshot.categories.first { $0.id == id }?.name
+        if id == ReviewCoverageEngine.unconfirmedCategoryID { return "미확인" }
+        return model.snapshot.categories.first { $0.id == id }?.name
             ?? TimelineRowKind.title(forCategoryID: id)
             ?? PlanCategory(categoryID: id).rawValue
     }
 
     private func symbolName(_ group: RecordCategoryGroup) -> String {
-        TimelineRowKind(categoryID: group.id)?.systemImage
+        if group.id == ReviewCoverageEngine.unconfirmedCategoryID {
+            return "questionmark.circle"
+        }
+        return TimelineRowKind(categoryID: group.id)?.systemImage
             ?? group.icon?.systemImage
             ?? PlanCategory(categoryID: group.id).systemImage
     }

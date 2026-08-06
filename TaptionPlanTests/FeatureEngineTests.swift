@@ -334,6 +334,169 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testMovementDisplayRejectsLocationWalkingAndKeepsCanonicalCar() {
+        let start = makeDate(2026, 8, 5, 10)
+        let raw = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(12 * hour),
+            source: .location,
+            confidence: .high,
+            behavior: "walking",
+            evidence: ["위치 변화"]
+        )
+        let car = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start.addingTimeInterval(9 * hour),
+                end: start.addingTimeInterval(11 * hour)
+            ),
+            distanceMeters: 20_100,
+            confidence: .high,
+            evidence: ["도로 위 차량 속도"]
+        )
+
+        XCTAssertTrue(
+            MovementDisplayEngine.visibleActuals(
+                [raw],
+                travel: [car],
+                asOf: start.addingTimeInterval(12 * hour)
+            ).isEmpty
+        )
+        let review = MovementDisplayEngine.reviewActuals(
+            [raw],
+            travel: [car],
+            asOf: start.addingTimeInterval(12 * hour)
+        )
+        XCTAssertEqual(review.map(\.title), ["자동차"])
+        XCTAssertEqual(review.map(\.categoryID), ["movement"])
+    }
+
+    func testMovementDisplayKeepsOnlyCertainWalkingOutsideCanonicalTravel() {
+        let start = makeDate(2026, 8, 5, 9)
+        let uncertain = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(hour),
+            source: .motion,
+            confidence: .medium
+        )
+        let certain = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(hour),
+            source: .motion,
+            confidence: .high,
+            evidence: ["iPhone 걸음·거리 기록"]
+        )
+        let car = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start.addingTimeInterval(20 * 60),
+                end: start.addingTimeInterval(40 * 60)
+            ),
+            distanceMeters: 5_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+
+        XCTAssertTrue(
+            MovementDisplayEngine.visibleActuals(
+                [uncertain], travel: [], asOf: start.addingTimeInterval(hour)
+            ).isEmpty
+        )
+        let visible = MovementDisplayEngine.visibleActuals(
+            [certain],
+            travel: [car],
+            asOf: start.addingTimeInterval(hour)
+        )
+        XCTAssertEqual(visible.count, 2)
+        XCTAssertEqual(visible.reduce(0) { $0 + $1.span().duration }, 40 * 60)
+        XCTAssertTrue(visible.allSatisfy {
+            $0.span().intersection(with: car.span) == nil
+        })
+    }
+
+    func testReviewCoverageMakesPastDayExactlyTwentyFourHours() {
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 4),
+            end: makeDate(2026, 8, 5)
+        )
+        let activity = ActualRecord(
+            planID: nil,
+            title: "생활",
+            categoryID: "routine",
+            startedAt: day.start,
+            endedAt: day.start.addingTimeInterval(12 * hour),
+            source: .location
+        )
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: day.start.addingTimeInterval(2 * hour),
+            endedAt: day.start.addingTimeInterval(8 * hour),
+            source: .healthKit
+        )
+        let movement = ActualRecord(
+            planID: nil,
+            title: "자동차",
+            categoryID: "movement",
+            startedAt: day.start.addingTimeInterval(10 * hour),
+            endedAt: day.start.addingTimeInterval(14 * hour),
+            source: .motion
+        )
+
+        let records = ReviewCoverageEngine.records(
+            actuals: [activity, sleep, movement],
+            in: [day],
+            asOf: day.end
+        )
+        XCTAssertEqual(
+            records.reduce(0) { $0 + $1.span(asOf: day.end).duration },
+            24 * hour
+        )
+        XCTAssertEqual(
+            records.filter { $0.categoryID == "sleep" }
+                .reduce(0) { $0 + $1.span(asOf: day.end).duration },
+            6 * hour
+        )
+        XCTAssertEqual(
+            records.filter {
+                $0.categoryID == ReviewCoverageEngine.unconfirmedCategoryID
+            }.reduce(0) { $0 + $1.span(asOf: day.end).duration },
+            10 * hour
+        )
+        let ordered = records.map { $0.span(asOf: day.end) }
+            .sorted { $0.start < $1.start }
+        for pair in zip(ordered, ordered.dropFirst()) {
+            XCTAssertLessThanOrEqual(pair.0.end, pair.1.start)
+        }
+    }
+
+    func testReviewCoverageFillsCurrentDayOnlyThroughNow() {
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 6),
+            end: makeDate(2026, 8, 7)
+        )
+        let now = day.start.addingTimeInterval(11 * hour + 15 * 60)
+        let records = ReviewCoverageEngine.records(
+            actuals: [],
+            in: [day],
+            asOf: now
+        )
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].title, "미확인")
+        XCTAssertEqual(records[0].span(asOf: now).duration, 11 * hour + 15 * 60)
+        XCTAssertEqual(records[0].endedAt, now)
+    }
+
     // MARK: - 수면과 겹친 휴식·생활
 
     private func restSpans(

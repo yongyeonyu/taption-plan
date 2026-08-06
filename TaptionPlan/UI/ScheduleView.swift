@@ -7768,10 +7768,21 @@ private struct TimelineBoard: View {
         // 지나서 나머지 배율이 기록의 categoryID를 그대로 이름으로 찍었고
         // (appUsage), 줄 순서도 시간표와 어긋났다.
         let usesAutomaticDayRows = includesCalendar
-        let automaticActuals = AutomaticRecordTimelineEngine.activities(
+        var automaticActuals = AutomaticRecordTimelineEngine.activities(
             from: displayedVisibleActuals,
             inside: span
         )
+        if model.selectedScale == .day {
+            automaticActuals += ReviewCoverageEngine.unconfirmedRecords(
+                actuals: displayedVisibleActuals,
+                in: [span],
+                asOf: now
+            ).map { record in
+                var value = record
+                value.categoryID = "activity"
+                return value
+            }
+        }
         let categoryVisibleActuals: [ActualRecord]
         if usesAutomaticDayRows && TaptionProductScope.automaticLoggingOnly {
             categoryVisibleActuals = []
@@ -8419,7 +8430,9 @@ private struct TimelineBoard: View {
                     status: .completed,
                     isActual: true,
                     detailText:
-                        "자동 활동 · \(actualSourceName(actual.source))",
+                        actual.behavior == "unconfirmed-gap"
+                            ? "자동 기록 없음"
+                            : "자동 활동 · \(actualSourceName(actual.source))",
                     categoryID: "activity",
                     categoryName: "활동"
                 )
