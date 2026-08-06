@@ -10480,6 +10480,52 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(recomputed, [old])
     }
 
+    /// 기압 원본이 만료된 과거 기록도 대표 GPS 고도를 가지고 있으면 새 층
+    /// 기준으로 다시 표시한다. 좌표와 고도 원본은 그대로 보존한다.
+    func testReapplyingFloorsUsesStoredPointForPastStay() {
+        let base = makeDate(2026, 8, 5, 9, 0)
+        let reference = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 60,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 8
+        )
+        var place = FrequentPlace(kind: .company)
+        place.calibrateCurrentFloor(
+            to: 2,
+            from: SensorReading(timestamp: base, point: reference)
+        )
+        let pastPoint = GeoPoint(
+            latitude: reference.latitude,
+            longitude: reference.longitude,
+            altitude: 66,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 8
+        )
+        let past = PlaceStay(
+            placeKey: place.stablePlaceKey,
+            displayName: "회사",
+            floor: 19,
+            span: TimeSpan(
+                start: base.addingTimeInterval(-90 * 86_400),
+                end: base.addingTimeInterval(-90 * 86_400 + 3_600)
+            ),
+            confidence: .high,
+            point: pastPoint,
+            isConfirmed: true
+        )
+
+        let recomputed = FrequentPlaceResolutionEngine().reapplyingFloors(
+            of: place,
+            to: [past],
+            readings: []
+        )[0]
+
+        XCTAssertEqual(recomputed.floor, 4)
+        XCTAssertEqual(recomputed.point, pastPoint)
+    }
+
     /// 기록이 스스로 근거를 지니고 있으면 원본 표본 보관 기간과 상관없이
     /// 다시 매긴다. 근거가 없는 옆 기록은 그대로 둔다.
     func testReapplyingFloorsPrefersStoredEvidenceOverArchive() {
@@ -10510,7 +10556,7 @@ final class FeatureEngineTests: XCTestCase {
                 pressureKilopascals: pressure(groundPressure, risingBy: 51)
             )
         )
-        // 근거도 표본도 없는 더 오래된 기록.
+        // 기압 근거와 보관 표본은 없지만 대표 GPS 고도는 남은 더 오래된 기록.
         let older = long.addingTimeInterval(-110 * 86_400)
         let legacy = PlaceStay(
             placeKey: place.stablePlaceKey,
@@ -10537,8 +10583,10 @@ final class FeatureEngineTests: XCTestCase {
             // 2층 기준에서 51m 위, 층 높이 3m이면 19층이다. 보관분이 비어
             // 있든 엉뚱한 표본이 남아 있든 답은 기록이 지닌 근거에서 나온다.
             XCTAssertEqual(recomputed[0].floor, 19)
-            // 근거가 없는 옛 기록은 지어내지 않고 그대로 둔다.
-            XCTAssertEqual(recomputed[1], legacy)
+            // 대표 GPS 고도는 낮은 신뢰도의 원본 근거다. 기준점과 같은
+            // 고도이므로 새 2층 기준으로 다시 표시한다.
+            XCTAssertEqual(recomputed[1].floor, 2)
+            XCTAssertEqual(recomputed[1].point, legacy.point)
         }
     }
 

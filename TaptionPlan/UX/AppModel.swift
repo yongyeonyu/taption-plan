@@ -4125,9 +4125,8 @@ final class AppModel {
 
     /// 기준점을 고치면 그 기준으로 매긴 지난 기록도 다시 매겨야 한다. 원본
     /// 표본은 그대로 두고 파생된 층수만 다시 구한다. 기록이 스스로 근거를
-    /// 지녔으면 보관 기간과 무관하게 다시 매기고, 근거가 없는 옛 기록만
-    /// 7일 보관분을 뒤진다. 그마저 없으면 되살릴 방법이 없으므로 손대지 않고
-    /// 있던 층수를 그대로 남긴다.
+    /// 지녔으면 보관 기간과 무관하게 다시 매기고, 옛 기록은 7일 보관분과
+    /// 기록에 남은 대표 GPS 고도 순으로 보완한다.
     func reapplyStoredFloors(forPlaceID placeID: UUID) async {
         guard let place = settings.frequentPlaces.first(where: {
             $0.id == placeID

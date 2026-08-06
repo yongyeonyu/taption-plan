@@ -1370,9 +1370,9 @@ struct FrequentPlaceResolutionEngine: Sendable {
     }
 
     /// 기준점을 고친 뒤, 이미 저장된 이 장소의 체류를 새 기준으로 다시
-    /// 매긴다. 기록이 스스로 지닌 근거를 먼저 쓰고, 그것이 없는 옛 기록만
-    /// 7일 보관분에서 표본을 찾는다. 둘 다 없으면 다시 구할 방법이 없으므로
-    /// 있던 층수를 그대로 둔다. 지어내는 것보다 낫다.
+    /// 매긴다. 기록이 스스로 지닌 근거를 먼저 쓰고, 그것이 없는 옛 기록은
+    /// 7일 보관분과 대표 GPS 고도 순으로 보완한다. 어느 근거도 없을 때만
+    /// 있던 층수를 그대로 둔다.
     func reapplyingFloors(
         of place: FrequentPlace,
         to places: [PlaceStay],
@@ -1396,6 +1396,16 @@ struct FrequentPlaceResolutionEngine: Sendable {
             }) {
                 estimate = engine.estimate(
                     reading: reading,
+                    calibration: calibration
+                )
+            } else if let point = stay.point,
+                      point.altitude.isFinite {
+                // 예전 기록도 대표 GPS 고도는 자체 보관한다. 기압 원본이
+                // 만료됐더라도 이 낮은 신뢰도의 근거로 현재 보정값을 다시
+                // 적용할 수 있으며, 저장된 좌표와 원본 센서는 바꾸지 않는다.
+                estimate = engine.estimate(
+                    evidence: FloorEvidence(measuredAt: stay.span.start),
+                    at: point,
                     calibration: calibration
                 )
             } else {

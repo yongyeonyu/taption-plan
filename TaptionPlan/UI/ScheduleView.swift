@@ -7168,6 +7168,10 @@ private struct TimelineBoard: View {
             : axisMarkers(in: displaySpan)
         let visibleDuration = displaySpan.duration * viewport.length
         GeometryReader { boardProxy in
+            let timelineWidth = max(
+                1,
+                boardProxy.size.width - scheduleLabelColumnWidth
+            )
             VStack(spacing: 0) {
                 ScrollView(.vertical, showsIndicators: false) {
                     GeometryReader { _ in
@@ -7275,10 +7279,16 @@ private struct TimelineBoard: View {
                     .frame(height: layout.contentHeight)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .simultaneousGesture(
+                    viewportDragGesture(width: timelineWidth)
+                )
 
                 // Keep the time ruler below the timeline. It remains visible
                 // while rows scroll, like a measuring scale in an editor.
                 axis(markers: displayAxisMarkers)
+                    .simultaneousGesture(
+                        viewportDragGesture(width: timelineWidth)
+                    )
                     .simultaneousGesture(
                         TapGesture().onEnded {
                             editingPlanID = nil
@@ -7286,14 +7296,6 @@ private struct TimelineBoard: View {
                     )
             }
             .contentShape(Rectangle())
-            .simultaneousGesture(
-                viewportDragGesture(
-                    width: max(
-                        1,
-                        boardProxy.size.width - scheduleLabelColumnWidth
-                    )
-                )
-            )
             // Keep SwiftUI's recognizer as a second path for devices where a
             // UIScrollView consumes the UIKit pinch before the attached
             // recognizer receives it. Both paths share the same guarded
