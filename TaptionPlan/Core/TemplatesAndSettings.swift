@@ -11,7 +11,7 @@ enum CategoryCatalog {
         category("study", "학습", .book, "#D3C7E6", "#7654A4", "#805BB1", 6),
         category("hobby", "취미", .music, "#C4E9DA", "#477F69", "#4B9879", 7),
         category("sleep", "수면", .sleep, "#C9D6E5", "#536F91", "#5B7EA8", 8),
-        category("routine", "생활", .home, "#F7E8B4", "#A98118", "#B58A12", 9),
+        category("routine", "일과", .home, "#F7E8B4", "#A98118", "#B58A12", 9),
         category("relationship", "관계", .relationship, "#F9D9E1", "#A75B70", "#B9617B", 10),
         category("rest", "휴식", .cafe, "#E3E4E8", "#696D77", "#777C88", 11),
         category("travel", "여행", .travel, "#CDE8F1", "#407F98", "#3F91AE", 12),
@@ -217,13 +217,13 @@ enum CategoryHierarchyCatalog {
 
     static let middleSuggestionsByCategoryID: [String: [String]] = [
         "movement": [
-            "걷기", "달리기", "자전거", "대중교통", "자동차", "장거리 이동",
+            "도보", "러닝", "달리기", "자전거", "차량", "버스", "지하철", "전철",
         ],
         "location": [
             "집", "회사", "학교", "학원", "운동시설", "식당·카페",
         ],
         "activity": [
-            "수면", "운동", "명상", "회복", "걸음", "스트레칭",
+            "수면", "휴식", "이동", "업무", "생활", "샤워", "청소", "미확인", "활동",
         ],
         "photo": [
             "일상", "사람", "장소", "음식", "기록", "작품",
@@ -244,7 +244,7 @@ enum CategoryHierarchyCatalog {
             "밤잠", "낮잠", "취침 준비", "수면 회복",
         ],
         "routine": [
-            "식사", "집안일", "개인관리", "장보기", "행정", "반려동물",
+            "취침", "출근", "업무", "학업", "취미", "운동", "퇴근", "아침", "점심", "저녁",
         ],
         "relationship": [
             "가족", "친구", "연인", "동료", "모임", "육아",
@@ -314,9 +314,90 @@ enum CategoryHierarchyCatalog {
         ],
     ]
 
+    static let subSuggestionsByCategoryID: [String: [String: [String]]] = [
+        "routine": [
+            "취침": [
+                "취침", "취침 준비", "기상", "낮잠",
+            ],
+            "출근": [
+                "도보", "자동차", "버스", "지하철", "전철", "기타 이동",
+            ],
+            "아침": [
+                "기상", "아침 식사", "산책", "준비",
+            ],
+            "점심": [
+                "점심 식사", "휴식", "외출", "이동",
+            ],
+            "저녁": [
+                "저녁 식사", "정리", "휴식", "산책",
+            ],
+            "업무": [
+                "회의", "문서", "집중", "보고", "일정",
+            ],
+            "학업": [
+                "수업", "과제", "복습", "시험", "자료 정리",
+            ],
+            "취미": [
+                "영화", "게임", "독서", "동호회", "관람",
+            ],
+            "운동": [
+                "걷기운동", "달리기", "자전거", "근력운동", "요가", "스트레칭",
+            ],
+            "퇴근": [
+                "도보", "자동차", "버스", "지하철", "전철", "기타 이동",
+            ],
+        ],
+        "activity": [
+            "수면": [
+                "깊은 수면", "코어수면", "회복 수면", "야간 수면", "낮잠",
+            ],
+            "휴식": [
+                "정지", "샤워", "목욕", "명상", "짧은 휴식",
+            ],
+            "이동": [
+                "걷기", "달리기", "자전거", "자동차", "버스", "지하철",
+            ],
+            "업무": [
+                "연락", "문서", "회의", "처리", "기획",
+            ],
+            "생활": [
+                "청소", "요리", "정리", "빨래", "세탁",
+            ],
+            "샤워": [
+                "샤워", "목욕", "모발", "피부 관리",
+            ],
+            "청소": [
+                "물걸레", "청소기", "정리", "거주 공간 정리",
+            ],
+            "미확인": [
+                "분류 대기", "상태 확인", "추정 정리",
+            ],
+            "활동": [
+                "메모", "기록", "연결", "임시 분류",
+            ],
+        ],
+    ]
+
+    private static let fallbackSubSuggestions = [
+        "추가", "기타", "기록", "임시",
+    ]
+
     static func middleSuggestions(for categoryID: String) -> [String] {
         middleSuggestionsByCategoryID[categoryID]
             ?? defaultMiddleSuggestions
+    }
+
+    static func subSuggestions(
+        for categoryID: String,
+        middleName: String?
+    ) -> [String] {
+        let key = middleName?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !key.isEmpty,
+              let mapping = subSuggestionsByCategoryID[categoryID] else {
+            return fallbackSubSuggestions
+        }
+        return mapping[key] ?? fallbackSubSuggestions
     }
 }
 

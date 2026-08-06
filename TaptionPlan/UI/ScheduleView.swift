@@ -6,6 +6,7 @@ private let scheduleLabelColumnWidth: CGFloat = 64
 private let ganttTableLineColor = Color.tpLine.opacity(0.30)
 private let detailPanelCollapsedHeight: CGFloat = 300
 private let detailPanelMinimumHeight: CGFloat = 220
+private let minimumTimelineBoardHeight: CGFloat = 120
 
 #if DEBUG
 /// Debug-only display-link probe for physical-device frame evidence.
@@ -382,21 +383,28 @@ private func watchBehavior(_ actual: ActualRecord) -> WatchBehaviorKind? {
     actual.behavior.flatMap(WatchBehaviorKind.init(rawValue:))
 }
 
-private func isMovementActual(_ actual: ActualRecord) -> Bool {
-    // 앱 이름은 임의의 낱말이라 제목만 보고 이동으로 오인하면 안 된다.
-    if actual.categoryID == "appUsage" { return false }
-    if actual.categoryID == "movement" { return true }
-    if watchBehavior(actual)?.isMovement == true { return true }
-    let title = actual.title.lowercased()
-    return [
-        "걷기", "걷", "달리기", "달리", "자전거", "차량", "자동차",
-        "버스", "지하철", "택시", "기차", "비행기", "배", "이동",
-    ].contains { title.contains($0) }
-}
+    private func isMovementActual(_ actual: ActualRecord) -> Bool {
+        // 앱 이름은 임의의 낱말이라 제목만 보고 이동으로 오인하면 안 된다.
+        if actual.categoryID == "appUsage" { return false }
+        if actual.categoryID == "movement" { return true }
+        if watchBehavior(actual)?.isMovement == true { return true }
+        let title = actual.title.lowercased()
+        return [
+            "걷기", "걷", "달리기", "달리", "자전거", "차량", "자동차",
+            "버스", "지하철", "택시", "기차", "비행기", "배", "이동",
+        ].contains { title.contains($0) }
+    }
 
-private func movementActualTitle(_ actual: ActualRecord) -> String {
-    MovementPresentation.title(for: actual)
-}
+    private func isConfirmedMovementActual(_ actual: ActualRecord) -> Bool {
+        if actual.behavior == "unconfirmed-gap" { return false }
+        if actual.categoryID == ReviewCoverageEngine.unconfirmedCategoryID { return false }
+        if actual.source == .manual { return isMovementActual(actual) }
+        return isMovementActual(actual) && actual.confidence != .low
+    }
+
+    private func movementActualTitle(_ actual: ActualRecord) -> String {
+        MovementPresentation.title(for: actual)
+    }
 
 private func movementActualSymbol(_ actual: ActualRecord) -> String {
     MovementPresentation.symbol(for: actual)
@@ -1355,6 +1363,8 @@ private extension TimelineSelection {
             return .sleep
         case "activity":
             return .activity
+        case ReviewCoverageEngine.unconfirmedCategoryID:
+            return .activity
         case "weather":
             return .weather
         case "exercise", "workout":
@@ -1611,9 +1621,20 @@ struct ScheduleView: View {
     var body: some View {
         GeometryReader { geometry in
             let defaultPanelHeight = geometry.size.height * 0.5
+            let timelineBoardHeightBudget = max(
+                minimumTimelineBoardHeight,
+                geometry.size.height * 0.2
+            )
+            let maxPanelHeight = max(
+                detailPanelMinimumHeight,
+                geometry.size.height - timelineBoardHeightBudget
+            )
             let resolvedPanelHeight = detailPanelHeight > 0
-                ? min(detailPanelHeight, geometry.size.height)
-                : defaultPanelHeight
+                ? min(detailPanelHeight, maxPanelHeight)
+                : min(
+                    max(defaultPanelHeight, detailPanelMinimumHeight),
+                    maxPanelHeight
+                )
             VStack(spacing: 0) {
                 VStack(spacing: 0) {
             DraftTopBar(
@@ -3287,6 +3308,9 @@ private struct TimelineDetailPanel: View {
                             } label: {
                                 Label(item.rawValue, systemImage: item.systemImage)
                                     .font(.taption(size: 8.5, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.85)
+                                    .fixedSize(horizontal: false, vertical: true)
                                     .foregroundStyle(
                                         section == item
                                             ? Color.white
@@ -3879,7 +3903,7 @@ private struct TimelineDetailPanel: View {
     private var movementContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             detailHeading("이동", systemImage: "figure.walk.motion")
-            ForEach(detailTravel) { travel in
+            ForEach(confirmedDetailTravel) { travel in
                 HStack(spacing: 7) {
                     Image(systemName: routeModeSystemImage(travel.mode))
                         .font(.taption(size: 9, weight: .bold))
@@ -3910,7 +3934,7 @@ private struct TimelineDetailPanel: View {
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
-            ForEach(detailMovementActuals) { actual in
+            ForEach(confirmedDetailMovementActuals) { actual in
                 HStack(spacing: 7) {
                     Image(
                         systemName: movementActualSymbol(actual)
@@ -4497,6 +4521,14 @@ private struct TimelineDetailPanel: View {
         detailData.movementActuals
     }
 
+    private var confirmedDetailTravel: [TravelSegment] {
+        detailTravel.filter { $0.isConfirmed || $0.confidence != .low }
+    }
+
+    private var confirmedDetailMovementActuals: [ActualRecord] {
+        detailMovementActuals.filter(isConfirmedMovementActual)
+    }
+
     private var detailSleepPlans: [PlanRecord] {
         detailData.sleepPlans
     }
@@ -4831,7 +4863,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var hasMovementContent: Bool {
-        !detailTravel.isEmpty || !detailMovementActuals.isEmpty
+        !confirmedDetailTravel.isEmpty || !confirmedDetailMovementActuals.isEmpty
     }
 
     private var hasSleepContent: Bool {
@@ -6685,9 +6717,20 @@ struct GroupGanttView: View {
     var body: some View {
         GeometryReader { geometry in
             let defaultPanelHeight = geometry.size.height * 0.5
+            let timelineBoardHeightBudget = max(
+                minimumTimelineBoardHeight,
+                geometry.size.height * 0.2
+            )
+            let maxPanelHeight = max(
+                detailPanelMinimumHeight,
+                geometry.size.height - timelineBoardHeightBudget
+            )
             let resolvedPanelHeight = detailPanelHeight > 0
-                ? min(detailPanelHeight, geometry.size.height)
-                : defaultPanelHeight
+                ? min(detailPanelHeight, maxPanelHeight)
+                : min(
+                    max(defaultPanelHeight, detailPanelMinimumHeight),
+                    maxPanelHeight
+                )
             VStack(spacing: 0) {
                 VStack(spacing: 0) {
             DraftTopBar(
@@ -7768,30 +7811,29 @@ private struct TimelineBoard: View {
         // 지나서 나머지 배율이 기록의 categoryID를 그대로 이름으로 찍었고
         // (appUsage), 줄 순서도 시간표와 어긋났다.
         let usesAutomaticDayRows = includesCalendar
+        let unconfirmedActuals = model.selectedScale == .day
+            ? ReviewCoverageEngine.unconfirmedRecords(
+                actuals: displayedVisibleActuals,
+                in: [span],
+                asOf: now
+            )
+            : []
         var automaticActuals = AutomaticRecordTimelineEngine.activities(
             from: displayedVisibleActuals,
             inside: span
         )
         if model.selectedScale == .day {
-            automaticActuals += ReviewCoverageEngine.unconfirmedRecords(
-                actuals: displayedVisibleActuals,
-                in: [span],
-                asOf: now
-            ).map { record in
-                var value = record
-                value.categoryID = "activity"
-                return value
-            }
+            automaticActuals += unconfirmedActuals
         }
         let categoryVisibleActuals: [ActualRecord]
         if usesAutomaticDayRows && TaptionProductScope.automaticLoggingOnly {
-            categoryVisibleActuals = []
+            categoryVisibleActuals = unconfirmedActuals
         } else if usesAutomaticDayRows {
             categoryVisibleActuals = displayedVisibleActuals.filter {
                 $0.source != .healthKit && $0.source != .appleWatch
-            }
+            } + unconfirmedActuals
         } else {
-            categoryVisibleActuals = displayedVisibleActuals
+            categoryVisibleActuals = displayedVisibleActuals + unconfirmedActuals
         }
         let actualsGrouped = Dictionary(
             grouping: categoryVisibleActuals,
@@ -8019,6 +8061,7 @@ private struct TimelineBoard: View {
                 actuals: actuals.filter {
                     !AutomaticRecordTimelineEngine.isSleep($0)
                         && !isMovementActual($0)
+                        && $0.categoryID != ReviewCoverageEngine.unconfirmedCategoryID
                         && $0.categoryID != "appUsage"
                 },
                 index: index
@@ -8418,7 +8461,10 @@ private struct TimelineBoard: View {
                 planAllocation.count + actualAllocation.count
             ),
             blocks: planBlocks + actuals.map { actual in
-                timelineBlock(
+                let categoryName = actual.categoryID == ReviewCoverageEngine.unconfirmedCategoryID
+                    ? "미확인"
+                    : "활동"
+                return timelineBlock(
                     id: actual.id,
                     title: actual.title,
                     span: actual.span(),
@@ -8433,8 +8479,8 @@ private struct TimelineBoard: View {
                         actual.behavior == "unconfirmed-gap"
                             ? "자동 기록 없음"
                             : "자동 활동 · \(actualSourceName(actual.source))",
-                    categoryID: "activity",
-                    categoryName: "활동"
+                    categoryID: actual.categoryID,
+                    categoryName: categoryName
                 )
             }
         )

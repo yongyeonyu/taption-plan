@@ -963,8 +963,24 @@ enum DayPhaseEngine {
         )
         let contexts = stationaryContexts(actuals, in: window, asOf: asOf)
         let workBlocks = (
-            mergedBlocks(contexts, kind: .work, as: .work)
-                + mergedBlocks(contexts, kind: .study, as: .study)
+            destinationAwareBlocks(
+                contexts,
+                kind: .work,
+                as: .work,
+                stays: stays,
+                placeKinds: placeKinds,
+                in: window,
+                matchesDestination: { $0 == .company }
+            )
+            + destinationAwareBlocks(
+                contexts,
+                kind: .study,
+                as: .study,
+                stays: stays,
+                placeKinds: placeKinds,
+                in: window,
+                matchesDestination: { $0 == .school || $0 == .academy }
+            )
         )
         .sorted { $0.span.start < $1.span.start }
         let homeSpans = ActualIntervalMergeEngine.union(
@@ -1038,6 +1054,38 @@ enum DayPhaseEngine {
     ) -> [DayPhaseSpan] {
         ActualIntervalMergeEngine.union(
             contexts.filter { $0.kind == kind }.map(\.span),
+            mergeGap: 60
+        )
+        .map { DayPhaseSpan(phase: phase, span: $0) }
+    }
+
+    /// 같은 목적지(회사, 학교, 학원)에 실제로 머물렀으면 오타 없이 업무/수업 문맥을
+    /// 유지한다. 체류 근거가 있으면 문맥이 잠깐 비워도 같은 장소면 같은 일과를
+    /// 이어서 본다.
+    private static func destinationAwareBlocks(
+        _ contexts: [(kind: StationaryContextKind, span: TimeSpan)],
+        kind: StationaryContextKind,
+        as phase: DayPhase,
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        in window: TimeSpan,
+        matchesDestination: (FrequentPlaceKind) -> Bool
+    ) -> [DayPhaseSpan] {
+        let contextSpans = contexts
+            .filter { $0.kind == kind }
+            .map(\.span)
+
+        let destinationSpans = stays.compactMap { stay -> TimeSpan? in
+            guard let kind = placeKinds[stay.placeKey],
+                  matchesDestination(kind),
+                  let visible = stay.span.intersection(with: window) else {
+                return nil
+            }
+            return visible
+        }
+
+        return ActualIntervalMergeEngine.union(
+            contextSpans + destinationSpans,
             mergeGap: 60
         )
         .map { DayPhaseSpan(phase: phase, span: $0) }

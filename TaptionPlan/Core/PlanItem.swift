@@ -52,7 +52,7 @@ enum PlanCategory: String, CaseIterable, Identifiable {
     case study = "학습"
     case hobby = "취미"
     case sleep = "수면"
-    case routine = "생활"
+    case routine = "일과"
     case relationship = "관계"
     case rest = "휴식"
     case travel = "여행"

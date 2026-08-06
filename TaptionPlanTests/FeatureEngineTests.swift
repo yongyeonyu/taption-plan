@@ -9559,6 +9559,106 @@ final class FeatureEngineTests: XCTestCase {
         assertPhasesPartitionTheDay(phases, in: day)
     }
 
+    /// 출발지에서 이동해 도착한 목적지 안에 머무는 동안은 같은 목적지라면
+    /// 업무/수업 문맥이 끊기지 않는다. 분류가 잠깐 비어도 등록된 장소가
+    /// 근거가 되면 이어붙인다.
+    func testDayPhaseRingKeepsWorkOrStudyContinuousWhenDestinationIsNotLeft() throws {
+        let day = dayPhaseDay()
+        let homeKey = "frequent-home"
+        let workKey = "frequent-company"
+        let schoolKey = "frequent-school"
+
+        let workPhases = DayPhaseEngine.phases(
+            actuals: [
+                sleepActual(0, 7, on: day),
+                stationaryContext(.work, 9, 10, on: day),
+                stationaryContext(.unknownStay, 10, 11, on: day),
+                stationaryContext(.work, 11, 18, on: day),
+            ],
+            travel: [
+                travelLeg(.subway, 8, 8.75, on: day),
+                travelLeg(.subway, 18, 18.5, on: day),
+                travelLeg(.walking, 18.5, 18.75, on: day),
+            ],
+            stays: [
+                homeStay(0, 8, key: homeKey, on: day),
+                PlaceStay(
+                    placeKey: workKey,
+                    displayName: "회사",
+                    span: TimeSpan(
+                        start: day.start.addingTimeInterval(8.75 * hour),
+                        end: day.start.addingTimeInterval(18 * hour)
+                    ),
+                    confidence: .high,
+                    isConfirmed: true
+                ),
+                homeStay(18.75, 24, key: homeKey, on: day),
+            ],
+            placeKinds: [homeKey: .home, workKey: .company],
+            in: day,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(
+            workPhases.map(\.phase.title),
+            ["취침", "출근", "업무", "퇴근", "저녁"]
+        )
+        XCTAssertEqual(
+            workPhases.first(where: { $0.phase == .work })?.span.start,
+            day.start.addingTimeInterval(8.75 * hour)
+        )
+        XCTAssertEqual(
+            workPhases.first(where: { $0.phase == .work })?.span.end,
+            day.start.addingTimeInterval(18 * hour)
+        )
+
+        let studyPhases = DayPhaseEngine.phases(
+            actuals: [
+                sleepActual(0, 7, on: day),
+                stationaryContext(.study, 9, 10, on: day),
+                stationaryContext(.unknownStay, 10, 11, on: day),
+                stationaryContext(.study, 11, 18, on: day),
+            ],
+            travel: [
+                travelLeg(.bus, 8, 8.75, on: day),
+                travelLeg(.bus, 18, 18.5, on: day),
+                travelLeg(.walking, 18.5, 18.75, on: day),
+            ],
+            stays: [
+                homeStay(0, 8, key: homeKey, on: day),
+                PlaceStay(
+                    placeKey: schoolKey,
+                    displayName: "학교",
+                    span: TimeSpan(
+                        start: day.start.addingTimeInterval(8.75 * hour),
+                        end: day.start.addingTimeInterval(18 * hour)
+                    ),
+                    confidence: .high,
+                    isConfirmed: true
+                ),
+                homeStay(18.75, 24, key: homeKey, on: day),
+            ],
+            placeKinds: [homeKey: .home, schoolKey: .school],
+            in: day,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(
+            studyPhases.map(\.phase.title),
+            ["취침", "등교", "수업", "하교", "저녁"]
+        )
+        XCTAssertEqual(
+            studyPhases.first(where: { $0.phase == .study })?.span.start,
+            day.start.addingTimeInterval(8.75 * hour)
+        )
+        XCTAssertEqual(
+            studyPhases.first(where: { $0.phase == .study })?.span.end,
+            day.start.addingTimeInterval(18 * hour)
+        )
+        assertPhasesPartitionTheDay(workPhases, in: day)
+        assertPhasesPartitionTheDay(studyPhases, in: day)
+    }
+
     /// 회사가 아니라 학교에 닿으면 같은 모양의 하루를 등교·수업·하교라고
     /// 부른다. 도착해서 무엇이 시작되는지만 보고 정한다.
     func testDayPhaseRingSaysSchoolWordsWhenArrivingAtStudy() throws {

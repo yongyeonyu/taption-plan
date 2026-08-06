@@ -26,6 +26,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
     case movement
     case sleep
     case activity
+    case unconfirmed
     case appUsage
     case weather
     case photo
@@ -38,6 +39,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
         case .movement: "이동"
         case .sleep: "수면"
         case .activity: "활동"
+        case .unconfirmed: "미확인"
         case .appUsage: "어플"
         case .weather: "날씨"
         case .photo: "사진"
@@ -52,6 +54,7 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
         case .movement: "figure.walk.motion"
         case .sleep: "moon.zzz"
         case .activity: "figure.run"
+        case .unconfirmed: "questionmark.circle"
         case .appUsage: "app.badge.clock"
         case .weather: "cloud.sun"
         case .photo: "photo"
@@ -81,7 +84,17 @@ enum TimelineRowKind: String, CaseIterable, Sendable {
 /// Keeping this order in the model lets the UI persist one ordering for both
 /// surfaces without coupling storage to SwiftUI view types.
 enum TimelineRowOrder {
-    static let defaults = TimelineRowKind.allCases.map(\.rawValue)
+    static let defaults = [
+        TimelineRowKind.calendar.rawValue,
+        TimelineRowKind.location.rawValue,
+        TimelineRowKind.movement.rawValue,
+        TimelineRowKind.sleep.rawValue,
+        TimelineRowKind.activity.rawValue,
+        TimelineRowKind.appUsage.rawValue,
+        TimelineRowKind.weather.rawValue,
+        TimelineRowKind.photo.rawValue,
+        TimelineRowKind.memo.rawValue,
+    ]
 
     static func ordered<T>(
         _ values: [T],

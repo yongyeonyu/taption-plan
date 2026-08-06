@@ -7,6 +7,7 @@ struct AddPlanSheet: View {
     @State private var title = ""
     @State private var categoryID = "study"
     @State private var middleCategoryName = ""
+    @State private var subCategoryName = ""
     @State private var memoText = ""
     @State private var durationMinutes = 30
     @State private var goalDurationMonths = 12
@@ -35,6 +36,7 @@ struct AddPlanSheet: View {
                             ) {
                                 categoryID = category.id
                                 middleCategoryName = ""
+                                subCategoryName = ""
                                 memoText = ""
                                 path.removeAll()
                                 selectedDetent = .large
@@ -68,9 +70,10 @@ struct AddPlanSheet: View {
                 ) ?? model.selectedDate
                 goalEndAt = defaultGoalEndDate(from: startAt)
             } else if let parent = selectedParent {
-                categoryID = parent.categoryID
-                middleCategoryName = parent.middleCategoryName ?? ""
-                let proposed = QuickPlanDraftEngine.roundedUpToHalfHour(.now)
+                    categoryID = parent.categoryID
+                    middleCategoryName = parent.middleCategoryName ?? ""
+                    subCategoryName = ""
+                    let proposed = QuickPlanDraftEngine.roundedUpToHalfHour(.now)
                 let latestStart = parent.span.end.addingTimeInterval(
                     -QuickPlanDraftEngine.defaultDuration
                 )
@@ -142,6 +145,7 @@ struct AddPlanSheet: View {
             goalConnectionPicker
             categoryQuickPicker
             middleCategoryPicker
+            subCategoryPicker
 
             memoTextField(
                 label: "메모",
@@ -318,6 +322,7 @@ struct AddPlanSheet: View {
                                 titleFocused = false
                                 categoryID = recent.categoryID
                                 middleCategoryName = recent.name
+                                subCategoryName = ""
                             } label: {
                                 Label(
                                     recent.name,
@@ -426,7 +431,7 @@ struct AddPlanSheet: View {
             title: cleanTitle,
             categoryID: categoryID,
             middleCategoryName: middleCategoryName,
-            subCategoryName: nil,
+            subCategoryName: subCategoryName,
             startAt: startAt,
             duration: selectedDuration,
             parentID: model.addPlanContext.isGoal ? nil : parentID,
@@ -598,6 +603,7 @@ struct AddPlanSheet: View {
                         Button {
                             titleFocused = false
                             middleCategoryName = suggestion
+                            subCategoryName = ""
                         } label: {
                             DraftChip(
                                 title: suggestion,
@@ -614,6 +620,48 @@ struct AddPlanSheet: View {
                     }
                 }
             }
+        }
+    }
+
+    private var subCategoryPicker: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Text("소분류")
+                    .font(.taption(size: 10.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Text("상세 동작")
+                    .font(.taption(size: 7.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(subCategorySuggestions, id: \.self) { suggestion in
+                        Button {
+                            titleFocused = false
+                            subCategoryName = suggestion
+                        } label: {
+                            DraftChip(
+                                title: suggestion,
+                                selected: subCategoryName == suggestion
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("소분류 \(suggestion)")
+                        .accessibilityAddTraits(
+                            subCategoryName == suggestion
+                                ? .isSelected
+                                : []
+                        )
+                    }
+                }
+            }
+
+            memoTextField(
+                label: "소분류 직접 입력",
+                placeholder: "예: 걷기, 달리기, 자전거",
+                text: $subCategoryName
+            )
         }
     }
 
@@ -643,6 +691,42 @@ struct AddPlanSheet: View {
             .map { $0 }
     }
 
+    private var subCategorySuggestions: [String] {
+        var values = CategoryHierarchyCatalog.subSuggestions(
+            for: selectedCategory.id,
+            middleName: middleCategoryName
+        )
+        let cleanSelection = subCategoryName.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        if !cleanSelection.isEmpty,
+           !values.contains(cleanSelection) {
+            values.append(cleanSelection)
+        }
+        let cleanMiddle = middleCategoryName.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        if !cleanMiddle.isEmpty {
+            values.append(
+                contentsOf:
+                    model.snapshot.plans
+                        .filter { plan in
+                            plan.categoryID == selectedCategory.id
+                                && plan.middleCategoryName == cleanMiddle
+                        }
+                        .sorted { $0.updatedAt > $1.updatedAt }
+                        .compactMap(\.subCategoryName)
+            )
+        }
+
+        var seen = Set<String>()
+        return values
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+            .prefix(10)
+            .map { $0 }
+    }
+
     private func selectCategory(_ newCategoryID: String) {
         titleFocused = false
         let previousCategoryName = selectedCategory.name
@@ -653,6 +737,7 @@ struct AddPlanSheet: View {
         }
         middleCategoryName = ""
         memoText = ""
+        subCategoryName = ""
     }
 
     private func autofillGoalTitleIfNeeded(replacing oldCategoryName: String) {
