@@ -195,24 +195,29 @@ enum MovementDisplayEngine {
     }
 }
 
-/// 잠든 시간은 정지 문맥에서도 "집에서 휴식"으로 잡힌다. 두 기록을 그대로
-/// 두면 같은 시각을 휴식과 수면이 각각 세어 하루 합계가 흐른 시간을 넘는다.
+/// 잠든 시간은 정지 문맥에서도 "집에서 휴식"이나 "생활"로 잡힌다. 두 기록을
+/// 그대로 두면 같은 시각을 정지 문맥과 수면이 각각 세어 하루 합계가 흐른
+/// 시간을 넘는다.
 /// 측정된 원본은 그대로 두고, 화면과 합계가 함께 읽는 값에서만 수면이 덮은
-/// 만큼을 덜어 낸다. 수면이 통째로 덮은 휴식만 사라지고 나머지는 남는다.
+/// 만큼을 덜어 낸다. 수면이 통째로 덮은 기록만 사라지고 나머지는 남는다.
 enum RestSleepDisplayEngine {
-    /// 수면이 이기는 대상은 "쉬고 있었다"는 뜻뿐인 휴식 분류(집에서 휴식·
-    /// 카페·사용자 휴식)로 한정한다. 머무름·대기는 `activity`, 근무·수업·
-    /// 통화·회의는 각자의 분류라 여기에 들어오지 않는다. 그것들이 수면과
-    /// 겹친다면 감출 일이 아니라 따로 봐야 할 잘못이다.
     static func isRest(_ actual: ActualRecord) -> Bool {
         actual.categoryID == "rest"
+            || actual.behavior == "cafe"
+            || actual.behavior == "homeRest"
+    }
+
+    static func yieldsToSleep(_ actual: ActualRecord) -> Bool {
+        isRest(actual)
+            || actual.categoryID == "routine"
+            || actual.behavior == "housework"
     }
 
     static func visibleActuals(
         _ actuals: [ActualRecord],
         asOf date: Date = .now
     ) -> [ActualRecord] {
-        guard actuals.contains(where: isRest) else { return actuals }
+        guard actuals.contains(where: yieldsToSleep) else { return actuals }
         let sleepSpans = ActualIntervalMergeEngine.union(
             actuals
                 .filter(AutomaticRecordTimelineEngine.isSleep)
@@ -222,7 +227,7 @@ enum RestSleepDisplayEngine {
         guard !sleepSpans.isEmpty else { return actuals }
 
         return actuals.flatMap { actual -> [ActualRecord] in
-            guard isRest(actual) else { return [actual] }
+            guard yieldsToSleep(actual) else { return [actual] }
             let span = actual.span(asOf: date)
             guard span.duration > 0 else { return [actual] }
             let remainders = ActualIntervalMergeEngine.subtracting(

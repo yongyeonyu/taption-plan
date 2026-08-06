@@ -276,6 +276,9 @@ struct TravelModeClassifier: Sendable {
         let airportRatio = ratio(ordered, where: \.nearAirport)
         let portRatio = ratio(ordered, where: \.nearPort)
         let waterRatio = ratio(ordered, where: \.onWater)
+        let roadRatio = ordered.isEmpty ? 0 : Double(ordered.filter {
+            $0.behaviorEvidence?.contains("Apple 지도 도로 인접") == true
+        }.count) / Double(ordered.count)
 
         let watchVibration = watchAcceleration.sampleCount >= 2
             && watchAcceleration.standardDeviationG >= 0.012
@@ -288,7 +291,6 @@ struct TravelModeClassifier: Sendable {
                 && maxSpeed <= 40
         let railContext = stationRatio >= 0.2
             || railRatio >= 0.25
-            || stopRatio >= 0.3 && railSpeedSignal
         let undergroundSignal = gpsLossRatio >= 0.35
             || altitudeDelta <= -2
         let displacementMeters = firstLastDisplacement(ordered)
@@ -302,10 +304,10 @@ struct TravelModeClassifier: Sendable {
             add(.subway, 0.2, "철도 경로 일치")
             add(.train, 0.28, "철도 경로 일치")
         }
-        if gpsLossRatio >= 0.45 && (railContext || watchVibration) {
+        if gpsLossRatio >= 0.45 && railContext {
             add(.subway, 0.18, "GPS 약화")
         }
-        if altitudeDelta <= -2 && (railContext || watchVibration) {
+        if altitudeDelta <= -2 && railContext {
             add(.subway, 0.16, "상대고도 하강")
         }
         if stationRatio >= 0.25,
@@ -320,13 +322,13 @@ struct TravelModeClassifier: Sendable {
            profile.recoveryMeters >= 80,
            displacementMeters >= 100,
            lowStepSignal,
-           (railContext || gpsLossRatio >= 0.45) {
+           railContext {
             add(.subway, 0.9, "상대고도 100m 이상 하강 후 회복")
             add(.subway, 0.24, "지하 구간 위치 변화 \(Int(displacementMeters.rounded()))m")
         }
 
         if watchVibration && lowStepSignal && undergroundSignal
-            && (railContext || railSpeedSignal) {
+            && railContext && railSpeedSignal {
             add(.subway, 0.62, "Apple Watch 3축 가속도 철도 진동")
             add(.subway, 0.18, "걸음 거의 없음 · 지하 구간")
             if railContext {
@@ -345,6 +347,15 @@ struct TravelModeClassifier: Sendable {
         }
         if stopRatio >= 0.35 {
             add(.bus, 0.22, "정류장형 반복 정차")
+        }
+        if roadRatio >= 0.5,
+           hasVehicleSpeed || dominantMotion == .automotive {
+            if transitRatio >= 0.3 && stopRatio >= 0.2 {
+                add(.bus, 0.64, "도로·버스정류장·반복 정차 일치")
+            } else {
+                add(.car, 0.7, "도로 위 차량 속도·자동차 모션 우선")
+                add(.bus, 0.16, "도로 위 동력 이동")
+            }
         }
         if taxiHintRatio >= 0.5 {
             add(.taxi, 0.55, "택시 이용 단서")
@@ -3061,4 +3072,3 @@ enum LocationPrivacyFilter {
         )
     }
 }
-

@@ -303,6 +303,16 @@ enum TrackingSessionPolicy {
     static let activeHorizontalAccuracyLimit: Double = 50
     static let activeDistanceFilterMeters: Double = 5
 
+    static func shouldPromoteBackgroundMovement(
+        speedMetersPerSecond: Double,
+        displacementMeters: Double,
+        elapsed: TimeInterval
+    ) -> Bool {
+        speedMetersPerSecond >= 3
+            || elapsed > 0 && elapsed <= 10 * 60
+                && displacementMeters >= 80
+    }
+
     static func shouldAutomaticallyStart(
         motion: MotionKind,
         confidence: ConfidenceLevel,

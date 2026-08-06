@@ -62,6 +62,7 @@ private struct ReviewContentKey: Equatable {
     let scale: TimeScale
     let date: Date
     let selectedBucketIDs: Set<String>
+    let selectedChartBucketID: String?
     let healthRefreshedAt: Date?
 }
 
@@ -98,6 +99,8 @@ struct ReviewView: View {
     @State private var collapsedGroupIDs: Set<String> = []
     /// 켜 둔 칸. 비어 있으면 기간 전체를 본다.
     @State private var selectedBucketIDs: Set<String> = []
+    /// 주·월·년 막대에서 직접 고른 하루 또는 한 달.
+    @State private var selectedChartBucketID: String?
     /// 범례에서 고른 카테고리. 원형·막대 모두 이 하나만 남기고 나머지를 죽인다.
     @State private var highlightedCategoryID: String?
     /// 눈금판이나 범례에서 짚어 둔 일과 조각. 이름과 시각이 읽음창에 뜨고
@@ -153,6 +156,8 @@ struct ReviewView: View {
             HStack(spacing: 0) {
                 ForEach(TimeScale.allCases) { scale in
                     Button {
+                        selectedBucketIDs = []
+                        selectedChartBucketID = nil
                         model.reviewScale = scale
                     } label: {
                         Text(scale.rawValue)
@@ -213,6 +218,7 @@ struct ReviewView: View {
                 if !selectedBucketIDs.isEmpty {
                     Button {
                         selectedBucketIDs = []
+                        selectedChartBucketID = nil
                     } label: {
                         bucketChipLabel(
                             "전체",
@@ -278,6 +284,7 @@ struct ReviewView: View {
     }
 
     private func toggle(_ bucket: ReviewPeriodBucket) {
+        selectedChartBucketID = nil
         if selectedBucketIDs.contains(bucket.id) {
             selectedBucketIDs.remove(bucket.id)
         } else {
@@ -544,7 +551,10 @@ struct ReviewView: View {
         for pass in [false, true] {
             for ring in revealed
             where active.contains(ring.categoryID) == pass {
-                let tint = color(forCategoryID: ring.categoryID)
+                let tint = RecordRingPalette.color(
+                    .complementary,
+                    token: ring.categoryID
+                )
                 let width = pass
                     ? Self.clockBandWidth + 6
                     : Self.clockBandWidth
@@ -759,39 +769,11 @@ struct ReviewView: View {
     ) -> Color {
         switch kind {
         case .dayPhase:
-            switch DayPhase(rawValue: token) {
-            case .sleep: return .tpSleepDark
-            case .commuteToWork, .commuteToSchool, .commuteToAcademy,
-                 .activityDeparture:
-                return .tpTravelDark
-            case .commuteHomeFromWork, .commuteHomeFromSchool,
-                 .commuteHomeFromAcademy, .activityReturn:
-                return Color(red: 0.78, green: 0.55, blue: 0.29)
-            case .work: return .tpProjectDark
-            case .study: return .tpStudyDark
-            case .evening: return .tpRestDark
-            case .none: return Color(red: 0.89, green: 0.90, blue: 0.92)
-            }
+            return RecordRingPalette.color(.dark, token: token)
         case .sleepStage:
-            switch SleepStage(rawValue: token) {
-            case .deep: return Color(red: 0.23, green: 0.26, blue: 0.41)
-            case .core: return .tpSleepDark
-            case .rem: return Color(red: 0.55, green: 0.58, blue: 0.70)
-            case .asleepUnspecified:
-                return Color(red: 0.66, green: 0.68, blue: 0.76)
-            case .awake: return Color(red: 0.88, green: 0.66, blue: 0.54)
-            case .inBed, .none:
-                return Color(red: 0.89, green: 0.90, blue: 0.92)
-            }
+            return RecordRingPalette.color(.pastel, token: token)
         case .travel:
-            switch TravelMode(rawValue: token) {
-            case .running: return .tpExerciseDark
-            case .cycling: return .tpHobbyDark
-            case .car, .taxi: return .tpTravelDark
-            case .bus, .subway, .train: return .tpProjectDark
-            case .airplane, .ship: return .tpPlaceDark
-            case .walking, .none: return .tpHealthDark
-            }
+            return RecordRingPalette.color(.fluorescent, token: token)
         }
     }
 
@@ -1060,7 +1042,49 @@ struct ReviewView: View {
                 }
             }
         }
+        .chartOverlay { proxy in
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(.clear)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        SpatialTapGesture().onEnded { value in
+                            selectChartBucket(
+                                at: value.location,
+                                proxy: proxy,
+                                geometry: geometry
+                            )
+                        }
+                    )
+            }
+        }
         .frame(height: 168)
+        .accessibilityHint("막대를 눌러 해당 구간의 상세 기록 보기")
+    }
+
+    private func selectChartBucket(
+        at location: CGPoint,
+        proxy: ChartProxy,
+        geometry: GeometryProxy
+    ) {
+        guard let plotFrame = proxy.plotFrame else { return }
+        let frame = geometry[plotFrame]
+        guard frame.contains(location),
+              let date = proxy.value(
+                  atX: location.x - frame.minX,
+                  as: Date.self
+              ),
+              let bucket = content.chartBuckets.first(where: {
+                  $0.total > 0
+                      && $0.span.start <= date
+                      && date < $0.span.end
+              }) else {
+            return
+        }
+        selectedBucketIDs = []
+        selectedChartBucketID = selectedChartBucketID == bucket.id
+            ? nil
+            : bucket.id
     }
 
     /// 고른 칸 밖의 막대는 남겨 두되 흐리게 죽인다. 합계·목록이 세지 않은
@@ -1379,6 +1403,7 @@ struct ReviewView: View {
             scale: model.reviewScale,
             date: model.selectedDate,
             selectedBucketIDs: selectedBucketIDs,
+            selectedChartBucketID: selectedChartBucketID,
             healthRefreshedAt: model.lastHealthRefreshAt
         )
     }
@@ -1386,8 +1411,7 @@ struct ReviewView: View {
     private func rebuildContent() {
         let engine = ReviewEngine()
         // 화면(원형·막대·목록)과 합계가 모두 이 한 값을 읽는다. 수면과 겹친
-        // 휴식을 여기서 한 번만 덜어 내야 보이는 시간과 더한 시간이 어긋나지
-        // 않는다.
+        // 휴식·생활을 여기서 한 번만 덜어 내야 보이는 시간과 합계가 맞는다.
         let actuals = RestSleepDisplayEngine.visibleActuals(
             model.snapshot.actuals
         )
@@ -1408,12 +1432,29 @@ struct ReviewView: View {
         )
         if selected != selectedBucketIDs { selectedBucketIDs = selected }
 
-        // 합계·눈금판·목록이 함께 읽는 단 하나의 구간 묶음.
-        let spans = ReviewSelectionEngine.spans(
+        let chartBuckets = model.reviewScale == .day
+            ? []
+            : RecordChartEngine.buckets(
+                actuals: actuals,
+                in: period,
+                unit: model.reviewScale == .year ? .month : .day,
+                calendar: engine.aggregation.calendar
+            )
+        let selectedChartSpan = ReviewSelectionEngine.chartSpan(
+            selectedChartBucketID,
+            buckets: chartBuckets
+        )
+        if selectedChartBucketID != nil, selectedChartSpan == nil {
+            selectedChartBucketID = nil
+        }
+
+        // 막대를 직접 골랐으면 그 하루·월이 헤더의 큰 구간 선택보다 우선한다.
+        let bucketSpans = ReviewSelectionEngine.spans(
             period: period,
             buckets: pickable,
             selectedIDs: selected
         )
+        let spans = selectedChartSpan.map { [$0] } ?? bucketSpans
         let report = engine.report(
             over: spans,
             plans: model.snapshot.plans,
@@ -1426,7 +1467,6 @@ struct ReviewView: View {
         var rings: [RecordClockRing] = []
         var phaseRing: RecordClockDetailRing?
         var detailRings: [RecordClockDetailRing] = []
-        var chartBuckets: [RecordChartBucket] = []
         var selectedChartBucketIDs: Set<String> = []
         if model.reviewScale == .day, let day = spans.first {
             rings = RecordChartEngine.clockRings(actuals: actuals, in: day)
@@ -1453,13 +1493,9 @@ struct ReviewView: View {
                 ),
             ].compactMap { $0 }
         } else {
-            chartBuckets = RecordChartEngine.buckets(
-                actuals: actuals,
-                in: period,
-                unit: model.reviewScale == .year ? .month : .day,
-                calendar: engine.aggregation.calendar
-            )
-            if !selected.isEmpty {
+            if let selectedChartBucketID, selectedChartSpan != nil {
+                selectedChartBucketIDs = [selectedChartBucketID]
+            } else if !selected.isEmpty {
                 selectedChartBucketIDs = Set(
                     chartBuckets
                         .filter { bucket in
@@ -1492,7 +1528,7 @@ struct ReviewView: View {
             period: period,
             spans: spans,
             pickableBuckets: pickable,
-            selectedBucketCount: selected.count,
+            selectedBucketCount: selectedChartSpan == nil ? selected.count : 1,
             plannedCategories: report.categories,
             contexts: report.contexts,
             groups: groups,

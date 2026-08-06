@@ -186,6 +186,8 @@ final class AppModel {
     @ObservationIgnored private let airQualityService: AirQualityContextService
     @ObservationIgnored private let cloudSyncService: CloudKitSnapshotSyncService?
     @ObservationIgnored private let placeNameResolver: PlaceNameResolver
+    @ObservationIgnored private let transportContextService:
+        AppleTransportContextService
     @ObservationIgnored private let voiceMemoRecorder: VoiceMemoRecorder
     @ObservationIgnored private let voiceMemoPlayer: VoiceMemoPlayer
     @ObservationIgnored private let liveActivityController: TaptionLiveActivityController
@@ -268,6 +270,8 @@ final class AppModel {
         cloudSyncService: CloudKitSnapshotSyncService? =
             CloudKitSnapshotSyncService.automatic(),
         placeNameResolver: PlaceNameResolver = PlaceNameResolver(),
+        transportContextService: AppleTransportContextService =
+            AppleTransportContextService(),
         voiceMemoRecorder: VoiceMemoRecorder? = nil,
         voiceMemoPlayer: VoiceMemoPlayer? = nil,
         liveActivityController: TaptionLiveActivityController =
@@ -317,6 +321,7 @@ final class AppModel {
         self.airQualityService = airQualityService
         self.cloudSyncService = cloudSyncService
         self.placeNameResolver = placeNameResolver
+        self.transportContextService = transportContextService
         self.voiceMemoRecorder = voiceMemoRecorder ?? VoiceMemoRecorder()
         self.voiceMemoPlayer = voiceMemoPlayer ?? VoiceMemoPlayer()
         self.liveActivityController = liveActivityController
@@ -3604,7 +3609,7 @@ final class AppModel {
             return
         }
 
-        let readings = AppleDeviceGroundTruthEngine
+        var readings = AppleDeviceGroundTruthEngine
             .applyingMotionHistory(
                 to: (
                     archivedReadings
@@ -3613,6 +3618,7 @@ final class AppModel {
                 ).sorted { $0.timestamp < $1.timestamp },
                 activities: motionActivities
             )
+        readings = await transportContextService.enriching(readings)
         let knownPlaces = snapshot.places
         let knownNames = knownPlaces.reduce(into: [String: String]()) {
             $0[$1.placeKey] = $1.displayName
@@ -4724,7 +4730,7 @@ final class AppModel {
             try await healthService.enableBackgroundDelivery()
             isHealthBackgroundDeliveryConfigured = true
             Self.integrationLogger.notice(
-                "HealthKit background delivery enabled for activity and sleep"
+                "HealthKit background delivery enabled for routes, activity, sleep and vitals"
             )
         } catch {
             Self.integrationLogger.error(

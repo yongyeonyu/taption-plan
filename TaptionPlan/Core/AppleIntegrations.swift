@@ -6,6 +6,7 @@ import EventKit
 import Foundation
 import HealthKit
 import MediaPlayer
+import MapKit
 import Photos
 import UIKit
 import UserNotifications
@@ -858,8 +859,14 @@ final class AppleHealthService: @unchecked Sendable {
     private func observedSampleTypes() -> [HKSampleType] {
         [
             HKObjectType.workoutType(),
+            HKSeriesType.workoutRoute(),
             HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
             HKObjectType.categoryType(forIdentifier: .mindfulSession),
+            HKObjectType.quantityType(forIdentifier: .stepCount),
+            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
+            HKObjectType.quantityType(forIdentifier: .flightsClimbed),
+            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
+            HKObjectType.quantityType(forIdentifier: .heartRate),
         ].compactMap { $0 }
     }
 
@@ -1847,12 +1854,14 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var samplingTask: Task<Void, Never>?
     private var movementCandidateTask: Task<Void, Never>?
     private var stationaryStopTask: Task<Void, Never>?
+    private var backgroundWakeTask: Task<Void, Never>?
     private var configuration: SensorCollectionConfiguration = .standard
     private var isCollecting = false
     private var isLocationDenied = false
     private var sensorStreamsRunning = false
     private var lastEmissionAt: Date?
     private var latestLocation: CLLocation?
+    private var lastBackgroundWakeLocation: CLLocation?
     private var latestMotion: MotionKind = .unknown
     private var latestMotionConfidence: ConfidenceLevel = .low
     private var latestRelativeAltitude: Double?
@@ -1960,6 +1969,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         movementCandidateTask = nil
         stationaryStopTask?.cancel()
         stationaryStopTask = nil
+        backgroundWakeTask?.cancel()
+        backgroundWakeTask = nil
         stopHardwareStreams()
         locationManager.stopMonitoringVisits()
         locationManager.stopMonitoringSignificantLocationChanges()
@@ -1978,6 +1989,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestCurrentCadence = nil
         latestAverageActivePace = nil
         latestDeviceMotion = nil
+        lastBackgroundWakeLocation = nil
         deviceMotionAccumulator.reset()
         activeTrackingSession = nil
         trackingSequence = 0
@@ -2122,6 +2134,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.allowsBackgroundLocationUpdates =
             configuration.allowsBackgroundLocation
             && locationManager.authorizationStatus == .authorizedAlways
+        locationManager.showsBackgroundLocationIndicator =
+            locationManager.allowsBackgroundLocationUpdates
         applyLocationPolicy(isMoving: activeTrackingSession != nil)
         if permissionState() == .authorized {
             locationManager.startUpdatingLocation()
@@ -2245,6 +2259,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private func stopHardwareStreams() {
         locationManager.stopUpdatingLocation()
         locationManager.allowsBackgroundLocationUpdates = false
+        locationManager.showsBackgroundLocationIndicator = false
         activityManager.stopActivityUpdates()
         deviceMotionManager.stopDeviceMotionUpdates()
         altimeter.stopRelativeAltitudeUpdates()
@@ -2278,15 +2293,69 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
     ) {
+        let previousWakeLocation = lastBackgroundWakeLocation
         let isFirstLocationFix = latestLocation == nil
         latestLocation = locations.last {
             $0.horizontalAccuracy >= 0
                 && abs($0.timestamp.timeIntervalSinceNow) < 5 * 60
         }
+        if let latestLocation {
+            lastBackgroundWakeLocation = latestLocation
+            promoteBackgroundMovementIfNeeded(
+                latestLocation,
+                previous: previousWakeLocation,
+                batch: locations
+            )
+        }
         let isUsableTrackingPoint = activeTrackingSession != nil
             && (latestLocation?.horizontalAccuracy ?? .greatestFiniteMagnitude)
                 <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
         emit(force: (isFirstLocationFix && latestLocation != nil) || isUsableTrackingPoint)
+    }
+
+    private func promoteBackgroundMovementIfNeeded(
+        _ location: CLLocation,
+        previous: CLLocation?,
+        batch: [CLLocation]
+    ) {
+        guard isCollecting,
+              configuration.allowsBackgroundLocation,
+              !sensorStreamsRunning,
+              activeTrackingSession == nil else { return }
+        let batchStart = batch.first { $0.horizontalAccuracy >= 0 }
+        let distance = previous.map(location.distance)
+            ?? batchStart.map(location.distance)
+            ?? 0
+        let elapsed = previous.map {
+            location.timestamp.timeIntervalSince($0.timestamp)
+        } ?? batchStart.map {
+            location.timestamp.timeIntervalSince($0.timestamp)
+        } ?? .greatestFiniteMagnitude
+        guard TrackingSessionPolicy.shouldPromoteBackgroundMovement(
+            speedMetersPerSecond: location.speed,
+            displacementMeters: distance,
+            elapsed: elapsed
+        ) else {
+            return
+        }
+
+        activeTrackingSession = TrackingSession(
+            kind: .automatic,
+            wasAutomaticallyDetected: true
+        )
+        trackingSequence = 0
+        startHardwareStreams()
+        applyLocationPolicy(isMoving: true)
+
+        backgroundWakeTask?.cancel()
+        backgroundWakeTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(20))
+            guard !Task.isCancelled, let self,
+                  self.activeTrackingSession?.wasAutomaticallyDetected == true,
+                  self.latestMotion == .stationary
+                    || self.latestMotion == .unknown else { return }
+            self.endTracking()
+        }
     }
 
     func locationManager(
@@ -2355,6 +2424,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
         lastEmissionAt = now
         let location = latestLocation
+        let capturedAt = location?.timestamp ?? now
         let point = location.map {
             GeoPoint(
                 latitude: $0.coordinate.latitude,
@@ -2368,7 +2438,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         if session != nil { trackingSequence += 1 }
         continuation?.yield(
             SensorReading(
-                timestamp: now,
+                timestamp: capturedAt,
                 point: point,
                 speedMetersPerSecond: location.flatMap { $0.speed >= 0 ? $0.speed : nil },
                 speedAccuracyMetersPerSecond: location.flatMap {
@@ -2543,7 +2613,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             locationManager.desiredAccuracy = kCLLocationAccuracyBest
             locationManager.distanceFilter =
                 TrackingSessionPolicy.activeDistanceFilterMeters
-            locationManager.activityType = .fitness
+            locationManager.activityType = latestMotion == .automotive
+                || (latestLocation?.speed ?? 0) >= 5
+                ? .automotiveNavigation
+                : .fitness
             locationManager.pausesLocationUpdatesAutomatically = false
             return
         }
@@ -2725,6 +2798,147 @@ actor PlaceNameResolver {
                 continuation.resume(returning: name)
             }
         }
+    }
+}
+
+struct AppleTransportContext: Hashable, Sendable {
+    var isNearSubwayStation = false
+    var isNearBusStop = false
+    var isOnRoad = false
+}
+
+@MainActor
+final class AppleTransportContextService {
+    private struct CacheEntry {
+        let context: AppleTransportContext
+        let storedAt: Date
+    }
+
+    private var cache: [String: CacheEntry] = [:]
+
+    func enriching(_ readings: [SensorReading]) async -> [SensorReading] {
+        let candidates = readings.indices.filter { index in
+            guard readings[index].point != nil else { return false }
+            return readings[index].motion == .automotive
+                || (readings[index].speedMetersPerSecond ?? 0) >= 3
+        }
+        guard candidates.count >= 2 else { return readings }
+
+        let anchors = sampledIndices(candidates, maximumCount: 4)
+        var resolved: [(GeoPoint, AppleTransportContext)] = []
+        for index in anchors {
+            guard let point = readings[index].point else { continue }
+            resolved.append((point, await context(at: point)))
+        }
+        guard !resolved.isEmpty else { return readings }
+
+        return readings.map { reading in
+            guard let point = reading.point,
+                  let match = resolved.min(by: {
+                      distanceMeters(point, $0.0) < distanceMeters(point, $1.0)
+                  }),
+                  distanceMeters(point, match.0) <= 1_500 else {
+                return reading
+            }
+            var value = reading
+            value.nearbyStation = value.nearbyStation
+                || match.1.isNearSubwayStation
+                || match.1.isNearBusStop
+            value.matchesRailRoute = value.matchesRailRoute
+                || match.1.isNearSubwayStation
+            value.matchesPublicTransitRoute =
+                value.matchesPublicTransitRoute || match.1.isNearBusStop
+            if match.1.isOnRoad {
+                var evidence = value.behaviorEvidence ?? []
+                if !evidence.contains("Apple 지도 도로 인접") {
+                    evidence.append("Apple 지도 도로 인접")
+                }
+                value.behaviorEvidence = evidence
+            }
+            return value
+        }
+    }
+
+    private func context(at point: GeoPoint) async -> AppleTransportContext {
+        let key = cacheKey(point)
+        if let cached = cache[key],
+           Date.now.timeIntervalSince(cached.storedAt) < 6 * 60 * 60 {
+            return cached.context
+        }
+
+        async let subway = hasNearbyResult(
+            query: "지하철역",
+            point: point,
+            radius: 450
+        )
+        async let bus = hasNearbyResult(
+            query: "버스정류장",
+            point: point,
+            radius: 140
+        )
+        async let road = isOnRoad(point)
+        let value = await AppleTransportContext(
+            isNearSubwayStation: subway,
+            isNearBusStop: bus,
+            isOnRoad: road
+        )
+        cache[key] = CacheEntry(context: value, storedAt: .now)
+        return value
+    }
+
+    private func hasNearbyResult(
+        query: String,
+        point: GeoPoint,
+        radius: Double
+    ) async -> Bool {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: point.latitude,
+                longitude: point.longitude
+            ),
+            latitudinalMeters: max(300, radius * 2),
+            longitudinalMeters: max(300, radius * 2)
+        )
+        guard let response = try? await MKLocalSearch(request: request).start()
+        else { return false }
+        let origin = CLLocation(
+            latitude: point.latitude,
+            longitude: point.longitude
+        )
+        return response.mapItems.contains { item in
+            origin.distance(from: CLLocation(
+                latitude: item.placemark.coordinate.latitude,
+                longitude: item.placemark.coordinate.longitude
+            )) <= radius
+        }
+    }
+
+    private func isOnRoad(_ point: GeoPoint) async -> Bool {
+        let location = CLLocation(
+            latitude: point.latitude,
+            longitude: point.longitude
+        )
+        let placemark = try? await CLGeocoder().reverseGeocodeLocation(location)
+            .first
+        return placemark?.thoroughfare != nil
+            || placemark?.subThoroughfare != nil
+    }
+
+    private func sampledIndices(
+        _ indices: [Int],
+        maximumCount: Int
+    ) -> [Int] {
+        guard indices.count > maximumCount else { return indices }
+        return (0..<maximumCount).map { offset in
+            indices[offset * (indices.count - 1) / (maximumCount - 1)]
+        }
+    }
+
+    private func cacheKey(_ point: GeoPoint) -> String {
+        "\(Int((point.latitude * 1_000).rounded())):"
+            + "\(Int((point.longitude * 1_000).rounded()))"
     }
 }
 

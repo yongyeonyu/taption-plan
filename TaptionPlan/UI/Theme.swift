@@ -72,6 +72,37 @@ extension Color {
     }
 }
 
+enum RecordRingPaletteStyle: CaseIterable, Sendable {
+    case dark
+    case pastel
+    case complementary
+    case fluorescent
+}
+
+enum RecordRingPalette {
+    static let hexes: [RecordRingPaletteStyle: [String]] = [
+        .dark: ["#102A43", "#3D2645", "#1B4332", "#4A1D2F", "#243B53"],
+        .pastel: ["#A8DADC", "#FFD6A5", "#CDB4DB", "#BDE0FE", "#CAFFBF"],
+        .complementary: ["#0077B6", "#F77F00", "#7B2CBF", "#2A9D8F", "#D62828"],
+        .fluorescent: ["#00C2FF", "#FF2D95", "#70E000", "#FF9500", "#8A5CFF"],
+    ]
+
+    static func color(
+        _ style: RecordRingPaletteStyle,
+        token: String
+    ) -> Color {
+        let values = hexes[style] ?? ["#111111"]
+        return Color(hex: values[stableIndex(token, count: values.count)])
+    }
+
+    private static func stableIndex(_ token: String, count: Int) -> Int {
+        let hash = token.unicodeScalars.reduce(UInt64(5_381)) {
+            (($0 << 5) &+ $0) ^ UInt64($1.value)
+        }
+        return Int(hash % UInt64(max(1, count)))
+    }
+}
+
 extension CategoryIcon {
     var systemImage: String {
         switch self {

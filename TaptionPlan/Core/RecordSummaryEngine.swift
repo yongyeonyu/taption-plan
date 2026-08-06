@@ -287,6 +287,14 @@ enum ReviewSelectionEngine {
         return ActualIntervalMergeEngine.union(chosen, mergeGap: 0)
     }
 
+    static func chartSpan(
+        _ selectedID: String?,
+        buckets: [RecordChartBucket]
+    ) -> TimeSpan? {
+        guard let selectedID else { return nil }
+        return buckets.first { $0.id == selectedID }?.span
+    }
+
     private static func component(
         for level: TimelineLevel
     ) -> Calendar.Component {

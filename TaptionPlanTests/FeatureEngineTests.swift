@@ -334,7 +334,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    // MARK: - 수면과 겹친 휴식
+    // MARK: - 수면과 겹친 휴식·생활
 
     private func restSpans(
         _ actuals: [ActualRecord],
@@ -342,6 +342,18 @@ final class FeatureEngineTests: XCTestCase {
     ) -> [TimeSpan] {
         RestSleepDisplayEngine.visibleActuals(actuals, asOf: asOf)
             .filter(RestSleepDisplayEngine.isRest)
+            .map { $0.span(asOf: asOf) }
+            .sorted { $0.start < $1.start }
+    }
+
+    private func routineSpans(
+        _ actuals: [ActualRecord],
+        asOf: Date
+    ) -> [TimeSpan] {
+        RestSleepDisplayEngine.visibleActuals(actuals, asOf: asOf)
+            .filter {
+                ActualRecordCategoryResolver.categoryID(for: $0) == "routine"
+            }
             .map { $0.span(asOf: asOf) }
             .sorted { $0.start < $1.start }
     }
@@ -418,6 +430,61 @@ final class FeatureEngineTests: XCTestCase {
             RestSleepDisplayEngine.visibleActuals([rest, sleep], asOf: asOf)
                 .map(\.id),
             [sleep.id]
+        )
+    }
+
+    func testSleepCutsOverlappingLifeIntoVisibleRemainders() {
+        let asOf = makeDate(2026, 8, 6, 12)
+        let life = makeActual(
+            "집안일",
+            "activity",
+            start: makeDate(2026, 8, 6, 0),
+            minutes: 8 * 60,
+            source: .location,
+            behavior: StationaryContextKind.housework.rawValue
+        )
+        let sleep = makeActual(
+            "수면",
+            "sleep",
+            start: makeDate(2026, 8, 6, 1),
+            minutes: 5 * 60,
+            source: .healthKit
+        )
+
+        XCTAssertEqual(
+            routineSpans([life, sleep], asOf: asOf),
+            [
+                TimeSpan(
+                    start: makeDate(2026, 8, 6, 0),
+                    end: makeDate(2026, 8, 6, 1)
+                ),
+                TimeSpan(
+                    start: makeDate(2026, 8, 6, 6),
+                    end: makeDate(2026, 8, 6, 8)
+                ),
+            ]
+        )
+
+        let visible = RestSleepDisplayEngine.visibleActuals(
+            [life, sleep],
+            asOf: asOf
+        )
+        let groups = ActualRecordGroupingEngine.groups(
+            actuals: visible,
+            in: TimeSpan(
+                start: makeDate(2026, 8, 6),
+                end: makeDate(2026, 8, 7)
+            ),
+            categories: CategoryCatalog.builtIn,
+            asOf: asOf
+        )
+        XCTAssertEqual(
+            groups.first { $0.id == "routine" }?.duration,
+            3 * hour
+        )
+        XCTAssertEqual(
+            groups.first { $0.id == "sleep" }?.duration,
+            5 * hour
         )
     }
 
@@ -500,7 +567,7 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     /// 근무·수업·통화·회의가 수면과 겹치면 감출 일이 아니라 따로 봐야 할
-    /// 잘못이다. 수면 우선 규칙은 휴식 분류에만 닿는다.
+    /// 잘못이다. 수면 우선 규칙은 휴식·생활 분류에만 닿는다.
     func testSleepDoesNotSwallowWorkOrMeetingRecords() {
         let asOf = makeDate(2026, 8, 5, 23)
         let sleep = makeActual(
@@ -1439,6 +1506,7 @@ final class FeatureEngineTests: XCTestCase {
                 watchAccelerationStandardDeviationG: 0.04,
                 watchAccelerationMeanJerkGPerSecond: 0.16,
                 gpsAvailable: index < 2,
+                nearbyStation: true,
                 frequentStops: true
             )
         }
@@ -1450,6 +1518,83 @@ final class FeatureEngineTests: XCTestCase {
             result.evidence.contains("Apple Watch 3축 가속도 철도 진동")
         )
         XCTAssertTrue(result.evidence.contains("걸음 거의 없음 · 지하 구간"))
+    }
+
+    func testUndergroundVibrationWithoutStationContextDoesNotBecomeSubway() {
+        let base = makeDate(2026, 7, 30, 8, 0)
+        let readings = (0..<6).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                relativeAltitudeMeters: Double(index) * -1,
+                stepCount: 20,
+                watchAccelerationStandardDeviationG: 0.04,
+                watchAccelerationMeanJerkGPerSecond: 0.16,
+                gpsAvailable: index < 2,
+                frequentStops: true
+            )
+        }
+
+        XCTAssertNotEqual(
+            TravelModeClassifier().classify(readings: readings).mode,
+            .subway
+        )
+    }
+
+    func testRoadContextPrioritizesCarWithoutBusStops() {
+        let base = makeDate(2026, 7, 30, 8, 0)
+        let readings = (0..<6).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: 13,
+                motion: .automotive,
+                motionConfidence: .high,
+                stepCount: 10,
+                behaviorEvidence: ["Apple 지도 도로 인접"]
+            )
+        }
+
+        let result = TravelModeClassifier().classify(readings: readings)
+        XCTAssertEqual(result.mode, .car)
+        XCTAssertTrue(
+            result.evidence.contains("도로 위 차량 속도·자동차 모션 우선")
+        )
+    }
+
+    func testBackgroundLocationPromotesUnscheduledMovement() {
+        XCTAssertTrue(
+            TrackingSessionPolicy.shouldPromoteBackgroundMovement(
+                speedMetersPerSecond: 8,
+                displacementMeters: 0,
+                elapsed: 0
+            )
+        )
+        XCTAssertTrue(
+            TrackingSessionPolicy.shouldPromoteBackgroundMovement(
+                speedMetersPerSecond: -1,
+                displacementMeters: 120,
+                elapsed: 120
+            )
+        )
+        XCTAssertFalse(
+            TrackingSessionPolicy.shouldPromoteBackgroundMovement(
+                speedMetersPerSecond: -1,
+                displacementMeters: 20,
+                elapsed: 120
+            )
+        )
+    }
+
+    func testRecordClockRingPalettesStayDistinct() {
+        let sets = RecordRingPaletteStyle.allCases.map {
+            Set(RecordRingPalette.hexes[$0] ?? [])
+        }
+        XCTAssertTrue(sets.allSatisfy { $0.count >= 5 })
+        for pair in zip(sets, sets.dropFirst()) {
+            XCTAssertTrue(pair.0.isDisjoint(with: pair.1))
+        }
     }
 
     func testWatchVibrationWithoutUndergroundContextDoesNotBecomeSubway() {
@@ -6871,6 +7016,42 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(groups[1].duration, 60 * 60)
         XCTAssertEqual(groups[1].children.map(\.title), ["카카오톡", "Safari"])
         XCTAssertEqual(groups[1].children.map(\.duration), [38 * 60, 22 * 60])
+    }
+
+    func testChartSelectionReturnsOnlyTheTappedBucketSpan() {
+        let day = makeDate(2026, 8, 3)
+        let buckets = RecordChartEngine.buckets(
+            actuals: [
+                makeActual(
+                    "걷기",
+                    "movement",
+                    start: day.addingTimeInterval(hour),
+                    minutes: 30
+                ),
+                makeActual(
+                    "수면",
+                    "sleep",
+                    start: day.addingTimeInterval(24 * hour),
+                    minutes: 6 * 60
+                ),
+            ],
+            in: TimeSpan(
+                start: day,
+                end: day.addingTimeInterval(7 * 24 * hour)
+            ),
+            unit: .day,
+            calendar: Calendar(identifier: .gregorian),
+            asOf: day.addingTimeInterval(7 * 24 * hour)
+        )
+        let selected = buckets[1]
+
+        XCTAssertEqual(
+            ReviewSelectionEngine.chartSpan(selected.id, buckets: buckets),
+            selected.span
+        )
+        XCTAssertNil(
+            ReviewSelectionEngine.chartSpan("missing", buckets: buckets)
+        )
     }
 
     func testRecordGroupingMergesRepeatedTitlesAndClipsToSpan() {
