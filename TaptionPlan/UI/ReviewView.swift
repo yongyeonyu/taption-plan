@@ -18,6 +18,10 @@ private struct ReviewContent: Equatable {
     var rings: [RecordClockRing]
     /// 가장 바깥의 일과 고리. 하루 배율에서만 만들어진다.
     var phaseRing: RecordClockDetailRing?
+    /// 수면 단계처럼 활동을 더 구체화하는 고리.
+    var activityRings: [RecordClockDetailRing]
+    /// 날씨·위치는 상세 고리와 분리해 환경 정보로 표시한다.
+    var contextRings: [RecordClockDetailRing]
     var detailRings: [RecordClockDetailRing]
     var chartBuckets: [RecordChartBucket]
     /// 고른 구간에 걸친 막대. 비어 있으면 모두 고른 것과 같다.
@@ -33,6 +37,8 @@ private struct ReviewContent: Equatable {
         groups: [],
         rings: [],
         phaseRing: nil,
+        activityRings: [],
+        contextRings: [],
         detailRings: [],
         chartBuckets: [],
         selectedChartBucketIDs: []
@@ -317,8 +323,14 @@ struct ReviewView: View {
                 } else {
                     categoryLegend
                 }
+                if !content.activityRings.isEmpty {
+                    activityRingLegend
+                }
                 if !content.detailRings.isEmpty {
                     detailRingLegend
+                }
+                if !content.contextRings.isEmpty {
+                    contextRingLegend
                 }
             } else if content.groups.isEmpty {
                 emptyRecordText
@@ -368,6 +380,8 @@ struct ReviewView: View {
             isolating: highlightedCategoryID
         )
         let detailRings = filteredDetailRings
+        let activityRings = filteredActivityRings
+        let contextRings = filteredContextRings
         let phaseRing = content.phaseRing
         let pinnedPhaseArc = highlightedPhaseArc
         let span = content.period
@@ -385,7 +399,9 @@ struct ReviewView: View {
                     rings: rings,
                     phaseRing: phaseRing,
                     pinnedPhaseArc: pinnedPhaseArc,
+                    activityRings: activityRings,
                     detailRings: detailRings,
+                    contextRings: contextRings,
                     progress: progress,
                     span: span,
                     nowFraction: RecordClockEngine.nowFraction(
@@ -412,9 +428,44 @@ struct ReviewView: View {
 
     private var highlightedPhaseToken: String? { highlightedPhaseArc?.token }
 
+    private var filteredActivityRings: [RecordClockDetailRing] {
+        guard let highlightedDetail,
+              highlightedDetail.kind == .sleepStage else {
+            return content.activityRings
+        }
+        return content.activityRings.compactMap { ring in
+            let arcs = ring.arcs.filter { $0.token == highlightedDetail.token }
+            return arcs.isEmpty
+                ? nil
+                : RecordClockDetailRing(id: ring.id, kind: ring.kind, arcs: arcs)
+        }
+    }
+
     private var filteredDetailRings: [RecordClockDetailRing] {
-        guard let highlightedDetail else { return content.detailRings }
+        guard let highlightedDetail,
+              highlightedDetail.kind != .sleepStage else {
+            return content.detailRings
+        }
         return content.detailRings.compactMap { ring in
+            guard ring.kind == highlightedDetail.kind else { return nil }
+            let arcs = ring.arcs.filter { $0.token == highlightedDetail.token }
+            return arcs.isEmpty
+                ? nil
+                : RecordClockDetailRing(
+                    id: ring.id,
+                    kind: ring.kind,
+                    arcs: arcs
+                )
+        }
+    }
+
+    private var filteredContextRings: [RecordClockDetailRing] {
+        guard let highlightedDetail,
+              highlightedDetail.kind == .weather
+                || highlightedDetail.kind == .location else {
+            return content.contextRings
+        }
+        return content.contextRings.compactMap { ring in
             guard ring.kind == highlightedDetail.kind else { return nil }
             let arcs = ring.arcs.filter { $0.token == highlightedDetail.token }
             return arcs.isEmpty
@@ -501,7 +552,9 @@ struct ReviewView: View {
         rings: [RecordClockRing],
         phaseRing: RecordClockDetailRing?,
         pinnedPhaseArc: RecordClockDetailArc?,
+        activityRings: [RecordClockDetailRing],
         detailRings: [RecordClockDetailRing],
+        contextRings: [RecordClockDetailRing],
         progress: Double?,
         span: TimeSpan,
         nowFraction: Double?
@@ -571,12 +624,32 @@ struct ReviewView: View {
             }
         }
 
-        let innerEdge = drawDetailRings(
+        let activityEdge = drawDetailRings(
             context: context,
             center: center,
             outerEdge: radius - Self.clockBandWidth / 2,
             rings: RecordClockEngine.detailRings(
+                activityRings,
+                revealedThrough: progress
+            )
+        )
+
+        let innerEdge = drawDetailRings(
+            context: context,
+            center: center,
+            outerEdge: activityEdge,
+            rings: RecordClockEngine.detailRings(
                 detailRings,
+                revealedThrough: progress
+            )
+        )
+
+        _ = drawDetailRings(
+            context: context,
+            center: center,
+            outerEdge: innerEdge,
+            rings: RecordClockEngine.detailRings(
+                contextRings,
                 revealedThrough: progress
             )
         )
@@ -776,6 +849,10 @@ struct ReviewView: View {
         case .travel:
             return TravelMode(rawValue: token).map(MovementPresentation.title)
                 ?? token
+        case .weather:
+            return WeatherClockToken.displayName(token)
+        case .location:
+            return token
         }
     }
 
@@ -834,7 +911,110 @@ struct ReviewView: View {
                 .font(.taption(size: 8.5, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.vertical, 4)
-            ForEach(content.detailRings) { ring in
+            ForEach(content.detailRings.filter { $0.kind != .sleepStage }) { ring in
+                ForEach(detailTokens(of: ring), id: \.self) { token in
+                    let selection = ReviewDetailSelection(
+                        kind: ring.kind,
+                        token: token
+                    )
+                    Button {
+                        highlightedDetail = highlightedDetail == selection
+                            ? nil
+                            : selection
+                    } label: {
+                        HStack(spacing: 4) {
+                            Capsule()
+                                .fill(detailColor(ring.kind, token: token))
+                                .frame(width: 10, height: 6)
+                            Text(detailName(ring.kind, token: token))
+                                .font(
+                                    .taption(
+                                        size: 8.5,
+                                        weight: highlightedDetail == selection
+                                            ? .bold
+                                            : .regular
+                                    )
+                                )
+                                .foregroundStyle(Color.tpInk)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(
+                            highlightedDetail == selection
+                                ? detailColor(ring.kind, token: token)
+                                    .opacity(0.16)
+                                : Color(red: 0.95, green: 0.95, blue: 0.96),
+                            in: Capsule()
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(
+                        highlightedDetail == selection ? [.isSelected] : []
+                    )
+                }
+            }
+        }
+    }
+
+    private var contextRingLegend: some View {
+        ChipFlowLayout(spacing: 5) {
+            Text("날씨·위치")
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+                .padding(.vertical, 4)
+            ForEach(content.contextRings) { ring in
+                ForEach(detailTokens(of: ring), id: \.self) { token in
+                    let selection = ReviewDetailSelection(
+                        kind: ring.kind,
+                        token: token
+                    )
+                    Button {
+                        highlightedDetail = highlightedDetail == selection
+                            ? nil
+                            : selection
+                    } label: {
+                        HStack(spacing: 4) {
+                            Capsule()
+                                .fill(detailColor(ring.kind, token: token))
+                                .frame(width: 10, height: 6)
+                            Text(detailName(ring.kind, token: token))
+                                .font(
+                                    .taption(
+                                        size: 8.5,
+                                        weight: highlightedDetail == selection
+                                            ? .bold
+                                            : .regular
+                                    )
+                                )
+                                .foregroundStyle(Color.tpInk)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(
+                            highlightedDetail == selection
+                                ? detailColor(ring.kind, token: token)
+                                    .opacity(0.16)
+                                : Color(red: 0.95, green: 0.95, blue: 0.96),
+                            in: Capsule()
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(
+                        highlightedDetail == selection ? [.isSelected] : []
+                    )
+                }
+            }
+        }
+    }
+
+    private var activityRingLegend: some View {
+        ChipFlowLayout(spacing: 5) {
+            Text("활동 상세")
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+                .padding(.vertical, 4)
+            ForEach(content.activityRings) { ring in
                 ForEach(detailTokens(of: ring), id: \.self) { token in
                     let selection = ReviewDetailSelection(
                         kind: ring.kind,
@@ -1413,6 +1593,7 @@ struct ReviewView: View {
             MovementDisplayEngine.reviewActuals(
                 model.snapshot.actuals,
                 travel: model.snapshot.travel,
+                calendarEvents: model.snapshot.calendarEvents,
                 asOf: now
             ),
             asOf: now
@@ -1480,6 +1661,8 @@ struct ReviewView: View {
 
         var rings: [RecordClockRing] = []
         var phaseRing: RecordClockDetailRing?
+        var activityRings: [RecordClockDetailRing] = []
+        var contextRings: [RecordClockDetailRing] = []
         var detailRings: [RecordClockDetailRing] = []
         var selectedChartBucketIDs: Set<String> = []
         if model.reviewScale == .day, let day = spans.first {
@@ -1498,16 +1681,30 @@ struct ReviewView: View {
                     .kindsByPlaceKey(model.snapshot.settings.frequentPlaces),
                 in: day
             )
-            // 수면 단계와 이동 구간은 이미 받아 둔 값이다. 건강 데이터를
-            // 새로 묻지 않는다.
-            detailRings = [
+            // 수면 단계는 활동 안에서 한 단계 올려 보여 주고, 이동은 상세,
+            // 날씨·위치는 그 아래 환경 띠로 분리한다.
+            activityRings = [
                 RecordClockDetailEngine.sleepRing(
                     sessions: model.sleepSessions,
                     in: day
-                ),
+                )
+            ].compactMap { $0 }
+            detailRings = [
                 RecordClockDetailEngine.travelRing(
                     segments: model.snapshot.travel,
                     in: day
+                ),
+            ].compactMap { $0 }
+            contextRings = [
+                RecordClockDetailEngine.weatherRing(
+                    contexts: model.snapshot.weather,
+                    in: day,
+                    asOf: now
+                ),
+                RecordClockDetailEngine.locationRing(
+                    stays: model.snapshot.places,
+                    in: day,
+                    asOf: now
                 ),
             ].compactMap { $0 }
         } else {
@@ -1553,6 +1750,8 @@ struct ReviewView: View {
             groups: groups,
             rings: rings,
             phaseRing: phaseRing,
+            activityRings: activityRings,
+            contextRings: contextRings,
             detailRings: detailRings,
             chartBuckets: chartBuckets,
             selectedChartBucketIDs: selectedChartBucketIDs
@@ -1565,7 +1764,7 @@ struct ReviewView: View {
             highlightedCategoryID = nil
         }
         if let highlightedDetail,
-           !detailRings.contains(where: {
+           !(activityRings + detailRings).contains(where: {
                $0.kind == highlightedDetail.kind
                    && $0.arcs.contains(where: {
                        $0.token == highlightedDetail.token

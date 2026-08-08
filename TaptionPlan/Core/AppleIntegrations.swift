@@ -2802,9 +2802,12 @@ actor PlaceNameResolver {
 }
 
 struct AppleTransportContext: Hashable, Sendable {
-    var isNearSubwayStation = false
-    var isNearBusStop = false
+    var subwayStationName: String?
+    var busStopName: String?
     var isOnRoad = false
+
+    var isNearSubwayStation: Bool { subwayStationName != nil }
+    var isNearBusStop: Bool { busStopName != nil }
 }
 
 @MainActor
@@ -2844,6 +2847,10 @@ final class AppleTransportContextService {
             value.nearbyStation = value.nearbyStation
                 || match.1.isNearSubwayStation
                 || match.1.isNearBusStop
+            if let stationName = match.1.subwayStationName
+                ?? match.1.busStopName {
+                value.nearbyStationName = stationName
+            }
             value.matchesRailRoute = value.matchesRailRoute
                 || match.1.isNearSubwayStation
             value.matchesPublicTransitRoute =
@@ -2866,31 +2873,31 @@ final class AppleTransportContextService {
             return cached.context
         }
 
-        async let subway = hasNearbyResult(
+        async let subway = nearbyName(
             query: "지하철역",
             point: point,
             radius: 450
         )
-        async let bus = hasNearbyResult(
+        async let bus = nearbyName(
             query: "버스정류장",
             point: point,
             radius: 140
         )
         async let road = isOnRoad(point)
         let value = await AppleTransportContext(
-            isNearSubwayStation: subway,
-            isNearBusStop: bus,
+            subwayStationName: subway,
+            busStopName: bus,
             isOnRoad: road
         )
         cache[key] = CacheEntry(context: value, storedAt: .now)
         return value
     }
 
-    private func hasNearbyResult(
+    private func nearbyName(
         query: String,
         point: GeoPoint,
         radius: Double
-    ) async -> Bool {
+    ) async -> String? {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
         request.region = MKCoordinateRegion(
@@ -2902,17 +2909,21 @@ final class AppleTransportContextService {
             longitudinalMeters: max(300, radius * 2)
         )
         guard let response = try? await MKLocalSearch(request: request).start()
-        else { return false }
+        else { return nil }
         let origin = CLLocation(
             latitude: point.latitude,
             longitude: point.longitude
         )
-        return response.mapItems.contains { item in
-            origin.distance(from: CLLocation(
-                latitude: item.placemark.coordinate.latitude,
-                longitude: item.placemark.coordinate.longitude
-            )) <= radius
-        }
+        return response.mapItems
+            .compactMap { item -> (Double, String)? in
+                let distance = origin.distance(from: CLLocation(
+                    latitude: item.placemark.coordinate.latitude,
+                    longitude: item.placemark.coordinate.longitude
+                ))
+                guard distance <= radius else { return nil }
+                return (distance, item.name ?? item.placemark.name ?? query)
+            }
+            .min(by: { $0.0 < $1.0 })?.1
     }
 
     private func isOnRoad(_ point: GeoPoint) async -> Bool {

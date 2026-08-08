@@ -7,6 +7,33 @@ import SwiftUI // TEMP-CAT-SHEET
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    func testTimelineHierarchyIsSeparateFromRecordSource() {
+        let span = TimeSpan(
+            start: makeDate(2026, 8, 8, 9, 0),
+            end: makeDate(2026, 8, 8, 10, 0)
+        )
+        let routine = PlanRecord(
+            title: "루틴: 운동",
+            span: span,
+            categoryID: "activity",
+            middleCategoryName: "운동"
+        )
+        let detail = ActualRecord(
+            planID: nil,
+            title: "깊은 수면",
+            categoryID: "sleep",
+            startedAt: span.start,
+            endedAt: span.end,
+            source: .healthKit,
+            behavior: "deepSleep"
+        )
+
+        XCTAssertEqual(routine.semanticLevel, .activity)
+        XCTAssertEqual(routine.sourceKind, .routine)
+        XCTAssertEqual(detail.semanticLevel, .detail)
+        XCTAssertEqual(detail.sourceKind, .automatic)
+    }
+
     func testPlayheadMapUsesOnlyMovementContainingExactPlayheadTime() {
         let playhead = makeDate(2026, 8, 1, 9, 0)
         let nearby = TravelSegment(
@@ -1675,12 +1702,52 @@ final class FeatureEngineTests: XCTestCase {
         }
 
         let result = TravelModeClassifier().classify(readings: readings)
-
         XCTAssertEqual(result.mode, .subway)
         XCTAssertTrue(
             result.evidence.contains("Apple Watch 3축 가속도 철도 진동")
         )
         XCTAssertTrue(result.evidence.contains("걸음 거의 없음 · 지하 구간"))
+    }
+
+    func testStationToStationUndergroundTravelIdentifiesSubwayWithoutVibration() {
+        let base = makeDate(2026, 8, 8, 8, 0)
+        let altitudes = [0.0, -2, -8, -12, -10, -6, -2, 0]
+        let readings = (0..<altitudes.count).map { index in
+            let stationName: String?
+            if index < 2 {
+                stationName = "강남역"
+            } else if index >= 6 {
+                stationName = "홍대입구역"
+            } else {
+                stationName = nil
+            }
+            return SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                speedMetersPerSecond: 11,
+                motion: .automotive,
+                motionConfidence: .high,
+                relativeAltitudeMeters: altitudes[index],
+                stepCount: 200 + index,
+                watchAccelerationStandardDeviationG: 0.004,
+                watchAccelerationMeanJerkGPerSecond: 0.01,
+                gpsAvailable: index < 2 || index >= 6,
+                nearbyStation: stationName != nil,
+                nearbyStationName: stationName,
+                matchesRailRoute: true
+            )
+        }
+
+        let result = TravelModeClassifier().classify(readings: readings)
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.confidence, .high)
+        XCTAssertTrue(
+            result.evidence.contains("지하철역 강남역 → 홍대입구역"),
+            "실제 근거: \(result.evidence)"
+        )
+        XCTAssertTrue(
+            result.evidence.contains("Apple Watch 진동 없음"),
+            "실제 근거: \(result.evidence)"
+        )
     }
 
     func testUndergroundVibrationWithoutStationContextDoesNotBecomeSubway() {
@@ -5693,6 +5760,33 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
     }
 
+    func testFileRepositoryRecoversLastValidGenerationAfterCorruption() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taption-recovery-\(UUID().uuidString)", isDirectory: true)
+        let fileURL = directory.appendingPathComponent("snapshot.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        var first = TaptionDataSnapshot.empty
+        first.categories = CategoryCatalog.builtIn
+        first.plans = [
+            PlanRecord(
+                title: "보존된 기록",
+                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
+                categoryID: "activity"
+            )
+        ]
+        let repository = FilePlanRepository(fileURL: fileURL)
+        try await repository.save(first)
+
+        var second = first
+        second.plans[0].title = "새 기록"
+        try await repository.save(second)
+        try Data("broken".utf8).write(to: fileURL, options: [.atomic])
+
+        let recovered = try await repository.load()
+        XCTAssertEqual(recovered.plans.first?.title, "보존된 기록")
+    }
+
     func testSnapshotCompressionRoundTripAndLegacyJSON() {
         let json = Data(repeating: 0x41, count: 32 * 1024)
         let stored = TaptionSnapshotCompression.encode(json)
@@ -9484,6 +9578,79 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(
             RecordClockDetailEngine.sleepRing(sessions: [], in: day)
         )
+    }
+
+    func testWeatherRingShowsChangedMeasurementsWithAirQuality() throws {
+        let dayStart = makeDate(2026, 8, 4)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        func weather(
+            _ minute: Double,
+            _ condition: String,
+            _ temperature: Double,
+            _ pm10: Double
+        ) -> WeatherContext {
+            WeatherContext(
+                observedAt: dayStart.addingTimeInterval(minute * 60),
+                condition: condition,
+                symbolName: condition == "비" ? "cloud.rain.fill" : "sun.max.fill",
+                temperatureCelsius: temperature,
+                airQuality: AirQualityContext(
+                    pm10MicrogramsPerCubicMeter: pm10,
+                    pm25MicrogramsPerCubicMeter: 8,
+                    observedAt: dayStart.addingTimeInterval(minute * 60),
+                    providerName: "테스트",
+                    isFallback: false
+                )
+            )
+        }
+        let ring = try XCTUnwrap(
+            RecordClockDetailEngine.weatherRing(
+                contexts: [
+                    weather(8 * 60, "맑음", 25, 12),
+                    weather(8 * 60 + 15, "맑음", 25, 12),
+                    weather(9 * 60, "비", 21, 92),
+                ],
+                in: day,
+                asOf: day.end
+            )
+        )
+        XCTAssertEqual(ring.kind, .weather)
+        XCTAssertEqual(ring.arcs.count, 2)
+        XCTAssertEqual(WeatherClockToken.displayName(ring.arcs[0].token), "☀️ 25° · 🟢")
+        XCTAssertEqual(WeatherClockToken.displayName(ring.arcs[1].token), "🌧️ 21° · 🟠")
+        assertRingHasNoSlivers(ring)
+    }
+
+    func testLocationRingShowsPlaceAndFloorBelowDetailContext() throws {
+        let dayStart = makeDate(2026, 8, 4)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let ring = try XCTUnwrap(
+            RecordClockDetailEngine.locationRing(
+                stays: [
+                    PlaceStay(
+                        placeKey: "home",
+                        displayName: "집",
+                        floor: 20,
+                        span: TimeSpan(
+                            start: dayStart.addingTimeInterval(8 * hour),
+                            end: dayStart.addingTimeInterval(10 * hour)
+                        ),
+                        confidence: .high
+                    ),
+                ],
+                in: day,
+                asOf: day.end
+            )
+        )
+        XCTAssertEqual(ring.kind, .location)
+        XCTAssertEqual(ring.arcs.map(\.token), ["집 · 20층"])
+        assertRingHasNoSlivers(ring)
     }
 
     private func assertRingHasNoSlivers(

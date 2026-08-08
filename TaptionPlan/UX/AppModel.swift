@@ -66,6 +66,9 @@ final class AppModel {
     @ObservationIgnored private(set) var timelineRevision: UInt64 = 0
     @ObservationIgnored private var timestampOnlySnapshotAssignment = false
     private(set) var isBootstrapped = false
+    /// 저장소를 읽지 못한 상태에서 빈 스냅샷을 저장하면 기존 기록을
+    /// 덮어쓸 수 있다. 복구 가능한 저장본을 다시 읽기 전까지 저장을 막는다.
+    @ObservationIgnored private var repositoryLoadFailed = false
     private(set) var isRefreshingIntegrations = false
     private(set) var isSensorCollecting = false
     private(set) var isCloudSyncing = false
@@ -235,6 +238,8 @@ final class AppModel {
 
     private static let permissionOnboardingKey =
         "taption.permission-onboarding.v1"
+    private static let permissionFlagsMigrationKey =
+        "taption.permission-flags-sync.v2"
 
     private struct LiveMergeCacheKey: Equatable {
         let spanStart: TimeInterval
@@ -761,6 +766,7 @@ final class AppModel {
             guard let self else { return }
             do {
                 var source = try await repository.load()
+                repositoryLoadFailed = false
                 source.weather = WeatherTimelineEngine.coalesced(source.weather)
                 // Publish the local snapshot first. Normalizing historical
                 // records and loading device integrations can be expensive;
@@ -775,6 +781,7 @@ final class AppModel {
                 isBootstrapped = true
                 scheduleBootstrapPreparation()
             } catch {
+                repositoryLoadFailed = true
                 var fallback = TaptionDataSnapshot.empty
                 fallback.categories = CategoryCatalog.builtIn
                 snapshot = fallback
@@ -987,6 +994,16 @@ final class AppModel {
         snapshot.settings.permissions[feature] ?? .notDetermined
     }
 
+    /// Re-reads the system permission centers when Settings becomes visible.
+    /// The saved snapshot is only a cache; iOS permissions can change while
+    /// the app is suspended or in Settings.
+    func refreshPermissions() async {
+        await bootstrap()
+        await refreshPermissionStates()
+        refreshAppUsageAuthorizationState()
+        await persistDeviceLocalSnapshot()
+    }
+
     /// 설치 후 첫 실행에서만 권한 안내를 띄운다. 권한은 기기마다 다르므로
     /// iCloud로 오가는 스냅샷이 아니라 기기 저장소에 표시 여부를 남긴다.
     func presentPermissionOnboardingIfNeeded() {
@@ -1027,14 +1044,8 @@ final class AppModel {
         isRefreshingIntegrations = true
         defer { isRefreshingIntegrations = false }
         do {
-            // 데이터 접근이 없는 승인 상태에서도 재요청을 막지 않는다.
-            // 서비스가 승인을 해제한 뒤 다시 물어본다. 이 함수는 사용자가
-            // 직접 누른 동작으로만 호출되므로, 이 빌드에서 자동 재시도가
-            // 이미 실패했더라도 다시 누르면 다시 시도한다.
             if screenTimeUsageService.authorizationState != .approved {
-                try await screenTimeUsageService.requestAuthorization(
-                    forceRetry: true
-                )
+                try await screenTimeUsageService.requestAuthorization()
             }
             refreshAppUsageAuthorizationState()
             await refreshAppUsageData(
@@ -3697,10 +3708,19 @@ final class AppModel {
             )
         )
 
-        snapshot.travel.removeAll {
-            $0.span.intersection(with: span) != nil
+        // A photo location is only a fallback anchor. It must not erase a
+        // previously recorded route when the sensor archive is temporarily
+        // unavailable. HealthKit workout routes are valid primary evidence.
+        let hasPrimaryLocationEvidence = archivedReadings.contains {
+            $0.point != nil
+        } || healthRouteReadings.contains {
+            $0.point != nil
         }
-        if !readings.compactMap(\.point).isEmpty {
+
+        if hasPrimaryLocationEvidence {
+            snapshot.travel.removeAll {
+                $0.span.intersection(with: span) != nil
+            }
             snapshot.places.removeAll {
                 $0.span.intersection(with: span) != nil
             }
@@ -3709,8 +3729,8 @@ final class AppModel {
             }
             snapshot.places.append(contentsOf: places)
             snapshot.floorTransitions.append(contentsOf: floors)
+            snapshot.travel.append(contentsOf: travel)
         }
-        snapshot.travel.append(contentsOf: travel)
         snapshot.places.sort { $0.span.start < $1.span.start }
         snapshot.travel.sort { $0.span.start < $1.span.start }
         snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
@@ -4472,26 +4492,30 @@ final class AppModel {
     }
 
     private func refreshPermissionStates() async {
-        snapshot.settings.permissions[.photos] = photoService.permissionState()
+        let photoState = photoService.permissionState()
+        snapshot.settings.permissions[.photos] = photoState
         if !permissionState(for: .photos).isGranted {
             snapshot.settings.showsPhotos = false
             snapshot.settings.showsPhotosInWidgets = false
             snapshot.photos = []
         }
-        snapshot.settings.permissions[.calendar] = calendarService.permissionState()
+        let calendarState = calendarService.permissionState()
+        snapshot.settings.permissions[.calendar] = calendarState
         if !permissionState(for: .calendar).isGranted {
             snapshot.settings.selectedCalendarIDs = []
             snapshot.calendarEvents = []
         }
+        var healthState = PermissionState.unavailable
         do {
-            snapshot.settings.permissions[.health] =
-                try await healthService.authorizationRequestState()
+            healthState = try await healthService.authorizationRequestState()
         } catch {
-            snapshot.settings.permissions[.health] = healthService.permissionState()
+            healthState = healthService.permissionState()
         }
+        snapshot.settings.permissions[.health] = healthState
+        var locationState = PermissionState.unavailable
         if let sensorService {
-            snapshot.settings.permissions[.location] =
-                sensorService.locationPermissionState()
+            locationState = sensorService.locationPermissionState()
+            snapshot.settings.permissions[.location] = locationState
             snapshot.settings.permissions[.motion] =
                 sensorService.motionPermissionState()
             snapshot.settings.backgroundPreciseLocationEnabled =
@@ -4511,11 +4535,40 @@ final class AppModel {
             snapshot.settings.locationEnabled = false
             snapshot.settings.backgroundPreciseLocationEnabled = false
         }
-        snapshot.settings.permissions[.notifications] =
-            await notificationScheduler.authorizationState()
+        let notificationState = await notificationScheduler.authorizationState()
+        snapshot.settings.permissions[.notifications] = notificationState
         if !permissionState(for: .notifications).isGranted {
             snapshot.settings.notificationsEnabled = false
         }
+        migratePermissionFlagsIfNeeded(
+            photos: photoState,
+            calendar: calendarState,
+            health: healthState,
+            location: locationState,
+            notifications: notificationState
+        )
+    }
+
+    private func migratePermissionFlagsIfNeeded(
+        photos: PermissionState,
+        calendar: PermissionState,
+        health: PermissionState,
+        location: PermissionState,
+        notifications: PermissionState
+    ) {
+        guard !UserDefaults.standard.bool(forKey: Self.permissionFlagsMigrationKey)
+        else { return }
+        let granted = [photos, calendar, health, location, notifications]
+            .contains(where: \.isGranted)
+        guard granted else { return }
+        snapshot.settings.showsPhotos = photos.isGranted
+        snapshot.settings.healthEnabled = health.isGranted
+        snapshot.settings.locationEnabled = location.isGranted
+        snapshot.settings.notificationsEnabled = notifications.isGranted
+        if calendar.isGranted, snapshot.settings.selectedCalendarIDs.isEmpty {
+            snapshot.settings.selectedCalendarIDs = calendarService.calendars().map(\.id)
+        }
+        UserDefaults.standard.set(true, forKey: Self.permissionFlagsMigrationKey)
     }
 
     private func refreshPhotos() {
@@ -4604,17 +4657,32 @@ final class AppModel {
                     capturedAt: span.end
                 )
             }
-            snapshot.actuals = AppleDeviceGroundTruthEngine
-                .replacingHealthKitActuals(
-                    existing: snapshot.actuals,
-                    with: visibleFreshActuals,
-                    inside: span
+            // HealthKit can legally return an empty result while its daemon,
+            // Watch delivery, or authorization is catching up. An empty
+            // refresh is not evidence that previously saved records vanished.
+            if !visibleFreshActuals.isEmpty {
+                snapshot.actuals = AppleDeviceGroundTruthEngine
+                    .replacingHealthKitActuals(
+                        existing: snapshot.actuals,
+                        with: visibleFreshActuals,
+                        inside: span
+                    )
+            } else {
+                Self.integrationLogger.notice(
+                    "HealthKit returned no actuals; preserving existing records"
                 )
-            sleepSessions.removeAll {
-                $0.span.intersection(with: span) != nil
             }
-            sleepSessions.append(contentsOf: freshSessions)
-            sleepSessions.sort { $0.span.start < $1.span.start }
+            if !freshSessions.isEmpty {
+                sleepSessions.removeAll {
+                    $0.span.intersection(with: span) != nil
+                }
+                sleepSessions.append(contentsOf: freshSessions)
+                sleepSessions.sort { $0.span.start < $1.span.start }
+            } else {
+                Self.integrationLogger.notice(
+                    "HealthKit returned no sleep sessions; preserving existing records"
+                )
+            }
             lastHealthRefreshAt = .now
             Self.integrationLogger.notice(
                 "HealthKit refresh completed: actuals=\(freshActuals.count, privacy: .public), sleepSessions=\(freshSessions.count, privacy: .public), periodic=\(requestedSpan != nil, privacy: .public)"
@@ -4648,13 +4716,19 @@ final class AppModel {
                 from: samples,
                 suppressedIDs: snapshot.settings.suppressedActualIDs
             )
-            let updated = ScreenTimeUsageRecordEngine.replacing(
-                existing: snapshot.actuals,
-                with: fresh,
-                inside: span
-            )
-            if snapshot.actuals != updated {
-                snapshot.actuals = updated
+            if !samples.isEmpty {
+                let updated = ScreenTimeUsageRecordEngine.replacing(
+                    existing: snapshot.actuals,
+                    with: fresh,
+                    inside: span
+                )
+                if snapshot.actuals != updated {
+                    snapshot.actuals = updated
+                }
+            } else {
+                Self.integrationLogger.notice(
+                    "Screen Time returned no samples; preserving existing records"
+                )
             }
             appUsageRecordCount = fresh.count
             appUsageTotalDuration = fresh.reduce(into: 0) {
@@ -5490,6 +5564,12 @@ final class AppModel {
     }
 
     private func persist() async {
+        guard !repositoryLoadFailed else {
+            Self.integrationLogger.error(
+                "Persistence blocked after repository load failure; preserving existing data"
+            )
+            return
+        }
         do {
             var value = snapshot
             value.updatedAt = .now
@@ -5635,6 +5715,12 @@ final class AppModel {
     }
 
     private func persistDeviceLocalSnapshot() async {
+        guard !repositoryLoadFailed else {
+            Self.integrationLogger.error(
+                "Device persistence blocked after repository load failure; preserving existing data"
+            )
+            return
+        }
         // Location and HealthKit callbacks can converge at the same moment.
         // Coalesce those device-only commits so one sensor tick does not
         // trigger duplicate disk writes, widget serialization and timeline

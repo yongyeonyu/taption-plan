@@ -16,6 +16,20 @@ enum TimelineLevel: String, Codable, CaseIterable, Sendable {
     case year
 }
 
+/// The semantic hierarchy shown by the timetable.  Record origin is kept
+/// separate in `TimelineSourceKind`; it is a badge, not another parent row.
+enum TimelineSemanticLevel: String, Codable, CaseIterable, Sendable {
+    case dayPhase = "일과"
+    case activity = "활동"
+    case detail = "상세"
+}
+
+enum TimelineSourceKind: String, Codable, CaseIterable, Sendable {
+    case automatic = "자동"
+    case routine = "루틴"
+    case action = "액션"
+}
+
 /// The automatic timeline rows.  Row identifier, Korean label and symbol live
 /// together here so every scale, every detail card and every widget reads the
 /// same vocabulary. Duplicating the label tables per surface is what produced
@@ -467,6 +481,19 @@ struct PlanRecord: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+extension PlanRecord {
+    /// Plans use the same semantic vocabulary as automatic records.  The
+    /// routine/action distinction remains an origin relationship in the graph.
+    var semanticLevel: TimelineSemanticLevel {
+        if subCategoryName?.isEmpty == false { return .detail }
+        return middleCategoryName?.isEmpty == false ? .activity : .dayPhase
+    }
+
+    var sourceKind: TimelineSourceKind {
+        GoalRecordPolicy.isGoal(self) ? .routine : .action
+    }
+}
+
 struct GoalRepeatRule: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var name: String?
@@ -614,6 +641,28 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         }
         let observedEnd = min(endedAt ?? date, date)
         return TimeSpan(start: startedAt, end: max(startedAt, observedEnd))
+    }
+}
+
+extension ActualRecord {
+    var semanticLevel: TimelineSemanticLevel {
+        let value = (behavior ?? "").lowercased()
+        let detailTokens = [
+            "core", "deep", "rem", "walking", "running", "cycling",
+            "automotive", "bus", "subway", "train", "boat", "airplane"
+        ]
+        return detailTokens.contains { value.contains($0) }
+            ? .detail
+            : .activity
+    }
+
+    var sourceKind: TimelineSourceKind {
+        switch source {
+        case .manual, .timer:
+            .action
+        default:
+            .automatic
+        }
     }
 }
 
@@ -2294,6 +2343,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var systemFloor: Int?
     var gpsAvailable: Bool
     var nearbyStation: Bool
+    /// Apple 지도에서 확인한 가장 가까운 철도·버스 정류장 이름입니다.
+    /// 원시 GPS와 함께 보관해 역과 역 사이 이동을 판정할 때 사용합니다.
+    var nearbyStationName: String?
     var matchesRailRoute: Bool
     var matchesPublicTransitRoute: Bool
     var frequentStops: Bool
@@ -2342,6 +2394,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         systemFloor: Int? = nil,
         gpsAvailable: Bool = true,
         nearbyStation: Bool = false,
+        nearbyStationName: String? = nil,
         matchesRailRoute: Bool = false,
         matchesPublicTransitRoute: Bool = false,
         frequentStops: Bool = false,
@@ -2390,6 +2443,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.systemFloor = systemFloor
         self.gpsAvailable = gpsAvailable
         self.nearbyStation = nearbyStation
+        self.nearbyStationName = nearbyStationName
         self.matchesRailRoute = matchesRailRoute
         self.matchesPublicTransitRoute = matchesPublicTransitRoute
         self.frequentStops = frequentStops

@@ -173,16 +173,25 @@ enum MovementDisplayEngine {
     static func reviewActuals(
         _ actuals: [ActualRecord],
         travel: [TravelSegment],
+        calendarEvents: [CalendarRecord] = [],
         asOf date: Date = .now
     ) -> [ActualRecord] {
         let canonical = travel.compactMap { segment -> ActualRecord? in
             let end = min(segment.span.end, date)
             guard end > segment.span.start else { return nil }
+            let isConfirmedBySchedule = hasScheduledEvent(
+                segment.span,
+                in: calendarEvents
+            )
+            let isConfirmed = segment.isConfirmed
+                || segment.confidence == .high
+                || isConfirmedBySchedule
+            let title = MovementPresentation.title(for: segment.mode)
             return ActualRecord(
                 id: segment.id,
                 planID: nil,
-                title: MovementPresentation.title(for: segment.mode),
-                categoryID: "movement",
+                title: isConfirmed ? title : "\(title) (미확인)",
+                categoryID: isConfirmed ? "movement" : "unconfirmed",
                 startedAt: segment.span.start,
                 endedAt: end,
                 source: .location,
@@ -190,10 +199,22 @@ enum MovementDisplayEngine {
                 createdAt: segment.span.start,
                 behavior: segment.mode.rawValue,
                 evidence: segment.evidence,
-                manuallyCorrected: segment.isConfirmed
+                manuallyCorrected: isConfirmed
             )
         }
         return visibleActuals(actuals, travel: travel, asOf: date) + canonical
+    }
+
+    private static func hasScheduledEvent(
+        _ span: TimeSpan,
+        in events: [CalendarRecord]
+    ) -> Bool {
+        guard span.duration > 0 else { return false }
+        return events.contains { event in
+            !event.isAllDay
+                && event.isCancelled != true
+                && (event.span.intersection(with: span)?.duration ?? 0) > 0
+        }
     }
 
     static func visibleActuals(

@@ -140,6 +140,15 @@ enum RecordTimelinePalette {
         case .dayPhase: dayPhaseHexes[token]
         case .sleepStage: sleepStageHexes[token]
         case .travel: travelHexes[token]
+        case .weather:
+            switch WeatherClockToken.airGrade(token) {
+            case .good: "#16A34A"
+            case .moderate: "#CA8A04"
+            case .bad: "#EA580C"
+            case .veryBad: "#DC2626"
+            case nil: "#0EA5E9"
+            }
+        case .location: "#0284C7"
         }
         return Color(hex: hex ?? "#475569")
     }

@@ -295,6 +295,23 @@ struct TravelModeClassifier: Sendable {
             || altitudeDelta <= -2
         let displacementMeters = firstLastDisplacement(ordered)
         let deepUndergroundRecovery = altitudeDropAndRecovery(ordered)
+        let railStations = railStationSequence(ordered)
+        let altitudeDropMeters = maxAltitudeDrop(ordered)
+        let undergroundDescent = altitudeDropMeters >= 8
+            || altitudeDelta <= -8
+            || gpsLossRatio >= 0.45
+        let lowStepsForTransit = !stepSignal.hasCoverage
+            || stepsPerMinute <= 5
+                && stepSignal.cadenceStepsPerSecond <= 0.2
+        let watchVibrationUnavailable = watchAcceleration.sampleCount < 2
+        let watchVibrationAbsent = watchAcceleration.sampleCount >= 2
+            && watchAcceleration.standardDeviationG < 0.012
+            && watchAcceleration.meanJerkGPerSecond < 0.04
+        let stationToStationSubway = railStations.count >= 2
+            && railContext
+            && undergroundDescent
+            && lowStepsForTransit
+            && (watchVibrationAbsent || watchVibrationUnavailable)
 
         if stationRatio >= 0.25 {
             add(.subway, 0.16, "역 접근")
@@ -334,6 +351,31 @@ struct TravelModeClassifier: Sendable {
             if railContext {
                 add(.subway, 0.18, "역·철도·반복 정차 패턴")
             }
+        }
+
+        // 지하철은 역 근처 표본이 두 곳 이상 순서대로 잡히고, 그 사이에
+        // 지하 하강·GPS 약화와 걸음 부재가 겹칠 때 확정한다. 워치 진동이
+        // 약한 경우도 철도 차량과 모순되지 않으므로 별도 근거로 남긴다.
+        if stationToStationSubway {
+            let first = railStations.first ?? "출발역"
+            let last = railStations.last ?? "도착역"
+            add(
+                .subway,
+                1.35,
+                "지하철역 \(first) → \(last)"
+            )
+            add(.subway, 0.42, "역·역 이동 구간")
+            add(.subway, 0.32, "지하 하강·GPS 약화")
+            add(.subway, 0.18, "걸음 거의 없음")
+            if watchVibrationAbsent {
+                add(.subway, 0.12, "Apple Watch 진동 없음")
+            }
+            return MovementInference(
+                mode: .subway,
+                confidence: .high,
+                score: 0.96,
+                evidence: Array(Set(candidates[.subway]?.1 ?? [])).sorted()
+            )
         }
 
         let busStopPathSignal = transitRatio >= 0.5
@@ -490,6 +532,29 @@ struct TravelModeClassifier: Sendable {
             dropMeters: max(0, drop),
             recoveryMeters: max(0, recovery)
         )
+    }
+
+    private func maxAltitudeDrop(_ readings: [SensorReading]) -> Double {
+        let values = readings.compactMap(\.relativeAltitudeMeters)
+        guard let first = values.first else { return 0 }
+        var highest = first
+        var maximumDrop = 0.0
+        for value in values.dropFirst() {
+            highest = max(highest, value)
+            maximumDrop = max(maximumDrop, highest - value)
+        }
+        return maximumDrop
+    }
+
+    private func railStationSequence(_ readings: [SensorReading]) -> [String] {
+        var result: [String] = []
+        for reading in readings where reading.matchesRailRoute {
+            guard let rawName = reading.nearbyStationName else { continue }
+            let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, result.last != name else { continue }
+            result.append(name)
+        }
+        return result
     }
 
     private func firstLastDisplacement(_ readings: [SensorReading]) -> Double {

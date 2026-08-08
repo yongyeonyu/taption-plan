@@ -520,6 +520,8 @@ enum RecordClockDetailKind: String, Equatable, Sendable {
     case dayPhase
     case sleepStage
     case travel
+    case weather
+    case location
 }
 
 struct RecordClockDetailArc: Identifiable, Equatable, Sendable {
@@ -535,6 +537,59 @@ struct RecordClockDetailRing: Identifiable, Equatable, Sendable {
     let id: String
     let kind: RecordClockDetailKind
     let arcs: [RecordClockDetailArc]
+}
+
+/// 원형 시간표의 날씨 조각은 한 칸에 온도·상태·미세먼지를 함께 보인다.
+/// 문자열 하나로 보관해 기존의 가벼운 링 모델과 범례 선택을 그대로 쓴다.
+enum WeatherClockToken {
+    static func make(_ context: WeatherContext) -> String {
+        let condition = context.condition.replacingOccurrences(of: "|", with: "/")
+        let symbol = context.symbolName.replacingOccurrences(of: "|", with: "/")
+        let temperature = Int(context.temperatureCelsius.rounded())
+        let air = context.airQuality
+        let grade = air.map { String($0.overallGrade.rawValue) } ?? "-"
+        let pm10 = air.map { String(Int($0.pm10MicrogramsPerCubicMeter.rounded())) } ?? "-"
+        let pm25 = air.map { String(Int($0.pm25MicrogramsPerCubicMeter.rounded())) } ?? "-"
+        return [condition, symbol, String(temperature), grade, pm10, pm25].joined(separator: "|")
+    }
+
+    static func displayName(_ token: String) -> String {
+        let parts = token.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 6, let temperature = Int(parts[2]) else { return token }
+        return "\(weatherEmoji(for: parts[1])) \(temperature)° · \(airEmoji(for: parts[3]))"
+    }
+
+    static func airGrade(_ token: String) -> AirQualityGrade? {
+        let parts = token.split(separator: "|", omittingEmptySubsequences: false)
+        guard parts.count == 6, let raw = Int(parts[3]) else { return nil }
+        return AirQualityGrade(rawValue: raw)
+    }
+
+    private static func weatherEmoji(for symbol: String) -> String {
+        switch symbol {
+        case "sun.max.fill", "sun.min.fill": "☀️"
+        case "moon.fill", "moon.stars.fill": "🌙"
+        case "cloud.sun.fill", "cloud.moon.fill": "🌤️"
+        case "cloud.fill": "☁️"
+        case "cloud.fog.fill": "🌫️"
+        case "cloud.drizzle.fill": "🌦️"
+        case "cloud.sleet.fill": "🌨️"
+        case "cloud.rain.fill", "cloud.heavyrain.fill": "🌧️"
+        case "cloud.snow.fill": "❄️"
+        case "cloud.bolt.rain.fill": "⛈️"
+        default: "🌡️"
+        }
+    }
+
+    private static func airEmoji(for rawGrade: String) -> String {
+        switch Int(rawGrade).flatMap(AirQualityGrade.init(rawValue:)) {
+        case .good: "🟢"
+        case .moderate: "🟡"
+        case .bad: "🟠"
+        case .veryBad: "🔴"
+        case nil: "⚪️"
+        }
+    }
 }
 
 struct RecordChartSlice: Identifiable, Equatable, Sendable {
@@ -1413,6 +1468,49 @@ enum RecordClockDetailEngine {
             )
         }
         return ring(kind: .travel, pieces: pieces, in: span)
+    }
+
+    /// 측정 시각별 날씨 띠. 같은 상태는 `WeatherTimelineEngine`이 하나로
+    /// 합치고, 상태가 바뀐 시각만 원 안쪽에서 경계를 만든다.
+    static func weatherRing(
+        contexts: [WeatherContext],
+        in span: TimeSpan,
+        asOf: Date = .now
+    ) -> RecordClockDetailRing? {
+        let limit = min(span.end, asOf)
+        guard span.start < limit else { return nil }
+        let visibleSpan = TimeSpan(start: span.start, end: limit)
+        let pieces = WeatherTimelineEngine.coalesced(contexts).compactMap {
+            context -> (token: String, span: TimeSpan)? in
+            guard context.observedAt < limit,
+                  let visible = WeatherTimelineEngine.span(for: context)
+                    .intersection(with: visibleSpan),
+                  visible.duration > 0 else { return nil }
+            return (WeatherClockToken.make(context), visible)
+        }
+        return ring(kind: .weather, pieces: pieces, in: span)
+    }
+
+    /// 머문 장소 띠. 날씨와 함께 상세 고리 아래의 환경 정보로 보여 준다.
+    /// 장소 이름과 층수만 토큰으로 보관하고, 원본 위치 좌표는 모델에 그대로
+    /// 남겨 둔다.
+    static func locationRing(
+        stays: [PlaceStay],
+        in span: TimeSpan,
+        asOf: Date = .now
+    ) -> RecordClockDetailRing? {
+        let limit = min(span.end, asOf)
+        guard span.start < limit else { return nil }
+        let visibleSpan = TimeSpan(start: span.start, end: limit)
+        let pieces = stays.compactMap { stay -> (token: String, span: TimeSpan)? in
+            guard let visible = stay.span.intersection(with: visibleSpan),
+                  visible.duration > 0 else { return nil }
+            let name = stay.displayName
+                .replacingOccurrences(of: "|", with: "/")
+            let token = stay.floor.map { "\(name) · \($0)층" } ?? name
+            return (token, visible)
+        }
+        return ring(kind: .location, pieces: pieces, in: span)
     }
 
     /// 겹친 단계 가운데 구체적인 관측이 이긴다. 경계마다 한 단계만 남겨

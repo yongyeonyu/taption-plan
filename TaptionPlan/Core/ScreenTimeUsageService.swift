@@ -36,7 +36,7 @@ enum ScreenTimeAuthorizationState: String, Sendable {
     var guidance: String? {
         switch self {
         case .dataAccessUnavailable:
-            "앱 사용 데이터 접근 없이 승인된 상태입니다. 탭하면 승인을 해제하고 데이터 접근까지 다시 요청합니다."
+            "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요."
         case .denied:
             "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 Taption Plan을 허용해 주세요."
         case .requiresCurrentSystem:
@@ -136,11 +136,7 @@ final class ScreenTimeUsageService {
 #endif
     }
 
-    /// - Parameter forceRetry: 빌드당 한 번으로 묶인 자동 재시도 한도를
-    ///   무시하고 해제·재요청을 한 번 더 시도한다. 이 함수의 호출부는 전부
-    ///   사용자가 직접 누른 동작이라(설정 행, 온보딩 버튼), 자동 재시도가
-    ///   이미 실패해 소진됐어도 사람이 다시 누르면 다시 시도하는 게 맞다.
-    func requestAuthorization(forceRetry: Bool = false) async throws {
+    func requestAuthorization() async throws {
 #if canImport(FamilyControls)
         switch authorizationState {
         case .approved:
@@ -151,25 +147,11 @@ final class ScreenTimeUsageService {
         case .requiresCurrentSystem:
             throw ScreenTimeUsageError.requiresCurrentSystem
         case .dataAccessUnavailable:
-            // FamilyControls에는 "데이터 접근을 함께 요청하는" 별도 API가
-            // 없다. 시스템이 앱의 엔타이틀먼트를 보고 동의 화면 종류를
-            // 고르며, 이미 승인 기록이 있으면 requestAuthorization(for:)는
-            // 프롬프트 없이 즉시 반환한다. 따라서 승인을 해제하고 데몬이
-            // 실제로 상태를 되돌린 뒤에 다시 요청해야 한다.
-            guard forceRetry || DataAccessRetryMarker.canRetry else {
-                // 이 빌드에서 이미 재승인을 시도했는데도 기본 승인만
-                // 남았다면 다시 해제해 봐야 결과가 같다. 멀쩡한 승인을
-                // 날리는 대신 원인과 다음 단계를 알려 준다.
-                throw ScreenTimeUsageError.dataAccessNotGranted
-            }
-            DataAccessRetryMarker.markAttempted()
-            try await revokeAuthorization()
-            let cleared = await waitForAuthorizationStatus {
-                $0 == .notDetermined || $0 == .denied
-            }
-            guard cleared == .notDetermined else {
-                throw ScreenTimeUsageError.revokeFailed
-            }
+            // 승인 해제는 iOS 스크린 타임 데몬과 앱의 엔타이틀먼트가
+            // 어긋난 상태에서 충돌을 일으킬 수 있다. 앱에서 강제로
+            // revoke하지 않고 시스템 설정에서 데이터 접근을 허용하도록
+            // 안내한다.
+            throw ScreenTimeUsageError.dataAccessNotGranted
         case .notDetermined, .denied:
             break
         }
@@ -184,15 +166,6 @@ final class ScreenTimeUsageService {
     }
 
 #if canImport(FamilyControls)
-    private func revokeAuthorization() async throws {
-        try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<Void, any Error>) in
-            AuthorizationCenter.shared.revokeAuthorization { result in
-                continuation.resume(with: result)
-            }
-        }
-    }
-
     /// `authorizationStatus`는 스크린 타임 데몬이 XPC로 밀어 주는
     /// `@Published` 값이라 호출 직후에는 아직 예전 값일 수 있다. 원하는
     /// 상태로 확정될 때까지 짧게 기다린다.
@@ -415,37 +388,11 @@ final class ScreenTimeUsageService {
 #endif
 }
 
-/// 데이터 접근 재승인을 이 빌드에서 이미 시도했는지 기억한다. 앱 버전이
-/// 바뀌면(= 엔타이틀먼트가 달라졌을 수 있으면) 다시 한 번 시도하게 둔다.
-enum DataAccessRetryMarker {
-    private static let key = "screenTime.dataAccessRetry.version"
-
-    static var currentVersion: String {
-        let bundle = Bundle.main
-        let short = bundle.object(
-            forInfoDictionaryKey: "CFBundleShortVersionString"
-        ) as? String ?? "0"
-        let build = bundle.object(
-            forInfoDictionaryKey: "CFBundleVersion"
-        ) as? String ?? "0"
-        return "\(short)(\(build))"
-    }
-
-    static var canRetry: Bool {
-        UserDefaults.standard.string(forKey: key) != currentVersion
-    }
-
-    static func markAttempted() {
-        UserDefaults.standard.set(currentVersion, forKey: key)
-    }
-}
-
 enum ScreenTimeUsageError: LocalizedError {
     case unavailable
     case requiresCurrentSystem
     case dataAccessUnavailable
     case dataAccessNotGranted
-    case revokeFailed
 
     var errorDescription: String? {
         switch self {
@@ -454,7 +401,7 @@ enum ScreenTimeUsageError: LocalizedError {
         case .requiresCurrentSystem:
             "앱 사용시간 기록에는 iOS 26.4 이상이 필요합니다."
         case .dataAccessUnavailable:
-            "앱 사용 데이터 접근이 아직 승인되지 않았습니다. 설정 화면의 '어플' 항목을 눌러 승인을 다시 받아 주세요."
+            "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요."
         case .dataAccessNotGranted:
             """
             앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.
@@ -463,8 +410,6 @@ enum ScreenTimeUsageError: LocalizedError {
             3. 설정 > 스크린 타임 > 앱 사용 데이터 공유에서 Taption Plan을 허용합니다.
             그래도 같다면 이 Apple 계정에서는 접근이 제한됩니다. 가족 공유의 자녀 계정이거나 일부 국가/지역인 경우가 여기에 해당합니다.
             """
-        case .revokeFailed:
-            "기존 스크린 타임 승인을 해제하지 못했습니다. 설정 > 스크린 타임에서 Taption Plan의 접근을 끈 뒤 다시 시도해 주세요."
         }
     }
 }

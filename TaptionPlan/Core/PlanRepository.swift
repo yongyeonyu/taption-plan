@@ -21,7 +21,19 @@ actor MigratingPlanRepository: PlanDataRepository {
     }
 
     func load() async throws -> TaptionDataSnapshot {
-        let shared = try await primary.load()
+        let shared: TaptionDataSnapshot
+        do {
+            shared = try await primary.load()
+        } catch {
+            // A damaged shared file must never make the app fall back to an
+            // empty snapshot and overwrite the last good device copy.
+            if let existing = try? await legacy.load(),
+               existing.updatedAt != .distantPast {
+                try? await primary.save(existing)
+                return existing
+            }
+            throw error
+        }
         guard shared.updatedAt == .distantPast else {
             return shared
         }
@@ -150,6 +162,10 @@ actor FilePlanRepository: PlanDataRepository {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
+    private var backupURL: URL {
+        fileURL.appendingPathExtension("backup")
+    }
+
     init(fileURL: URL, storageLabel: String = "file") {
         self.fileURL = fileURL
         self.storageLabel = storageLabel
@@ -196,26 +212,32 @@ actor FilePlanRepository: PlanDataRepository {
 
     func load() async throws -> TaptionDataSnapshot {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            if let recovered = try? loadSnapshot(at: backupURL) {
+                Self.logger.error(
+                    "Repository primary missing; recovered backup: storage=\(self.storageLabel, privacy: .public)"
+                )
+                return recovered
+            }
             Self.logger.notice(
                 "Repository load empty: storage=\(self.storageLabel, privacy: .public)"
             )
             return .empty
         }
         do {
-            let storedData = try Data(contentsOf: fileURL)
-            let data = TaptionSnapshotCompression.decode(storedData)
-            let snapshot = try decoder.decode(
-                TaptionDataSnapshot.self,
-                from: data
+            let (snapshot, storedBytes, jsonBytes) = try loadSnapshotWithSizes(
+                at: fileURL
             )
-            guard snapshot.schemaVersion <= TaptionDataSnapshot.empty.schemaVersion else {
-                throw RepositoryError.unsupportedSchema(snapshot.schemaVersion)
-            }
             Self.logger.debug(
-                "Repository load: storage=\(self.storageLabel, privacy: .public), bytes=\(storedData.count, privacy: .public), jsonBytes=\(data.count, privacy: .public), updated=\(snapshot.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(snapshot.plans.count, privacy: .public), places=\(snapshot.places.count, privacy: .public), travel=\(snapshot.travel.count, privacy: .public)"
+                "Repository load: storage=\(self.storageLabel, privacy: .public), bytes=\(storedBytes, privacy: .public), jsonBytes=\(jsonBytes, privacy: .public), updated=\(snapshot.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(snapshot.plans.count, privacy: .public), actuals=\(snapshot.actuals.count, privacy: .public), places=\(snapshot.places.count, privacy: .public), travel=\(snapshot.travel.count, privacy: .public)"
             )
             return snapshot
         } catch {
+            if let recovered = try? loadSnapshot(at: backupURL) {
+                Self.logger.error(
+                    "Repository load recovered backup: storage=\(self.storageLabel, privacy: .public), error=\(error.localizedDescription, privacy: .public), plans=\(recovered.plans.count, privacy: .public), actuals=\(recovered.actuals.count, privacy: .public)"
+                )
+                return recovered
+            }
             Self.logger.error(
                 "Repository load failed: storage=\(self.storageLabel, privacy: .public), error=\(error.localizedDescription, privacy: .public)"
             )
@@ -233,6 +255,13 @@ actor FilePlanRepository: PlanDataRepository {
                 at: fileURL.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
+            // Keep the last valid generation. Never replace this backup from
+            // a file that no longer decodes.
+            if FileManager.default.fileExists(atPath: fileURL.path),
+               (try? loadSnapshot(at: fileURL)) != nil {
+                let previous = try Data(contentsOf: fileURL)
+                try previous.write(to: backupURL, options: [.atomic])
+            }
             try data.write(
                 to: fileURL,
                 options: [
@@ -241,7 +270,7 @@ actor FilePlanRepository: PlanDataRepository {
                 ]
             )
             Self.logger.notice(
-                "Repository save: storage=\(self.storageLabel, privacy: .public), bytes=\(data.count, privacy: .public), jsonBytes=\(json.count, privacy: .public), updated=\(value.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(value.plans.count, privacy: .public), places=\(value.places.count, privacy: .public), travel=\(value.travel.count, privacy: .public)"
+                "Repository save: storage=\(self.storageLabel, privacy: .public), bytes=\(data.count, privacy: .public), jsonBytes=\(json.count, privacy: .public), updated=\(value.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(value.plans.count, privacy: .public), actuals=\(value.actuals.count, privacy: .public), places=\(value.places.count, privacy: .public), travel=\(value.travel.count, privacy: .public)"
             )
         } catch {
             Self.logger.error(
@@ -252,8 +281,28 @@ actor FilePlanRepository: PlanDataRepository {
     }
 
     func deleteAll() async throws {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
-        try FileManager.default.removeItem(at: fileURL)
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
+        }
+        if FileManager.default.fileExists(atPath: backupURL.path) {
+            try FileManager.default.removeItem(at: backupURL)
+        }
+    }
+
+    private func loadSnapshot(at url: URL) throws -> TaptionDataSnapshot {
+        try loadSnapshotWithSizes(at: url).snapshot
+    }
+
+    private func loadSnapshotWithSizes(
+        at url: URL
+    ) throws -> (snapshot: TaptionDataSnapshot, storedBytes: Int, jsonBytes: Int) {
+        let storedData = try Data(contentsOf: url)
+        let data = TaptionSnapshotCompression.decode(storedData)
+        let snapshot = try decoder.decode(TaptionDataSnapshot.self, from: data)
+        guard snapshot.schemaVersion <= TaptionDataSnapshot.empty.schemaVersion else {
+            throw RepositoryError.unsupportedSchema(snapshot.schemaVersion)
+        }
+        return (snapshot, storedData.count, data.count)
     }
 }
 

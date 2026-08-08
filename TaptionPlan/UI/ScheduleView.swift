@@ -1659,9 +1659,6 @@ struct ScheduleView: View {
                     editingPlanID = nil
                 }
             )
-            if let session = model.activeTrackingSession {
-                liveTrackingBanner(session)
-            }
             if let missing = model.timelineIntegrationNotice {
                 integrationNotice(missing)
             }
@@ -1828,47 +1825,6 @@ struct ScheduleView: View {
         dayZoom = TimelineZoomPreset.defaultPreset(for: scale)
     }
 
-    private func liveTrackingBanner(_ session: TrackingSession) -> some View {
-        let lastSample = model.latestSensorReading?.timestamp
-        return HStack(spacing: 8) {
-            Image(
-                systemName: session.kind == .running
-                    ? "figure.run"
-                    : "figure.walk"
-            )
-            .font(.taption(size: 13, weight: .bold))
-            .foregroundStyle(Color.tpTransitDark)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(
-                    model.trackingSessionWasRecovered
-                        ? "\(session.kind.displayName) 기록을 이어가는 중"
-                        : "\(session.kind.displayName) 기록 중"
-                )
-                .font(.taption(size: 9.5, weight: .bold))
-                Text(
-                    lastSample.map {
-                        "마지막 위치 \(relativeAgeText($0)) · 경로 \(model.liveRouteState.readings.count)개"
-                    } ?? "아직 첫 위치를 기다리는 중"
-                )
-                .font(.taption(size: 7.5, weight: .semibold))
-                .foregroundStyle(Color.tpSecondary)
-            }
-            Spacer(minLength: 4)
-            Button("종료") {
-                Task { await model.stopTracking() }
-            }
-            .font(.taption(size: 8, weight: .bold))
-            .buttonStyle(.borderedProminent)
-            .tint(Color.tpTransitDark)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(Color.tpTransit.opacity(0.22))
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.tpTransitDark.opacity(0.18)).frame(height: 0.5)
-        }
-    }
-
     private func integrationNotice(_ missing: [String]) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.circle")
@@ -1962,12 +1918,6 @@ struct ScheduleView: View {
                 .fill(Color.tpSecondary.opacity(0.18))
                 .frame(height: 0.5)
         }
-    }
-
-    private func relativeAgeText(_ date: Date) -> String {
-        let seconds = max(0, Int(Date.now.timeIntervalSince(date)))
-        if seconds < 60 { return "방금" }
-        return "\(seconds / 60)분 전"
     }
 
     private func requestPlayheadDetailUpdate(at date: Date) {
@@ -2785,13 +2735,16 @@ private struct RecordRelationshipView: View {
             HStack(spacing: 6) {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
                     .font(.taption(size: 10, weight: .bold))
-                Text("연결 구조")
+                Text("기록 출처 연결")
                     .font(.taption(size: 9.5, weight: .bold))
                 Spacer(minLength: 4)
-                Text("탭해서 루틴·액션 연결")
+                Text("자동 근거 · 루틴 · 액션")
                     .font(.taption(size: 7.5, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
             }
+            Text("시간표 분류는 일과 → 활동 → 상세로 보고, 아래 연결은 출처만 표시합니다.")
+                .font(.taption(size: 7.5))
+                .foregroundStyle(Color.tpSecondary)
 
             if !connectionChains.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
@@ -4250,11 +4203,12 @@ private struct TimelineDetailPanel: View {
     private func actualDetailSubtitle(_ actual: ActualRecord) -> String {
         let span = "실제 · \(actual.startedAt.formatted(date: .omitted, time: .shortened))–\((actual.endedAt ?? .now).formatted(date: .omitted, time: .shortened))"
         let source = actualSourceLabel(actual.source)
+        let origin = actual.sourceKind.rawValue
         guard let behavior = actual.behavior
             .flatMap({ WatchBehaviorKind(rawValue: $0) }) else {
-            return "\(span) · \(source)"
+            return "\(span) · \(origin) · \(source)"
         }
-        return "\(span) · \(source) · \(behavior.title)"
+        return "\(span) · \(origin) · \(source) · \(behavior.title)"
     }
 
     private var actionContent: some View {
@@ -4670,13 +4624,16 @@ private struct TimelineDetailPanel: View {
                     from: actuals,
                     inside: focusedSpan
                 )
+            let reviewedAutomaticActuals = MovementDisplayEngine.reviewActuals(
+                automaticActuals,
+                travel: travel,
+                calendarEvents: model.snapshot.calendarEvents,
+                asOf: .now
+            )
             let displayedAutomaticActuals = RestSleepDisplayEngine
                 .visibleActuals(
-                    MovementDisplayEngine.visibleActuals(
-                        automaticActuals,
-                        travel: model.snapshot.travel,
-                        asOf: .now
-                    )
+                    reviewedAutomaticActuals,
+                    asOf: .now
                 )
             let sleepActuals = deduplicatedActuals(
                 displayedAutomaticActuals
@@ -4968,6 +4925,11 @@ private struct TimelineDetailPanel: View {
     }
 
     private func travelLocationLabel(_ travel: TravelSegment) -> String? {
+        if let stationRoute = travel.evidence.first(where: {
+            $0.hasPrefix("지하철역 ")
+        }) {
+            return stationRoute
+        }
         let from = travelPlaceTitle(travel.fromPlaceID)
         let to = travelPlaceTitle(travel.toPlaceID)
         switch (from, to) {
@@ -7321,6 +7283,11 @@ private struct TimelineBoard: View {
                     }
                     .frame(height: layout.contentHeight)
                 }
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .top
+                )
                 .scrollBounceBehavior(.basedOnSize)
                 .simultaneousGesture(
                     viewportDragGesture(width: timelineWidth)
@@ -7329,6 +7296,7 @@ private struct TimelineBoard: View {
                 // Keep the time ruler below the timeline. It remains visible
                 // while rows scroll, like a measuring scale in an editor.
                 axis(markers: displayAxisMarkers)
+                    .layoutPriority(1)
                     .simultaneousGesture(
                         viewportDragGesture(width: timelineWidth)
                     )
@@ -7793,6 +7761,9 @@ private struct TimelineBoard: View {
             .sorted { $0.span.start < $1.span.start }
         let grouped = Dictionary(grouping: visiblePlans, by: \.categoryID)
         let now = Date.now
+        let relevantTravel = model.snapshot.travel.filter {
+            $0.span.intersection(with: span) != nil
+        }
         let visibleActuals = AutomaticRecordTimelineEngine.visibleThroughNow(
             model.snapshot.actuals,
             intersecting: span,
@@ -7800,9 +7771,10 @@ private struct TimelineBoard: View {
         )
             .sorted { $0.startedAt < $1.startedAt }
         let displayedVisibleActuals = RestSleepDisplayEngine.visibleActuals(
-            MovementDisplayEngine.visibleActuals(
+            MovementDisplayEngine.reviewActuals(
                 visibleActuals,
-                travel: model.snapshot.travel,
+                travel: relevantTravel,
+                calendarEvents: model.snapshot.calendarEvents,
                 asOf: now
             ),
             asOf: now

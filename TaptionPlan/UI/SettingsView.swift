@@ -213,6 +213,9 @@ struct SettingsView: View {
                         watchInstallRow
                         appUsageRow
                         locationIntegrationRow
+                        if let session = model.activeTrackingSession {
+                            liveTrackingRow(session)
+                        }
                         settingsRow(
                             icon: "location.viewfinder",
                             iconBackground: .tpPlace,
@@ -317,6 +320,9 @@ struct SettingsView: View {
             model.refreshAppleWatchConnectionState()
             model.refreshAppUsageAuthorizationState()
             model.refreshFrequentPlaceSuggestion()
+        }
+        .task {
+            await model.refreshPermissions()
         }
         .overlay {
             if model.isRefreshingIntegrations
@@ -519,6 +525,60 @@ struct SettingsView: View {
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
         }
+    }
+
+    private func liveTrackingRow(_ session: TrackingSession) -> some View {
+        let lastSample = model.latestSensorReading?.timestamp
+        return HStack(spacing: 8) {
+            Image(
+                systemName: session.kind == .running
+                    ? "figure.run"
+                    : "figure.walk"
+            )
+            .font(.taption(size: 13, weight: .bold))
+            .foregroundStyle(Color.tpTransitDark)
+            .frame(width: 27, height: 27)
+            .background(
+                Color.tpTransit.opacity(0.28),
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(
+                    model.trackingSessionWasRecovered
+                        ? "\(session.kind.displayName) 기록을 이어가는 중"
+                        : "\(session.kind.displayName) 기록 중"
+                )
+                .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
+                Text(
+                    lastSample.map {
+                        "마지막 위치 \(relativeAgeText($0)) · 경로 \(model.liveRouteState.readings.count)개"
+                    } ?? "아직 첫 위치를 기다리는 중"
+                )
+                .font(.taption(size: SettingsTypography.rowSubtitle))
+                .foregroundStyle(Color.tpSecondary)
+            }
+
+            Spacer(minLength: 4)
+            Button("종료") {
+                Task { await model.stopTracking() }
+            }
+            .font(.taption(size: SettingsTypography.action, weight: .bold))
+            .buttonStyle(.borderedProminent)
+            .tint(Color.tpTransitDark)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            Color.tpTransit.opacity(0.16),
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
+    }
+
+    private func relativeAgeText(_ date: Date) -> String {
+        let seconds = max(0, Int(Date.now.timeIntervalSince(date)))
+        if seconds < 60 { return "방금" }
+        return "\(seconds / 60)분 전"
     }
 
     /// 어느 빌드가 실제로 설치돼 있는지 앱 안에서 바로 확인할 수 있게 한다.
