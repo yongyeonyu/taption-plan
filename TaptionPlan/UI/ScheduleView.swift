@@ -1621,13 +1621,9 @@ struct ScheduleView: View {
     var body: some View {
         GeometryReader { geometry in
             let defaultPanelHeight = geometry.size.height * 0.5
-            let timelineBoardHeightBudget = max(
-                minimumTimelineBoardHeight,
-                geometry.size.height * 0.2
-            )
             let maxPanelHeight = max(
                 detailPanelMinimumHeight,
-                geometry.size.height - timelineBoardHeightBudget
+                geometry.size.height - minimumTimelineBoardHeight
             )
             let resolvedPanelHeight = detailPanelHeight > 0
                 ? min(detailPanelHeight, maxPanelHeight)
@@ -1725,6 +1721,7 @@ struct ScheduleView: View {
                 selection: selectedTimelineItem,
                 playheadDate: mapPlayheadDate,
                 panelHeight: $detailPanelHeight,
+                maxHeight: maxPanelHeight,
                 section: $detailSection,
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
@@ -2882,6 +2879,7 @@ private struct TimelineDetailPanel: View {
     let selection: TimelineSelection?
     let playheadDate: Date?
     @Binding var panelHeight: CGFloat
+    let maxHeight: CGFloat
     @Binding var section: TimelineDetailSection
     let highlightedSection: TimelineDetailSection?
     @Binding var selectedPhotoCluster: PhotoCluster?
@@ -2923,10 +2921,7 @@ private struct TimelineDetailPanel: View {
     @State private var panelDragStartHeight: CGFloat?
 
     private var maximumPanelHeight: CGFloat {
-        return max(
-            detailPanelCollapsedHeight,
-            UIScreen.main.bounds.height - 72
-        )
+        max(detailPanelCollapsedHeight, maxHeight)
     }
 
     var body: some View {
@@ -4033,7 +4028,7 @@ private struct TimelineDetailPanel: View {
     }
 
     /// 메모 카드. 시간표 메모 줄이 표식으로 뭉쳐 보여 주는 것을 여기서는
-    /// 하나씩 편다. 눌러서 그 자리의 메모 입력을 연다.
+    /// 하나씩 펼쳐 보여 준다. 새 메모 입력은 하단 메뉴에서 시작한다.
     private var memoContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             detailHeading(
@@ -4045,12 +4040,7 @@ private struct TimelineDetailPanel: View {
                 selection: nil,
                 section: .memo,
                 memos: detailData.memos,
-                onSelect: { memo in
-                    model.openMemoEntry(
-                        at: memo.occurredAt,
-                        memoIDs: [memo.id]
-                    )
-                }
+                onSelect: nil
             )
         }
     }
@@ -6679,13 +6669,9 @@ struct GroupGanttView: View {
     var body: some View {
         GeometryReader { geometry in
             let defaultPanelHeight = geometry.size.height * 0.5
-            let timelineBoardHeightBudget = max(
-                minimumTimelineBoardHeight,
-                geometry.size.height * 0.2
-            )
             let maxPanelHeight = max(
                 detailPanelMinimumHeight,
-                geometry.size.height - timelineBoardHeightBudget
+                geometry.size.height - minimumTimelineBoardHeight
             )
             let resolvedPanelHeight = detailPanelHeight > 0
                 ? min(detailPanelHeight, maxPanelHeight)
@@ -6770,6 +6756,7 @@ struct GroupGanttView: View {
                 selection: selectedTimelineItem,
                 playheadDate: mapPlayheadDate,
                 panelHeight: $detailPanelHeight,
+                maxHeight: maxPanelHeight,
                 section: $detailSection,
                 highlightedSection: selectedTimelineItem?.preferredDetailSection,
                 selectedPhotoCluster: $selectedPhotoCluster,
@@ -7141,6 +7128,8 @@ private struct TimelineBoard: View {
     // at render time; the wider window is rebuilt only when a drag starts or
     // ends.
     @State private var dragLayoutSpan: TimeSpan?
+    /// Keep row geometry stable while the timeline is being dragged.
+    @State private var dragLayoutSnapshot: TimelineBoardLayoutSnapshot?
     @State private var zoomFeedbackSequence = 0
     @State private var continuousMagnifyOrigin: ContinuousMagnifyOrigin?
     @State private var selectedRowID: String?
@@ -7164,7 +7153,7 @@ private struct TimelineBoard: View {
         // to the 60 Hz display budget.
         let displaySpan = visibleSpan
         let layoutSpan = dragLayoutSpan ?? displaySpan
-        let layout = cachedLayoutSnapshot(in: layoutSpan)
+        let layout = dragLayoutSnapshot ?? cachedLayoutSnapshot(in: layoutSpan)
         // Axis labels are cheap to derive and must follow the moving
         // playhead even while the wider drag window keeps row geometry
         // cached.
@@ -7353,6 +7342,7 @@ private struct TimelineBoard: View {
                 around: model.selectedDate
             )
             dragLayoutSpan = nil
+            dragLayoutSnapshot = nil
             onPlayheadMove?(continuousCenterDate)
             resetViewport()
         }
@@ -7370,6 +7360,7 @@ private struct TimelineBoard: View {
                 || hasCustomContinuousDuration
             if continuousDragOrigin == nil {
                 dragLayoutSpan = nil
+                dragLayoutSnapshot = nil
                 if !keepZoom {
                     continuousTimelineDuration = continuousDuration(around: newDate)
                     resetViewport()
@@ -8048,7 +8039,7 @@ private struct TimelineBoard: View {
     }
 
     /// 메모 줄. 다른 줄과 달리 손으로 남긴 기록이라 자동 줄의 회색 바탕을
-    /// 쓰지 않고, 줄 이름을 누르면 곧바로 메모 입력이 열린다.
+    /// 쓰지 않고, 줄을 누르면 하단 상세 내용만 갱신한다.
     ///
     /// 메모는 순간이라 길이가 없다. 순간마다 눈에 걸리는 최소 길이의 표식을
     /// 만들고, 배율이 넓어져 서로 구분되지 않는 표식은 `MemoTimelineEngine`
@@ -9634,7 +9625,9 @@ private struct TimelineBoard: View {
                         lastContinuousRenderUptime = 0
                     }
                     if dragLayoutSpan == nil {
-                        dragLayoutSpan = dragLayoutWindow
+                        let window = dragLayoutWindow
+                        dragLayoutSpan = window
+                        dragLayoutSnapshot = cachedLayoutSnapshot(in: window)
                     }
                     guard let continuousDragOrigin else { return }
                     let secondsPerPoint = activeContinuousDuration
@@ -9710,6 +9703,7 @@ private struct TimelineBoard: View {
                     viewport = preservedViewport
                     lastContinuousRenderUptime = 0
                     dragLayoutSpan = nil
+                    dragLayoutSnapshot = nil
                 } else if let dragOrigin {
                     // Commit the final sample even when the last 240 Hz
                     // callback arrived inside the 60 Hz presentation gate.
@@ -9776,6 +9770,7 @@ private struct TimelineBoard: View {
                 // leave a second viewport multiplier behind to quantize it.
                 viewport = .full
                 dragLayoutSpan = nil
+                dragLayoutSnapshot = nil
             }
         }
         guard let magnifyOrigin else { return }
@@ -9951,6 +9946,8 @@ private struct TimelineBoard: View {
         dragOrigin = nil
         magnifyOrigin = nil
         continuousMagnifyOrigin = nil
+        dragLayoutSpan = nil
+        dragLayoutSnapshot = nil
         editingPlanID = nil
         if withFeedback, changed {
             zoomFeedbackSequence += 1
@@ -9959,17 +9956,6 @@ private struct TimelineBoard: View {
 
     private func handleRowTap(_ row: TimelineRowModel) {
         selectedRowID = row.id
-        // 메모 줄의 이름표가 곧 메모 아이콘이다. 계획도 기록도 고르지 않고
-        // 여기서 바로 입력이 열린다.
-        if row.id == TimelineRowKind.memo.rawValue {
-            model.openMemoEntry(
-                at: MemoTimelineEngine.entryDate(
-                    now: .now,
-                    visibleSpan: visibleSpan
-                )
-            )
-            return
-        }
         let selectableBlocks = row.blocks
             .filter { !$0.isActual && $0.planID != nil }
             .sorted {
@@ -10053,22 +10039,6 @@ private struct TimelineBoard: View {
     }
 
     private func handleTap(_ block: TimelineBlock) {
-        // 메모 표식은 여러 개가 합쳐진 것일 수 있으므로 표식이 덮은 구간의
-        // 메모를 모두 열어 준다.
-        if block.categoryID == MemoTimelineEngine.categoryID {
-            let span = TimeSpan(
-                start: block.startsAt ?? visibleSpan.start,
-                end: block.endsAt ?? visibleSpan.end
-            )
-            model.openMemoEntry(
-                at: span.start,
-                memoIDs: MemoTimelineEngine.memoIDs(
-                    in: span,
-                    from: model.snapshot.memos
-                )
-            )
-            return
-        }
         onSelection?(
             selectionFromBlock(block)
         )

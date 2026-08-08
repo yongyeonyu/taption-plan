@@ -404,12 +404,7 @@ final class AppModel {
     }
 
     var showsBottomBar: Bool {
-        switch detail {
-        case nil, .group, .goal, .locationTimeline:
-            true
-        default:
-            false
-        }
+        true
     }
 
     var settings: AppFeatureSettings {
@@ -461,9 +456,15 @@ final class AppModel {
             groupNavigationPath = []
             return
         }
+        if tab == .review, reviewScale != .day {
+            reviewScale = .day
+        }
         selectedTab = tab
         detail = nil
         groupNavigationPath = []
+        if tab == .schedule || tab == .review {
+            Task { await refreshConnectedRecordsNow() }
+        }
     }
 
     func openGroup(_ planID: UUID) {
@@ -2018,8 +2019,10 @@ final class AppModel {
             await persist()
         } catch {
             isRecordingVoiceMemo = false
+            let reason = (error as? VoiceMemoRecordingError)?.localizedDescription
+                ?? "마이크 입력 장치를 확인해 주세요."
             userFacingError =
-                "음성 녹음을 시작하지 못했습니다. \(error.localizedDescription)"
+                "음성 녹음을 시작하지 못했습니다. \(reason)"
         }
     }
 

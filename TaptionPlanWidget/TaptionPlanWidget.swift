@@ -196,9 +196,9 @@ private struct TaptionScheduleWidgetMetrics {
 
     var catHeight: CGFloat {
         switch family {
-        case .systemExtraLarge: 36
-        case .systemLarge: 31
-        default: 25
+        case .systemExtraLarge: 42
+        case .systemLarge: 36
+        default: 30
         }
     }
 

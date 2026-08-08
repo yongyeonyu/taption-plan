@@ -60,6 +60,8 @@
 		A10000000000000000000031 /* TaptionPlanWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C10000000000000000000004 /* TaptionPlanWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000032 /* PhotoGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000032 /* PhotoGalleryView.swift */; };
 		A10000000000000000000033 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* Assets.xcassets */; };
+		A10000000000000000000078 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000078 /* Assets.xcassets */; };
+		A10000000000000000000079 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000033 /* Assets.xcassets */; };
 		A10000000000000000000034 /* TaptionPlanWatchWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000034 /* TaptionPlanWatchWidget.swift */; };
 		A10000000000000000000035 /* WatchWidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000035 /* WatchWidgetShared.swift */; };
 		A10000000000000000000036 /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
@@ -208,6 +210,7 @@
 		F10000000000000000000031 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10000000000000000000032 /* PhotoGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoGalleryView.swift; sourceTree = "<group>"; };
 		F10000000000000000000033 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F10000000000000000000078 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10000000000000000000034 /* TaptionPlanWatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchWidget.swift; sourceTree = "<group>"; };
 		F10000000000000000000035 /* WatchWidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetShared.swift; sourceTree = "<group>"; };
 		F10000000000000000000036 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -380,6 +383,7 @@
 		810000000000000000000008 /* TaptionPlanWidget */ = {
 			isa = PBXGroup;
 			children = (
+				F10000000000000000000078 /* Assets.xcassets */,
 				F10000000000000000000020 /* TaptionPlanWidget.swift */,
 				F10000000000000000000021 /* Info.plist */,
 				F10000000000000000000022 /* TaptionPlanWidget.entitlements */,
@@ -617,6 +621,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000078 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -632,6 +637,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000079 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -2969,6 +2969,7 @@ final class VoiceMemoRecorder: NSObject, AVAudioRecorderDelegate {
     }
 
     func start(in directory: URL) throws -> URL {
+        _ = stop()
         try FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true
@@ -2977,30 +2978,80 @@ final class VoiceMemoRecorder: NSObject, AVAudioRecorderDelegate {
             "memo-\(UUID().uuidString).m4a"
         )
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .spokenAudio)
-        try session.setActive(true)
-        let recorder = try AVAudioRecorder(
-            url: url,
-            settings: [
-                AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-                AVSampleRateKey: 44_100,
-                AVNumberOfChannelsKey: 1,
-                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-            ]
-        )
-        recorder.delegate = self
-        recorder.record()
-        self.recorder = recorder
-        activeURL = url
-        return url
+        do {
+            try session.setCategory(
+                .playAndRecord,
+                mode: .spokenAudio,
+                options: [.defaultToSpeaker, .allowBluetoothHFP]
+            )
+            try session.setActive(
+                true,
+                options: .notifyOthersOnDeactivation
+            )
+            guard session.isInputAvailable,
+                  !session.currentRoute.inputs.isEmpty else {
+                throw VoiceMemoRecordingError.inputUnavailable
+            }
+
+            let sampleRate = session.sampleRate
+            let channelCount = session.inputNumberOfChannels
+            guard sampleRate > 0, channelCount > 0 else {
+                throw VoiceMemoRecordingError.invalidInputFormat
+            }
+
+            let recorder = try AVAudioRecorder(
+                url: url,
+                settings: [
+                    AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                    AVSampleRateKey: sampleRate,
+                    AVNumberOfChannelsKey: Int(channelCount),
+                    AVEncoderBitRateKey: 128_000,
+                    AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                ]
+            )
+            recorder.delegate = self
+            guard recorder.prepareToRecord(), recorder.record() else {
+                throw VoiceMemoRecordingError.couldNotStart
+            }
+            self.recorder = recorder
+            activeURL = url
+            return url
+        } catch {
+            try? FileManager.default.removeItem(at: url)
+            try? session.setActive(
+                false,
+                options: .notifyOthersOnDeactivation
+            )
+            throw error
+        }
     }
 
     func stop() -> URL? {
         recorder?.stop()
         recorder = nil
-        try? AVAudioSession.sharedInstance().setActive(false)
+        try? AVAudioSession.sharedInstance().setActive(
+            false,
+            options: .notifyOthersOnDeactivation
+        )
         defer { activeURL = nil }
         return activeURL
+    }
+}
+
+enum VoiceMemoRecordingError: LocalizedError {
+    case inputUnavailable
+    case invalidInputFormat
+    case couldNotStart
+
+    var errorDescription: String? {
+        switch self {
+        case .inputUnavailable:
+            "마이크 입력 장치를 사용할 수 없습니다."
+        case .invalidInputFormat:
+            "현재 오디오 입력 형식을 확인할 수 없습니다."
+        case .couldNotStart:
+            "녹음 준비를 완료하지 못했습니다."
+        }
     }
 }
 

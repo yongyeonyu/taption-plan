@@ -95,8 +95,7 @@ struct QuickActionSheet: View {
             .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 13))
             .padding(.bottom, 12)
 
-            // 메모 입력은 여기서 시작하지 않는다. 시간표의 메모 줄 하나가
-            // 유일한 입구이고, 이 줄은 이 항목에 남은 메모를 알려 주기만 한다.
+            // 메모 입력은 하단 메뉴의 메모 추가 버튼에서 시작한다.
             HStack(spacing: 8) {
                 Image(systemName: "note.text")
                     .font(.taption(size: 15))
@@ -217,23 +216,17 @@ struct QuickActionSheet: View {
 }
 
 /// 메모 입력의 유일한 화면. 계획도 기록도 고르지 않고 순간 하나에만 매인다.
-/// 키보드는 메모 글에만 쓰고, 시각과 갈래는 손가락으로 고른다.
+/// 키보드는 메모 글에만 쓰고, 시각은 손가락으로 고른다.
 struct MemoDetailView: View {
     @Bindable var model: AppModel
-    @State private var selectedTag = "결정"
+    @State private var selectedMemoKind: MemoKind = .decision
     @State private var memo = ""
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var editingMemoID: UUID?
     @State private var dragOriginSpan: TimeSpan?
     @State private var dragStartedAt: Date?
     @State private var lastFeedbackDate: Date?
-
-    private let tags: [(label: String, kind: MemoKind)] = [
-        ("결정", .decision),
-        ("아이디어", .idea),
-        ("막힘", .blocker),
-        ("다음 할 일", .nextAction),
-    ]
+    @FocusState private var composerFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -245,16 +238,29 @@ struct MemoDetailView: View {
                 model.closeMemoEntry()
             }
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 10) {
-                    instantCard
-                    tagRow
-                    savedMemoList
-                    composer
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 10) {
+                        instantCard
+                        savedMemoList
+                        composer
+                            .id("memo-composer")
+                    }
+                    .padding(12)
+                    .padding(.bottom, composerFocused ? 16 : 0)
                 }
-                .padding(12)
+                .background(Color.tpBackground)
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: composerFocused) { _, focused in
+                    guard focused else { return }
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(80))
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo("memo-composer", anchor: .bottom)
+                        }
+                    }
+                }
             }
-            .background(Color.tpBackground)
         }
         .onChange(of: selectedPhotoItem) { _, item in
             guard let identifier = item?.itemIdentifier else { return }
@@ -302,9 +308,6 @@ struct MemoDetailView: View {
 
             timeStrip
 
-            Text("좌우로 끌어 메모를 남길 시각을 옮깁니다. 빠르게 끌면 10분, 천천히 끌면 1분씩 움직입니다.")
-                .font(.taption(size: 8.5))
-                .foregroundStyle(Color.tpSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
@@ -413,35 +416,6 @@ struct MemoDetailView: View {
             end: calendar.date(byAdding: .day, value: 1, to: start)
                 ?? start.addingTimeInterval(86_400)
         )
-    }
-
-    // MARK: - 갈래
-
-    private var tagRow: some View {
-        HStack(spacing: 5) {
-            ForEach(tags, id: \.label) { tag in
-                Button {
-                    selectedTag = tag.label
-                } label: {
-                    Text(tag.label)
-                        .font(.taption(size: 9, weight: .bold))
-                        .foregroundStyle(
-                            selectedTag == tag.label
-                                ? Color(red: 0.36, green: 0.27, blue: 0.49)
-                                : Color.tpSecondary
-                        )
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
-                        .background(
-                            selectedTag == tag.label
-                                ? Color.tpStudy
-                                : Color(red: 0.92, green: 0.92, blue: 0.93),
-                            in: RoundedRectangle(cornerRadius: 9)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 
     // MARK: - 목록
@@ -571,6 +545,7 @@ struct MemoDetailView: View {
                 text: $memo,
                 axis: .vertical
             )
+                .focused($composerFocused)
                 .font(.taption(size: 11))
                 .lineLimit(2...3)
                 .padding(.horizontal, 2)
@@ -663,14 +638,15 @@ struct MemoDetailView: View {
     private func beginEditing(_ entry: ActionMemo) {
         editingMemoID = entry.id
         memo = entry.text
-        selectedTag = tags.first(where: {
-            $0.kind == entry.kind
-        })?.label ?? "결정"
+        selectedMemoKind = entry.kind
+        composerFocused = true
     }
 
     private func cancelEditing() {
         editingMemoID = nil
         memo = ""
+        selectedMemoKind = .decision
+        composerFocused = false
     }
 
     private func deleteMemo(_ memoID: UUID) {
@@ -678,12 +654,6 @@ struct MemoDetailView: View {
             cancelEditing()
         }
         model.deleteMemo(memoID)
-    }
-
-    private var selectedMemoKind: MemoKind {
-        tags.first(where: {
-            $0.label == selectedTag
-        })?.kind ?? .decision
     }
 
     private func memoTool(_ icon: String, _ title: String, dark: Bool = false) -> some View {

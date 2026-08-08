@@ -316,599 +316,466 @@ private struct TaptionCatFigure: View {
     let pose: TaptionCatAnimationPose
     let reducesMotion: Bool
 
-    private var palette: TaptionCatPalette { TaptionCatPalette(style: style) }
-    private var action: TaptionCatAnimationAction { pose.action }
-    private var idle: TaptionCatIdleBeat {
-        reducesMotion ? .still : pose.idle
-    }
     private var legSwing: Double {
         guard !reducesMotion, pose.legSwing.isFinite else { return 0 }
         return min(1, max(-1, pose.legSwing))
     }
 
     var body: some View {
+        TaptionCatAtlasIllustration(
+            style: style,
+            pose: pose,
+            reducesMotion: reducesMotion,
+            legSwing: legSwing
+        )
+    }
+}
+
+private struct TaptionCatAtlasIllustration: View {
+    let style: String
+    let pose: TaptionCatAnimationPose
+    let reducesMotion: Bool
+    let legSwing: Double
+
+    private var action: TaptionCatAnimationAction { pose.action }
+
+    var body: some View {
+        TaptionCatAtlasSprite(style: style, action: action)
+            .scaleEffect(x: motionScale.width, y: motionScale.height, anchor: .bottom)
+            .rotationEffect(motionTilt, anchor: .bottom)
+            .offset(motionOffset)
+            .frame(width: 52, height: 32)
+    }
+
+    private var motionOffset: CGSize {
+        guard !reducesMotion else { return .zero }
+        let swing = CGFloat(legSwing)
+        let ease = CGFloat(pose.cycleEase)
+        return switch action {
+        case .walking: CGSize(width: swing * 0.7, height: -abs(swing) * 0.7)
+        case .running: CGSize(width: swing, height: -abs(swing) * 1.8)
+        case .sitting: CGSize(width: 0, height: ease * -0.4)
+        case .sleeping: CGSize(width: 0, height: ease * 0.3)
+        case .grooming: CGSize(width: swing * 0.35, height: ease * 0.4)
+        case .eating: CGSize(width: 0, height: ease * 0.8)
+        case .startled: CGSize(width: pose.phase.isMultiple(of: 2) ? -0.7 : 0.7, height: -ease)
+        case .ballPlay: CGSize(width: swing, height: -abs(swing) * 0.8)
+        case .fishingPlay: CGSize(width: swing * 0.5, height: -ease * 0.5)
+        case .stretching: CGSize(width: -ease * 0.8, height: ease * 0.4)
+        case .kneading: CGSize(width: swing * 0.35, height: abs(swing) * 0.5)
+        case .yawning: CGSize(width: 0, height: -ease * 0.5)
+        }
+    }
+
+    private var motionScale: CGSize {
+        guard !reducesMotion else { return CGSize(width: 1, height: 1) }
+        let swing = abs(CGFloat(legSwing))
+        let ease = CGFloat(pose.cycleEase)
+        return switch action {
+        case .running: CGSize(width: 1 + swing * 0.05, height: 1 - swing * 0.04)
+        case .sleeping: CGSize(width: 1 + ease * 0.015, height: 1 - ease * 0.02)
+        case .startled: CGSize(width: 1 + ease * 0.025, height: 1 + ease * 0.05)
+        case .stretching: CGSize(width: 1 + ease * 0.045, height: 1 - ease * 0.025)
+        case .kneading: CGSize(width: 1, height: 1 - swing * 0.025)
+        case .yawning: CGSize(width: 1 - ease * 0.015, height: 1 + ease * 0.035)
+        default: CGSize(width: 1, height: 1)
+        }
+    }
+
+    private var motionTilt: Angle {
+        guard !reducesMotion else { return .zero }
+        return switch action {
+        case .walking: .degrees(legSwing * 2.5)
+        case .running: .degrees(legSwing * 4)
+        case .grooming: .degrees(legSwing * 2)
+        case .eating: .degrees(-pose.cycleEase * 2)
+        case .ballPlay: .degrees(legSwing * 3)
+        case .fishingPlay: .degrees(legSwing * 2.5)
+        case .yawning: .degrees(-pose.cycleEase * 2)
+        default: .zero
+        }
+    }
+}
+
+private struct TaptionCatAtlasSprite: View {
+    let style: String
+    let action: TaptionCatAnimationAction
+
+    private var index: Int {
+        switch action {
+        case .walking: 0
+        case .running: 1
+        case .sitting: 2
+        case .sleeping: 3
+        case .grooming: 4
+        case .eating: 5
+        case .startled: 6
+        case .ballPlay: 7
+        case .fishingPlay: 8
+        case .stretching: 9
+        case .kneading: 10
+        case .yawning: 11
+        }
+    }
+
+    private var assetName: String {
+        switch style.lowercased() {
+        case "white", "흰색 고양이": "TaptionCatAtlasWhite"
+        case "mackerel", "고등어 고양이": "TaptionCatAtlasMackerel"
+        case "black", "검정 고양이": "TaptionCatAtlasBlack"
+        case "gray", "회색 고양이": "TaptionCatAtlasGray"
+        case "cheese", "치즈 고양이": "TaptionCatAtlasCheese"
+        case "cow", "젖소무늬 고양이": "TaptionCatAtlasCow"
+        default: "TaptionCatAtlasCalico"
+        }
+    }
+
+    var body: some View {
+        Image(assetName)
+            .resizable()
+            .interpolation(.high)
+            .frame(width: 208, height: 96)
+            .offset(x: -CGFloat(index % 4) * 52, y: -CGFloat(index / 4) * 32)
+            .frame(width: 52, height: 32, alignment: .topLeading)
+            .clipped()
+    }
+}
+
+private struct ReferenceCatIllustration: View {
+    let palette: TaptionCatPalette
+    let pose: TaptionCatAnimationPose
+    let reducesMotion: Bool
+    let legSwing: Double
+
+    private var action: TaptionCatAnimationAction { pose.action }
+
+    var body: some View {
         ZStack {
-            Ellipse()
-                .fill(.black.opacity(0.11))
-                .frame(width: bodyWidth + 16, height: 4.8)
-                .blur(radius: 0.55)
-                .offset(x: 5, y: 14)
-            accessory
-            HStack(spacing: -6) {
-                tail
-                bodyShape
-            }
-            .scaleEffect(
-                x: 1,
-                y: reducesMotion ? 1 : bodyScaleY,
-                anchor: .bottom
-            )
-            .rotationEffect(.degrees(bodyTiltDegrees))
+            Image("TaptionReferenceCat")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 52, height: 32)
+                .clipped()
+                .offset(actionOffset)
+                .scaleEffect(x: actionScaleX, y: actionScaleY, anchor: .bottom)
+                .rotationEffect(actionTilt, anchor: .bottom)
+                .opacity(0.99)
+            postureOverlay
+            overlay
         }
         .frame(width: 52, height: 32)
     }
 
-    private var bodyShape: some View {
-        Ellipse()
-            .fill(palette.fur)
-            .frame(width: bodyWidth, height: bodyHeight)
-            .overlay { bodyMarkings }
-            .overlay {
-                Ellipse()
-                    .stroke(palette.outline.opacity(0.94), lineWidth: 1.45)
-            }
-            .overlay(alignment: .topLeading) {
-                Capsule()
-                    .fill(.white.opacity(palette.coat == .black ? 0.14 : 0.42))
-                    .frame(width: bodyWidth * 0.44, height: 2)
-                    .offset(x: bodyWidth * 0.18, y: bodyHeight * 0.14)
-            }
-            .overlay(alignment: .bottom) { legs }
-            .overlay(alignment: .trailing) { head }
-    }
-
-    @ViewBuilder
-    private var bodyMarkings: some View {
-        ZStack {
-            switch palette.coat {
-            case .white:
-                Ellipse()
-                    .fill(palette.patch.opacity(0.45))
-                    .frame(width: bodyWidth * 0.42, height: bodyHeight * 0.52)
-                    .offset(x: -bodyWidth * 0.20, y: bodyHeight * 0.20)
-            case .calico:
-                Ellipse()
-                    .fill(palette.patch)
-                    .frame(width: bodyWidth * 0.42, height: bodyHeight * 0.72)
-                    .rotationEffect(.degrees(-16))
-                    .offset(x: -bodyWidth * 0.18, y: -1)
-                Ellipse()
-                    .fill(palette.secondPatch)
-                    .frame(width: bodyWidth * 0.29, height: bodyHeight * 0.56)
-                    .rotationEffect(.degrees(22))
-                    .offset(x: bodyWidth * 0.27, y: 2)
-            case .tabby, .gray, .cheese:
-                HStack(spacing: 2.7) {
-                    ForEach(0..<4, id: \.self) { index in
-                        Capsule()
-                            .fill(palette.patch.opacity(0.88 - Double(index) * 0.08))
-                            .frame(width: 2.2, height: bodyHeight * 0.62)
-                            .rotationEffect(.degrees(index.isMultiple(of: 2) ? -15 : 13))
-                    }
-                }
-                .offset(y: -bodyHeight * 0.17)
-                Ellipse()
-                    .fill(palette.secondPatch.opacity(0.75))
-                    .frame(width: bodyWidth * 0.36, height: bodyHeight * 0.31)
-                    .offset(x: bodyWidth * 0.20, y: bodyHeight * 0.30)
-            case .black:
-                Ellipse()
-                    .fill(palette.patch.opacity(0.40))
-                    .frame(width: bodyWidth * 0.68, height: bodyHeight * 0.38)
-                    .offset(x: -1, y: -bodyHeight * 0.21)
-            case .cow:
-                Ellipse()
-                    .fill(palette.patch)
-                    .frame(width: bodyWidth * 0.38, height: bodyHeight * 0.66)
-                    .rotationEffect(.degrees(18))
-                    .offset(x: -bodyWidth * 0.22, y: 1)
-                Circle()
-                    .fill(palette.patch)
-                    .frame(width: bodyHeight * 0.48)
-                    .offset(x: bodyWidth * 0.29, y: -bodyHeight * 0.18)
-            }
-        }
-        .frame(width: bodyWidth, height: bodyHeight)
-        .clipShape(Ellipse())
-    }
-
-    private var bodyWidth: CGFloat {
+    private var actionOffset: CGSize {
+        guard !reducesMotion else { return .zero }
+        let swing = CGFloat(legSwing)
         switch action {
-        case _ where action.sitsUpright: 28
-        case .sleeping: 37
-        case .stretching: 40
-        case .startled: 29
-        default: 35
+        case .walking: return CGSize(width: swing * 1.2, height: -abs(swing) * 0.8)
+        case .running: return CGSize(width: swing * 1.8, height: -abs(swing) * 2.0)
+        case .sitting: return CGSize(width: 1, height: 2)
+        case .sleeping: return CGSize(width: 0, height: 2)
+        case .grooming: return CGSize(width: swing * 1.0, height: abs(swing) * 0.8)
+        case .eating: return CGSize(width: -3, height: 4 + swing * 1.2)
+        case .ballPlay, .fishingPlay: return CGSize(width: swing * 1.1, height: 2 - abs(swing) * 1.1)
+        case .stretching: return CGSize(width: swing * 0.5, height: 1)
+        case .kneading: return CGSize(width: 0, height: 2)
+        case .startled: return CGSize(width: swing * 0.8, height: -1)
+        default: return .zero
         }
     }
 
-    private var bodyHeight: CGFloat {
+    private var actionScaleX: CGFloat {
+        guard !reducesMotion else { return 1 }
         switch action {
-        case _ where action.sitsUpright: 25
-        case .sleeping: 15
-        case .stretching: 14
-        case .startled: 22
-        default: 19
+        case .sitting: return 0.80
+        case .sleeping: return 1.12
+        case .grooming: return 0.88
+        case .eating: return 0.88
+        case .ballPlay, .fishingPlay: return 0.86
+        case .stretching: return 1.24
+        case .kneading: return 0.90
+        case .yawning: return 0.90
+        case .startled: return 1.10
+        case .running: return 1 + abs(CGFloat(legSwing)) * 0.06
+        default: return 1
         }
     }
 
-    private var bodyTiltDegrees: Double {
+    private var actionScaleY: CGFloat {
+        guard !reducesMotion else { return action == .sleeping ? 0.95 : 1 }
         switch action {
-        case .sleeping: 4
-        // 기지개는 앞을 낮추고 엉덩이를 든다.
-        case .stretching: 16 + 6 * pose.cycleEase
-        default: 0
+        case .sitting: return 0.78
+        case .sleeping: return 0.62 + CGFloat(pose.cycleEase) * 0.08
+        case .grooming: return 0.94
+        case .eating: return 0.76
+        case .ballPlay, .fishingPlay: return 0.80
+        case .stretching: return 0.68
+        case .kneading: return 0.64
+        case .yawning: return 0.88
+        case .running: return 0.90 + abs(CGFloat(legSwing)) * 0.10
+        case .startled: return 1.10
+        default: return 1
         }
     }
 
-    private var bodyScaleY: CGFloat {
+    private var actionTilt: Angle {
+        guard !reducesMotion else { return .zero }
+        let swing = legSwing
         switch action {
-        // 자는 동안에도 숨은 쉰다.
-        case .sleeping: 1 + CGFloat(legSwing) * 0.03
-        case _ where action.movesAcrossTrack:
-            1.04 - 0.10 * CGFloat(abs(legSwing))
-        default: 1
+        case .walking: return .degrees(swing * 5)
+        case .running: return .degrees(swing * 10)
+        case .grooming: return .degrees(-10 + swing * 5)
+        case .eating: return .degrees(-17 + swing * 3)
+        case .stretching: return .degrees(18 + pose.cycleEase * 10)
+        case .sleeping: return .degrees(8)
+        case .yawning: return .degrees(-10 - pose.cycleEase * 5)
+        case .sitting: return .degrees(0)
+        case .startled: return .degrees(swing * 3)
+        default: return .zero
         }
     }
 
     @ViewBuilder
-    private var tail: some View {
-        if action == .startled {
-            ZStack {
-                FluffyTailShape()
-                    .fill(palette.fur)
-                VStack(spacing: 3) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        Capsule()
-                            .fill(palette.patch.opacity(0.78))
-                            .frame(width: 7, height: 2)
-                    }
-                }
-                .opacity(usesTailBands ? 1 : 0)
-                FluffyTailShape()
-                    .stroke(palette.outline.opacity(0.85), lineWidth: 0.8)
-            }
-                .frame(width: 13, height: 31)
-                .rotationEffect(.degrees(-18))
-                .offset(x: 1, y: -2)
-        } else {
-            ZStack {
-                CatTailCurve()
-                    .stroke(
-                        palette.outline.opacity(0.92),
-                        style: StrokeStyle(lineWidth: 7.2, lineCap: .round)
-                    )
-                CatTailCurve()
-                    .stroke(
-                        palette.fur,
-                        style: StrokeStyle(lineWidth: 4.9, lineCap: .round)
-                    )
-                if usesTailBands {
-                    CatTailCurve()
-                        .trim(from: 0.05, to: 0.26)
-                        .stroke(
-                            palette.patch,
-                            style: StrokeStyle(lineWidth: 4.5, lineCap: .butt)
-                        )
-                    CatTailCurve()
-                        .trim(from: 0.42, to: 0.56)
-                        .stroke(
-                            palette.patch.opacity(0.9),
-                            style: StrokeStyle(lineWidth: 4.5, lineCap: .butt)
-                        )
-                } else if palette.coat == .calico || palette.coat == .cow {
-                    CatTailCurve()
-                        .trim(from: 0, to: 0.34)
-                        .stroke(
-                            palette.secondPatch,
-                            style: StrokeStyle(lineWidth: 4.5, lineCap: .round)
-                        )
-                }
-            }
-            .frame(width: 16, height: 28)
-            .rotationEffect(
-                .degrees(idle.tailTip * 7),
-                anchor: .top
-            )
-            .rotationEffect(.degrees(tailBaseDegrees))
-            .offset(x: 5, y: action == .sleeping ? 4 : -2)
-        }
-    }
-
-    private var usesTailBands: Bool {
-        switch palette.coat {
-        case .tabby, .gray, .cheese: true
-        default: false
-        }
-    }
-
-    private var tailBaseDegrees: Double {
-        // 기지개에서는 꼬리가 위로 곧게 선다. 몸통 기울기만큼 되돌린다.
-        action == .stretching
-            ? -14 - bodyTiltDegrees + pose.tailSwing * 8
-            : -54 + pose.tailSwing * 12
-    }
-
-    private var head: some View {
-        ZStack {
-            ears
-            Circle()
-                .fill(palette.fur)
-                .overlay { headMarkings }
-                .overlay {
-                    Circle()
-                        .stroke(palette.outline.opacity(0.95), lineWidth: 1.45)
-                }
-            HStack(spacing: 6.2) {
-                eye
-                eye
-            }
-            .offset(y: -2.2)
-            HStack(spacing: 8) {
-                Circle().fill(palette.innerEar.opacity(0.42))
-                Circle().fill(palette.innerEar.opacity(0.42))
-            }
-            .frame(width: 14, height: 2.5)
-            .offset(y: 2.4)
-            HStack(spacing: 9.5) {
-                Circle()
-                    .fill(Color(red: 1, green: 0.45, blue: 0.49).opacity(0.17))
-                Circle()
-                    .fill(Color(red: 1, green: 0.45, blue: 0.49).opacity(0.17))
-            }
-            .frame(width: 18, height: 5)
-            .offset(y: 4.5)
-            HStack(spacing: -0.7) {
-                Circle().fill(.white.opacity(0.86))
-                Circle().fill(.white.opacity(0.86))
-            }
-            .frame(width: 9.5, height: 5.2)
-            .offset(y: 3.2)
-            whiskers
-            Triangle()
-                .fill(palette.nose)
-                .frame(width: 4.2, height: 3)
-                .rotationEffect(.degrees(180))
-                .offset(y: 2.9)
-            CatMouthShape()
-                .stroke(palette.outline.opacity(0.86), lineWidth: 0.85)
-                .frame(width: 7.5, height: 4.2)
-                .offset(y: 5)
-            if action == .yawning {
-                Ellipse()
-                    .fill(palette.outline)
-                    .frame(
-                        width: 4 + 3 * yawn,
-                        height: 0.8 + 5.4 * yawn
-                    )
-                    .offset(y: 5 + 1.6 * yawn)
-            }
-            if action == .grooming {
-                CatLegShape()
-                    .fill(palette.fur)
-                    .overlay { CatLegShape().stroke(palette.outline, lineWidth: 0.6) }
-                    .frame(width: 6, height: 13)
-                    .rotationEffect(.degrees(-10 + legSwing * 18))
-                    .offset(x: -7, y: 6)
-            }
-        }
-        .frame(width: 23, height: 23)
-        .rotationEffect(
-            .degrees(reducesMotion ? 0 : pose.headTiltDegrees),
-            anchor: .bottom
-        )
-        .offset(x: headOffset.x, y: headOffset.y)
-    }
-
-    @ViewBuilder
-    private var headMarkings: some View {
-        ZStack {
-            switch palette.coat {
-            case .white:
-                Ellipse()
-                    .fill(palette.patch.opacity(0.4))
-                    .frame(width: 7, height: 12)
-                    .offset(x: -6, y: -1)
-            case .calico:
-                Circle()
-                    .fill(palette.patch)
-                    .frame(width: 12)
-                    .offset(x: 4.5, y: -5.5)
-                Ellipse()
-                    .fill(palette.secondPatch)
-                    .frame(width: 7, height: 10)
-                    .rotationEffect(.degrees(-18))
-                    .offset(x: -6, y: 2)
-            case .tabby, .gray, .cheese:
-                VStack(spacing: 1) {
-                    ForEach(0..<3, id: \.self) { index in
-                        Capsule()
-                            .fill(palette.patch)
-                            .frame(width: 1.5, height: 5.3 - CGFloat(index) * 0.5)
-                            .rotationEffect(.degrees(Double(index - 1) * 12))
-                    }
-                }
-                .rotationEffect(.degrees(90))
-                .offset(y: -5)
-            case .black:
-                Ellipse()
-                    .fill(palette.patch.opacity(0.45))
-                    .frame(width: 10, height: 4)
-                    .offset(x: -1, y: -5)
-            case .cow:
-                Ellipse()
-                    .fill(palette.patch)
-                    .frame(width: 10, height: 13)
-                    .rotationEffect(.degrees(18))
-                    .offset(x: -5, y: -2)
-            }
-        }
-        .frame(width: 23, height: 23)
-        .clipShape(Circle())
-    }
-
-    private var headOffset: (x: CGFloat, y: CGFloat) {
-        switch action {
-        case .sleeping: (0, 5.5)
-        // 귀가 몸통에 묻히지 않도록 머리를 조금 띄운다.
-        case .stretching: (5, -2)
-        // 밥그릇 쪽으로 고개를 내렸다 올린다.
-        case .eating: (3, -2 + CGFloat(legSwing) * 1.5)
-        default: (2, -3.5)
-        }
-    }
-
-    /// 0...1. 하품이 가장 크게 벌어진 순간이 1이다.
-    private var yawn: CGFloat {
-        guard action == .yawning, !reducesMotion else { return 0 }
-        return CGFloat(pose.cycleEase)
-    }
-
-    private var ears: some View {
-        HStack(spacing: 8.2) {
-            ear
-                .rotationEffect(
-                    .degrees(idle.earFlick * -4 - Double(yawn) * 7),
-                    anchor: .bottom
-                )
-            ear
-                .rotationEffect(
-                    .degrees(idle.earFlick * 13 + Double(yawn) * 7),
-                    anchor: .bottom
-                )
-        }
-        .frame(width: 23, height: 11)
-        .offset(y: -8.5)
-    }
-
-    private var ear: some View {
-        Triangle()
-            .fill(palette.fur)
-            .overlay {
-                Triangle()
-                    .fill(palette.innerEar.opacity(0.72))
-                    .scaleEffect(0.54, anchor: .bottom)
-                    .offset(y: 1.5)
-            }
-            .overlay { Triangle().stroke(palette.outline, lineWidth: 1) }
-    }
-
-    /// 0이면 감은 눈, 1이면 뜬 눈.
-    private var eyeOpenness: Double {
-        guard action != .sleeping else { return 0 }
-        return switch action {
-        // 꾹꾹이는 만족스러워서 실눈을 뜬다.
-        case .kneading: min(0.4, idle.eyeOpenness)
-        // 하품이 깊어질수록 눈이 감긴다.
-        case .yawning: min(1 - Double(yawn), idle.eyeOpenness)
-        default: idle.eyeOpenness
-        }
-    }
-
-    private var eye: some View {
-        ZStack {
-            Capsule()
-                .fill(palette.outline)
-            if eyeOpenness >= 0.15 {
-                Circle()
-                    .fill(palette.eye.opacity(0.96))
-                    .frame(width: 2.3)
-                    .offset(x: 0.7, y: 0.8)
-                Circle()
-                    .fill(palette.outline)
-                    .frame(width: 1.1)
-                    .offset(x: 0.8, y: 1)
-                Circle()
-                    .fill(.white)
-                    .frame(width: 1.55)
-                    .offset(x: -0.95, y: -1.05)
-                Circle()
-                    .fill(.white.opacity(0.85))
-                    .frame(width: 0.65)
-                    .offset(x: 1.1, y: -0.25)
-            }
-        }
-            .frame(
-                width: 4.4 + (1 - eyeOpenness) * 1.2,
-                height: 1 + eyeOpenness * 4.1
-            )
-    }
-
-    private var whiskers: some View {
-        HStack(spacing: 5) {
-            whiskerSet.scaleEffect(x: -1, y: 1)
-            whiskerSet
-        }
-        .offset(y: 3)
-        .opacity(action == .sleeping ? 0.35 : 0.9)
-    }
-
-    private var whiskerSet: some View {
-        VStack(spacing: 1.4) {
-            ForEach([-9.0, 0, 9], id: \.self) { angle in
-                Capsule()
-                    .fill(palette.outline.opacity(0.67))
-                    .frame(width: 7.5, height: 0.8)
-                    .rotationEffect(.degrees(angle))
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var legs: some View {
-        if action != .sleeping {
-            HStack(spacing: action.sitsUpright ? 5 : 4.3) {
-                ForEach(0..<4, id: \.self) { index in
-                    leg(index: index)
-                }
-            }
-            .offset(y: legGroupOffsetY)
-        }
-    }
-
-    /// 52×32 프레임을 벗어나면 발이 잘려 동작이 읽히지 않는다.
-    private var legGroupOffsetY: CGFloat {
-        switch action {
-        case .kneading: 1
-        case .stretching: 3
-        case _ where action.sitsUpright: 7
-        default: 5
-        }
-    }
-
-    private func leg(index: Int) -> some View {
-        VStack(spacing: -1) {
-            CatLegShape()
-                .fill(palette.fur)
-                .overlay {
-                    CatLegShape()
-                        .stroke(palette.outline.opacity(0.90), lineWidth: 0.8)
-                }
-                .frame(width: 4.8, height: legHeight(index: index))
-            ZStack {
-                Capsule()
-                    .fill(palette.shadow)
-                HStack(spacing: 0.7) {
-                    Capsule().fill(palette.outline.opacity(0.55))
-                    Capsule().fill(palette.outline.opacity(0.55))
-                }
-                .frame(width: 2.4, height: 0.55)
-                .offset(y: 0.4)
-            }
-                .frame(
-                    width: action == .kneading && index >= 2 ? 7 : 6.3,
-                    height: 3.1
-                )
-        }
-        .opacity(index.isMultiple(of: 2) ? 0.9 : 1)
-        .rotationEffect(.degrees(legRotation(index: index)))
-        .offset(y: legOffsetY(index: index))
-    }
-
-    private func legHeight(index: Int) -> CGFloat {
-        switch action {
-        case .stretching: index >= 2 ? 7.5 : 10
-        // 식빵 자세라 발이 짧게 접혀 있다.
-        case .kneading: 6
-        case _ where action.sitsUpright: 12
-        default: 9.5
-        }
-    }
-
-    private func legRotation(index: Int) -> Double {
-        let swing = legSwing * 18
+    private var postureOverlay: some View {
         switch action {
         case .walking, .running:
-            return index == 0 || index == 3 ? swing : -swing
-        // 앞다리를 앞으로 뻗고 뒷다리로 버틴다.
-        case .stretching:
-            return index >= 2 ? -26 - 10 * pose.cycleEase : 8
-        case .kneading:
-            return index >= 2 ? -4 : 4
-        default:
-            return index.isMultiple(of: 2) ? 4 : -4
-        }
-    }
-
-    private func legOffsetY(index: Int) -> CGFloat {
-        switch action {
-        case .walking, .running:
-            return index.isMultiple(of: 2)
-                ? CGFloat(-legSwing * 1.5)
-                : CGFloat(legSwing * 1.5)
-        // 앞발 두 개가 번갈아 눌린다.
-        case .kneading:
-            guard index >= 2 else { return 0 }
-            return index == 2
-                ? CGFloat(-2.8 * legSwing)
-                : CGFloat(2.8 * legSwing)
-        default:
-            return 0
-        }
-    }
-
-    @ViewBuilder
-    private var accessory: some View {
-        switch action {
-        case .sleeping:
-            Text(pose.phase < TaptionCatAnimationEngine.phaseCount / 2 ? "z" : "zZ")
-                .font(.system(size: 10, weight: .black, design: .rounded))
-                .foregroundStyle(Color(red: 0.37, green: 0.40, blue: 0.48))
-                .offset(x: 22, y: -15)
+            movingPaws
+        case .sitting:
+            sittingHindquarter
         case .eating:
-            Capsule()
-                .fill(Color(red: 0.89, green: 0.46, blue: 0.36))
-                .frame(width: 20, height: 7)
-                .overlay {
-                    HStack(spacing: 1) {
-                        Circle().fill(.brown).frame(width: 3, height: 3)
-                        Circle().fill(.brown).frame(width: 3, height: 3)
-                    }
-                    .offset(y: -3)
-                }
-                .offset(x: 21, y: 16)
-        case .startled:
-            Image(systemName: "exclamationmark")
-                .font(.system(size: 11, weight: .black))
-                .foregroundStyle(.red)
-                .offset(x: 21, y: -17)
-        case .ballPlay:
-            Circle()
-                .fill(Color(red: 0.38, green: 0.61, blue: 0.88))
-                .overlay { Circle().stroke(.white.opacity(0.9), lineWidth: 1) }
-                .frame(width: 11, height: 11)
-                .offset(x: 19.5 + CGFloat(legSwing) * 3.5,
-                        y: 11.5 + CGFloat(legSwing) * 3.5)
-        case .fishingPlay:
-            Path { path in
-                path.move(to: CGPoint(x: 16, y: 4))
-                path.addLine(to: CGPoint(x: 45, y: 29))
-            }
-            .stroke(.gray, style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
-            .overlay(alignment: .bottomTrailing) {
-                Image(systemName: "fish.fill")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.blue)
-                    .offset(x: 2, y: 3)
-            }
+            loweredHead
+        case .ballPlay, .fishingPlay:
+            raisedPlayPaw
+        case .stretching:
+            stretchPaws
         case .kneading:
-            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                .fill(palette.outline.opacity(0.24))
-                .frame(width: 27, height: 5)
-                .offset(x: 5, y: 12)
+            kneadingCushion
         default:
             EmptyView()
         }
+    }
+
+    private var movingPaws: some View {
+        HStack(spacing: action == .running ? 5 : 7) {
+            Capsule()
+                .fill(.white)
+                .overlay { Capsule().stroke(palette.outline, lineWidth: 0.8) }
+                .frame(width: 2.8, height: action == .running ? 6 : 5.5)
+                .rotationEffect(.degrees(-18 * legSwing), anchor: .top)
+            Capsule()
+                .fill(.white)
+                .overlay { Capsule().stroke(palette.outline, lineWidth: 0.8) }
+                .frame(width: 2.8, height: action == .running ? 6 : 5.5)
+                .rotationEffect(.degrees(18 * legSwing), anchor: .top)
+        }
+        .offset(x: -1, y: 10)
+        .opacity(0.92)
+    }
+
+    private var sittingHindquarter: some View {
+        ZStack {
+            Ellipse()
+                .fill(.white)
+                .overlay { Ellipse().stroke(palette.outline, lineWidth: 0.8) }
+                .frame(width: 16, height: 9)
+            Ellipse()
+                .fill(palette.patch)
+                .frame(width: 8, height: 6)
+                .offset(x: 3, y: -1)
+            Capsule()
+                .fill(.white)
+                .overlay { Capsule().stroke(palette.outline, lineWidth: 0.8) }
+                .frame(width: 3.5, height: 6)
+                .offset(x: -6, y: 5)
+        }
+        .offset(x: 11, y: 8)
+    }
+
+    private var loweredHead: some View {
+        ZStack {
+            Capsule()
+                .fill(.white)
+                .overlay { Capsule().stroke(palette.outline, lineWidth: 0.75) }
+                .frame(width: 12, height: 4)
+            Circle()
+                .fill(Color(red: 0.98, green: 0.43, blue: 0.52))
+                .frame(width: 1.7, height: 1.7)
+                .offset(x: 5, y: 1)
+        }
+        .rotationEffect(.degrees(-10))
+        .offset(x: -16, y: 8)
+    }
+
+    private var raisedPlayPaw: some View {
+        Capsule()
+            .fill(.white)
+            .overlay { Capsule().stroke(palette.outline, lineWidth: 0.8) }
+            .frame(width: 3.5, height: 8)
+            .rotationEffect(.degrees(-35 + legSwing * 20), anchor: .bottom)
+            .offset(x: -7, y: 5)
+    }
+
+    private var stretchPaws: some View {
+        HStack(spacing: 3) {
+            Capsule().fill(.white).overlay { Capsule().stroke(palette.outline, lineWidth: 0.8) }
+                .frame(width: 4, height: 9)
+            Capsule().fill(.white).overlay { Capsule().stroke(palette.outline, lineWidth: 0.8) }
+                .frame(width: 4, height: 9)
+        }
+        .rotationEffect(.degrees(42))
+        .offset(x: -13, y: 8)
+    }
+
+    private var kneadingCushion: some View {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(Color(red: 0.72, green: 0.55, blue: 0.38).opacity(0.85))
+            .frame(width: 18, height: 4)
+            .offset(x: -3, y: 12)
+    }
+
+    @ViewBuilder
+    private var overlay: some View {
+        switch action {
+        case .startled:
+            puffedTail
+            Text("!")
+                .font(.system(size: 10, weight: .black, design: .rounded))
+                .foregroundStyle(.red)
+                .offset(x: 20, y: -14)
+        case .eating:
+            bowl
+        case .grooming:
+            groomingPaw
+        case .sleeping:
+            Text(pose.phase < TaptionCatAnimationEngine.phaseCount / 2 ? "z" : "zZ")
+                .font(.system(size: 9, weight: .black, design: .rounded))
+                .foregroundStyle(Color(red: 0.37, green: 0.40, blue: 0.48))
+                .offset(x: 21, y: -14)
+        case .yawning:
+            yawnMouth
+        case .kneading:
+            kneadingPaws
+        case .ballPlay:
+            Circle()
+                .fill(Color(red: 0.38, green: 0.61, blue: 0.88))
+                .frame(width: 8, height: 8)
+                .offset(x: 21 + CGFloat(legSwing) * 3, y: 10)
+        case .fishingPlay:
+            fishingLine
+        default:
+            EmptyView()
+        }
+    }
+
+    private var bowl: some View {
+        ZStack {
+            Ellipse()
+                .fill(Color(red: 0.93, green: 0.46, blue: 0.32))
+                .frame(width: 11, height: 5)
+                .overlay { Ellipse().stroke(Color(red: 0.52, green: 0.20, blue: 0.15), lineWidth: 0.7) }
+            Ellipse()
+                .fill(Color(red: 0.63, green: 0.26, blue: 0.16))
+                .frame(width: 8, height: 2.2)
+            HStack(spacing: 1) {
+                Circle().fill(Color(red: 0.36, green: 0.20, blue: 0.10)).frame(width: 1.7)
+                Circle().fill(Color(red: 0.36, green: 0.20, blue: 0.10)).frame(width: 1.7)
+                Circle().fill(Color(red: 0.36, green: 0.20, blue: 0.10)).frame(width: 1.7)
+            }
+            .offset(y: -1)
+        }
+        .offset(x: -18, y: 11)
+    }
+
+    private var groomingPaw: some View {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(.white)
+            .overlay { RoundedRectangle(cornerRadius: 2).stroke(palette.outline, lineWidth: 0.8) }
+            .frame(width: 4.5, height: 11)
+            .rotationEffect(.degrees(-24 + legSwing * 10), anchor: .bottom)
+            .offset(x: -11, y: 2)
+    }
+
+    private var yawnMouth: some View {
+        ZStack {
+            Ellipse()
+                .fill(palette.outline)
+                .frame(width: 5.5, height: 4.8 + CGFloat(pose.cycleEase) * 2)
+            Capsule()
+                .fill(Color(red: 0.98, green: 0.43, blue: 0.52))
+                .frame(width: 3.1, height: 1.8)
+                .offset(y: 1.1)
+        }
+        .offset(x: -12, y: 4)
+    }
+
+    private var kneadingPaws: some View {
+        HStack(spacing: 2) {
+            Capsule().fill(palette.shadow).frame(width: 5.5, height: 2.4)
+            Capsule().fill(palette.shadow).frame(width: 5.5, height: 2.4)
+        }
+        .rotationEffect(.degrees(legSwing * 5))
+        .offset(x: -4, y: 12)
+    }
+
+    private var puffedTail: some View {
+        ZStack {
+            RaccoonTailShape()
+                .fill(.white)
+                .overlay { RaccoonTailShape().stroke(palette.outline, lineWidth: 1.3) }
+            ForEach(0..<3, id: \.self) { index in
+                Capsule()
+                    .fill(palette.patch)
+                    .frame(width: 7, height: 2.1)
+                    .rotationEffect(.degrees(-18 + Double(index) * 18))
+                    .offset(x: 4, y: CGFloat(index - 1) * 5)
+            }
+        }
+        .frame(width: 19, height: 25)
+        .scaleEffect(1.05)
+        .rotationEffect(.degrees(legSwing * 5), anchor: .bottom)
+        .offset(x: 17, y: 0)
+    }
+
+    private var fishingLine: some View {
+        Path { path in
+            path.move(to: CGPoint(x: 16, y: 1))
+            path.addLine(to: CGPoint(x: 43, y: 25))
+        }
+        .stroke(.gray, style: StrokeStyle(lineWidth: 0.8, dash: [2, 2]))
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "fish.fill")
+                .font(.system(size: 7, weight: .bold))
+                .foregroundStyle(.blue)
+        }
+    }
+}
+
+private struct RaccoonTailShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.width * 0.12, y: rect.height * 0.82))
+        path.addCurve(
+            to: CGPoint(x: rect.width * 0.62, y: rect.height * 0.63),
+            control1: CGPoint(x: rect.width * 0.18, y: rect.height * 0.65),
+            control2: CGPoint(x: rect.width * 0.42, y: rect.height * 0.92)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.width * 0.63, y: rect.height * 0.20),
+            control1: CGPoint(x: rect.width * 0.88, y: rect.height * 0.48),
+            control2: CGPoint(x: rect.width * 0.91, y: rect.height * 0.06)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.width * 0.35, y: rect.height * 0.20),
+            control1: CGPoint(x: rect.width * 0.55, y: rect.height * 0.04),
+            control2: CGPoint(x: rect.width * 0.42, y: rect.height * 0.07)
+        )
+        path.addCurve(
+            to: CGPoint(x: rect.width * 0.12, y: rect.height * 0.82),
+            control1: CGPoint(x: rect.width * 0.24, y: rect.height * 0.38),
+            control2: CGPoint(x: rect.width * 0.02, y: rect.height * 0.58)
+        )
+        path.closeSubpath()
+        return path
     }
 }
 
@@ -996,93 +863,5 @@ private struct TaptionCatPalette {
         }
         innerEar = Color(red: 0.92, green: 0.57, blue: 0.60)
         nose = Color(red: 0.62, green: 0.31, blue: 0.34)
-    }
-}
-
-private struct Triangle: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
-        return path
-    }
-}
-
-private struct CatTailCurve: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.maxX * 0.78, y: rect.maxY))
-        path.addCurve(
-            to: CGPoint(x: rect.maxX * 0.36, y: rect.minY + rect.height * 0.08),
-            control1: CGPoint(x: rect.maxX * 0.22, y: rect.maxY * 0.76),
-            control2: CGPoint(x: rect.minX, y: rect.maxY * 0.28)
-        )
-        path.addCurve(
-            to: CGPoint(x: rect.maxX * 0.77, y: rect.minY + rect.height * 0.18),
-            control1: CGPoint(x: rect.maxX * 0.48, y: rect.minY),
-            control2: CGPoint(x: rect.maxX * 0.68, y: rect.minY)
-        )
-        return path
-    }
-}
-
-private struct FluffyTailShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let points = [
-            CGPoint(x: 0.50, y: 0.00), CGPoint(x: 0.78, y: 0.06),
-            CGPoint(x: 0.72, y: 0.14), CGPoint(x: 0.91, y: 0.22),
-            CGPoint(x: 0.78, y: 0.31), CGPoint(x: 0.93, y: 0.43),
-            CGPoint(x: 0.79, y: 0.52), CGPoint(x: 0.89, y: 0.66),
-            CGPoint(x: 0.72, y: 0.73), CGPoint(x: 0.78, y: 0.89),
-            CGPoint(x: 0.57, y: 1.00), CGPoint(x: 0.35, y: 0.91),
-            CGPoint(x: 0.39, y: 0.76), CGPoint(x: 0.19, y: 0.68),
-            CGPoint(x: 0.31, y: 0.54), CGPoint(x: 0.12, y: 0.43),
-            CGPoint(x: 0.29, y: 0.32), CGPoint(x: 0.14, y: 0.20),
-            CGPoint(x: 0.34, y: 0.13), CGPoint(x: 0.27, y: 0.05)
-        ]
-        var path = Path()
-        guard let first = points.first else { return path }
-        path.move(to: CGPoint(x: rect.minX + first.x * rect.width, y: rect.minY + first.y * rect.height))
-        for point in points.dropFirst() {
-            path.addLine(to: CGPoint(x: rect.minX + point.x * rect.width, y: rect.minY + point.y * rect.height))
-        }
-        path.closeSubpath()
-        return path
-    }
-}
-
-private struct CatLegShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX + rect.width * 0.20, y: rect.minY))
-        path.addQuadCurve(
-            to: CGPoint(x: rect.minX + rect.width * 0.25, y: rect.maxY),
-            control: CGPoint(x: rect.minX + rect.width * 0.05, y: rect.midY)
-        )
-        path.addQuadCurve(
-            to: CGPoint(x: rect.minX + rect.width * 0.80, y: rect.minY),
-            control: CGPoint(x: rect.maxX, y: rect.midY)
-        )
-        path.closeSubpath()
-        return path
-    }
-}
-
-private struct CatMouthShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addQuadCurve(
-            to: CGPoint(x: rect.minX, y: rect.maxY * 0.68),
-            control: CGPoint(x: rect.width * 0.34, y: rect.maxY)
-        )
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addQuadCurve(
-            to: CGPoint(x: rect.maxX, y: rect.maxY * 0.68),
-            control: CGPoint(x: rect.width * 0.66, y: rect.maxY)
-        )
-        return path
     }
 }

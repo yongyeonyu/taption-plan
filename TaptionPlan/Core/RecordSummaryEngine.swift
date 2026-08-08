@@ -559,6 +559,20 @@ enum WeatherClockToken {
         return "\(weatherEmoji(for: parts[1])) \(temperature)° · \(airEmoji(for: parts[3]))"
     }
 
+    /// 원형 시간표의 호출 라벨에서 미세먼지 표식을 더 작게 그릴 수 있도록
+    /// 저장된 토큰을 세 조각으로 나눈다. 저장 형식은 바꾸지 않는다.
+    static func compactParts(
+        _ token: String
+    ) -> (weather: String, temperature: String, air: String)? {
+        let parts = token.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 6, let temperature = Int(parts[2]) else { return nil }
+        return (
+            weatherEmoji(for: parts[1]),
+            String(temperature),
+            airEmoji(for: parts[3])
+        )
+    }
+
     static func airGrade(_ token: String) -> AirQualityGrade? {
         let parts = token.split(separator: "|", omittingEmptySubsequences: false)
         guard parts.count == 6, let raw = Int(parts[3]) else { return nil }

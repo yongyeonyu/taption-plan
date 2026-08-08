@@ -250,6 +250,7 @@ struct DraftBottomNavigationBar: View {
                 mainAddButton
             }
             tabButton(.review)
+            memoAddButton
             tabButton(.settings)
         }
         .padding(.horizontal, 6)
@@ -291,6 +292,25 @@ struct DraftBottomNavigationBar: View {
     private var mainAddButtonAccessibilityLabel: String {
         if model.selectedTab == .goals { return "루틴 추가" }
         return model.detail == .group ? "하위 계획 추가" : "계획 추가"
+    }
+
+    private var memoAddButton: some View {
+        Button {
+            model.openMemoEntry(at: .now)
+        } label: {
+            VStack(spacing: 3) {
+                Image(systemName: "plus")
+                    .font(.taption(size: 19, weight: .bold))
+                    .frame(height: 20)
+                Text("메모")
+                    .font(.taption(size: 9.5, weight: .regular))
+            }
+            .foregroundStyle(Color.tpSecondary)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("메모 추가")
     }
 
     private func tabButton(_ tab: RootTab) -> some View {
@@ -513,7 +533,7 @@ struct RunningCatView: View {
                 reducesMotion: reduceMotion
             )
         }
-        .frame(width: 52, height: 32)
+        .frame(width: 56, height: 36)
     }
 
     private var outline: Color {
