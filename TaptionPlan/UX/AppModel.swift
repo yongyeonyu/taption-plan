@@ -226,6 +226,7 @@ final class AppModel {
     @ObservationIgnored private var lastLiveEnvironmentFailureAt: Date?
     @ObservationIgnored private var lastTrackingSessionRecoveryPersistAt: Date?
     @ObservationIgnored private var lastDeviceSnapshotPersistAt: Date?
+    @ObservationIgnored private var lastReviewArchiveRefreshAt: Date?
     @ObservationIgnored private var pendingDeviceLocalPersistTask: Task<Void, Never>?
     @ObservationIgnored private var liveMergeCacheKey: LiveMergeCacheKey?
     @ObservationIgnored private var liveMergeCacheValue: [SensorReading] = []
@@ -1443,6 +1444,7 @@ final class AppModel {
                 cloud: cloudValue,
                 local: localDeviceData
             ))
+            await refreshReviewArchives(force: true)
             try await repository.save(snapshot)
             publishWidgetPayload()
         } catch {
@@ -2067,9 +2069,10 @@ final class AppModel {
     }
 
     func deleteMemo(_ memoID: UUID) {
-        guard snapshot.memos.contains(where: { $0.id == memoID }) else {
+        guard let memo = snapshot.memos.first(where: { $0.id == memoID }) else {
             return
         }
+        invalidateReviewArchives(dates: [memo.occurredAt])
         snapshot.settings.cloudDeletedRecordKeys.insert(
             CloudBackupRecordKey.memo(memoID)
         )
@@ -2729,6 +2732,14 @@ final class AppModel {
             in: snapshot.plans
         )) ?? []
         let deletedIDs = Set([planID] + descendants.map(\.id))
+        invalidateReviewArchives(
+            spans: ([plan] + descendants).map(\.span),
+            dates: snapshot.memos.compactMap { memo in
+                memo.planID.map(deletedIDs.contains) == true
+                    ? memo.occurredAt
+                    : nil
+            }
+        )
         snapshot.settings.cloudDeletedRecordKeys.formUnion(
             deletedIDs.map(CloudBackupRecordKey.plan)
         )
@@ -2798,6 +2809,7 @@ final class AppModel {
             return
         }
 
+        invalidateReviewArchives(spans: [actual.span()])
         snapshot.settings.suppressedActualIDs.insert(actualID)
         snapshot.actuals.removeAll { $0.id == actualID }
         removeRecordLinks {
@@ -5796,6 +5808,7 @@ final class AppModel {
             return
         }
         do {
+            await refreshReviewArchives(force: true)
             var value = snapshot
             value.updatedAt = .now
             assignTimestampOnlySnapshot(value)
@@ -5995,6 +6008,61 @@ final class AppModel {
         }
     }
 
+    private func refreshReviewArchives(
+        force: Bool,
+        asOf: Date = .now
+    ) async {
+        let interval = max(
+            60,
+            snapshot.settings.sensorCollectionProfile.interval
+        )
+        if !force, let lastReviewArchiveRefreshAt,
+           asOf.timeIntervalSince(lastReviewArchiveRefreshAt) < interval {
+            return
+        }
+        let source = snapshot
+        let revision = timelineRevision
+        let reports = await Task.detached(priority: .utility) {
+            ReviewReportArchiveEngine.refreshed(
+                snapshot: source,
+                asOf: asOf
+            )
+        }.value
+        guard revision == timelineRevision else { return }
+        lastReviewArchiveRefreshAt = asOf
+        guard reports != snapshot.yearlyReports else { return }
+        snapshot.yearlyReports = reports
+    }
+
+    private func invalidateReviewArchives(
+        spans: [TimeSpan] = [],
+        dates: [Date] = []
+    ) {
+        let calendar = Calendar.autoupdatingCurrent
+        var starts = Set(dates.map(calendar.startOfDay))
+        for span in spans {
+            var day = calendar.startOfDay(for: span.start)
+            while day < span.end {
+                starts.insert(day)
+                guard let next = calendar.date(byAdding: .day, value: 1, to: day)
+                else { break }
+                day = next
+            }
+        }
+        guard !starts.isEmpty else { return }
+        snapshot.yearlyReports = snapshot.yearlyReports.compactMap { year in
+            let days = year.days.filter { !starts.contains($0.span.start) }
+            guard !days.isEmpty else { return nil }
+            return ReviewArchiveHierarchy.year(
+                span: year.span,
+                days: days,
+                asOf: .now,
+                calendar: calendar
+            )
+        }
+        lastReviewArchiveRefreshAt = nil
+    }
+
     private func persistDeviceLocalSnapshot() async {
         guard !repositoryLoadFailed else {
             Self.integrationLogger.error(
@@ -6016,6 +6084,7 @@ final class AppModel {
         pendingDeviceLocalPersistTask = nil
         lastDeviceSnapshotPersistAt = .now
         do {
+            await refreshReviewArchives(force: false)
             var value = snapshot
             value.updatedAt = .now
             assignTimestampOnlySnapshot(value)

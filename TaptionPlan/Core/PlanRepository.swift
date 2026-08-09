@@ -393,6 +393,12 @@ enum CloudSnapshotRecoveryEngine {
             backup.floorTransitions,
             id: \.id
         )
+        value.yearlyReports = merged(
+            primary.yearlyReports,
+            backup.yearlyReports,
+            id: \.id,
+            resolve: { ReviewArchiveHierarchy.merging($0, $1) }
+        ).sorted { $0.span.start < $1.span.start }
         value.settings.cloudDeletedRecordKeys = deleted
         value.settings.suppressedActualIDs = suppressedActuals
         value.schemaVersion = max(local.schemaVersion, remote.schemaVersion)

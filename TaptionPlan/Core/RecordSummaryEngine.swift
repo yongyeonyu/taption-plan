@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 /// 기록 화면이 쓰는 "N시간 N분" 표기. 화면마다 같은 계산을 다시 쓰지 않도록
 /// 한 곳에 둔다.
@@ -65,25 +66,6 @@ enum ActualRecordCategoryResolver {
 }
 
 // MARK: - 계층형 기록 목록
-
-struct RecordGroupChild: Identifiable, Equatable, Sendable {
-    let id: String
-    let title: String
-    let duration: TimeInterval
-    let start: Date
-    let recordID: UUID
-    let occurrenceCount: Int
-}
-
-struct RecordCategoryGroup: Identifiable, Equatable, Sendable {
-    let id: String
-    let name: String
-    let colorHex: String?
-    let icon: CategoryIcon?
-    let duration: TimeInterval
-    let dominantChildTitle: String?
-    let children: [RecordGroupChild]
-}
 
 /// 기간 안의 자동·수동 기록을 카테고리 → 항목의 두 단계로 접는다.
 /// 화면은 이 결과만 그리고, 제스처 중에는 다시 계산하지 않는다.
@@ -208,6 +190,236 @@ enum ActualRecordGroupingEngine {
         }
         if let name = definition?.name { return name }
         return TimelineRowKind.title(forCategoryID: categoryID) ?? categoryID
+    }
+}
+
+// MARK: - 일별 기준 리포트 보관
+
+enum ReviewReportArchiveEngine {
+    static func refreshed(
+        snapshot: TaptionDataSnapshot,
+        asOf: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [YearlyReviewArchive] {
+        let today = calendar.startOfDay(for: asOf)
+        var sources = sourcesByDay(snapshot: snapshot, asOf: asOf, calendar: calendar)
+        sources[today, default: .empty].categories = snapshot.categories
+
+        let existingDays = Dictionary(
+            uniqueKeysWithValues: snapshot.yearlyReports
+                .flatMap(\.days)
+                .map { ($0.span.start, $0) }
+        )
+        let dayStarts = Set(sources.keys).union(existingDays.keys).filter {
+            $0 <= today
+        }
+        let review = ReviewEngine(calendar: calendar)
+        let days = dayStarts.sorted().compactMap { dayStart -> DailyReviewArchive? in
+            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            else { return nil }
+            let span = TimeSpan(start: dayStart, end: dayEnd)
+            let effectiveEnd = min(dayEnd, asOf)
+            guard effectiveEnd > dayStart else { return nil }
+            var source = sources[dayStart, default: .empty]
+            source.categories = snapshot.categories
+            source.sort()
+            let fingerprint = fingerprint(source, effectiveEnd: effectiveEnd)
+            if let existing = existingDays[dayStart],
+               existing.sourceFingerprint == fingerprint {
+                return existing
+            }
+            if let existing = existingDays[dayStart],
+               dayStart < today,
+               source.isEmpty {
+                return existing
+            }
+
+            let visibleActuals = ReviewCoverageEngine.records(
+                actuals: RestSleepDisplayEngine.visibleActuals(
+                    MovementDisplayEngine.reviewActuals(
+                        source.actuals,
+                        travel: source.travel,
+                        calendarEvents: source.calendarEvents,
+                        asOf: effectiveEnd
+                    ),
+                    asOf: effectiveEnd
+                ),
+                in: [span],
+                asOf: effectiveEnd
+            )
+            let report = review.report(
+                over: [span],
+                plans: source.plans,
+                actuals: visibleActuals,
+                weather: source.weather,
+                photos: source.photos,
+                memos: source.memos,
+                asOf: effectiveEnd
+            )
+            return DailyReviewArchive(
+                id: dayID(dayStart, calendar: calendar),
+                span: span,
+                report: report,
+                groups: ActualRecordGroupingEngine.groups(
+                    actuals: visibleActuals,
+                    in: span,
+                    categories: source.categories,
+                    asOf: effectiveEnd
+                ),
+                sourceFingerprint: fingerprint,
+                updatedAt: asOf
+            )
+        }
+
+        return Dictionary(grouping: days) {
+            calendar.dateInterval(of: .year, for: $0.span.start)?.start
+                ?? $0.span.start
+        }.keys.sorted().compactMap { start in
+            guard let interval = calendar.dateInterval(of: .year, for: start)
+            else { return nil }
+            let span = TimeSpan(start: interval.start, end: interval.end)
+            return ReviewArchiveHierarchy.year(
+                span: span,
+                days: days.filter { span.contains($0.span.start) },
+                asOf: asOf,
+                calendar: calendar
+            )
+        }
+    }
+
+    private static func sourcesByDay(
+        snapshot: TaptionDataSnapshot,
+        asOf: Date,
+        calendar: Calendar
+    ) -> [Date: DailyReviewSource] {
+        var result: [Date: DailyReviewSource] = [:]
+        for plan in snapshot.plans {
+            distribute(plan.span, asOf: asOf, calendar: calendar) { day, span in
+                var value = plan
+                value.span = span
+                result[day, default: .empty].plans.append(value)
+            }
+        }
+        for actual in snapshot.actuals {
+            distribute(actual.span(asOf: asOf), asOf: asOf, calendar: calendar) {
+                day, span in
+                var value = actual
+                value.startedAt = span.start
+                value.endedAt = span.end
+                result[day, default: .empty].actuals.append(value)
+            }
+        }
+        for event in snapshot.calendarEvents {
+            distribute(event.span, asOf: asOf, calendar: calendar) { day, span in
+                var value = event
+                value.span = span
+                result[day, default: .empty].calendarEvents.append(value)
+            }
+        }
+        for place in snapshot.places {
+            distribute(place.span, asOf: asOf, calendar: calendar) { day, span in
+                var value = place
+                value.span = span
+                result[day, default: .empty].places.append(value)
+            }
+        }
+        for travel in snapshot.travel {
+            distribute(travel.span, asOf: asOf, calendar: calendar) { day, span in
+                var value = travel
+                value.span = span
+                result[day, default: .empty].travel.append(value)
+            }
+        }
+        for memo in snapshot.memos where memo.occurredAt <= asOf {
+            result[calendar.startOfDay(for: memo.occurredAt), default: .empty]
+                .memos.append(memo)
+        }
+        for weather in snapshot.weather where weather.observedAt <= asOf {
+            result[calendar.startOfDay(for: weather.observedAt), default: .empty]
+                .weather.append(weather)
+        }
+        for photo in snapshot.photos where photo.capturedAt <= asOf {
+            result[calendar.startOfDay(for: photo.capturedAt), default: .empty]
+                .photos.append(photo)
+        }
+        return result
+    }
+
+    private static func distribute(
+        _ source: TimeSpan,
+        asOf: Date,
+        calendar: Calendar,
+        body: (Date, TimeSpan) -> Void
+    ) {
+        let end = min(source.end, asOf)
+        guard end > source.start else { return }
+        var day = calendar.startOfDay(for: source.start)
+        while day < end {
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day)
+            else { break }
+            if let clipped = TimeSpan(start: source.start, end: end)
+                .intersection(with: TimeSpan(start: day, end: next)) {
+                body(day, clipped)
+            }
+            day = next
+        }
+    }
+
+    private static func fingerprint(
+        _ source: DailyReviewSource,
+        effectiveEnd: Date
+    ) -> String {
+        let minute = Date(
+            timeIntervalSince1970: floor(effectiveEnd.timeIntervalSince1970 / 60) * 60
+        )
+        let payload = DailyReviewFingerprint(source: source, effectiveEnd: minute)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .millisecondsSince1970
+        let data = (try? encoder.encode(payload)) ?? Data()
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func dayID(_ date: Date, calendar: Calendar) -> String {
+        let value = calendar.dateComponents([.year, .month, .day], from: date)
+        return "day-\(value.year ?? 0)-\(value.month ?? 0)-\(value.day ?? 0)"
+    }
+}
+
+private struct DailyReviewFingerprint: Codable {
+    var source: DailyReviewSource
+    var effectiveEnd: Date
+}
+
+private struct DailyReviewSource: Codable {
+    var plans: [PlanRecord] = []
+    var actuals: [ActualRecord] = []
+    var memos: [ActionMemo] = []
+    var categories: [CategoryDefinition] = []
+    var photos: [PhotoMoment] = []
+    var calendarEvents: [CalendarRecord] = []
+    var weather: [WeatherContext] = []
+    var places: [PlaceStay] = []
+    var travel: [TravelSegment] = []
+
+    static let empty = DailyReviewSource()
+
+    var isEmpty: Bool {
+        plans.isEmpty && actuals.isEmpty && memos.isEmpty && photos.isEmpty
+            && calendarEvents.isEmpty && weather.isEmpty && places.isEmpty
+            && travel.isEmpty
+    }
+
+    mutating func sort() {
+        plans.sort { $0.id.uuidString < $1.id.uuidString }
+        actuals.sort { $0.id.uuidString < $1.id.uuidString }
+        memos.sort { $0.id.uuidString < $1.id.uuidString }
+        categories.sort { $0.id < $1.id }
+        photos.sort { $0.id < $1.id }
+        calendarEvents.sort { $0.id < $1.id }
+        weather.sort { $0.id.uuidString < $1.id.uuidString }
+        places.sort { $0.id.uuidString < $1.id.uuidString }
+        travel.sort { $0.id.uuidString < $1.id.uuidString }
     }
 }
 

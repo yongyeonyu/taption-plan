@@ -1503,6 +1503,197 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(report.actualDuration, hour)
     }
 
+    func testReviewArchiveStoresDailyWeeklyAndMonthlyDataInsideYear() {
+        let first = makeDate(2026, 1, 2, 9)
+        let second = makeDate(2026, 1, 8, 10)
+        let asOf = makeDate(2026, 1, 11, 12)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: first,
+                endedAt: first.addingTimeInterval(hour),
+                source: .manual
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "운동",
+                categoryID: "exercise",
+                startedAt: second,
+                endedAt: second.addingTimeInterval(2 * hour),
+                source: .manual
+            ),
+        ]
+
+        let archives = ReviewReportArchiveEngine.refreshed(
+            snapshot: snapshot,
+            asOf: asOf,
+            calendar: utcCalendar
+        )
+
+        XCTAssertEqual(archives.count, 1)
+        XCTAssertEqual(archives[0].months.count, 1)
+        XCTAssertGreaterThanOrEqual(archives[0].months[0].weeks.count, 2)
+        XCTAssertEqual(
+            Set(archives[0].months[0].dayIDs),
+            Set(archives[0].days.map(\.id))
+        )
+    }
+
+    func testChangingDailyDataRebuildsMonthAndYear() {
+        let start = makeDate(2026, 2, 3, 9)
+        let asOf = makeDate(2026, 2, 4)
+        let id = UUID()
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [
+            ActualRecord(
+                id: id,
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(hour),
+                source: .manual
+            )
+        ]
+        let original = ReviewReportArchiveEngine.refreshed(
+            snapshot: snapshot,
+            asOf: asOf,
+            calendar: utcCalendar
+        )
+        snapshot.yearlyReports = original
+        snapshot.actuals[0].endedAt = start.addingTimeInterval(3 * hour)
+
+        let updated = ReviewReportArchiveEngine.refreshed(
+            snapshot: snapshot,
+            asOf: asOf,
+            calendar: utcCalendar
+        )
+        let day = updated[0].days.first { $0.span.contains(start) }
+        let month = updated[0].months[0].report.categories.first {
+            $0.categoryID == "work"
+        }
+        let year = updated[0].report.categories.first {
+            $0.categoryID == "work"
+        }
+
+        XCTAssertNotEqual(
+            day?.sourceFingerprint,
+            original[0].days.first { $0.span.contains(start) }?.sourceFingerprint
+        )
+        XCTAssertEqual(day?.groups.first { $0.id == "work" }?.duration, 3 * hour)
+        XCTAssertEqual(month?.actual, 3 * hour)
+        XCTAssertEqual(year?.actual, 3 * hour)
+    }
+
+    func testHistoricalDailyBackupSurvivesMissingLocalSource() {
+        let start = makeDate(2026, 2, 10, 9)
+        let firstAsOf = makeDate(2026, 2, 11)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(2 * hour),
+                source: .manual
+            )
+        ]
+        snapshot.yearlyReports = ReviewReportArchiveEngine.refreshed(
+            snapshot: snapshot,
+            asOf: firstAsOf,
+            calendar: utcCalendar
+        )
+        snapshot.actuals = []
+
+        let recovered = ReviewReportArchiveEngine.refreshed(
+            snapshot: snapshot,
+            asOf: makeDate(2026, 2, 12),
+            calendar: utcCalendar
+        )
+        let archivedDay = recovered[0].days.first { $0.span.contains(start) }
+
+        XCTAssertEqual(
+            archivedDay?.groups.first { $0.id == "work" }?.duration,
+            2 * hour
+        )
+    }
+
+    func testCloudRecoveryMergesDifferentDailyReportsInSameYear() {
+        let first = makeDate(2026, 3, 2, 9)
+        let second = makeDate(2026, 3, 8, 10)
+        let asOf = makeDate(2026, 3, 10)
+        var local = TaptionDataSnapshot.empty
+        local.updatedAt = asOf
+        local.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: first,
+                endedAt: first.addingTimeInterval(hour),
+                source: .manual
+            )
+        ]
+        local.yearlyReports = ReviewReportArchiveEngine.refreshed(
+            snapshot: local,
+            asOf: asOf,
+            calendar: utcCalendar
+        )
+        var remote = TaptionDataSnapshot.empty
+        remote.updatedAt = asOf.addingTimeInterval(-hour)
+        remote.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: second,
+                endedAt: second.addingTimeInterval(2 * hour),
+                source: .manual
+            )
+        ]
+        remote.yearlyReports = ReviewReportArchiveEngine.refreshed(
+            snapshot: remote,
+            asOf: asOf,
+            calendar: utcCalendar
+        )
+
+        let recovered = CloudSnapshotRecoveryEngine.merge(
+            local: local,
+            remote: remote
+        )
+        let work = recovered.yearlyReports[0].report.categories.first {
+            $0.categoryID == "work"
+        }
+
+        XCTAssertTrue(recovered.yearlyReports[0].days.contains {
+            $0.span.contains(first)
+        })
+        XCTAssertTrue(recovered.yearlyReports[0].days.contains {
+            $0.span.contains(second)
+        })
+        XCTAssertEqual(work?.actual, 3 * hour)
+    }
+
+    func testSnapshotWithoutYearlyReportsDecodesAsEmptyArchive() throws {
+        let data = try JSONEncoder().encode(TaptionDataSnapshot.empty)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        object.removeValue(forKey: "yearlyReports")
+
+        let legacy = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(
+            TaptionDataSnapshot.self,
+            from: legacy
+        )
+
+        XCTAssertTrue(decoded.yearlyReports.isEmpty)
+    }
+
     func testAllCustomCategoryRequirementsExist() throws {
         XCTAssertEqual(CategoryCatalog.builtIn.count, 32)
         XCTAssertGreaterThanOrEqual(CategoryIcon.allCases.count, 32)
