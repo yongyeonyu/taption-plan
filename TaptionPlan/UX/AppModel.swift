@@ -415,6 +415,40 @@ final class AppModel {
         snapshot.settings
     }
 
+    /// 자동 기록의 원본은 보존하고, 시간표와 상세 화면에 표시할 활동만
+    /// 사용자가 교정한다. 교정표는 기록 ID로 저장되어 다음 센서 갱신에도
+    /// 같은 결과를 복원한다.
+    func updateActualActivity(
+        _ actualID: UUID,
+        with option: ActivityCorrectionOption
+    ) async {
+        guard snapshot.actuals.contains(where: { $0.id == actualID }) else {
+            return
+        }
+        snapshot.settings.activityCorrections[actualID] = option.correction
+        if option.isCustom {
+            snapshot.settings.customActivityLabels =
+                AppFeatureSettings.normalizedActivityLabels(
+                    snapshot.settings.customActivityLabels + [option.title]
+                )
+        }
+        snapshot.actuals = ActivityCorrectionEngine.applying(
+            snapshot.settings.activityCorrections,
+            to: snapshot.actuals
+        )
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        await persist()
+    }
+
+    private func applyStoredActivityCorrections() {
+        let corrected = ActivityCorrectionEngine.applying(
+            snapshot.settings.activityCorrections,
+            to: snapshot.actuals
+        )
+        guard corrected != snapshot.actuals else { return }
+        snapshot.actuals = corrected
+    }
+
     var currentAltitudeStatus: String? {
         guard let estimate = latestAltitudeEstimate else { return nil }
         return "\(estimate.floor)층 추정 · 해발 \(Int(estimate.seaLevelAltitudeMeters.rounded()))m · ±\(Int(estimate.verticalAccuracyMeters.rounded()))m"
@@ -653,6 +687,10 @@ final class AppModel {
             from: loaded.actuals,
             suppressedIDs: loaded.settings.suppressedActualIDs
         )
+        loaded.actuals = ActivityCorrectionEngine.applying(
+            loaded.settings.activityCorrections,
+            to: loaded.actuals
+        )
         loaded.weather = WeatherTimelineEngine.coalesced(loaded.weather)
         return loaded
     }
@@ -774,6 +812,10 @@ final class AppModel {
                 var source = try await repository.load()
                 repositoryLoadFailed = false
                 source.weather = WeatherTimelineEngine.coalesced(source.weather)
+                source.actuals = ActivityCorrectionEngine.applying(
+                    source.settings.activityCorrections,
+                    to: source.actuals
+                )
                 // Publish the local snapshot first. Normalizing historical
                 // records and loading device integrations can be expensive;
                 // neither should hold the first timeline frame hostage.
@@ -6024,6 +6066,7 @@ final class AppModel {
             return
         }
         do {
+            applyStoredActivityCorrections()
             await refreshReviewArchives(force: true)
             var value = snapshot
             value.updatedAt = .now
@@ -6119,6 +6162,7 @@ final class AppModel {
         value.settings.floorCalibration = nil
         value.settings.floorCalibrationHistory = []
         value.settings.movementCorrections = []
+        value.settings.activityCorrections = [:]
         // 거절한 자리는 이 기기의 위치 기록에서만 나온 좌표다. 자주가는 곳
         // 자체와 달리 사용자가 적은 값이 아니므로 기기에 남긴다.
         value.settings.dismissedPlaceSuggestions = []
@@ -6176,6 +6220,12 @@ final class AppModel {
             local.settings.floorCalibrationHistory
         value.settings.movementCorrections =
             local.settings.movementCorrections
+        value.settings.activityCorrections =
+            local.settings.activityCorrections
+        value.settings.customActivityLabels =
+            AppFeatureSettings.normalizedActivityLabels(
+                local.settings.customActivityLabels
+            )
         value.settings.dismissedPlaceSuggestions =
             local.settings.dismissedPlaceSuggestions
         // Weather is sampled with device location and remains device ground
@@ -6197,6 +6247,10 @@ final class AppModel {
         value.actuals = ActualRecordSuppressionEngine.visibleRecords(
             from: value.actuals,
             suppressedIDs: value.settings.suppressedActualIDs
+        )
+        value.actuals = ActivityCorrectionEngine.applying(
+            value.settings.activityCorrections,
+            to: value.actuals
         )
         // iCloud can still hand back placeholder plans written by an older
         // build on this or another device.
@@ -6300,6 +6354,7 @@ final class AppModel {
         pendingDeviceLocalPersistTask = nil
         lastDeviceSnapshotPersistAt = .now
         do {
+            applyStoredActivityCorrections()
             await refreshReviewArchives(force: false)
             var value = snapshot
             value.updatedAt = .now

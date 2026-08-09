@@ -15,6 +15,8 @@ private struct ReviewContent: Equatable {
     var plannedCategories: [CategoryDuration]
     var contexts: [ReviewContext]
     var groups: [RecordCategoryGroup]
+    /// 하루 기록 목록은 일과를 먼저 보여 주고 그 안에 활동을 넣는다.
+    var phaseGroups: [RecordCategoryGroup]
     var rings: [RecordClockRing]
     /// 가장 바깥의 일과 고리. 하루 배율에서만 만들어진다.
     var phaseRing: RecordClockDetailRing?
@@ -36,6 +38,7 @@ private struct ReviewContent: Equatable {
         plannedCategories: [],
         contexts: [],
         groups: [],
+        phaseGroups: [],
         rings: [],
         phaseRing: nil,
         activityRings: [],
@@ -391,7 +394,10 @@ struct ReviewView: View {
     }
 
     private var recordedDuration: TimeInterval {
-        content.phaseDurations.reduce(0) { $0 + $1.actual }
+        if model.reviewScale == .day {
+            return content.period.duration
+        }
+        return content.phaseDurations.reduce(0) { $0 + $1.actual }
     }
 
     /// 24시간 눈금판. 자정이 12시 방향이고 시계 방향으로 하루가 흐른다.
@@ -1453,22 +1459,27 @@ struct ReviewView: View {
     // MARK: - 계층형 기록
 
     private var recordHierarchyCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let groups = hierarchyGroups
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Label("실제 기록", systemImage: "checkmark.circle")
                     .font(.taption(size: 11, weight: .bold))
                 Spacer()
-                Text("\(childCount)개 항목")
+                Text(
+                    model.reviewScale == .day
+                        ? "\(groups.count)개 일과 · \(childCount)개 활동"
+                        : "\(childCount)개 항목"
+                )
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
             }
 
-            if content.groups.isEmpty {
+            if groups.isEmpty {
                 Text("이 기간에 저장된 실제 데이터가 없습니다.")
                     .font(.taption(size: 10.5))
                     .foregroundStyle(Color.tpSecondary)
             } else {
-                ForEach(content.groups) { group in
+                ForEach(groups) { group in
                     categorySection(group)
                 }
             }
@@ -1482,7 +1493,11 @@ struct ReviewView: View {
     }
 
     private var childCount: Int {
-        content.groups.reduce(0) { $0 + $1.children.count }
+        hierarchyGroups.reduce(0) { $0 + $1.children.count }
+    }
+
+    private var hierarchyGroups: [RecordCategoryGroup] {
+        model.reviewScale == .day ? content.phaseGroups : content.groups
     }
 
     @ViewBuilder
@@ -1734,6 +1749,7 @@ struct ReviewView: View {
         var phaseRing: RecordClockDetailRing?
         var activityRings: [RecordClockDetailRing] = []
         var contextRings: [RecordClockDetailRing] = []
+        var phaseGroups: [RecordCategoryGroup] = []
         var phaseDurations = RecordChartEngine.categoryDurations(
             in: chartBuckets
         )
@@ -1759,6 +1775,12 @@ struct ReviewView: View {
                 stays: model.snapshot.places,
                 placeKinds: placeKinds,
                 in: day,
+                asOf: now
+            )
+            phaseGroups = ActualRecordGroupingEngine.phaseGroups(
+                phases: dayPhases,
+                actuals: displayActuals,
+                categories: model.snapshot.categories,
                 asOf: now
             )
             activityRings = RecordClockDetailEngine.activityRings(
@@ -1804,7 +1826,8 @@ struct ReviewView: View {
             categories: model.snapshot.categories,
             asOf: now
         )
-        let groupIDs = Set(groups.map(\.id))
+        let hierarchyGroups = model.reviewScale == .day ? phaseGroups : groups
+        let groupIDs = Set(hierarchyGroups.map(\.id))
         let collapsesAllGroups = content.spans.isEmpty
             || content.period != period
         content = ReviewContent(
@@ -1815,6 +1838,7 @@ struct ReviewView: View {
             plannedCategories: report.categories,
             contexts: report.contexts,
             groups: groups,
+            phaseGroups: phaseGroups,
             rings: rings,
             phaseRing: phaseRing,
             activityRings: activityRings,
@@ -1887,6 +1911,7 @@ struct ReviewView: View {
 struct ActualRecordDetailView: View {
     @Bindable var model: AppModel
     let recordID: UUID
+    @State private var isActivityPickerPresented = false
 
     private var record: ActualRecord? {
         model.snapshot.actuals.first { $0.id == recordID }
@@ -1928,30 +1953,47 @@ struct ActualRecordDetailView: View {
             }
             .background(Color.tpBackground)
         }
+        .sheet(isPresented: $isActivityPickerPresented) {
+            ActivityCorrectionSheet(model: model, recordID: recordID)
+        }
     }
 
     private func detailContent(_ record: ActualRecord) -> some View {
         let categoryID = displayCategoryID(record)
         let span = record.span(asOf: Date.now)
         return VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
-                Label(
-                    displayTitle(record, categoryID: categoryID),
-                    systemImage: symbolName(record, categoryID: categoryID)
-                )
-                .font(.taption(size: 17, weight: .bold))
-                .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
-                applicationNameLabel(record)
-                Text("\(span.start.formatted(date: .abbreviated, time: .shortened)) – \(span.end.formatted(date: .omitted, time: .shortened))")
-                    .font(.taption(size: 11))
-                    .foregroundStyle(Color.tpSecondary)
-                Text(durationText(span.duration))
-                    .font(.taption(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.tpProjectDark)
+            Button {
+                isActivityPickerPresented = true
+            } label: {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Label(
+                            displayTitle(record, categoryID: categoryID),
+                            systemImage: symbolName(record, categoryID: categoryID)
+                        )
+                        .font(.taption(size: 17, weight: .bold))
+                        .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.right")
+                            .font(.taption(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                    applicationNameLabel(record)
+                    Text("\(span.start.formatted(date: .abbreviated, time: .shortened)) – \(span.end.formatted(date: .omitted, time: .shortened))")
+                        .font(.taption(size: 11))
+                        .foregroundStyle(Color.tpSecondary)
+                    Text(durationText(span.duration))
+                        .font(.taption(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.tpProjectDark)
+                    Text("탭하여 활동 변경")
+                        .font(.taption(size: 9, weight: .medium))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
+            .buttonStyle(.plain)
 
             detailRow("데이터 출처", sourceName(record.source))
             detailRow("신뢰도", record.confidence.rawValue)
@@ -1980,7 +2022,7 @@ struct ActualRecordDetailView: View {
                 .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
             }
             if AutomaticRecordTimelineEngine.isImmutable(record) {
-                Label("센서·건강 데이터는 원본 보존을 위해 수정할 수 없습니다.", systemImage: "lock.fill")
+                Label("센서·건강 원본은 보존되고 표시 활동만 변경됩니다.", systemImage: "lock.fill")
                     .font(.taption(size: 9))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.horizontal, 2)
@@ -2069,6 +2111,219 @@ struct ActualRecordDetailView: View {
 
     private func durationText(_ interval: TimeInterval) -> String {
         DurationText.korean(interval)
+    }
+}
+
+private enum ActivityCorrectionCatalog {
+    static func options(
+        for record: ActualRecord,
+        actuals: [ActualRecord],
+        customLabels: [String]
+    ) -> [ActivityCorrectionOption] {
+        var result: [ActivityCorrectionOption] = []
+        var seen = Set<String>()
+        let calendar = Calendar.autoupdatingCurrent
+        let automatic = actuals
+            .filter {
+                guard calendar.isDate($0.startedAt, inSameDayAs: record.startedAt)
+                else { return false }
+                let category = ActualRecordCategoryResolver.categoryID(for: $0)
+                return [
+                    "activity", "movement", "sleep", "work", "study", "hobby",
+                    "exercise", "rest", "routine", "food", "relationship"
+                ].contains(category) || $0.id == record.id
+            }
+            .sorted { $0.startedAt < $1.startedAt }
+        for actual in automatic {
+            let option = automaticOption(for: actual)
+            guard seen.insert(option.title).inserted else { continue }
+            result.append(option)
+        }
+        for kind in WatchBehaviorKind.confirmationChoices {
+            let option = option(for: kind)
+            guard seen.insert(option.title).inserted else { continue }
+            result.append(option)
+        }
+        for context in StationaryContextKind.allCases
+        where context != .unknownStay {
+            let option = option(for: context)
+            guard seen.insert(option.title).inserted else { continue }
+            result.append(option)
+        }
+        for label in customLabels {
+            let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            let option = ActivityCorrectionOption.custom(trimmed)
+            guard seen.insert(option.title).inserted else { continue }
+            result.append(option)
+        }
+        return result
+    }
+
+    private static func automaticOption(for record: ActualRecord) -> ActivityCorrectionOption {
+        if let behavior = record.behavior,
+           let kind = WatchBehaviorKind.fromModelLabel(behavior) {
+            return option(for: kind, automatic: true)
+        }
+        if let behavior = record.behavior,
+           let context = StationaryContextKind(rawValue: behavior) {
+            return option(for: context, automatic: true)
+        }
+        return ActivityCorrectionOption(
+            id: "automatic.\(record.id.uuidString)",
+            title: record.title.isEmpty ? "활동" : record.title,
+            behavior: record.behavior,
+            categoryID: record.categoryID,
+            systemImage: TimelineRowKind(categoryID: record.categoryID)?.systemImage
+                ?? "figure.run",
+            isAutomatic: true,
+            isCustom: false
+        )
+    }
+
+    private static func option(
+        for kind: WatchBehaviorKind,
+        automatic: Bool = false
+    ) -> ActivityCorrectionOption {
+        ActivityCorrectionOption(
+            id: "watch.\(kind.rawValue)",
+            title: kind.title,
+            behavior: kind.rawValue,
+            categoryID: kind.isMovement ? "movement" : (kind == .sleep ? "sleep" : "activity"),
+            systemImage: kind.isMovement ? "figure.walk.motion" : "figure.run",
+            isAutomatic: automatic,
+            isCustom: false
+        )
+    }
+
+    private static func option(
+        for context: StationaryContextKind,
+        automatic: Bool = false
+    ) -> ActivityCorrectionOption {
+        ActivityCorrectionOption(
+            id: "context.\(context.rawValue)",
+            title: context.title,
+            behavior: context.rawValue,
+            categoryID: context.categoryID,
+            systemImage: TimelineRowKind(categoryID: context.categoryID)?.systemImage
+                ?? "figure.run",
+            isAutomatic: automatic,
+            isCustom: false
+        )
+    }
+}
+
+private struct ActivityCorrectionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let recordID: UUID
+    @State private var customTitle = ""
+
+    private var record: ActualRecord? {
+        model.snapshot.actuals.first { $0.id == recordID }
+    }
+
+    private var options: [ActivityCorrectionOption] {
+        guard let record else { return [] }
+        return ActivityCorrectionCatalog.options(
+            for: record,
+            actuals: model.snapshot.actuals,
+            customLabels: model.snapshot.settings.customActivityLabels
+        )
+    }
+
+    private var automaticOptions: [ActivityCorrectionOption] {
+        options.filter(\.isAutomatic)
+    }
+
+    private var suggestedOptions: [ActivityCorrectionOption] {
+        options.filter { !$0.isAutomatic && !$0.isCustom }
+    }
+
+    private var customOptions: [ActivityCorrectionOption] {
+        options.filter(\.isCustom)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if !automaticOptions.isEmpty {
+                    Section("자동으로 구분된 활동") {
+                        ForEach(automaticOptions) { optionRow($0) }
+                    }
+                }
+                Section("활동 선택") {
+                    ForEach(suggestedOptions) { optionRow($0) }
+                }
+                if !customOptions.isEmpty {
+                    Section("내가 추가한 활동") {
+                        ForEach(customOptions) { optionRow($0) }
+                    }
+                }
+                Section("활동 추가") {
+                    HStack(spacing: 8) {
+                        TextField("새 활동 이름", text: $customTitle)
+                            .textInputAutocapitalization(.never)
+                        Button("추가") {
+                            addCustomActivity()
+                        }
+                        .disabled(customTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("활동 변경")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("닫기") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func optionRow(_ option: ActivityCorrectionOption) -> some View {
+        Button {
+            select(option)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: option.systemImage)
+                    .frame(width: 22)
+                    .foregroundStyle(PlanCategory(categoryID: option.categoryID).darkColor)
+                Text(option.title)
+                    .foregroundStyle(Color.tpInk)
+                Spacer()
+                if isSelected(option) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.tpProjectDark)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func isSelected(_ option: ActivityCorrectionOption) -> Bool {
+        guard let record else { return false }
+        return option.correction == ActivityCorrection(
+            title: record.title,
+            behavior: record.behavior,
+            categoryID: record.categoryID
+        )
+    }
+
+    private func select(_ option: ActivityCorrectionOption) {
+        Task {
+            await model.updateActualActivity(recordID, with: option)
+            dismiss()
+        }
+    }
+
+    private func addCustomActivity() {
+        let title = customTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return }
+        customTitle = ""
+        select(.custom(title))
     }
 }
 

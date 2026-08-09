@@ -167,6 +167,96 @@ enum ActualIntervalMergeEngine {
     }
 }
 
+/// Keeps raw stays intact while showing one block for duplicate place results.
+enum PlaceStayPresentationEngine {
+    static func consolidated(_ stays: [PlaceStay]) -> [PlaceStay] {
+        var result: [PlaceStay] = []
+        for stay in stays.sorted(by: chronological) {
+            var value = stay
+            for index in result.indices.reversed()
+            where overlapsSamePlace(result[index], value) {
+                value = merged(result.remove(at: index), value)
+            }
+            result.append(value)
+        }
+        return result.sorted(by: chronological)
+    }
+
+    private static func overlapsSamePlace(
+        _ lhs: PlaceStay,
+        _ rhs: PlaceStay
+    ) -> Bool {
+        let samePlace = (!lhs.placeKey.isEmpty && lhs.placeKey == rhs.placeKey)
+            || normalized(lhs.displayName) == normalized(rhs.displayName)
+        let sameFloor = lhs.floor == rhs.floor
+            || lhs.floor == nil
+            || rhs.floor == nil
+        return samePlace && sameFloor
+            && lhs.span.intersection(with: rhs.span) != nil
+    }
+
+    private static func merged(
+        _ lhs: PlaceStay,
+        _ rhs: PlaceStay
+    ) -> PlaceStay {
+        let preferred = isPreferred(rhs, over: lhs) ? rhs : lhs
+        let fallback = preferred.id == lhs.id ? rhs : lhs
+        var value = preferred
+        value.span = TimeSpan(
+            start: min(lhs.span.start, rhs.span.start),
+            end: max(lhs.span.end, rhs.span.end)
+        )
+        value.confidence = confidenceRank(lhs.confidence)
+            >= confidenceRank(rhs.confidence) ? lhs.confidence : rhs.confidence
+        value.isConfirmed = lhs.isConfirmed || rhs.isConfirmed
+        value.buildingName = value.buildingName ?? fallback.buildingName
+        value.floor = value.floor ?? fallback.floor
+        value.floorEvidence = value.floorEvidence ?? fallback.floorEvidence
+        value.point = value.point ?? fallback.point
+        return value
+    }
+
+    private static func isPreferred(
+        _ lhs: PlaceStay,
+        over rhs: PlaceStay
+    ) -> Bool {
+        let leftScore = score(lhs)
+        let rightScore = score(rhs)
+        if leftScore != rightScore { return leftScore > rightScore }
+        if lhs.span.duration != rhs.span.duration {
+            return lhs.span.duration > rhs.span.duration
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    private static func score(_ stay: PlaceStay) -> Int {
+        (stay.floorEvidence == nil ? 0 : 16)
+            + (stay.isConfirmed ? 8 : 0)
+            + confidenceRank(stay.confidence) * 2
+            + (stay.floor == nil ? 0 : 1)
+    }
+
+    private static func confidenceRank(_ value: ConfidenceLevel) -> Int {
+        switch value {
+        case .low: 0
+        case .medium: 1
+        case .high: 2
+        }
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
+
+    private static func chronological(_ lhs: PlaceStay, _ rhs: PlaceStay) -> Bool {
+        lhs.span.start == rhs.span.start
+            ? lhs.span.end < rhs.span.end
+            : lhs.span.start < rhs.span.start
+    }
+}
+
 /// Keeps raw movement intact while collapsing duplicate display segments.
 enum TravelSegmentPresentationEngine {
     static func consolidated(

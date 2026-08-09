@@ -351,7 +351,9 @@ private enum TimelinePlayheadSynchronizer {
             automaticActuals: automaticValues,
             places: isFuture
                 ? []
-                : places.filter { contains($0.span, at: date) },
+                : PlaceStayPresentationEngine.consolidated(
+                    places.filter { contains($0.span, at: date) }
+                ),
             travel: isFuture
                 ? []
                 : travel.filter { contains($0.span, at: date) },
@@ -1665,6 +1667,7 @@ struct ScheduleView: View {
                 model: model,
                 scale: model.selectedScale,
                 storedPlans: model.snapshot.plans,
+                usesFullWidthRuler: resolvedPanelHeight >= maxPanelHeight - 1,
                 dayZoom: $dayZoom,
                 editingPlanID: $editingPlanID,
                 onPlayheadMove: { date in
@@ -4581,11 +4584,11 @@ private struct TimelineDetailPanel: View {
                         .sorted { $0.span.start < $1.span.start }
                 )
             }
-            let places = (playheadMatch?.places ?? model.snapshot.places
-                .filter {
+            let places = PlaceStayPresentationEngine.consolidated(
+                playheadMatch?.places ?? model.snapshot.places.filter {
                     $0.span.intersection(with: focusedSpan) != nil
-                })
-                .sorted { $0.span.start < $1.span.start }
+                }
+            )
             let travel = TravelSegmentPresentationEngine.consolidated(
                 playheadMatch?.travel ?? model.snapshot.travel.filter {
                     $0.span.intersection(with: focusedSpan) != nil
@@ -6718,6 +6721,7 @@ struct GroupGanttView: View {
                 scale: model.selectedScale,
                 storedPlans: model.snapshot.plans,
                 isGroup: true,
+                usesFullWidthRuler: resolvedPanelHeight >= maxPanelHeight - 1,
                 dayZoom: $dayZoom,
                 editingPlanID: $editingPlanID,
                 onPlayheadMove: { date in
@@ -7127,6 +7131,7 @@ private struct TimelineBoard: View {
     let scale: TimeScale
     let storedPlans: [PlanRecord]
     var isGroup = false
+    var usesFullWidthRuler = false
     @Binding var dayZoom: TimelineZoomPreset
     @Binding var editingPlanID: UUID?
     var onPlayheadMove: ((Date) -> Void)?
@@ -7180,9 +7185,14 @@ private struct TimelineBoard: View {
             : axisMarkers(in: displaySpan)
         let visibleDuration = displaySpan.duration * viewport.length
         GeometryReader { boardProxy in
-            let timelineWidth = max(
+            let contentTimelineWidth = max(
                 1,
                 boardProxy.size.width - scheduleLabelColumnWidth
+            )
+            let rulerTimelineWidth = max(
+                1,
+                boardProxy.size.width
+                    - (usesFullWidthRuler ? 0 : scheduleLabelColumnWidth)
             )
             VStack(spacing: 0) {
                 ScrollView(.vertical, showsIndicators: false) {
@@ -7297,7 +7307,7 @@ private struct TimelineBoard: View {
                 )
                 .scrollBounceBehavior(.basedOnSize)
                 .simultaneousGesture(
-                    viewportDragGesture(width: timelineWidth)
+                    viewportDragGesture(width: contentTimelineWidth)
                 )
 
                 // Keep the time ruler below the timeline. It remains visible
@@ -7305,7 +7315,7 @@ private struct TimelineBoard: View {
                 axis(markers: displayAxisMarkers)
                     .layoutPriority(1)
                     .simultaneousGesture(
-                        viewportDragGesture(width: timelineWidth)
+                        viewportDragGesture(width: rulerTimelineWidth)
                     )
                     .simultaneousGesture(
                         TapGesture().onEnded {
@@ -7443,8 +7453,10 @@ private struct TimelineBoard: View {
 
     private func axis(markers: [TimelineAxisMarker]) -> some View {
         HStack(spacing: 0) {
-            resolutionMenu
-                .frame(width: scheduleLabelColumnWidth)
+            if !usesFullWidthRuler {
+                resolutionMenu
+                    .frame(width: scheduleLabelColumnWidth)
+            }
             GeometryReader { proxy in
                 ZStack(alignment: .topLeading) {
                     Rectangle()
@@ -7533,8 +7545,14 @@ private struct TimelineBoard: View {
             }
             .clipped()
         }
-        .padding(.leading, 4)
-        .padding(.trailing, 4)
+        .overlay(alignment: .leading) {
+            if usesFullWidthRuler {
+                resolutionMenu
+                    .frame(width: scheduleLabelColumnWidth)
+                    .background(Color.white.opacity(0.92), in: Capsule())
+            }
+        }
+        .padding(.horizontal, usesFullWidthRuler ? 0 : 4)
         .frame(height: axisHeight)
         .overlay(alignment: .top) {
             Rectangle().fill(Color.tpLine).frame(height: 0.5)
@@ -8060,9 +8078,8 @@ private struct TimelineBoard: View {
         }
         values += inferredPhaseActivities(phases, coveredBy: values)
 
-        let present = Set(values.map(\.phase))
-        return dayPhaseRowOrder.compactMap { phase in
-            guard present.contains(phase) else { return nil }
+        // 왼쪽 행은 화면의 기준축이므로 기록이 없어도 같은 자리를 유지한다.
+        return DayPhase.timelineRows.map { phase in
             let activities = values
                 .filter { $0.phase == phase }
                 .sorted { $0.span.start < $1.span.start }
@@ -8337,13 +8354,6 @@ private struct TimelineBoard: View {
             appUsageTokenData: appUsageTokenData,
             styleKey: styleKey ?? "\(categoryID).\(title)"
         )
-    }
-
-    private var dayPhaseRowOrder: [DayPhase] {
-        [
-            .sleep, .movement, .exercise, .work, .study, .hobby, .activity,
-            .appointment, .unconfirmed,
-        ]
     }
 
     private func dayPhaseSystemImage(_ phase: DayPhase) -> String {
@@ -8621,8 +8631,8 @@ private struct TimelineBoard: View {
     ) -> TimelineRowModel {
         let now = Date.now
         let visiblePlans = plans.filter { $0.span.start <= now }
-        let visiblePlaces = model.snapshot.places
-            .compactMap { place -> PlaceStay? in
+        let visiblePlaces = PlaceStayPresentationEngine.consolidated(
+            model.snapshot.places.compactMap { place -> PlaceStay? in
                 guard place.span.start <= now,
                       place.span.start < visibleSpan.end,
                       place.span.end > visibleSpan.start,
@@ -8634,7 +8644,7 @@ private struct TimelineBoard: View {
                 return value
             }
             .filter { $0.span.intersection(with: visibleSpan) != nil }
-            .sorted { $0.span.start < $1.span.start }
+        )
         let planAllocation = laneAllocation(visiblePlans, span: \.span)
         let placeAllocation = laneAllocation(visiblePlaces, span: \.span)
         let offset = planAllocation.count
@@ -9069,18 +9079,19 @@ private struct TimelineBoard: View {
                     )
                 }
         case "location":
-            let visiblePlaces: [PlaceStay] = model.snapshot.places.compactMap {
-                place in
-                guard let clipped = automaticSpanThroughNow(
-                    place.span,
-                    asOf: now
-                ), clipped.intersection(with: visibleSpan) != nil else {
-                    return nil
+            let visiblePlaces = PlaceStayPresentationEngine.consolidated(
+                model.snapshot.places.compactMap { place in
+                    guard let clipped = automaticSpanThroughNow(
+                        place.span,
+                        asOf: now
+                    ), clipped.intersection(with: visibleSpan) != nil else {
+                        return nil
+                    }
+                    var value = place
+                    value.span = clipped
+                    return value
                 }
-                var value = place
-                value.span = clipped
-                return value
-            }
+            )
             return visiblePlaces
                 .sorted { $0.span.start < $1.span.start }
                 .map { place in
@@ -9363,7 +9374,9 @@ private struct TimelineBoard: View {
     @ViewBuilder
     private func gridLines(markers: [TimelineAxisMarker]) -> some View {
         HStack(spacing: 0) {
-            Color.clear.frame(width: scheduleLabelColumnWidth)
+            if !usesFullWidthRuler {
+                Color.clear.frame(width: scheduleLabelColumnWidth)
+            }
             GeometryReader { proxy in
                 ZStack(alignment: .topLeading) {
                     ForEach(markers) { marker in
@@ -9386,8 +9399,11 @@ private struct TimelineBoard: View {
     private func currentLine() -> some View {
         if isContinuousTimeline {
             GeometryReader { proxy in
-                let x = scheduleLabelColumnWidth
-                    + max(1, proxy.size.width - scheduleLabelColumnWidth) / 2
+                let leadingWidth = usesFullWidthRuler
+                    ? 0
+                    : scheduleLabelColumnWidth
+                let x = leadingWidth
+                    + max(1, proxy.size.width - leadingWidth) / 2
                 ZStack(alignment: .topLeading) {
                     Rectangle()
                         .fill(Color.tpNow)
@@ -9415,11 +9431,14 @@ private struct TimelineBoard: View {
             .zIndex(20)
         } else {
             GeometryReader { proxy in
+                let leadingWidth = usesFullWidthRuler
+                    ? 0
+                    : scheduleLabelColumnWidth
                 let timelineWidth = max(
                     1,
-                    proxy.size.width - scheduleLabelColumnWidth
+                    proxy.size.width - leadingWidth
                 )
-                let x = scheduleLabelColumnWidth + timelineWidth / 2
+                let x = leadingWidth + timelineWidth / 2
                 ZStack(alignment: .topLeading) {
                     Rectangle()
                         .fill(Color.tpNow)

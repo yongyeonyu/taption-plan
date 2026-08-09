@@ -108,6 +108,10 @@ struct WatchContentView: View {
             statusRow("수집", value: collectionStatus(measurement))
             statusRow("전송", value: connectivity.statusText)
             statusRow("최근 측정", value: freshnessText(at: date))
+            if let summary = connectivity.payload?.todaySummary {
+                statusRow("일과", value: durationText(summary.recordedMinutes))
+                statusRow("활동", value: durationText(summary.activeMinutes))
+            }
             if workout.isActive {
                 statusRow("원시 표본", value: "\(workout.sensorSampleCount)개")
             }
@@ -282,6 +286,14 @@ struct WatchContentView: View {
                 .minimumScaleFactor(0.75)
         }
         .font(.system(size: 10))
+    }
+
+    private func durationText(_ minutes: Int) -> String {
+        let hours = max(0, minutes) / 60
+        let remainder = max(0, minutes) % 60
+        if hours == 0 { return "\(remainder)분" }
+        if remainder == 0 { return "\(hours)시간" }
+        return "\(hours)시간 \(remainder)분"
     }
 
     private func symbol(for kind: WatchBehaviorKind) -> String {

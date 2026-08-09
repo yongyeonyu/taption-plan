@@ -2825,6 +2825,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var notificationsEnabled: Bool
     var permissions: [PermissionFeature: PermissionState]
     var timelineRowOrder: [String]
+    /// 사용자 교정은 원본 센서와 분리한 표시용 파생값이다.
+    var activityCorrections: [UUID: ActivityCorrection]
+    var customActivityLabels: [String]
 
     static let defaults = AppFeatureSettings(
         startScale: .day,
@@ -2853,7 +2856,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         permissions: Dictionary(
             uniqueKeysWithValues: PermissionFeature.allCases.map { ($0, .notDetermined) }
         ),
-        timelineRowOrder: TimelineRowOrder.defaults
+        timelineRowOrder: TimelineRowOrder.defaults,
+        activityCorrections: [:],
+        customActivityLabels: []
     )
 
     init(
@@ -2881,7 +2886,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         weatherEnabled: Bool,
         notificationsEnabled: Bool,
         permissions: [PermissionFeature: PermissionState],
-        timelineRowOrder: [String] = TimelineRowOrder.defaults
+        timelineRowOrder: [String] = TimelineRowOrder.defaults,
+        activityCorrections: [UUID: ActivityCorrection] = [:],
+        customActivityLabels: [String] = []
     ) {
         self.startScale = startScale
         self.rememberLastScale = rememberLastScale
@@ -2908,6 +2915,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.notificationsEnabled = notificationsEnabled
         self.permissions = permissions
         self.timelineRowOrder = Self.normalizedTimelineRowOrder(timelineRowOrder)
+        self.activityCorrections = activityCorrections
+        self.customActivityLabels = Self.normalizedActivityLabels(customActivityLabels)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -2936,6 +2945,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case notificationsEnabled
         case permissions
         case timelineRowOrder
+        case activityCorrections
+        case customActivityLabels
     }
 
     init(from decoder: Decoder) throws {
@@ -3045,6 +3056,16 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                 forKey: .timelineRowOrder
             ) ?? defaults.timelineRowOrder
         )
+        activityCorrections = try values.decodeIfPresent(
+            [UUID: ActivityCorrection].self,
+            forKey: .activityCorrections
+        ) ?? defaults.activityCorrections
+        customActivityLabels = Self.normalizedActivityLabels(
+            try values.decodeIfPresent(
+                [String].self,
+                forKey: .customActivityLabels
+            ) ?? defaults.customActivityLabels
+        )
         for feature in PermissionFeature.allCases
         where permissions[feature] == nil {
             permissions[feature] = .notDetermined
@@ -3070,6 +3091,81 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             result.append(id)
         }
         return result
+    }
+
+    static func normalizedActivityLabels(_ labels: [String]) -> [String] {
+        var result: [String] = []
+        for label in labels {
+            let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  !result.contains(where: {
+                      $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
+                  }) else { continue }
+            result.append(trimmed)
+        }
+        return result
+    }
+}
+
+/// 사용자가 자동 기록의 표시 분류만 교정한 값. 센서 원본과 근거는
+/// 그대로 보존하고, 다음 자동 갱신 뒤에도 같은 표시를 복원한다.
+struct ActivityCorrection: Codable, Hashable, Sendable {
+    var title: String
+    var behavior: String?
+    var categoryID: String
+
+    init(title: String, behavior: String? = nil, categoryID: String = "activity") {
+        self.title = title
+        self.behavior = behavior
+        self.categoryID = categoryID
+    }
+}
+
+struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
+    var id: String
+    var title: String
+    var behavior: String?
+    var categoryID: String
+    var systemImage: String
+    var isAutomatic: Bool
+    var isCustom: Bool
+
+    var correction: ActivityCorrection {
+        ActivityCorrection(
+            title: title,
+            behavior: behavior,
+            categoryID: categoryID
+        )
+    }
+
+    static func custom(_ title: String) -> ActivityCorrectionOption {
+        ActivityCorrectionOption(
+            id: "custom.\(title)",
+            title: title,
+            behavior: nil,
+            categoryID: "activity",
+            systemImage: "plus.circle",
+            isAutomatic: false,
+            isCustom: true
+        )
+    }
+}
+
+enum ActivityCorrectionEngine {
+    static func applying(
+        _ corrections: [UUID: ActivityCorrection],
+        to actuals: [ActualRecord]
+    ) -> [ActualRecord] {
+        guard !corrections.isEmpty else { return actuals }
+        return actuals.map { actual in
+            guard let correction = corrections[actual.id] else { return actual }
+            var value = actual
+            value.title = correction.title
+            value.behavior = correction.behavior
+            value.categoryID = correction.categoryID
+            value.manuallyCorrected = true
+            return value
+        }
     }
 }
 

@@ -34,6 +34,53 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(detailedActivity.sourceKind, .automatic)
     }
 
+    func testActivityCorrectionChangesDisplayFieldsWithoutTouchingEvidence() {
+        let source = ActualRecord(
+            planID: nil,
+            title: "머무름",
+            categoryID: "activity",
+            startedAt: makeDate(2026, 8, 10, 0, 0),
+            endedAt: makeDate(2026, 8, 10, 1, 0),
+            source: .location,
+            behavior: StationaryContextKind.unknownStay.rawValue,
+            evidence: ["GPS"]
+        )
+        let corrected = ActivityCorrectionEngine.applying(
+            [source.id: ActivityCorrection(
+                title: "샤워",
+                behavior: WatchBehaviorKind.showering.rawValue,
+                categoryID: "activity"
+            )],
+            to: [source]
+        )[0]
+
+        XCTAssertEqual(corrected.id, source.id)
+        XCTAssertEqual(corrected.title, "샤워")
+        XCTAssertEqual(corrected.behavior, WatchBehaviorKind.showering.rawValue)
+        XCTAssertEqual(corrected.evidence, ["GPS"])
+        XCTAssertEqual(corrected.source, .location)
+        XCTAssertTrue(corrected.manuallyCorrected)
+    }
+
+    func testActivityCorrectionSettingsRoundTrip() throws {
+        let id = UUID()
+        var settings = AppFeatureSettings.defaults
+        settings.activityCorrections[id] = ActivityCorrection(
+            title: "집안일",
+            behavior: WatchBehaviorKind.housework.rawValue,
+            categoryID: "activity"
+        )
+        settings.customActivityLabels = ["집안일"]
+
+        let restored = try JSONDecoder().decode(
+            AppFeatureSettings.self,
+            from: JSONEncoder().encode(settings)
+        )
+
+        XCTAssertEqual(restored.activityCorrections[id]?.title, "집안일")
+        XCTAssertEqual(restored.customActivityLabels, ["집안일"])
+    }
+
     func testPlayheadMapUsesOnlyMovementContainingExactPlayheadTime() {
         let playhead = makeDate(2026, 8, 1, 9, 0)
         let nearby = TravelSegment(
@@ -2717,6 +2764,69 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.confidence, .high)
         XCTAssertTrue(result.isConfirmed)
         XCTAssertEqual(result.evidence.count, 2)
+    }
+
+    func testPlacePresentationShowsOneCopyOfDuplicateStay() throws {
+        let base = makeDate(2026, 8, 9, 2, 38)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(15 * hour + 28 * 60)
+        )
+        let inferred = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            floor: 19,
+            span: span,
+            confidence: .medium
+        )
+        let confirmed = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            floor: 19,
+            span: span,
+            confidence: .high,
+            isConfirmed: true
+        )
+
+        let values = PlaceStayPresentationEngine.consolidated(
+            [inferred, confirmed, inferred, confirmed]
+        )
+        let result = try XCTUnwrap(values.first)
+        XCTAssertEqual(values.count, 1)
+        XCTAssertEqual(result.id, confirmed.id)
+        XCTAssertEqual(result.span, span)
+        XCTAssertEqual(result.floor, 19)
+        XCTAssertEqual(result.confidence, .high)
+        XCTAssertTrue(result.isConfirmed)
+    }
+
+    func testPlacePresentationKeepsRealFloorChangesSeparate() {
+        let base = makeDate(2026, 8, 9, 9)
+        let first = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            floor: 1,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(30 * 60)
+            ),
+            confidence: .high
+        )
+        let second = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            floor: 2,
+            span: TimeSpan(
+                start: first.span.end,
+                end: first.span.end.addingTimeInterval(30 * 60)
+            ),
+            confidence: .high
+        )
+
+        XCTAssertEqual(
+            PlaceStayPresentationEngine.consolidated([first, second]).count,
+            2
+        )
     }
 
     func testTravelPresentationSeparatesWorkoutWalkingColorClass() {
@@ -10585,6 +10695,64 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(assignments.map(\.phase), [.sleep, .commuteToWork])
         XCTAssertEqual(assignments.map(\.span.duration), [30 * 60, 30 * 60])
+    }
+
+    func testAutomaticTimelineKeepsEveryDayPhaseRowWithoutData() {
+        XCTAssertEqual(
+            DayPhase.timelineRows,
+            [
+                .sleep, .movement, .exercise, .work, .study, .hobby, .activity,
+                .appointment, .unconfirmed,
+            ]
+        )
+    }
+
+    func testDayRecordGroupsShowPhasesWithNestedActivitiesAnd24Hours() {
+        let day = dayPhaseDay()
+        let sleepEnd = day.start.addingTimeInterval(8 * hour)
+        let phases = [
+            DayPhaseSpan(
+                phase: .sleep,
+                span: TimeSpan(start: day.start, end: sleepEnd)
+            ),
+            DayPhaseSpan(
+                phase: .activity,
+                span: TimeSpan(start: sleepEnd, end: day.end)
+            ),
+        ]
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "코어 수면",
+            categoryID: "sleep",
+            startedAt: day.start.addingTimeInterval(2 * hour),
+            endedAt: day.start.addingTimeInterval(3 * hour),
+            source: .healthKit
+        )
+        let walk = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: sleepEnd.addingTimeInterval(2 * hour),
+            endedAt: sleepEnd.addingTimeInterval(3 * hour),
+            source: .motion
+        )
+
+        let groups = ActualRecordGroupingEngine.phaseGroups(
+            phases: phases,
+            actuals: [sleep, walk],
+            categories: CategoryCatalog.builtIn,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(groups.map(\.id), ["sleep", "activity"])
+        XCTAssertEqual(groups.map(\.children.count), [1, 1])
+        XCTAssertEqual(groups[0].children[0].title, "코어 수면")
+        XCTAssertEqual(groups[1].children[0].title, "걷기")
+        XCTAssertEqual(
+            groups.reduce(0) { $0 + $1.duration },
+            day.duration,
+            accuracy: 0.001
+        )
     }
 
     /// iPhone·Watch가 운동으로 확정한 시간은 업무·이동·수면보다 먼저
