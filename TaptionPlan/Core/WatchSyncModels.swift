@@ -1401,6 +1401,8 @@ enum TaptionWatchEnvelope {
         "taption.watch.location-tracking-guidance"
     static let acceptedKey = "taption.watch.accepted"
     static let launchDiagnosticsKey = "taption.watch.launch-diagnostics"
+    static let diagnosticsRequestKey = "taption.watch.diagnostics-request"
+    static let diagnosticsLogKey = "taption.watch.diagnostics-log"
 }
 
 /// Apple Watch가 보내온 직전 실행 기록. 워치 앱이 실행 중 종료될 때 어느

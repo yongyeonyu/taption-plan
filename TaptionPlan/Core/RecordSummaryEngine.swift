@@ -1458,6 +1458,23 @@ enum RecordClockDetailEngine {
         )
     }
 
+    /// 활동 띠에는 실제로 잠든 단계만 올린다. `침대에 있음`과 `깨어 있음`은
+    /// 수면 단계가 아니므로 기존 수면 구간의 바탕색으로 남는다.
+    static func activitySleepRing(
+        sessions: [SleepSession],
+        in span: TimeSpan
+    ) -> RecordClockDetailRing? {
+        guard let source = sleepRing(sessions: sessions, in: span) else {
+            return nil
+        }
+        let arcs = source.arcs.filter {
+            SleepStage(rawValue: $0.token)?.isAsleep == true
+        }
+        return arcs.isEmpty
+            ? nil
+            : RecordClockDetailRing(id: source.id, kind: source.kind, arcs: arcs)
+    }
+
     /// 이동 구간 띠. 같은 이동 수단이 이어지면 한 조각으로 붙인다.
     static func travelRing(
         segments: [TravelSegment],

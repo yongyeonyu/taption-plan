@@ -53,6 +53,18 @@
 	<string>걷기·달리기·이동 상태와 걸음 및 층수 변화를 추정하기 위해 동작 및 피트니스 접근이 필요합니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>촬영 시각에 맞춰 사진을 시간표에 표시하기 위해 사진 접근이 필요합니다.</string>
+	<key>NSUbiquitousContainers</key>
+	<dict>
+		<key>iCloud.com.taption.plan</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerName</key>
+			<string>Taption Plan</string>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>Any</string>
+		</dict>
+	</dict>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

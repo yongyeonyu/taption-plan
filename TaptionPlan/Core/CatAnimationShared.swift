@@ -118,10 +118,9 @@ struct TaptionCatAnimationPose: Equatable, Sendable {
 enum TaptionCatAnimationEngine {
     /// A small, deterministic frame clock keeps the same gait on iPhone,
     /// WidgetKit and watchOS.  TimelineView supplies the actual redraw date.
-    static let stepDuration: TimeInterval = 0.08
-    /// 꼬리·머리·다리를 한 주기에 8번 표본화한다. 4번이던 시절보다
-    /// 중간값이 두 배로 늘어 움직임이 덜 끊긴다.
-    static let phaseCount = 8
+    static let stepDuration: TimeInterval = 0.12
+    /// 모든 동작은 실제 자세가 다른 6장의 스프라이트로 한 주기를 돈다.
+    static let phaseCount = 6
     private static let stepCount = 40
 
     static func pose(
@@ -316,17 +315,11 @@ private struct TaptionCatFigure: View {
     let pose: TaptionCatAnimationPose
     let reducesMotion: Bool
 
-    private var legSwing: Double {
-        guard !reducesMotion, pose.legSwing.isFinite else { return 0 }
-        return min(1, max(-1, pose.legSwing))
-    }
-
     var body: some View {
         TaptionCatAtlasIllustration(
             style: style,
             pose: pose,
-            reducesMotion: reducesMotion,
-            legSwing: legSwing
+            reducesMotion: reducesMotion
         )
     }
 }
@@ -335,73 +328,25 @@ private struct TaptionCatAtlasIllustration: View {
     let style: String
     let pose: TaptionCatAnimationPose
     let reducesMotion: Bool
-    let legSwing: Double
 
     private var action: TaptionCatAnimationAction { pose.action }
 
     var body: some View {
-        TaptionCatAtlasSprite(style: style, action: action)
-            .scaleEffect(x: motionScale.width, y: motionScale.height, anchor: .bottom)
-            .rotationEffect(motionTilt, anchor: .bottom)
-            .offset(motionOffset)
+        TaptionCatAtlasSprite(
+            style: style,
+            action: action,
+            frame: reducesMotion ? 0 : pose.phase
+        )
             .frame(width: 52, height: 32)
-    }
-
-    private var motionOffset: CGSize {
-        guard !reducesMotion else { return .zero }
-        let swing = CGFloat(legSwing)
-        let ease = CGFloat(pose.cycleEase)
-        return switch action {
-        case .walking: CGSize(width: swing * 0.7, height: -abs(swing) * 0.7)
-        case .running: CGSize(width: swing, height: -abs(swing) * 1.8)
-        case .sitting: CGSize(width: 0, height: ease * -0.4)
-        case .sleeping: CGSize(width: 0, height: ease * 0.3)
-        case .grooming: CGSize(width: swing * 0.35, height: ease * 0.4)
-        case .eating: CGSize(width: 0, height: ease * 0.8)
-        case .startled: CGSize(width: pose.phase.isMultiple(of: 2) ? -0.7 : 0.7, height: -ease)
-        case .ballPlay: CGSize(width: swing, height: -abs(swing) * 0.8)
-        case .fishingPlay: CGSize(width: swing * 0.5, height: -ease * 0.5)
-        case .stretching: CGSize(width: -ease * 0.8, height: ease * 0.4)
-        case .kneading: CGSize(width: swing * 0.35, height: abs(swing) * 0.5)
-        case .yawning: CGSize(width: 0, height: -ease * 0.5)
-        }
-    }
-
-    private var motionScale: CGSize {
-        guard !reducesMotion else { return CGSize(width: 1, height: 1) }
-        let swing = abs(CGFloat(legSwing))
-        let ease = CGFloat(pose.cycleEase)
-        return switch action {
-        case .running: CGSize(width: 1 + swing * 0.05, height: 1 - swing * 0.04)
-        case .sleeping: CGSize(width: 1 + ease * 0.015, height: 1 - ease * 0.02)
-        case .startled: CGSize(width: 1 + ease * 0.025, height: 1 + ease * 0.05)
-        case .stretching: CGSize(width: 1 + ease * 0.045, height: 1 - ease * 0.025)
-        case .kneading: CGSize(width: 1, height: 1 - swing * 0.025)
-        case .yawning: CGSize(width: 1 - ease * 0.015, height: 1 + ease * 0.035)
-        default: CGSize(width: 1, height: 1)
-        }
-    }
-
-    private var motionTilt: Angle {
-        guard !reducesMotion else { return .zero }
-        return switch action {
-        case .walking: .degrees(legSwing * 2.5)
-        case .running: .degrees(legSwing * 4)
-        case .grooming: .degrees(legSwing * 2)
-        case .eating: .degrees(-pose.cycleEase * 2)
-        case .ballPlay: .degrees(legSwing * 3)
-        case .fishingPlay: .degrees(legSwing * 2.5)
-        case .yawning: .degrees(-pose.cycleEase * 2)
-        default: .zero
-        }
     }
 }
 
 private struct TaptionCatAtlasSprite: View {
     let style: String
     let action: TaptionCatAnimationAction
+    let frame: Int
 
-    private var index: Int {
+    private var actionIndex: Int {
         switch action {
         case .walking: 0
         case .running: 1
@@ -431,13 +376,22 @@ private struct TaptionCatAtlasSprite: View {
     }
 
     var body: some View {
+        let frameIndex = ((frame % 6) + 6) % 6
         Image(assetName)
             .resizable()
             .interpolation(.high)
-            .frame(width: 208, height: 96)
-            .offset(x: -CGFloat(index % 4) * 52, y: -CGFloat(index / 4) * 32)
+            .frame(width: 312, height: 384)
+            .offset(
+                x: -CGFloat(frameIndex) * 52,
+                y: -CGFloat(actionIndex) * 32
+            )
             .frame(width: 52, height: 32, alignment: .topLeading)
             .clipped()
+            .id("\(assetName)-\(actionIndex)-\(frameIndex)")
+            .transaction { transaction in
+                transaction.animation = nil
+                transaction.disablesAnimations = true
+            }
     }
 }
 

@@ -5256,6 +5256,7 @@ final class FeatureEngineTests: XCTestCase {
         let actions = TaptionWidgetCatAction.allCases
 
         XCTAssertEqual(actions.count, 12)
+        XCTAssertEqual(TaptionCatAnimationEngine.phaseCount, 6)
         XCTAssertEqual(Set(actions.map(\.previewTitle)).count, actions.count)
         XCTAssertTrue(actions.allSatisfy { !$0.previewSystemImage.isEmpty })
 
@@ -5398,7 +5399,7 @@ final class FeatureEngineTests: XCTestCase {
             }
         }
 
-        // 위젯이 도는 40스텝 시퀀스가 8위상 주기를 끊김 없이 채운다.
+        // 위젯이 도는 40스텝 시퀀스가 6프레임 주기를 빠짐없이 채운다.
         let walkPhases = (0..<40).map {
             TaptionWidgetCatWalkEngine.pose(
                 at: Date(
@@ -6138,6 +6139,31 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertFalse(
             CloudKitErrorPolicy.isProductionSchemaUnavailable(
+                NSError(domain: "CKErrorDomain", code: 3)
+            )
+        )
+    }
+
+    func testCloudKitRecordConflictRecognizesCodeAndOplockMessage() {
+        XCTAssertTrue(
+            CloudKitErrorPolicy.isRecordConflict(
+                NSError(domain: "CKErrorDomain", code: 14)
+            )
+        )
+        XCTAssertTrue(
+            CloudKitErrorPolicy.isRecordConflict(
+                NSError(
+                    domain: "CKInternalErrorDomain",
+                    code: 2_000,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "client oplock error updating record"
+                    ]
+                )
+            )
+        )
+        XCTAssertFalse(
+            CloudKitErrorPolicy.isRecordConflict(
                 NSError(domain: "CKErrorDomain", code: 3)
             )
         )
@@ -9521,6 +9547,57 @@ final class FeatureEngineTests: XCTestCase {
         assertRingHasNoSlivers(ring)
     }
 
+    func testActivitySleepRingKeepsOnlyAsleepStages() throws {
+        let dayStart = makeDate(2026, 8, 4)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let segments = [
+            SleepSegment(
+                stage: .inBed,
+                span: TimeSpan(
+                    start: dayStart,
+                    end: dayStart.addingTimeInterval(5 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(
+                    start: dayStart.addingTimeInterval(hour),
+                    end: dayStart.addingTimeInterval(3 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .awake,
+                span: TimeSpan(
+                    start: dayStart.addingTimeInterval(3 * hour),
+                    end: dayStart.addingTimeInterval(4 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .rem,
+                span: TimeSpan(
+                    start: dayStart.addingTimeInterval(4 * hour),
+                    end: dayStart.addingTimeInterval(5 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+        ]
+        let sessions = SleepAnalysisEngine().sessions(from: segments)
+        let ring = try XCTUnwrap(
+            RecordClockDetailEngine.activitySleepRing(
+                sessions: sessions,
+                in: day
+            )
+        )
+
+        XCTAssertEqual(ring.arcs.map(\.token), ["core", "rem"])
+    }
+
     /// 같은 이동 수단이 이어지면 하나로 붙이고, 너무 짧은 구간은 이웃에
     /// 합치되 이웃이 없으면 최소 길이로 넓혀 남긴다.
     func testTravelRingJoinsSameModeAndCondensesShortSegments() throws {
@@ -12063,6 +12140,52 @@ final class FeatureEngineTests: XCTestCase {
             decoded.dismissedPlaceSuggestions,
             settings.dismissedPlaceSuggestions
         )
+    }
+
+    func testDiagnosticsPackageIncludesIPhoneAndWatchLogs() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let package = try TaptionPlanDiagnosticsLogPackageBuilder(
+            packageDirectoryURL: root
+        ).makePackage(
+            summary: ["build": "47", "actuals": "12"],
+            iphoneLog: "iphone-event",
+            watchLog: "watch-event"
+        )
+        let text = try String(contentsOf: package, encoding: .utf8)
+
+        XCTAssertTrue(text.contains("## iphone_log"))
+        XCTAssertTrue(text.contains("iphone-event"))
+        XCTAssertTrue(text.contains("## apple_watch_log"))
+        XCTAssertTrue(text.contains("watch-event"))
+        XCTAssertTrue(text.contains("raw health values are excluded"))
+    }
+
+    func testDiagnosticsICloudExporterKeepsSourceAndAvoidsCollision() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let package = root.appendingPathComponent("TaptionLogs-test.txt")
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        try "diagnostics".write(to: package, atomically: true, encoding: .utf8)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let exporter = TaptionPlanDiagnosticsICloudExporter(
+            ubiquityContainerURL: { root.appendingPathComponent("iCloud") },
+            transferItem: { source, destination in
+                try FileManager.default.copyItem(at: source, to: destination)
+            }
+        )
+
+        let first = try exporter.export(package)
+        let second = try exporter.export(package)
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: package.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: first.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: second.path))
+        XCTAssertEqual(second.lastPathComponent, "TaptionLogs-test-2.txt")
     }
 
     private func makeDate(

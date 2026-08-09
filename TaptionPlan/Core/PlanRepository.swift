@@ -380,6 +380,48 @@ enum CloudKitErrorPolicy {
         return message.contains("cannot create new type")
             || message.contains("production schema")
     }
+
+    static func isRecordConflict(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == CKError.errorDomain,
+           nsError.code == CKError.Code.serverRecordChanged.rawValue {
+            return true
+        }
+        if partialErrors(in: nsError).contains(where: isRecordConflict) {
+            return true
+        }
+        return conflictMessage(in: nsError).contains("client oplock")
+    }
+
+    static func serverRecord(in error: Error) -> CKRecord? {
+        let nsError = error as NSError
+        if let record = nsError.userInfo[
+            CKRecordChangedErrorServerRecordKey
+        ] as? CKRecord {
+            return record
+        }
+        return partialErrors(in: nsError).lazy.compactMap(serverRecord).first
+    }
+
+    private static func partialErrors(in error: NSError) -> [Error] {
+        guard let values = error.userInfo[
+            CKPartialErrorsByItemIDKey
+        ] as? [AnyHashable: Any] else {
+            return []
+        }
+        return values.values.compactMap { $0 as? Error }
+    }
+
+    private static func conflictMessage(in error: NSError) -> String {
+        [
+            error.localizedDescription,
+            error.localizedFailureReason ?? "",
+            error.userInfo[NSLocalizedRecoverySuggestionErrorKey] as? String
+                ?? "",
+        ]
+        .joined(separator: " ")
+        .lowercased()
+    }
 }
 
 actor CloudKitSnapshotSyncService {
@@ -393,6 +435,8 @@ actor CloudKitSnapshotSyncService {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private var schemaUnavailable = false
+    private var uploadInProgress = false
+    private var uploadWaiters: [CheckedContinuation<Void, Never>] = []
 
     nonisolated static func automatic() -> CloudKitSnapshotSyncService? {
 #if targetEnvironment(simulator)
@@ -511,6 +555,9 @@ actor CloudKitSnapshotSyncService {
 
     @discardableResult
     func upload(_ snapshot: TaptionDataSnapshot) async throws -> TaptionDataSnapshot {
+        await acquireUploadTurn()
+        defer { releaseUploadTurn() }
+        try Task.checkCancellation()
         guard !schemaUnavailable else {
             throw RepositoryError.cloudSchemaUnavailable
         }
@@ -522,6 +569,22 @@ actor CloudKitSnapshotSyncService {
             }
             throw error
         }
+    }
+
+    private func acquireUploadTurn() async {
+        guard uploadInProgress else {
+            uploadInProgress = true
+            return
+        }
+        await withCheckedContinuation { uploadWaiters.append($0) }
+    }
+
+    private func releaseUploadTurn() {
+        guard !uploadWaiters.isEmpty else {
+            uploadInProgress = false
+            return
+        }
+        uploadWaiters.removeFirst().resume()
     }
 
     private func uploadRecord(
@@ -570,7 +633,7 @@ actor CloudKitSnapshotSyncService {
         assetURL: URL?
     ) async throws {
         var record = initialRecord
-        let maximumAttempts = 3
+        let maximumAttempts = 6
 
         for attempt in 1...maximumAttempts {
             applyPayload(
@@ -582,19 +645,29 @@ actor CloudKitSnapshotSyncService {
 
             do {
                 _ = try await database.save(record)
-                return
-            } catch let error as CKError
-                where error.code == .serverRecordChanged
-                    && attempt < maximumAttempts {
-                if let serverRecord = error.userInfo[
-                    CKRecordChangedErrorServerRecordKey
-                ] as? CKRecord {
-                    record = serverRecord
-                } else {
-                    record = try await database.record(
-                        for: initialRecord.recordID
+                if attempt > 1 {
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "cloud_conflict_recovered",
+                        fields: ["attempt": String(attempt)]
                     )
                 }
+                return
+            } catch {
+                guard CloudKitErrorPolicy.isRecordConflict(error),
+                      attempt < maximumAttempts else {
+                    throw error
+                }
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "cloud_conflict_retry",
+                    level: .notice,
+                    fields: ["attempt": String(attempt)]
+                )
+                let serverRecord = CloudKitErrorPolicy.serverRecord(in: error)
+                let delay = min(800_000_000, 50_000_000 << (attempt - 1))
+                try await Task.sleep(nanoseconds: UInt64(delay))
+                record = (try? await database.record(
+                    for: initialRecord.recordID
+                )) ?? serverRecord ?? record
             }
         }
     }

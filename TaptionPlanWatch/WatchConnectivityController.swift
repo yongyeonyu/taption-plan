@@ -42,6 +42,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         restorePendingSensorSummaries()
         restorePendingHealthSnapshots()
         guard WCSession.isSupported() else {
+            WatchLaunchDiagnostics.mark("connectivity unsupported")
             statusText = "연결을 지원하지 않음"
             return
         }
@@ -51,6 +52,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let session = WCSession.default
         session.delegate = self
         session.activate()
+        WatchLaunchDiagnostics.mark("connectivity activating")
     }
 
     private static var activeDelegate: WatchConnectivityController?
@@ -63,6 +65,14 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         pendingLaunchReport = nil
         session.transferUserInfo([
             TaptionWatchEnvelope.launchDiagnosticsKey: report,
+        ])
+    }
+
+    private func sendDiagnosticsLog() {
+        guard let report = WatchLaunchDiagnostics.currentReport(),
+              !report.isEmpty else { return }
+        WCSession.default.transferUserInfo([
+            TaptionWatchEnvelope.diagnosticsLogKey: report,
         ])
     }
 
@@ -230,6 +240,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             TaptionWatchEnvelope.payloadKey
         ] as? Data
         Task { @MainActor [weak self] in
+            WatchLaunchDiagnostics.mark(
+                "connectivity activated=\(activationState.rawValue) reachable=\(isReachable) error=\(error == nil ? "none" : "present")"
+            )
             self?.updateStatus(
                 activationRawValue: activationRawValue,
                 isReachable: isReachable
@@ -239,6 +252,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             }
             if activationState == .activated {
                 self?.sendPendingLaunchReport()
+                self?.sendDiagnosticsLog()
                 self?.flushPendingSensorSummaries(using: .default)
                 self?.flushPendingHealthSnapshots(using: .default)
                 self?.requestSync()
@@ -250,11 +264,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let activationRawValue = session.activationState.rawValue
         let isReachable = session.isReachable
         Task { @MainActor [weak self] in
+            WatchLaunchDiagnostics.mark(
+                "connectivity reachable=\(isReachable)"
+            )
             self?.updateStatus(
                 activationRawValue: activationRawValue,
                 isReachable: isReachable
             )
             if isReachable {
+                self?.sendDiagnosticsLog()
                 self?.requestSync()
             }
         }
@@ -281,13 +299,40 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let dataSyncRequested = message[
             TaptionWatchEnvelope.dataSyncRequestKey
         ] as? Bool == true
+        let diagnosticsRequested = message[
+            TaptionWatchEnvelope.diagnosticsRequestKey
+        ] as? Bool == true
         Task { @MainActor [weak self] in
             if let data { self?.apply(data: data) }
             if let workoutData { self?.applyWorkoutRequest(data: workoutData) }
             if dataSyncRequested {
+                WatchLaunchDiagnostics.mark("data sync requested")
                 self?.onDataSyncRequest?()
             }
+            if diagnosticsRequested {
+                WatchLaunchDiagnostics.mark("diagnostics requested")
+                self?.sendDiagnosticsLog()
+            }
         }
+    }
+
+    nonisolated func session(
+        _ session: WCSession,
+        didReceiveMessage message: [String: Any],
+        replyHandler: @escaping ([String: Any]) -> Void
+    ) {
+        if message[
+            TaptionWatchEnvelope.diagnosticsRequestKey
+        ] as? Bool == true {
+            WatchLaunchDiagnostics.mark("diagnostics requested live")
+            replyHandler([
+                TaptionWatchEnvelope.diagnosticsLogKey:
+                    WatchLaunchDiagnostics.currentReport() ?? "",
+            ])
+            return
+        }
+        self.session(session, didReceiveMessage: message)
+        replyHandler([TaptionWatchEnvelope.acceptedKey: true])
     }
 
     nonisolated func session(
@@ -301,11 +346,19 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let dataSyncRequested = userInfo[
             TaptionWatchEnvelope.dataSyncRequestKey
         ] as? Bool == true
+        let diagnosticsRequested = userInfo[
+            TaptionWatchEnvelope.diagnosticsRequestKey
+        ] as? Bool == true
         Task { @MainActor [weak self] in
             if let data { self?.apply(data: data) }
             if let workoutData { self?.applyWorkoutRequest(data: workoutData) }
             if dataSyncRequested {
+                WatchLaunchDiagnostics.mark("data sync requested background")
                 self?.onDataSyncRequest?()
+            }
+            if diagnosticsRequested {
+                WatchLaunchDiagnostics.mark("diagnostics requested background")
+                self?.sendDiagnosticsLog()
             }
         }
     }
@@ -418,6 +471,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         through session: WCSession
     ) {
         guard let data = try? encoder.encode(summary) else { return }
+        WatchLaunchDiagnostics.mark(
+            "sensor summary sequence=\(summary.sequence) samples=\(summary.accelerometerSampleCount) final=\(summary.isFinal)"
+        )
         let envelope: [String: Any] = [
             TaptionWatchEnvelope.sensorSummaryKey: data,
         ]

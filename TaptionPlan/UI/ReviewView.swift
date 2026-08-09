@@ -18,7 +18,7 @@ private struct ReviewContent: Equatable {
     var rings: [RecordClockRing]
     /// 가장 바깥의 일과 고리. 하루 배율에서만 만들어진다.
     var phaseRing: RecordClockDetailRing?
-    /// 수면 단계처럼 활동을 더 구체화하는 고리.
+    /// 수면 단계는 별도 고리를 만들지 않고 활동 띠의 수면 구간 위에 그린다.
     var activityRings: [RecordClockDetailRing]
     /// 날씨·위치는 상세 고리와 분리해 환경 정보로 표시한다.
     var contextRings: [RecordClockDetailRing]
@@ -331,9 +331,6 @@ struct ReviewView: View {
                     emptyRecordText
                 } else {
                     categoryLegend
-                }
-                if content.activityRings.contains(where: { $0.kind == .sleepStage }) {
-                    activityRingLegend
                 }
                 if !detailLegendRings.isEmpty {
                     detailRingLegend
@@ -695,7 +692,12 @@ struct ReviewView: View {
                 let width = pass
                     ? Self.clockBandWidth + 6
                     : Self.clockBandWidth
-                let opacity = progress == nil || pass ? 1.0 : 0.4
+                let hasStageSelection = highlightedDetail?.kind == .sleepStage
+                let opacity = if hasStageSelection {
+                    ring.categoryID == TimelineRowKind.sleep.rawValue ? 0.22 : 0.12
+                } else {
+                    progress == nil || pass ? 1.0 : 0.4
+                }
                 for arc in ring.arcs {
                     context.stroke(
                         arcPath(
@@ -711,20 +713,21 @@ struct ReviewView: View {
             }
         }
 
-        let activityEdge = drawDetailRings(
+        drawSleepStagesOnActivityBand(
             context: context,
             center: center,
-            outerEdge: radius - Self.clockBandWidth / 2,
+            radius: radius,
             rings: RecordClockEngine.detailRings(
                 activityRings,
                 revealedThrough: progress
-            )
+            ),
+            isDimming: highlightedCategoryID != nil
         )
 
         _ = drawDetailRings(
             context: context,
             center: center,
-            outerEdge: activityEdge,
+            outerEdge: radius - Self.clockBandWidth / 2,
             rings: RecordClockEngine.detailRings(
                 detailRings,
                 revealedThrough: progress
@@ -758,6 +761,37 @@ struct ReviewView: View {
                 arc: focusedPhaseArc,
                 in: span
             )
+        }
+    }
+
+    /// 코어·깊은·REM 수면은 일반 `수면` 위에 같은 폭으로 덮어, 일과의
+    /// `취침`과 활동의 실제 수면 단계만 남는 2단계 구조로 보이게 한다.
+    private func drawSleepStagesOnActivityBand(
+        context: GraphicsContext,
+        center: CGPoint,
+        radius: CGFloat,
+        rings: [RecordClockDetailRing],
+        isDimming: Bool
+    ) {
+        for ring in rings where ring.kind == .sleepStage {
+            for arc in ring.arcs {
+                context.stroke(
+                    arcPath(
+                        center: center,
+                        radius: radius,
+                        from: arc.startFraction,
+                        to: arc.endFraction
+                    ),
+                    with: .color(
+                        detailColor(.sleepStage, token: arc.token)
+                            .opacity(isDimming ? 0.18 : 1)
+                    ),
+                    style: StrokeStyle(
+                        lineWidth: Self.clockBandWidth,
+                        lineCap: .butt
+                    )
+                )
+            }
         }
     }
 
@@ -962,58 +996,6 @@ struct ReviewView: View {
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.vertical, 4)
             ForEach(detailLegendRings.filter { $0.kind != .sleepStage }) { ring in
-                ForEach(detailTokens(of: ring), id: \.self) { token in
-                    let selection = ReviewDetailSelection(
-                        kind: ring.kind,
-                        token: token
-                    )
-                    Button {
-                        highlightedDetail = highlightedDetail == selection
-                            ? nil
-                            : selection
-                    } label: {
-                        HStack(spacing: 4) {
-                            Capsule()
-                                .fill(detailColor(ring.kind, token: token))
-                                .frame(width: 10, height: 6)
-                            Text(detailName(ring.kind, token: token))
-                                .font(
-                                    .taption(
-                                        size: 8.5,
-                                        weight: highlightedDetail == selection
-                                            ? .bold
-                                            : .regular
-                                    )
-                                )
-                                .foregroundStyle(Color.tpInk)
-                        }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(
-                            highlightedDetail == selection
-                                ? detailColor(ring.kind, token: token)
-                                    .opacity(0.16)
-                                : Color(red: 0.95, green: 0.95, blue: 0.96),
-                            in: Capsule()
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(
-                        highlightedDetail == selection ? [.isSelected] : []
-                    )
-                }
-            }
-        }
-    }
-
-    private var activityRingLegend: some View {
-        let sleepRings = content.activityRings.filter { $0.kind == .sleepStage }
-        return ChipFlowLayout(spacing: 5) {
-            Text("활동 상세")
-                .font(.taption(size: 8.5, weight: .bold))
-                .foregroundStyle(Color.tpSecondary)
-                .padding(.vertical, 4)
-            ForEach(sleepRings) { ring in
                 ForEach(detailTokens(of: ring), id: \.self) { token in
                     let selection = ReviewDetailSelection(
                         kind: ring.kind,
@@ -1317,37 +1299,90 @@ struct ReviewView: View {
                     .padding(.vertical, 4)
             }
             ForEach(content.groups.prefix(8)) { group in
-                Button {
-                    highlightedCategoryID =
-                        highlightedCategoryID == group.id ? nil : group.id
-                } label: {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(color(forCategoryID: group.id))
-                            .frame(width: 7, height: 7)
-                        Text(group.name)
-                            .font(
-                                .taption(
-                                    size: 9,
-                                    weight: highlightedCategoryID == group.id
-                                        ? .bold
-                                        : .regular
-                                )
-                            )
-                            .foregroundStyle(Color.tpInk)
+                if model.reviewScale == .day,
+                   group.id == TimelineRowKind.sleep.rawValue,
+                   !activitySleepTokens.isEmpty {
+                    ForEach(activitySleepTokens, id: \.self) { token in
+                        sleepStageLegendChip(token)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(
-                        highlightedCategoryID == group.id
-                            ? color(forCategoryID: group.id).opacity(0.16)
-                            : Color(red: 0.95, green: 0.95, blue: 0.96),
-                        in: Capsule()
-                    )
+                } else {
+                    categoryLegendChip(group)
                 }
-                .buttonStyle(.plain)
             }
         }
+    }
+
+    private var activitySleepTokens: [String] {
+        content.activityRings
+            .filter { $0.kind == .sleepStage }
+            .flatMap(detailTokens)
+    }
+
+    private func categoryLegendChip(_ group: RecordCategoryGroup) -> some View {
+        Button {
+            highlightedDetail = nil
+            highlightedCategoryID = highlightedCategoryID == group.id
+                ? nil
+                : group.id
+        } label: {
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(color(forCategoryID: group.id))
+                    .frame(width: 7, height: 7)
+                Text(group.name)
+                    .font(
+                        .taption(
+                            size: 9,
+                            weight: highlightedCategoryID == group.id
+                                ? .bold
+                                : .regular
+                        )
+                    )
+                    .foregroundStyle(Color.tpInk)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                highlightedCategoryID == group.id
+                    ? color(forCategoryID: group.id).opacity(0.16)
+                    : Color(red: 0.95, green: 0.95, blue: 0.96),
+                in: Capsule()
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func sleepStageLegendChip(_ token: String) -> some View {
+        let selection = ReviewDetailSelection(kind: .sleepStage, token: token)
+        return Button {
+            highlightedCategoryID = nil
+            highlightedDetail = highlightedDetail == selection ? nil : selection
+        } label: {
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(detailColor(.sleepStage, token: token))
+                    .frame(width: 7, height: 7)
+                Text(detailName(.sleepStage, token: token))
+                    .font(
+                        .taption(
+                            size: 9,
+                            weight: highlightedDetail == selection
+                                ? .bold
+                                : .regular
+                        )
+                    )
+                    .foregroundStyle(Color.tpInk)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                highlightedDetail == selection
+                    ? detailColor(.sleepStage, token: token).opacity(0.16)
+                    : Color(red: 0.95, green: 0.95, blue: 0.96),
+                in: Capsule()
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 계획
@@ -1685,10 +1720,10 @@ struct ReviewView: View {
                     .kindsByPlaceKey(model.snapshot.settings.frequentPlaces),
                 in: day
             )
-            // 수면 단계는 활동 안에서 한 단계 올려 보여 주고, 이동은 상세,
-            // 날씨·위치는 그 아래 환경 띠로 분리한다.
+            // 수면 단계는 활동의 수면 구간에 바로 덮어 2단계로 보여 주고,
+            // 이동은 상세, 날씨·위치는 환경 정보로 분리한다.
             activityRings = [
-                RecordClockDetailEngine.sleepRing(
+                RecordClockDetailEngine.activitySleepRing(
                     sessions: model.sleepSessions,
                     in: day
                 )

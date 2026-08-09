@@ -293,8 +293,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         sessionID requestedSessionID: UUID? = nil
     ) async -> Bool {
         guard !isActive, HKHealthStore.isHealthDataAvailable() else {
+            WatchLaunchDiagnostics.mark("workout start rejected active=\(isActive)")
             return false
         }
+        WatchLaunchDiagnostics.mark("workout start requested kind=\(kind.rawValue)")
         do {
             try await requestAuthorization()
             let configuration = HKWorkoutConfiguration()
@@ -344,8 +346,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 sessionID: sensorSessionID,
                 startedAt: start
             )
+            WatchLaunchDiagnostics.mark("workout started kind=\(kind.rawValue)")
             return true
         } catch {
+            WatchLaunchDiagnostics.mark("workout start failed")
             reset(with: "운동을 시작하지 못했습니다. \(error.localizedDescription)")
             return false
         }
@@ -353,6 +357,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     func stop() async -> TaptionWatchPlanItem? {
         guard let session, let builder else { return nil }
+        WatchLaunchDiagnostics.mark("workout stop requested")
         let linkedPlan = linkedPlan
         let end = Date.now
         if let summary = stopSensorCollection(at: end, isFinal: true) {
@@ -362,8 +367,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         do {
             try await builder.endCollection(at: end)
             _ = try await builder.finishWorkout()
+            WatchLaunchDiagnostics.mark("workout stopped")
             reset()
         } catch {
+            WatchLaunchDiagnostics.mark("workout stop failed")
             reset(with: "운동 저장을 완료하지 못했습니다. \(error.localizedDescription)")
         }
         return linkedPlan
@@ -673,6 +680,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func reset(with message: String? = nil) {
+        if message != nil {
+            WatchLaunchDiagnostics.mark("workout reset with error")
+        }
         if let summary = stopSensorCollection(at: .now, isFinal: true) {
             onSensorSummary?(summary)
         }

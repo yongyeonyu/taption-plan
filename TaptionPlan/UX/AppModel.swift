@@ -72,6 +72,8 @@ final class AppModel {
     private(set) var isRefreshingIntegrations = false
     private(set) var isSensorCollecting = false
     private(set) var isCloudSyncing = false
+    private(set) var isExportingDiagnostics = false
+    private(set) var diagnosticsExportStatus = "준비됨"
     private(set) var cloudUnavailableReason: CloudUnavailableReason?
     private(set) var isRecordingVoiceMemo = false
     private(set) var playingVoiceAttachmentID: UUID?
@@ -343,6 +345,10 @@ final class AppModel {
         self.rawDeviceDataArchive = rawArchive
         Self.integrationLogger.notice(
             "Repository selected: \(repositorySource, privacy: .public)"
+        )
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "app_model_initialized",
+            fields: ["repository": repositorySource]
         )
         self.voiceMemoPlayer.onFinish = { [weak self] in
             self?.playingVoiceAttachmentID = nil
@@ -763,6 +769,7 @@ final class AppModel {
             return
         }
 
+        TaptionPlanDiagnosticsLogger.shared.record("bootstrap_started")
         let task = Task { [weak self] in
             guard let self else { return }
             do {
@@ -780,6 +787,14 @@ final class AppModel {
                     openInitialSetup()
                 }
                 isBootstrapped = true
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "bootstrap_local_snapshot_loaded",
+                    fields: [
+                        "plans": String(source.plans.count),
+                        "actuals": String(source.actuals.count),
+                        "places": String(source.places.count),
+                    ]
+                )
                 scheduleBootstrapPreparation()
             } catch {
                 repositoryLoadFailed = true
@@ -788,6 +803,11 @@ final class AppModel {
                 snapshot = fallback
                 isBootstrapped = true
                 userFacingError = "저장된 데이터를 불러오지 못했습니다. \(error.localizedDescription)"
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "bootstrap_failed",
+                    level: .error,
+                    fields: ["error": String(describing: type(of: error))]
+                )
             }
             bootstrapTask = nil
         }
@@ -1306,8 +1326,25 @@ final class AppModel {
     ) async {
         await waitForBootstrapPreparation()
         guard !isRefreshingIntegrations else { return }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "integration_refresh_started",
+            fields: [
+                "scale": selectedScale.rawValue,
+                "current_day": String(includesCurrentDeviceDay),
+            ]
+        )
         isRefreshingIntegrations = true
-        defer { isRefreshingIntegrations = false }
+        defer {
+            isRefreshingIntegrations = false
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "integration_refresh_finished",
+                fields: [
+                    "actuals": String(snapshot.actuals.count),
+                    "travel": String(snapshot.travel.count),
+                    "weather": String(snapshot.weather.count),
+                ]
+            )
+        }
         let refreshSpan = dataSpan ?? visibleDataSpan
         let photoSpan = permissionState(for: .photos).isGranted
             && settings.showsPhotos
@@ -1568,6 +1605,10 @@ final class AppModel {
             linkedPlanID: linkedPlanID
         )
         activeTrackingSession = session
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "tracking_started",
+            fields: ["kind": kind.rawValue]
+        )
         trackingSessionWasRecovered = false
         TrackingSessionRecoveryStore.save(session)
         lastTrackingSessionRecoveryPersistAt = .now
@@ -1603,6 +1644,17 @@ final class AppModel {
             return
         }
         finalizeTrackingSession(completed)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "tracking_stopped",
+            fields: [
+                "kind": completed.kind.rawValue,
+                "duration_seconds": String(
+                    Int((completed.endedAt ?? .now).timeIntervalSince(
+                        completed.startedAt
+                    ))
+                ),
+            ]
+        )
         TrackingSessionRecoveryStore.clear()
         lastTrackingSessionRecoveryPersistAt = nil
         try? watchConnectivityService.requestWorkout(
@@ -1719,6 +1771,71 @@ final class AppModel {
         )
         try data.write(to: url, options: [.atomic, .completeFileProtection])
         return url
+    }
+
+    func exportDiagnosticsToICloud() async {
+        guard !isExportingDiagnostics else { return }
+        isExportingDiagnostics = true
+        diagnosticsExportStatus = "전송 중"
+        defer { isExportingDiagnostics = false }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "diagnostics_export_requested"
+        )
+        do {
+            let watchLog = await watchConnectivityService
+                .requestDiagnosticsLog()
+                ?? WatchLaunchReportStore.read()?.report
+            let builder = try TaptionPlanDiagnosticsLogPackageBuilder
+                .applicationSupport()
+            let package = try builder.makePackage(
+                summary: diagnosticsSummary,
+                iphoneLog: TaptionPlanDiagnosticsLogger.shared.combinedLog(),
+                watchLog: watchLog
+            )
+            let destination = try await Task.detached(priority: .utility) {
+                try TaptionPlanDiagnosticsICloudExporter().export(package)
+            }.value
+            diagnosticsExportStatus = "전송됨"
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "diagnostics_export_completed",
+                fields: ["file": destination.lastPathComponent]
+            )
+        } catch {
+            diagnosticsExportStatus = "실패"
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "diagnostics_export_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
+            userFacingError = error.localizedDescription
+        }
+    }
+
+    private var diagnosticsSummary: [String: String] {
+        let bundle = Bundle.main
+        return [
+            "app_version": bundle.object(
+                forInfoDictionaryKey: "CFBundleShortVersionString"
+            ) as? String ?? "unknown",
+            "build": bundle.object(
+                forInfoDictionaryKey: "CFBundleVersion"
+            ) as? String ?? "unknown",
+            "os": ProcessInfo.processInfo.operatingSystemVersionString,
+            "plans": String(snapshot.plans.count),
+            "actuals": String(snapshot.actuals.count),
+            "travel": String(snapshot.travel.count),
+            "places": String(snapshot.places.count),
+            "weather": String(snapshot.weather.count),
+            "calendar_events": String(snapshot.calendarEvents.count),
+            "photos": String(snapshot.photos.count),
+            "memos": String(snapshot.memos.count),
+            "watch_connection": appleWatchConnectionState.rawValue,
+            "sensor_collecting": String(isSensorCollecting),
+            "location_enabled": String(settings.locationEnabled),
+            "health_enabled": String(settings.healthEnabled),
+            "cloud_status": cloudStatusText,
+            "widget_sync": widgetSyncStatusText,
+        ]
     }
 
     func deleteAllUserData() async {
@@ -3497,11 +3614,19 @@ final class AppModel {
             containing: date ?? selectedDate
         )
         let archivedReadings: [SensorReading]
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sensor_timeline_refresh_started"
+        )
         do {
             archivedReadings = try await sensorService.archivedReadings(
                 in: span
             )
         } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_timeline_read_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
             userFacingError =
                 "위치 기록을 읽지 못했습니다. \(error.localizedDescription)"
             return
@@ -3517,6 +3642,13 @@ final class AppModel {
         }
         let motionActivities =
             (try? await sensorService.motionActivities(in: span)) ?? []
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sensor_timeline_evidence_loaded",
+            fields: [
+                "gps": String(archivedReadings.count),
+                "motion": String(motionActivities.count),
+            ]
+        )
         let pedometer =
             try? await sensorService.pedometerSummary(in: span)
         let iPhonePedometerEvidence =
@@ -4612,6 +4744,10 @@ final class AppModel {
         guard !isHealthRefreshRunning else { return }
         isHealthRefreshRunning = true
         defer { isHealthRefreshRunning = false }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "health_refresh_started",
+            fields: ["periodic": String(requestedSpan != nil)]
+        )
 
         do {
             let span = requestedSpan ?? recentHealthSpan
@@ -4690,6 +4826,13 @@ final class AppModel {
             Self.integrationLogger.notice(
                 "HealthKit refresh completed: actuals=\(freshActuals.count, privacy: .public), sleepSessions=\(freshSessions.count, privacy: .public), periodic=\(requestedSpan != nil, privacy: .public)"
             )
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "health_refresh_completed",
+                fields: [
+                    "actuals": String(freshActuals.count),
+                    "sleep_sessions": String(freshSessions.count),
+                ]
+            )
         } catch {
             Self.integrationLogger.error(
                 "HealthKit refresh failed: \(error.localizedDescription, privacy: .public)"
@@ -4698,6 +4841,11 @@ final class AppModel {
                 userFacingError =
                     "건강 데이터를 읽지 못했습니다. \(error.localizedDescription)"
             }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "health_refresh_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
         }
     }
 
@@ -5130,11 +5278,22 @@ final class AppModel {
                 }
                 self.snapshot.weather.append(context)
                 self.coalesceWeatherSnapshot()
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "live_environment_refreshed",
+                    fields: [
+                        "air_quality": String(context.airQuality != nil),
+                    ]
+                )
                 await self.persistDeviceLocalSnapshot()
             } catch {
                 self.lastLiveEnvironmentFailureAt = date
                 Self.integrationLogger.info(
                     "Live weather context unavailable: \(error.localizedDescription, privacy: .public)"
+                )
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "live_environment_failed",
+                    level: .error,
+                    fields: ["error": String(describing: type(of: error))]
                 )
             }
         }
@@ -5287,6 +5446,10 @@ final class AppModel {
             }
             snapshot.weather.append(contentsOf: contexts)
             coalesceWeatherSnapshot()
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "stored_environment_refreshed",
+                fields: ["contexts": String(contexts.count)]
+            )
         }
 
         // This refresh runs as part of automatic sensor analysis.  A weather
@@ -5296,6 +5459,13 @@ final class AppModel {
         if let firstError, contexts.isEmpty {
             Self.integrationLogger.info(
                 "Stored weather refresh unavailable: \(firstError.localizedDescription, privacy: .public)"
+            )
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "stored_environment_failed",
+                level: .error,
+                fields: [
+                    "error": String(describing: type(of: firstError)),
+                ]
             )
         }
     }
@@ -5333,9 +5503,20 @@ final class AppModel {
             }
             snapshot.weather.append(context)
             coalesceWeatherSnapshot()
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "stored_environment_fallback_refreshed",
+                fields: [
+                    "air_quality": String(context.airQuality != nil),
+                ]
+            )
         } catch {
             Self.integrationLogger.info(
                 "Stored weather fallback unavailable: \(error.localizedDescription, privacy: .public)"
+            )
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "stored_environment_fallback_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
             )
         }
     }
@@ -5419,12 +5600,25 @@ final class AppModel {
             Self.integrationLogger.notice(
                 "Widget ground-truth publish: snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public), generated=\(payload.generatedAt.timeIntervalSince1970, privacy: .public), fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), items=\(payload.items.count, privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public)"
             )
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "widget_payload_published",
+                fields: [
+                    "items": String(payload.items.count),
+                    "locations": String(locationCount),
+                    "movements": String(movementCount),
+                ]
+            )
             requestImmediateWidgetRefresh()
         } catch {
             Self.integrationLogger.error(
                 "Widget ground-truth publish failed: \(error.localizedDescription, privacy: .public)"
             )
             userFacingError = "위젯 데이터를 갱신하지 못했습니다. \(error.localizedDescription)"
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "widget_payload_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
         }
         // Watch payloads are a live execution queue, not a copy of the
         // historical timeline.  Keep a currently-running item even when it
@@ -5598,7 +5792,14 @@ final class AppModel {
                             "CloudKit production schema is unavailable; local save completed"
                         )
                     } else {
-                        throw error
+                        Self.integrationLogger.error(
+                            "CloudKit upload deferred; local save completed: \(error.localizedDescription, privacy: .public)"
+                        )
+                        TaptionPlanDiagnosticsLogger.shared.record(
+                            "cloud_upload_deferred",
+                            level: .notice,
+                            fields: ["error": String(describing: type(of: error))]
+                        )
                     }
                 }
             }
@@ -5616,6 +5817,11 @@ final class AppModel {
             }
         } catch {
             userFacingError = "변경 내용을 저장하지 못했습니다. \(error.localizedDescription)"
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "local_persistence_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
         }
     }
 

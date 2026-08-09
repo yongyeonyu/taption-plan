@@ -243,6 +243,23 @@ struct AppleWatchOnboardingStore {
 }
 
 final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @unchecked Sendable {
+    private final class DiagnosticsReplyGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<String?, Never>?
+
+        init(_ continuation: CheckedContinuation<String?, Never>) {
+            self.continuation = continuation
+        }
+
+        func finish(_ value: String?) {
+            lock.lock()
+            let pending = continuation
+            continuation = nil
+            lock.unlock()
+            pending?.resume(returning: value)
+        }
+    }
+
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let commandDefaults: UserDefaults
@@ -359,11 +376,55 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         }
     }
 
+    func requestDiagnosticsLog() async -> String? {
+        let cached = WatchDiagnosticsLogStore.read()
+        guard WCSession.isSupported() else { return cached }
+        let session = WCSession.default
+        guard session.activationState == .activated, session.isPaired else {
+            return cached
+        }
+        let request: [String: Any] = [
+            TaptionWatchEnvelope.diagnosticsRequestKey: true,
+        ]
+        session.transferUserInfo(request)
+        guard session.isReachable else { return cached }
+        return await withCheckedContinuation { continuation in
+            let gate = DiagnosticsReplyGate(continuation)
+            session.sendMessage(
+                request,
+                replyHandler: { reply in
+                    let report = reply[
+                        TaptionWatchEnvelope.diagnosticsLogKey
+                    ] as? String
+                    if let report, !report.isEmpty {
+                        WatchDiagnosticsLogStore.save(report)
+                    }
+                    gate.finish(report?.isEmpty == false ? report : cached)
+                },
+                errorHandler: { _ in
+                    gate.finish(cached)
+                }
+            )
+            DispatchQueue.global(qos: .utility).asyncAfter(
+                deadline: .now() + 2
+            ) {
+                gate.finish(WatchDiagnosticsLogStore.read() ?? cached)
+            }
+        }
+    }
+
     nonisolated func session(
         _ session: WCSession,
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: (any Error)?
     ) {
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_connectivity_activation",
+            fields: [
+                "state": String(activationState.rawValue),
+                "error": error == nil ? "false" : "true",
+            ]
+        )
         statusHandler?(connectionState(for: session))
     }
 
@@ -427,6 +488,16 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             WatchLaunchReportStore.save(report)
             accepted = true
         }
+        if let report = envelope[
+            TaptionWatchEnvelope.diagnosticsLogKey
+        ] as? String, !report.isEmpty {
+            WatchDiagnosticsLogStore.save(report)
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_diagnostics_received",
+                fields: ["bytes": String(report.utf8.count)]
+            )
+            accepted = true
+        }
         if let data = envelope[
             TaptionWatchEnvelope.sensorSummaryKey
         ] as? Data,
@@ -434,6 +505,14 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             TaptionWatchSensorSummary.self,
             from: data
         ) {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_sensor_summary_received",
+                fields: [
+                    "sequence": String(summary.sequence),
+                    "samples": String(summary.accelerometerSampleCount),
+                    "final": String(summary.isFinal),
+                ]
+            )
             // The Watch may deliver the same batch once as a live message and
             // again from its reliable background queue.  Forward both copies:
             // the archive and activity upsert are idempotent, while marking a
@@ -448,6 +527,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             TaptionWatchHealthSnapshot.self,
             from: data
         ) {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_health_snapshot_received"
+            )
             healthSnapshotHandler?(snapshot)
             accepted = true
         }

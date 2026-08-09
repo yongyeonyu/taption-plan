@@ -81,6 +81,8 @@
 		A10000000000000000000074 /* WatchObjCExceptionCatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000074 /* WatchObjCExceptionCatcher.m */; };
 		A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */; };
 		A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000077 /* WatchMeasurementAlertTests.swift */; };
+		A1000000000000000000007A /* DiagnosticsLogSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007A /* DiagnosticsLogSupport.swift */; };
+		A1000000000000000000007B /* DiagnosticsLogSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007A /* DiagnosticsLogSupport.swift */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -223,6 +225,7 @@
 		F10000000000000000000040 /* CatAnimationShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatAnimationShared.swift; sourceTree = "<group>"; };
 		F10000000000000000000041 /* ScreenTimeUsageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeUsageService.swift; sourceTree = "<group>"; };
 		F10000000000000000000072 /* WatchSensorQueryPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlan.swift; sourceTree = "<group>"; };
+		F1000000000000000000007A /* DiagnosticsLogSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupport.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
 		F10000000000000000000074 /* WatchObjCExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchObjCExceptionCatcher.m; sourceTree = "<group>"; };
 		F10000000000000000000075 /* TaptionPlanWatch-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TaptionPlanWatch-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -376,6 +379,7 @@
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
 				F10000000000000000000072 /* WatchSensorQueryPlan.swift */,
+				F1000000000000000000007A /* DiagnosticsLogSupport.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -689,6 +693,7 @@
 				A1000000000000000000003B /* WidgetPayloadFactory.swift in Sources */,
 				A10000000000000000000061 /* RecordSummaryEngine.swift in Sources */,
 				A10000000000000000000072 /* WatchSensorQueryPlan.swift in Sources */,
+				A1000000000000000000007A /* DiagnosticsLogSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -716,6 +721,7 @@
 				A1000000000000000000003C /* WidgetPayloadFactory.swift in Sources */,
 				A1000000000000000000003D /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000041 /* CatAnimationShared.swift in Sources */,
+				A1000000000000000000007B /* DiagnosticsLogSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

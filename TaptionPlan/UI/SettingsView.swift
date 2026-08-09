@@ -281,6 +281,24 @@ struct SettingsView: View {
                             }
                         }
                         settingsRow(
+                            icon: "icloud.and.arrow.up",
+                            iconBackground: Color(
+                                red: 0.90,
+                                green: 0.95,
+                                blue: 1.00
+                            ),
+                            iconColor: Color(
+                                red: 0.16,
+                                green: 0.45,
+                                blue: 0.75
+                            ),
+                            title: "로그 보내기",
+                            subtitle: "iPhone · Apple Watch 진단 로그를 iCloud Drive > TaptionLogs에 저장",
+                            value: model.diagnosticsExportStatus
+                        ) {
+                            Task { await model.exportDiagnosticsToICloud() }
+                        }
+                        settingsRow(
                             icon: "trash",
                             iconBackground: Color(
                                 red: 1.00,
@@ -327,6 +345,7 @@ struct SettingsView: View {
         .overlay {
             if model.isRefreshingIntegrations
                 || model.isCloudSyncing
+                || model.isExportingDiagnostics
                 || model.isStoreLoading {
                 ProgressView()
                     .controlSize(.small)

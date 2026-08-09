@@ -431,83 +431,17 @@ struct CatFaceView: View {
     let coat: CatCoat
 
     var body: some View {
-        ZStack {
-            Triangle()
-                .fill(coat.baseColor)
-                .frame(width: 15, height: 14)
-                .rotationEffect(.degrees(-7))
-                .offset(x: -13, y: -13)
-            Triangle()
-                .fill(earColor)
-                .frame(width: 15, height: 14)
-                .rotationEffect(.degrees(7))
-                .offset(x: 13, y: -13)
-
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(coat.baseColor)
-                .overlay {
-                    coatPattern
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(outlineColor, lineWidth: 1.5)
-                }
-
-            HStack(spacing: 10) {
-                Circle().fill(eyeColor).frame(width: 3.5, height: 3.5)
-                Circle().fill(eyeColor).frame(width: 3.5, height: 3.5)
-            }
-            .offset(y: -1)
-        }
-        .frame(width: 42, height: 31)
-    }
-
-    @ViewBuilder
-    private var coatPattern: some View {
-        switch coat {
-        case .calico:
-            ZStack {
-                Circle().fill(Color(red: 0.22, green: 0.21, blue: 0.23))
-                    .frame(width: 17, height: 17).offset(x: -12, y: -8)
-                Circle().fill(Color(red: 0.86, green: 0.53, blue: 0.23))
-                    .frame(width: 19, height: 19).offset(x: 13, y: 8)
-            }
-        case .mackerel:
-            stripePattern(color: Color(red: 0.30, green: 0.31, blue: 0.32))
-        case .cheese:
-            stripePattern(color: Color(red: 0.66, green: 0.42, blue: 0.16))
-        case .cow:
-            ZStack {
-                Circle().fill(Color.tpInk).frame(width: 18, height: 18).offset(x: -13, y: -7)
-                Circle().fill(Color.tpInk).frame(width: 20, height: 20).offset(x: 14, y: 9)
-            }
-        default:
-            EmptyView()
-        }
-    }
-
-    private func stripePattern(color: Color) -> some View {
-        HStack(spacing: 5) {
-            ForEach(0..<5, id: \.self) { _ in
-                Rectangle()
-                    .fill(color)
-                    .frame(width: 3)
-                    .rotationEffect(.degrees(18))
-            }
-        }
-    }
-
-    private var earColor: Color {
-        coat == .calico ? Color(red: 0.86, green: 0.53, blue: 0.23) : coat.baseColor
-    }
-
-    private var outlineColor: Color {
-        coat == .black ? .black : Color(red: 0.35, green: 0.35, blue: 0.38)
-    }
-
-    private var eyeColor: Color {
-        coat == .black ? Color(red: 0.96, green: 0.83, blue: 0.37) : .tpInk
+        TaptionCatAnimationView(
+            style: coat.rawValue,
+            pose: TaptionCatAnimationEngine.pose(
+                at: Date(timeIntervalSinceReferenceDate: 0),
+                preferredAction: .sitting,
+                reducesMotion: true
+            ),
+            reducesMotion: true
+        )
+        .frame(width: 52, height: 34)
+        .accessibilityHidden(true)
     }
 }
 
