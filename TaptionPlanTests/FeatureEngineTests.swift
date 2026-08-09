@@ -62,6 +62,37 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(corrected.manuallyCorrected)
     }
 
+    func testActivityCorrectionCanAdjustDisplaySpanWithoutChangingSource() {
+        let source = ActualRecord(
+            planID: nil,
+            title: "머무름",
+            categoryID: "activity",
+            startedAt: makeDate(2026, 8, 10, 0, 0),
+            endedAt: makeDate(2026, 8, 10, 1, 0),
+            source: .location,
+            behavior: StationaryContextKind.unknownStay.rawValue,
+            evidence: ["GPS"]
+        )
+        let start = makeDate(2026, 8, 10, 0, 10)
+        let end = makeDate(2026, 8, 10, 0, 40)
+        let corrected = ActivityCorrectionEngine.applying(
+            [source.id: ActivityCorrection(
+                title: source.title,
+                behavior: source.behavior,
+                categoryID: source.categoryID,
+                startedAt: start,
+                endedAt: end
+            )],
+            to: [source]
+        )[0]
+
+        XCTAssertEqual(corrected.startedAt, start)
+        XCTAssertEqual(corrected.endedAt, end)
+        XCTAssertEqual(corrected.evidence, source.evidence)
+        XCTAssertEqual(corrected.source, source.source)
+        XCTAssertTrue(corrected.manuallyCorrected)
+    }
+
     func testActivityCorrectionSettingsRoundTrip() throws {
         let id = UUID()
         var settings = AppFeatureSettings.defaults

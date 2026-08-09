@@ -453,7 +453,7 @@ struct ReviewView: View {
             }
         }
         .frame(height: Self.clockHeight)
-        .overlay { phaseTapLayer }
+        .overlay { clockTapLayer }
         .overlay { playControl }
         .contentShape(Rectangle())
         // 목록을 위아래로 굴리는 손가락을 가로채지 않도록 함께 인식시킨다.
@@ -550,39 +550,81 @@ struct ReviewView: View {
                 .foregroundStyle(Color.tpInk)
     }
 
-    /// 일과 띠를 짚으면 그 줄거리의 이름과 시각이 눈금판 가운데에 뜬다. 재생
+    /// 원형 띠를 짚으면 해당 기록의 활동·시간 수정 화면을 연다. 재생
     /// 단추가 이 층 위에 덮여 있어 단추 누르기를 가로채지 않는다.
-    private var phaseTapLayer: some View {
+    private var clockTapLayer: some View {
         GeometryReader { proxy in
             Color.clear
                 .contentShape(Rectangle())
                 .onTapGesture { location in
-                    highlightPhase(at: location, in: proxy.size)
+                    openRecordEditor(at: location, in: proxy.size)
                 }
         }
         .accessibilityHidden(true)
     }
 
-    private func highlightPhase(at location: CGPoint, in size: CGSize) {
-        guard let ring = content.phaseRing else { return }
+    private func openRecordEditor(at location: CGPoint, in size: CGSize) {
         let side = min(size.width, size.height)
         let outer = side / 2 - 24
         let dx = location.x - size.width / 2
         let dy = location.y - size.height / 2
         let distance = sqrt(dx * dx + dy * dy)
-        guard distance >= outer - Self.phaseBandWidth - 4,
-              distance <= outer + 6 else {
+        guard distance >= outer - Self.phaseBandWidth - 7 else {
             clearClockHighlight()
             return
         }
         var fraction = (Angle(radians: atan2(dy, dx)).degrees + 90) / 360
         fraction -= floor(fraction)
-        guard let arc = RecordClockEngine.arc(in: ring, at: fraction) else {
+
+        if distance <= outer + 8,
+           let record = recordForRing(at: fraction, categoryID: nil) {
+            model.detail = .actualEditor(record.id)
+            return
+        }
+
+        let activityRadius = outer
+            - Self.phaseBandWidth
+            - Self.bandGap
+            - Self.clockBandWidth / 2
+        guard abs(distance - activityRadius) <= Self.clockBandWidth / 2 + 8
+        else {
             clearClockHighlight()
             return
         }
-        let next = ReviewClockHighlight.phase(arcID: arc.id, token: arc.token)
-        clockHighlight = clockHighlight == next ? nil : next
+
+        let categoryID = content.rings.first {
+            $0.arcs.contains {
+                $0.startFraction <= fraction && fraction < $0.endFraction
+            }
+        }?.categoryID
+        guard let record = recordForRing(at: fraction, categoryID: categoryID)
+        else {
+            clearClockHighlight()
+            return
+        }
+        model.detail = .actualEditor(record.id)
+    }
+
+    private func recordForRing(
+        at fraction: Double,
+        categoryID: String?
+    ) -> ActualRecord? {
+        let span = content.period
+        let date = span.start.addingTimeInterval(span.duration * fraction)
+        let candidates = model.snapshot.actuals.filter { actual in
+            guard let visible = actual.span(asOf: Date.now)
+                .intersection(with: span), visible.duration > 0 else {
+                return false
+            }
+            if let categoryID,
+               ActualRecordCategoryResolver.categoryID(for: actual) != categoryID {
+                return false
+            }
+            return visible.contains(date)
+        }
+        return candidates.min {
+            $0.span(asOf: Date.now).duration < $1.span(asOf: Date.now).duration
+        }
     }
 
     private var playControl: some View {
@@ -1911,10 +1953,43 @@ struct ReviewView: View {
 struct ActualRecordDetailView: View {
     @Bindable var model: AppModel
     let recordID: UUID
+    let opensEditor: Bool
     @State private var isActivityPickerPresented = false
+    @State private var focusedRecordID: UUID
+    @State private var didOpenEditor = false
+
+    init(
+        model: AppModel,
+        recordID: UUID,
+        opensEditor: Bool = false
+    ) {
+        self.model = model
+        self.recordID = recordID
+        self.opensEditor = opensEditor
+        _focusedRecordID = State(initialValue: recordID)
+    }
 
     private var record: ActualRecord? {
-        model.snapshot.actuals.first { $0.id == recordID }
+        model.snapshot.actuals.first { $0.id == focusedRecordID }
+    }
+
+    private var classifiedRecords: [ActualRecord] {
+        let calendar = Calendar.autoupdatingCurrent
+        guard let anchor = model.snapshot.actuals.first(where: {
+            $0.id == focusedRecordID
+        }) else { return [] }
+        return model.snapshot.actuals
+            .filter {
+                calendar.isDate($0.startedAt, inSameDayAs: anchor.startedAt)
+                    && $0.span(asOf: Date.now).duration > 0
+            }
+            .sorted { $0.startedAt == $1.startedAt
+                ? $0.id.uuidString < $1.id.uuidString
+                : $0.startedAt < $1.startedAt }
+    }
+
+    private var focusedRecordIndex: Int? {
+        classifiedRecords.firstIndex { $0.id == focusedRecordID }
     }
 
     var body: some View {
@@ -1940,7 +2015,10 @@ struct ActualRecordDetailView: View {
 
             ScrollView(showsIndicators: false) {
                 if let record {
-                    detailContent(record)
+                    VStack(alignment: .leading, spacing: 10) {
+                        recordPager
+                        detailContent(record)
+                    }
                         .padding(14)
                 } else {
                     ContentUnavailableView(
@@ -1952,10 +2030,75 @@ struct ActualRecordDetailView: View {
                 }
             }
             .background(Color.tpBackground)
+            .simultaneousGesture(recordSwipeGesture)
         }
         .sheet(isPresented: $isActivityPickerPresented) {
-            ActivityCorrectionSheet(model: model, recordID: recordID)
+            ActivityCorrectionSheet(model: model, recordID: focusedRecordID)
         }
+        .onAppear {
+            guard opensEditor, !didOpenEditor else { return }
+            didOpenEditor = true
+            isActivityPickerPresented = true
+        }
+    }
+
+    private var recordPager: some View {
+        guard let index = focusedRecordIndex, classifiedRecords.count > 1
+        else { return AnyView(EmptyView()) }
+
+        return AnyView(
+            HStack(spacing: 8) {
+                pagerButton("chevron.left", enabled: index > 0) {
+                    moveRecord(by: -1)
+                }
+                Spacer()
+                Text("분류된 기록 (index + 1) / (classifiedRecords.count)")
+                    .font(.taption(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+                Spacer()
+                pagerButton(
+                    "chevron.right",
+                    enabled: index + 1 < classifiedRecords.count
+                ) {
+                    moveRecord(by: 1)
+                }
+            }
+            .padding(.horizontal, 4)
+        )
+    }
+
+    private func pagerButton(
+        _ systemImage: String,
+        enabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.taption(size: 11, weight: .bold))
+                .foregroundStyle(enabled ? Color.tpInk : Color.tpLine)
+                .frame(width: 28, height: 28)
+                .background(Color.white, in: Circle())
+                .overlay(Circle().stroke(Color.tpLine, lineWidth: 0.7))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+    }
+
+    private var recordSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 24)
+            .onEnded { value in
+                guard abs(value.translation.width) > abs(value.translation.height),
+                      abs(value.translation.width) >= 40 else { return }
+                moveRecord(by: value.translation.width < 0 ? 1 : -1)
+            }
+    }
+
+    private func moveRecord(by offset: Int) {
+        guard let index = focusedRecordIndex else { return }
+        let next = index + offset
+        guard classifiedRecords.indices.contains(next) else { return }
+        isActivityPickerPresented = false
+        focusedRecordID = classifiedRecords[next].id
     }
 
     private func detailContent(_ record: ActualRecord) -> some View {
@@ -1985,7 +2128,7 @@ struct ActualRecordDetailView: View {
                     Text(durationText(span.duration))
                         .font(.taption(size: 15, weight: .semibold))
                         .foregroundStyle(Color.tpProjectDark)
-                    Text("탭하여 활동 변경")
+                    Text("탭하여 활동·시간 수정")
                         .font(.taption(size: 9, weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }
@@ -2218,6 +2361,22 @@ private struct ActivityCorrectionSheet: View {
     @Bindable var model: AppModel
     let recordID: UUID
     @State private var customTitle = ""
+    @State private var selectedOption: ActivityCorrectionOption?
+    @State private var startAt: Date
+    @State private var endAt: Date
+
+    init(model: AppModel, recordID: UUID) {
+        self.model = model
+        self.recordID = recordID
+        let record = model.snapshot.actuals.first { $0.id == recordID }
+        let start = record?.startedAt ?? .now
+        _startAt = State(initialValue: start)
+        _endAt = State(
+            initialValue: record?.endedAt
+                ?? start.addingTimeInterval(5 * 60)
+        )
+        _selectedOption = State(initialValue: nil)
+    }
 
     private var record: ActualRecord? {
         model.snapshot.actuals.first { $0.id == recordID }
@@ -2247,6 +2406,26 @@ private struct ActivityCorrectionSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("시간 조정") {
+                    DatePicker(
+                        "시작",
+                        selection: $startAt,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    DatePicker(
+                        "끝",
+                        selection: $endAt,
+                        in: startAt...,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    HStack {
+                        Text("표시 시간")
+                        Spacer()
+                        Text(durationText)
+                            .foregroundStyle(Color.tpProjectDark)
+                            .font(.taption(size: 11, weight: .semibold))
+                    }
+                }
                 if !automaticOptions.isEmpty {
                     Section("자동으로 구분된 활동") {
                         ForEach(automaticOptions) { optionRow($0) }
@@ -2275,6 +2454,10 @@ private struct ActivityCorrectionSheet: View {
             .navigationTitle("활동 변경")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("저장") { save() }
+                        .fontWeight(.semibold)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("닫기") { dismiss() }
                 }
@@ -2305,25 +2488,46 @@ private struct ActivityCorrectionSheet: View {
 
     private func isSelected(_ option: ActivityCorrectionOption) -> Bool {
         guard let record else { return false }
+        if selectedOption?.id == option.id { return true }
         return option.correction == ActivityCorrection(
             title: record.title,
             behavior: record.behavior,
-            categoryID: record.categoryID
+            categoryID: record.categoryID,
+            startedAt: nil,
+            endedAt: nil
         )
     }
 
     private func select(_ option: ActivityCorrectionOption) {
-        Task {
-            await model.updateActualActivity(recordID, with: option)
-            dismiss()
-        }
+        selectedOption = option
     }
 
     private func addCustomActivity() {
         let title = customTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
         customTitle = ""
-        select(.custom(title))
+        let option = ActivityCorrectionOption.custom(title)
+        selectedOption = option
+    }
+
+    private var durationText: String {
+        DurationText.korean(max(0, endAt.timeIntervalSince(startAt)))
+    }
+
+    private func save() {
+        guard endAt > startAt else { return }
+        let option = selectedOption
+        Task {
+            if let option {
+                await model.updateActualActivity(recordID, with: option)
+            }
+            await model.updateActualSpan(
+                recordID,
+                startAt: startAt,
+                endAt: endAt
+            )
+            dismiss()
+        }
     }
 }
 

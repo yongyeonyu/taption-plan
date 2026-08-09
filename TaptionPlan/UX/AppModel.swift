@@ -440,6 +440,33 @@ final class AppModel {
         await persist()
     }
 
+    /// 자동 기록의 센서 원본은 그대로 두고, 화면에 표시할 시간만 조정한다.
+    func updateActualSpan(
+        _ actualID: UUID,
+        startAt: Date,
+        endAt: Date
+    ) async {
+        guard endAt > startAt,
+              let actual = snapshot.actuals.first(where: { $0.id == actualID })
+        else { return }
+
+        var correction = snapshot.settings.activityCorrections[actualID]
+            ?? ActivityCorrection(
+                title: actual.title,
+                behavior: actual.behavior,
+                categoryID: actual.categoryID
+            )
+        correction.startedAt = startAt
+        correction.endedAt = endAt
+        snapshot.settings.activityCorrections[actualID] = correction
+        snapshot.actuals = ActivityCorrectionEngine.applying(
+            snapshot.settings.activityCorrections,
+            to: snapshot.actuals
+        )
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        await persist()
+    }
+
     private func applyStoredActivityCorrections() {
         let corrected = ActivityCorrectionEngine.applying(
             snapshot.settings.activityCorrections,

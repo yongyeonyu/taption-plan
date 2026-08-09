@@ -3113,11 +3113,22 @@ struct ActivityCorrection: Codable, Hashable, Sendable {
     var title: String
     var behavior: String?
     var categoryID: String
+    /// 사용자 조정 시간은 센서 원본이 아니라 표시용 파생값이다.
+    var startedAt: Date?
+    var endedAt: Date?
 
-    init(title: String, behavior: String? = nil, categoryID: String = "activity") {
+    init(
+        title: String,
+        behavior: String? = nil,
+        categoryID: String = "activity",
+        startedAt: Date? = nil,
+        endedAt: Date? = nil
+    ) {
         self.title = title
         self.behavior = behavior
         self.categoryID = categoryID
+        self.startedAt = startedAt
+        self.endedAt = endedAt
     }
 }
 
@@ -3163,6 +3174,12 @@ enum ActivityCorrectionEngine {
             value.title = correction.title
             value.behavior = correction.behavior
             value.categoryID = correction.categoryID
+            if let startedAt = correction.startedAt {
+                value.startedAt = startedAt
+            }
+            if let endedAt = correction.endedAt {
+                value.endedAt = endedAt
+            }
             value.manuallyCorrected = true
             return value
         }

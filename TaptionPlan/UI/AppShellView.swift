@@ -123,6 +123,12 @@ struct AppShellView: View {
                 GoalDetailView(model: model)
             case .actual(let recordID):
                 ActualRecordDetailView(model: model, recordID: recordID)
+            case .actualEditor(let recordID):
+                ActualRecordDetailView(
+                    model: model,
+                    recordID: recordID,
+                    opensEditor: true
+                )
             case .locationTimeline:
                 LocationTimelineView(model: model)
             case .memo:
