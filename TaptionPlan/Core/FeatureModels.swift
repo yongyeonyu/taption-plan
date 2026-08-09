@@ -3155,7 +3155,7 @@ struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
             title: title,
             behavior: nil,
             categoryID: "activity",
-            systemImage: "plus.circle",
+            systemImage: "tag.fill",
             isAutomatic: false,
             isCustom: true
         )

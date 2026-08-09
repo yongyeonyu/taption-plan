@@ -50,6 +50,23 @@ enum StationaryContextKind: String, Codable, CaseIterable, Sendable {
         case .waiting, .unknownStay: "activity"
         }
     }
+
+    var systemImage: String {
+        switch self {
+        case .call: "phone.fill"
+        case .meeting: "person.3.fill"
+        case .work: "briefcase.fill"
+        case .study: "book.fill"
+        case .hobby: "paintpalette.fill"
+        case .gymFacility: "dumbbell.fill"
+        case .mealPlace: "fork.knife"
+        case .cafe: "cup.and.saucer.fill"
+        case .homeRest: "house.fill"
+        case .housework: "washer.fill"
+        case .waiting: "hourglass"
+        case .unknownStay: "questionmark.circle"
+        }
+    }
 }
 
 /// 문맥 종류와 경쟁하지 않고 따로 붙는 부가 신호.

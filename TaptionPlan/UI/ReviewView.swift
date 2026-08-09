@@ -116,6 +116,9 @@ struct ReviewView: View {
     /// 화면에서는 한 변이 카드 너비에 묶이므로, 알약이 남은 자리에 맞춰
     /// 스스로 줄어든다.
     private static let clockHeight: CGFloat = 324
+    private static let linearClockHeight: CGFloat = 150
+    private static let linearTimelineInset: CGFloat = 54
+    private static let clockLinearThreshold: CGFloat = 1.08
 
     @State private var content = ReviewContent.empty
     @State private var collapsedGroupIDs: Set<String> = []
@@ -127,6 +130,11 @@ struct ReviewView: View {
     @State private var clockHighlight: ReviewClockHighlight?
     /// 재생을 시작한 시각. nil이면 멈춘 상태다.
     @State private var playStartedAt: Date?
+    /// 하루 원형 시간표의 핀치 배율. 1배율은 원형, 그보다 크면 직선
+    /// 시간표로 바꿔 두 줄(일과·활동)로 보여 준다.
+    @State private var clockZoomScale: CGFloat = 1
+    @State private var clockMagnifyOrigin: CGFloat?
+    @State private var lastClockZoomRenderUptime: TimeInterval = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -149,6 +157,9 @@ struct ReviewView: View {
         .task(id: contentKey) { rebuildContent() }
         .task(id: playStartedAt) { await stopPlaybackWhenSweepEnds() }
         .onDisappear { clearClockHighlight() }
+        .onChange(of: model.reviewScale) { _, scale in
+            if scale != .day { resetClockZoom() }
+        }
     }
 
     /// 한 바퀴를 다 돌면 스스로 멈춰 정적인 화면으로 돌아간다.
@@ -404,6 +415,17 @@ struct ReviewView: View {
     /// 평소에는 눈금과 현재 시각 바늘만 두고, 기록은 재생하거나 범례에서
     /// 카테고리를 고를 때만 안쪽 띠에 굵게 드러낸다.
     private var dayClockChart: some View {
+        Group {
+            if clockZoomScale >= Self.clockLinearThreshold {
+                linearDayClockChart
+            } else {
+                circularDayClockChart
+            }
+        }
+        .animation(.easeOut(duration: 0.16), value: clockZoomScale >= Self.clockLinearThreshold)
+    }
+
+    private var circularDayClockChart: some View {
         let rings = content.rings
         let activityRings = content.activityRings
         let phaseRing = content.phaseRing
@@ -458,7 +480,385 @@ struct ReviewView: View {
         .contentShape(Rectangle())
         // 목록을 위아래로 굴리는 손가락을 가로채지 않도록 함께 인식시킨다.
         .simultaneousGesture(dateSwipeGesture)
+        .background {
+            TwoFingerPinchAttachment(
+                onChanged: { factor, _ in
+                    updateClockZoom(factor: factor)
+                },
+                onEnded: { factor, _ in
+                    finishClockZoom(factor: factor)
+                }
+            )
+        }
         .accessibilityLabel("하루 24시간 눈금판")
+    }
+
+    private var linearDayClockChart: some View {
+        TimelineView(
+            RecordClockSchedule(isPlaying: playStartedAt != nil)
+        ) { timeline in
+            let progress = RecordClockEngine.progress(
+                start: playStartedAt,
+                now: timeline.date
+            )
+            GeometryReader { proxy in
+                let viewportWidth = max(proxy.size.width, 1)
+                let contentWidth = max(
+                    viewportWidth,
+                    viewportWidth * clockZoomScale
+                )
+                ScrollView(.horizontal, showsIndicators: false) {
+                    Canvas { context, size in
+                        drawLinearClock(
+                            context: context,
+                            size: size,
+                            rings: content.rings,
+                            phaseRing: content.phaseRing,
+                            activityRings: content.activityRings,
+                            highlight: clockHighlight,
+                            progress: progress,
+                            span: content.period,
+                            nowFraction: RecordClockEngine.nowFraction(
+                                in: content.period,
+                                asOf: timeline.date
+                            ),
+                            readout: progress.flatMap {
+                                playbackContext(
+                                    at: $0,
+                                    in: content.contextRings
+                                )
+                            } ?? currentContextReadout()
+                        )
+                    }
+                    .frame(width: contentWidth, height: Self.linearClockHeight)
+                    .contentShape(Rectangle())
+                    .onTapGesture { location in
+                        openLinearRecordEditor(
+                            at: location.x,
+                            width: contentWidth
+                        )
+                    }
+                }
+            }
+        }
+        .frame(height: Self.linearClockHeight)
+        .overlay { playControl }
+        .contentShape(Rectangle())
+        .background {
+            TwoFingerPinchAttachment(
+                onChanged: { factor, _ in
+                    updateClockZoom(factor: factor)
+                },
+                onEnded: { factor, _ in
+                    finishClockZoom(factor: factor)
+                }
+            )
+        }
+        .accessibilityLabel("확대된 하루 24시간 직선 시간표")
+        .accessibilityValue("일과와 활동 두 줄")
+    }
+
+    private func drawLinearClock(
+        context: GraphicsContext,
+        size: CGSize,
+        rings: [RecordClockRing],
+        phaseRing: RecordClockDetailRing?,
+        activityRings: [RecordClockDetailRing],
+        highlight: ReviewClockHighlight?,
+        progress: Double?,
+        span: TimeSpan,
+        nowFraction: Double?,
+        readout: PlaybackContextReadout?
+    ) {
+        let left = Self.linearTimelineInset
+        let right = 8.0
+        let timelineWidth = max(1, size.width - left - right)
+        let phaseRect = CGRect(x: left, y: 30, width: timelineWidth, height: 24)
+        let activityRect = CGRect(x: left, y: 78, width: timelineWidth, height: 28)
+
+        drawLinearGrid(
+            context: context,
+            size: size,
+            left: left,
+            width: timelineWidth
+        )
+        drawLinearRowLabel(context: context, title: "일과", y: phaseRect.midY)
+        drawLinearRowLabel(context: context, title: "활동", y: activityRect.midY)
+
+        let revealedPhase = RecordClockEngine.detailRing(
+            phaseRing,
+            revealedThrough: progress
+        )
+        if let revealedPhase {
+            drawLinearDetailArcs(
+                context: context,
+                arcs: revealedPhase.arcs,
+                rect: phaseRect,
+                color: { detailColor(.dayPhase, token: $0) },
+                opacity: { token in
+                    phaseOpacity(
+                        token: token,
+                        focusedToken: nil,
+                        highlight: highlight,
+                        isPlaying: progress != nil
+                    )
+                }
+            )
+        } else {
+            drawLinearPlaceholder(
+                context: context,
+                rect: phaseRect,
+                color: Color.tpLine.opacity(0.35)
+            )
+        }
+
+        let revealedRings = RecordClockEngine.rings(
+            rings,
+            revealedThrough: progress
+        )
+        let active = progress.map {
+            RecordClockEngine.categoryIDs(in: rings, at: $0)
+        } ?? Set<String>()
+        for pass in [false, true] {
+            for ring in revealedRings
+            where active.contains(ring.categoryID) == pass {
+                drawLinearCategoryArcs(
+                    context: context,
+                    arcs: ring.arcs,
+                    rect: activityRect,
+                    color: color(forCategoryID: ring.categoryID),
+                    opacity: activityOpacity(
+                        categoryID: ring.categoryID,
+                        highlight: highlight,
+                        isPlaybackActive: progress != nil,
+                        isUnderPlayhead: pass
+                    )
+                )
+            }
+        }
+
+        let details = RecordClockEngine.detailRings(
+            activityRings,
+            revealedThrough: progress
+        )
+        for ring in details {
+            drawLinearDetailArcs(
+                context: context,
+                arcs: ring.arcs,
+                rect: activityRect.insetBy(dx: 0, dy: 5),
+                color: { detailColor(ring.kind, token: $0) },
+                opacity: { token in
+                    activityDetailOpacity(
+                        kind: ring.kind,
+                        token: token,
+                        highlight: highlight
+                    )
+                }
+            )
+        }
+
+        if let fraction = progress ?? nowFraction {
+            let x = left + timelineWidth * fraction
+            context.stroke(
+                Path { path in
+                    path.move(to: CGPoint(x: x, y: 12))
+                    path.addLine(to: CGPoint(x: x, y: size.height - 8))
+                },
+                with: .color(progress == nil ? Color.tpNow : Color.tpInk),
+                style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+            )
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(x: x - 3, y: 9, width: 6, height: 6)
+                ),
+                with: .color(progress == nil ? Color.tpNow : Color.tpInk)
+            )
+            if let readout {
+                drawLinearReadout(
+                    context: context,
+                    readout: readout,
+                    x: x,
+                    width: size.width
+                )
+            }
+        }
+    }
+
+    private func drawLinearGrid(
+        context: GraphicsContext,
+        size: CGSize,
+        left: CGFloat,
+        width: CGFloat
+    ) {
+        let rowBottom = size.height - 18
+        for hour in 0...24 {
+            let x = left + width * CGFloat(hour) / 24
+            let major = hour % 6 == 0
+            context.stroke(
+                Path { path in
+                    path.move(to: CGPoint(x: x, y: 14))
+                    path.addLine(to: CGPoint(x: x, y: rowBottom))
+                },
+                with: .color(Color.tpLine.opacity(major ? 0.45 : 0.2)),
+                lineWidth: major ? 1 : 0.6
+            )
+            guard major else { continue }
+            let label = context.resolve(
+                Text("\(hour)")
+                    .font(.taption(size: 8, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+            )
+            context.draw(label, at: CGPoint(x: x, y: rowBottom + 8))
+        }
+    }
+
+    private func drawLinearRowLabel(
+        context: GraphicsContext,
+        title: String,
+        y: CGFloat
+    ) {
+        let label = context.resolve(
+            Text(title)
+                .font(.taption(size: 9, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+        )
+        context.draw(label, at: CGPoint(x: 23, y: y))
+    }
+
+    private func drawLinearPlaceholder(
+        context: GraphicsContext,
+        rect: CGRect,
+        color: Color
+    ) {
+        context.fill(
+            Path(roundedRect: rect, cornerRadius: 7),
+            with: .color(color)
+        )
+    }
+
+    private func drawLinearCategoryArcs(
+        context: GraphicsContext,
+        arcs: [RecordClockArc],
+        rect: CGRect,
+        color: Color,
+        opacity: Double
+    ) {
+        for arc in arcs {
+            let x = rect.minX + rect.width * arc.startFraction
+            let end = rect.minX + rect.width * arc.endFraction
+            let bar = CGRect(
+                x: x,
+                y: rect.minY,
+                width: max(1, end - x),
+                height: rect.height
+            )
+            context.fill(
+                Path(roundedRect: bar, cornerRadius: 7),
+                with: .color(color.opacity(opacity))
+            )
+        }
+    }
+
+    private func drawLinearDetailArcs(
+        context: GraphicsContext,
+        arcs: [RecordClockDetailArc],
+        rect: CGRect,
+        color: (String) -> Color,
+        opacity: (String) -> Double
+    ) {
+        for arc in arcs {
+            let x = rect.minX + rect.width * arc.startFraction
+            let end = rect.minX + rect.width * arc.endFraction
+            let bar = CGRect(
+                x: x,
+                y: rect.minY,
+                width: max(1, end - x),
+                height: rect.height
+            )
+            context.fill(
+                Path(roundedRect: bar, cornerRadius: 5),
+                with: .color(color(arc.token).opacity(opacity(arc.token)))
+            )
+        }
+    }
+
+    private func drawLinearReadout(
+        context: GraphicsContext,
+        readout: PlaybackContextReadout,
+        x: CGFloat,
+        width: CGFloat
+    ) {
+        var parts: [String] = []
+        if let weather = readout.weatherToken {
+            parts.append(detailName(.weather, token: weather))
+        }
+        if let location = readout.locationToken {
+            parts.append(detailName(.location, token: location))
+        }
+        guard !parts.isEmpty else { return }
+        let label = context.resolve(
+            Text(parts.joined(separator: " · "))
+                .font(.taption(size: 7, weight: .medium))
+                .foregroundStyle(Color.tpInk)
+        )
+        let measured = label.measure(in: CGSize(width: 180, height: 24))
+        let box = CGRect(
+            x: min(max(4, x - measured.width / 2 - 6), width - measured.width - 12),
+            y: 0,
+            width: measured.width + 12,
+            height: measured.height + 5
+        )
+        context.fill(
+            Path(roundedRect: box, cornerRadius: box.height / 2),
+            with: .color(.white.opacity(0.95))
+        )
+        context.stroke(
+            Path(roundedRect: box, cornerRadius: box.height / 2),
+            with: .color(Color.tpLine.opacity(0.8)),
+            lineWidth: 0.7
+        )
+        context.draw(label, at: CGPoint(x: box.midX, y: box.midY))
+    }
+
+    private func openLinearRecordEditor(at x: CGFloat, width: CGFloat) {
+        let timelineWidth = max(1, width - Self.linearTimelineInset - 8)
+        let fraction = min(
+            1,
+            max(0, (x - Self.linearTimelineInset) / timelineWidth)
+        )
+        guard let record = recordForRing(at: fraction, categoryID: nil)
+        else { return }
+        model.detail = .actualEditor(record.id)
+    }
+
+    private func updateClockZoom(factor: CGFloat) {
+        if clockMagnifyOrigin == nil { clockMagnifyOrigin = clockZoomScale }
+        let now = ProcessInfo.processInfo.systemUptime
+        guard lastClockZoomRenderUptime == 0
+            || now - lastClockZoomRenderUptime >= 1.0 / 60.0
+        else { return }
+        lastClockZoomRenderUptime = now
+        guard let origin = clockMagnifyOrigin else { return }
+        let next = min(4, max(1, origin * max(0.01, factor)))
+        if next != clockZoomScale { clockZoomScale = next }
+    }
+
+    private func finishClockZoom(factor: CGFloat) {
+        guard let origin = clockMagnifyOrigin else { return }
+        // 제스처 종료값은 프레임 게이트를 우회해 즉시 반영한다.
+        let next = min(4, max(1, origin * max(0.01, factor)))
+        if next != clockZoomScale { clockZoomScale = next }
+        clockMagnifyOrigin = nil
+        lastClockZoomRenderUptime = 0
+        if clockZoomScale < Self.clockLinearThreshold {
+            clockZoomScale = 1
+        }
+    }
+
+    private func resetClockZoom() {
+        clockMagnifyOrigin = nil
+        lastClockZoomRenderUptime = 0
+        if clockZoomScale != 1 { clockZoomScale = 1 }
     }
 
     /// 짚어 둔 조각. 범례에서 고른 경우에는 그 이름의 첫 조각을 짚는다.
@@ -2317,8 +2717,11 @@ private enum ActivityCorrectionCatalog {
             title: record.title.isEmpty ? "활동" : record.title,
             behavior: record.behavior,
             categoryID: record.categoryID,
-            systemImage: TimelineRowKind(categoryID: record.categoryID)?.systemImage
-                ?? "figure.run",
+            systemImage: activitySystemImage(
+                title: record.title,
+                behavior: record.behavior,
+                categoryID: record.categoryID
+            ),
             isAutomatic: true,
             isCustom: false
         )
@@ -2333,7 +2736,7 @@ private enum ActivityCorrectionCatalog {
             title: kind.title,
             behavior: kind.rawValue,
             categoryID: kind.isMovement ? "movement" : (kind == .sleep ? "sleep" : "activity"),
-            systemImage: kind.isMovement ? "figure.walk.motion" : "figure.run",
+            systemImage: kind.systemImage,
             isAutomatic: automatic,
             isCustom: false
         )
@@ -2348,11 +2751,60 @@ private enum ActivityCorrectionCatalog {
             title: context.title,
             behavior: context.rawValue,
             categoryID: context.categoryID,
-            systemImage: TimelineRowKind(categoryID: context.categoryID)?.systemImage
-                ?? "figure.run",
+            systemImage: context.systemImage,
             isAutomatic: automatic,
             isCustom: false
         )
+    }
+
+    private static func activitySystemImage(
+        title: String,
+        behavior: String?,
+        categoryID: String
+    ) -> String {
+        if let behavior,
+           let kind = WatchBehaviorKind.fromModelLabel(behavior) {
+            return kind.systemImage
+        }
+        if let behavior,
+           let context = StationaryContextKind(rawValue: behavior) {
+            return context.systemImage
+        }
+
+        let text = "\(title) \(behavior ?? "")"
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+        let matches: [(String, String)] = [
+            ("지하철", "tram.fill"), ("subway", "tram.fill"),
+            ("버스", "bus.fill"), ("bus", "bus.fill"),
+            ("자동차", "car.fill"), ("자가용", "car.fill"),
+            ("택시", "taxi.fill"), ("자전거", "bicycle"),
+            ("걷", "figure.walk"), ("walk", "figure.walk"),
+            ("달리", "figure.run"), ("run", "figure.run"),
+            ("샤워", "shower.fill"), ("shower", "shower.fill"),
+            ("양치", "toothbrush.fill"), ("brush", "toothbrush.fill"),
+            ("집안일", "washer.fill"), ("청소", "washer.fill"),
+            ("식사", "fork.knife"), ("meal", "fork.knife"),
+            ("타이핑", "keyboard"), ("typing", "keyboard"),
+            ("서기", "figure.stand"), ("standing", "figure.stand"),
+            ("앉기", "figure.seated.side"), ("sitting", "figure.seated.side"),
+            ("눕기", "bed.double.fill"), ("수면", "bed.double.fill"),
+            ("lying", "bed.double.fill"), ("sleep", "bed.double.fill"),
+            ("집에서휴식", "house.fill"), ("정지", "pause.circle.fill"),
+            ("휴식", "sofa.fill"),
+            ("rest", "sofa.fill"), ("통화", "phone.fill"),
+            ("회의", "person.3.fill"), ("근무", "briefcase.fill"),
+            ("수업", "book.fill"), ("학습", "book.fill"),
+            ("운동시설", "dumbbell.fill"), ("gym", "dumbbell.fill"),
+            ("운동", "figure.run"),
+            ("카페", "cup.and.saucer.fill"), ("cafe", "cup.and.saucer.fill"),
+            ("대기", "hourglass"),
+        ]
+        if let match = matches.first(where: { text.contains($0.0) }) {
+            return match.1
+        }
+        return TimelineRowKind(categoryID: categoryID)?.systemImage
+            ?? "sparkles"
     }
 }
 

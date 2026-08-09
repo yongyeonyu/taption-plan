@@ -126,6 +126,31 @@ enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    var systemImage: String {
+        switch self {
+        case .stationary: "pause.circle.fill"
+        case .standing: "figure.stand"
+        case .sitting: "figure.seated.side"
+        case .lying: "bed.double.fill"
+        case .walking: "figure.walk"
+        case .running: "figure.run"
+        case .cycling: "bicycle"
+        case .stairsUp, .stairsDown: "figure.stairs"
+        case .elevator: "arrow.up.arrow.down"
+        case .automotive: "car.fill"
+        case .publicTransit: "bus.fill"
+        case .subway: "tram.fill"
+        case .exercise: "figure.strengthtraining.traditional"
+        case .brushingTeeth: "toothbrush.fill"
+        case .eating: "fork.knife"
+        case .typing: "keyboard"
+        case .housework: "washer.fill"
+        case .showering: "shower.fill"
+        case .sleep: "bed.double.fill"
+        case .unknown: "sparkles"
+        }
+    }
+
     static func fromModelLabel(_ label: String) -> WatchBehaviorKind? {
         let normalized = label
             .trimmingCharacters(in: .whitespacesAndNewlines)
