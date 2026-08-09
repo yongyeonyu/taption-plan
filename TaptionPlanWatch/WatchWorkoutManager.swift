@@ -2,6 +2,7 @@ import CoreMotion
 import CoreLocation
 import Foundation
 import HealthKit
+import WatchKit
 import WidgetKit
 
 private struct WatchAccelerationArchiveSample: Codable, Sendable {
@@ -269,22 +270,29 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         acceleration: TaptionWatchAccelerationSettings?,
         dataSyncProfile: TaptionWatchDataSyncProfile?
     ) {
-        let acceleration = acceleration
-            ?? TaptionWatchAccelerationSettings(profile: .off)
-        let dataSyncProfile = dataSyncProfile ?? .off
-        guard self.accelerationSettings != acceleration
-            || self.dataSyncProfile != dataSyncProfile else {
+        let nextAcceleration = acceleration ?? accelerationSettings
+        let nextDataSyncProfile = dataSyncProfile ?? self.dataSyncProfile
+        guard accelerationSettings != nextAcceleration
+            || self.dataSyncProfile != nextDataSyncProfile else {
             return
         }
-        self.accelerationSettings = acceleration
-        self.dataSyncProfile = dataSyncProfile
+        accelerationSettings = nextAcceleration
+        self.dataSyncProfile = nextDataSyncProfile
+        let accelerationName = nextAcceleration?.profile.rawValue.description
+            ?? "pending"
+        WatchLaunchDiagnostics.mark(
+            "iPhone settings acceleration=\(accelerationName) sync=\(nextDataSyncProfile.rawValue)"
+        )
         refreshAmbientRecording()
         restartHealthSync()
     }
 
     func syncNow() async {
+        WatchLaunchDiagnostics.mark("manual data sync begin")
         refreshAmbientRecording()
+        await ambientDrainTask?.value
         await emitHealthSnapshot()
+        WatchLaunchDiagnostics.mark("manual data sync end")
     }
 
     func start(
@@ -399,6 +407,9 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         // 메서드라 기록을 시작하지 않는다. 화면과 위젯이 "왜 안 재는지"를
         // 말할 수 있어야 한다.
         let isEnabled = accelerationSettings?.isEnabled == true
+        WatchLaunchDiagnostics.mark(
+            "ambient refresh enabled=\(isEnabled)"
+        )
         ambientDrainTask = Task { [weak self] in
             guard let self else { return }
             let recorder = self.ambientRecorder
@@ -406,9 +417,13 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 await recorder.arm()
                 let result = await recorder.drain()
                 self.recorderStatus = await recorder.status()
+                WatchLaunchDiagnostics.mark(
+                    "ambient drain summaries=\(result.summaries.count) samples=\(result.archiveSamples.count)"
+                )
                 self.applyAmbientDrain(result)
             } else {
                 self.recorderStatus = await recorder.status()
+                WatchLaunchDiagnostics.mark("ambient recording disabled")
                 self.publishMeasurement()
             }
             self.ambientDrainTask = nil
@@ -431,7 +446,14 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             let archive = accelerationArchive
             Task { try? await archive.append(samples) }
         }
-        for summary in result.summaries {
+        let waterLockEnabled = WKInterfaceDevice.current().isWaterLockEnabled
+        let now = Date.now
+        for var summary in result.summaries {
+            // CMSensorRecorder의 과거 표본에는 당시 Water Lock 값이 없다.
+            // 방금 끝난 창에만 현재 상태를 결합해 과거 샤워를 오인하지 않는다.
+            if abs(now.timeIntervalSince(summary.endedAt)) <= 3 * 60 {
+                summary.waterLockEnabled = waterLockEnabled
+            }
             onSensorSummary?(summary)
         }
         if let latest = result.summaries.last, let behavior = latest.behavior {
@@ -1223,7 +1245,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             behaviorEvidence: behavior.evidence,
             behaviorModelVersion: behavior.modelVersion,
             behaviorSegments: pendingBehaviorSegments,
-            isAmbient: false
+            isAmbient: false,
+            waterLockEnabled: WKInterfaceDevice.current().isWaterLockEnabled
         )
     }
 }

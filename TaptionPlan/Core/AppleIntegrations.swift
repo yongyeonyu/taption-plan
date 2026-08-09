@@ -491,7 +491,13 @@ final class AppleHealthService: @unchecked Sendable {
                 source: detail.sourceName.localizedCaseInsensitiveContains("watch")
                     ? .appleWatch
                     : .healthKit,
-                confidence: .high
+                confidence: .high,
+                behavior: WatchBehaviorKind.exercise.rawValue,
+                evidence: [
+                    AutomaticRecordTimelineEngine.healthWorkoutEvidence,
+                    detail.sourceName,
+                ],
+                modelVersion: "healthkit-workout-v1"
             )
         }
     }
@@ -2131,6 +2137,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private func startHardwareStreams() {
         guard !sensorStreamsRunning else { return }
         sensorStreamsRunning = true
+        UIDevice.current.isBatteryMonitoringEnabled = true
         locationManager.allowsBackgroundLocationUpdates =
             configuration.allowsBackgroundLocation
             && locationManager.authorizationStatus == .authorizedAlways
@@ -2264,6 +2271,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         deviceMotionManager.stopDeviceMotionUpdates()
         altimeter.stopRelativeAltitudeUpdates()
         pedometer.stopUpdates()
+        UIDevice.current.isBatteryMonitoringEnabled = false
         sensorStreamsRunning = false
         if activeTrackingSession == nil {
             movementCandidateTask?.cancel()
@@ -2463,6 +2471,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 deviceMotion: latestDeviceMotion,
                 deviceMotionSummary: deviceMotionAccumulator.summary,
                 systemFloor: location?.floor?.level,
+                powerState: Self.powerState(UIDevice.current.batteryState),
                 gpsAvailable: location != nil,
                 trackingSessionID: session?.id,
                 trackingKind: session?.kind,
@@ -2472,6 +2481,18 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             )
         )
         deviceMotionAccumulator.reset()
+    }
+
+    private static func powerState(
+        _ value: UIDevice.BatteryState
+    ) -> DevicePowerState {
+        switch value {
+        case .unplugged: .unplugged
+        case .charging: .charging
+        case .full: .full
+        case .unknown: .unknown
+        @unknown default: .unknown
+        }
     }
 
     private func updateAutomaticTracking(for motion: MotionKind) {

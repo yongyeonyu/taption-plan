@@ -167,6 +167,127 @@ enum ActualIntervalMergeEngine {
     }
 }
 
+/// Keeps raw movement intact while collapsing duplicate display segments.
+enum TravelSegmentPresentationEngine {
+    static func consolidated(
+        _ segments: [TravelSegment]
+    ) -> [TravelSegment] {
+        TravelMode.allCases
+            .flatMap { mode in
+                consolidate(segments.filter { $0.mode == mode })
+            }
+            .sorted {
+                $0.span.start == $1.span.start
+                    ? $0.span.end < $1.span.end
+                    : $0.span.start < $1.span.start
+            }
+    }
+
+    static func isWorkoutWalking(
+        _ segment: TravelSegment,
+        actuals: [ActualRecord],
+        asOf date: Date = .now
+    ) -> Bool {
+        segment.mode == .walking
+            && isWorkoutTravel(segment, actuals: actuals, asOf: date)
+    }
+
+    static func isWorkoutTravel(
+        _ segment: TravelSegment,
+        actuals: [ActualRecord],
+        asOf date: Date = .now
+    ) -> Bool {
+        guard segment.span.duration > 0,
+              [.walking, .running, .cycling].contains(segment.mode) else {
+            return false
+        }
+        return actuals.contains { actual in
+            guard AutomaticRecordTimelineEngine.isConfirmedWorkout(actual),
+                  MovementPresentation.mode(for: actual) == segment.mode,
+                  let overlap = actual.span(asOf: date)
+                    .intersection(with: segment.span) else {
+                return false
+            }
+            return overlap.duration / segment.span.duration >= 0.5
+        }
+    }
+
+    private static func consolidate(
+        _ segments: [TravelSegment]
+    ) -> [TravelSegment] {
+        var result: [TravelSegment] = []
+        for segment in segments.sorted(by: chronological) {
+            guard let last = result.last,
+                  segment.span.start <= last.span.end else {
+                result.append(segment)
+                continue
+            }
+            result[result.count - 1] = merged(last, segment)
+        }
+        return result
+    }
+
+    private static func merged(
+        _ lhs: TravelSegment,
+        _ rhs: TravelSegment
+    ) -> TravelSegment {
+        let preferred = isPreferred(rhs, over: lhs) ? rhs : lhs
+        var value = preferred
+        value.span = TimeSpan(
+            start: min(lhs.span.start, rhs.span.start),
+            end: max(lhs.span.end, rhs.span.end)
+        )
+        value.distanceMeters = max(lhs.distanceMeters, rhs.distanceMeters)
+        value.confidence = confidenceRank(lhs.confidence)
+            >= confidenceRank(rhs.confidence) ? lhs.confidence : rhs.confidence
+        value.evidence = Array(Set(lhs.evidence + rhs.evidence)).sorted()
+        value.isConfirmed = lhs.isConfirmed || rhs.isConfirmed
+        value.fromPlaceID = lhs.span.start <= rhs.span.start
+            ? lhs.fromPlaceID ?? rhs.fromPlaceID
+            : rhs.fromPlaceID ?? lhs.fromPlaceID
+        value.toPlaceID = lhs.span.end >= rhs.span.end
+            ? lhs.toPlaceID ?? rhs.toPlaceID
+            : rhs.toPlaceID ?? lhs.toPlaceID
+        return value
+    }
+
+    private static func isPreferred(
+        _ lhs: TravelSegment,
+        over rhs: TravelSegment
+    ) -> Bool {
+        if lhs.isConfirmed != rhs.isConfirmed { return lhs.isConfirmed }
+        let leftConfidence = confidenceRank(lhs.confidence)
+        let rightConfidence = confidenceRank(rhs.confidence)
+        if leftConfidence != rightConfidence {
+            return leftConfidence > rightConfidence
+        }
+        if lhs.span.duration != rhs.span.duration {
+            return lhs.span.duration > rhs.span.duration
+        }
+        if lhs.distanceMeters != rhs.distanceMeters {
+            return lhs.distanceMeters > rhs.distanceMeters
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    private static func confidenceRank(_ confidence: ConfidenceLevel) -> Int {
+        switch confidence {
+        case .low: 0
+        case .medium: 1
+        case .high: 2
+        }
+    }
+
+    private static func chronological(
+        _ lhs: TravelSegment,
+        _ rhs: TravelSegment
+    ) -> Bool {
+        lhs.span.start == rhs.span.start
+            ? lhs.span.end < rhs.span.end
+            : lhs.span.start < rhs.span.start
+    }
+}
+
 /// Keeps measured movement records as raw evidence while showing one
 /// canonical travel segment when the route inference covers that interval.
 enum MovementDisplayEngine {
@@ -176,7 +297,8 @@ enum MovementDisplayEngine {
         calendarEvents: [CalendarRecord] = [],
         asOf date: Date = .now
     ) -> [ActualRecord] {
-        let canonical = travel.compactMap { segment -> ActualRecord? in
+        let displayTravel = TravelSegmentPresentationEngine.consolidated(travel)
+        let canonical = displayTravel.compactMap { segment -> ActualRecord? in
             let end = min(segment.span.end, date)
             guard end > segment.span.start else { return nil }
             let isConfirmedBySchedule = hasScheduledEvent(
@@ -202,7 +324,11 @@ enum MovementDisplayEngine {
                 manuallyCorrected: isConfirmed
             )
         }
-        return visibleActuals(actuals, travel: travel, asOf: date) + canonical
+        return visibleActuals(
+            actuals,
+            travel: displayTravel,
+            asOf: date
+        ) + canonical
     }
 
     private static func hasScheduledEvent(
@@ -311,6 +437,7 @@ enum RestSleepDisplayEngine {
         isRest(actual)
             || actual.categoryID == "routine"
             || actual.behavior == "housework"
+            || actual.behavior == WatchBehaviorKind.showering.rawValue
     }
 
     static func visibleActuals(
@@ -411,6 +538,9 @@ enum TimelineLaneAllocator {
 }
 
 enum AutomaticRecordTimelineEngine {
+    static let healthWorkoutEvidence = "HealthKit 운동 기록"
+    static let watchWorkoutEvidence = "Apple Watch 운동 세션"
+
     /// Device/HealthKit records are ground truth. Their timestamps and
     /// measured duration must never be changed by the plan editor or the
     /// routine progress slider.
@@ -431,6 +561,29 @@ enum AutomaticRecordTimelineEngine {
             || actual.title.localizedCaseInsensitiveContains("수면")
             || actual.title.localizedCaseInsensitiveContains("취침")
             || actual.title.localizedCaseInsensitiveContains("sleep")
+    }
+
+    /// HealthKit의 HKWorkout과 Watch에서 직접 시작한 운동 세션만 운동으로
+    /// 확정한다. 수동 계획이나 iPhone의 수동적 걷기 추정은 포함하지 않는다.
+    static func isConfirmedWorkout(_ actual: ActualRecord) -> Bool {
+        guard actual.source == .healthKit || actual.source == .appleWatch,
+              !isSleep(actual) else {
+            return false
+        }
+        if actual.categoryID == "exercise"
+            || actual.behavior == WatchBehaviorKind.exercise.rawValue {
+            return true
+        }
+        if actual.evidence.contains(healthWorkoutEvidence)
+            || actual.evidence.contains(watchWorkoutEvidence) {
+            return true
+        }
+        // 이전 Watch 빌드에는 운동 세션 표식이 없었다. 주기 수집으로 생긴
+        // 집안일은 제외하고, 센서 세션이 있는 옛 기록만 호환한다.
+        return actual.source == .appleWatch
+            && actual.sensorChunkID != nil
+            && actual.behavior.flatMap(WatchBehaviorKind.init(rawValue:))?
+                .isMovement == true
     }
 
     static func isRoutineOnlyCategory(_ categoryID: String) -> Bool {

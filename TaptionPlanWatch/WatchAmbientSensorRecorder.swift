@@ -78,14 +78,19 @@ actor WatchAmbientSensorRecorder {
     /// 재무장은 12시간 창을 처음부터 다시 시작하므로, 남은 창이 충분하면
     /// 건너뛴다.
     func arm(now: Date = .now) {
+        let authorization = CMSensorRecorder.authorizationStatus()
         guard CMSensorRecorder.isAccelerometerRecordingAvailable(),
-              CMSensorRecorder.authorizationStatus() != .denied,
-              CMSensorRecorder.authorizationStatus() != .restricted else {
+              authorization != .denied,
+              authorization != .restricted else {
+            WatchLaunchDiagnostics.mark(
+                "ambient arm unavailable authorization=\(authorization.rawValue)"
+            )
             return
         }
         if let armedUntil = defaults.object(forKey: armedUntilKey) as? Date,
            armedUntil.timeIntervalSince(now)
             > Self.maximumRecordingDuration - Self.rearmMargin {
+            WatchLaunchDiagnostics.mark("ambient arm reused")
             return
         }
         recorder.recordAccelerometer(
@@ -100,13 +105,18 @@ actor WatchAmbientSensorRecorder {
         if defaults.object(forKey: armedAtKey) == nil {
             defaults.set(now, forKey: armedAtKey)
         }
+        WatchLaunchDiagnostics.mark("ambient arm started")
     }
 
     /// 마지막으로 처리한 지점 이후의 표본만 읽어 기존 특징 파이프라인에
     /// 통과시킨다.
     func drain(now: Date = .now) -> WatchAmbientDrainResult {
+        let authorization = CMSensorRecorder.authorizationStatus()
         guard CMSensorRecorder.isAccelerometerRecordingAvailable(),
-              CMSensorRecorder.authorizationStatus() == .authorized else {
+              authorization == .authorized else {
+            WatchLaunchDiagnostics.mark(
+                "ambient drain unavailable authorization=\(authorization.rawValue)"
+            )
             return WatchAmbientDrainResult()
         }
         let highWater = WatchSensorQueryPlan.sanitizedHighWater(
@@ -118,7 +128,11 @@ actor WatchAmbientSensorRecorder {
             armedAt: armedAt(),
             highWater: highWater
         )
-        guard !windows.isEmpty else { return WatchAmbientDrainResult() }
+        guard !windows.isEmpty else {
+            WatchLaunchDiagnostics.mark("ambient drain no-window")
+            return WatchAmbientDrainResult()
+        }
+        WatchLaunchDiagnostics.mark("ambient drain windows=\(windows.count)")
 
         let recorder = self.recorder
         var pipeline = WatchAmbientBehaviorPipeline(sessionID: UUID())
@@ -152,7 +166,11 @@ actor WatchAmbientSensorRecorder {
         if let highWater = ledger.highWater {
             defaults.set(highWater, forKey: highWaterKey)
         }
-        return pipeline.finish()
+        let result = pipeline.finish()
+        WatchLaunchDiagnostics.mark(
+            "ambient drain complete summaries=\(result.summaries.count) samples=\(result.archiveSamples.count) failures=\(ledger.failureCount)"
+        )
+        return result
     }
 
     /// 기록을 처음 건 시각. 이보다 앞은 표본이 존재할 수 없다.

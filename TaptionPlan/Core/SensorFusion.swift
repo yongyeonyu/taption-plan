@@ -402,10 +402,22 @@ struct TravelModeClassifier: Sendable {
         if taxiHintRatio >= 0.5 {
             add(.taxi, 0.55, "택시 이용 단서")
         }
-        if airportRatio >= 0.25, averageSpeed > 35 {
+        let endpointAirportSignal = ordered.first?.nearAirport == true
+            || ordered.last?.nearAirport == true
+        let maximumAltitude = ordered.compactMap { $0.point?.altitude }.max() ?? 0
+        if endpointAirportSignal,
+           maxSpeed > 55 || displacementMeters >= 50_000 {
+            add(.airplane, 0.82, "공항 출도착·장거리 고속 경로")
+        }
+        if maximumAltitude >= 1_500, maxSpeed > 45, lowStepSignal {
+            add(.airplane, 0.72, "고고도·항공 속도·걸음 없음")
+        } else if airportRatio >= 0.25, averageSpeed > 35 {
             add(.airplane, 0.32, "공항 인접 고속 이동")
         }
-        if portRatio >= 0.2 || waterRatio >= 0.4 {
+        if waterRatio >= 0.4, lowStepSignal,
+           averageSpeed >= 1, averageSpeed <= 20 {
+            add(.ship, 0.88, "수상 경로·선박 속도·걸음 없음")
+        } else if portRatio >= 0.2 || waterRatio >= 0.4 {
             add(.ship, 0.55, "항구·수상 경로")
         }
 
@@ -2709,7 +2721,7 @@ enum AppleWatchSensorActivityEngine {
         atHome: Bool = false
     ) -> [ActualRecord] {
         if summary.isAmbient == true {
-            return upsertingAmbientHousework(
+            return upsertingAmbientActivity(
                 summary,
                 into: existing,
                 atHome: atHome
@@ -2727,6 +2739,7 @@ enum AppleWatchSensorActivityEngine {
         if evidence.isEmpty {
             evidence = ["Apple Watch 센서 청크"]
         }
+        evidence.append(AutomaticRecordTimelineEngine.watchWorkoutEvidence)
         if summary.latestHeartRate != nil {
             evidence.append("심박수")
         }
@@ -2828,16 +2841,32 @@ enum AppleWatchSensorActivityEngine {
         ).sorted { $0.startedAt < $1.startedAt }
     }
 
-    private static func upsertingAmbientHousework(
+    private static func upsertingAmbientActivity(
         _ summary: TaptionWatchSensorSummary,
         into existing: [ActualRecord],
         atHome: Bool
     ) -> [ActualRecord] {
         let previous = existing.first {
-            $0.id == summary.sessionID && $0.behavior == "housework"
+            $0.id == summary.sessionID && $0.source == .appleWatch
         }
         guard atHome, sustainedMotion(summary) else {
             return existing.sorted { $0.startedAt < $1.startedAt }
+        }
+        if var confirmed = previous, confirmed.manuallyCorrected {
+            confirmed.endedAt = max(
+                confirmed.endedAt ?? confirmed.startedAt,
+                summary.endedAt
+            )
+            return (
+                existing.filter { $0.id != summary.sessionID } + [confirmed]
+            ).sorted { $0.startedAt < $1.startedAt }
+        }
+
+        let behavior: WatchBehaviorKind = switch summary.behavior {
+        case .showering, .brushingTeeth, .eating, .typing, .housework:
+            summary.behavior ?? .housework
+        default:
+            .housework
         }
 
         var evidence = summary.behaviorEvidence ?? []
@@ -2850,8 +2879,8 @@ enum AppleWatchSensorActivityEngine {
             id: summary.sessionID,
             planID: nil,
             routineID: nil,
-            title: "집안일",
-            categoryID: "activity",
+            title: behavior.title,
+            categoryID: behavior == .sleep ? "sleep" : "activity",
             startedAt: previous?.startedAt ?? summary.startedAt,
             endedAt: max(previous?.endedAt ?? summary.startedAt, summary.endedAt),
             source: .appleWatch,
@@ -2859,7 +2888,7 @@ enum AppleWatchSensorActivityEngine {
                 ConfidenceLevel(score: max(0.55, $0))
             } ?? .medium,
             createdAt: previous?.createdAt ?? summary.startedAt,
-            behavior: WatchBehaviorKind.housework.rawValue,
+            behavior: behavior.rawValue,
             evidence: Array(Set(evidence)).sorted(),
             sensorChunkID: summary.sessionID,
             modelVersion: summary.behaviorModelVersion
@@ -2892,6 +2921,112 @@ enum AppleWatchSensorActivityEngine {
             }
         } ?? false
         return acceleration >= 0.018 || behaviorIsMotion
+    }
+}
+
+/// Apple Watch가 없는 경우에만 충전 중인 iPhone의 무활동을 수면 후보로 쓴다.
+/// 원본 센서와 앱 사용 기록은 그대로 두고, 한 시간 이상 이어진 구간만
+/// 수정 불가 파생 기록으로 만든다.
+enum ChargingInactivitySleepEngine {
+    static let modelVersion = "charging-inactivity-sleep-v1"
+    static let minimumDuration: TimeInterval = 60 * 60
+
+    static func records(
+        readings: [SensorReading],
+        actuals: [ActualRecord],
+        inside span: TimeSpan,
+        watchAvailable: Bool,
+        maximumSampleGap: TimeInterval,
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        guard !watchAvailable else { return [] }
+        let observed = TimeSpan(start: span.start, end: min(span.end, asOf))
+        guard observed.duration >= minimumDuration else { return [] }
+        let samples = readings
+            .filter { observed.contains($0.timestamp) && isInactiveCharging($0) }
+            .sorted { $0.timestamp < $1.timestamp }
+        guard samples.count >= 3 else { return [] }
+
+        let allowedGap = max(20 * 60, maximumSampleGap)
+        var runs: [[SensorReading]] = []
+        for sample in samples {
+            if let last = runs.last?.last,
+               sample.timestamp.timeIntervalSince(last.timestamp) <= allowedGap {
+                runs[runs.count - 1].append(sample)
+            } else {
+                runs.append([sample])
+            }
+        }
+        let blockers = actuals.compactMap { actual -> TimeSpan? in
+            guard actual.source == .appUsage
+                    || AutomaticRecordTimelineEngine.isSleep(actual)
+                    || AutomaticRecordTimelineEngine.isConfirmedWorkout(actual)
+                    || ActualRecordCategoryResolver.categoryID(for: actual)
+                        == "movement" else {
+                return nil
+            }
+            return actual.span(asOf: asOf).intersection(with: observed)
+        }
+
+        return runs.flatMap { run -> [TimeSpan] in
+            guard run.count >= 3,
+                  let first = run.first?.timestamp,
+                  let last = run.last?.timestamp,
+                  last.timeIntervalSince(first) >= minimumDuration else {
+                return []
+            }
+            return ActualIntervalMergeEngine.subtracting(
+                blockers,
+                from: TimeSpan(start: first, end: last)
+            ).filter { $0.duration >= minimumDuration }
+        }.map { value in
+            ActualRecord(
+                id: stableID(value),
+                planID: nil,
+                title: "수면",
+                categoryID: "sleep",
+                startedAt: value.start,
+                endedAt: value.end,
+                source: .motion,
+                confidence: .medium,
+                createdAt: value.end,
+                behavior: "charging-inactivity-sleep",
+                evidence: ["iPhone 충전 중", "가속도·걸음·앱 사용 없음", "1시간 이상 지속"],
+                modelVersion: modelVersion
+            )
+        }
+    }
+
+    private static func isInactiveCharging(_ reading: SensorReading) -> Bool {
+        guard reading.powerState?.isCharging == true,
+              (reading.stepCount ?? 0) <= 2 else { return false }
+        if reading.motion == .stationary { return true }
+        guard reading.motion == .unknown,
+              let summary = reading.deviceMotionSummary,
+              summary.sampleCount >= 2 else { return false }
+        return summary.userAccelerationStandardDeviationG <= 0.01
+            && summary.meanRotationRateRadiansPerSecond <= 0.03
+    }
+
+    private static func stableID(_ span: TimeSpan) -> UUID {
+        let key = "\(modelVersion)|\(Int(span.start.timeIntervalSince1970))|\(Int(span.end.timeIntervalSince1970))"
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        var bytes = [UInt8](repeating: 0, count: 16)
+        for byte in key.utf8 {
+            hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
+        }
+        for index in bytes.indices {
+            hash = (hash ^ UInt64(index + 1)) &* 1_099_511_628_211
+            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 }
 

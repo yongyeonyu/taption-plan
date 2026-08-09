@@ -222,6 +222,7 @@ enum ReviewReportArchiveEngine {
             guard effectiveEnd > dayStart else { return nil }
             var source = sources[dayStart, default: .empty]
             source.categories = snapshot.categories
+            source.frequentPlaces = snapshot.settings.frequentPlaces
             source.sort()
             let fingerprint = fingerprint(source, effectiveEnd: effectiveEnd)
             if let existing = existingDays[dayStart],
@@ -247,6 +248,11 @@ enum ReviewReportArchiveEngine {
                 in: [span],
                 asOf: effectiveEnd
             )
+            let phaseActuals = DayPhaseEvidenceEngine.records(
+                from: source.actuals,
+                intersecting: span,
+                asOf: effectiveEnd
+            )
             let report = review.report(
                 over: [span],
                 plans: source.plans,
@@ -256,10 +262,22 @@ enum ReviewReportArchiveEngine {
                 memos: source.memos,
                 asOf: effectiveEnd
             )
+            let dayPhases = DayPhaseEngine.categoryDurations(
+                DayPhaseEngine.completePhases(
+                    actuals: phaseActuals,
+                    travel: source.travel,
+                    stays: source.places,
+                    placeKinds: FrequentPlaceResolutionEngine()
+                        .kindsByPlaceKey(source.frequentPlaces),
+                    in: span,
+                    asOf: effectiveEnd
+                )
+            )
             return DailyReviewArchive(
                 id: dayID(dayStart, calendar: calendar),
                 span: span,
                 report: report,
+                dayPhases: dayPhases,
                 groups: ActualRecordGroupingEngine.groups(
                     actuals: visibleActuals,
                     in: span,
@@ -396,6 +414,7 @@ private struct DailyReviewSource: Codable {
     var actuals: [ActualRecord] = []
     var memos: [ActionMemo] = []
     var categories: [CategoryDefinition] = []
+    var frequentPlaces: [FrequentPlace] = []
     var photos: [PhotoMoment] = []
     var calendarEvents: [CalendarRecord] = []
     var weather: [WeatherContext] = []
@@ -415,6 +434,7 @@ private struct DailyReviewSource: Codable {
         actuals.sort { $0.id.uuidString < $1.id.uuidString }
         memos.sort { $0.id.uuidString < $1.id.uuidString }
         categories.sort { $0.id < $1.id }
+        frequentPlaces.sort { $0.id.uuidString < $1.id.uuidString }
         photos.sort { $0.id < $1.id }
         calendarEvents.sort { $0.id < $1.id }
         weather.sort { $0.id.uuidString < $1.id.uuidString }
@@ -519,6 +539,9 @@ enum ReviewCoverageEngine {
 
     private static func precedence(_ actual: ActualRecord) -> Int {
         let category = ActualRecordCategoryResolver.categoryID(for: actual)
+        if AutomaticRecordTimelineEngine.isConfirmedWorkout(actual) {
+            return 1_000
+        }
         if AutomaticRecordTimelineEngine.isSleep(actual) { return 900 }
         return switch category {
         case "movement": 800
@@ -574,6 +597,22 @@ enum ReviewCoverageEngine {
             bytes[8], bytes[9], bytes[10], bytes[11],
             bytes[12], bytes[13], bytes[14], bytes[15]
         ))
+    }
+}
+
+/// 일과는 이동 표시용으로 합쳐진 사본이 아니라 HealthKit·Apple Watch 원본을
+/// 읽는다. 그래야 같은 걷기가 활동에서는 `걷기`, 일과에서는 `운동`이 된다.
+enum DayPhaseEvidenceEngine {
+    static func records(
+        from actuals: [ActualRecord],
+        intersecting span: TimeSpan,
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        AutomaticRecordTimelineEngine.visibleThroughNow(
+            actuals,
+            intersecting: span,
+            asOf: asOf
+        )
     }
 }
 
@@ -909,6 +948,68 @@ enum RecordChartEngine {
             categoryIDs: categoryIDs
         )
 
+        return buckets(
+            values: visible,
+            in: span,
+            unit: unit,
+            calendar: calendar
+        )
+    }
+
+    /// 주·월·년은 세부 활동이 아니라 일별로 확정된 일과를 합산한다. 매일을
+    /// 먼저 24시간 분류한 뒤에만 일·월 단위 막대로 묶어, 상위 기간에서
+    /// 중복 활동 시간이 더해지지 않게 한다.
+    static func phaseBuckets(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        in span: TimeSpan,
+        unit: Calendar.Component,
+        calendar: Calendar,
+        asOf: Date = .now
+    ) -> [RecordChartBucket] {
+        let end = min(span.end, asOf)
+        guard end > span.start else { return [] }
+        let values = DayPhaseEngine.completePhasesAcrossDays(
+            actuals: actuals,
+            travel: travel,
+            stays: stays,
+            placeKinds: placeKinds,
+            in: span,
+            calendar: calendar,
+            asOf: asOf
+        ).map { ($0.phase.rawValue, $0.span) }
+        return buckets(
+            values: values,
+            in: span,
+            unit: unit,
+            calendar: calendar
+        )
+    }
+
+    static func categoryDurations(
+        in buckets: [RecordChartBucket]
+    ) -> [CategoryDuration] {
+        var totals: [String: TimeInterval] = [:]
+        for slice in buckets.flatMap(\.slices) {
+            totals[slice.categoryID, default: 0] += slice.duration
+        }
+        return totals.map {
+            CategoryDuration(categoryID: $0.key, planned: 0, actual: $0.value)
+        }.sorted {
+            $0.actual == $1.actual
+                ? $0.categoryID < $1.categoryID
+                : $0.actual > $1.actual
+        }
+    }
+
+    private static func buckets(
+        values: [(categoryID: String, span: TimeSpan)],
+        in span: TimeSpan,
+        unit: Calendar.Component,
+        calendar: Calendar
+    ) -> [RecordChartBucket] {
         var result: [RecordChartBucket] = []
         var cursor = calendar.dateInterval(of: unit, for: span.start)?.start
             ?? span.start
@@ -932,7 +1033,7 @@ enum RecordChartEngine {
                         formatOptions: [.withInternetDateTime]
                     ),
                     span: bucketSpan,
-                    slices: slices(of: visible, in: bucketSpan)
+                    slices: slices(of: values, in: bucketSpan)
                 )
             )
             cursor = next
@@ -1132,11 +1233,17 @@ enum MemoTimelineEngine {
 
 // MARK: - 하루의 줄거리
 
-/// 눈금판 가장 바깥 고리가 말하는 하루의 큰 줄거리. 이름은 집 반대편에
-/// 등록해 둔 곳이 정한다 — 회사면 출근·퇴근, 학교면 등교·하교, 학원이면
-/// 등원·하원이라 사용자가 고를 일이 없다.
+/// 하루를 겹치지 않는 일과 한 줄로 요약한다. 현재 화면은 수면·이동·운동·
+/// 업무·학업·취미·활동·미확인만 사용하고, 예전 세부 일과 값은 보관 자료와
+/// 하위 기능의 호환을 위해 남겨 둔다.
 enum DayPhase: String, CaseIterable, Sendable {
+    case unconfirmed
     case sleep
+    case movement
+    case exercise
+    case hobby
+    case activity
+    case appointment
     case commuteToWork
     case commuteToSchool
     case commuteToAcademy
@@ -1151,7 +1258,13 @@ enum DayPhase: String, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .sleep: "취침"
+        case .unconfirmed: "미확인"
+        case .sleep: "수면"
+        case .movement: "이동"
+        case .exercise: "운동"
+        case .hobby: "취미"
+        case .activity: "활동"
+        case .appointment: "약속"
         case .commuteToWork: "출근"
         case .commuteToSchool: "등교"
         case .commuteToAcademy: "등원"
@@ -1182,25 +1295,23 @@ enum DayPhase: String, CaseIterable, Sendable {
         }
     }
 
-    /// 같은 시각을 두 줄거리가 주장할 때 큰 값이 이긴다. 이 고리는 겹칠 수
-    /// 없는 한 줄이라 순서를 못 박아 둔다.
-    ///
-    /// 1. 집을 나섰다는 사실이 가장 세다. 지하철에서 졸아도 그 시간은
-    ///    출근이고, 운동하러 나선 새벽도 취침이 아니라 시작이다.
-    /// 2. 그다음이 일터에 있었다는 사실이다. 회사에서 잔 낮잠은 이 고리에서
-    ///    업무로 읽힌다 — 안쪽 카테고리 고리는 같은 시각을 그대로 수면으로
-    ///    보여 주며, 두 고리는 일부러 다른 말을 한다.
-    /// 3. 취침은 위 둘이 비운 자리에서만 이긴다.
-    /// 4. 저녁은 가장 약해, 퇴근 뒤 남은 자리만 채운다.
+    /// 같은 시각을 두 근거가 주장해도 일과는 하나만 남긴다. 확정 운동이 가장
+    /// 강하고, 수면은 업무·학업·취미보다 우선한다. 이동과 일반 활동은 그
+    /// 위 분류들이 비운 구간만 채운다.
     var precedence: Int {
         switch self {
+        case .exercise: 8
+        case .sleep: 7
+        case .work, .study, .hobby: 6
+        case .movement: 5
         case .commuteToWork, .commuteToSchool, .commuteToAcademy,
              .activityDeparture,
              .commuteHomeFromWork, .commuteHomeFromSchool,
              .commuteHomeFromAcademy, .activityReturn: 4
-        case .work, .study: 3
-        case .sleep: 2
+        case .appointment: 4
+        case .activity: 2
         case .evening: 1
+        case .unconfirmed: 0
         }
     }
 }
@@ -1211,8 +1322,8 @@ struct DayPhaseSpan: Equatable, Sendable {
 }
 
 /// 이미 만들어 둔 수면 기록·정지 문맥·이동 구간만 읽어 하루를 겹치지 않는
-/// 줄거리로 나눈다. 새로 수집하는 값은 없고, 근거가 없는 시간에는 이름을
-/// 지어내지 않는다 — 주말이나 재택처럼 오감이 없는 날은 그냥 빈칸이다.
+/// 줄거리로 나눈다. 새로 수집하는 값은 없고, 근거가 없는 과거는 `미확인`으로
+/// 채워 상위 기간에서 하루가 정확히 24시간이 되게 한다.
 enum DayPhaseEngine {
     /// 하루보다 넓은 기간에서는 여러 날의 줄거리가 같은 각도에 겹쳐 뭉개진다.
     /// 그때는 아무것도 만들지 않는다.
@@ -1243,35 +1354,45 @@ enum DayPhaseEngine {
             end: span.end.addingTimeInterval(margin)
         )
         let contexts = stationaryContexts(actuals, in: window, asOf: asOf)
-        let workBlocks = (
-            destinationAwareBlocks(
+        let workBlocks = destinationAwareBlocks(
                 contexts,
                 kind: .work,
                 as: .work,
                 stays: stays,
                 placeKinds: placeKinds,
                 in: window,
+                returnGap: 2 * 60 * 60,
                 matchesDestination: { $0 == .company }
             )
-            + destinationAwareBlocks(
+        let studyBlocks = destinationAwareBlocks(
                 contexts,
                 kind: .study,
                 as: .study,
                 stays: stays,
                 placeKinds: placeKinds,
                 in: window,
+                returnGap: 2 * 60 * 60,
                 matchesDestination: { $0 == .school || $0 == .academy }
             )
+        let hobbyBlocks = destinationAwareBlocks(
+            contexts,
+            kind: .hobby,
+            as: .hobby,
+            stays: stays,
+            placeKinds: placeKinds,
+            in: window,
+            returnGap: 2 * 60 * 60,
+            matchesDestination: { $0 == .hobby }
         )
-        .sorted { $0.span.start < $1.span.start }
-        let homeSpans = ActualIntervalMergeEngine.union(
-            contexts
-                .filter { $0.kind == .homeRest || $0.kind == .housework }
-                .map(\.span)
-                + stays
-                    .filter { placeKinds[$0.placeKey] == .home }
-                    .compactMap { $0.span.intersection(with: window) },
-            mergeGap: 60
+        let facilityExerciseBlocks = destinationAwareBlocks(
+            contexts,
+            kind: .gymFacility,
+            as: .exercise,
+            stays: stays,
+            placeKinds: placeKinds,
+            in: window,
+            returnGap: 15 * 60,
+            matchesDestination: { $0 == .exercise }
         )
         let sleepSpans = ActualIntervalMergeEngine.union(
             actuals
@@ -1279,23 +1400,63 @@ enum DayPhaseEngine {
                 .compactMap { $0.span(asOf: asOf).intersection(with: window) },
             mergeGap: 0
         )
-        let commutes = commutes(
-            travel: travel,
-            contexts: contexts,
-            window: window,
-            workBlocks: workBlocks,
-            homeSpans: homeSpans,
-            destinations: destinations(
-                stays: stays,
-                placeKinds: placeKinds,
-                window: window
+        let exerciseSpans = ActualIntervalMergeEngine.union(
+            actuals.compactMap { actual -> TimeSpan? in
+                guard AutomaticRecordTimelineEngine.isConfirmedWorkout(actual)
+                else { return nil }
+                return actual.span(asOf: asOf).intersection(with: window)
+            } + facilityExerciseBlocks.map(\.span),
+            mergeGap: 60
+        )
+        let movementEvidence = travel.compactMap {
+            $0.span.intersection(with: window)
+        } + actuals.compactMap { actual -> TimeSpan? in
+            guard actual.source != .manual,
+                  actual.source != .timer,
+                  ActualRecordCategoryResolver.categoryID(for: actual)
+                    == "movement" else { return nil }
+            return actual.span(asOf: asOf).intersection(with: window)
+        }
+        let movementSpans = ActualIntervalMergeEngine.union(
+            movementEvidence.flatMap {
+                ActualIntervalMergeEngine.subtracting(exerciseSpans, from: $0)
+            },
+            mergeGap: 60
+        )
+        let phaseBlocks: [(DayPhase, [DayPhaseSpan])] = [
+            (.work, workBlocks), (.study, studyBlocks),
+            (.hobby, hobbyBlocks),
+        ]
+        let broadBlocks = phaseBlocks.flatMap { phase, blocks in
+            let actualSpans = automaticSpans(
+                actuals,
+                in: window,
+                asOf: asOf,
+                categoryID: phase.rawValue
             )
+            return ActualIntervalMergeEngine.union(
+                blocks.map(\.span) + actualSpans,
+                mergeGap: 60
+            ).map { DayPhaseSpan(phase: phase, span: $0) }
+        }
+        let activitySpans = ActualIntervalMergeEngine.union(
+            contexts.map(\.span) + automaticSpans(
+                actuals,
+                in: window,
+                asOf: asOf,
+                categoryIDs: [
+                    "activity", "rest", "routine", "food", "relationship",
+                    "health", "appUsage",
+                ]
+            ),
+            mergeGap: 60
         )
 
-        let candidates = workBlocks
-            + commutes
+        let candidates = broadBlocks
+            + exerciseSpans.map { DayPhaseSpan(phase: .exercise, span: $0) }
             + sleepSpans.map { DayPhaseSpan(phase: .sleep, span: $0) }
-            + evenings(after: commutes, homeSpans: homeSpans, in: span)
+            + movementSpans.map { DayPhaseSpan(phase: .movement, span: $0) }
+            + activitySpans.map { DayPhaseSpan(phase: .activity, span: $0) }
         return resolved(
             candidates.compactMap { value in
                 value.span.intersection(with: span).map {
@@ -1303,6 +1464,103 @@ enum DayPhaseEngine {
                 }
             }
         )
+    }
+
+    /// 표시·상위 집계용 일과. 기록이 존재하는 과거 구간은 근거가 없는 자리도
+    /// `미확인`으로 채워 하루가 끝났을 때 정확히 24시간이 되게 한다. 현재
+    /// 시각 이후는 자동 기록으로 만들지 않는다.
+    static func completePhases(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        in span: TimeSpan,
+        asOf: Date = .now
+    ) -> [DayPhaseSpan] {
+        guard span.duration <= maximumSpanDuration else { return [] }
+        let end = min(span.end, asOf)
+        guard end > span.start else { return [] }
+        let observed = TimeSpan(start: span.start, end: end)
+        let known = phases(
+            actuals: actuals,
+            travel: travel,
+            stays: stays,
+            placeKinds: placeKinds,
+            in: span,
+            asOf: asOf
+        ).compactMap { value in
+            value.span.intersection(with: observed).map {
+                DayPhaseSpan(phase: value.phase, span: $0)
+            }
+        }
+        let unknown = ActualIntervalMergeEngine.subtracting(
+            known.map(\.span),
+            from: observed
+        ).map { DayPhaseSpan(phase: .unconfirmed, span: $0) }
+        return (known + unknown).sorted { $0.span.start < $1.span.start }
+    }
+
+    static func completePhasesAcrossDays(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        in span: TimeSpan,
+        calendar: Calendar,
+        asOf: Date = .now
+    ) -> [DayPhaseSpan] {
+        let end = min(span.end, asOf)
+        guard end > span.start else { return [] }
+        var result: [DayPhaseSpan] = []
+        var day = calendar.startOfDay(for: span.start)
+        while day < end {
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day)
+            else { break }
+            result += completePhases(
+                actuals: actuals,
+                travel: travel,
+                stays: stays,
+                placeKinds: placeKinds,
+                in: TimeSpan(
+                    start: max(day, span.start),
+                    end: min(next, span.end)
+                ),
+                asOf: asOf
+            )
+            day = next
+        }
+        return result
+    }
+
+    static func categoryDurations(
+        _ phases: [DayPhaseSpan]
+    ) -> [CategoryDuration] {
+        var totals: [DayPhase: TimeInterval] = [:]
+        for value in phases {
+            totals[value.phase, default: 0] += value.span.duration
+        }
+        return totals.map {
+            CategoryDuration(
+                categoryID: $0.key.rawValue,
+                planned: 0,
+                actual: $0.value
+            )
+        }.sorted {
+            $0.actual == $1.actual
+                ? $0.categoryID < $1.categoryID
+                : $0.actual > $1.actual
+        }
+    }
+
+    static func assignments(
+        of span: TimeSpan,
+        to phases: [DayPhaseSpan]
+    ) -> [DayPhaseSpan] {
+        phases.compactMap { value in
+            value.span.intersection(with: span).map {
+                DayPhaseSpan(phase: value.phase, span: $0)
+            }
+        }
     }
 
     // MARK: - 근거 모으기
@@ -1323,6 +1581,37 @@ enum DayPhaseEngine {
                 return nil
             }
             return (kind, visible)
+        }
+    }
+
+    private static func automaticSpans(
+        _ actuals: [ActualRecord],
+        in window: TimeSpan,
+        asOf: Date,
+        categoryID: String
+    ) -> [TimeSpan] {
+        automaticSpans(
+            actuals,
+            in: window,
+            asOf: asOf,
+            categoryIDs: [categoryID]
+        )
+    }
+
+    private static func automaticSpans(
+        _ actuals: [ActualRecord],
+        in window: TimeSpan,
+        asOf: Date,
+        categoryIDs: Set<String>
+    ) -> [TimeSpan] {
+        actuals.compactMap { actual in
+            guard actual.source != .manual,
+                  actual.source != .timer,
+                  actual.source != .calendar,
+                  categoryIDs.contains(
+                    ActualRecordCategoryResolver.categoryID(for: actual)
+                  ) else { return nil }
+            return actual.span(asOf: asOf).intersection(with: window)
         }
     }
 
@@ -1350,19 +1639,24 @@ enum DayPhaseEngine {
         stays: [PlaceStay],
         placeKinds: [String: FrequentPlaceKind],
         in window: TimeSpan,
+        returnGap: TimeInterval,
         matchesDestination: (FrequentPlaceKind) -> Bool
     ) -> [DayPhaseSpan] {
         let contextSpans = contexts
             .filter { $0.kind == kind }
             .map(\.span)
 
-        let destinationSpans = stays.compactMap { stay -> TimeSpan? in
+        let destinationSpans = Dictionary(grouping: stays) { $0.placeKey }
+            .values.flatMap { samePlace in
+            let spans = samePlace.compactMap { stay -> TimeSpan? in
             guard let kind = placeKinds[stay.placeKey],
                   matchesDestination(kind),
                   let visible = stay.span.intersection(with: window) else {
                 return nil
             }
             return visible
+            }
+            return ActualIntervalMergeEngine.union(spans, mergeGap: returnGap)
         }
 
         return ActualIntervalMergeEngine.union(
@@ -1632,7 +1926,7 @@ enum RecordClockDetailEngine {
     ) -> RecordClockDetailRing? {
         ring(
             kind: .dayPhase,
-            pieces: DayPhaseEngine.phases(
+            pieces: DayPhaseEngine.completePhases(
                 actuals: actuals,
                 travel: travel,
                 stays: stays,
@@ -1643,6 +1937,19 @@ enum RecordClockDetailEngine {
             .map { ($0.phase.rawValue, $0.span) },
             in: span
         )
+    }
+
+    /// 두 번째이자 마지막 단계인 활동 띠에 덮어 쓸 세부 근거. 수면 단계와
+    /// 이동수단은 별도 상세 띠를 만들지 않고 해당 활동 구간의 색을 바꾼다.
+    static func activityRings(
+        sleepSessions: [SleepSession],
+        travel: [TravelSegment],
+        in span: TimeSpan
+    ) -> [RecordClockDetailRing] {
+        [
+            activitySleepRing(sessions: sleepSessions, in: span),
+            travelRing(segments: travel, in: span),
+        ].compactMap { $0 }
     }
 
     /// 수면 단계 띠. HealthKit은 같은 시각에 여러 단계를 겹쳐 보내므로
@@ -1679,12 +1986,36 @@ enum RecordClockDetailEngine {
         guard let source = sleepRing(sessions: sessions, in: span) else {
             return nil
         }
-        let arcs = source.arcs.filter {
+        let asleep = source.arcs.filter {
             SleepStage(rawValue: $0.token)?.isAsleep == true
         }
-        return arcs.isEmpty
-            ? nil
-            : RecordClockDetailRing(id: source.id, kind: source.kind, arcs: arcs)
+        guard !asleep.isEmpty else { return nil }
+        let hasWatchSource = sessions.flatMap(\.segments).contains { segment in
+            segment.sourceName.localizedCaseInsensitiveContains("watch")
+                || segment.deviceName?
+                    .localizedCaseInsensitiveContains("watch") == true
+        }
+        guard !hasWatchSource else {
+            return RecordClockDetailRing(
+                id: source.id,
+                kind: source.kind,
+                arcs: asleep
+            )
+        }
+        let pieces = asleep.map { arc in
+            (
+                SleepStage.asleepUnspecified.rawValue,
+                TimeSpan(
+                    start: span.start.addingTimeInterval(
+                        span.duration * arc.startFraction
+                    ),
+                    end: span.start.addingTimeInterval(
+                        span.duration * arc.endFraction
+                    )
+                )
+            )
+        }
+        return ring(kind: .sleepStage, pieces: pieces, in: span)
     }
 
     /// 이동 구간 띠. 같은 이동 수단이 이어지면 한 조각으로 붙인다.

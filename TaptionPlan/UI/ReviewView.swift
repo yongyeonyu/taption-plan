@@ -18,11 +18,12 @@ private struct ReviewContent: Equatable {
     var rings: [RecordClockRing]
     /// 가장 바깥의 일과 고리. 하루 배율에서만 만들어진다.
     var phaseRing: RecordClockDetailRing?
-    /// 수면 단계는 별도 고리를 만들지 않고 활동 띠의 수면 구간 위에 그린다.
+    /// 수면 단계와 이동수단은 별도 상세 고리 없이 활동 띠 위에 그린다.
     var activityRings: [RecordClockDetailRing]
     /// 날씨·위치는 상세 고리와 분리해 환경 정보로 표시한다.
     var contextRings: [RecordClockDetailRing]
-    var detailRings: [RecordClockDetailRing]
+    /// 일별 일과를 합산한 값. 주·월·년 막대와 범례가 이 값만 읽는다.
+    var phaseDurations: [CategoryDuration]
     var chartBuckets: [RecordChartBucket]
     /// 고른 구간에 걸친 막대. 비어 있으면 모두 고른 것과 같다.
     var selectedChartBucketIDs: Set<String>
@@ -39,7 +40,7 @@ private struct ReviewContent: Equatable {
         phaseRing: nil,
         activityRings: [],
         contextRings: [],
-        detailRings: [],
+        phaseDurations: [],
         chartBuckets: [],
         selectedChartBucketIDs: []
     )
@@ -77,6 +78,12 @@ private struct ReviewDetailSelection: Equatable {
     var token: String
 }
 
+private enum ReviewClockHighlight: Equatable {
+    case phase(arcID: String, token: String)
+    case category(String)
+    case detail(ReviewDetailSelection)
+}
+
 private struct PlaybackContextReadout {
     var weatherToken: String?
     var locationToken: String?
@@ -91,13 +98,10 @@ struct ReviewView: View {
 
     /// 24시간 눈금 안쪽에 기록을 담는 띠. 하나만 두고 굵게 그린다.
     private static let clockBandWidth: CGFloat = 20
-    /// 카테고리 띠 바깥에 두르는 일과 띠. 밖에서 안으로 줄거리 → 카테고리 →
-    /// 결 순서로 읽힌다.
+    /// 활동 띠 바깥에 두르는 일과 띠.
     private static let phaseBandWidth: CGFloat = 12
-    /// 바깥 띠 안쪽에 겹쳐 두는 결 띠(수면 단계·이동 구간). 작은 화면에서도
-    /// 서로 붙어 보이지 않을 만큼만 벌린다.
-    private static let detailBandWidth: CGFloat = 8
-    private static let detailBandGap: CGFloat = 3.5
+    /// 일과와 활동 두 띠가 서로 붙어 보이지 않을 만큼만 벌린다.
+    private static let bandGap: CGFloat = 3.5
     private static let clockButtonSize: CGFloat = 44
     /// 일과 띠를 두르면서 안쪽 띠가 가운데 단추와 읽음창에 밀리지 않도록
     /// 눈금판을 키웠다. 카드 너비(약 343pt)보다 작아 가로로 넘치지 않는다.
@@ -116,12 +120,8 @@ struct ReviewView: View {
     @State private var selectedBucketIDs: Set<String> = []
     /// 주·월·년 막대에서 직접 고른 하루 또는 한 달.
     @State private var selectedChartBucketID: String?
-    /// 범례에서 고른 카테고리. 원형·막대 모두 이 하나만 남기고 나머지를 죽인다.
-    @State private var highlightedCategoryID: String?
-    /// 눈금판이나 범례에서 짚어 둔 일과 조각. 이름과 시각이 읽음창에 뜨고
-    /// 나머지는 죽는다.
-    @State private var highlightedPhaseArcID: String?
-    @State private var highlightedDetail: ReviewDetailSelection?
+    /// 범례에서 고른 한 항목. 서로 배타적으로 유지해 다른 띠는 흐리게 남긴다.
+    @State private var clockHighlight: ReviewClockHighlight?
     /// 재생을 시작한 시각. nil이면 멈춘 상태다.
     @State private var playStartedAt: Date?
 
@@ -145,6 +145,7 @@ struct ReviewView: View {
         }
         .task(id: contentKey) { rebuildContent() }
         .task(id: playStartedAt) { await stopPlaybackWhenSweepEnds() }
+        .onDisappear { clearClockHighlight() }
     }
 
     /// 한 바퀴를 다 돌면 스스로 멈춰 정적인 화면으로 돌아간다.
@@ -153,6 +154,26 @@ struct ReviewView: View {
         try? await Task.sleep(for: .seconds(RecordClockEngine.sweepDuration))
         guard !Task.isCancelled else { return }
         playStartedAt = nil
+    }
+
+    private var highlightedCategoryID: String? {
+        guard case .category(let id) = clockHighlight else { return nil }
+        return id
+    }
+
+    private var highlightedDetail: ReviewDetailSelection? {
+        guard case .detail(let selection) = clockHighlight else { return nil }
+        return selection
+    }
+
+    private var highlightedPhaseToken: String? {
+        guard case .phase(_, let token) = clockHighlight else { return nil }
+        return token
+    }
+
+    private func clearClockHighlight() {
+        guard clockHighlight != nil else { return }
+        clockHighlight = nil
     }
 
     // MARK: - 머리말
@@ -173,6 +194,7 @@ struct ReviewView: View {
                     Button {
                         selectedBucketIDs = []
                         selectedChartBucketID = nil
+                        clearClockHighlight()
                         model.reviewScale = scale
                     } label: {
                         Text(scale.rawValue)
@@ -234,6 +256,7 @@ struct ReviewView: View {
                     Button {
                         selectedBucketIDs = []
                         selectedChartBucketID = nil
+                        clearClockHighlight()
                     } label: {
                         bucketChipLabel(
                             "전체",
@@ -299,6 +322,7 @@ struct ReviewView: View {
     }
 
     private func toggle(_ bucket: ReviewPeriodBucket) {
+        clearClockHighlight()
         selectedChartBucketID = nil
         if selectedBucketIDs.contains(bucket.id) {
             selectedBucketIDs.remove(bucket.id)
@@ -332,10 +356,7 @@ struct ReviewView: View {
                 } else {
                     categoryLegend
                 }
-                if !detailLegendRings.isEmpty {
-                    detailRingLegend
-                }
-            } else if content.groups.isEmpty {
+            } else if content.phaseDurations.isEmpty {
                 emptyRecordText
             } else {
                 barChart
@@ -370,22 +391,18 @@ struct ReviewView: View {
     }
 
     private var recordedDuration: TimeInterval {
-        content.groups.reduce(0) { $0 + $1.duration }
+        content.phaseDurations.reduce(0) { $0 + $1.actual }
     }
 
     /// 24시간 눈금판. 자정이 12시 방향이고 시계 방향으로 하루가 흐른다.
     /// 평소에는 눈금과 현재 시각 바늘만 두고, 기록은 재생하거나 범례에서
     /// 카테고리를 고를 때만 안쪽 띠에 굵게 드러낸다.
     private var dayClockChart: some View {
-        // 고르기는 프레임마다가 아니라 본문이 다시 그려질 때 한 번만 한다.
-        let rings = RecordClockEngine.rings(
-            content.rings,
-            isolating: highlightedCategoryID
-        )
-        let detailRings = filteredDetailRings
-        let activityRings = filteredActivityRings
+        let rings = content.rings
+        let activityRings = content.activityRings
         let phaseRing = content.phaseRing
         let pinnedPhaseArc = highlightedPhaseArc
+        let highlight = clockHighlight
         let span = content.period
         let currentReadout = currentContextReadout()
         return TimelineView(
@@ -404,7 +421,7 @@ struct ReviewView: View {
                         phaseRing: phaseRing,
                         pinnedPhaseArc: pinnedPhaseArc,
                         activityRings: activityRings,
-                        detailRings: detailRings,
+                        highlight: highlight,
                         progress: progress,
                         span: span,
                         nowFraction: RecordClockEngine.nowFraction(
@@ -440,44 +457,8 @@ struct ReviewView: View {
 
     /// 짚어 둔 조각. 범례에서 고른 경우에는 그 이름의 첫 조각을 짚는다.
     private var highlightedPhaseArc: RecordClockDetailArc? {
-        guard let id = highlightedPhaseArcID else { return nil }
+        guard case .phase(let id, _) = clockHighlight else { return nil }
         return content.phaseRing?.arcs.first { $0.id == id }
-    }
-
-    private var highlightedPhaseToken: String? { highlightedPhaseArc?.token }
-
-    private var filteredActivityRings: [RecordClockDetailRing] {
-        guard let highlightedDetail,
-              highlightedDetail.kind == .sleepStage else {
-            return content.activityRings.filter { $0.kind == .sleepStage }
-        }
-        return content.activityRings.filter { $0.kind == .sleepStage }
-            .compactMap { ring in
-            let arcs = ring.arcs.filter { $0.token == highlightedDetail.token }
-            return arcs.isEmpty
-                ? nil
-                : RecordClockDetailRing(id: ring.id, kind: ring.kind, arcs: arcs)
-        }
-    }
-
-    private var filteredDetailRings: [RecordClockDetailRing] {
-        let source = content.detailRings
-            + content.activityRings.filter { $0.kind != .sleepStage }
-        guard let highlightedDetail,
-              highlightedDetail.kind != .sleepStage else {
-            return source
-        }
-        return source.compactMap { ring in
-            guard ring.kind == highlightedDetail.kind else { return nil }
-            let arcs = ring.arcs.filter { $0.token == highlightedDetail.token }
-            return arcs.isEmpty
-                ? nil
-                : RecordClockDetailRing(
-                    id: ring.id,
-                    kind: ring.kind,
-                    arcs: arcs
-                )
-        }
     }
 
     private func playbackContext(
@@ -585,20 +566,22 @@ struct ReviewView: View {
         let distance = sqrt(dx * dx + dy * dy)
         guard distance >= outer - Self.phaseBandWidth - 4,
               distance <= outer + 6 else {
-            highlightedPhaseArcID = nil
+            clearClockHighlight()
             return
         }
         var fraction = (Angle(radians: atan2(dy, dx)).degrees + 90) / 360
         fraction -= floor(fraction)
         guard let arc = RecordClockEngine.arc(in: ring, at: fraction) else {
-            highlightedPhaseArcID = nil
+            clearClockHighlight()
             return
         }
-        highlightedPhaseArcID = highlightedPhaseArcID == arc.id ? nil : arc.id
+        let next = ReviewClockHighlight.phase(arcID: arc.id, token: arc.token)
+        clockHighlight = clockHighlight == next ? nil : next
     }
 
     private var playControl: some View {
         Button {
+            clearClockHighlight()
             playStartedAt = playStartedAt == nil ? .now : nil
         } label: {
             Image(systemName: playStartedAt == nil ? "play.fill" : "pause.fill")
@@ -627,6 +610,7 @@ struct ReviewView: View {
                     return
                 }
                 playStartedAt = nil
+                clearClockHighlight()
                 model.shiftReviewDate(by: step)
             }
     }
@@ -638,7 +622,7 @@ struct ReviewView: View {
         phaseRing: RecordClockDetailRing?,
         pinnedPhaseArc: RecordClockDetailArc?,
         activityRings: [RecordClockDetailRing],
-        detailRings: [RecordClockDetailRing],
+        highlight: ReviewClockHighlight?,
         progress: Double?,
         span: TimeSpan,
         nowFraction: Double?
@@ -664,12 +648,13 @@ struct ReviewView: View {
             radius: outer - Self.phaseBandWidth / 2,
             ring: revealedPhases,
             focusedToken: focusedPhaseArc?.token,
-            isDimmingOthers: pinnedPhaseArc != nil || progress != nil
+            highlight: highlight,
+            isPlaying: progress != nil
         )
 
         let radius = outer
             - Self.phaseBandWidth
-            - Self.detailBandGap
+            - Self.bandGap
             - Self.clockBandWidth / 2
         context.stroke(
             arcPath(center: center, radius: radius, from: 0, to: 1),
@@ -692,12 +677,12 @@ struct ReviewView: View {
                 let width = pass
                     ? Self.clockBandWidth + 6
                     : Self.clockBandWidth
-                let hasStageSelection = highlightedDetail?.kind == .sleepStage
-                let opacity = if hasStageSelection {
-                    ring.categoryID == TimelineRowKind.sleep.rawValue ? 0.22 : 0.12
-                } else {
-                    progress == nil || pass ? 1.0 : 0.4
-                }
+                let opacity = activityOpacity(
+                    categoryID: ring.categoryID,
+                    highlight: highlight,
+                    isPlaybackActive: progress != nil,
+                    isUnderPlayhead: pass
+                )
                 for arc in ring.arcs {
                     context.stroke(
                         arcPath(
@@ -713,7 +698,7 @@ struct ReviewView: View {
             }
         }
 
-        drawSleepStagesOnActivityBand(
+        drawActivityDetailsOnBand(
             context: context,
             center: center,
             radius: radius,
@@ -721,17 +706,7 @@ struct ReviewView: View {
                 activityRings,
                 revealedThrough: progress
             ),
-            isDimming: highlightedCategoryID != nil
-        )
-
-        _ = drawDetailRings(
-            context: context,
-            center: center,
-            outerEdge: radius - Self.clockBandWidth / 2,
-            rings: RecordClockEngine.detailRings(
-                detailRings,
-                revealedThrough: progress
-            )
+            highlight: highlight
         )
 
         if let progress {
@@ -764,16 +739,16 @@ struct ReviewView: View {
         }
     }
 
-    /// 코어·깊은·REM 수면은 일반 `수면` 위에 같은 폭으로 덮어, 일과의
-    /// `취침`과 활동의 실제 수면 단계만 남는 2단계 구조로 보이게 한다.
-    private func drawSleepStagesOnActivityBand(
+    /// 코어·깊은·REM 수면과 이동수단은 해당 활동 구간 위에 같은 폭으로
+    /// 덮는다. 별도 상세 띠를 만들지 않아 일과·활동 두 단계만 남는다.
+    private func drawActivityDetailsOnBand(
         context: GraphicsContext,
         center: CGPoint,
         radius: CGFloat,
         rings: [RecordClockDetailRing],
-        isDimming: Bool
+        highlight: ReviewClockHighlight?
     ) {
-        for ring in rings where ring.kind == .sleepStage {
+        for ring in rings {
             for arc in ring.arcs {
                 context.stroke(
                     arcPath(
@@ -783,8 +758,14 @@ struct ReviewView: View {
                         to: arc.endFraction
                     ),
                     with: .color(
-                        detailColor(.sleepStage, token: arc.token)
-                            .opacity(isDimming ? 0.18 : 1)
+                        detailColor(ring.kind, token: arc.token)
+                            .opacity(
+                                activityDetailOpacity(
+                                    kind: ring.kind,
+                                    token: arc.token,
+                                    highlight: highlight
+                                )
+                            )
                     ),
                     style: StrokeStyle(
                         lineWidth: Self.clockBandWidth,
@@ -792,6 +773,53 @@ struct ReviewView: View {
                     )
                 )
             }
+        }
+    }
+
+    private func activityOpacity(
+        categoryID: String,
+        highlight: ReviewClockHighlight?,
+        isPlaybackActive: Bool,
+        isUnderPlayhead: Bool
+    ) -> Double {
+        switch highlight {
+        case .phase:
+            return 0.1
+        case .category(let selectedID):
+            return categoryID == selectedID ? 1 : 0.1
+        case .detail(let selection):
+            return categoryID == activityCategoryID(for: selection.kind)
+                ? 0.22
+                : 0.08
+        case nil:
+            return !isPlaybackActive || isUnderPlayhead ? 1 : 0.4
+        }
+    }
+
+    private func activityDetailOpacity(
+        kind: RecordClockDetailKind,
+        token: String,
+        highlight: ReviewClockHighlight?
+    ) -> Double {
+        switch highlight {
+        case .phase:
+            return 0.1
+        case .category(let selectedID):
+            return activityCategoryID(for: kind) == selectedID ? 1 : 0.1
+        case .detail(let selection):
+            return selection.kind == kind && selection.token == token ? 1 : 0.1
+        case nil:
+            return 1
+        }
+    }
+
+    private func activityCategoryID(
+        for kind: RecordClockDetailKind?
+    ) -> String? {
+        switch kind {
+        case .sleepStage: TimelineRowKind.sleep.rawValue
+        case .travel: TimelineRowKind.movement.rawValue
+        case .dayPhase, .weather, .location, nil: nil
         }
     }
 
@@ -803,7 +831,8 @@ struct ReviewView: View {
         radius: CGFloat,
         ring: RecordClockDetailRing?,
         focusedToken: String?,
-        isDimmingOthers: Bool
+        highlight: ReviewClockHighlight?,
+        isPlaying: Bool
     ) {
         context.stroke(
             arcPath(center: center, radius: radius, from: 0, to: 1),
@@ -815,6 +844,12 @@ struct ReviewView: View {
         for pass in [false, true] {
             for arc in ring.arcs where (arc.token == focusedToken) == pass {
                 let isFocused = pass && focusedToken != nil
+                let opacity = phaseOpacity(
+                    token: arc.token,
+                    focusedToken: focusedToken,
+                    highlight: highlight,
+                    isPlaying: isPlaying
+                )
                 context.stroke(
                     arcPath(
                         center: center,
@@ -824,7 +859,7 @@ struct ReviewView: View {
                     ),
                     with: .color(
                         detailColor(.dayPhase, token: arc.token)
-                            .opacity(isDimmingOthers && !isFocused ? 0.3 : 1)
+                            .opacity(opacity)
                     ),
                     style: StrokeStyle(
                         lineWidth: isFocused
@@ -834,6 +869,22 @@ struct ReviewView: View {
                     )
                 )
             }
+        }
+    }
+
+    private func phaseOpacity(
+        token: String,
+        focusedToken: String?,
+        highlight: ReviewClockHighlight?,
+        isPlaying: Bool
+    ) -> Double {
+        switch highlight {
+        case .phase(_, let selectedToken):
+            return token == selectedToken ? 1 : 0.12
+        case .category, .detail:
+            return 0.12
+        case nil:
+            return isPlaying && token != focusedToken ? 0.3 : 1
         }
     }
 
@@ -873,47 +924,6 @@ struct ReviewView: View {
         context.draw(label, at: CGPoint(x: box.midX, y: box.midY))
     }
 
-    /// 바깥 고리 안쪽에 결 띠를 한 줄씩 안으로 쌓고, 마지막 띠 안쪽 가장자리를
-    /// 돌려준다. 읽음창이 그 안에 들어가야 띠를 덮지 않는다. 가운데 단추를
-    /// 덮을 만큼 안으로 들어가면 더 그리지 않는다.
-    private func drawDetailRings(
-        context: GraphicsContext,
-        center: CGPoint,
-        outerEdge: CGFloat,
-        rings: [RecordClockDetailRing]
-    ) -> CGFloat {
-        var edge = outerEdge - Self.detailBandGap
-        for ring in rings {
-            let radius = edge - Self.detailBandWidth / 2
-            guard radius - Self.detailBandWidth / 2
-                > Self.clockButtonSize / 2 + 4 else {
-                return edge
-            }
-            context.stroke(
-                arcPath(center: center, radius: radius, from: 0, to: 1),
-                with: .color(Color.tpLine.opacity(0.4)),
-                lineWidth: Self.detailBandWidth
-            )
-            for arc in ring.arcs {
-                context.stroke(
-                    arcPath(
-                        center: center,
-                        radius: radius,
-                        from: arc.startFraction,
-                        to: arc.endFraction
-                    ),
-                    with: .color(detailColor(ring.kind, token: arc.token)),
-                    style: StrokeStyle(
-                        lineWidth: Self.detailBandWidth,
-                        lineCap: .butt
-                    )
-                )
-            }
-            edge -= Self.detailBandWidth + Self.detailBandGap
-        }
-        return edge
-    }
-
     private func detailColor(
         _ kind: RecordClockDetailKind,
         token: String
@@ -949,10 +959,15 @@ struct ReviewView: View {
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.vertical, 4)
             ForEach(detailTokens(of: ring), id: \.self) { token in
+                let isSelected = highlightedPhaseToken == token
                 Button {
-                    highlightedPhaseArcID = highlightedPhaseToken == token
-                        ? nil
-                        : ring.arcs.first { $0.token == token }?.id
+                    guard let arc = ring.arcs.first(where: { $0.token == token })
+                    else { return }
+                    let next = ReviewClockHighlight.phase(
+                        arcID: arc.id,
+                        token: token
+                    )
+                    clockHighlight = clockHighlight == next ? nil : next
                 } label: {
                     HStack(spacing: 4) {
                         Capsule()
@@ -962,7 +977,7 @@ struct ReviewView: View {
                             .font(
                                 .taption(
                                     size: 8.5,
-                                    weight: highlightedPhaseToken == token
+                                    weight: isSelected
                                         ? .bold
                                         : .regular
                                 )
@@ -972,77 +987,20 @@ struct ReviewView: View {
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
                     .background(
-                        highlightedPhaseToken == token
+                        isSelected
                             ? detailColor(.dayPhase, token: token).opacity(0.16)
                             : Color(red: 0.95, green: 0.95, blue: 0.96),
                         in: Capsule()
                     )
                 }
+                .opacity(legendOpacity(isSelected: isSelected))
                 .buttonStyle(.plain)
                 .accessibilityLabel(detailName(.dayPhase, token: token))
                 .accessibilityAddTraits(
-                    highlightedPhaseToken == token ? [.isSelected] : []
+                    isSelected ? [.isSelected] : []
                 )
             }
         }
-    }
-
-    /// 안쪽 띠의 색이 무엇을 뜻하는지 적는다. 띠가 없으면 아무것도 두지
-    /// 않는다.
-    private var detailRingLegend: some View {
-        ChipFlowLayout(spacing: 5) {
-            Text("상세")
-                .font(.taption(size: 8.5, weight: .bold))
-                .foregroundStyle(Color.tpSecondary)
-                .padding(.vertical, 4)
-            ForEach(detailLegendRings.filter { $0.kind != .sleepStage }) { ring in
-                ForEach(detailTokens(of: ring), id: \.self) { token in
-                    let selection = ReviewDetailSelection(
-                        kind: ring.kind,
-                        token: token
-                    )
-                    Button {
-                        highlightedDetail = highlightedDetail == selection
-                            ? nil
-                            : selection
-                    } label: {
-                        HStack(spacing: 4) {
-                            Capsule()
-                                .fill(detailColor(ring.kind, token: token))
-                                .frame(width: 10, height: 6)
-                            Text(detailName(ring.kind, token: token))
-                                .font(
-                                    .taption(
-                                        size: 8.5,
-                                        weight: highlightedDetail == selection
-                                            ? .bold
-                                            : .regular
-                                    )
-                                )
-                                .foregroundStyle(Color.tpInk)
-                        }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(
-                            highlightedDetail == selection
-                                ? detailColor(ring.kind, token: token)
-                                    .opacity(0.16)
-                                : Color(red: 0.95, green: 0.95, blue: 0.96),
-                            in: Capsule()
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(
-                        highlightedDetail == selection ? [.isSelected] : []
-                    )
-                }
-            }
-        }
-    }
-
-    private var detailLegendRings: [RecordClockDetailRing] {
-        content.detailRings
-            + content.activityRings.filter { $0.kind != .sleepStage }
     }
 
     private func detailTokens(of ring: RecordClockDetailRing) -> [String] {
@@ -1161,7 +1119,7 @@ struct ReviewView: View {
                         y: .value("시간", slice.duration / 3_600)
                     )
                     .foregroundStyle(
-                        color(forCategoryID: slice.categoryID)
+                        detailColor(.dayPhase, token: slice.categoryID)
                             .opacity(barOpacity(bucket, slice))
                     )
                 }
@@ -1221,6 +1179,7 @@ struct ReviewView: View {
         proxy: ChartProxy,
         geometry: GeometryProxy
     ) {
+        clearClockHighlight()
         guard let plotFrame = proxy.plotFrame else { return }
         let frame = geometry[plotFrame]
         guard frame.contains(location),
@@ -1297,33 +1256,51 @@ struct ReviewView: View {
                     .font(.taption(size: 8.5, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.vertical, 4)
-            }
-            ForEach(content.groups.prefix(8)) { group in
-                if model.reviewScale == .day,
-                   group.id == TimelineRowKind.sleep.rawValue,
-                   !activitySleepTokens.isEmpty {
-                    ForEach(activitySleepTokens, id: \.self) { token in
-                        sleepStageLegendChip(token)
+                ForEach(content.groups.prefix(8)) { group in
+                    if let kind = activityDetailKind(for: group.id),
+                       !activityTokens(for: kind).isEmpty {
+                        ForEach(activityTokens(for: kind), id: \.self) { token in
+                            activityDetailLegendChip(kind, token: token)
+                        }
+                    } else {
+                        categoryLegendChip(group)
                     }
-                } else {
-                    categoryLegendChip(group)
+                }
+            } else {
+                Text("일과")
+                    .font(.taption(size: 8.5, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.vertical, 4)
+                ForEach(content.phaseDurations.prefix(12)) { value in
+                    phaseSummaryLegendChip(value.categoryID)
                 }
             }
         }
     }
 
-    private var activitySleepTokens: [String] {
+    private func activityDetailKind(
+        for categoryID: String
+    ) -> RecordClockDetailKind? {
+        switch categoryID {
+        case TimelineRowKind.sleep.rawValue: .sleepStage
+        case TimelineRowKind.movement.rawValue: .travel
+        default: nil
+        }
+    }
+
+    private func activityTokens(
+        for kind: RecordClockDetailKind
+    ) -> [String] {
         content.activityRings
-            .filter { $0.kind == .sleepStage }
+            .filter { $0.kind == kind }
             .flatMap(detailTokens)
     }
 
     private func categoryLegendChip(_ group: RecordCategoryGroup) -> some View {
-        Button {
-            highlightedDetail = nil
-            highlightedCategoryID = highlightedCategoryID == group.id
-                ? nil
-                : group.id
+        let isSelected = highlightedCategoryID == group.id
+        return Button {
+            let next = ReviewClockHighlight.category(group.id)
+            clockHighlight = clockHighlight == next ? nil : next
         } label: {
             HStack(spacing: 4) {
                 Circle()
@@ -1333,7 +1310,7 @@ struct ReviewView: View {
                     .font(
                         .taption(
                             size: 9,
-                            weight: highlightedCategoryID == group.id
+                            weight: isSelected
                                 ? .bold
                                 : .regular
                         )
@@ -1343,30 +1320,36 @@ struct ReviewView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(
-                highlightedCategoryID == group.id
+                isSelected
                     ? color(forCategoryID: group.id).opacity(0.16)
                     : Color(red: 0.95, green: 0.95, blue: 0.96),
                 in: Capsule()
             )
         }
+        .opacity(legendOpacity(isSelected: isSelected))
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
-    private func sleepStageLegendChip(_ token: String) -> some View {
-        let selection = ReviewDetailSelection(kind: .sleepStage, token: token)
+    private func activityDetailLegendChip(
+        _ kind: RecordClockDetailKind,
+        token: String
+    ) -> some View {
+        let selection = ReviewDetailSelection(kind: kind, token: token)
+        let isSelected = highlightedDetail == selection
         return Button {
-            highlightedCategoryID = nil
-            highlightedDetail = highlightedDetail == selection ? nil : selection
+            let next = ReviewClockHighlight.detail(selection)
+            clockHighlight = clockHighlight == next ? nil : next
         } label: {
             HStack(spacing: 4) {
                 Circle()
-                    .fill(detailColor(.sleepStage, token: token))
+                    .fill(detailColor(kind, token: token))
                     .frame(width: 7, height: 7)
-                Text(detailName(.sleepStage, token: token))
+                Text(detailName(kind, token: token))
                     .font(
                         .taption(
                             size: 9,
-                            weight: highlightedDetail == selection
+                            weight: isSelected
                                 ? .bold
                                 : .regular
                         )
@@ -1376,13 +1359,54 @@ struct ReviewView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(
-                highlightedDetail == selection
-                    ? detailColor(.sleepStage, token: token).opacity(0.16)
+                isSelected
+                    ? detailColor(kind, token: token).opacity(0.16)
                     : Color(red: 0.95, green: 0.95, blue: 0.96),
                 in: Capsule()
             )
         }
+        .opacity(legendOpacity(isSelected: isSelected))
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func phaseSummaryLegendChip(_ id: String) -> some View {
+        let phase = DayPhase(rawValue: id)
+        let tint = detailColor(.dayPhase, token: id)
+        let isSelected = highlightedCategoryID == id
+        return Button {
+            let next = ReviewClockHighlight.category(id)
+            clockHighlight = clockHighlight == next ? nil : next
+        } label: {
+            HStack(spacing: 4) {
+                Circle().fill(tint).frame(width: 7, height: 7)
+                Text(phase?.title ?? id)
+                    .font(
+                        .taption(
+                            size: 9,
+                            weight: isSelected
+                                ? .bold
+                                : .regular
+                        )
+                    )
+                    .foregroundStyle(Color.tpInk)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                isSelected
+                    ? tint.opacity(0.16)
+                    : Color(red: 0.95, green: 0.95, blue: 0.96),
+                in: Capsule()
+            )
+        }
+        .opacity(legendOpacity(isSelected: isSelected))
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func legendOpacity(isSelected: Bool) -> Double {
+        clockHighlight == nil || isSelected ? 1 : 0.42
     }
 
     // MARK: - 계획
@@ -1466,6 +1490,7 @@ struct ReviewView: View {
         let isExpanded = !collapsedGroupIDs.contains(group.id)
         VStack(alignment: .leading, spacing: 2) {
             Button {
+                clearClockHighlight()
                 if isExpanded {
                     collapsedGroupIDs.insert(group.id)
                 } else {
@@ -1515,6 +1540,7 @@ struct ReviewView: View {
         in group: RecordCategoryGroup
     ) -> some View {
         Button {
+            clearClockHighlight()
             model.detail = .actual(child.recordID)
         } label: {
             HStack(spacing: 7) {
@@ -1654,15 +1680,21 @@ struct ReviewView: View {
         )
         if selected != selectedBucketIDs { selectedBucketIDs = selected }
 
-        let periodActuals = ReviewCoverageEngine.records(
-            actuals: actuals,
-            in: [period],
+        let phaseActuals = DayPhaseEvidenceEngine.records(
+            from: model.snapshot.actuals,
+            intersecting: period,
             asOf: now
+        )
+        let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
+            model.snapshot.settings.frequentPlaces
         )
         let chartBuckets = model.reviewScale == .day
             ? []
-            : RecordChartEngine.buckets(
-                actuals: periodActuals,
+            : RecordChartEngine.phaseBuckets(
+                actuals: phaseActuals,
+                travel: model.snapshot.travel,
+                stays: model.snapshot.places,
+                placeKinds: placeKinds,
                 in: period,
                 unit: model.reviewScale == .year ? .month : .day,
                 calendar: engine.aggregation.calendar,
@@ -1702,7 +1734,9 @@ struct ReviewView: View {
         var phaseRing: RecordClockDetailRing?
         var activityRings: [RecordClockDetailRing] = []
         var contextRings: [RecordClockDetailRing] = []
-        var detailRings: [RecordClockDetailRing] = []
+        var phaseDurations = RecordChartEngine.categoryDurations(
+            in: chartBuckets
+        )
         var selectedChartBucketIDs: Set<String> = []
         if model.reviewScale == .day, let day = spans.first {
             rings = RecordChartEngine.clockRings(
@@ -1710,30 +1744,28 @@ struct ReviewView: View {
                 in: day,
                 asOf: now
             )
-            // 일과 고리도 이미 만들어 둔 수면·정지 문맥·이동만 읽는다. 집이
-            // 아직 좌표를 갖지 않았으면 오감을 만들 수 없어 그만큼 빈다.
-            phaseRing = RecordClockDetailEngine.phaseRing(
-                actuals: actuals,
+            let dayPhases = DayPhaseEngine.completePhases(
+                actuals: phaseActuals,
                 travel: model.snapshot.travel,
                 stays: model.snapshot.places,
-                placeKinds: FrequentPlaceResolutionEngine()
-                    .kindsByPlaceKey(model.snapshot.settings.frequentPlaces),
+                placeKinds: placeKinds,
+                in: day,
+                asOf: now
+            )
+            phaseDurations = DayPhaseEngine.categoryDurations(dayPhases)
+            phaseRing = RecordClockDetailEngine.phaseRing(
+                actuals: phaseActuals,
+                travel: model.snapshot.travel,
+                stays: model.snapshot.places,
+                placeKinds: placeKinds,
+                in: day,
+                asOf: now
+            )
+            activityRings = RecordClockDetailEngine.activityRings(
+                sleepSessions: model.sleepSessions,
+                travel: model.snapshot.travel,
                 in: day
             )
-            // 수면 단계는 활동의 수면 구간에 바로 덮어 2단계로 보여 주고,
-            // 이동은 상세, 날씨·위치는 환경 정보로 분리한다.
-            activityRings = [
-                RecordClockDetailEngine.activitySleepRing(
-                    sessions: model.sleepSessions,
-                    in: day
-                )
-            ].compactMap { $0 }
-            detailRings = [
-                RecordClockDetailEngine.travelRing(
-                    segments: model.snapshot.travel,
-                    in: day
-                ),
-            ].compactMap { $0 }
             contextRings = [
                 RecordClockDetailEngine.weatherRing(
                     contexts: model.snapshot.weather,
@@ -1766,10 +1798,6 @@ struct ReviewView: View {
         if content.period != period || model.reviewScale != .day {
             playStartedAt = nil
         }
-        // 조각의 id는 띠 안의 자리 번호라, 띠가 달라지면 같은 id가 다른
-        // 줄거리를 가리킨다. 띠가 바뀌면 짚어 둔 조각을 놓는다.
-        if content.phaseRing != phaseRing { highlightedPhaseArcID = nil }
-
         let groups = ActualRecordGroupingEngine.groups(
             actuals: displayActuals,
             in: spans,
@@ -1791,25 +1819,34 @@ struct ReviewView: View {
             phaseRing: phaseRing,
             activityRings: activityRings,
             contextRings: contextRings,
-            detailRings: detailRings,
+            phaseDurations: phaseDurations,
             chartBuckets: chartBuckets,
             selectedChartBucketIDs: selectedChartBucketIDs
         )
         collapsedGroupIDs = collapsesAllGroups
             ? groupIDs
             : collapsedGroupIDs.intersection(groupIDs)
-        if let highlighted = highlightedCategoryID,
-           !content.groups.contains(where: { $0.id == highlighted }) {
-            highlightedCategoryID = nil
-        }
-        if let highlightedDetail,
-           !(activityRings + detailRings).contains(where: {
-               $0.kind == highlightedDetail.kind
-                   && $0.arcs.contains(where: {
-                       $0.token == highlightedDetail.token
-                   })
-           }) {
-            self.highlightedDetail = nil
+        let legendIDs = model.reviewScale == .day
+            ? Set(groups.map(\.id))
+            : Set(phaseDurations.map(\.categoryID))
+        switch clockHighlight {
+        case .phase(let arcID, let token):
+            if phaseRing?.arcs.contains(where: {
+                $0.id == arcID && $0.token == token
+            }) != true {
+                clearClockHighlight()
+            }
+        case .category(let id):
+            if !legendIDs.contains(id) { clearClockHighlight() }
+        case .detail(let selection):
+            if !activityRings.contains(where: {
+                $0.kind == selection.kind
+                    && $0.arcs.contains(where: { $0.token == selection.token })
+            }) {
+                clearClockHighlight()
+            }
+        case nil:
+            break
         }
     }
 

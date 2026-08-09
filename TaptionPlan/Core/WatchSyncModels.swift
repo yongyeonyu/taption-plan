@@ -75,6 +75,7 @@ enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
     case eating
     case typing
     case housework
+    case showering
     case sleep
     case unknown
 
@@ -98,10 +99,22 @@ enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
         case .eating: "식사"
         case .typing: "타이핑"
         case .housework: "집안일"
+        case .showering: "샤워"
         case .sleep: "수면"
         case .unknown: "활동"
         }
     }
+
+    /// Watch에서 사용자가 고를 수 있는 확정 활동. 모델 내부의 `unknown`은
+    /// 사용자 선택지로 노출하지 않는다.
+    static let confirmationChoices: [WatchBehaviorKind] = [
+        .sleep,
+        .walking, .running, .cycling, .stairsUp, .stairsDown, .elevator,
+        .automotive, .publicTransit, .subway,
+        .exercise,
+        .showering, .housework, .brushingTeeth, .eating, .typing,
+        .standing, .sitting, .lying, .stationary,
+    ]
 
     var isMovement: Bool {
         switch self {
@@ -793,6 +806,11 @@ struct TaptionWatchActivityConfirmation: Codable, Hashable, Sendable {
     var observedBehavior: WatchBehaviorKind?
     /// 사용자가 고른 실제 행동. `isCorrect`가 true면 nil이다.
     var correctedBehavior: WatchBehaviorKind?
+    /// iPhone이 만든 확인 요청과 센서 패턴. Watch가 독자적으로 후보를
+    /// 만들지 않도록 요청 원본을 응답에 그대로 돌려보낸다.
+    var suggestionID: UUID?
+    var sensorSessionID: UUID?
+    var pattern: WatchActivityPattern?
 
     init(
         id: UUID = UUID(),
@@ -803,7 +821,10 @@ struct TaptionWatchActivityConfirmation: Codable, Hashable, Sendable {
         observedPlanID: UUID? = nil,
         observedPlanTitle: String? = nil,
         observedBehavior: WatchBehaviorKind? = nil,
-        correctedBehavior: WatchBehaviorKind? = nil
+        correctedBehavior: WatchBehaviorKind? = nil,
+        suggestionID: UUID? = nil,
+        sensorSessionID: UUID? = nil,
+        pattern: WatchActivityPattern? = nil
     ) {
         self.id = id
         self.respondedAt = respondedAt
@@ -814,6 +835,268 @@ struct TaptionWatchActivityConfirmation: Codable, Hashable, Sendable {
         self.observedPlanTitle = observedPlanTitle
         self.observedBehavior = observedBehavior
         self.correctedBehavior = isCorrect ? nil : correctedBehavior
+        self.suggestionID = suggestionID
+        self.sensorSessionID = sensorSessionID
+        self.pattern = pattern
+    }
+}
+
+/// iPhone과 Watch의 문맥을 합친 개인화용 특징. 원시 센서 파일은 별도로
+/// 보존하고 여기에는 비교에 필요한 요약값만 둔다.
+struct WatchActivityPattern: Codable, Hashable, Sendable {
+    var duration: TimeInterval
+    var accelerationVariationG: Double?
+    var jerkGPerSecond: Double?
+    var peakRotationRate: Double?
+    var stepsPerMinute: Double?
+    var averageHeartRate: Double?
+    var atHome: Bool
+    var waterLockEnabled: Bool
+    var observedBehavior: WatchBehaviorKind?
+}
+
+struct WatchActivityPatternSample: Codable, Hashable, Sendable {
+    var id: UUID
+    var capturedAt: Date
+    var pattern: WatchActivityPattern
+    var label: WatchBehaviorKind
+
+    init(
+        id: UUID = UUID(),
+        capturedAt: Date = .now,
+        pattern: WatchActivityPattern,
+        label: WatchBehaviorKind
+    ) {
+        self.id = id
+        self.capturedAt = capturedAt
+        self.pattern = pattern
+        self.label = label
+    }
+}
+
+struct TaptionWatchActivitySuggestion: Identifiable, Codable, Hashable,
+    Sendable {
+    var id: UUID
+    var sensorSessionID: UUID
+    var generatedAt: Date
+    var startedAt: Date
+    var endedAt: Date
+    var proposedBehavior: WatchBehaviorKind
+    var alternativeBehaviors: [WatchBehaviorKind]
+    var confidenceScore: Double
+    var evidence: [String]
+    var pattern: WatchActivityPattern
+
+    init(
+        id: UUID = UUID(),
+        sensorSessionID: UUID,
+        generatedAt: Date = .now,
+        startedAt: Date,
+        endedAt: Date,
+        proposedBehavior: WatchBehaviorKind,
+        alternativeBehaviors: [WatchBehaviorKind],
+        confidenceScore: Double,
+        evidence: [String],
+        pattern: WatchActivityPattern
+    ) {
+        self.id = id
+        self.sensorSessionID = sensorSessionID
+        self.generatedAt = generatedAt
+        self.startedAt = startedAt
+        self.endedAt = max(startedAt, endedAt)
+        self.proposedBehavior = proposedBehavior
+        self.alternativeBehaviors = alternativeBehaviors.filter {
+            $0 != proposedBehavior && $0 != .unknown
+        }
+        self.confidenceScore = min(1, max(0, confidenceScore))
+        self.evidence = Array(Set(evidence)).sorted()
+        self.pattern = pattern
+    }
+}
+
+struct WatchActivityResolution: Sendable {
+    var learnedBehavior: WatchBehaviorInference?
+    var suggestion: TaptionWatchActivitySuggestion?
+}
+
+/// 애매한 생활 행동은 사용자에게 묻고, 같은 패턴이 세 번 이상 같은 답을
+/// 얻은 뒤에만 자동 확정한다. 운동 세션처럼 Apple이 이미 확정한 기록은
+/// 이 경로를 거치지 않는다.
+enum WatchActivityPersonalizationEngine {
+    static let modelVersion = "watch-personal-v1"
+    private static let minimumLearningSamples = 3
+
+    static func pattern(
+        from summary: TaptionWatchSensorSummary,
+        atHome: Bool
+    ) -> WatchActivityPattern {
+        let duration = max(1, summary.endedAt.timeIntervalSince(
+            summary.startedAt
+        ))
+        return WatchActivityPattern(
+            duration: duration,
+            accelerationVariationG: summary.accelerometerStandardDeviationG,
+            jerkGPerSecond: summary.accelerometerMeanJerkGPerSecond,
+            peakRotationRate: summary.peakRotationRateRadiansPerSecond,
+            stepsPerMinute: summary.stepCount.map {
+                Double($0) / max(1, duration / 60)
+            },
+            averageHeartRate: summary.averageHeartRate,
+            atHome: atHome,
+            waterLockEnabled: summary.waterLockEnabled == true,
+            observedBehavior: summary.behavior
+        )
+    }
+
+    static func resolve(
+        _ summary: TaptionWatchSensorSummary,
+        atHome: Bool,
+        learnedSamples: [WatchActivityPatternSample],
+        now: Date = .now
+    ) -> WatchActivityResolution {
+        guard summary.isAmbient == true else {
+            return WatchActivityResolution(
+                learnedBehavior: nil,
+                suggestion: nil
+            )
+        }
+        let pattern = pattern(from: summary, atHome: atHome)
+        if let learned = learnedBehavior(
+            for: pattern,
+            samples: learnedSamples
+        ) {
+            return WatchActivityResolution(
+                learnedBehavior: learned,
+                suggestion: nil
+            )
+        }
+        guard isSustainedMotion(pattern) else {
+            return WatchActivityResolution(
+                learnedBehavior: nil,
+                suggestion: nil
+            )
+        }
+
+        let proposal: (
+            behavior: WatchBehaviorKind,
+            alternatives: [WatchBehaviorKind],
+            score: Double,
+            evidence: [String]
+        )?
+        if atHome && pattern.waterLockEnabled && pattern.duration >= 60 {
+            proposal = (
+                .showering,
+                [.housework],
+                0.72,
+                ["집 위치", "Water Lock 켜짐", "지속적인 손목 움직임"]
+            )
+        } else if atHome && summary.behavior?.isMovement != true {
+            proposal = (
+                .housework,
+                [.showering, .brushingTeeth],
+                max(0.55, min(0.74, summary.behaviorConfidenceScore ?? 0.6)),
+                ["집 위치", "지속적인 손목 움직임"]
+            )
+        } else if let behavior = summary.behavior,
+                  [.brushingTeeth, .eating, .typing, .housework]
+                    .contains(behavior),
+                  (summary.behaviorConfidenceScore ?? 0) < 0.85 {
+            proposal = (
+                behavior,
+                [],
+                summary.behaviorConfidenceScore ?? 0.55,
+                summary.behaviorEvidence ?? ["Apple Watch 센서 추정"]
+            )
+        } else {
+            proposal = nil
+        }
+        guard let proposal else {
+            return WatchActivityResolution(
+                learnedBehavior: nil,
+                suggestion: nil
+            )
+        }
+        return WatchActivityResolution(
+            learnedBehavior: nil,
+            suggestion: TaptionWatchActivitySuggestion(
+                sensorSessionID: summary.sessionID,
+                generatedAt: now,
+                startedAt: summary.startedAt,
+                endedAt: summary.endedAt,
+                proposedBehavior: proposal.behavior,
+                alternativeBehaviors: proposal.alternatives,
+                confidenceScore: proposal.score,
+                evidence: proposal.evidence,
+                pattern: pattern
+            )
+        )
+    }
+
+    static func learnedBehavior(
+        for pattern: WatchActivityPattern,
+        samples: [WatchActivityPatternSample]
+    ) -> WatchBehaviorInference? {
+        let nearby = samples.compactMap { sample -> (
+            WatchActivityPatternSample, Double
+        )? in
+            guard sample.pattern.atHome == pattern.atHome,
+                  sample.pattern.waterLockEnabled
+                    == pattern.waterLockEnabled else { return nil }
+            let value = distance(pattern, sample.pattern)
+            return value <= 1.5 ? (sample, value) : nil
+        }
+        .sorted { $0.1 < $1.1 }
+        .prefix(8)
+        guard nearby.count >= minimumLearningSamples else { return nil }
+
+        var votes: [WatchBehaviorKind: Double] = [:]
+        for (sample, distance) in nearby {
+            votes[sample.label, default: 0] += 1 / (0.15 + distance)
+        }
+        guard let winner = votes.max(by: { $0.value < $1.value }) else {
+            return nil
+        }
+        let total = votes.values.reduce(0, +)
+        let confidence = total > 0 ? winner.value / total : 0
+        guard confidence >= 0.8 else { return nil }
+        return WatchBehaviorInference(
+            kind: winner.key,
+            confidenceScore: min(0.95, confidence),
+            evidence: ["사용자 확인 패턴 \(nearby.count)회"],
+            modelVersion: modelVersion
+        )
+    }
+
+    private static func isSustainedMotion(
+        _ pattern: WatchActivityPattern
+    ) -> Bool {
+        guard pattern.duration >= 20 else { return false }
+        return (pattern.accelerationVariationG ?? 0) >= 0.018
+            || (pattern.jerkGPerSecond ?? 0) >= 0.018
+            || (pattern.stepsPerMinute ?? 0) >= 8
+    }
+
+    private static func distance(
+        _ lhs: WatchActivityPattern,
+        _ rhs: WatchActivityPattern
+    ) -> Double {
+        var values: [Double] = []
+        func add(_ a: Double?, _ b: Double?, scale: Double) {
+            guard let a, let b else { return }
+            values.append(min(2, abs(a - b) / scale))
+        }
+        add(lhs.accelerationVariationG, rhs.accelerationVariationG, scale: 0.04)
+        add(lhs.jerkGPerSecond, rhs.jerkGPerSecond, scale: 0.25)
+        add(lhs.peakRotationRate, rhs.peakRotationRate, scale: 2)
+        add(lhs.stepsPerMinute, rhs.stepsPerMinute, scale: 40)
+        add(lhs.averageHeartRate, rhs.averageHeartRate, scale: 35)
+        if let left = lhs.observedBehavior, let right = rhs.observedBehavior,
+           left != right {
+            values.append(0.35)
+        }
+        return values.isEmpty
+            ? (lhs.observedBehavior == rhs.observedBehavior ? 0 : 2)
+            : values.reduce(0, +) / Double(values.count)
     }
 }
 
@@ -1302,6 +1585,7 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var dataSyncProfile: TaptionWatchDataSyncProfile? = nil
     var locationTrackingEnabled: Bool? = nil
     var locationPermissionState: String? = nil
+    var activitySuggestion: TaptionWatchActivitySuggestion? = nil
 }
 
 struct TaptionWatchHealthSnapshot: Codable, Hashable, Sendable {
@@ -1385,6 +1669,9 @@ struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
     /// Low-power accelerometer capture outside an explicit workout session.
     /// Optional so summaries queued by older Watch builds remain readable.
     var isAmbient: Bool? = nil
+    /// 직접적인 물방울 센서가 아니라 Watch의 Water Lock 상태다.
+    /// 지원되는 수중 센서가 없는 기기에서도 샤워 후보의 보조 근거가 된다.
+    var waterLockEnabled: Bool? = nil
 }
 
 enum TaptionWatchEnvelope {
@@ -1433,6 +1720,29 @@ enum WatchActivityConfirmationStore {
               ) else {
             return []
         }
+        return values
+    }
+}
+
+enum WatchActivityLearningStore {
+    private static let key = "TaptionPlan.watchActivityLearningSamples"
+    private static let limit = 1_000
+
+    static func append(_ value: WatchActivityPatternSample) {
+        var all = read()
+        guard !all.contains(where: { $0.id == value.id }) else { return }
+        all.append(value)
+        if all.count > limit { all.removeFirst(all.count - limit) }
+        guard let data = try? JSONEncoder().encode(all) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func read() -> [WatchActivityPatternSample] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let values = try? JSONDecoder().decode(
+                [WatchActivityPatternSample].self,
+                from: data
+              ) else { return [] }
         return values
     }
 }

@@ -1026,7 +1026,7 @@ struct SettingsView: View {
                         )
                         .foregroundStyle(Color.tpInk)
                     Text(
-                        "워치는 가속도만 "
+                        "iPhone 설정 자동 반영 · 워치는 가속도만 "
                             + model.settings.watchAccelerationProfile.subtitle
                     )
                         .font(.taption(size: SettingsTypography.rowSubtitle))
@@ -1120,7 +1120,7 @@ struct SettingsView: View {
             .accessibilityValue(model.settings.watchDataSyncProfile.subtitle)
 
             HStack {
-                Text("건강·활동·가속도 최신값")
+                Text("iPhone 설정 자동 반영 · 건강·활동·가속도")
                     .font(.taption(size: SettingsTypography.footnote))
                     .foregroundStyle(Color.tpSecondary)
                 Spacer()

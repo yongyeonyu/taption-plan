@@ -227,6 +227,8 @@ final class AppModel {
     @ObservationIgnored private var lastTrackingSessionRecoveryPersistAt: Date?
     @ObservationIgnored private var lastDeviceSnapshotPersistAt: Date?
     @ObservationIgnored private var lastReviewArchiveRefreshAt: Date?
+    @ObservationIgnored private var pendingWatchActivitySuggestion:
+        TaptionWatchActivitySuggestion?
     @ObservationIgnored private var pendingDeviceLocalPersistTask: Task<Void, Never>?
     @ObservationIgnored private var liveMergeCacheKey: LiveMergeCacheKey?
     @ObservationIgnored private var liveMergeCacheValue: [SensorReading] = []
@@ -378,22 +380,17 @@ final class AppModel {
             },
             onActivityConfirmation: { [weak self] confirmation in
                 Task { @MainActor [weak self] in
-                    self?.applyWatchActivityConfirmation(confirmation)
+                    await self?.applyWatchActivityConfirmation(confirmation)
                 }
             },
-            onLocationTracking: { [weak self] enabled in
+            // Watch settings are owned by the iPhone. Older Watch builds may
+            // still send a location toggle; ignore it and restore the iPhone
+            // value instead of letting the Watch mutate app settings.
+            onLocationTracking: { [weak self] _ in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    if enabled {
-                        await self.enableLocationCollection()
-                    } else {
-                        await self.disableLocationCollection()
-                    }
-                }
-            },
-            onLocationTrackingGuidance: { [weak self] in
-                Task { @MainActor [weak self] in
-                    self?.presentPermissionOnboarding(for: .location)
+                    await self.bootstrap()
+                    self.publishWatchPayload()
                 }
             },
             onStatusChange: { [weak self] state in
@@ -788,6 +785,7 @@ final class AppModel {
                     openInitialSetup()
                 }
                 isBootstrapped = true
+                publishWatchPayload()
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "bootstrap_local_snapshot_loaded",
                     fields: [
@@ -1308,6 +1306,7 @@ final class AppModel {
             userFacingError =
                 "장소를 자동 기록하려면 위치 접근을 ‘항상’으로 허용해주세요."
         }
+        publishWatchPayload()
         await persist()
     }
 
@@ -1316,6 +1315,7 @@ final class AppModel {
         isSensorCollecting = false
         snapshot.settings.locationEnabled = false
         snapshot.settings.backgroundPreciseLocationEnabled = false
+        publishWatchPayload()
         await persist()
     }
 
@@ -1467,6 +1467,7 @@ final class AppModel {
     func selectCatCoat(_ coat: CatCoat) {
         selectedCatCoat = coat
         snapshot.settings.catStyle = coat.catStyle
+        publishWatchPayload()
         Task { await persist() }
     }
 
@@ -1485,7 +1486,9 @@ final class AppModel {
     }
 
     func setReduceMotion(_ enabled: Bool) {
+        guard snapshot.settings.reduceMotion != enabled else { return }
         snapshot.settings.reduceMotion = enabled
+        publishWatchPayload()
         Task { await persist() }
     }
 
@@ -1518,6 +1521,7 @@ final class AppModel {
             return
         }
         snapshot.settings.watchAccelerationProfile = profile
+        publishWatchPayload()
         Task { await persist() }
     }
 
@@ -1528,6 +1532,7 @@ final class AppModel {
             return
         }
         snapshot.settings.watchDataSyncProfile = profile
+        publishWatchPayload()
         Task { await persist() }
     }
 
@@ -3271,6 +3276,32 @@ final class AppModel {
                     + error.localizedDescription
             }
         }
+        let atHome = isWatchSummaryAtHome(summary)
+        let resolution = WatchActivityPersonalizationEngine.resolve(
+            summary,
+            atHome: atHome,
+            learnedSamples: WatchActivityLearningStore.read()
+        )
+        var interpretedSummary = summary
+        if let learned = resolution.learnedBehavior {
+            interpretedSummary.behavior = learned.kind
+            interpretedSummary.behaviorConfidenceScore = learned.confidenceScore
+            interpretedSummary.behaviorEvidence = Array(Set(
+                (summary.behaviorEvidence ?? []) + learned.evidence
+            )).sorted()
+            interpretedSummary.behaviorModelVersion = learned.modelVersion
+        }
+        let previousSuggestion = pendingWatchActivitySuggestion
+        if let suggestion = resolution.suggestion {
+            pendingWatchActivitySuggestion = mergingWatchSuggestion(suggestion)
+        } else if resolution.learnedBehavior != nil
+                    || (pendingWatchActivitySuggestion?.sensorSessionID
+                        == summary.sessionID && summary.isFinal) {
+            pendingWatchActivitySuggestion = nil
+        }
+        if previousSuggestion != pendingWatchActivitySuggestion {
+            publishWatchPayload()
+        }
         if summary.isAmbient != true, let sensorService {
             let routePoints = summary.routePoints ?? []
             let watchAccelerationAverageG = summary.accelerometerAverageG.map {
@@ -3320,6 +3351,7 @@ final class AppModel {
             case .automotive, .publicTransit, .subway: .automotive
             case .stationary, .standing, .sitting, .lying, .elevator,
                  .exercise, .brushingTeeth, .eating, .typing, .housework,
+                 .showering,
                  .sleep, .unknown:
                 .stationary
             }
@@ -3471,12 +3503,23 @@ final class AppModel {
         let linkedPlan = summary.linkedPlanID.flatMap { planID in
             snapshot.plans.first { $0.id == planID }
         }
-        snapshot.actuals = AppleWatchSensorActivityEngine.upserting(
-            summary,
-            into: snapshot.actuals,
-            linkedPlan: linkedPlan,
-            atHome: isWatchSummaryAtHome(summary)
-        )
+        if resolution.suggestion == nil {
+            snapshot.actuals = AppleWatchSensorActivityEngine.upserting(
+                interpretedSummary,
+                into: snapshot.actuals,
+                linkedPlan: linkedPlan,
+                atHome: atHome
+            )
+        } else {
+            // 답변 전에는 후보를 최종 활동으로 보이지 않는다. 원시 센서와
+            // 요약 아카이브는 위에서 이미 보존했다.
+            snapshot.actuals.removeAll {
+                $0.source == .appleWatch
+                    && !$0.manuallyCorrected
+                    && ($0.id == summary.sessionID
+                        || $0.sensorChunkID == summary.sessionID)
+            }
+        }
         snapshot.actuals = ActualRecordSuppressionEngine.visibleRecords(
             from: snapshot.actuals,
             suppressedIDs: snapshot.settings.suppressedActualIDs
@@ -3484,15 +3527,97 @@ final class AppModel {
         await persistDeviceLocalSnapshot()
     }
 
-    /// 워치에서 온 확인·교정을 기록 원본과 별개로 보관한다. 자동 센서 기록은
-    /// 원본을 보존해야 하므로 여기서 기존 기록을 고치지 않는다.
+    /// Watch의 답을 파생 기록과 개인화 표본에 반영한다. 원시 센서 아카이브는
+    /// 수정하지 않으며 같은 패턴이 충분히 쌓이기 전까지 자동 확정하지 않는다.
     private func applyWatchActivityConfirmation(
         _ confirmation: TaptionWatchActivityConfirmation
-    ) {
+    ) async {
+        guard !WatchActivityConfirmationStore.read().contains(where: {
+            $0.id == confirmation.id
+        }) else { return }
         WatchActivityConfirmationStore.append(confirmation)
+        let suggestion = pendingWatchActivitySuggestion.flatMap {
+            confirmation.suggestionID == nil
+                || $0.id == confirmation.suggestionID ? $0 : nil
+        }
+        let label = confirmation.isCorrect
+            ? confirmation.observedBehavior
+            : confirmation.correctedBehavior
+        if let label, let pattern = confirmation.pattern ?? suggestion?.pattern {
+            WatchActivityLearningStore.append(
+                WatchActivityPatternSample(
+                    id: confirmation.id,
+                    capturedAt: confirmation.respondedAt,
+                    pattern: pattern,
+                    label: label
+                )
+            )
+        }
+        if let label,
+           let sessionID = confirmation.sensorSessionID
+                ?? suggestion?.sensorSessionID {
+            let previous = snapshot.actuals.first {
+                $0.id == sessionID && $0.source == .appleWatch
+            }
+            snapshot.actuals.removeAll {
+                $0.source == .appleWatch
+                    && !$0.manuallyCorrected
+                    && ($0.id == sessionID || $0.sensorChunkID == sessionID)
+            }
+            snapshot.actuals.append(
+                ActualRecord(
+                    id: sessionID,
+                    planID: nil,
+                    title: label.title,
+                    categoryID: watchCategoryID(for: label),
+                    startedAt: confirmation.observedStartedAt,
+                    endedAt: confirmation.observedEndedAt,
+                    source: .appleWatch,
+                    confidence: .high,
+                    createdAt: previous?.createdAt
+                        ?? confirmation.observedStartedAt,
+                    behavior: label.rawValue,
+                    evidence: Array(Set(
+                        (suggestion?.evidence ?? []) + ["사용자 확인"]
+                    )).sorted(),
+                    sensorChunkID: sessionID,
+                    modelVersion:
+                        WatchActivityPersonalizationEngine.modelVersion,
+                    manuallyCorrected: true
+                )
+            )
+            snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        }
+        if confirmation.suggestionID == nil
+            || pendingWatchActivitySuggestion?.id == confirmation.suggestionID {
+            pendingWatchActivitySuggestion = nil
+        }
         Self.integrationLogger.notice(
             "Watch activity confirmation received: correct=\(confirmation.isCorrect, privacy: .public)"
         )
+        await persistDeviceLocalSnapshot()
+    }
+
+    private func mergingWatchSuggestion(
+        _ candidate: TaptionWatchActivitySuggestion
+    ) -> TaptionWatchActivitySuggestion {
+        guard let current = pendingWatchActivitySuggestion,
+              current.sensorSessionID == candidate.sensorSessionID,
+              current.proposedBehavior == candidate.proposedBehavior,
+              candidate.startedAt <= current.endedAt.addingTimeInterval(10 * 60)
+        else { return candidate }
+        var merged = candidate
+        merged.id = current.id
+        merged.startedAt = min(current.startedAt, candidate.startedAt)
+        merged.evidence = Array(Set(current.evidence + candidate.evidence))
+            .sorted()
+        return merged
+    }
+
+    private func watchCategoryID(for behavior: WatchBehaviorKind) -> String {
+        if behavior.isMovement { return "movement" }
+        if behavior == .sleep { return "sleep" }
+        return "activity"
     }
 
     private func applyWatchHealthSnapshot(
@@ -3746,6 +3871,8 @@ final class AppModel {
             )
             snapshot.actuals.removeAll {
                 $0.source == .motion
+                    && $0.modelVersion
+                        != ChargingInactivitySleepEngine.modelVersion
                     && $0.span(asOf: span.end).intersection(with: span) != nil
             }
             snapshot.actuals.append(contentsOf: generatedMotionActuals)
@@ -3926,6 +4053,10 @@ final class AppModel {
             ),
             inside: span
         )
+        applyChargingInactivitySleepRecords(
+            readings: readings,
+            inside: span
+        )
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(
@@ -3934,6 +4065,45 @@ final class AppModel {
                 fallbackReading: latestReadingWithPoint
             )
         }
+    }
+
+    private func applyChargingInactivitySleepRecords(
+        readings: [SensorReading],
+        inside span: TimeSpan
+    ) {
+        let evidence = readings.filter { $0.powerState != nil }
+        guard !evidence.isEmpty else { return }
+        let prior = snapshot.actuals.filter {
+            $0.modelVersion != ChargingInactivitySleepEngine.modelVersion
+        }
+        let watchAvailable = appleWatchConnectionState != .unsupported
+            && appleWatchConnectionState != .notPaired
+            || readings.contains { $0.sourceDevice == .appleWatch }
+            || prior.contains {
+                $0.source == .appleWatch
+                    && $0.span(asOf: span.end).intersection(with: span) != nil
+            }
+        let records = ChargingInactivitySleepEngine.records(
+            readings: readings,
+            actuals: prior,
+            inside: span,
+            watchAvailable: watchAvailable,
+            maximumSampleGap: max(
+                20 * 60,
+                settings.sensorCollectionProfile.interval * 1.6 + 60
+            )
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        let evidenceSpan = TimeSpan(
+            start: evidence.map(\.timestamp).min() ?? span.start,
+            end: evidence.map(\.timestamp).max() ?? span.start
+        )
+        snapshot.actuals.removeAll { actual in
+            actual.modelVersion == ChargingInactivitySleepEngine.modelVersion
+                && actual.span(asOf: span.end)
+                    .intersection(with: evidenceSpan) != nil
+        }
+        snapshot.actuals.append(contentsOf: records)
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 
     func setWeatherEnabled(_ enabled: Bool) async {
@@ -4784,13 +4954,18 @@ final class AppModel {
         guard !isHealthRefreshRunning else { return }
         isHealthRefreshRunning = true
         defer { isHealthRefreshRunning = false }
+        let span = requestedSpan ?? recentHealthSpan
+        let healthFields = [
+            "periodic": String(requestedSpan != nil),
+            "start": String(Int(span.start.timeIntervalSince1970)),
+            "end": String(Int(span.end.timeIntervalSince1970)),
+        ]
         TaptionPlanDiagnosticsLogger.shared.record(
             "health_refresh_started",
-            fields: ["periodic": String(requestedSpan != nil)]
+            fields: healthFields
         )
 
         do {
-            let span = requestedSpan ?? recentHealthSpan
             async let actualValues = healthService.actuals(in: span)
             async let sessions = healthService.sleepSessions(in: span)
             let (freshActuals, freshSessions) = try await (actualValues, sessions)
@@ -4868,10 +5043,10 @@ final class AppModel {
             )
             TaptionPlanDiagnosticsLogger.shared.record(
                 "health_refresh_completed",
-                fields: [
+                fields: healthFields.merging([
                     "actuals": String(freshActuals.count),
                     "sleep_sessions": String(freshSessions.count),
-                ]
+                ]) { _, new in new }
             )
         } catch {
             Self.integrationLogger.error(
@@ -4884,7 +5059,9 @@ final class AppModel {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "health_refresh_failed",
                 level: .error,
-                fields: ["error": String(describing: type(of: error))]
+                fields: healthFields.merging(
+                    TaptionDiagnosticError.fields(for: error)
+                ) { _, new in new }
             )
         }
     }
@@ -4931,6 +5108,13 @@ final class AppModel {
             Self.integrationLogger.notice(
                 "Screen Time refresh completed: samples=\(samples.count, privacy: .public), records=\(fresh.count, privacy: .public)"
             )
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "screen_time_refresh_completed",
+                fields: [
+                    "samples": String(samples.count),
+                    "records": String(fresh.count),
+                ]
+            )
         } catch {
             Self.integrationLogger.error(
                 "Screen Time refresh failed: \(error.localizedDescription, privacy: .public)"
@@ -4938,6 +5122,11 @@ final class AppModel {
             if showErrors {
                 userFacingError = "앱 사용시간을 읽지 못했습니다. \(error.localizedDescription)"
             }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "screen_time_refresh_failed",
+                level: .error,
+                fields: TaptionDiagnosticError.fields(for: error)
+            )
         }
     }
 
@@ -5597,33 +5786,6 @@ final class AppModel {
     private func publishWidgetPayload() {
         let calendar = Calendar.autoupdatingCurrent
         let now = Date.now
-        let dayStart = calendar.startOfDay(for: now)
-        let weekStart = calendar.dateInterval(
-            of: .weekOfYear,
-            for: dayStart
-        )?.start ?? dayStart
-        let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)
-            ?? weekStart.addingTimeInterval(7 * 86_400)
-        let categoriesByID = Dictionary(
-            snapshot.categories.map { ($0.id, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-        let activeActualPairs: [(UUID, ActualRecord)] = snapshot.actuals
-            .compactMap { actual in
-                guard let planID = actual.planID,
-                      actual.endedAt == nil else {
-                    return nil
-                }
-                return (planID, actual)
-            }
-        let activeActualsByPlanID = Dictionary(
-            activeActualPairs,
-            uniquingKeysWith: { current, candidate in
-                current.startedAt >= candidate.startedAt
-                    ? current
-                    : candidate
-            }
-        )
         let payload = TaptionWidgetPayloadFactory.make(
             from: snapshot,
             now: now,
@@ -5660,6 +5822,39 @@ final class AppModel {
                 fields: ["error": String(describing: type(of: error))]
             )
         }
+        publishWatchPayload(now: now, calendar: calendar)
+    }
+
+    /// The iPhone snapshot is the only Watch settings source. This method is
+    /// intentionally separate from widget serialization so a settings toggle
+    /// reaches the Watch immediately, before disk or iCloud work finishes.
+    private func publishWatchPayload(
+        now: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) {
+        let dayStart = calendar.startOfDay(for: now)
+        let weekStart = calendar.dateInterval(
+            of: .weekOfYear,
+            for: dayStart
+        )?.start ?? dayStart
+        let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart)
+            ?? weekStart.addingTimeInterval(7 * 86_400)
+        let categoriesByID = Dictionary(
+            snapshot.categories.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let activeActualsByPlanID = Dictionary(
+            snapshot.actuals.compactMap { actual -> (UUID, ActualRecord)? in
+                guard let planID = actual.planID,
+                      actual.endedAt == nil else { return nil }
+                return (planID, actual)
+            },
+            uniquingKeysWith: { current, candidate in
+                current.startedAt >= candidate.startedAt
+                    ? current
+                    : candidate
+            }
+        )
         // Watch payloads are a live execution queue, not a copy of the
         // historical timeline.  Keep a currently-running item even when it
         // started before this moment, include upcoming items through the
@@ -5691,7 +5886,7 @@ final class AppModel {
                 )
             }
         let watchPayload = TaptionWatchPayload(
-            generatedAt: .now,
+            generatedAt: now,
             viewportStart: now,
             viewportEnd: weekEnd,
             items: watchItems,
@@ -5700,7 +5895,7 @@ final class AppModel {
             todaySummary: TaptionWatchDaySummaryFactory.make(
                 plans: snapshot.plans,
                 actuals: snapshot.actuals,
-                at: .now,
+                at: now,
                 calendar: calendar
             ),
             accelerationSettings: TaptionWatchAccelerationSettings(
@@ -5709,9 +5904,30 @@ final class AppModel {
             dataSyncProfile: snapshot.settings.watchDataSyncProfile,
             locationTrackingEnabled: snapshot.settings.locationEnabled,
             locationPermissionState:
-                snapshot.settings.permissions[.location]?.rawValue
+                snapshot.settings.permissions[.location]?.rawValue,
+            activitySuggestion: pendingWatchActivitySuggestion.flatMap {
+                now.timeIntervalSince($0.endedAt) <= 2 * 3_600 ? $0 : nil
+            }
         )
-        try? watchConnectivityService.update(payload: watchPayload)
+        do {
+            try watchConnectivityService.update(payload: watchPayload)
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_settings_queued",
+                fields: [
+                    "acceleration": snapshot.settings
+                        .watchAccelerationProfile.displayName,
+                    "data_sync": snapshot.settings
+                        .watchDataSyncProfile.displayName,
+                    "location": String(snapshot.settings.locationEnabled),
+                ]
+            )
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_settings_publish_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
+        }
     }
 
     private func requestImmediateWidgetRefresh() {

@@ -52,17 +52,6 @@ struct TaptionPlanWatchApp: App {
                 }
             }
         }
-        // Applies cached settings only; sensor capture itself stays gated
-        // until the first view's .task calls beginCaptureAfterFirstRender(),
-        // so the sensor queue can never race the first scene transaction.
-        Task { @MainActor [weak connectivity, weak workout] in
-            await Task.yield()
-            guard let workout else { return }
-            workout.applySettings(
-                acceleration: connectivity?.payload?.accelerationSettings,
-                dataSyncProfile: connectivity?.payload?.dataSyncProfile
-            )
-        }
         _connectivity = StateObject(wrappedValue: connectivity)
         _workout = StateObject(wrappedValue: workout)
         WatchLaunchDiagnostics.mark("app-init-end")

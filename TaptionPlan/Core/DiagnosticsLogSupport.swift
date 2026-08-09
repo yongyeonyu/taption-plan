@@ -6,6 +6,24 @@ enum TaptionDiagnosticsLevel: String {
     case error
 }
 
+enum TaptionDiagnosticError {
+    static func fields(for error: Error) -> [String: String] {
+        let value = error as NSError
+        var fields = [
+            "error_type": String(reflecting: type(of: error)),
+            "error_domain": value.domain,
+            "error_code": String(value.code),
+            "error_value": String(describing: error),
+            "error_description": value.localizedDescription,
+        ]
+        if let underlying = value.userInfo[NSUnderlyingErrorKey] as? NSError {
+            fields["underlying_domain"] = underlying.domain
+            fields["underlying_code"] = String(underlying.code)
+        }
+        return fields
+    }
+}
+
 final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     static let shared = TaptionPlanDiagnosticsLogger()
 

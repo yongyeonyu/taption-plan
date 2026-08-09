@@ -117,6 +117,25 @@ struct ScreenTimeUsageSample: Codable, Hashable, Sendable {
     var applicationTokenData: Data?
 }
 
+enum ScreenTimeUsageRetryPolicy {
+    static let maximumAttempts = 3
+
+    static func delay(after attempt: Int) -> Duration {
+        attempt == 1 ? .milliseconds(400) : .seconds(1)
+    }
+
+    static func shouldRetry(_ error: Error) -> Bool {
+        if error is CancellationError { return false }
+        let value = error as NSError
+        let type = String(reflecting: type(of: error)).lowercased()
+        let domain = value.domain.lowercased()
+        let description = value.localizedDescription.lowercased()
+        return (domain.contains("deviceactivity") && value.code == 0)
+            || type.contains("missingdata")
+            || description.contains("missing data")
+    }
+}
+
 @MainActor
 final class ScreenTimeUsageService {
     var authorizationState: ScreenTimeAuthorizationState {
@@ -227,17 +246,69 @@ final class ScreenTimeUsageService {
             segment: .hourly(during: range),
             devices: DeviceActivityFilter.Devices([.iPhone])
         )
-        var result: [ScreenTimeUsageSample] = []
+        let baseFields = [
+            "authorization": authorizationState.rawValue,
+            "start": String(Int(range.start.timeIntervalSince1970)),
+            "end": String(Int(range.end.timeIntervalSince1970)),
+        ]
+        for attempt in 1...ScreenTimeUsageRetryPolicy.maximumAttempts {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "screen_time_query_started",
+                fields: baseFields.merging([
+                    "attempt": String(attempt),
+                ]) { _, new in new }
+            )
+            do {
+                let result = try await query(filter: filter, range: range)
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "screen_time_query_completed",
+                    fields: baseFields.merging([
+                        "attempt": String(attempt),
+                        "samples": String(result.count),
+                    ]) { _, new in new }
+                )
+                return result
+            } catch {
+                let errorFields = baseFields
+                    .merging(TaptionDiagnosticError.fields(for: error)) {
+                        _, new in new
+                    }
+                    .merging(["attempt": String(attempt)]) { _, new in new }
+                guard attempt < ScreenTimeUsageRetryPolicy.maximumAttempts,
+                      ScreenTimeUsageRetryPolicy.shouldRetry(error) else {
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "screen_time_query_failed",
+                        level: .error,
+                        fields: errorFields
+                    )
+                    throw error
+                }
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "screen_time_query_retry",
+                    level: .notice,
+                    fields: errorFields
+                )
+                try await Task.sleep(
+                    for: ScreenTimeUsageRetryPolicy.delay(after: attempt)
+                )
+            }
+        }
+        return []
+    }
 
+    @available(iOS 26.4, *)
+    private func query(
+        filter: DeviceActivityFilter,
+        range: DateInterval
+    ) async throws -> [ScreenTimeUsageSample] {
+        var result: [ScreenTimeUsageSample] = []
         for try await data in DeviceActivityData.activityData(
             filteredBy: filter,
             using: .cached
         ) {
             for await segment in data.activitySegments {
                 guard let span = clipped(segment.dateInterval, to: range),
-                      segment.totalActivityDuration > 0 else {
-                    continue
-                }
+                      segment.totalActivityDuration > 0 else { continue }
                 let perApp = await appSamples(in: segment, span: span)
                 result.append(contentsOf: perApp.isEmpty
                     ? [segmentTotal(of: segment, span: span)]

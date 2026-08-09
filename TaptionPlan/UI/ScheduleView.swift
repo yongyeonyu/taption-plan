@@ -2739,7 +2739,7 @@ private struct RecordRelationshipView: View {
                     .font(.taption(size: 7.5, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
             }
-            Text("시간표 분류는 일과 → 활동 → 상세로 보고, 아래 연결은 출처만 표시합니다.")
+            Text("시간표는 왼쪽 일과와 오른쪽 활동으로 보고, 아래 연결은 출처만 표시합니다.")
                 .font(.taption(size: 7.5))
                 .foregroundStyle(Color.tpSecondary)
 
@@ -3855,9 +3855,9 @@ private struct TimelineDetailPanel: View {
                 HStack(spacing: 7) {
                     Image(systemName: routeModeSystemImage(travel.mode))
                         .font(.taption(size: 9, weight: .bold))
-                        .foregroundStyle(routeColor(for: travel.mode))
+                        .foregroundStyle(detailTravelColor(travel))
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("알고리즘 결과 · \(timelineTravelModeName(travel.mode))")
+                        Text(detailTravelTitle(travel))
                             .font(.taption(size: 9, weight: .semibold))
                         Text(
                             "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened)) · \(confidenceLabel(travel.confidence))"
@@ -4586,11 +4586,11 @@ private struct TimelineDetailPanel: View {
                     $0.span.intersection(with: focusedSpan) != nil
                 })
                 .sorted { $0.span.start < $1.span.start }
-            let travel = (playheadMatch?.travel ?? model.snapshot.travel
-                .filter {
+            let travel = TravelSegmentPresentationEngine.consolidated(
+                playheadMatch?.travel ?? model.snapshot.travel.filter {
                     $0.span.intersection(with: focusedSpan) != nil
-                })
-                .sorted { $0.span.start < $1.span.start }
+                }
+            )
             let sleepPlans = deduplicatedPlans(
                 matchedPlans.filter {
                     $0.categoryID == "sleep"
@@ -5953,6 +5953,24 @@ private struct TimelineDetailPanel: View {
         case .taxi, .car: .tpInk
         case .airplane, .ship: .tpPlaceDark
         }
+    }
+
+    private func detailTravelColor(_ travel: TravelSegment) -> Color {
+        isWorkoutWalking(travel)
+            ? RecordTimelinePalette.categoryColor("exercise")
+            : routeColor(for: travel.mode)
+    }
+
+    private func detailTravelTitle(_ travel: TravelSegment) -> String {
+        let kind = isWorkoutWalking(travel) ? "운동 기록" : "알고리즘 결과"
+        return "\(kind) · \(timelineTravelModeName(travel.mode))"
+    }
+
+    private func isWorkoutWalking(_ travel: TravelSegment) -> Bool {
+        TravelSegmentPresentationEngine.isWorkoutWalking(
+            travel,
+            actuals: model.snapshot.actuals
+        )
     }
 
     private func fitMapToRoutes(force: Bool = false) {
@@ -7402,20 +7420,7 @@ private struct TimelineBoard: View {
             categories: model.snapshot.categories
         )
         var rowModels = rows(in: span, index: index)
-        let clusters = photoClusters(in: span)
-        if scale == .day, !isGroup, !clusters.isEmpty {
-            rowModels.append(
-                TimelineRowModel(
-                    title: TimelineRowKind.photo.title,
-                    id: TimelineRowKind.photo.rawValue,
-                    dotColor: Color.tpPhotoDark,
-                    systemImage: TimelineRowKind.photo.systemImage,
-                    isSystemAutomatic: true,
-                    height: 65,
-                    blocks: []
-                )
-            )
-        }
+        let clusters: [PhotoCluster] = []
         rowModels = TimelineRowOrder.ordered(
             rowModels,
             id: \.id,
@@ -7423,8 +7428,7 @@ private struct TimelineBoard: View {
         )
         let buckets = summaryBuckets(in: span)
         let colors = summaryColors(for: buckets)
-        // The photo lane is a real row now. Do not reserve the old footer
-        // height as well, or the board grows an empty duplicate gap.
+        // 넓은 배율의 요약 막대만 하단 여백을 쓴다.
         let footerHeight: CGFloat = scale == .day ? 0 : 46
         return TimelineBoardLayoutSnapshot(
             rows: rowModels,
@@ -7752,15 +7756,22 @@ private struct TimelineBoard: View {
             .sorted { $0.span.start < $1.span.start }
         let grouped = Dictionary(grouping: visiblePlans, by: \.categoryID)
         let now = Date.now
-        let relevantTravel = model.snapshot.travel.filter {
-            $0.span.intersection(with: span) != nil
-        }
+        let relevantTravel = TravelSegmentPresentationEngine.consolidated(
+            model.snapshot.travel.filter {
+                $0.span.intersection(with: span) != nil
+            }
+        )
         let visibleActuals = AutomaticRecordTimelineEngine.visibleThroughNow(
             model.snapshot.actuals,
             intersecting: span,
             asOf: now
         )
             .sorted { $0.startedAt < $1.startedAt }
+        let phaseActuals = DayPhaseEvidenceEngine.records(
+            from: model.snapshot.actuals,
+            intersecting: span,
+            asOf: now
+        )
         let displayedVisibleActuals = RestSleepDisplayEngine.visibleActuals(
             MovementDisplayEngine.reviewActuals(
                 visibleActuals,
@@ -7790,7 +7801,7 @@ private struct TimelineBoard: View {
         }
         let categoryVisibleActuals: [ActualRecord]
         if usesAutomaticDayRows && TaptionProductScope.automaticLoggingOnly {
-            categoryVisibleActuals = unconfirmedActuals
+            categoryVisibleActuals = []
         } else if usesAutomaticDayRows {
             categoryVisibleActuals = displayedVisibleActuals.filter {
                 $0.source != .healthKit && $0.source != .appleWatch
@@ -7809,14 +7820,26 @@ private struct TimelineBoard: View {
             .sorted { $0.span.start < $1.span.start }
         if usesAutomaticDayRows {
             values.append(
-                contentsOf: automaticDayRows(
+                contentsOf: automaticDayPhaseRows(
                     events: events,
-                    plansByCategory: grouped,
-                    actuals: automaticActuals,
+                    actuals: phaseActuals,
+                    activities: automaticActuals,
+                    travel: relevantTravel,
                     visibleSpan: span,
                     index: index
                 )
             )
+            values.append(
+                automaticLocationRow(
+                    plans: grouped[
+                        TimelineRowKind.location.rawValue,
+                        default: []
+                    ],
+                    visibleSpan: span,
+                    index: index
+                )
+            )
+            values.append(automaticWeatherRow(visibleSpan: span))
         }
 
         let orderedCategories = model.snapshot.categories.sorted {
@@ -7994,48 +8017,428 @@ private struct TimelineBoard: View {
         return values
     }
 
-    private func automaticDayRows(
+    private func automaticDayPhaseRows(
         events: [CalendarRecord],
-        plansByCategory: [String: [PlanRecord]],
         actuals: [ActualRecord],
+        activities: [ActualRecord],
+        travel: [TravelSegment],
         visibleSpan: TimeSpan,
         index: TimelineBoardDataIndex
     ) -> [TimelineRowModel] {
-        return [
-            automaticScheduleRow(events),
-            automaticLocationRow(
-                plans: plansByCategory["location", default: []],
-                visibleSpan: visibleSpan,
-                index: index
-            ),
-            automaticMovementRow(
-                plans: plansByCategory["movement", default: []],
-                actuals: actuals.filter(isMovementActual),
-                visibleSpan: visibleSpan,
-                index: index
-            ),
-            automaticSleepRow(
-                plans: plansByCategory["sleep", default: []],
-                actuals: actuals.filter(AutomaticRecordTimelineEngine.isSleep),
-                index: index
-            ),
-            automaticActivityRow(
-                plans: plansByCategory["activity", default: []],
-                actuals: actuals.filter {
-                    !AutomaticRecordTimelineEngine.isSleep($0)
-                        && !isMovementActual($0)
-                        && $0.categoryID != ReviewCoverageEngine.unconfirmedCategoryID
-                        && $0.categoryID != "appUsage"
-                },
-                index: index
-            ),
-            automaticAppUsageRow(
-                actuals: actuals.filter { $0.categoryID == "appUsage" },
-                index: index
-            ),
-            automaticWeatherRow(visibleSpan: visibleSpan),
-            memoRow(visibleSpan: visibleSpan),
+        let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
+            model.snapshot.settings.frequentPlaces
+        )
+        let phases = DayPhaseEngine.completePhasesAcrossDays(
+            actuals: actuals,
+            travel: travel,
+            stays: model.snapshot.places,
+            placeKinds: placeKinds,
+            in: visibleSpan,
+            calendar: TimelineAxisGrid.normalizedCalendar()
+        )
+        var values = phaseActivityValues(
+            actuals: activities,
+            travel: travel,
+            phases: phases,
+            visibleSpan: visibleSpan,
+            index: index
+        )
+        values += events.compactMap { event in
+            event.span.intersection(with: visibleSpan).map { span in
+                phaseActivity(
+                    seed: "calendar.\(event.id)",
+                    phase: .appointment,
+                    title: event.title,
+                    span: span,
+                    categoryID: "calendar",
+                    categoryName: "일정",
+                    detailText: calendarDetailText(event),
+                    color: dayPhaseColor(.appointment),
+                    recordNodeID: "automatic.calendar.\(event.id)"
+                )
+            }
+        }
+        values += inferredPhaseActivities(phases, coveredBy: values)
+
+        let present = Set(values.map(\.phase))
+        return dayPhaseRowOrder.compactMap { phase in
+            guard present.contains(phase) else { return nil }
+            let activities = values
+                .filter { $0.phase == phase }
+                .sorted { $0.span.start < $1.span.start }
+            let allocation = laneAllocation(activities, span: \.span)
+            return TimelineRowModel(
+                title: phase.title,
+                id: "dayPhase.\(phase.rawValue)",
+                dotColor: dayPhaseColor(phase),
+                systemImage: dayPhaseSystemImage(phase),
+                fillColor: dayPhaseColor(phase).opacity(0.18),
+                actualColor: dayPhaseColor(phase),
+                isSystemAutomatic: true,
+                height: compactAutomaticHeight(allocation.count),
+                blocks: activities.map { activity in
+                    timelineBlock(
+                        id: activity.id,
+                        title: activity.title,
+                        span: activity.span,
+                        top: compactAutomaticTop(
+                            allocation.lanes[activity.id, default: 0]
+                        ),
+                        height: 14,
+                        isFixed: true,
+                        status: activity.isMeasured ? .completed : .planned,
+                        isActual: activity.isMeasured,
+                        opensLocationTimeline: activity.isRoute,
+                        minimumWidth: 4,
+                        detailText: activity.detailText,
+                        categoryID: activity.categoryID,
+                        categoryName: activity.categoryName,
+                        appUsageTokenData: activity.appUsageTokenData,
+                        actualID: activity.actualID,
+                        travelID: activity.travelID,
+                        recordNodeID: activity.recordNodeID,
+                        fillColor: activity.color.opacity(0.20),
+                        actualColor: activity.color,
+                        styleKey: activity.styleKey,
+                        minimumFraction: 0.000_001
+                    )
+                }
+            )
+        }
+    }
+
+    private func phaseActivityValues(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        phases: [DayPhaseSpan],
+        visibleSpan: TimeSpan,
+        index: TimelineBoardDataIndex
+    ) -> [TimelinePhaseActivity] {
+        let now = Date.now
+        let observed = TimeSpan(
+            start: visibleSpan.start,
+            end: min(visibleSpan.end, now)
+        )
+        guard observed.duration > 0 else { return [] }
+        var values: [TimelinePhaseActivity] = []
+
+        let sleepRing = RecordClockDetailEngine.activitySleepRing(
+            sessions: model.sleepSessions,
+            in: observed
+        )
+        let sleepSpans: [TimeSpan] = sleepRing?.arcs.compactMap { arc in
+            let span = TimeSpan(
+                start: observed.start.addingTimeInterval(
+                    observed.duration * arc.startFraction
+                ),
+                end: observed.start.addingTimeInterval(
+                    observed.duration * arc.endFraction
+                )
+            )
+            guard let stage = SleepStage(rawValue: arc.token) else {
+                return nil
+            }
+            values += assignedPhaseActivities(
+                seed: "sleep.\(arc.id)",
+                title: stage.displayName,
+                span: span,
+                phases: phases,
+                categoryID: "sleep",
+                categoryName: "수면",
+                detailText: "Apple 건강 · 수정 불가",
+                color: RecordTimelinePalette.detailColor(
+                    .sleepStage,
+                    token: arc.token
+                ),
+                isMeasured: true,
+                styleKey: "sleep.\(arc.token)"
+            )
+            return span
+        } ?? []
+
+        var travelSpans: [TimeSpan] = []
+        var workoutTravelSpans: [TimeSpan] = []
+        for segment in travel.sorted(by: { $0.span.start < $1.span.start }) {
+            guard let span = segment.span.intersection(with: observed) else {
+                continue
+            }
+            let isWorkout = TravelSegmentPresentationEngine
+                .isWorkoutTravel(segment, actuals: actuals, asOf: now)
+            if isWorkout {
+                workoutTravelSpans.append(span)
+            } else {
+                travelSpans.append(span)
+            }
+            values += assignedPhaseActivities(
+                seed: "travel.\(segment.id.uuidString)",
+                title: travelModeName(segment.mode),
+                span: span,
+                phases: phases,
+                categoryID: isWorkout ? "exercise" : "movement",
+                categoryName: isWorkout ? "운동" : "이동",
+                detailText: isWorkout
+                    ? "운동 기록 · 수정 불가"
+                    : "센서 추정 · \(confidenceName(segment.confidence))",
+                color: isWorkout
+                    ? RecordTimelinePalette.categoryColor("exercise")
+                    : RecordTimelinePalette.detailColor(
+                        .travel,
+                        token: segment.mode.rawValue
+                    ),
+                isMeasured: true,
+                travelID: segment.id,
+                isRoute: true,
+                styleKey: isWorkout
+                    ? "exercise.\(segment.mode.rawValue).workout"
+                    : "travel.\(segment.mode.rawValue)"
+            )
+        }
+
+        var seen = Set<UUID>()
+        for actual in actuals where seen.insert(actual.id).inserted {
+            guard let span = actual.span(asOf: now).intersection(with: observed)
+            else { continue }
+            let categoryID = ActualRecordCategoryResolver.categoryID(for: actual)
+            let covered: [TimeSpan] = if categoryID == "sleep" {
+                sleepSpans
+            } else if categoryID == "movement" {
+                travelSpans
+            } else if categoryID == "exercise",
+                      AutomaticRecordTimelineEngine.isConfirmedWorkout(actual) {
+                workoutTravelSpans
+            } else {
+                []
+            }
+            let color = activityColor(categoryID)
+            for remainder in ActualIntervalMergeEngine.subtracting(
+                covered,
+                from: span
+            ) {
+                values += assignedPhaseActivities(
+                    seed: "actual.\(actual.id.uuidString)",
+                    title: activityTitle(actual, categoryID: categoryID),
+                    span: remainder,
+                    phases: phases,
+                    categoryID: categoryID,
+                    categoryName: index.categoryNames[categoryID]
+                        ?? TimelineRowKind.title(forCategoryID: categoryID)
+                        ?? actual.title,
+                    detailText:
+                        "자동 활동 · \(actualSourceName(actual.source))",
+                    color: color,
+                    isMeasured: true,
+                    actualID: actual.id,
+                    isRoute: categoryID == "movement",
+                    appUsageTokenData: model.appUsageTokenIndex[actual.id],
+                    styleKey: "actual.\(categoryID).\(actual.title)"
+                )
+            }
+        }
+        return values
+    }
+
+    private func assignedPhaseActivities(
+        seed: String,
+        title: String,
+        span: TimeSpan,
+        phases: [DayPhaseSpan],
+        categoryID: String,
+        categoryName: String,
+        detailText: String,
+        color: Color,
+        isMeasured: Bool,
+        actualID: UUID? = nil,
+        travelID: UUID? = nil,
+        recordNodeID: String? = nil,
+        isRoute: Bool = false,
+        appUsageTokenData: Data? = nil,
+        styleKey: String
+    ) -> [TimelinePhaseActivity] {
+        DayPhaseEngine.assignments(of: span, to: phases).map { assignment in
+            phaseActivity(
+                seed: seed,
+                phase: assignment.phase,
+                title: title,
+                span: assignment.span,
+                categoryID: categoryID,
+                categoryName: categoryName,
+                detailText: detailText,
+                color: color,
+                isMeasured: isMeasured,
+                actualID: actualID,
+                travelID: travelID,
+                recordNodeID: recordNodeID,
+                isRoute: isRoute,
+                appUsageTokenData: appUsageTokenData,
+                styleKey: styleKey
+            )
+        }
+    }
+
+    private func inferredPhaseActivities(
+        _ phases: [DayPhaseSpan],
+        coveredBy values: [TimelinePhaseActivity]
+    ) -> [TimelinePhaseActivity] {
+        let byPhase = Dictionary(grouping: values, by: \.phase)
+        return phases.flatMap { value -> [TimelinePhaseActivity] in
+            let covered = byPhase[value.phase, default: []]
+                .compactMap { $0.span.intersection(with: value.span) }
+            let fallback = fallbackActivity(for: value.phase)
+            return ActualIntervalMergeEngine.subtracting(
+                covered,
+                from: value.span
+            ).map { span in
+                phaseActivity(
+                    seed: "inferred.\(value.phase.rawValue)",
+                    phase: value.phase,
+                    title: fallback.title,
+                    span: span,
+                    categoryID: fallback.categoryID,
+                    categoryName: fallback.title,
+                    detailText: "일과에서 추정",
+                    color: activityColor(fallback.categoryID),
+                    styleKey: "inferred.\(fallback.categoryID)"
+                )
+            }
+        }
+    }
+
+    private func phaseActivity(
+        seed: String,
+        phase: DayPhase,
+        title: String,
+        span: TimeSpan,
+        categoryID: String,
+        categoryName: String,
+        detailText: String,
+        color: Color,
+        isMeasured: Bool = false,
+        actualID: UUID? = nil,
+        travelID: UUID? = nil,
+        recordNodeID: String? = nil,
+        isRoute: Bool = false,
+        appUsageTokenData: Data? = nil,
+        styleKey: String? = nil
+    ) -> TimelinePhaseActivity {
+        TimelinePhaseActivity(
+            id: stablePhaseActivityID(seed, phase: phase, span: span),
+            phase: phase,
+            title: title,
+            span: span,
+            categoryID: categoryID,
+            categoryName: categoryName,
+            detailText: detailText,
+            color: color,
+            isMeasured: isMeasured,
+            actualID: actualID,
+            travelID: travelID,
+            recordNodeID: recordNodeID,
+            isRoute: isRoute,
+            appUsageTokenData: appUsageTokenData,
+            styleKey: styleKey ?? "\(categoryID).\(title)"
+        )
+    }
+
+    private var dayPhaseRowOrder: [DayPhase] {
+        [
+            .sleep, .movement, .exercise, .work, .study, .hobby, .activity,
+            .appointment, .unconfirmed,
         ]
+    }
+
+    private func dayPhaseSystemImage(_ phase: DayPhase) -> String {
+        switch phase {
+        case .sleep: "bed.double.fill"
+        case .movement: "arrow.left.arrow.right"
+        case .exercise: "figure.run"
+        case .hobby: "paintpalette.fill"
+        case .activity: "figure.stand"
+        case .appointment: "calendar"
+        case .work: "briefcase.fill"
+        case .study: "book.fill"
+        case .evening: "fork.knife"
+        case .unconfirmed: "questionmark.circle"
+        case .commuteToWork, .commuteToSchool, .commuteToAcademy,
+             .activityDeparture, .commuteHomeFromWork,
+             .commuteHomeFromSchool, .commuteHomeFromAcademy,
+             .activityReturn: "arrow.left.arrow.right"
+        }
+    }
+
+    private func dayPhaseColor(_ phase: DayPhase) -> Color {
+        RecordTimelinePalette.detailColor(
+            .dayPhase,
+            token: phase.rawValue
+        )
+    }
+
+    private func activityColor(_ categoryID: String) -> Color {
+        let fallback = model.snapshot.categories.first {
+            $0.id == categoryID
+        }?.actualHex
+        return RecordTimelinePalette.categoryColor(
+            categoryID,
+            fallbackHex: fallback
+        )
+    }
+
+    private func activityTitle(
+        _ actual: ActualRecord,
+        categoryID: String
+    ) -> String {
+        if categoryID == "movement",
+           let mode = MovementPresentation.mode(for: actual) {
+            return travelModeName(mode)
+        }
+        return actual.title
+    }
+
+    private func fallbackActivity(
+        for phase: DayPhase
+    ) -> (title: String, categoryID: String) {
+        switch phase {
+        case .sleep: ("수면", "sleep")
+        case .movement: ("이동", "movement")
+        case .exercise: ("운동", "exercise")
+        case .hobby: ("취미", "hobby")
+        case .activity: ("활동", "activity")
+        case .appointment: ("일정", "calendar")
+        case .work: ("업무", "work")
+        case .study: ("학업", "study")
+        case .evening: ("생활", "activity")
+        case .unconfirmed: ("미확인", "unconfirmed")
+        case .commuteToWork, .commuteToSchool, .commuteToAcademy,
+             .activityDeparture, .commuteHomeFromWork,
+             .commuteHomeFromSchool, .commuteHomeFromAcademy,
+             .activityReturn: ("이동", "movement")
+        }
+    }
+
+    private func stablePhaseActivityID(
+        _ seed: String,
+        phase: DayPhase,
+        span: TimeSpan
+    ) -> UUID {
+        let value = [
+            seed,
+            phase.rawValue,
+            String(Int(span.start.timeIntervalSinceReferenceDate.rounded())),
+            String(Int(span.end.timeIntervalSinceReferenceDate.rounded())),
+        ].joined(separator: "|")
+        var bytes = Array(repeating: UInt8(0), count: 16)
+        var hash = UInt64(14_695_981_039_346_656_037)
+        for (index, byte) in value.utf8.enumerated() {
+            hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
+            bytes[index % 16] ^= UInt8(truncatingIfNeeded: hash >> 24)
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 
     /// 메모 줄. 다른 줄과 달리 손으로 남긴 기록이라 자동 줄의 회색 바탕을
@@ -8785,7 +9188,14 @@ private struct TimelineBoard: View {
         isGoal: Bool = false,
         categoryID: String? = nil,
         categoryName: String? = nil,
-        appUsageTokenData: Data? = nil
+        appUsageTokenData: Data? = nil,
+        actualID: UUID? = nil,
+        travelID: UUID? = nil,
+        recordNodeID: String? = nil,
+        fillColor: Color? = nil,
+        actualColor: Color? = nil,
+        styleKey: String? = nil,
+        minimumFraction: CGFloat = 0.012
     ) -> TimelineBlock {
         let overlap = span.intersection(with: layoutDataSpan) ?? span
         let start = CGFloat(
@@ -8800,7 +9210,7 @@ private struct TimelineBoard: View {
             planID: planID,
             title: title,
             start: max(0, min(1, start)),
-            length: max(0.012, min(1, length)),
+            length: max(minimumFraction, min(1, length)),
             top: top,
             height: height,
             isFixed: isFixed,
@@ -8816,7 +9226,13 @@ private struct TimelineBoard: View {
             categoryID: categoryID,
             categoryName: categoryName,
             isGoal: isGoal,
-            appUsageTokenData: appUsageTokenData
+            appUsageTokenData: appUsageTokenData,
+            actualID: actualID,
+            travelID: travelID,
+            recordNodeID: recordNodeID,
+            fillColor: fillColor,
+            actualColor: actualColor,
+            styleKey: styleKey
         )
     }
 
@@ -9956,6 +10372,14 @@ private struct TimelineBoard: View {
 
     private func handleRowTap(_ row: TimelineRowModel) {
         selectedRowID = row.id
+        if row.id.hasPrefix("dayPhase."),
+           let block = nearestBlock(
+               in: row.blocks,
+               to: continuousCenterDate
+           ) {
+            onSelection?(selectionFromBlock(block))
+            return
+        }
         let selectableBlocks = row.blocks
             .filter { !$0.isActual && $0.planID != nil }
             .sorted {
@@ -9990,6 +10414,26 @@ private struct TimelineBoard: View {
                 categoryName: row.title
             )
         )
+    }
+
+    private func nearestBlock(
+        in blocks: [TimelineBlock],
+        to date: Date
+    ) -> TimelineBlock? {
+        blocks.min { lhs, rhs in
+            blockDistance(lhs, to: date) < blockDistance(rhs, to: date)
+        }
+    }
+
+    private func blockDistance(
+        _ block: TimelineBlock,
+        to date: Date
+    ) -> TimeInterval {
+        guard let start = block.startsAt, let end = block.endsAt else {
+            return .greatestFiniteMagnitude
+        }
+        if start <= date, date <= end { return 0 }
+        return min(abs(start.timeIntervalSince(date)), abs(end.timeIntervalSince(date)))
     }
 
     private func focusOnBlock(_ block: TimelineBlock) {
@@ -10076,27 +10520,47 @@ private struct TimelineBoard: View {
                 )
             )
         }()
+        let actualID = block.actualID ?? (
+            block.isActual
+                && model.snapshot.actuals.contains(where: { $0.id == block.id })
+                ? block.id
+                : nil
+        )
+        let travelID = block.travelID ?? (
+            block.categoryID == "movement"
+                && model.snapshot.travel.contains(where: { $0.id == block.id })
+                ? block.id
+                : nil
+        )
         return TimelineSelection(
             title: block.title,
             span: selectionSpan,
             planID: block.planID,
-            actualID: block.isActual
-                && model.snapshot.actuals.contains(where: { $0.id == block.id })
-                ? block.id
-                : nil,
-            travelID: block.categoryID == "movement" ? block.id : nil,
+            actualID: actualID,
+            travelID: travelID,
             recordNodeID: {
+                if let recordNodeID = block.recordNodeID {
+                    return recordNodeID
+                }
+                if let travelID {
+                    return "automatic.travel.\(travelID.uuidString)"
+                }
+                if let actualID {
+                    return "automatic.actual.\(actualID.uuidString)"
+                }
                 if block.isActual {
-                    if block.categoryID == "movement" {
-                        return "automatic.travel.\(block.id.uuidString)"
-                    }
-                    if block.categoryID == "location" {
+                    if block.categoryID == "location",
+                       model.snapshot.places.contains(where: {
+                           $0.id == block.id
+                       }) {
                         return "automatic.place.\(block.id.uuidString)"
                     }
-                    if block.categoryID == "weather" {
+                    if block.categoryID == "weather",
+                       model.snapshot.weather.contains(where: {
+                           $0.id == block.id
+                       }) {
                         return "automatic.weather.\(block.id.uuidString)"
                     }
-                    return "automatic.actual.\(block.id.uuidString)"
                 }
                 if block.categoryID == "calendar" {
                     let event = model.snapshot.calendarEvents.first {
@@ -10167,6 +10631,7 @@ private struct TimelineBarLane: Equatable {
     let isGoal: Bool
     let isFixed: Bool
     let isActual: Bool
+    let styleKey: String
 
     init(_ block: TimelineBlock) {
         top = block.top
@@ -10174,6 +10639,7 @@ private struct TimelineBarLane: Equatable {
         isGoal = block.isGoal
         isFixed = block.isFixed
         isActual = block.isActual
+        styleKey = block.styleKey
     }
 }
 
@@ -10273,8 +10739,9 @@ private struct TimelineRow: View {
                         let block = bar.block
                         TimelineBar(
                                 block: block,
-                                color: row.fillColor,
-                                actualColor: row.actualColor,
+                                color: block.fillColor ?? row.fillColor,
+                                actualColor:
+                                    block.actualColor ?? row.actualColor,
                                 width: bar.slice.width,
                                 contentWidth: bar.contentWidth,
                                 isEditing: editingPlanID == block.planID,
@@ -10688,6 +11155,24 @@ private struct TimelineBarEditGestures: ViewModifier {
     }
 }
 
+private struct TimelinePhaseActivity: Identifiable {
+    let id: UUID
+    let phase: DayPhase
+    let title: String
+    let span: TimeSpan
+    let categoryID: String
+    let categoryName: String
+    let detailText: String
+    let color: Color
+    let isMeasured: Bool
+    let actualID: UUID?
+    let travelID: UUID?
+    let recordNodeID: String?
+    let isRoute: Bool
+    let appUsageTokenData: Data?
+    let styleKey: String
+}
+
 private struct TimelineRowModel: Identifiable {
     let id: String
     let title: String
@@ -10761,6 +11246,12 @@ private struct TimelineBlock: Identifiable {
     let detailText: String?
     let categoryID: String?
     let categoryName: String?
+    let actualID: UUID?
+    let travelID: UUID?
+    let recordNodeID: String?
+    let fillColor: Color?
+    let actualColor: Color?
+    let styleKey: String
     /// 어플 줄 전용. 막대가 넓으면 이 토큰으로 실제 앱 이름을 그린다.
     let appUsageTokenData: Data?
 
@@ -10785,7 +11276,13 @@ private struct TimelineBlock: Identifiable {
         categoryID: String? = nil,
         categoryName: String? = nil,
         isGoal: Bool = false,
-        appUsageTokenData: Data? = nil
+        appUsageTokenData: Data? = nil,
+        actualID: UUID? = nil,
+        travelID: UUID? = nil,
+        recordNodeID: String? = nil,
+        fillColor: Color? = nil,
+        actualColor: Color? = nil,
+        styleKey: String? = nil
     ) {
         self.id = id
         self.planID = planID
@@ -10808,6 +11305,14 @@ private struct TimelineBlock: Identifiable {
         self.categoryID = categoryID
         self.categoryName = categoryName
         self.appUsageTokenData = appUsageTokenData
+        self.actualID = actualID
+        self.travelID = travelID
+        self.recordNodeID = recordNodeID
+        self.fillColor = fillColor
+        self.actualColor = actualColor
+        self.styleKey = styleKey ?? [categoryID, title]
+            .compactMap { $0 }
+            .joined(separator: ".")
     }
 }
 

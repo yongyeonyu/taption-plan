@@ -80,84 +80,6 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         (payload?.items ?? []).sorted { $0.startsAt < $1.startsAt }
     }
 
-    /// The payload can be cached while the Watch is offline. Re-apply the
-    /// live-window policy at read time so a stale cache never resurrects a
-    /// completed or already-ended item on the Watch.
-    func liveItems(at date: Date = .now) -> [TaptionWatchPlanItem] {
-        orderedItems.filter {
-            TaptionWatchLiveItemPolicy.isLive($0, at: date)
-        }
-    }
-
-    func currentItems(at date: Date = .now) -> [TaptionWatchPlanItem] {
-        TaptionWatchLiveItemPolicy.current(liveItems(at: date), at: date)
-    }
-
-    func upcomingItems(at date: Date = .now) -> [TaptionWatchPlanItem] {
-        TaptionWatchLiveItemPolicy.upcoming(liveItems(at: date), at: date)
-    }
-
-    func currentItem(at date: Date = .now) -> TaptionWatchPlanItem? {
-        currentItems(at: date).first
-    }
-
-    func nextItem(at date: Date = .now) -> TaptionWatchPlanItem? {
-        upcomingItems(at: date).first
-    }
-
-    func send(_ kind: TaptionWatchCommandKind, for planID: UUID) {
-        let command = TaptionWatchCommand(planID: planID, kind: kind)
-        guard WCSession.isSupported(),
-              let data = try? encoder.encode(command) else {
-            return
-        }
-        applyOptimistic(command)
-        let envelope: [String: Any] = [TaptionWatchEnvelope.commandKey: data]
-        let session = WCSession.default
-        // 활성화 전 전송은 예외를 던진다.
-        guard session.activationState == .activated else { return }
-        session.transferUserInfo(envelope)
-        if session.isReachable {
-            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
-        }
-    }
-
-    func sendLocationTracking(_ enabled: Bool) {
-        guard WCSession.isSupported() else { return }
-        if var value = payload,
-           value.locationTrackingEnabled != enabled {
-            value.locationTrackingEnabled = enabled
-            value.generatedAt = .now
-            payload = value
-            if let data = try? encoder.encode(value) {
-                UserDefaults.standard.set(data, forKey: cachedPayloadKey)
-            }
-            publishToWidget(value)
-        }
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        let envelope: [String: Any] = [
-            TaptionWatchEnvelope.locationTrackingKey: enabled,
-        ]
-        session.transferUserInfo(envelope)
-        if session.isReachable {
-            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
-        }
-    }
-
-    func requestLocationTrackingGuidance() {
-        guard WCSession.isSupported() else { return }
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        let envelope: [String: Any] = [
-            TaptionWatchEnvelope.locationTrackingGuidanceKey: true,
-        ]
-        session.transferUserInfo(envelope)
-        if session.isReachable {
-            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
-        }
-    }
-
     func requestSync() {
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
@@ -183,13 +105,23 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     func sendSensorSummary(_ summary: TaptionWatchSensorSummary) {
-        guard WCSession.isSupported() else { return }
+        WatchLaunchDiagnostics.mark(
+            "sensor send requested sequence=\(summary.sequence) samples=\(summary.accelerometerSampleCount)"
+        )
+        guard WCSession.isSupported() else {
+            cachePending(summary)
+            WatchLaunchDiagnostics.mark("sensor send queued unsupported")
+            return
+        }
         let session = WCSession.default
         guard session.activationState == .activated else {
             cachePending(summary)
+            WatchLaunchDiagnostics.mark("sensor send queued inactive")
             return
         }
-        transfer(summary, through: session)
+        if !transfer(summary, through: session) {
+            cachePending(summary)
+        }
     }
 
     func sendActivityConfirmation(
@@ -273,6 +205,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             )
             if isReachable {
                 self?.sendDiagnosticsLog()
+                self?.flushPendingSensorSummaries(using: .default)
+                self?.flushPendingHealthSnapshots(using: .default)
                 self?.requestSync()
             }
         }
@@ -384,39 +318,11 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         payload = value
+        WatchLaunchDiagnostics.mark(
+            "payload applied acceleration=\(value.accelerationSettings?.profile.rawValue.description ?? "none") sync=\(value.dataSyncProfile?.rawValue.description ?? "none")"
+        )
         onPayloadChange?(value)
         UserDefaults.standard.set(data, forKey: cachedPayloadKey)
-        publishToWidget(value)
-    }
-
-    private func applyOptimistic(_ command: TaptionWatchCommand) {
-        guard var value = payload,
-              let index = value.items.firstIndex(where: {
-                  $0.id == command.planID
-              }) else {
-            return
-        }
-        switch command.kind {
-        case .start:
-            value.items[index].status = "running"
-            value.items[index].actualStartedAt = command.requestedAt
-        case .complete, .stopCurrentActivity:
-            value.items[index].status = "completed"
-            value.items[index].actualStartedAt = nil
-        case .skip:
-            value.items[index].status = "skipped"
-            value.items[index].actualStartedAt = nil
-        case .postponeThirtyMinutes:
-            value.items[index].startsAt = value.items[index].startsAt
-                .addingTimeInterval(30 * 60)
-            value.items[index].endsAt = value.items[index].endsAt
-                .addingTimeInterval(30 * 60)
-        }
-        value.generatedAt = .now
-        payload = value
-        if let data = try? encoder.encode(value) {
-            UserDefaults.standard.set(data, forKey: cachedPayloadKey)
-        }
         publishToWidget(value)
     }
 
@@ -469,8 +375,13 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private func transfer(
         _ summary: TaptionWatchSensorSummary,
         through session: WCSession
-    ) {
-        guard let data = try? encoder.encode(summary) else { return }
+    ) -> Bool {
+        guard let data = try? encoder.encode(summary) else {
+            WatchLaunchDiagnostics.mark(
+                "sensor encode failed sequence=\(summary.sequence)"
+            )
+            return false
+        }
         WatchLaunchDiagnostics.mark(
             "sensor summary sequence=\(summary.sequence) samples=\(summary.accelerometerSampleCount) final=\(summary.isFinal)"
         )
@@ -478,6 +389,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             TaptionWatchEnvelope.sensorSummaryKey: data,
         ]
         session.transferUserInfo(envelope)
+        WatchLaunchDiagnostics.mark(
+            "sensor reliable transfer scheduled sequence=\(summary.sequence)"
+        )
         if session.isReachable {
             session.sendMessage(
                 envelope,
@@ -485,6 +399,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                 errorHandler: nil
             )
         }
+        return true
     }
 
     private func cachePending(_ summary: TaptionWatchSensorSummary) {
@@ -505,6 +420,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             )
         }
         persistPendingSensorSummaries()
+        WatchLaunchDiagnostics.mark(
+            "sensor queue count=\(pendingSensorSummaries.count)"
+        )
     }
 
     private func flushPendingSensorSummaries(using session: WCSession) {
@@ -514,10 +432,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
         let pending = pendingSensorSummaries
         pendingSensorSummaries = []
-        persistPendingSensorSummaries()
         for summary in pending {
-            transfer(summary, through: session)
+            if !transfer(summary, through: session) {
+                pendingSensorSummaries.append(summary)
+            }
         }
+        persistPendingSensorSummaries()
+        WatchLaunchDiagnostics.mark(
+            "sensor queue drained sent=\(pending.count - pendingSensorSummaries.count) remaining=\(pendingSensorSummaries.count)"
+        )
     }
 
     private func cachePending(_ snapshot: TaptionWatchHealthSnapshot) {
@@ -574,6 +497,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         pendingSensorSummaries = values
+        WatchLaunchDiagnostics.mark(
+            "sensor queue restored count=\(values.count)"
+        )
     }
 
     private func persistPendingSensorSummaries() {

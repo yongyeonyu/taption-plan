@@ -18,7 +18,7 @@ final class FeatureEngineTests: XCTestCase {
             categoryID: "activity",
             middleCategoryName: "운동"
         )
-        let detail = ActualRecord(
+        let detailedActivity = ActualRecord(
             planID: nil,
             title: "깊은 수면",
             categoryID: "sleep",
@@ -30,8 +30,8 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(routine.semanticLevel, .activity)
         XCTAssertEqual(routine.sourceKind, .routine)
-        XCTAssertEqual(detail.semanticLevel, .detail)
-        XCTAssertEqual(detail.sourceKind, .automatic)
+        XCTAssertEqual(detailedActivity.semanticLevel, .activity)
+        XCTAssertEqual(detailedActivity.sourceKind, .automatic)
     }
 
     func testPlayheadMapUsesOnlyMovementContainingExactPlayheadTime() {
@@ -1586,6 +1586,15 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(day?.groups.first { $0.id == "work" }?.duration, 3 * hour)
         XCTAssertEqual(month?.actual, 3 * hour)
         XCTAssertEqual(year?.actual, 3 * hour)
+        XCTAssertEqual(day?.dayPhases?.reduce(0) { $0 + $1.actual }, 24 * hour)
+        XCTAssertEqual(
+            updated[0].months[0].dayPhases?.reduce(0) { $0 + $1.actual },
+            24 * hour
+        )
+        XCTAssertEqual(
+            updated[0].dayPhases?.reduce(0) { $0 + $1.actual },
+            24 * hour
+        )
     }
 
     func testHistoricalDailyBackupSurvivesMissingLocalSource() {
@@ -2069,6 +2078,106 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(
             TravelModeClassifier().classify(readings: [ship]).mode,
             .ship
+        )
+
+        let flight = (0..<4).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 5 * 60),
+                speedMetersPerSecond: 70,
+                motion: .unknown,
+                motionConfidence: .medium,
+                stepCount: 0,
+                nearAirport: true
+            )
+        }
+        XCTAssertEqual(
+            TravelModeClassifier().classify(readings: flight).mode,
+            .airplane
+        )
+    }
+
+    func testChargingInactivityBecomesSleepOnlyAfterOneHourWithoutWatch() {
+        let start = makeDate(2026, 8, 9, 14, 0)
+        let readings = (0...4).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 15 * 60),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .charging
+            )
+        }
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(2 * hour)
+        )
+
+        let records = ChargingInactivitySleepEngine.records(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            watchAvailable: false,
+            maximumSampleGap: 15 * 60,
+            asOf: span.end
+        )
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records.first?.categoryID, "sleep")
+        XCTAssertEqual(records.first?.span(asOf: span.end).duration, hour)
+
+        XCTAssertTrue(
+            ChargingInactivitySleepEngine.records(
+                readings: Array(readings.prefix(4)),
+                actuals: [],
+                inside: span,
+                watchAvailable: false,
+                maximumSampleGap: 15 * 60,
+                asOf: span.end
+            ).isEmpty
+        )
+        XCTAssertTrue(
+            ChargingInactivitySleepEngine.records(
+                readings: readings,
+                actuals: [],
+                inside: span,
+                watchAvailable: true,
+                maximumSampleGap: 15 * 60,
+                asOf: span.end
+            ).isEmpty
+        )
+    }
+
+    func testChargingInactivitySleepIsBlockedByAppUsage() {
+        let start = makeDate(2026, 8, 9, 14, 0)
+        let readings = (0...4).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 15 * 60),
+                motion: .stationary,
+                stepCount: 0,
+                powerState: .full
+            )
+        }
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(2 * hour)
+        )
+        let appUsage = ActualRecord(
+            planID: nil,
+            title: "앱 사용",
+            categoryID: "appUsage",
+            startedAt: start.addingTimeInterval(10 * 60),
+            endedAt: start.addingTimeInterval(50 * 60),
+            source: .appUsage
+        )
+
+        XCTAssertTrue(
+            ChargingInactivitySleepEngine.records(
+                readings: readings,
+                actuals: [appUsage],
+                inside: span,
+                watchAvailable: false,
+                maximumSampleGap: 15 * 60,
+                asOf: span.end
+            ).isEmpty
         )
     }
 
@@ -2570,6 +2679,93 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(group.span.end, second.span.end)
         XCTAssertEqual(group.distanceMeters, 2_000)
         XCTAssertEqual(group.evidence.count, 2)
+    }
+
+    func testTravelPresentationCollapsesOverlappingWalkingDuplicates() throws {
+        let base = makeDate(2026, 8, 9, 18, 16)
+        let inferred = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(78 * 60)
+            ),
+            distanceMeters: 5_600,
+            confidence: .medium,
+            evidence: ["iPhone Core Motion 기록"]
+        )
+        let confirmed = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(78 * 60)
+            ),
+            distanceMeters: 5_590,
+            confidence: .high,
+            evidence: ["iPhone 걸음·거리 기록"],
+            isConfirmed: true
+        )
+
+        let values = TravelSegmentPresentationEngine.consolidated([
+            inferred, confirmed, inferred, confirmed,
+        ])
+        XCTAssertEqual(values.count, 1)
+        let result = try XCTUnwrap(values.first)
+
+        XCTAssertEqual(result.id, confirmed.id)
+        XCTAssertEqual(result.span, confirmed.span)
+        XCTAssertEqual(result.distanceMeters, 5_600)
+        XCTAssertEqual(result.confidence, .high)
+        XCTAssertTrue(result.isConfirmed)
+        XCTAssertEqual(result.evidence.count, 2)
+    }
+
+    func testTravelPresentationSeparatesWorkoutWalkingColorClass() {
+        let base = makeDate(2026, 8, 9, 18, 0)
+        let walking = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(hour)
+            ),
+            distanceMeters: 4_800,
+            confidence: .high,
+            evidence: []
+        )
+        let workout = ActualRecord(
+            planID: nil,
+            title: "걷기 운동",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(10 * 60),
+            endedAt: base.addingTimeInterval(55 * 60),
+            source: .appleWatch,
+            behavior: WatchBehaviorKind.walking.rawValue,
+            evidence: [AutomaticRecordTimelineEngine.watchWorkoutEvidence],
+            sensorChunkID: UUID()
+        )
+        let passive = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: walking.span.start,
+            endedAt: walking.span.end,
+            source: .motion,
+            behavior: WatchBehaviorKind.walking.rawValue
+        )
+
+        XCTAssertTrue(
+            TravelSegmentPresentationEngine.isWorkoutWalking(
+                walking,
+                actuals: [workout],
+                asOf: base.addingTimeInterval(2 * hour)
+            )
+        )
+        XCTAssertFalse(
+            TravelSegmentPresentationEngine.isWorkoutWalking(
+                walking,
+                actuals: [passive],
+                asOf: base.addingTimeInterval(2 * hour)
+            )
+        )
     }
 
     func testTravelGroupingKeepsDifferentOrDistantSegmentsSeparate() {
@@ -4813,6 +5009,103 @@ final class FeatureEngineTests: XCTestCase {
             atHome: false
         )
         XCTAssertTrue(outsideHome.isEmpty)
+    }
+
+    func testWatchAsksAboutShowerFromHomeWaterLockAndMotion() throws {
+        let base = makeDate(2026, 8, 9, 7)
+        let summary = TaptionWatchSensorSummary(
+            sessionID: UUID(),
+            sequence: 1,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: base,
+            endedAt: base.addingTimeInterval(2 * 60),
+            isFinal: true,
+            accelerometerSampleCount: 1_500,
+            accelerometerAverageG: nil,
+            peakAccelerationG: 1.3,
+            accelerometerStandardDeviationG: 0.08,
+            accelerometerMeanJerkGPerSecond: 0.2,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: 1.2,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: 0,
+            distanceMeters: nil,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: nil,
+            averageHeartRate: 82,
+            maximumHeartRate: nil,
+            activeEnergyKilocalories: nil,
+            behavior: .housework,
+            behaviorConfidenceScore: 0.62,
+            behaviorEvidence: ["손목 움직임"],
+            behaviorModelVersion: WatchBehaviorClassifier.rulesVersion,
+            isAmbient: true,
+            waterLockEnabled: true
+        )
+
+        let resolution = WatchActivityPersonalizationEngine.resolve(
+            summary,
+            atHome: true,
+            learnedSamples: [],
+            now: base.addingTimeInterval(2 * 60)
+        )
+        let suggestion = try XCTUnwrap(resolution.suggestion)
+        XCTAssertNil(resolution.learnedBehavior)
+        XCTAssertEqual(suggestion.proposedBehavior, .showering)
+        XCTAssertTrue(suggestion.alternativeBehaviors.contains(.housework))
+        XCTAssertTrue(suggestion.evidence.contains("Water Lock 켜짐"))
+    }
+
+    func testThreeMatchingWatchConfirmationsEnableAutomaticClassification()
+        throws {
+        let pattern = WatchActivityPattern(
+            duration: 120,
+            accelerationVariationG: 0.08,
+            jerkGPerSecond: 0.2,
+            peakRotationRate: 1.2,
+            stepsPerMinute: 0,
+            averageHeartRate: 82,
+            atHome: true,
+            waterLockEnabled: true,
+            observedBehavior: .housework
+        )
+        let samples = (0..<3).map { index in
+            WatchActivityPatternSample(
+                capturedAt: makeDate(2026, 8, 6 + index, 7),
+                pattern: pattern,
+                label: .showering
+            )
+        }
+
+        let learned = try XCTUnwrap(
+            WatchActivityPersonalizationEngine.learnedBehavior(
+                for: pattern,
+                samples: samples
+            )
+        )
+        XCTAssertEqual(learned.kind, .showering)
+        XCTAssertGreaterThanOrEqual(learned.confidenceScore, 0.8)
+        XCTAssertTrue(learned.evidence.first?.contains("3회") == true)
+    }
+
+    func testWatchConfirmationUsesOnlyPredefinedActivities() {
+        let choices = WatchBehaviorKind.confirmationChoices
+
+        XCTAssertFalse(choices.isEmpty)
+        XCTAssertFalse(choices.contains(.unknown))
+        XCTAssertEqual(Set(choices).count, choices.count)
+        XCTAssertTrue(choices.contains(.showering))
+        XCTAssertTrue(choices.contains(.housework))
     }
 
     func testPlaceDetectionRequiresLongStay() {
@@ -7488,6 +7781,60 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testScreenTimeRetriesTransientDeviceActivityStoreErrorOnly() {
+        let transient = NSError(
+            domain: "DeviceActivity.DeviceActivityDataStore.DataStoreError",
+            code: 0
+        )
+        let denied = NSError(
+            domain: "DeviceActivity.DeviceActivityDataStore.DataStoreError",
+            code: 2
+        )
+
+        XCTAssertTrue(ScreenTimeUsageRetryPolicy.shouldRetry(transient))
+        XCTAssertFalse(ScreenTimeUsageRetryPolicy.shouldRetry(denied))
+        XCTAssertEqual(ScreenTimeUsageRetryPolicy.maximumAttempts, 3)
+    }
+
+    func testDiagnosticErrorFieldsRetainDomainCodeAndDescription() {
+        let error = NSError(
+            domain: "TaptionPlanTests",
+            code: 47,
+            userInfo: [NSLocalizedDescriptionKey: "diagnostic detail"]
+        )
+        let fields = TaptionDiagnosticError.fields(for: error)
+
+        XCTAssertEqual(fields["error_domain"], "TaptionPlanTests")
+        XCTAssertEqual(fields["error_code"], "47")
+        XCTAssertEqual(fields["error_description"], "diagnostic detail")
+    }
+
+    func testRecentWatchContactOverridesTransientInstallationFlag() {
+        let now = makeDate(2026, 8, 9, 22, 0)
+        XCTAssertEqual(
+            AppleWatchConnectionPolicy.state(
+                isSupported: true,
+                isPaired: true,
+                isWatchAppInstalled: false,
+                isReachable: false,
+                lastContactAt: now.addingTimeInterval(-60),
+                now: now
+            ),
+            .background
+        )
+        XCTAssertEqual(
+            AppleWatchConnectionPolicy.state(
+                isSupported: true,
+                isPaired: true,
+                isWatchAppInstalled: false,
+                isReachable: false,
+                lastContactAt: now.addingTimeInterval(-31 * 60),
+                now: now
+            ),
+            .appNotInstalled
+        )
+    }
+
     func testBundleIdentifierDisplayNameDropsReverseDNSPrefix() {
         let name = AppBundleDisplayName.displayName(forBundleIdentifier:)
         XCTAssertEqual(name("com.burbn.instagram"), "Instagram")
@@ -7826,6 +8173,41 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(buckets[0].slices[0].duration, 60 * 60)
         XCTAssertEqual(buckets[1].total, 3 * hour)
         XCTAssertEqual(buckets[2].total, 0)
+    }
+
+    func testDayPhaseBucketsCompleteEachPastDayTo24Hours() {
+        let day = dayPhaseDay()
+        let period = TimeSpan(
+            start: day.start,
+            end: day.end.addingTimeInterval(24 * hour)
+        )
+        let buckets = RecordChartEngine.phaseBuckets(
+            actuals: [
+                sleepActual(0, 7, on: day),
+                stationaryContext(.work, 9, 17, on: day),
+            ],
+            travel: [],
+            stays: [],
+            placeKinds: [:],
+            in: period,
+            unit: .day,
+            calendar: utcCalendar,
+            asOf: period.end
+        )
+
+        XCTAssertEqual(buckets.count, 2)
+        XCTAssertEqual(buckets[0].total, 24 * hour)
+        XCTAssertEqual(
+            buckets[0].slices.first {
+                $0.categoryID == DayPhase.unconfirmed.rawValue
+            }?.duration,
+            9 * hour
+        )
+        XCTAssertEqual(buckets[1].total, 24 * hour)
+        XCTAssertEqual(
+            buckets[1].slices.map(\.categoryID),
+            [DayPhase.unconfirmed.rawValue]
+        )
     }
 
     func testChartBucketsUseOneColumnPerMonthForTheYearScale() {
@@ -9932,6 +10314,85 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(ring.arcs.map(\.token), ["core", "rem"])
     }
 
+    func testActivitySleepRingHidesStagesWithoutWatchEvidence() throws {
+        let dayStart = makeDate(2026, 8, 4)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let sessions = SleepAnalysisEngine().sessions(
+            from: [
+                SleepSegment(
+                    stage: .core,
+                    span: TimeSpan(
+                        start: dayStart,
+                        end: dayStart.addingTimeInterval(2 * hour)
+                    ),
+                    sourceName: "iPhone"
+                ),
+                SleepSegment(
+                    stage: .deep,
+                    span: TimeSpan(
+                        start: dayStart.addingTimeInterval(2 * hour),
+                        end: dayStart.addingTimeInterval(3 * hour)
+                    ),
+                    sourceName: "iPhone"
+                ),
+            ]
+        )
+        let ring = try XCTUnwrap(
+            RecordClockDetailEngine.activitySleepRing(
+                sessions: sessions,
+                in: day
+            )
+        )
+
+        XCTAssertEqual(
+            Set(ring.arcs.map(\.token)),
+            Set([SleepStage.asleepUnspecified.rawValue])
+        )
+    }
+
+    func testActivityBandIncludesSleepStagesAndTravelModes() {
+        let dayStart = makeDate(2026, 8, 4)
+        let day = TimeSpan(
+            start: dayStart,
+            end: dayStart.addingTimeInterval(24 * hour)
+        )
+        let sessions = SleepAnalysisEngine().sessions(
+            from: [
+                SleepSegment(
+                    stage: .core,
+                    span: TimeSpan(
+                        start: dayStart,
+                        end: dayStart.addingTimeInterval(2 * hour)
+                    ),
+                    sourceName: "Apple Watch"
+                )
+            ]
+        )
+        let travel = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: dayStart.addingTimeInterval(8 * hour),
+                end: dayStart.addingTimeInterval(9 * hour)
+            ),
+            distanceMeters: 10_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+
+        let rings = RecordClockDetailEngine.activityRings(
+            sleepSessions: sessions,
+            travel: [travel],
+            in: day
+        )
+
+        XCTAssertEqual(rings.map(\.kind), [.sleepStage, .travel])
+        XCTAssertEqual(rings[0].arcs.map(\.token), ["core"])
+        XCTAssertEqual(rings[1].arcs.map(\.token), ["car"])
+    }
+
     /// 같은 이동 수단이 이어지면 하나로 붙이고, 너무 짧은 구간은 이웃에
     /// 합치되 이웃이 없으면 최소 길이로 넓혀 남긴다.
     func testTravelRingJoinsSameModeAndCondensesShortSegments() throws {
@@ -10101,8 +10562,208 @@ final class FeatureEngineTests: XCTestCase {
 
     // MARK: - 하루 눈금판 바깥의 일과 고리
 
-    /// 여느 출퇴근 날은 취침 → 출근 → 업무 → 퇴근 → 저녁 순서로 읽힌다.
-    /// 이름은 도착지가 정하므로 사용자가 고를 일이 없다.
+    func testActivityIsSplitAcrossItsDayPhaseRows() {
+        let day = dayPhaseDay()
+        let boundary = day.start.addingTimeInterval(7 * hour)
+        let activity = TimeSpan(
+            start: boundary.addingTimeInterval(-30 * 60),
+            end: boundary.addingTimeInterval(30 * 60)
+        )
+        let assignments = DayPhaseEngine.assignments(
+            of: activity,
+            to: [
+                DayPhaseSpan(
+                    phase: .sleep,
+                    span: TimeSpan(start: day.start, end: boundary)
+                ),
+                DayPhaseSpan(
+                    phase: .commuteToWork,
+                    span: TimeSpan(start: boundary, end: day.end)
+                ),
+            ]
+        )
+
+        XCTAssertEqual(assignments.map(\.phase), [.sleep, .commuteToWork])
+        XCTAssertEqual(assignments.map(\.span.duration), [30 * 60, 30 * 60])
+    }
+
+    /// iPhone·Watch가 운동으로 확정한 시간은 업무·이동·수면보다 먼저
+    /// 일과에 놓인다. 수동 계획이나 수동적 동작 추정은 운동으로 올리지 않는다.
+    func testDayPhaseRingPrioritizesConfirmedWorkout() {
+        let day = dayPhaseDay()
+        let watchWorkout = ActualRecord(
+            planID: nil,
+            title: "달리기",
+            categoryID: "activity",
+            startedAt: day.start.addingTimeInterval(6.5 * hour),
+            endedAt: day.start.addingTimeInterval(7.5 * hour),
+            source: .appleWatch,
+            behavior: WatchBehaviorKind.running.rawValue,
+            evidence: [AutomaticRecordTimelineEngine.watchWorkoutEvidence],
+            sensorChunkID: UUID()
+        )
+        let passiveMotion = ActualRecord(
+            planID: nil,
+            title: "운동",
+            categoryID: "exercise",
+            startedAt: day.start.addingTimeInterval(18 * hour),
+            endedAt: day.start.addingTimeInterval(19 * hour),
+            source: .motion
+        )
+        let iPhoneWorkout = ActualRecord(
+            planID: nil,
+            title: "근력 운동",
+            categoryID: "exercise",
+            startedAt: day.start.addingTimeInterval(12 * hour),
+            endedAt: day.start.addingTimeInterval(13 * hour),
+            source: .healthKit,
+            behavior: WatchBehaviorKind.exercise.rawValue,
+            evidence: [AutomaticRecordTimelineEngine.healthWorkoutEvidence]
+        )
+        let phases = DayPhaseEngine.phases(
+            actuals: [
+                sleepActual(0, 7, on: day),
+                stationaryContext(.homeRest, 0, 6, on: day),
+                stationaryContext(.work, 8, 18, on: day),
+                watchWorkout,
+                iPhoneWorkout,
+                passiveMotion,
+            ],
+            travel: [travelLeg(.walking, 6, 8, on: day)],
+            stays: [],
+            placeKinds: [:],
+            in: day,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(
+            phases.map(\.phase),
+            [.sleep, .exercise, .movement, .work, .exercise, .work]
+        )
+        XCTAssertEqual(
+            phases.filter { $0.phase == .exercise }.map(\.span),
+            [watchWorkout.span(asOf: day.end), iPhoneWorkout.span(asOf: day.end)]
+        )
+        XCTAssertFalse(
+            phases.contains {
+                $0.span.start == passiveMotion.startedAt
+                    && $0.phase == .exercise
+            }
+        )
+        assertPhasesPartitionTheDay(phases, in: day)
+    }
+
+    func testWatchWalkingWorkoutIsExerciseWithWalkingActivity() throws {
+        let day = dayPhaseDay()
+        let span = TimeSpan(
+            start: day.start.addingTimeInterval(18 * hour),
+            end: day.start.addingTimeInterval(19 * hour)
+        )
+        let workout = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "exercise",
+            startedAt: span.start,
+            endedAt: span.end,
+            source: .appleWatch,
+            behavior: WatchBehaviorKind.exercise.rawValue,
+            evidence: [AutomaticRecordTimelineEngine.healthWorkoutEvidence]
+        )
+        let travel = TravelSegment(
+            mode: .walking,
+            span: span,
+            distanceMeters: 5_600,
+            confidence: .high,
+            evidence: ["Apple Watch 운동 경로"]
+        )
+
+        let displayed = MovementDisplayEngine.reviewActuals(
+            [workout],
+            travel: [travel],
+            asOf: day.end
+        )
+        let walking = try XCTUnwrap(
+            displayed.first {
+                ActualRecordCategoryResolver.categoryID(for: $0) == "movement"
+            }
+        )
+        XCTAssertEqual(MovementPresentation.title(for: walking), "걷기")
+        XCTAssertFalse(displayed.contains { $0.id == workout.id })
+
+        let evidence = DayPhaseEvidenceEngine.records(
+            from: [workout],
+            intersecting: day,
+            asOf: day.end
+        )
+        let phases = DayPhaseEngine.phases(
+            actuals: evidence,
+            travel: [travel],
+            stays: [],
+            placeKinds: [:],
+            in: day,
+            asOf: day.end
+        )
+        XCTAssertEqual(
+            phases.filter { $0.phase == .exercise }.map(\.span),
+            [span]
+        )
+    }
+
+    func testWalkingBelongsToMovementUnlessAWorkoutCoversIt() {
+        let day = dayPhaseDay()
+        let workoutSpan = TimeSpan(
+            start: day.start.addingTimeInterval(10 * hour),
+            end: day.start.addingTimeInterval(11 * hour)
+        )
+        let ordinarySpan = TimeSpan(
+            start: day.start.addingTimeInterval(12 * hour),
+            end: day.start.addingTimeInterval(13 * hour)
+        )
+        let workout = ActualRecord(
+            planID: nil,
+            title: "걷기 운동",
+            categoryID: "exercise",
+            startedAt: workoutSpan.start,
+            endedAt: workoutSpan.end,
+            source: .appleWatch,
+            behavior: WatchBehaviorKind.walking.rawValue,
+            evidence: [AutomaticRecordTimelineEngine.watchWorkoutEvidence]
+        )
+        let phases = DayPhaseEngine.phases(
+            actuals: [workout],
+            travel: [
+                TravelSegment(
+                    mode: .walking,
+                    span: workoutSpan,
+                    distanceMeters: 4_000,
+                    confidence: .high,
+                    evidence: ["Apple Watch 운동 경로"]
+                ),
+                TravelSegment(
+                    mode: .walking,
+                    span: ordinarySpan,
+                    distanceMeters: 2_000,
+                    confidence: .high,
+                    evidence: ["iPhone Core Motion"]
+                ),
+            ],
+            stays: [],
+            placeKinds: [:],
+            in: day,
+            asOf: day.end
+        )
+
+        XCTAssertEqual(
+            phases.first { $0.span.contains(workoutSpan.start) }?.phase,
+            .exercise
+        )
+        XCTAssertEqual(
+            phases.first { $0.span.contains(ordinarySpan.start) }?.phase,
+            .movement
+        )
+    }
+
+    /// 일과는 수면·활동·이동·업무처럼 배타적인 대분류 한 줄로 읽힌다.
     func testDayPhaseRingTellsACommuteDayInOrder() throws {
         let day = dayPhaseDay()
         let phases = DayPhaseEngine.phases(
@@ -10126,12 +10787,12 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(
             phases.map(\.phase.title),
-            ["취침", "출근", "업무", "퇴근", "저녁"]
+            ["수면", "활동", "이동", "업무", "이동", "활동"]
         )
-        // 걷고 타는 두 다리는 한 번의 출근이다.
-        XCTAssertEqual(phases[1].span.start, day.start.addingTimeInterval(8 * hour))
+        // 걷고 타는 두 다리는 한 번의 이동이다.
+        XCTAssertEqual(phases[2].span.start, day.start.addingTimeInterval(8 * hour))
         XCTAssertEqual(
-            phases[1].span.end,
+            phases[2].span.end,
             day.start.addingTimeInterval(8.75 * hour)
         )
         assertPhasesPartitionTheDay(phases, in: day)
@@ -10179,7 +10840,7 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(
             workPhases.map(\.phase.title),
-            ["취침", "출근", "업무", "퇴근", "저녁"]
+            ["수면", "이동", "업무", "이동"]
         )
         XCTAssertEqual(
             workPhases.first(where: { $0.phase == .work })?.span.start,
@@ -10223,7 +10884,7 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(
             studyPhases.map(\.phase.title),
-            ["취침", "등교", "수업", "하교", "저녁"]
+            ["수면", "이동", "수업", "이동"]
         )
         XCTAssertEqual(
             studyPhases.first(where: { $0.phase == .study })?.span.start,
@@ -10237,8 +10898,56 @@ final class FeatureEngineTests: XCTestCase {
         assertPhasesPartitionTheDay(studyPhases, in: day)
     }
 
-    /// 회사가 아니라 학교에 닿으면 같은 모양의 하루를 등교·수업·하교라고
-    /// 부른다. 도착해서 무엇이 시작되는지만 보고 정한다.
+    func testReturningToCompanyKeepsLunchActivityUnderWork() throws {
+        let day = dayPhaseDay()
+        let companyKey = "frequent-company"
+        let lunch = TimeSpan(
+            start: day.start.addingTimeInterval(12.1 * hour),
+            end: day.start.addingTimeInterval(12.9 * hour)
+        )
+        let phases = DayPhaseEngine.phases(
+            actuals: [
+                stationaryContext(.mealPlace, 12.1, 12.9, on: day),
+            ],
+            travel: [],
+            stays: [
+                PlaceStay(
+                    placeKey: companyKey,
+                    displayName: "회사",
+                    span: TimeSpan(
+                        start: day.start.addingTimeInterval(9 * hour),
+                        end: day.start.addingTimeInterval(12 * hour)
+                    ),
+                    confidence: .high,
+                    isConfirmed: true
+                ),
+                PlaceStay(
+                    placeKey: companyKey,
+                    displayName: "회사",
+                    span: TimeSpan(
+                        start: day.start.addingTimeInterval(13 * hour),
+                        end: day.start.addingTimeInterval(18 * hour)
+                    ),
+                    confidence: .high,
+                    isConfirmed: true
+                ),
+            ],
+            placeKinds: [companyKey: .company],
+            in: day,
+            asOf: day.end
+        )
+
+        let parent = try XCTUnwrap(
+            phases.first { $0.span.contains(lunch.start) }
+        )
+        XCTAssertEqual(parent.phase, .work)
+        XCTAssertEqual(
+            DayPhaseEngine.assignments(of: lunch, to: phases).map(\.phase),
+            [.work]
+        )
+    }
+
+    /// 학교에 닿으면 이동의 목적은 활동 상세에 남고 일과는 수업으로 읽힌다.
     func testDayPhaseRingSaysSchoolWordsWhenArrivingAtStudy() throws {
         let day = dayPhaseDay()
         let homeKey = "frequent-home"
@@ -10264,7 +10973,7 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(
             phases.map(\.phase.title),
-            ["취침", "등교", "수업", "하교", "저녁"]
+            ["수면", "이동", "수업", "이동"]
         )
         assertPhasesPartitionTheDay(phases, in: day)
     }
@@ -10286,8 +10995,7 @@ final class FeatureEngineTests: XCTestCase {
             in: day,
             asOf: day.end
         )
-        // 집에 있었다는 사실만으로는 저녁이 되지 않는다. 돌아온 길이 없다.
-        XCTAssertEqual(weekend.map(\.phase), [.sleep])
+        XCTAssertEqual(weekend.map(\.phase), [.sleep, .activity])
         assertPhasesPartitionTheDay(weekend, in: day)
 
         let workedFromHome = DayPhaseEngine.phases(
@@ -10303,13 +11011,15 @@ final class FeatureEngineTests: XCTestCase {
             in: day,
             asOf: day.end
         )
-        XCTAssertEqual(workedFromHome.map(\.phase), [.sleep, .work])
+        XCTAssertEqual(
+            workedFromHome.map(\.phase),
+            [.sleep, .activity, .work, .activity]
+        )
         assertPhasesPartitionTheDay(workedFromHome, in: day)
     }
 
-    /// 회사에서 잔 낮잠은 바깥 고리에서 업무다. 같은 시각을 안쪽 카테고리
-    /// 고리는 그대로 수면으로 보여 준다 — 두 고리는 일부러 다른 말을 한다.
-    func testDayPhaseRingKeepsWorkOverANapAtTheOffice() throws {
+    /// 수면 근거는 회사 체류와 겹쳐도 수면 일과가 우선한다.
+    func testDayPhaseRingKeepsSleepOverWorkAtTheOffice() throws {
         let day = dayPhaseDay()
         let nap = sleepActual(13, 13.75, on: day)
         let actuals = [
@@ -10334,12 +11044,12 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(
             phases.map(\.phase.title),
-            ["취침", "출근", "업무", "퇴근", "저녁"]
+            ["수면", "활동", "이동", "업무", "수면", "업무", "이동", "활동"]
         )
         let napMiddle = day.start.addingTimeInterval(13.5 * hour)
         XCTAssertEqual(
             phases.first { $0.span.contains(napMiddle) }?.phase,
-            .work
+            .sleep
         )
         assertPhasesPartitionTheDay(phases, in: day)
 
@@ -10384,8 +11094,8 @@ final class FeatureEngineTests: XCTestCase {
         // 나누기 단계에서는 짧은 수업도 제 자리를 지킨다.
         XCTAssertEqual(
             phases.map(\.phase),
-            [.sleep, .commuteToWork, .work, .study, .work,
-             .commuteHomeFromWork, .evening]
+            [.sleep, .activity, .movement, .work, .study, .work,
+             .movement, .activity]
         )
         assertPhasesPartitionTheDay(phases, in: day)
 
@@ -10403,10 +11113,9 @@ final class FeatureEngineTests: XCTestCase {
         // 그릴 때는 앞선 업무가 그 자리를 이어받는다.
         XCTAssertEqual(
             ring.arcs.map(\.token),
-            ["sleep", "commuteToWork", "work", "commuteHomeFromWork",
-             "evening"]
+            ["sleep", "activity", "movement", "work", "movement", "activity"]
         )
-        XCTAssertEqual(ring.arcs[2].endFraction, 18.0 / 24, accuracy: 1e-9)
+        XCTAssertEqual(ring.arcs[3].endFraction, 18.0 / 24, accuracy: 1e-9)
         assertRingHasNoSlivers(ring)
     }
 
@@ -10446,7 +11155,7 @@ final class FeatureEngineTests: XCTestCase {
                 asOf: week.end
             )
         )
-        XCTAssertNil(
+        XCTAssertEqual(
             RecordClockDetailEngine.phaseRing(
                 actuals: [],
                 travel: [],
@@ -10454,22 +11163,19 @@ final class FeatureEngineTests: XCTestCase {
                 placeKinds: [:],
                 in: day,
                 asOf: day.end
-            )
+            )?.arcs.map(\.token),
+            [DayPhase.unconfirmed.rawValue]
         )
     }
 
-    /// 오가는 길의 이름은 집 반대편에 등록해 둔 곳이 정한다. 학교와 학원은
-    /// 정지 문맥이 똑같이 "수업·학습"인데도 등교·하교와 등원·하원으로 갈린다.
-    /// 취미·운동은 오가는 일이 아니므로 시작·종료라고 적는다.
+    /// 목적지 종류는 머무름의 일과를 정하고, 오가는 구간은 모두 이동이다.
     func testDayPhaseRingNamesTheRoundTripFromTheRegisteredPlace() {
         let cases: [(FrequentPlaceKind, StationaryContextKind?, [String])] = [
-            (.company, .work, ["취침", "출근", "업무", "퇴근", "저녁"]),
-            (.school, .study, ["취침", "등교", "수업", "하교", "저녁"]),
-            (.academy, .study, ["취침", "등원", "수업", "하원", "저녁"]),
-            // 취미·운동을 다녀온 길은 저녁을 열지 않는다. 나갔다 왔다고 그
-            // 전에 집에서 보낸 저녁이 없던 일이 되면 안 된다.
-            (.hobby, nil, ["취침", "시작", "종료"]),
-            (.exercise, .gymFacility, ["취침", "시작", "종료"]),
+            (.company, .work, ["수면", "이동", "업무", "이동"]),
+            (.school, .study, ["수면", "이동", "수업", "이동"]),
+            (.academy, .study, ["수면", "이동", "수업", "이동"]),
+            (.hobby, nil, ["수면", "이동", "취미", "이동"]),
+            (.exercise, .gymFacility, ["수면", "이동", "운동", "이동"]),
         ]
         for (kind, context, titles) in cases {
             let phases = roundTripPhases(to: kind, staying: context)
@@ -10492,7 +11198,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(
             known.map(\.phase.title),
-            ["취침", "출근", "업무", "퇴근", "저녁"]
+            ["수면", "이동", "업무", "이동"]
         )
 
         let unknown = roundTripPhases(
@@ -10500,11 +11206,11 @@ final class FeatureEngineTests: XCTestCase {
             staying: .cafe,
             registeringDestination: false
         )
-        XCTAssertEqual(unknown.map(\.phase.title), ["취침"])
+        XCTAssertEqual(unknown.map(\.phase.title), ["수면", "이동", "활동", "이동"])
 
         // 등록은 했지만 종류에 이름이 없는 곳도 같은 자리로 떨어진다.
         let custom = roundTripPhases(to: .custom, staying: .cafe)
-        XCTAssertEqual(custom.map(\.phase.title), ["취침"])
+        XCTAssertEqual(custom.map(\.phase.title), ["수면", "이동", "활동", "이동"])
     }
 
     /// 읽음창은 짚은 조각의 진짜 시작·끝 시각을 적는다. 각도로 접었다 펴도
@@ -10558,7 +11264,7 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         let arc = try XCTUnwrap(
-            ring.arcs.first { $0.token == DayPhase.commuteToWork.rawValue }
+            ring.arcs.first { $0.token == DayPhase.movement.rawValue }
         )
         // 재생머리가 그 조각 위를 지날 때 읽는 조각도 같은 조각이다.
         XCTAssertEqual(

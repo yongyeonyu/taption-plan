@@ -21,7 +21,6 @@ enum TimelineLevel: String, Codable, CaseIterable, Sendable {
 enum TimelineSemanticLevel: String, Codable, CaseIterable, Sendable {
     case dayPhase = "일과"
     case activity = "활동"
-    case detail = "상세"
 }
 
 enum TimelineSourceKind: String, Codable, CaseIterable, Sendable {
@@ -485,8 +484,10 @@ extension PlanRecord {
     /// Plans use the same semantic vocabulary as automatic records.  The
     /// routine/action distinction remains an origin relationship in the graph.
     var semanticLevel: TimelineSemanticLevel {
-        if subCategoryName?.isEmpty == false { return .detail }
-        return middleCategoryName?.isEmpty == false ? .activity : .dayPhase
+        middleCategoryName?.isEmpty == false
+            || subCategoryName?.isEmpty == false
+            ? .activity
+            : .dayPhase
     }
 
     var sourceKind: TimelineSourceKind {
@@ -646,14 +647,7 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
 
 extension ActualRecord {
     var semanticLevel: TimelineSemanticLevel {
-        let value = (behavior ?? "").lowercased()
-        let detailTokens = [
-            "core", "deep", "rem", "walking", "running", "cycling",
-            "automotive", "bus", "subway", "train", "boat", "airplane"
-        ]
-        return detailTokens.contains { value.contains($0) }
-            ? .detail
-            : .activity
+        .activity
     }
 
     var sourceKind: TimelineSourceKind {
@@ -2315,6 +2309,15 @@ struct LiveRouteState: Hashable, Sendable {
     )
 }
 
+enum DevicePowerState: String, Codable, Hashable, Sendable {
+    case unknown
+    case unplugged
+    case charging
+    case full
+
+    var isCharging: Bool { self == .charging || self == .full }
+}
+
 struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var timestamp: Date
@@ -2341,6 +2344,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var watchAccelerationStandardDeviationG: Double?
     var watchAccelerationMeanJerkGPerSecond: Double?
     var systemFloor: Int?
+    var powerState: DevicePowerState?
     var gpsAvailable: Bool
     var nearbyStation: Bool
     /// Apple 지도에서 확인한 가장 가까운 철도·버스 정류장 이름입니다.
@@ -2392,6 +2396,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         watchAccelerationStandardDeviationG: Double? = nil,
         watchAccelerationMeanJerkGPerSecond: Double? = nil,
         systemFloor: Int? = nil,
+        powerState: DevicePowerState? = nil,
         gpsAvailable: Bool = true,
         nearbyStation: Bool = false,
         nearbyStationName: String? = nil,
@@ -2441,6 +2446,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.watchAccelerationMeanJerkGPerSecond =
             watchAccelerationMeanJerkGPerSecond
         self.systemFloor = systemFloor
+        self.powerState = powerState
         self.gpsAvailable = gpsAvailable
         self.nearbyStation = nearbyStation
         self.nearbyStationName = nearbyStationName
@@ -2544,6 +2550,8 @@ struct DailyReviewArchive: Identifiable, Codable, Hashable, Sendable {
     var id: String
     var span: TimeSpan
     var report: ReviewReport
+    /// 일과는 일별 확정값만 저장한다. nil은 이 필드가 없던 이전 백업이다.
+    var dayPhases: [CategoryDuration]? = nil
     var groups: [RecordCategoryGroup]
     var sourceFingerprint: String
     var updatedAt: Date
@@ -2553,6 +2561,7 @@ struct ReviewPeriodArchive: Identifiable, Codable, Hashable, Sendable {
     var id: String
     var span: TimeSpan
     var report: ReviewReport
+    var dayPhases: [CategoryDuration]? = nil
     var dayIDs: [String]
     var isComplete: Bool
 }
@@ -2561,6 +2570,7 @@ struct MonthlyReviewArchive: Identifiable, Codable, Hashable, Sendable {
     var id: String
     var span: TimeSpan
     var report: ReviewReport
+    var dayPhases: [CategoryDuration]? = nil
     var weeks: [ReviewPeriodArchive]
     var dayIDs: [String]
     var isComplete: Bool
@@ -2570,6 +2580,7 @@ struct YearlyReviewArchive: Identifiable, Codable, Hashable, Sendable {
     var id: String
     var span: TimeSpan
     var report: ReviewReport
+    var dayPhases: [CategoryDuration]? = nil
     var months: [MonthlyReviewArchive]
     var days: [DailyReviewArchive]
     var isComplete: Bool
@@ -2605,6 +2616,7 @@ enum ReviewArchiveHierarchy {
             id: archiveID("year", span.start, calendar: calendar),
             span: span,
             report: aggregate(ordered, span: span),
+            dayPhases: aggregateDayPhases(ordered),
             months: months,
             days: ordered,
             isComplete: complete,
@@ -2657,6 +2669,7 @@ enum ReviewArchiveHierarchy {
                 id: archiveID("week", weekSpan.start, calendar: calendar),
                 span: weekSpan,
                 report: aggregate(weekDays, span: weekSpan),
+                dayPhases: aggregateDayPhases(weekDays),
                 dayIDs: weekDays.map(\.id).sorted(),
                 isComplete: weekSpan.end <= asOf
             )
@@ -2665,6 +2678,7 @@ enum ReviewArchiveHierarchy {
             id: archiveID("month", span.start, calendar: calendar),
             span: span,
             report: aggregate(days, span: span),
+            dayPhases: aggregateDayPhases(days),
             weeks: weeks,
             dayIDs: days.map(\.id).sorted(),
             isComplete: span.end <= asOf
@@ -2706,6 +2720,22 @@ enum ReviewArchiveHierarchy {
             unplannedActualDuration: unplanned,
             contexts: contexts.values.sorted { $0.date < $1.date }
         )
+    }
+
+    private static func aggregateDayPhases(
+        _ days: [DailyReviewArchive]
+    ) -> [CategoryDuration] {
+        var totals: [String: TimeInterval] = [:]
+        for value in days.flatMap({ $0.dayPhases ?? [] }) {
+            totals[value.categoryID, default: 0] += value.actual
+        }
+        return totals.map {
+            CategoryDuration(categoryID: $0.key, planned: 0, actual: $0.value)
+        }.sorted {
+            $0.actual == $1.actual
+                ? $0.categoryID < $1.categoryID
+                : $0.actual > $1.actual
+        }
     }
 
     private static func archiveID(

@@ -8,6 +8,7 @@ enum StationaryContextKind: String, Codable, CaseIterable, Sendable {
     case meeting
     case work
     case study
+    case hobby
     case gymFacility
     case mealPlace
     case cafe
@@ -22,6 +23,7 @@ enum StationaryContextKind: String, Codable, CaseIterable, Sendable {
         case .meeting: "회의"
         case .work: "근무"
         case .study: "수업·학습"
+        case .hobby: "취미"
         case .gymFacility: "운동시설"
         case .mealPlace: "식사 장소"
         case .cafe: "카페"
@@ -39,6 +41,7 @@ enum StationaryContextKind: String, Codable, CaseIterable, Sendable {
         switch self {
         case .work, .meeting: "work"
         case .study: "study"
+        case .hobby: "hobby"
         case .mealPlace: "food"
         case .cafe, .homeRest: "rest"
         case .gymFacility: "exercise"
@@ -177,16 +180,27 @@ struct StationaryContextClassifier: Sendable {
         // 2. 체류의 절반 이상을 덮는 캘린더 일정. 하루 종일 일정은 모든
         //    체류를 덮어 버리므로 회의 근거로 쓰지 않는다.
         if let event = coveringEvent(in: input.calendarEvents, stay: stay) {
-            add(.meeting, 0.66, "캘린더 일정 '\(event.title)'")
-            if (event.attendeeCount ?? 0) >= 2 {
-                add(.meeting, 0.14, "참석자 \(event.attendeeCount ?? 0)명")
+            if containsMealWord(event.title) {
+                add(.mealPlace, 0.74, "식사 일정 '\(event.title)'")
+            } else {
+                add(.meeting, 0.66, "캘린더 일정 '\(event.title)'")
+                if (event.attendeeCount ?? 0) >= 2 {
+                    add(.meeting, 0.14, "참석자 \(event.attendeeCount ?? 0)명")
+                }
+                if input.placeKind == .company {
+                    add(.meeting, 0.10, "회사에서 진행")
+                }
+                if placement.isFlatOnDesk {
+                    add(.meeting, 0.08, "기기를 책상에 둔 자세")
+                }
             }
-            if input.placeKind == .company {
-                add(.meeting, 0.10, "회사에서 진행")
-            }
-            if placement.isFlatOnDesk {
-                add(.meeting, 0.08, "기기를 책상에 둔 자세")
-            }
+        }
+
+        let placeName = input.stay.displayName.lowercased()
+        if containsMealWord(placeName) {
+            add(.mealPlace, 0.58, "장소 이름: 식사")
+        } else if ["카페", "cafe", "coffee"].contains(where: placeName.contains) {
+            add(.cafe, 0.55, "장소 이름: 카페")
         }
 
         // 3. 자주가는 곳 종류에서 오는 기본 문맥.
@@ -202,7 +216,7 @@ struct StationaryContextClassifier: Sendable {
         case .home:
             add(.homeRest, 0.45, "자주가는 곳: 집")
         case .hobby:
-            add(.unknownStay, 0.30, "자주가는 곳: 취미")
+            add(.hobby, 0.62, "자주가는 곳: 취미")
         case .custom:
             add(.unknownStay, 0.30, "자주가는 곳: 사용자 추가")
         case nil:
@@ -335,6 +349,14 @@ struct StationaryContextClassifier: Sendable {
         guard weekday != 1, weekday != 7 else { return false }
         let hour = calendar.component(.hour, from: middle)
         return hour >= 9 && hour < 18
+    }
+
+    private func containsMealWord(_ value: String) -> Bool {
+        let text = value.lowercased()
+        return [
+            "아침", "점심", "저녁", "식사", "식당", "restaurant", "lunch",
+            "dinner", "breakfast",
+        ].contains(where: text.contains)
     }
 
     private func isLowMotion(

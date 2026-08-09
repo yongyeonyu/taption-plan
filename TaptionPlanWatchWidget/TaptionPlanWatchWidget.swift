@@ -257,7 +257,8 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var sourceTitle: String {
-        measurement?.source.title ?? "측정 대기"
+        if confirmationSuggestion != nil { return "확인 요청" }
+        return measurement?.source.title ?? "측정 대기"
     }
 
     private var sourceSymbolName: String {
@@ -269,6 +270,9 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var activityTitle: String {
+        if let suggestion = confirmationSuggestion {
+            return "\(suggestion.proposedBehavior.title) 맞나요?"
+        }
         guard let behavior = measurement?.behavior else {
             return measurement?.isRecordingRequested == false
                 ? "기록 꺼짐"
@@ -278,10 +282,12 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var confidence: Double {
-        min(1, max(0, measurement?.confidenceScore ?? 0))
+        min(1, max(0, confirmationSuggestion?.confidenceScore
+            ?? measurement?.confidenceScore ?? 0))
     }
 
     private var confidenceText: String {
+        if confirmationSuggestion != nil { return "Watch에서 확인" }
         guard measurement?.behavior != nil else {
             return "손목 움직임을 모으는 중"
         }
@@ -327,8 +333,16 @@ private struct TaptionWatchWidgetView: View {
         return "\(activityTitle), \(confidenceText), \(freshnessText)"
     }
 
+    private var confirmationSuggestion: TaptionWatchActivitySuggestion? {
+        guard let value = resolvedPayload?.activitySuggestion,
+              playbackDate.timeIntervalSince(value.endedAt) <= 2 * 3_600 else {
+            return nil
+        }
+        return value
+    }
+
     private var activitySymbolName: String {
-        switch measurement?.behavior {
+        switch confirmationSuggestion?.proposedBehavior ?? measurement?.behavior {
         case .walking: "figure.walk"
         case .running: "figure.run"
         case .cycling: "bicycle"
@@ -342,6 +356,7 @@ private struct TaptionWatchWidgetView: View {
         case .eating: "fork.knife"
         case .typing: "keyboard"
         case .housework: "house.fill"
+        case .showering: "shower.fill"
         case .sleep: "bed.double.fill"
         case .lying: "bed.double"
         case .sitting: "chair.fill"

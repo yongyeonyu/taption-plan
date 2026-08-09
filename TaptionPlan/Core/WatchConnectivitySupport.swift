@@ -112,6 +112,31 @@ enum AppleWatchConnectionState: String, Sendable {
     }
 }
 
+enum AppleWatchConnectionPolicy {
+    static let recentContactWindow: TimeInterval = 30 * 60
+
+    static func state(
+        isSupported: Bool,
+        isPaired: Bool,
+        isWatchAppInstalled: Bool,
+        isReachable: Bool,
+        lastContactAt: Date?,
+        now: Date = .now
+    ) -> AppleWatchConnectionState {
+        guard isSupported else { return .unsupported }
+        let hasRecentContact = lastContactAt.map {
+            now.timeIntervalSince($0) >= 0
+                && now.timeIntervalSince($0) <= recentContactWindow
+        } ?? false
+        if hasRecentContact {
+            return isReachable ? .reachable : .background
+        }
+        guard isPaired else { return .notPaired }
+        guard isWatchAppInstalled else { return .appNotInstalled }
+        return isReachable ? .reachable : .background
+    }
+}
+
 /// 첫 실행에서 한 번만 보여 주는 Apple Watch 안내.
 enum AppleWatchOnboardingPrompt: String, Sendable, CaseIterable {
     /// 워치는 있는데 워치 앱이 없다. 설치를 권한다.
@@ -266,6 +291,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private let commandDefaultsKey = "TaptionPlan.appliedWatchCommandIDs"
     private let confirmationDefaultsKey =
         "TaptionPlan.appliedWatchConfirmationIDs"
+    private let lastContactDefaultsKey = "TaptionPlan.lastWatchContactAt.v1"
     private let lock = NSLock()
     private var latestPayloadData: Data?
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
@@ -331,11 +357,16 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         guard WCSession.isSupported() else { return }
         let message: [String: Any] = [TaptionWatchEnvelope.payloadKey: data]
         let session = WCSession.default
+        let state = connectionState(for: session)
         guard session.activationState == .activated,
-              session.isPaired else {
+              state == .background || state == .reachable else {
             return
         }
         try session.updateApplicationContext(message)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_payload_delivered",
+            fields: ["reachable": String(session.isReachable)]
+        )
         if session.isReachable {
             session.sendMessage(message, replyHandler: nil, errorHandler: nil)
         }
@@ -426,6 +457,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             ]
         )
         statusHandler?(connectionState(for: session))
+        if activationState == .activated {
+            publishLatestPayload()
+        }
     }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
@@ -439,10 +473,14 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         statusHandler?(connectionState(for: session))
+        if session.isReachable {
+            publishLatestPayload()
+        }
     }
 
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
         statusHandler?(connectionState(for: session))
+        publishLatestPayload()
     }
 
     nonisolated func session(
@@ -477,6 +515,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
 
     @discardableResult
     private func receiveEnvelope(_ envelope: [String: Any]) -> Bool {
+        if !envelope.isEmpty {
+            recordWatchContact()
+        }
         var accepted = receiveCommand(from: envelope)
         if envelope[TaptionWatchEnvelope.refreshRequestKey] as? Bool == true {
             publishLatestPayload()
@@ -500,25 +541,33 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         }
         if let data = envelope[
             TaptionWatchEnvelope.sensorSummaryKey
-        ] as? Data,
-        let summary = try? decoder.decode(
-            TaptionWatchSensorSummary.self,
-            from: data
-        ) {
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "watch_sensor_summary_received",
-                fields: [
-                    "sequence": String(summary.sequence),
-                    "samples": String(summary.accelerometerSampleCount),
-                    "final": String(summary.isFinal),
-                ]
-            )
-            // The Watch may deliver the same batch once as a live message and
-            // again from its reliable background queue.  Forward both copies:
-            // the archive and activity upsert are idempotent, while marking a
-            // batch consumed before persistence could lose it on an app crash.
-            sensorSummaryHandler?(summary)
-            accepted = true
+        ] as? Data {
+            do {
+                let summary = try decoder.decode(
+                    TaptionWatchSensorSummary.self,
+                    from: data
+                )
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_sensor_summary_received",
+                    fields: [
+                        "sequence": String(summary.sequence),
+                        "samples": String(summary.accelerometerSampleCount),
+                        "final": String(summary.isFinal),
+                    ]
+                )
+                // Live and reliable delivery can contain the same summary.
+                // Persistence is idempotent, so forwarding both avoids loss.
+                sensorSummaryHandler?(summary)
+                accepted = true
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_sensor_summary_decode_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error).merging([
+                        "bytes": String(data.count),
+                    ]) { _, new in new }
+                )
+            }
         }
         if let data = envelope[
             TaptionWatchEnvelope.healthSnapshotKey
@@ -565,11 +614,17 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             return
         }
         let session = WCSession.default
-        guard session.activationState == .activated, session.isPaired else {
+        let state = connectionState(for: session)
+        guard session.activationState == .activated,
+              state == .background || state == .reachable else {
             return
         }
         let message: [String: Any] = [TaptionWatchEnvelope.payloadKey: data]
         try? session.updateApplicationContext(message)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_payload_republished",
+            fields: ["reachable": String(session.isReachable)]
+        )
         if session.isReachable {
             session.sendMessage(
                 message,
@@ -622,9 +677,30 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private func connectionState(
         for session: WCSession
     ) -> AppleWatchConnectionState {
-        guard WCSession.isSupported() else { return .unsupported }
-        guard session.isPaired else { return .notPaired }
-        guard session.isWatchAppInstalled else { return .appNotInstalled }
-        return session.isReachable ? .reachable : .background
+        AppleWatchConnectionPolicy.state(
+            isSupported: WCSession.isSupported(),
+            isPaired: session.isPaired,
+            isWatchAppInstalled: session.isWatchAppInstalled,
+            isReachable: session.isReachable,
+            lastContactAt: commandDefaults.object(
+                forKey: lastContactDefaultsKey
+            ) as? Date
+        )
+    }
+
+    private func recordWatchContact() {
+        let now = Date.now
+        commandDefaults.set(now, forKey: lastContactDefaultsKey)
+        let session = WCSession.default
+        let state = connectionState(for: session)
+        statusHandler?(state)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_contact_received",
+            fields: [
+                "state": state.rawValue,
+                "installed_flag": String(session.isWatchAppInstalled),
+                "reachable": String(session.isReachable),
+            ]
+        )
     }
 }

@@ -78,13 +78,13 @@ extension Color {
 enum RecordTimelinePalette {
     static let categoryHexes: [String: String] = [
         "calendar": "#52525B", "location": "#0284C7",
-        "movement": "#D97706", "sleep": "#4F46E5",
-        "activity": "#16A34A", "appUsage": "#0891B2",
+        "movement": "#F76B15", "sleep": "#5B5BD6",
+        "activity": "#29A383", "appUsage": "#0891B2",
         "weather": "#0EA5E9", "photo": "#9333EA", "memo": "#6B7280",
-        "unconfirmed": "#CBD5E1",
+        "unconfirmed": "#C7CFD9",
         "project": "#0F766E", "exercise": "#DC2626", "study": "#4338CA",
         "hobby": "#059669", "routine": "#CA8A04",
-        "relationship": "#DB2777", "rest": "#64748B",
+        "relationship": "#DB2777", "rest": "#7E868F",
         "travel": "#EA580C", "health": "#0D9488", "event": "#C026D3",
         "work": "#2563EB", "family": "#E11D48", "parenting": "#F97316",
         "finance": "#65A30D", "housing": "#78716C", "career": "#7C3AED",
@@ -95,40 +95,46 @@ enum RecordTimelinePalette {
     ]
 
     static let sleepStageHexes: [String: String] = [
-        SleepStage.inBed.rawValue: "#94A3B8",
-        SleepStage.awake.rawValue: "#F59E0B",
-        SleepStage.core.rawValue: "#3B82F6",
-        SleepStage.deep.rawValue: "#312E81",
-        SleepStage.rem.rawValue: "#D946EF",
-        SleepStage.asleepUnspecified.rawValue: "#14B8A6",
+        SleepStage.inBed.rawValue: "#8B8D98",
+        SleepStage.awake.rawValue: "#D5A300",
+        SleepStage.core.rawValue: "#3E63DD",
+        SleepStage.deep.rawValue: "#4A3F8F",
+        SleepStage.rem.rawValue: "#D6409F",
+        SleepStage.asleepUnspecified.rawValue: "#12A594",
     ]
 
     static let travelHexes: [String: String] = [
-        TravelMode.walking.rawValue: "#65A30D",
-        TravelMode.running.rawValue: "#DC2626",
-        TravelMode.cycling.rawValue: "#0891B2",
-        TravelMode.bus.rawValue: "#F97316",
-        TravelMode.subway.rawValue: "#7C3AED",
-        TravelMode.taxi.rawValue: "#EAB308",
-        TravelMode.car.rawValue: "#2563EB",
-        TravelMode.train.rawValue: "#BE123C",
-        TravelMode.airplane.rawValue: "#0EA5E9",
-        TravelMode.ship.rawValue: "#0F766E",
+        TravelMode.walking.rawValue: "#29A383",
+        TravelMode.running.rawValue: "#E54666",
+        TravelMode.cycling.rawValue: "#00A2C7",
+        TravelMode.bus.rawValue: "#F76B15",
+        TravelMode.subway.rawValue: "#8E4EC6",
+        TravelMode.taxi.rawValue: "#D5A300",
+        TravelMode.car.rawValue: "#3E63DD",
+        TravelMode.train.rawValue: "#D6409F",
+        TravelMode.airplane.rawValue: "#0C7792",
+        TravelMode.ship.rawValue: "#12A594",
     ]
 
     static let dayPhaseHexes: [String: String] = [
-        DayPhase.sleep.rawValue: "#4338CA",
-        DayPhase.commuteToWork.rawValue: "#EA580C",
-        DayPhase.commuteToSchool.rawValue: "#0284C7",
-        DayPhase.commuteToAcademy.rawValue: "#7C3AED",
-        DayPhase.activityDeparture.rawValue: "#65A30D",
-        DayPhase.work.rawValue: "#1E3A8A",
-        DayPhase.study.rawValue: "#2563EB",
-        DayPhase.commuteHomeFromWork.rawValue: "#DC2626",
-        DayPhase.commuteHomeFromSchool.rawValue: "#0891B2",
-        DayPhase.commuteHomeFromAcademy.rawValue: "#DB2777",
-        DayPhase.activityReturn.rawValue: "#15803D",
-        DayPhase.evening.rawValue: "#CA8A04",
+        DayPhase.unconfirmed.rawValue: "#C7CFD9",
+        DayPhase.sleep.rawValue: "#5B5BD6",
+        DayPhase.movement.rawValue: "#F59E0B",
+        DayPhase.exercise.rawValue: "#E54666",
+        DayPhase.hobby.rawValue: "#8B5CF6",
+        DayPhase.activity.rawValue: "#10B981",
+        DayPhase.appointment.rawValue: "#8E4EC6",
+        DayPhase.commuteToWork.rawValue: "#F76B15",
+        DayPhase.commuteToSchool.rawValue: "#0090FF",
+        DayPhase.commuteToAcademy.rawValue: "#7C66DC",
+        DayPhase.activityDeparture.rawValue: "#46A758",
+        DayPhase.work.rawValue: "#3E63DD",
+        DayPhase.study.rawValue: "#00A2C7",
+        DayPhase.commuteHomeFromWork.rawValue: "#E54D2E",
+        DayPhase.commuteHomeFromSchool.rawValue: "#12A594",
+        DayPhase.commuteHomeFromAcademy.rawValue: "#D6409F",
+        DayPhase.activityReturn.rawValue: "#29A383",
+        DayPhase.evening.rawValue: "#D5A300",
     ]
 
     static func categoryColor(_ id: String, fallbackHex: String? = nil) -> Color {
@@ -142,13 +148,13 @@ enum RecordTimelinePalette {
         case .travel: travelHexes[token]
         case .weather:
             switch WeatherClockToken.airGrade(token) {
-            case .good: "#16A34A"
-            case .moderate: "#CA8A04"
-            case .bad: "#EA580C"
-            case .veryBad: "#DC2626"
-            case nil: "#0EA5E9"
+            case .good: "#29A383"
+            case .moderate: "#D5A300"
+            case .bad: "#F76B15"
+            case .veryBad: "#E54666"
+            case nil: "#00A2C7"
             }
-        case .location: "#0284C7"
+        case .location: "#0090FF"
         }
         return Color(hex: hex ?? "#475569")
     }
