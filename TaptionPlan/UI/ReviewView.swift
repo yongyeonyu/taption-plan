@@ -2362,6 +2362,7 @@ private struct ActivityCorrectionSheet: View {
     let recordID: UUID
     @State private var customTitle = ""
     @State private var selectedOption: ActivityCorrectionOption?
+    @State private var addedCustomOptions: [ActivityCorrectionOption] = []
     @State private var startAt: Date
     @State private var endAt: Date
 
@@ -2400,7 +2401,12 @@ private struct ActivityCorrectionSheet: View {
     }
 
     private var customOptions: [ActivityCorrectionOption] {
-        options.filter(\.isCustom)
+        var result = options.filter(\.isCustom)
+        for option in addedCustomOptions
+        where !result.contains(where: { $0.id == option.id }) {
+            result.append(option)
+        }
+        return result
     }
 
     var body: some View {
@@ -2443,6 +2449,8 @@ private struct ActivityCorrectionSheet: View {
                     HStack(spacing: 8) {
                         TextField("새 활동 이름", text: $customTitle)
                             .textInputAutocapitalization(.never)
+                            .submitLabel(.done)
+                            .onSubmit { addCustomActivity() }
                         Button("추가") {
                             addCustomActivity()
                         }
@@ -2507,6 +2515,15 @@ private struct ActivityCorrectionSheet: View {
         guard !title.isEmpty else { return }
         customTitle = ""
         let option = ActivityCorrectionOption.custom(title)
+        guard !customOptions.contains(where: {
+            $0.title.localizedCaseInsensitiveCompare(title) == .orderedSame
+        }) else {
+            selectedOption = customOptions.first {
+                $0.title.localizedCaseInsensitiveCompare(title) == .orderedSame
+            }
+            return
+        }
+        addedCustomOptions.append(option)
         selectedOption = option
     }
 
