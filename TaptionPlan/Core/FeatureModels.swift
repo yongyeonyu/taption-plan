@@ -2589,6 +2589,11 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
     var movementCorrections: [TravelModeCorrection]
     var suppressedActualIDs: Set<UUID>
+    /// Prevents a deliberate deletion from being mistaken for local data loss
+    /// when an older CloudKit snapshot is used as a recovery source.
+    var cloudDeletedRecordKeys: Set<String>
+    /// A full reset invalidates every cloud record written before this time.
+    var cloudResetAt: Date?
     var weatherEnabled: Bool
     var notificationsEnabled: Bool
     var permissions: [PermissionFeature: PermissionState]
@@ -2614,6 +2619,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         dismissedPlaceSuggestions: [],
         movementCorrections: [],
         suppressedActualIDs: [],
+        cloudDeletedRecordKeys: [],
+        cloudResetAt: nil,
         weatherEnabled: false,
         notificationsEnabled: false,
         permissions: Dictionary(
@@ -2642,6 +2649,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         dismissedPlaceSuggestions: [DismissedPlaceSuggestion] = [],
         movementCorrections: [TravelModeCorrection] = [],
         suppressedActualIDs: Set<UUID> = [],
+        cloudDeletedRecordKeys: Set<String> = [],
+        cloudResetAt: Date? = nil,
         weatherEnabled: Bool,
         notificationsEnabled: Bool,
         permissions: [PermissionFeature: PermissionState],
@@ -2666,6 +2675,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.dismissedPlaceSuggestions = dismissedPlaceSuggestions
         self.movementCorrections = movementCorrections
         self.suppressedActualIDs = suppressedActualIDs
+        self.cloudDeletedRecordKeys = cloudDeletedRecordKeys
+        self.cloudResetAt = cloudResetAt
         self.weatherEnabled = weatherEnabled
         self.notificationsEnabled = notificationsEnabled
         self.permissions = permissions
@@ -2692,6 +2703,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case dismissedPlaceSuggestions
         case movementCorrections
         case suppressedActualIDs
+        case cloudDeletedRecordKeys
+        case cloudResetAt
         case weatherEnabled
         case notificationsEnabled
         case permissions
@@ -2779,6 +2792,14 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             Set<UUID>.self,
             forKey: .suppressedActualIDs
         ) ?? defaults.suppressedActualIDs
+        cloudDeletedRecordKeys = try values.decodeIfPresent(
+            Set<String>.self,
+            forKey: .cloudDeletedRecordKeys
+        ) ?? defaults.cloudDeletedRecordKeys
+        cloudResetAt = try values.decodeIfPresent(
+            Date.self,
+            forKey: .cloudResetAt
+        ) ?? defaults.cloudResetAt
         weatherEnabled = try values.decodeIfPresent(
             Bool.self,
             forKey: .weatherEnabled

@@ -330,6 +330,147 @@ enum CloudSyncDecision: Equatable, Sendable {
     case unchanged
 }
 
+enum CloudBackupRecordKey {
+    static func plan(_ id: UUID) -> String { "plan:\(id.uuidString)" }
+    static func memo(_ id: UUID) -> String { "memo:\(id.uuidString)" }
+    static func link(_ id: UUID) -> String { "link:\(id.uuidString)" }
+}
+
+enum CloudSnapshotRecoveryEngine {
+    static func merge(
+        local: TaptionDataSnapshot,
+        remote: TaptionDataSnapshot
+    ) -> TaptionDataSnapshot {
+        if local.settings.cloudResetAt != remote.settings.cloudResetAt {
+            return resetWinner(local: local, remote: remote)
+        }
+
+        let localIsPrimary = local.updatedAt >= remote.updatedAt
+        let primary = localIsPrimary ? local : remote
+        let backup = localIsPrimary ? remote : local
+        var value = primary
+        let deleted = local.settings.cloudDeletedRecordKeys.union(
+            remote.settings.cloudDeletedRecordKeys
+        )
+        let suppressedActuals = local.settings.suppressedActualIDs.union(
+            remote.settings.suppressedActualIDs
+        )
+
+        value.plans = mergePlans(primary.plans, backup.plans).filter {
+            !deleted.contains(CloudBackupRecordKey.plan($0.id))
+        }
+        value.memos = mergeMemos(primary.memos, backup.memos).filter {
+            !deleted.contains(CloudBackupRecordKey.memo($0.id))
+        }
+        value.actuals = merged(primary.actuals, backup.actuals, id: \.id)
+            .filter { !suppressedActuals.contains($0.id) }
+        value.recordLinks = merged(
+            primary.recordLinks,
+            backup.recordLinks,
+            id: \.id
+        ).filter {
+            !deleted.contains(CloudBackupRecordKey.link($0.id))
+                && referencesAvailableRecords(
+                    $0,
+                    plans: value.plans,
+                    suppressedActuals: suppressedActuals
+                )
+        }
+        value.categories = merged(
+            primary.categories,
+            backup.categories,
+            id: \.id
+        )
+        value.calendarEvents = merged(
+            primary.calendarEvents,
+            backup.calendarEvents,
+            id: \.id
+        )
+        value.places = merged(primary.places, backup.places, id: \.id)
+        value.travel = merged(primary.travel, backup.travel, id: \.id)
+        value.floorTransitions = merged(
+            primary.floorTransitions,
+            backup.floorTransitions,
+            id: \.id
+        )
+        value.settings.cloudDeletedRecordKeys = deleted
+        value.settings.suppressedActualIDs = suppressedActuals
+        value.schemaVersion = max(local.schemaVersion, remote.schemaVersion)
+        value.updatedAt = max(local.updatedAt, remote.updatedAt)
+        return value
+    }
+
+    private static func resetWinner(
+        local: TaptionDataSnapshot,
+        remote: TaptionDataSnapshot
+    ) -> TaptionDataSnapshot {
+        let localReset = local.settings.cloudResetAt ?? .distantPast
+        let remoteReset = remote.settings.cloudResetAt ?? .distantPast
+        return localReset >= remoteReset ? local : remote
+    }
+
+    private static func mergePlans(
+        _ primary: [PlanRecord],
+        _ backup: [PlanRecord]
+    ) -> [PlanRecord] {
+        merged(primary, backup, id: \.id) { current, candidate in
+            candidate.updatedAt > current.updatedAt ? candidate : current
+        }
+    }
+
+    private static func mergeMemos(
+        _ primary: [ActionMemo],
+        _ backup: [ActionMemo]
+    ) -> [ActionMemo] {
+        merged(primary, backup, id: \.id) { current, candidate in
+            candidate.updatedAt > current.updatedAt ? candidate : current
+        }
+    }
+
+    private static func merged<Element, ID: Hashable>(
+        _ primary: [Element],
+        _ backup: [Element],
+        id: KeyPath<Element, ID>,
+        resolve: (Element, Element) -> Element = { current, _ in current }
+    ) -> [Element] {
+        var result: [Element] = []
+        var indexes: [ID: Int] = [:]
+        for item in primary + backup {
+            let itemID = item[keyPath: id]
+            if let index = indexes[itemID] {
+                result[index] = resolve(result[index], item)
+            } else {
+                indexes[itemID] = result.count
+                result.append(item)
+            }
+        }
+        return result
+    }
+
+    private static func referencesAvailableRecords(
+        _ link: RecordLink,
+        plans: [PlanRecord],
+        suppressedActuals: Set<UUID>
+    ) -> Bool {
+        let planIDs = Set(plans.map(\.id))
+        for nodeID in [link.fromNodeID, link.toNodeID] {
+            for prefix in ["routine.", "action."] where nodeID.hasPrefix(prefix) {
+                guard let id = UUID(
+                    uuidString: String(nodeID.dropFirst(prefix.count))
+                ), planIDs.contains(id) else { return false }
+            }
+            let actualPrefix = "automatic.actual."
+            if nodeID.hasPrefix(actualPrefix),
+               let id = UUID(
+                   uuidString: String(nodeID.dropFirst(actualPrefix.count))
+               ), suppressedActuals.contains(id) {
+                return false
+            }
+        }
+        return true
+    }
+}
+
 enum CloudUnavailableReason: Sendable {
     case unsupportedBuild
     case signedOut
@@ -517,40 +658,23 @@ actor CloudKitSnapshotSyncService {
             let uploaded = try await upload(local)
             return (uploaded, .uploaded)
         }
-
-        if remote.updatedAt > local.updatedAt {
-            return (remote, .downloaded)
+        let merged = CloudSnapshotRecoveryEngine.merge(
+            local: local,
+            remote: remote
+        )
+        if merged == local, merged == remote {
+            return (merged, .unchanged)
         }
-        if local.updatedAt > remote.updatedAt {
-            let uploaded = try await upload(local)
-            return (uploaded, .uploaded)
+        if merged == remote {
+            return (merged, .downloaded)
         }
-        return (local, .unchanged)
+        let uploaded = try await upload(merged)
+        return (uploaded, merged == local ? .uploaded : .downloaded)
     }
 
     func fetch() async throws -> TaptionDataSnapshot? {
-        let recordID = CKRecord.ID(recordName: Self.recordName)
-        let record: CKRecord
-        do {
-            record = try await database.record(for: recordID)
-        } catch let error as CKError where error.code == .unknownItem {
-            return nil
-        }
-
-        let data: Data?
-        if let inline = record["payload"] as? Data {
-            data = inline
-        } else if let asset = record["payloadAsset"] as? CKAsset,
-                  let fileURL = asset.fileURL {
-            data = try Data(contentsOf: fileURL)
-        } else {
-            data = nil
-        }
-
-        guard let data else {
-            throw RepositoryError.cloudPayloadMissing
-        }
-        return try decoder.decode(TaptionDataSnapshot.self, from: data)
+        guard let record = try await fetchRecord() else { return nil }
+        return try snapshot(from: record)
     }
 
     @discardableResult
@@ -562,7 +686,26 @@ actor CloudKitSnapshotSyncService {
             throw RepositoryError.cloudSchemaUnavailable
         }
         do {
-            return try await uploadRecord(snapshot)
+            let record = try await fetchRecord()
+            let value: TaptionDataSnapshot
+            if let record {
+                value = CloudSnapshotRecoveryEngine.merge(
+                    local: snapshot,
+                    remote: try self.snapshot(from: record)
+                )
+            } else {
+                value = snapshot
+            }
+            var stamped = value
+            stamped.updatedAt = .now
+            let target = record ?? CKRecord(
+                recordType: Self.recordType,
+                recordID: CKRecord.ID(recordName: Self.recordName)
+            )
+            return try await saveWithConflictRecovery(
+                target,
+                value: stamped
+            )
         } catch {
             if CloudKitErrorPolicy.isProductionSchemaUnavailable(error) {
                 schemaUnavailable = true
@@ -587,37 +730,13 @@ actor CloudKitSnapshotSyncService {
         uploadWaiters.removeFirst().resume()
     }
 
-    private func uploadRecord(
-        _ snapshot: TaptionDataSnapshot
-    ) async throws -> TaptionDataSnapshot {
-        var value = snapshot
-        value.updatedAt = .now
-        let data = try encoder.encode(value)
+    private func fetchRecord() async throws -> CKRecord? {
         let recordID = CKRecord.ID(recordName: Self.recordName)
-        let record = (try? await database.record(for: recordID))
-            ?? CKRecord(recordType: Self.recordType, recordID: recordID)
-
-        if data.count <= Self.inlineLimit {
-            try await saveWithConflictRecovery(
-                record,
-                value: value,
-                inlineData: data,
-                assetURL: nil
-            )
-            return value
+        do {
+            return try await database.record(for: recordID)
+        } catch let error as CKError where error.code == .unknownItem {
+            return nil
         }
-
-        let temporaryURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("taption-cloud-\(UUID().uuidString).json")
-        defer { try? FileManager.default.removeItem(at: temporaryURL) }
-        try data.write(to: temporaryURL, options: .atomic)
-        try await saveWithConflictRecovery(
-            record,
-            value: value,
-            inlineData: nil,
-            assetURL: temporaryURL
-        )
-        return value
     }
 
     /// A phone, Watch-triggered refresh, and another Apple device can update
@@ -628,18 +747,34 @@ actor CloudKitSnapshotSyncService {
     /// failure to the user.
     private func saveWithConflictRecovery(
         _ initialRecord: CKRecord,
-        value: TaptionDataSnapshot,
-        inlineData: Data?,
-        assetURL: URL?
-    ) async throws {
+        value initialValue: TaptionDataSnapshot
+    ) async throws -> TaptionDataSnapshot {
         var record = initialRecord
+        var value = initialValue
         let maximumAttempts = 6
 
         for attempt in 1...maximumAttempts {
+            let data = try encoder.encode(value)
+            let assetURL: URL?
+            if data.count > Self.inlineLimit {
+                let url = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(
+                        "taption-cloud-\(UUID().uuidString).json"
+                    )
+                try data.write(to: url, options: .atomic)
+                assetURL = url
+            } else {
+                assetURL = nil
+            }
+            defer {
+                if let assetURL {
+                    try? FileManager.default.removeItem(at: assetURL)
+                }
+            }
             applyPayload(
                 to: record,
                 value: value,
-                inlineData: inlineData,
+                inlineData: assetURL == nil ? data : nil,
                 assetURL: assetURL
             )
 
@@ -651,7 +786,7 @@ actor CloudKitSnapshotSyncService {
                         fields: ["attempt": String(attempt)]
                     )
                 }
-                return
+                return value
             } catch {
                 guard CloudKitErrorPolicy.isRecordConflict(error),
                       attempt < maximumAttempts else {
@@ -668,8 +803,30 @@ actor CloudKitSnapshotSyncService {
                 record = (try? await database.record(
                     for: initialRecord.recordID
                 )) ?? serverRecord ?? record
+                if let remote = try? snapshot(from: record) {
+                    value = CloudSnapshotRecoveryEngine.merge(
+                        local: value,
+                        remote: remote
+                    )
+                    value.updatedAt = .now
+                }
             }
         }
+        return value
+    }
+
+    private func snapshot(from record: CKRecord) throws -> TaptionDataSnapshot {
+        let data: Data?
+        if let inline = record["payload"] as? Data {
+            data = inline
+        } else if let asset = record["payloadAsset"] as? CKAsset,
+                  let fileURL = asset.fileURL {
+            data = try Data(contentsOf: fileURL)
+        } else {
+            data = nil
+        }
+        guard let data else { throw RepositoryError.cloudPayloadMissing }
+        return try decoder.decode(TaptionDataSnapshot.self, from: data)
     }
 
     private func applyPayload(

@@ -1439,10 +1439,10 @@ final class AppModel {
             let (cloudValue, _) = try await cloudSyncService.synchronize(
                 local: cloudPortableSnapshot(snapshot)
             )
-            snapshot = mergeDeviceLocalData(
+            assignCloudMergedSnapshot(mergeDeviceLocalData(
                 cloud: cloudValue,
                 local: localDeviceData
-            )
+            ))
             try await repository.save(snapshot)
             publishWidgetPayload()
         } catch {
@@ -1851,6 +1851,7 @@ final class AppModel {
         empty.settings.permissions = snapshot.settings.permissions
         empty.settings.permissions[.cloud] =
             snapshot.settings.permissions[.cloud] ?? .notDetermined
+        empty.settings.cloudResetAt = .now
         snapshot = empty
         pendingSetupCategoryIDs = Set(empty.categories.map(\.id))
         isEditingSetupCategories = false
@@ -2066,6 +2067,12 @@ final class AppModel {
     }
 
     func deleteMemo(_ memoID: UUID) {
+        guard snapshot.memos.contains(where: { $0.id == memoID }) else {
+            return
+        }
+        snapshot.settings.cloudDeletedRecordKeys.insert(
+            CloudBackupRecordKey.memo(memoID)
+        )
         snapshot.memos.removeAll { $0.id == memoID }
         memoEntry?.memoIDs.removeAll { $0 == memoID }
         Task { await persist() }
@@ -2423,7 +2430,7 @@ final class AppModel {
                 for: goal.id
             )
         }
-        snapshot.recordLinks.removeAll {
+        removeRecordLinks {
             $0.fromNodeID == "automatic.actual.\(actualID.uuidString)"
         }
         await persist()
@@ -2473,11 +2480,11 @@ final class AppModel {
                     for: planID
                 )
             }
-            snapshot.recordLinks.removeAll {
+            removeRecordLinks {
                 $0.fromNodeID == sourceNodeID
             }
         } else {
-            snapshot.recordLinks.removeAll {
+            removeRecordLinks {
                 $0.fromNodeID == sourceNodeID
             }
             snapshot.recordLinks.append(
@@ -2722,6 +2729,16 @@ final class AppModel {
             in: snapshot.plans
         )) ?? []
         let deletedIDs = Set([planID] + descendants.map(\.id))
+        snapshot.settings.cloudDeletedRecordKeys.formUnion(
+            deletedIDs.map(CloudBackupRecordKey.plan)
+        )
+        snapshot.settings.cloudDeletedRecordKeys.formUnion(
+            snapshot.memos.compactMap { memo in
+                memo.planID.map(deletedIDs.contains) == true
+                    ? CloudBackupRecordKey.memo(memo.id)
+                    : nil
+            }
+        )
         snapshot.plans.removeAll { deletedIDs.contains($0.id) }
         snapshot.memos.removeAll {
             $0.planID.map(deletedIDs.contains) == true
@@ -2740,7 +2757,7 @@ final class AppModel {
             }
             return preserved
         }
-        snapshot.recordLinks.removeAll { link in
+        removeRecordLinks { link in
             recordNodePlanID(link.fromNodeID).map(deletedIDs.contains) == true
                 || recordNodePlanID(link.toNodeID).map(deletedIDs.contains) == true
         }
@@ -2762,6 +2779,17 @@ final class AppModel {
         return nil
     }
 
+    private func removeRecordLinks(
+        where shouldRemove: (RecordLink) -> Bool
+    ) {
+        snapshot.settings.cloudDeletedRecordKeys.formUnion(
+            snapshot.recordLinks.lazy
+                .filter(shouldRemove)
+                .map { CloudBackupRecordKey.link($0.id) }
+        )
+        snapshot.recordLinks.removeAll(where: shouldRemove)
+    }
+
     func deleteActual(_ actualID: UUID) async {
         guard let actual = snapshot.actuals.first(where: {
             $0.id == actualID
@@ -2772,7 +2800,7 @@ final class AppModel {
 
         snapshot.settings.suppressedActualIDs.insert(actualID)
         snapshot.actuals.removeAll { $0.id == actualID }
-        snapshot.recordLinks.removeAll {
+        removeRecordLinks {
             $0.fromNodeID == "automatic.actual.\(actualID.uuidString)"
                 || $0.toNodeID == "automatic.actual.\(actualID.uuidString)"
         }
@@ -5775,13 +5803,15 @@ final class AppModel {
             if permissionState(for: .cloud).isGranted,
                let cloudSyncService {
                 do {
+                    let localDeviceData = snapshot
                     let uploaded = try await cloudSyncService.upload(
                         cloudPortableSnapshot(value)
                     )
-                    var uploadedValue = snapshot
-                    uploadedValue.updatedAt = uploaded.updatedAt
-                    assignTimestampOnlySnapshot(uploadedValue)
-                    try await repository.save(uploadedValue)
+                    assignCloudMergedSnapshot(mergeDeviceLocalData(
+                        cloud: uploaded,
+                        local: localDeviceData
+                    ))
+                    try await repository.save(snapshot)
                 } catch {
                     if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
                         || error is RepositoryError
@@ -5876,6 +5906,21 @@ final class AppModel {
         value.actuals.append(contentsOf: deviceActuals.filter {
             !cloudIDs.contains($0.id)
         })
+        value.places = deviceRecords(
+            local.places,
+            recoveringMissingFrom: value.places,
+            id: \.id
+        ).sorted { $0.span.start < $1.span.start }
+        value.travel = deviceRecords(
+            local.travel,
+            recoveringMissingFrom: value.travel,
+            id: \.id
+        ).sorted { $0.span.start < $1.span.start }
+        value.floorTransitions = deviceRecords(
+            local.floorTransitions,
+            recoveringMissingFrom: value.floorTransitions,
+            id: \.id
+        ).sorted { $0.span.start < $1.span.start }
         value.photos = local.photos
         value.settings.permissions = local.settings.permissions
         value.settings.showsPhotos = local.settings.showsPhotos
@@ -5910,6 +5955,13 @@ final class AppModel {
         value.settings.suppressedActualIDs.formUnion(
             local.settings.suppressedActualIDs
         )
+        value.settings.cloudDeletedRecordKeys.formUnion(
+            local.settings.cloudDeletedRecordKeys
+        )
+        value.settings.cloudResetAt = [
+            value.settings.cloudResetAt,
+            local.settings.cloudResetAt,
+        ].compactMap { $0 }.max()
         value.settings.weatherEnabled = local.settings.weatherEnabled
         value.settings.notificationsEnabled =
             local.settings.notificationsEnabled
@@ -5921,6 +5973,26 @@ final class AppModel {
         // build on this or another device.
         MemoShellPlanMigration.apply(to: &value)
         return value
+    }
+
+    private func deviceRecords<Element, ID: Hashable>(
+        _ local: [Element],
+        recoveringMissingFrom cloud: [Element],
+        id: KeyPath<Element, ID>
+    ) -> [Element] {
+        var seen = Set(local.map { $0[keyPath: id] })
+        return local + cloud.filter { seen.insert($0[keyPath: id]).inserted }
+    }
+
+    private func assignCloudMergedSnapshot(_ value: TaptionDataSnapshot) {
+        guard value != snapshot else { return }
+        var content = value
+        content.updatedAt = snapshot.updatedAt
+        if content == snapshot {
+            assignTimestampOnlySnapshot(value)
+        } else {
+            snapshot = value
+        }
     }
 
     private func persistDeviceLocalSnapshot() async {

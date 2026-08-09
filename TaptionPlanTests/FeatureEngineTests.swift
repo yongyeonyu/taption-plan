@@ -6169,6 +6169,149 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testCloudRecoveryRestoresRecordsMissingFromNewerLocalSnapshot() {
+        let base = makeDate(2026, 8, 9, 9)
+        let localPlan = PlanRecord(
+            title: "로컬 계획",
+            span: TimeSpan(start: base, end: base.addingTimeInterval(hour)),
+            categoryID: "activity",
+            updatedAt: base.addingTimeInterval(2 * hour)
+        )
+        let cloudPlan = PlanRecord(
+            title: "백업 계획",
+            span: TimeSpan(
+                start: base.addingTimeInterval(2 * hour),
+                end: base.addingTimeInterval(3 * hour)
+            ),
+            categoryID: "activity",
+            updatedAt: base
+        )
+        let cloudMemo = ActionMemo(
+            planID: cloudPlan.id,
+            kind: .decision,
+            text: "백업 메모",
+            createdAt: base,
+            updatedAt: base
+        )
+        var local = TaptionDataSnapshot.empty
+        local.updatedAt = base.addingTimeInterval(3 * hour)
+        local.plans = [localPlan]
+        var remote = TaptionDataSnapshot.empty
+        remote.updatedAt = base.addingTimeInterval(hour)
+        remote.plans = [cloudPlan]
+        remote.memos = [cloudMemo]
+
+        let recovered = CloudSnapshotRecoveryEngine.merge(
+            local: local,
+            remote: remote
+        )
+
+        XCTAssertEqual(Set(recovered.plans.map(\.id)), [localPlan.id, cloudPlan.id])
+        XCTAssertEqual(recovered.memos, [cloudMemo])
+        XCTAssertEqual(recovered.updatedAt, local.updatedAt)
+    }
+
+    func testCloudRecoveryUsesNewestVersionOfSameRecord() {
+        let base = makeDate(2026, 8, 9, 10)
+        let id = UUID()
+        let localPlan = PlanRecord(
+            id: id,
+            title: "이전 제목",
+            span: TimeSpan(start: base, end: base.addingTimeInterval(hour)),
+            categoryID: "activity",
+            updatedAt: base
+        )
+        let cloudPlan = PlanRecord(
+            id: id,
+            title: "최신 제목",
+            span: TimeSpan(start: base, end: base.addingTimeInterval(hour)),
+            categoryID: "activity",
+            updatedAt: base.addingTimeInterval(hour)
+        )
+        var local = TaptionDataSnapshot.empty
+        local.updatedAt = base.addingTimeInterval(2 * hour)
+        local.plans = [localPlan]
+        var remote = TaptionDataSnapshot.empty
+        remote.updatedAt = base.addingTimeInterval(hour)
+        remote.plans = [cloudPlan]
+
+        let recovered = CloudSnapshotRecoveryEngine.merge(
+            local: local,
+            remote: remote
+        )
+
+        XCTAssertEqual(recovered.plans, [cloudPlan])
+    }
+
+    func testCloudRecoveryDoesNotResurrectDeletedRecords() {
+        let base = makeDate(2026, 8, 9, 11)
+        let plan = PlanRecord(
+            title: "삭제한 계획",
+            span: TimeSpan(start: base, end: base.addingTimeInterval(hour)),
+            categoryID: "activity"
+        )
+        let memo = ActionMemo(
+            planID: plan.id,
+            kind: .idea,
+            text: "삭제한 메모"
+        )
+        let actual = ActualRecord(
+            planID: nil,
+            title: "삭제한 기록",
+            categoryID: "activity",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(hour),
+            source: .manual
+        )
+        var local = TaptionDataSnapshot.empty
+        local.updatedAt = base.addingTimeInterval(2 * hour)
+        local.settings.cloudDeletedRecordKeys = [
+            CloudBackupRecordKey.plan(plan.id),
+            CloudBackupRecordKey.memo(memo.id),
+        ]
+        local.settings.suppressedActualIDs = [actual.id]
+        var remote = TaptionDataSnapshot.empty
+        remote.updatedAt = base
+        remote.plans = [plan]
+        remote.memos = [memo]
+        remote.actuals = [actual]
+
+        let recovered = CloudSnapshotRecoveryEngine.merge(
+            local: local,
+            remote: remote
+        )
+
+        XCTAssertTrue(recovered.plans.isEmpty)
+        XCTAssertTrue(recovered.memos.isEmpty)
+        XCTAssertTrue(recovered.actuals.isEmpty)
+    }
+
+    func testCloudRecoveryKeepsExplicitFullReset() {
+        let base = makeDate(2026, 8, 9, 12)
+        var reset = TaptionDataSnapshot.empty
+        reset.updatedAt = base
+        reset.settings.cloudResetAt = base
+        var staleDevice = TaptionDataSnapshot.empty
+        staleDevice.updatedAt = base.addingTimeInterval(hour)
+        staleDevice.plans = [
+            PlanRecord(
+                title: "초기화 전 계획",
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(hour)
+                ),
+                categoryID: "activity"
+            )
+        ]
+
+        let recovered = CloudSnapshotRecoveryEngine.merge(
+            local: reset,
+            remote: staleDevice
+        )
+
+        XCTAssertEqual(recovered, reset)
+    }
+
     func testOpenMeteoWeatherCodesUseKoreanConditionsAndDayNightSymbols() {
         let clearDay = OpenMeteoWeatherCodePresentation(
             code: 0,
