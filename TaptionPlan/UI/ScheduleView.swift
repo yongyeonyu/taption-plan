@@ -1526,6 +1526,8 @@ struct TwoFingerPinchAttachment: UIViewRepresentable {
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var onChanged: (_ scale: CGFloat, _ anchor: CGFloat) -> Void
         var onEnded: (_ scale: CGFloat, _ anchor: CGFloat) -> Void
+        private var originalPanTouchLimits: [(UIScrollView, Int)] = []
+        private var didLogRecognition = false
 
         init(
             onChanged: @escaping (_ scale: CGFloat, _ anchor: CGFloat) -> Void,
@@ -1542,9 +1544,30 @@ struct TwoFingerPinchAttachment: UIViewRepresentable {
             let anchor = min(1, max(0, location.x / width))
             let scale = max(0.01, recognizer.scale)
             switch recognizer.state {
-            case .began, .changed:
+            case .began:
+                didLogRecognition = true
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "pinch_recognizer_began",
+                    fields: [
+                        "host": String(reflecting: type(of: view)),
+                        "scale": String(format: "%.3f", scale),
+                    ]
+                )
+                onChanged(scale, anchor)
+            case .changed:
                 onChanged(scale, anchor)
             case .ended, .cancelled, .failed:
+                if didLogRecognition {
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "pinch_recognizer_ended",
+                        fields: [
+                            "host": String(reflecting: type(of: view)),
+                            "state": String(describing: recognizer.state.rawValue),
+                            "scale": String(format: "%.3f", scale),
+                        ]
+                    )
+                }
+                didLogRecognition = false
                 onEnded(scale, anchor)
             default:
                 break
@@ -1557,6 +1580,40 @@ struct TwoFingerPinchAttachment: UIViewRepresentable {
                 otherGestureRecognizer: UIGestureRecognizer
         ) -> Bool {
             true
+        }
+
+        func allowPinchAlongsideScroll(from view: UIView) -> UIView? {
+            var host: UIView?
+            var ancestor = view.superview
+            while let current = ancestor {
+                if let scrollView = current as? UIScrollView {
+                    host = host ?? scrollView
+                    if !originalPanTouchLimits.contains(where: {
+                        $0.0 === scrollView
+                    }) {
+                        originalPanTouchLimits.append(
+                            (
+                                scrollView,
+                                scrollView.panGestureRecognizer.maximumNumberOfTouches
+                            )
+                        )
+                        scrollView.panGestureRecognizer.maximumNumberOfTouches = 1
+                    }
+                }
+                ancestor = current.superview
+            }
+            return host
+        }
+
+        var modifiedScrollCount: Int {
+            originalPanTouchLimits.count
+        }
+
+        func restoreScrollTouchLimits() {
+            for (scrollView, limit) in originalPanTouchLimits {
+                scrollView.panGestureRecognizer.maximumNumberOfTouches = limit
+            }
+            originalPanTouchLimits.removeAll()
         }
     }
 
@@ -1576,6 +1633,8 @@ struct TwoFingerPinchAttachment: UIViewRepresentable {
                 return
             }
             removeRecognizer()
+            let host = coordinator.allowPinchAlongsideScroll(from: self)
+                ?? superview
             let recognizer = UIPinchGestureRecognizer(
                 target: coordinator,
                 action: #selector(Coordinator.didChange(_:))
@@ -1584,8 +1643,17 @@ struct TwoFingerPinchAttachment: UIViewRepresentable {
             recognizer.delaysTouchesBegan = false
             recognizer.delaysTouchesEnded = false
             recognizer.delegate = coordinator
-            superview.addGestureRecognizer(recognizer)
-            installedSuperview = superview
+            host.addGestureRecognizer(recognizer)
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "pinch_attachment_installed",
+                fields: [
+                    "host": String(reflecting: type(of: host)),
+                    "ancestor_scroll": String(
+                        coordinator.modifiedScrollCount
+                    ),
+                ]
+            )
+            installedSuperview = host
             self.recognizer = recognizer
         }
 
@@ -1593,6 +1661,7 @@ struct TwoFingerPinchAttachment: UIViewRepresentable {
             if let recognizer {
                 installedSuperview?.removeGestureRecognizer(recognizer)
             }
+            coordinator?.restoreScrollTouchLimits()
             recognizer = nil
             installedSuperview = nil
         }
@@ -7309,6 +7378,29 @@ private struct TimelineBoard: View {
                 .simultaneousGesture(
                     viewportDragGesture(width: contentTimelineWidth)
                 )
+                // ScrollView owns the touch arena on a real device. Give
+                // the two-finger gesture priority so its pan recognizer
+                // cannot swallow a pinch before the viewport sees it.
+                .highPriorityGesture(
+                    viewportMagnifyGesture,
+                    including: .subviews
+                )
+                .background {
+                    TwoFingerPinchAttachment(
+                        onChanged: { scale, anchor in
+                            viewportMagnifyChanged(
+                                factor: Double(scale),
+                                anchor: Double(anchor)
+                            )
+                        },
+                        onEnded: { scale, anchor in
+                            viewportMagnifyEnded(
+                                factor: Double(scale),
+                                anchor: Double(anchor)
+                            )
+                        }
+                    )
+                }
 
                 // Keep the time ruler below the timeline. It remains visible
                 // while rows scroll, like a measuring scale in an editor.
@@ -7322,29 +7414,12 @@ private struct TimelineBoard: View {
                             editingPlanID = nil
                         }
                     )
+                    .highPriorityGesture(
+                        viewportMagnifyGesture,
+                        including: .subviews
+                    )
             }
             .contentShape(Rectangle())
-            // Keep SwiftUI's recognizer as a second path for devices where a
-            // UIScrollView consumes the UIKit pinch before the attached
-            // recognizer receives it. Both paths share the same guarded
-            // viewport state, so a single physical pinch is applied once.
-            .simultaneousGesture(viewportMagnifyGesture)
-            .background {
-                TwoFingerPinchAttachment(
-                    onChanged: { scale, anchor in
-                        viewportMagnifyChanged(
-                            factor: Double(scale),
-                            anchor: Double(anchor)
-                        )
-                    },
-                    onEnded: { scale, anchor in
-                        viewportMagnifyEnded(
-                            factor: Double(scale),
-                            anchor: Double(anchor)
-                        )
-                    }
-                )
-            }
             .background {
                 TwoFingerDoubleTapAttachment {
                     resetViewport(withFeedback: true)
@@ -10185,6 +10260,14 @@ private struct TimelineBoard: View {
         if magnifyOrigin == nil {
             magnifyOrigin = viewport
             editingPlanID = nil
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "timeline_zoom_began",
+                fields: [
+                    "scale": String(format: "%.3f", factor),
+                    "anchor": String(format: "%.3f", anchor),
+                    "resolution": scale.rawValue,
+                ]
+            )
             if isContinuousTimeline {
                 let originSpan = visibleSpan
                 let clampedAnchor = min(1, max(0, anchor))
@@ -10235,13 +10318,31 @@ private struct TimelineBoard: View {
         factor: Double,
         anchor: Double
     ) {
-        guard magnifyOrigin != nil else { return }
+        guard magnifyOrigin != nil else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "timeline_zoom_ended_without_begin",
+                fields: [
+                    "scale": String(format: "%.3f", factor),
+                    "anchor": String(format: "%.3f", anchor),
+                    "resolution": scale.rawValue,
+                ]
+            )
+            return
+        }
         finishSemanticMagnification(
             factor: factor,
             anchor: anchor
         )
         magnifyOrigin = nil
         lastViewportRenderUptime = 0
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "timeline_zoom_ended",
+            fields: [
+                "scale": String(format: "%.3f", factor),
+                "anchor": String(format: "%.3f", anchor),
+                "resolution": scale.rawValue,
+            ]
+        )
     }
 
     private func finishSemanticMagnification(

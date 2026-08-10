@@ -480,6 +480,9 @@ struct ReviewView: View {
         .contentShape(Rectangle())
         // 목록을 위아래로 굴리는 손가락을 가로채지 않도록 함께 인식시킨다.
         .simultaneousGesture(dateSwipeGesture)
+        // The surrounding record view is a vertical ScrollView. Prioritize
+        // the two-finger recognizer so scrolling cannot consume the pinch.
+        .highPriorityGesture(clockMagnifyGesture, including: .subviews)
         .background {
             TwoFingerPinchAttachment(
                 onChanged: { factor, _ in
@@ -544,6 +547,7 @@ struct ReviewView: View {
         .frame(height: Self.linearClockHeight)
         .overlay { playControl }
         .contentShape(Rectangle())
+        .highPriorityGesture(clockMagnifyGesture, including: .subviews)
         .background {
             TwoFingerPinchAttachment(
                 onChanged: { factor, _ in
@@ -832,7 +836,16 @@ struct ReviewView: View {
     }
 
     private func updateClockZoom(factor: CGFloat) {
-        if clockMagnifyOrigin == nil { clockMagnifyOrigin = clockZoomScale }
+        if clockMagnifyOrigin == nil {
+            clockMagnifyOrigin = clockZoomScale
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "record_clock_zoom_began",
+                fields: [
+                    "factor": String(format: "%.3f", factor),
+                    "scale": String(format: "%.3f", clockZoomScale),
+                ]
+            )
+        }
         let now = ProcessInfo.processInfo.systemUptime
         guard lastClockZoomRenderUptime == 0
             || now - lastClockZoomRenderUptime >= 1.0 / 60.0
@@ -843,8 +856,24 @@ struct ReviewView: View {
         if next != clockZoomScale { clockZoomScale = next }
     }
 
+    private var clockMagnifyGesture: some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.001)
+            .onChanged { value in
+                updateClockZoom(factor: CGFloat(value.magnification))
+            }
+            .onEnded { value in
+                finishClockZoom(factor: CGFloat(value.magnification))
+            }
+    }
+
     private func finishClockZoom(factor: CGFloat) {
-        guard let origin = clockMagnifyOrigin else { return }
+        guard let origin = clockMagnifyOrigin else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "record_clock_zoom_ended_without_begin",
+                fields: ["factor": String(format: "%.3f", factor)]
+            )
+            return
+        }
         // 제스처 종료값은 프레임 게이트를 우회해 즉시 반영한다.
         let next = min(4, max(1, origin * max(0.01, factor)))
         if next != clockZoomScale { clockZoomScale = next }
@@ -853,6 +882,14 @@ struct ReviewView: View {
         if clockZoomScale < Self.clockLinearThreshold {
             clockZoomScale = 1
         }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "record_clock_zoom_ended",
+            fields: [
+                "factor": String(format: "%.3f", factor),
+                "scale": String(format: "%.3f", clockZoomScale),
+                "linear": String(clockZoomScale >= Self.clockLinearThreshold),
+            ]
+        )
     }
 
     private func resetClockZoom() {
