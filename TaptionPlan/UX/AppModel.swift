@@ -467,6 +467,48 @@ final class AppModel {
         await persist()
     }
 
+    /// 화면에서만 채워졌던 미확인 구간을 사용자가 결정한 파생 기록으로 남긴다.
+    /// 센서·HealthKit 원본은 수정하거나 삭제하지 않는다.
+    func classifyUnconfirmedSpan(
+        _ span: TimeSpan,
+        with option: ActivityCorrectionOption
+    ) async {
+        guard span.duration > 0 else { return }
+        let alreadySaved = snapshot.actuals.contains { actual in
+            actual.source == .manual
+                && actual.manuallyCorrected
+                && actual.title == option.title
+                && actual.categoryID == option.categoryID
+                && actual.behavior == option.behavior
+                && actual.startedAt == span.start
+                && actual.endedAt == span.end
+        }
+        guard !alreadySaved else { return }
+        if option.isCustom {
+            snapshot.settings.customActivityLabels =
+                AppFeatureSettings.normalizedActivityLabels(
+                    snapshot.settings.customActivityLabels + [option.title]
+                )
+        }
+        snapshot.actuals.append(
+            ActualRecord(
+                planID: nil,
+                title: option.title,
+                categoryID: option.categoryID,
+                startedAt: span.start,
+                endedAt: span.end,
+                source: .manual,
+                confidence: .high,
+                behavior: option.behavior,
+                evidence: ["사용자가 미확인 구간을 분류함"],
+                modelVersion: "manual-gap-classification-v1",
+                manuallyCorrected: true
+            )
+        )
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        await persist()
+    }
+
     private func applyStoredActivityCorrections() {
         let corrected = ActivityCorrectionEngine.applying(
             snapshot.settings.activityCorrections,

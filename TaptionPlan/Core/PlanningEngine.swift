@@ -411,7 +411,10 @@ enum MovementDisplayEngine {
                 createdAt: segment.span.start,
                 behavior: segment.mode.rawValue,
                 evidence: segment.evidence,
-                manuallyCorrected: isConfirmed
+                // `isConfirmed` describes inference confidence, not a user
+                // edit. Keep the manual-override flag reserved for explicit
+                // corrections so coverage precedence stays truthful.
+                manuallyCorrected: false
             )
         }
         return visibleActuals(
@@ -441,6 +444,11 @@ enum MovementDisplayEngine {
         let travelSpans = travel.map(\.span)
         return actuals.flatMap { actual -> [ActualRecord] in
             guard isMovementRecord(actual) else {
+                return [actual]
+            }
+            // 사용자가 미확인 구간을 직접 확정한 기록은 파생 이동 결과가
+            // 겹치더라도 숨기지 않는다. 원본은 그대로 두고 표시 우선권만 준다.
+            guard !actual.manuallyCorrected, actual.source != .manual else {
                 return [actual]
             }
             guard isReliable(actual) else { return [] }

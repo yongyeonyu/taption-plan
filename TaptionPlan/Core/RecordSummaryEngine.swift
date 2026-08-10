@@ -592,11 +592,12 @@ enum ReviewCoverageEngine {
     }
 
     private static func precedence(_ actual: ActualRecord) -> Int {
-        let category = ActualRecordCategoryResolver.categoryID(for: actual)
         if AutomaticRecordTimelineEngine.isConfirmedWorkout(actual) {
-            return 1_000
+            return 1_300
         }
-        if AutomaticRecordTimelineEngine.isSleep(actual) { return 900 }
+        if AutomaticRecordTimelineEngine.isSleep(actual) { return 1_200 }
+        if actual.manuallyCorrected || actual.source == .manual { return 1_100 }
+        let category = ActualRecordCategoryResolver.categoryID(for: actual)
         return switch category {
         case "movement": 800
         case "activity", "exercise", "health": 700
@@ -2383,6 +2384,17 @@ enum RecordClockEngine {
         )
     }
 
+    /// 활동 고리의 조각을 사용자가 고른 실제 시각으로 되돌린다.
+    static func span(
+        of arc: RecordClockArc,
+        in span: TimeSpan
+    ) -> TimeSpan {
+        TimeSpan(
+            start: date(at: arc.startFraction, in: span),
+            end: date(at: arc.endFraction, in: span)
+        )
+    }
+
     /// 읽음창이 적는 시각. 기록 상세·목표 화면이 구간을 적을 때와 같은 표기라
     /// 화면마다 시각을 다르게 읽지 않는다. 오전·오후를 떼면 눈금판이 24시간
     /// 판인데 6시가 두 번 생겨 읽는 사람이 어느 쪽인지 알 수 없다.
@@ -2410,6 +2422,22 @@ enum RecordClockEngine {
             result.insert(ring.categoryID)
         }
         return result
+    }
+
+    /// 가운데 고정 재생머리에서 스크롤한 거리와 하루 위치를 서로 바꾼다.
+    static func playheadFraction(
+        contentOffset: Double,
+        timelineWidth: Double
+    ) -> Double {
+        guard timelineWidth > 0 else { return 0 }
+        return min(1, max(0, contentOffset / timelineWidth))
+    }
+
+    static func contentOffset(
+        for fraction: Double,
+        timelineWidth: Double
+    ) -> Double {
+        max(0, timelineWidth) * min(1, max(0, fraction))
     }
 
     /// 가로로 충분히 끌었을 때만 날짜를 옮긴다. 왼쪽으로 끌면 다음 날이다.

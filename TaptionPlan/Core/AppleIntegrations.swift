@@ -299,6 +299,42 @@ private final class HealthObserverCompletion: @unchecked Sendable {
 final class AppleHealthService: @unchecked Sendable {
     static let shared = AppleHealthService()
 
+    private final class RouteLocationsAccumulator: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [CLLocation] = []
+
+        func append(_ locations: [CLLocation]) {
+            lock.lock()
+            values.append(contentsOf: locations)
+            lock.unlock()
+        }
+
+        func snapshot() -> [CLLocation] {
+            lock.lock()
+            let result = values
+            lock.unlock()
+            return result
+        }
+    }
+
+    private final class RouteLocationsReplyGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation:
+            CheckedContinuation<[CLLocation], Never>?
+
+        init(_ continuation: CheckedContinuation<[CLLocation], Never>) {
+            self.continuation = continuation
+        }
+
+        func finish(_ value: [CLLocation]) {
+            lock.lock()
+            let pending = continuation
+            continuation = nil
+            lock.unlock()
+            pending?.resume(returning: value)
+        }
+    }
+
     private let store: HKHealthStore
     private let sleepEngine: SleepAnalysisEngine
     private let observerLock = NSLock()
@@ -670,18 +706,20 @@ final class AppleHealthService: @unchecked Sendable {
     private func locations(
         in route: HKWorkoutRoute
     ) async throws -> [CLLocation] {
-        try await withCheckedThrowingContinuation { continuation in
-            var collected: [CLLocation] = []
+        await withCheckedContinuation {
+            (continuation: CheckedContinuation<[CLLocation], Never>) in
+            let collected = RouteLocationsAccumulator()
+            let gate = RouteLocationsReplyGate(continuation)
             let query = HKWorkoutRouteQuery(
                 route: route
             ) { _, locations, done, error in
                 if error != nil {
-                    continuation.resume(returning: [])
+                    gate.finish([])
                     return
                 }
-                collected.append(contentsOf: locations ?? [])
+                collected.append(locations ?? [])
                 if done {
-                    continuation.resume(returning: collected)
+                    gate.finish(collected.snapshot())
                 }
             }
             store.execute(query)

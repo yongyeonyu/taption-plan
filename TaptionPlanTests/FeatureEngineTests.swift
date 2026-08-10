@@ -439,6 +439,59 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testMovementDisplayKeepsManualClassificationOverCanonicalTravel() {
+        let start = makeDate(2026, 8, 1, 9)
+        let end = start.addingTimeInterval(20 * 60)
+        let manual = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: start,
+            endedAt: end,
+            source: .manual,
+            confidence: .high,
+            behavior: "walking",
+            manuallyCorrected: true
+        )
+        let travel = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: start, end: end),
+            distanceMeters: 1_200,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+
+        XCTAssertEqual(
+            MovementDisplayEngine.visibleActuals(
+                [manual],
+                travel: [travel],
+                asOf: end
+            ).map(\.id),
+            [manual.id]
+        )
+    }
+
+    func testConfirmedCanonicalTravelIsNotMarkedAsManualCorrection() {
+        let start = makeDate(2026, 8, 1, 9)
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(20 * 60)),
+            distanceMeters: 1_200,
+            confidence: .high,
+            evidence: ["GPS"],
+            isConfirmed: true
+        )
+
+        let result = MovementDisplayEngine.reviewActuals(
+            [],
+            travel: [segment],
+            asOf: segment.span.end
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertFalse(result[0].manuallyCorrected)
+    }
+
     func testMovementDisplayRejectsLocationWalkingAndKeepsCanonicalCar() {
         let start = makeDate(2026, 8, 5, 10)
         let raw = ActualRecord(
@@ -600,6 +653,106 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(records[0].title, "미확인")
         XCTAssertEqual(records[0].span(asOf: now).duration, 11 * hour + 15 * 60)
         XCTAssertEqual(records[0].endedAt, now)
+    }
+
+    func testManualClassificationWinsOverLaterAutomaticEvidence() {
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 10),
+            end: makeDate(2026, 8, 11)
+        )
+        let automatic = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: day.start,
+            endedAt: day.start.addingTimeInterval(3 * hour),
+            source: .motion
+        )
+        let manual = ActualRecord(
+            planID: nil,
+            title: "샤워",
+            categoryID: "activity",
+            startedAt: day.start.addingTimeInterval(hour),
+            endedAt: day.start.addingTimeInterval(2 * hour),
+            source: .manual,
+            manuallyCorrected: true
+        )
+
+        let records = ReviewCoverageEngine.records(
+            actuals: [automatic, manual],
+            in: [day],
+            asOf: day.start.addingTimeInterval(3 * hour)
+        )
+
+        XCTAssertEqual(
+            records.filter { $0.title == "샤워" }
+                .reduce(0) { $0 + $1.span(asOf: day.end).duration },
+            hour
+        )
+        XCTAssertEqual(
+            records.filter { $0.title == "걷기" }
+                .reduce(0) { $0 + $1.span(asOf: day.end).duration },
+            2 * hour
+        )
+    }
+
+    func testManualClassificationDoesNotHideConfirmedWorkoutOrSleep() {
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 10),
+            end: makeDate(2026, 8, 11)
+        )
+        let manual = ActualRecord(
+            planID: nil,
+            title: "샤워",
+            categoryID: "activity",
+            startedAt: day.start,
+            endedAt: day.start.addingTimeInterval(3 * hour),
+            source: .manual,
+            manuallyCorrected: true
+        )
+        let workout = ActualRecord(
+            planID: nil,
+            title: "걷기 운동",
+            categoryID: "exercise",
+            startedAt: day.start.addingTimeInterval(hour),
+            endedAt: day.start.addingTimeInterval(2 * hour),
+            source: .appleWatch
+        )
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: day.start.addingTimeInterval(2 * hour),
+            endedAt: day.start.addingTimeInterval(3 * hour),
+            source: .healthKit
+        )
+
+        let records = ReviewCoverageEngine.records(
+            actuals: [manual, workout, sleep],
+            in: [day],
+            asOf: day.start.addingTimeInterval(3 * hour)
+        )
+
+        XCTAssertEqual(
+            records.first(where: { $0.title == "걷기 운동" })?.span(
+                asOf: day.end
+            ).duration ?? 0,
+            hour,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            records.first(where: { $0.title == "수면" })?.span(
+                asOf: day.end
+            ).duration ?? 0,
+            hour,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            records.filter { $0.title == "샤워" }
+                .reduce(0) { $0 + $1.span(asOf: day.end).duration },
+            hour,
+            accuracy: 0.001
+        )
     }
 
     // MARK: - 수면과 겹친 휴식·생활
@@ -1448,18 +1601,47 @@ final class FeatureEngineTests: XCTestCase {
                 ended = (scale, anchor)
             }
         )
-        let hostView = UIView(frame: CGRect(x: 0, y: 0, width: 400, height: 300))
+        let window = UIWindow(
+            frame: CGRect(x: 0, y: 0, width: 400, height: 300)
+        )
+        let controller = UIViewController()
+        window.rootViewController = controller
+        let scrollView = UIScrollView(frame: window.bounds)
+        let hostView = UIView(frame: scrollView.bounds)
         let attachmentView = TwoFingerPinchAttachment.AttachmentView()
+        attachmentView.frame = hostView.bounds
         attachmentView.coordinator = coordinator
+        coordinator.targetView = attachmentView
 
+        // SwiftUI creates background representables before their final window
+        // hierarchy exists. The recognizer must not stay on that temporary host.
         hostView.addSubview(attachmentView)
         attachmentView.installRecognizerIfNeeded()
+        XCTAssertFalse(
+            hostView.gestureRecognizers?.contains {
+                $0 is UIPinchGestureRecognizer
+            } ?? false
+        )
 
-        let recognizer = hostView.gestureRecognizers?
+        controller.view.addSubview(scrollView)
+        scrollView.addSubview(hostView)
+        window.isHidden = false
+        attachmentView.installRecognizerIfNeeded()
+
+        let recognizer = window.gestureRecognizers?
             .compactMap { $0 as? UIPinchGestureRecognizer }
             .first
         XCTAssertNotNil(recognizer)
         XCTAssertEqual(recognizer?.cancelsTouchesInView, false)
+        XCTAssertEqual(
+            scrollView.panGestureRecognizer.maximumNumberOfTouches,
+            1
+        )
+        XCTAssertFalse(
+            hostView.gestureRecognizers?.contains {
+                $0 is UIPinchGestureRecognizer
+            } ?? false
+        )
 
         coordinator.onChanged(1.5, 0.25)
         coordinator.onEnded(0.75, 0.75)
@@ -1467,6 +1649,45 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(changed?.1 ?? 0, 0.25, accuracy: 0.0001)
         XCTAssertEqual(ended?.0 ?? 0, 0.75, accuracy: 0.0001)
         XCTAssertEqual(ended?.1 ?? 0, 0.75, accuracy: 0.0001)
+        coordinator.restoreScrollTouchLimits()
+    }
+
+    @MainActor
+    func testTwoFingerPinchKeepsSharedScrollLimitUntilLastAttachmentLeaves() {
+        let scrollView = UIScrollView(
+            frame: CGRect(x: 0, y: 0, width: 400, height: 300)
+        )
+        let firstView = UIView(frame: scrollView.bounds)
+        let secondView = UIView(frame: scrollView.bounds)
+        scrollView.addSubview(firstView)
+        scrollView.addSubview(secondView)
+        let first = TwoFingerPinchAttachment.Coordinator(
+            onChanged: { _, _ in },
+            onEnded: { _, _ in }
+        )
+        let second = TwoFingerPinchAttachment.Coordinator(
+            onChanged: { _, _ in },
+            onEnded: { _, _ in }
+        )
+
+        let original = scrollView.panGestureRecognizer.maximumNumberOfTouches
+        first.limitAncestorScrollPans(from: firstView)
+        second.limitAncestorScrollPans(from: secondView)
+        XCTAssertEqual(
+            scrollView.panGestureRecognizer.maximumNumberOfTouches,
+            1
+        )
+
+        first.restoreScrollTouchLimits()
+        XCTAssertEqual(
+            scrollView.panGestureRecognizer.maximumNumberOfTouches,
+            1
+        )
+        second.restoreScrollTouchLimits()
+        XCTAssertEqual(
+            scrollView.panGestureRecognizer.maximumNumberOfTouches,
+            original
+        )
     }
 
     func testScheduleDragSnapsToFifteenMinutes() throws {
@@ -8431,6 +8652,39 @@ final class FeatureEngineTests: XCTestCase {
             ) ?? -1,
             1,
             accuracy: 0.0001
+        )
+    }
+
+    func testLinearClockKeepsCenteredPlayheadMappedToScrollOffset() {
+        XCTAssertEqual(
+            RecordClockEngine.playheadFraction(
+                contentOffset: 600,
+                timelineWidth: 2_400
+            ),
+            0.25,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            RecordClockEngine.contentOffset(
+                for: 0.75,
+                timelineWidth: 2_400
+            ),
+            1_800,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            RecordClockEngine.playheadFraction(
+                contentOffset: 3_000,
+                timelineWidth: 2_400
+            ),
+            1
+        )
+        XCTAssertEqual(
+            RecordClockEngine.contentOffset(
+                for: -0.5,
+                timelineWidth: 2_400
+            ),
+            0
         )
     }
 

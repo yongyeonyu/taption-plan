@@ -15,6 +15,8 @@ private struct ReviewContent: Equatable {
     var plannedCategories: [CategoryDuration]
     var contexts: [ReviewContext]
     var groups: [RecordCategoryGroup]
+    /// 링과 목록에 실제로 그린 파생 기록. 탭 대상도 같은 배열에서 찾는다.
+    var displayActuals: [ActualRecord]
     /// 하루 기록 목록은 일과를 먼저 보여 주고 그 안에 활동을 넣는다.
     var phaseGroups: [RecordCategoryGroup]
     var rings: [RecordClockRing]
@@ -38,6 +40,7 @@ private struct ReviewContent: Equatable {
         plannedCategories: [],
         contexts: [],
         groups: [],
+        displayActuals: [],
         phaseGroups: [],
         rings: [],
         phaseRing: nil,
@@ -96,6 +99,23 @@ private struct PlaybackContextReadout {
     }
 }
 
+private struct LinearClockItem {
+    var title: String
+    var tint: Color
+}
+
+/// Scroll geometry can arrive faster than the SwiftUI layout budget. Keep the
+/// latest offset outside view state and publish the playhead at most 60Hz.
+private final class LinearScrollTracker {
+    var latestOffset: CGFloat = 0
+    var lastPublishedUptime: TimeInterval = 0
+}
+
+private struct ReviewUnconfirmedSelection: Identifiable {
+    let id = UUID()
+    let span: TimeSpan
+}
+
 struct ReviewView: View {
     @Bindable var model: AppModel
 
@@ -116,8 +136,9 @@ struct ReviewView: View {
     /// 화면에서는 한 변이 카드 너비에 묶이므로, 알약이 남은 자리에 맞춰
     /// 스스로 줄어든다.
     private static let clockHeight: CGFloat = 324
-    private static let linearClockHeight: CGFloat = 150
-    private static let linearTimelineInset: CGFloat = 54
+    private static let linearClockHeight: CGFloat = 174
+    private static let linearTimelineHeight: CGFloat = 122
+    private static let linearTimelineInset: CGFloat = 82
     private static let clockLinearThreshold: CGFloat = 1.08
 
     @State private var content = ReviewContent.empty
@@ -135,6 +156,11 @@ struct ReviewView: View {
     @State private var clockZoomScale: CGFloat = 1
     @State private var clockMagnifyOrigin: CGFloat?
     @State private var lastClockZoomRenderUptime: TimeInterval = 0
+    @State private var linearScrollPosition = ScrollPosition(x: 0)
+    @State private var linearPlayheadFraction = 0.5
+    @State private var linearPositionedPeriodStart: Date?
+    @State private var unconfirmedSelection: ReviewUnconfirmedSelection?
+    @State private var linearScrollTracker = LinearScrollTracker()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -159,6 +185,12 @@ struct ReviewView: View {
         .onDisappear { clearClockHighlight() }
         .onChange(of: model.reviewScale) { _, scale in
             if scale != .day { resetClockZoom() }
+        }
+        .sheet(item: $unconfirmedSelection) { selection in
+            ActivityCorrectionSheet(
+                model: model,
+                unconfirmedSpan: selection.span
+            )
         }
     }
 
@@ -505,47 +537,105 @@ struct ReviewView: View {
                 now: timeline.date
             )
             GeometryReader { proxy in
-                let viewportWidth = max(proxy.size.width, 1)
-                let contentWidth = max(
+                let labelWidth = Self.linearTimelineInset
+                let viewportWidth = max(proxy.size.width - labelWidth, 1)
+                let timelineWidth = max(
                     viewportWidth,
                     viewportWidth * clockZoomScale
                 )
-                ScrollView(.horizontal, showsIndicators: false) {
-                    Canvas { context, size in
-                        drawLinearClock(
-                            context: context,
-                            size: size,
-                            rings: content.rings,
-                            phaseRing: content.phaseRing,
-                            activityRings: content.activityRings,
-                            highlight: clockHighlight,
-                            progress: progress,
-                            span: content.period,
-                            nowFraction: RecordClockEngine.nowFraction(
-                                in: content.period,
-                                asOf: timeline.date
-                            ),
-                            readout: progress.flatMap {
-                                playbackContext(
-                                    at: $0,
-                                    in: content.contextRings
+                VStack(spacing: 8) {
+                    HStack(spacing: 0) {
+                        linearPlayheadLabels
+                            .frame(
+                                width: labelWidth,
+                                height: Self.linearTimelineHeight
+                            )
+                        ZStack {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                Canvas { context, size in
+                                    drawLinearClock(
+                                        context: context,
+                                        size: size,
+                                        timelineStart: viewportWidth / 2,
+                                        timelineWidth: timelineWidth,
+                                        rings: content.rings,
+                                        phaseRing: content.phaseRing,
+                                        activityRings: content.activityRings,
+                                        highlight: clockHighlight,
+                                        progress: progress
+                                    )
+                                }
+                                .frame(
+                                    width: timelineWidth + viewportWidth,
+                                    height: Self.linearTimelineHeight
                                 )
-                            } ?? currentContextReadout()
-                        )
+                                .contentShape(Rectangle())
+                                .onTapGesture { location in
+                                    guard location.y < 82 else { return }
+                                    openLinearRecordEditor(
+                                        at: location.x,
+                                        timelineStart: viewportWidth / 2,
+                                        timelineWidth: timelineWidth
+                                    )
+                                }
+                            }
+                            .scrollPosition($linearScrollPosition)
+                            .onScrollGeometryChange(for: CGFloat.self) {
+                                $0.contentOffset.x
+                            } action: { _, offset in
+                                updateLinearPlayhead(
+                                    offset: offset,
+                                    timelineWidth: timelineWidth
+                                )
+                            }
+                            .onScrollPhaseChange { _, phase in
+                                if phase == .idle {
+                                    updateLinearPlayhead(
+                                        offset: linearScrollTracker.latestOffset,
+                                        timelineWidth: timelineWidth,
+                                        force: true
+                                    )
+                                }
+                                guard phase == .tracking || phase == .interacting,
+                                      playStartedAt != nil else { return }
+                                playStartedAt = nil
+                            }
+                            .onAppear {
+                                positionLinearTimeline(
+                                    timelineWidth: timelineWidth,
+                                    asOf: timeline.date
+                                )
+                            }
+                            .onChange(of: timelineWidth) { _, _ in
+                                positionLinearTimeline(
+                                    timelineWidth: timelineWidth,
+                                    asOf: timeline.date
+                                )
+                            }
+                            .onChange(of: content.period.start) { _, _ in
+                                positionLinearTimeline(
+                                    timelineWidth: timelineWidth,
+                                    asOf: timeline.date,
+                                    resetsTime: true
+                                )
+                            }
+                            .onChange(of: progress) { _, fraction in
+                                guard let fraction else { return }
+                                moveLinearTimeline(
+                                    to: fraction,
+                                    timelineWidth: timelineWidth
+                                )
+                            }
+
+                            linearPlayhead
+                                .allowsHitTesting(false)
+                        }
                     }
-                    .frame(width: contentWidth, height: Self.linearClockHeight)
-                    .contentShape(Rectangle())
-                    .onTapGesture { location in
-                        openLinearRecordEditor(
-                            at: location.x,
-                            width: contentWidth
-                        )
-                    }
+                    playControl
                 }
             }
         }
         .frame(height: Self.linearClockHeight)
-        .overlay { playControl }
         .contentShape(Rectangle())
         .highPriorityGesture(clockMagnifyGesture, including: .subviews)
         .background {
@@ -562,32 +652,208 @@ struct ReviewView: View {
         .accessibilityValue("일과와 활동 두 줄")
     }
 
+    private var linearPlayheadLabels: some View {
+        VStack(spacing: 0) {
+            linearPlayheadLabel("일과", item: linearPhaseItem)
+                .frame(height: 40)
+            linearPlayheadLabel("활동", item: linearActivityItem)
+                .frame(height: 40)
+            Text(linearPlayheadTimeText)
+                .font(.taption(size: 8.5, weight: .bold))
+                .foregroundStyle(Color.tpNow)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .padding(.trailing, 6)
+    }
+
+    private func linearPlayheadLabel(
+        _ title: String,
+        item: LinearClockItem
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.taption(size: 7.5, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(item.tint)
+                    .frame(width: 6, height: 6)
+                Text(item.title)
+                    .font(.taption(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    private var linearPhaseItem: LinearClockItem {
+        guard let arc = RecordClockEngine.arc(
+            in: content.phaseRing,
+            at: linearLookupFraction
+        ) else {
+            return LinearClockItem(
+                title: "미확인",
+                tint: detailColor(.dayPhase, token: DayPhase.unconfirmed.rawValue)
+            )
+        }
+        return LinearClockItem(
+            title: detailName(.dayPhase, token: arc.token),
+            tint: detailColor(.dayPhase, token: arc.token)
+        )
+    }
+
+    private var linearActivityItem: LinearClockItem {
+        guard let ring = content.rings.first(where: { ring in
+            ring.arcs.contains {
+                $0.startFraction <= linearLookupFraction
+                    && linearLookupFraction < $0.endFraction
+            }
+        }) else {
+            return LinearClockItem(
+                title: "미확인",
+                tint: color(forCategoryID: ReviewCoverageEngine.unconfirmedCategoryID)
+            )
+        }
+
+        let detailKind: RecordClockDetailKind? = switch ring.categoryID {
+        case TimelineRowKind.sleep.rawValue: .sleepStage
+        case TimelineRowKind.movement.rawValue: .travel
+        default: nil
+        }
+        if let detailKind,
+           let detailRing = content.activityRings.first(
+               where: { $0.kind == detailKind }
+           ),
+           let arc = RecordClockEngine.arc(
+               in: detailRing,
+               at: linearLookupFraction
+           ) {
+            return LinearClockItem(
+                title: detailName(detailKind, token: arc.token),
+                tint: detailColor(detailKind, token: arc.token)
+            )
+        }
+        return LinearClockItem(
+            title: categoryName(ring.categoryID),
+            tint: color(forCategoryID: ring.categoryID)
+        )
+    }
+
+    private var linearPlayheadTimeText: String {
+        content.period.start
+            .addingTimeInterval(
+                content.period.duration * linearPlayheadFraction
+            )
+            .formatted(date: .omitted, time: .shortened)
+    }
+
+    private var linearLookupFraction: Double {
+        min(linearPlayheadFraction, 1 - 0.000_001)
+    }
+
+    private var linearPlayhead: some View {
+        Canvas { context, size in
+            let x = size.width / 2
+            context.stroke(
+                Path { path in
+                    path.move(to: CGPoint(x: x, y: 3))
+                    path.addLine(to: CGPoint(x: x, y: 99))
+                },
+                with: .color(Color.tpNow),
+                style: StrokeStyle(lineWidth: 1.6, lineCap: .round)
+            )
+            context.fill(
+                Path(ellipseIn: CGRect(x: x - 3.5, y: 0, width: 7, height: 7)),
+                with: .color(Color.tpNow)
+            )
+        }
+    }
+
+    private func updateLinearPlayhead(
+        offset: CGFloat,
+        timelineWidth: CGFloat,
+        force: Bool = false
+    ) {
+        linearScrollTracker.latestOffset = offset
+        let now = ProcessInfo.processInfo.systemUptime
+        guard force
+            || now - linearScrollTracker.lastPublishedUptime >= 1.0 / 60.0
+        else { return }
+        linearScrollTracker.lastPublishedUptime = now
+        let next = RecordClockEngine.playheadFraction(
+            contentOffset: Double(offset),
+            timelineWidth: Double(timelineWidth)
+        )
+        guard abs(next - linearPlayheadFraction) > 0.00001 else { return }
+        linearPlayheadFraction = next
+    }
+
+    private func positionLinearTimeline(
+        timelineWidth: CGFloat,
+        asOf date: Date,
+        resetsTime: Bool = false
+    ) {
+        if resetsTime || linearPositionedPeriodStart != content.period.start {
+            let next = RecordClockEngine.nowFraction(
+                in: content.period,
+                asOf: date
+            ) ?? 0.5
+            if next != linearPlayheadFraction { linearPlayheadFraction = next }
+            linearPositionedPeriodStart = content.period.start
+        }
+        moveLinearTimeline(
+            to: linearPlayheadFraction,
+            timelineWidth: timelineWidth
+        )
+    }
+
+    private func moveLinearTimeline(
+        to fraction: Double,
+        timelineWidth: CGFloat
+    ) {
+        let next = min(1, max(0, fraction))
+        if next != linearPlayheadFraction { linearPlayheadFraction = next }
+        linearScrollPosition.scrollTo(
+            x: CGFloat(
+                RecordClockEngine.contentOffset(
+                    for: next,
+                    timelineWidth: Double(timelineWidth)
+                )
+            )
+        )
+    }
+
     private func drawLinearClock(
         context: GraphicsContext,
         size: CGSize,
+        timelineStart: CGFloat,
+        timelineWidth: CGFloat,
         rings: [RecordClockRing],
         phaseRing: RecordClockDetailRing?,
         activityRings: [RecordClockDetailRing],
         highlight: ReviewClockHighlight?,
-        progress: Double?,
-        span: TimeSpan,
-        nowFraction: Double?,
-        readout: PlaybackContextReadout?
+        progress: Double?
     ) {
-        let left = Self.linearTimelineInset
-        let right = 8.0
-        let timelineWidth = max(1, size.width - left - right)
-        let phaseRect = CGRect(x: left, y: 30, width: timelineWidth, height: 24)
-        let activityRect = CGRect(x: left, y: 78, width: timelineWidth, height: 28)
+        let phaseRect = CGRect(
+            x: timelineStart,
+            y: 7,
+            width: timelineWidth,
+            height: 27
+        )
+        let activityRect = CGRect(
+            x: timelineStart,
+            y: 44,
+            width: timelineWidth,
+            height: 30
+        )
 
         drawLinearGrid(
             context: context,
-            size: size,
-            left: left,
+            timelineStart: timelineStart,
             width: timelineWidth
         )
-        drawLinearRowLabel(context: context, title: "일과", y: phaseRect.midY)
-        drawLinearRowLabel(context: context, title: "활동", y: activityRect.midY)
 
         let revealedPhase = RecordClockEngine.detailRing(
             phaseRing,
@@ -661,72 +927,51 @@ struct ReviewView: View {
             )
         }
 
-        if let fraction = progress ?? nowFraction {
-            let x = left + timelineWidth * fraction
-            context.stroke(
-                Path { path in
-                    path.move(to: CGPoint(x: x, y: 12))
-                    path.addLine(to: CGPoint(x: x, y: size.height - 8))
-                },
-                with: .color(progress == nil ? Color.tpNow : Color.tpInk),
-                style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
-            )
-            context.fill(
-                Path(
-                    ellipseIn: CGRect(x: x - 3, y: 9, width: 6, height: 6)
-                ),
-                with: .color(progress == nil ? Color.tpNow : Color.tpInk)
-            )
-            if let readout {
-                drawLinearReadout(
-                    context: context,
-                    readout: readout,
-                    x: x,
-                    width: size.width
-                )
-            }
-        }
     }
 
     private func drawLinearGrid(
         context: GraphicsContext,
-        size: CGSize,
-        left: CGFloat,
+        timelineStart: CGFloat,
         width: CGFloat
     ) {
-        let rowBottom = size.height - 18
-        for hour in 0...24 {
-            let x = left + width * CGFloat(hour) / 24
-            let major = hour % 6 == 0
+        for quarter in 0...96 {
+            let x = timelineStart + width * CGFloat(quarter) / 96
+            let isHour = quarter.isMultiple(of: 4)
+            let isHalfHour = quarter.isMultiple(of: 2)
             context.stroke(
                 Path { path in
-                    path.move(to: CGPoint(x: x, y: 14))
-                    path.addLine(to: CGPoint(x: x, y: rowBottom))
+                    path.move(to: CGPoint(x: x, y: 4))
+                    path.addLine(to: CGPoint(x: x, y: 78))
                 },
-                with: .color(Color.tpLine.opacity(major ? 0.45 : 0.2)),
-                lineWidth: major ? 1 : 0.6
+                with: .color(Color.tpLine.opacity(isHour ? 0.38 : 0.13)),
+                lineWidth: isHour ? 0.9 : 0.5
             )
-            guard major else { continue }
+
+            context.stroke(
+                Path { path in
+                    path.move(to: CGPoint(x: x, y: 84))
+                    path.addLine(
+                        to: CGPoint(
+                            x: x,
+                            y: isHour ? 96 : (isHalfHour ? 92 : 89)
+                        )
+                    )
+                },
+                with: .color(Color.tpSecondary.opacity(0.72)),
+                lineWidth: isHour ? 1 : 0.6
+            )
+
+            guard isHour else { continue }
+            let hour = quarter / 4
+            let labelStride = width < 560 ? 3 : (width < 900 ? 2 : 1)
+            guard hour.isMultiple(of: labelStride) else { continue }
             let label = context.resolve(
-                Text("\(hour)")
+                Text(String(format: "%02d:00", hour))
                     .font(.taption(size: 8, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
             )
-            context.draw(label, at: CGPoint(x: x, y: rowBottom + 8))
+            context.draw(label, at: CGPoint(x: x, y: 108))
         }
-    }
-
-    private func drawLinearRowLabel(
-        context: GraphicsContext,
-        title: String,
-        y: CGFloat
-    ) {
-        let label = context.resolve(
-            Text(title)
-                .font(.taption(size: 9, weight: .bold))
-                .foregroundStyle(Color.tpSecondary)
-        )
-        context.draw(label, at: CGPoint(x: 23, y: y))
     }
 
     private func drawLinearPlaceholder(
@@ -786,53 +1031,20 @@ struct ReviewView: View {
         }
     }
 
-    private func drawLinearReadout(
-        context: GraphicsContext,
-        readout: PlaybackContextReadout,
-        x: CGFloat,
-        width: CGFloat
+    private func openLinearRecordEditor(
+        at x: CGFloat,
+        timelineStart: CGFloat,
+        timelineWidth: CGFloat
     ) {
-        var parts: [String] = []
-        if let weather = readout.weatherToken {
-            parts.append(detailName(.weather, token: weather))
-        }
-        if let location = readout.locationToken {
-            parts.append(detailName(.location, token: location))
-        }
-        guard !parts.isEmpty else { return }
-        let label = context.resolve(
-            Text(parts.joined(separator: " · "))
-                .font(.taption(size: 7, weight: .medium))
-                .foregroundStyle(Color.tpInk)
-        )
-        let measured = label.measure(in: CGSize(width: 180, height: 24))
-        let box = CGRect(
-            x: min(max(4, x - measured.width / 2 - 6), width - measured.width - 12),
-            y: 0,
-            width: measured.width + 12,
-            height: measured.height + 5
-        )
-        context.fill(
-            Path(roundedRect: box, cornerRadius: box.height / 2),
-            with: .color(.white.opacity(0.95))
-        )
-        context.stroke(
-            Path(roundedRect: box, cornerRadius: box.height / 2),
-            with: .color(Color.tpLine.opacity(0.8)),
-            lineWidth: 0.7
-        )
-        context.draw(label, at: CGPoint(x: box.midX, y: box.midY))
-    }
-
-    private func openLinearRecordEditor(at x: CGFloat, width: CGFloat) {
-        let timelineWidth = max(1, width - Self.linearTimelineInset - 8)
         let fraction = min(
-            1,
-            max(0, (x - Self.linearTimelineInset) / timelineWidth)
+            1 - 0.000_001,
+            max(0, (x - timelineStart) / timelineWidth)
         )
-        guard let record = recordForRing(at: fraction, categoryID: nil)
-        else { return }
-        model.detail = .actualEditor(record.id)
+        if let record = recordForRing(at: fraction, categoryID: nil) {
+            model.detail = .actualEditor(record.id)
+        } else {
+            openUnconfirmedEditor(at: fraction, categoryID: nil)
+        }
     }
 
     private func updateClockZoom(factor: CGFloat) {
@@ -1018,6 +1230,10 @@ struct ReviewView: View {
             model.detail = .actualEditor(record.id)
             return
         }
+        if distance <= outer + 8,
+           openUnconfirmedEditor(at: fraction, categoryID: nil) {
+            return
+        }
 
         let activityRadius = outer
             - Self.phaseBandWidth
@@ -1034,12 +1250,35 @@ struct ReviewView: View {
                 $0.startFraction <= fraction && fraction < $0.endFraction
             }
         }?.categoryID
-        guard let record = recordForRing(at: fraction, categoryID: categoryID)
-        else {
+        if let record = recordForRing(at: fraction, categoryID: categoryID) {
+            model.detail = .actualEditor(record.id)
+        } else if !openUnconfirmedEditor(
+            at: fraction,
+            categoryID: categoryID
+        ) {
             clearClockHighlight()
-            return
         }
-        model.detail = .actualEditor(record.id)
+    }
+
+    @discardableResult
+    private func openUnconfirmedEditor(
+        at fraction: Double,
+        categoryID: String?
+    ) -> Bool {
+        let unconfirmedID = ReviewCoverageEngine.unconfirmedCategoryID
+        guard categoryID == nil || categoryID == unconfirmedID,
+              let arc = content.rings
+                .first(where: { $0.categoryID == unconfirmedID })?
+                .arcs.first(where: {
+                    $0.startFraction <= fraction && fraction < $0.endFraction
+                }) else {
+            return false
+        }
+        clearClockHighlight()
+        unconfirmedSelection = ReviewUnconfirmedSelection(
+            span: RecordClockEngine.span(of: arc, in: content.period)
+        )
+        return true
     }
 
     private func recordForRing(
@@ -1048,7 +1287,7 @@ struct ReviewView: View {
     ) -> ActualRecord? {
         let span = content.period
         let date = span.start.addingTimeInterval(span.duration * fraction)
-        let candidates = model.snapshot.actuals.filter { actual in
+        let rendered = content.displayActuals.filter { actual in
             guard let visible = actual.span(asOf: Date.now)
                 .intersection(with: span), visible.duration > 0 else {
                 return false
@@ -1059,7 +1298,35 @@ struct ReviewView: View {
             }
             return visible.contains(date)
         }
-        return candidates.min {
+
+        guard let displayed = rendered.min(by: {
+            $0.span(asOf: Date.now).duration
+                < $1.span(asOf: Date.now).duration
+        }) else {
+            return nil
+        }
+        if let source = model.snapshot.actuals.first(where: {
+            $0.id == displayed.id
+        }) {
+            return source
+        }
+
+        // Canonical travel and overlap remainders are display-only records.
+        // Resolve them back to the measured record at the same instant so a
+        // visible arc never silently loses its editor tap.
+        let sourceCandidates = model.snapshot.actuals.filter { actual in
+            guard let visible = actual.span(asOf: Date.now)
+                .intersection(with: span), visible.duration > 0,
+                visible.contains(date),
+                ActualRecordCategoryResolver.categoryID(for: actual)
+                    == ActualRecordCategoryResolver.categoryID(for: displayed)
+            else { return false }
+            if let behavior = displayed.behavior, actual.behavior != behavior {
+                return false
+            }
+            return true
+        }
+        return sourceCandidates.min {
             $0.span(asOf: Date.now).duration < $1.span(asOf: Date.now).duration
         }
     }
@@ -2317,6 +2584,7 @@ struct ReviewView: View {
             plannedCategories: report.categories,
             contexts: report.contexts,
             groups: groups,
+            displayActuals: displayActuals,
             phaseGroups: phaseGroups,
             rings: rings,
             phaseRing: phaseRing,
@@ -2845,19 +3113,30 @@ private enum ActivityCorrectionCatalog {
     }
 }
 
+private enum ActivityCorrectionTarget {
+    case record(UUID)
+    case unconfirmed(ActualRecord)
+
+    var isUnconfirmed: Bool {
+        if case .unconfirmed = self { return true }
+        return false
+    }
+}
+
 private struct ActivityCorrectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
-    let recordID: UUID
+    let target: ActivityCorrectionTarget
     @State private var customTitle = ""
     @State private var selectedOption: ActivityCorrectionOption?
     @State private var addedCustomOptions: [ActivityCorrectionOption] = []
     @State private var startAt: Date
     @State private var endAt: Date
+    @State private var isSaving = false
 
     init(model: AppModel, recordID: UUID) {
         self.model = model
-        self.recordID = recordID
+        target = .record(recordID)
         let record = model.snapshot.actuals.first { $0.id == recordID }
         let start = record?.startedAt ?? .now
         _startAt = State(initialValue: start)
@@ -2868,8 +3147,32 @@ private struct ActivityCorrectionSheet: View {
         _selectedOption = State(initialValue: nil)
     }
 
+    init(model: AppModel, unconfirmedSpan: TimeSpan) {
+        self.model = model
+        target = .unconfirmed(
+            ActualRecord(
+                planID: nil,
+                title: "미확인",
+                categoryID: ReviewCoverageEngine.unconfirmedCategoryID,
+                startedAt: unconfirmedSpan.start,
+                endedAt: unconfirmedSpan.end,
+                source: .manual,
+                confidence: .low,
+                behavior: "unconfirmed-gap"
+            )
+        )
+        _startAt = State(initialValue: unconfirmedSpan.start)
+        _endAt = State(initialValue: unconfirmedSpan.end)
+        _selectedOption = State(initialValue: nil)
+    }
+
     private var record: ActualRecord? {
-        model.snapshot.actuals.first { $0.id == recordID }
+        switch target {
+        case .record(let id):
+            model.snapshot.actuals.first { $0.id == id }
+        case .unconfirmed(let placeholder):
+            placeholder
+        }
     }
 
     private var options: [ActivityCorrectionOption] {
@@ -2948,12 +3251,17 @@ private struct ActivityCorrectionSheet: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("활동 변경")
+            .navigationTitle(target.isUnconfirmed ? "활동 결정" : "활동 변경")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("저장") { save() }
                         .fontWeight(.semibold)
+                        .disabled(
+                            isSaving
+                                || endAt <= startAt
+                                || target.isUnconfirmed && selectedOption == nil
+                        )
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("닫기") { dismiss() }
@@ -3021,17 +3329,29 @@ private struct ActivityCorrectionSheet: View {
     }
 
     private func save() {
-        guard endAt > startAt else { return }
+        guard !isSaving, endAt > startAt else { return }
         let option = selectedOption
+        if target.isUnconfirmed, option == nil { return }
+        isSaving = true
         Task {
-            if let option {
-                await model.updateActualActivity(recordID, with: option)
+            defer { isSaving = false }
+            switch target {
+            case .record(let recordID):
+                if let option {
+                    await model.updateActualActivity(recordID, with: option)
+                }
+                await model.updateActualSpan(
+                    recordID,
+                    startAt: startAt,
+                    endAt: endAt
+                )
+            case .unconfirmed:
+                guard let option else { return }
+                await model.classifyUnconfirmedSpan(
+                    TimeSpan(start: startAt, end: endAt),
+                    with: option
+                )
             }
-            await model.updateActualSpan(
-                recordID,
-                startAt: startAt,
-                endAt: endAt
-            )
             dismiss()
         }
     }

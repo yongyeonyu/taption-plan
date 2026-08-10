@@ -46,7 +46,7 @@ enum WatchLaunchDiagnostics {
                 FileManager.default.createFile(atPath: url.path, contents: nil)
             }
             handle = try? FileHandle(forWritingTo: url)
-            try? handle?.seekToEnd()
+            _ = try? handle?.seekToEnd()
         }
         try? handle?.write(contentsOf: data)
         try? handle?.synchronize()
