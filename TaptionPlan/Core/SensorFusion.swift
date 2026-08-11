@@ -289,13 +289,27 @@ struct TravelModeClassifier: Sendable {
             && averageSpeed <= 35
             || maxSpeed >= 8
                 && maxSpeed <= 40
+        let signaledRailStations = SubwayStationCatalog.stationNames(
+            from: ordered
+        )
+        let coordinateTrajectory = SubwayStationCatalog.coordinateTrajectory(
+            from: ordered
+        )
+        let railStations = signaledRailStations.count >= 2
+            ? signaledRailStations
+            : coordinateTrajectory?.observedStationNames ?? signaledRailStations
+        let resolvedSubwayRoute = signaledRailStations.count >= 2
+            ? SubwayStationCatalog.route(for: signaledRailStations)
+            : coordinateTrajectory?.route
+        let coordinateRailContext = signaledRailStations.count < 2
+            && coordinateTrajectory != nil
         let railContext = stationRatio >= 0.2
             || railRatio >= 0.25
+            || coordinateRailContext
         let undergroundSignal = gpsLossRatio >= 0.35
             || altitudeDelta <= -2
         let displacementMeters = firstLastDisplacement(ordered)
         let deepUndergroundRecovery = altitudeDropAndRecovery(ordered)
-        let railStations = SubwayStationCatalog.stationNames(from: ordered)
         let altitudeDropMeters = maxAltitudeDrop(ordered)
         let undergroundDescent = altitudeDropMeters >= 8
             || altitudeDelta <= -8
@@ -307,11 +321,19 @@ struct TravelModeClassifier: Sendable {
         let watchVibrationAbsent = watchAcceleration.sampleCount >= 2
             && watchAcceleration.standardDeviationG < 0.012
             && watchAcceleration.meanJerkGPerSecond < 0.04
+        let coordinateTrajectorySignal = coordinateRailContext
+            && Set(railStations).count >= 3
+            && railSpeedSignal
+            && hasVehicleSpeed
         let stationToStationSubway = railStations.count >= 2
+            && resolvedSubwayRoute != nil
             && railContext
-            && undergroundDescent
-            && lowStepsForTransit
-            && (watchVibrationAbsent || watchVibrationUnavailable)
+            && (
+                coordinateTrajectorySignal
+                || undergroundDescent
+                    && lowStepsForTransit
+                    && (watchVibrationAbsent || watchVibrationUnavailable)
+            )
 
         if stationRatio >= 0.25 {
             add(.subway, 0.16, "역 접근")
@@ -320,6 +342,10 @@ struct TravelModeClassifier: Sendable {
         if railRatio >= 0.5 {
             add(.subway, 0.2, "철도 경로 일치")
             add(.train, 0.28, "철도 경로 일치")
+        }
+        if coordinateRailContext {
+            add(.subway, 0.42, "역 좌표 궤적 일치")
+            add(.train, 0.12, "철도역 순차 통과")
         }
         if gpsLossRatio >= 0.45 && railContext {
             add(.subway, 0.18, "GPS 약화")
@@ -353,13 +379,13 @@ struct TravelModeClassifier: Sendable {
             }
         }
 
-        // 지하철은 역 근처 표본이 두 곳 이상 순서대로 잡히고, 그 사이에
-        // 지하 하강·GPS 약화와 걸음 부재가 겹칠 때 확정한다. 워치 진동이
-        // 약한 경우도 철도 차량과 모순되지 않으므로 별도 근거로 남긴다.
+        // 지도 보강값이 있으면 역·역 이동과 지하 신호를 함께 확인한다.
+        // 과거처럼 보강값이 비어 있으면 세 역 이상의 좌표 순서와 철도 속도가
+        // 일치할 때만 복원해, 환승 보행 때문에 전체 걸음 수가 늘어도 놓치지 않는다.
         if stationToStationSubway {
             let first = railStations.first ?? "출발역"
             let last = railStations.last ?? "도착역"
-            let subwayRoute = SubwayStationCatalog.route(for: railStations)
+            let subwayRoute = resolvedSubwayRoute
             var routeEvidence: [String] = []
             if let subwayRoute {
                 routeEvidence.append(
@@ -377,8 +403,17 @@ struct TravelModeClassifier: Sendable {
                 "지하철역 \(first) → \(last)"
             )
             add(.subway, 0.42, "역·역 이동 구간")
-            add(.subway, 0.32, "지하 하강·GPS 약화")
-            add(.subway, 0.18, "걸음 거의 없음")
+            if undergroundDescent {
+                add(.subway, 0.32, "지하 하강·GPS 약화")
+            }
+            if lowStepsForTransit {
+                add(.subway, 0.18, "걸음 거의 없음")
+            } else if coordinateTrajectorySignal {
+                add(.subway, 0.18, "환승 보행 포함")
+            }
+            if coordinateRailContext {
+                add(.subway, 0.28, "원본 좌표로 역 순서 복원")
+            }
             if watchVibrationAbsent {
                 add(.subway, 0.12, "Apple Watch 진동 없음")
             }
@@ -519,9 +554,7 @@ struct TravelModeClassifier: Sendable {
             1,
             min(1, winner.value.0) * (0.82 + min(0.18, margin))
         )
-        let subwayRoute = winner.key == .subway
-            ? SubwayStationCatalog.route(for: railStations)
-            : nil
+        let subwayRoute = winner.key == .subway ? resolvedSubwayRoute : nil
         var winnerEvidence = winner.value.1
         if let subwayRoute {
             winnerEvidence.append(
@@ -2254,6 +2287,78 @@ struct MovementRouteBuilder: Sendable {
     }
 }
 
+/// 지도 보강값과 Core Motion 라벨이 비어 있던 과거 기록에서도 원본 GPS가
+/// 철도역을 순서대로 통과했다면 이동 세그먼트를 복원한다. 원본 표본은 바꾸지
+/// 않고, 파생 구간만 만들어 자동차 조각과 `unknown` 공백을 대체한다.
+enum SubwayTravelSegmentEngine {
+    /// 배터리 절약 프로필은 15분 간격으로 표본을 남긴다. 예약 실행의
+    /// 지연까지 감안해 한 번의 표본 공백은 18분까지 같은 이동으로 잇는다.
+    static let defaultMaximumReadingGap: TimeInterval = 18 * 60
+
+    static func segments(
+        from readings: [SensorReading],
+        maximumReadingGap: TimeInterval = defaultMaximumReadingGap
+    ) -> [TravelSegment] {
+        let maximumGap = maximumReadingGap.isFinite
+            ? max(0, maximumReadingGap)
+            : defaultMaximumReadingGap
+        return groups(from: readings, maximumGap: maximumGap).compactMap { group in
+            guard let trajectory = SubwayStationCatalog.coordinateTrajectory(
+                from: group
+            ) else { return nil }
+            let contextSpan = TimeSpan(
+                start: trajectory.span.start.addingTimeInterval(-2 * 60),
+                end: trajectory.span.end.addingTimeInterval(2 * 60)
+            )
+            let context = group.filter { contextSpan.contains($0.timestamp) }
+            let inference = TravelModeClassifier().classify(
+                readings: context,
+                inside: trajectory.span
+            )
+            guard inference.mode == .subway else { return nil }
+            let route = inference.subwayRoute ?? trajectory.route
+            return TravelSegment(
+                mode: .subway,
+                span: trajectory.span,
+                distanceMeters: pathDistance(route.coordinates),
+                confidence: .high,
+                evidence: Array(
+                    Set(inference.evidence + ["원본 GPS 철도 궤적 복원"])
+                ).sorted(),
+                subwayRoute: route
+            )
+        }
+    }
+
+    private static func groups(
+        from readings: [SensorReading],
+        maximumGap: TimeInterval
+    ) -> [[SensorReading]] {
+        var result: [[SensorReading]] = []
+        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
+            guard var current = result.popLast() else {
+                result.append([reading])
+                continue
+            }
+            if let previous = current.last,
+               reading.timestamp.timeIntervalSince(previous.timestamp) <= maximumGap {
+                current.append(reading)
+                result.append(current)
+            } else {
+                result.append(current)
+                result.append([reading])
+            }
+        }
+        return result
+    }
+
+    private static func pathDistance(_ points: [GeoPoint]) -> Double {
+        zip(points, points.dropFirst()).reduce(0) {
+            $0 + distanceMeters($1.0, $1.1)
+        }
+    }
+}
+
 enum TravelSegmentGroupingEngine {
     static let defaultMaximumGap: TimeInterval = 5 * 60
 
@@ -2513,6 +2618,31 @@ enum AppleDeviceGroundTruthEngine {
         healthEvidence: [AppleMovementEvidence] = [],
         readings: [SensorReading] = []
     ) -> [TravelSegment] {
+        let trajectorySubwaySegments = SubwayTravelSegmentEngine
+            .segments(from: readings)
+            .map { segment in
+                guard let matched = gpsSegments
+                    .filter({ overlappingEnough($0.span, segment.span) })
+                    .max(by: {
+                        overlapDuration($0.span, segment.span)
+                            < overlapDuration($1.span, segment.span)
+                    }) else { return segment }
+                var value = segment
+                value.fromPlaceID = matched.fromPlaceID
+                value.toPlaceID = matched.toPlaceID
+                if matched.span.duration <= segment.span.duration + 30 * 60 {
+                    value.span = TimeSpan(
+                        start: min(matched.span.start, segment.span.start),
+                        end: max(matched.span.end, segment.span.end)
+                    )
+                }
+                return value
+            }
+        let primarySegments = gpsSegments.filter { gps in
+            !trajectorySubwaySegments.contains {
+                overlappingEnough(gps.span, $0.span)
+            }
+        } + trajectorySubwaySegments
         let watchSegments = healthEvidence
             .filter {
                 $0.source == .appleWatch
@@ -2521,7 +2651,7 @@ enum AppleDeviceGroundTruthEngine {
                     && $0.span.duration >= 60
             }
             .filter { workout in
-                !gpsSegments.contains {
+                !primarySegments.contains {
                     $0.span.intersection(with: workout.span) != nil
                 }
             }
@@ -2540,7 +2670,7 @@ enum AppleDeviceGroundTruthEngine {
         let candidates = motionActivities
             .filter { $0.span.duration >= 60 }
             .filter { activity in
-                !gpsSegments.contains {
+                !primarySegments.contains {
                     $0.span.intersection(with: activity.span) != nil
                 }
                     && !watchSegments.contains {
@@ -2610,8 +2740,23 @@ enum AppleDeviceGroundTruthEngine {
             )
         }
 
-        return (gpsSegments + watchSegments + motionSegments)
+        return (primarySegments + watchSegments + motionSegments)
             .sorted { $0.span.start < $1.span.start }
+    }
+
+    private static func overlappingEnough(
+        _ lhs: TimeSpan,
+        _ rhs: TimeSpan
+    ) -> Bool {
+        let shorter = max(1, min(lhs.duration, rhs.duration))
+        return overlapDuration(lhs, rhs) / shorter >= 0.5
+    }
+
+    private static func overlapDuration(
+        _ lhs: TimeSpan,
+        _ rhs: TimeSpan
+    ) -> TimeInterval {
+        lhs.intersection(with: rhs)?.duration ?? 0
     }
 
     /// Core Motion이 자동차로 본 구간은 최종 결과에서도 동력 이동으로 남긴다.
@@ -2743,6 +2888,7 @@ enum AppleDeviceGroundTruthEngine {
                 .sorted()
             last.isConfirmed = last.isConfirmed || segment.isConfirmed
             last.toPlaceID = segment.toPlaceID ?? last.toPlaceID
+            last.subwayRoute = last.subwayRoute ?? segment.subwayRoute
             result[result.count - 1] = last
         }
         return result

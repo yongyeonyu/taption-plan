@@ -1,5 +1,28 @@
 import Foundation
 
+/// High-frequency timeline gestures may arrive faster than the display can
+/// present them. Keep the latest sample for the gesture end, but only publish
+/// intermediate state at the display cadence.
+enum TimelineInteractionFrameGate {
+    static let maximumRenderRate: Double = 60
+    static let minimumInterval = 1 / maximumRenderRate
+
+    static func shouldRender(
+        lastUptime: inout TimeInterval,
+        nowUptime: TimeInterval,
+        force: Bool = false
+    ) -> Bool {
+        guard force
+            || lastUptime == 0
+            || nowUptime - lastUptime >= minimumInterval
+        else {
+            return false
+        }
+        lastUptime = nowUptime
+        return true
+    }
+}
+
 enum PlanningError: Error, Equatable {
     case missingPlan(UUID)
     case parentCycle
@@ -338,6 +361,8 @@ enum TravelSegmentPresentationEngine {
         value.toPlaceID = lhs.span.end >= rhs.span.end
             ? lhs.toPlaceID ?? rhs.toPlaceID
             : rhs.toPlaceID ?? lhs.toPlaceID
+        value.subwayRoute = preferred.subwayRoute
+            ?? (preferred.id == lhs.id ? rhs.subwayRoute : lhs.subwayRoute)
         return value
     }
 

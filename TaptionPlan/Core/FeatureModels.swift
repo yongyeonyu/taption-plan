@@ -169,6 +169,7 @@ enum GoalCategoryPolicy {
         "location",
         "sleep",
         "activity",
+        "appUsage",
     ]
 }
 
@@ -3196,6 +3197,16 @@ struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
 }
 
 enum ActivityCorrectionEngine {
+    static func replacingActivity(
+        in existing: ActivityCorrection?,
+        with option: ActivityCorrectionOption
+    ) -> ActivityCorrection {
+        var correction = option.correction
+        correction.startedAt = existing?.startedAt
+        correction.endedAt = existing?.endedAt
+        return correction
+    }
+
     static func applying(
         _ corrections: [UUID: ActivityCorrection],
         to actuals: [ActualRecord]

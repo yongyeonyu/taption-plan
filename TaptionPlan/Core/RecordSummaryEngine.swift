@@ -2280,11 +2280,15 @@ enum RecordClockDetailEngine {
 /// 원형 시간표는 재생 중 매 프레임 다시 그린다. 그때마다 하루를 다시 집계하면
 /// 예산을 넘기므로, 이미 만들어 둔 고리를 자르고 고르는 일만 여기서 한다.
 enum RecordClockEngine {
-    /// 재생이 00시에서 24시까지 한 바퀴 도는 데 걸리는 시간.
+    /// 재생이 00시에서 24시까지 한 바퀴 도는 데 걸리는 시간. 오늘은 같은
+    /// 속도로 현재 시각까지만 진행한다.
     static let sweepDuration: TimeInterval = 24
 
     /// 재생 중 화면 갱신 예산. 한 시간당 1초라 60Hz면 충분히 매끄럽다.
     static let frameInterval: TimeInterval = 1.0 / 60.0
+
+    /// 24시간 눈금판에 표시하는 모든 시각.
+    static let labeledHours = Array(0..<24)
 
     /// 가로로 이만큼 끌어야 날짜가 넘어간다.
     static let swipeThreshold: Double = 44
@@ -2297,12 +2301,44 @@ enum RecordClockEngine {
         return asOf.timeIntervalSince(span.start) / total
     }
 
-    /// 재생 진행률(0…1). 재생 중이 아니면 nil이고, 그때는 정적인 화면이다.
-    static func progress(start: Date?, now: Date) -> Double? {
+    /// 과거 날짜는 24시, 오늘은 현재 시각, 미래 날짜는 00시까지만 재생한다.
+    static func playbackEndFraction(
+        in span: TimeSpan,
+        asOf: Date = .now
+    ) -> Double {
+        guard span.duration > 0 else { return 0 }
+        if asOf <= span.start { return 0 }
+        if asOf >= span.end { return 1 }
+        return asOf.timeIntervalSince(span.start) / span.duration
+    }
+
+    /// 재생 진행률. `endFraction`에 도달하면 더 진행하지 않는다.
+    static func progress(
+        start: Date?,
+        now: Date,
+        endFraction: Double = 1
+    ) -> Double? {
         guard let start else { return nil }
+        let end = endFraction.isFinite
+            ? min(1, max(0, endFraction))
+            : 1
         let elapsed = now.timeIntervalSince(start)
+        guard elapsed.isFinite else { return 0 }
         guard elapsed > 0 else { return 0 }
-        return min(1, elapsed / sweepDuration)
+        return min(end, elapsed / sweepDuration)
+    }
+
+    /// 자정이 위쪽인 24시간 시계에서 한 점의 시각 비율을 구한다.
+    static func clockFraction(
+        x: Double,
+        y: Double,
+        centerX: Double,
+        centerY: Double
+    ) -> Double {
+        var fraction = (atan2(y - centerY, x - centerX) + .pi / 2)
+            / (2 * .pi)
+        fraction -= floor(fraction)
+        return fraction
     }
 
     /// 범례에서 고른 카테고리만 남긴다. 고르지 않았으면 그대로 둔다.

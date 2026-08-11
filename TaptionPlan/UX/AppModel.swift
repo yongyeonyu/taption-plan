@@ -425,7 +425,11 @@ final class AppModel {
         guard snapshot.actuals.contains(where: { $0.id == actualID }) else {
             return
         }
-        snapshot.settings.activityCorrections[actualID] = option.correction
+        snapshot.settings.activityCorrections[actualID] =
+            ActivityCorrectionEngine.replacingActivity(
+                in: snapshot.settings.activityCorrections[actualID],
+                with: option
+            )
         if option.isCustom {
             snapshot.settings.customActivityLabels =
                 AppFeatureSettings.normalizedActivityLabels(

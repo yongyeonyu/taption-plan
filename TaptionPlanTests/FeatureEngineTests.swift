@@ -93,6 +93,26 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(corrected.manuallyCorrected)
     }
 
+    func testActivityCorrectionChoiceKeepsExistingDisplaySpan() {
+        let start = makeDate(2026, 8, 10, 0, 10)
+        let end = makeDate(2026, 8, 10, 0, 40)
+        let updated = ActivityCorrectionEngine.replacingActivity(
+            in: ActivityCorrection(
+                title: "머무름",
+                behavior: StationaryContextKind.unknownStay.rawValue,
+                categoryID: "activity",
+                startedAt: start,
+                endedAt: end
+            ),
+            with: ActivityCorrectionOption.custom("독서")
+        )
+
+        XCTAssertEqual(updated.title, "독서")
+        XCTAssertNil(updated.behavior)
+        XCTAssertEqual(updated.startedAt, start)
+        XCTAssertEqual(updated.endedAt, end)
+    }
+
     func testActivityCorrectionSettingsRoundTrip() throws {
         let id = UUID()
         var settings = AppFeatureSettings.defaults
@@ -3339,6 +3359,262 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertGreaterThan(route?.coordinates.count ?? 0, 2)
         XCTAssertEqual(route?.stops.first?.stationName, "마곡나루")
         XCTAssertEqual(route?.stops.last?.stationName, "가정")
+    }
+
+    func testCoordinateTrajectoryRestoresGajeongCommuteWithTransferWalking() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let samples: [(Double, Double, Double, Int)] = [
+            (0, 37.5248, 126.6744, 100),
+            (12, 37.5692, 126.6737, 320),
+            (24, 37.57127, 126.7359, 520),
+            (36, 37.5667, 126.8273, 720),
+        ]
+        let readings = samples.map { minute, latitude, longitude, steps in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                relativeAltitudeMeters: 0,
+                stepCount: steps
+            )
+        }
+
+        let result = TravelModeClassifier().classify(readings: readings)
+        let route = try XCTUnwrap(result.subwayRoute)
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.confidence, .high)
+        XCTAssertEqual(route.lineNames, ["인천2호선", "공항철도"])
+        XCTAssertEqual(route.transferStationNames, ["검암"])
+        XCTAssertTrue(result.evidence.contains("원본 좌표로 역 순서 복원"))
+        XCTAssertTrue(result.evidence.contains("환승 보행 포함"))
+    }
+
+    func testCoordinateTrajectoryTrimsWalkingPastMagongnaru() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let samples: [(Double, Double, Double)] = [
+            (0, 37.5248, 126.6744),
+            (12, 37.5692, 126.6737),
+            (24, 37.57127, 126.7359),
+            (36, 37.5667, 126.8273),
+            (46, 37.5599, 126.8250),
+        ]
+        let readings = samples.map { minute, latitude, longitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: minute == 46 ? 1.2 : 12,
+                motion: minute == 46 ? .walking : .automotive,
+                motionConfidence: .high
+            )
+        }
+
+        let trajectory = try XCTUnwrap(
+            SubwayStationCatalog.coordinateTrajectory(from: readings)
+        )
+
+        XCTAssertEqual(trajectory.route.stops.first?.stationName, "가정")
+        XCTAssertEqual(trajectory.route.stops.last?.stationName, "마곡나루")
+        XCTAssertEqual(trajectory.route.transferStationNames, ["검암"])
+        XCTAssertEqual(
+            trajectory.span.end,
+            base.addingTimeInterval(36 * 60)
+        )
+    }
+
+    func testCoordinateTrajectoryCreatesSubwaySegmentAcrossUnknownMotion() throws {
+        let base = makeDate(2026, 8, 11, 21, 54)
+        let samples: [(Double, Double, Double, MotionKind)] = [
+            (0, 37.5667, 126.8273, .unknown),
+            (10, 37.57127, 126.7359, .unknown),
+            (20, 37.5692, 126.6737, .unknown),
+            (30, 37.5248, 126.6744, .automotive),
+        ]
+        let readings = samples.map { minute, latitude, longitude, motion in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: motion,
+                motionConfidence: .medium,
+                stepCount: 400 + Int(minute * 8)
+            )
+        }
+        let car = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(30 * 60)
+            ),
+            distanceMeters: 18_000,
+            confidence: .medium,
+            evidence: ["iPhone Core Motion 자동차"]
+        )
+
+        let merged = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [car],
+            motionActivities: [],
+            pedometer: nil,
+            readings: readings
+        )
+        let subway = try XCTUnwrap(merged.first)
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(subway.mode, .subway)
+        XCTAssertEqual(subway.subwayRoute?.lineNames, ["공항철도", "인천2호선"])
+        XCTAssertEqual(subway.subwayRoute?.transferStationNames, ["검암"])
+        XCTAssertTrue(subway.evidence.contains("원본 GPS 철도 궤적 복원"))
+    }
+
+    func testSubwayTravelSegmentAllowsBatterySaverReadingCadence() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let samples: [(Double, Double, Double)] = [
+            (0, 37.5248, 126.6744),
+            (15, 37.5692, 126.6737),
+            (30, 37.57127, 126.7359),
+            (45, 37.5667, 126.8273),
+        ]
+        let readings = samples.map { minute, latitude, longitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            )
+        }
+
+        let result = try XCTUnwrap(
+            SubwayTravelSegmentEngine.segments(from: readings).first
+        )
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.subwayRoute?.transferStationNames, ["검암"])
+        XCTAssertEqual(result.span.duration, 45 * 60)
+    }
+
+    func testSubwayTravelSegmentClampsInvalidReadingGap() {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let samples: [(Double, Double, Double)] = [
+            (0, 37.5248, 126.6744),
+            (15, 37.5692, 126.6737),
+            (30, 37.57127, 126.7359),
+            (45, 37.5667, 126.8273),
+        ]
+        let readings = samples.map { minute, latitude, longitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            )
+        }
+
+        XCTAssertEqual(
+            SubwayTravelSegmentEngine.segments(
+                from: readings,
+                maximumReadingGap: .nan
+            ).count,
+            1
+        )
+    }
+
+    func testTwoStationRoadMovementDoesNotCreateSubwayTrajectory() {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(20 * 60),
+                point: GeoPoint(
+                    latitude: 37.5692,
+                    longitude: 126.6737,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            ),
+        ]
+
+        XCTAssertNil(SubwayStationCatalog.coordinateTrajectory(from: readings))
+        XCTAssertTrue(SubwayTravelSegmentEngine.segments(from: readings).isEmpty)
+    }
+
+    func testSubwayRouteSurvivesTravelPresentationMerge() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let route = try XCTUnwrap(
+            SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"])
+        )
+        let first = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(20 * 60)),
+            distanceMeters: 10_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+        let second = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: base.addingTimeInterval(10 * 60),
+                end: base.addingTimeInterval(40 * 60)
+            ),
+            distanceMeters: 18_000,
+            confidence: .medium,
+            evidence: ["철도 노선"],
+            subwayRoute: route
+        )
+
+        let result = TravelSegmentPresentationEngine.consolidated([first, second])
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.subwayRoute, route)
     }
 
     func testCoreMotionWalkingLabelLosesToImpossibleDisplacementSpeed() {
@@ -8695,6 +8971,86 @@ final class FeatureEngineTests: XCTestCase {
                 )
             ) ?? -1,
             1,
+            accuracy: 0.0001
+        )
+    }
+
+    func testClockPlaybackStopsAtNowForToday() {
+        let day = makeDate(2026, 8, 4)
+        let span = TimeSpan(
+            start: day,
+            end: day.addingTimeInterval(24 * hour)
+        )
+        let now = day.addingTimeInterval(6 * hour)
+        let playbackStartedAt = makeDate(2026, 8, 5)
+        let end = RecordClockEngine.playbackEndFraction(in: span, asOf: now)
+
+        XCTAssertEqual(end, 0.25, accuracy: 0.0001)
+        XCTAssertEqual(
+            RecordClockEngine.progress(
+                start: playbackStartedAt,
+                now: playbackStartedAt.addingTimeInterval(24),
+                endFraction: end
+            ) ?? -1,
+            0.25,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            RecordClockEngine.playbackEndFraction(
+                in: span,
+                asOf: span.end.addingTimeInterval(1)
+            ),
+            1
+        )
+        XCTAssertEqual(
+            RecordClockEngine.playbackEndFraction(
+                in: span,
+                asOf: span.start.addingTimeInterval(-1)
+            ),
+            0
+        )
+    }
+
+    func testClockDragMapsEveryQuarterTurnLikeAClock() {
+        XCTAssertEqual(RecordClockEngine.labeledHours, Array(0..<24))
+        XCTAssertEqual(
+            RecordClockEngine.clockFraction(
+                x: 100,
+                y: 0,
+                centerX: 100,
+                centerY: 100
+            ),
+            0,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            RecordClockEngine.clockFraction(
+                x: 200,
+                y: 100,
+                centerX: 100,
+                centerY: 100
+            ),
+            0.25,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            RecordClockEngine.clockFraction(
+                x: 100,
+                y: 200,
+                centerX: 100,
+                centerY: 100
+            ),
+            0.5,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            RecordClockEngine.clockFraction(
+                x: 0,
+                y: 100,
+                centerX: 100,
+                centerY: 100
+            ),
+            0.75,
             accuracy: 0.0001
         )
     }

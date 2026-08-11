@@ -104,11 +104,97 @@ private struct LinearClockItem {
     var tint: Color
 }
 
+enum CircularActivityLabelQuadrant: CaseIterable, Hashable {
+    case topLeft
+    case topRight
+    case bottomLeft
+    case bottomRight
+
+    init(clockFraction: Double) {
+        guard clockFraction.isFinite else {
+            self = .topRight
+            return
+        }
+        let fraction = clockFraction - floor(clockFraction)
+        switch fraction {
+        case 0..<0.25:
+            self = .topRight
+        case 0.25..<0.5:
+            self = .bottomRight
+        case 0.5..<0.75:
+            self = .bottomLeft
+        default:
+            self = .topLeft
+        }
+    }
+
+    var isLeft: Bool {
+        self == .topLeft || self == .bottomLeft
+    }
+
+    var isTop: Bool {
+        self == .topLeft || self == .topRight
+    }
+}
+
+enum CircularActivityLabelPaging {
+    static func clampedIndex(_ index: Int, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        return min(max(index, 0), count - 1)
+    }
+
+    static func index(
+        movingBy offset: Int,
+        from index: Int,
+        count: Int
+    ) -> Int {
+        clampedIndex(index + offset, count: count)
+    }
+}
+
+enum CircularClockTapBand: Equatable {
+    case phase
+    case activity
+
+    static func resolve(
+        distance: Double,
+        outerRadius: Double,
+        phaseBandWidth: Double,
+        bandGap: Double,
+        activityBandWidth: Double,
+        tolerance: Double = 8
+    ) -> CircularClockTapBand? {
+        let phaseRadius = outerRadius - phaseBandWidth / 2
+        let activityRadius = outerRadius
+            - phaseBandWidth
+            - bandGap
+            - activityBandWidth / 2
+        let phaseDelta = abs(distance - phaseRadius)
+        let activityDelta = abs(distance - activityRadius)
+        let hitsPhase = phaseDelta <= phaseBandWidth / 2 + tolerance
+        let hitsActivity = activityDelta <= activityBandWidth / 2 + tolerance
+
+        switch (hitsPhase, hitsActivity) {
+        case (true, true):
+            return activityDelta <= phaseDelta ? .activity : .phase
+        case (true, false):
+            return .phase
+        case (false, true):
+            return .activity
+        case (false, false):
+            return nil
+        }
+    }
+}
+
 private struct CircularActivityLabel: Identifiable {
     let id: String
     let groupID: String
     let groupName: String
     let child: RecordGroupChild
+    let start: Date
+    let anchorFraction: Double
+    let quadrant: CircularActivityLabelQuadrant
 }
 
 /// Scroll geometry can arrive faster than the SwiftUI layout budget. Keep the
@@ -118,9 +204,59 @@ private final class LinearScrollTracker {
     var lastPublishedUptime: TimeInterval = 0
 }
 
+private final class CircularPlayheadTracker {
+    var lastPublishedUptime: TimeInterval = 0
+    var isDragging = false
+}
+
 private struct ReviewUnconfirmedSelection: Identifiable {
     let id = UUID()
     let span: TimeSpan
+}
+
+private struct ReviewQuickActivitySelection: Identifiable {
+    let recordID: UUID
+
+    var id: UUID { recordID }
+}
+
+enum ActivityQuickSelectionPolicy {
+    private static let placeholderTitles = [
+        "", "활동", "머무름", "미확인",
+    ]
+
+    static func needsSelection(_ record: ActualRecord) -> Bool {
+        let behavior = normalized(record.behavior)
+        if behavior == WatchBehaviorKind.unknown.rawValue.lowercased()
+            || behavior == StationaryContextKind.unknownStay.rawValue.lowercased() {
+            return true
+        }
+        guard behavior == nil,
+              ActualRecordCategoryResolver.categoryID(for: record) == "activity"
+        else { return false }
+        return placeholderTitles.contains(normalized(record.title))
+    }
+
+    static func isDetailedOption(_ option: ActivityCorrectionOption) -> Bool {
+        let behavior = normalized(option.behavior)
+        if behavior == WatchBehaviorKind.unknown.rawValue.lowercased()
+            || behavior == StationaryContextKind.unknownStay.rawValue.lowercased() {
+            return false
+        }
+        return !placeholderTitles.contains(normalized(option.title))
+    }
+
+    private static func normalized(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let normalized = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return normalized.isEmpty ? nil : normalized
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
 }
 
 struct ReviewView: View {
@@ -133,8 +269,8 @@ struct ReviewView: View {
     /// 일과와 활동 두 띠가 서로 붙어 보이지 않을 만큼만 벌린다.
     private static let bandGap: CGFloat = 3.5
     private static let clockButtonSize: CGFloat = 44
-    private static let cornerLabelWidth: CGFloat = 96
-    private static let cornerLabelHeight: CGFloat = 30
+    private static let cornerLabelWidth: CGFloat = 108
+    private static let cornerLabelHeight: CGFloat = 46
     /// 일과 띠를 두르면서 안쪽 띠가 가운데 단추와 읽음창에 밀리지 않도록
     /// 눈금판을 키웠다. 카드 너비(약 343pt)보다 작아 가로로 넘치지 않는다.
     ///
@@ -145,6 +281,7 @@ struct ReviewView: View {
     /// 화면에서는 한 변이 카드 너비에 묶이므로, 알약이 남은 자리에 맞춰
     /// 스스로 줄어든다.
     private static let clockHeight: CGFloat = 324
+    private static let circularClockLegendMargin: CGFloat = 20
     private static let linearClockHeight: CGFloat = 174
     private static let linearTimelineHeight: CGFloat = 122
     private static let linearTimelineInset: CGFloat = 82
@@ -158,6 +295,8 @@ struct ReviewView: View {
     @State private var selectedChartBucketID: String?
     /// 범례에서 고른 한 항목. 서로 배타적으로 유지해 다른 띠는 흐리게 남긴다.
     @State private var clockHighlight: ReviewClockHighlight?
+    @State private var circularActivityLabelPageIndices:
+        [CircularActivityLabelQuadrant: Int] = [:]
     /// 재생을 시작한 시각. nil이면 멈춘 상태다.
     @State private var playStartedAt: Date?
     /// 하루 원형 시간표의 핀치 배율. 1배율은 원형, 그보다 크면 직선
@@ -167,9 +306,12 @@ struct ReviewView: View {
     @State private var lastClockZoomRenderUptime: TimeInterval = 0
     @State private var linearScrollPosition = ScrollPosition(x: 0)
     @State private var linearPlayheadFraction = 0.5
+    @State private var circularPlayheadFraction: Double?
     @State private var linearPositionedPeriodStart: Date?
     @State private var unconfirmedSelection: ReviewUnconfirmedSelection?
+    @State private var quickActivitySelection: ReviewQuickActivitySelection?
     @State private var linearScrollTracker = LinearScrollTracker()
+    @State private var circularPlayheadTracker = CircularPlayheadTracker()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -193,7 +335,15 @@ struct ReviewView: View {
         .task(id: playStartedAt) { await stopPlaybackWhenSweepEnds() }
         .onDisappear { clearClockHighlight() }
         .onChange(of: model.reviewScale) { _, scale in
-            if scale != .day { resetClockZoom() }
+            if scale != .day {
+                resetClockZoom()
+                clearManualPlayhead()
+            }
+        }
+        .onChange(of: highlightedPhaseToken) { _, _ in
+            if !circularActivityLabelPageIndices.isEmpty {
+                circularActivityLabelPageIndices = [:]
+            }
         }
         .sheet(item: $unconfirmedSelection) { selection in
             ActivityCorrectionSheet(
@@ -201,13 +351,29 @@ struct ReviewView: View {
                 unconfirmedSpan: selection.span
             )
         }
+        .sheet(item: $quickActivitySelection) { selection in
+            QuickActivitySelectionSheet(
+                model: model,
+                recordID: selection.recordID
+            )
+        }
     }
 
-    /// 한 바퀴를 다 돌면 스스로 멈춰 정적인 화면으로 돌아간다.
+    /// 과거 날짜는 하루 끝, 오늘은 재생을 시작한 현재 시각에서 멈춘다.
     private func stopPlaybackWhenSweepEnds() async {
-        guard playStartedAt != nil else { return }
-        try? await Task.sleep(for: .seconds(RecordClockEngine.sweepDuration))
-        guard !Task.isCancelled else { return }
+        guard let startedAt = playStartedAt else { return }
+        let end = RecordClockEngine.playbackEndFraction(
+            in: content.period,
+            asOf: startedAt
+        )
+        guard end > 0 else {
+            if playStartedAt == startedAt { playStartedAt = nil }
+            return
+        }
+        try? await Task.sleep(
+            for: .seconds(RecordClockEngine.sweepDuration * end)
+        )
+        guard !Task.isCancelled, playStartedAt == startedAt else { return }
         playStartedAt = nil
     }
 
@@ -403,15 +569,23 @@ struct ReviewView: View {
             if model.reviewScale == .day {
                 timelineLocationHeader
                 dayClockChart
-                // 범례도 고리와 같은 순서로 밖에서 안으로 읽힌다.
-                if let phaseRing = content.phaseRing {
-                    phaseLegend(phaseRing)
+                VStack(alignment: .leading, spacing: 9) {
+                    // 범례도 고리와 같은 순서로 밖에서 안으로 읽힌다.
+                    if let phaseRing = content.phaseRing {
+                        phaseLegend(phaseRing)
+                    }
+                    if content.groups.isEmpty {
+                        emptyRecordText
+                    } else {
+                        categoryLegend
+                    }
                 }
-                if content.groups.isEmpty {
-                    emptyRecordText
-                } else {
-                    categoryLegend
-                }
+                .padding(
+                    .top,
+                    clockZoomScale < Self.clockLinearThreshold
+                        ? Self.circularClockLegendMargin
+                        : 0
+                )
             } else if content.phaseDurations.isEmpty {
                 emptyRecordText
             } else {
@@ -463,10 +637,12 @@ struct ReviewView: View {
     private var timelineLocationText: String {
         let fraction = clockZoomScale >= Self.clockLinearThreshold
             ? linearLookupFraction
-            : (RecordClockEngine.nowFraction(
-                in: content.period,
-                asOf: Date.now
-            ) ?? 0)
+            : (circularPlayheadFraction
+                ?? RecordClockEngine.nowFraction(
+                    in: content.period,
+                    asOf: Date.now
+                )
+                ?? 0)
         let token = content.contextRings
             .first(where: { $0.kind == .location })?
             .arcs
@@ -521,10 +697,8 @@ struct ReviewView: View {
         return TimelineView(
             RecordClockSchedule(isPlaying: playStartedAt != nil)
         ) { timeline in
-            let progress = RecordClockEngine.progress(
-                start: playStartedAt,
-                now: timeline.date
-            )
+            let playbackProgress = clockPlaybackProgress(at: timeline.date)
+            let progress = playbackProgress ?? circularPlayheadFraction
             ZStack {
                 Canvas { context, size in
                     drawClock(
@@ -537,9 +711,8 @@ struct ReviewView: View {
                         highlight: highlight,
                         progress: progress,
                         span: span,
-                        nowFraction: RecordClockEngine.nowFraction(
-                            in: span,
-                            asOf: timeline.date
+                        nowFraction: idleCircularPlayheadFraction(
+                            at: timeline.date
                         )
                     )
                 }
@@ -563,7 +736,9 @@ struct ReviewView: View {
         .overlay { clockTapLayer }
         .overlay { circularActivityLeaderLines }
         .overlay { circularActivityLabels }
+        .overlay { circularPlayheadOverlay }
         .overlay { playControl }
+        .coordinateSpace(name: "recordCircularClock")
         .contentShape(Rectangle())
         // 목록을 위아래로 굴리는 손가락을 가로채지 않도록 함께 인식시킨다.
         .simultaneousGesture(dateSwipeGesture)
@@ -583,19 +758,99 @@ struct ReviewView: View {
         .accessibilityLabel("하루 24시간 눈금판")
     }
 
+    private var circularPlayheadOverlay: some View {
+        TimelineView(
+            RecordClockSchedule(isPlaying: playStartedAt != nil)
+        ) { timeline in
+            let fraction = clockPlaybackProgress(at: timeline.date)
+                ?? idleCircularPlayheadFraction(at: timeline.date)
+            circularPlayheadHandle(at: fraction)
+        }
+    }
+
+    private func circularPlayheadHandle(at fraction: Double) -> some View {
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height)
+            let center = CGPoint(
+                x: proxy.size.width / 2,
+                y: proxy.size.height / 2
+            )
+            let tip = point(
+                center: center,
+                radius: side / 2 - 15,
+                angle: clockAngle(fraction)
+            )
+            ZStack {
+                Circle().fill(Color.clear)
+                Circle()
+                    .fill(Color.tpNow)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(.white, lineWidth: 1.5))
+                    .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
+            }
+            .frame(width: 32, height: 32)
+            .contentShape(Circle())
+            .position(tip)
+            .gesture(
+                DragGesture(
+                    minimumDistance: 0,
+                    coordinateSpace: .named("recordCircularClock")
+                )
+                .onChanged { value in
+                    updateCircularPlayhead(
+                        at: value.location,
+                        in: proxy.size
+                    )
+                }
+                .onEnded { value in
+                    finishCircularPlayheadDrag(
+                        at: value.location,
+                        in: proxy.size
+                    )
+                }
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("시간 플레이헤드")
+            .accessibilityValue(circularPlayheadTimeText(fraction))
+            .accessibilityHint("15분씩 조절할 수 있습니다")
+            .accessibilityAdjustableAction(adjustCircularPlayhead)
+        }
+    }
+
+    private func clockPlaybackProgress(at date: Date) -> Double? {
+        guard let startedAt = playStartedAt else { return nil }
+        return RecordClockEngine.progress(
+            start: startedAt,
+            now: date,
+            endFraction: RecordClockEngine.playbackEndFraction(
+                in: content.period,
+                asOf: startedAt
+            )
+        )
+    }
+
+    private func idleCircularPlayheadFraction(at date: Date) -> Double {
+        circularPlayheadFraction
+            ?? RecordClockEngine.nowFraction(in: content.period, asOf: date)
+            ?? 0
+    }
+
     private var circularActivityLabels: some View {
-        let labels = circularActivityLabelItems
+        let labels = Dictionary(
+            grouping: circularActivityLabelItems,
+            by: \.quadrant
+        )
         return VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 4) {
-                circularActivityLabel(at: 0, from: labels)
+                circularActivityLabel(in: .topLeft, from: labels)
                 Spacer(minLength: 4)
-                circularActivityLabel(at: 1, from: labels)
+                circularActivityLabel(in: .topRight, from: labels)
             }
             Spacer(minLength: 0)
             HStack(alignment: .bottom, spacing: 4) {
-                circularActivityLabel(at: 2, from: labels)
+                circularActivityLabel(in: .bottomLeft, from: labels)
                 Spacer(minLength: 4)
-                circularActivityLabel(at: 3, from: labels)
+                circularActivityLabel(in: .bottomRight, from: labels)
             }
         }
         .padding(.horizontal, 3)
@@ -603,12 +858,15 @@ struct ReviewView: View {
     }
 
     private var circularActivityLeaderLines: some View {
-        let labels = circularActivityLabelItems
+        let labels = Dictionary(
+            grouping: circularActivityLabelItems,
+            by: \.quadrant
+        )
         return Canvas { context, size in
             drawCircularActivityLeaderLines(
                 context: context,
                 size: size,
-                labels: labels
+                labels: visibleCircularActivityLabels(in: labels)
             )
         }
         .allowsHitTesting(false)
@@ -624,42 +882,20 @@ struct ReviewView: View {
         let side = min(size.width, size.height)
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
         let outer = side / 2 - 24
-        let activityRadius = outer
-            - Self.phaseBandWidth
-            - Self.bandGap
-            - Self.clockBandWidth / 2
-        let lineRadius = activityRadius + Self.clockBandWidth / 2 + 3
+        let lineRadius = outer + 2
 
-        for (index, item) in labels.enumerated() {
-            guard let actual = content.displayActuals.first(where: {
-                $0.id == item.child.recordID
-            }) else { continue }
-            let visible = actual.span(asOf: Date.now)
-            guard let clipped = visible.intersection(with: content.period),
-                  clipped.duration > 0 else { continue }
-            let midpoint = clipped.start.addingTimeInterval(
-                clipped.duration / 2
-            )
-            let fraction = min(
-                1 - 0.000_001,
-                max(
-                    0,
-                    midpoint.timeIntervalSince(content.period.start)
-                        / content.period.duration
-                )
-            )
+        for item in labels {
             let start = point(
                 center: center,
                 radius: lineRadius,
-                angle: clockAngle(fraction)
+                angle: clockAngle(item.anchorFraction)
             )
             let anchor = circularActivityLabelAnchor(
-                index: index,
+                quadrant: item.quadrant,
                 in: size
             )
-            let isLeft = index.isMultiple(of: 2)
             let elbow = CGPoint(
-                x: anchor.x + (isLeft ? 14 : -14),
+                x: anchor.x + (item.quadrant.isLeft ? 14 : -14),
                 y: anchor.y
             )
             var path = Path()
@@ -688,15 +924,13 @@ struct ReviewView: View {
     }
 
     private func circularActivityLabelAnchor(
-        index: Int,
+        quadrant: CircularActivityLabelQuadrant,
         in size: CGSize
     ) -> CGPoint {
-        let isLeft = index.isMultiple(of: 2)
-        let x = isLeft
+        let x = quadrant.isLeft
             ? 3 + Self.cornerLabelWidth
             : size.width - 3 - Self.cornerLabelWidth
-        let isTop = index < 2
-        let y = isTop
+        let y = quadrant.isTop
             ? 4 + Self.cornerLabelHeight / 2
             : size.height - 4 - Self.cornerLabelHeight / 2
         return CGPoint(x: x, y: y)
@@ -704,36 +938,98 @@ struct ReviewView: View {
 
     @ViewBuilder
     private func circularActivityLabel(
-        at index: Int,
-        from labels: [CircularActivityLabel]
+        in quadrant: CircularActivityLabelQuadrant,
+        from labels: [CircularActivityLabelQuadrant: [CircularActivityLabel]]
     ) -> some View {
-        circularActivityLabel(index < labels.count ? labels[index] : nil)
+        let items = labels[quadrant] ?? []
+        if !items.isEmpty {
+            let index = CircularActivityLabelPaging.clampedIndex(
+                circularActivityLabelPageIndices[quadrant] ?? 0,
+                count: items.count
+            )
+            circularActivityLabel(
+                items[index],
+                quadrant: quadrant,
+                index: index,
+                count: items.count
+            )
+        } else {
+            Color.clear
+                .frame(
+                    width: Self.cornerLabelWidth,
+                    height: Self.cornerLabelHeight
+                )
+                .accessibilityHidden(true)
+        }
     }
 
     private var circularActivityLabelItems: [CircularActivityLabel] {
         guard let selectedPhase = highlightedPhaseToken else { return [] }
-        return Array(
-            content.phaseGroups
-                .filter { $0.id == selectedPhase }
-                .flatMap { group in
-                    group.children.map {
-                        CircularActivityLabel(
-                            id: "\(group.id).\($0.id)",
-                            groupID: group.id,
-                            groupName: group.name,
-                            child: $0
-                        )
-                    }
-                }
-                .prefix(4)
+        let period = content.period
+        guard period.duration > 0 else { return [] }
+        let actuals: [UUID: ActualRecord] = Dictionary(
+            content.displayActuals.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
         )
+        let now = Date.now
+        var labels: [CircularActivityLabel] = []
+        for group in content.phaseGroups where group.id == selectedPhase {
+            for child in group.children {
+                guard let actual = actuals[child.recordID],
+                      let clipped = actual.span(asOf: now)
+                          .intersection(with: period),
+                      clipped.duration > 0 else { continue }
+                let midpoint = clipped.start.addingTimeInterval(
+                    clipped.duration / 2
+                )
+                let elapsed = midpoint.timeIntervalSince(period.start)
+                let fraction = min(
+                    1 - 0.000_001,
+                    max(0, elapsed / period.duration)
+                )
+                let labelID = group.id + "." + child.id
+                labels.append(
+                    CircularActivityLabel(
+                        id: labelID,
+                        groupID: group.id,
+                        groupName: group.name,
+                        child: child,
+                        start: clipped.start,
+                        anchorFraction: fraction,
+                        quadrant: CircularActivityLabelQuadrant(
+                            clockFraction: fraction
+                        )
+                    )
+                )
+            }
+        }
+        return labels.sorted {
+            $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start
+        }
     }
 
-    @ViewBuilder
+    private func visibleCircularActivityLabels(
+        in labels: [CircularActivityLabelQuadrant: [CircularActivityLabel]]
+    ) -> [CircularActivityLabel] {
+        CircularActivityLabelQuadrant.allCases.compactMap { quadrant in
+            guard let items = labels[quadrant], !items.isEmpty else {
+                return nil
+            }
+            let index = CircularActivityLabelPaging.clampedIndex(
+                circularActivityLabelPageIndices[quadrant] ?? 0,
+                count: items.count
+            )
+            return items[index]
+        }
+    }
+
     private func circularActivityLabel(
-        _ item: CircularActivityLabel?
+        _ item: CircularActivityLabel,
+        quadrant: CircularActivityLabelQuadrant,
+        index: Int,
+        count: Int
     ) -> some View {
-        if let item {
+        ZStack(alignment: .bottomTrailing) {
             Button {
                 // 하단 실제 기록의 자식 행과 같은 상세 화면을 연다.
                 clearClockHighlight()
@@ -756,13 +1052,14 @@ struct ReviewView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 }
+                .padding(.horizontal, 6)
+                .padding(.top, 4)
+                .padding(.bottom, count > 1 ? 16 : 4)
                 .frame(
                     width: Self.cornerLabelWidth,
                     height: Self.cornerLabelHeight,
-                    alignment: .leading
+                    alignment: .topLeading
                 )
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
                 .background(
                     Color.white.opacity(0.96),
                     in: RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -779,24 +1076,97 @@ struct ReviewView: View {
             .accessibilityLabel(
                 "\(item.groupName) \(item.child.title) 상세 보기"
             )
-        } else {
-            Color.clear
-                .frame(
-                    width: Self.cornerLabelWidth,
-                    height: Self.cornerLabelHeight
+
+            if count > 1 {
+                HStack(spacing: 2) {
+                    circularActivityPageButton(
+                        symbol: "chevron.left",
+                        label: "이전 활동 라벨",
+                        isDisabled: index == 0
+                    ) {
+                        moveCircularActivityLabel(
+                            in: quadrant,
+                            by: -1,
+                            count: count
+                        )
+                    }
+                    Text("\(index + 1)/\(count)")
+                        .font(.taption(size: 6.5, weight: .semibold))
+                        .foregroundStyle(Color.tpSecondary)
+                        .monospacedDigit()
+                    circularActivityPageButton(
+                        symbol: "chevron.right",
+                        label: "다음 활동 라벨",
+                        isDisabled: index == count - 1
+                    ) {
+                        moveCircularActivityLabel(
+                            in: quadrant,
+                            by: 1,
+                            count: count
+                        )
+                    }
+                }
+                .padding(.horizontal, 3)
+                .padding(.vertical, 1)
+                .background(
+                    Color.white.opacity(0.98),
+                    in: Capsule()
                 )
-                .accessibilityHidden(true)
+                .padding(.trailing, 3)
+                .padding(.bottom, 2)
+            }
         }
+        .frame(
+            width: Self.cornerLabelWidth,
+            height: Self.cornerLabelHeight
+        )
+    }
+
+    private func circularActivityPageButton(
+        symbol: String,
+        label: String,
+        isDisabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.taption(size: 7, weight: .bold))
+                .frame(width: 15, height: 13)
+                .foregroundStyle(
+                    isDisabled
+                        ? Color.tpSecondary.opacity(0.3)
+                        : Color.tpInk
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .accessibilityLabel(label)
+    }
+
+    private func moveCircularActivityLabel(
+        in quadrant: CircularActivityLabelQuadrant,
+        by offset: Int,
+        count: Int
+    ) {
+        let current = CircularActivityLabelPaging.clampedIndex(
+            circularActivityLabelPageIndices[quadrant] ?? 0,
+            count: count
+        )
+        let next = CircularActivityLabelPaging.index(
+            movingBy: offset,
+            from: current,
+            count: count
+        )
+        guard next != current else { return }
+        circularActivityLabelPageIndices[quadrant] = next
     }
 
     private var linearDayClockChart: some View {
         TimelineView(
             RecordClockSchedule(isPlaying: playStartedAt != nil)
         ) { timeline in
-            let progress = RecordClockEngine.progress(
-                start: playStartedAt,
-                now: timeline.date
-            )
+            let progress = clockPlaybackProgress(at: timeline.date)
             GeometryReader { proxy in
                 let labelWidth = Self.linearTimelineInset
                 let viewportWidth = max(proxy.size.width - labelWidth, 1)
@@ -1032,6 +1402,88 @@ struct ReviewView: View {
         }
     }
 
+    private func updateCircularPlayhead(
+        at location: CGPoint,
+        in size: CGSize,
+        force: Bool = false
+    ) {
+        if !circularPlayheadTracker.isDragging {
+            circularPlayheadTracker.isDragging = true
+            circularPlayheadTracker.lastPublishedUptime = 0
+            if playStartedAt != nil { playStartedAt = nil }
+            clearClockHighlight()
+        }
+        let now = ProcessInfo.processInfo.systemUptime
+        guard force
+            || circularPlayheadTracker.lastPublishedUptime == 0
+            || now - circularPlayheadTracker.lastPublishedUptime >= 1.0 / 60.0
+        else { return }
+        circularPlayheadTracker.lastPublishedUptime = now
+        setManualPlayhead(
+            RecordClockEngine.clockFraction(
+                x: Double(location.x),
+                y: Double(location.y),
+                centerX: Double(size.width / 2),
+                centerY: Double(size.height / 2)
+            )
+        )
+    }
+
+    private func finishCircularPlayheadDrag(
+        at location: CGPoint,
+        in size: CGSize
+    ) {
+        updateCircularPlayhead(at: location, in: size, force: true)
+        circularPlayheadTracker.lastPublishedUptime = 0
+        Task { @MainActor in
+            await Task.yield()
+            circularPlayheadTracker.isDragging = false
+        }
+    }
+
+    private func setManualPlayhead(_ fraction: Double) {
+        let next = min(1, max(0, fraction))
+        if circularPlayheadFraction.map({ abs($0 - next) > 0.00001 })
+            != false {
+            circularPlayheadFraction = next
+        }
+        if abs(linearPlayheadFraction - next) > 0.00001 {
+            linearPlayheadFraction = next
+        }
+    }
+
+    private func clearManualPlayhead() {
+        guard circularPlayheadFraction != nil else { return }
+        circularPlayheadFraction = nil
+        circularPlayheadTracker.lastPublishedUptime = 0
+    }
+
+    private func adjustCircularPlayhead(
+        _ direction: AccessibilityAdjustmentDirection
+    ) {
+        guard content.period.duration > 0 else { return }
+        let current = clockPlaybackProgress(at: Date.now)
+            ?? idleCircularPlayheadFraction(at: Date.now)
+        let step = 15 * 60 / content.period.duration
+        let offset: Double
+        switch direction {
+        case .increment: offset = step
+        case .decrement: offset = -step
+        @unknown default: return
+        }
+        if playStartedAt != nil { playStartedAt = nil }
+        var next = current + offset
+        if next < 0 { next += 1 }
+        if next > 1 { next -= 1 }
+        setManualPlayhead(next)
+    }
+
+    private func circularPlayheadTimeText(_ fraction: Double) -> String {
+        content.period.start
+            .addingTimeInterval(content.period.duration * fraction)
+            .formatted(date: .omitted, time: .shortened)
+    }
+
     private func updateLinearPlayhead(
         offset: CGFloat,
         timelineWidth: CGFloat,
@@ -1049,6 +1501,10 @@ struct ReviewView: View {
         )
         guard abs(next - linearPlayheadFraction) > 0.00001 else { return }
         linearPlayheadFraction = next
+        if playStartedAt == nil,
+           circularPlayheadFraction.map({ abs($0 - next) > 0.00001 }) != false {
+            circularPlayheadFraction = next
+        }
     }
 
     private func positionLinearTimeline(
@@ -1057,10 +1513,12 @@ struct ReviewView: View {
         resetsTime: Bool = false
     ) {
         if resetsTime || linearPositionedPeriodStart != content.period.start {
-            let next = RecordClockEngine.nowFraction(
-                in: content.period,
-                asOf: date
-            ) ?? 0.5
+            let next = circularPlayheadFraction
+                ?? RecordClockEngine.nowFraction(
+                    in: content.period,
+                    asOf: date
+                )
+                ?? 0.5
             if next != linearPlayheadFraction { linearPlayheadFraction = next }
             linearPositionedPeriodStart = content.period.start
         }
@@ -1460,8 +1918,8 @@ struct ReviewView: View {
                 .foregroundStyle(Color.tpInk)
     }
 
-    /// 원형 띠를 짚으면 해당 기록의 활동·시간 수정 화면을 연다. 재생
-    /// 단추가 이 층 위에 덮여 있어 단추 누르기를 가로채지 않는다.
+    /// 원형 띠를 짚으면 해당 기록을 연다. 미분류 활동은 상세활동만 바로
+    /// 고르며, 재생 단추가 이 층 위에 덮여 있어 누르기를 가로채지 않는다.
     private var clockTapLayer: some View {
         GeometryReader { proxy in
             Color.clear
@@ -1479,30 +1937,28 @@ struct ReviewView: View {
         let dx = location.x - size.width / 2
         let dy = location.y - size.height / 2
         let distance = sqrt(dx * dx + dy * dy)
-        guard distance >= outer - Self.phaseBandWidth - 7 else {
+        guard let tappedBand = CircularClockTapBand.resolve(
+            distance: Double(distance),
+            outerRadius: Double(outer),
+            phaseBandWidth: Double(Self.phaseBandWidth),
+            bandGap: Double(Self.bandGap),
+            activityBandWidth: Double(Self.clockBandWidth)
+        ) else {
             clearClockHighlight()
             return
         }
         var fraction = (Angle(radians: atan2(dy, dx)).degrees + 90) / 360
         fraction -= floor(fraction)
 
-        if distance <= outer + 8,
-           let record = recordForRing(at: fraction, categoryID: nil) {
-            model.detail = .actualEditor(record.id)
-            return
-        }
-        if distance <= outer + 8,
-           openUnconfirmedEditor(at: fraction, categoryID: nil) {
-            return
-        }
-
-        let activityRadius = outer
-            - Self.phaseBandWidth
-            - Self.bandGap
-            - Self.clockBandWidth / 2
-        guard abs(distance - activityRadius) <= Self.clockBandWidth / 2 + 8
-        else {
-            clearClockHighlight()
+        if tappedBand == .phase {
+            if let record = recordForRing(at: fraction, categoryID: nil) {
+                model.detail = .actualEditor(record.id)
+            } else if !openUnconfirmedEditor(
+                at: fraction,
+                categoryID: nil
+            ) {
+                clearClockHighlight()
+            }
             return
         }
 
@@ -1512,13 +1968,25 @@ struct ReviewView: View {
             }
         }?.categoryID
         if let record = recordForRing(at: fraction, categoryID: categoryID) {
-            model.detail = .actualEditor(record.id)
+            openRecord(record)
         } else if !openUnconfirmedEditor(
             at: fraction,
             categoryID: categoryID
         ) {
             clearClockHighlight()
         }
+    }
+
+    private func openRecord(_ record: ActualRecord) {
+        clearClockHighlight()
+        guard ActivityQuickSelectionPolicy.needsSelection(record) else {
+            model.detail = .actualEditor(record.id)
+            return
+        }
+        guard quickActivitySelection?.recordID != record.id else { return }
+        quickActivitySelection = ReviewQuickActivitySelection(
+            recordID: record.id
+        )
     }
 
     @discardableResult
@@ -1594,8 +2062,7 @@ struct ReviewView: View {
 
     private var playControl: some View {
         Button {
-            clearClockHighlight()
-            playStartedAt = playStartedAt == nil ? .now : nil
+            toggleClockPlayback()
         } label: {
             Image(systemName: playStartedAt == nil ? "play.fill" : "pause.fill")
                 .font(.taption(size: 14, weight: .bold))
@@ -1608,7 +2075,33 @@ struct ReviewView: View {
                 .overlay(Circle().stroke(Color.tpLine, lineWidth: 0.8))
         }
         .buttonStyle(.plain)
+        .disabled(
+            playStartedAt == nil
+                && RecordClockEngine.playbackEndFraction(
+                    in: content.period,
+                    asOf: Date.now
+                ) == 0
+        )
         .accessibilityLabel(playStartedAt == nil ? "하루 기록 재생" : "재생 멈춤")
+    }
+
+    private func toggleClockPlayback() {
+        clearClockHighlight()
+        let now = Date.now
+        if playStartedAt != nil {
+            if let fraction = clockPlaybackProgress(at: now) {
+                setManualPlayhead(fraction)
+            }
+            playStartedAt = nil
+            return
+        }
+        guard RecordClockEngine.playbackEndFraction(
+            in: content.period,
+            asOf: now
+        ) > 0 else { return }
+        clearManualPlayhead()
+        if linearPlayheadFraction != 0 { linearPlayheadFraction = 0 }
+        playStartedAt = now
     }
 
     /// 옆으로 넘겨 날짜를 옮긴다. 끄는 동안에는 아무것도 다시 그리지 않고
@@ -1616,6 +2109,7 @@ struct ReviewView: View {
     private var dateSwipeGesture: some Gesture {
         DragGesture(minimumDistance: 12)
             .onEnded { value in
+                guard !circularPlayheadTracker.isDragging else { return }
                 guard let step = RecordClockEngine.swipeStep(
                     width: value.translation.width,
                     height: value.translation.height
@@ -1623,6 +2117,7 @@ struct ReviewView: View {
                     return
                 }
                 playStartedAt = nil
+                clearManualPlayhead()
                 clearClockHighlight()
                 model.shiftReviewDate(by: step)
             }
@@ -1728,7 +2223,7 @@ struct ReviewView: View {
                 center: center,
                 radius: outer + 9,
                 fraction: progress,
-                tint: Color.tpInk,
+                tint: Color.tpNow,
                 width: 1.6
             )
         } else if let nowFraction {
@@ -2080,7 +2575,7 @@ struct ReviewView: View {
         center: CGPoint,
         radius: CGFloat
     ) {
-        for hour in 0..<24 {
+        for hour in RecordClockEngine.labeledHours {
             let angle = clockAngle(Double(hour) / 24)
             let isMajor = hour % 6 == 0
             let length: CGFloat = isMajor ? 6 : 3
@@ -2094,17 +2589,22 @@ struct ReviewView: View {
                 with: .color(Color.tpSecondary.opacity(isMajor ? 0.55 : 0.22)),
                 lineWidth: isMajor ? 1.2 : 0.8
             )
-            if isMajor {
-                let label = context.resolve(
-                    Text("\(hour)")
-                        .font(.taption(size: 8, weight: .bold))
-                        .foregroundStyle(Color.tpSecondary)
-                )
-                context.draw(
-                    label,
-                    at: point(center: center, radius: radius + 7, angle: angle)
-                )
-            }
+            let label = context.resolve(
+                Text(String(format: "%02d", hour))
+                    .font(
+                        .taption(
+                            size: isMajor ? 8 : 6.5,
+                            weight: isMajor ? .bold : .medium
+                        )
+                    )
+                    .foregroundStyle(
+                        Color.tpSecondary.opacity(isMajor ? 1 : 0.82)
+                    )
+            )
+            context.draw(
+                label,
+                at: point(center: center, radius: radius + 7, angle: angle)
+            )
         }
     }
 
@@ -2870,7 +3370,10 @@ struct ReviewView: View {
             }
         }
 
-        // 보고 있는 기간이 바뀌면 재생하던 하루가 사라지므로 멈춘다.
+        // 보고 있는 기간이 바뀌면 재생하던 하루와 수동 위치가 사라진다.
+        if content.period != period {
+            clearManualPlayhead()
+        }
         if content.period != period || model.reviewScale != .day {
             playStartedAt = nil
         }
@@ -2985,15 +3488,23 @@ struct ActualRecordDetailView: View {
     }
 
     private var record: ActualRecord? {
-        model.snapshot.actuals.first { $0.id == focusedRecordID }
+        detailRecords.first { $0.id == focusedRecordID }
+    }
+
+    private var detailRecords: [ActualRecord] {
+        MovementDisplayEngine.reviewActuals(
+            model.snapshot.actuals,
+            travel: model.snapshot.travel,
+            calendarEvents: model.snapshot.calendarEvents
+        )
     }
 
     private var classifiedRecords: [ActualRecord] {
         let calendar = Calendar.autoupdatingCurrent
-        guard let anchor = model.snapshot.actuals.first(where: {
+        guard let anchor = detailRecords.first(where: {
             $0.id == focusedRecordID
         }) else { return [] }
-        return model.snapshot.actuals
+        return detailRecords
             .filter {
                 calendar.isDate($0.startedAt, inSameDayAs: anchor.startedAt)
                     && $0.span(asOf: Date.now).duration > 0
@@ -3051,7 +3562,9 @@ struct ActualRecordDetailView: View {
             ActivityCorrectionSheet(model: model, recordID: focusedRecordID)
         }
         .onAppear {
-            guard opensEditor, !didOpenEditor else { return }
+            guard opensEditor,
+                  !didOpenEditor,
+                  isStoredRecord(focusedRecordID) else { return }
             didOpenEditor = true
             isActivityPickerPresented = true
         }
@@ -3121,7 +3634,9 @@ struct ActualRecordDetailView: View {
         let span = record.span(asOf: Date.now)
         return VStack(alignment: .leading, spacing: 12) {
             Button {
-                isActivityPickerPresented = true
+                if isStoredRecord(record.id) {
+                    isActivityPickerPresented = true
+                }
             } label: {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -3132,9 +3647,11 @@ struct ActualRecordDetailView: View {
                         .font(.taption(size: 17, weight: .bold))
                         .foregroundStyle(PlanCategory(categoryID: categoryID).darkColor)
                         Spacer(minLength: 4)
-                        Image(systemName: "chevron.right")
-                            .font(.taption(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.tpSecondary)
+                        if isStoredRecord(record.id) {
+                            Image(systemName: "chevron.right")
+                                .font(.taption(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.tpSecondary)
+                        }
                     }
                     applicationNameLabel(record)
                     Text("\(span.start.formatted(date: .abbreviated, time: .shortened)) – \(span.end.formatted(date: .omitted, time: .shortened))")
@@ -3143,7 +3660,11 @@ struct ActualRecordDetailView: View {
                     Text(durationText(span.duration))
                         .font(.taption(size: 15, weight: .semibold))
                         .foregroundStyle(Color.tpProjectDark)
-                    Text("탭하여 상세활동·시간 수정")
+                    Text(
+                        isStoredRecord(record.id)
+                            ? "탭하여 상세활동·시간 수정"
+                            : "센서에서 복원한 이동 기록"
+                    )
                         .font(.taption(size: 9, weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }
@@ -3152,6 +3673,11 @@ struct ActualRecordDetailView: View {
                 .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
             }
             .buttonStyle(.plain)
+
+            if let travel = subwayTravel(for: record),
+               let route = travel.subwayRoute {
+                SubwayRouteTimelineView(route: route, span: travel.span)
+            }
 
             detailRow("데이터 출처", sourceName(record.source))
             detailRow("신뢰도", record.confidence.rawValue)
@@ -3186,6 +3712,24 @@ struct ActualRecordDetailView: View {
                     .padding(.horizontal, 2)
             }
         }
+    }
+
+    private func isStoredRecord(_ id: UUID) -> Bool {
+        model.snapshot.actuals.contains { $0.id == id }
+    }
+
+    private func subwayTravel(for record: ActualRecord) -> TravelSegment? {
+        let span = record.span(asOf: Date.now)
+        return model.snapshot.travel
+            .filter {
+                $0.mode == .subway
+                    && $0.subwayRoute != nil
+                    && $0.span.intersection(with: span) != nil
+            }
+            .max {
+                ($0.span.intersection(with: span)?.duration ?? 0)
+                    < ($1.span.intersection(with: span)?.duration ?? 0)
+            }
     }
 
     private func detailRow(_ title: String, _ value: String) -> some View {
@@ -3272,6 +3816,169 @@ struct ActualRecordDetailView: View {
     }
 }
 
+struct SubwayRouteTimelineView: View {
+    private struct StationNode: Identifiable {
+        let id: String
+        let name: String
+        var lineNames: [String]
+        var routeIndex: Int
+        var isTransfer: Bool
+    }
+
+    let route: SubwayRoutePath
+    let span: TimeSpan
+    var isCompact = false
+
+    private var nodes: [StationNode] {
+        var result: [StationNode] = []
+        for (index, stop) in route.stops.enumerated() {
+            let normalized = normalizedStationName(stop.stationName)
+            if let last = result.last,
+               normalizedStationName(last.name) == normalized {
+                var value = last
+                if !value.lineNames.contains(stop.lineName) {
+                    value.lineNames.append(stop.lineName)
+                }
+                value.routeIndex = index
+                value.isTransfer = true
+                result[result.count - 1] = value
+                continue
+            }
+            result.append(
+                StationNode(
+                    id: "\(index).\(normalized).\(stop.lineName)",
+                    name: stop.stationName,
+                    lineNames: [stop.lineName],
+                    routeIndex: index,
+                    isTransfer: route.transferStationNames.contains {
+                        normalizedStationName($0) == normalized
+                    }
+                )
+            )
+        }
+        return result
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: isCompact ? 6 : 9) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Label("지하철 노선", systemImage: "tram.fill")
+                    .font(.taption(
+                        size: isCompact ? 8 : 11,
+                        weight: .bold
+                    ))
+                    .foregroundStyle(Color.tpProjectDark)
+                Spacer(minLength: 4)
+                Text(route.lineNames.joined(separator: " → "))
+                    .font(.taption(
+                        size: isCompact ? 6.8 : 9,
+                        weight: .semibold
+                    ))
+                    .foregroundStyle(Color.tpSecondary)
+                    .lineLimit(1)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 0) {
+                    ForEach(Array(nodes.enumerated()), id: \.element.id) { index, node in
+                        stationNode(node, isLast: index == nodes.count - 1)
+                    }
+                }
+                .padding(.horizontal, isCompact ? 2 : 4)
+            }
+
+            if !route.transferStationNames.isEmpty {
+                Label(
+                    route.transferStationNames
+                        .map { "\(stationTitle($0)) 환승" }
+                        .joined(separator: " · "),
+                    systemImage: "arrow.triangle.swap"
+                )
+                .font(.taption(size: isCompact ? 6.8 : 9, weight: .semibold))
+                .foregroundStyle(Color.tpPlaceDark)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(isCompact ? 8 : 12)
+        .background(
+            Color.tpProject.opacity(0.12),
+            in: RoundedRectangle(cornerRadius: isCompact ? 10 : 13)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private func stationNode(
+        _ node: StationNode,
+        isLast: Bool
+    ) -> some View {
+        let width: CGFloat = isCompact ? 54 : 70
+        return VStack(spacing: isCompact ? 2 : 4) {
+            Text(timeText(for: node))
+                .font(.taption(size: isCompact ? 6 : 8))
+                .foregroundStyle(Color.tpSecondary)
+            ZStack {
+                if !isLast {
+                    Rectangle()
+                        .fill(Color.tpProjectDark.opacity(0.45))
+                        .frame(width: width, height: 2)
+                        .offset(x: width / 2)
+                }
+                Circle()
+                    .fill(node.isTransfer ? Color.tpPlaceDark : Color.tpProjectDark)
+                    .frame(width: isCompact ? 7 : 9, height: isCompact ? 7 : 9)
+                    .overlay(
+                        Circle().stroke(Color.white, lineWidth: isCompact ? 1 : 1.5)
+                    )
+            }
+            .frame(width: width, height: isCompact ? 8 : 10)
+            Text(stationTitle(node.name))
+                .font(.taption(
+                    size: isCompact ? 6.3 : 8.5,
+                    weight: node.isTransfer ? .bold : .medium
+                ))
+                .foregroundStyle(node.isTransfer ? Color.tpPlaceDark : Color.tpInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(width: width)
+            if node.isTransfer {
+                Text("환승")
+                    .font(.taption(size: isCompact ? 5.8 : 7.5, weight: .bold))
+                    .foregroundStyle(Color.tpPlaceDark)
+            } else {
+                Text(" ")
+                    .font(.taption(size: isCompact ? 5.8 : 7.5))
+            }
+        }
+        .frame(width: width)
+    }
+
+    private func timeText(for node: StationNode) -> String {
+        if node.routeIndex == 0 {
+            return span.start.formatted(date: .omitted, time: .shortened)
+        }
+        if node.routeIndex == route.stops.count - 1 {
+            return span.end.formatted(date: .omitted, time: .shortened)
+        }
+        return " "
+    }
+
+    private func stationTitle(_ name: String) -> String {
+        name.hasSuffix("역") ? name : "\(name)역"
+    }
+
+    private func normalizedStationName(_ name: String) -> String {
+        let compact = name.filter { !$0.isWhitespace }
+        return compact.hasSuffix("역") ? String(compact.dropLast()) : compact
+    }
+
+    private var accessibilityText: String {
+        let stationNames = nodes.map { stationTitle($0.name) }
+            .joined(separator: ", ")
+        return "지하철 노선 \(route.lineNames.joined(separator: "에서 ")), \(stationNames)"
+    }
+}
+
 private enum ActivityCorrectionCatalog {
     static func options(
         for record: ActualRecord,
@@ -3316,6 +4023,19 @@ private enum ActivityCorrectionCatalog {
             result.append(option)
         }
         return result
+    }
+
+    static func quickOptions(
+        for record: ActualRecord,
+        actuals: [ActualRecord],
+        customLabels: [String]
+    ) -> [ActivityCorrectionOption] {
+        options(
+            for: record,
+            actuals: actuals,
+            customLabels: customLabels
+        )
+        .filter(ActivityQuickSelectionPolicy.isDetailedOption)
     }
 
     private static func automaticOption(for record: ActualRecord) -> ActivityCorrectionOption {
@@ -3420,6 +4140,118 @@ private enum ActivityCorrectionCatalog {
         }
         return TimelineRowKind(categoryID: categoryID)?.systemImage
             ?? "sparkles"
+    }
+}
+
+private struct QuickActivitySelectionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let recordID: UUID
+    @State private var isSaving = false
+
+    private var record: ActualRecord? {
+        model.snapshot.actuals.first { $0.id == recordID }
+    }
+
+    private var options: [ActivityCorrectionOption] {
+        guard let record else { return [] }
+        return ActivityCorrectionCatalog.quickOptions(
+            for: record,
+            actuals: model.snapshot.actuals,
+            customLabels: model.snapshot.settings.customActivityLabels
+        )
+    }
+
+    private var automaticOptions: [ActivityCorrectionOption] {
+        options.filter(\.isAutomatic)
+    }
+
+    private var suggestedOptions: [ActivityCorrectionOption] {
+        options.filter { !$0.isAutomatic && !$0.isCustom }
+    }
+
+    private var customOptions: [ActivityCorrectionOption] {
+        options.filter(\.isCustom)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !automaticOptions.isEmpty {
+                        optionSection("오늘 기록", options: automaticOptions)
+                    }
+                    optionSection("상세활동", options: suggestedOptions)
+                    if !customOptions.isEmpty {
+                        optionSection("내 활동", options: customOptions)
+                    }
+                }
+                .padding(16)
+            }
+            .background(Color.tpBackground)
+            .navigationTitle("상세활동 선택")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("닫기") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func optionSection(
+        _ title: String,
+        options: [ActivityCorrectionOption]
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.taption(size: 11, weight: .bold))
+                .foregroundStyle(Color.tpSecondary)
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 120), spacing: 8)],
+                spacing: 8
+            ) {
+                ForEach(options) { optionButton($0) }
+            }
+        }
+    }
+
+    private func optionButton(_ option: ActivityCorrectionOption) -> some View {
+        let color = PlanCategory(categoryID: option.categoryID).darkColor
+        return Button {
+            apply(option)
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: option.systemImage)
+                    .frame(width: 18)
+                Text(option.title)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+            }
+            .font(.taption(size: 11, weight: .semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 11)
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
+            .overlay {
+                RoundedRectangle(cornerRadius: 11)
+                    .stroke(color.opacity(0.26), lineWidth: 0.8)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isSaving)
+    }
+
+    private func apply(_ option: ActivityCorrectionOption) {
+        guard !isSaving, record != nil else { return }
+        isSaving = true
+        Task {
+            await model.updateActualActivity(recordID, with: option)
+            dismiss()
+        }
     }
 }
 

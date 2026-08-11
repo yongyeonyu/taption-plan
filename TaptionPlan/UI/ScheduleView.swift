@@ -4006,34 +4006,43 @@ private struct TimelineDetailPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             detailHeading("이동", systemImage: "figure.walk.motion")
             ForEach(confirmedDetailTravel) { travel in
-                HStack(spacing: 7) {
-                    Image(systemName: routeModeSystemImage(travel.mode))
-                        .font(.taption(size: 9, weight: .bold))
-                        .foregroundStyle(detailTravelColor(travel))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(detailTravelTitle(travel))
-                            .font(.taption(size: 9, weight: .semibold))
-                        Text(
-                            "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened)) · \(confidenceLabel(travel.confidence))"
-                        )
-                        .font(.taption(size: 7.5))
-                        .foregroundStyle(Color.tpSecondary)
-                        if let location = travelLocationLabel(travel) {
-                            Text(location)
-                                .font(.taption(size: 7.5, weight: .medium))
-                                .foregroundStyle(Color.tpPlaceDark)
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(spacing: 7) {
+                        Image(systemName: routeModeSystemImage(travel.mode))
+                            .font(.taption(size: 9, weight: .bold))
+                            .foregroundStyle(detailTravelColor(travel))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(detailTravelTitle(travel))
+                                .font(.taption(size: 9, weight: .semibold))
+                            Text(
+                                "\(travel.span.start.formatted(date: .omitted, time: .shortened))–\(travel.span.end.formatted(date: .omitted, time: .shortened)) · \(confidenceLabel(travel.confidence))"
+                            )
+                            .font(.taption(size: 7.5))
+                            .foregroundStyle(Color.tpSecondary)
+                            if let location = travelLocationLabel(travel) {
+                                Text(location)
+                                    .font(.taption(size: 7.5, weight: .medium))
+                                    .foregroundStyle(Color.tpPlaceDark)
+                            }
+                            if !travel.evidence.isEmpty {
+                                Text(travel.evidence.prefix(2).joined(separator: " · "))
+                                    .font(.taption(size: 7.2))
+                                    .foregroundStyle(Color.tpSecondary)
+                                    .lineLimit(1)
+                            }
                         }
-                        if !travel.evidence.isEmpty {
-                            Text(travel.evidence.prefix(2).joined(separator: " · "))
-                                .font(.taption(size: 7.2))
-                                .foregroundStyle(Color.tpSecondary)
-                                .lineLimit(1)
-                        }
+                        Spacer(minLength: 4)
+                        Text(distanceLabel(travel.distanceMeters))
+                            .font(.taption(size: 8, weight: .semibold))
+                            .foregroundStyle(Color.tpSecondary)
                     }
-                    Spacer(minLength: 4)
-                    Text(distanceLabel(travel.distanceMeters))
-                        .font(.taption(size: 8, weight: .semibold))
-                        .foregroundStyle(Color.tpSecondary)
+                    if travel.mode == .subway, let route = travel.subwayRoute {
+                        SubwayRouteTimelineView(
+                            route: route,
+                            span: travel.span,
+                            isCompact: true
+                        )
+                    }
                 }
             }
             ForEach(confirmedDetailMovementActuals) { actual in
@@ -7276,6 +7285,25 @@ private final class TimelineBoardLayoutCache {
     }
 }
 
+@MainActor
+private final class TimelineBoardDataIndexCache {
+    private var revision: UInt64?
+    private var cachedIndex: TimelineBoardDataIndex?
+
+    func value(
+        for revision: UInt64,
+        build: () -> TimelineBoardDataIndex
+    ) -> TimelineBoardDataIndex {
+        if self.revision == revision, let cachedIndex {
+            return cachedIndex
+        }
+        let index = build()
+        self.revision = revision
+        cachedIndex = index
+        return index
+    }
+}
+
 private struct TimelineSummaryKey: Equatable {
     let timelineRevision: UInt64
     let childLevel: TimelineLevel
@@ -7337,6 +7365,7 @@ private struct TimelineBoard: View {
     @State private var continuousMagnifyOrigin: ContinuousMagnifyOrigin?
     @State private var selectedRowID: String?
     @State private var layoutCache = TimelineBoardLayoutCache()
+    @State private var dataIndexCache = TimelineBoardDataIndexCache()
     @State private var summaryCache = TimelineSummaryCache()
     @State private var lastContinuousRenderUptime: TimeInterval = 0
     // Touch hardware can deliver 120/240 samples per second, while the
@@ -7611,10 +7640,12 @@ private struct TimelineBoard: View {
     private func makeLayoutSnapshot(
         in span: TimeSpan
     ) -> TimelineBoardLayoutSnapshot {
-        let index = TimelineBoardDataIndex(
-            plans: storedPlans,
-            categories: model.snapshot.categories
-        )
+        let index = dataIndexCache.value(for: model.timelineRevision) {
+            TimelineBoardDataIndex(
+                plans: storedPlans,
+                categories: model.snapshot.categories
+            )
+        }
         var rowModels = rows(in: span, index: index)
         let clusters: [PhotoCluster] = []
         rowModels = TimelineRowOrder.ordered(
@@ -8033,6 +8064,15 @@ private struct TimelineBoard: View {
                     index: index
                 )
             )
+            let appUsageActuals = displayedVisibleActuals
+                .filter { $0.categoryID == TimelineRowKind.appUsage.rawValue }
+            if !appUsageActuals.isEmpty {
+                values.append(
+                    automaticAppUsageRow(
+                        actuals: appUsageActuals
+                    )
+                )
+            }
             values.append(
                 automaticLocationRow(
                     plans: grouped[
@@ -8390,6 +8430,7 @@ private struct TimelineBoard: View {
                     ),
                 isMeasured: true,
                 travelID: segment.id,
+                recordNodeID: "automatic.travel.\(segment.id.uuidString)",
                 isRoute: true,
                 styleKey: isWorkout
                     ? "exercise.\(segment.mode.rawValue).workout"
@@ -8688,8 +8729,7 @@ private struct TimelineBoard: View {
     private var memoMarkerMinimumWidth: CGFloat { 22 }
 
     private func automaticAppUsageRow(
-        actuals: [ActualRecord],
-        index: TimelineBoardDataIndex
+        actuals: [ActualRecord]
     ) -> TimelineRowModel {
         let values = actuals.filter { $0.startedAt <= .now }
         let allocation = laneAllocation(values, span: { $0.span() })
@@ -8953,7 +8993,9 @@ private struct TimelineBoard: View {
                 detailText:
                     "자동 이동 · \(confidenceName(travel.confidence))",
                 categoryID: "movement",
-                categoryName: "이동"
+                categoryName: "이동",
+                travelID: travel.id,
+                recordNodeID: "automatic.travel.\(travel.id.uuidString)"
             )
         }
         let actualBlocks = actuals.map { actual in
@@ -9264,7 +9306,9 @@ private struct TimelineBoard: View {
                         detailText:
                             "센서 추정 · \(confidenceName(travel.confidence))",
                         categoryID: "movement",
-                        categoryName: "이동"
+                        categoryName: "이동",
+                        travelID: travel.id,
+                        recordNodeID: "automatic.travel.\(travel.id.uuidString)"
                     )
                 }
         case "location":
@@ -9538,10 +9582,16 @@ private struct TimelineBoard: View {
             dragLayoutSpan?.duration ?? 0
         )
         let halfDuration = windowDuration / 2
-        dragLayoutSpan = TimeSpan(
+        let nextWindow = TimeSpan(
             start: center.addingTimeInterval(-halfDuration),
             end: center.addingTimeInterval(halfDuration)
         )
+        guard dragLayoutSpan != nextWindow else { return }
+        // Keep the data window and its derived rows as one cache entry. If the
+        // window advances during a pinch, leaving the snapshot nil makes the
+        // next SwiftUI pass rebuild every row on the hot path.
+        dragLayoutSnapshot = cachedLayoutSnapshot(in: nextWindow)
+        dragLayoutSpan = nextWindow
     }
 
     private var standardVisibleSpan: TimeSpan {
@@ -10261,12 +10311,12 @@ private struct TimelineBoard: View {
                         -Double(translationWidth) * secondsPerPoint
                     )
                     let uptime = ProcessInfo.processInfo.systemUptime
-                    guard lastContinuousRenderUptime == 0
-                        || uptime - lastContinuousRenderUptime >= 1.0 / 60.0
-                    else {
+                    guard TimelineInteractionFrameGate.shouldRender(
+                        lastUptime: &lastContinuousRenderUptime,
+                        nowUptime: uptime
+                    ) else {
                         return
                     }
-                    lastContinuousRenderUptime = uptime
                     guard continuousCenterDate != candidate else { return }
                     continuousCenterDate = candidate
                     onPlayheadMove?(continuousCenterDate)
@@ -10280,12 +10330,12 @@ private struct TimelineBoard: View {
                         viewportWidth: Double(width)
                     )
                     let uptime = ProcessInfo.processInfo.systemUptime
-                    guard lastViewportRenderUptime == 0
-                        || uptime - lastViewportRenderUptime >= 1.0 / 60.0
-                    else {
+                    guard TimelineInteractionFrameGate.shouldRender(
+                        lastUptime: &lastViewportRenderUptime,
+                        nowUptime: uptime
+                    ) else {
                         return
                     }
-                    lastViewportRenderUptime = uptime
                     guard viewport != candidate else { return }
                     viewport = candidate
                 }
@@ -10419,12 +10469,12 @@ private struct TimelineBoard: View {
             minimumLength: viewportMinimumLength
         )
         let uptime = ProcessInfo.processInfo.systemUptime
-        guard lastViewportRenderUptime == 0
-            || uptime - lastViewportRenderUptime >= 1.0 / 60.0
-        else {
+        guard TimelineInteractionFrameGate.shouldRender(
+            lastUptime: &lastViewportRenderUptime,
+            nowUptime: uptime
+        ) else {
             return
         }
-        lastViewportRenderUptime = uptime
         viewport = candidate
     }
 
@@ -10552,13 +10602,13 @@ private struct TimelineBoard: View {
     ) {
         guard let origin = continuousMagnifyOrigin else { return }
         let uptime = ProcessInfo.processInfo.systemUptime
-        guard force
-            || lastViewportRenderUptime == 0
-            || uptime - lastViewportRenderUptime >= 1.0 / 60.0
-        else {
+        guard TimelineInteractionFrameGate.shouldRender(
+            lastUptime: &lastViewportRenderUptime,
+            nowUptime: uptime,
+            force: force
+        ) else {
             return
         }
-        lastViewportRenderUptime = uptime
 
         let safeFactor = max(0.01, factor)
         let minimumDuration: TimeInterval = 60
@@ -11029,8 +11079,27 @@ private struct TimelineRow: View {
     private func visibleBars(width: CGFloat) -> [TimelineRowBar] {
         var bars: [TimelineRowBar] = []
         var runs: [TimelineBarRun] = []
+        let displayStart = displaySpan.start
+        let displayEnd = displaySpan.end
+        let displayDuration = max(1, displaySpan.duration)
         for block in row.blocks {
-            guard let slice = visibleSlice(for: block, width: width) else {
+            // Drag snapshots intentionally cover a wider window than the
+            // current viewport. Reject blocks outside that viewport before
+            // doing date-to-fraction projection; on dense automatic rows this
+            // removes most of the per-frame work during a scrub.
+            if !useCachedBlockFractions {
+                if let endsAt = block.endsAt, endsAt <= displayStart {
+                    continue
+                }
+                if let startsAt = block.startsAt, startsAt >= displayEnd {
+                    continue
+                }
+            }
+            guard let slice = visibleSlice(
+                for: block,
+                width: width,
+                displayDuration: displayDuration
+            ) else {
                 continue
             }
             let lane = TimelineBarLane(block)
@@ -11083,7 +11152,8 @@ private struct TimelineRow: View {
 
     private func visibleSlice(
         for block: TimelineBlock,
-        width: CGFloat
+        width: CGFloat,
+        displayDuration: TimeInterval
     ) -> TimelineBlockSlice? {
         let blockStart: Double
         let blockEnd: Double
@@ -11096,7 +11166,7 @@ private struct TimelineRow: View {
             // dragging. This keeps a block moving at a constant speed across
             // week/month/year boundaries instead of snapping to calendar
             // bucket edges.
-            let duration = max(1, displaySpan.duration)
+            let duration = displayDuration
             blockStart = startsAt.timeIntervalSince(displaySpan.start)
                 / duration
             blockEnd = endsAt.timeIntervalSince(displaySpan.start)
