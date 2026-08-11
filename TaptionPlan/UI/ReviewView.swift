@@ -104,6 +104,13 @@ private struct LinearClockItem {
     var tint: Color
 }
 
+private struct CircularActivityLabel: Identifiable {
+    let id: String
+    let groupID: String
+    let groupName: String
+    let child: RecordGroupChild
+}
+
 /// Scroll geometry can arrive faster than the SwiftUI layout budget. Keep the
 /// latest offset outside view state and publish the playhead at most 60Hz.
 private final class LinearScrollTracker {
@@ -126,6 +133,8 @@ struct ReviewView: View {
     /// 일과와 활동 두 띠가 서로 붙어 보이지 않을 만큼만 벌린다.
     private static let bandGap: CGFloat = 3.5
     private static let clockButtonSize: CGFloat = 44
+    private static let cornerLabelWidth: CGFloat = 96
+    private static let cornerLabelHeight: CGFloat = 30
     /// 일과 띠를 두르면서 안쪽 띠가 가운데 단추와 읽음창에 밀리지 않도록
     /// 눈금판을 키웠다. 카드 너비(약 343pt)보다 작아 가로로 넘치지 않는다.
     ///
@@ -169,7 +178,7 @@ struct ReviewView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 10) {
                     chartCard
-                    planBreakdownCard
+                    memoBreakdownCard
                     recordHierarchyCard
                     contextCard
                 }
@@ -392,6 +401,7 @@ struct ReviewView: View {
 
             // 하루 눈금판은 기록이 없어도 남는다. 옆으로 넘길 자리가 있어야 한다.
             if model.reviewScale == .day {
+                timelineLocationHeader
                 dayClockChart
                 // 범례도 고리와 같은 순서로 밖에서 안으로 읽힌다.
                 if let phaseRing = content.phaseRing {
@@ -421,6 +431,49 @@ struct ReviewView: View {
         Text("이 기간에 저장된 실제 데이터가 없습니다.")
             .font(.taption(size: 10.5))
             .foregroundStyle(Color.tpSecondary)
+    }
+
+    private var timelineLocationHeader: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.taption(size: 10, weight: .semibold))
+                .foregroundStyle(Color.tpPlaceDark)
+            Text(timelineLocationText)
+                .font(.taption(size: 9, weight: .semibold))
+                .foregroundStyle(
+                    timelineLocationText == "위치 정보 없음"
+                        ? Color.tpSecondary
+                        : Color.tpInk
+                )
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 18, alignment: .leading)
+        .padding(.horizontal, 3)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.tpLine.opacity(0.35))
+                .frame(height: 0.5)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("현재 위치")
+    }
+
+    private var timelineLocationText: String {
+        let fraction = clockZoomScale >= Self.clockLinearThreshold
+            ? linearLookupFraction
+            : (RecordClockEngine.nowFraction(
+                in: content.period,
+                asOf: Date.now
+            ) ?? 0)
+        let token = content.contextRings
+            .first(where: { $0.kind == .location })?
+            .arcs
+            .filter { $0.startFraction <= fraction + 0.0001 }
+            .max { $0.startFraction < $1.startFraction }?
+            .token
+        return token.map { detailName(.location, token: $0) } ?? "위치 정보 없음"
     }
 
     private var chartTitle: String {
@@ -508,6 +561,8 @@ struct ReviewView: View {
         }
         .frame(height: Self.clockHeight)
         .overlay { clockTapLayer }
+        .overlay { circularActivityLeaderLines }
+        .overlay { circularActivityLabels }
         .overlay { playControl }
         .contentShape(Rectangle())
         // 목록을 위아래로 굴리는 손가락을 가로채지 않도록 함께 인식시킨다.
@@ -526,6 +581,210 @@ struct ReviewView: View {
             )
         }
         .accessibilityLabel("하루 24시간 눈금판")
+    }
+
+    private var circularActivityLabels: some View {
+        let labels = circularActivityLabelItems
+        return VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 4) {
+                circularActivityLabel(at: 0, from: labels)
+                Spacer(minLength: 4)
+                circularActivityLabel(at: 1, from: labels)
+            }
+            Spacer(minLength: 0)
+            HStack(alignment: .bottom, spacing: 4) {
+                circularActivityLabel(at: 2, from: labels)
+                Spacer(minLength: 4)
+                circularActivityLabel(at: 3, from: labels)
+            }
+        }
+        .padding(.horizontal, 3)
+        .padding(.vertical, 4)
+    }
+
+    private var circularActivityLeaderLines: some View {
+        let labels = circularActivityLabelItems
+        return Canvas { context, size in
+            drawCircularActivityLeaderLines(
+                context: context,
+                size: size,
+                labels: labels
+            )
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func drawCircularActivityLeaderLines(
+        context: GraphicsContext,
+        size: CGSize,
+        labels: [CircularActivityLabel]
+    ) {
+        guard !labels.isEmpty else { return }
+        let side = min(size.width, size.height)
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let outer = side / 2 - 24
+        let activityRadius = outer
+            - Self.phaseBandWidth
+            - Self.bandGap
+            - Self.clockBandWidth / 2
+        let lineRadius = activityRadius + Self.clockBandWidth / 2 + 3
+
+        for (index, item) in labels.enumerated() {
+            guard let actual = content.displayActuals.first(where: {
+                $0.id == item.child.recordID
+            }) else { continue }
+            let visible = actual.span(asOf: Date.now)
+            guard let clipped = visible.intersection(with: content.period),
+                  clipped.duration > 0 else { continue }
+            let midpoint = clipped.start.addingTimeInterval(
+                clipped.duration / 2
+            )
+            let fraction = min(
+                1 - 0.000_001,
+                max(
+                    0,
+                    midpoint.timeIntervalSince(content.period.start)
+                        / content.period.duration
+                )
+            )
+            let start = point(
+                center: center,
+                radius: lineRadius,
+                angle: clockAngle(fraction)
+            )
+            let anchor = circularActivityLabelAnchor(
+                index: index,
+                in: size
+            )
+            let isLeft = index.isMultiple(of: 2)
+            let elbow = CGPoint(
+                x: anchor.x + (isLeft ? 14 : -14),
+                y: anchor.y
+            )
+            var path = Path()
+            path.move(to: start)
+            path.addLine(to: elbow)
+            path.addLine(to: anchor)
+            context.stroke(
+                path,
+                with: .color(
+                    color(forCategoryID: item.groupID).opacity(0.7)
+                ),
+                style: StrokeStyle(lineWidth: 0.9, lineCap: .round)
+            )
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: start.x - 2.2,
+                        y: start.y - 2.2,
+                        width: 4.4,
+                        height: 4.4
+                    )
+                ),
+                with: .color(color(forCategoryID: item.groupID))
+            )
+        }
+    }
+
+    private func circularActivityLabelAnchor(
+        index: Int,
+        in size: CGSize
+    ) -> CGPoint {
+        let isLeft = index.isMultiple(of: 2)
+        let x = isLeft
+            ? 3 + Self.cornerLabelWidth
+            : size.width - 3 - Self.cornerLabelWidth
+        let isTop = index < 2
+        let y = isTop
+            ? 4 + Self.cornerLabelHeight / 2
+            : size.height - 4 - Self.cornerLabelHeight / 2
+        return CGPoint(x: x, y: y)
+    }
+
+    @ViewBuilder
+    private func circularActivityLabel(
+        at index: Int,
+        from labels: [CircularActivityLabel]
+    ) -> some View {
+        circularActivityLabel(index < labels.count ? labels[index] : nil)
+    }
+
+    private var circularActivityLabelItems: [CircularActivityLabel] {
+        Array(
+            content.phaseGroups
+                .flatMap { group in
+                    group.children.map {
+                        CircularActivityLabel(
+                            id: "\(group.id).\($0.id)",
+                            groupID: group.id,
+                            groupName: group.name,
+                            child: $0
+                        )
+                    }
+                }
+                .prefix(4)
+        )
+    }
+
+    @ViewBuilder
+    private func circularActivityLabel(
+        _ item: CircularActivityLabel?
+    ) -> some View {
+        if let item {
+            Button {
+                // 하단 실제 기록의 자식 행과 같은 상세 화면을 연다.
+                clearClockHighlight()
+                model.detail = .actual(item.child.recordID)
+            } label: {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(item.child.title)
+                        .font(.taption(size: 8.5, weight: .semibold))
+                        .foregroundStyle(color(forCategoryID: item.groupID))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                    Text(
+                        "\(item.groupName) · "
+                            + DurationText.koreanAtLeastAMinute(
+                                item.child.duration
+                            )
+                    )
+                    .font(.taption(size: 7.5))
+                    .foregroundStyle(Color.tpSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                }
+                .frame(
+                    width: Self.cornerLabelWidth,
+                    height: Self.cornerLabelHeight,
+                    alignment: .leading
+                )
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(
+                    Color.white.opacity(0.96),
+                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .stroke(
+                            color(forCategoryID: item.groupID).opacity(0.45),
+                            lineWidth: 0.8
+                        )
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(
+                "\(item.groupName) \(item.child.title) 상세 보기"
+            )
+        } else {
+            Color.clear
+                .frame(
+                    width: Self.cornerLabelWidth,
+                    height: Self.cornerLabelHeight
+                )
+                .accessibilityHidden(true)
+        }
     }
 
     private var linearDayClockChart: some View {
@@ -649,14 +908,14 @@ struct ReviewView: View {
             )
         }
         .accessibilityLabel("확대된 하루 24시간 직선 시간표")
-        .accessibilityValue("일과와 활동 두 줄")
+        .accessibilityValue("일과와 상세활동 두 줄")
     }
 
     private var linearPlayheadLabels: some View {
         VStack(spacing: 0) {
             linearPlayheadLabel("일과", item: linearPhaseItem)
                 .frame(height: 40)
-            linearPlayheadLabel("활동", item: linearActivityItem)
+            linearPlayheadLabel("상세활동", item: linearActivityItem)
                 .frame(height: 40)
             Text(linearPlayheadTimeText)
                 .font(.taption(size: 8.5, weight: .bold))
@@ -2004,7 +2263,7 @@ struct ReviewView: View {
     private var categoryLegend: some View {
         ChipFlowLayout(spacing: 5) {
             if model.reviewScale == .day {
-                Text("활동")
+                Text("상세활동")
                     .font(.taption(size: 8.5, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.vertical, 4)
@@ -2161,33 +2420,38 @@ struct ReviewView: View {
         clockHighlight == nil || isSelected ? 1 : 0.42
     }
 
-    // MARK: - 계획
+    // MARK: - 메모
 
-    private var planBreakdownCard: some View {
-        let plannedCategories = content.plannedCategories
-            .filter { $0.planned > 0 }
+    private var memoBreakdownCard: some View {
+        let memos = content.contexts.filter { $0.symbolName == "note.text" }
 
         return VStack(alignment: .leading, spacing: 8) {
-            Label("계획", systemImage: "calendar.badge.clock")
+            Label("메모", systemImage: "note.text")
                 .font(.taption(size: 11, weight: .bold))
 
-            if plannedCategories.isEmpty {
-                Text("이 기간에 등록된 계획이 없습니다.")
+            if memos.isEmpty {
+                Text("이 기간에 작성된 메모가 없습니다.")
                     .font(.taption(size: 10.5))
                     .foregroundStyle(Color.tpSecondary)
             } else {
-                ForEach(plannedCategories) { category in
-                    HStack(spacing: 8) {
-                        Text(categoryName(category.categoryID))
-                            .font(.taption(size: 10, weight: .semibold))
-                        Spacer(minLength: 4)
-                        Text("계획 \(DurationText.korean(category.planned))")
-                            .font(.taption(size: 9))
+                ForEach(memos) { memo in
+                    HStack(alignment: .top, spacing: 7) {
+                        Image(systemName: "note.text")
+                            .font(.taption(size: 11))
+                            .foregroundStyle(Color.tpStudyDark)
+                            .frame(width: 14)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(memo.text)
+                                .font(.taption(size: 10, weight: .medium))
+                                .lineLimit(3)
+                            Text(
+                                memo.date.formatted(
+                                    date: .omitted,
+                                    time: .shortened
+                                )
+                            )
+                            .font(.taption(size: 8.5))
                             .foregroundStyle(Color.tpSecondary)
-                        if category.actual > 0 {
-                            Text("실제 \(DurationText.korean(category.actual))")
-                                .font(.taption(size: 9, weight: .semibold))
-                                .foregroundStyle(Color.tpProjectDark)
                         }
                     }
                     .padding(.vertical, 2)
@@ -2212,8 +2476,8 @@ struct ReviewView: View {
                     .font(.taption(size: 11, weight: .bold))
                 Spacer()
                 Text(
-                    model.reviewScale == .day
-                        ? "\(groups.count)개 일과 · \(childCount)개 활동"
+                    model.reviewScale == .day || model.reviewScale == .week
+                        ? "\(groups.count)개 일과 · \(childCount)개 상세활동"
                         : "\(childCount)개 항목"
                 )
                     .font(.taption(size: 9))
@@ -2243,7 +2507,9 @@ struct ReviewView: View {
     }
 
     private var hierarchyGroups: [RecordCategoryGroup] {
-        model.reviewScale == .day ? content.phaseGroups : content.groups
+        model.reviewScale == .day || model.reviewScale == .week
+            ? content.phaseGroups
+            : content.groups
     }
 
     @ViewBuilder
@@ -2268,7 +2534,7 @@ struct ReviewView: View {
                         .font(.taption(size: 11, weight: .semibold))
                         .foregroundStyle(color(forCategoryID: group.id))
                         .frame(width: 15)
-                    Text(group.name)
+                    Text(displayedGroupName(group))
                         .font(.taption(size: 11, weight: .bold))
                         .foregroundStyle(Color.tpInk)
                     Spacer(minLength: 4)
@@ -2338,8 +2604,12 @@ struct ReviewView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(group.name) \(child.title) \(DurationText.koreanAtLeastAMinute(child.duration))"
+            "\(displayedGroupName(group)) \(child.title) \(DurationText.koreanAtLeastAMinute(child.duration))"
         )
+    }
+
+    private func displayedGroupName(_ group: RecordCategoryGroup) -> String {
+        group.id == "activity" ? "상세활동" : group.name
     }
 
     private func appUsageTokenData(
@@ -2364,16 +2634,19 @@ struct ReviewView: View {
     // MARK: - 맥락
 
     private var contextCard: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        let contexts = content.contexts.filter {
+            $0.symbolName != "note.text"
+        }
+        return VStack(alignment: .leading, spacing: 7) {
             Text("이 기간을 설명한 기록")
                 .font(.taption(size: 11, weight: .bold))
-            if content.contexts.isEmpty {
+            if contexts.isEmpty {
                 contextLine(
                     "tray",
-                    "사진·날씨·메모가 연결되면 이번 기간의 맥락을 보여드립니다."
+                    "사진·날씨가 연결되면 이번 기간의 맥락을 보여드립니다."
                 )
             } else {
-                ForEach(content.contexts) { context in
+                ForEach(contexts) { context in
                     contextLine(context.symbolName, context.text)
                 }
             }
@@ -2546,6 +2819,39 @@ struct ReviewView: View {
                     asOf: now
                 ),
             ].compactMap { $0 }
+        } else if model.reviewScale == .week {
+            // 주 보기 역시 하루 단위로 완성한 일과를 부모로 사용한다.
+            // 선택한 날짜가 있으면 그 날짜만, 없으면 주 전체를 계층으로 묶는다.
+            let phases = spans.flatMap { span in
+                DayPhaseEngine.completePhasesAcrossDays(
+                    actuals: phaseActuals,
+                    travel: model.snapshot.travel,
+                    stays: model.snapshot.places,
+                    placeKinds: placeKinds,
+                    in: span,
+                    calendar: engine.aggregation.calendar,
+                    asOf: now
+                )
+            }
+            phaseGroups = ActualRecordGroupingEngine.phaseGroups(
+                phases: phases,
+                actuals: displayActuals,
+                categories: model.snapshot.categories,
+                asOf: now
+            )
+            if let selectedChartBucketID, selectedChartSpan != nil {
+                selectedChartBucketIDs = [selectedChartBucketID]
+            } else if !selected.isEmpty {
+                selectedChartBucketIDs = Set(
+                    chartBuckets
+                        .filter { bucket in
+                            spans.contains {
+                                $0.intersection(with: bucket.span) != nil
+                            }
+                        }
+                        .map(\.id)
+                )
+            }
         } else {
             if let selectedChartBucketID, selectedChartSpan != nil {
                 selectedChartBucketIDs = [selectedChartBucketID]
@@ -2572,7 +2878,9 @@ struct ReviewView: View {
             categories: model.snapshot.categories,
             asOf: now
         )
-        let hierarchyGroups = model.reviewScale == .day ? phaseGroups : groups
+        let hierarchyGroups = model.reviewScale == .day || model.reviewScale == .week
+            ? phaseGroups
+            : groups
         let groupIDs = Set(hierarchyGroups.map(\.id))
         let collapsesAllGroups = content.spans.isEmpty
             || content.period != period
@@ -2833,7 +3141,7 @@ struct ActualRecordDetailView: View {
                     Text(durationText(span.duration))
                         .font(.taption(size: 15, weight: .semibold))
                         .foregroundStyle(Color.tpProjectDark)
-                    Text("탭하여 활동·시간 수정")
+                    Text("탭하여 상세활동·시간 수정")
                         .font(.taption(size: 9, weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }

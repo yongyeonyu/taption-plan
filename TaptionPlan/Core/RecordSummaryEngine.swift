@@ -1339,6 +1339,20 @@ enum DayPhase: String, CaseIterable, Sendable {
         }
     }
 
+    /// 활동은 겹친 일과 중 해당 종류의 줄에만 배치한다. 특히 일반 활동이
+    /// 수면 구간을 빌려 수면 줄에 그려지지 않게 한다.
+    static func phase(forActivityCategory categoryID: String) -> Self {
+        switch categoryID {
+        case "sleep": .sleep
+        case "movement": .movement
+        case "exercise", "workout": .exercise
+        case "work": .work
+        case "study": .study
+        case "hobby": .hobby
+        default: .activity
+        }
+    }
+
     /// 집 반대편에 등록해 둔 곳이 오가는 길의 이름을 정한다. 취미·운동은
     /// 오가는 일이 아니라 그 자체가 하루의 한 대목이라 출퇴근 같은 말 대신
     /// 시작·종료로 적는다. 집이나 이름 없는 곳은 여기서 아무 말도 만들지

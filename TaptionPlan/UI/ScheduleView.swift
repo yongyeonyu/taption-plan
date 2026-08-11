@@ -3099,6 +3099,9 @@ private struct TimelineDetailPanel: View {
                     .padding(.bottom, DraftBottomBarMetrics.contentInset)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                // 콘텐츠가 화면보다 짧거나 마지막 카드까지 도달하면
+                // 아래쪽 고무줄 반동을 만들지 않는다.
+                .scrollBounceBehavior(.basedOnSize)
                 .frame(
                     maxWidth: .infinity,
                     maxHeight: .infinity,
@@ -3211,22 +3214,32 @@ private struct TimelineDetailPanel: View {
                         panelDragStartHeight = panelHeight
                     }
                     let start = panelDragStartHeight ?? panelHeight
-                    panelHeight = min(
+                    let nextHeight = min(
                         maximumPanelHeight,
                         max(
                             detailPanelMinimumHeight,
                             start - value.translation.height
                         )
                     )
+                    guard abs(nextHeight - panelHeight) > 0.5 else { return }
+                    panelHeight = nextHeight
                 }
                 .onEnded { value in
                     panelDragStartHeight = nil
+                    let targetHeight: CGFloat?
+                    if value.translation.height < -8,
+                       panelHeight < maximumPanelHeight - 0.5 {
+                        targetHeight = maximumPanelHeight
+                    } else if value.translation.height > 8,
+                              panelHeight > detailPanelCollapsedHeight + 0.5 {
+                        targetHeight = detailPanelCollapsedHeight
+                    } else {
+                        targetHeight = nil
+                    }
+                    guard let targetHeight,
+                          abs(targetHeight - panelHeight) > 0.5 else { return }
                     withAnimation(.snappy(duration: 0.2)) {
-                        if value.translation.height < -8 {
-                            panelHeight = maximumPanelHeight
-                        } else if value.translation.height > 8 {
-                            panelHeight = detailPanelCollapsedHeight
-                        }
+                        panelHeight = targetHeight
                     }
                 }
         )
@@ -8415,7 +8428,10 @@ private struct TimelineBoard: View {
         appUsageTokenData: Data? = nil,
         styleKey: String
     ) -> [TimelinePhaseActivity] {
-        DayPhaseEngine.assignments(of: span, to: phases).map { assignment in
+        let activityPhase = DayPhase.phase(forActivityCategory: categoryID)
+        return DayPhaseEngine.assignments(of: span, to: phases)
+            .filter { $0.phase == activityPhase }
+            .map { assignment in
             phaseActivity(
                 seed: seed,
                 phase: assignment.phase,

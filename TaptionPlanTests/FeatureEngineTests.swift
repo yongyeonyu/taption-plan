@@ -10982,6 +10982,36 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(assignments.map(\.span.duration), [30 * 60, 30 * 60])
     }
 
+    func testActivityDoesNotBorrowSleepPhase() {
+        let day = dayPhaseDay()
+        let sleepEnd = day.start.addingTimeInterval(8 * hour)
+        let phases = [
+            DayPhaseSpan(
+                phase: .sleep,
+                span: TimeSpan(start: day.start, end: sleepEnd)
+            ),
+            DayPhaseSpan(
+                phase: .activity,
+                span: TimeSpan(start: sleepEnd, end: day.end)
+            ),
+        ]
+        let stay = TimeSpan(
+            start: day.start.addingTimeInterval(7 * hour),
+            end: day.start.addingTimeInterval(9 * hour)
+        )
+
+        XCTAssertEqual(
+            DayPhaseEngine.assignments(of: stay, to: phases)
+                .filter {
+                    $0.phase == DayPhase.phase(
+                        forActivityCategory: "activity"
+                    )
+                }
+                .map(\.phase),
+            [.activity]
+        )
+    }
+
     func testAutomaticTimelineKeepsEveryDayPhaseRowWithoutData() {
         XCTAssertEqual(
             DayPhase.timelineRows,
