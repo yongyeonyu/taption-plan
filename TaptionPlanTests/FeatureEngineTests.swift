@@ -3297,6 +3297,50 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(estimate?.confidence, .high)
     }
 
+    func testFloorCalibrationUsesStableMedianInsteadOfPressureOutlier() {
+        let base = makeDate(2026, 7, 31, 18)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 82,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 6
+        )
+        let engine = FloorCalibrationEngine()
+        let calibration = engine.capturing(
+            .homeTwentiethFloor,
+            from: SensorReading(
+                timestamp: base,
+                point: point,
+                pressureKilopascals: 100.2
+            )
+        )
+        let readings = [99.5, 100.19, 100.2, 100.21, 100.18].enumerated().map {
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double($0.offset) * 60),
+                point: point,
+                pressureKilopascals: $0.element
+            )
+        }
+
+        let estimate = engine.estimate(readings: readings, calibration: calibration)
+
+        XCTAssertEqual(estimate?.floor, 20)
+        XCTAssertEqual(estimate?.confidence, .medium)
+    }
+
+    func testSubwayCatalogBuildsMagongnaruTransferToGajeong() {
+        let route = SubwayStationCatalog.route(
+            for: ["마곡나루역", "검암역", "가정역"]
+        )
+
+        XCTAssertEqual(route?.transferStationNames, ["검암"])
+        XCTAssertEqual(route?.lineNames, ["공항철도", "인천2호선"])
+        XCTAssertGreaterThan(route?.coordinates.count ?? 0, 2)
+        XCTAssertEqual(route?.stops.first?.stationName, "마곡나루")
+        XCTAssertEqual(route?.stops.last?.stationName, "가정")
+    }
+
     func testCoreMotionWalkingLabelLosesToImpossibleDisplacementSpeed() {
         let base = makeDate(2026, 8, 4, 9, 24)
         let span = TimeSpan(start: base, end: base.addingTimeInterval(46 * 60))

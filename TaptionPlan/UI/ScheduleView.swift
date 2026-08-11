@@ -5535,6 +5535,7 @@ private struct TimelineDetailPanel: View {
 
         var pins: [RouteLocationPin] = []
         var usedPlaceIDs = Set<UUID>()
+        var usedStationKeys = Set<String>()
         let values = selectedSegment == nil ? routeSegments : routeSegments.filter {
             selectedSegmentIDs.contains($0.id)
         }
@@ -5566,6 +5567,27 @@ private struct TimelineDetailPanel: View {
 
             appendIfValid(segment.fromPlaceID, segmentMode: segment.mode)
             appendIfValid(segment.toPlaceID, segmentMode: segment.mode)
+
+            if segment.mode == .subway, let route = segment.subwayRoute {
+                for stop in route.stops {
+                    guard let point = stop.coordinate,
+                          isValidCoordinate(point),
+                          usedStationKeys.insert(stop.stationName).inserted else {
+                        continue
+                    }
+                    pins.append(
+                        RouteLocationPin(
+                            id: "\(segment.id)-station-\(stop.stationName)",
+                            coordinate: CLLocationCoordinate2D(
+                                latitude: point.latitude,
+                                longitude: point.longitude
+                            ),
+                            title: "\(stop.stationName)역 · \(stop.lineName)",
+                            tint: routeColor(for: segment.mode)
+                        )
+                    )
+                }
+            }
         }
 
         if pins.isEmpty {
@@ -6083,6 +6105,13 @@ private struct TimelineDetailPanel: View {
         for segment: TravelSegment,
         includeImprecise: Bool
     ) -> [CLLocationCoordinate2D] {
+        if segment.mode == .subway,
+           let route = segment.subwayRoute {
+            let routePoints = route.coordinates.filter(isValidCoordinate)
+            if routePoints.count >= 2 {
+                return simplifiedRouteCoordinates(routePoints)
+            }
+        }
         var values = routeCoordinates(
             for: segment,
             includeImprecise: includeImprecise

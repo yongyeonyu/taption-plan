@@ -2077,6 +2077,7 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
     var confidence: ConfidenceLevel
     var evidence: [String]
     var isConfirmed: Bool
+    var subwayRoute: SubwayRoutePath?
 
     init(
         id: UUID = UUID(),
@@ -2087,7 +2088,8 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
         distanceMeters: Double,
         confidence: ConfidenceLevel,
         evidence: [String],
-        isConfirmed: Bool = false
+        isConfirmed: Bool = false,
+        subwayRoute: SubwayRoutePath? = nil
     ) {
         self.id = id
         self.fromPlaceID = fromPlaceID
@@ -2098,6 +2100,36 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
         self.confidence = confidence
         self.evidence = evidence
         self.isConfirmed = isConfirmed
+        self.subwayRoute = subwayRoute
+    }
+}
+
+struct SubwayRouteStop: Codable, Hashable, Sendable {
+    var lineName: String
+    var order: Int
+    var stationName: String
+    var latitude: Double?
+    var longitude: Double?
+
+    var coordinate: GeoPoint? {
+        guard let latitude, let longitude else { return nil }
+        return GeoPoint(
+            latitude: latitude,
+            longitude: longitude,
+            altitude: 0,
+            horizontalAccuracy: -1,
+            verticalAccuracy: -1
+        )
+    }
+}
+
+struct SubwayRoutePath: Codable, Hashable, Sendable {
+    var stops: [SubwayRouteStop]
+    var lineNames: [String]
+    var transferStationNames: [String]
+
+    var coordinates: [GeoPoint] {
+        stops.compactMap(\.coordinate)
     }
 }
 
@@ -2475,6 +2507,7 @@ struct MovementInference: Codable, Hashable, Sendable {
     var confidence: ConfidenceLevel
     var score: Double
     var evidence: [String]
+    var subwayRoute: SubwayRoutePath? = nil
 }
 
 // MARK: - Summaries, review, widget, and settings

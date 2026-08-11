@@ -9,8 +9,12 @@
 - `시간표 · 목표 · ＋ · 회고 · 설정` 하단 메뉴
 - SwiftData 기반 계획 모델과 상·하위 목표 관계
 - 계획 추가 시트
+- iPhone·Apple Watch 고도 보정 및 층수 캘리브레이션
+- 국내 지하철 역·노선·환승 기반 이동 판정과 Apple 지도 경로 표시
 - UI 기획 원본: `plan.md`
 - 브라우저 목업: `ui-draft-iphone.html`
+
+구현 세부와 검증 명령은 [`DEVELOPMENT.md`](DEVELOPMENT.md)에 기록합니다.
 
 ## 실행
 

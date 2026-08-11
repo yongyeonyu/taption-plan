@@ -711,8 +711,10 @@ struct ReviewView: View {
     }
 
     private var circularActivityLabelItems: [CircularActivityLabel] {
-        Array(
+        guard let selectedPhase = highlightedPhaseToken else { return [] }
+        return Array(
             content.phaseGroups
+                .filter { $0.id == selectedPhase }
                 .flatMap { group in
                     group.children.map {
                         CircularActivityLabel(

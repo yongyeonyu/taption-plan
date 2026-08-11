@@ -2879,22 +2879,42 @@ final class AppleTransportContextService {
     private var cache: [String: CacheEntry] = [:]
 
     func enriching(_ readings: [SensorReading]) async -> [SensorReading] {
+        let staticOnly = readings.indices.filter { index in
+            guard let point = readings[index].point,
+                  SubwayStationCatalog.nearest(
+                      to: point,
+                      maximumDistanceMeters: 220
+                  ) != nil else { return false }
+            let reading = readings[index]
+            return reading.motion != .stationary
+                || (reading.speedMetersPerSecond ?? 0) >= 1
+                || !reading.gpsAvailable
+                || reading.nearbyStation
+        }
         let candidates = readings.indices.filter { index in
             guard readings[index].point != nil else { return false }
             return readings[index].motion == .automotive
                 || (readings[index].speedMetersPerSecond ?? 0) >= 3
         }
-        guard candidates.count >= 2 else { return readings }
+        guard candidates.count >= 2 || staticOnly.count >= 2 else {
+            return readings.map(refiningStaticStation)
+        }
 
-        let anchors = sampledIndices(candidates, maximumCount: 4)
+        let anchors = sampledIndices(
+            candidates.isEmpty ? staticOnly : candidates,
+            maximumCount: 4
+        )
         var resolved: [(GeoPoint, AppleTransportContext)] = []
         for index in anchors {
             guard let point = readings[index].point else { continue }
             resolved.append((point, await context(at: point)))
         }
-        guard !resolved.isEmpty else { return readings }
+        guard !resolved.isEmpty else {
+            return readings.map(refiningStaticStation)
+        }
 
         return readings.map { reading in
+            let reading = refiningStaticStation(reading)
             guard let point = reading.point,
                   let match = resolved.min(by: {
                       distanceMeters(point, $0.0) < distanceMeters(point, $1.0)
@@ -2914,6 +2934,18 @@ final class AppleTransportContextService {
                 || match.1.isNearSubwayStation
             value.matchesPublicTransitRoute =
                 value.matchesPublicTransitRoute || match.1.isNearBusStop
+            // MapKit 검색이 누락되거나 역 이름을 잘못 붙여도, 공식 역
+            // 카탈로그의 좌표를 마지막 보정으로 사용한다. 버스 정류장
+            // 표본은 철도 역으로 승격하지 않는다.
+            if (match.1.isNearSubwayStation || value.matchesRailRoute),
+               let station = SubwayStationCatalog.nearest(
+                   to: point,
+                   maximumDistanceMeters: 450
+               ) {
+                value.nearbyStation = true
+                value.nearbyStationName = station.stationName
+                value.matchesRailRoute = true
+            }
             if match.1.isOnRoad {
                 var evidence = value.behaviorEvidence ?? []
                 if !evidence.contains("Apple 지도 도로 인접") {
@@ -2923,6 +2955,23 @@ final class AppleTransportContextService {
             }
             return value
         }
+    }
+
+    private func refiningStaticStation(_ reading: SensorReading) -> SensorReading {
+        guard let point = reading.point,
+              let station = SubwayStationCatalog.nearest(
+                  to: point,
+                  maximumDistanceMeters: 220
+              ) else { return reading }
+        guard reading.motion != .stationary
+            || (reading.speedMetersPerSecond ?? 0) >= 1
+            || !reading.gpsAvailable
+            || reading.nearbyStation else { return reading }
+        var value = reading
+        value.nearbyStation = true
+        value.nearbyStationName = station.stationName
+        value.matchesRailRoute = true
+        return value
     }
 
     private func context(at point: GeoPoint) async -> AppleTransportContext {

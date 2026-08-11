@@ -295,7 +295,7 @@ struct TravelModeClassifier: Sendable {
             || altitudeDelta <= -2
         let displacementMeters = firstLastDisplacement(ordered)
         let deepUndergroundRecovery = altitudeDropAndRecovery(ordered)
-        let railStations = railStationSequence(ordered)
+        let railStations = SubwayStationCatalog.stationNames(from: ordered)
         let altitudeDropMeters = maxAltitudeDrop(ordered)
         let undergroundDescent = altitudeDropMeters >= 8
             || altitudeDelta <= -8
@@ -359,6 +359,18 @@ struct TravelModeClassifier: Sendable {
         if stationToStationSubway {
             let first = railStations.first ?? "출발역"
             let last = railStations.last ?? "도착역"
+            let subwayRoute = SubwayStationCatalog.route(for: railStations)
+            var routeEvidence: [String] = []
+            if let subwayRoute {
+                routeEvidence.append(
+                    "노선 " + subwayRoute.lineNames.joined(separator: " → ")
+                )
+                if !subwayRoute.transferStationNames.isEmpty {
+                    routeEvidence.append(
+                        "환승 " + subwayRoute.transferStationNames.joined(separator: ", ")
+                    )
+                }
+            }
             add(
                 .subway,
                 1.35,
@@ -370,11 +382,15 @@ struct TravelModeClassifier: Sendable {
             if watchVibrationAbsent {
                 add(.subway, 0.12, "Apple Watch 진동 없음")
             }
+            let evidence = Array(
+                Set((candidates[.subway]?.1 ?? []) + routeEvidence)
+            ).sorted()
             return MovementInference(
                 mode: .subway,
                 confidence: .high,
                 score: 0.96,
-                evidence: Array(Set(candidates[.subway]?.1 ?? [])).sorted()
+                evidence: Array(Set(evidence)).sorted(),
+                subwayRoute: subwayRoute
             )
         }
 
@@ -503,11 +519,26 @@ struct TravelModeClassifier: Sendable {
             1,
             min(1, winner.value.0) * (0.82 + min(0.18, margin))
         )
+        let subwayRoute = winner.key == .subway
+            ? SubwayStationCatalog.route(for: railStations)
+            : nil
+        var winnerEvidence = winner.value.1
+        if let subwayRoute {
+            winnerEvidence.append(
+                "노선 " + subwayRoute.lineNames.joined(separator: " → ")
+            )
+            if !subwayRoute.transferStationNames.isEmpty {
+                winnerEvidence.append(
+                    "환승 " + subwayRoute.transferStationNames.joined(separator: ", ")
+                )
+            }
+        }
         return MovementInference(
             mode: winner.key,
             confidence: ConfidenceLevel(score: score),
             score: score,
-            evidence: Array(Set(winner.value.1)).sorted()
+            evidence: Array(Set(winnerEvidence)).sorted(),
+            subwayRoute: subwayRoute
         )
     }
 
@@ -556,17 +587,6 @@ struct TravelModeClassifier: Sendable {
             maximumDrop = max(maximumDrop, highest - value)
         }
         return maximumDrop
-    }
-
-    private func railStationSequence(_ readings: [SensorReading]) -> [String] {
-        var result: [String] = []
-        for reading in readings where reading.matchesRailRoute {
-            guard let rawName = reading.nearbyStationName else { continue }
-            let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !name.isEmpty, result.last != name else { continue }
-            result.append(name)
-        }
-        return result
     }
 
     private func firstLastDisplacement(_ readings: [SensorReading]) -> Double {
@@ -936,31 +956,32 @@ struct FloorEstimator: Sendable {
 
         let systemReadings = ordered.filter { $0.systemFloor != nil }
         if let firstSystemReading = systemReadings.first,
-           let lastSystemReading = systemReadings.last,
-           let from = firstSystemReading.systemFloor,
-           let to = lastSystemReading.systemFloor,
-           from != to {
-            let crossingIndex = systemReadings.firstIndex {
-                $0.systemFloor == to
-            } ?? systemReadings.index(before: systemReadings.endIndex)
-            let transitionStart = crossingIndex > systemReadings.startIndex
-                ? systemReadings[
-                    systemReadings.index(before: crossingIndex)
-                ].timestamp
-                : firstSystemReading.timestamp
-            return FloorTransition(
-                id: UUID(),
-                placeKey: placeKey,
-                fromFloor: from,
-                toFloor: to,
-                relativeAltitudeMeters: Double(to - from) * defaultFloorHeightMeters,
-                span: TimeSpan(
-                    start: transitionStart,
-                    end: systemReadings[crossingIndex].timestamp
-                ),
-                confidence: .high,
-                evidence: ["시스템 실내 층 정보"]
-            )
+           let from = firstSystemReading.systemFloor {
+            // CLFloor는 실내에서 한두 번 튈 수 있으므로 새 층이 연속해서
+            // 확인된 경우에만 전이를 확정한다.
+            for index in systemReadings.indices.dropFirst() {
+                guard let to = systemReadings[index].systemFloor,
+                      to != from else { continue }
+                let confirmed = systemReadings[index...].prefix {
+                    $0.systemFloor == to
+                }.count
+                guard confirmed >= minimumStableSampleCount else { continue }
+                let previousIndex = systemReadings.index(before: index)
+                return FloorTransition(
+                    id: UUID(),
+                    placeKey: placeKey,
+                    fromFloor: from,
+                    toFloor: to,
+                    relativeAltitudeMeters: Double(to - from)
+                        * defaultFloorHeightMeters,
+                    span: TimeSpan(
+                        start: systemReadings[previousIndex].timestamp,
+                        end: systemReadings[index].timestamp
+                    ),
+                    confidence: .high,
+                    evidence: ["시스템 실내 층 정보 \(confirmed)회 연속"]
+                )
+            }
         }
 
         let floorHeight = max(
@@ -1207,6 +1228,64 @@ struct FloorCalibrationEngine: Sendable {
         )
     }
 
+    /// 같은 체류의 표본 중앙값으로 층을 추정한다. 한 번의 기압/GPS 값이
+    /// 흔들려도 등록된 층이 바로 바뀌지 않으며, 상대고도는 동일 세션만 쓴다.
+    func estimate(
+        readings: [SensorReading],
+        calibration: FloorCalibration
+    ) -> CalibratedAltitudeEstimate? {
+        let usable = readings
+            .filter { reading in
+                reading.point != nil
+                    && (reading.relativeAltitudeMeters != nil
+                        || reading.pressureKilopascals != nil
+                        || reading.point?.altitude.isFinite == true)
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+        guard !usable.isEmpty else { return nil }
+
+        var representative = usable.min {
+            qualityScore($0) < qualityScore($1)
+        } ?? usable[0]
+        let points = usable.compactMap(\.point)
+        if !points.isEmpty, var point = representative.point {
+            point.latitude = median(points.map(\.latitude))
+            point.longitude = median(points.map(\.longitude))
+            let altitudes = points.map(\.altitude).filter(\.isFinite)
+            if !altitudes.isEmpty {
+                point.altitude = median(altitudes)
+            }
+            representative.point = point
+        }
+
+        let pressureReadings: [SensorReading] = if let session = representative.altimeterSessionID {
+            usable.filter { $0.altimeterSessionID == session }
+        } else {
+            usable
+        }
+        let pressures = pressureReadings.compactMap(\.pressureKilopascals)
+            .filter { $0.isFinite && $0 > 0 }
+        if !pressures.isEmpty {
+            representative.pressureKilopascals = median(pressures)
+        }
+
+        if let session = representative.altimeterSessionID {
+            let relative = usable
+                .filter { $0.altimeterSessionID == session }
+                .compactMap(\.relativeAltitudeMeters)
+                .filter(\.isFinite)
+            if relative.count >= 3 {
+                representative.relativeAltitudeMeters = median(relative)
+            } else {
+                representative.relativeAltitudeMeters = nil
+                representative.altimeterSessionID = nil
+            }
+        } else {
+            representative.relativeAltitudeMeters = nil
+        }
+        return estimate(reading: representative, calibration: calibration)
+    }
+
     /// 기록이 스스로 지닌 근거로 다시 매기는 입구. 원본 표본이 지워진 뒤에도
     /// 살아 있는 표본과 똑같은 규칙을 태운다.
     func estimate(
@@ -1326,6 +1405,21 @@ struct FloorCalibrationEngine: Sendable {
         }
     }
 
+    private func qualityScore(_ reading: SensorReading) -> Double {
+        let vertical = reading.point?.verticalAccuracy ?? 1_000
+        let horizontal = reading.point?.horizontalAccuracy ?? 1_000
+        return max(0, vertical) * 10_000 + max(0, horizontal)
+    }
+
+    private func median(_ values: [Double]) -> Double {
+        let sorted = values.sorted()
+        guard !sorted.isEmpty else { return 0 }
+        let middle = sorted.count / 2
+        return sorted.count.isMultiple(of: 2)
+            ? (sorted[middle - 1] + sorted[middle]) / 2
+            : sorted[middle]
+    }
+
     func applying(
         _ calibration: FloorCalibration?,
         to places: [PlaceStay],
@@ -1429,17 +1523,21 @@ struct FrequentPlaceResolutionEngine: Sendable {
             // home/company floor jump on every refresh. Real floor changes
             // are handled separately by FloorTimelineEngine after they remain
             // stable across multiple samples.
-            if let calibration = match.floorCalibration,
-               let anchor,
-               let estimate = FloorCalibrationEngine().estimate(
-                            reading: anchor,
-                            calibration: calibration
+            if let floor = match.floor {
+                // 등록된 기준 층은 날씨·문 개폐·사람 움직임에 따른
+                // 기압/GPS drift로 덮지 않는다. 실제 층 이동은 여러 표본을
+                // 본 FloorTimelineEngine이 별도로 확정한다.
+                updated.floor = floor
+                updated.confidence = .high
+            } else if let calibration = match.floorCalibration,
+                      let estimate = FloorCalibrationEngine().estimate(
+                          readings: readings.filter {
+                              place.span.contains($0.timestamp)
+                          },
+                          calibration: calibration
                       ) {
                 updated.floor = estimate.floor
                 updated.confidence = estimate.confidence
-            } else if let floor = match.floor {
-                updated.floor = floor
-                updated.confidence = .high
             }
             updated.isConfirmed = true
             return updated
@@ -1468,11 +1566,13 @@ struct FrequentPlaceResolutionEngine: Sendable {
                     at: stay.point ?? place.point,
                     calibration: calibration
                 )
-            } else if let reading = ordered.first(where: {
+            } else if ordered.contains(where: {
                 stay.span.contains($0.timestamp)
             }) {
                 estimate = engine.estimate(
-                    reading: reading,
+                    readings: ordered.filter {
+                        stay.span.contains($0.timestamp)
+                    },
                     calibration: calibration
                 )
             } else if let point = stay.point,
@@ -2141,7 +2241,8 @@ struct MovementRouteBuilder: Sendable {
                 distanceMeters: distance,
                 confidence: inference.confidence,
                 evidence: inference.evidence,
-                isConfirmed: correctedModes[signature] != nil
+                isConfirmed: correctedModes[signature] != nil,
+                subwayRoute: inference.subwayRoute
             )
         }
     }
@@ -2504,7 +2605,8 @@ enum AppleDeviceGroundTruthEngine {
                 span: activity.span,
                 distanceMeters: distance,
                 confidence: inference.confidence,
-                evidence: Array(Set(evidence)).sorted()
+                evidence: Array(Set(evidence)).sorted(),
+                subwayRoute: inference.subwayRoute
             )
         }
 
