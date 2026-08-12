@@ -142,6 +142,8 @@ struct AppShellView: View {
                     correctionSpan: span,
                     opensEditor: true
                 )
+            case .unconfirmedEditor(let span):
+                UnconfirmedRecordDetailView(model: model, span: span)
             case .locationTimeline:
                 LocationTimelineView(model: model)
             case .memo:

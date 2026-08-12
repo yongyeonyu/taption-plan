@@ -55,6 +55,7 @@ enum AppDetail: Equatable {
     case actualEditor(UUID)
     case actualSegment(UUID, TimeSpan)
     case actualSegmentEditor(UUID, TimeSpan)
+    case unconfirmedEditor(TimeSpan)
     case locationTimeline
     case memo
     case inference
@@ -112,6 +113,11 @@ enum TimeScale: String, CaseIterable, Identifiable {
     case month = "월"
     case year = "년"
 
+    /// The schedule is an NLE-like working surface. It deliberately keeps
+    /// three edit resolutions; yearly reports remain available in the review
+    /// model but are not a schedule viewport.
+    static let scheduleCases: [Self] = [.day, .week, .month]
+
     var id: Self { self }
 
     var title: String {
@@ -156,6 +162,26 @@ enum TimeScale: String, CaseIterable, Identifiable {
         case .month: .year
         case .week: .month
         case .day: .week
+        }
+    }
+
+    var scheduleEquivalent: Self {
+        self == .year ? .month : self
+    }
+
+    var scheduleNarrower: Self? {
+        switch scheduleEquivalent {
+        case .month: .week
+        case .week: .day
+        case .day, .year: nil
+        }
+    }
+
+    var scheduleBroader: Self? {
+        switch scheduleEquivalent {
+        case .day: .week
+        case .week: .month
+        case .month, .year: nil
         }
     }
 }

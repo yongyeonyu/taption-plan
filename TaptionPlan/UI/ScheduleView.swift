@@ -1777,6 +1777,7 @@ struct ScheduleView: View {
                 title: headerTitle,
                 trailing: headerTrailing,
                 selectedScale: model.selectedScale,
+                scaleOptions: TimeScale.scheduleCases,
                 onScaleChange: selectScaleFromTopBar,
                 dayZoom: dayZoom,
                 onDayZoomChange: { dayZoom = $0 },
@@ -6895,6 +6896,7 @@ struct GroupGanttView: View {
                 title: selectedGroup?.title ?? "그룹 간트",
                 trailing: selectedGroup.map(periodText) ?? "",
                 selectedScale: model.selectedScale,
+                scaleOptions: TimeScale.scheduleCases,
                 onScaleChange: selectScaleFromTopBar,
                 dayZoom: dayZoom,
                 onDayZoomChange: { dayZoom = $0 },
@@ -7239,17 +7241,20 @@ struct GroupGanttView: View {
     }
 }
 
-private struct TimelineBoardLayoutSnapshot {
-    var rows: [TimelineRowModel]
-    var axisMarkers: [TimelineAxisMarker]
-    var photoClusters: [PhotoCluster]
-    var summaryBuckets: [SummaryBucket]
-    var summaryColors: [SummaryColor]
-    var contentHeight: CGFloat
+/// Immutable NLE render snapshot. Source data is versioned by
+/// `timelineRevision`; viewport gestures only reproject these tracks.
+private struct NLETimelineRenderSnapshot {
+    let documentRevision: UInt64
+    let rows: [TimelineRowModel]
+    let axisMarkers: [TimelineAxisMarker]
+    let photoClusters: [PhotoCluster]
+    let summaryBuckets: [SummaryBucket]
+    let summaryColors: [SummaryColor]
+    let contentHeight: CGFloat
 }
 
-private struct TimelineBoardLayoutKey: Equatable {
-    let timelineRevision: UInt64
+private struct NLETimelineRenderKey: Equatable {
+    let documentRevision: UInt64
     let scale: TimeScale
     let isGroup: Bool
     let selectedGroupPlanID: UUID?
@@ -7258,19 +7263,18 @@ private struct TimelineBoardLayoutKey: Equatable {
 }
 
 /// 시간표는 멈춰 있을 때의 좁은 구간과 드래그용 넓은 구간을 번갈아 쓴다.
-/// 한 벌만 들고 있으면 드래그를 시작하고 끝낼 때마다 서로를 밀어내므로
-/// 두 벌을 남겨 둔다.
+/// 일·주·월 해상도와 직전 드래그 창이 서로 밀려나지 않도록 네 벌을 남겨 둔다.
 @MainActor
-private final class TimelineBoardLayoutCache {
+private final class NLETimelineRenderCache {
     private var entries: [(
-        key: TimelineBoardLayoutKey,
-        snapshot: TimelineBoardLayoutSnapshot
+        key: NLETimelineRenderKey,
+        snapshot: NLETimelineRenderSnapshot
     )] = []
 
     func value(
-        for key: TimelineBoardLayoutKey,
-        build: () -> TimelineBoardLayoutSnapshot
-    ) -> TimelineBoardLayoutSnapshot {
+        for key: NLETimelineRenderKey,
+        build: () -> NLETimelineRenderSnapshot
+    ) -> NLETimelineRenderSnapshot {
         if let index = entries.firstIndex(where: { $0.key == key }) {
             let entry = entries.remove(at: index)
             entries.insert(entry, at: 0)
@@ -7278,8 +7282,8 @@ private final class TimelineBoardLayoutCache {
         }
         let snapshot = build()
         entries.insert((key, snapshot), at: 0)
-        if entries.count > 2 {
-            entries.removeLast(entries.count - 2)
+        if entries.count > 4 {
+            entries.removeLast(entries.count - 4)
         }
         return snapshot
     }
@@ -7334,6 +7338,55 @@ private struct ContinuousMagnifyOrigin {
     let anchor: Double
 }
 
+private final class TimelineGestureMetrics {
+    private(set) var kind: String?
+    private var startedUptime: TimeInterval = 0
+    private(set) var inputSamples = 0
+    private(set) var renderedSamples = 0
+
+    func begin(_ kind: String) {
+        guard self.kind == nil else { return }
+        self.kind = kind
+        startedUptime = ProcessInfo.processInfo.systemUptime
+        inputSamples = 0
+        renderedSamples = 0
+    }
+
+    func inputSample() {
+        guard kind != nil else { return }
+        inputSamples += 1
+    }
+
+    func renderedSample() {
+        guard kind != nil else { return }
+        renderedSamples += 1
+    }
+
+    func finish() -> [String: String]? {
+        guard let kind else { return nil }
+        let duration = max(
+            0,
+            ProcessInfo.processInfo.systemUptime - startedUptime
+        )
+        let reduction = inputSamples > 0
+            ? Int(
+                (1 - Double(renderedSamples) / Double(inputSamples)) * 100
+            )
+            : 0
+        let fields = [
+            "kind": kind,
+            "input_samples": String(inputSamples),
+            "rendered_samples": String(renderedSamples),
+            "reduction_percent": String(max(0, reduction)),
+            "duration_ms": String(Int(duration * 1_000)),
+        ]
+        self.kind = nil
+        inputSamples = 0
+        renderedSamples = 0
+        return fields
+    }
+}
+
 private struct TimelineBoard: View {
     @Bindable var model: AppModel
     let scale: TimeScale
@@ -7360,19 +7413,23 @@ private struct TimelineBoard: View {
     // ends.
     @State private var dragLayoutSpan: TimeSpan?
     /// Keep row geometry stable while the timeline is being dragged.
-    @State private var dragLayoutSnapshot: TimelineBoardLayoutSnapshot?
+    @State private var dragLayoutSnapshot: NLETimelineRenderSnapshot?
     @State private var zoomFeedbackSequence = 0
     @State private var continuousMagnifyOrigin: ContinuousMagnifyOrigin?
     @State private var selectedRowID: String?
-    @State private var layoutCache = TimelineBoardLayoutCache()
+    @State private var layoutCache = NLETimelineRenderCache()
     @State private var dataIndexCache = TimelineBoardDataIndexCache()
     @State private var summaryCache = TimelineSummaryCache()
     @State private var lastContinuousRenderUptime: TimeInterval = 0
     // Touch hardware can deliver 120/240 samples per second, while the
     // timeline only needs to invalidate at the display cadence.  Keeping a
-    // separate gate for the non-continuous viewport gestures prevents week,
-    // month, and year pans/pinches from rebuilding every row for every sample.
+    // separate gate for viewport gestures prevents day, week, and month
+    // pans/pinches from rebuilding every row for every sample.
     @State private var lastViewportRenderUptime: TimeInterval = 0
+    // This reference is intentionally mutated without publishing SwiftUI
+    // state. It aggregates 120/240 Hz input and emits one support event at
+    // gesture end, keeping the render path free of per-sample diagnostics.
+    @State private var gestureMetrics = TimelineGestureMetrics()
     // Keep the ruler compact so the timeline retains the larger share of the
     // screen while still leaving room for labels and holiday names.
     private let axisHeight: CGFloat = 34
@@ -7634,9 +7691,9 @@ private struct TimelineBoard: View {
 
     private func cachedLayoutSnapshot(
         in span: TimeSpan
-    ) -> TimelineBoardLayoutSnapshot {
-        let key = TimelineBoardLayoutKey(
-            timelineRevision: model.timelineRevision,
+    ) -> NLETimelineRenderSnapshot {
+        let key = NLETimelineRenderKey(
+            documentRevision: model.timelineRevision,
             scale: scale,
             isGroup: isGroup,
             selectedGroupPlanID: model.selectedGroupPlanID,
@@ -7650,7 +7707,7 @@ private struct TimelineBoard: View {
 
     private func makeLayoutSnapshot(
         in span: TimeSpan
-    ) -> TimelineBoardLayoutSnapshot {
+    ) -> NLETimelineRenderSnapshot {
         let index = dataIndexCache.value(for: model.timelineRevision) {
             TimelineBoardDataIndex(
                 plans: storedPlans,
@@ -7668,7 +7725,8 @@ private struct TimelineBoard: View {
         let colors = summaryColors(for: buckets)
         // 넓은 배율의 요약 막대만 하단 여백을 쓴다.
         let footerHeight: CGFloat = scale == .day ? 0 : 46
-        return TimelineBoardLayoutSnapshot(
+        return NLETimelineRenderSnapshot(
+            documentRevision: model.timelineRevision,
             rows: rowModels,
             axisMarkers: axisMarkers(in: span),
             photoClusters: clusters,
@@ -7836,7 +7894,7 @@ private struct TimelineBoard: View {
     private var resolutionMenu: some View {
         Menu {
             Section("화면 해상도") {
-                ForEach(TimelineZoomPreset.allCases) { preset in
+                ForEach(TimelineZoomPreset.scheduleCases) { preset in
                     Button {
                         selectResolution(preset)
                     } label: {
@@ -7894,6 +7952,7 @@ private struct TimelineBoard: View {
     }
 
     private func selectResolution(_ preset: TimelineZoomPreset) {
+        guard preset != .oneYear else { return }
         dayZoom = preset
         viewport = .full
         dragOrigin = nil
@@ -8027,7 +8086,7 @@ private struct TimelineBoard: View {
             ),
             asOf: now
         )
-        // 일·주·월·년이 모두 같은 줄 목록을 쓴다. 예전에는 하루만 이 경로를
+        // 일·주·월이 모두 같은 줄 목록을 쓴다. 예전에는 하루만 이 경로를
         // 지나서 나머지 배율이 기록의 categoryID를 그대로 이름으로 찍었고
         // (appUsage), 줄 순서도 시간표와 어긋났다.
         let usesAutomaticDayRows = includesCalendar
@@ -9495,13 +9554,16 @@ private struct TimelineBoard: View {
         scale == .day
     }
 
-    /// Every resolution now uses the same continuous playhead model. Day
-    /// keeps its selected zoom duration; week/month/year retain the calendar
-    /// period's initial width while the center moves through adjacent periods.
+    /// Every schedule resolution now uses the same continuous NLE playhead
+    /// model. Day keeps its selected zoom duration; week and month retain the
+    /// calendar period's initial width while the center moves through adjacent
+    /// periods.
     private var isContinuousTimeline: Bool {
         switch scale {
-        case .day, .week, .month, .year:
+        case .day, .week, .month:
             true
+        case .year:
+            false
         }
     }
 
@@ -9614,11 +9676,10 @@ private struct TimelineBoard: View {
 
     private var visibleSpan: TimeSpan {
         guard isContinuousTimeline else { return standardVisibleSpan }
-        let halfDuration = activeContinuousDuration / 2
-        return TimeSpan(
-            start: continuousCenterDate.addingTimeInterval(-halfDuration),
-            end: continuousCenterDate.addingTimeInterval(halfDuration)
-        )
+        return NLETimelineViewport(
+            centerDate: continuousCenterDate,
+            visibleDuration: activeContinuousDuration
+        ).span
     }
 
     @ViewBuilder
@@ -10301,6 +10362,8 @@ private struct TimelineBoard: View {
         width: CGFloat
     ) {
         guard editingPlanID == nil else { return }
+        gestureMetrics.begin("pan")
+        gestureMetrics.inputSample()
         do {
                 if isContinuousTimeline {
                     if continuousDragOrigin == nil {
@@ -10315,12 +10378,15 @@ private struct TimelineBoard: View {
                         dragLayoutSnapshot = cachedLayoutSnapshot(in: window)
                     }
                     guard let continuousDragOrigin else { return }
-                    let secondsPerPoint = activeContinuousDuration
-                        * viewport.length
-                        / Double(max(1, width))
-                    let candidate = continuousDragOrigin.addingTimeInterval(
-                        -Double(translationWidth) * secondsPerPoint
+                    let candidate = NLETimelineViewport(
+                        centerDate: continuousDragOrigin,
+                        visibleDuration: activeContinuousDuration
                     )
+                    .panned(
+                        by: Double(translationWidth),
+                        viewportWidth: Double(max(1, width))
+                    )
+                    .centerDate
                     let uptime = ProcessInfo.processInfo.systemUptime
                     guard TimelineInteractionFrameGate.shouldRender(
                         lastUptime: &lastContinuousRenderUptime,
@@ -10328,6 +10394,7 @@ private struct TimelineBoard: View {
                     ) else {
                         return
                     }
+                    gestureMetrics.renderedSample()
                     guard continuousCenterDate != candidate else { return }
                     continuousCenterDate = candidate
                 } else {
@@ -10346,6 +10413,7 @@ private struct TimelineBoard: View {
                     ) else {
                         return
                     }
+                    gestureMetrics.renderedSample()
                     guard viewport != candidate else { return }
                     viewport = candidate
                 }
@@ -10360,14 +10428,15 @@ private struct TimelineBoard: View {
                 if isContinuousTimeline {
                     var finalDate = continuousCenterDate
                     if let continuousDragOrigin {
-                        let secondsPerPoint = activeContinuousDuration
-                            * viewport.length
-                            / Double(max(1, width))
-                        finalDate = continuousDragOrigin
-                            .addingTimeInterval(
-                                -Double(translationWidth)
-                                    * secondsPerPoint
-                            )
+                        finalDate = NLETimelineViewport(
+                            centerDate: continuousDragOrigin,
+                            visibleDuration: activeContinuousDuration
+                        )
+                        .panned(
+                            by: Double(translationWidth),
+                            viewportWidth: Double(max(1, width))
+                        )
+                        .centerDate
                     }
                     // 손을 뗀 자리가 곧 최종 자리다. 기록이 없는 구간에
                     // 멈추면 그 빈 구간을 보여 준다. 예전에는 가장 가까운
@@ -10409,6 +10478,7 @@ private struct TimelineBoard: View {
                 continuousDragOrigin = nil
                 lastViewportRenderUptime = 0
         }
+        recordGestureMetrics()
     }
 
     private var viewportMagnifyGesture: some Gesture {
@@ -10431,6 +10501,8 @@ private struct TimelineBoard: View {
         factor: Double,
         anchor: Double
     ) {
+        gestureMetrics.begin("zoom")
+        gestureMetrics.inputSample()
         if magnifyOrigin == nil {
             magnifyOrigin = viewport
             editingPlanID = nil
@@ -10467,10 +10539,14 @@ private struct TimelineBoard: View {
         }
         guard let magnifyOrigin else { return }
         if continuousMagnifyOrigin != nil {
+            let lastRender = lastViewportRenderUptime
             applyContinuousMagnification(
                 factor: factor,
                 force: false
             )
+            if lastViewportRenderUptime != lastRender {
+                gestureMetrics.renderedSample()
+            }
             return
         }
         let candidate = magnifyOrigin.magnifying(
@@ -10485,6 +10561,7 @@ private struct TimelineBoard: View {
         ) else {
             return
         }
+        gestureMetrics.renderedSample()
         viewport = candidate
     }
 
@@ -10509,6 +10586,7 @@ private struct TimelineBoard: View {
         )
         magnifyOrigin = nil
         lastViewportRenderUptime = 0
+        recordGestureMetrics()
         TaptionPlanDiagnosticsLogger.shared.record(
             "timeline_zoom_ended",
             fields: [
@@ -10545,7 +10623,9 @@ private struct TimelineBoard: View {
         }
 
         if scale != .day {
-            let targetScale = zoomsIn ? scale.narrower : scale.broader
+            let targetScale = zoomsIn
+                ? scale.scheduleNarrower
+                : scale.scheduleBroader
             guard let targetScale else {
                 viewport = origin
                 return
@@ -10562,7 +10642,7 @@ private struct TimelineBoard: View {
             to: visibleSpan.duration * origin.length
         )
         if zoomsOut, originStage == .day {
-            guard let broader = scale.broader else {
+            guard let broader = scale.scheduleBroader else {
                 viewport = origin
                 return
             }
@@ -10621,15 +10701,17 @@ private struct TimelineBoard: View {
         }
 
         let safeFactor = max(0.01, factor)
-        let minimumDuration: TimeInterval = 60
-        let maximumDuration: TimeInterval = 10 * 366 * 24 * 60 * 60
-        let duration = min(
-            maximumDuration,
-            max(minimumDuration, origin.duration / safeFactor)
+        let nleViewport = NLETimelineViewport(
+            centerDate: origin.anchorDate,
+            visibleDuration: origin.duration
         )
-        let center = origin.anchorDate.addingTimeInterval(
-            duration * (0.5 - origin.anchor)
+        let magnified = nleViewport.magnified(
+            by: safeFactor,
+            anchor: origin.anchor,
+            maximumDuration: NLETimelineViewport.maximumScheduleDuration
         )
+        let duration = magnified.visibleDuration
+        let center = magnified.centerDate
         if continuousTimelineDuration != duration {
             continuousTimelineDuration = duration
         }
@@ -10638,6 +10720,14 @@ private struct TimelineBoard: View {
         }
         viewport = .full
         ensureMagnifyLayoutWindow(around: center)
+    }
+
+    private func recordGestureMetrics() {
+        guard let fields = gestureMetrics.finish() else { return }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "timeline_gesture_metrics",
+            fields: fields
+        )
     }
 
     private func resetViewport(withFeedback: Bool = false) {
@@ -10776,9 +10866,25 @@ private struct TimelineBoard: View {
     }
 
     private func handleTap(_ block: TimelineBlock) {
-        onSelection?(
-            selectionFromBlock(block)
-        )
+        let selection = selectionFromBlock(block)
+        onSelection?(selection)
+
+        if selection.categoryID == ReviewCoverageEngine.unconfirmedCategoryID {
+            model.detail = .unconfirmedEditor(selection.span)
+            return
+        }
+
+        // A stored actual record is the editable source for the selected
+        // timeline block.  Open its detail editor directly so a tap on the
+        // timetable is enough to correct the displayed activity and time.
+        // The editor persists a correction while keeping automatic sensor /
+        // HealthKit source values unchanged.
+        if let actualID = selection.actualID,
+           model.snapshot.actuals.contains(where: { $0.id == actualID }) {
+            model.detail = .actualEditor(actualID)
+            return
+        }
+
         if block.opensLocationTimeline {
             return
         }

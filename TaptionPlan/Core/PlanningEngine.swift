@@ -23,6 +23,37 @@ enum TimelineInteractionFrameGate {
     }
 }
 
+/// Integration reads are much more expensive than a timeline frame. A tab
+/// selection, foreground callback and sensor callback can all arrive for the
+/// same document window, so keep one short-lived admission gate in front of
+/// HealthKit, Screen Time and location enumeration.
+struct TimelineIntegrationRefreshGate {
+    static let minimumRepeatInterval: TimeInterval = 5
+
+    private(set) var lastKey: String?
+    private(set) var lastUptime: TimeInterval?
+
+    mutating func shouldStart(
+        key: String,
+        nowUptime: TimeInterval,
+        force: Bool = false
+    ) -> Bool {
+        guard !force,
+              let lastKey,
+              let lastUptime,
+              lastKey == key,
+              nowUptime - lastUptime < Self.minimumRepeatInterval else {
+            return true
+        }
+        return false
+    }
+
+    mutating func commit(key: String, nowUptime: TimeInterval) {
+        lastKey = key
+        lastUptime = nowUptime
+    }
+}
+
 /// Cached timeline rows keep blocks ordered by start time. This index narrows
 /// every drag frame to blocks that can intersect the visible window instead
 /// of rescanning a month or year of off-screen records.

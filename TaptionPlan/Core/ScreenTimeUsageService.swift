@@ -36,7 +36,7 @@ enum ScreenTimeAuthorizationState: String, Sendable {
     var guidance: String? {
         switch self {
         case .dataAccessUnavailable:
-            "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요."
+            "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요. 지역·Apple 계정에 따라 이 데이터 접근이 제공되지 않을 수도 있습니다."
         case .denied:
             "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 Taption Plan을 허용해 주세요."
         case .requiresCurrentSystem:
@@ -242,69 +242,124 @@ final class ScreenTimeUsageService {
         let end = min(requestedSpan.end, .now)
         guard requestedSpan.start < end else { return [] }
         let range = DateInterval(start: requestedSpan.start, end: end)
-        let filter = DeviceActivityFilter(
-            segment: .hourly(during: range),
-            devices: DeviceActivityFilter.Devices([.iPhone])
-        )
+        // Omitting `devices` keeps the query on the device that is currently
+        // running the app. An explicit `.iPhone` filter can return no rows
+        // when the same target is running on an iPad or a restored device.
+        let filter = DeviceActivityFilter(segment: .hourly(during: range))
         let baseFields = [
             "authorization": authorizationState.rawValue,
             "start": String(Int(range.start.timeIntervalSince1970)),
             "end": String(Int(range.end.timeIntervalSince1970)),
         ]
-        for attempt in 1...ScreenTimeUsageRetryPolicy.maximumAttempts {
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "screen_time_query_started",
-                fields: baseFields.merging([
+        // A live read asks the Screen Time daemon to refresh first. Older
+        // builds used only `.cached`, which commonly returned an empty result
+        // immediately after the user approved access. Keep the cache as a
+        // fallback for devices whose daemon has just completed a refresh.
+        let policies: [(name: String, value: DeviceActivityData.Policy)] = [
+            ("live", .live),
+            ("cached", .cached),
+        ]
+        var lastError: Error?
+
+        for policy in policies {
+            for attempt in 1...ScreenTimeUsageRetryPolicy.maximumAttempts {
+                let fields = baseFields.merging([
                     "attempt": String(attempt),
+                    "policy": policy.name,
                 ]) { _, new in new }
-            )
-            do {
-                let result = try await query(filter: filter, range: range)
                 TaptionPlanDiagnosticsLogger.shared.record(
-                    "screen_time_query_completed",
-                    fields: baseFields.merging([
-                        "attempt": String(attempt),
-                        "samples": String(result.count),
-                    ]) { _, new in new }
+                    "screen_time_query_started",
+                    fields: fields
                 )
-                return result
-            } catch {
-                let errorFields = baseFields
-                    .merging(TaptionDiagnosticError.fields(for: error)) {
-                        _, new in new
-                    }
-                    .merging(["attempt": String(attempt)]) { _, new in new }
-                guard attempt < ScreenTimeUsageRetryPolicy.maximumAttempts,
-                      ScreenTimeUsageRetryPolicy.shouldRetry(error) else {
+                do {
+                    let result = try await query(
+                        filter: filter,
+                        range: range,
+                        policy: policy.value
+                    )
                     TaptionPlanDiagnosticsLogger.shared.record(
-                        "screen_time_query_failed",
-                        level: .error,
+                        "screen_time_query_completed",
+                        fields: fields.merging([
+                            "samples": String(result.count),
+                        ]) { _, new in new }
+                    )
+                    if !result.isEmpty || policy.name == "cached" {
+                        return result
+                    }
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "screen_time_query_fallback",
+                        level: .notice,
+                        fields: fields.merging([
+                            "reason": "live_empty",
+                        ]) { _, new in new }
+                    )
+                    break
+                } catch {
+                    if let accessError = dataAccessError(for: error) {
+                        let errorFields = fields.merging(
+                            TaptionDiagnosticError.fields(for: error)
+                        ) { _, new in new }
+                        TaptionPlanDiagnosticsLogger.shared.record(
+                            "screen_time_query_failed",
+                            level: .error,
+                            fields: errorFields
+                        )
+                        throw accessError
+                    }
+
+                    // `missingData` means there was no activity in the
+                    // requested interval, not that the integration failed.
+                    // Try the cache once, then report an empty successful read.
+                    if isMissingData(error) {
+                        TaptionPlanDiagnosticsLogger.shared.record(
+                            "screen_time_query_empty",
+                            level: .notice,
+                            fields: fields.merging([
+                                "reason": "missing_data",
+                            ]) { _, new in new }
+                        )
+                        break
+                    }
+
+                    lastError = error
+                    let errorFields = fields.merging(
+                        TaptionDiagnosticError.fields(for: error)
+                    ) { _, new in new }
+                    guard attempt < ScreenTimeUsageRetryPolicy.maximumAttempts,
+                          ScreenTimeUsageRetryPolicy.shouldRetry(error) else {
+                        TaptionPlanDiagnosticsLogger.shared.record(
+                            "screen_time_query_failed",
+                            level: .error,
+                            fields: errorFields
+                        )
+                        break
+                    }
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "screen_time_query_retry",
+                        level: .notice,
                         fields: errorFields
                     )
-                    throw error
+                    try await Task.sleep(
+                        for: ScreenTimeUsageRetryPolicy.delay(after: attempt)
+                    )
                 }
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "screen_time_query_retry",
-                    level: .notice,
-                    fields: errorFields
-                )
-                try await Task.sleep(
-                    for: ScreenTimeUsageRetryPolicy.delay(after: attempt)
-                )
             }
         }
+
+        if let lastError { throw lastError }
         return []
     }
 
     @available(iOS 26.4, *)
     private func query(
         filter: DeviceActivityFilter,
-        range: DateInterval
+        range: DateInterval,
+        policy: DeviceActivityData.Policy
     ) async throws -> [ScreenTimeUsageSample] {
         var result: [ScreenTimeUsageSample] = []
         for try await data in DeviceActivityData.activityData(
             filteredBy: filter,
-            using: .cached
+            using: policy
         ) {
             for await segment in data.activitySegments {
                 guard let span = clipped(segment.dateInterval, to: range),
@@ -316,6 +371,33 @@ final class ScreenTimeUsageService {
             }
         }
         return result
+    }
+
+    @available(iOS 26.4, *)
+    private func isMissingData(_ error: Error) -> Bool {
+        if let dataError = error as? DeviceActivityData.Error {
+            return dataError == .missingData
+        }
+        let description = String(reflecting: error).lowercased()
+        return description.contains("missingdata")
+            || description.contains("missing data")
+    }
+
+    @available(iOS 26.4, *)
+    private func dataAccessError(for error: Error) -> ScreenTimeUsageError? {
+        guard let dataError = error as? DeviceActivityData.Error else {
+            return nil
+        }
+        switch dataError {
+        case .unavailable:
+            return .dataAccessUnavailable
+        case .unauthorized:
+            return .dataAccessNotGranted
+        case .missingData:
+            return nil
+        @unknown default:
+            return nil
+        }
     }
 
     /// 한 시간대(segment)를 카테고리 → 앱 순으로 펼쳐 앱마다 한 줄씩 만든다.
@@ -472,7 +554,7 @@ enum ScreenTimeUsageError: LocalizedError {
         case .requiresCurrentSystem:
             "앱 사용시간 기록에는 iOS 26.4 이상이 필요합니다."
         case .dataAccessUnavailable:
-            "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요."
+            "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요. 지역·Apple 계정에 따라 이 데이터 접근이 제공되지 않을 수도 있습니다."
         case .dataAccessNotGranted:
             """
             앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.

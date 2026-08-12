@@ -231,6 +231,48 @@ private struct ReviewRecordSelection {
     let displayedSpan: TimeSpan
 }
 
+private enum RecentActivitySelectionStore {
+    private static let key = "review.recentActivityOptionIDs"
+    private static let limit = 8
+
+    static func ids() -> [String] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let ids = try? JSONDecoder().decode([String].self, from: data)
+        else { return [] }
+        var seen = Set<String>()
+        return ids.filter { seen.insert($0).inserted }
+    }
+
+    static func prioritize(
+        _ options: [ActivityCorrectionOption]
+    ) -> [ActivityCorrectionOption] {
+        let recentIDs = ids()
+        let rank = Dictionary(
+            uniqueKeysWithValues: recentIDs.enumerated().map { ($1, $0) }
+        )
+        return options.enumerated()
+            .sorted { left, right in
+                let leftRank = rank[left.element.id]
+                    ?? recentIDs.count + left.offset
+                let rightRank = rank[right.element.id]
+                    ?? recentIDs.count + right.offset
+                return leftRank == rightRank
+                    ? left.offset < right.offset
+                    : leftRank < rightRank
+            }
+            .map(\.element)
+    }
+
+    static func remember(_ option: ActivityCorrectionOption) {
+        var next = ids()
+        next.removeAll { $0 == option.id }
+        next.insert(option.id, at: 0)
+        next = Array(next.prefix(limit))
+        guard let data = try? JSONEncoder().encode(next) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+}
+
 enum ActivityQuickSelectionPolicy {
     private static let placeholderTitles = [
         "", "활동", "머무름", "미확인",
@@ -351,7 +393,7 @@ struct ReviewView: View {
                 clearManualPlayhead()
             }
         }
-        .onChange(of: highlightedPhaseToken) { _, _ in
+        .onChange(of: clockHighlight) { _, _ in
             if !circularActivityLabelPageIndices.isEmpty {
                 circularActivityLabelPageIndices = [:]
             }
@@ -359,14 +401,16 @@ struct ReviewView: View {
         .sheet(item: $unconfirmedSelection) { selection in
             ActivityCorrectionSheet(
                 model: model,
-                unconfirmedSpan: selection.span
+                unconfirmedSpan: selection.span,
+                showsQuickMenu: true
             )
         }
         .sheet(item: $quickActivitySelection) { selection in
-            QuickActivitySelectionSheet(
+            ActivityCorrectionSheet(
                 model: model,
                 recordID: selection.recordID,
-                displayedSpan: selection.displayedSpan
+                displayedSpan: selection.displayedSpan,
+                showsQuickMenu: true
             )
         }
     }
@@ -976,48 +1020,98 @@ struct ReviewView: View {
     }
 
     private var circularActivityLabelItems: [CircularActivityLabel] {
-        guard let selectedPhase = highlightedPhaseToken else { return [] }
         let period = content.period
         guard period.duration > 0 else { return [] }
         let actuals: [UUID: ActualRecord] = Dictionary(
             content.displayActuals.map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
         )
-        let now = Date.now
-        var labels: [CircularActivityLabel] = []
-        for group in content.phaseGroups where group.id == selectedPhase {
-            for child in group.children {
-                guard let actual = actuals[child.recordID],
-                      let clipped = actual.span(asOf: now)
-                          .intersection(with: period),
-                      clipped.duration > 0 else { continue }
-                let midpoint = clipped.start.addingTimeInterval(
-                    clipped.duration / 2
-                )
-                let elapsed = midpoint.timeIntervalSince(period.start)
-                let fraction = min(
-                    1 - 0.000_001,
-                    max(0, elapsed / period.duration)
-                )
-                let labelID = group.id + "." + child.id
-                labels.append(
-                    CircularActivityLabel(
-                        id: labelID,
-                        groupID: group.id,
-                        groupName: group.name,
-                        child: child,
-                        start: clipped.start,
-                        anchorFraction: fraction,
-                        quadrant: CircularActivityLabelQuadrant(
-                            clockFraction: fraction
-                        )
-                    )
-                )
+
+        let source: RecordCategoryGroup?
+        let detailIntervals: [TimeSpan]?
+        switch clockHighlight {
+        case .phase(_, let token):
+            source = content.phaseGroups.first { $0.id == token }
+            detailIntervals = nil
+        case .category(let categoryID):
+            source = content.groups.first { $0.id == categoryID }
+            detailIntervals = nil
+        case .detail(let selection):
+            let categoryID = activityCategoryID(for: selection.kind)
+            source = categoryID.flatMap { id in
+                content.groups.first { $0.id == id }
             }
+            detailIntervals = detailSpans(for: selection)
+        case nil:
+            source = nil
+            detailIntervals = nil
         }
-        return labels.sorted {
+        guard let source else { return [] }
+
+        let now = Date.now
+        return source.children.compactMap { child in
+            guard let actual = actuals[child.recordID],
+                  let clipped = actual.span(asOf: now)
+                      .intersection(with: period),
+                  clipped.duration > 0 else { return nil }
+
+            let matching: [TimeSpan]
+            if let detailIntervals {
+                matching = detailIntervals.compactMap {
+                    clipped.intersection(with: $0)
+                }
+                guard !matching.isEmpty else { return nil }
+            } else {
+                matching = [clipped]
+            }
+
+            let visible = ActualIntervalMergeEngine.union(matching)
+            guard let labelSpan = visible.first else { return nil }
+            let midpoint = labelSpan.start.addingTimeInterval(
+                labelSpan.duration / 2
+            )
+            let elapsed = midpoint.timeIntervalSince(period.start)
+            let fraction = min(
+                1 - 0.000_001,
+                max(0, elapsed / period.duration)
+            )
+            let labelChild = RecordGroupChild(
+                id: child.id,
+                title: child.title,
+                duration: detailIntervals == nil
+                    ? child.duration
+                    : visible.reduce(0) { $0 + $1.duration },
+                start: labelSpan.start,
+                recordID: child.recordID,
+                occurrenceCount: child.occurrenceCount
+            )
+            let labelID = source.id + "." + child.id
+            return CircularActivityLabel(
+                id: labelID,
+                groupID: source.id,
+                groupName: source.name,
+                child: labelChild,
+                start: labelSpan.start,
+                anchorFraction: fraction,
+                quadrant: CircularActivityLabelQuadrant(
+                    clockFraction: fraction
+                )
+            )
+        }
+        .sorted {
             $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start
         }
+    }
+
+    private func detailSpans(
+        for selection: ReviewDetailSelection
+    ) -> [TimeSpan] {
+        guard let ring = content.activityRings.first(where: {
+            $0.kind == selection.kind
+        }) else { return [] }
+        return ring.arcs
+            .filter { $0.token == selection.token }
+            .map { RecordClockEngine.span(of: $0, in: content.period) }
     }
 
     private func visibleCircularActivityLabels(
@@ -1782,10 +1876,7 @@ struct ReviewView: View {
             max(0, (x - timelineStart) / timelineWidth)
         )
         if let selection = recordForRing(at: fraction, categoryID: nil) {
-            model.detail = .actualSegmentEditor(
-                selection.record.id,
-                selection.displayedSpan
-            )
+            openRecord(selection)
         } else {
             openUnconfirmedEditor(at: fraction, categoryID: nil)
         }
@@ -1943,8 +2034,8 @@ struct ReviewView: View {
                 .foregroundStyle(Color.tpInk)
     }
 
-    /// 원형 띠를 짚으면 해당 기록을 연다. 미분류 활동은 상세활동만 바로
-    /// 고르며, 재생 단추가 이 층 위에 덮여 있어 누르기를 가로채지 않는다.
+    /// 원형 띠를 짚으면 빠른 활동 변경 메뉴를 연다. 재생 단추가 이 층 위에
+    /// 덮여 있어 누르기를 가로채지 않는다.
     private var clockTapLayer: some View {
         GeometryReader { proxy in
             Color.clear
@@ -1980,10 +2071,7 @@ struct ReviewView: View {
                 at: fraction,
                 categoryID: nil
             ) {
-                model.detail = .actualSegmentEditor(
-                    selection.record.id,
-                    selection.displayedSpan
-                )
+                openRecord(selection)
             } else if !openUnconfirmedEditor(
                 at: fraction,
                 categoryID: nil
@@ -2014,13 +2102,6 @@ struct ReviewView: View {
     private func openRecord(_ selection: ReviewRecordSelection) {
         clearClockHighlight()
         let record = selection.record
-        guard ActivityQuickSelectionPolicy.needsSelection(record) else {
-            model.detail = .actualSegmentEditor(
-                record.id,
-                selection.displayedSpan
-            )
-            return
-        }
         let next = ReviewQuickActivitySelection(
             recordID: record.id,
             displayedSpan: selection.displayedSpan
@@ -3537,6 +3618,33 @@ struct ReviewView: View {
     }
 }
 
+struct UnconfirmedRecordDetailView: View {
+    @Bindable var model: AppModel
+    let span: TimeSpan
+    @State private var isEditorPresented = true
+
+    var body: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.tpBackground)
+            .sheet(
+                isPresented: $isEditorPresented,
+                onDismiss: dismissDetail
+            ) {
+                ActivityCorrectionSheet(
+                    model: model,
+                    unconfirmedSpan: span,
+                    showsQuickMenu: true
+                )
+            }
+    }
+
+    private func dismissDetail() {
+        guard model.detail == .unconfirmedEditor(span) else { return }
+        model.detail = nil
+    }
+}
+
 struct ActualRecordDetailView: View {
     @Bindable var model: AppModel
     let recordID: UUID
@@ -3647,7 +3755,8 @@ struct ActualRecordDetailView: View {
             ActivityCorrectionSheet(
                 model: model,
                 recordID: focusedRecordID,
-                displayedSpan: focusedCorrectionSpan
+                displayedSpan: focusedCorrectionSpan,
+                showsQuickMenu: true
             )
         }
         .onAppear {
@@ -4232,125 +4341,6 @@ private enum ActivityCorrectionCatalog {
     }
 }
 
-private struct QuickActivitySelectionSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Bindable var model: AppModel
-    let recordID: UUID
-    let displayedSpan: TimeSpan
-    @State private var isSaving = false
-
-    private var record: ActualRecord? {
-        model.snapshot.actuals.first { $0.id == recordID }
-    }
-
-    private var options: [ActivityCorrectionOption] {
-        guard let record else { return [] }
-        return ActivityCorrectionCatalog.quickOptions(
-            for: record,
-            actuals: model.snapshot.actuals,
-            customLabels: model.snapshot.settings.customActivityLabels
-        )
-    }
-
-    private var automaticOptions: [ActivityCorrectionOption] {
-        options.filter(\.isAutomatic)
-    }
-
-    private var suggestedOptions: [ActivityCorrectionOption] {
-        options.filter { !$0.isAutomatic && !$0.isCustom }
-    }
-
-    private var customOptions: [ActivityCorrectionOption] {
-        options.filter(\.isCustom)
-    }
-
-    var body: some View {
-        NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    if !automaticOptions.isEmpty {
-                        optionSection("오늘 기록", options: automaticOptions)
-                    }
-                    optionSection("상세활동", options: suggestedOptions)
-                    if !customOptions.isEmpty {
-                        optionSection("내 활동", options: customOptions)
-                    }
-                }
-                .padding(16)
-            }
-            .background(Color.tpBackground)
-            .navigationTitle("상세활동 선택")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("닫기") { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
-
-    private func optionSection(
-        _ title: String,
-        options: [ActivityCorrectionOption]
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.taption(size: 11, weight: .bold))
-                .foregroundStyle(Color.tpSecondary)
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 120), spacing: 8)],
-                spacing: 8
-            ) {
-                ForEach(options) { optionButton($0) }
-            }
-        }
-    }
-
-    private func optionButton(_ option: ActivityCorrectionOption) -> some View {
-        let color = PlanCategory(categoryID: option.categoryID).darkColor
-        return Button {
-            apply(option)
-        } label: {
-            HStack(spacing: 7) {
-                Image(systemName: option.systemImage)
-                    .frame(width: 18)
-                Text(option.title)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 0)
-            }
-            .font(.taption(size: 11, weight: .semibold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 11)
-            .frame(maxWidth: .infinity, minHeight: 40)
-            .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
-            .overlay {
-                RoundedRectangle(cornerRadius: 11)
-                    .stroke(color.opacity(0.26), lineWidth: 0.8)
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(isSaving)
-    }
-
-    private func apply(_ option: ActivityCorrectionOption) {
-        guard !isSaving, record != nil else { return }
-        isSaving = true
-        Task {
-            await model.correctActualFragment(
-                recordID,
-                displayedSpan: displayedSpan,
-                startAt: displayedSpan.start,
-                endAt: displayedSpan.end,
-                with: option
-            )
-            dismiss()
-        }
-    }
-}
-
 private enum ActivityCorrectionTarget {
     case record(UUID)
     case unconfirmed(ActualRecord)
@@ -4361,11 +4351,207 @@ private enum ActivityCorrectionTarget {
     }
 }
 
+private struct ActivityCorrectionHierarchyPicker: View {
+    let record: ActualRecord
+    let options: [ActivityCorrectionOption]
+    let onSelect: (ActivityCorrectionOption) -> Void
+    @State private var selectedPhase: DayPhase
+
+    init(
+        record: ActualRecord,
+        options: [ActivityCorrectionOption],
+        onSelect: @escaping (ActivityCorrectionOption) -> Void
+    ) {
+        self.record = record
+        self.options = options
+        self.onSelect = onSelect
+        _selectedPhase = State(
+            initialValue: Self.phase(for: record)
+        )
+    }
+
+    private var phaseChoices: [DayPhase] {
+        let available = Set(options.map(Self.phase(for:)))
+        let current = Self.phase(for: record)
+        return DayPhase.timelineRows.filter {
+            available.contains($0) || $0 == current
+        }
+    }
+
+    private var detailOptions: [ActivityCorrectionOption] {
+        options.filter { Self.phase(for: $0) == selectedPhase }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("일과")
+                    .font(.taption(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                ForEach(phaseChoices, id: \.rawValue) { phase in
+                    phaseButton(phase)
+                }
+            }
+            .frame(width: 94, alignment: .leading)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("상세활동")
+                    .font(.taption(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                if detailOptions.isEmpty {
+                    Text("선택 가능한 활동 없음")
+                        .font(.taption(size: 9))
+                        .foregroundStyle(Color.tpSecondary)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: 38,
+                            alignment: .leading
+                        )
+                } else {
+                    ForEach(detailOptions) { option in
+                        optionButton(option)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func phaseButton(_ phase: DayPhase) -> some View {
+        let isSelected = selectedPhase == phase
+        let tint = Self.phaseColor(phase)
+        return Button {
+            guard selectedPhase != phase else { return }
+            selectedPhase = phase
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: Self.phaseSystemImage(phase))
+                    .font(.taption(size: 10, weight: .semibold))
+                    .frame(width: 15)
+                Text(phase.title)
+                    .font(
+                        .taption(
+                            size: 9.5,
+                            weight: isSelected ? .bold : .regular
+                        )
+                    )
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(isSelected ? tint : Color.tpInk)
+            .padding(.horizontal, 7)
+            .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
+            .background(
+                isSelected
+                    ? tint.opacity(0.14)
+                    : Color(red: 0.95, green: 0.95, blue: 0.96),
+                in: RoundedRectangle(cornerRadius: 9)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func optionButton(
+        _ option: ActivityCorrectionOption
+    ) -> some View {
+        let tint = PlanCategory(categoryID: option.categoryID).darkColor
+        return Button {
+            onSelect(option)
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: option.systemImage)
+                    .font(.taption(size: 10, weight: .semibold))
+                    .frame(width: 17)
+                Text(option.title)
+                    .font(.taption(size: 10, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+            .background(
+                tint.opacity(0.1),
+                in: RoundedRectangle(cornerRadius: 9)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .stroke(tint.opacity(0.22), lineWidth: 0.7)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(option.title)
+    }
+
+    private static func phase(for record: ActualRecord) -> DayPhase {
+        if record.categoryID == ReviewCoverageEngine.unconfirmedCategoryID {
+            return .activity
+        }
+        if let behavior = record.behavior,
+           let kind = WatchBehaviorKind.fromModelLabel(behavior) {
+            return phase(for: kind)
+        }
+        return DayPhase.phase(forActivityCategory: record.categoryID)
+    }
+
+    private static func phase(
+        for option: ActivityCorrectionOption
+    ) -> DayPhase {
+        if option.categoryID == ReviewCoverageEngine.unconfirmedCategoryID {
+            return .activity
+        }
+        if let behavior = option.behavior,
+           let kind = WatchBehaviorKind.fromModelLabel(behavior) {
+            return phase(for: kind)
+        }
+        return DayPhase.phase(forActivityCategory: option.categoryID)
+    }
+
+    private static func phase(for kind: WatchBehaviorKind) -> DayPhase {
+        switch kind {
+        case .sleep: .sleep
+        case .automotive, .publicTransit, .subway, .walking, .running,
+             .cycling, .stairsUp, .stairsDown, .elevator: .movement
+        case .exercise: .exercise
+        default: .activity
+        }
+    }
+
+    private static func phaseSystemImage(_ phase: DayPhase) -> String {
+        switch phase {
+        case .sleep: "moon.zzz.fill"
+        case .movement: "figure.walk.motion"
+        case .exercise: "figure.strengthtraining.traditional"
+        case .work: "briefcase.fill"
+        case .study: "book.fill"
+        case .hobby: "paintpalette.fill"
+        case .appointment: "calendar"
+        case .unconfirmed: "questionmark.circle"
+        default: "sparkles"
+        }
+    }
+
+    private static func phaseColor(_ phase: DayPhase) -> Color {
+        RecordTimelinePalette.detailColor(
+            .dayPhase,
+            token: phase.rawValue
+        )
+    }
+}
+
 private struct ActivityCorrectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
     let target: ActivityCorrectionTarget
     let displayedSpan: TimeSpan?
+    let showsQuickMenu: Bool
     @State private var customTitle = ""
     @State private var selectedOption: ActivityCorrectionOption?
     @State private var addedCustomOptions: [ActivityCorrectionOption] = []
@@ -4376,11 +4562,13 @@ private struct ActivityCorrectionSheet: View {
     init(
         model: AppModel,
         recordID: UUID,
-        displayedSpan: TimeSpan? = nil
+        displayedSpan: TimeSpan? = nil,
+        showsQuickMenu: Bool = false
     ) {
         self.model = model
         target = .record(recordID)
         self.displayedSpan = displayedSpan
+        self.showsQuickMenu = showsQuickMenu
         let record = model.snapshot.actuals.first { $0.id == recordID }
         let start = displayedSpan?.start ?? record?.startedAt ?? .now
         _startAt = State(initialValue: start)
@@ -4392,9 +4580,14 @@ private struct ActivityCorrectionSheet: View {
         _selectedOption = State(initialValue: nil)
     }
 
-    init(model: AppModel, unconfirmedSpan: TimeSpan) {
+    init(
+        model: AppModel,
+        unconfirmedSpan: TimeSpan,
+        showsQuickMenu: Bool = false
+    ) {
         self.model = model
         displayedSpan = nil
+        self.showsQuickMenu = showsQuickMenu
         target = .unconfirmed(
             ActualRecord(
                 planID: nil,
@@ -4430,6 +4623,17 @@ private struct ActivityCorrectionSheet: View {
         )
     }
 
+    private var quickOptions: [ActivityCorrectionOption] {
+        guard let record else { return [] }
+        return RecentActivitySelectionStore.prioritize(
+            ActivityCorrectionCatalog.quickOptions(
+                for: record,
+                actuals: model.snapshot.actuals,
+                customLabels: model.snapshot.settings.customActivityLabels
+            )
+        )
+    }
+
     private var automaticOptions: [ActivityCorrectionOption] {
         options.filter(\.isAutomatic)
     }
@@ -4450,6 +4654,15 @@ private struct ActivityCorrectionSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                if showsQuickMenu, let record, !quickOptions.isEmpty {
+                    Section("빠른 변경") {
+                        ActivityCorrectionHierarchyPicker(
+                            record: record,
+                            options: quickOptions,
+                            onSelect: selectQuickOption
+                        )
+                    }
+                }
                 Section("시간 조정") {
                     DatePicker(
                         "시작",
@@ -4515,6 +4728,14 @@ private struct ActivityCorrectionSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func selectQuickOption(_ option: ActivityCorrectionOption) {
+        guard !isSaving, endAt > startAt else { return }
+        RecentActivitySelectionStore.remember(option)
+        selectedOption = option
+        save()
     }
 
     private func optionRow(_ option: ActivityCorrectionOption) -> some View {
@@ -4533,20 +4754,26 @@ private struct ActivityCorrectionSheet: View {
                         .foregroundStyle(Color.tpProjectDark)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
     private func isSelected(_ option: ActivityCorrectionOption) -> Bool {
         guard let record else { return false }
-        if selectedOption?.id == option.id { return true }
-        return option.correction == ActivityCorrection(
+        if let selectedOption {
+            return selectedOption.id == option.id
+        }
+        let current = ActivityCorrection(
             title: record.title,
             behavior: record.behavior,
             categoryID: record.categoryID,
             startedAt: nil,
             endedAt: nil
         )
+        guard option.correction == current else { return false }
+        return options.first(where: { $0.correction == current })?.id == option.id
     }
 
     private func select(_ option: ActivityCorrectionOption) {
@@ -4578,6 +4805,9 @@ private struct ActivityCorrectionSheet: View {
         guard !isSaving, endAt > startAt else { return }
         let option = selectedOption
         if target.isUnconfirmed, option == nil { return }
+        if let option {
+            RecentActivitySelectionStore.remember(option)
+        }
         isSaving = true
         Task {
             defer { isSaving = false }

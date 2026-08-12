@@ -5,6 +5,7 @@ struct DraftTopBar: View {
     let trailing: String
     var trailingColor: Color = .tpSecondary
     var selectedScale: TimeScale?
+    var scaleOptions: [TimeScale] = TimeScale.allCases
     var onScaleChange: ((TimeScale) -> Void)?
     var dayZoom: TimelineZoomPreset?
     var onDayZoomChange: ((TimelineZoomPreset) -> Void)?
@@ -122,6 +123,7 @@ struct DraftTopBar: View {
             if let selectedScale {
                 DraftScalePicker(
                     selected: selectedScale,
+                    options: scaleOptions,
                     dayZoom: dayZoom,
                     onSelect: { scale in onScaleChange?(scale) },
                     onDayZoomChange: { zoom in onDayZoomChange?(zoom) }
@@ -196,13 +198,14 @@ struct DraftTopBar: View {
 
 struct DraftScalePicker: View {
     let selected: TimeScale
+    let options: [TimeScale]
     let dayZoom: TimelineZoomPreset?
     let onSelect: (TimeScale) -> Void
     let onDayZoomChange: (TimelineZoomPreset) -> Void
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(TimeScale.allCases) { scale in
+            ForEach(options) { scale in
                 Button {
                     onSelect(scale)
                 } label: {

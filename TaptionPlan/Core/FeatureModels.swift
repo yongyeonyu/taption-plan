@@ -3184,12 +3184,19 @@ struct ActivityCorrectionOption: Identifiable, Hashable, Sendable {
     }
 
     static func custom(_ title: String) -> ActivityCorrectionOption {
-        ActivityCorrectionOption(
+        let normalized = title
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let systemImage = normalized.contains("양치")
+            || normalized.contains("brush")
+            ? "toothbrush.fill"
+            : "tag.fill"
+        return ActivityCorrectionOption(
             id: "custom.\(title)",
             title: title,
             behavior: nil,
             categoryID: "activity",
-            systemImage: "tag.fill",
+            systemImage: systemImage,
             isAutomatic: false,
             isCustom: true
         )

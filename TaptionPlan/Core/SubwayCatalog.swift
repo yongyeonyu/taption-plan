@@ -143,21 +143,86 @@ enum SubwayStationCatalog {
             observations.removeLast()
         }
 
-        let names = observations.map(\.name)
-        guard Set(names.map(normalized)).count >= 3,
-              let first = observations.first,
-              let last = observations.last,
-              last.timestamp.timeIntervalSince(first.timestamp) >= 2 * 60,
-              let route = route(for: names),
-              route.stops.count >= 3,
-              route.stops.count <= min(64, max(12, names.count * 8)) else {
+        // 하루 전체 표본을 한 번에 읽으면 출근·퇴근과 도로 주행이 하나의
+        // 경로로 이어질 수 있다. 관측 역의 연속 구간을 모두 평가하고,
+        // 실제 노선상 이동 거리가 가장 긴 단순 경로를 선택한다. 역을 다시
+        // 방문하는 후보는 도로를 따라 여러 역 반경을 스친 잡음일 가능성이
+        // 높아 제외한다.
+        let candidates = trajectoryCandidates(
+            from: observations
+        )
+        guard let best = candidates.max(by: { lhs, rhs in
+            if lhs.route.stops.count != rhs.route.stops.count {
+                return lhs.route.stops.count < rhs.route.stops.count
+            }
+            if lhs.names.count != rhs.names.count {
+                return lhs.names.count < rhs.names.count
+            }
+            return lhs.last.timestamp < rhs.last.timestamp
+        }) else {
             return nil
         }
         return CoordinateTrajectory(
-            observedStationNames: names,
-            route: route,
-            span: TimeSpan(start: first.timestamp, end: last.timestamp)
+            observedStationNames: best.names,
+            route: best.route,
+            span: TimeSpan(start: best.first.timestamp, end: best.last.timestamp)
         )
+    }
+
+    private static func trajectoryCandidates(
+        from observations: [(
+            name: String,
+            timestamp: Date,
+            point: GeoPoint
+        )]
+    ) -> [(
+        names: [String],
+        route: SubwayRoutePath,
+        first: (name: String, timestamp: Date, point: GeoPoint),
+        last: (name: String, timestamp: Date, point: GeoPoint)
+    )] {
+        guard observations.count >= 3 else { return [] }
+        var result: [(
+            names: [String],
+            route: SubwayRoutePath,
+            first: (name: String, timestamp: Date, point: GeoPoint),
+            last: (name: String, timestamp: Date, point: GeoPoint)
+        )] = []
+        for start in observations.indices {
+            guard start + 2 < observations.count else { continue }
+            for end in (start + 2)..<observations.count {
+                let window = Array(observations[start...end])
+                let names = window.map(\.name)
+                guard Set(names.map(normalized)).count >= 3,
+                      let first = window.first,
+                      let last = window.last,
+                      last.timestamp.timeIntervalSince(first.timestamp)
+                        >= 2 * 60,
+                      let route = route(for: names),
+                      route.stops.count >= 3,
+                      route.stops.count
+                        <= min(64, max(12, names.count * 8)),
+                      !hasNonAdjacentStationRepeat(route) else {
+                    continue
+                }
+                result.append((names, route, first, last))
+            }
+        }
+        return result
+    }
+
+    private static func hasNonAdjacentStationRepeat(
+        _ route: SubwayRoutePath
+    ) -> Bool {
+        var lastIndexByName: [String: Int] = [:]
+        for (index, stop) in route.stops.enumerated() {
+            let name = normalized(stop.stationName)
+            if let previous = lastIndexByName[name], index - previous > 1 {
+                return true
+            }
+            lastIndexByName[name] = index
+        }
+        return false
     }
 
     private static func hasRailSpeedLeg(
@@ -245,6 +310,17 @@ enum SubwayStationCatalog {
             lineNames: lineNames,
             transferStationNames: transfers
         )
+    }
+
+    static func bestRoute(_ routes: [SubwayRoutePath?]) -> SubwayRoutePath? {
+        routes.compactMap { $0 }.max { lhs, rhs in
+            routeScore(lhs) < routeScore(rhs)
+        }
+    }
+
+    private static func routeScore(_ route: SubwayRoutePath) -> Int {
+        let repeatPenalty = hasNonAdjacentStationRepeat(route) ? 10_000 : 0
+        return route.stops.count - repeatPenalty
     }
 
     private static func shortestPath(

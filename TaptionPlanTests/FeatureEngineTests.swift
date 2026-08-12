@@ -3605,6 +3605,42 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testCoordinateTrajectoryChoosesLongestSimpleRouteAcrossDayNoise() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let samples: [(Double, Double, Double)] = [
+            (0, 37.5248, 126.6744),
+            (12, 37.5692, 126.6737),
+            (24, 37.57127, 126.7359),
+            (36, 37.5667, 126.8273),
+            (52, 37.5692, 126.6737),
+            (64, 37.5248, 126.6744),
+        ]
+        let readings = samples.map { minute, latitude, longitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            )
+        }
+
+        let trajectory = try XCTUnwrap(
+            SubwayStationCatalog.coordinateTrajectory(from: readings)
+        )
+
+        XCTAssertEqual(trajectory.route.lineNames, ["인천2호선", "공항철도"])
+        XCTAssertEqual(trajectory.route.transferStationNames, ["검암"])
+        XCTAssertEqual(trajectory.route.stops.first?.stationName, "가정")
+        XCTAssertEqual(trajectory.route.stops.last?.stationName, "마곡나루")
+    }
+
     func testCoordinateTrajectoryCreatesSubwaySegmentAcrossUnknownMotion() throws {
         let base = makeDate(2026, 8, 11, 21, 54)
         let samples: [(Double, Double, Double, MotionKind)] = [
@@ -5076,6 +5112,46 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         XCTAssertEqual(result, [gps])
+    }
+
+    func testMergingTravelRetainsStableSubwayWhenNextRefreshDropsCandidate() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(45 * 60)
+        )
+        let route = try XCTUnwrap(
+            SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"])
+        )
+        let car = TravelSegment(
+            mode: .car,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["도로 이동"]
+        )
+        let subway = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: base.addingTimeInterval(5 * 60),
+                end: base.addingTimeInterval(40 * 60)
+            ),
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["원본 GPS 철도 궤적 복원"],
+            subwayRoute: route
+        )
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [car],
+            motionActivities: [],
+            pedometer: nil,
+            readings: [],
+            preservedSubwaySegments: [subway]
+        )
+
+        XCTAssertEqual(result.map(\.mode), [.subway])
+        XCTAssertEqual(result.first?.subwayRoute?.transferStationNames, ["검암"])
     }
 
     func testHealthKitRefreshReplacesOnlyHealthKitGroundTruthWindow() {
@@ -7476,6 +7552,10 @@ final class FeatureEngineTests: XCTestCase {
             CloudKitErrorPolicy.isProductionSchemaUnavailable(
                 NSError(domain: "CKErrorDomain", code: 3)
             )
+        )
+        XCTAssertEqual(CloudUnavailableReason.schemaMissing.statusLabel, "서버 설정 필요")
+        XCTAssertTrue(
+            CloudUnavailableReason.schemaMissing.guidance.contains("Production")
         )
     }
 

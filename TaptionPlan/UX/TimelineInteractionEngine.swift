@@ -16,6 +16,10 @@ enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
 
     var id: Self { self }
 
+    /// Resolution choices exposed by the schedule NLE. Yearly aggregation is
+    /// a review/report concern, not an editable timeline viewport.
+    static let scheduleCases: [Self] = allCases.filter { $0 != .oneYear }
+
     var duration: TimeInterval {
         switch self {
         case .oneMinute: 60
@@ -53,7 +57,7 @@ enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
         case .oneMonth:
             .month
         case .oneYear:
-            .year
+            .month
         default:
             .day
         }
@@ -64,13 +68,13 @@ enum TimelineZoomPreset: String, CaseIterable, Identifiable, Sendable {
         case .day: .oneHour
         case .week: .oneWeek
         case .month: .oneMonth
-        case .year: .oneYear
+        case .year: .oneMonth
         }
     }
 
     static func nearest(to stage: GanttZoomStage) -> Self {
         switch stage {
-        case .year: .oneYear
+        case .year: .oneMonth
         case .month: .oneMonth
         case .week: .oneWeek
         case .day: .oneDay
@@ -327,6 +331,71 @@ struct GanttViewport: Equatable, Sendable {
         return GanttViewport(
             start: start - padding,
             length: focusedLength
+        )
+    }
+}
+
+/// NLE-style viewport state: the document stays immutable while pan and zoom
+/// update only a center instant and visible duration. Rendering code can turn
+/// this pair into a span without rebuilding source tracks or rereading data.
+struct NLETimelineViewport: Equatable, Sendable {
+    static let minimumDuration: TimeInterval = 60
+    static let maximumScheduleDuration: TimeInterval = 31 * 24 * 60 * 60
+
+    let centerDate: Date
+    let visibleDuration: TimeInterval
+
+    init(centerDate: Date, visibleDuration: TimeInterval) {
+        self.visibleDuration = min(
+            Self.maximumScheduleDuration,
+            max(Self.minimumDuration, visibleDuration.isFinite
+                ? visibleDuration
+                : Self.minimumDuration)
+        )
+        self.centerDate = centerDate
+    }
+
+    var span: TimeSpan {
+        let half = visibleDuration / 2
+        return TimeSpan(
+            start: centerDate.addingTimeInterval(-half),
+            end: centerDate.addingTimeInterval(half)
+        )
+    }
+
+    func panned(
+        by translation: Double,
+        viewportWidth: Double
+    ) -> Self {
+        guard viewportWidth > 0, translation.isFinite else { return self }
+        return Self(
+            centerDate: centerDate.addingTimeInterval(
+                -translation / viewportWidth * visibleDuration
+            ),
+            visibleDuration: visibleDuration
+        )
+    }
+
+    func magnified(
+        by factor: Double,
+        anchor: Double,
+        maximumDuration: TimeInterval = Self.maximumScheduleDuration
+    ) -> Self {
+        let safeFactor = max(0.01, factor.isFinite ? factor : 1)
+        let maxDuration = max(Self.minimumDuration, maximumDuration)
+        let newDuration = min(
+            maxDuration,
+            max(Self.minimumDuration, visibleDuration / safeFactor)
+        )
+        let clampedAnchor = min(1, max(0, anchor.isFinite ? anchor : 0.5))
+        let anchorDate = span.start.addingTimeInterval(
+            visibleDuration * clampedAnchor
+        )
+        return Self(
+            centerDate: anchorDate.addingTimeInterval(
+                newDuration * (0.5 - clampedAnchor)
+            ),
+            visibleDuration: newDuration
         )
     }
 }

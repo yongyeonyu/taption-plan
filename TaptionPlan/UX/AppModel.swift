@@ -29,7 +29,7 @@ final class AppModel {
     /// 새 메모가 놓일 순간과 그 자리에 이미 있던 메모만 들고 있으면 된다.
     private(set) var memoEntry: MemoEntry?
     var selectedCatCoat: CatCoat = .calico
-    /// 기록 탭도 시간표와 같은 배율(일·주·월·년)을 쓴다.
+    /// 기록 탭은 시간표와 같은 배율을 쓰되, 기록 전용 년 보기는 유지한다.
     var reviewScale: TimeScale = .week
     var isPermissionOnboardingPresented = false
     private(set) var permissionOnboardingStartFeature: PermissionFeature?
@@ -234,6 +234,18 @@ final class AppModel {
     @ObservationIgnored private var liveMergeCacheValue: [SensorReading] = []
     @ObservationIgnored private var sensorRefreshFingerprints:
         [Date: SensorRefreshFingerprint] = [:]
+    @ObservationIgnored private var integrationRefreshGate =
+        TimelineIntegrationRefreshGate()
+    @ObservationIgnored private var integrationRefreshSkipCount = 0
+    @ObservationIgnored private var lastIntegrationSkipLogUptime: TimeInterval = 0
+    @ObservationIgnored private var lastWidgetPayloadIdentity:
+        TaptionWidgetPayload?
+    @ObservationIgnored private var lastWatchPayloadIdentity:
+        TaptionWatchPayload?
+    @ObservationIgnored private var widgetPayloadSkipCount = 0
+    @ObservationIgnored private var watchPayloadSkipCount = 0
+    @ObservationIgnored private var lastWidgetSkipLogUptime: TimeInterval = 0
+    @ObservationIgnored private var lastWatchSkipLogUptime: TimeInterval = 0
 
     // Keep the live route bounded without shifting the whole array on every
     // GPS tick.  Trimming in batches makes long running sessions amortized
@@ -687,7 +699,10 @@ final class AppModel {
         detail = nil
         groupNavigationPath = []
         if tab == .schedule || tab == .review {
-            Task { await refreshConnectedRecordsNow() }
+            // Selecting the same root tab is common while the timeline is
+            // already visible. The integration gate below keeps that UI
+            // action from rereading the same HealthKit/location window.
+            Task { await refreshConnectedRecordsNow(force: false) }
         }
     }
 
@@ -732,16 +747,17 @@ final class AppModel {
     }
 
     func selectScale(_ scale: TimeScale) {
-        guard selectedScale != scale else { return }
-        selectedScale = scale
+        let scheduleScale = scale.scheduleEquivalent
+        guard selectedScale != scheduleScale else { return }
+        selectedScale = scheduleScale
         if settings.rememberLastScale {
-            snapshot.settings.startScale = scale.timelineLevel
+            snapshot.settings.startScale = scheduleScale.timelineLevel
         }
-        Task {
-            await refreshEnabledData(persistDeviceSnapshot: false)
-            if settings.rememberLastScale {
-                await persist()
-            }
+        // NLE rule: changing the view resolution only changes the local
+        // viewport. HealthKit, location, calendar and app-usage sources are
+        // immutable document inputs and must not be re-read for a tab tap.
+        if settings.rememberLastScale {
+            Task { await persist() }
         }
     }
 
@@ -1006,7 +1022,9 @@ final class AppModel {
                 // records and loading device integrations can be expensive;
                 // neither should hold the first timeline frame hostage.
                 snapshot = source
-                selectedScale = TimeScale(timelineLevel: source.settings.startScale)
+                selectedScale = TimeScale(
+                    timelineLevel: source.settings.startScale
+                ).scheduleEquivalent
                 selectedCatCoat = CatCoat(catStyle: source.settings.catStyle)
                 if source.updatedAt == .distantPast,
                    source.plans.isEmpty {
@@ -1062,7 +1080,9 @@ final class AppModel {
                 return
             }
             snapshot = loaded
-            selectedScale = TimeScale(timelineLevel: loaded.settings.startScale)
+            selectedScale = TimeScale(
+                timelineLevel: loaded.settings.startScale
+            ).scheduleEquivalent
             selectedCatCoat = CatCoat(catStyle: loaded.settings.catStyle)
             await applyPendingWidgetCommands(repositoryAlreadyLoaded: true)
             bootstrapPreparationTask = nil
@@ -1287,7 +1307,9 @@ final class AppModel {
         }
     }
 
-    func requestAppUsageAuthorization() async {
+    func requestAppUsageAuthorization(
+        openSettingsIfNeeded: Bool = true
+    ) async {
         guard !isRefreshingIntegrations else { return }
         isRefreshingIntegrations = true
         defer { isRefreshingIntegrations = false }
@@ -1303,8 +1325,22 @@ final class AppModel {
             await persist()
         } catch {
             refreshAppUsageAuthorizationState()
+            if openSettingsIfNeeded,
+               appUsageAuthorizationState == .dataAccessUnavailable {
+                openAppUsageSettings()
+            }
             userFacingError = error.localizedDescription
         }
+    }
+
+    /// Screen Time은 앱 안에서 권한을 다시 승인할 수 없는 상태가 있다.
+    /// 공개된 iOS URL은 앱의 설정 화면까지이므로, 시스템 설정에서 Screen
+    /// Time의 앱 및 웹사이트 활동·데이터 공유를 확인하도록 바로 보낸다.
+    func openAppUsageSettings() {
+        guard let url = URL(
+            string: UIApplication.openSettingsURLString
+        ) else { return }
+        UIApplication.shared.open(url)
     }
 
     func requestPhotos() async {
@@ -1551,10 +1587,43 @@ final class AppModel {
         includesCurrentDeviceDay: Bool = false,
         dataSpan: TimeSpan? = nil,
         healthSpan: TimeSpan? = nil,
-        persistDeviceSnapshot: Bool = true
+        persistDeviceSnapshot: Bool = true,
+        force: Bool = false
     ) async {
         await waitForBootstrapPreparation()
         guard !isRefreshingIntegrations else { return }
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: selectedDate)
+        let refreshKey = [
+            selectedScale.rawValue,
+            String(dayStart.timeIntervalSinceReferenceDate),
+            String(includesCurrentDeviceDay),
+            String(settings.hashValue),
+            dataSpan.map { String($0.start.timeIntervalSinceReferenceDate) }
+                ?? "visible",
+            healthSpan.map { String($0.start.timeIntervalSinceReferenceDate) }
+                ?? "default",
+        ].joined(separator: "|")
+        let uptime = ProcessInfo.processInfo.systemUptime
+        guard integrationRefreshGate.shouldStart(
+            key: refreshKey,
+            nowUptime: uptime,
+            force: force
+        ) else {
+            integrationRefreshSkipCount += 1
+            if uptime - lastIntegrationSkipLogUptime >= 5 {
+                lastIntegrationSkipLogUptime = uptime
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "integration_refresh_skipped",
+                    fields: [
+                        "reason": "same_window",
+                        "count": String(integrationRefreshSkipCount),
+                    ]
+                )
+            }
+            return
+        }
+        let startedAt = uptime
         TaptionPlanDiagnosticsLogger.shared.record(
             "integration_refresh_started",
             fields: [
@@ -1565,12 +1634,22 @@ final class AppModel {
         isRefreshingIntegrations = true
         defer {
             isRefreshingIntegrations = false
+            integrationRefreshGate.commit(
+                key: refreshKey,
+                nowUptime: ProcessInfo.processInfo.systemUptime
+            )
             TaptionPlanDiagnosticsLogger.shared.record(
                 "integration_refresh_finished",
                 fields: [
                     "actuals": String(snapshot.actuals.count),
                     "travel": String(snapshot.travel.count),
                     "weather": String(snapshot.weather.count),
+                    "duration_ms": String(
+                        Int(
+                            (ProcessInfo.processInfo.systemUptime - startedAt)
+                                * 1_000
+                        )
+                    ),
                 ]
             )
         }
@@ -1635,9 +1714,12 @@ final class AppModel {
     /// Publishes the latest HealthKit/Watch and sensor records before a
     /// routine dashboard is shown. Automatic evidence is ground truth, so a
     /// dashboard must not wait for the next foreground polling interval.
-    func refreshConnectedRecordsNow() async {
+    func refreshConnectedRecordsNow(force: Bool = true) async {
         await bootstrap()
-        await refreshEnabledData(includesCurrentDeviceDay: true)
+        await refreshEnabledData(
+            includesCurrentDeviceDay: true,
+            force: force
+        )
     }
 
     func synchronizeCloud(showErrors: Bool = true) async {
@@ -1649,6 +1731,12 @@ final class AppModel {
             return
         }
         isCloudSyncing = true
+        if showErrors {
+            // Settings에서 사용자가 다시 누른 경우에는 이전 Production 스키마
+            // 실패를 캐시하지 않고 즉시 재확인한다. 자동 저장은 반복 요청을
+            // 만들지 않도록 서비스의 보호 상태를 유지한다.
+            await cloudSyncService.resetSchemaAvailability()
+        }
         if await cloudSyncService.isSchemaUnavailable() {
             snapshot.settings.permissions[.cloud] = .unavailable
             cloudUnavailableReason = .schemaMissing
@@ -1681,10 +1769,20 @@ final class AppModel {
                     && (error as? RepositoryError) == .cloudSchemaUnavailable {
                 snapshot.settings.permissions[.cloud] = .unavailable
                 cloudUnavailableReason = .schemaMissing
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "cloud_sync_schema_unavailable",
+                    level: .error,
+                    fields: CloudKitErrorPolicy.diagnosticFields(for: error)
+                )
                 Self.integrationLogger.error(
                     "CloudKit production schema is unavailable; local data remains authoritative"
                 )
             } else if showErrors {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "cloud_sync_failed",
+                    level: .error,
+                    fields: CloudKitErrorPolicy.diagnosticFields(for: error)
+                )
                 userFacingError =
                     "iCloud와 동기화하지 못했습니다. \(error.localizedDescription)"
             }
@@ -1700,8 +1798,9 @@ final class AppModel {
     }
 
     func setStartScale(_ scale: TimeScale) {
-        snapshot.settings.startScale = scale.timelineLevel
-        selectedScale = scale
+        let scheduleScale = scale.scheduleEquivalent
+        snapshot.settings.startScale = scheduleScale.timelineLevel
+        selectedScale = scheduleScale
         Task { await persist() }
     }
 
@@ -1776,8 +1875,14 @@ final class AppModel {
     /// 워치는 나중에 페어링될 수도, 앱이 나중에 설치될 수도 있다. 세션이
     /// 상태를 알릴 때마다 여기로 들어와 안내가 따라 바뀐다.
     func applyAppleWatchConnectionState(_ state: AppleWatchConnectionState) {
-        if appleWatchConnectionState != state {
+        let changed = appleWatchConnectionState != state
+        if changed {
             appleWatchConnectionState = state
+            // Reachability is not part of the Watch payload itself. Reset the
+            // identity so a newly reachable companion receives the latest
+            // queue once, without restoring the old duplicate-send loop.
+            lastWatchPayloadIdentity = nil
+            publishWatchPayload()
         }
         // 설치를 한 번 확인했으면 사용자가 나중에 지우더라도 다시 권하지 않는다.
         guard state == .background || state == .reachable,
@@ -2048,7 +2153,7 @@ final class AppModel {
 
     private var diagnosticsSummary: [String: String] {
         let bundle = Bundle.main
-        return [
+        var summary: [String: String] = [
             "app_version": bundle.object(
                 forInfoDictionaryKey: "CFBundleShortVersionString"
             ) as? String ?? "unknown",
@@ -2069,8 +2174,17 @@ final class AppModel {
             "location_enabled": String(settings.locationEnabled),
             "health_enabled": String(settings.healthEnabled),
             "cloud_status": cloudStatusText,
+            "cloud_status_reason": cloudUnavailableReason?.statusLabel ?? "없음",
             "widget_sync": widgetSyncStatusText,
+            "integration_refresh_skipped": String(integrationRefreshSkipCount),
+            "widget_payload_skipped": String(widgetPayloadSkipCount),
+            "watch_payload_skipped": String(watchPayloadSkipCount),
         ]
+        summary.merge(
+            TaptionPlanDiagnosticsTravelSummary.fields(for: snapshot.travel),
+            uniquingKeysWith: { _, new in new }
+        )
+        return summary
     }
 
     func deleteAllUserData() async {
@@ -4011,7 +4125,11 @@ final class AppModel {
         )
         let archivedReadings: [SensorReading]
         TaptionPlanDiagnosticsLogger.shared.record(
-            "sensor_timeline_refresh_started"
+            "sensor_timeline_refresh_started",
+            fields: [
+                "span_start": String(span.start.timeIntervalSinceReferenceDate),
+                "span_end": String(span.end.timeIntervalSinceReferenceDate),
+            ]
         )
         do {
             archivedReadings = try await sensorService.archivedReadings(
@@ -4072,6 +4190,10 @@ final class AppModel {
         let fingerprintUnchanged =
             sensorRefreshFingerprints[span.start] == refreshFingerprint
         if fingerprintUnchanged {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_timeline_refresh_skipped",
+                fields: ["reason": "fingerprint_unchanged"]
+            )
             guard (settings.locationEnabled || settings.weatherEnabled),
                   weatherNeedsRefresh(for: latestReadingWithPoint) else {
                 return
@@ -4150,6 +4272,18 @@ final class AppModel {
            healthRouteReadings.isEmpty,
            motionActivities.isEmpty,
            healthMovementEvidence.isEmpty {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_travel_inference_completed",
+                fields: [
+                    "gps_readings": String(archivedReadings.count),
+                    "health_route_readings": String(healthRouteReadings.count),
+                    "motion_activities": String(motionActivities.count),
+                    "places": "0",
+                    "travel": "0",
+                    "persisted": "false",
+                    "reason": "no_evidence",
+                ]
+            )
             return
         }
 
@@ -4211,16 +4345,22 @@ final class AppModel {
             }
         let places = basePlaces + walkingLocations
         let floors = floorTimeline.transitions
+        let gpsSegments = MovementRouteBuilder().build(
+            stays: basePlaces,
+            readings: readings,
+            healthEvidence: healthMovementEvidence
+        )
+        let previousSubwaySegments = snapshot.travel.filter {
+            $0.mode == .subway
+                && $0.span.intersection(with: span) != nil
+        }
         let inferredTravel = AppleDeviceGroundTruthEngine.mergingTravel(
-            gpsSegments: MovementRouteBuilder().build(
-                stays: basePlaces,
-                readings: readings,
-                healthEvidence: healthMovementEvidence
-            ),
+            gpsSegments: gpsSegments,
             motionActivities: motionActivities,
             pedometer: pedometer,
             healthEvidence: healthMovementEvidence,
-            readings: readings
+            readings: readings,
+            preservedSubwaySegments: previousSubwaySegments
         )
         let travel = AppleDeviceGroundTruthEngine.coalescingTravel(
             AppleDeviceGroundTruthEngine.resolvingOverlaps(
@@ -4249,6 +4389,33 @@ final class AppModel {
         } || healthRouteReadings.contains {
             $0.point != nil
         }
+        var travelDiagnostics =
+            TaptionPlanDiagnosticsTravelSummary.fields(for: travel)
+        travelDiagnostics["gps_readings"] = String(archivedReadings.count)
+        travelDiagnostics["health_route_readings"] = String(
+            healthRouteReadings.count
+        )
+        travelDiagnostics["motion_activities"] = String(
+            motionActivities.count
+        )
+        travelDiagnostics["places"] = String(places.count)
+        travelDiagnostics["base_places"] = String(basePlaces.count)
+        travelDiagnostics["persisted"] = String(hasPrimaryLocationEvidence)
+        let subwayCount = travel.filter { $0.mode == .subway }.count
+        if !previousSubwaySegments.isEmpty,
+           subwayCount > 0 {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_subway_stabilized",
+                fields: [
+                    "previous": String(previousSubwaySegments.count),
+                    "current": String(subwayCount),
+                ]
+            )
+        }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sensor_travel_inference_completed",
+            fields: travelDiagnostics
+        )
 
         if hasPrimaryLocationEvidence {
             snapshot.travel.removeAll {
@@ -5350,6 +5517,15 @@ final class AppModel {
             Self.integrationLogger.error(
                 "Screen Time refresh failed: \(error.localizedDescription, privacy: .public)"
             )
+            if let screenTimeError = error as? ScreenTimeUsageError {
+                switch screenTimeError {
+                case .dataAccessUnavailable, .dataAccessNotGranted:
+                    appUsageAuthorizationState = .dataAccessUnavailable
+                    snapshot.settings.permissions[.appUsage] = .unavailable
+                default:
+                    break
+                }
+            }
             if showErrors {
                 userFacingError = "앱 사용시간을 읽지 못했습니다. \(error.localizedDescription)"
             }
@@ -6014,6 +6190,43 @@ final class AppModel {
         }
     }
 
+    private func normalizedWidgetPayload(
+        _ payload: TaptionWidgetPayload
+    ) -> TaptionWidgetPayload {
+        var normalized = payload
+        normalized.generatedAt = .distantPast
+        // updatedAt is an envelope timestamp. The source fingerprint and
+        // item values carry the actual widget content, so a sensor-only save
+        // must not force another app-group write.
+        normalized.sourceSnapshotUpdatedAt = nil
+        // Recompute-free identity: the fingerprint intentionally includes
+        // movement end times, while the comparison below canonicalizes an
+        // open movement edge to distantPast.
+        normalized.sourceFingerprint = nil
+        if let center = payload.displayCenterDate {
+            let minute = floor(center.timeIntervalSinceReferenceDate / 60)
+            normalized.displayCenterDate = Date(
+                timeIntervalSinceReferenceDate: minute * 60
+            )
+        }
+        // Open-ended automatic records use "now" as their presentation end.
+        // Ignore that moving edge while comparing payload content.
+        normalized.items = payload.items.map { item in
+            var item = item
+            let isOpenEndedLane =
+                item.resolvedLane == .activity
+                    || item.resolvedLane == .sleep
+                    || item.resolvedLane == .movement
+            if isOpenEndedLane,
+               item.endsAt >= payload.generatedAt.addingTimeInterval(-120),
+               item.endsAt <= payload.generatedAt.addingTimeInterval(120) {
+                item.endsAt = .distantPast
+            }
+            return item
+        }
+        return normalized
+    }
+
     private func publishWidgetPayload() {
         let calendar = Calendar.autoupdatingCurrent
         let now = Date.now
@@ -6022,8 +6235,26 @@ final class AppModel {
             now: now,
             calendar: calendar
         )
+        let identity = normalizedWidgetPayload(payload)
+        if lastWidgetPayloadIdentity == identity {
+            widgetPayloadSkipCount += 1
+            let uptime = ProcessInfo.processInfo.systemUptime
+            if uptime - lastWidgetSkipLogUptime >= 5 {
+                lastWidgetSkipLogUptime = uptime
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "widget_payload_skipped",
+                    fields: [
+                        "reason": "unchanged",
+                        "count": String(widgetPayloadSkipCount),
+                    ]
+                )
+            }
+            publishWatchPayload(now: now, calendar: calendar)
+            return
+        }
         do {
             try TaptionWidgetSharedStore.writePayload(payload)
+            lastWidgetPayloadIdentity = identity
             let locationCount = payload.items.filter {
                 $0.resolvedLane == .location
             }.count
@@ -6140,8 +6371,30 @@ final class AppModel {
                 now.timeIntervalSince($0.endedAt) <= 2 * 3_600 ? $0 : nil
             }
         )
+        var identity = watchPayload
+        identity.generatedAt = .distantPast
+        // The live viewport starts at "now" for rendering. It is not payload
+        // content, otherwise every sensor callback would queue another Watch
+        // transfer even when the execution queue is unchanged.
+        identity.viewportStart = dayStart
+        if lastWatchPayloadIdentity == identity {
+            watchPayloadSkipCount += 1
+            let uptime = ProcessInfo.processInfo.systemUptime
+            if uptime - lastWatchSkipLogUptime >= 5 {
+                lastWatchSkipLogUptime = uptime
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_payload_skipped",
+                    fields: [
+                        "reason": "unchanged",
+                        "count": String(watchPayloadSkipCount),
+                    ]
+                )
+            }
+            return
+        }
         do {
             try watchConnectivityService.update(payload: watchPayload)
+            lastWatchPayloadIdentity = identity
             TaptionPlanDiagnosticsLogger.shared.record(
                 "watch_settings_queued",
                 fields: [
@@ -6279,6 +6532,12 @@ final class AppModel {
                             && (error as? RepositoryError)
                                 == .cloudSchemaUnavailable {
                         snapshot.settings.permissions[.cloud] = .unavailable
+                        cloudUnavailableReason = .schemaMissing
+                        TaptionPlanDiagnosticsLogger.shared.record(
+                            "cloud_upload_schema_unavailable",
+                            level: .error,
+                            fields: CloudKitErrorPolicy.diagnosticFields(for: error)
+                        )
                         Self.integrationLogger.error(
                             "CloudKit production schema is unavailable; local save completed"
                         )

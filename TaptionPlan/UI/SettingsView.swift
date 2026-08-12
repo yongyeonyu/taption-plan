@@ -68,7 +68,7 @@ struct SettingsView: View {
 
                     settingsSection(
                         "화면과 동작",
-                        summary: "현재 \(TimeScale(timelineLevel: model.settings.startScale).rawValue)"
+                        summary: "현재 \(TimeScale(timelineLevel: model.settings.startScale).scheduleEquivalent.rawValue)"
                     ) {
                         settingsScaleRow(
                             icon: "chart.bar.xaxis",
@@ -81,7 +81,7 @@ struct SettingsView: View {
                         settingsToggleRow(
                             icon: "arrow.uturn.forward",
                             title: "마지막 배율 기억",
-                            subtitle: "일·주·월·년의 마지막 선택 유지",
+                            subtitle: "일·주·월의 마지막 선택 유지",
                             isOn: Binding(
                                 get: {
                                     model.settings.rememberLastScale
@@ -456,15 +456,35 @@ struct SettingsView: View {
     }
 
     private var appUsageRow: some View {
-        settingsRow(
-            icon: "app.badge.clock",
-            iconBackground: Color(red: 0.93, green: 0.90, blue: 0.98),
-            iconColor: Color(red: 0.42, green: 0.34, blue: 0.64),
-            title: ScreenTimeUsageRecordEngine.laneTitle,
-            subtitle: "Screen Time 앱별 사용 기록",
-            value: model.appUsageStatusText
-        ) {
-            Task { await model.requestAppUsageAuthorization() }
+        VStack(alignment: .leading, spacing: 5) {
+            settingsRow(
+                icon: "app.badge.clock",
+                iconBackground: Color(red: 0.93, green: 0.90, blue: 0.98),
+                iconColor: Color(red: 0.42, green: 0.34, blue: 0.64),
+                title: ScreenTimeUsageRecordEngine.laneTitle,
+                subtitle: "Screen Time 앱별 사용 기록",
+                value: model.appUsageStatusText
+            ) {
+                Task { await model.requestAppUsageAuthorization() }
+            }
+
+            if let guidance = model.appUsageAuthorizationState.guidance {
+                HStack(alignment: .top, spacing: 7) {
+                    Text(guidance)
+                        .font(.taption(size: SettingsTypography.footnote))
+                        .foregroundStyle(Color.tpSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("설정 열기") {
+                        model.openAppUsageSettings()
+                    }
+                    .font(.taption(size: SettingsTypography.footnote, weight: .bold))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.tpInk)
+                    .fixedSize()
+                }
+                .padding(.horizontal, 37)
+                .padding(.bottom, 7)
+            }
         }
     }
 
@@ -1391,7 +1411,7 @@ struct SettingsView: View {
         selection: TimeScale
     ) -> some View {
         Menu {
-            ForEach(TimeScale.allCases) { scale in
+            ForEach(TimeScale.scheduleCases) { scale in
                 Button {
                     model.setStartScale(scale)
                 } label: {
@@ -2142,7 +2162,7 @@ private extension TimeScale {
         case .day: self = .day
         case .week: self = .week
         case .month: self = .month
-        case .year: self = .year
+        case .year: self = .month
         }
     }
 }

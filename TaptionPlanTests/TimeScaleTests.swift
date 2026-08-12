@@ -8,6 +8,14 @@ final class TimeScaleTests: XCTestCase {
         }
     }
 
+    func testScheduleUsesDayWeekMonthAndNormalizesYearToMonth() {
+        XCTAssertEqual(TimeScale.scheduleCases, [.day, .week, .month])
+        XCTAssertEqual(TimeScale.year.scheduleEquivalent, .month)
+        XCTAssertNil(TimeScale.month.scheduleBroader)
+        XCTAssertEqual(TimeScale.week.scheduleBroader, .month)
+        XCTAssertFalse(TimelineZoomPreset.scheduleCases.contains(.oneYear))
+    }
+
     func testCircularActivityLabelsUseTheirClockQuadrant() {
         XCTAssertEqual(
             CircularActivityLabelQuadrant(clockFraction: 0),
@@ -216,6 +224,128 @@ final class TimeScaleTests: XCTestCase {
             )
         )
         XCTAssertEqual(lastUptime, 10.001)
+    }
+
+    func testIntegrationRefreshGateSuppressesSameWindowButAllowsNewWindow() {
+        var gate = TimelineIntegrationRefreshGate()
+
+        XCTAssertTrue(
+            gate.shouldStart(key: "day|a", nowUptime: 10)
+        )
+        gate.commit(key: "day|a", nowUptime: 10)
+        XCTAssertFalse(
+            gate.shouldStart(key: "day|a", nowUptime: 14.9)
+        )
+        XCTAssertTrue(
+            gate.shouldStart(key: "day|a", nowUptime: 15)
+        )
+        XCTAssertTrue(
+            gate.shouldStart(key: "day|b", nowUptime: 10.1)
+        )
+        XCTAssertTrue(
+            gate.shouldStart(key: "day|a", nowUptime: 10.1, force: true)
+        )
+    }
+
+    func testDiagnosticsTravelSummaryExposesSubwayRouteWithoutCoordinates() {
+        let start = Date(timeIntervalSinceReferenceDate: 10_000)
+        let route = SubwayRoutePath(
+            stops: [
+                SubwayRouteStop(
+                    lineName: "인천1호선",
+                    order: 0,
+                    stationName: "가정역",
+                    latitude: 37.0,
+                    longitude: 126.0
+                ),
+                SubwayRouteStop(
+                    lineName: "인천1호선",
+                    order: 1,
+                    stationName: "검암역",
+                    latitude: 37.1,
+                    longitude: 126.1
+                ),
+                SubwayRouteStop(
+                    lineName: "5호선",
+                    order: 2,
+                    stationName: "마곡나루역",
+                    latitude: 37.2,
+                    longitude: 126.2
+                ),
+            ],
+            lineNames: ["인천1호선", "5호선"],
+            transferStationNames: ["검암역"]
+        )
+        let subway = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(1_800)
+            ),
+            distanceMeters: 12_000,
+            confidence: .high,
+            evidence: ["rail route"],
+            isConfirmed: true,
+            subwayRoute: route
+        )
+        let car = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start.addingTimeInterval(1_800),
+                end: start.addingTimeInterval(2_000)
+            ),
+            distanceMeters: 100,
+            confidence: .medium,
+            evidence: ["motion"]
+        )
+
+        let fields = TaptionPlanDiagnosticsTravelSummary.fields(
+            for: [subway, car]
+        )
+
+        XCTAssertEqual(fields["subway_segment_count"], "1")
+        XCTAssertEqual(fields["subway_route_count"], "1")
+        XCTAssertEqual(fields["subway_route_lines"], "인천1호선+5호선")
+        XCTAssertEqual(
+            fields["subway_route_stations"],
+            "가정역→검암역→마곡나루역"
+        )
+        XCTAssertEqual(fields["subway_transfer_stations"], "검암역")
+        XCTAssertTrue(fields["travel_mode_counts"]?.contains("subway=1") == true)
+        XCTAssertTrue(fields["travel_mode_counts"]?.contains("car=1") == true)
+    }
+
+    func testNLEViewportPansAndMagnifiesWithoutChangingDocumentData() {
+        let base = Date(timeIntervalSinceReferenceDate: 10_000)
+        let viewport = NLETimelineViewport(
+            centerDate: base,
+            visibleDuration: 24 * 60 * 60
+        )
+
+        let panned = viewport.panned(by: 100, viewportWidth: 600)
+        XCTAssertEqual(
+            panned.centerDate.timeIntervalSince(base),
+            -4 * 60 * 60,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(panned.visibleDuration, viewport.visibleDuration)
+
+        let magnified = viewport.magnified(by: 2, anchor: 0.25)
+        XCTAssertEqual(magnified.visibleDuration, 12 * 60 * 60, accuracy: 0.001)
+        XCTAssertEqual(
+            magnified.span.start.timeIntervalSince(
+                viewport.span.start.addingTimeInterval(3 * 60 * 60)
+            ),
+            0,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            NLETimelineViewport(
+                centerDate: base,
+                visibleDuration: 90 * 24 * 60 * 60
+            ).visibleDuration,
+            NLETimelineViewport.maximumScheduleDuration
+        )
     }
 
     func testCachedViewportProjectionMovesOnlyTheViewportDuringDrag() {

@@ -24,6 +24,61 @@ enum TaptionDiagnosticError {
     }
 }
 
+/// Safe, compact movement metadata for support packages. Coordinates and raw
+/// sensor samples stay out of the export, while mode and subway-route names
+/// make a transit inference auditable from the iCloud log alone.
+enum TaptionPlanDiagnosticsTravelSummary {
+    static func fields(for travel: [TravelSegment]) -> [String: String] {
+        let modeCounts = travel.reduce(into: [TravelMode: Int]()) {
+            counts,
+            segment in
+            counts[segment.mode, default: 0] += 1
+        }
+        let modeText = TravelMode.allCases
+            .compactMap { mode -> String? in
+                guard let count = modeCounts[mode], count > 0 else {
+                    return nil
+                }
+                return "\(mode.rawValue)=\(count)"
+            }
+            .joined(separator: ",")
+        let subwaySegments = travel.filter { $0.mode == .subway }
+        let routes = subwaySegments.compactMap { $0.subwayRoute }
+        let routeLines = uniqueJoined(
+            routes.map { $0.lineNames.joined(separator: "+") }
+        )
+        let routeStations = uniqueJoined(
+            routes.map { route in
+                route.stops
+                    .sorted { $0.order < $1.order }
+                    .map { $0.stationName }
+                    .joined(separator: "→")
+            }
+        )
+        let transfers = uniqueJoined(
+            routes.flatMap { $0.transferStationNames }
+        )
+        return [
+            "travel_mode_counts": modeText,
+            "travel_confirmed_count": String(
+                travel.filter { $0.isConfirmed }.count
+            ),
+            "travel_high_confidence_count": String(
+                travel.filter { $0.confidence == .high }.count
+            ),
+            "subway_segment_count": String(subwaySegments.count),
+            "subway_route_count": String(routes.count),
+            "subway_route_lines": routeLines,
+            "subway_route_stations": routeStations,
+            "subway_transfer_stations": transfers,
+        ]
+    }
+
+    private static func uniqueJoined(_ values: [String]) -> String {
+        Array(Set(values.filter { !$0.isEmpty })).sorted().joined(separator: ";")
+    }
+}
+
 final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     static let shared = TaptionPlanDiagnosticsLogger()
 
@@ -189,7 +244,7 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
         let text = """
         Taption Plan diagnostics
         created_at: \(ISO8601DateFormatter().string(from: .now))
-        privacy: titles, memo text, coordinates and raw health values are excluded
+        privacy: titles, memo text, coordinates and raw health values are excluded; detected station names and lines may be included for transit debugging
 
         ## environment
         \(environment)

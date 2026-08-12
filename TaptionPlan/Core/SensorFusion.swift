@@ -295,14 +295,20 @@ struct TravelModeClassifier: Sendable {
         let coordinateTrajectory = SubwayStationCatalog.coordinateTrajectory(
             from: ordered
         )
-        let railStations = signaledRailStations.count >= 2
-            ? signaledRailStations
-            : coordinateTrajectory?.observedStationNames ?? signaledRailStations
-        let resolvedSubwayRoute = signaledRailStations.count >= 2
+        let signaledSubwayRoute = signaledRailStations.count >= 2
             ? SubwayStationCatalog.route(for: signaledRailStations)
-            : coordinateTrajectory?.route
-        let coordinateRailContext = signaledRailStations.count < 2
+            : nil
+        let resolvedSubwayRoute = SubwayStationCatalog.bestRoute([
+            signaledSubwayRoute,
+            coordinateTrajectory?.route,
+        ])
+        let usesCoordinateRoute = coordinateTrajectory?.route
+            == resolvedSubwayRoute
             && coordinateTrajectory != nil
+        let railStations = usesCoordinateRoute
+            ? coordinateTrajectory?.observedStationNames ?? signaledRailStations
+            : signaledRailStations
+        let coordinateRailContext = usesCoordinateRoute
         let railContext = stationRatio >= 0.2
             || railRatio >= 0.25
             || coordinateRailContext
@@ -2302,10 +2308,55 @@ enum SubwayTravelSegmentEngine {
         let maximumGap = maximumReadingGap.isFinite
             ? max(0, maximumReadingGap)
             : defaultMaximumReadingGap
-        return groups(from: readings, maximumGap: maximumGap).compactMap { group in
+        return inferSegments(
+            from: groups(from: readings, maximumGap: maximumGap)
+        )
+    }
+
+    /// Prefer the movement windows already found between known places. A
+    /// whole-day coordinate pass can join morning and evening commutes and
+    /// then choose an unrelated rail path, even though each individual move
+    /// contains enough station evidence.
+    static func segments(
+        from readings: [SensorReading],
+        within candidateSpans: [TimeSpan],
+        maximumReadingGap: TimeInterval = defaultMaximumReadingGap
+    ) -> [TravelSegment] {
+        guard !candidateSpans.isEmpty else {
+            return segments(
+                from: readings,
+                maximumReadingGap: maximumReadingGap
+            )
+        }
+        let maximumGap = maximumReadingGap.isFinite
+            ? max(0, maximumReadingGap)
+            : defaultMaximumReadingGap
+        let candidateGroups = candidateSpans.flatMap { span -> [[SensorReading]] in
+            let context = TimeSpan(
+                start: span.start.addingTimeInterval(-2 * 60),
+                end: span.end.addingTimeInterval(2 * 60)
+            )
+            return groups(
+                from: readings.filter { context.contains($0.timestamp) },
+                maximumGap: maximumGap
+            )
+        }
+        return inferSegments(from: candidateGroups)
+            .filter { segment in
+                candidateSpans.contains { span in
+                    segment.span.intersection(with: span) != nil
+                }
+            }
+    }
+
+    private static func inferSegments(
+        from groups: [[SensorReading]]
+    ) -> [TravelSegment] {
+        var result: [TravelSegment] = []
+        for group in groups {
             guard let trajectory = SubwayStationCatalog.coordinateTrajectory(
                 from: group
-            ) else { return nil }
+            ) else { continue }
             let contextSpan = TimeSpan(
                 start: trajectory.span.start.addingTimeInterval(-2 * 60),
                 end: trajectory.span.end.addingTimeInterval(2 * 60)
@@ -2315,9 +2366,9 @@ enum SubwayTravelSegmentEngine {
                 readings: context,
                 inside: trajectory.span
             )
-            guard inference.mode == .subway else { return nil }
+            guard inference.mode == .subway else { continue }
             let route = inference.subwayRoute ?? trajectory.route
-            return TravelSegment(
+            result.append(TravelSegment(
                 mode: .subway,
                 span: trajectory.span,
                 distanceMeters: pathDistance(route.coordinates),
@@ -2326,8 +2377,9 @@ enum SubwayTravelSegmentEngine {
                     Set(inference.evidence + ["원본 GPS 철도 궤적 복원"])
                 ).sorted(),
                 subwayRoute: route
-            )
+            ))
         }
+        return result
     }
 
     private static func groups(
@@ -2616,10 +2668,20 @@ enum AppleDeviceGroundTruthEngine {
         motionActivities: [MotionActivityRecord],
         pedometer: PedometerSummary?,
         healthEvidence: [AppleMovementEvidence] = [],
-        readings: [SensorReading] = []
+        readings: [SensorReading] = [],
+        preservedSubwaySegments: [TravelSegment] = []
     ) -> [TravelSegment] {
-        let trajectorySubwaySegments = SubwayTravelSegmentEngine
-            .segments(from: readings)
+        let candidateSpans = gpsSegments.map(\.span)
+        let detectedSubwaySegments = SubwayTravelSegmentEngine
+            .segments(
+                from: readings,
+                within: candidateSpans
+            )
+        let trajectorySubwaySegments = stabilizedSubwaySegments(
+            detected: detectedSubwaySegments,
+            preserved: preservedSubwaySegments,
+            candidateSpans: candidateSpans
+        )
             .map { segment in
                 guard let matched = gpsSegments
                     .filter({ overlappingEnough($0.span, segment.span) })
@@ -2742,6 +2804,70 @@ enum AppleDeviceGroundTruthEngine {
 
         return (primarySegments + watchSegments + motionSegments)
             .sorted { $0.span.start < $1.span.start }
+    }
+
+    private static func stabilizedSubwaySegments(
+        detected: [TravelSegment],
+        preserved: [TravelSegment],
+        candidateSpans: [TimeSpan]
+    ) -> [TravelSegment] {
+        var result = detected
+        guard !candidateSpans.isEmpty else { return result }
+        for segment in preserved where segment.mode == .subway {
+            guard segment.subwayRoute != nil,
+                  segment.confidence == .high,
+                  candidateSpans.contains(where: { candidate in
+                      let overlap = overlapDuration(segment.span, candidate)
+                      let shorter = max(
+                          1,
+                          min(segment.span.duration, candidate.duration)
+                      )
+                      return overlap / shorter >= 0.2
+                  }) else {
+                continue
+            }
+            guard let index = result.firstIndex(where: {
+                overlappingEnough($0.span, segment.span)
+            }) else {
+                result.append(segment)
+                continue
+            }
+            result[index] = preferredSubwaySegment(
+                result[index],
+                over: segment
+            )
+        }
+        return result
+    }
+
+    private static func preferredSubwaySegment(
+        _ lhs: TravelSegment,
+        over rhs: TravelSegment
+    ) -> TravelSegment {
+        let lhsStops = lhs.subwayRoute?.stops.count ?? 0
+        let rhsStops = rhs.subwayRoute?.stops.count ?? 0
+        let preferred: TravelSegment
+        if lhsStops != rhsStops {
+            preferred = lhsStops > rhsStops ? lhs : rhs
+        } else if lhs.confidence != rhs.confidence {
+            preferred = lhs.confidence == .high ? lhs : rhs
+        } else {
+            preferred = lhs.span.duration >= rhs.span.duration ? lhs : rhs
+        }
+        var value = preferred
+        value.span = TimeSpan(
+            start: min(lhs.span.start, rhs.span.start),
+            end: max(lhs.span.end, rhs.span.end)
+        )
+        value.evidence = Array(Set(lhs.evidence + rhs.evidence)).sorted()
+        value.isConfirmed = lhs.isConfirmed || rhs.isConfirmed
+        value.fromPlaceID = lhs.fromPlaceID ?? rhs.fromPlaceID
+        value.toPlaceID = lhs.toPlaceID ?? rhs.toPlaceID
+        value.distanceMeters = max(lhs.distanceMeters, rhs.distanceMeters)
+        value.subwayRoute = preferred.subwayRoute
+            ?? lhs.subwayRoute
+            ?? rhs.subwayRoute
+        return value
     }
 
     private static func overlappingEnough(

@@ -492,7 +492,7 @@ enum CloudUnavailableReason: Sendable {
         case .restricted: "기기에서 제한됨"
         case .temporarilyUnavailable: "잠시 후 다시"
         case .accountCheckFailed: "계정 확인 실패"
-        case .schemaMissing: "서버 준비 중"
+        case .schemaMissing: "서버 설정 필요"
         }
     }
 
@@ -509,23 +509,34 @@ enum CloudUnavailableReason: Sendable {
         case .accountCheckFailed:
             "iCloud 계정 상태를 확인하지 못했습니다. 네트워크를 확인한 뒤 이 줄을 눌러주세요."
         case .schemaMissing:
-            "iCloud 서버 준비가 끝나지 않았습니다. 그동안 기록은 이 기기에 안전하게 저장됩니다."
+            "iCloud 컨테이너의 TaptionSnapshot 스키마가 Production에 배포되지 않았습니다. 배포 전까지 기록은 이 기기에 안전하게 저장되며, 배포 후 이 줄을 눌러 다시 시도할 수 있습니다."
         }
     }
 }
 
 enum CloudKitErrorPolicy {
     static func isProductionSchemaUnavailable(_ error: Error) -> Bool {
-        let nsError = error as NSError
-        let values = [
-            error.localizedDescription,
-            nsError.localizedFailureReason ?? "",
-            nsError.userInfo[NSLocalizedRecoverySuggestionErrorKey] as? String
-                ?? "",
-        ]
-        let message = values.joined(separator: " ").lowercased()
+        let message = diagnosticMessage(for: error)
         return message.contains("cannot create new type")
             || message.contains("production schema")
+    }
+
+    static func diagnosticFields(for error: Error) -> [String: String] {
+        let nsError = error as NSError
+        var fields = [
+            "error_type": String(reflecting: type(of: error)),
+            "error_domain": nsError.domain,
+            "error_code": String(nsError.code),
+        ]
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            let underlyingError = underlying as NSError
+            fields["underlying_domain"] = underlyingError.domain
+            fields["underlying_code"] = String(underlyingError.code)
+        }
+        fields["failure_kind"] = isProductionSchemaUnavailable(error)
+            ? "production_schema"
+            : "cloudkit"
+        return fields
     }
 
     static func isRecordConflict(_ error: Error) -> Bool {
@@ -568,6 +579,27 @@ enum CloudKitErrorPolicy {
         ]
         .joined(separator: " ")
         .lowercased()
+    }
+
+    private static func diagnosticMessage(for error: Error) -> String {
+        let nsError = error as NSError
+        var values = [
+            error.localizedDescription,
+            nsError.localizedFailureReason ?? "",
+            nsError.userInfo[NSLocalizedRecoverySuggestionErrorKey] as? String
+                ?? "",
+        ]
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            values.append(diagnosticMessage(for: underlying))
+        }
+        if let partial = nsError.userInfo[CKPartialErrorsByItemIDKey]
+            as? [AnyHashable: Any] {
+            values.append(contentsOf: partial.values.compactMap { value in
+                guard let error = value as? Error else { return nil }
+                return diagnosticMessage(for: error)
+            })
+        }
+        return values.joined(separator: " ").lowercased()
     }
 }
 
@@ -630,27 +662,50 @@ actor CloudKitSnapshotSyncService {
     /// 다르다. 이유를 그대로 돌려주어 설정 화면이 안내할 수 있게 한다.
     func accountAvailability() async -> (PermissionState, CloudUnavailableReason?) {
         do {
-            switch try await container.accountStatus() {
+            let status = try await container.accountStatus()
+            let result: (PermissionState, CloudUnavailableReason?)
+            switch status {
             case .available:
-                return (.authorized, nil)
+                result = (.authorized, nil)
             case .couldNotDetermine:
-                return (.notDetermined, nil)
+                result = (.notDetermined, nil)
             case .noAccount:
-                return (.unavailable, .signedOut)
+                result = (.unavailable, .signedOut)
             case .restricted:
-                return (.unavailable, .restricted)
+                result = (.unavailable, .restricted)
             case .temporarilyUnavailable:
-                return (.unavailable, .temporarilyUnavailable)
+                result = (.unavailable, .temporarilyUnavailable)
             @unknown default:
-                return (.unavailable, .accountCheckFailed)
+                result = (.unavailable, .accountCheckFailed)
             }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "cloud_account_status",
+                fields: [
+                    "status": String(describing: status),
+                    "permission": result.0.rawValue,
+                    "reason": result.1?.statusLabel ?? "authorized",
+                ]
+            )
+            return result
         } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "cloud_account_check_failed",
+                level: .error,
+                fields: CloudKitErrorPolicy.diagnosticFields(for: error)
+            )
             return (.unavailable, .accountCheckFailed)
         }
     }
 
     func isSchemaUnavailable() -> Bool {
         schemaUnavailable
+    }
+
+    func resetSchemaAvailability() {
+        schemaUnavailable = false
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "cloud_schema_retry_requested"
+        )
     }
 
     func synchronize(
@@ -715,6 +770,17 @@ actor CloudKitSnapshotSyncService {
         } catch {
             if CloudKitErrorPolicy.isProductionSchemaUnavailable(error) {
                 schemaUnavailable = true
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "cloud_production_schema_unavailable",
+                    level: .error,
+                    fields: CloudKitErrorPolicy.diagnosticFields(for: error)
+                )
+            } else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "cloud_upload_failed",
+                    level: .error,
+                    fields: CloudKitErrorPolicy.diagnosticFields(for: error)
+                )
             }
             throw error
         }
@@ -742,6 +808,19 @@ actor CloudKitSnapshotSyncService {
             return try await database.record(for: recordID)
         } catch let error as CKError where error.code == .unknownItem {
             return nil
+        } catch {
+            if CloudKitErrorPolicy.isProductionSchemaUnavailable(error) {
+                schemaUnavailable = true
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "cloud_production_schema_unavailable",
+                    level: .error,
+                    fields: CloudKitErrorPolicy.diagnosticFields(for: error)
+                        .merging(["operation": "fetch"]) { current, _ in
+                            current
+                        }
+                )
+            }
+            throw error
         }
     }
 
