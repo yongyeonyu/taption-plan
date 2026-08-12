@@ -3227,9 +3227,15 @@ struct ReviewView: View {
                     // 어플 기록만 시스템이 그리는 실제 앱 이름·아이콘을 쓴다.
                     AppUsageNameLabel(tokenData: tokenData, size: 10)
                 } else {
-                    Text(child.title)
-                        .font(.taption(size: 10, weight: .medium))
-                        .lineLimit(1)
+                    HStack(spacing: 5) {
+                        Image(systemName: childSymbolName(child, in: group))
+                            .font(.taption(size: 9, weight: .semibold))
+                            .foregroundStyle(color(forCategoryID: group.id))
+                            .frame(width: 14)
+                        Text(child.title)
+                            .font(.taption(size: 10, weight: .medium))
+                            .lineLimit(1)
+                    }
                 }
                 if child.occurrenceCount > 1 {
                     Text("\(child.occurrenceCount)회")
@@ -3257,6 +3263,30 @@ struct ReviewView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(
             "\(displayedGroupName(group)) \(child.title) \(DurationText.koreanAtLeastAMinute(child.duration))"
+        )
+    }
+
+    private func childSymbolName(
+        _ child: RecordGroupChild,
+        in group: RecordCategoryGroup
+    ) -> String {
+        if let actual = model.snapshot.actuals.first(where: {
+            $0.id == child.recordID
+        }) {
+            if let behavior = actual.behavior,
+               let kind = WatchBehaviorKind.fromModelLabel(behavior) {
+                return kind.systemImage
+            }
+            return ActivityCorrectionCatalog.activitySystemImage(
+                title: actual.title,
+                behavior: actual.behavior,
+                categoryID: group.id
+            )
+        }
+        return ActivityCorrectionCatalog.activitySystemImage(
+            title: child.title,
+            behavior: nil,
+            categoryID: group.id
         )
     }
 
@@ -4290,7 +4320,7 @@ private enum ActivityCorrectionCatalog {
         )
     }
 
-    private static func activitySystemImage(
+    static func activitySystemImage(
         title: String,
         behavior: String?,
         categoryID: String
@@ -4735,7 +4765,10 @@ private struct ActivityCorrectionSheet: View {
         guard !isSaving, endAt > startAt else { return }
         RecentActivitySelectionStore.remember(option)
         selectedOption = option
-        save()
+        // `@State` is committed on the next render pass. Passing the option
+        // directly avoids saving the previous selection when the quick menu
+        // closes immediately after a tap.
+        save(option: option)
     }
 
     private func optionRow(_ option: ActivityCorrectionOption) -> some View {
@@ -4801,9 +4834,9 @@ private struct ActivityCorrectionSheet: View {
         DurationText.korean(max(0, endAt.timeIntervalSince(startAt)))
     }
 
-    private func save() {
+    private func save(option selectedOverride: ActivityCorrectionOption? = nil) {
         guard !isSaving, endAt > startAt else { return }
-        let option = selectedOption
+        let option = selectedOverride ?? selectedOption
         if target.isUnconfirmed, option == nil { return }
         if let option {
             RecentActivitySelectionStore.remember(option)

@@ -132,6 +132,17 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored.customActivityLabels, ["집안일"])
     }
 
+    func testBrushingTeethActivityUsesToothbrushIcon() {
+        XCTAssertEqual(
+            WatchBehaviorKind.brushingTeeth.systemImage,
+            "toothbrush.fill"
+        )
+        XCTAssertEqual(
+            ActivityCorrectionOption.custom("양치").systemImage,
+            "toothbrush.fill"
+        )
+    }
+
     func testFragmentCorrectionChangesOnlyTheSelectedSplitPiece() throws {
         let start = makeDate(2026, 8, 12, 0, 0)
         let source = ActualRecord(
