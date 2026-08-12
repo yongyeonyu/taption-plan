@@ -331,6 +331,37 @@ struct GanttViewport: Equatable, Sendable {
     }
 }
 
+/// Projects the moving visible window into a wider cached data window. Blocks
+/// can then keep their cached fractions while the viewport alone moves.
+enum TimelineCachedViewportProjection {
+    static func viewport(
+        displaySpan: TimeSpan,
+        dataSpan: TimeSpan,
+        viewport: GanttViewport
+    ) -> GanttViewport? {
+        guard displaySpan.duration > 0, dataSpan.duration > 0 else {
+            return nil
+        }
+        let visibleStart = displaySpan.start.addingTimeInterval(
+            displaySpan.duration * viewport.start
+        )
+        let visibleEnd = displaySpan.start.addingTimeInterval(
+            displaySpan.duration * viewport.end
+        )
+        guard dataSpan.start <= visibleStart,
+              visibleEnd <= dataSpan.end,
+              visibleStart < visibleEnd else {
+            return nil
+        }
+        return GanttViewport(
+            start: visibleStart.timeIntervalSince(dataSpan.start)
+                / dataSpan.duration,
+            length: visibleEnd.timeIntervalSince(visibleStart)
+                / dataSpan.duration
+        )
+    }
+}
+
 enum TimeSliderHandle: Sendable {
     case start
     case body

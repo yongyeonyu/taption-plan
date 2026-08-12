@@ -129,6 +129,19 @@ struct AppShellView: View {
                     recordID: recordID,
                     opensEditor: true
                 )
+            case .actualSegment(let recordID, let span):
+                ActualRecordDetailView(
+                    model: model,
+                    recordID: recordID,
+                    correctionSpan: span
+                )
+            case .actualSegmentEditor(let recordID, let span):
+                ActualRecordDetailView(
+                    model: model,
+                    recordID: recordID,
+                    correctionSpan: span,
+                    opensEditor: true
+                )
             case .locationTimeline:
                 LocationTimelineView(model: model)
             case .memo:

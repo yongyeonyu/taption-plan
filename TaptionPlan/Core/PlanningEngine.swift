@@ -23,6 +23,60 @@ enum TimelineInteractionFrameGate {
     }
 }
 
+/// Cached timeline rows keep blocks ordered by start time. This index narrows
+/// every drag frame to blocks that can intersect the visible window instead
+/// of rescanning a month or year of off-screen records.
+enum TimelineVisibleIntervalIndex {
+    static func prefixMaximumEnds(
+        starts: [Double],
+        lengths: [Double]
+    ) -> [Double] {
+        guard starts.count == lengths.count else { return [] }
+        var maximum = -Double.infinity
+        return zip(starts, lengths).map { start, length in
+            maximum = max(maximum, start + max(0, length))
+            return maximum
+        }
+    }
+
+    static func candidateRange(
+        starts: [Double],
+        prefixMaximumEnds: [Double],
+        visibleStart: Double,
+        visibleEnd: Double
+    ) -> Range<Int> {
+        guard starts.count == prefixMaximumEnds.count,
+              visibleStart < visibleEnd,
+              !starts.isEmpty else {
+            return 0..<0
+        }
+
+        var lower = 0
+        var upper = prefixMaximumEnds.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if prefixMaximumEnds[middle] > visibleStart {
+                upper = middle
+            } else {
+                lower = middle + 1
+            }
+        }
+        let firstCandidate = lower
+
+        lower = firstCandidate
+        upper = starts.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if starts[middle] >= visibleEnd {
+                upper = middle
+            } else {
+                lower = middle + 1
+            }
+        }
+        return firstCandidate..<max(firstCandidate, lower)
+    }
+}
+
 enum PlanningError: Error, Equatable {
     case missingPlan(UUID)
     case parentCycle
@@ -193,6 +247,37 @@ enum ActualIntervalMergeEngine {
 /// Keeps raw stays intact while showing one block for duplicate place results.
 enum PlaceStayPresentationEngine {
     static func consolidated(_ stays: [PlaceStay]) -> [PlaceStay] {
+        let samePlaceValues = mergeSamePlaceDuplicates(stays)
+        var result: [PlaceStay] = []
+        for stay in samePlaceValues {
+            let overlappingIndices = result.indices.filter {
+                result[$0].span.intersection(with: stay.span) != nil
+            }
+            guard !overlappingIndices.isEmpty else {
+                result.append(stay)
+                continue
+            }
+
+            // 위치 센서는 같은 시간에 서로 다른 장소 후보를 만들 수 있다.
+            // 표시에서는 가장 신뢰할 수 있는 후보 하나만 남기되 원본 기록은
+            // 건드리지 않는다. 새 후보가 기존 후보 모두보다 정확할 때만
+            // 교체하므로 결과에는 겹치는 위치 막대가 생기지 않는다.
+            guard overlappingIndices.allSatisfy({
+                isPreferred(stay, over: result[$0])
+            }) else {
+                continue
+            }
+            for index in overlappingIndices.reversed() {
+                result.remove(at: index)
+            }
+            result.append(stay)
+        }
+        return result.sorted(by: chronological)
+    }
+
+    private static func mergeSamePlaceDuplicates(
+        _ stays: [PlaceStay]
+    ) -> [PlaceStay] {
         var result: [PlaceStay] = []
         for stay in stays.sorted(by: chronological) {
             var value = stay
@@ -246,6 +331,20 @@ enum PlaceStayPresentationEngine {
         let leftScore = score(lhs)
         let rightScore = score(rhs)
         if leftScore != rightScore { return leftScore > rightScore }
+        let leftHorizontalAccuracy = validAccuracy(
+            lhs.point?.horizontalAccuracy
+        )
+        let rightHorizontalAccuracy = validAccuracy(
+            rhs.point?.horizontalAccuracy
+        )
+        if leftHorizontalAccuracy != rightHorizontalAccuracy {
+            return leftHorizontalAccuracy < rightHorizontalAccuracy
+        }
+        let leftVerticalAccuracy = validAccuracy(lhs.point?.verticalAccuracy)
+        let rightVerticalAccuracy = validAccuracy(rhs.point?.verticalAccuracy)
+        if leftVerticalAccuracy != rightVerticalAccuracy {
+            return leftVerticalAccuracy < rightVerticalAccuracy
+        }
         if lhs.span.duration != rhs.span.duration {
             return lhs.span.duration > rhs.span.duration
         }
@@ -253,10 +352,22 @@ enum PlaceStayPresentationEngine {
     }
 
     private static func score(_ stay: PlaceStay) -> Int {
-        (stay.floorEvidence == nil ? 0 : 16)
-            + (stay.isConfirmed ? 8 : 0)
-            + confidenceRank(stay.confidence) * 2
+        (stay.isConfirmed ? 32 : 0)
+            + confidenceRank(stay.confidence) * 8
+            + (
+                validAccuracy(stay.point?.horizontalAccuracy).isFinite
+                    ? 4
+                    : 0
+            )
+            + (stay.floorEvidence == nil ? 0 : 2)
             + (stay.floor == nil ? 0 : 1)
+    }
+
+    private static func validAccuracy(_ value: Double?) -> Double {
+        guard let value, value.isFinite, value >= 0 else {
+            return .infinity
+        }
+        return value
     }
 
     private static func confidenceRank(_ value: ConfidenceLevel) -> Int {

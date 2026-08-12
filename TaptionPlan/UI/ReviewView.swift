@@ -216,8 +216,19 @@ private struct ReviewUnconfirmedSelection: Identifiable {
 
 private struct ReviewQuickActivitySelection: Identifiable {
     let recordID: UUID
+    let displayedSpan: TimeSpan
 
-    var id: UUID { recordID }
+    var id: UUID {
+        ActivityFragmentCorrectionEngine.stableID(
+            sourceID: recordID,
+            span: displayedSpan
+        )
+    }
+}
+
+private struct ReviewRecordSelection {
+    let record: ActualRecord
+    let displayedSpan: TimeSpan
 }
 
 enum ActivityQuickSelectionPolicy {
@@ -354,7 +365,8 @@ struct ReviewView: View {
         .sheet(item: $quickActivitySelection) { selection in
             QuickActivitySelectionSheet(
                 model: model,
-                recordID: selection.recordID
+                recordID: selection.recordID,
+                displayedSpan: selection.displayedSpan
             )
         }
     }
@@ -1033,7 +1045,17 @@ struct ReviewView: View {
             Button {
                 // 하단 실제 기록의 자식 행과 같은 상세 화면을 연다.
                 clearClockHighlight()
-                model.detail = .actual(item.child.recordID)
+                if let selection = recordForRing(
+                    at: item.anchorFraction,
+                    categoryID: nil
+                ) {
+                    model.detail = .actualSegment(
+                        selection.record.id,
+                        selection.displayedSpan
+                    )
+                } else {
+                    model.detail = .actual(item.child.recordID)
+                }
             } label: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.child.title)
@@ -1759,8 +1781,11 @@ struct ReviewView: View {
             1 - 0.000_001,
             max(0, (x - timelineStart) / timelineWidth)
         )
-        if let record = recordForRing(at: fraction, categoryID: nil) {
-            model.detail = .actualEditor(record.id)
+        if let selection = recordForRing(at: fraction, categoryID: nil) {
+            model.detail = .actualSegmentEditor(
+                selection.record.id,
+                selection.displayedSpan
+            )
         } else {
             openUnconfirmedEditor(at: fraction, categoryID: nil)
         }
@@ -1951,8 +1976,14 @@ struct ReviewView: View {
         fraction -= floor(fraction)
 
         if tappedBand == .phase {
-            if let record = recordForRing(at: fraction, categoryID: nil) {
-                model.detail = .actualEditor(record.id)
+            if let selection = recordForRing(
+                at: fraction,
+                categoryID: nil
+            ) {
+                model.detail = .actualSegmentEditor(
+                    selection.record.id,
+                    selection.displayedSpan
+                )
             } else if !openUnconfirmedEditor(
                 at: fraction,
                 categoryID: nil
@@ -1967,8 +1998,11 @@ struct ReviewView: View {
                 $0.startFraction <= fraction && fraction < $0.endFraction
             }
         }?.categoryID
-        if let record = recordForRing(at: fraction, categoryID: categoryID) {
-            openRecord(record)
+        if let selection = recordForRing(
+            at: fraction,
+            categoryID: categoryID
+        ) {
+            openRecord(selection)
         } else if !openUnconfirmedEditor(
             at: fraction,
             categoryID: categoryID
@@ -1977,16 +2011,22 @@ struct ReviewView: View {
         }
     }
 
-    private func openRecord(_ record: ActualRecord) {
+    private func openRecord(_ selection: ReviewRecordSelection) {
         clearClockHighlight()
+        let record = selection.record
         guard ActivityQuickSelectionPolicy.needsSelection(record) else {
-            model.detail = .actualEditor(record.id)
+            model.detail = .actualSegmentEditor(
+                record.id,
+                selection.displayedSpan
+            )
             return
         }
-        guard quickActivitySelection?.recordID != record.id else { return }
-        quickActivitySelection = ReviewQuickActivitySelection(
-            recordID: record.id
+        let next = ReviewQuickActivitySelection(
+            recordID: record.id,
+            displayedSpan: selection.displayedSpan
         )
+        guard quickActivitySelection?.id != next.id else { return }
+        quickActivitySelection = next
     }
 
     @discardableResult
@@ -2013,11 +2053,12 @@ struct ReviewView: View {
     private func recordForRing(
         at fraction: Double,
         categoryID: String?
-    ) -> ActualRecord? {
+    ) -> ReviewRecordSelection? {
         let span = content.period
         let date = span.start.addingTimeInterval(span.duration * fraction)
+        let now = Date.now
         let rendered = content.displayActuals.filter { actual in
-            guard let visible = actual.span(asOf: Date.now)
+            guard let visible = actual.span(asOf: now)
                 .intersection(with: span), visible.duration > 0 else {
                 return false
             }
@@ -2029,35 +2070,63 @@ struct ReviewView: View {
         }
 
         guard let displayed = rendered.min(by: {
-            $0.span(asOf: Date.now).duration
-                < $1.span(asOf: Date.now).duration
-        }) else {
+            $0.span(asOf: now).duration < $1.span(asOf: now).duration
+        }), let displayedSpan = displayed.span(asOf: now)
+            .intersection(with: span) else {
             return nil
         }
         if let source = model.snapshot.actuals.first(where: {
             $0.id == displayed.id
         }) {
-            return source
+            return ReviewRecordSelection(
+                record: source,
+                displayedSpan: displayedSpan
+            )
         }
 
         // Canonical travel and overlap remainders are display-only records.
         // Resolve them back to the measured record at the same instant so a
         // visible arc never silently loses its editor tap.
         let sourceCandidates = model.snapshot.actuals.filter { actual in
-            guard let visible = actual.span(asOf: Date.now)
+            guard let visible = actual.span(asOf: now)
                 .intersection(with: span), visible.duration > 0,
                 visible.contains(date),
                 ActualRecordCategoryResolver.categoryID(for: actual)
                     == ActualRecordCategoryResolver.categoryID(for: displayed)
             else { return false }
+            if let chunkID = displayed.sensorChunkID,
+               actual.sensorChunkID != chunkID {
+                return false
+            }
             if let behavior = displayed.behavior, actual.behavior != behavior {
                 return false
             }
             return true
         }
-        return sourceCandidates.min {
-            $0.span(asOf: Date.now).duration < $1.span(asOf: Date.now).duration
+        guard let source = sourceCandidates.min(by: {
+            let leftSourceRank = $0.source == displayed.source ? 0 : 1
+            let rightSourceRank = $1.source == displayed.source ? 0 : 1
+            if leftSourceRank != rightSourceRank {
+                return leftSourceRank < rightSourceRank
+            }
+            let leftCreated = abs(
+                $0.createdAt.timeIntervalSince(displayed.createdAt)
+            )
+            let rightCreated = abs(
+                $1.createdAt.timeIntervalSince(displayed.createdAt)
+            )
+            if leftCreated != rightCreated {
+                return leftCreated < rightCreated
+            }
+            return $0.span(asOf: now).duration
+                < $1.span(asOf: now).duration
+        }) else {
+            return nil
         }
+        return ReviewRecordSelection(
+            record: source,
+            displayedSpan: displayedSpan
+        )
     }
 
     private var playControl: some View {
@@ -3471,6 +3540,7 @@ struct ReviewView: View {
 struct ActualRecordDetailView: View {
     @Bindable var model: AppModel
     let recordID: UUID
+    let correctionSpan: TimeSpan?
     let opensEditor: Bool
     @State private var isActivityPickerPresented = false
     @State private var focusedRecordID: UUID
@@ -3479,16 +3549,31 @@ struct ActualRecordDetailView: View {
     init(
         model: AppModel,
         recordID: UUID,
+        correctionSpan: TimeSpan? = nil,
         opensEditor: Bool = false
     ) {
         self.model = model
         self.recordID = recordID
+        self.correctionSpan = correctionSpan
         self.opensEditor = opensEditor
         _focusedRecordID = State(initialValue: recordID)
     }
 
     private var record: ActualRecord? {
-        detailRecords.first { $0.id == focusedRecordID }
+        guard var value = detailRecords.first(where: {
+            $0.id == focusedRecordID
+        }) else {
+            return nil
+        }
+        if let focusedCorrectionSpan {
+            value.startedAt = focusedCorrectionSpan.start
+            value.endedAt = focusedCorrectionSpan.end
+        }
+        return value
+    }
+
+    private var focusedCorrectionSpan: TimeSpan? {
+        focusedRecordID == recordID ? correctionSpan : nil
     }
 
     private var detailRecords: [ActualRecord] {
@@ -3559,7 +3644,11 @@ struct ActualRecordDetailView: View {
             .simultaneousGesture(recordSwipeGesture)
         }
         .sheet(isPresented: $isActivityPickerPresented) {
-            ActivityCorrectionSheet(model: model, recordID: focusedRecordID)
+            ActivityCorrectionSheet(
+                model: model,
+                recordID: focusedRecordID,
+                displayedSpan: focusedCorrectionSpan
+            )
         }
         .onAppear {
             guard opensEditor,
@@ -4147,6 +4236,7 @@ private struct QuickActivitySelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
     let recordID: UUID
+    let displayedSpan: TimeSpan
     @State private var isSaving = false
 
     private var record: ActualRecord? {
@@ -4249,7 +4339,13 @@ private struct QuickActivitySelectionSheet: View {
         guard !isSaving, record != nil else { return }
         isSaving = true
         Task {
-            await model.updateActualActivity(recordID, with: option)
+            await model.correctActualFragment(
+                recordID,
+                displayedSpan: displayedSpan,
+                startAt: displayedSpan.start,
+                endAt: displayedSpan.end,
+                with: option
+            )
             dismiss()
         }
     }
@@ -4269,6 +4365,7 @@ private struct ActivityCorrectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
     let target: ActivityCorrectionTarget
+    let displayedSpan: TimeSpan?
     @State private var customTitle = ""
     @State private var selectedOption: ActivityCorrectionOption?
     @State private var addedCustomOptions: [ActivityCorrectionOption] = []
@@ -4276,14 +4373,20 @@ private struct ActivityCorrectionSheet: View {
     @State private var endAt: Date
     @State private var isSaving = false
 
-    init(model: AppModel, recordID: UUID) {
+    init(
+        model: AppModel,
+        recordID: UUID,
+        displayedSpan: TimeSpan? = nil
+    ) {
         self.model = model
         target = .record(recordID)
+        self.displayedSpan = displayedSpan
         let record = model.snapshot.actuals.first { $0.id == recordID }
-        let start = record?.startedAt ?? .now
+        let start = displayedSpan?.start ?? record?.startedAt ?? .now
         _startAt = State(initialValue: start)
         _endAt = State(
-            initialValue: record?.endedAt
+            initialValue: displayedSpan?.end
+                ?? record?.endedAt
                 ?? start.addingTimeInterval(5 * 60)
         )
         _selectedOption = State(initialValue: nil)
@@ -4291,6 +4394,7 @@ private struct ActivityCorrectionSheet: View {
 
     init(model: AppModel, unconfirmedSpan: TimeSpan) {
         self.model = model
+        displayedSpan = nil
         target = .unconfirmed(
             ActualRecord(
                 planID: nil,
@@ -4479,14 +4583,24 @@ private struct ActivityCorrectionSheet: View {
             defer { isSaving = false }
             switch target {
             case .record(let recordID):
-                if let option {
-                    await model.updateActualActivity(recordID, with: option)
+                if let displayedSpan {
+                    await model.correctActualFragment(
+                        recordID,
+                        displayedSpan: displayedSpan,
+                        startAt: startAt,
+                        endAt: endAt,
+                        with: option
+                    )
+                } else {
+                    if let option {
+                        await model.updateActualActivity(recordID, with: option)
+                    }
+                    await model.updateActualSpan(
+                        recordID,
+                        startAt: startAt,
+                        endAt: endAt
+                    )
                 }
-                await model.updateActualSpan(
-                    recordID,
-                    startAt: startAt,
-                    endAt: endAt
-                )
             case .unconfirmed:
                 guard let option else { return }
                 await model.classifyUnconfirmedSpan(

@@ -655,6 +655,72 @@ enum ReviewCoverageEngine {
     }
 }
 
+/// 겹침 제거 뒤 하나의 자동 기록이 여러 표시 조각으로 갈렸을 때, 사용자가
+/// 고른 조각만 수동 파생 기록으로 교정한다. 센서 원본 전체에 교정을 걸면
+/// 떨어져 보이는 다른 조각까지 함께 바뀌므로 표시 구간을 별도 ID로 보존한다.
+enum ActivityFragmentCorrectionEngine {
+    static func needsSeparateRecord(
+        source: ActualRecord,
+        displayedSpan: TimeSpan,
+        tolerance: TimeInterval = 1
+    ) -> Bool {
+        guard let sourceEnd = source.endedAt else { return true }
+        return abs(source.startedAt.timeIntervalSince(displayedSpan.start))
+                > tolerance
+            || abs(sourceEnd.timeIntervalSince(displayedSpan.end)) > tolerance
+    }
+
+    static func record(
+        source: ActualRecord,
+        displayedSpan: TimeSpan,
+        correctedSpan: TimeSpan,
+        option: ActivityCorrectionOption?,
+        createdAt: Date = .now
+    ) -> ActualRecord {
+        ActualRecord(
+            id: stableID(sourceID: source.id, span: displayedSpan),
+            planID: source.planID,
+            routineID: source.routineID,
+            title: option?.title ?? source.title,
+            categoryID: option?.categoryID ?? source.categoryID,
+            startedAt: correctedSpan.start,
+            endedAt: correctedSpan.end,
+            source: .manual,
+            confidence: .high,
+            createdAt: createdAt,
+            behavior: option?.behavior ?? source.behavior,
+            evidence: ["사용자가 표시 구간을 분류함"],
+            modelVersion: "manual-activity-fragment-v1",
+            manuallyCorrected: true
+        )
+    }
+
+    static func stableID(sourceID: UUID, span: TimeSpan) -> UUID {
+        let start = Int64(
+            (span.start.timeIntervalSince1970 * 1_000).rounded()
+        )
+        let end = Int64(
+            (span.end.timeIntervalSince1970 * 1_000).rounded()
+        )
+        let seed = "activity-fragment.\(sourceID.uuidString).\(start).\(end)"
+        var bytes = Array(repeating: UInt8(0), count: 16)
+        var hash = UInt64(14_695_981_039_346_656_037)
+        for (index, byte) in seed.utf8.enumerated() {
+            hash ^= UInt64(byte)
+            hash = hash &* 1_099_511_628_211
+            bytes[index % bytes.count] ^= UInt8(truncatingIfNeeded: hash >> 24)
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+}
+
 /// 일과는 이동 표시용으로 합쳐진 사본이 아니라 HealthKit·Apple Watch 원본을
 /// 읽는다. 그래야 같은 걷기가 활동에서는 `걷기`, 일과에서는 `운동`이 된다.
 enum DayPhaseEvidenceEngine {

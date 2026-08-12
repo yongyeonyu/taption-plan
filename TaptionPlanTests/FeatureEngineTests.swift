@@ -132,6 +132,91 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored.customActivityLabels, ["집안일"])
     }
 
+    func testFragmentCorrectionChangesOnlyTheSelectedSplitPiece() throws {
+        let start = makeDate(2026, 8, 12, 0, 0)
+        let source = ActualRecord(
+            planID: nil,
+            title: "활동",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(8 * hour),
+            source: .location
+        )
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start.addingTimeInterval(2 * hour),
+            endedAt: start.addingTimeInterval(7 * hour),
+            source: .healthKit
+        )
+        let period = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(8 * hour)
+        )
+        let pieces = ReviewCoverageEngine.records(
+            actuals: [source, sleep],
+            in: [period],
+            asOf: period.end
+        ).filter { $0.title == source.title }
+        let selected = try XCTUnwrap(
+            pieces.max { $0.startedAt < $1.startedAt }
+        ).span(asOf: period.end)
+
+        XCTAssertTrue(
+            ActivityFragmentCorrectionEngine.needsSeparateRecord(
+                source: source,
+                displayedSpan: selected
+            )
+        )
+        let corrected = ActivityFragmentCorrectionEngine.record(
+            source: source,
+            displayedSpan: selected,
+            correctedSpan: selected,
+            option: .custom("출근준비")
+        )
+        let result = ReviewCoverageEngine.records(
+            actuals: [source, sleep, corrected],
+            in: [period],
+            asOf: period.end
+        )
+
+        XCTAssertEqual(source.title, "활동")
+        XCTAssertEqual(corrected.source, .manual)
+        XCTAssertNotEqual(corrected.id, source.id)
+        XCTAssertEqual(
+            result.first(where: { $0.startedAt == start })?.title,
+            "활동"
+        )
+        XCTAssertEqual(
+            result.first(where: {
+                $0.startedAt == start.addingTimeInterval(7 * hour)
+            })?.title,
+            "출근준비"
+        )
+    }
+
+    func testFragmentCorrectionReusesWholeFinishedRecord() {
+        let source = ActualRecord(
+            planID: nil,
+            title: "활동",
+            categoryID: "activity",
+            startedAt: makeDate(2026, 8, 12, 7, 0),
+            endedAt: makeDate(2026, 8, 12, 8, 0),
+            source: .location
+        )
+
+        XCTAssertFalse(
+            ActivityFragmentCorrectionEngine.needsSeparateRecord(
+                source: source,
+                displayedSpan: TimeSpan(
+                    start: source.startedAt,
+                    end: source.endedAt ?? source.startedAt
+                )
+            )
+        )
+    }
+
     func testPlayheadMapUsesOnlyMovementContainingExactPlayheadTime() {
         let playhead = makeDate(2026, 8, 1, 9, 0)
         let nearby = TravelSegment(
@@ -3070,6 +3155,90 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.floor, 19)
         XCTAssertEqual(result.confidence, .high)
         XCTAssertTrue(result.isConfirmed)
+    }
+
+    func testPlacePresentationKeepsOnlyMostAccurateOverlappingLocation()
+        throws
+    {
+        let base = makeDate(2026, 8, 12, 9)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(hour)
+        )
+        let noisy = PlaceStay(
+            placeKey: "gps-candidate",
+            displayName: "근처 위치",
+            span: span,
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.0,
+                longitude: 126.0,
+                altitude: 15,
+                horizontalAccuracy: 65,
+                verticalAccuracy: 22
+            )
+        )
+        let accurate = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            span: span,
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.1,
+                longitude: 126.1,
+                altitude: 14,
+                horizontalAccuracy: 4,
+                verticalAccuracy: 3
+            )
+        )
+
+        let values = PlaceStayPresentationEngine.consolidated([
+            noisy, accurate,
+        ])
+
+        XCTAssertEqual(values.count, 1)
+        XCTAssertEqual(try XCTUnwrap(values.first).id, accurate.id)
+    }
+
+    func testPlacePresentationReturnsNoOverlappingLocationSegments() {
+        let base = makeDate(2026, 8, 12, 9)
+        let values = PlaceStayPresentationEngine.consolidated([
+            PlaceStay(
+                placeKey: "candidate-a",
+                displayName: "후보 A",
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(50 * 60)
+                ),
+                confidence: .low
+            ),
+            PlaceStay(
+                placeKey: "office",
+                displayName: "회사",
+                span: TimeSpan(
+                    start: base.addingTimeInterval(10 * 60),
+                    end: base.addingTimeInterval(70 * 60)
+                ),
+                confidence: .high,
+                isConfirmed: true
+            ),
+            PlaceStay(
+                placeKey: "candidate-b",
+                displayName: "후보 B",
+                span: TimeSpan(
+                    start: base.addingTimeInterval(40 * 60),
+                    end: base.addingTimeInterval(90 * 60)
+                ),
+                confidence: .medium
+            ),
+        ])
+
+        for (index, value) in values.enumerated() {
+            for other in values.dropFirst(index + 1) {
+                XCTAssertNil(value.span.intersection(with: other.span))
+            }
+        }
+        XCTAssertEqual(values.map(\.displayName), ["회사"])
     }
 
     func testPlacePresentationKeepsRealFloorChangesSeparate() {

@@ -53,6 +53,8 @@ enum AppDetail: Equatable {
     case goal
     case actual(UUID)
     case actualEditor(UUID)
+    case actualSegment(UUID, TimeSpan)
+    case actualSegmentEditor(UUID, TimeSpan)
     case locationTimeline
     case memo
     case inference

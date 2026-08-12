@@ -7393,6 +7393,16 @@ private struct TimelineBoard: View {
             ? layout.axisMarkers
             : axisMarkers(in: displaySpan)
         let visibleDuration = displaySpan.duration * viewport.length
+        let cachedDragViewport = dragLayoutSpan.flatMap {
+            TimelineCachedViewportProjection.viewport(
+                displaySpan: displaySpan,
+                dataSpan: $0,
+                viewport: viewport
+            )
+        }
+        let rowViewport = cachedDragViewport ?? viewport
+        let usesCachedBlockFractions = dragLayoutSpan == nil
+            || cachedDragViewport != nil
         GeometryReader { boardProxy in
             let contentTimelineWidth = max(
                 1,
@@ -7439,12 +7449,11 @@ private struct TimelineBoard: View {
                                             isSelected: selectedRowID == row.id,
                                             editingPlanID: editingPlanID,
                                             visibleDuration: visibleDuration,
-                                            viewport: viewport,
+                                            viewport: rowViewport,
                                             displaySpan: displaySpan,
                                             scale: scale,
                                             useCachedBlockFractions:
-                                                !isContinuousTimeline
-                                                || dragLayoutSpan == nil,
+                                                usesCachedBlockFractions,
                                             onBlockTap: handleTap,
                                             onBlockDoubleTap: focusOnBlock,
                                             onEdit: { editingPlanID = $0 },
@@ -7590,8 +7599,10 @@ private struct TimelineBoard: View {
             resetViewport()
         }
         .onChange(of: model.selectedDate) { _, newDate in
-            continuousCenterDate = newDate
-            onPlayheadMove?(newDate)
+            if continuousCenterDate != newDate {
+                continuousCenterDate = newDate
+                onPlayheadMove?(newDate)
+            }
             let preserveViewport = preserveViewportAfterContinuousDrag
             preserveViewportAfterContinuousDrag = false
             // A continuous drag changes the selected date, but it must not
@@ -10319,7 +10330,6 @@ private struct TimelineBoard: View {
                     }
                     guard continuousCenterDate != candidate else { return }
                     continuousCenterDate = candidate
-                    onPlayheadMove?(continuousCenterDate)
                 } else {
                     if dragOrigin == nil {
                         dragOrigin = viewport
@@ -10625,7 +10635,6 @@ private struct TimelineBoard: View {
         }
         if continuousCenterDate != center {
             continuousCenterDate = center
-            onPlayheadMove?(center)
         }
         viewport = .full
         ensureMagnifyLayoutWindow(around: center)
@@ -11082,7 +11091,19 @@ private struct TimelineRow: View {
         let displayStart = displaySpan.start
         let displayEnd = displaySpan.end
         let displayDuration = max(1, displaySpan.duration)
-        for block in row.blocks {
+        let candidateBlocks: ArraySlice<TimelineBlock>
+        if useCachedBlockFractions {
+            let range = TimelineVisibleIntervalIndex.candidateRange(
+                starts: row.blockStarts,
+                prefixMaximumEnds: row.prefixMaximumBlockEnds,
+                visibleStart: viewport.start,
+                visibleEnd: viewport.end
+            )
+            candidateBlocks = row.blocks[range]
+        } else {
+            candidateBlocks = row.blocks[...]
+        }
+        for block in candidateBlocks {
             // Drag snapshots intentionally cover a wider window than the
             // current viewport. Reject blocks outside that viewport before
             // doing date-to-fraction projection; on dense automatic rows this
@@ -11489,6 +11510,8 @@ private struct TimelineRowModel: Identifiable {
     let isSystemAutomatic: Bool
     let height: CGFloat
     let blocks: [TimelineBlock]
+    let blockStarts: [Double]
+    let prefixMaximumBlockEnds: [Double]
 
     init(
         title: String,
@@ -11513,7 +11536,18 @@ private struct TimelineRowModel: Identifiable {
         self.customActualColor = actualColor
         self.isSystemAutomatic = isSystemAutomatic
         self.height = height
-        self.blocks = blocks
+        let sortedBlocks = blocks.sorted {
+            if $0.start != $1.start { return $0.start < $1.start }
+            if $0.length != $1.length { return $0.length > $1.length }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        self.blocks = sortedBlocks
+        blockStarts = sortedBlocks.map { Double($0.start) }
+        prefixMaximumBlockEnds =
+            TimelineVisibleIntervalIndex.prefixMaximumEnds(
+                starts: blockStarts,
+                lengths: sortedBlocks.map { Double($0.length) }
+            )
     }
 
     var fillColor: Color {

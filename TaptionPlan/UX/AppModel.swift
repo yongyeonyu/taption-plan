@@ -422,7 +422,9 @@ final class AppModel {
         _ actualID: UUID,
         with option: ActivityCorrectionOption
     ) async {
-        guard snapshot.actuals.contains(where: { $0.id == actualID }) else {
+        guard let actual = snapshot.actuals.first(where: {
+            $0.id == actualID
+        }) else {
             return
         }
         snapshot.settings.activityCorrections[actualID] =
@@ -442,6 +444,14 @@ final class AppModel {
         )
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
         await persist()
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "activity_correction_applied",
+            fields: [
+                "record_id": actualID.uuidString,
+                "scope": "record",
+                "source": String(describing: actual.source),
+            ]
+        )
     }
 
     /// 자동 기록의 센서 원본은 그대로 두고, 화면에 표시할 시간만 조정한다.
@@ -469,6 +479,109 @@ final class AppModel {
         )
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
         await persist()
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "activity_span_correction_applied",
+            fields: [
+                "record_id": actualID.uuidString,
+                "scope": "record",
+                "source": String(describing: actual.source),
+                "start": String(startAt.timeIntervalSince1970),
+                "end": String(endAt.timeIntervalSince1970),
+            ]
+        )
+    }
+
+    /// 겹침 제거로 갈라진 표시 조각만 교정한다. 조각이 원본 전체와 같으면
+    /// 기존 교정표를 쓰고, 일부면 자동 원본 위에 별도의 수동 기록을 얹는다.
+    func correctActualFragment(
+        _ actualID: UUID,
+        displayedSpan: TimeSpan,
+        startAt: Date,
+        endAt: Date,
+        with option: ActivityCorrectionOption?
+    ) async {
+        guard endAt > startAt,
+              displayedSpan.duration > 0,
+              let actual = snapshot.actuals.first(where: {
+                  $0.id == actualID
+              }) else {
+            return
+        }
+
+        if !ActivityFragmentCorrectionEngine.needsSeparateRecord(
+            source: actual,
+            displayedSpan: displayedSpan
+        ) {
+            var correction = snapshot.settings.activityCorrections[actualID]
+                ?? ActivityCorrection(
+                    title: actual.title,
+                    behavior: actual.behavior,
+                    categoryID: actual.categoryID
+                )
+            if let option {
+                correction = ActivityCorrectionEngine.replacingActivity(
+                    in: correction,
+                    with: option
+                )
+            }
+            correction.startedAt = startAt
+            correction.endedAt = endAt
+            snapshot.settings.activityCorrections[actualID] = correction
+        } else {
+            let fragmentID = ActivityFragmentCorrectionEngine.stableID(
+                sourceID: actualID,
+                span: displayedSpan
+            )
+            let createdAt = snapshot.actuals.first(where: {
+                $0.id == fragmentID
+            })?.createdAt ?? .now
+            let fragment = ActivityFragmentCorrectionEngine.record(
+                source: actual,
+                displayedSpan: displayedSpan,
+                correctedSpan: TimeSpan(start: startAt, end: endAt),
+                option: option,
+                createdAt: createdAt
+            )
+            if let index = snapshot.actuals.firstIndex(where: {
+                $0.id == fragment.id
+            }) {
+                snapshot.actuals[index] = fragment
+            } else {
+                snapshot.actuals.append(fragment)
+            }
+        }
+
+        if let option, option.isCustom {
+            snapshot.settings.customActivityLabels =
+                AppFeatureSettings.normalizedActivityLabels(
+                    snapshot.settings.customActivityLabels + [option.title]
+                )
+        }
+        snapshot.actuals = ActivityCorrectionEngine.applying(
+            snapshot.settings.activityCorrections,
+            to: snapshot.actuals
+        )
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        await persist()
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "activity_correction_applied",
+            fields: [
+                "record_id": actualID.uuidString,
+                "scope": ActivityFragmentCorrectionEngine.needsSeparateRecord(
+                    source: actual,
+                    displayedSpan: displayedSpan
+                ) ? "fragment" : "record",
+                "source": String(describing: actual.source),
+                "display_start": String(
+                    displayedSpan.start.timeIntervalSince1970
+                ),
+                "display_end": String(
+                    displayedSpan.end.timeIntervalSince1970
+                ),
+                "start": String(startAt.timeIntervalSince1970),
+                "end": String(endAt.timeIntervalSince1970),
+            ]
+        )
     }
 
     /// 화면에서만 채워졌던 미확인 구간을 사용자가 결정한 파생 기록으로 남긴다.

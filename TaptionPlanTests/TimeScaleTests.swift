@@ -218,6 +218,66 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(lastUptime, 10.001)
     }
 
+    func testCachedViewportProjectionMovesOnlyTheViewportDuringDrag() {
+        let base = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        let dataSpan = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(10 * 60 * 60)
+        )
+        let displaySpan = TimeSpan(
+            start: base.addingTimeInterval(4 * 60 * 60),
+            end: base.addingTimeInterval(6 * 60 * 60)
+        )
+
+        let projection = TimelineCachedViewportProjection.viewport(
+            displaySpan: displaySpan,
+            dataSpan: dataSpan,
+            viewport: GanttViewport(start: 0.25, length: 0.5)
+        )
+
+        XCTAssertEqual(projection?.start ?? -1, 0.45, accuracy: 0.000_001)
+        XCTAssertEqual(projection?.length ?? -1, 0.1, accuracy: 0.000_001)
+    }
+
+    func testVisibleIntervalIndexSkipsDenseOffscreenBlocks() {
+        let starts = (0..<1_000).map { Double($0) / 1_000 }
+        let lengths = Array(repeating: 0.001, count: starts.count)
+        let prefixEnds = TimelineVisibleIntervalIndex.prefixMaximumEnds(
+            starts: starts,
+            lengths: lengths
+        )
+
+        let range = TimelineVisibleIntervalIndex.candidateRange(
+            starts: starts,
+            prefixMaximumEnds: prefixEnds,
+            visibleStart: 0.5,
+            visibleEnd: 0.51
+        )
+
+        XCTAssertEqual(range.lowerBound, 500)
+        XCTAssertEqual(range.upperBound, 510)
+        XCTAssertLessThan(range.count, starts.count / 50)
+    }
+
+    func testVisibleIntervalIndexKeepsLongEarlierOverlap() {
+        let starts = [0.0, 0.1, 0.2, 0.8]
+        let lengths = [0.9, 0.05, 0.05, 0.1]
+        let prefixEnds = TimelineVisibleIntervalIndex.prefixMaximumEnds(
+            starts: starts,
+            lengths: lengths
+        )
+
+        let range = TimelineVisibleIntervalIndex.candidateRange(
+            starts: starts,
+            prefixMaximumEnds: prefixEnds,
+            visibleStart: 0.5,
+            visibleEnd: 0.6
+        )
+
+        XCTAssertTrue(range.contains(0))
+        XCTAssertFalse(range.contains(3))
+    }
+
     func testPinchZoomRulerLabelsActualNonPresetSpans() {
         XCTAssertEqual(
             TimelineZoomPreset.displayLabel(for: 90 * 60),
