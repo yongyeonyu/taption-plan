@@ -1898,7 +1898,7 @@ struct ScheduleView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.white)
+        .background(Color.tpBackground)
         .task(id: routeReadingsSpan) {
             routeReadings = await model.sensorReadings(in: routeReadingsSpan)
         }
@@ -2978,7 +2978,7 @@ private struct RecordRelationshipView: View {
             .frame(height: CGFloat(max(1, columns.map(\.count).max() ?? 1)) * (cardHeight + rowGap) + 18)
         }
         .padding(9)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 11, style: .continuous)
                 .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.5)
@@ -3416,15 +3416,15 @@ private struct TimelineDetailPanel: View {
                                     .fixedSize(horizontal: false, vertical: true)
                                     .foregroundStyle(
                                         section == item
-                                            ? Color.white
+                                            ? Color.tpSurface
                                             : Color.tpInk
                                     )
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 5)
                                     .background(
                                         section == item
-                                            ? Color.tpInk
-                                            : Color.white,
+                                            ? Color.tpProjectDark
+                                            : Color.tpSurface,
                                         in: Capsule()
                                     )
                             }
@@ -3442,7 +3442,7 @@ private struct TimelineDetailPanel: View {
             }
         }
         .padding(.vertical, 6)
-        .background(Color(red: 0.94, green: 0.94, blue: 0.95))
+        .background(Color.tpSky.opacity(0.18))
     }
 
     private var detailContextTitle: some View {
@@ -3452,7 +3452,7 @@ private struct TimelineDetailPanel: View {
                 .foregroundStyle(Color.tpInk)
                 .frame(width: 24, height: 24)
                 .background(
-                    Color.white,
+                    Color.tpSurface,
                     in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                 )
 
@@ -3680,7 +3680,7 @@ private struct TimelineDetailPanel: View {
         .background(
             isFocused
                 ? Color.tpInk.opacity(0.035)
-                : Color.white,
+                : Color.tpSurface,
             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
         )
         .overlay {
@@ -6045,7 +6045,7 @@ private struct TimelineDetailPanel: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 9))
+        .background(Color.tpSurfaceCream, in: RoundedRectangle(cornerRadius: 9))
         .overlay {
             RoundedRectangle(cornerRadius: 9)
                 .stroke(Color.tpLine, lineWidth: 0.7)
@@ -7004,7 +7004,7 @@ struct GroupGanttView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Color.white)
+        .background(Color.tpBackground)
         .task(id: routeReadingsSpan) {
             routeReadings = await model.sensorReadings(in: routeReadingsSpan)
         }
@@ -7636,7 +7636,7 @@ private struct TimelineBoard: View {
 #if DEBUG
         .background(TimelineFrameBudgetProbeView())
 #endif
-        .background(Color.white)
+        .background(Color.tpSurface)
         .onAppear {
             continuousCenterDate = model.selectedDate
             continuousTimelineDuration = continuousDuration(
@@ -7835,7 +7835,7 @@ private struct TimelineBoard: View {
             if usesFullWidthRuler {
                 resolutionMenu
                     .frame(width: scheduleLabelColumnWidth)
-                    .background(Color.white.opacity(0.92), in: Capsule())
+                    .background(Color.tpSurface.opacity(0.92), in: Capsule())
             }
         }
         .padding(.horizontal, usesFullWidthRuler ? 0 : 4)
@@ -11372,7 +11372,7 @@ private struct TimelineBar: View {
                     .foregroundStyle(Color.tpInk.opacity(0.62))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
-                    .background(Color.white.opacity(0.70), in: Capsule())
+                    .background(Color.tpSurface.opacity(0.70), in: Capsule())
             }
             if showsContent, !showsMinuteDetails, block.status == .completed {
                 Image(systemName: "checkmark.circle.fill")

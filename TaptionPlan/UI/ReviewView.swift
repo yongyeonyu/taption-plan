@@ -493,9 +493,9 @@ struct ReviewView: View {
                             .background {
                                 if model.reviewScale == scale {
                                     RoundedRectangle(cornerRadius: 7)
-                                        .fill(.white)
+                                        .fill(Color.tpSurface)
                                         .shadow(
-                                            color: .black.opacity(0.12),
+                                            color: Color.tpSky.opacity(0.24),
                                             radius: 1.5,
                                             y: 1
                                         )
@@ -507,7 +507,7 @@ struct ReviewView: View {
             }
             .padding(2)
             .background(
-                Color(red: 0.93, green: 0.93, blue: 0.94),
+                Color.tpSky.opacity(0.18),
                 in: RoundedRectangle(cornerRadius: 9)
             )
 
@@ -518,7 +518,13 @@ struct ReviewView: View {
         .padding(.horizontal, 10)
         .padding(.top, 5)
         .padding(.bottom, 8)
-        .background(Color.white)
+        .background(
+            LinearGradient(
+                colors: [Color.tpSurface, Color.tpSurfaceBlue.opacity(0.48)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.tpLine).frame(height: 0.5)
         }
@@ -587,7 +593,7 @@ struct ReviewView: View {
         .background(
             isSelected
                 ? Color.tpProjectDark.opacity(0.16)
-                : Color(red: 0.95, green: 0.95, blue: 0.96),
+                : Color.tpSky.opacity(0.12),
             in: Capsule()
         )
         .overlay {
@@ -651,10 +657,7 @@ struct ReviewView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(11)
-        .background(
-            Color.white,
-            in: RoundedRectangle(cornerRadius: 13, style: .continuous)
-        )
+        .tpCardSurface(radius: 13, tint: .tpSurfaceBlue)
     }
 
     private var emptyRecordText: some View {
@@ -2010,7 +2013,7 @@ struct ReviewView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
-        .background(.white.opacity(0.96), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.tpSurfaceCream.opacity(0.96), in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.8)
@@ -2221,7 +2224,7 @@ struct ReviewView: View {
                     width: Self.clockButtonSize,
                     height: Self.clockButtonSize
                 )
-                .background(Color.white, in: Circle())
+                .background(Color.tpSurface, in: Circle())
                 .overlay(Circle().stroke(Color.tpLine, lineWidth: 0.8))
         }
         .buttonStyle(.plain)
@@ -2647,7 +2650,7 @@ struct ReviewView: View {
                     .background(
                         isSelected
                             ? detailColor(.dayPhase, token: token).opacity(0.16)
-                            : Color(red: 0.95, green: 0.95, blue: 0.96),
+                            : Color.tpSky.opacity(0.12),
                         in: Capsule()
                     )
                 }
@@ -2985,7 +2988,7 @@ struct ReviewView: View {
             .background(
                 isSelected
                     ? color(forCategoryID: group.id).opacity(0.16)
-                    : Color(red: 0.95, green: 0.95, blue: 0.96),
+                    : Color.tpSky.opacity(0.12),
                 in: Capsule()
             )
         }
@@ -3024,7 +3027,7 @@ struct ReviewView: View {
             .background(
                 isSelected
                     ? detailColor(kind, token: token).opacity(0.16)
-                    : Color(red: 0.95, green: 0.95, blue: 0.96),
+                    : Color.tpSky.opacity(0.12),
                 in: Capsule()
             )
         }
@@ -3112,10 +3115,7 @@ struct ReviewView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(11)
-        .background(
-            Color.white,
-            in: RoundedRectangle(cornerRadius: 13, style: .continuous)
-        )
+        .tpCardSurface(radius: 13, tint: .tpSurfacePink)
     }
 
     // MARK: - 계층형 기록
@@ -3148,10 +3148,7 @@ struct ReviewView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(11)
-        .background(
-            Color.white,
-            in: RoundedRectangle(cornerRadius: 13, style: .continuous)
-        )
+        .tpCardSurface(radius: 13, tint: .tpSurfaceSage)
     }
 
     private var childCount: Int {
@@ -3335,10 +3332,7 @@ struct ReviewView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(11)
-        .background(
-            Color.white,
-            in: RoundedRectangle(cornerRadius: 13, style: .continuous)
-        )
+        .tpCardSurface(radius: 13, tint: .tpSurfaceLavender)
     }
 
     private func contextLine(_ image: String, _ text: String) -> some View {
@@ -3757,7 +3751,13 @@ struct ActualRecordDetailView: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
-            .background(Color.white)
+            .background(
+                LinearGradient(
+                    colors: [Color.tpSurface, Color.tpSurfaceBlue.opacity(0.48)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
             .overlay(alignment: .bottom) {
                 Rectangle().fill(Color.tpLine).frame(height: 0.5)
             }
@@ -3833,7 +3833,7 @@ struct ActualRecordDetailView: View {
                 .font(.taption(size: 11, weight: .bold))
                 .foregroundStyle(enabled ? Color.tpInk : Color.tpLine)
                 .frame(width: 28, height: 28)
-                .background(Color.white, in: Circle())
+                .background(Color.tpSurface, in: Circle())
                 .overlay(Circle().stroke(Color.tpLine, lineWidth: 0.7))
         }
         .buttonStyle(.plain)
@@ -3898,7 +3898,7 @@ struct ActualRecordDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
+                .tpCardSurface(radius: 15, tint: .tpSurfaceBlue)
             }
             .buttonStyle(.plain)
 
@@ -3931,7 +3931,7 @@ struct ActualRecordDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
+                .tpCardSurface(radius: 13, tint: .tpSurfacePink)
             }
             if AutomaticRecordTimelineEngine.isImmutable(record) {
                 Label("센서·건강 원본은 보존되고 표시 활동만 변경됩니다.", systemImage: "lock.fill")
@@ -3970,7 +3970,7 @@ struct ActualRecordDetailView: View {
                 .foregroundStyle(Color.tpSecondary)
         }
         .padding(12)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+        .tpCardSurface(radius: 12, tint: .tpSurfaceCream)
     }
 
     private func applicationNameLabel(_ record: ActualRecord) -> some View {

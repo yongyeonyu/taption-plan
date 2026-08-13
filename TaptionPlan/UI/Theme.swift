@@ -10,10 +10,19 @@ extension Font {
 }
 
 extension Color {
-    static let tpInk = Color(red: 0.11, green: 0.11, blue: 0.12)
-    static let tpSecondary = Color(red: 0.43, green: 0.43, blue: 0.45)
-    static let tpBackground = Color(red: 0.97, green: 0.97, blue: 0.98)
-    static let tpLine = Color(red: 0.90, green: 0.90, blue: 0.92)
+    // Tokyo postcard palette: a cool sky, warm paper and soft botanical
+    // accents keep the timeline calm without lowering text contrast.
+    static let tpInk = Color(red: 38 / 255, green: 54 / 255, blue: 75 / 255)
+    static let tpSecondary = Color(red: 104 / 255, green: 120 / 255, blue: 139 / 255)
+    static let tpBackground = Color(red: 247 / 255, green: 246 / 255, blue: 244 / 255)
+    static let tpSurface = Color(red: 255 / 255, green: 253 / 255, blue: 248 / 255)
+    static let tpSurfaceBlue = Color(red: 241 / 255, green: 248 / 255, blue: 252 / 255)
+    static let tpSurfacePink = Color(red: 255 / 255, green: 242 / 255, blue: 245 / 255)
+    static let tpSurfaceSage = Color(red: 241 / 255, green: 248 / 255, blue: 240 / 255)
+    static let tpSurfaceLavender = Color(red: 247 / 255, green: 243 / 255, blue: 251 / 255)
+    static let tpSurfaceCream = Color(red: 255 / 255, green: 249 / 255, blue: 236 / 255)
+    static let tpSky = Color(red: 185 / 255, green: 221 / 255, blue: 237 / 255)
+    static let tpLine = Color(red: 221 / 255, green: 231 / 255, blue: 235 / 255)
 
     static let tpProject = Color(red: 190 / 255, green: 218 / 255, blue: 227 / 255)
     static let tpHobby = Color(red: 196 / 255, green: 233 / 255, blue: 218 / 255)
@@ -271,7 +280,39 @@ extension PlanCategory {
 extension View {
     func draftCard(radius: CGFloat = 14) -> some View {
         self
-            .background(Color.white, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+            .background(
+                LinearGradient(
+                    colors: [Color.tpSurface, Color.tpSurfaceBlue.opacity(0.58)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: radius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(Color.tpLine.opacity(0.72), lineWidth: 0.7)
+            }
+            .shadow(color: Color.tpSky.opacity(0.16), radius: 4, y: 2)
+    }
+
+    /// A lightweight pastel surface for the record and timeline cards. It
+    /// avoids material blur so continuous timeline gestures stay on budget.
+    func tpCardSurface(
+        radius: CGFloat = 14,
+        tint: Color = .tpSurfaceBlue
+    ) -> some View {
+        self
+            .background(
+                LinearGradient(
+                    colors: [Color.tpSurface, tint.opacity(0.62)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: radius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .stroke(Color.tpLine.opacity(0.68), lineWidth: 0.7)
+            }
     }
 }

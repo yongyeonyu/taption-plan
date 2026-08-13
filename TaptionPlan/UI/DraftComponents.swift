@@ -77,7 +77,7 @@ struct DraftTopBar: View {
                             .foregroundStyle(Color.tpInk)
                             .frame(width: 34, height: 34)
                             .background(
-                                Color(red: 0.94, green: 0.94, blue: 0.95),
+                                Color.tpSky.opacity(0.22),
                                 in: Circle()
                             )
                     }
@@ -133,7 +133,13 @@ struct DraftTopBar: View {
         .padding(.horizontal, 10)
         .padding(.top, 5)
         .padding(.bottom, 8)
-        .background(Color.white)
+        .background(
+            LinearGradient(
+                colors: [Color.tpSurface, Color.tpSurfaceBlue.opacity(0.52)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(Color.tpLine)
@@ -217,8 +223,8 @@ struct DraftScalePicker: View {
                         .background {
                             if selected == scale {
                                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(Color.white)
-                                    .shadow(color: .black.opacity(0.12), radius: 1.5, y: 1)
+                                    .fill(Color.tpSurface)
+                                    .shadow(color: Color.tpSky.opacity(0.24), radius: 1.5, y: 1)
                             }
                         }
                 }
@@ -230,7 +236,7 @@ struct DraftScalePicker: View {
         .padding(2)
         .background(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Color(red: 0.93, green: 0.93, blue: 0.94))
+                .fill(Color.tpSky.opacity(0.18))
         )
     }
 }
@@ -259,7 +265,13 @@ struct DraftBottomNavigationBar: View {
         .padding(.horizontal, 6)
         .padding(.top, 16)
         .padding(.bottom, 0)
-        .background(.white.opacity(0.97))
+        .background(
+            LinearGradient(
+                colors: [Color.tpSurface.opacity(0.98), Color.tpSurfacePink.opacity(0.88)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(Color.tpLine)
@@ -284,8 +296,8 @@ struct DraftBottomNavigationBar: View {
                 .font(.taption(size: 23, weight: .medium))
                 .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
-                .background(Color.tpInk, in: Circle())
-                .shadow(color: .black.opacity(0.28), radius: 7, y: 4)
+                .background(Color.tpProjectDark, in: Circle())
+                .shadow(color: Color.tpSky.opacity(0.36), radius: 7, y: 4)
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
@@ -348,7 +360,7 @@ struct DraftChip: View {
             .foregroundStyle(selected ? Color.white : Color.tpSecondary)
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(selected ? tint : Color(red: 0.94, green: 0.94, blue: 0.95))
+            .background(selected ? tint : Color.tpSky.opacity(0.16))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
