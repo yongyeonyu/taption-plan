@@ -18,6 +18,9 @@
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
+		A10000000000000000000080 /* record-classification.json in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000080 /* record-classification.json */; };
+		A10000000000000000000081 /* record-classification.json in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000080 /* record-classification.json */; };
+		A10000000000000000000082 /* record-classification.json in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000080 /* record-classification.json */; };
 		A1000000000000000000000C /* TimeScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000C /* TimeScaleTests.swift */; };
 		A1000000000000000000000D /* DraftComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* DraftComponents.swift */; };
 		A1000000000000000000000E /* DetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* DetailViews.swift */; };
@@ -233,6 +236,7 @@
 		F10000000000000000000075 /* TaptionPlanWatch-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TaptionPlanWatch-Bridging-Header.h"; sourceTree = "<group>"; };
 		F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlanTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000077 /* WatchMeasurementAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchMeasurementAlertTests.swift; sourceTree = "<group>"; };
+		F10000000000000000000080 /* record-classification.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "record-classification.json"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -362,6 +366,7 @@
 			children = (
 				F10000000000000000000003 /* PlanItem.swift */,
 				F1000000000000000000000F /* FeatureModels.swift */,
+				F10000000000000000000080 /* record-classification.json */,
 				F10000000000000000000010 /* PlanRepository.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
@@ -614,6 +619,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000000B /* Assets.xcassets in Resources */,
+				A10000000000000000000080 /* record-classification.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -621,6 +627,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000081 /* record-classification.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -629,6 +636,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000078 /* Assets.xcassets in Resources */,
+				A10000000000000000000082 /* record-classification.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

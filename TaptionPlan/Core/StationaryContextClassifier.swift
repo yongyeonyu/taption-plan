@@ -255,8 +255,8 @@ struct StationaryContextClassifier: Sendable {
                 AppleWatchSensorActivityEngine.sustainedMotion($0)
                     && TimeSpan(start: $0.startedAt, end: $0.endedAt)
                         .intersection(with: stay) != nil
-            }) {
-                add(.housework, 0.40, "집에서 이어지는 손목 움직임")
+            }) || hasHomeMovement(input.readings, in: stay) {
+                add(.housework, 0.40, "집에서 걷기·가속도 움직임")
             } else if isLowMotion(input.readings, stay: stay, placement: placement) {
                 add(.homeRest, 0.30, "집에서 움직임 거의 없음")
             }
@@ -386,6 +386,25 @@ struct StationaryContextClassifier: Sendable {
         let stationary = inside.filter { $0.motion == .stationary }.count
         return Double(stationary) / Double(inside.count) >= 0.7
             || placement.stillRatio >= 0.7
+    }
+
+    private func hasHomeMovement(
+        _ readings: [SensorReading],
+        in stay: TimeSpan
+    ) -> Bool {
+        let inside = readings.filter { stay.contains($0.timestamp) }
+        guard inside.count >= 3 else { return false }
+        let active = inside.filter { reading in
+            if reading.motion == .walking
+                || reading.motion == .running
+                || reading.motion == .cycling {
+                return true
+            }
+            guard let summary = reading.deviceMotionSummary else { return false }
+            return summary.userAccelerationStandardDeviationG >= 0.015
+                || summary.peakUserAccelerationG >= 0.12
+        }
+        return Double(active.count) / Double(inside.count) >= 0.25
     }
 
     private func abuts(

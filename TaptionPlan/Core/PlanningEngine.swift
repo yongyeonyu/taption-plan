@@ -1670,7 +1670,8 @@ struct ReviewEngine: Sendable {
         weather: [WeatherContext],
         photos: [PhotoMoment],
         memos: [ActionMemo],
-        asOf: Date = .now
+        asOf: Date = .now,
+        scope: RecordAnalysisScope = .legacy
     ) -> ReviewReport {
         report(
             over: [aggregation.interval(for: level, containing: date)],
@@ -1679,7 +1680,8 @@ struct ReviewEngine: Sendable {
             weather: weather,
             photos: photos,
             memos: memos,
-            asOf: asOf
+            asOf: asOf,
+            scope: scope
         )
     }
 
@@ -1692,7 +1694,8 @@ struct ReviewEngine: Sendable {
         weather: [WeatherContext],
         photos: [PhotoMoment],
         memos: [ActionMemo],
-        asOf: Date = .now
+        asOf: Date = .now,
+        scope: RecordAnalysisScope = .legacy
     ) -> ReviewReport {
         let ordered = spans.sorted { $0.start < $1.start }
         guard let first = ordered.first, let last = ordered.last else {
@@ -1707,13 +1710,38 @@ struct ReviewEngine: Sendable {
         }
         let hull = TimeSpan(start: first.start, end: last.end)
 
+        let scopedPlans: [PlanRecord]
+        let scopedActuals: [ActualRecord]
+        switch scope {
+        case .legacy:
+            scopedPlans = plans
+            scopedActuals = actuals
+        case .canonical:
+            scopedPlans = plans.map { plan in
+                var value = plan
+                value.categoryID = RecordAnalysisCategoryNormalizer.categoryID(
+                    for: plan.categoryID
+                )
+                return value
+            }
+            scopedActuals = actuals.map { actual in
+                var value = actual
+                value.categoryID = RecordAnalysisCategoryNormalizer.categoryID(
+                    for: actual.categoryID,
+                    title: actual.title,
+                    behavior: actual.behavior
+                )
+                return value
+            }
+        }
+
         var planned: [String: TimeInterval] = [:]
         var actual: [String: TimeInterval] = [:]
         for span in ordered {
             let bucket = aggregation.summary(
                 of: span,
-                plans: plans,
-                actuals: actuals,
+                plans: scopedPlans,
+                actuals: scopedActuals,
                 photos: photos,
                 asOf: asOf
             )
@@ -1734,8 +1762,8 @@ struct ReviewEngine: Sendable {
                 max($0.actual, $0.planned) > max($1.actual, $1.planned)
             }
 
-        let knownPlanIDs = Set(plans.map(\.id))
-        let unplanned = actuals.reduce(0) { partial, actual in
+        let knownPlanIDs = Set(scopedPlans.map(\.id))
+        let unplanned = scopedActuals.reduce(0) { partial, actual in
             guard actual.planID == nil || !knownPlanIDs.contains(actual.planID!) else {
                 return partial
             }

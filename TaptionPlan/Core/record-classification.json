@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "activity",
+      "title": "활동",
+      "systemImage": "sparkles",
+      "details": [
+        { "id": "activity.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
+        { "id": "activity.housework", "title": "집안일", "behavior": "housework", "systemImage": "washer.fill", "automaticOnly": true },
+        { "id": "activity.unconfirmed", "title": "미확인", "behavior": "unconfirmed-activity", "systemImage": "questionmark.circle" }
+      ]
+    },
+    {
+      "id": "work",
+      "title": "업무",
+      "systemImage": "briefcase.fill",
+      "details": [
+        { "id": "work.route", "title": "업무(집 - 회사)", "behavior": "work", "systemImage": "briefcase.fill" },
+        { "id": "work.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
+        { "id": "work.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
+      ]
+    },
+    {
+      "id": "study",
+      "title": "수업",
+      "systemImage": "book.fill",
+      "details": [
+        { "id": "study.route", "title": "수업(집 - 학교·학원)", "behavior": "study", "systemImage": "book.fill" },
+        { "id": "study.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
+        { "id": "study.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
+      ]
+    },
+    {
+      "id": "hobby",
+      "title": "취미",
+      "systemImage": "paintpalette.fill",
+      "details": [
+        { "id": "hobby.route", "title": "취미(집 - 취미)", "behavior": "hobby", "systemImage": "paintpalette.fill" },
+        { "id": "hobby.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
+        { "id": "hobby.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
+      ]
+    },
+    {
+      "id": "sleep",
+      "title": "수면",
+      "systemImage": "moon.zzz.fill",
+      "automaticOnly": true,
+      "details": [
+        { "id": "sleep.core", "title": "코어 수면", "behavior": "core", "systemImage": "moon.zzz.fill", "automaticOnly": true },
+        { "id": "sleep.deep", "title": "깊은 수면", "behavior": "deep", "systemImage": "moon.zzz.fill", "automaticOnly": true },
+        { "id": "sleep.rem", "title": "REM 수면", "behavior": "rem", "systemImage": "moon.zzz.fill", "automaticOnly": true }
+      ]
+    },
+    {
+      "id": "movement",
+      "title": "이동",
+      "systemImage": "figure.walk.motion",
+      "details": [
+        { "id": "movement.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" },
+        { "id": "movement.car", "title": "자동차", "behavior": "automotive", "systemImage": "car.fill" },
+        { "id": "movement.subway", "title": "지하철", "behavior": "subway", "systemImage": "tram.fill" },
+        { "id": "movement.privateVehicle", "title": "자가용", "behavior": "privateVehicle", "systemImage": "car.fill" },
+        { "id": "movement.bus", "title": "버스", "behavior": "bus", "systemImage": "bus.fill" },
+        { "id": "movement.ship", "title": "배", "behavior": "ship", "systemImage": "ferry.fill" },
+        { "id": "movement.airplane", "title": "비행기", "behavior": "airplane", "systemImage": "airplane" },
+        { "id": "movement.cycling", "title": "자전거", "behavior": "cycling", "systemImage": "bicycle" },
+        { "id": "movement.unconfirmed", "title": "미확인", "behavior": "unconfirmed-movement", "systemImage": "questionmark.circle" }
+      ]
+    },
+    {
+      "id": "exercise",
+      "title": "운동",
+      "systemImage": "figure.strengthtraining.traditional",
+      "automaticOnly": true,
+      "details": [
+        { "id": "exercise.workout", "title": "운동", "behavior": "exercise", "systemImage": "figure.strengthtraining.traditional", "automaticOnly": true }
+      ]
+    }
+  ]
+}

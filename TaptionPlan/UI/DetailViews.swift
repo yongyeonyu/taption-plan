@@ -2551,7 +2551,7 @@ struct CategorySetupView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("필요한 대분류만 골라보세요")
+                    Text("필요한 일과만 골라보세요")
                         .font(.taption(size: 21, weight: .bold))
                     Text("역할·상황·루틴에 맞는 항목을 시간표와 추가 메뉴에 표시합니다. 자동 기록 항목도 여기서 켜고 끌 수 있습니다.")
                         .font(.taption(size: 10.5))
@@ -2566,7 +2566,7 @@ struct CategorySetupView: View {
                         }
                     }
 
-                    Text("선택 \(model.selectedSetupCategoryCount)개 · 나중에 설정 > 대분류 관리에서 추가·편집할 수 있습니다.")
+                    Text("선택 \(model.selectedSetupCategoryCount)개 · 분류표 관리에서 자동 분류 기준을 확인할 수 있습니다.")
                         .font(.taption(size: 9, weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                         .padding(.top, 2)

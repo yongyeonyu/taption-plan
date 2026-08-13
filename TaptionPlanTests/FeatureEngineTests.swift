@@ -7,6 +7,81 @@ import SwiftUI // TEMP-CAT-SHEET
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    func testRecordAnalysisPolicyUsesOnlyCanonicalAutomaticCategories() {
+        let phaseTitles = RecordAnalysisCategoryPolicy.options
+            .filter(RecordAnalysisCategoryPolicy.isPhaseOption)
+            .map(\.title)
+        XCTAssertEqual(
+            phaseTitles,
+            ["활동", "업무", "수업", "취미", "수면", "이동", "운동"]
+        )
+
+        let detailTitles = Set(
+            RecordAnalysisCategoryPolicy.options
+                .filter { !RecordAnalysisCategoryPolicy.isPhaseOption($0) }
+                .map(\.title)
+        )
+        XCTAssertTrue(detailTitles.isSuperset(of: [
+            "휴식", "미확인", "업무(집 - 회사)", "수업(집 - 학교·학원)",
+            "취미(집 - 취미)", "코어 수면", "깊은 수면", "REM 수면",
+            "걷기", "자동차", "지하철", "자가용", "버스", "배", "비행기",
+            "자전거", "운동",
+        ]))
+    }
+
+    func testCanonicalAnalysisDoesNotMutateStoredRecord() {
+        let record = ActualRecord(
+            planID: nil,
+            title: "집에서 휴식",
+            categoryID: "rest",
+            startedAt: makeDate(2026, 8, 13, 9, 0),
+            endedAt: makeDate(2026, 8, 13, 10, 0),
+            source: .location,
+            behavior: StationaryContextKind.homeRest.rawValue
+        )
+
+        XCTAssertEqual(
+            RecordAnalysisCategoryPolicy.categoryID(for: record),
+            "activity"
+        )
+        XCTAssertEqual(
+            RecordAnalysisCategoryNormalizer.categoryID(
+                for: record.categoryID,
+                title: record.title,
+                behavior: record.behavior
+            ),
+            "activity"
+        )
+        XCTAssertEqual(record.categoryID, "rest")
+        XCTAssertEqual(record.title, "집에서 휴식")
+    }
+
+    func testHouseworkAlwaysBelongsToActivity() {
+        let record = ActualRecord(
+            planID: nil,
+            title: "집안일",
+            categoryID: "work",
+            startedAt: makeDate(2026, 8, 13, 9, 0),
+            endedAt: makeDate(2026, 8, 13, 10, 0),
+            source: .location,
+            behavior: WatchBehaviorKind.housework.rawValue
+        )
+
+        XCTAssertEqual(
+            RecordAnalysisCategoryPolicy.categoryID(for: record),
+            "activity"
+        )
+        XCTAssertEqual(
+            RecordAnalysisCategoryPolicy.detailTitle(for: record),
+            "집안일"
+        )
+        XCTAssertFalse(
+            RecordAnalysisCategoryPolicy.options
+                .filter { $0.categoryID == "work" }
+                .contains { $0.title == "집안일" }
+        )
+    }
+
     func testTimelineHierarchyIsSeparateFromRecordSource() {
         let span = TimeSpan(
             start: makeDate(2026, 8, 8, 9, 0),
@@ -3541,6 +3616,86 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(route?.stops.last?.stationName, "가정")
     }
 
+    func testSubwayCatalogRejectsRoundTripRoute() {
+        let route = SubwayStationCatalog.route(
+            for: [
+                "김포공항역", "공항시장역", "신방화역", "마곡나루역",
+                "김포공항역", "계양역",
+            ]
+        )
+
+        XCTAssertNil(route)
+    }
+
+    func testStationStopPatternOverridesAutomotiveForTransferCommute() {
+        let base = makeDate(2026, 8, 12, 8, 0)
+        let samples: [(Double, Double, Double, String)] = [
+            (0, 37.5248, 126.6744, "가정역"),
+            (60, 37.5692, 126.6737, "검암역"),
+            (120, 37.57127, 126.7359, "마곡나루역"),
+        ]
+        let readings = samples.map { minute, latitude, longitude, name in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 0,
+                motion: .stationary,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: name,
+                matchesRailRoute: true
+            )
+        }
+
+        let result = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.confidence, .high)
+        XCTAssertTrue(result.evidence.contains("출발역·환승역·도착역 순서"))
+        XCTAssertTrue(result.evidence.contains("역별 가다·서다 정차 패턴"))
+    }
+
+    func testCoordinateRouteWinsConflictingStationEnrichment() throws {
+        let base = makeDate(2026, 8, 12, 8, 0)
+        let samples: [(Double, Double, Double, String)] = [
+            (0, 37.5248, 126.6744, "김포공항역"),
+            (12, 37.5692, 126.6737, "공항시장역"),
+            (24, 37.57127, 126.7359, "신방화역"),
+            (36, 37.5667, 126.8273, "마곡나루역"),
+        ]
+        let readings = samples.map { minute, latitude, longitude, name in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: name,
+                matchesRailRoute: true
+            )
+        }
+
+        let result = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.subwayRoute?.stops.first?.stationName, "가정")
+        XCTAssertEqual(result.subwayRoute?.stops.last?.stationName, "마곡나루")
+        XCTAssertEqual(result.subwayRoute?.transferStationNames, ["검암"])
+    }
+
     func testCoordinateTrajectoryRestoresGajeongCommuteWithTransferWalking() throws {
         let base = makeDate(2026, 8, 11, 9, 35)
         let samples: [(Double, Double, Double, Int)] = [
@@ -5163,6 +5318,90 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(result.map(\.mode), [.subway])
         XCTAssertEqual(result.first?.subwayRoute?.transferStationNames, ["검암"])
+    }
+
+    func testMergingTravelKeepsValidatedSubwayOutsideNewGPSCandidates() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let route = try XCTUnwrap(
+            SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"])
+        )
+        let preserved = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: base.addingTimeInterval(60 * 60),
+                end: base.addingTimeInterval(90 * 60)
+            ),
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: [
+                "출발역·환승역·도착역 순서",
+                "역별 가다·서다 정차 패턴",
+            ],
+            subwayRoute: route
+        )
+        let unrelatedCar = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(15 * 60)
+            ),
+            distanceMeters: 4_000,
+            confidence: .high,
+            evidence: ["도로 이동"]
+        )
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [unrelatedCar],
+            motionActivities: [],
+            pedometer: nil,
+            readings: [],
+            preservedSubwaySegments: [preserved]
+        )
+
+        XCTAssertEqual(result.map(\.mode), [.car, .subway])
+        XCTAssertEqual(
+            result.last?.subwayRoute?.transferStationNames,
+            ["검암"]
+        )
+    }
+
+    func testValidatedSubwayDisplacesPartiallyOverlappingAutomotiveCandidate() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let route = try XCTUnwrap(
+            SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"])
+        )
+        let car = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(60 * 60)
+            ),
+            distanceMeters: 20_000,
+            confidence: .high,
+            evidence: ["Core Motion 자동차"]
+        )
+        let preserved = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: base.addingTimeInterval(45 * 60),
+                end: base.addingTimeInterval(105 * 60)
+            ),
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["역별 가다·서다 정차 패턴"],
+            subwayRoute: route
+        )
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [car],
+            motionActivities: [],
+            pedometer: nil,
+            readings: [],
+            preservedSubwaySegments: [preserved]
+        )
+
+        XCTAssertEqual(result.map(\.mode), [.subway])
+        XCTAssertEqual(result.first?.subwayRoute, route)
     }
 
     func testHealthKitRefreshReplacesOnlyHealthKitGroundTruthWindow() {

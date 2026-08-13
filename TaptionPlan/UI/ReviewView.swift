@@ -2602,8 +2602,7 @@ struct ReviewView: View {
         case .sleepStage:
             return SleepStage(rawValue: token)?.displayName ?? token
         case .travel:
-            return TravelMode(rawValue: token).map(MovementPresentation.title)
-                ?? token
+            return RecordAnalysisCategoryPolicy.movementTitle(for: token)
         case .weather:
             return WeatherClockToken.displayName(token)
         case .location:
@@ -3408,7 +3407,8 @@ struct ReviewView: View {
                 in: period,
                 unit: model.reviewScale == .year ? .month : .day,
                 calendar: engine.aggregation.calendar,
-                asOf: now
+                asOf: now,
+                scope: .canonical
             )
         let selectedChartSpan = ReviewSelectionEngine.chartSpan(
             selectedChartBucketID,
@@ -3437,7 +3437,8 @@ struct ReviewView: View {
             weather: model.snapshot.weather,
             photos: model.snapshot.photos,
             memos: model.snapshot.memos,
-            asOf: now
+            asOf: now,
+            scope: .canonical
         )
 
         var rings: [RecordClockRing] = []
@@ -3453,7 +3454,8 @@ struct ReviewView: View {
             rings = RecordChartEngine.clockRings(
                 actuals: displayActuals,
                 in: day,
-                asOf: now
+                asOf: now,
+                scope: .canonical
             )
             let dayPhases = DayPhaseEngine.completePhases(
                 actuals: phaseActuals,
@@ -3463,25 +3465,31 @@ struct ReviewView: View {
                 in: day,
                 asOf: now
             )
-            phaseDurations = DayPhaseEngine.categoryDurations(dayPhases)
+            phaseDurations = DayPhaseEngine.categoryDurations(
+                dayPhases,
+                scope: .canonical
+            )
             phaseRing = RecordClockDetailEngine.phaseRing(
                 actuals: phaseActuals,
                 travel: model.snapshot.travel,
                 stays: model.snapshot.places,
                 placeKinds: placeKinds,
                 in: day,
-                asOf: now
+                asOf: now,
+                scope: .canonical
             )
             phaseGroups = ActualRecordGroupingEngine.phaseGroups(
                 phases: dayPhases,
                 actuals: displayActuals,
                 categories: model.snapshot.categories,
-                asOf: now
+                asOf: now,
+                scope: .canonical
             )
             activityRings = RecordClockDetailEngine.activityRings(
                 sleepSessions: model.sleepSessions,
                 travel: model.snapshot.travel,
-                in: day
+                in: day,
+                scope: .canonical
             )
             contextRings = [
                 RecordClockDetailEngine.weatherRing(
@@ -3509,12 +3517,13 @@ struct ReviewView: View {
                     asOf: now
                 )
             }
-            phaseGroups = ActualRecordGroupingEngine.phaseGroups(
-                phases: phases,
-                actuals: displayActuals,
-                categories: model.snapshot.categories,
-                asOf: now
-            )
+                phaseGroups = ActualRecordGroupingEngine.phaseGroups(
+                    phases: phases,
+                    actuals: displayActuals,
+                    categories: model.snapshot.categories,
+                    asOf: now,
+                    scope: .canonical
+                )
             if let selectedChartBucketID, selectedChartSpan != nil {
                 selectedChartBucketIDs = [selectedChartBucketID]
             } else if !selected.isEmpty {
@@ -3555,7 +3564,8 @@ struct ReviewView: View {
             actuals: displayActuals,
             in: spans,
             categories: model.snapshot.categories,
-            asOf: now
+            asOf: now,
+            scope: .canonical
         )
         let hierarchyGroups = model.reviewScale == .day || model.reviewScale == .week
             ? phaseGroups
@@ -4213,44 +4223,7 @@ private enum ActivityCorrectionCatalog {
         actuals: [ActualRecord],
         customLabels: [String]
     ) -> [ActivityCorrectionOption] {
-        var result: [ActivityCorrectionOption] = []
-        var seen = Set<String>()
-        let calendar = Calendar.autoupdatingCurrent
-        let automatic = actuals
-            .filter {
-                guard calendar.isDate($0.startedAt, inSameDayAs: record.startedAt)
-                else { return false }
-                let category = ActualRecordCategoryResolver.categoryID(for: $0)
-                return [
-                    "activity", "movement", "sleep", "work", "study", "hobby",
-                    "exercise", "rest", "routine", "food", "relationship"
-                ].contains(category) || $0.id == record.id
-            }
-            .sorted { $0.startedAt < $1.startedAt }
-        for actual in automatic {
-            let option = automaticOption(for: actual)
-            guard seen.insert(option.title).inserted else { continue }
-            result.append(option)
-        }
-        for kind in WatchBehaviorKind.confirmationChoices {
-            let option = option(for: kind)
-            guard seen.insert(option.title).inserted else { continue }
-            result.append(option)
-        }
-        for context in StationaryContextKind.allCases
-        where context != .unknownStay {
-            let option = option(for: context)
-            guard seen.insert(option.title).inserted else { continue }
-            result.append(option)
-        }
-        for label in customLabels {
-            let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            let option = ActivityCorrectionOption.custom(trimmed)
-            guard seen.insert(option.title).inserted else { continue }
-            result.append(option)
-        }
-        return result
+        RecordAnalysisCategoryPolicy.options
     }
 
     static func quickOptions(
@@ -4258,12 +4231,7 @@ private enum ActivityCorrectionCatalog {
         actuals: [ActualRecord],
         customLabels: [String]
     ) -> [ActivityCorrectionOption] {
-        options(
-            for: record,
-            actuals: actuals,
-            customLabels: customLabels
-        )
-        .filter(ActivityQuickSelectionPolicy.isDetailedOption)
+        options(for: record, actuals: actuals, customLabels: customLabels)
     }
 
     private static func automaticOption(for record: ActualRecord) -> ActivityCorrectionOption {
@@ -4403,13 +4371,16 @@ private struct ActivityCorrectionHierarchyPicker: View {
     private var phaseChoices: [DayPhase] {
         let available = Set(options.map(Self.phase(for:)))
         let current = Self.phase(for: record)
-        return DayPhase.timelineRows.filter {
+        return RecordAnalysisCategoryPolicy.phaseOrder.filter {
             available.contains($0) || $0 == current
         }
     }
 
     private var detailOptions: [ActivityCorrectionOption] {
-        options.filter { Self.phase(for: $0) == selectedPhase }
+        options.filter {
+            !RecordAnalysisCategoryPolicy.isPhaseOption($0)
+                && Self.phase(for: $0) == selectedPhase
+        }
     }
 
     var body: some View {
@@ -4491,6 +4462,7 @@ private struct ActivityCorrectionHierarchyPicker: View {
     ) -> some View {
         let tint = PlanCategory(categoryID: option.categoryID).darkColor
         return Button {
+            guard !option.isAutomaticOnly else { return }
             onSelect(option)
         } label: {
             HStack(spacing: 7) {
@@ -4517,31 +4489,21 @@ private struct ActivityCorrectionHierarchyPicker: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(option.isAutomaticOnly)
+        .opacity(option.isAutomaticOnly ? 0.55 : 1)
         .accessibilityLabel(option.title)
     }
 
     private static func phase(for record: ActualRecord) -> DayPhase {
-        if record.categoryID == ReviewCoverageEngine.unconfirmedCategoryID {
-            return .activity
-        }
-        if let behavior = record.behavior,
-           let kind = WatchBehaviorKind.fromModelLabel(behavior) {
-            return phase(for: kind)
-        }
-        return DayPhase.phase(forActivityCategory: record.categoryID)
+        RecordAnalysisCategoryPolicy.phase(
+            for: RecordAnalysisCategoryPolicy.categoryID(for: record)
+        )
     }
 
     private static func phase(
         for option: ActivityCorrectionOption
     ) -> DayPhase {
-        if option.categoryID == ReviewCoverageEngine.unconfirmedCategoryID {
-            return .activity
-        }
-        if let behavior = option.behavior,
-           let kind = WatchBehaviorKind.fromModelLabel(behavior) {
-            return phase(for: kind)
-        }
-        return DayPhase.phase(forActivityCategory: option.categoryID)
+        RecordAnalysisCategoryPolicy.phase(for: option.categoryID)
     }
 
     private static func phase(for kind: WatchBehaviorKind) -> DayPhase {
@@ -4582,9 +4544,7 @@ private struct ActivityCorrectionSheet: View {
     let target: ActivityCorrectionTarget
     let displayedSpan: TimeSpan?
     let showsQuickMenu: Bool
-    @State private var customTitle = ""
     @State private var selectedOption: ActivityCorrectionOption?
-    @State private var addedCustomOptions: [ActivityCorrectionOption] = []
     @State private var startAt: Date
     @State private var endAt: Date
     @State private var isSaving = false
@@ -4672,15 +4632,6 @@ private struct ActivityCorrectionSheet: View {
         options.filter { !$0.isAutomatic && !$0.isCustom }
     }
 
-    private var customOptions: [ActivityCorrectionOption] {
-        var result = options.filter(\.isCustom)
-        for option in addedCustomOptions
-        where !result.contains(where: { $0.id == option.id }) {
-            result.append(option)
-        }
-        return result
-    }
-
     var body: some View {
         NavigationStack {
             List {
@@ -4721,23 +4672,6 @@ private struct ActivityCorrectionSheet: View {
                 Section("활동 선택") {
                     ForEach(suggestedOptions) { optionRow($0) }
                 }
-                if !customOptions.isEmpty {
-                    Section("내가 추가한 활동") {
-                        ForEach(customOptions) { optionRow($0) }
-                    }
-                }
-                Section("활동 추가") {
-                    HStack(spacing: 8) {
-                        TextField("새 활동 이름", text: $customTitle)
-                            .textInputAutocapitalization(.never)
-                            .submitLabel(.done)
-                            .onSubmit { addCustomActivity() }
-                        Button("추가") {
-                            addCustomActivity()
-                        }
-                        .disabled(customTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                }
             }
             .listStyle(.insetGrouped)
             .navigationTitle(target.isUnconfirmed ? "활동 결정" : "활동 변경")
@@ -4762,7 +4696,7 @@ private struct ActivityCorrectionSheet: View {
     }
 
     private func selectQuickOption(_ option: ActivityCorrectionOption) {
-        guard !isSaving, endAt > startAt else { return }
+        guard !isSaving, endAt > startAt, !option.isAutomaticOnly else { return }
         RecentActivitySelectionStore.remember(option)
         selectedOption = option
         // `@State` is committed on the next render pass. Passing the option
@@ -4773,6 +4707,7 @@ private struct ActivityCorrectionSheet: View {
 
     private func optionRow(_ option: ActivityCorrectionOption) -> some View {
         Button {
+            guard !option.isAutomaticOnly else { return }
             select(option)
         } label: {
             HStack(spacing: 10) {
@@ -4791,6 +4726,8 @@ private struct ActivityCorrectionSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(option.isAutomaticOnly)
+        .opacity(option.isAutomaticOnly ? 0.55 : 1)
     }
 
     private func isSelected(_ option: ActivityCorrectionOption) -> Bool {
@@ -4810,23 +4747,6 @@ private struct ActivityCorrectionSheet: View {
     }
 
     private func select(_ option: ActivityCorrectionOption) {
-        selectedOption = option
-    }
-
-    private func addCustomActivity() {
-        let title = customTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty else { return }
-        customTitle = ""
-        let option = ActivityCorrectionOption.custom(title)
-        guard !customOptions.contains(where: {
-            $0.title.localizedCaseInsensitiveCompare(title) == .orderedSame
-        }) else {
-            selectedOption = customOptions.first {
-                $0.title.localizedCaseInsensitiveCompare(title) == .orderedSame
-            }
-            return
-        }
-        addedCustomOptions.append(option)
         selectedOption = option
     }
 

@@ -65,6 +65,259 @@ enum ActualRecordCategoryResolver {
     }
 }
 
+/// 기록 화면과 자동 분류가 공유하는 최소 분류표다. 센서·HealthKit 원본의
+/// `categoryID`, 제목, 근거는 바꾸지 않고, 저장 기록을 분석·표시할 때만 이
+/// 일과 → 상세활동 계층으로 정규화한다.
+enum RecordAnalysisCategoryPolicy {
+    static var categoryIDs: [String] {
+        RecordClassificationCatalog.categoryIDs
+    }
+
+    static var phaseOrder: [DayPhase] {
+        categoryIDs.map { phase(for: $0) }
+    }
+
+    static var options: [ActivityCorrectionOption] {
+        RecordClassificationCatalog.options
+    }
+
+    static func isPhaseOption(_ option: ActivityCorrectionOption) -> Bool {
+        option.id.hasPrefix("phase.")
+    }
+
+    static func phase(for categoryID: String) -> DayPhase {
+        switch categoryID {
+        case "work": .work
+        case "study": .study
+        case "hobby": .hobby
+        case "sleep": .sleep
+        case "movement": .movement
+        case "exercise": .exercise
+        default: .activity
+        }
+    }
+
+    /// 자동 기록을 일곱 개 상위 분류 중 하나로만 분석한다. 기록 자체는
+    /// 호출자에게 돌려주지 않고, 이 값만 합계·고리·범례의 열쇠로 쓴다.
+    static func categoryID(for actual: ActualRecord) -> String {
+        if actual.behavior == "unconfirmed-movement" {
+            return "movement"
+        }
+        if actual.categoryID == ReviewCoverageEngine.unconfirmedCategoryID
+            || actual.behavior == "unconfirmed-gap"
+            || normalized(actual.title) == "미확인" {
+            return "activity"
+        }
+
+        let value = normalized("\(actual.title) \(actual.behavior ?? "")")
+        if actual.behavior == WatchBehaviorKind.housework.rawValue
+            || actual.behavior == StationaryContextKind.housework.rawValue
+            || value.contains("집안일")
+            || value.contains("housework") {
+            return "activity"
+        }
+
+        if ["work", "study", "hobby"].contains(actual.categoryID),
+           let behavior = actual.behavior,
+           [
+               WatchBehaviorKind.stationary.rawValue,
+               WatchBehaviorKind.sitting.rawValue,
+               WatchBehaviorKind.standing.rawValue,
+               WatchBehaviorKind.lying.rawValue,
+               WatchBehaviorKind.walking.rawValue,
+           ].contains(behavior) {
+            return actual.categoryID
+        }
+
+        if let kind = actual.behavior.flatMap(WatchBehaviorKind.fromModelLabel) {
+            switch kind {
+            case .sleep: return "sleep"
+            case .walking, .running, .cycling, .stairsUp, .stairsDown,
+                 .elevator, .automotive, .publicTransit, .subway:
+                return "movement"
+            case .exercise: return "exercise"
+            case .unknown: return "activity"
+            default: return "activity"
+            }
+        }
+
+        if let context = actual.behavior.flatMap(StationaryContextKind.init(rawValue:)) {
+            switch context.categoryID {
+            case "work", "study", "hobby", "exercise":
+                return context.categoryID
+            default:
+                return "activity"
+            }
+        }
+
+        if value.contains("코어") || value.contains("깊은")
+            || value.contains("rem") || value.contains("수면")
+            || value.contains("sleep") {
+            return "sleep"
+        }
+        if value.contains("업무") || value.contains("근무") || value.contains("work") {
+            return "work"
+        }
+        if value.contains("수업") || value.contains("학습") || value.contains("study") {
+            return "study"
+        }
+        if value.contains("취미") || value.contains("hobby") {
+            return "hobby"
+        }
+        if value.contains("운동") || value.contains("exercise") {
+            return "exercise"
+        }
+        if value.contains("걷") || value.contains("자동차") || value.contains("자가용")
+            || value.contains("지하철") || value.contains("버스") || value.contains("배")
+            || value.contains("비행기") || value.contains("자전거")
+            || value.contains("walking") || value.contains("automotive")
+            || value.contains("subway") || value.contains("transit") {
+            return "movement"
+        }
+
+        switch actual.categoryID {
+        default: return categoryID(for: actual.categoryID)
+        }
+    }
+
+    static func categoryID(for rawID: String) -> String {
+        switch rawID {
+        case let value where categoryIDs.contains(value):
+            return value
+        case "unconfirmed":
+            return "activity"
+        default:
+            // 기존의 업무·수업 외 사용자 카테고리는 원본을 유지하되, 자동
+            // 기록 분석에서는 활동으로만 남긴다.
+            return "activity"
+        }
+    }
+
+    static func canonicalPhase(_ phase: DayPhase) -> DayPhase {
+        switch phase {
+        case .sleep: .sleep
+        case .movement, .commuteToWork, .commuteToSchool, .commuteToAcademy,
+             .commuteHomeFromWork, .commuteHomeFromSchool,
+             .commuteHomeFromAcademy:
+            .movement
+        case .work: .work
+        case .study: .study
+        case .hobby: .hobby
+        case .exercise: .exercise
+        case .unconfirmed: .activity
+        default: .activity
+        }
+    }
+
+    static func detailTitle(for actual: ActualRecord) -> String {
+        let category = categoryID(for: actual)
+        if let detail = RecordClassificationCatalog.categories
+            .first(where: { $0.id == category })?.details
+            .first(where: { detail in
+                detail.behavior == actual.behavior
+                    || normalized(actual.title).contains(
+                        normalized(detail.title)
+                    )
+            }) {
+            return detail.title
+        }
+        switch category {
+        case "work": return "업무(집 - 회사)"
+        case "study": return "수업(집 - 학교·학원)"
+        case "hobby": return "취미(집 - 취미)"
+        case "exercise": return "운동"
+        case "sleep":
+            return SleepStage(rawValue: actual.behavior ?? "")?.displayName ?? "수면"
+        case "movement": return movementTitle(for: actual)
+        default:
+            let behavior = actual.behavior.flatMap(WatchBehaviorKind.fromModelLabel)
+            return behavior == .stationary || behavior == .sitting
+                || behavior == .standing || behavior == .lying
+                || normalized(actual.title).contains("휴식")
+                ? "휴식"
+                : "미확인"
+        }
+    }
+
+    static func movementTitle(for actual: ActualRecord) -> String {
+        let value = normalized("\(actual.title) \(actual.behavior ?? "")")
+        if value.contains("자가용") || value.contains("privatevehicle") {
+            return "자가용"
+        }
+        if value.contains("지하철") || value.contains("subway") { return "지하철" }
+        if value.contains("버스") || value.contains("bus") || value.contains("transit") {
+            return "버스"
+        }
+        if value.contains("배") || value.contains("ship") { return "배" }
+        if value.contains("비행기") || value.contains("airplane") {
+            return "비행기"
+        }
+        if value.contains("자전거") || value.contains("cycling") { return "자전거" }
+        if value.contains("걷") || value.contains("walking") { return "걷기" }
+        if value.contains("자동차") || value.contains("automotive") || value.contains("car") {
+            return "자동차"
+        }
+        return "미확인"
+    }
+
+    static func movementTitle(for mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "걷기"
+        case .cycling: "자전거"
+        case .subway, .train: "지하철"
+        case .bus: "버스"
+        case .ship: "배"
+        case .airplane: "비행기"
+        case .car, .taxi: "자동차"
+        case .running: "미확인"
+        }
+    }
+
+    static func movementToken(for mode: TravelMode) -> String {
+        switch mode {
+        case .walking: TravelMode.walking.rawValue
+        case .cycling: TravelMode.cycling.rawValue
+        case .subway, .train: TravelMode.subway.rawValue
+        case .bus: TravelMode.bus.rawValue
+        case .ship: TravelMode.ship.rawValue
+        case .airplane: TravelMode.airplane.rawValue
+        case .car, .taxi: TravelMode.car.rawValue
+        case .running: "unknown"
+        }
+    }
+
+    static func movementTitle(for token: String) -> String {
+        guard token != "unknown" else { return "미확인" }
+        return TravelMode(rawValue: token).map(movementTitle(for:)) ?? "미확인"
+    }
+
+    static func canonicalSleepStage(_ stage: SleepStage) -> SleepStage? {
+        switch stage {
+        case .core, .deep, .rem: stage
+        case .asleepUnspecified: .core
+        case .inBed, .awake: nil
+        }
+    }
+
+    static func canonicalized(
+        _ actuals: [ActualRecord]
+    ) -> [ActualRecord] {
+        actuals.map { actual in
+            var value = actual
+            value.categoryID = categoryID(for: actual)
+            value.title = detailTitle(for: actual)
+            return value
+        }
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+    }
+}
+
 // MARK: - 계층형 기록 목록
 
 /// 기간 안의 자동·수동 기록을 카테고리 → 항목의 두 단계로 접는다.
@@ -74,13 +327,15 @@ enum ActualRecordGroupingEngine {
         actuals: [ActualRecord],
         in span: TimeSpan,
         categories: [CategoryDefinition],
-        asOf: Date = .now
+        asOf: Date = .now,
+        scope: RecordAnalysisScope = .legacy
     ) -> [RecordCategoryGroup] {
         groups(
             actuals: actuals,
             in: [span],
             categories: categories,
-            asOf: asOf
+            asOf: asOf,
+            scope: scope
         )
     }
 
@@ -90,14 +345,18 @@ enum ActualRecordGroupingEngine {
         actuals: [ActualRecord],
         in spans: [TimeSpan],
         categories: [CategoryDefinition],
-        asOf: Date = .now
+        asOf: Date = .now,
+        scope: RecordAnalysisScope = .legacy
     ) -> [RecordCategoryGroup] {
         var seen = Set<UUID>()
         var byCategory: [String: [(record: ActualRecord, span: TimeSpan)]] = [:]
 
         for actual in actuals {
             guard seen.insert(actual.id).inserted else { continue }
-            let id = ActualRecordCategoryResolver.categoryID(for: actual)
+            let id = switch scope {
+            case .legacy: ActualRecordCategoryResolver.categoryID(for: actual)
+            case .canonical: RecordAnalysisCategoryPolicy.categoryID(for: actual)
+            }
             for span in spans {
                 let limit = min(asOf, span.end)
                 guard actual.startedAt < limit,
@@ -117,7 +376,7 @@ enum ActualRecordGroupingEngine {
 
         return byCategory
             .map { categoryID, values in
-                let children = mergedChildren(values)
+                let children = mergedChildren(values, scope: scope)
                 let definition = definitions[categoryID]
                 return RecordCategoryGroup(
                     id: categoryID,
@@ -148,7 +407,8 @@ enum ActualRecordGroupingEngine {
         phases: [DayPhaseSpan],
         actuals: [ActualRecord],
         categories: [CategoryDefinition],
-        asOf: Date = .now
+        asOf: Date = .now,
+        scope: RecordAnalysisScope = .legacy
     ) -> [RecordCategoryGroup] {
         let definitions = Dictionary(
             categories.map { ($0.id, $0) },
@@ -156,7 +416,11 @@ enum ActualRecordGroupingEngine {
         )
         var spansByPhase: [DayPhase: [TimeSpan]] = [:]
         for phase in phases {
-            spansByPhase[phase.phase, default: []].append(phase.span)
+            let canonical = switch scope {
+            case .legacy: phase.phase
+            case .canonical: RecordAnalysisCategoryPolicy.canonicalPhase(phase.phase)
+            }
+            spansByPhase[canonical, default: []].append(phase.span)
         }
 
         var phaseStarts: [String: Date] = [:]
@@ -173,7 +437,7 @@ enum ActualRecordGroupingEngine {
                     values.append((record: actual, span: visible))
                 }
             }
-            let children = mergedChildren(values)
+            let children = mergedChildren(values, scope: scope)
             let definition = definitions[phase.rawValue]
             phaseStarts[phase.rawValue] = merged.first?.start ?? .distantFuture
             let duration = merged.reduce(0) { $0 + $1.duration }
@@ -199,16 +463,19 @@ enum ActualRecordGroupingEngine {
     /// 한 줄로 합치고 겹치는 구간은 한 번만 센다. 한 기록이 고른 칸 여럿에
     /// 걸쳐 잘렸을 때는 조각이 아니라 기록을 센다.
     private static func mergedChildren(
-        _ values: [(record: ActualRecord, span: TimeSpan)]
+        _ values: [(record: ActualRecord, span: TimeSpan)],
+        scope: RecordAnalysisScope = .legacy
     ) -> [RecordGroupChild] {
-        Dictionary(grouping: values) { childTitle($0.record).lowercased() }
+        Dictionary(grouping: values) {
+            childTitle($0.record, scope: scope).lowercased()
+        }
             .values
             .compactMap { entries -> RecordGroupChild? in
                 let ordered = entries.sorted { $0.span.start < $1.span.start }
                 guard let first = ordered.first else { return nil }
                 return RecordGroupChild(
                     id: first.record.id.uuidString,
-                    title: childTitle(first.record),
+                    title: childTitle(first.record, scope: scope),
                     duration: ActualIntervalMergeEngine.duration(
                         of: ordered.map(\.span)
                     ),
@@ -222,16 +489,24 @@ enum ActualRecordGroupingEngine {
             }
     }
 
-    private static func childTitle(_ actual: ActualRecord) -> String {
-        if ActualRecordCategoryResolver.categoryID(for: actual) == "movement" {
-            return MovementPresentation.title(for: actual)
+    private static func childTitle(
+        _ actual: ActualRecord,
+        scope: RecordAnalysisScope
+    ) -> String {
+        switch scope {
+        case .legacy:
+            if ActualRecordCategoryResolver.categoryID(for: actual) == "movement" {
+                return MovementPresentation.title(for: actual)
+            }
+            let trimmed = actual.title.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            if !trimmed.isEmpty { return trimmed }
+            return TimelineRowKind.title(forCategoryID: actual.categoryID)
+                ?? actual.categoryID
+        case .canonical:
+            return RecordAnalysisCategoryPolicy.detailTitle(for: actual)
         }
-        let trimmed = actual.title.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        if !trimmed.isEmpty { return trimmed }
-        return TimelineRowKind.title(forCategoryID: actual.categoryID)
-            ?? actual.categoryID
     }
 
     private static func displayName(
@@ -314,7 +589,8 @@ enum ReviewReportArchiveEngine {
                 weather: source.weather,
                 photos: source.photos,
                 memos: source.memos,
-                asOf: effectiveEnd
+                asOf: effectiveEnd,
+                scope: .canonical
             )
             let dayPhases = DayPhaseEngine.categoryDurations(
                 DayPhaseEngine.completePhases(
@@ -325,7 +601,8 @@ enum ReviewReportArchiveEngine {
                         .kindsByPlaceKey(source.frequentPlaces),
                     in: span,
                     asOf: effectiveEnd
-                )
+                ),
+                scope: .canonical
             )
             return DailyReviewArchive(
                 id: dayID(dayStart, calendar: calendar),
@@ -336,7 +613,8 @@ enum ReviewReportArchiveEngine {
                     actuals: visibleActuals,
                     in: span,
                     categories: source.categories,
-                    asOf: effectiveEnd
+                    asOf: effectiveEnd,
+                    scope: .canonical
                 ),
                 sourceFingerprint: fingerprint,
                 updatedAt: asOf
@@ -1002,7 +1280,8 @@ enum RecordChartEngine {
     static func clockRings(
         actuals: [ActualRecord],
         in span: TimeSpan,
-        asOf: Date = .now
+        asOf: Date = .now,
+        scope: RecordAnalysisScope = .legacy
     ) -> [RecordClockRing] {
         let limit = min(asOf, span.end)
         let total = span.duration
@@ -1018,10 +1297,11 @@ enum RecordChartEngine {
                   visible.duration > 0 else {
                 continue
             }
-            byCategory[
-                ActualRecordCategoryResolver.categoryID(for: actual),
-                default: []
-            ].append(visible)
+            let categoryID = switch scope {
+            case .legacy: ActualRecordCategoryResolver.categoryID(for: actual)
+            case .canonical: RecordAnalysisCategoryPolicy.categoryID(for: actual)
+            }
+            byCategory[categoryID, default: []].append(visible)
         }
 
         return byCategory
@@ -1088,7 +1368,8 @@ enum RecordChartEngine {
         in span: TimeSpan,
         unit: Calendar.Component,
         calendar: Calendar,
-        asOf: Date = .now
+        asOf: Date = .now,
+        scope: RecordAnalysisScope = .legacy
     ) -> [RecordChartBucket] {
         let end = min(span.end, asOf)
         guard end > span.start else { return [] }
@@ -1100,7 +1381,13 @@ enum RecordChartEngine {
             in: span,
             calendar: calendar,
             asOf: asOf
-        ).map { ($0.phase.rawValue, $0.span) }
+        ).map {
+            let phase = switch scope {
+            case .legacy: $0.phase
+            case .canonical: RecordAnalysisCategoryPolicy.canonicalPhase($0.phase)
+            }
+            return (phase.rawValue, $0.span)
+        }
         return buckets(
             values: values,
             in: span,
@@ -1673,11 +1960,16 @@ enum DayPhaseEngine {
     }
 
     static func categoryDurations(
-        _ phases: [DayPhaseSpan]
+        _ phases: [DayPhaseSpan],
+        scope: RecordAnalysisScope = .legacy
     ) -> [CategoryDuration] {
         var totals: [DayPhase: TimeInterval] = [:]
         for value in phases {
-            totals[value.phase, default: 0] += value.span.duration
+            let phase = switch scope {
+            case .legacy: value.phase
+            case .canonical: RecordAnalysisCategoryPolicy.canonicalPhase(value.phase)
+            }
+            totals[phase, default: 0] += value.span.duration
         }
         return totals.map {
             CategoryDuration(
@@ -2062,19 +2354,27 @@ enum RecordClockDetailEngine {
         stays: [PlaceStay],
         placeKinds: [String: FrequentPlaceKind],
         in span: TimeSpan,
-        asOf: Date = .now
+        asOf: Date = .now,
+        scope: RecordAnalysisScope = .legacy
     ) -> RecordClockDetailRing? {
-        ring(
+        let phases = DayPhaseEngine.completePhases(
+            actuals: actuals,
+            travel: travel,
+            stays: stays,
+            placeKinds: placeKinds,
+            in: span,
+            asOf: asOf
+        )
+        let pieces = phases.map { phase -> (String, TimeSpan) in
+            let value = switch scope {
+            case .legacy: phase.phase
+            case .canonical: RecordAnalysisCategoryPolicy.canonicalPhase(phase.phase)
+            }
+            return (value.rawValue, phase.span)
+        }
+        return ring(
             kind: .dayPhase,
-            pieces: DayPhaseEngine.completePhases(
-                actuals: actuals,
-                travel: travel,
-                stays: stays,
-                placeKinds: placeKinds,
-                in: span,
-                asOf: asOf
-            )
-            .map { ($0.phase.rawValue, $0.span) },
+            pieces: pieces,
             in: span
         )
     }
@@ -2084,11 +2384,20 @@ enum RecordClockDetailEngine {
     static func activityRings(
         sleepSessions: [SleepSession],
         travel: [TravelSegment],
-        in span: TimeSpan
+        in span: TimeSpan,
+        scope: RecordAnalysisScope = .legacy
     ) -> [RecordClockDetailRing] {
         [
-            activitySleepRing(sessions: sleepSessions, in: span),
-            travelRing(segments: travel, in: span),
+            activitySleepRing(
+                sessions: sleepSessions,
+                in: span,
+                scope: scope
+            ),
+            travelRing(
+                segments: travel,
+                in: span,
+                scope: scope
+            ),
         ].compactMap { $0 }
     }
 
@@ -2096,18 +2405,29 @@ enum RecordClockDetailEngine {
     /// 경계마다 한 단계를 골라 한 줄로 편다.
     static func sleepRing(
         sessions: [SleepSession],
-        in span: TimeSpan
+        in span: TimeSpan,
+        scope: RecordAnalysisScope = .legacy
     ) -> RecordClockDetailRing? {
         var seen = Set<UUID>()
         var clipped: [(stage: SleepStage, span: TimeSpan)] = []
         for session in sessions {
             for segment in session.segments {
                 guard seen.insert(segment.id).inserted else { continue }
+                let stage: SleepStage?
+                switch scope {
+                case .legacy:
+                    stage = segment.stage
+                case .canonical:
+                    stage = RecordAnalysisCategoryPolicy.canonicalSleepStage(
+                        segment.stage
+                    )
+                }
+                guard let stage else { continue }
                 guard let visible = segment.span.intersection(with: span),
                       visible.duration > 0 else {
                     continue
                 }
-                clipped.append((segment.stage, visible))
+                clipped.append((stage, visible))
             }
         }
         return ring(
@@ -2121,9 +2441,14 @@ enum RecordClockDetailEngine {
     /// 수면 단계가 아니므로 기존 수면 구간의 바탕색으로 남는다.
     static func activitySleepRing(
         sessions: [SleepSession],
-        in span: TimeSpan
+        in span: TimeSpan,
+        scope: RecordAnalysisScope = .legacy
     ) -> RecordClockDetailRing? {
-        guard let source = sleepRing(sessions: sessions, in: span) else {
+        guard let source = sleepRing(
+            sessions: sessions,
+            in: span,
+            scope: scope
+        ) else {
             return nil
         }
         let asleep = source.arcs.filter {
@@ -2161,7 +2486,8 @@ enum RecordClockDetailEngine {
     /// 이동 구간 띠. 같은 이동 수단이 이어지면 한 조각으로 붙인다.
     static func travelRing(
         segments: [TravelSegment],
-        in span: TimeSpan
+        in span: TimeSpan,
+        scope: RecordAnalysisScope = .legacy
     ) -> RecordClockDetailRing? {
         var seen = Set<UUID>()
         var pieces: [(token: String, span: TimeSpan)] = []
@@ -2174,9 +2500,18 @@ enum RecordClockDetailEngine {
             // 겹쳐 들어온 구간도 한 줄에 그려야 하므로 앞 조각 뒤로 민다.
             let start = max(visible.start, pieces.last?.span.end ?? visible.start)
             guard start < visible.end else { continue }
+            let token: String
+            switch scope {
+            case .legacy:
+                token = segment.mode.rawValue
+            case .canonical:
+                token = RecordAnalysisCategoryPolicy.movementToken(
+                    for: segment.mode
+                )
+            }
             pieces.append(
                 (
-                    segment.mode.rawValue,
+                    token,
                     TimeSpan(start: start, end: visible.end)
                 )
             )

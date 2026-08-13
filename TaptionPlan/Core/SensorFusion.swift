@@ -298,13 +298,12 @@ struct TravelModeClassifier: Sendable {
         let signaledSubwayRoute = signaledRailStations.count >= 2
             ? SubwayStationCatalog.route(for: signaledRailStations)
             : nil
-        let resolvedSubwayRoute = SubwayStationCatalog.bestRoute([
-            signaledSubwayRoute,
-            coordinateTrajectory?.route,
-        ])
-        let usesCoordinateRoute = coordinateTrajectory?.route
-            == resolvedSubwayRoute
-            && coordinateTrajectory != nil
+        // 원본 좌표로 복원한 역 순서는 하루 전체의 역 이름을 이어 붙인
+        // 보강값보다 우선한다. 보강값만 고르면 출근·퇴근이 한 경로로
+        // 합쳐져 환승역을 다시 통과하는 순환 노선이 선택될 수 있다.
+        let resolvedSubwayRoute = coordinateTrajectory?.route
+            ?? signaledSubwayRoute
+        let usesCoordinateRoute = coordinateTrajectory != nil
         let railStations = usesCoordinateRoute
             ? coordinateTrajectory?.observedStationNames ?? signaledRailStations
             : signaledRailStations
@@ -312,6 +311,22 @@ struct TravelModeClassifier: Sendable {
         let railContext = stationRatio >= 0.2
             || railRatio >= 0.25
             || coordinateRailContext
+        let stationStopPattern = resolvedSubwayRoute.map {
+            SubwayStationCatalog.stationStopPattern(
+                from: ordered,
+                route: $0
+            )
+        }
+        let routeHasTransferPattern = resolvedSubwayRoute.map {
+            !$0.transferStationNames.isEmpty
+                && Set(railStations).count >= 3
+        } ?? false
+        let stationStopConfirmation = routeHasTransferPattern
+            && stationStopPattern?.isStrong == true
+        let routeTrajectoryConfirmation = coordinateRailContext
+            && Set(railStations).count >= 3
+            && railSpeedSignal
+            && hasVehicleSpeed
         let undergroundSignal = gpsLossRatio >= 0.35
             || altitudeDelta <= -2
         let displacementMeters = firstLastDisplacement(ordered)
@@ -327,15 +342,13 @@ struct TravelModeClassifier: Sendable {
         let watchVibrationAbsent = watchAcceleration.sampleCount >= 2
             && watchAcceleration.standardDeviationG < 0.012
             && watchAcceleration.meanJerkGPerSecond < 0.04
-        let coordinateTrajectorySignal = coordinateRailContext
-            && Set(railStations).count >= 3
-            && railSpeedSignal
-            && hasVehicleSpeed
+        let coordinateTrajectorySignal = routeTrajectoryConfirmation
         let stationToStationSubway = railStations.count >= 2
             && resolvedSubwayRoute != nil
             && railContext
             && (
                 coordinateTrajectorySignal
+                || stationStopConfirmation
                 || undergroundDescent
                     && lowStepsForTransit
                     && (watchVibrationAbsent || watchVibrationUnavailable)
@@ -419,6 +432,12 @@ struct TravelModeClassifier: Sendable {
             }
             if coordinateRailContext {
                 add(.subway, 0.28, "원본 좌표로 역 순서 복원")
+            }
+            if routeHasTransferPattern {
+                add(.subway, 0.36, "출발역·환승역·도착역 순서")
+            }
+            if stationStopConfirmation {
+                add(.subway, 0.5, "역별 가다·서다 정차 패턴")
             }
             if watchVibrationAbsent {
                 add(.subway, 0.12, "Apple Watch 진동 없음")
@@ -2333,8 +2352,8 @@ enum SubwayTravelSegmentEngine {
             : defaultMaximumReadingGap
         let candidateGroups = candidateSpans.flatMap { span -> [[SensorReading]] in
             let context = TimeSpan(
-                start: span.start.addingTimeInterval(-2 * 60),
-                end: span.end.addingTimeInterval(2 * 60)
+                start: span.start.addingTimeInterval(-10 * 60),
+                end: span.end.addingTimeInterval(10 * 60)
             )
             return groups(
                 from: readings.filter { context.contains($0.timestamp) },
@@ -2679,8 +2698,7 @@ enum AppleDeviceGroundTruthEngine {
             )
         let trajectorySubwaySegments = stabilizedSubwaySegments(
             detected: detectedSubwaySegments,
-            preserved: preservedSubwaySegments,
-            candidateSpans: candidateSpans
+            preserved: preservedSubwaySegments
         )
             .map { segment in
                 guard let matched = gpsSegments
@@ -2702,7 +2720,7 @@ enum AppleDeviceGroundTruthEngine {
             }
         let primarySegments = gpsSegments.filter { gps in
             !trajectorySubwaySegments.contains {
-                overlappingEnough(gps.span, $0.span)
+                subwayDisplaces($0, gps)
             }
         } + trajectorySubwaySegments
         let watchSegments = healthEvidence
@@ -2808,22 +2826,13 @@ enum AppleDeviceGroundTruthEngine {
 
     private static func stabilizedSubwaySegments(
         detected: [TravelSegment],
-        preserved: [TravelSegment],
-        candidateSpans: [TimeSpan]
+        preserved: [TravelSegment]
     ) -> [TravelSegment] {
         var result = detected
-        guard !candidateSpans.isEmpty else { return result }
         for segment in preserved where segment.mode == .subway {
-            guard segment.subwayRoute != nil,
+            guard let route = segment.subwayRoute,
                   segment.confidence == .high,
-                  candidateSpans.contains(where: { candidate in
-                      let overlap = overlapDuration(segment.span, candidate)
-                      let shorter = max(
-                          1,
-                          min(segment.span.duration, candidate.duration)
-                      )
-                      return overlap / shorter >= 0.2
-                  }) else {
+                  SubwayStationCatalog.isValid(route) else {
                 continue
             }
             guard let index = result.firstIndex(where: {
@@ -2838,6 +2847,28 @@ enum AppleDeviceGroundTruthEngine {
             )
         }
         return result
+    }
+
+    /// 확인된 지하철 구간은 GPS·Core Motion의 자동차 후보보다 우선한다.
+    /// 두 구간이 같은 시각을 조금이라도 공유하는 경우에도 역 순서·환승·
+    /// 정차 패턴으로 확정된 지하철을 자동차가 덮어쓰지 않게 한다.
+    private static func subwayDisplaces(
+        _ subway: TravelSegment,
+        _ candidate: TravelSegment
+    ) -> Bool {
+        guard subway.mode == .subway,
+              subway.confidence == .high,
+              let route = subway.subwayRoute,
+              SubwayStationCatalog.isValid(route) else {
+            return overlappingEnough(candidate.span, subway.span)
+        }
+        let overlap = overlapDuration(candidate.span, subway.span)
+        guard overlap > 0 else { return false }
+        let shorter = max(
+            1,
+            min(candidate.span.duration, subway.span.duration)
+        )
+        return overlap / shorter >= 0.2
     }
 
     private static func preferredSubwaySegment(
