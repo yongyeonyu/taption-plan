@@ -87,6 +87,11 @@
 		A1000000000000000000007A /* DiagnosticsLogSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007A /* DiagnosticsLogSupport.swift */; };
 		A1000000000000000000007B /* DiagnosticsLogSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007A /* DiagnosticsLogSupport.swift */; };
 		A1000000000000000000007C /* SubwayCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007C /* SubwayCatalog.swift */; };
+		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
+		A1000000000000000000007E /* MapHomeBannerAdView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007E /* MapHomeBannerAdView.swift */; };
+		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
+		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
+		D90000000000000000000001 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = D90000000000000000000003 /* GoogleMobileAds */; };
 		/* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -231,6 +236,10 @@
 		F10000000000000000000072 /* WatchSensorQueryPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlan.swift; sourceTree = "<group>"; };
 		F1000000000000000000007A /* DiagnosticsLogSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupport.swift; sourceTree = "<group>"; };
 		F1000000000000000000007C /* SubwayCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayCatalog.swift; sourceTree = "<group>"; };
+		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
+		F1000000000000000000007E /* MapHomeBannerAdView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeBannerAdView.swift; sourceTree = "<group>"; };
+		F1000000000000000000007F /* MapHomeCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarSheet.swift; sourceTree = "<group>"; };
+		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
 		F10000000000000000000074 /* WatchObjCExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchObjCExceptionCatcher.m; sourceTree = "<group>"; };
 		F10000000000000000000075 /* TaptionPlanWatch-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TaptionPlanWatch-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -244,6 +253,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D90000000000000000000001 /* GoogleMobileAds in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,6 +341,10 @@
 		810000000000000000000005 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				F1000000000000000000007D /* MapHomeView.swift */,
+				F1000000000000000000007E /* MapHomeBannerAdView.swift */,
+				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
+				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
 				F10000000000000000000006 /* ScheduleView.swift */,
 				F10000000000000000000007 /* GoalsView.swift */,
@@ -456,6 +470,9 @@
 				B20000000000000000000003 /* PBXTargetDependency */,
 			);
 			name = TaptionPlan;
+			packageProductDependencies = (
+				D90000000000000000000003 /* GoogleMobileAds */,
+			);
 			productName = TaptionPlan;
 			productReference = C10000000000000000000001 /* TaptionPlan.app */;
 			productType = "com.apple.product-type.application";
@@ -599,6 +616,9 @@
 				ko,
 				Base,
 			);
+			packageReferences = (
+				D90000000000000000000002 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
 			mainGroup = 810000000000000000000001;
 			productRefGroup = 810000000000000000000002 /* Products */;
 			projectDirPath = "";
@@ -669,6 +689,10 @@
 				A10000000000000000000004 /* Theme.swift in Sources */,
 				A10000000000000000000005 /* AppShellView.swift in Sources */,
 				A10000000000000000000006 /* ScheduleView.swift in Sources */,
+				A1000000000000000000007D /* MapHomeView.swift in Sources */,
+				A1000000000000000000007E /* MapHomeBannerAdView.swift in Sources */,
+				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
+				A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
@@ -788,6 +812,25 @@
 			targetProxy = B10000000000000000000004 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D90000000000000000000002 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D90000000000000000000003 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D90000000000000000000002 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		610000000000000000000001 /* Debug */ = {
@@ -916,6 +959,7 @@
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
+				GAD_APPLICATION_IDENTIFIER = "ca-app-pub-3940256099942544~1458002511";
 				INFOPLIST_FILE = TaptionPlan/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -929,6 +973,8 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
+				TAPTION_ADMOB_BANNER_UNIT_ID = "ca-app-pub-3940256099942544/2435281174";
+				TAPTION_ADMOB_APP_OPEN_UNIT_ID = "ca-app-pub-3940256099942544/5575463023";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -943,6 +989,7 @@
 				CURRENT_PROJECT_VERSION = 52;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
+				GAD_APPLICATION_IDENTIFIER = "";
 				INFOPLIST_FILE = TaptionPlan/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -956,6 +1003,8 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
+				TAPTION_ADMOB_BANNER_UNIT_ID = "";
+				TAPTION_ADMOB_APP_OPEN_UNIT_ID = "";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;

@@ -33,6 +33,19 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>AIRKOREA_SERVICE_KEY</key>
 	<string>$(AIRKOREA_SERVICE_KEY)</string>
+	<key>GADApplicationIdentifier</key>
+	<string>$(GAD_APPLICATION_IDENTIFIER)</string>
+	<key>TaptionAdMobBannerUnitID</key>
+	<string>$(TAPTION_ADMOB_BANNER_UNIT_ID)</string>
+	<key>TaptionAdMobAppOpenUnitID</key>
+	<string>$(TAPTION_ADMOB_APP_OPEN_UNIT_ID)</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>

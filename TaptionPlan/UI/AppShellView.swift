@@ -1,8 +1,11 @@
 import SwiftUI
 
 struct AppShellView: View {
+    private static let legacyUIEnabled = false
+
     @Environment(\.scenePhase) private var scenePhase
     @State private var model = AppModel()
+    @State private var showsMapHome = true
 
     var body: some View {
         NavigationStack {
@@ -10,20 +13,40 @@ struct AppShellView: View {
                 .toolbar(.hidden, for: .navigationBar)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if model.showsBottomBar {
+            if Self.legacyUIEnabled && model.showsBottomBar && !showsMapHome {
                 DraftBottomNavigationBar(model: model)
             }
         }
-        .sheet(isPresented: $model.isAddPlanPresented) {
+        .sheet(
+            isPresented: Binding(
+                get: { Self.legacyUIEnabled && model.isAddPlanPresented },
+                set: { model.isAddPlanPresented = $0 }
+            )
+        ) {
             AddPlanSheet(model: model)
         }
-        .sheet(item: $model.selectedAction) { item in
+        .sheet(
+            item: Binding(
+                get: { Self.legacyUIEnabled ? model.selectedAction : nil },
+                set: { model.selectedAction = $0 }
+            )
+        ) { item in
             QuickActionSheet(model: model, item: item)
         }
-        .sheet(item: $model.planEditorRequest) { request in
+        .sheet(
+            item: Binding(
+                get: { Self.legacyUIEnabled ? model.planEditorRequest : nil },
+                set: { model.planEditorRequest = $0 }
+            )
+        ) { request in
             PlanEditorSheet(model: model, planID: request.id)
         }
-        .sheet(isPresented: $model.isPermissionOnboardingPresented) {
+        .sheet(
+            isPresented: Binding(
+                get: { Self.legacyUIEnabled && model.isPermissionOnboardingPresented },
+                set: { model.isPermissionOnboardingPresented = $0 }
+            )
+        ) {
             PermissionOnboardingSheet(
                 model: model,
                 initialFeature: model.permissionOnboardingStartFeature
@@ -36,15 +59,19 @@ struct AppShellView: View {
         .task {
             await model.sceneBecameActive()
             model.presentPermissionOnboardingIfNeeded()
-            if let planID = TaptionPlanAppDelegate.takePendingPlanID(),
+            if Self.legacyUIEnabled,
+               let planID = TaptionPlanAppDelegate.takePendingPlanID(),
                let url = URL(
                     string: "taptionplan://plan/\(planID.uuidString)"
                ) {
+                showsMapHome = false
                 await model.openDeepLink(url)
             }
         }
         .onOpenURL { url in
+            guard Self.legacyUIEnabled else { return }
             Task { @MainActor in
+                showsMapHome = false
                 await model.bootstrap()
                 await model.openDeepLink(url)
             }
@@ -54,6 +81,7 @@ struct AppShellView: View {
                 for: .taptionPlanOpenNotificationPlan
             )
         ) { notification in
+            guard Self.legacyUIEnabled else { return }
             let planID =
                 TaptionPlanAppDelegate.takePendingPlanID()
                 ?? notification.object as? UUID
@@ -64,6 +92,7 @@ struct AppShellView: View {
                 return
             }
             Task { @MainActor in
+                showsMapHome = false
                 await model.bootstrap()
                 await model.openDeepLink(url)
             }
@@ -72,6 +101,8 @@ struct AppShellView: View {
             Task {
                 switch phase {
                 case .active:
+                    TaptionAdvertisingCoordinator.shared
+                        .requestStartupPresentation()
                     await model.sceneBecameActive()
                 case .background:
                     await model.sceneEnteredBackground()
@@ -115,7 +146,7 @@ struct AppShellView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let detail = model.detail {
+        if Self.legacyUIEnabled, let detail = model.detail {
             switch detail {
             case .group:
                 GroupGanttView(model: model)
@@ -166,6 +197,15 @@ struct AppShellView: View {
 
     @ViewBuilder
     private var rootContent: some View {
+        if Self.legacyUIEnabled && !showsMapHome {
+            legacyRootContent
+        } else {
+            MapHomeView(model: model)
+        }
+    }
+
+    @ViewBuilder
+    private var legacyRootContent: some View {
         switch model.selectedTab {
         case .schedule:
             ScheduleView(model: model)

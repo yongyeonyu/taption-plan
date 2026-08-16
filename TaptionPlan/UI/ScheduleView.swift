@@ -8,6 +8,108 @@ private let detailPanelCollapsedHeight: CGFloat = 300
 private let detailPanelMinimumHeight: CGFloat = 220
 private let minimumTimelineBoardHeight: CGFloat = 120
 
+struct RouteMapViewport {
+    struct Padding: Equatable {
+        let top: CGFloat
+        let leading: CGFloat
+        let bottom: CGFloat
+        let trailing: CGFloat
+
+        static let timeline = Padding(
+            top: 34,
+            leading: 22,
+            bottom: 28,
+            trailing: 22
+        )
+        static let compact = Padding(
+            top: 26,
+            leading: 18,
+            bottom: 22,
+            trailing: 18
+        )
+    }
+
+    static func region(
+        for coordinates: [CLLocationCoordinate2D],
+        viewport: CGSize,
+        padding: Padding,
+        minimumLatitudeDelta: CLLocationDegrees = 0.005,
+        minimumLongitudeDelta: CLLocationDegrees = 0.005
+    ) -> MKCoordinateRegion? {
+        var minLatitude = Double.infinity
+        var maxLatitude = -Double.infinity
+        var minLongitude = Double.infinity
+        var maxLongitude = -Double.infinity
+
+        for coordinate in coordinates where CLLocationCoordinate2DIsValid(coordinate) {
+            minLatitude = min(minLatitude, coordinate.latitude)
+            maxLatitude = max(maxLatitude, coordinate.latitude)
+            minLongitude = min(minLongitude, coordinate.longitude)
+            maxLongitude = max(maxLongitude, coordinate.longitude)
+        }
+
+        guard minLatitude <= maxLatitude else { return nil }
+        return region(
+            fromLatitudes: (minLatitude, maxLatitude),
+            longitudes: (minLongitude, maxLongitude),
+            viewport: viewport,
+            padding: padding,
+            minimumLatitudeDelta: minimumLatitudeDelta,
+            minimumLongitudeDelta: minimumLongitudeDelta
+        )
+    }
+
+    static func region(
+        fromLatitudes latitudes: (Double, Double),
+        longitudes: (Double, Double),
+        viewport: CGSize,
+        padding: Padding,
+        minimumLatitudeDelta: CLLocationDegrees = 0.005,
+        minimumLongitudeDelta: CLLocationDegrees = 0.005
+    ) -> MKCoordinateRegion {
+        let width = max(1, Double(viewport.width))
+        let height = max(1, Double(viewport.height))
+        let horizontalPadding = min(
+            width - 1,
+            Double(padding.leading + padding.trailing)
+        )
+        let verticalPadding = min(
+            height - 1,
+            Double(padding.top + padding.bottom)
+        )
+        let availableWidth = max(1, width - horizontalPadding)
+        let availableHeight = max(1, height - verticalPadding)
+        let centerLatitude = (latitudes.0 + latitudes.1) / 2
+        let centerLongitude = (longitudes.0 + longitudes.1) / 2
+        let longitudeScale = max(
+            0.15,
+            abs(cos(centerLatitude * .pi / 180))
+        )
+        let routeHeight = max(0, latitudes.1 - latitudes.0)
+        let routeWidth = max(0, longitudes.1 - longitudes.0) * longitudeScale
+        let mapScale = max(
+            routeWidth / availableWidth,
+            routeHeight / availableHeight,
+            minimumLatitudeDelta / height,
+            minimumLongitudeDelta * longitudeScale / width
+        )
+
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: centerLatitude,
+                longitude: centerLongitude
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta: max(minimumLatitudeDelta, mapScale * height),
+                longitudeDelta: max(
+                    minimumLongitudeDelta,
+                    mapScale * width / longitudeScale
+                )
+            )
+        )
+    }
+}
+
 #if DEBUG
 /// Debug-only display-link probe for physical-device frame evidence.
 ///
@@ -3029,6 +3131,7 @@ private struct TimelineDetailPanel: View {
     let onActualDeleted: (UUID) -> Void
     let onRouteSelection: (TimelineSelection) -> Void
     @State private var mapPosition: MapCameraPosition = .automatic
+    @State private var routeMapViewportSize = CGSize.zero
     // 지도에서 선을 골라내려면 지금 보이는 범위를 알아야 한다. 카메라가
     // 멈출 때만 받아 두어 프레임마다 값이 바뀌지 않게 한다.
     @State private var visibleMapRegion: MKCoordinateRegion?
@@ -3863,6 +3966,17 @@ private struct TimelineDetailPanel: View {
                     selectRouteSegment(near: coordinate)
                 }
                 .frame(height: routeMapHeight)
+                .background {
+                    GeometryReader { geometry in
+                        Color.clear
+                            .onAppear {
+                                updateRouteMapViewportSize(geometry.size)
+                            }
+                            .onChange(of: geometry.size) { _, size in
+                                updateRouteMapViewportSize(size)
+                            }
+                    }
+                }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
 
@@ -6262,8 +6376,24 @@ private struct TimelineDetailPanel: View {
         mapPosition = .automatic
     }
 
-    /// 기간 전체를 담는 화면 범위. 좌표를 새로 이어 붙이지 않고 최솟값과
-    /// 최댓값만 훑는다. 센서 알림마다 불릴 수 있어 할당을 만들지 않는다.
+    private var resolvedRouteMapViewportSize: CGSize {
+        guard routeMapViewportSize.width > 1,
+              routeMapViewportSize.height > 1 else {
+            return CGSize(width: 390, height: routeMapHeight)
+        }
+        return routeMapViewportSize
+    }
+
+    private func updateRouteMapViewportSize(_ size: CGSize) {
+        guard size.width > 1,
+              size.height > 1,
+              abs(routeMapViewportSize.width - size.width) > 0.5
+                || abs(routeMapViewportSize.height - size.height) > 0.5
+        else { return }
+        routeMapViewportSize = size
+        fitMapToRoutes(force: true)
+    }
+
     private func periodRouteRegion() -> MKCoordinateRegion? {
         var minLatitude = Double.infinity
         var maxLatitude = -Double.infinity
@@ -6271,6 +6401,7 @@ private struct TimelineDetailPanel: View {
         var maxLongitude = -Double.infinity
         func extend(_ values: [CLLocationCoordinate2D]) {
             for value in values {
+                guard CLLocationCoordinate2DIsValid(value) else { continue }
                 minLatitude = min(minLatitude, value.latitude)
                 maxLatitude = max(maxLatitude, value.latitude)
                 minLongitude = min(minLongitude, value.longitude)
@@ -6282,41 +6413,21 @@ private struct TimelineDetailPanel: View {
             extend(coordinates(for: segment))
         }
         guard minLatitude <= maxLatitude else { return nil }
-        return region(
+        return RouteMapViewport.region(
             fromLatitudes: (minLatitude, maxLatitude),
-            longitudes: (minLongitude, maxLongitude)
+            longitudes: (minLongitude, maxLongitude),
+            viewport: resolvedRouteMapViewportSize,
+            padding: .timeline
         )
     }
 
     private func fitMap(to values: [CLLocationCoordinate2D]) {
-        let latitudes = values.map(\.latitude)
-        let longitudes = values.map(\.longitude)
-        guard let minLatitude = latitudes.min(),
-              let maxLatitude = latitudes.max(),
-              let minLongitude = longitudes.min(),
-              let maxLongitude = longitudes.max() else { return }
-        mapPosition = .region(
-            region(
-                fromLatitudes: (minLatitude, maxLatitude),
-                longitudes: (minLongitude, maxLongitude)
-            )
-        )
-    }
-
-    private func region(
-        fromLatitudes latitudes: (Double, Double),
-        longitudes: (Double, Double)
-    ) -> MKCoordinateRegion {
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(
-                latitude: (latitudes.0 + latitudes.1) / 2,
-                longitude: (longitudes.0 + longitudes.1) / 2
-            ),
-            span: MKCoordinateSpan(
-                latitudeDelta: max(0.005, (latitudes.1 - latitudes.0) * 1.45),
-                longitudeDelta: max(0.005, (longitudes.1 - longitudes.0) * 1.45)
-            )
-        )
+        guard let region = RouteMapViewport.region(
+            for: values,
+            viewport: resolvedRouteMapViewportSize,
+            padding: .timeline
+        ) else { return }
+        mapPosition = .region(region)
     }
 }
 

@@ -5,6 +5,26 @@ import OSLog
 import UIKit
 import WidgetKit
 
+enum StartupMapLocationPolicy {
+    static func latestValidReading(
+        in readings: [SensorReading]
+    ) -> SensorReading? {
+        readings
+            .filter(isValid)
+            .max { $0.timestamp < $1.timestamp }
+    }
+
+    private static func isValid(_ reading: SensorReading) -> Bool {
+        guard reading.gpsAvailable,
+              let point = reading.point else {
+            return false
+        }
+        return (-90...90).contains(point.latitude)
+            && (-180...180).contains(point.longitude)
+            && (0...50).contains(point.horizontalAccuracy)
+    }
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -77,10 +97,6 @@ final class AppModel {
     private(set) var cloudUnavailableReason: CloudUnavailableReason?
     private(set) var isRecordingVoiceMemo = false
     private(set) var playingVoiceAttachmentID: UUID?
-    private(set) var isStoreLoading = false
-    private(set) var hasProAccess = false
-    private(set) var proProduct: StoreProductPresentation?
-    private(set) var storeStatusMessage = "App Store 확인 중"
     private(set) var sensorAvailability: SensorHardwareAvailability?
     private(set) var latestSensorReading: SensorReading?
     private(set) var liveRouteState: LiveRouteState = .empty
@@ -197,7 +213,6 @@ final class AppModel {
     @ObservationIgnored private let voiceMemoPlayer: VoiceMemoPlayer
     @ObservationIgnored private let liveActivityController: TaptionLiveActivityController
     @ObservationIgnored private let notificationScheduler: PlanNotificationScheduler
-    @ObservationIgnored private let purchaseService: StoreKitPurchaseService
     @ObservationIgnored private let watchConnectivityService: AppleWatchConnectivityService
     @ObservationIgnored private let airPodsActivityService: AirPodsActivityService
     @ObservationIgnored private let screenTimeUsageService: ScreenTimeUsageService
@@ -300,8 +315,6 @@ final class AppModel {
             TaptionLiveActivityController(),
         notificationScheduler: PlanNotificationScheduler =
             PlanNotificationScheduler(),
-        purchaseService: StoreKitPurchaseService =
-            StoreKitPurchaseService(),
         watchConnectivityService: AppleWatchConnectivityService =
             AppleWatchConnectivityService(),
         airPodsActivityService: AirPodsActivityService =
@@ -348,7 +361,6 @@ final class AppModel {
         self.voiceMemoPlayer = voiceMemoPlayer ?? VoiceMemoPlayer()
         self.liveActivityController = liveActivityController
         self.notificationScheduler = notificationScheduler
-        self.purchaseService = purchaseService
         self.watchConnectivityService = watchConnectivityService
         self.airPodsActivityService = airPodsActivityService
         self.screenTimeUsageService =
@@ -1097,6 +1109,7 @@ final class AppModel {
         isSceneActive = true
         await bootstrap()
         await applyPendingLocationTrackingRequest()
+        await hydrateLatestMapLocationAnchor()
         applyPendingLocationTrackingGuidance()
         airPodsActivityService.start { [weak self] observation in
             self?.applyAirPodsActivity(observation)
@@ -1120,6 +1133,26 @@ final class AppModel {
             return
         }
         presentPermissionOnboarding(for: .location)
+    }
+
+    private func hydrateLatestMapLocationAnchor() async {
+        guard settings.locationEnabled,
+              permissionState(for: .location).isGranted,
+              let sensorService else {
+            return
+        }
+        let span = TimelineAggregationEngine().interval(
+            for: .day,
+            containing: .now
+        )
+        guard let readings = try? await sensorService.archivedReadings(in: span),
+              let latest = StartupMapLocationPolicy.latestValidReading(
+                in: readings
+              ),
+              latestSensorReading != latest else {
+            return
+        }
+        latestSensorReading = latest
     }
 
     func sceneEnteredBackground() async {
@@ -1235,7 +1268,6 @@ final class AppModel {
                 self.deferredVisibleRefreshTask = nil
                 return
             }
-            await self.refreshStore(showErrors: false)
             await self.synchronizeCloud(showErrors: false)
             await self.persistDeviceLocalSnapshot()
             self.deferredVisibleRefreshTask = nil
@@ -1467,67 +1499,6 @@ final class AppModel {
         snapshot.settings.notificationsEnabled = false
         await notificationScheduler.cancelAllPlanReminders()
         await persist()
-    }
-
-    func refreshStore(showErrors: Bool = true) async {
-        guard !isStoreLoading else { return }
-        isStoreLoading = true
-        hasProAccess = await purchaseService.hasProEntitlement()
-        do {
-            proProduct = try await purchaseService.loadProProduct()
-            if hasProAccess {
-                storeStatusMessage = "영구 사용 중"
-            } else if let proProduct {
-                storeStatusMessage = "\(proProduct.displayPrice) · 한 번만 결제"
-            } else {
-                storeStatusMessage = "App Store 상품 준비 중"
-            }
-        } catch {
-            proProduct = nil
-            storeStatusMessage = hasProAccess
-                ? "영구 사용 중"
-                : "App Store 상품 준비 중"
-            if showErrors {
-                userFacingError =
-                    "구매 정보를 불러오지 못했습니다. \(error.localizedDescription)"
-            }
-        }
-        isStoreLoading = false
-    }
-
-    func purchasePro() async {
-        guard !isStoreLoading, !hasProAccess else { return }
-        isStoreLoading = true
-        do {
-            switch try await purchaseService.purchasePro() {
-            case .purchased:
-                hasProAccess = true
-                storeStatusMessage = "영구 사용 중"
-            case .pending:
-                storeStatusMessage = "구매 승인 대기 중"
-            case .cancelled:
-                break
-            }
-        } catch {
-            userFacingError =
-                "구매를 완료하지 못했습니다. \(error.localizedDescription)"
-        }
-        isStoreLoading = false
-    }
-
-    func restorePurchases() async {
-        guard !isStoreLoading else { return }
-        isStoreLoading = true
-        do {
-            hasProAccess = try await purchaseService.restorePurchases()
-            storeStatusMessage = hasProAccess
-                ? "영구 사용 중"
-                : "복원할 구매 내역 없음"
-        } catch {
-            userFacingError =
-                "구매 내역을 복원하지 못했습니다. \(error.localizedDescription)"
-        }
-        isStoreLoading = false
     }
 
     func enableLocationCollection(always: Bool = true) async {
@@ -4146,9 +4117,9 @@ final class AppModel {
             return
         }
         if Calendar.autoupdatingCurrent.isDate(span.start, inSameDayAs: .now),
-           let latest = archivedReadings.max(by: {
-               $0.timestamp < $1.timestamp
-           }) {
+           let latest = StartupMapLocationPolicy.latestValidReading(
+            in: archivedReadings
+           ) {
             // Seed the live map anchor when the app is reopened before the
             // next Core Location callback arrives. Historical-day refreshes
             // must never replace the current-location anchor.

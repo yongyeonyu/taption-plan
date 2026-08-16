@@ -2,8 +2,9 @@ import Foundation
 import StoreKit
 
 enum TaptionCommercePolicy {
+    static let isAdSupportedFreeMode = true
+    static let supportsPaidPurchase = false
     static let proProductID = "com.taption.plan.pro"
-    static let isLifetimeNonConsumable = true
 
     static func grantsProAccess(
         productID: String,

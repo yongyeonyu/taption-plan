@@ -396,6 +396,62 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testRouteMapViewportFitsVerticalRouteInsideEdgePadding() throws {
+        let viewport = CGSize(width: 390, height: 216)
+        let padding = RouteMapViewport.Padding(
+            top: 34,
+            leading: 22,
+            bottom: 28,
+            trailing: 22
+        )
+        let region = try XCTUnwrap(
+            RouteMapViewport.region(
+                for: [
+                    CLLocationCoordinate2D(latitude: 37.50, longitude: 126.98),
+                    CLLocationCoordinate2D(latitude: 37.62, longitude: 126.98),
+                ],
+                viewport: viewport,
+                padding: padding
+            )
+        )
+
+        XCTAssertEqual(region.center.latitude, 37.56, accuracy: 0.000_001)
+        XCTAssertEqual(region.center.longitude, 126.98, accuracy: 0.000_001)
+        XCTAssertEqual(
+            0.12 / region.span.latitudeDelta,
+            (216 - 34 - 28) / 216,
+            accuracy: 0.001
+        )
+    }
+
+    func testRouteMapViewportFitsHorizontalRouteInsideEdgePadding() throws {
+        let viewport = CGSize(width: 390, height: 216)
+        let padding = RouteMapViewport.Padding(
+            top: 34,
+            leading: 22,
+            bottom: 28,
+            trailing: 22
+        )
+        let region = try XCTUnwrap(
+            RouteMapViewport.region(
+                for: [
+                    CLLocationCoordinate2D(latitude: 37.56, longitude: 126.72),
+                    CLLocationCoordinate2D(latitude: 37.56, longitude: 127.18),
+                ],
+                viewport: viewport,
+                padding: padding
+            )
+        )
+
+        XCTAssertEqual(region.center.latitude, 37.56, accuracy: 0.000_001)
+        XCTAssertEqual(region.center.longitude, 126.95, accuracy: 0.000_001)
+        XCTAssertEqual(
+            0.46 / region.span.longitudeDelta,
+            (390 - 22 - 22) / 390,
+            accuracy: 0.001
+        )
+    }
+
     func testRouteContextKeepsEveryTripInOrderAndCapsTheLongestOnes() {
         let day = makeDate(2026, 8, 1)
         let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
@@ -3632,7 +3688,7 @@ final class FeatureEngineTests: XCTestCase {
         let samples: [(Double, Double, Double, String)] = [
             (0, 37.5248, 126.6744, "가정역"),
             (60, 37.5692, 126.6737, "검암역"),
-            (120, 37.57127, 126.7359, "마곡나루역"),
+            (120, 37.5667, 126.8273, "마곡나루역"),
         ]
         let readings = samples.map { minute, latitude, longitude, name in
             SensorReading(
@@ -7595,24 +7651,30 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testCommercePolicyUsesLifetimeNonConsumableEntitlement() {
-        XCTAssertTrue(TaptionCommercePolicy.isLifetimeNonConsumable)
+    func testCommercePolicyDefaultsToAdSupportedFreeUse() {
+        XCTAssertTrue(TaptionCommercePolicy.isAdSupportedFreeMode)
+        XCTAssertFalse(TaptionCommercePolicy.supportsPaidPurchase)
+    }
+
+    func testLaunchAdPolicyCapsFullScreenAdsAtFourHours() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+
         XCTAssertTrue(
-            TaptionCommercePolicy.grantsProAccess(
-                productID: TaptionCommercePolicy.proProductID,
-                revocationDate: nil
+            TaptionAdvertisingPolicy.shouldPresentLaunchAd(
+                lastShownAt: nil,
+                now: now
             )
         )
         XCTAssertFalse(
-            TaptionCommercePolicy.grantsProAccess(
-                productID: TaptionCommercePolicy.proProductID,
-                revocationDate: .now
+            TaptionAdvertisingPolicy.shouldPresentLaunchAd(
+                lastShownAt: now.addingTimeInterval(-3_999),
+                now: now
             )
         )
-        XCTAssertFalse(
-            TaptionCommercePolicy.grantsProAccess(
-                productID: "com.example.other",
-                revocationDate: nil
+        XCTAssertTrue(
+            TaptionAdvertisingPolicy.shouldPresentLaunchAd(
+                lastShownAt: now.addingTimeInterval(-4 * 60 * 60),
+                now: now
             )
         )
     }

@@ -896,6 +896,7 @@ struct InferenceDetailView: View {
     @State private var floorOverrides: [UUID: Int] = [:]
     @State private var routeReadings: [SensorReading] = []
     @State private var mapPosition: MapCameraPosition = .automatic
+    @State private var routeMapViewportSize = CGSize.zero
 
     private let modes: [TravelMode] = [
         .walking, .running, .cycling, .bus, .subway,
@@ -1304,6 +1305,17 @@ struct InferenceDetailView: View {
                 })
                 .mapStyle(.standard)
                 .frame(height: 165)
+                .background {
+                    GeometryReader { geometry in
+                        Color.clear
+                            .onAppear {
+                                updateRouteMapViewportSize(geometry.size)
+                            }
+                            .onChange(of: geometry.size) { _, size in
+                                updateRouteMapViewportSize(size)
+                            }
+                    }
+                }
                 .clipShape(RoundedRectangle(cornerRadius: 11))
             }
 
@@ -1408,34 +1420,33 @@ struct InferenceDetailView: View {
         } else {
             values = allRouteCoordinates
         }
-        guard let first = values.first else {
+        guard let region = RouteMapViewport.region(
+            for: values,
+            viewport: resolvedRouteMapViewportSize,
+            padding: .compact
+        ) else {
             mapPosition = .automatic
             return
         }
-        let latitudes = values.map(\.latitude)
-        let longitudes = values.map(\.longitude)
-        let minimumLatitude = latitudes.min() ?? first.latitude
-        let maximumLatitude = latitudes.max() ?? first.latitude
-        let minimumLongitude = longitudes.min() ?? first.longitude
-        let maximumLongitude = longitudes.max() ?? first.longitude
-        mapPosition = .region(
-            MKCoordinateRegion(
-                center: CLLocationCoordinate2D(
-                    latitude: (minimumLatitude + maximumLatitude) / 2,
-                    longitude: (minimumLongitude + maximumLongitude) / 2
-                ),
-                span: MKCoordinateSpan(
-                    latitudeDelta: max(
-                        0.005,
-                        (maximumLatitude - minimumLatitude) * 1.45
-                    ),
-                    longitudeDelta: max(
-                        0.005,
-                        (maximumLongitude - minimumLongitude) * 1.45
-                    )
-                )
-            )
-        )
+        mapPosition = .region(region)
+    }
+
+    private var resolvedRouteMapViewportSize: CGSize {
+        guard routeMapViewportSize.width > 1,
+              routeMapViewportSize.height > 1 else {
+            return CGSize(width: 340, height: 165)
+        }
+        return routeMapViewportSize
+    }
+
+    private func updateRouteMapViewportSize(_ size: CGSize) {
+        guard size.width > 1,
+              size.height > 1,
+              abs(routeMapViewportSize.width - size.width) > 0.5
+                || abs(routeMapViewportSize.height - size.height) > 0.5
+        else { return }
+        routeMapViewportSize = size
+        fitMapToSelection()
     }
 
     private func openInAppleMaps(_ group: TravelSegmentGroup) {

@@ -38,7 +38,6 @@ struct SettingsView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 9) {
                     accountCard
-                    proCard
 
                     settingsSection(
                         "나에게 맞추기",
@@ -345,8 +344,7 @@ struct SettingsView: View {
         .overlay {
             if model.isRefreshingIntegrations
                 || model.isCloudSyncing
-                || model.isExportingDiagnostics
-                || model.isStoreLoading {
+                || model.isExportingDiagnostics {
                 ProgressView()
                     .controlSize(.small)
                     .padding(12)
@@ -1234,119 +1232,6 @@ struct SettingsView: View {
         .buttonStyle(.plain)
         .disabled(true)
         .opacity(0.42)
-    }
-
-    private var proCard: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .top, spacing: 9) {
-                Image(systemName: model.hasProAccess
-                    ? "checkmark.seal.fill"
-                    : "sparkles")
-                    .font(.taption(size: 18, weight: .semibold))
-                    .foregroundStyle(
-                        model.hasProAccess
-                            ? Color(red: 0.18, green: 0.52, blue: 0.32)
-                            : Color(red: 0.57, green: 0.38, blue: 0.08)
-                    )
-                    .frame(width: 35, height: 35)
-                    .background(
-                        model.hasProAccess
-                            ? Color(red: 0.90, green: 0.97, blue: 0.92)
-                            : Color(red: 1.00, green: 0.95, blue: 0.85),
-                        in: RoundedRectangle(cornerRadius: 11)
-                    )
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(model.proProduct?.displayName ?? "Taption Plan Pro")
-                        .font(
-                            .taption(
-                                size: SettingsTypography.cardTitle,
-                                weight: .black
-                            )
-                        )
-                        .foregroundStyle(Color.tpInk)
-                    Text(model.storeStatusMessage)
-                        .font(
-                            .taption(
-                                size: SettingsTypography.accountSubtitle,
-                                weight: .semibold
-                            )
-                        )
-                        .foregroundStyle(Color.tpSecondary)
-                    Text("한 번 구매하면 이후 가격이 올라도 계속 사용할 수 있습니다.")
-                        .font(
-                            .taption(size: SettingsTypography.rowSubtitle)
-                        )
-                        .foregroundStyle(Color.tpSecondary)
-                }
-                Spacer(minLength: 0)
-            }
-
-            HStack(spacing: 7) {
-                Button {
-                    Task {
-                        if model.proProduct == nil {
-                            await model.refreshStore()
-                        } else {
-                            await model.purchasePro()
-                        }
-                    }
-                } label: {
-                    Text(primaryPurchaseLabel)
-                        .font(
-                            .taption(
-                                size: SettingsTypography.action,
-                                weight: .bold
-                            )
-                        )
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
-                        .background(
-                            model.hasProAccess
-                                ? Color(red: 0.18, green: 0.52, blue: 0.32)
-                                : Color.tpInk,
-                            in: RoundedRectangle(cornerRadius: 9)
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(model.hasProAccess || model.isStoreLoading)
-
-                Button {
-                    Task { await model.restorePurchases() }
-                } label: {
-                    Text("구매 복원")
-                        .font(
-                            .taption(
-                                size: SettingsTypography.action,
-                                weight: .bold
-                            )
-                        )
-                        .foregroundStyle(Color.tpInk)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(
-                            Color.tpBackground,
-                            in: RoundedRectangle(cornerRadius: 9)
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isStoreLoading)
-            }
-        }
-        .padding(11)
-        .background(
-            Color.white,
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-        )
-    }
-
-    private var primaryPurchaseLabel: String {
-        if model.hasProAccess { return "구매 완료" }
-        if let product = model.proProduct {
-            return "\(product.displayPrice) 영구 구매"
-        }
-        return "구매 정보 다시 확인"
     }
 
     private func settingsSection<Content: View>(

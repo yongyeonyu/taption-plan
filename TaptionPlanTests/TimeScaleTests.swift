@@ -510,6 +510,103 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeCalendarDayStyleUsesHolidayAndWeekendColors() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        func date(_ day: Int) throws -> Date {
+            try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 8, day: day)))
+        }
+
+        XCTAssertEqual(MapHomeCalendarDayStyle(date: try date(15), calendar: calendar), .saturday)
+        XCTAssertEqual(MapHomeCalendarDayStyle(date: try date(16), calendar: calendar), .holiday)
+        XCTAssertEqual(MapHomeCalendarDayStyle(date: try date(22), calendar: calendar), .saturday)
+        XCTAssertEqual(MapHomeCalendarDayStyle(date: try date(18), calendar: calendar), .weekday)
+    }
+
+    func testMapHomeTimeSidebarLimitsTodayToCurrentMinute() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 16, hour: 10, minute: 18))
+        )
+
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.maximumSelectableMinute(for: now, now: now, calendar: calendar),
+            618
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.maximumSelectableMinute(
+                for: try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: now)),
+                now: now,
+                calendar: calendar
+            ),
+            1_439
+        )
+    }
+
+    func testMapHomeTimeSidebarDragClampsToAllowedRange() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByDragging(
+                baseMinute: 600,
+                translation: 50,
+                trackHeight: 300,
+                maxMinute: 800
+            ),
+            800
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByDragging(
+                baseMinute: 5,
+                translation: -100,
+                trackHeight: 300,
+                maxMinute: 600
+            ),
+            0
+        )
+    }
+
+    func testStartupMapLocationUsesNewestUsableGPSReading() {
+        let base = Date(timeIntervalSinceReferenceDate: 0)
+        let validEarlier = SensorReading(
+            timestamp: base,
+            point: GeoPoint(
+                latitude: 37.5665,
+                longitude: 126.9780,
+                altitude: 25,
+                horizontalAccuracy: 12,
+                verticalAccuracy: 8
+            )
+        )
+        let invalidNewer = SensorReading(
+            timestamp: base.addingTimeInterval(120),
+            point: GeoPoint(
+                latitude: 37.5670,
+                longitude: 126.9785,
+                altitude: 25,
+                horizontalAccuracy: 80,
+                verticalAccuracy: 8
+            )
+        )
+        let newestValid = SensorReading(
+            timestamp: base.addingTimeInterval(60),
+            point: GeoPoint(
+                latitude: 37.5668,
+                longitude: 126.9783,
+                altitude: 25,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 8
+            )
+        )
+
+        XCTAssertEqual(
+            StartupMapLocationPolicy.latestValidReading(
+                in: [validEarlier, invalidNewer, newestValid]
+            )?.id,
+            newestValid.id
+        )
+    }
+
     func testNonDayFractionsKeepCalendarBucketsEqual() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

@@ -100,6 +100,7 @@ final class TaptionPlanAppDelegate:
             [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        TaptionAdvertisingCoordinator.shared.start()
         TaptionPlanBackgroundRefresh.register()
         TaptionPlanBackgroundRefresh.schedule(reason: "launch")
         AppleHealthService.shared.startObservingChanges {
@@ -114,6 +115,10 @@ final class TaptionPlanAppDelegate:
 
     func applicationWillEnterForeground(_ application: UIApplication) {
         TaptionPlanBackgroundRefresh.schedule(reason: "application-foreground")
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        TaptionAdvertisingCoordinator.shared.requestStartupPresentation()
     }
 
     func userNotificationCenter(

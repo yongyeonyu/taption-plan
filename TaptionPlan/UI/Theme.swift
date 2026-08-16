@@ -23,6 +23,23 @@ extension Color {
     static let tpSurfaceCream = Color(red: 255 / 255, green: 249 / 255, blue: 236 / 255)
     static let tpSky = Color(red: 185 / 255, green: 221 / 255, blue: 237 / 255)
     static let tpLine = Color(red: 221 / 255, green: 231 / 255, blue: 235 / 255)
+    static let tpHoliday = Color(red: 0.86, green: 0.27, blue: 0.30)
+    static let tpSaturday = Color(red: 0.24, green: 0.47, blue: 0.77)
+    static let tpAccent = Color(red: 0.21, green: 0.57, blue: 0.70)
+
+    // The original product guide's ten-color set, softened by the postcard
+    // surfaces above. Map Home uses these as accents rather than repainting
+    // every legacy surface.
+    static let tpReferenceBlue = Color(hex: "#2D9BF0")
+    static let tpReferenceRose = Color(hex: "#F15C80")
+    static let tpReferenceMint = Color(hex: "#48B38C")
+    static let tpReferenceGray = Color(hex: "#777777")
+    static let tpReferenceGold = Color(hex: "#E1C453")
+    static let tpReferencePurple = Color(hex: "#B965C8")
+    static let tpReferenceCyan = Color(hex: "#45CFD5")
+    static let tpReferenceSand = Color(hex: "#D7A77F")
+    static let tpReferenceBlush = Color(hex: "#FBBEBE")
+    static let tpReferenceLeaf = Color(hex: "#8ED97E")
 
     static let tpProject = Color(red: 190 / 255, green: 218 / 255, blue: 227 / 255)
     static let tpHobby = Color(red: 196 / 255, green: 233 / 255, blue: 218 / 255)
