@@ -14,7 +14,7 @@ struct CategoryManagerView: View {
         VStack(spacing: 0) {
             DraftTopBar(
                 title: "분류표 관리",
-                trailing: "\(categories.count)개 일과",
+                trailing: "\(categories.count)개 대분류",
                 onBack: { model.detail = nil }
             )
 
@@ -121,14 +121,6 @@ struct CategoryManagerView: View {
     }
 
     private func categoryColor(_ id: String) -> Color {
-        switch id {
-        case "work": Color(red: 0.34, green: 0.45, blue: 0.78)
-        case "study": Color(red: 0.45, green: 0.39, blue: 0.72)
-        case "hobby": Color(red: 0.75, green: 0.42, blue: 0.66)
-        case "sleep": Color(red: 0.37, green: 0.37, blue: 0.74)
-        case "movement": Color(red: 0.84, green: 0.57, blue: 0.22)
-        case "exercise": Color(red: 0.78, green: 0.35, blue: 0.34)
-        default: Color.tpPlaceDark
-        }
+        CanonicalCategoryPalette.color(id)
     }
 }

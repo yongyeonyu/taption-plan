@@ -41,7 +41,7 @@ struct SettingsView: View {
 
                     settingsSection(
                         "나에게 맞추기",
-                        summary: "\(RecordClassificationCatalog.categories.count)개 일과"
+                        summary: "\(RecordClassificationCatalog.categories.count)개 대분류"
                     ) {
                         settingsRow(
                             icon: "person.crop.circle.badge.checkmark",
@@ -114,7 +114,7 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "list.bullet.rectangle",
                             title: "분류표 관리",
-                            subtitle: "일과 · 상세활동 · 자동 분류 기준",
+                            subtitle: "대분류 · 상세활동 · 자동 분류 기준",
                             value: "\(RecordClassificationCatalog.categories.count)개"
                         ) {
                             model.detail = .categoryManager

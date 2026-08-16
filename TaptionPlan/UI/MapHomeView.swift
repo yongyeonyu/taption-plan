@@ -18,6 +18,9 @@ struct MapHomeView: View {
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
     @State private var isMapCenteredOnUser = false
     @State private var hasAppliedInitialLocation = false
+    @State private var timeRailSegments: [MapHomeTimeRailSegment] = [
+        .wholeDayUnconfirmed,
+    ]
 
     private static let userCenterTolerance: CLLocationDistance = 120
 
@@ -29,6 +32,7 @@ struct MapHomeView: View {
         static let mapControlSize: CGFloat = 44
         static let mapControlIcon: CGFloat = 15
         static let timeRailWidth: CGFloat = 58
+        static let timeSidebarHandleOverflow: CGFloat = 18
         static let timeRailTopMargin: CGFloat = 18
         static let timeRailBottomMargin: CGFloat = 28
     }
@@ -108,6 +112,17 @@ struct MapHomeView: View {
         .task {
             focusMapIfNeeded()
             applyInitialLocationIfAvailable()
+            refreshTimeRailSegments()
+        }
+        .task(id: model.selectedDate) {
+            while !Task.isCancelled {
+                refreshTimeRailSegments()
+                do {
+                    try await Task.sleep(nanoseconds: 60_000_000_000)
+                } catch {
+                    return
+                }
+            }
         }
         .onChange(of: model.latestSensorReading?.point) { _, _ in
             applyInitialLocationIfAvailable()
@@ -121,6 +136,10 @@ struct MapHomeView: View {
             }
             mapPosition = .automatic
             focusMapIfNeeded()
+            refreshTimeRailSegments()
+        }
+        .onChange(of: model.snapshot.actuals) { _, _ in
+            refreshTimeRailSegments()
         }
     }
 
@@ -176,7 +195,9 @@ struct MapHomeView: View {
                 .fill(.clear)
                 .contentShape(Rectangle())
                 .frame(
-                    width: Layout.timeRailWidth + Layout.horizontalInset,
+                    width: Layout.timeRailWidth
+                        + Layout.timeSidebarHandleOverflow
+                        + Layout.horizontalInset,
                     height: max(0, proxy.size.height - protectedTop)
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -282,6 +303,7 @@ struct MapHomeView: View {
                         }
                     ),
                     activity: currentActivity(at: minute),
+                    segments: timeRailSegments,
                     railWidth: Layout.timeRailWidth,
                     onSectionEdit: {
                         sectionEditSelection = MapHomeSectionEditSelection(
@@ -594,32 +616,23 @@ struct MapHomeView: View {
     }
 
     private func currentActivity(at minute: Int) -> MapHomeTimeSidebarActivity {
-        let calendar = Calendar.autoupdatingCurrent
-        let moment = calendar.startOfDay(for: model.selectedDate)
-            .addingTimeInterval(TimeInterval(minute * 60))
-        guard let actual = model.snapshot.actuals
-            .filter({
-                $0.startedAt <= moment
-                    && ($0.endedAt ?? .distantFuture) >= moment
-            })
-            .max(by: { $0.startedAt < $1.startedAt }) else {
-            return MapHomeTimeSidebarActivity(
-                systemImage: "sparkles",
-                tint: .tpReferenceMint,
-                accessibilityLabel: "활동 없음"
-            )
-        }
-
-        let categoryID = RecordAnalysisCategoryPolicy.categoryID(for: actual)
-        let category = model.snapshot.categories.first { $0.id == categoryID }
-            ?? model.snapshot.categories.first { $0.id == actual.categoryID }
-        return MapHomeTimeSidebarActivity(
-            systemImage: categoryID == "movement"
-                ? MovementPresentation.symbol(for: actual)
-                : category.map { $0.icon.systemImage } ?? "sparkles",
-            tint: Color(hex: category?.darkHex ?? "#48B38C"),
-            accessibilityLabel: actual.title
+        let segment = MapHomeTimeRailSegmentEngine.segment(
+            at: minute,
+            in: timeRailSegments
+        ) ?? .wholeDayUnconfirmed
+        return .majorCategory(
+            segment.categoryID,
+            accessibilityLabel: segment.title
         )
+    }
+
+    private func refreshTimeRailSegments() {
+        let next = MapHomeTimeRailSegmentEngine.segments(
+            from: model.snapshot.actuals,
+            on: model.selectedDate
+        )
+        guard next != timeRailSegments else { return }
+        timeRailSegments = next
     }
 
     /// Show the persisted, station-to-station subway path on the map.  The

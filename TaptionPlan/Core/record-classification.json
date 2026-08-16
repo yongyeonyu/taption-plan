@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "categories": [
     {
       "id": "activity",
@@ -7,8 +7,7 @@
       "systemImage": "sparkles",
       "details": [
         { "id": "activity.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
-        { "id": "activity.housework", "title": "집안일", "behavior": "housework", "systemImage": "washer.fill", "automaticOnly": true },
-        { "id": "activity.unconfirmed", "title": "미확인", "behavior": "unconfirmed-activity", "systemImage": "questionmark.circle" }
+        { "id": "activity.housework", "title": "집안일", "behavior": "housework", "systemImage": "washer.fill", "automaticOnly": true }
       ]
     },
     {
@@ -64,8 +63,7 @@
         { "id": "movement.bus", "title": "버스", "behavior": "bus", "systemImage": "bus.fill" },
         { "id": "movement.ship", "title": "배", "behavior": "ship", "systemImage": "ferry.fill" },
         { "id": "movement.airplane", "title": "비행기", "behavior": "airplane", "systemImage": "airplane" },
-        { "id": "movement.cycling", "title": "자전거", "behavior": "cycling", "systemImage": "bicycle" },
-        { "id": "movement.unconfirmed", "title": "미확인", "behavior": "unconfirmed-movement", "systemImage": "questionmark.circle" }
+        { "id": "movement.cycling", "title": "자전거", "behavior": "cycling", "systemImage": "bicycle" }
       ]
     },
     {
@@ -75,6 +73,15 @@
       "automaticOnly": true,
       "details": [
         { "id": "exercise.workout", "title": "운동", "behavior": "exercise", "systemImage": "figure.strengthtraining.traditional", "automaticOnly": true }
+      ]
+    },
+    {
+      "id": "unconfirmed",
+      "title": "미확인",
+      "systemImage": "questionmark.circle.fill",
+      "automaticOnly": true,
+      "details": [
+        { "id": "unconfirmed.automatic", "title": "미확인", "behavior": "unconfirmed", "systemImage": "questionmark.circle.fill", "automaticOnly": true }
       ]
     }
   ]

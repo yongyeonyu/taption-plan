@@ -4,6 +4,260 @@ struct MapHomeTimeSidebarActivity {
     let systemImage: String
     let tint: Color
     let accessibilityLabel: String
+
+    static func majorCategory(
+        _ categoryID: String,
+        accessibilityLabel: String? = nil
+    ) -> Self {
+        let category = MapHomeSidebarMajorCategory.presentation(for: categoryID)
+        return Self(
+            systemImage: category.systemImage,
+            tint: category.tint,
+            accessibilityLabel: accessibilityLabel ?? category.title
+        )
+    }
+}
+
+/// 오른쪽 시간 레일에서 공통으로 보이는 대분류 모형이다. 제목과 아이콘은
+/// 단일 JSON 분류표에서, 색상은 앱 공통 팔레트에서 읽는다.
+struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let systemImage: String
+    let hex: String
+
+    var tint: Color {
+        Color(hex: hex)
+    }
+
+    static var all: [Self] {
+        let catalog = Dictionary(
+            uniqueKeysWithValues: RecordClassificationCatalog.categories.map {
+                ($0.id, $0)
+            }
+        )
+        return CanonicalCategoryPalette.orderedIDs.compactMap { id in
+            guard let category = catalog[id] else { return nil }
+            return Self(
+                id: category.id,
+                title: category.title,
+                systemImage: category.systemImage,
+                hex: CanonicalCategoryPalette.hex(category.id)
+            )
+        }
+    }
+
+    static func presentation(for categoryID: String) -> Self {
+        all.first { $0.id == categoryID }
+            ?? all.first { $0.id == "activity" }
+            ?? Self(
+                id: "activity",
+                title: "활동",
+                systemImage: "sparkles",
+                hex: CanonicalCategoryPalette.hex("activity")
+            )
+    }
+}
+
+/// A single, clipped automatic-record interval on the right-hand time rail.
+/// Intervals use a half-open minute range so adjacent records never overlap.
+struct MapHomeTimeRailSegment: Identifiable, Hashable {
+    let id: String
+    let startMinute: Int
+    let endMinute: Int
+    let categoryID: String
+    let title: String
+    let sourceID: UUID?
+
+    init(
+        startMinute: Int,
+        endMinute: Int,
+        categoryID: String,
+        title: String,
+        sourceID: UUID? = nil
+    ) {
+        self.startMinute = min(max(startMinute, 0), 1_440)
+        self.endMinute = min(max(endMinute, 0), 1_440)
+        self.categoryID = CanonicalCategoryPalette.orderedIDs.contains(categoryID)
+            ? categoryID
+            : "activity"
+        self.title = title
+        self.sourceID = sourceID
+        id = [
+            String(self.startMinute),
+            String(self.endMinute),
+            self.categoryID,
+            sourceID?.uuidString ?? "gap",
+        ].joined(separator: "-")
+    }
+
+    static let wholeDayUnconfirmed = MapHomeTimeRailSegment(
+        startMinute: 0,
+        endMinute: 1_440,
+        categoryID: "unconfirmed",
+        title: "미확인"
+    )
+}
+
+/// Produces one winning automatic category for every minute in a day.  It
+/// derives a presentation copy only; source records remain untouched.
+enum MapHomeTimeRailSegmentEngine {
+    private struct Candidate {
+        let actual: ActualRecord
+        let startMinute: Int
+        let endMinute: Int
+        let categoryID: String
+    }
+
+    static func segments(
+        from actuals: [ActualRecord],
+        on date: Date,
+        asOf: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [MapHomeTimeRailSegment] {
+        let dayStart = calendar.startOfDay(for: date)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+        else { return [.wholeDayUnconfirmed] }
+        let day = TimeSpan(start: dayStart, end: dayEnd)
+        let candidates = AutomaticRecordTimelineEngine.activities(
+            from: actuals,
+            inside: day,
+            asOf: asOf
+        ).compactMap { actual -> Candidate? in
+            let span = actual.span(asOf: asOf)
+            let start = max(span.start, dayStart)
+            let end = min(span.end, dayEnd)
+            guard start < end else { return nil }
+            let startMinute = minute(
+                for: start,
+                relativeTo: dayStart,
+                rounding: .down
+            )
+            let endMinute = minute(
+                for: end,
+                relativeTo: dayStart,
+                rounding: .up
+            )
+            guard startMinute < endMinute else { return nil }
+            return Candidate(
+                actual: actual,
+                startMinute: startMinute,
+                endMinute: endMinute,
+                categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual)
+            )
+        }
+
+        let boundaries = Set(
+            candidates.flatMap { [$0.startMinute, $0.endMinute] } + [0, 1_440]
+        ).sorted()
+        var result: [MapHomeTimeRailSegment] = []
+
+        for (start, end) in zip(boundaries, boundaries.dropFirst()) where start < end {
+            let winner = candidates
+                .filter { $0.startMinute <= start && $0.endMinute >= end }
+                .max(by: { isHigherPriority($1, than: $0) })
+            let next = MapHomeTimeRailSegment(
+                startMinute: start,
+                endMinute: end,
+                categoryID: winner?.categoryID ?? "unconfirmed",
+                title: winner?.actual.title ?? "미확인",
+                sourceID: winner?.actual.id
+            )
+            append(next, to: &result)
+        }
+        return result.isEmpty ? [.wholeDayUnconfirmed] : result
+    }
+
+    static func segment(
+        at minute: Int,
+        in segments: [MapHomeTimeRailSegment]
+    ) -> MapHomeTimeRailSegment? {
+        let resolved = min(max(minute, 0), 1_439)
+        return segments.first {
+            $0.startMinute <= resolved && resolved < $0.endMinute
+        }
+    }
+
+    private static func minute(
+        for date: Date,
+        relativeTo dayStart: Date,
+        rounding: FloatingPointRoundingRule
+    ) -> Int {
+        let raw = date.timeIntervalSince(dayStart) / 60
+        return min(1_440, max(0, Int(raw.rounded(rounding))))
+    }
+
+    private static func append(
+        _ segment: MapHomeTimeRailSegment,
+        to result: inout [MapHomeTimeRailSegment]
+    ) {
+        guard let previous = result.last,
+              previous.endMinute == segment.startMinute,
+              previous.categoryID == segment.categoryID,
+              previous.title == segment.title,
+              previous.sourceID == segment.sourceID
+        else {
+            result.append(segment)
+            return
+        }
+        result.removeLast()
+        result.append(
+            MapHomeTimeRailSegment(
+                startMinute: previous.startMinute,
+                endMinute: segment.endMinute,
+                categoryID: previous.categoryID,
+                title: previous.title,
+                sourceID: previous.sourceID
+            )
+        )
+    }
+
+    private static func isHigherPriority(
+        _ lhs: Candidate,
+        than rhs: Candidate
+    ) -> Bool {
+        let lhsPhase = RecordAnalysisCategoryPolicy.phase(for: lhs.categoryID)
+        let rhsPhase = RecordAnalysisCategoryPolicy.phase(for: rhs.categoryID)
+        if lhsPhase.precedence != rhsPhase.precedence {
+            return lhsPhase.precedence > rhsPhase.precedence
+        }
+        if lhs.actual.manuallyCorrected != rhs.actual.manuallyCorrected {
+            return lhs.actual.manuallyCorrected
+        }
+        let lhsConfidence = confidenceRank(lhs.actual.confidence)
+        let rhsConfidence = confidenceRank(rhs.actual.confidence)
+        if lhsConfidence != rhsConfidence { return lhsConfidence > rhsConfidence }
+        let lhsSource = sourceRank(lhs.actual.source)
+        let rhsSource = sourceRank(rhs.actual.source)
+        if lhsSource != rhsSource { return lhsSource > rhsSource }
+        if lhs.actual.startedAt != rhs.actual.startedAt {
+            return lhs.actual.startedAt > rhs.actual.startedAt
+        }
+        if lhs.actual.createdAt != rhs.actual.createdAt {
+            return lhs.actual.createdAt > rhs.actual.createdAt
+        }
+        return lhs.actual.id.uuidString > rhs.actual.id.uuidString
+    }
+
+    private static func confidenceRank(_ confidence: ConfidenceLevel) -> Int {
+        switch confidence {
+        case .high: 3
+        case .medium: 2
+        case .low: 1
+        }
+    }
+
+    private static func sourceRank(_ source: ActualSource) -> Int {
+        switch source {
+        case .healthKit: 7
+        case .appleWatch: 6
+        case .location: 5
+        case .motion: 4
+        case .appUsage: 3
+        case .media, .call: 2
+        case .manual, .timer, .calendar, .photo: 0
+        }
+    }
 }
 
 /// A narrow, non-resizing time rail for the map home screen.
@@ -12,6 +266,7 @@ struct MapHomeTimeSidebar: View {
     let date: Date
     @Binding var selectedMinute: Int
     let activity: MapHomeTimeSidebarActivity?
+    let segments: [MapHomeTimeRailSegment]
     var onSelectionChanged: ((Int) -> Void)?
     var onSectionEdit: (() -> Void)?
 
@@ -29,6 +284,7 @@ struct MapHomeTimeSidebar: View {
         date: Date,
         selectedMinute: Binding<Int>,
         activity: MapHomeTimeSidebarActivity? = nil,
+        segments: [MapHomeTimeRailSegment] = [],
         railWidth: CGFloat = 58,
         onSelectionChanged: ((Int) -> Void)? = nil,
         onSectionEdit: (() -> Void)? = nil
@@ -36,6 +292,7 @@ struct MapHomeTimeSidebar: View {
         self.date = date
         self._selectedMinute = selectedMinute
         self.activity = activity
+        self.segments = segments
         self.railWidth = max(58, railWidth)
         self.onSelectionChanged = onSelectionChanged
         self.onSectionEdit = onSectionEdit
@@ -52,9 +309,6 @@ struct MapHomeTimeSidebar: View {
             let minute = min(max(selectedMinute, 0), maxMinute)
             let selectedY = verticalInset + trackHeight * CGFloat(minute) / 1439
             let trackX = railWidth - numericColumnWidth - activeRailWidth / 2 - 1
-            // At midnight the handle is at the absolute top of the rail. Do
-            // not leave the minimum-height blue cap visible in that state.
-            let activeRailHeight = minute == 0 ? 0 : max(6, selectedY - verticalInset)
 
             ZStack(alignment: .topLeading) {
                 Rectangle()
@@ -71,12 +325,34 @@ struct MapHomeTimeSidebar: View {
                     )
                     .allowsHitTesting(false)
 
-                ZStack(alignment: .top) {
+                ZStack {
                     Rectangle()
                         .fill(Color.tpInk.opacity(0.72))
-                    Rectangle()
-                        .fill(Color.tpReferenceBlue.opacity(0.86))
-                        .frame(height: activeRailHeight)
+
+                    ForEach(displaySegments) { segment in
+                        let start = min(max(segment.startMinute, 0), 1_440)
+                        let end = min(max(segment.endMinute, 0), 1_440)
+                        if start < end {
+                            Rectangle()
+                                .fill(
+                                    CanonicalCategoryPalette.color(
+                                        segment.categoryID
+                                    ).opacity(segment.categoryID == "unconfirmed" ? 0.82 : 0.94)
+                                )
+                                .frame(
+                                    width: activeRailWidth,
+                                    height: max(
+                                        1,
+                                        trackHeight * CGFloat(end - start) / 1_440
+                                    )
+                                )
+                                .position(
+                                    x: activeRailWidth / 2,
+                                    y: trackHeight
+                                        * CGFloat(start + end) / 2 / 1_440
+                                )
+                        }
+                    }
                 }
                 .frame(width: activeRailWidth, height: trackHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
@@ -133,13 +409,16 @@ struct MapHomeTimeSidebar: View {
         trackX: CGFloat
     ) -> some View {
         let handleHeight: CGFloat = 40
+        let fallbackActivity = MapHomeTimeSidebarActivity.majorCategory(
+            "unconfirmed"
+        )
         return ZStack {
             Button {
                 onSectionEdit?()
             } label: {
-                Image(systemName: activity?.systemImage ?? "sparkles")
+                Image(systemName: activity?.systemImage ?? fallbackActivity.systemImage)
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(activity?.tint ?? Color.tpReferenceMint)
+                    .foregroundStyle(activity?.tint ?? fallbackActivity.tint)
                     .frame(width: 32, height: handleHeight)
                     .background(
                         Color.tpInk.opacity(0.90),
@@ -148,14 +427,14 @@ struct MapHomeTimeSidebar: View {
                     .overlay {
                         RoundedRectangle(cornerRadius: 9, style: .continuous)
                             .stroke(
-                                (activity?.tint ?? Color.tpReferenceMint)
+                                (activity?.tint ?? fallbackActivity.tint)
                                     .opacity(0.45),
                                 lineWidth: 1
                             )
                     }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(activity?.accessibilityLabel ?? "활동 없음")
+            .accessibilityLabel(activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel)
             .accessibilityHint("탭하면 섹션 편집을 엽니다")
             .position(x: trackX - 23, y: handleHeight / 2)
 
@@ -242,6 +521,10 @@ struct MapHomeTimeSidebar: View {
 
     private func timeLabel(for minute: Int) -> String {
         String(format: "%02d:%02d", minute / 60, minute % 60)
+    }
+
+    private var displaySegments: [MapHomeTimeRailSegment] {
+        segments.isEmpty ? [.wholeDayUnconfirmed] : segments
     }
 }
 

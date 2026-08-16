@@ -93,20 +93,20 @@ enum RecordAnalysisCategoryPolicy {
         case "sleep": .sleep
         case "movement": .movement
         case "exercise": .exercise
+        case "unconfirmed": .unconfirmed
         default: .activity
         }
     }
 
-    /// 자동 기록을 일곱 개 상위 분류 중 하나로만 분석한다. 기록 자체는
+    /// 자동 기록을 여덟 개 상위 분류 중 하나로만 분석한다. 기록 자체는
     /// 호출자에게 돌려주지 않고, 이 값만 합계·고리·범례의 열쇠로 쓴다.
     static func categoryID(for actual: ActualRecord) -> String {
-        if actual.behavior == "unconfirmed-movement" {
-            return "movement"
-        }
         if actual.categoryID == ReviewCoverageEngine.unconfirmedCategoryID
+            || actual.behavior == "unconfirmed-activity"
+            || actual.behavior == "unconfirmed-movement"
             || actual.behavior == "unconfirmed-gap"
             || normalized(actual.title) == "미확인" {
-            return "activity"
+            return "unconfirmed"
         }
 
         let value = normalized("\(actual.title) \(actual.behavior ?? "")")
@@ -184,8 +184,6 @@ enum RecordAnalysisCategoryPolicy {
         switch rawID {
         case let value where categoryIDs.contains(value):
             return value
-        case "unconfirmed":
-            return "activity"
         default:
             // 기존의 업무·수업 외 사용자 카테고리는 원본을 유지하되, 자동
             // 기록 분석에서는 활동으로만 남긴다.
@@ -204,7 +202,7 @@ enum RecordAnalysisCategoryPolicy {
         case .study: .study
         case .hobby: .hobby
         case .exercise: .exercise
-        case .unconfirmed: .activity
+        case .unconfirmed: .unconfirmed
         default: .activity
         }
     }
@@ -229,6 +227,7 @@ enum RecordAnalysisCategoryPolicy {
         case "sleep":
             return SleepStage(rawValue: actual.behavior ?? "")?.displayName ?? "수면"
         case "movement": return movementTitle(for: actual)
+        case "unconfirmed": return "미확인"
         default:
             let behavior = actual.behavior.flatMap(WatchBehaviorKind.fromModelLabel)
             return behavior == .stationary || behavior == .sitting
@@ -1702,6 +1701,7 @@ enum DayPhase: String, CaseIterable, Sendable {
         case "work": .work
         case "study": .study
         case "hobby": .hobby
+        case "unconfirmed": .unconfirmed
         default: .activity
         }
     }

@@ -13,7 +13,7 @@ final class FeatureEngineTests: XCTestCase {
             .map(\.title)
         XCTAssertEqual(
             phaseTitles,
-            ["활동", "업무", "수업", "취미", "수면", "이동", "운동"]
+            ["활동", "업무", "수업", "취미", "수면", "이동", "운동", "미확인"]
         )
 
         let detailTitles = Set(
@@ -27,6 +27,236 @@ final class FeatureEngineTests: XCTestCase {
             "걷기", "자동차", "지하철", "자가용", "버스", "배", "비행기",
             "자전거", "운동",
         ]))
+    }
+
+    func testMapHomeSidebarUsesEightDistinctMajorCategoryVisuals() {
+        let categories = MapHomeSidebarMajorCategory.all
+
+        XCTAssertEqual(categories.map(\.id), CanonicalCategoryPalette.orderedIDs)
+        XCTAssertEqual(Set(categories.map(\.hex)).count, 8)
+        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 8)
+        XCTAssertEqual(
+            categories.map(\.title),
+            ["활동", "업무", "수업", "취미", "수면", "이동", "운동", "미확인"]
+        )
+    }
+
+    func testMapHomeSidebarHandleUsesCanonicalMajorCategoryPresentation() {
+        let categories = CanonicalCategoryPalette.orderedIDs.map {
+            MapHomeSidebarMajorCategory.presentation(for: $0)
+        }
+
+        XCTAssertEqual(categories, MapHomeSidebarMajorCategory.all)
+        XCTAssertEqual(
+            MapHomeTimeSidebarActivity.majorCategory("unconfirmed").systemImage,
+            "questionmark.circle.fill"
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarActivity.majorCategory("unconfirmed").accessibilityLabel,
+            "미확인"
+        )
+    }
+
+    func testMapHomeTimeRailUsesOneNonOverlappingSegmentForEachCanonicalCategory() {
+        let day = makeDate(2026, 8, 15)
+        let records: [ActualRecord] = [
+            ActualRecord(
+                planID: nil,
+                title: "집안일",
+                categoryID: "activity",
+                startedAt: day,
+                endedAt: day.addingTimeInterval(3 * hour),
+                source: .motion,
+                behavior: WatchBehaviorKind.housework.rawValue
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: day.addingTimeInterval(3 * hour),
+                endedAt: day.addingTimeInterval(6 * hour),
+                source: .location
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "수업",
+                categoryID: "study",
+                startedAt: day.addingTimeInterval(6 * hour),
+                endedAt: day.addingTimeInterval(9 * hour),
+                source: .location
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "취미",
+                categoryID: "hobby",
+                startedAt: day.addingTimeInterval(9 * hour),
+                endedAt: day.addingTimeInterval(12 * hour),
+                source: .location
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "수면",
+                categoryID: "sleep",
+                startedAt: day.addingTimeInterval(12 * hour),
+                endedAt: day.addingTimeInterval(15 * hour),
+                source: .healthKit
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "걷기",
+                categoryID: "activity",
+                startedAt: day.addingTimeInterval(15 * hour),
+                endedAt: day.addingTimeInterval(18 * hour),
+                source: .motion,
+                behavior: WatchBehaviorKind.walking.rawValue
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "운동",
+                categoryID: "exercise",
+                startedAt: day.addingTimeInterval(18 * hour),
+                endedAt: day.addingTimeInterval(21 * hour),
+                source: .healthKit
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "미확인",
+                categoryID: "activity",
+                startedAt: day.addingTimeInterval(21 * hour),
+                endedAt: day.addingTimeInterval(24 * hour),
+                source: .motion,
+                behavior: "unconfirmed-activity"
+            ),
+        ]
+
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: records,
+            on: day,
+            asOf: day.addingTimeInterval(25 * hour),
+            calendar: utcCalendar
+        )
+
+        XCTAssertEqual(segments.map(\.categoryID), CanonicalCategoryPalette.orderedIDs)
+        XCTAssertEqual(segments.first?.startMinute, 0)
+        XCTAssertEqual(segments.last?.endMinute, 1_440)
+        XCTAssertTrue(
+            zip(segments, segments.dropFirst()).allSatisfy {
+                $0.endMinute == $1.startMinute
+            }
+        )
+    }
+
+    func testMapHomeTimeRailResolvesOverlapsAndIgnoresManualRecords() {
+        let day = makeDate(2026, 8, 15)
+        let records = [
+            ActualRecord(
+                planID: nil,
+                title: "수면",
+                categoryID: "sleep",
+                startedAt: day,
+                endedAt: day.addingTimeInterval(3 * hour),
+                source: .healthKit
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "걷기",
+                categoryID: "activity",
+                startedAt: day.addingTimeInterval(hour),
+                endedAt: day.addingTimeInterval(2 * hour),
+                source: .motion,
+                behavior: WatchBehaviorKind.walking.rawValue
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "집에서 휴식",
+                categoryID: "activity",
+                startedAt: day.addingTimeInterval(2 * hour),
+                endedAt: day.addingTimeInterval(4 * hour),
+                source: .location
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "수동 업무",
+                categoryID: "work",
+                startedAt: day,
+                endedAt: day.addingTimeInterval(24 * hour),
+                source: .manual
+            ),
+        ]
+
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: records,
+            on: day,
+            asOf: day.addingTimeInterval(25 * hour),
+            calendar: utcCalendar
+        )
+
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(at: 90, in: segments)?.categoryID,
+            "sleep"
+        )
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(at: 210, in: segments)?.categoryID,
+            "activity"
+        )
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(at: 500, in: segments)?.categoryID,
+            "unconfirmed"
+        )
+        XCTAssertFalse(segments.contains { $0.categoryID == "work" })
+    }
+
+    func testMapHomeTimeRailClipsOngoingAutomaticRecordWithoutMutatingIt() {
+        let day = makeDate(2026, 8, 15)
+        let ongoing = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "activity",
+            startedAt: day.addingTimeInterval(10 * hour),
+            source: .motion,
+            behavior: WatchBehaviorKind.walking.rawValue
+        )
+
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: [ongoing],
+            on: day,
+            asOf: day.addingTimeInterval(10 * hour + 20 * 60),
+            calendar: utcCalendar
+        )
+
+        XCTAssertNil(ongoing.endedAt)
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(at: 619, in: segments)?.categoryID,
+            "movement"
+        )
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(at: 620, in: segments)?.categoryID,
+            "unconfirmed"
+        )
+    }
+
+    func testUnconfirmedStaysSeparateFromActivityAndMovement() {
+        let record = ActualRecord(
+            planID: nil,
+            title: "미확인",
+            categoryID: "activity",
+            startedAt: makeDate(2026, 8, 13, 9, 0),
+            endedAt: makeDate(2026, 8, 13, 10, 0),
+            source: .motion,
+            behavior: "unconfirmed-movement"
+        )
+
+        XCTAssertEqual(
+            RecordAnalysisCategoryNormalizer.categoryID(
+                for: record.categoryID,
+                title: record.title,
+                behavior: record.behavior
+            ),
+            "unconfirmed"
+        )
+        XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: record), "unconfirmed")
+        XCTAssertEqual(RecordAnalysisCategoryPolicy.phase(for: "unconfirmed"), .unconfirmed)
+        XCTAssertEqual(RecordAnalysisCategoryPolicy.detailTitle(for: record), "미확인")
     }
 
     func testCanonicalAnalysisDoesNotMutateStoredRecord() {

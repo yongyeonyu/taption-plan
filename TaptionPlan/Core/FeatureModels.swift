@@ -39,7 +39,7 @@ enum RecordAnalysisScope: Sendable {
 
 /// 공용 타깃(위젯 포함)이 기록을 합칠 때 쓰는 문자열 기반 정규화기다.
 /// 상세 문맥은 iPhone 앱에서 더 풍부하게 보정하지만, 모든 타깃이 최소한
-/// 같은 일곱 상위 분류를 계산하도록 의존성을 작게 유지한다.
+/// 같은 여덟 상위 분류를 계산하도록 의존성을 작게 유지한다.
 enum RecordAnalysisCategoryNormalizer {
     static func categoryID(
         for rawCategoryID: String,
@@ -49,13 +49,12 @@ enum RecordAnalysisCategoryNormalizer {
         let value = [title, behavior ?? ""].joined(separator: " ")
             .lowercased()
             .replacingOccurrences(of: " ", with: "")
-        if value.contains("unconfirmed-movement") {
-            return "movement"
-        }
         if rawCategoryID == "unconfirmed"
+            || value.contains("unconfirmed-activity")
+            || value.contains("unconfirmed-movement")
             || value.contains("unconfirmed-gap")
             || value.contains("미확인") {
-            return "activity"
+            return "unconfirmed"
         }
         if value.contains("housework") || value.contains("집안일") {
             return "activity"
@@ -192,6 +191,7 @@ enum RecordClassificationCatalog {
             category("sleep", "수면", "moon.zzz.fill"),
             category("movement", "이동", "figure.walk.motion"),
             category("exercise", "운동", "figure.strengthtraining.traditional"),
+            category("unconfirmed", "미확인", "questionmark.circle.fill"),
         ]
     )
 

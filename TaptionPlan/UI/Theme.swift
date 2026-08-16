@@ -98,27 +98,53 @@ extension Color {
     }
 }
 
+/// 지도 홈·기록·설정이 같은 색을 쓰도록 묶은 자동 기록의 여덟 대분류 팔레트다.
+enum CanonicalCategoryPalette {
+    static let orderedIDs = [
+        "activity", "work", "study", "hobby",
+        "sleep", "movement", "exercise", "unconfirmed",
+    ]
+
+    static let hexes: [String: String] = [
+        "activity": "#29A383",
+        "work": "#2563EB",
+        "study": "#00A2C7",
+        "hobby": "#8B5CF6",
+        "sleep": "#5B5BD6",
+        "movement": "#F76B15",
+        "exercise": "#DC2626",
+        "unconfirmed": "#94A3B8",
+    ]
+
+    static func hex(_ id: String) -> String {
+        hexes[id] ?? hexes["activity"]!
+    }
+
+    static func color(_ id: String) -> Color {
+        Color(hex: hex(id))
+    }
+}
+
 /// 기록 시간표와 바로 아래 범례·아이콘이 함께 쓰는 단일 색상표.
 /// 해시 팔레트는 서로 다른 항목이 같은 칸에 충돌할 수 있으므로, 자동 기록과
 /// 내장 카테고리는 고정 색을 갖는다.
 enum RecordTimelinePalette {
     static let categoryHexes: [String: String] = [
         "calendar": "#52525B", "location": "#0284C7",
-        "movement": "#F76B15", "sleep": "#5B5BD6",
-        "activity": "#29A383", "appUsage": "#0891B2",
-        "weather": "#0EA5E9", "photo": "#9333EA", "memo": "#6B7280",
-        "unconfirmed": "#C7CFD9",
-        "project": "#0F766E", "exercise": "#DC2626", "study": "#4338CA",
-        "hobby": "#059669", "routine": "#CA8A04",
+        "appUsage": "#0891B2", "weather": "#0EA5E9",
+        "photo": "#9333EA", "memo": "#6B7280",
+        "project": "#0F766E", "routine": "#CA8A04",
         "relationship": "#DB2777", "rest": "#7E868F",
         "travel": "#EA580C", "health": "#0D9488", "event": "#C026D3",
-        "work": "#2563EB", "family": "#E11D48", "parenting": "#F97316",
+        "family": "#E11D48", "parenting": "#F97316",
         "finance": "#65A30D", "housing": "#78716C", "career": "#7C3AED",
         "creative": "#BE185D", "pet": "#A16207", "community": "#15803D",
         "student": "#0369A1", "exam": "#B45309", "military": "#3F6212",
         "athlete": "#B91C1C", "pregnancy": "#C2418C",
         "caregiver": "#6D28D9", "government": "#334155", "food": "#C2410C",
-    ]
+    ].merging(CanonicalCategoryPalette.hexes, uniquingKeysWith: { _, canonical in
+        canonical
+    })
 
     static let sleepStageHexes: [String: String] = [
         SleepStage.inBed.rawValue: "#8B8D98",
@@ -143,23 +169,23 @@ enum RecordTimelinePalette {
     ]
 
     static let dayPhaseHexes: [String: String] = [
-        DayPhase.unconfirmed.rawValue: "#C7CFD9",
-        DayPhase.sleep.rawValue: "#5B5BD6",
-        DayPhase.movement.rawValue: "#F59E0B",
-        DayPhase.exercise.rawValue: "#E54666",
-        DayPhase.hobby.rawValue: "#8B5CF6",
-        DayPhase.activity.rawValue: "#10B981",
+        DayPhase.unconfirmed.rawValue: CanonicalCategoryPalette.hex("unconfirmed"),
+        DayPhase.sleep.rawValue: CanonicalCategoryPalette.hex("sleep"),
+        DayPhase.movement.rawValue: CanonicalCategoryPalette.hex("movement"),
+        DayPhase.exercise.rawValue: CanonicalCategoryPalette.hex("exercise"),
+        DayPhase.hobby.rawValue: CanonicalCategoryPalette.hex("hobby"),
+        DayPhase.activity.rawValue: CanonicalCategoryPalette.hex("activity"),
         DayPhase.appointment.rawValue: "#8E4EC6",
-        DayPhase.commuteToWork.rawValue: "#F76B15",
+        DayPhase.commuteToWork.rawValue: "#E8792F",
         DayPhase.commuteToSchool.rawValue: "#0090FF",
         DayPhase.commuteToAcademy.rawValue: "#7C66DC",
         DayPhase.activityDeparture.rawValue: "#46A758",
-        DayPhase.work.rawValue: "#3E63DD",
-        DayPhase.study.rawValue: "#00A2C7",
+        DayPhase.work.rawValue: CanonicalCategoryPalette.hex("work"),
+        DayPhase.study.rawValue: CanonicalCategoryPalette.hex("study"),
         DayPhase.commuteHomeFromWork.rawValue: "#E54D2E",
         DayPhase.commuteHomeFromSchool.rawValue: "#12A594",
         DayPhase.commuteHomeFromAcademy.rawValue: "#D6409F",
-        DayPhase.activityReturn.rawValue: "#29A383",
+        DayPhase.activityReturn.rawValue: "#56A68A",
         DayPhase.evening.rawValue: "#D5A300",
     ]
 
