@@ -52,9 +52,16 @@ struct MapHomeTimeSidebar: View {
             let minute = min(max(selectedMinute, 0), maxMinute)
             let selectedY = verticalInset + trackHeight * CGFloat(minute) / 1439
             let trackX = railWidth - numericColumnWidth - activeRailWidth / 2 - 1
-            let activeRailHeight = max(6, selectedY - verticalInset)
+            // At midnight the handle is at the absolute top of the rail. Do
+            // not leave the minimum-height blue cap visible in that state.
+            let activeRailHeight = minute == 0 ? 0 : max(6, selectedY - verticalInset)
 
             ZStack(alignment: .topLeading) {
+                Rectangle()
+                    .fill(.clear)
+                    .contentShape(Rectangle())
+                    .gesture(timeTapGesture(trackHeight: trackHeight, maxMinute: maxMinute))
+
                 Rectangle()
                     .fill(Color.white.opacity(0.68))
                     .frame(width: numericColumnWidth + 3, height: trackHeight)
@@ -73,10 +80,11 @@ struct MapHomeTimeSidebar: View {
                 }
                 .frame(width: activeRailWidth, height: trackHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-                    .position(
-                        x: trackX,
-                        y: verticalInset + trackHeight / 2
-                    )
+                .position(
+                    x: trackX,
+                    y: verticalInset + trackHeight / 2
+                )
+                .allowsHitTesting(false)
 
                 ForEach(0...23, id: \.self) { hour in
                     let y = verticalInset + trackHeight * CGFloat(hour * 60) / 1439
@@ -95,6 +103,7 @@ struct MapHomeTimeSidebar: View {
                         x: railWidth - numericColumnWidth / 2,
                         y: y
                     )
+                    .allowsHitTesting(false)
                 }
 
                 selectionHandle(
@@ -123,14 +132,15 @@ struct MapHomeTimeSidebar: View {
         y: CGFloat,
         trackX: CGFloat
     ) -> some View {
-        ZStack {
+        let handleHeight: CGFloat = 40
+        return ZStack {
             Button {
                 onSectionEdit?()
             } label: {
                 Image(systemName: activity?.systemImage ?? "sparkles")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(activity?.tint ?? Color.tpReferenceMint)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 32, height: handleHeight)
                     .background(
                         Color.tpInk.opacity(0.90),
                         in: RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -147,7 +157,7 @@ struct MapHomeTimeSidebar: View {
             .buttonStyle(.plain)
             .accessibilityLabel(activity?.accessibilityLabel ?? "활동 없음")
             .accessibilityHint("탭하면 섹션 편집을 엽니다")
-            .position(x: trackX - 23, y: 20)
+            .position(x: trackX - 23, y: handleHeight / 2)
 
             Button {
                 onSectionEdit?()
@@ -169,10 +179,23 @@ struct MapHomeTimeSidebar: View {
             .accessibilityLabel("섹션 편집")
             .accessibilityValue(timeLabel(for: minute))
             .accessibilityHint("탭하면 이 시간의 섹션 편집을 엽니다")
-            .position(x: trackX + activeRailWidth / 2 + 17, y: 20)
+            .position(x: trackX + activeRailWidth / 2 + 17, y: handleHeight / 2)
         }
-        .frame(width: railWidth, height: 40)
+        .frame(width: railWidth, height: handleHeight)
         .position(x: railWidth / 2, y: y)
+    }
+
+    private func timeTapGesture(trackHeight: CGFloat, maxMinute: Int) -> some Gesture {
+        SpatialTapGesture()
+            .onEnded { value in
+                let minute = MapHomeTimeSidebarMath.minuteByLocation(
+                    y: value.location.y,
+                    trackHeight: trackHeight,
+                    verticalInset: verticalInset,
+                    maxMinute: maxMinute
+                )
+                publish(minute, force: true)
+            }
     }
 
     private func dragGesture(trackHeight: CGFloat, maxMinute: Int) -> some Gesture {
@@ -238,5 +261,17 @@ enum MapHomeTimeSidebarMath {
         guard trackHeight > 0 else { return min(max(baseMinute, 0), maxMinute) }
         let delta = Int((translation / trackHeight * 1439).rounded())
         return min(max(baseMinute + delta, 0), maxMinute)
+    }
+
+    static func minuteByLocation(
+        y: CGFloat,
+        trackHeight: CGFloat,
+        verticalInset: CGFloat,
+        maxMinute: Int
+    ) -> Int {
+        guard trackHeight > 0 else { return 0 }
+        let position = min(max(y - verticalInset, 0), trackHeight)
+        let minute = Int((position / trackHeight * 1439).rounded())
+        return min(max(minute, 0), maxMinute)
     }
 }

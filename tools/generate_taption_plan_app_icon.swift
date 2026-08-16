@@ -50,18 +50,18 @@ private func drawIcon(variant: IconVariant) -> NSImage {
         let specs = [
             PillSpec(
                 orbitDegrees: 0,
-                colors: [NSColor(hex: 0xFF3B30), NSColor(hex: 0xFF8A55), NSColor(hex: 0xFFE45E)],
-                stroke: NSColor(hex: 0x6B120A, alpha: 0.94)
+                colors: [NSColor(hex: 0xF4B5A6), NSColor(hex: 0xF8C8B6), NSColor(hex: 0xF6D99B)],
+                stroke: NSColor(hex: 0x171719)
             ),
             PillSpec(
                 orbitDegrees: 120,
-                colors: [NSColor(hex: 0x25E86E), NSColor(hex: 0x5BFFC1), NSColor(hex: 0x20C8F4)],
-                stroke: NSColor(hex: 0x044729, alpha: 0.94)
+                colors: [NSColor(hex: 0xA9DFC7), NSColor(hex: 0xBDE8D8), NSColor(hex: 0xB3DBEA)],
+                stroke: NSColor(hex: 0x171719)
             ),
             PillSpec(
                 orbitDegrees: 240,
-                colors: [NSColor(hex: 0x2E78FF), NSColor(hex: 0x70BEFF), NSColor(hex: 0xA45CFF)],
-                stroke: NSColor(hex: 0x082C84, alpha: 0.94)
+                colors: [NSColor(hex: 0xA9BDEB), NSColor(hex: 0xC0CDF1), NSColor(hex: 0xD6BCE9)],
+                stroke: NSColor(hex: 0x171719)
             ),
         ]
         drawArcPill(specs[0], startDegrees: 218, endDegrees: 302, in: context, variant: variant)
@@ -71,18 +71,18 @@ private func drawIcon(variant: IconVariant) -> NSImage {
         let specs = [
             PillSpec(
                 orbitDegrees: 0,
-                colors: [NSColor.white.withAlphaComponent(0.92), NSColor.white.withAlphaComponent(0.70)],
-                stroke: NSColor.white.withAlphaComponent(0.32)
+                colors: [NSColor(hex: 0xF4B5A6), NSColor(hex: 0xF6D99B)],
+                stroke: NSColor(hex: 0x171719)
             ),
             PillSpec(
                 orbitDegrees: 120,
-                colors: [NSColor.white.withAlphaComponent(0.80), NSColor.white.withAlphaComponent(0.58)],
-                stroke: NSColor.white.withAlphaComponent(0.26)
+                colors: [NSColor(hex: 0xA9DFC7), NSColor(hex: 0xB3DBEA)],
+                stroke: NSColor(hex: 0x171719)
             ),
             PillSpec(
                 orbitDegrees: 240,
-                colors: [NSColor.white.withAlphaComponent(0.68), NSColor.white.withAlphaComponent(0.48)],
-                stroke: NSColor.white.withAlphaComponent(0.22)
+                colors: [NSColor(hex: 0xA9BDEB), NSColor(hex: 0xD6BCE9)],
+                stroke: NSColor(hex: 0x171719)
             ),
         ]
         drawArcPill(specs[0], startDegrees: 218, endDegrees: 302, in: context, variant: variant)
@@ -101,21 +101,21 @@ private func drawBackground(in context: CGContext, variant: IconVariant) {
     let baseBottom: NSColor
     switch variant {
     case .full:
-        baseTop = NSColor(hex: 0x070913)
-        baseBottom = NSColor(hex: 0x02030A)
+        baseTop = NSColor(hex: 0xEAF5EF)
+        baseBottom = NSColor(hex: 0xFBE8EB)
     case .dark:
-        baseTop = NSColor(hex: 0x05060E)
-        baseBottom = NSColor(hex: 0x000006)
+        baseTop = NSColor(hex: 0xDDEBE5)
+        baseBottom = NSColor(hex: 0xF1DDE0)
     case .tinted:
-        baseTop = NSColor(hex: 0x090A10)
-        baseBottom = NSColor(hex: 0x020208)
+        baseTop = NSColor(hex: 0xE9EEF1)
+        baseBottom = NSColor(hex: 0xF5E9EE)
     }
     NSGradient(colors: [baseTop, baseBottom])?.draw(in: rect, angle: -90)
 
     let center = CGPoint(x: size * 0.50, y: size * 0.49)
     let glowColors = [
-        NSColor(hex: 0x1C2D64, alpha: variant == .tinted ? 0.16 : 0.26).cgColor,
-        NSColor(hex: 0x071021, alpha: 0.08).cgColor,
+        NSColor.white.withAlphaComponent(variant == .tinted ? 0.12 : 0.22).cgColor,
+        NSColor(hex: 0xF6DFBE, alpha: 0.12).cgColor,
         NSColor.clear.cgColor,
     ] as CFArray
     let locations: [CGFloat] = [0, 0.42, 1]
@@ -136,13 +136,8 @@ private func drawOrbitGlow(in context: CGContext, variant: IconVariant) {
     let rect = CGRect(x: 210, y: 210, width: 604, height: 604)
     let path = CGPath(ellipseIn: rect, transform: nil)
     context.addPath(path)
-    context.setLineWidth(variant == .tinted ? 40 : 34)
-    context.setStrokeColor(NSColor(hex: 0x7DA6FF, alpha: variant == .tinted ? 0.10 : 0.14).cgColor)
-    context.setShadow(
-        offset: CGSize(width: 0, height: 0),
-        blur: variant == .tinted ? 24 : 36,
-        color: NSColor(hex: 0x4E7EFF, alpha: variant == .tinted ? 0.12 : 0.25).cgColor
-    )
+    context.setLineWidth(variant == .tinted ? 28 : 24)
+    context.setStrokeColor(NSColor(hex: 0x171719).cgColor)
     context.strokePath()
     context.restoreGState()
 }
@@ -167,8 +162,8 @@ private func drawArcPill(
     context.setLineJoin(.round)
     context.setShadow(
         offset: CGSize(width: 0, height: 0),
-        blur: variant == .tinted ? 20 : 34,
-        color: spec.stroke.withAlphaComponent(variant == .tinted ? 0.18 : 0.58).cgColor
+        blur: variant == .tinted ? 8 : 14,
+        color: spec.stroke.withAlphaComponent(variant == .tinted ? 0.08 : 0.16).cgColor
     )
     context.setStrokeColor(spec.stroke.cgColor)
     context.setLineWidth(strokeWidth)

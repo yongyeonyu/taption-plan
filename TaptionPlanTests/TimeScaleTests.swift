@@ -524,6 +524,16 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapHomeCalendarDayStyle(date: try date(18), calendar: calendar), .weekday)
     }
 
+    func testMapHomeLanguageUsesPersistableLocaleAndFormats() {
+        XCTAssertEqual(MapHomeLanguage.korean.rawValue, "korean")
+        XCTAssertEqual(MapHomeLanguage.english.rawValue, "english")
+        XCTAssertEqual(MapHomeLanguage.korean.locale.identifier, "ko_KR")
+        XCTAssertEqual(MapHomeLanguage.english.locale.identifier, "en_US")
+        XCTAssertEqual(MapHomeLanguage.korean.datePartFormat, "M월 d일")
+        XCTAssertEqual(MapHomeLanguage.english.datePartFormat, "MMM d")
+        XCTAssertEqual(MapHomeLanguage.english.text("지도 홈", "Map Home"), "Map Home")
+    }
+
     func testMapHomeTimeSidebarLimitsTodayToCurrentMinute() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -563,6 +573,36 @@ final class TimeScaleTests: XCTestCase {
                 maxMinute: 600
             ),
             0
+        )
+    }
+
+    func testMapHomeTimeSidebarTapMapsAndClampsToVisibleRail() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByLocation(
+                y: 14,
+                trackHeight: 300,
+                verticalInset: 14,
+                maxMinute: 1_439
+            ),
+            0
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByLocation(
+                y: 164,
+                trackHeight: 300,
+                verticalInset: 14,
+                maxMinute: 1_439
+            ),
+            720
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByLocation(
+                y: 400,
+                trackHeight: 300,
+                verticalInset: 14,
+                maxMinute: 618
+            ),
+            618
         )
     }
 

@@ -10,6 +10,9 @@ struct MapHomeView: View {
     @State private var isCalendarPresented = false
     @State private var isHomeLocationPresented = false
     @State private var isMutedMap = true
+    @AppStorage("taption.mapHome.language") private var languageRawValue = MapHomeLanguage.korean.rawValue
+    @State private var isCompassVisible = false
+    @State private var isGPSLoggingActionInFlight = false
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
@@ -35,10 +38,19 @@ struct MapHomeView: View {
         _selectedScope = State(initialValue: .day)
     }
 
+    private var language: MapHomeLanguage {
+        MapHomeLanguage(rawValue: languageRawValue) ?? .korean
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             map
                 .ignoresSafeArea()
+
+            // Keep the time rail and its trailing breathing room outside the
+            // map's gesture arena.  The rail itself is rendered above this
+            // shield, so its controls remain tappable.
+            trailingMapGestureShield
 
             VStack(spacing: 12) {
                 header
@@ -75,11 +87,12 @@ struct MapHomeView: View {
                 selectedDate: $model.selectedDate,
                 holidayName: { date in
                     TimelineAxisGrid.koreanHolidayName(on: date)
-                }
+                },
+                language: language
             )
         }
         .sheet(isPresented: $isHomeLocationPresented) {
-            MapHomeLocationSheet(model: model) {
+            MapHomeLocationSheet(model: model, language: language) {
                 mapPosition = .automatic
                 focusMapIfNeeded()
             }
@@ -87,7 +100,7 @@ struct MapHomeView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: $sectionEditSelection) { selection in
-            MapHomeSectionEditSheet(selection: selection)
+            MapHomeSectionEditSheet(selection: selection, language: language)
                 .presentationDetents([.height(232)])
                 .presentationDragIndicator(.visible)
         }
@@ -135,8 +148,18 @@ struct MapHomeView: View {
                 }
             }
 
+            // Use MapKit's native location glyph so the marker follows the
+            // system location source and heading behavior automatically.
+            UserAnnotation()
+
         }
         .mapStyle(mapStyle)
+        .mapControls {
+            if isCompassVisible {
+                MapCompass()
+                    .mapControlVisibility(.visible)
+            }
+        }
         .onMapCameraChange(frequency: .onEnd) { context in
             updateUserCenterState(for: context.region.center)
         }
@@ -144,6 +167,23 @@ struct MapHomeView: View {
             MapHomeFairyAtmosphere()
                 .allowsHitTesting(false)
         }
+    }
+
+    private var trailingMapGestureShield: some View {
+        GeometryReader { proxy in
+            let protectedTop = Layout.headerVisibleHeight + Layout.timeRailTopMargin
+            Rectangle()
+                .fill(.clear)
+                .contentShape(Rectangle())
+                .frame(
+                    width: Layout.timeRailWidth + Layout.horizontalInset,
+                    height: max(0, proxy.size.height - protectedTop)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .allowsHitTesting(true)
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 
     private var mapStyle: MapStyle {
@@ -168,7 +208,11 @@ struct MapHomeView: View {
                         .font(.system(size: Layout.headerIcon, weight: .medium))
                     .frame(width: 42, height: Layout.headerHitTarget)
             }
-            .accessibilityLabel(isMenuOpen ? "메뉴 닫기" : "메뉴 열기")
+            .accessibilityLabel(
+                isMenuOpen
+                    ? language.text("메뉴 닫기", "Close menu")
+                    : language.text("메뉴 열기", "Open menu")
+            )
 
             headerDateButton("chevron.backward.2", amount: -7)
             headerDateButton("chevron.left", amount: -1)
@@ -182,7 +226,9 @@ struct MapHomeView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("오늘 날짜로 이동, \(dateTitle)")
+            .accessibilityLabel(
+                language.text("오늘 날짜로 이동", "Go to today") + ", \(dateTitle)"
+            )
 
             headerDateButton("chevron.right", amount: 1)
             headerDateButton("chevron.forward.2", amount: 7)
@@ -190,10 +236,10 @@ struct MapHomeView: View {
             Button {
                 isCalendarPresented = true
             } label: {
-                MapHomeCalendarGlyph(date: model.selectedDate)
+                MapHomeCalendarGlyph(date: model.selectedDate, language: language)
                     .frame(width: 42, height: Layout.headerHitTarget)
             }
-            .accessibilityLabel("날짜 선택")
+            .accessibilityLabel(language.text("날짜 선택", "Choose date"))
         }
         .foregroundStyle(ink)
         .padding(.horizontal, 7)
@@ -214,7 +260,11 @@ struct MapHomeView: View {
                 .font(.system(size: 15, weight: .medium))
                 .frame(width: 31, height: Layout.headerHitTarget)
         }
-        .accessibilityLabel(amount < 0 ? "이전 날짜" : "다음 날짜")
+        .accessibilityLabel(
+            amount < 0
+                ? language.text("이전 날짜", "Previous date")
+                : language.text("다음 날짜", "Next date")
+        )
     }
 
     private var currentTimeRail: some View {
@@ -259,9 +309,12 @@ struct MapHomeView: View {
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                     .background(Color.white.opacity(0.94), in: Circle())
             }
-            .accessibilityLabel("현재 위치")
+            .accessibilityLabel(language.text("현재 위치", "Current location"))
 
             Button {
+                if !isCompassVisible {
+                    isCompassVisible = true
+                }
                 mapPosition = .userLocation(followsHeading: true, fallback: .automatic)
             } label: {
                 Image(systemName: "location.north.line.fill")
@@ -270,7 +323,7 @@ struct MapHomeView: View {
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                     .background(Color.white.opacity(0.94), in: Circle())
             }
-            .accessibilityLabel("나침반")
+            .accessibilityLabel(language.text("나침반 표시", "Show compass"))
 
             Button {
                 isMutedMap.toggle()
@@ -281,7 +334,7 @@ struct MapHomeView: View {
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                     .background(Color.white.opacity(0.94), in: Circle())
             }
-            .accessibilityLabel("지도 스타일")
+            .accessibilityLabel(language.text("지도 스타일", "Map style"))
         }
     }
 
@@ -313,9 +366,9 @@ struct MapHomeView: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("오늘의 지도")
+                    Text(language.text("오늘의 지도", "Today's Map"))
                         .font(.system(size: 21, weight: .bold, design: .rounded))
-                    Text("자동으로 남은 하루의 기록")
+                    Text(language.text("자동으로 남은 하루의 기록", "Today's activity, automatically recorded"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                 }
@@ -329,11 +382,13 @@ struct MapHomeView: View {
             }
             .padding(.bottom, 27)
 
-            menuItem("map", "지도 홈", isSelected: true) {
+            menuItem("map", language.text("지도 홈", "Map Home"), isSelected: true) {
                 isMenuOpen = false
             }
 
             homeLocationMenuItem
+            gpsLoggingMenuItem
+            languageMenuItem
 
             Spacer()
 
@@ -341,7 +396,11 @@ struct MapHomeView: View {
                 Image(systemName: "map.fill")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.tpReferenceBlue)
-                Text(currentCoordinate == nil ? "위치 기록을 기다리는 중" : "현재 위치 기록 중")
+                Text(
+                    currentCoordinate == nil
+                        ? language.text("위치 기록을 기다리는 중", "Waiting for location")
+                        : language.text("현재 위치 기록 중", "Recording current location")
+                )
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
@@ -361,14 +420,14 @@ struct MapHomeView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("집 위치")
+                    Text(language.text("집 위치", "Home location"))
                         .font(.system(size: 16, weight: .medium, design: .rounded))
                     if let home = homePlace, home.point != nil {
-                        Text("설정됨 · Lv.\(home.floor ?? 1)")
+                        Text(language.text("설정됨", "Set") + " · Lv.\(home.floor ?? 1)")
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundStyle(Color.tpReferenceMint)
                     } else {
-                        Text("현재 위치로 설정")
+                        Text(language.text("현재 위치로 설정", "Set from current location"))
                             .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
@@ -384,7 +443,110 @@ struct MapHomeView: View {
             .background(Color.tpReferenceMint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("집 위치 설정")
+        .accessibilityLabel(language.text("집 위치 설정", "Set home location"))
+    }
+
+    private var languageMenuItem: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(language.text("언어", "Language"), systemImage: "globe")
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.primary)
+
+            Picker(language.text("언어", "Language"), selection: $languageRawValue) {
+                ForEach(MapHomeLanguage.allCases) { option in
+                    Text(option.displayName).tag(option.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel(language.text("언어", "Language"))
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .background(Color.tpReferenceBlue.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var gpsLoggingMenuItem: some View {
+        let session = model.activeTrackingSession
+        let isLogging = session != nil
+        return Button {
+            toggleGPSLogging()
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: isLogging ? "location.fill" : "location.viewfinder")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(
+                        isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue
+                    )
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(
+                        isLogging
+                            ? language.text("실시간 GPS 기록 중", "Live GPS logging")
+                            : language.text("실시간 GPS 기록", "Live GPS logging")
+                    )
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+
+                    Text(
+                        isLogging
+                            ? language.text(
+                                "탭하면 기록을 종료합니다",
+                                "Tap to stop recording"
+                            )
+                            : language.text(
+                                "탭하면 고정밀 위치 기록을 시작합니다",
+                                "Tap to start high-accuracy location logging"
+                            )
+                    )
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if isGPSLoggingActionInFlight {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: isLogging ? "stop.fill" : "play.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Color.white.opacity(0.76),
+                            in: Circle()
+                        )
+                }
+            }
+            .foregroundStyle(Color.primary)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .background(
+                (isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue)
+                    .opacity(0.08),
+                in: RoundedRectangle(cornerRadius: 12)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isGPSLoggingActionInFlight)
+        .accessibilityLabel(
+            isLogging
+                ? language.text("실시간 GPS 기록 종료", "Stop live GPS logging")
+                : language.text("실시간 GPS 기록 시작", "Start live GPS logging")
+        )
+    }
+
+    private func toggleGPSLogging() {
+        guard !isGPSLoggingActionInFlight else { return }
+        isGPSLoggingActionInFlight = true
+        Task { @MainActor in
+            defer { isGPSLoggingActionInFlight = false }
+            if model.activeTrackingSession == nil {
+                await model.startTracking(.walking)
+            } else {
+                await model.stopTracking()
+            }
+        }
     }
 
     private var homePlace: FrequentPlace? {
@@ -485,25 +647,27 @@ struct MapHomeView: View {
 
     private var dateTitle: String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = selectedScope == .day ? "M월 d일 EEEE" : "yyyy년 M월"
+        formatter.locale = language.locale
+        formatter.dateFormat = selectedScope == .day
+            ? language.dateTitleFormat
+            : language.monthTitleFormat
         return formatter.string(from: model.selectedDate)
     }
 
     private var dateTitleLabel: Text {
         let calendar = Calendar.autoupdatingCurrent
         let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "ko_KR")
-        dateFormatter.dateFormat = "M월 d일"
+        dateFormatter.locale = language.locale
+        dateFormatter.dateFormat = language.datePartFormat
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = Locale(identifier: "ko_KR")
-        weekdayFormatter.dateFormat = "EEEE"
+        weekdayFormatter.locale = language.locale
+        weekdayFormatter.dateFormat = language.weekdayFormat
         let weekday = calendar.component(.weekday, from: model.selectedDate)
         let weekdayText = Text(" \(weekdayFormatter.string(from: model.selectedDate))")
-            .font(.system(size: weekday == 7 ? 17 : 19, weight: .semibold, design: .rounded))
+            .font(.system(size: 17, weight: .semibold, design: .rounded))
             .foregroundStyle(weekday == 1 ? Color.tpHoliday : weekday == 7 ? Color.tpSaturday : ink)
         return Text(dateFormatter.string(from: model.selectedDate))
-            .font(.system(size: weekday == 7 ? 17 : 19, weight: .semibold, design: .rounded))
+            .font(.system(size: 17, weight: .semibold, design: .rounded))
             .foregroundStyle(ink) + weekdayText
     }
 
@@ -604,9 +768,66 @@ private struct MapHomeSectionEditSelection: Identifiable {
     }
 }
 
+enum MapHomeLanguage: String, CaseIterable, Identifiable {
+    case korean
+    case english
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .korean: "한국어"
+        case .english: "English"
+        }
+    }
+
+    var locale: Locale {
+        switch self {
+        case .korean: Locale(identifier: "ko_KR")
+        case .english: Locale(identifier: "en_US")
+        }
+    }
+
+    var dateTitleFormat: String {
+        switch self {
+        case .korean: "M월 d일 EEEE"
+        case .english: "EEE, MMM d"
+        }
+    }
+
+    var monthTitleFormat: String {
+        switch self {
+        case .korean: "yyyy년 M월"
+        case .english: "MMMM yyyy"
+        }
+    }
+
+    var datePartFormat: String {
+        switch self {
+        case .korean: "M월 d일"
+        case .english: "MMM d"
+        }
+    }
+
+    var weekdayFormat: String {
+        switch self {
+        case .korean: "EEEE"
+        case .english: "EEE"
+        }
+    }
+
+    func text(_ korean: String, _ english: String) -> String {
+        switch self {
+        case .korean: korean
+        case .english: english
+        }
+    }
+}
+
 private struct MapHomeSectionEditSheet: View {
     @Environment(\.dismiss) private var dismiss
     let selection: MapHomeSectionEditSelection
+    let language: MapHomeLanguage
 
     private var timeText: String {
         String(format: "%02d:%02d", selection.minute / 60, selection.minute % 60)
@@ -615,10 +836,10 @@ private struct MapHomeSectionEditSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("섹션 편집")
+                Text(language.text("섹션 편집", "Edit section"))
                     .font(.system(size: 21, weight: .bold, design: .rounded))
                 Spacer()
-                Button("닫기") { dismiss() }
+                Button(language.text("닫기", "Close")) { dismiss() }
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
             }
 
@@ -634,7 +855,7 @@ private struct MapHomeSectionEditSheet: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(selection.activity.accessibilityLabel)
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    Text("선택 시각 \(timeText)")
+                    Text(language.text("선택 시각", "Selected time") + " \(timeText)")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
@@ -646,7 +867,12 @@ private struct MapHomeSectionEditSheet: View {
                 in: RoundedRectangle(cornerRadius: 15, style: .continuous)
             )
 
-            Text("오른쪽 핸들을 위·아래로 끌어 선택 시각을 바꿀 수 있습니다.")
+            Text(
+                language.text(
+                    "오른쪽 핸들을 위·아래로 끌어 선택 시각을 바꿀 수 있습니다.",
+                    "Drag the right handle up or down to change the selected time."
+                )
+            )
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
         }
@@ -658,6 +884,7 @@ private struct MapHomeSectionEditSheet: View {
 private struct MapHomeLocationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
+    let language: MapHomeLanguage
     let onSaved: () -> Void
 
     private var home: FrequentPlace? {
@@ -677,14 +904,14 @@ private struct MapHomeLocationSheet: View {
                     .frame(width: 42, height: 42)
                     .background(Color.tpReferenceMint.opacity(0.14), in: Circle())
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("집 위치 설정")
+                    Text(language.text("집 위치 설정", "Set home location"))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                     if let home, home.point != nil {
-                        Text("현재 저장 상태 · Lv.\(home.floor ?? 1)")
+                        Text(language.text("현재 저장 상태", "Saved") + " · Lv.\(home.floor ?? 1)")
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("집 장소를 찾을 수 없습니다")
+                        Text(language.text("집 장소를 찾을 수 없습니다", "Home place is unavailable"))
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
@@ -694,8 +921,14 @@ private struct MapHomeLocationSheet: View {
 
             Text(
                 hasCurrentLocation
-                    ? "현재 위치를 집의 기준 위치로 저장합니다. 좌표는 화면에 표시하지 않습니다."
-                    : "현재 위치를 받는 중입니다. 위치 기록이 잡히면 저장할 수 있습니다."
+                    ? language.text(
+                        "현재 위치를 집의 기준 위치로 저장합니다. 좌표는 화면에 표시하지 않습니다.",
+                        "Save the current location as home. Coordinates are not shown."
+                    )
+                    : language.text(
+                        "현재 위치를 받는 중입니다. 위치 기록이 잡히면 저장할 수 있습니다.",
+                        "Waiting for location. Save becomes available when a location is recorded."
+                    )
             )
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
@@ -707,7 +940,9 @@ private struct MapHomeLocationSheet: View {
                 dismiss()
             } label: {
                 Label(
-                    home?.point == nil ? "현재 위치로 저장" : "현재 위치로 다시 저장",
+                    home?.point == nil
+                        ? language.text("현재 위치로 저장", "Save current location")
+                        : language.text("현재 위치로 다시 저장", "Update current location"),
                     systemImage: "location.fill"
                 )
                 .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -860,6 +1095,7 @@ enum MapHomeCalendarDayStyle: Equatable {
 
 private struct MapHomeCalendarGlyph: View {
     let date: Date
+    let language: MapHomeLanguage
 
     private var calendar: Calendar {
         TimelineAxisGrid.normalizedCalendar()
@@ -882,23 +1118,45 @@ private struct MapHomeCalendarGlyph: View {
     }
 
     var body: some View {
-        let symbol: String = switch style {
-        case .weekday: calendar.isDateInToday(date) ? "calendar.badge.clock" : "calendar"
-        case .saturday: "calendar.badge.plus"
-        case .holiday: "calendar.badge.exclamationmark"
-        }
-        ZStack(alignment: .top) {
-            Image(systemName: symbol)
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(tint)
-
-            Text(day)
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(tint)
-                .padding(.top, 7)
-        }
+        NotionCalendarDaysIcon(tint: tint)
         .frame(width: 24, height: 25)
-        .accessibilityLabel("\(day)일 달력")
+        .accessibilityLabel(
+            language.text("\(day)일 달력", "Calendar, day \(day)")
+        )
+    }
+}
+
+private struct NotionCalendarDaysIcon: View {
+    let tint: Color
+
+    private let dateDots = [
+        CGPoint(x: 8, y: 13), CGPoint(x: 12, y: 13), CGPoint(x: 16, y: 13),
+        CGPoint(x: 8, y: 17), CGPoint(x: 12, y: 17), CGPoint(x: 16, y: 17)
+    ]
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .stroke(tint, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                .frame(width: 18, height: 18)
+
+            Path { path in
+                path.move(to: CGPoint(x: 8, y: 2))
+                path.addLine(to: CGPoint(x: 8, y: 5))
+                path.move(to: CGPoint(x: 16, y: 2))
+                path.addLine(to: CGPoint(x: 16, y: 5))
+                path.move(to: CGPoint(x: 3, y: 9))
+                path.addLine(to: CGPoint(x: 21, y: 9))
+            }
+            .stroke(tint, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+
+            ForEach(dateDots.indices, id: \.self) { index in
+                Circle()
+                    .fill(tint)
+                    .frame(width: 2, height: 2)
+                    .position(dateDots[index])
+            }
+        }
+        .frame(width: 24, height: 24)
     }
 }

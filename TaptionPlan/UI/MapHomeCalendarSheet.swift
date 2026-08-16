@@ -8,19 +8,22 @@ import SwiftUI
 struct MapHomeCalendarSheet: View {
     @Binding private var selectedDate: Date
     private let holidayName: (Date) -> String?
+    private let language: MapHomeLanguage
     private let calendar: Calendar
 
     @State private var displayedMonth: Date
 
     init(
         selectedDate: Binding<Date>,
-        holidayName: @escaping (Date) -> String?
+        holidayName: @escaping (Date) -> String?,
+        language: MapHomeLanguage = .korean
     ) {
         self._selectedDate = selectedDate
         self.holidayName = holidayName
+        self.language = language
 
         var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "ko_KR")
+        calendar.locale = language.locale
         calendar.timeZone = .current
         calendar.firstWeekday = 1
         self.calendar = calendar
@@ -63,7 +66,7 @@ struct MapHomeCalendarSheet: View {
                     .frame(width: 34, height: 34)
                     .background(Color.tpBackground, in: Circle())
             }
-            .accessibilityLabel("이전 달")
+            .accessibilityLabel(language.text("이전 달", "Previous month"))
 
             Spacer(minLength: 12)
 
@@ -82,16 +85,18 @@ struct MapHomeCalendarSheet: View {
                     .frame(width: 34, height: 34)
                     .background(Color.tpBackground, in: Circle())
             }
-            .accessibilityLabel("다음 달")
+            .accessibilityLabel(language.text("다음 달", "Next month"))
         }
     }
 
     private var weekdayHeader: some View {
-        let weekdays = ["일", "월", "화", "수", "목", "금", "토"]
+        let weekdays = language == .korean
+            ? ["일", "월", "화", "수", "목", "금", "토"]
+            : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
         return LazyVGrid(columns: gridColumns, spacing: 0) {
             ForEach(Array(weekdays.enumerated()), id: \.offset) { index, weekday in
                 Text(weekday)
-                    .font(.system(size: index == 6 ? 10 : 12, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(weekdayColor(index: index))
                     .frame(maxWidth: .infinity)
             }
@@ -160,9 +165,9 @@ struct MapHomeCalendarSheet: View {
 
     private var monthTitle: String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.locale = language.locale
         formatter.calendar = calendar
-        formatter.dateFormat = "yyyy년 M월"
+        formatter.dateFormat = language.monthTitleFormat
         return formatter.string(from: displayedMonth)
     }
 
@@ -186,7 +191,9 @@ struct MapHomeCalendarSheet: View {
     }
 
     private func accessibilityLabel(day: Int, date: Date, holiday: String?) -> String {
-        let title = "\(monthTitle) \(day)일"
+        let title = language == .korean
+            ? "\(monthTitle) \(day)일"
+            : "\(monthTitle) \(day)"
         return holiday.map { "\(title), \($0)" } ?? title
     }
 }
