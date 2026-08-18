@@ -271,6 +271,8 @@ private struct MapHomeAppLockView: View {
     @State private var pin = ""
     @State private var errorMessage: String?
     @State private var isAuthenticating = false
+    @State private var hasAttemptedAutomaticBiometrics = false
+    @State private var showsPINInput = false
 
     var body: some View {
         ZStack {
@@ -290,19 +292,21 @@ private struct MapHomeAppLockView: View {
                     Text("잠금을 해제해 주세요")
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.70))
-                    SecureField("4자리 비밀번호", text: $pin)
-                        .keyboardType(.numberPad)
-                        .textContentType(.password)
-                        .multilineTextAlignment(.center)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.tpInk)
-                        .padding(.horizontal, 18)
-                        .frame(width: 210, height: 48)
-                        .background(.white, in: RoundedRectangle(cornerRadius: 14))
-                        .onChange(of: pin) { _, value in
-                            pin = String(value.filter(\.isNumber).prefix(4))
-                            if pin.count == 4 { unlockWithPIN() }
-                        }
+                    if showsPINInput || !model.securityStatus.settings.biometricUnlockEnabled {
+                        SecureField("4자리 비밀번호", text: $pin)
+                            .keyboardType(.numberPad)
+                            .textContentType(.password)
+                            .multilineTextAlignment(.center)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.tpInk)
+                            .padding(.horizontal, 18)
+                            .frame(width: 210, height: 48)
+                            .background(.white, in: RoundedRectangle(cornerRadius: 14))
+                            .onChange(of: pin) { _, value in
+                                pin = String(value.filter(\.isNumber).prefix(4))
+                                if pin.count == 4 { unlockWithPIN() }
+                            }
+                    }
 
                     if model.securityStatus.settings.biometricUnlockEnabled {
                         Button {
@@ -325,6 +329,17 @@ private struct MapHomeAppLockView: View {
             }
             .padding(28)
         }
+        .task(id: isCheckingInitialState) {
+            startAutomaticBiometricAuthenticationIfNeeded()
+        }
+    }
+
+    private func startAutomaticBiometricAuthenticationIfNeeded() {
+        guard !isCheckingInitialState,
+              model.securityStatus.settings.biometricUnlockEnabled,
+              !hasAttemptedAutomaticBiometrics else { return }
+        hasAttemptedAutomaticBiometrics = true
+        unlockWithBiometrics(isAutomaticAttempt: true)
     }
 
     private func unlockWithPIN() {
@@ -339,15 +354,21 @@ private struct MapHomeAppLockView: View {
         }
     }
 
-    private func unlockWithBiometrics() {
+    private func unlockWithBiometrics(isAutomaticAttempt: Bool = false) {
         guard !isAuthenticating else { return }
         isAuthenticating = true
+        if isAutomaticAttempt {
+            showsPINInput = false
+        }
         Task { @MainActor in
             defer { isAuthenticating = false }
             do {
                 try await model.unlockAppWithBiometrics()
                 errorMessage = nil
             } catch {
+                // Biometrics are only a fast path. Keep the PIN available after
+                // cancellation, failure, or an unavailable sensor.
+                showsPINInput = true
                 errorMessage = error.localizedDescription
             }
         }

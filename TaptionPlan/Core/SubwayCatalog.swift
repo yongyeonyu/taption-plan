@@ -229,9 +229,12 @@ enum SubwayStationCatalog {
                   point.horizontalAccuracy <= 100 else {
                 return nil
             }
+            // GPS 표본은 역 중심에서 수십~수백 m 벗어날 수 있다. 체류
+            // 판정은 보행 출입구까지 포함하되, 실제 승차 종료는 아래의
+            // 50m 이탈 표본 두 개로 별도 확정한다.
             let station = nearest(
                 to: point,
-                maximumDistanceMeters: exitDistanceMeters
+                maximumDistanceMeters: max(220, exitDistanceMeters)
             )
             return StationPointSample(
                 stationName: station?.stationName,

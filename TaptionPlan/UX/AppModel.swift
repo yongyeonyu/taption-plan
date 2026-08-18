@@ -305,6 +305,7 @@ final class AppModel {
         let latestMotionEnd: Date?
         let pedometerEnd: Date?
         let latestHealthEvidenceEnd: Date?
+        let transportEnrichmentModelVersion: Int
         let settingsHash: Int
     }
 
@@ -4346,6 +4347,8 @@ final class AppModel {
             latestHealthEvidenceEnd: healthKitMovementEvidence
                 .map(\.span.end)
                 .max(),
+            transportEnrichmentModelVersion:
+                AppleTransportContextService.enrichmentModelVersion,
             settingsHash: settings.hashValue
         )
         let latestReadingWithPoint = archivedReadings

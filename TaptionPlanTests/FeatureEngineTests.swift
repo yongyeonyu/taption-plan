@@ -4461,6 +4461,95 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(segment.evidence.contains("출발역·환승역·도착역 상태 확정"))
     }
 
+    func testAppleTransportEnrichmentPersistsConfirmedMagongnaruGeomamGajeongJourney() async throws {
+        let base = makeDate(2026, 8, 18, 20, 22)
+        let samples: [(Double, Double, Double)] = [
+            (0, 37.5667, 126.8273),
+            (5, 37.5667, 126.8273),
+            (6, 37.5600, 126.8273),
+            (10, 37.5590, 126.8273),
+            (20, 37.5692, 126.6737),
+            (25, 37.5692, 126.6737),
+            (26, 37.5680, 126.6737),
+            (30, 37.5670, 126.6737),
+            (40, 37.5248, 126.6744),
+            (45, 37.5248, 126.6744),
+            (46, 37.5500, 126.7500),
+            (47, 37.5500, 126.7500),
+        ]
+        let readings = samples.map { minute, latitude, longitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: minute == 0 || minute == 5
+                    || minute == 20 || minute == 25 ? 0 : 12,
+                motion: minute == 0 || minute == 5
+                    || minute == 20 || minute == 25
+                    ? .stationary : .automotive,
+                motionConfidence: .high
+            )
+        }
+
+        let service = AppleTransportContextService()
+        let enriched = await service.enriching(readings)
+        let railReadings = enriched.filter(\.matchesRailRoute)
+
+        XCTAssertGreaterThanOrEqual(railReadings.count, 4)
+        XCTAssertEqual(railReadings.first?.nearbyStationName, "마곡나루")
+        XCTAssertEqual(
+            railReadings.last?.nearbyStationName,
+            "가정"
+        )
+        let result = TravelModeClassifier().classify(readings: enriched)
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.subwayRoute?.transferStationNames, ["검암"])
+        XCTAssertEqual(result.subwayRoute?.stops.first?.stationName, "마곡나루")
+        XCTAssertEqual(result.subwayRoute?.stops.last?.stationName, "가정")
+    }
+
+    func testAppleTransportEnrichmentDoesNotPromoteTwoRoadEndpoints() async {
+        let base = makeDate(2026, 8, 18, 20, 22)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5667,
+                    longitude: 126.8273,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(25 * 60),
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            ),
+        ]
+
+        let service = AppleTransportContextService()
+        let enriched = await service.enriching(readings)
+
+        XCTAssertFalse(enriched.contains(where: \.matchesRailRoute))
+    }
+
     func testStationJourneyDoesNotConfirmBeforeDestinationExit() {
         let base = makeDate(2026, 8, 18, 7, 0)
         let readings = [

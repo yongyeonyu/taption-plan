@@ -598,6 +598,74 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeTimeSidebarPinchUsesOneHourMinimumAndTwoToOneSteps() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.durationByMagnification(
+                startDurationMinutes: 1_440,
+                magnification: 1
+            ),
+            1_440
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.durationByMagnification(
+                startDurationMinutes: 1_440,
+                magnification: 2
+            ),
+            720
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.durationByMagnification(
+                startDurationMinutes: 1_440,
+                magnification: 64
+            ),
+            60
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.durationByMagnification(
+                startDurationMinutes: 60,
+                magnification: 128
+            ),
+            60
+        )
+    }
+
+    func testMapHomeTimeSidebarZoomWindowClampsAroundSelectedMinute() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.visibleWindow(centerMinute: 30, durationMinutes: 60),
+            0...60
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.visibleWindow(centerMinute: 720, durationMinutes: 60),
+            690...750
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.visibleWindow(centerMinute: 1_430, durationMinutes: 60),
+            1_380...1_440
+        )
+    }
+
+    func testMapHomeTimeSidebarDragUsesVisibleHourRange() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByDragging(
+                baseMinute: 720,
+                translation: 150,
+                trackHeight: 300,
+                maxMinute: 1_439,
+                visibleStartMinute: 690,
+                visibleDurationMinutes: 60
+            ),
+            750
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.zoomLevel(for: 1_440),
+            1
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.zoomLevel(for: 60),
+            0
+        )
+    }
+
     func testMapHomeTimeSidebarTapMapsAndClampsToVisibleRail() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.minuteByLocation(

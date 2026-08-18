@@ -7,6 +7,7 @@ struct MapHomeView: View {
     @Bindable private var model: AppModel
 
     @State private var mapPosition: MapCameraPosition = .automatic
+    @Namespace private var mapScope
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
     @State private var selectedLocationDestination: MapHomeLocationDestination?
@@ -33,6 +34,9 @@ struct MapHomeView: View {
         latitudeDelta: 0.025,
         longitudeDelta: 0.035
     )
+    @State private var sharedZoomLevel: CGFloat = 1
+    @State private var zoomResetToken = 0
+    @State private var lastMapCameraPublishUptime: TimeInterval = 0
 
     private static let userCenterTolerance: CLLocationDistance = 120
     private static let categoryPaletteHexes = [
@@ -199,7 +203,11 @@ struct MapHomeView: View {
 
     @ViewBuilder
     private var map: some View {
-        Map(position: $mapPosition, interactionModes: [.pan, .zoom, .rotate]) {
+        Map(
+            position: $mapPosition,
+            interactionModes: [.pan, .zoom, .rotate],
+            scope: mapScope
+        ) {
             if timelineRouteOverlays.isEmpty {
                 ForEach(subwayRouteOverlays) { overlay in
                     // Keep the inferred subway path as a fallback when raw
@@ -248,9 +256,19 @@ struct MapHomeView: View {
 
         }
         .mapStyle(mapStyle)
-        .onMapCameraChange(frequency: .onEnd) { context in
+        .onMapCameraChange(frequency: .continuous) { context in
+            let uptime = ProcessInfo.processInfo.systemUptime
+            guard uptime - lastMapCameraPublishUptime >= (1.0 / 60.0) else { return }
+            lastMapCameraPublishUptime = uptime
             updateVisibleMapSpan(context.region.span)
             updateUserCenterState(for: context.region.center)
+            if let level = sharedZoomLevel(for: context.region.span) {
+                let duration = MapHomeTimeSidebarMath.duration(for: level)
+                let synchronizedLevel = MapHomeTimeSidebarMath.zoomLevel(for: duration)
+                if abs(synchronizedLevel - sharedZoomLevel) > 0.02 {
+                    sharedZoomLevel = synchronizedLevel
+                }
+            }
         }
         .overlay {
             MapHomeFairyAtmosphere()
@@ -333,9 +351,6 @@ struct MapHomeView: View {
             }
             .accessibilityLabel(language.text("날짜 선택", "Choose date"))
 
-            if isHeadingMode {
-                headingCompass
-            }
         }
         .foregroundStyle(ink)
         .padding(.horizontal, 7)
@@ -381,6 +396,8 @@ struct MapHomeView: View {
                     activity: currentActivity(at: minute),
                     segments: timeRailSegments,
                     categoryColors: model.settings.mapCategoryColors,
+                    zoomResetToken: zoomResetToken,
+                    zoomLevel: sharedZoomLevel,
                     railWidth: Layout.timeRailWidth,
                     onSectionEdit: {
                         sectionEditSelection = MapHomeSectionEditSelection(
@@ -388,6 +405,9 @@ struct MapHomeView: View {
                             minute: minute,
                             activity: currentActivity(at: minute)
                         )
+                    },
+                    onZoomChanged: { level in
+                        applySharedZoom(level)
                     }
                 )
                 .frame(width: Layout.timeRailWidth, height: railHeight)
@@ -410,20 +430,29 @@ struct MapHomeView: View {
             }
             .accessibilityLabel(language.text("현재 위치", "Current location"))
 
-            Button {
-                isHeadingMode.toggle()
-                mapPosition = .userLocation(
-                    followsHeading: isHeadingMode,
-                    fallback: .automatic
-                )
-            } label: {
-                Image(systemName: isHeadingMode ? "location.north.line.fill" : "location.north.line")
-                    .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                    .foregroundStyle(Color.tpReferenceRose)
-                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                    .background(Color.white.opacity(0.94), in: Circle())
+            if isHeadingMode {
+                Button {
+                    isHeadingMode = false
+                    mapPosition = .userLocation(followsHeading: false, fallback: .automatic)
+                } label: {
+                    MapCompass(scope: mapScope)
+                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                        .background(Color.white.opacity(0.94), in: Circle())
+                }
+                .accessibilityLabel(language.text("나침반 끄기", "Hide compass"))
+            } else {
+                Button {
+                    isHeadingMode = true
+                    mapPosition = .userLocation(followsHeading: true, fallback: .automatic)
+                } label: {
+                    Image(systemName: "location.north.line")
+                        .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                        .foregroundStyle(Color.tpReferenceRose)
+                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                        .background(Color.white.opacity(0.94), in: Circle())
+                }
+                .accessibilityLabel(language.text("나침반 표시", "Show compass"))
             }
-            .accessibilityLabel(language.text("나침반 표시", "Show compass"))
 
             Button {
                 isMutedMap.toggle()
@@ -436,26 +465,6 @@ struct MapHomeView: View {
             }
             .accessibilityLabel(language.text("지도 스타일", "Map style"))
         }
-    }
-
-    private var headingCompass: some View {
-        Button {
-            isHeadingMode = false
-            mapPosition = .userLocation(followsHeading: false, fallback: .automatic)
-        } label: {
-            Image(systemName: "safari")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.tpInk)
-                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                .background(Color.tpSurface.opacity(0.96), in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
-                }
-                .shadow(color: Color.black.opacity(0.10), radius: 5, y: 2)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(language.text("나침반 종료", "Stop heading mode"))
     }
 
     private var menu: some View {
@@ -1226,12 +1235,9 @@ struct MapHomeView: View {
     private func jumpToTodayAndCurrentMapPosition() {
         model.selectedDate = Date()
         selectedTimelineMinute = nil
-        if currentCoordinate != nil {
-            focusUserLocation()
-        } else {
-            mapPosition = .automatic
-            focusMapIfNeeded()
-        }
+        sharedZoomLevel = 1
+        zoomResetToken += 1
+        focusMapForSharedZoom()
     }
 
     private func minuteOfDay(for date: Date) -> Int {
@@ -1253,11 +1259,9 @@ struct MapHomeView: View {
 
     private func focusMapIfNeeded() {
         let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
-        let coordinates = placeAnnotations.map(\.coordinate)
-            + (routeCoordinates.isEmpty
-                ? subwayRouteOverlays.flatMap(\.coordinates)
-                : routeCoordinates)
-            + (currentCoordinate.map { [$0] } ?? [])
+        let coordinates = routeCoordinates.isEmpty
+            ? subwayRouteOverlays.flatMap(\.coordinates)
+            : routeCoordinates
         guard let first = coordinates.first else {
             mapPosition = .automatic
             return
@@ -1274,6 +1278,69 @@ struct MapHomeView: View {
                     longitude: ((longitudes.max() ?? first.longitude) + (longitudes.min() ?? first.longitude)) / 2
                 ),
                 span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
+            )
+        )
+    }
+
+    private func applySharedZoom(_ level: CGFloat) {
+        sharedZoomLevel = min(max(level, 0), 1)
+        focusMapForSharedZoom()
+    }
+
+    private func sharedZoomLevel(for span: MKCoordinateSpan) -> CGFloat? {
+        let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
+        let subwayCoordinates = subwayRouteOverlays.flatMap(\.coordinates)
+        let coordinates: [CLLocationCoordinate2D]
+        if !routeCoordinates.isEmpty {
+            coordinates = routeCoordinates
+        } else if !subwayCoordinates.isEmpty {
+            coordinates = subwayCoordinates
+        } else if let currentCoordinate {
+            coordinates = [currentCoordinate]
+        } else {
+            return nil
+        }
+        guard let first = coordinates.first else { return nil }
+        let fitLatitude = max(0.025, ((coordinates.map(\.latitude).max() ?? first.latitude) - (coordinates.map(\.latitude).min() ?? first.latitude)) * 1.8)
+        let fitLongitude = max(0.035, ((coordinates.map(\.longitude).max() ?? first.longitude) - (coordinates.map(\.longitude).min() ?? first.longitude)) * 1.8)
+        let scale = max(span.latitudeDelta / fitLatitude, span.longitudeDelta / fitLongitude)
+        return min(max((scale - 0.05) / 0.95, 0), 1)
+    }
+
+    private func focusMapForSharedZoom() {
+        let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
+        let subwayCoordinates = subwayRouteOverlays.flatMap(\.coordinates)
+        let coordinates: [CLLocationCoordinate2D]
+        if !routeCoordinates.isEmpty {
+            coordinates = routeCoordinates
+        } else if !subwayCoordinates.isEmpty {
+            coordinates = subwayCoordinates
+        } else if let currentCoordinate {
+            coordinates = [currentCoordinate]
+        } else {
+            mapPosition = .automatic
+            return
+        }
+        guard let first = coordinates.first else {
+            mapPosition = .automatic
+            return
+        }
+        let latitudes = coordinates.map(\.latitude)
+        let longitudes = coordinates.map(\.longitude)
+        let fitLatitude = max(0.025, ((latitudes.max() ?? first.latitude) - (latitudes.min() ?? first.latitude)) * 1.8)
+        let fitLongitude = max(0.035, ((longitudes.max() ?? first.longitude) - (longitudes.min() ?? first.longitude)) * 1.8)
+        let zoom = 1 - sharedZoomLevel
+        let spanScale = max(0.05, 1 - 0.95 * zoom)
+        mapPosition = .region(
+            MKCoordinateRegion(
+                center: CLLocationCoordinate2D(
+                    latitude: ((latitudes.max() ?? first.latitude) + (latitudes.min() ?? first.latitude)) / 2,
+                    longitude: ((longitudes.max() ?? first.longitude) + (longitudes.min() ?? first.longitude)) / 2
+                ),
+                span: MKCoordinateSpan(
+                    latitudeDelta: max(0.001, fitLatitude * spanScale),
+                    longitudeDelta: max(0.001, fitLongitude * spanScale)
+                )
             )
         )
     }

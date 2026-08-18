@@ -3072,6 +3072,10 @@ struct AppleTransportContext: Hashable, Sendable {
 
 @MainActor
 final class AppleTransportContextService {
+    /// Bump when persisted raw sensor readings need a fresh transport
+    /// enrichment pass even if their archive fingerprint is unchanged.
+    static let enrichmentModelVersion = 2
+
     private struct CacheEntry {
         let context: AppleTransportContext
         let storedAt: Date
@@ -3098,7 +3102,9 @@ final class AppleTransportContextService {
                 || (readings[index].speedMetersPerSecond ?? 0) >= 3
         }
         guard candidates.count >= 2 || staticOnly.count >= 2 else {
-            return readings.map(refiningStaticStation)
+            return deterministicStationJourneyEnrichment(
+                readings.map(refiningStaticStation)
+            )
         }
 
         let anchors = sampledIndices(
@@ -3111,10 +3117,12 @@ final class AppleTransportContextService {
             resolved.append((point, await context(at: point)))
         }
         guard !resolved.isEmpty else {
-            return readings.map(refiningStaticStation)
+            return deterministicStationJourneyEnrichment(
+                readings.map(refiningStaticStation)
+            )
         }
 
-        return readings.map { reading in
+        let enriched = readings.map { reading in
             let reading = refiningStaticStation(reading)
             guard let point = reading.point,
                   let match = resolved.min(by: {
@@ -3131,14 +3139,12 @@ final class AppleTransportContextService {
                 ?? match.1.busStopName {
                 value.nearbyStationName = stationName
             }
-            value.matchesRailRoute = value.matchesRailRoute
-                || match.1.isNearSubwayStation
             value.matchesPublicTransitRoute =
                 value.matchesPublicTransitRoute || match.1.isNearBusStop
             // MapKit 검색이 누락되거나 역 이름을 잘못 붙여도, 공식 역
             // 카탈로그의 좌표를 마지막 보정으로 사용한다. 버스 정류장
             // 표본은 철도 역으로 승격하지 않는다.
-            if (match.1.isNearSubwayStation || value.matchesRailRoute),
+            if value.matchesRailRoute,
                let station = SubwayStationCatalog.nearest(
                    to: point,
                    maximumDistanceMeters: 450
@@ -3156,6 +3162,54 @@ final class AppleTransportContextService {
             }
             return value
         }
+        return deterministicStationJourneyEnrichment(enriched)
+    }
+
+    /// Apple의 일시적인 교통 컨텍스트에 의존하지 않고, 보관된 좌표에서
+    /// 역 체류(5분)와 역 이탈(50m 이상 2회)을 먼저 확인한 뒤에만 철도
+    /// 컨텍스트를 저장한다. 두 도로 끝점만 있는 기록은 이 단계에서
+    /// 승격되지 않는다.
+    private func deterministicStationJourneyEnrichment(
+        _ readings: [SensorReading]
+    ) -> [SensorReading] {
+        guard let journey = SubwayStationCatalog.stationJourney(
+            from: readings
+        ), journey.isConfirmed else {
+            return readings
+        }
+        let journeyStops = journey.stays.compactMap { stay in
+            journey.route.stops.first {
+                $0.stationName.compare(
+                    stay.stationName,
+                    options: [.caseInsensitive, .diacriticInsensitive],
+                    range: nil,
+                    locale: .current
+                ) == .orderedSame
+            }
+        }
+        return readings.map { reading in
+            guard let point = reading.point,
+                  let stop = journeyStops.min(by: {
+                      guard let lhs = $0.coordinate,
+                            let rhs = $1.coordinate else { return false }
+                      return distanceMeters(point, lhs)
+                          < distanceMeters(point, rhs)
+                  }),
+                  let coordinate = stop.coordinate,
+                  distanceMeters(point, coordinate) <= 450 else {
+                return reading
+            }
+            var value = reading
+            value.nearbyStation = true
+            value.nearbyStationName = stop.stationName
+            value.matchesRailRoute = true
+            var evidence = value.behaviorEvidence ?? []
+            if !evidence.contains("역 체류·50m 이탈 경로 보강") {
+                evidence.append("역 체류·50m 이탈 경로 보강")
+            }
+            value.behaviorEvidence = evidence
+            return value
+        }
     }
 
     private func refiningStaticStation(_ reading: SensorReading) -> SensorReading {
@@ -3171,7 +3225,6 @@ final class AppleTransportContextService {
         var value = reading
         value.nearbyStation = true
         value.nearbyStationName = station.stationName
-        value.matchesRailRoute = true
         return value
     }
 
