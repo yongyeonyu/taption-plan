@@ -399,6 +399,9 @@ struct MapHomeView: View {
                     zoomResetToken: zoomResetToken,
                     zoomLevel: sharedZoomLevel,
                     railWidth: Layout.timeRailWidth,
+                    onSelectionChanged: { minute in
+                        selectedTimelineMinute = minute
+                    },
                     onSectionEdit: {
                         sectionEditSelection = MapHomeSectionEditSelection(
                             date: model.selectedDate,
@@ -1118,7 +1121,11 @@ struct MapHomeView: View {
     }
 
     private var effectiveTimelineMinute: Int {
-        selectedTimelineMinute ?? minuteOfDay(for: Date())
+        selectedTimelineMinute ?? MapHomeTimeSidebarMath.defaultTimelineMinute(
+            for: model.selectedDate,
+            now: Date(),
+            calendar: .autoupdatingCurrent
+        )
     }
 
     private var timelineSelectionSpan: TimeSpan? {

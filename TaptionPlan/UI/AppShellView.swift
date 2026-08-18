@@ -7,6 +7,10 @@ struct AppShellView: View {
     @State private var model = AppModel()
     @State private var showsMapHome = true
     @State private var isSecurityStateReady = false
+    @State private var lockGeneration = 0
+    @State private var automaticBiometricAttemptedGeneration: Int?
+    @State private var isBiometricAuthenticationInFlight = false
+    @State private var biometricPromptInterruptedScene = false
 
     var body: some View {
         NavigationStack {
@@ -59,6 +63,10 @@ struct AppShellView: View {
         .preferredColorScheme(.light)
         .task {
             await model.sceneBecameActive()
+            if model.isAppLocked {
+                lockGeneration &+= 1
+                automaticBiometricAttemptedGeneration = nil
+            }
             isSecurityStateReady = true
             model.presentPermissionOnboardingIfNeeded()
             if Self.legacyUIEnabled,
@@ -122,7 +130,10 @@ struct AppShellView: View {
         if !isSecurityStateReady || model.isAppLocked {
             MapHomeAppLockView(
                 model: model,
-                isCheckingInitialState: !isSecurityStateReady
+                isCheckingInitialState: !isSecurityStateReady,
+                lockGeneration: lockGeneration,
+                automaticBiometricAttemptedGeneration: $automaticBiometricAttemptedGeneration,
+                isBiometricAuthenticationInFlight: $isBiometricAuthenticationInFlight
             )
         } else if shouldHideAppSnapshot {
             Color.tpInk
@@ -149,8 +160,22 @@ struct AppShellView: View {
         let mustCoverBeforeForeground =
             phase == .active
             && model.securityStatus.settings.lockOnForeground
+        if phase == .active, biometricPromptInterruptedScene {
+            // Face ID can briefly drive the scene inactive/active while its
+            // prompt is finishing. Treat that pair as part of the current
+            // unlock generation; otherwise handleForeground() relocks the
+            // app immediately after a successful authentication.
+            biometricPromptInterruptedScene = false
+            isSecurityStateReady = true
+            return
+        }
         if mustCoverBeforeForeground {
             isSecurityStateReady = false
+            lockGeneration &+= 1
+            automaticBiometricAttemptedGeneration = nil
+        }
+        if phase == .inactive, isBiometricAuthenticationInFlight {
+            biometricPromptInterruptedScene = true
         }
         Task { @MainActor in
             switch phase {
@@ -268,10 +293,12 @@ struct AppShellView: View {
 private struct MapHomeAppLockView: View {
     @Bindable var model: AppModel
     let isCheckingInitialState: Bool
+    let lockGeneration: Int
+    @Binding var automaticBiometricAttemptedGeneration: Int?
+    @Binding var isBiometricAuthenticationInFlight: Bool
     @State private var pin = ""
     @State private var errorMessage: String?
     @State private var isAuthenticating = false
-    @State private var hasAttemptedAutomaticBiometrics = false
     @State private var showsPINInput = false
 
     var body: some View {
@@ -337,8 +364,8 @@ private struct MapHomeAppLockView: View {
     private func startAutomaticBiometricAuthenticationIfNeeded() {
         guard !isCheckingInitialState,
               model.securityStatus.settings.biometricUnlockEnabled,
-              !hasAttemptedAutomaticBiometrics else { return }
-        hasAttemptedAutomaticBiometrics = true
+              automaticBiometricAttemptedGeneration != lockGeneration else { return }
+        automaticBiometricAttemptedGeneration = lockGeneration
         unlockWithBiometrics(isAutomaticAttempt: true)
     }
 
@@ -357,11 +384,15 @@ private struct MapHomeAppLockView: View {
     private func unlockWithBiometrics(isAutomaticAttempt: Bool = false) {
         guard !isAuthenticating else { return }
         isAuthenticating = true
+        isBiometricAuthenticationInFlight = true
         if isAutomaticAttempt {
             showsPINInput = false
         }
         Task { @MainActor in
-            defer { isAuthenticating = false }
+            defer {
+                isAuthenticating = false
+                isBiometricAuthenticationInFlight = false
+            }
             do {
                 try await model.unlockAppWithBiometrics()
                 errorMessage = nil

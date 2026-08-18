@@ -1235,11 +1235,12 @@ final class AppModel {
     }
 
     func sceneBecameActive() async {
+        let wasSceneActive = isSceneActive
         isSceneActive = true
         if let securityBackupService {
             if !isBootstrapped {
                 securityBackupService.handleLaunch()
-            } else {
+            } else if !wasSceneActive {
                 securityBackupService.handleForeground()
             }
             securityStatus = securityBackupService.status

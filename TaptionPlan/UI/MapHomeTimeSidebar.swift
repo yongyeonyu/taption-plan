@@ -296,6 +296,7 @@ struct MapHomeTimeSidebar: View {
     @State private var magnificationStartDuration = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var visibleStartMinute = 0
     @State private var viewportDragStartMinute: Int?
+    @State private var isHandleDragging = false
 
     private let railWidth: CGFloat
     // Keep the numeric rail visibly separated from both the map header and
@@ -344,10 +345,12 @@ struct MapHomeTimeSidebar: View {
                 durationMinutes: visibleDurationMinutes,
                 centerMinute: minute
             )
-            let selectedY = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
-                minute: minute,
-                window: visibleWindow
-            )
+            let selectedY = isViewportInteraction
+                ? verticalInset + trackHeight / 2
+                : verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
+                    minute: minute,
+                    window: visibleWindow
+                )
             let trackX = railWidth - numericColumnWidth - activeRailWidth / 2 - 1
 
             ZStack(alignment: .topLeading) {
@@ -464,6 +467,7 @@ struct MapHomeTimeSidebar: View {
         .onDisappear {
             dragStartMinute = nil
             isPrecisionMode = false
+            isHandleDragging = false
         }
         .onChange(of: zoomResetToken) { _, _ in
             visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
@@ -601,6 +605,7 @@ struct MapHomeTimeSidebar: View {
     ) -> some Gesture {
         DragGesture(minimumDistance: 1)
             .onChanged { value in
+                isHandleDragging = true
                 if dragStartMinute == nil {
                     dragStartMinute = min(max(selectedMinute, 0), maxMinute)
                     lastRenderUptime = 0
@@ -631,17 +636,28 @@ struct MapHomeTimeSidebar: View {
                 publish(minute, force: true)
                 dragStartMinute = nil
                 isPrecisionMode = false
+                isHandleDragging = false
             }
     }
 
     private func viewportDragGesture(trackHeight: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 4)
             .onChanged { value in
-                guard visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes else { return }
+                guard visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
+                      !isHandleDragging
+                else { return }
                 if viewportDragStartMinute == nil { viewportDragStartMinute = visibleStartMinute }
                 let base = viewportDragStartMinute ?? visibleStartMinute
                 let delta = Int((value.translation.height / max(trackHeight, 1) * CGFloat(visibleDurationMinutes)).rounded())
                 visibleStartMinute = min(max(base + delta, 0), MapHomeTimeSidebarMath.fullDayMinutes - visibleDurationMinutes)
+                let fixedMinute = MapHomeTimeSidebarMath.minuteByFixedPlayhead(
+                    trackHeight: trackHeight,
+                    verticalInset: verticalInset,
+                    maxMinute: MapHomeTimeSidebarMath.maximumSelectableMinute(for: date, now: Date()),
+                    visibleStartMinute: visibleStartMinute,
+                    visibleDurationMinutes: visibleDurationMinutes
+                )
+                publish(fixedMinute, force: false)
             }
             .onEnded { _ in viewportDragStartMinute = nil }
     }
@@ -689,6 +705,10 @@ struct MapHomeTimeSidebar: View {
 
     private var displaySegments: [MapHomeTimeRailSegment] {
         segments.isEmpty ? [.wholeDayUnconfirmed] : segments
+    }
+
+    private var isViewportInteraction: Bool {
+        visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes && !isHandleDragging
     }
 }
 
@@ -765,6 +785,23 @@ enum MapHomeTimeSidebarMath {
         return min(1439, max(0, (components.hour ?? 0) * 60 + (components.minute ?? 0)))
     }
 
+    /// A past day has no moving "now" cutoff: render its complete archived
+    /// route until the user chooses a time on the rail.
+    static func defaultTimelineMinute(
+        for date: Date,
+        now: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Int {
+        guard calendar.isDate(date, inSameDayAs: now) else {
+            return fullDayMinutes
+        }
+        let components = calendar.dateComponents([.hour, .minute], from: now)
+        return min(
+            fullDayMinutes - 1,
+            max(0, (components.hour ?? 0) * 60 + (components.minute ?? 0))
+        )
+    }
+
     static func minuteByDragging(
         baseMinute: Int,
         translation: CGFloat,
@@ -795,6 +832,23 @@ enum MapHomeTimeSidebarMath {
         let duration = min(max(visibleDurationMinutes, 1), fullDayMinutes)
         let minute = visibleStartMinute + Int((position / trackHeight * CGFloat(duration)).rounded())
         return min(max(minute, 0), maxMinute)
+    }
+
+    static func minuteByFixedPlayhead(
+        trackHeight: CGFloat,
+        verticalInset: CGFloat,
+        maxMinute: Int,
+        visibleStartMinute: Int,
+        visibleDurationMinutes: Int
+    ) -> Int {
+        minuteByLocation(
+            y: verticalInset + trackHeight / 2,
+            trackHeight: trackHeight,
+            verticalInset: verticalInset,
+            maxMinute: maxMinute,
+            visibleStartMinute: visibleStartMinute,
+            visibleDurationMinutes: visibleDurationMinutes
+        )
     }
 }
 

@@ -696,6 +696,75 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeTimeSidebarFixedPlayheadMapsCenterOfZoomedWindow() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByFixedPlayhead(
+                trackHeight: 300,
+                verticalInset: 14,
+                maxMinute: 1_439,
+                visibleStartMinute: 690,
+                visibleDurationMinutes: 60
+            ),
+            720
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByFixedPlayhead(
+                trackHeight: 300,
+                verticalInset: 14,
+                maxMinute: 618,
+                visibleStartMinute: 600,
+                visibleDurationMinutes: 60
+            ),
+            618
+        )
+    }
+
+    func testMapHomeTimeSidebarFixedPlayheadTracksViewportScroll() {
+        let first = MapHomeTimeSidebarMath.minuteByFixedPlayhead(
+            trackHeight: 300,
+            verticalInset: 14,
+            maxMinute: 1_439,
+            visibleStartMinute: 600,
+            visibleDurationMinutes: 60
+        )
+        let second = MapHomeTimeSidebarMath.minuteByFixedPlayhead(
+            trackHeight: 300,
+            verticalInset: 14,
+            maxMinute: 1_439,
+            visibleStartMinute: 660,
+            visibleDurationMinutes: 60
+        )
+        XCTAssertEqual(first, 630)
+        XCTAssertEqual(second, 690)
+        XCTAssertEqual(second - first, 60)
+    }
+
+    func testMapHomeTimelineUsesFullDayForArchivedDate() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(
+            from: DateComponents(year: 2026, month: 8, day: 19, hour: 9, minute: 47)
+        )!
+        let archivedDate = calendar.date(byAdding: .day, value: -1, to: now)!
+
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.defaultTimelineMinute(
+                for: archivedDate,
+                now: now,
+                calendar: calendar
+            ),
+            MapHomeTimeSidebarMath.fullDayMinutes
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.defaultTimelineMinute(
+                for: now,
+                now: now,
+                calendar: calendar
+            ),
+            587
+        )
+    }
+
     func testStartupMapLocationUsesNewestUsableGPSReading() {
         let base = Date(timeIntervalSinceReferenceDate: 0)
         let validEarlier = SensorReading(
