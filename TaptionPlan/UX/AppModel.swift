@@ -126,6 +126,8 @@ final class AppModel {
     private(set) var lastAppUsageRefreshAt: Date?
     private(set) var appUsageRecordCount = 0
     private(set) var appUsageTotalDuration: TimeInterval = 0
+    private(set) var biometricDataProtectionStatus: BiometricDataProtectionStatus =
+        .notProtected
     /// 기록 ID → 앱 토큰. 스크린 타임 데이터는 민감하므로 저장하지 않고
     /// 새로 고칠 때마다 메모리에만 채운다.
     private(set) var appUsageTokenIndex: [UUID: Data] = [:]
@@ -199,6 +201,8 @@ final class AppModel {
     }
 
     @ObservationIgnored private let repository: any PlanDataRepository
+    @ObservationIgnored private let biometricProtectedSnapshotStore:
+        BiometricProtectedSnapshotStore?
     @ObservationIgnored private let calendarService: AppleCalendarService
     @ObservationIgnored private let photoService: ApplePhotoLibraryService
     @ObservationIgnored private let healthService: AppleHealthService
@@ -344,6 +348,9 @@ final class AppModel {
             self.repository = InMemoryPlanRepository()
             repositorySource = "in-memory"
         }
+        let protectionStore = try? BiometricProtectedSnapshotStore.applicationSupport()
+        self.biometricProtectedSnapshotStore = protectionStore
+        self.biometricDataProtectionStatus = protectionStore?.status ?? .unavailable
         let rawArchive = try? RawDeviceDataMonthlyArchive.applicationSupport()
         self.calendarService = calendarService ?? AppleCalendarService()
         self.photoService = photoService
@@ -437,6 +444,27 @@ final class AppModel {
 
     var settings: AppFeatureSettings {
         snapshot.settings
+    }
+
+    func refreshBiometricDataProtectionStatus() {
+        biometricDataProtectionStatus = biometricProtectedSnapshotStore?.status
+            ?? .unavailable
+    }
+
+    func protectCurrentDataWithBiometrics() async throws {
+        guard let biometricProtectedSnapshotStore else {
+            throw BiometricDataProtectionError.invalidArchive
+        }
+        biometricDataProtectionStatus = try await biometricProtectedSnapshotStore
+            .protect(snapshot)
+    }
+
+    func validateBiometricProtectedData() async throws {
+        guard let biometricProtectedSnapshotStore else {
+            throw BiometricDataProtectionError.archiveMissing
+        }
+        biometricDataProtectionStatus = try await biometricProtectedSnapshotStore
+            .validate()
     }
 
     /// 자동 기록의 원본은 보존하고, 시간표와 상세 화면에 표시할 활동만

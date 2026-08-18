@@ -105,9 +105,19 @@ final class TaptionAdvertisingCoordinator: NSObject, FullScreenContentDelegate {
 }
 
 struct MapHomeBannerAdView: View {
-    private let adSize = largeAnchoredAdaptiveBanner(
-        width: UIScreen.main.bounds.width
-    )
+    static var reservedHeight: CGFloat {
+        largeAnchoredAdaptiveBanner(width: UIScreen.main.bounds.width).size.height
+    }
+
+    @MainActor
+    static var bottomSafeAreaInset: CGFloat {
+        let activeScene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
+        return activeScene?.windows.first(where: \.isKeyWindow)?.safeAreaInsets.bottom ?? 0
+    }
+
+    private let adSize = largeAnchoredAdaptiveBanner(width: UIScreen.main.bounds.width)
 
     var body: some View {
         if let unitID = MapHomeAdConfiguration.bannerUnitID {

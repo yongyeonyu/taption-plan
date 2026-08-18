@@ -259,6 +259,31 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(RecordAnalysisCategoryPolicy.detailTitle(for: record), "미확인")
     }
 
+    func testCanonicalMovementLabelsKeepCarDistinctFromSubway() {
+        XCTAssertEqual(
+            RecordAnalysisCategoryNormalizer.categoryID(
+                for: "activity",
+                title: "car"
+            ),
+            "movement"
+        )
+        XCTAssertEqual(RecordAnalysisCategoryPolicy.movementTitle(for: .car), "자동차")
+        XCTAssertEqual(RecordAnalysisCategoryPolicy.movementTitle(for: .subway), "지하철")
+    }
+
+    func testMapHomeLocationHierarchyKeepsConfiguredAndUserDestinationsDistinct() {
+        XCTAssertEqual(
+            MapHomeLocationDestination.allCases.map(\.rawValue),
+            ["home", "company", "school", "exercise", "hobby", "user"]
+        )
+        XCTAssertEqual(MapHomeLocationDestination.home.placeKind, .home)
+        XCTAssertEqual(MapHomeLocationDestination.company.placeKind, .company)
+        XCTAssertEqual(MapHomeLocationDestination.school.placeKind, .school)
+        XCTAssertEqual(MapHomeLocationDestination.exercise.placeKind, .exercise)
+        XCTAssertEqual(MapHomeLocationDestination.hobby.placeKind, .hobby)
+        XCTAssertNil(MapHomeLocationDestination.user.placeKind)
+    }
+
     func testCanonicalAnalysisDoesNotMutateStoredRecord() {
         let record = ActualRecord(
             planID: nil,
@@ -7744,6 +7769,44 @@ final class FeatureEngineTests: XCTestCase {
 
         let legacy = Data("{\"schemaVersion\":1}".utf8)
         XCTAssertEqual(TaptionSnapshotCompression.decode(legacy), legacy)
+    }
+
+    func testBiometricProtectedSnapshotCodecEncryptsCompressedSnapshot() throws {
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.categories = CategoryCatalog.builtIn
+        snapshot.plans = [
+            PlanRecord(
+                title: "보호 기록",
+                span: TimeSpan(
+                    start: makeDate(2026, 8, 18, 9),
+                    end: makeDate(2026, 8, 18, 10)
+                ),
+                categoryID: "activity"
+            ),
+        ]
+        let key = Data(repeating: 0x5A, count: 32)
+        let archive = try BiometricProtectedSnapshotCodec.archive(
+            snapshot: snapshot,
+            keyData: key,
+            now: makeDate(2026, 8, 18, 11)
+        )
+
+        let restored = try BiometricProtectedSnapshotCodec.snapshot(
+            from: archive,
+            keyData: key
+        )
+
+        XCTAssertEqual(archive.version, BiometricProtectedSnapshotArchive.currentVersion)
+        XCTAssertEqual(restored.schemaVersion, snapshot.schemaVersion)
+        XCTAssertEqual(restored.plans.map(\.title), snapshot.plans.map(\.title))
+        XCTAssertEqual(restored.plans.map(\.span), snapshot.plans.map(\.span))
+        XCTAssertEqual(restored.categories.map(\.id), snapshot.categories.map(\.id))
+        XCTAssertThrowsError(
+            try BiometricProtectedSnapshotCodec.snapshot(
+                from: archive,
+                keyData: Data(repeating: 0xA5, count: 32)
+            )
+        )
     }
 
     func testAppGroupRepositoryMigratesExistingDeviceSnapshotOnce() async throws {

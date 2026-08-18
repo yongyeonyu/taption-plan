@@ -50,6 +50,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>보호된 Taption Plan 기록의 암호키를 열기 위해 Face ID를 사용합니다.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>고정된 일정을 시간표에 표시하기 위해 캘린더 접근이 필요합니다.</string>
 	<key>NSHealthShareUsageDescription</key>

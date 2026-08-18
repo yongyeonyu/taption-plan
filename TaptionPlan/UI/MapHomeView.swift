@@ -8,10 +8,13 @@ struct MapHomeView: View {
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
-    @State private var isHomeLocationPresented = false
+    @State private var selectedLocationDestination: MapHomeLocationDestination?
+    @State private var isLocationMenuExpanded = true
+    @State private var isSettingsMenuExpanded = false
+    @State private var isDataProtectionPresented = false
     @State private var isMutedMap = true
     @AppStorage("taption.mapHome.language") private var languageRawValue = MapHomeLanguage.korean.rawValue
-    @State private var isCompassVisible = false
+    @State private var isHeadingMode = false
     @State private var isGPSLoggingActionInFlight = false
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
@@ -21,6 +24,12 @@ struct MapHomeView: View {
     @State private var timeRailSegments: [MapHomeTimeRailSegment] = [
         .wholeDayUnconfirmed,
     ]
+    @State private var routeProjection: RouteTimelineProjection?
+    @State private var routeReadings: [SensorReading] = []
+    @State private var visibleMapSpan = MKCoordinateSpan(
+        latitudeDelta: 0.025,
+        longitudeDelta: 0.035
+    )
 
     private static let userCenterTolerance: CLLocationDistance = 120
 
@@ -46,6 +55,12 @@ struct MapHomeView: View {
         MapHomeLanguage(rawValue: languageRawValue) ?? .korean
     }
 
+    private func sectionEditSheet(for selection: MapHomeSectionEditSelection) -> some View {
+        MapHomeSectionEditSheet(selection: selection, language: language)
+            .presentationDetents([.height(232)])
+            .presentationDragIndicator(.visible)
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             map
@@ -67,13 +82,16 @@ struct MapHomeView: View {
 
             currentTimeRail
                 .padding(.top, Layout.headerVisibleHeight + Layout.timeRailTopMargin)
-                .padding(.bottom, Layout.timeRailBottomMargin)
+                .padding(
+                    .bottom,
+                    Layout.timeRailBottomMargin + MapHomeBannerAdView.reservedHeight
+                )
                 .padding(.trailing, Layout.horizontalInset)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
 
             mapControls
                 .padding(.leading, Layout.horizontalInset)
-                .padding(.bottom, 12)
+                .padding(.bottom, 12 + MapHomeBannerAdView.reservedHeight)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
 
             if isMenuOpen {
@@ -82,9 +100,11 @@ struct MapHomeView: View {
                     .zIndex(2)
             }
         }
+        .ignoresSafeArea(.container, edges: .bottom)
         .preferredColorScheme(.light)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay(alignment: .bottom) {
             MapHomeBannerAdView()
+                .offset(y: MapHomeBannerAdView.bottomSafeAreaInset)
         }
         .sheet(isPresented: $isCalendarPresented) {
             MapHomeCalendarSheet(
@@ -95,18 +115,25 @@ struct MapHomeView: View {
                 language: language
             )
         }
-        .sheet(isPresented: $isHomeLocationPresented) {
-            MapHomeLocationSheet(model: model, language: language) {
+        .sheet(item: $selectedLocationDestination) { destination in
+            MapHomeLocationSheet(
+                model: model,
+                destination: destination,
+                language: language
+            ) {
                 mapPosition = .automatic
                 focusMapIfNeeded()
             }
                 .presentationDetents([.height(260)])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(item: $sectionEditSelection) { selection in
-            MapHomeSectionEditSheet(selection: selection, language: language)
-                .presentationDetents([.height(232)])
+        .sheet(isPresented: $isDataProtectionPresented) {
+            MapHomeDataProtectionSheet(model: model, language: language)
+                .presentationDetents([.height(410)])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $sectionEditSelection) { selection in
+            sectionEditSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
         .task {
@@ -115,6 +142,8 @@ struct MapHomeView: View {
             refreshTimeRailSegments()
         }
         .task(id: model.selectedDate) {
+            let date = model.selectedDate
+            await refreshRouteReadings(for: date)
             while !Task.isCancelled {
                 refreshTimeRailSegments()
                 do {
@@ -126,6 +155,7 @@ struct MapHomeView: View {
         }
         .onChange(of: model.latestSensorReading?.point) { _, _ in
             applyInitialLocationIfAvailable()
+            refreshRouteProjection()
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
@@ -140,23 +170,51 @@ struct MapHomeView: View {
         }
         .onChange(of: model.snapshot.actuals) { _, _ in
             refreshTimeRailSegments()
+            refreshRouteProjection()
+        }
+        .onChange(of: model.liveRouteState.readings) { _, _ in
+            refreshRouteProjection()
+        }
+        .onChange(of: selectedTimelineMinute) { _, minute in
+            guard minute != nil,
+                  let projection = refreshRouteProjection(),
+                  let point = projection.coordinateAtCutoff
+            else { return }
+            focusMap(on: point)
         }
     }
 
     @ViewBuilder
     private var map: some View {
         Map(position: $mapPosition, interactionModes: [.pan, .zoom, .rotate]) {
-            ForEach(subwayRouteOverlays) { overlay in
-                // A warm halo keeps the route readable over both the muted
-                // and realistic Apple map styles without changing geometry.
+            if timelineRouteOverlays.isEmpty {
+                ForEach(subwayRouteOverlays) { overlay in
+                    // Keep the inferred subway path as a fallback when raw
+                    // GPS samples are unavailable for the selected day.
+                    MapPolyline(coordinates: overlay.coordinates)
+                        .stroke(
+                            Color.tpReferenceGold.opacity(0.50),
+                            style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round)
+                        )
+                    MapPolyline(coordinates: overlay.coordinates)
+                        .stroke(
+                            Color.tpReferenceMint.opacity(0.92),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+                        )
+                }
+            }
+
+            ForEach(timelineRouteOverlays) { overlay in
                 MapPolyline(coordinates: overlay.coordinates)
                     .stroke(
-                        Color.tpReferenceGold.opacity(0.50),
-                        style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round)
+                        CanonicalCategoryPalette.color(overlay.categoryID)
+                            .opacity(overlay.opacity * 0.20),
+                        style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round)
                     )
                 MapPolyline(coordinates: overlay.coordinates)
                     .stroke(
-                        Color.tpReferenceMint.opacity(0.92),
+                        CanonicalCategoryPalette.color(overlay.categoryID)
+                            .opacity(overlay.opacity),
                         style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
                     )
             }
@@ -164,22 +222,17 @@ struct MapHomeView: View {
             ForEach(homeAnnotations) { place in
                 Annotation("", coordinate: place.coordinate, anchor: .bottom) {
                     MapHomePlacePin(name: place.name, floor: place.floor)
+                        .fixedSize()
+                        .zIndex(0)
                 }
             }
 
-            // Use MapKit's native location glyph so the marker follows the
-            // system location source and heading behavior automatically.
             UserAnnotation()
 
         }
         .mapStyle(mapStyle)
-        .mapControls {
-            if isCompassVisible {
-                MapCompass()
-                    .mapControlVisibility(.visible)
-            }
-        }
         .onMapCameraChange(frequency: .onEnd) { context in
+            updateVisibleMapSpan(context.region.span)
             updateUserCenterState(for: context.region.center)
         }
         .overlay {
@@ -241,9 +294,10 @@ struct MapHomeView: View {
             Button {
                 model.selectedDate = Date()
             } label: {
-                dateTitleLabel
+                (isHeadingMode ? datePartTitleLabel : dateTitleLabel)
                     .lineLimit(1)
                     .minimumScaleFactor(0.76)
+                    .layoutPriority(1)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
@@ -261,9 +315,14 @@ struct MapHomeView: View {
                     .frame(width: 42, height: Layout.headerHitTarget)
             }
             .accessibilityLabel(language.text("날짜 선택", "Choose date"))
+
+            if isHeadingMode {
+                headingCompass
+            }
         }
         .foregroundStyle(ink)
         .padding(.horizontal, 7)
+        .frame(maxWidth: .infinity)
         .frame(height: Layout.headerVisibleHeight)
         .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
@@ -334,9 +393,7 @@ struct MapHomeView: View {
             .accessibilityLabel(language.text("현재 위치", "Current location"))
 
             Button {
-                if !isCompassVisible {
-                    isCompassVisible = true
-                }
+                isHeadingMode = true
                 mapPosition = .userLocation(followsHeading: true, fallback: .automatic)
             } label: {
                 Image(systemName: "location.north.line.fill")
@@ -360,6 +417,26 @@ struct MapHomeView: View {
         }
     }
 
+    private var headingCompass: some View {
+        Button {
+            isHeadingMode = false
+            mapPosition = .userLocation(followsHeading: false, fallback: .automatic)
+        } label: {
+            Image(systemName: "safari")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.tpInk)
+                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                .background(Color.tpSurface.opacity(0.96), in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
+                }
+                .shadow(color: Color.black.opacity(0.10), radius: 5, y: 2)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(language.text("나침반 종료", "Stop heading mode"))
+    }
+
     private var menu: some View {
         GeometryReader { proxy in
             ZStack(alignment: .topLeading) {
@@ -378,7 +455,8 @@ struct MapHomeView: View {
     }
 
     private var sidebarContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Image("MapHomeNotionMascot")
                     .resizable()
@@ -408,11 +486,12 @@ struct MapHomeView: View {
                 isMenuOpen = false
             }
 
-            homeLocationMenuItem
+            locationMenuItem
             gpsLoggingMenuItem
             languageMenuItem
+            settingsMenuItem
 
-            Spacer()
+            Spacer(minLength: 28)
 
             HStack(spacing: 7) {
                 Image(systemName: "map.fill")
@@ -426,46 +505,117 @@ struct MapHomeView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
+            }
+            .padding(.horizontal, 22)
+            .padding(.top, 60)
+            .padding(.bottom, 16)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 60)
-        .padding(.bottom, 16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private var homeLocationMenuItem: some View {
-        Button {
-            isHomeLocationPresented = true
-        } label: {
-            HStack(spacing: 13) {
-                Image(systemName: "house.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(language.text("집 위치", "Home location"))
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                    if let home = homePlace, home.point != nil {
-                        Text(language.text("설정됨", "Set") + " · Lv.\(home.floor ?? 1)")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color.tpReferenceMint)
-                    } else {
-                        Text(language.text("현재 위치로 설정", "Set from current location"))
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
+    private var locationMenuItem: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Button {
+                isLocationMenuExpanded.toggle()
+            } label: {
+                HStack(spacing: 13) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.tpReferenceBlue)
+                        .frame(width: 24)
+                    Text(language.text("위치", "Location"))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    Spacer()
+                    Image(systemName: isLocationMenuExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(Color.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(
+                    Color.tpReferenceBlue.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("위치 목록", "Location list"))
+
+            if isLocationMenuExpanded {
+                VStack(spacing: 5) {
+                    ForEach(MapHomeLocationDestination.allCases) { destination in
+                        locationDestinationRow(destination)
                     }
                 }
+                .padding(.leading, 12)
+            }
+        }
+    }
+
+    private func locationDestinationRow(
+        _ destination: MapHomeLocationDestination
+    ) -> some View {
+        Button {
+            if destination == .user {
+                focusUserLocation()
+                isMenuOpen = false
+            } else {
+                selectedLocationDestination = destination
+            }
+        } label: {
+            HStack(spacing: 10) {
+                MapHomeLocationThumbnail(destination: destination, size: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(language.text(destination.koreanName, destination.englishName))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    Text(locationDestinationSubtitle(destination))
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(destination == .user ? destination.tint : .secondary)
+                }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                Image(systemName: destination == .user ? "location.fill" : "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(destination == .user ? destination.tint : .secondary)
             }
             .foregroundStyle(Color.primary)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 12)
-            .background(Color.tpReferenceMint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .padding(.vertical, 7)
+            .padding(.horizontal, 8)
+            .background(
+                destination.tint.opacity(destination == .user ? 0.10 : 0.055),
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(language.text("집 위치 설정", "Set home location"))
+        .accessibilityLabel(locationDestinationAccessibilityLabel(destination))
+    }
+
+    private func locationDestinationSubtitle(
+        _ destination: MapHomeLocationDestination
+    ) -> String {
+        if destination == .user {
+            return currentCoordinate == nil
+                ? language.text("위치 확인 중", "Locating")
+                : language.text("현재 위치", "Current location")
+        }
+        guard let kind = destination.placeKind,
+              let place = model.settings.frequentPlaces.first(where: { $0.kind == kind })
+        else {
+            return language.text("설정 준비 중", "Setting up")
+        }
+        if place.point != nil {
+            return language.text("설정됨", "Set") + " · Lv.\(place.floor ?? 1)"
+        }
+        return language.text("현재 위치로 설정", "Set from current location")
+    }
+
+    private func locationDestinationAccessibilityLabel(
+        _ destination: MapHomeLocationDestination
+    ) -> String {
+        let name = language.text(destination.koreanName, destination.englishName)
+        if destination == .user {
+            return language.text("\(name) 현재 위치 보기", "Show \(name) location")
+        }
+        return language.text("\(name) 위치 설정", "Set \(name) location")
     }
 
     private var languageMenuItem: some View {
@@ -485,6 +635,81 @@ struct MapHomeView: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 12)
         .background(Color.tpReferenceBlue.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var settingsMenuItem: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Button {
+                isSettingsMenuExpanded.toggle()
+            } label: {
+                HStack(spacing: 13) {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.tpReferenceRose)
+                        .frame(width: 24)
+                    Text(language.text("설정", "Settings"))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    Spacer()
+                    Image(systemName: isSettingsMenuExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(Color.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(
+                    Color.tpReferenceRose.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("설정 목록", "Settings list"))
+
+            if isSettingsMenuExpanded {
+                Button {
+                    isDataProtectionPresented = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.tpReferenceRose)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(language.text("데이터 보호", "Data Protection"))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Text(dataProtectionStatusText)
+                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(Color.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                    .background(
+                        Color.tpReferenceRose.opacity(0.055),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("데이터 보호 열기", "Open data protection"))
+                .padding(.leading, 12)
+            }
+        }
+    }
+
+    private var dataProtectionStatusText: String {
+        switch model.biometricDataProtectionStatus {
+        case .protected:
+            language.text("생체 인증으로 보호됨", "Protected by biometrics")
+        case .notProtected:
+            language.text("보호 사본 없음", "No protected copy")
+        case .unavailable:
+            language.text("보호 저장소를 사용할 수 없음", "Protection storage unavailable")
+        }
     }
 
     private var gpsLoggingMenuItem: some View {
@@ -571,10 +796,6 @@ struct MapHomeView: View {
         }
     }
 
-    private var homePlace: FrequentPlace? {
-        model.settings.frequentPlaces.first { $0.kind == .home }
-    }
-
     @ViewBuilder
     private func menuItem(_ icon: String, _ title: String, isSelected: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -658,6 +879,92 @@ struct MapHomeView: View {
         }
     }
 
+    private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] {
+        (routeProjection?.segments ?? []).compactMap { segment in
+            let coordinates = segment.coordinates.compactMap { point -> CLLocationCoordinate2D? in
+                guard isValid(point) else { return nil }
+                return CLLocationCoordinate2D(
+                    latitude: point.latitude,
+                    longitude: point.longitude
+                )
+            }
+            guard coordinates.count >= 2 else { return nil }
+            return MapHomeTimelineRouteOverlay(
+                id: segment.id,
+                categoryID: segment.category.rawValue,
+                opacity: segment.opacity,
+                coordinates: coordinates
+            )
+        }
+    }
+
+    private var effectiveTimelineMinute: Int {
+        selectedTimelineMinute ?? minuteOfDay(for: Date())
+    }
+
+    private var timelineSelectionSpan: TimeSpan? {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        guard let segment = MapHomeTimeRailSegmentEngine.segment(
+            at: effectiveTimelineMinute,
+            in: timeRailSegments
+        ), let end = calendar.date(
+            byAdding: .minute,
+            value: segment.endMinute,
+            to: dayStart
+        ), let start = calendar.date(
+            byAdding: .minute,
+            value: segment.startMinute,
+            to: dayStart
+        ) else { return nil }
+        return TimeSpan(start: start, end: end)
+    }
+
+    private func refreshRouteReadings(for date: Date) async {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: date)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+        else { return }
+        let readings = await model.sensorReadings(
+            in: TimeSpan(start: dayStart, end: dayEnd)
+        )
+        guard !Task.isCancelled,
+              calendar.isDate(date, inSameDayAs: model.selectedDate)
+        else { return }
+        routeReadings = readings
+        let projection = refreshRouteProjection()
+        if selectedTimelineMinute != nil,
+           let point = projection?.coordinateAtCutoff {
+            focusMap(on: point)
+        } else {
+            focusMapIfNeeded()
+        }
+    }
+
+    @discardableResult
+    private func refreshRouteProjection() -> RouteTimelineProjection? {
+        let calendar = Calendar.autoupdatingCurrent
+        let liveReadings = model.liveRouteState.readings
+            + (model.latestSensorReading.map { [$0] } ?? [])
+        let timelineDate = calendar.date(
+            byAdding: .minute,
+            value: effectiveTimelineMinute,
+            to: calendar.startOfDay(for: model.selectedDate)
+        )
+        let next = RouteTimelineDataEngine.project(
+            selectedDate: model.selectedDate,
+            through: timelineDate,
+            selectedSpan: timelineSelectionSpan,
+            actuals: model.snapshot.actuals,
+            readings: routeReadings,
+            liveReadings: liveReadings,
+            calendar: calendar
+        )
+        guard routeProjection != next else { return next }
+        routeProjection = next
+        return next
+    }
+
     private var dateTitle: String {
         let formatter = DateFormatter()
         formatter.locale = language.locale
@@ -668,20 +975,23 @@ struct MapHomeView: View {
     }
 
     private var dateTitleLabel: Text {
-        let calendar = Calendar.autoupdatingCurrent
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = language.locale
-        dateFormatter.dateFormat = language.datePartFormat
         let weekdayFormatter = DateFormatter()
         weekdayFormatter.locale = language.locale
         weekdayFormatter.dateFormat = language.weekdayFormat
-        let weekday = calendar.component(.weekday, from: model.selectedDate)
+        let weekday = Calendar.autoupdatingCurrent.component(.weekday, from: model.selectedDate)
         let weekdayText = Text(" \(weekdayFormatter.string(from: model.selectedDate))")
             .font(.system(size: 17, weight: .semibold, design: .rounded))
             .foregroundStyle(weekday == 1 ? Color.tpHoliday : weekday == 7 ? Color.tpSaturday : ink)
+        return datePartTitleLabel + weekdayText
+    }
+
+    private var datePartTitleLabel: Text {
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = language.locale
+        dateFormatter.dateFormat = language.datePartFormat
         return Text(dateFormatter.string(from: model.selectedDate))
             .font(.system(size: 17, weight: .semibold, design: .rounded))
-            .foregroundStyle(ink) + weekdayText
+            .foregroundStyle(ink)
     }
 
     private var ink: Color {
@@ -706,8 +1016,11 @@ struct MapHomeView: View {
     }
 
     private func focusMapIfNeeded() {
+        let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
         let coordinates = homeAnnotations.map(\.coordinate)
-            + subwayRouteOverlays.flatMap(\.coordinates)
+            + (routeCoordinates.isEmpty
+                ? subwayRouteOverlays.flatMap(\.coordinates)
+                : routeCoordinates)
             + (currentCoordinate.map { [$0] } ?? [])
         guard let first = coordinates.first else {
             mapPosition = .automatic
@@ -727,6 +1040,17 @@ struct MapHomeView: View {
                 span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
             )
         )
+    }
+
+    private func focusMap(on point: GeoPoint) {
+        let coordinate = CLLocationCoordinate2D(
+            latitude: point.latitude,
+            longitude: point.longitude
+        )
+        mapPosition = .region(
+            MKCoordinateRegion(center: coordinate, span: visibleMapSpan)
+        )
+        updateUserCenterState(for: coordinate)
     }
 
     private func focusUserLocation() {
@@ -762,6 +1086,17 @@ struct MapHomeView: View {
         }
         guard isMapCenteredOnUser != nextValue else { return }
         isMapCenteredOnUser = nextValue
+    }
+
+    private func updateVisibleMapSpan(_ span: MKCoordinateSpan) {
+        let next = MKCoordinateSpan(
+            latitudeDelta: min(max(span.latitudeDelta, 0.002), 80),
+            longitudeDelta: min(max(span.longitudeDelta, 0.002), 80)
+        )
+        guard abs(visibleMapSpan.latitudeDelta - next.latitudeDelta) > 0.000_1
+            || abs(visibleMapSpan.longitudeDelta - next.longitudeDelta) > 0.000_1
+        else { return }
+        visibleMapSpan = next
     }
 
     private func isValid(_ point: GeoPoint) -> Bool {
@@ -894,14 +1229,183 @@ private struct MapHomeSectionEditSheet: View {
     }
 }
 
-private struct MapHomeLocationSheet: View {
+private struct MapHomeDataProtectionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
     let language: MapHomeLanguage
+    @State private var isWorking = false
+    @State private var resultMessage: String?
+
+    private var isProtected: Bool {
+        model.biometricDataProtectionStatus.isProtected
+    }
+
+    private var statusTitle: String {
+        switch model.biometricDataProtectionStatus {
+        case let .protected(createdAt):
+            let formatter = DateFormatter()
+            formatter.locale = language.locale
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            return language.text("보호 사본 생성됨", "Protected copy created")
+                + " · " + formatter.string(from: createdAt)
+        case .notProtected:
+            return language.text("보호 사본 없음", "No protected copy")
+        case .unavailable:
+            return language.text("보호 저장소를 사용할 수 없음", "Protection storage unavailable")
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(Color.tpReferenceRose)
+                    .frame(width: 46, height: 46)
+                    .background(
+                        Color.tpReferenceRose.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(language.text("데이터 보호", "Data Protection"))
+                        .font(.system(size: 21, weight: .bold, design: .rounded))
+                    Text(statusTitle)
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button(language.text("닫기", "Close")) { dismiss() }
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+            }
+
+            Text(
+                language.text(
+                    "현재 기록을 LZFSE로 압축한 뒤 AES-GCM으로 암호화한 보호 사본을 이 기기에 만듭니다.",
+                    "Creates an on-device protected copy by LZFSE-compressing and AES-GCM-encrypting your current records."
+                )
+            )
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+
+            Text(
+                language.text(
+                    "Face ID 또는 Touch ID는 키체인 암호키를 여는 승인에만 사용되며, 생체 정보는 앱·iCloud·백업에 저장되지 않습니다.",
+                    "Face ID or Touch ID only authorizes access to the Keychain encryption key. Biometric data is never stored in the app, iCloud, or the backup."
+                )
+            )
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+                .padding(12)
+                .background(
+                    Color.tpReferenceBlue.opacity(0.07),
+                    in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                )
+
+            if let resultMessage {
+                Text(resultMessage)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(isProtected ? Color.tpReferenceBlue : Color.tpReferenceRose)
+            }
+
+            Button {
+                protectCurrentSnapshot()
+            } label: {
+                HStack(spacing: 8) {
+                    if isWorking {
+                        ProgressView()
+                            .tint(.white)
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: isProtected ? "arrow.clockwise" : "faceid")
+                    }
+                    Text(
+                        isProtected
+                            ? language.text("보호 사본 갱신", "Update protected copy")
+                            : language.text("생체 인증으로 보호 시작", "Protect with biometrics")
+                    )
+                }
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .foregroundStyle(.white)
+                .background(Color.tpReferenceRose, in: RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .disabled(isWorking)
+
+            if isProtected {
+                Button {
+                    validateProtectedSnapshot()
+                } label: {
+                    Label(
+                        language.text("생체 인증으로 보호 사본 확인", "Verify protected copy with biometrics"),
+                        systemImage: "checkmark.shield.fill"
+                    )
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.tpReferenceBlue)
+                .disabled(isWorking)
+            }
+        }
+        .padding(22)
+        .background(Color.tpSurface)
+        .task {
+            model.refreshBiometricDataProtectionStatus()
+        }
+    }
+
+    private func protectCurrentSnapshot() {
+        guard !isWorking else { return }
+        isWorking = true
+        Task { @MainActor in
+            defer { isWorking = false }
+            do {
+                try await model.protectCurrentDataWithBiometrics()
+                resultMessage = language.text(
+                    "생체 인증으로 잠긴 보호 사본을 만들었습니다.",
+                    "A biometric-protected copy was created."
+                )
+            } catch {
+                resultMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func validateProtectedSnapshot() {
+        guard !isWorking else { return }
+        isWorking = true
+        Task { @MainActor in
+            defer { isWorking = false }
+            do {
+                try await model.validateBiometricProtectedData()
+                resultMessage = language.text(
+                    "보호 사본을 확인했습니다.",
+                    "The protected copy was verified."
+                )
+            } catch {
+                resultMessage = error.localizedDescription
+            }
+        }
+    }
+}
+
+private struct MapHomeLocationSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let destination: MapHomeLocationDestination
+    let language: MapHomeLanguage
     let onSaved: () -> Void
 
-    private var home: FrequentPlace? {
-        model.settings.frequentPlaces.first { $0.kind == .home }
+    private var place: FrequentPlace? {
+        guard let kind = destination.placeKind else { return nil }
+        return model.settings.frequentPlaces.first { $0.kind == kind }
     }
 
     private var hasCurrentLocation: Bool {
@@ -911,20 +1415,24 @@ private struct MapHomeLocationSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
-                Image(systemName: "house.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(Color.tpReferenceMint)
-                    .frame(width: 42, height: 42)
-                    .background(Color.tpReferenceMint.opacity(0.14), in: Circle())
+                MapHomeLocationThumbnail(destination: destination)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(language.text("집 위치 설정", "Set home location"))
+                    Text(
+                        language.text(destination.koreanName, destination.englishName)
+                            + language.text(" 위치 설정", " location")
+                    )
                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                    if let home, home.point != nil {
-                        Text(language.text("현재 저장 상태", "Saved") + " · Lv.\(home.floor ?? 1)")
+                    if let place, place.point != nil {
+                        Text(language.text("현재 저장 상태", "Saved") + " · Lv.\(place.floor ?? 1)")
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     } else {
-                        Text(language.text("집 장소를 찾을 수 없습니다", "Home place is unavailable"))
+                        Text(
+                            language.text(
+                                "현재 위치를 기준으로 저장할 수 있습니다",
+                                "Save this place from your current location"
+                            )
+                        )
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
@@ -935,8 +1443,8 @@ private struct MapHomeLocationSheet: View {
             Text(
                 hasCurrentLocation
                     ? language.text(
-                        "현재 위치를 집의 기준 위치로 저장합니다. 좌표는 화면에 표시하지 않습니다.",
-                        "Save the current location as home. Coordinates are not shown."
+                        "현재 위치를 이 장소의 기준 위치로 저장합니다. 좌표는 화면에 표시하지 않습니다.",
+                        "Save the current location as this place. Coordinates are not shown."
                     )
                     : language.text(
                         "현재 위치를 받는 중입니다. 위치 기록이 잡히면 저장할 수 있습니다.",
@@ -947,13 +1455,13 @@ private struct MapHomeLocationSheet: View {
                 .foregroundStyle(.secondary)
 
             Button {
-                guard let home else { return }
-                model.setFrequentPlaceToCurrentLocation(home.id)
+                guard let place else { return }
+                model.setFrequentPlaceToCurrentLocation(place.id)
                 onSaved()
                 dismiss()
             } label: {
                 Label(
-                    home?.point == nil
+                    place?.point == nil
                         ? language.text("현재 위치로 저장", "Save current location")
                         : language.text("현재 위치로 다시 저장", "Update current location"),
                     systemImage: "location.fill"
@@ -962,11 +1470,11 @@ private struct MapHomeLocationSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .foregroundStyle(.white)
-                .background(Color.tpReferenceMint, in: RoundedRectangle(cornerRadius: 13))
+                .background(destination.tint, in: RoundedRectangle(cornerRadius: 13))
             }
             .buttonStyle(.plain)
-            .disabled(home == nil || !hasCurrentLocation)
-            .opacity(home == nil || !hasCurrentLocation ? 0.46 : 1)
+            .disabled(place == nil || !hasCurrentLocation)
+            .opacity(place == nil || !hasCurrentLocation ? 0.46 : 1)
         }
         .padding(22)
         .background(Color.tpSurface)
@@ -975,6 +1483,13 @@ private struct MapHomeLocationSheet: View {
 
 private struct MapHomeSubwayRouteOverlay: Identifiable {
     let id: UUID
+    let coordinates: [CLLocationCoordinate2D]
+}
+
+private struct MapHomeTimelineRouteOverlay: Identifiable {
+    let id: String
+    let categoryID: String
+    let opacity: Double
     let coordinates: [CLLocationCoordinate2D]
 }
 

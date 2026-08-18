@@ -78,10 +78,17 @@ enum RecordAnalysisCategoryNormalizer {
         }
         if value.contains("walking") || value.contains("걷")
             || value.contains("automotive") || value.contains("자동차")
-            || value.contains("자가용") || value.contains("subway")
+            || value.contains("자가용") || value.contains("privatevehicle")
+            || value.contains("car") || value.contains("driving")
+            || value.contains("subway") || value.contains("metro")
             || value.contains("지하철") || value.contains("transit")
-            || value.contains("버스") || value.contains("배")
-            || value.contains("비행기") || value.contains("자전거") {
+            || value.contains("publictransit") || value.contains("버스")
+            || value.contains("bus") || value.contains("배")
+            || value.contains("ship") || value.contains("ferry")
+            || value.contains("비행기") || value.contains("airplane")
+            || value.contains("자전거") || value.contains("cycling")
+            || value.contains("bike") || value.contains("train")
+            || value.contains("rail") {
             return "movement"
         }
         switch rawCategoryID {
