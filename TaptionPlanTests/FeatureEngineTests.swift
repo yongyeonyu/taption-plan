@@ -7,6 +7,67 @@ import SwiftUI // TEMP-CAT-SHEET
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    func testSubwayWiFiSSIDAllowListNormalizesCarrierNames() {
+        XCTAssertTrue(SubwayWiFiSSID.isAllowed("  T WIFI  "))
+        XCTAssertTrue(SubwayWiFiSSID.isAllowed("t wifi_secure"))
+        XCTAssertTrue(SubwayWiFiSSID.isAllowed(" KT_WiFi_secure "))
+        XCTAssertTrue(SubwayWiFiSSID.isAllowed("U+   ZONE"))
+        XCTAssertFalse(SubwayWiFiSSID.isAllowed("ollehWiFi"))
+        XCTAssertFalse(SubwayWiFiSSID.isAllowed("SKT_WiFi"))
+    }
+
+    func testSubwayWiFiSSIDRequiresContinuousCurrentNetworkObservations() {
+        XCTAssertFalse(
+            SubwayWiFiSSID.hasContinuousEvidence(["T wifi", nil])
+        )
+        XCTAssertTrue(
+            SubwayWiFiSSID.hasContinuousEvidence([
+                "T wifi", "T wifi_secure", "KT_WiFi"
+            ])
+        )
+        XCTAssertFalse(
+            SubwayWiFiSSID.hasContinuousEvidence([
+                "T wifi", "ollehWiFi", "KT_WiFi"
+            ])
+        )
+    }
+
+    func testSubwayWiFiEvidenceKeepsSSIDStreakAndTime() {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let samples: [(Double, Double, Double, String, String, Int)] = [
+            (0, 37.5248, 126.6744, "가정역", "T wifi", 1),
+            (10, 37.5692, 126.6737, "검암역", "T wifi_secure", 2),
+            (20, 37.5667, 126.8273, "마곡나루역", "KT_WiFi", 3),
+        ]
+        let readings = samples.map { minute, latitude, longitude, station, ssid, streak in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                connectedWiFiSSID: ssid,
+                subwayWiFiObservationStreak: streak,
+                nearbyStation: true,
+                nearbyStationName: station,
+                matchesRailRoute: true
+            )
+        }
+
+        let inference = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertEqual(inference.mode, .subway)
+        XCTAssertTrue(inference.evidence.contains(
+            "지하철 Wi-Fi KT_WiFi 연속 3회 16:20"
+        ))
+    }
+
     func testRecordAnalysisPolicyUsesOnlyCanonicalAutomaticCategories() {
         let phaseTitles = RecordAnalysisCategoryPolicy.options
             .filter(RecordAnalysisCategoryPolicy.isPhaseOption)
@@ -4346,6 +4407,106 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(segment.mode, .subway)
         XCTAssertEqual(segment.subwayRoute?.stops.first?.stationName, "가정")
         XCTAssertEqual(segment.subwayRoute?.stops.last?.stationName, "마곡나루")
+    }
+
+    func testStationJourneyRequiresFiveMinuteStaysAndFiftyMeterExit() throws {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let samples: [(Double, Double, Double, Bool)] = [
+            (0, 37.5248, 126.6744, true),
+            (5, 37.5248, 126.6744, true),
+            (6, 37.5500, 126.7500, false),
+            (10, 37.5500, 126.7500, false),
+            (20, 37.5667, 126.8273, true),
+            (25, 37.5667, 126.8273, true),
+            (26, 37.5600, 126.8273, false),
+            (27, 37.5590, 126.8273, false),
+        ]
+        let readings = samples.map { minute, latitude, longitude, rail in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                motion: .automotive,
+                motionConfidence: .high,
+                matchesRailRoute: rail
+            )
+        }
+
+        let journey = try XCTUnwrap(
+            SubwayStationCatalog.stationJourney(from: readings)
+        )
+
+        XCTAssertTrue(journey.isConfirmed)
+        XCTAssertTrue(journey.hasRailEvidence)
+        XCTAssertEqual(journey.startStationName, "가정")
+        XCTAssertEqual(journey.destinationStationName, "마곡나루")
+        XCTAssertEqual(journey.transferStationNames, ["검암"])
+        XCTAssertEqual(journey.stays.map(\.stationName), ["가정", "마곡나루"])
+        XCTAssertTrue(journey.stays.allSatisfy(\.exitConfirmed))
+        XCTAssertEqual(journey.route.transferStationNames, ["검암"])
+        XCTAssertTrue(journey.evidence.contains("역 이탈 50m 이상 지속"))
+
+        let inference = TravelModeClassifier().classify(readings: readings)
+        XCTAssertEqual(inference.mode, .subway)
+        let segment = try XCTUnwrap(
+            SubwayTravelSegmentEngine.segments(from: readings).first
+        )
+        XCTAssertEqual(segment.mode, .subway)
+        XCTAssertEqual(segment.subwayRoute?.transferStationNames, ["검암"])
+        XCTAssertTrue(segment.evidence.contains("출발역·환승역·도착역 상태 확정"))
+    }
+
+    func testStationJourneyDoesNotConfirmBeforeDestinationExit() {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                )
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(5 * 60),
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                )
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(20 * 60),
+                point: GeoPoint(
+                    latitude: 37.5667,
+                    longitude: 126.8273,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                )
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(25 * 60),
+                point: GeoPoint(
+                    latitude: 37.5667,
+                    longitude: 126.8273,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                )
+            ),
+        ]
+
+        XCTAssertNil(SubwayStationCatalog.stationJourney(from: readings))
     }
 
     func testSubwayRouteSurvivesTravelPresentationMerge() throws {

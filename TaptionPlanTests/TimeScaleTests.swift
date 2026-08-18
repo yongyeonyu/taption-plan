@@ -576,6 +576,28 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeTimeSidebarPrecisionDragUsesQuarterSensitivity() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByDragging(
+                baseMinute: 600,
+                translation: 50,
+                trackHeight: 300,
+                maxMinute: 1_439,
+                sensitivity: 0.25
+            ),
+            660
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteByDragging(
+                baseMinute: 600,
+                translation: 50,
+                trackHeight: 300,
+                maxMinute: 1_439
+            ),
+            840
+        )
+    }
+
     func testMapHomeTimeSidebarTapMapsAndClampsToVisibleRail() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.minuteByLocation(

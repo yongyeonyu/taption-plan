@@ -352,6 +352,57 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     }
 }
 
+/// SSIDs used by the carrier-operated subway Wi-Fi networks.  This is an
+/// exact allow-list: generic/legacy names such as `ollehWiFi` are not
+/// evidence of a subway ride.  Matching is deliberately independent from
+/// the UI and movement classifier so archived readings can be re-analysed.
+enum SubwayWiFiSSID {
+    private static let allowed: Set<String> = [
+        "t wifi",
+        "t wifi secure",
+        "kt wifi",
+        "kt wifi secure",
+        "u+ zone",
+    ]
+
+    static func normalized(_ ssid: String) -> String {
+        ssid
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(
+                of: "\\s+",
+                with: " ",
+                options: .regularExpression
+            )
+            .lowercased()
+    }
+
+    static func isAllowed(_ ssid: String?) -> Bool {
+        guard let ssid else { return false }
+        return allowed.contains(normalized(ssid))
+    }
+
+    /// A run of accepted, connected SSIDs is a stronger signal than a single
+    /// scan.  Secure/open variants may alternate while the device remains in
+    /// the train, so the name itself need not remain identical.
+    static func hasContinuousEvidence(
+        _ ssids: [String?],
+        minimumObservations: Int = 2
+    ) -> Bool {
+        guard minimumObservations > 0 else { return false }
+        var run = 0
+        for ssid in ssids {
+            if isAllowed(ssid) {
+                run += 1
+                if run >= minimumObservations { return true }
+            } else {
+                run = 0
+            }
+        }
+        return false
+    }
+}
+
 enum TrackingSessionPolicy {
     static let automaticStartDuration: TimeInterval = 10
     static let automaticStopStationaryDuration: TimeInterval = 2 * 60

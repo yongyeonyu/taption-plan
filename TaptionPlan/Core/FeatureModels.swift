@@ -2575,6 +2575,13 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var systemFloor: Int?
     var powerState: DevicePowerState?
     var gpsAvailable: Bool
+    /// The SSID returned by Apple's current-network API, when available.
+    /// It is nil when Wi-Fi information access or location authorization is
+    /// unavailable; no surrounding networks are scanned.
+    var connectedWiFiSSID: String?
+    /// Number of consecutive persisted observations whose current SSID is an
+    /// allow-listed subway carrier network.
+    var subwayWiFiObservationStreak: Int?
     var nearbyStation: Bool
     /// Apple 지도에서 확인한 가장 가까운 철도·버스 정류장 이름입니다.
     /// 원시 GPS와 함께 보관해 역과 역 사이 이동을 판정할 때 사용합니다.
@@ -2628,6 +2635,8 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         systemFloor: Int? = nil,
         powerState: DevicePowerState? = nil,
         gpsAvailable: Bool = true,
+        connectedWiFiSSID: String? = nil,
+        subwayWiFiObservationStreak: Int? = nil,
         nearbyStation: Bool = false,
         nearbyStationName: String? = nil,
         matchesRailRoute: Bool = false,
@@ -2679,6 +2688,10 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.systemFloor = systemFloor
         self.powerState = powerState
         self.gpsAvailable = gpsAvailable
+        self.connectedWiFiSSID = connectedWiFiSSID
+        self.subwayWiFiObservationStreak = subwayWiFiObservationStreak.map {
+            max(0, $0)
+        }
         self.nearbyStation = nearbyStation
         self.nearbyStationName = nearbyStationName
         self.matchesRailRoute = matchesRailRoute

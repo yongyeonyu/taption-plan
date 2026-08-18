@@ -7,6 +7,7 @@ import Foundation
 import HealthKit
 import MediaPlayer
 import MapKit
+import NetworkExtension
 import Photos
 import UIKit
 import UserNotifications
@@ -1819,6 +1820,33 @@ final class AirPodsActivityService: NSObject, CXCallObserverDelegate, @unchecked
 
 // MARK: - Live sensor collection
 
+/// Reads only the network the device is currently joined to. iOS does not
+/// expose a surrounding-network scan to third-party apps. Access requires
+/// the Wi-Fi information entitlement and an authorized location status.
+@MainActor
+enum CurrentConnectedWiFiService {
+    static func fetchSSID(
+        authorizationStatus: CLAuthorizationStatus,
+        completion: @escaping @MainActor @Sendable (String?) -> Void
+    ) {
+        guard authorizationStatus == .authorizedAlways
+                || authorizationStatus == .authorizedWhenInUse else {
+            completion(nil)
+            return
+        }
+        guard #available(iOS 14.0, *) else {
+            completion(nil)
+            return
+        }
+        NEHotspotNetwork.fetchCurrent { network in
+            let ssid = network?.ssid
+            Task { @MainActor in
+                completion(ssid)
+            }
+        }
+    }
+}
+
 private struct AltimeterSensorUpdate: Sendable {
     var relativeAltitudeMeters: Double?
     var pressureKilopascals: Double?
@@ -1920,6 +1948,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var latestCurrentCadence: Double?
     private var latestAverageActivePace: Double?
     private var latestDeviceMotion: DeviceMotionSnapshot?
+    private var latestConnectedWiFiSSID: String?
+    private var subwayWiFiObservationStreak = 0
+    private var currentWiFiFetchInFlight = false
+    private var lastWiFiFetchAt: Date?
     private var deviceMotionAccumulator = DeviceMotionAccumulator()
     private var activeTrackingSession: TrackingSession?
     private var activeTrackingPreferences = GPSLoggingPreferences.standard
@@ -2036,6 +2068,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestCurrentCadence = nil
         latestAverageActivePace = nil
         latestDeviceMotion = nil
+        latestConnectedWiFiSSID = nil
+        subwayWiFiObservationStreak = 0
+        currentWiFiFetchInFlight = false
+        lastWiFiFetchAt = nil
         lastBackgroundWakeLocation = nil
         deviceMotionAccumulator.reset()
         activeTrackingSession = nil
@@ -2258,6 +2294,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         guard !sensorStreamsRunning else { return }
         sensorStreamsRunning = true
         UIDevice.current.isBatteryMonitoringEnabled = true
+        refreshConnectedWiFiIfNeeded(force: true)
         locationManager.allowsBackgroundLocationUpdates =
             configuration.allowsBackgroundLocation
             && locationManager.authorizationStatus == .authorizedAlways
@@ -2418,6 +2455,32 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         deviceMotionAccumulator.reset()
     }
 
+    private func refreshConnectedWiFiIfNeeded(force: Bool = false) {
+        guard permissionState() == .authorized,
+              !currentWiFiFetchInFlight else { return }
+        if !force,
+           let lastWiFiFetchAt,
+           Date.now.timeIntervalSince(lastWiFiFetchAt) < 30 {
+            return
+        }
+        currentWiFiFetchInFlight = true
+        lastWiFiFetchAt = .now
+        CurrentConnectedWiFiService.fetchSSID(
+            authorizationStatus: locationManager.authorizationStatus
+        ) { [weak self] ssid in
+            Task { @MainActor in
+                guard let self else { return }
+                self.currentWiFiFetchInFlight = false
+                self.latestConnectedWiFiSSID = ssid
+                if SubwayWiFiSSID.isAllowed(ssid) {
+                    self.subwayWiFiObservationStreak += 1
+                } else {
+                    self.subwayWiFiObservationStreak = 0
+                }
+            }
+        }
+    }
+
     func locationManager(
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
@@ -2563,6 +2626,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         allowManualTrackingSample: Bool = false
     ) {
         guard continuation != nil else { return }
+        refreshConnectedWiFiIfNeeded()
         if activeTrackingSession?.wasAutomaticallyDetected == false,
            completedSession == nil,
            !allowManualTrackingSample {
@@ -2628,6 +2692,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 systemFloor: location?.floor?.level,
                 powerState: Self.powerState(UIDevice.current.batteryState),
                 gpsAvailable: locationFixQuality == .precise,
+                connectedWiFiSSID: latestConnectedWiFiSSID,
+                subwayWiFiObservationStreak: subwayWiFiObservationStreak,
                 trackingSessionID: session?.id,
                 trackingKind: session?.kind,
                 sourceDevice: .iPhone,

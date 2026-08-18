@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MapHomeTimeSidebarActivity {
     let systemImage: String
@@ -287,6 +288,7 @@ struct MapHomeTimeSidebar: View {
 
     @State private var dragStartMinute: Int?
     @State private var lastRenderUptime: TimeInterval = 0
+    @State private var isPrecisionMode = false
 
     private let railWidth: CGFloat
     // Keep the numeric rail visibly separated from both the map header and
@@ -423,6 +425,7 @@ struct MapHomeTimeSidebar: View {
         .frame(width: railWidth)
         .onDisappear {
             dragStartMinute = nil
+            isPrecisionMode = false
         }
     }
 
@@ -471,15 +474,39 @@ struct MapHomeTimeSidebar: View {
             .foregroundStyle(Color.white)
             .frame(width: 32, height: 40)
             .background(
-                Color.tpInk.opacity(0.90),
+                isPrecisionMode
+                    ? Color.green.opacity(0.90)
+                    : Color.tpInk.opacity(0.90),
                 in: RoundedRectangle(cornerRadius: 4, style: .continuous)
             )
-            .allowsHitTesting(false)
+            .contentShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .simultaneousGesture(precisionLongPressGesture())
+            .simultaneousGesture(precisionReleaseGesture())
             .accessibilityHidden(true)
             .position(x: trackX + activeRailWidth / 2 + 17, y: handleHeight / 2)
         }
         .frame(width: railWidth, height: handleHeight)
         .position(x: railWidth / 2, y: y)
+    }
+
+    private func precisionLongPressGesture() -> some Gesture {
+        LongPressGesture(minimumDuration: 0.45, maximumDistance: 24)
+            .onChanged { isPressing in
+                guard isPressing, !isPrecisionMode else { return }
+                isPrecisionMode = true
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+    }
+
+    private func precisionReleaseGesture() -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onEnded { _ in
+                // Defer the reset until the parent drag publishes its final
+                // sample, so the release sample still uses quarter speed.
+                DispatchQueue.main.async {
+                    isPrecisionMode = false
+                }
+            }
     }
 
     private func categoryColorHex(_ id: String) -> String {
@@ -511,7 +538,8 @@ struct MapHomeTimeSidebar: View {
                     baseMinute: base,
                     translation: value.translation.height,
                     trackHeight: trackHeight,
-                    maxMinute: maxMinute
+                    maxMinute: maxMinute,
+                    sensitivity: isPrecisionMode ? 0.25 : 1
                 )
                 publish(minute, force: false)
             }
@@ -521,10 +549,12 @@ struct MapHomeTimeSidebar: View {
                     baseMinute: base,
                     translation: value.translation.height,
                     trackHeight: trackHeight,
-                    maxMinute: maxMinute
+                    maxMinute: maxMinute,
+                    sensitivity: isPrecisionMode ? 0.25 : 1
                 )
                 publish(minute, force: true)
                 dragStartMinute = nil
+                isPrecisionMode = false
             }
     }
 
@@ -561,10 +591,11 @@ enum MapHomeTimeSidebarMath {
         baseMinute: Int,
         translation: CGFloat,
         trackHeight: CGFloat,
-        maxMinute: Int
+        maxMinute: Int,
+        sensitivity: CGFloat = 1
     ) -> Int {
         guard trackHeight > 0 else { return min(max(baseMinute, 0), maxMinute) }
-        let delta = Int((translation / trackHeight * 1439).rounded())
+        let delta = Int((translation / trackHeight * 1439 * max(sensitivity, 0)).rounded())
         return min(max(baseMinute + delta, 0), maxMinute)
     }
 

@@ -295,6 +295,10 @@ struct TravelModeClassifier: Sendable {
         let strictCoordinateTrajectory = SubwayStationCatalog.coordinateTrajectory(
             from: ordered
         )
+        let stationJourney = SubwayStationCatalog.stationJourney(
+            from: ordered
+        )
+        let stationStateConfirmation = stationJourney?.hasRailEvidence == true
         // 지하 구간에서는 출발·도착역 두 개만 GPS에 남을 수 있다. 이 보조
         // 궤적은 철도 지도 신호가 충분한 경우에만 허용해 도로 주행을 막는다.
         let coordinateTrajectory = strictCoordinateTrajectory
@@ -307,23 +311,37 @@ struct TravelModeClassifier: Sendable {
         // 원본 좌표로 복원한 역 순서는 하루 전체의 역 이름을 이어 붙인
         // 보강값보다 우선한다. 보강값만 고르면 출근·퇴근이 한 경로로
         // 합쳐져 환승역을 다시 통과하는 순환 노선이 선택될 수 있다.
-        let resolvedSubwayRoute = coordinateTrajectory?.route
+        let resolvedSubwayRoute = stationJourney?.route
+            ?? coordinateTrajectory?.route
             ?? signaledSubwayRoute
         let usesCoordinateRoute = coordinateTrajectory != nil
-        let railStations = usesCoordinateRoute
+        let railStations = stationJourney?.stationNames
+            ?? (usesCoordinateRoute
             ? coordinateTrajectory?.observedStationNames ?? signaledRailStations
-            : signaledRailStations
+            : signaledRailStations)
         let coordinateRailContext = usesCoordinateRoute
         let railContext = stationRatio >= 0.2
             || railRatio >= 0.25
             || coordinateRailContext
+            || stationStateConfirmation
+        let subwayWiFiStreak = ordered.compactMap {
+            $0.subwayWiFiObservationStreak
+        }.max() ?? 0
+        let latestSubwayWiFi = ordered.last {
+            SubwayWiFiSSID.isAllowed($0.connectedWiFiSSID)
+        }
+        let subwayWiFiSignal = subwayWiFiStreak >= 2
+            && railSpeedSignal
+            && railContext
         let stationStopPattern = resolvedSubwayRoute.map {
             SubwayStationCatalog.stationStopPattern(
                 from: ordered,
                 route: $0
             )
         }
-        let routeHasTransferPattern = resolvedSubwayRoute.map {
+        let routeHasTransferPattern = stationJourney.map {
+            stationStateConfirmation && !$0.transferStationNames.isEmpty
+        } ?? resolvedSubwayRoute.map {
             !$0.transferStationNames.isEmpty
                 && Set(railStations).count >= 3
         } ?? false
@@ -357,8 +375,11 @@ struct TravelModeClassifier: Sendable {
             && resolvedSubwayRoute != nil
             && railContext
             && (
+                stationStateConfirmation
+                ||
                 coordinateTrajectorySignal
                 || stationStopConfirmation
+                || subwayWiFiSignal
                 || undergroundDescent
                     && lowStepsForTransit
                     && (watchVibrationAbsent || watchVibrationUnavailable)
@@ -381,6 +402,17 @@ struct TravelModeClassifier: Sendable {
         }
         if altitudeDelta <= -2 && railContext {
             add(.subway, 0.16, "상대고도 하강")
+        }
+        if subwayWiFiSignal {
+            add(
+                .subway,
+                0.82,
+                subwayWiFiEvidence(
+                    ssid: latestSubwayWiFi?.connectedWiFiSSID,
+                    streak: subwayWiFiStreak,
+                    observedAt: latestSubwayWiFi?.timestamp
+                )
+            )
         }
         if stationRatio >= 0.25,
            railRatio >= 0.5,
@@ -412,10 +444,17 @@ struct TravelModeClassifier: Sendable {
         // 과거처럼 보강값이 비어 있으면 세 역 이상의 좌표 순서와 철도 속도가
         // 일치할 때만 복원해, 환승 보행 때문에 전체 걸음 수가 늘어도 놓치지 않는다.
         if stationToStationSubway {
-            let first = railStations.first ?? "출발역"
-            let last = railStations.last ?? "도착역"
+            let first = stationJourney?.startStationName
+                ?? railStations.first
+                ?? "출발역"
+            let last = stationJourney?.destinationStationName
+                ?? railStations.last
+                ?? "도착역"
             let subwayRoute = resolvedSubwayRoute
             var routeEvidence: [String] = []
+            if let stationJourney {
+                routeEvidence.append(contentsOf: stationJourney.evidence)
+            }
             if let subwayRoute {
                 routeEvidence.append(
                     "노선 " + subwayRoute.lineNames.joined(separator: " → ")
@@ -661,6 +700,20 @@ struct TravelModeClassifier: Sendable {
         let points = readings.compactMap(\.point)
         guard let first = points.first, let last = points.last else { return 0 }
         return distanceMeters(first, last)
+    }
+
+    private func subwayWiFiEvidence(
+        ssid: String?,
+        streak: Int,
+        observedAt: Date?
+    ) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        let time = observedAt.map {
+            let values = calendar.dateComponents([.hour, .minute], from: $0)
+            return String(format: "%02d:%02d", values.hour ?? 0, values.minute ?? 0)
+        } ?? "시각 미확인"
+        return "지하철 Wi-Fi \(ssid ?? "미확인") 연속 \(streak)회 \(time)"
     }
 
     private func speedSeries(for readings: [SensorReading]) -> [Double] {
@@ -2383,41 +2436,59 @@ enum SubwayTravelSegmentEngine {
     ) -> [TravelSegment] {
         var result: [TravelSegment] = []
         for group in groups {
+            let stationJourney = SubwayStationCatalog.stationJourney(
+                from: group
+            )
             let strictTrajectory = SubwayStationCatalog.coordinateTrajectory(
                 from: group
             )
             let hasRailConfirmation = !group.isEmpty
                 && Double(group.filter(\.matchesRailRoute).count)
                     / Double(group.count) >= 0.25
-            guard let trajectory = strictTrajectory
+            let trajectory = strictTrajectory
                 ?? (hasRailConfirmation
                     ? SubwayStationCatalog.sparseEndpointTrajectory(from: group)
-                    : nil) else { continue }
+                    : nil)
+            guard let span = stationJourney?.span ?? trajectory?.span else {
+                continue
+            }
             let contextSpan = TimeSpan(
-                start: trajectory.span.start.addingTimeInterval(-2 * 60),
-                end: trajectory.span.end.addingTimeInterval(2 * 60)
+                start: span.start.addingTimeInterval(-2 * 60),
+                end: span.end.addingTimeInterval(2 * 60)
             )
             let context = group.filter { contextSpan.contains($0.timestamp) }
             let inference = TravelModeClassifier().classify(
                 readings: context,
-                inside: trajectory.span
+                inside: span
             )
-            guard inference.mode == .subway
-                || trajectory.isSparseEndpointTrajectory else { continue }
-            let route = inference.subwayRoute ?? trajectory.route
-            let sparseEndpointEvidence = trajectory.isSparseEndpointTrajectory
+            guard inference.mode == .subway else { continue }
+            guard let route = inference.subwayRoute
+                ?? stationJourney?.route
+                ?? trajectory?.route else {
+                continue
+            }
+            let sparseEndpointEvidence = trajectory?.isSparseEndpointTrajectory == true
                 ? ["철도 지도 신호·출발역·도착역 복원"]
                 : []
+            let stationStateEvidence = stationJourney?.evidence ?? []
+            let routeSourceEvidence = trajectory == nil
+                ? ["역 체류 상태로 지하철 구간 확정"]
+                : ["원본 GPS 철도 궤적 복원"]
             result.append(TravelSegment(
                 mode: .subway,
-                span: trajectory.span,
+                span: span,
                 distanceMeters: pathDistance(route.coordinates),
-                confidence: trajectory.isSparseEndpointTrajectory ? .medium : .high,
+                confidence: stationJourney?.isConfirmed == true
+                    ? .high
+                    : (trajectory?.isSparseEndpointTrajectory == true
+                        ? .medium
+                        : .high),
                 evidence: Array(
                     Set(
                         inference.evidence
                             + sparseEndpointEvidence
-                            + ["원본 GPS 철도 궤적 복원"]
+                            + stationStateEvidence
+                            + routeSourceEvidence
                     )
                 ).sorted(),
                 subwayRoute: route
