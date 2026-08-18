@@ -1905,6 +1905,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var sensorStreamsRunning = false
     private var lastEmissionAt: Date?
     private var latestLocation: CLLocation?
+    private var latestPreciseLocation: CLLocation?
     private var lastBackgroundWakeLocation: CLLocation?
     private var latestMotion: MotionKind = .unknown
     private var latestMotionConfidence: ConfidenceLevel = .low
@@ -1921,6 +1922,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var latestDeviceMotion: DeviceMotionSnapshot?
     private var deviceMotionAccumulator = DeviceMotionAccumulator()
     private var activeTrackingSession: TrackingSession?
+    private var activeTrackingPreferences = GPSLoggingPreferences.standard
     private var trackingSequence = 0
     /// nil이 아니면 층 보정용 표본을 모으는 중이다.
     private var altitudeBurstSamples: [AltitudeBurstSample]?
@@ -2022,6 +2024,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         isCollecting = false
         isLocationDenied = false
         lastEmissionAt = nil
+        latestPreciseLocation = nil
         latestRelativeAltitude = nil
         latestPressureKilopascals = nil
         altimeterSessionID = nil
@@ -2036,6 +2039,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         lastBackgroundWakeLocation = nil
         deviceMotionAccumulator.reset()
         activeTrackingSession = nil
+        activeTrackingPreferences = .standard
         trackingSequence = 0
         continuation?.finish()
         continuation = nil
@@ -2044,7 +2048,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     func beginTracking(
         kind: TrackingKind,
         linkedPlanID: UUID? = nil,
-        sessionID: UUID = UUID()
+        sessionID: UUID = UUID(),
+        preferences: GPSLoggingPreferences = .standard
     ) -> TrackingSession {
         let session = TrackingSession(
             id: sessionID,
@@ -2053,35 +2058,64 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             wasAutomaticallyDetected: false
         )
         activeTrackingSession = session
+        activeTrackingPreferences = preferences
         trackingSequence = 0
         movementCandidateTask?.cancel()
         stationaryStopTask?.cancel()
         applyLocationPolicy(isMoving: true)
-        startHardwareStreams()
-        emit(force: true)
+        if sensorStreamsRunning {
+            stopHardwareStreams()
+        }
+        updateBackgroundWakeMonitoring()
+        restartSamplingTask()
         return session
     }
 
     @discardableResult
-    func resumeTracking(_ session: TrackingSession) -> TrackingSession {
+    func resumeTracking(
+        _ session: TrackingSession,
+        preferences: GPSLoggingPreferences = .standard
+    ) -> TrackingSession {
         activeTrackingSession = session
+        activeTrackingPreferences = preferences
         trackingSequence = 0
         movementCandidateTask?.cancel()
         stationaryStopTask?.cancel()
         applyLocationPolicy(isMoving: true)
-        startHardwareStreams()
-        emit(force: true)
+        if sensorStreamsRunning {
+            stopHardwareStreams()
+        }
+        updateBackgroundWakeMonitoring()
+        restartSamplingTask()
         return session
+    }
+
+    func updateTrackingPreferences(_ preferences: GPSLoggingPreferences) {
+        guard activeTrackingSession != nil else { return }
+        activeTrackingPreferences = preferences
+        applyLocationPolicy(isMoving: true)
+        if sensorStreamsRunning { stopHardwareStreams() }
+        updateBackgroundWakeMonitoring()
+        restartSamplingTask()
     }
 
     @discardableResult
     func endTracking(at date: Date = .now) -> TrackingSession? {
         guard var session = activeTrackingSession else { return nil }
         session.endedAt = date
+        let preferences = activeTrackingPreferences
         activeTrackingSession = nil
         stationaryStopTask?.cancel()
         stationaryStopTask = nil
-        emit(force: true, completedSession: session)
+        if session.wasAutomaticallyDetected {
+            emit(force: true, completedSession: session)
+        } else if let location = preferredTrackingLocation(
+            batteryMinimal: preferences.isBatteryMinimal
+        ) {
+            latestLocation = location
+            emit(force: true, completedSession: session)
+        }
+        activeTrackingPreferences = .standard
         stopHardwareStreams()
         applyLocationPolicy(isMoving: latestMotion != .stationary)
         restartSamplingTask()
@@ -2120,8 +2154,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private func restartSamplingTask() {
         samplingTask?.cancel()
         guard isCollecting,
-              !isLocationDenied,
-              activeTrackingSession == nil else {
+              !isLocationDenied else {
             return
         }
         samplingTask = Task { [weak self] in
@@ -2131,19 +2164,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     private func runSamplingLoop() async {
         while !Task.isCancelled, isCollecting {
-            if activeTrackingSession != nil {
-                try? await Task.sleep(for: .seconds(1))
-                continue
-            }
-
             let startedAt = Date.now
             await sampleOnce()
             guard !Task.isCancelled, isCollecting else { break }
-            if activeTrackingSession != nil {
-                continue
-            }
-
-            let interval = max(1, configuration.minimumEmissionInterval)
+            let interval = max(1, activeEmissionInterval)
             let nextStart = startedAt.addingTimeInterval(interval)
             let delay = max(0, nextStart.timeIntervalSinceNow)
             if delay > 0 {
@@ -2153,12 +2177,41 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     private func sampleOnce() async {
-        guard isCollecting, activeTrackingSession == nil else { return }
+        guard isCollecting else { return }
+        let session = activeTrackingSession
+        if session?.wasAutomaticallyDetected == false {
+            // A cached location from the previous window must not win over a
+            // fresh fix (or become a stale fallback) for this sample.
+            clearSampleState()
+        }
+
         startHardwareStreams()
         try? await Task.sleep(
             for: .seconds(configuration.profile.samplingWindowDuration)
         )
         guard !Task.isCancelled else { return }
+
+        if let activeSession = activeTrackingSession,
+           !activeSession.wasAutomaticallyDetected {
+            if let location = preferredTrackingLocation(
+                batteryMinimal: activeTrackingPreferences.isBatteryMinimal
+            ) {
+                latestLocation = location
+                emit(force: true, allowManualTrackingSample: true)
+            }
+            stopHardwareStreams()
+            clearSampleState()
+            return
+        }
+
+        // A manual session may have ended while its sampling window was
+        // asleep. Its final record was handled by endTracking; do not emit a
+        // blank baseline record from this now-obsolete window.
+        if session?.wasAutomaticallyDetected == false {
+            stopHardwareStreams()
+            clearSampleState()
+            return
+        }
 
         // Motion can promote this window to a tracking session. In that case
         // the streams stay on and the route continues without a duty-cycle
@@ -2170,6 +2223,35 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         guard altitudeBurstSamples == nil else { return }
         stopHardwareStreams()
         clearSampleState()
+    }
+
+    private func preferredTrackingLocation(
+        batteryMinimal: Bool
+    ) -> CLLocation? {
+        let freshness = max(90, activeTrackingPreferences.interval * 1.5)
+        let candidates = [
+            latestPreciseLocation,
+            latestLocation,
+            locationManager.location,
+        ].compactMap { location -> CLLocation? in
+            guard let location,
+                  abs(location.timestamp.timeIntervalSinceNow) <= freshness,
+                  TrackingSessionPolicy.allowsPersistingLocation(
+                      horizontalAccuracy: location.horizontalAccuracy,
+                      batteryMinimal: batteryMinimal
+                  ) else {
+                return nil
+            }
+            return location
+        }
+        guard !candidates.isEmpty else { return nil }
+        if let precise = candidates.first(where: {
+            $0.horizontalAccuracy
+                <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
+        }) {
+            return precise
+        }
+        return candidates.max(by: { $0.timestamp < $1.timestamp })
     }
 
     private func startHardwareStreams() {
@@ -2319,6 +2401,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     private func clearSampleState() {
         latestLocation = nil
+        latestPreciseLocation = nil
         latestMotion = .unknown
         latestMotionConfidence = .low
         latestRelativeAltitude = nil
@@ -2341,9 +2424,16 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     ) {
         let previousWakeLocation = lastBackgroundWakeLocation
         let isFirstLocationFix = latestLocation == nil
-        latestLocation = locations.last {
+        let validLocations = locations.filter {
             $0.horizontalAccuracy >= 0
                 && abs($0.timestamp.timeIntervalSinceNow) < 5 * 60
+        }
+        latestLocation = validLocations.last
+        if let precise = validLocations.last(where: {
+            $0.horizontalAccuracy
+                <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
+        }) {
+            latestPreciseLocation = precise
         }
         if let latestLocation {
             lastBackgroundWakeLocation = latestLocation
@@ -2353,10 +2443,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 batch: locations
             )
         }
-        let isUsableTrackingPoint = activeTrackingSession != nil
-            && (latestLocation?.horizontalAccuracy ?? .greatestFiniteMagnitude)
-                <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
-        emit(force: (isFirstLocationFix && latestLocation != nil) || isUsableTrackingPoint)
+        if activeTrackingSession?.wasAutomaticallyDetected == true {
+            emit(force: true)
+        } else if activeTrackingSession == nil,
+                  isFirstLocationFix,
+                  latestLocation != nil {
+            emit(force: true)
+        }
     }
 
     private func promoteBackgroundMovementIfNeeded(
@@ -2419,11 +2512,18 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             timestamp: date
         )
         latestLocation = location
+        latestPreciseLocation = location.horizontalAccuracy
+            <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
+            ? location
+            : nil
         latestMotion = .stationary
         latestMotionConfidence = .high
         // 방문 이벤트는 백그라운드 웨이크업으로 드물게 도착하므로
         // 발행 간격 제한 없이 즉시 기록한다.
-        emit(force: true)
+        if activeTrackingSession?.wasAutomaticallyDetected == true
+            || activeTrackingSession == nil {
+            emit(force: true)
+        }
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -2433,9 +2533,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 configuration.allowsBackgroundLocation
                 && manager.authorizationStatus == .authorizedAlways
             updateBackgroundWakeMonitoring()
-            if activeTrackingSession != nil || sensorStreamsRunning {
+            if sensorStreamsRunning {
                 manager.startUpdatingLocation()
             } else {
+                manager.stopUpdatingLocation()
                 restartSamplingTask()
             }
         }
@@ -2458,18 +2559,33 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     private func emit(
         force: Bool = false,
-        completedSession: TrackingSession? = nil
+        completedSession: TrackingSession? = nil,
+        allowManualTrackingSample: Bool = false
     ) {
         guard continuation != nil else { return }
+        if activeTrackingSession?.wasAutomaticallyDetected == false,
+           completedSession == nil,
+           !allowManualTrackingSample {
+            return
+        }
         let now = Date.now
+        if force,
+           completedSession == nil,
+           activeTrackingSession?.wasAutomaticallyDetected == true,
+           let lastEmissionAt,
+           now.timeIntervalSince(lastEmissionAt)
+                < TrackingSessionPolicy.automaticEmissionThrottleInterval {
+            return
+        }
         if !force,
            let lastEmissionAt,
            now.timeIntervalSince(lastEmissionAt)
-            < max(0.25, configuration.minimumEmissionInterval) {
+                < max(0.25, activeEmissionInterval) {
             return
         }
         lastEmissionAt = now
         let location = latestLocation
+        let locationFixQuality = Self.locationFixQuality(for: location)
         let capturedAt = location?.timestamp ?? now
         let point = location.map {
             GeoPoint(
@@ -2486,6 +2602,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             SensorReading(
                 timestamp: capturedAt,
                 point: point,
+                locationFixQuality: locationFixQuality,
                 speedMetersPerSecond: location.flatMap { $0.speed >= 0 ? $0.speed : nil },
                 speedAccuracyMetersPerSecond: location.flatMap {
                     $0.speedAccuracy >= 0 ? $0.speedAccuracy : nil
@@ -2510,7 +2627,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 deviceMotionSummary: deviceMotionAccumulator.summary,
                 systemFloor: location?.floor?.level,
                 powerState: Self.powerState(UIDevice.current.batteryState),
-                gpsAvailable: location != nil,
+                gpsAvailable: locationFixQuality == .precise,
                 trackingSessionID: session?.id,
                 trackingKind: session?.kind,
                 sourceDevice: .iPhone,
@@ -2695,6 +2812,24 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
         locationManager.pausesLocationUpdatesAutomatically =
             configuration.profile != .accuracy
+    }
+
+    private var activeEmissionInterval: TimeInterval {
+        activeTrackingSession == nil
+            ? configuration.minimumEmissionInterval
+            : activeTrackingPreferences.interval
+    }
+
+    private static func locationFixQuality(
+        for location: CLLocation?
+    ) -> LocationFixQuality? {
+        guard let location, location.horizontalAccuracy >= 0 else {
+            return nil
+        }
+        return location.horizontalAccuracy
+            <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
+            ? .precise
+            : .approximate
     }
 
     private static func motionKind(_ activity: CMMotionActivity) -> MotionKind {

@@ -2539,10 +2539,18 @@ enum DevicePowerState: String, Codable, Hashable, Sendable {
     var isCharging: Bool { self == .charging || self == .full }
 }
 
+enum LocationFixQuality: String, Codable, Hashable, Sendable {
+    case precise
+    case approximate
+}
+
 struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var timestamp: Date
     var point: GeoPoint?
+    /// `approximate` is a system-provided Wi-Fi/cellular/visit anchor. It is
+    /// preserved for place context but excluded from precise route inference.
+    var locationFixQuality: LocationFixQuality?
     var speedMetersPerSecond: Double?
     var speedAccuracyMetersPerSecond: Double?
     var courseDegrees: Double?
@@ -2595,6 +2603,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         id: UUID = UUID(),
         timestamp: Date,
         point: GeoPoint? = nil,
+        locationFixQuality: LocationFixQuality? = nil,
         speedMetersPerSecond: Double? = nil,
         speedAccuracyMetersPerSecond: Double? = nil,
         courseDegrees: Double? = nil,
@@ -2642,6 +2651,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.id = id
         self.timestamp = timestamp
         self.point = point
+        self.locationFixQuality = locationFixQuality
         self.speedMetersPerSecond = speedMetersPerSecond
         self.speedAccuracyMetersPerSecond = speedAccuracyMetersPerSecond
         self.courseDegrees = courseDegrees
@@ -3029,6 +3039,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var locationEnabled: Bool
     var backgroundPreciseLocationEnabled: Bool
     var sensorCollectionProfile: SensorCollectionProfile
+    var gpsLoggingPreferences: GPSLoggingPreferences
+    /// Optional user-selected overrides for the eight automatic major
+    /// categories. Missing values intentionally keep the shared defaults.
+    var mapCategoryColors: [String: String]
     var watchAccelerationProfile: TaptionWatchAccelerationProfile
     var watchDataSyncProfile: TaptionWatchDataSyncProfile
     var floorCalibration: FloorCalibration?
@@ -3063,6 +3077,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         locationEnabled: false,
         backgroundPreciseLocationEnabled: false,
         sensorCollectionProfile: .balanced,
+        gpsLoggingPreferences: .standard,
+        mapCategoryColors: [:],
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,
         floorCalibration: nil,
@@ -3095,6 +3111,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         locationEnabled: Bool,
         backgroundPreciseLocationEnabled: Bool,
         sensorCollectionProfile: SensorCollectionProfile,
+        gpsLoggingPreferences: GPSLoggingPreferences = .standard,
+        mapCategoryColors: [String: String] = [:],
         watchAccelerationProfile: TaptionWatchAccelerationProfile = .off,
         watchDataSyncProfile: TaptionWatchDataSyncProfile = .off,
         floorCalibration: FloorCalibration? = nil,
@@ -3123,6 +3141,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.locationEnabled = locationEnabled
         self.backgroundPreciseLocationEnabled = backgroundPreciseLocationEnabled
         self.sensorCollectionProfile = sensorCollectionProfile
+        self.gpsLoggingPreferences = gpsLoggingPreferences
+        self.mapCategoryColors = Self.normalizedMapCategoryColors(
+            mapCategoryColors
+        )
         self.watchAccelerationProfile = watchAccelerationProfile
         self.watchDataSyncProfile = watchDataSyncProfile
         self.floorCalibration = floorCalibration
@@ -3153,6 +3175,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case locationEnabled
         case backgroundPreciseLocationEnabled
         case sensorCollectionProfile
+        case gpsLoggingPreferences
+        case mapCategoryColors
         case watchAccelerationProfile
         case watchDataSyncProfile
         case floorCalibration
@@ -3218,6 +3242,16 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             SensorCollectionProfile.self,
             forKey: .sensorCollectionProfile
         ) ?? defaults.sensorCollectionProfile
+        gpsLoggingPreferences = try values.decodeIfPresent(
+            GPSLoggingPreferences.self,
+            forKey: .gpsLoggingPreferences
+        ) ?? defaults.gpsLoggingPreferences
+        mapCategoryColors = Self.normalizedMapCategoryColors(
+            try values.decodeIfPresent(
+                [String: String].self,
+                forKey: .mapCategoryColors
+            ) ?? defaults.mapCategoryColors
+        )
         watchAccelerationProfile = try values.decodeIfPresent(
             TaptionWatchAccelerationProfile.self,
             forKey: .watchAccelerationProfile
@@ -3326,6 +3360,22 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             result.append(trimmed)
         }
         return result
+    }
+
+    static func normalizedMapCategoryColors(
+        _ values: [String: String]
+    ) -> [String: String] {
+        let allowed = Set(RecordClassificationCatalog.categories.map(\.id))
+        return values.reduce(into: [:]) { result, item in
+            let hex = item.value.uppercased()
+            guard allowed.contains(item.key),
+                  hex.count == 7,
+                  hex.first == "#",
+                  hex.dropFirst().allSatisfy({ $0.isHexDigit }) else {
+                return
+            }
+            result[item.key] = hex
+        }
     }
 }
 

@@ -297,11 +297,78 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
     }
 }
 
+struct GPSLoggingPreferences: Codable, Hashable, Sendable {
+    var isBatteryMinimal: Bool
+    var intervalMinutes: Int
+
+    static let standard = GPSLoggingPreferences()
+
+    init(
+        isBatteryMinimal: Bool = false,
+        intervalMinutes: Int = 5
+    ) {
+        self.isBatteryMinimal = isBatteryMinimal
+        self.intervalMinutes = Self.clampedMinutes(intervalMinutes)
+    }
+
+    var interval: TimeInterval {
+        TimeInterval(effectiveIntervalMinutes * 60)
+    }
+
+    /// Battery-minimal tracking is intentionally fixed at one sample every
+    /// five minutes. The stored minute value remains available for the other
+    /// mode so changing modes does not lose the user's cadence choice.
+    var effectiveIntervalMinutes: Int {
+        isBatteryMinimal ? 5 : intervalMinutes
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case isBatteryMinimal
+        case intervalMinutes
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            isBatteryMinimal: try values.decodeIfPresent(
+                Bool.self,
+                forKey: .isBatteryMinimal
+            ) ?? false,
+            intervalMinutes: try values.decodeIfPresent(
+                Int.self,
+                forKey: .intervalMinutes
+            ) ?? Self.standard.intervalMinutes
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(isBatteryMinimal, forKey: .isBatteryMinimal)
+        try values.encode(intervalMinutes, forKey: .intervalMinutes)
+    }
+
+    static func clampedMinutes(_ value: Int) -> Int {
+        min(max(value, 1), 15)
+    }
+}
+
 enum TrackingSessionPolicy {
     static let automaticStartDuration: TimeInterval = 10
     static let automaticStopStationaryDuration: TimeInterval = 2 * 60
     static let activeHorizontalAccuracyLimit: Double = 50
     static let activeDistanceFilterMeters: Double = 5
+    static let automaticEmissionThrottleInterval: TimeInterval = 1
+
+    static func allowsPersistingLocation(
+        horizontalAccuracy: Double,
+        batteryMinimal: Bool
+    ) -> Bool {
+        horizontalAccuracy >= 0
+            && (
+                batteryMinimal
+                    || horizontalAccuracy <= activeHorizontalAccuracyLimit
+            )
+    }
 
     static func shouldPromoteBackgroundMovement(
         speedMetersPerSecond: Double,

@@ -21,6 +21,17 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         }
     }
 
+    init?(placeKind: FrequentPlaceKind) {
+        switch placeKind {
+        case .home: self = .home
+        case .company: self = .company
+        case .school: self = .school
+        case .exercise: self = .exercise
+        case .hobby: self = .hobby
+        case .academy, .custom: return nil
+        }
+    }
+
     var koreanName: String {
         switch self {
         case .home: "집"

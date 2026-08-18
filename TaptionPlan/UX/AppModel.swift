@@ -128,6 +128,15 @@ final class AppModel {
     private(set) var appUsageTotalDuration: TimeInterval = 0
     private(set) var biometricDataProtectionStatus: BiometricDataProtectionStatus =
         .notProtected
+    /// Cloud-backup PIN and the optional local app-lock gate are independent:
+    /// normal planning remains usable when no security credential is set.
+    private(set) var securityStatus = PlanSecurityStatus(
+        settings: PlanAppLockSettings(),
+        state: .unlocked,
+        hasPIN: false,
+        failedAttempts: 0,
+        retryAfter: nil
+    )
     /// 기록 ID → 앱 토큰. 스크린 타임 데이터는 민감하므로 저장하지 않고
     /// 새로 고칠 때마다 메모리에만 채운다.
     private(set) var appUsageTokenIndex: [UUID: Data] = [:]
@@ -210,6 +219,7 @@ final class AppModel {
     @ObservationIgnored private let weatherService: AppleWeatherContextService
     @ObservationIgnored private let airQualityService: AirQualityContextService
     @ObservationIgnored private let cloudSyncService: CloudKitSnapshotSyncService?
+    @ObservationIgnored private let securityBackupService: PlanSecurityBackupService?
     @ObservationIgnored private let placeNameResolver: PlaceNameResolver
     @ObservationIgnored private let transportContextService:
         AppleTransportContextService
@@ -323,7 +333,8 @@ final class AppModel {
             AppleWatchConnectivityService(),
         airPodsActivityService: AirPodsActivityService =
             AirPodsActivityService(),
-        screenTimeUsageService: ScreenTimeUsageService? = nil
+        screenTimeUsageService: ScreenTimeUsageService? = nil,
+        securityBackupService: PlanSecurityBackupService? = nil
     ) {
         let repositorySource: String
         if let repository {
@@ -362,6 +373,11 @@ final class AppModel {
         self.weatherService = weatherService
         self.airQualityService = airQualityService
         self.cloudSyncService = cloudSyncService
+        self.securityBackupService = securityBackupService ?? (try? PlanSecurityBackupService.applicationSupport())
+        self.securityStatus = self.securityBackupService?.status ?? PlanSecurityStatus(
+            settings: PlanAppLockSettings(), state: .unlocked, hasPIN: false,
+            failedAttempts: 0, retryAfter: nil
+        )
         self.placeNameResolver = placeNameResolver
         self.transportContextService = transportContextService
         self.voiceMemoRecorder = voiceMemoRecorder ?? VoiceMemoRecorder()
@@ -449,6 +465,90 @@ final class AppModel {
     func refreshBiometricDataProtectionStatus() {
         biometricDataProtectionStatus = biometricProtectedSnapshotStore?.status
             ?? .unavailable
+    }
+
+    var isAppLocked: Bool {
+        if case .locked = securityStatus.state { return true }
+        return false
+    }
+
+    func configureBackupPIN(_ pin: String) throws {
+        guard let securityBackupService else { throw PlanSecurityError.invalidCredential }
+        try securityBackupService.setPIN(pin)
+        securityStatus = securityBackupService.status
+    }
+
+    func configureAppLock(_ settings: PlanAppLockSettings) throws {
+        guard let securityBackupService else { throw PlanSecurityError.invalidCredential }
+        try securityBackupService.setAppLockSettings(settings)
+        securityStatus = securityBackupService.status
+    }
+
+    func setCloudBackupEnabled(_ enabled: Bool) throws {
+        var value = securityStatus.settings
+        value.cloudBackupEnabled = enabled
+        try configureAppLock(value)
+    }
+
+    func unlockApp(withPIN pin: String) throws {
+        guard let securityBackupService else { throw PlanSecurityError.invalidCredential }
+        try securityBackupService.unlock(withPIN: pin)
+        securityStatus = securityBackupService.status
+    }
+
+    func unlockAppWithBiometrics() async throws {
+        guard let securityBackupService else { throw PlanSecurityError.biometricUnavailable }
+        try await securityBackupService.unlockWithBiometrics()
+        securityStatus = securityBackupService.status
+    }
+
+    func recoverBackup(accountIdentifier: String, newPIN: String) throws -> TaptionDataSnapshot {
+        guard let securityBackupService else { throw PlanSecurityError.archiveNotFound }
+        let recovered = try securityBackupService.recoverLatestArchive(
+            accountIdentifier: accountIdentifier,
+            newPIN: newPIN
+        )
+        securityStatus = securityBackupService.status
+        return recovered
+    }
+
+    func recoverCloudBackup(newPIN: String) async throws -> TaptionDataSnapshot {
+        guard let securityBackupService else { throw PlanSecurityError.archiveNotFound }
+        let recovered = try await securityBackupService.recoverLatestArchive(
+            newPIN: newPIN
+        )
+        securityStatus = securityBackupService.status
+        return recovered
+    }
+
+    func loadCloudBackup() async throws -> TaptionDataSnapshot {
+        guard let securityBackupService else { throw PlanSecurityError.archiveNotFound }
+        let recovered = try await securityBackupService.loadLatestArchive()
+        securityStatus = securityBackupService.status
+        return recovered
+    }
+
+    func saveCloudBackupNow() async throws {
+        guard let securityBackupService else { throw PlanSecurityError.accountUnavailable }
+        guard securityStatus.settings.cloudBackupEnabled else {
+            throw PlanSecurityError.pinRequiredForCloudBackup
+        }
+        _ = try await securityBackupService.saveMonthlyArchive(snapshot)
+        securityStatus = securityBackupService.status
+    }
+
+    func applyCloudBackup(_ restored: TaptionDataSnapshot) async {
+        snapshot = restored
+        await persist()
+    }
+
+    func setMapCategoryColor(_ hex: String, for categoryID: String) {
+        var values = snapshot.settings.mapCategoryColors
+        values[categoryID] = hex
+        let normalized = AppFeatureSettings.normalizedMapCategoryColors(values)
+        guard normalized != snapshot.settings.mapCategoryColors else { return }
+        snapshot.settings.mapCategoryColors = normalized
+        Task { await persist() }
     }
 
     func protectCurrentDataWithBiometrics() async throws {
@@ -1135,7 +1235,16 @@ final class AppModel {
 
     func sceneBecameActive() async {
         isSceneActive = true
+        if let securityBackupService {
+            if !isBootstrapped {
+                securityBackupService.handleLaunch()
+            } else {
+                securityBackupService.handleForeground()
+            }
+            securityStatus = securityBackupService.status
+        }
         await bootstrap()
+        await refreshCloudBackupAfterForeground()
         await applyPendingLocationTrackingRequest()
         await hydrateLatestMapLocationAnchor()
         applyPendingLocationTrackingGuidance()
@@ -1200,6 +1309,37 @@ final class AppModel {
             }.value
         }
         await persist()
+        await saveCloudBackupOnBackground()
+    }
+
+    private func refreshCloudBackupAfterForeground() async {
+        guard securityStatus.settings.cloudBackupEnabled else { return }
+        do {
+            guard let securityBackupService else { return }
+            _ = try await securityBackupService.saveMonthlyArchive(snapshot)
+            securityStatus = securityBackupService.status
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "icloud_backup_foreground_deferred",
+                level: .error,
+                fields: ["error": error.localizedDescription]
+            )
+        }
+    }
+
+    private func saveCloudBackupOnBackground() async {
+        guard securityStatus.settings.cloudBackupEnabled else { return }
+        do {
+            guard let securityBackupService else { return }
+            _ = try await securityBackupService.saveMonthlyArchive(snapshot)
+            securityStatus = securityBackupService.status
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "icloud_backup_background_deferred",
+                level: .error,
+                fields: ["error": error.localizedDescription]
+            )
+        }
     }
 
     private func applyAirPodsActivity(
@@ -1840,6 +1980,30 @@ final class AppModel {
         Task { await persist() }
     }
 
+    func setGPSLoggingBatteryMinimal(_ enabled: Bool) {
+        guard snapshot.settings.gpsLoggingPreferences.isBatteryMinimal != enabled else {
+            return
+        }
+        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = enabled
+        refreshActiveGPSLoggingPreferences()
+        Task { await persist() }
+    }
+
+    func setGPSLoggingIntervalMinutes(_ minutes: Int) {
+        let resolved = GPSLoggingPreferences.clampedMinutes(minutes)
+        guard snapshot.settings.gpsLoggingPreferences.intervalMinutes != resolved else {
+            return
+        }
+        snapshot.settings.gpsLoggingPreferences.intervalMinutes = resolved
+        refreshActiveGPSLoggingPreferences()
+        Task { await persist() }
+    }
+
+    private func refreshActiveGPSLoggingPreferences() {
+        guard activeTrackingSession != nil else { return }
+        sensorService?.updateTrackingPreferences(settings.gpsLoggingPreferences)
+    }
+
     func setWatchAccelerationProfile(
         _ profile: TaptionWatchAccelerationProfile
     ) {
@@ -1941,7 +2105,8 @@ final class AppModel {
         let linkedPlanID: UUID? = nil
         let session = sensorService.beginTracking(
             kind: kind,
-            linkedPlanID: linkedPlanID
+            linkedPlanID: linkedPlanID,
+            preferences: settings.gpsLoggingPreferences
         )
         activeTrackingSession = session
         TaptionPlanDiagnosticsLogger.shared.record(
@@ -5662,7 +5827,10 @@ final class AppModel {
         }
 
         session.endedAt = nil
-        let restored = sensorService.resumeTracking(session)
+        let restored = sensorService.resumeTracking(
+            session,
+            preferences: settings.gpsLoggingPreferences
+        )
         activeTrackingSession = restored
         trackingSessionWasRecovered = true
         lastTrackingSessionRecoveryPersistAt = now
@@ -5750,7 +5918,11 @@ final class AppModel {
     }
 
     private func handleLiveSensorReading(_ reading: SensorReading) {
-        updateFloorEstimate(with: reading)
+        if reading.locationFixQuality == .approximate {
+            latestSensorReading = reading
+        } else {
+            updateFloorEstimate(with: reading)
+        }
         let session: TrackingSession?
         if let sessionID = reading.trackingSessionID,
            let kind = reading.trackingKind {
@@ -5807,10 +5979,12 @@ final class AppModel {
                     }
                 }
             }
-            refreshCurrentEnvironmentIfNeeded(
-                point: point,
-                at: reading.timestamp
-            )
+            if reading.locationFixQuality != .approximate {
+                refreshCurrentEnvironmentIfNeeded(
+                    point: point,
+                    at: reading.timestamp
+                )
+            }
         }
         liveRouteState.session = session
         liveRouteState.lastUpdatedAt = reading.timestamp
@@ -6654,6 +6828,10 @@ final class AppModel {
             local.settings.backgroundPreciseLocationEnabled
         value.settings.sensorCollectionProfile =
             local.settings.sensorCollectionProfile
+        value.settings.gpsLoggingPreferences =
+            local.settings.gpsLoggingPreferences
+        value.settings.mapCategoryColors =
+            local.settings.mapCategoryColors
         value.settings.watchAccelerationProfile =
             local.settings.watchAccelerationProfile
         value.settings.watchDataSyncProfile =

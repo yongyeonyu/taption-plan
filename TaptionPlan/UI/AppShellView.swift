@@ -6,6 +6,7 @@ struct AppShellView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var model = AppModel()
     @State private var showsMapHome = true
+    @State private var isSecurityStateReady = false
 
     var body: some View {
         NavigationStack {
@@ -58,6 +59,7 @@ struct AppShellView: View {
         .preferredColorScheme(.light)
         .task {
             await model.sceneBecameActive()
+            isSecurityStateReady = true
             model.presentPermissionOnboardingIfNeeded()
             if Self.legacyUIEnabled,
                let planID = TaptionPlanAppDelegate.takePendingPlanID(),
@@ -69,49 +71,17 @@ struct AppShellView: View {
             }
         }
         .onOpenURL { url in
-            guard Self.legacyUIEnabled else { return }
-            Task { @MainActor in
-                showsMapHome = false
-                await model.bootstrap()
-                await model.openDeepLink(url)
-            }
+            handleOpenURL(url)
         }
         .onReceive(
             NotificationCenter.default.publisher(
                 for: .taptionPlanOpenNotificationPlan
             )
         ) { notification in
-            guard Self.legacyUIEnabled else { return }
-            let planID =
-                TaptionPlanAppDelegate.takePendingPlanID()
-                ?? notification.object as? UUID
-            guard let planID,
-                  let url = URL(
-                    string: "taptionplan://plan/\(planID.uuidString)"
-                  ) else {
-                return
-            }
-            Task { @MainActor in
-                showsMapHome = false
-                await model.bootstrap()
-                await model.openDeepLink(url)
-            }
+            handlePlanNotification(notification)
         }
         .onChange(of: scenePhase) { _, phase in
-            Task {
-                switch phase {
-                case .active:
-                    TaptionAdvertisingCoordinator.shared
-                        .requestStartupPresentation()
-                    await model.sceneBecameActive()
-                case .background:
-                    await model.sceneEnteredBackground()
-                case .inactive:
-                    break
-                @unknown default:
-                    break
-                }
-            }
+            handleScenePhaseChange(phase)
         }
         .alert(
             "확인해 주세요",
@@ -122,26 +92,102 @@ struct AppShellView: View {
         ) {
             Button("확인") { model.clearError() }
         } message: {
-            Text(model.userFacingError ?? "")
+            userFacingErrorMessage
         }
         .overlay(alignment: .top) {
-            if let notice = model.floorCalibrationNotice {
-                Text(notice)
-                    .font(.taption(size: 14))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(
-                        Capsule().fill(Color.tpInk.opacity(0.92))
-                    )
-                    .padding(.top, 6)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
+            floorCalibrationNotice
+        }
+        .overlay {
+            securityOverlay
         }
         .animation(
             .easeInOut(duration: 0.25),
             value: model.floorCalibrationNotice
         )
+    }
+
+    private var userFacingErrorMessage: some View {
+        let message = model.userFacingError ?? ""
+        return Text(message)
+    }
+
+    private var shouldHideAppSnapshot: Bool {
+        guard scenePhase != .active else { return false }
+        let settings = model.securityStatus.settings
+        return settings.lockOnForeground || settings.lockOnLaunch
+    }
+
+    @ViewBuilder
+    private var securityOverlay: some View {
+        if !isSecurityStateReady || model.isAppLocked {
+            MapHomeAppLockView(
+                model: model,
+                isCheckingInitialState: !isSecurityStateReady
+            )
+        } else if shouldHideAppSnapshot {
+            Color.tpInk
+                .ignoresSafeArea()
+                .accessibilityHidden(true)
+        }
+    }
+
+    @ViewBuilder
+    private var floorCalibrationNotice: some View {
+        if let notice = model.floorCalibrationNotice {
+            Text(notice)
+                .font(.taption(size: 14))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 9)
+                .background(Capsule().fill(Color.tpInk.opacity(0.92)))
+                .padding(.top, 6)
+                .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    private func handleScenePhaseChange(_ phase: ScenePhase) {
+        let mustCoverBeforeForeground =
+            phase == .active
+            && model.securityStatus.settings.lockOnForeground
+        if mustCoverBeforeForeground {
+            isSecurityStateReady = false
+        }
+        Task { @MainActor in
+            switch phase {
+            case .active:
+                TaptionAdvertisingCoordinator.shared.requestStartupPresentation()
+                await model.sceneBecameActive()
+                isSecurityStateReady = true
+            case .background:
+                await model.sceneEnteredBackground()
+            case .inactive:
+                break
+            @unknown default:
+                break
+            }
+        }
+    }
+
+    private func handleOpenURL(_ url: URL) {
+        guard Self.legacyUIEnabled else { return }
+        Task { @MainActor in
+            showsMapHome = false
+            await model.bootstrap()
+            await model.openDeepLink(url)
+        }
+    }
+
+    private func handlePlanNotification(_ notification: Notification) {
+        guard Self.legacyUIEnabled else { return }
+        let pendingID = TaptionPlanAppDelegate.takePendingPlanID()
+        let planID = pendingID ?? (notification.object as? UUID)
+        guard let planID,
+              let url = URL(
+                string: "taptionplan://plan/\(planID.uuidString)"
+              ) else {
+            return
+        }
+        handleOpenURL(url)
     }
 
     @ViewBuilder
@@ -215,6 +261,95 @@ struct AppShellView: View {
             ReviewView(model: model)
         case .settings:
             SettingsView(model: model)
+        }
+    }
+}
+
+private struct MapHomeAppLockView: View {
+    @Bindable var model: AppModel
+    let isCheckingInitialState: Bool
+    @State private var pin = ""
+    @State private var errorMessage: String?
+    @State private var isAuthenticating = false
+
+    var body: some View {
+        ZStack {
+            Color.tpInk.ignoresSafeArea()
+            VStack(spacing: 18) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundStyle(Color.tpReferenceMint)
+                    .frame(width: 72, height: 72)
+                    .background(Color.white.opacity(0.10), in: Circle())
+                Text("Taption Plan")
+                    .font(.system(size: 25, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                if isCheckingInitialState {
+                    ProgressView().tint(.white)
+                } else {
+                    Text("잠금을 해제해 주세요")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.70))
+                    SecureField("4자리 비밀번호", text: $pin)
+                        .keyboardType(.numberPad)
+                        .textContentType(.password)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                        .padding(.horizontal, 18)
+                        .frame(width: 210, height: 48)
+                        .background(.white, in: RoundedRectangle(cornerRadius: 14))
+                        .onChange(of: pin) { _, value in
+                            pin = String(value.filter(\.isNumber).prefix(4))
+                            if pin.count == 4 { unlockWithPIN() }
+                        }
+
+                    if model.securityStatus.settings.biometricUnlockEnabled {
+                        Button {
+                            unlockWithBiometrics()
+                        } label: {
+                            Label("Face ID / Touch ID", systemImage: "faceid")
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.tpReferenceMint)
+                        }
+                        .disabled(isAuthenticating)
+                    }
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.tpReferenceRose)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 30)
+                    }
+                }
+            }
+            .padding(28)
+        }
+    }
+
+    private func unlockWithPIN() {
+        guard !isAuthenticating, pin.count == 4 else { return }
+        do {
+            try model.unlockApp(withPIN: pin)
+            pin = ""
+            errorMessage = nil
+        } catch {
+            pin = ""
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func unlockWithBiometrics() {
+        guard !isAuthenticating else { return }
+        isAuthenticating = true
+        Task { @MainActor in
+            defer { isAuthenticating = false }
+            do {
+                try await model.unlockAppWithBiometrics()
+                errorMessage = nil
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

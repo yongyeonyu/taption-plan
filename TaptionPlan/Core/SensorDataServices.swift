@@ -533,7 +533,12 @@ actor SensorReadingArchive {
         if let rawArchive, reading.trackingSessionID == nil {
             do {
                 try rawArchive.append(
-                    source: reading.point == nil ? .iPhoneSensor : .gps,
+                    source: (
+                        reading.locationFixQuality == .approximate
+                            || reading.point == nil
+                    )
+                        ? .iPhoneSensor
+                        : .gps,
                     kind: "sensor-reading",
                     payload: reading,
                     capturedAt: reading.timestamp
@@ -742,18 +747,27 @@ final class AppleSensorDataService {
     func beginTracking(
         kind: TrackingKind,
         linkedPlanID: UUID? = nil,
-        sessionID: UUID = UUID()
+        sessionID: UUID = UUID(),
+        preferences: GPSLoggingPreferences = .standard
     ) -> TrackingSession {
         collector.beginTracking(
             kind: kind,
             linkedPlanID: linkedPlanID,
-            sessionID: sessionID
+            sessionID: sessionID,
+            preferences: preferences
         )
     }
 
     @discardableResult
-    func resumeTracking(_ session: TrackingSession) -> TrackingSession {
-        collector.resumeTracking(session)
+    func resumeTracking(
+        _ session: TrackingSession,
+        preferences: GPSLoggingPreferences = .standard
+    ) -> TrackingSession {
+        collector.resumeTracking(session, preferences: preferences)
+    }
+
+    func updateTrackingPreferences(_ preferences: GPSLoggingPreferences) {
+        collector.updateTrackingPreferences(preferences)
     }
 
     /// 층 보정용 기압 표본 묶음. 기록 스트림과 달리 듀티사이클을 기다리지

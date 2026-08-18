@@ -1,6 +1,7 @@
 import CoreLocation
 import MapKit
 import SwiftUI
+import UIKit
 
 struct MapHomeView: View {
     @Bindable private var model: AppModel
@@ -10,12 +11,14 @@ struct MapHomeView: View {
     @State private var isCalendarPresented = false
     @State private var selectedLocationDestination: MapHomeLocationDestination?
     @State private var isLocationMenuExpanded = true
+    @State private var isCategoryMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
     @State private var isDataProtectionPresented = false
     @State private var isMutedMap = true
     @AppStorage("taption.mapHome.language") private var languageRawValue = MapHomeLanguage.korean.rawValue
     @State private var isHeadingMode = false
     @State private var isGPSLoggingActionInFlight = false
+    @State private var isGPSLoggingMenuExpanded = false
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
@@ -32,6 +35,11 @@ struct MapHomeView: View {
     )
 
     private static let userCenterTolerance: CLLocationDistance = 120
+    private static let categoryPaletteHexes = [
+        "#29A383", "#2563EB", "#00A2C7", "#8B5CF6",
+        "#5B5BD6", "#F76B15", "#DC2626", "#94A3B8",
+        "#E1C453", "#F15C80", "#48B38C", "#2D9BF0",
+    ]
 
     private enum Layout {
         static let horizontalInset: CGFloat = 10
@@ -128,8 +136,8 @@ struct MapHomeView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isDataProtectionPresented) {
-            MapHomeDataProtectionSheet(model: model, language: language)
-                .presentationDetents([.height(410)])
+            MapHomeSecuritySheet(model: model, language: language)
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: $sectionEditSelection) { selection in
@@ -164,8 +172,13 @@ struct MapHomeView: View {
             if selectedTimelineMinute != nil {
                 selectedTimelineMinute = nil
             }
-            mapPosition = .automatic
-            focusMapIfNeeded()
+            if Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
+               currentCoordinate != nil {
+                focusUserLocation()
+            } else {
+                mapPosition = .automatic
+                focusMapIfNeeded()
+            }
             refreshTimeRailSegments()
         }
         .onChange(of: model.snapshot.actuals) { _, _ in
@@ -193,12 +206,12 @@ struct MapHomeView: View {
                     // GPS samples are unavailable for the selected day.
                     MapPolyline(coordinates: overlay.coordinates)
                         .stroke(
-                            Color.tpReferenceGold.opacity(0.50),
+                            mapCategoryColor("movement").opacity(0.20),
                             style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round)
                         )
                     MapPolyline(coordinates: overlay.coordinates)
                         .stroke(
-                            Color.tpReferenceMint.opacity(0.92),
+                            mapCategoryColor("movement").opacity(0.92),
                             style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
                         )
                 }
@@ -207,21 +220,25 @@ struct MapHomeView: View {
             ForEach(timelineRouteOverlays) { overlay in
                 MapPolyline(coordinates: overlay.coordinates)
                     .stroke(
-                        CanonicalCategoryPalette.color(overlay.categoryID)
+                        mapCategoryColor(overlay.categoryID)
                             .opacity(overlay.opacity * 0.20),
                         style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round)
                     )
                 MapPolyline(coordinates: overlay.coordinates)
                     .stroke(
-                        CanonicalCategoryPalette.color(overlay.categoryID)
+                        mapCategoryColor(overlay.categoryID)
                             .opacity(overlay.opacity),
                         style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
                     )
             }
 
-            ForEach(homeAnnotations) { place in
+            ForEach(placeAnnotations) { place in
                 Annotation("", coordinate: place.coordinate, anchor: .bottom) {
-                    MapHomePlacePin(name: place.name, floor: place.floor)
+                    MapHomePlacePin(
+                        name: place.name,
+                        floor: place.floor,
+                        destination: place.destination
+                    )
                         .fixedSize()
                         .zIndex(0)
                 }
@@ -292,7 +309,7 @@ struct MapHomeView: View {
             headerDateButton("chevron.left", amount: -1)
 
             Button {
-                model.selectedDate = Date()
+                jumpToTodayAndCurrentMapPosition()
             } label: {
                 (isHeadingMode ? datePartTitleLabel : dateTitleLabel)
                     .lineLimit(1)
@@ -363,6 +380,7 @@ struct MapHomeView: View {
                     ),
                     activity: currentActivity(at: minute),
                     segments: timeRailSegments,
+                    categoryColors: model.settings.mapCategoryColors,
                     railWidth: Layout.timeRailWidth,
                     onSectionEdit: {
                         sectionEditSelection = MapHomeSectionEditSelection(
@@ -393,10 +411,13 @@ struct MapHomeView: View {
             .accessibilityLabel(language.text("현재 위치", "Current location"))
 
             Button {
-                isHeadingMode = true
-                mapPosition = .userLocation(followsHeading: true, fallback: .automatic)
+                isHeadingMode.toggle()
+                mapPosition = .userLocation(
+                    followsHeading: isHeadingMode,
+                    fallback: .automatic
+                )
             } label: {
-                Image(systemName: "location.north.line.fill")
+                Image(systemName: isHeadingMode ? "location.north.line.fill" : "location.north.line")
                     .font(.system(size: Layout.mapControlIcon, weight: .bold))
                     .foregroundStyle(Color.tpReferenceRose)
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
@@ -444,8 +465,14 @@ struct MapHomeView: View {
                     .ignoresSafeArea(edges: .top)
                     .onTapGesture { isMenuOpen = false }
 
+                let menuHeight = max(
+                    0,
+                    proxy.size.height
+                        - MapHomeBannerAdView.reservedHeight
+                        - MapHomeBannerAdView.bottomSafeAreaInset
+                )
                 sidebarContent
-                .frame(width: 316, height: proxy.size.height, alignment: .top)
+                .frame(width: 316, height: menuHeight, alignment: .top)
                 .background(.regularMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .ignoresSafeArea(edges: .top)
@@ -488,6 +515,7 @@ struct MapHomeView: View {
 
             locationMenuItem
             gpsLoggingMenuItem
+            categoryMenuItem
             languageMenuItem
             settingsMenuItem
 
@@ -510,6 +538,106 @@ struct MapHomeView: View {
             .padding(.top, 60)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .background(MapHomeScrollBounceDisabler())
+    }
+
+    private var categoryMenuItem: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Button {
+                isCategoryMenuExpanded.toggle()
+            } label: {
+                HStack(spacing: 13) {
+                    Image(systemName: "paintpalette.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.tpReferenceMint)
+                        .frame(width: 24)
+                    Text(language.text("행동 분류", "Activity categories"))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    Spacer()
+                    Image(systemName: isCategoryMenuExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(Color.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(
+                    Color.tpReferenceMint.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("행동 분류 목록", "Activity category list"))
+
+            if isCategoryMenuExpanded {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(
+                        MapHomeSidebarMajorCategory.all(
+                            categoryColors: model.settings.mapCategoryColors
+                        )
+                    ) { category in
+                        HStack(spacing: 9) {
+                            Circle()
+                                .fill(category.tint)
+                                .frame(width: 10, height: 10)
+                            Image(systemName: category.systemImage)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(category.tint)
+                                .frame(width: 20)
+                            Text(category.title)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                            Spacer()
+                            Menu {
+                                ForEach(Self.categoryPaletteHexes, id: \.self) { hex in
+                                    Button {
+                                        model.setMapCategoryColor(
+                                            hex,
+                                            for: category.id
+                                        )
+                                    } label: {
+                                        Label {
+                                            Text(hex)
+                                        } icon: {
+                                            Circle()
+                                                .fill(Color(hex: hex))
+                                        }
+                                    }
+                                }
+                            } label: {
+                                Circle()
+                                    .fill(category.tint)
+                                    .frame(width: 23, height: 23)
+                                    .overlay {
+                                        Image(systemName: "paintpalette.fill")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    }
+                            }
+                            .accessibilityLabel(
+                                language.text(
+                                    "\(category.title) 색상 팔레트",
+                                    "\(category.title) color palette"
+                                )
+                            )
+                        }
+                        .foregroundStyle(Color.primary)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 8)
+                        .background(
+                            category.tint.opacity(0.06),
+                            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        )
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(category.title)
+                    }
+                }
+                .padding(.leading, 12)
+                Text(language.text("색상을 선택하면 즉시 저장됩니다.", "Colors save immediately."))
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 20)
+            }
         }
     }
 
@@ -702,85 +830,158 @@ struct MapHomeView: View {
     }
 
     private var dataProtectionStatusText: String {
-        switch model.biometricDataProtectionStatus {
-        case .protected:
-            language.text("생체 인증으로 보호됨", "Protected by biometrics")
-        case .notProtected:
-            language.text("보호 사본 없음", "No protected copy")
-        case .unavailable:
-            language.text("보호 저장소를 사용할 수 없음", "Protection storage unavailable")
+        if model.securityStatus.settings.cloudBackupEnabled {
+            return language.text("월별 iCloud 백업 켜짐", "Monthly iCloud backup on")
         }
+        if model.securityStatus.settings.lockOnLaunch {
+            return language.text("앱 열 때마다 잠금", "Locks whenever the app opens")
+        }
+        return model.securityStatus.hasPIN
+            ? language.text("비밀번호 등록됨", "Password registered")
+            : language.text("보호 설정 안 됨", "Not configured")
     }
 
     private var gpsLoggingMenuItem: some View {
         let session = model.activeTrackingSession
         let isLogging = session != nil
-        return Button {
-            toggleGPSLogging()
-        } label: {
-            HStack(spacing: 13) {
-                Image(systemName: isLogging ? "location.fill" : "location.viewfinder")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(
-                        isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue
-                    )
-                    .frame(width: 24)
+        let preferences = model.settings.gpsLoggingPreferences
+        let tint = isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue
+        return VStack(alignment: .leading, spacing: 7) {
+            Button {
+                isGPSLoggingMenuExpanded.toggle()
+            } label: {
+                HStack(spacing: 13) {
+                    Image(systemName: isLogging ? "location.fill" : "location.viewfinder")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(tint)
+                        .frame(width: 24)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(
-                        isLogging
-                            ? language.text("실시간 GPS 기록 중", "Live GPS logging")
-                            : language.text("실시간 GPS 기록", "Live GPS logging")
-                    )
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-
-                    Text(
-                        isLogging
-                            ? language.text(
-                                "탭하면 기록을 종료합니다",
-                                "Tap to stop recording"
-                            )
-                            : language.text(
-                                "탭하면 고정밀 위치 기록을 시작합니다",
-                                "Tap to start high-accuracy location logging"
-                            )
-                    )
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                if isGPSLoggingActionInFlight {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: isLogging ? "stop.fill" : "play.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Color.white.opacity(0.76),
-                            in: Circle()
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(
+                            isLogging
+                                ? language.text("실시간 GPS 기록 중", "Live GPS logging")
+                                : language.text("실시간 GPS 기록", "Live GPS logging")
                         )
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+
+                        Text(
+                            language.text(
+                                "\(preferences.effectiveIntervalMinutes)분마다 위치 확인",
+                                "Checks location every \(preferences.effectiveIntervalMinutes) min"
+                            )
+                        )
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: isGPSLoggingMenuExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
                 }
+                .foregroundStyle(Color.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
             }
-            .foregroundStyle(Color.primary)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 12)
-            .background(
-                (isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue)
-                    .opacity(0.08),
-                in: RoundedRectangle(cornerRadius: 12)
-            )
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("실시간 GPS 기록 설정", "Live GPS logging settings"))
+
+            if isGPSLoggingMenuExpanded {
+                VStack(alignment: .leading, spacing: 11) {
+                    Button {
+                        toggleGPSLogging()
+                    } label: {
+                        HStack(spacing: 9) {
+                            Image(systemName: isLogging ? "stop.fill" : "play.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(tint)
+                                .frame(width: 28, height: 28)
+                                .background(Color.white.opacity(0.76), in: Circle())
+                            Text(
+                                isLogging
+                                    ? language.text("기록 종료", "Stop recording")
+                                    : language.text("기록 시작", "Start recording")
+                            )
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Spacer()
+                            if isGPSLoggingActionInFlight {
+                                ProgressView().controlSize(.small)
+                            }
+                        }
+                        .foregroundStyle(Color.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isGPSLoggingActionInFlight)
+
+                    Divider()
+
+                    Toggle(
+                        isOn: Binding(
+                            get: { model.settings.gpsLoggingPreferences.isBatteryMinimal },
+                            set: { model.setGPSLoggingBatteryMinimal($0) }
+                        )
+                    ) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(language.text("배터리 최소", "Minimum battery"))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Text(
+                                language.text(
+                                    "5분마다 GPS를 우선 읽고, 불가하면 Wi-Fi·기지국 근사 위치를 저장",
+                                    "Every 5 min, prefers GPS and falls back to Wi-Fi or cellular location"
+                                )
+                            )
+                            .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(Color.tpReferenceMint)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(language.text("시간", "Interval"))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Spacer()
+                            Text(language.text("\(preferences.effectiveIntervalMinutes)분", "\(preferences.effectiveIntervalMinutes) min"))
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(tint)
+                        }
+
+                        Slider(
+                            value: Binding(
+                                get: {
+                                    Double(model.settings.gpsLoggingPreferences.intervalMinutes)
+                                },
+                                set: { model.setGPSLoggingIntervalMinutes(Int($0.rounded())) }
+                            ),
+                            in: 1...15,
+                            step: 1
+                        )
+                        .tint(tint)
+                        .disabled(preferences.isBatteryMinimal)
+                        .accessibilityLabel(language.text("GPS 기록 시간", "GPS logging interval"))
+                        .accessibilityValue(language.text(
+                            "\(preferences.effectiveIntervalMinutes)분",
+                            "\(preferences.effectiveIntervalMinutes) minutes"
+                        ))
+
+                        HStack {
+                            Text(language.text("1분", "1 min"))
+                            Spacer()
+                            Text(language.text("기본 5분", "Default 5 min"))
+                            Spacer()
+                            Text(language.text("15분", "15 min"))
+                        }
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(11)
+                .background(tint.opacity(0.055), in: RoundedRectangle(cornerRadius: 10))
+                .padding(.leading, 12)
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(isGPSLoggingActionInFlight)
-        .accessibilityLabel(
-            isLogging
-                ? language.text("실시간 GPS 기록 종료", "Stop live GPS logging")
-                : language.text("실시간 GPS 기록 시작", "Start live GPS logging")
-        )
     }
 
     private func toggleGPSLogging() {
@@ -816,15 +1017,16 @@ struct MapHomeView: View {
         .buttonStyle(.plain)
     }
 
-    private var homeAnnotations: [MapHomePlaceAnnotation] {
+    private var placeAnnotations: [MapHomePlaceAnnotation] {
         model.settings.frequentPlaces.compactMap { place in
-            guard place.kind == .home,
+            guard let destination = MapHomeLocationDestination(placeKind: place.kind),
                   let point = place.point,
                   isValid(point) else { return nil }
             return MapHomePlaceAnnotation(
                 id: place.id,
                 name: place.name,
                 floor: place.floor,
+                destination: destination,
                 coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
             )
         }
@@ -843,7 +1045,15 @@ struct MapHomeView: View {
         ) ?? .wholeDayUnconfirmed
         return .majorCategory(
             segment.categoryID,
-            accessibilityLabel: segment.title
+            accessibilityLabel: segment.title,
+            categoryColors: model.settings.mapCategoryColors
+        )
+    }
+
+    private func mapCategoryColor(_ id: String) -> Color {
+        Color(
+            hex: model.settings.mapCategoryColors[id]
+                ?? CanonicalCategoryPalette.hex(id)
         )
     }
 
@@ -981,7 +1191,7 @@ struct MapHomeView: View {
         let weekday = Calendar.autoupdatingCurrent.component(.weekday, from: model.selectedDate)
         let weekdayText = Text(" \(weekdayFormatter.string(from: model.selectedDate))")
             .font(.system(size: 17, weight: .semibold, design: .rounded))
-            .foregroundStyle(weekday == 1 ? Color.tpHoliday : weekday == 7 ? Color.tpSaturday : ink)
+            .foregroundStyle(dateColor(weekday: weekday))
         return datePartTitleLabel + weekdayText
     }
 
@@ -991,11 +1201,37 @@ struct MapHomeView: View {
         dateFormatter.dateFormat = language.datePartFormat
         return Text(dateFormatter.string(from: model.selectedDate))
             .font(.system(size: 17, weight: .semibold, design: .rounded))
-            .foregroundStyle(ink)
+            .foregroundStyle(
+                dateColor(
+                    weekday: Calendar.autoupdatingCurrent.component(
+                        .weekday,
+                        from: model.selectedDate
+                    )
+                )
+            )
     }
 
     private var ink: Color {
         .tpInk
+    }
+
+    private func dateColor(weekday: Int) -> Color {
+        if TimelineAxisGrid.koreanHolidayName(on: model.selectedDate) != nil || weekday == 1 {
+            return .tpHoliday
+        }
+        if weekday == 7 { return .tpSaturday }
+        return ink
+    }
+
+    private func jumpToTodayAndCurrentMapPosition() {
+        model.selectedDate = Date()
+        selectedTimelineMinute = nil
+        if currentCoordinate != nil {
+            focusUserLocation()
+        } else {
+            mapPosition = .automatic
+            focusMapIfNeeded()
+        }
     }
 
     private func minuteOfDay(for date: Date) -> Int {
@@ -1017,7 +1253,7 @@ struct MapHomeView: View {
 
     private func focusMapIfNeeded() {
         let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
-        let coordinates = homeAnnotations.map(\.coordinate)
+        let coordinates = placeAnnotations.map(\.coordinate)
             + (routeCoordinates.isEmpty
                 ? subwayRouteOverlays.flatMap(\.coordinates)
                 : routeCoordinates)
@@ -1396,6 +1632,269 @@ private struct MapHomeDataProtectionSheet: View {
     }
 }
 
+private struct MapHomeSecuritySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+    @State private var pin = ""
+    @State private var confirmation = ""
+    @State private var recoveryPIN = ""
+    @State private var message: String?
+    @State private var pendingRestore: TaptionDataSnapshot?
+    @State private var isRestoreConfirmationPresented = false
+    @State private var isApplyingRestore = false
+
+    private var security: PlanSecurityStatus { model.securityStatus }
+    private var hasPIN: Bool { security.hasPIN }
+    private var appLockEnabled: Bool {
+        security.settings.lockOnLaunch && security.settings.lockOnForeground
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(Color.tpReferenceRose)
+                        .frame(width: 46, height: 46)
+                        .background(
+                            Color.tpReferenceRose.opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: 14)
+                        )
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(language.text("데이터 보호", "Data Protection"))
+                            .font(.system(size: 21, weight: .bold, design: .rounded))
+                        Text(hasPIN
+                            ? language.text("4자리 비밀번호 등록됨", "4-digit password registered")
+                            : language.text("백업 전 비밀번호 등록 필요", "Set a password before backup")
+                        )
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button(language.text("닫기", "Close")) { dismiss() }
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+
+                card(language.text("4자리 비밀번호", "4-digit password")) {
+                    SecureField(language.text("비밀번호", "Password"), text: $pin)
+                        .keyboardType(.numberPad)
+                        .textContentType(.newPassword)
+                        .onChange(of: pin) { _, value in pin = numericPIN(value) }
+                    SecureField(language.text("비밀번호 확인", "Confirm password"), text: $confirmation)
+                        .keyboardType(.numberPad)
+                        .textContentType(.newPassword)
+                        .onChange(of: confirmation) { _, value in confirmation = numericPIN(value) }
+                    Button(language.text("비밀번호 저장", "Save password")) {
+                        savePIN()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.tpReferenceRose)
+                    .disabled(pin.count != 4 || confirmation.count != 4)
+                }
+
+                card(language.text("앱 잠금", "App lock")) {
+                    Toggle(
+                        language.text("앱을 열 때마다 잠금", "Lock whenever the app opens"),
+                        isOn: Binding(
+                            get: { appLockEnabled },
+                            set: { setAppLock($0) }
+                        )
+                    )
+                    .tint(Color.tpReferenceRose)
+                    Toggle(
+                        language.text("Face ID / Touch ID 사용", "Use Face ID / Touch ID"),
+                        isOn: Binding(
+                            get: { security.settings.biometricUnlockEnabled },
+                            set: { setBiometricUnlock($0) }
+                        )
+                    )
+                    .tint(Color.tpReferenceMint)
+                    Text(language.text(
+                        "생체 인증은 빠른 잠금 해제용이며, 생체 정보는 앱이나 백업에 저장되지 않습니다.",
+                        "Biometrics are only a fast local unlock; biometric data is never stored."
+                    ))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                }
+
+                card(language.text("iCloud 백업", "iCloud Backup")) {
+                    Toggle(
+                        language.text("월별 암호화 백업", "Monthly encrypted backup"),
+                        isOn: Binding(
+                            get: { security.settings.cloudBackupEnabled },
+                            set: { setCloudBackup($0) }
+                        )
+                    )
+                    .tint(Color.tpReferenceBlue)
+                    Text(language.text(
+                        "iCloud Drive/Taption Plan에 월별 단일 암호화 파일로 저장합니다. 같은 iCloud 계정이면 새 기기와 비밀번호 분실 후에도 복구할 수 있습니다.",
+                        "One encrypted file is saved per month in iCloud Drive/Taption Plan. The same iCloud account can recover it on a new device or after password loss."
+                    ))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        Button(language.text("지금 백업", "Back up now")) { saveBackup() }
+                            .buttonStyle(.bordered)
+                            .disabled(!security.settings.cloudBackupEnabled)
+                        Button(language.text("백업 불러오기", "Restore backup")) { prepareRestore() }
+                            .buttonStyle(.bordered)
+                            .disabled(!hasPIN)
+                    }
+                }
+
+                card(language.text("비밀번호를 잊었나요?", "Forgot your password?")) {
+                    SecureField(language.text("새 4자리 비밀번호", "New 4-digit password"), text: $recoveryPIN)
+                        .keyboardType(.numberPad)
+                        .textContentType(.newPassword)
+                        .onChange(of: recoveryPIN) { _, value in recoveryPIN = numericPIN(value) }
+                    Button(language.text("같은 iCloud 계정으로 복구", "Recover with this iCloud account")) {
+                        recoverBackup()
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(recoveryPIN.count != 4)
+                }
+
+                if let message {
+                    Text(message)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpReferenceBlue)
+                }
+            }
+            .padding(22)
+        }
+        .background(Color.tpSurface)
+        .alert(
+            language.text("iCloud 백업 불러오기", "Restore iCloud backup"),
+            isPresented: $isRestoreConfirmationPresented
+        ) {
+            Button(language.text("취소", "Cancel"), role: .cancel) {
+                pendingRestore = nil
+            }
+            Button(language.text("현재 데이터 교체", "Replace current data"), role: .destructive) {
+                applyRestore()
+            }
+        } message: {
+            Text(language.text(
+                "현재 기기의 기록을 백업 내용으로 교체합니다.",
+                "Current records on this device will be replaced by the backup."
+            ))
+        }
+    }
+
+    @ViewBuilder
+    private func card<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+            content()
+        }
+        .padding(13)
+        .background(
+            Color.tpSurfaceBlue.opacity(0.72),
+            in: RoundedRectangle(cornerRadius: 14)
+        )
+    }
+
+    private func numericPIN(_ value: String) -> String {
+        String(value.filter(\.isNumber).prefix(4))
+    }
+
+    private func savePIN() {
+        guard pin == confirmation else {
+            message = language.text("비밀번호 확인이 일치하지 않습니다.", "Passwords do not match.")
+            return
+        }
+        perform {
+            try model.configureBackupPIN(pin)
+            pin = ""
+            confirmation = ""
+            message = language.text("비밀번호를 저장했습니다.", "Password saved.")
+        }
+    }
+
+    private func setAppLock(_ enabled: Bool) {
+        var value = security.settings
+        value.lockOnLaunch = enabled
+        value.lockOnForeground = enabled
+        configure(value)
+    }
+
+    private func setBiometricUnlock(_ enabled: Bool) {
+        var value = security.settings
+        value.biometricUnlockEnabled = enabled
+        configure(value)
+    }
+
+    private func setCloudBackup(_ enabled: Bool) {
+        var value = security.settings
+        value.cloudBackupEnabled = enabled
+        configure(value)
+    }
+
+    private func configure(_ value: PlanAppLockSettings) {
+        perform {
+            try model.configureAppLock(value)
+            message = language.text("보안 설정을 저장했습니다.", "Security settings saved.")
+        }
+    }
+
+    private func saveBackup() {
+        performAsync {
+            try await model.saveCloudBackupNow()
+            message = language.text("iCloud 백업을 저장했습니다.", "iCloud backup saved.")
+        }
+    }
+
+    private func prepareRestore() {
+        performAsync {
+            pendingRestore = try await model.loadCloudBackup()
+            isRestoreConfirmationPresented = pendingRestore != nil
+        }
+    }
+
+    private func recoverBackup() {
+        performAsync {
+            pendingRestore = try await model.recoverCloudBackup(newPIN: recoveryPIN)
+            recoveryPIN = ""
+            isRestoreConfirmationPresented = pendingRestore != nil
+        }
+    }
+
+    private func applyRestore() {
+        guard let pendingRestore, !isApplyingRestore else { return }
+        isApplyingRestore = true
+        Task { @MainActor in
+            await model.applyCloudBackup(pendingRestore)
+            self.pendingRestore = nil
+            self.isApplyingRestore = false
+            message = language.text("백업을 불러왔습니다.", "Backup restored.")
+        }
+    }
+
+    private func perform(_ action: () throws -> Void) {
+        do {
+            try action()
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    private func performAsync(_ action: @escaping () async throws -> Void) {
+        Task { @MainActor in
+            do {
+                try await action()
+            } catch {
+                message = error.localizedDescription
+            }
+        }
+    }
+}
+
 private struct MapHomeLocationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
@@ -1497,25 +1996,27 @@ private struct MapHomePlaceAnnotation: Identifiable {
     let id: UUID
     let name: String
     let floor: Int?
+    let destination: MapHomeLocationDestination
     let coordinate: CLLocationCoordinate2D
 }
 
 private struct MapHomePlacePin: View {
     let name: String
     let floor: Int?
+    let destination: MapHomeLocationDestination
 
     var body: some View {
         VStack(spacing: 5) {
-            MapHomeMarkerLabel(title: name, color: Color(red: 0.12, green: 0.15, blue: 0.24))
+            MapHomeMarkerLabel(title: name, color: destination.tint)
 
-            Image("MapHomeHouseMarker")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 60, height: 60)
+            MapHomeLocationThumbnail(destination: destination, size: 48)
+                .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .shadow(color: .black.opacity(0.13), radius: 6, y: 3)
 
             Text("Lv.\(floor ?? 1)")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.tpReferenceGold)
+                .foregroundStyle(destination.tint)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 .background(.white, in: Capsule())
@@ -1598,6 +2099,26 @@ private struct MapHomeFairyAtmosphere: View {
         }
         .blendMode(.softLight)
         .opacity(0.72)
+    }
+}
+
+private struct MapHomeScrollBounceDisabler: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        UIView(frame: .zero)
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        DispatchQueue.main.async {
+            var ancestor = view.superview
+            while let current = ancestor {
+                if let scrollView = current as? UIScrollView {
+                    scrollView.bounces = false
+                    scrollView.alwaysBounceVertical = false
+                    return
+                }
+                ancestor = current.superview
+            }
+        }
     }
 }
 

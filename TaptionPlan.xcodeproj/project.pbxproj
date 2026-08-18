@@ -91,6 +91,8 @@
 		A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000086 /* RouteTimelineDataTests.swift */; };
 		A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000087 /* MapHomeLocationPresentation.swift */; };
 		A10000000000000000000088 /* BiometricDataProtection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000088 /* BiometricDataProtection.swift */; };
+		A10000000000000000000089 /* SecurityBackupCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000089 /* SecurityBackupCore.swift */; };
+		A1000000000000000000008A /* SecurityBackupCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000008A /* SecurityBackupCoreTests.swift */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
 		A1000000000000000000007E /* MapHomeBannerAdView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007E /* MapHomeBannerAdView.swift */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
@@ -244,6 +246,8 @@
 		F10000000000000000000086 /* RouteTimelineDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteTimelineDataTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000087 /* MapHomeLocationPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLocationPresentation.swift; sourceTree = "<group>"; };
 		F10000000000000000000088 /* BiometricDataProtection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricDataProtection.swift; sourceTree = "<group>"; };
+		F10000000000000000000089 /* SecurityBackupCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityBackupCore.swift; sourceTree = "<group>"; };
+		F1000000000000000000008A /* SecurityBackupCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityBackupCoreTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
 		F1000000000000000000007E /* MapHomeBannerAdView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeBannerAdView.swift; sourceTree = "<group>"; };
 		F1000000000000000000007F /* MapHomeCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarSheet.swift; sourceTree = "<group>"; };
@@ -343,6 +347,7 @@
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
+				F1000000000000000000008A /* SecurityBackupCoreTests.swift */,
 			);
 			path = TaptionPlanTests;
 			sourceTree = "<group>";
@@ -414,6 +419,7 @@
 				F1000000000000000000007C /* SubwayCatalog.swift */,
 				F10000000000000000000085 /* RouteTimelineData.swift */,
 				F10000000000000000000088 /* BiometricDataProtection.swift */,
+				F10000000000000000000089 /* SecurityBackupCore.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -745,6 +751,7 @@
 				A10000000000000000000085 /* RouteTimelineData.swift in Sources */,
 				A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */,
 				A10000000000000000000088 /* BiometricDataProtection.swift in Sources */,
+				A10000000000000000000089 /* SecurityBackupCore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -757,6 +764,7 @@
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
+				A1000000000000000000008A /* SecurityBackupCoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -971,7 +979,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlanDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 57;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1002,10 +1010,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 57;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
-				GAD_APPLICATION_IDENTIFIER = "";
+				GAD_APPLICATION_IDENTIFIER = "ca-app-pub-3940256099942544~1458002511";
 				INFOPLIST_FILE = TaptionPlan/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1019,8 +1027,8 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TAPTION_ADMOB_BANNER_UNIT_ID = "";
-				TAPTION_ADMOB_APP_OPEN_UNIT_ID = "";
+				TAPTION_ADMOB_BANNER_UNIT_ID = "ca-app-pub-3940256099942544/2435281174";
+				TAPTION_ADMOB_APP_OPEN_UNIT_ID = "ca-app-pub-3940256099942544/5575463023";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -1073,7 +1081,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 57;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1100,7 +1108,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 57;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1127,7 +1135,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatchDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 57;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1161,7 +1169,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 57;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatch/Info.plist;
@@ -1194,7 +1202,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 57;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;
@@ -1222,7 +1230,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 55;
+				CURRENT_PROJECT_VERSION = 57;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;

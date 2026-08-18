@@ -28,6 +28,9 @@ enum SubwayStationCatalog {
         let observedStationNames: [String]
         let route: SubwayRoutePath
         let span: TimeSpan
+        /// 지하 구간에서 GPS가 끊겨 출발·도착역만 남은 제한적 복원입니다.
+        /// 호출부에서 별도의 철도 지도 신호를 반드시 함께 확인합니다.
+        let isSparseEndpointTrajectory: Bool
     }
 
     struct StationStopPattern: Hashable, Sendable {
@@ -240,6 +243,41 @@ enum SubwayStationCatalog {
         from readings: [SensorReading],
         maximumDistanceMeters: Double = 450
     ) -> CoordinateTrajectory? {
+        trajectory(
+            from: readings,
+            maximumDistanceMeters: maximumDistanceMeters,
+            minimumObservedStationCount: 3,
+            minimumDuration: 2 * 60,
+            minimumRouteStopCount: 3,
+            isSparseEndpointTrajectory: false
+        )
+    }
+
+    /// 터널 안에서 GPS가 끊겨 두 역만 남은 경우를 위한 제한적 보조 궤적입니다.
+    /// 이 함수의 결과만으로는 지하철로 확정하지 않으며, 호출부가
+    /// `matchesRailRoute` 같은 별도 철도 신호를 함께 요구해야 합니다.
+    static func sparseEndpointTrajectory(
+        from readings: [SensorReading],
+        maximumDistanceMeters: Double = 220
+    ) -> CoordinateTrajectory? {
+        trajectory(
+            from: readings,
+            maximumDistanceMeters: maximumDistanceMeters,
+            minimumObservedStationCount: 2,
+            minimumDuration: 8 * 60,
+            minimumRouteStopCount: 4,
+            isSparseEndpointTrajectory: true
+        )
+    }
+
+    private static func trajectory(
+        from readings: [SensorReading],
+        maximumDistanceMeters: Double,
+        minimumObservedStationCount: Int,
+        minimumDuration: TimeInterval,
+        minimumRouteStopCount: Int,
+        isSparseEndpointTrajectory: Bool
+    ) -> CoordinateTrajectory? {
         var observations: [(
             name: String,
             timestamp: Date,
@@ -285,7 +323,10 @@ enum SubwayStationCatalog {
         // 방문하는 후보는 도로를 따라 여러 역 반경을 스친 잡음일 가능성이
         // 높아 제외한다.
         let candidates = trajectoryCandidates(
-            from: observations
+            from: observations,
+            minimumObservedStationCount: minimumObservedStationCount,
+            minimumDuration: minimumDuration,
+            minimumRouteStopCount: minimumRouteStopCount
         )
         guard let best = candidates.max(by: { lhs, rhs in
             if lhs.route.stops.count != rhs.route.stops.count {
@@ -301,7 +342,8 @@ enum SubwayStationCatalog {
         return CoordinateTrajectory(
             observedStationNames: best.names,
             route: best.route,
-            span: TimeSpan(start: best.first.timestamp, end: best.last.timestamp)
+            span: TimeSpan(start: best.first.timestamp, end: best.last.timestamp),
+            isSparseEndpointTrajectory: isSparseEndpointTrajectory
         )
     }
 
@@ -310,14 +352,17 @@ enum SubwayStationCatalog {
             name: String,
             timestamp: Date,
             point: GeoPoint
-        )]
+        )],
+        minimumObservedStationCount: Int,
+        minimumDuration: TimeInterval,
+        minimumRouteStopCount: Int
     ) -> [(
         names: [String],
         route: SubwayRoutePath,
         first: (name: String, timestamp: Date, point: GeoPoint),
         last: (name: String, timestamp: Date, point: GeoPoint)
     )] {
-        guard observations.count >= 3 else { return [] }
+        guard observations.count >= minimumObservedStationCount else { return [] }
         var result: [(
             names: [String],
             route: SubwayRoutePath,
@@ -325,17 +370,18 @@ enum SubwayStationCatalog {
             last: (name: String, timestamp: Date, point: GeoPoint)
         )] = []
         for start in observations.indices {
-            guard start + 2 < observations.count else { continue }
-            for end in (start + 2)..<observations.count {
+            let firstEnd = start + minimumObservedStationCount - 1
+            guard firstEnd < observations.count else { continue }
+            for end in firstEnd..<observations.count {
                 let window = Array(observations[start...end])
                 let names = window.map(\.name)
-                guard Set(names.map(normalized)).count >= 3,
+                guard Set(names.map(normalized)).count >= minimumObservedStationCount,
                       let first = window.first,
                       let last = window.last,
                       last.timestamp.timeIntervalSince(first.timestamp)
-                        >= 2 * 60,
+                        >= minimumDuration,
                       let route = route(for: names),
-                      route.stops.count >= 3,
+                      route.stops.count >= minimumRouteStopCount,
                       route.stops.count
                         <= min(64, max(12, names.count * 8)),
                       !hasNonAdjacentStationRepeat(route) else {

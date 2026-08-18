@@ -292,9 +292,15 @@ struct TravelModeClassifier: Sendable {
         let signaledRailStations = SubwayStationCatalog.stationNames(
             from: ordered
         )
-        let coordinateTrajectory = SubwayStationCatalog.coordinateTrajectory(
+        let strictCoordinateTrajectory = SubwayStationCatalog.coordinateTrajectory(
             from: ordered
         )
+        // 지하 구간에서는 출발·도착역 두 개만 GPS에 남을 수 있다. 이 보조
+        // 궤적은 철도 지도 신호가 충분한 경우에만 허용해 도로 주행을 막는다.
+        let coordinateTrajectory = strictCoordinateTrajectory
+            ?? (railRatio >= 0.25
+                ? SubwayStationCatalog.sparseEndpointTrajectory(from: ordered)
+                : nil)
         let signaledSubwayRoute = signaledRailStations.count >= 2
             ? SubwayStationCatalog.route(for: signaledRailStations)
             : nil
@@ -324,9 +330,13 @@ struct TravelModeClassifier: Sendable {
         let stationStopConfirmation = routeHasTransferPattern
             && stationStopPattern?.isStrong == true
         let routeTrajectoryConfirmation = coordinateRailContext
-            && Set(railStations).count >= 3
             && railSpeedSignal
             && hasVehicleSpeed
+            && (
+                Set(railStations).count >= 3
+                || coordinateTrajectory?.isSparseEndpointTrajectory == true
+                    && railRatio >= 0.25
+            )
         let undergroundSignal = gpsLossRatio >= 0.35
             || altitudeDelta <= -2
         let displacementMeters = firstLastDisplacement(ordered)
@@ -2373,9 +2383,16 @@ enum SubwayTravelSegmentEngine {
     ) -> [TravelSegment] {
         var result: [TravelSegment] = []
         for group in groups {
-            guard let trajectory = SubwayStationCatalog.coordinateTrajectory(
+            let strictTrajectory = SubwayStationCatalog.coordinateTrajectory(
                 from: group
-            ) else { continue }
+            )
+            let hasRailConfirmation = !group.isEmpty
+                && Double(group.filter(\.matchesRailRoute).count)
+                    / Double(group.count) >= 0.25
+            guard let trajectory = strictTrajectory
+                ?? (hasRailConfirmation
+                    ? SubwayStationCatalog.sparseEndpointTrajectory(from: group)
+                    : nil) else { continue }
             let contextSpan = TimeSpan(
                 start: trajectory.span.start.addingTimeInterval(-2 * 60),
                 end: trajectory.span.end.addingTimeInterval(2 * 60)
@@ -2385,15 +2402,23 @@ enum SubwayTravelSegmentEngine {
                 readings: context,
                 inside: trajectory.span
             )
-            guard inference.mode == .subway else { continue }
+            guard inference.mode == .subway
+                || trajectory.isSparseEndpointTrajectory else { continue }
             let route = inference.subwayRoute ?? trajectory.route
+            let sparseEndpointEvidence = trajectory.isSparseEndpointTrajectory
+                ? ["철도 지도 신호·출발역·도착역 복원"]
+                : []
             result.append(TravelSegment(
                 mode: .subway,
                 span: trajectory.span,
                 distanceMeters: pathDistance(route.coordinates),
-                confidence: .high,
+                confidence: trajectory.isSparseEndpointTrajectory ? .medium : .high,
                 evidence: Array(
-                    Set(inference.evidence + ["원본 GPS 철도 궤적 복원"])
+                    Set(
+                        inference.evidence
+                            + sparseEndpointEvidence
+                            + ["원본 GPS 철도 궤적 복원"]
+                    )
                 ).sorted(),
                 subwayRoute: route
             ))

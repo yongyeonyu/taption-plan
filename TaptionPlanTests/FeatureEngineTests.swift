@@ -57,6 +57,24 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testMapCategoryColorOverridesAcceptOnlyTheEightValidHexValues() {
+        let colors = AppFeatureSettings.normalizedMapCategoryColors([
+            "work": "#4f46e5",
+            "sleep": "#ABCDEF",
+            "invalid": "#123456",
+            "activity": "not-a-color",
+        ])
+
+        XCTAssertEqual(colors, ["work": "#4F46E5", "sleep": "#ABCDEF"])
+        XCTAssertEqual(
+            MapHomeSidebarMajorCategory.presentation(
+                for: "work",
+                categoryColors: colors
+            ).hex,
+            "#4F46E5"
+        )
+    }
+
     func testMapHomeTimeRailUsesOneNonOverlappingSegmentForEachCanonicalCategory() {
         let day = makeDate(2026, 8, 15)
         let records: [ActualRecord] = [
@@ -4251,7 +4269,7 @@ final class FeatureEngineTests: XCTestCase {
                 motionConfidence: .high
             ),
             SensorReading(
-                timestamp: base.addingTimeInterval(20 * 60),
+                timestamp: base.addingTimeInterval(10 * 60),
                 point: GeoPoint(
                     latitude: 37.5692,
                     longitude: 126.6737,
@@ -4267,6 +4285,67 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertNil(SubwayStationCatalog.coordinateTrajectory(from: readings))
         XCTAssertTrue(SubwayTravelSegmentEngine.segments(from: readings).isEmpty)
+    }
+
+    func testSparseRailEndpointsRestoreSubwayWithoutRoadFalsePositive() throws {
+        let base = makeDate(2026, 8, 11, 7, 0)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "가정역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(10 * 60),
+                point: nil,
+                speedMetersPerSecond: nil,
+                motion: .automotive,
+                motionConfidence: .high,
+                gpsAvailable: false
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(20 * 60),
+                point: GeoPoint(
+                    latitude: 37.5667,
+                    longitude: 126.8273,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "마곡나루역",
+                matchesRailRoute: true
+            ),
+        ]
+
+        let trajectory = try XCTUnwrap(
+            SubwayStationCatalog.sparseEndpointTrajectory(from: readings)
+        )
+        let result = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertTrue(trajectory.isSparseEndpointTrajectory)
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.subwayRoute?.transferStationNames, ["검암"])
+        let segment = try XCTUnwrap(
+            SubwayTravelSegmentEngine.segments(from: readings).first
+        )
+        XCTAssertEqual(segment.mode, .subway)
+        XCTAssertEqual(segment.subwayRoute?.stops.first?.stationName, "가정")
+        XCTAssertEqual(segment.subwayRoute?.stops.last?.stationName, "마곡나루")
     }
 
     func testSubwayRouteSurvivesTravelPresentationMerge() throws {
@@ -5366,6 +5445,71 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertTrue(balanced.collectsDeviceMotion)
         XCTAssertEqual(balanced.minimumEmissionInterval, 5 * 60)
+    }
+
+    func testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes() throws {
+        XCTAssertEqual(GPSLoggingPreferences.standard.intervalMinutes, 5)
+        XCTAssertFalse(GPSLoggingPreferences.standard.isBatteryMinimal)
+        XCTAssertEqual(
+            GPSLoggingPreferences(intervalMinutes: 0).intervalMinutes,
+            1
+        )
+        XCTAssertEqual(
+            GPSLoggingPreferences(intervalMinutes: 16).intervalMinutes,
+            15
+        )
+        XCTAssertEqual(
+            GPSLoggingPreferences(intervalMinutes: 7).interval,
+            7 * 60
+        )
+        let batteryMinimal = GPSLoggingPreferences(
+            isBatteryMinimal: true,
+            intervalMinutes: 15
+        )
+        XCTAssertEqual(batteryMinimal.effectiveIntervalMinutes, 5)
+        XCTAssertEqual(batteryMinimal.interval, 5 * 60)
+        XCTAssertTrue(
+            TrackingSessionPolicy.allowsPersistingLocation(
+                horizontalAccuracy: 800,
+                batteryMinimal: true
+            )
+        )
+        XCTAssertFalse(
+            TrackingSessionPolicy.allowsPersistingLocation(
+                horizontalAccuracy: 800,
+                batteryMinimal: false
+            )
+        )
+        XCTAssertTrue(
+            TrackingSessionPolicy.allowsPersistingLocation(
+                horizontalAccuracy: 50,
+                batteryMinimal: false
+            )
+        )
+
+        let encoded = try JSONEncoder().encode(
+            GPSLoggingPreferences(isBatteryMinimal: true, intervalMinutes: 15)
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(GPSLoggingPreferences.self, from: encoded),
+            GPSLoggingPreferences(isBatteryMinimal: true, intervalMinutes: 15)
+        )
+
+        let approximate = SensorReading(
+            timestamp: makeDate(2026, 8, 18, 12),
+            point: GeoPoint(
+                latitude: 37.483,
+                longitude: 126.902,
+                altitude: 0,
+                horizontalAccuracy: 800,
+                verticalAccuracy: -1
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: false
+        )
+        XCTAssertNotNil(approximate.point)
+        XCTAssertEqual(approximate.locationFixQuality, .approximate)
+        XCTAssertFalse(approximate.gpsAvailable)
     }
 
     func testWatchCollectionAndDataSyncProfilesAreIndependent() throws {
@@ -7454,6 +7598,10 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(
             decoded.sensorCollectionProfile,
             AppFeatureSettings.defaults.sensorCollectionProfile
+        )
+        XCTAssertEqual(
+            decoded.gpsLoggingPreferences,
+            GPSLoggingPreferences.standard
         )
     }
 

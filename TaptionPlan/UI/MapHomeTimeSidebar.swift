@@ -7,9 +7,13 @@ struct MapHomeTimeSidebarActivity {
 
     static func majorCategory(
         _ categoryID: String,
-        accessibilityLabel: String? = nil
+        accessibilityLabel: String? = nil,
+        categoryColors: [String: String] = [:]
     ) -> Self {
-        let category = MapHomeSidebarMajorCategory.presentation(for: categoryID)
+        let category = MapHomeSidebarMajorCategory.presentation(
+            for: categoryID,
+            categoryColors: categoryColors
+        )
         return Self(
             systemImage: category.systemImage,
             tint: category.tint,
@@ -31,6 +35,10 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
     }
 
     static var all: [Self] {
+        all(categoryColors: [:])
+    }
+
+    static func all(categoryColors: [String: String] = [:]) -> [Self] {
         let catalog = Dictionary(
             uniqueKeysWithValues: RecordClassificationCatalog.categories.map {
                 ($0.id, $0)
@@ -42,19 +50,25 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
                 id: category.id,
                 title: category.title,
                 systemImage: category.systemImage,
-                hex: CanonicalCategoryPalette.hex(category.id)
+                hex: categoryColors[category.id]
+                    ?? CanonicalCategoryPalette.hex(category.id)
             )
         }
     }
 
-    static func presentation(for categoryID: String) -> Self {
-        all.first { $0.id == categoryID }
-            ?? all.first { $0.id == "activity" }
+    static func presentation(
+        for categoryID: String,
+        categoryColors: [String: String] = [:]
+    ) -> Self {
+        let values = all(categoryColors: categoryColors)
+        return values.first { $0.id == categoryID }
+            ?? values.first { $0.id == "activity" }
             ?? Self(
                 id: "activity",
                 title: "활동",
                 systemImage: "sparkles",
-                hex: CanonicalCategoryPalette.hex("activity")
+                hex: categoryColors["activity"]
+                    ?? CanonicalCategoryPalette.hex("activity")
             )
     }
 }
@@ -267,6 +281,7 @@ struct MapHomeTimeSidebar: View {
     @Binding var selectedMinute: Int
     let activity: MapHomeTimeSidebarActivity?
     let segments: [MapHomeTimeRailSegment]
+    let categoryColors: [String: String]
     var onSelectionChanged: ((Int) -> Void)?
     var onSectionEdit: (() -> Void)?
 
@@ -285,6 +300,7 @@ struct MapHomeTimeSidebar: View {
         selectedMinute: Binding<Int>,
         activity: MapHomeTimeSidebarActivity? = nil,
         segments: [MapHomeTimeRailSegment] = [],
+        categoryColors: [String: String] = [:],
         railWidth: CGFloat = 58,
         onSelectionChanged: ((Int) -> Void)? = nil,
         onSectionEdit: (() -> Void)? = nil
@@ -293,6 +309,7 @@ struct MapHomeTimeSidebar: View {
         self._selectedMinute = selectedMinute
         self.activity = activity
         self.segments = segments
+        self.categoryColors = categoryColors
         self.railWidth = max(58, railWidth)
         self.onSelectionChanged = onSelectionChanged
         self.onSectionEdit = onSectionEdit
@@ -318,7 +335,9 @@ struct MapHomeTimeSidebar: View {
 
                 Rectangle()
                     .fill(Color.white.opacity(0.68))
-                    .frame(width: numericColumnWidth + 3, height: trackHeight)
+                    // Keep the existing white numeric gutter continuous past
+                    // both ends of the coloured rail.
+                    .frame(width: numericColumnWidth + 3, height: railHeight)
                     .position(
                         x: railWidth - (numericColumnWidth + 3) / 2,
                         y: railHeight / 2
@@ -335,9 +354,13 @@ struct MapHomeTimeSidebar: View {
                         if start < end {
                             Rectangle()
                                 .fill(
-                                    CanonicalCategoryPalette.color(
+                                    Color(hex: categoryColorHex(
                                         segment.categoryID
-                                    ).opacity(segment.categoryID == "unconfirmed" ? 0.82 : 0.94)
+                                    )).opacity(
+                                        segment.categoryID == "unconfirmed"
+                                            ? 0.82
+                                            : 0.94
+                                    )
                                 )
                                 .frame(
                                     width: activeRailWidth,
@@ -410,7 +433,8 @@ struct MapHomeTimeSidebar: View {
     ) -> some View {
         let handleHeight: CGFloat = 40
         let fallbackActivity = MapHomeTimeSidebarActivity.majorCategory(
-            "unconfirmed"
+            "unconfirmed",
+            categoryColors: categoryColors
         )
         return ZStack {
             Button {
@@ -438,30 +462,28 @@ struct MapHomeTimeSidebar: View {
             .accessibilityHint("탭하면 섹션 편집을 엽니다")
             .position(x: trackX - 23, y: handleHeight / 2)
 
-            Button {
-                onSectionEdit?()
-            } label: {
-                VStack(spacing: -1) {
-                    Text(String(format: "%02d", minute / 60))
-                    Text(String(format: "%02d", minute % 60))
-                }
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Color.white)
-                .frame(width: 32, height: 40)
-                .background(
-                    Color.tpInk.opacity(0.90),
-                    in: RoundedRectangle(cornerRadius: 4, style: .continuous)
-                )
+            VStack(spacing: -1) {
+                Text(String(format: "%02d", minute / 60))
+                Text(String(format: "%02d", minute % 60))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("섹션 편집")
-            .accessibilityValue(timeLabel(for: minute))
-            .accessibilityHint("탭하면 이 시간의 섹션 편집을 엽니다")
+            .font(.system(size: 9, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(Color.white)
+            .frame(width: 32, height: 40)
+            .background(
+                Color.tpInk.opacity(0.90),
+                in: RoundedRectangle(cornerRadius: 4, style: .continuous)
+            )
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
             .position(x: trackX + activeRailWidth / 2 + 17, y: handleHeight / 2)
         }
         .frame(width: railWidth, height: handleHeight)
         .position(x: railWidth / 2, y: y)
+    }
+
+    private func categoryColorHex(_ id: String) -> String {
+        categoryColors[id] ?? CanonicalCategoryPalette.hex(id)
     }
 
     private func timeTapGesture(trackHeight: CGFloat, maxMinute: Int) -> some Gesture {
