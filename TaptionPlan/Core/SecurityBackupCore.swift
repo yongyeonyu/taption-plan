@@ -336,7 +336,7 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
     static let privateAccountScope = "icloud-private-v1"
     private static let recordType = "TaptionBackupRecoveryKey"
     private static let recordName = "taption-backup-recovery-key-v1"
-    private static let valueKey = "keyEnvelope"
+    private static let valueKey = "keyEnvelopeBytes"
     private let container: CKContainer
     private let database: CKDatabase
 
