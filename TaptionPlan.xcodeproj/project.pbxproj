@@ -1205,7 +1205,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 64;
+				CURRENT_PROJECT_VERSION = 65;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;
@@ -1233,7 +1233,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 64;
+				CURRENT_PROJECT_VERSION = 65;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;
