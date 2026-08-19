@@ -226,6 +226,88 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(lastUptime, 10.001)
     }
 
+    func testTimelineNLEProjectionCoalesces240HzInputAndFlushesLatestState() {
+        var projection = TimelineNLEProjection<Int>()
+        projection.begin(with: 0)
+        var rendered: [Int] = []
+
+        for sample in 1...240 {
+            if let state = projection.submit(
+                sample,
+                nowUptime: Double(sample) / 240
+            ) {
+                rendered.append(state)
+            }
+        }
+
+        XCTAssertGreaterThan(rendered.count, 50)
+        XCTAssertLessThanOrEqual(rendered.count, 61)
+        XCTAssertEqual(projection.latestState, 240)
+        XCTAssertEqual(
+            projection.finish(with: 241, nowUptime: 1.001),
+            241
+        )
+        XCTAssertEqual(projection.renderedState, 241)
+    }
+
+    func testTimelineNLEProjectionSynchronizesExternalTimelineState() {
+        var projection = TimelineNLEProjection<Int>()
+        projection.begin(with: 600)
+        projection.synchronize(with: 720)
+
+        XCTAssertEqual(
+            projection.finish(with: 600, nowUptime: 10),
+            600
+        )
+    }
+
+    func testMapHomeSidebarNLEProjectionCoalesces240HzDragAndFlushesFinalState() {
+        var projection = TimelineNLEProjection<MapHomeTimeSidebarNLEState>()
+        let initial = MapHomeTimeSidebarNLEState(
+            selectedMinute: 720,
+            visibleStartMinute: 690,
+            visibleDurationMinutes: 60
+        )
+        projection.begin(with: initial)
+        var renderedCount = 0
+
+        for sample in 1...240 {
+            let state = MapHomeTimeSidebarNLEState(
+                selectedMinute: min(1_439, 720 + sample),
+                visibleStartMinute: min(1_380, 690 + sample),
+                visibleDurationMinutes: 60
+            )
+            if projection.submit(
+                state,
+                nowUptime: Double(sample) / 240
+            ) != nil {
+                renderedCount += 1
+            }
+        }
+
+        let final = MapHomeTimeSidebarNLEState(
+            selectedMinute: 961,
+            visibleStartMinute: 931,
+            visibleDurationMinutes: 60
+        )
+        XCTAssertGreaterThan(renderedCount, 50)
+        XCTAssertLessThanOrEqual(renderedCount, 61)
+        XCTAssertEqual(
+            projection.finish(with: final, nowUptime: 1.001),
+            final
+        )
+    }
+
+    func testMapHomeCompassControlReturnsToArrowWithFixedDirection() {
+        let compass = MapHomeCompassControlState.directionArrow.toggled
+        XCTAssertEqual(compass, .compass)
+        XCTAssertTrue(compass.followsHeading)
+
+        let fixedDirection = compass.toggled
+        XCTAssertEqual(fixedDirection, .directionArrow)
+        XCTAssertFalse(fixedDirection.followsHeading)
+    }
+
     func testIntegrationRefreshGateSuppressesSameWindowButAllowsNewWindow() {
         var gate = TimelineIntegrationRefreshGate()
 
@@ -555,77 +637,56 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapHomeTimeSidebarDragClampsToAllowedRange() {
+    func testMapHomeTimeSidebarButtonsUseTheApprovedZoomSteps() {
         XCTAssertEqual(
-            MapHomeTimeSidebarMath.minuteByDragging(
-                baseMinute: 600,
-                translation: 50,
-                trackHeight: 300,
-                maxMinute: 800
-            ),
-            800
-        )
-        XCTAssertEqual(
-            MapHomeTimeSidebarMath.minuteByDragging(
-                baseMinute: 5,
-                translation: -100,
-                trackHeight: 300,
-                maxMinute: 600
-            ),
-            0
-        )
-    }
-
-    func testMapHomeTimeSidebarPrecisionDragUsesQuarterSensitivity() {
-        XCTAssertEqual(
-            MapHomeTimeSidebarMath.minuteByDragging(
-                baseMinute: 600,
-                translation: 50,
-                trackHeight: 300,
-                maxMinute: 1_439,
-                sensitivity: 0.25
-            ),
-            660
-        )
-        XCTAssertEqual(
-            MapHomeTimeSidebarMath.minuteByDragging(
-                baseMinute: 600,
-                translation: 50,
-                trackHeight: 300,
-                maxMinute: 1_439
-            ),
-            840
-        )
-    }
-
-    func testMapHomeTimeSidebarPinchUsesOneHourMinimumAndTwoToOneSteps() {
-        XCTAssertEqual(
-            MapHomeTimeSidebarMath.durationByMagnification(
-                startDurationMinutes: 1_440,
-                magnification: 1
-            ),
-            1_440
-        )
-        XCTAssertEqual(
-            MapHomeTimeSidebarMath.durationByMagnification(
-                startDurationMinutes: 1_440,
-                magnification: 2
-            ),
+            MapHomeTimeSidebarMath.duration(afterZoomStep: 1, from: 1_440),
             720
         )
         XCTAssertEqual(
-            MapHomeTimeSidebarMath.durationByMagnification(
-                startDurationMinutes: 1_440,
-                magnification: 64
-            ),
+            MapHomeTimeSidebarMath.duration(afterZoomStep: 1, from: 720),
+            360
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.duration(afterZoomStep: 1, from: 180),
             60
         )
         XCTAssertEqual(
-            MapHomeTimeSidebarMath.durationByMagnification(
-                startDurationMinutes: 60,
-                magnification: 128
-            ),
+            MapHomeTimeSidebarMath.duration(afterZoomStep: 1, from: 60),
             60
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.duration(afterZoomStep: -1, from: 60),
+            180
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.duration(afterZoomStep: -1, from: 1_440),
+            1_440
+        )
+    }
+
+    func testMapHomeMovementIconsCoverTheNineTransportLabels() {
+        let labels = [
+            "걷기", "자전거", "버스", "지하철", "택시",
+            "자동차", "기차", "비행기", "배",
+        ]
+        let symbols = labels.map(MapHomeMovementIcon.systemImage(for:))
+        XCTAssertEqual(
+            symbols,
+            [
+                "figure.walk.motion", "bicycle", "bus.fill", "tram.fill", "car.side.fill",
+                "car.fill", "train.side.front.car", "airplane", "ferry.fill",
+            ]
+        )
+    }
+
+    func testMapHomeTimeSidebarCurrentDateResetRestoresFullDayAtCurrentMinute() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.resetState(selectedMinute: 618),
+            MapHomeTimeSidebarNLEState(
+                selectedMinute: 618,
+                visibleStartMinute: 0,
+                visibleDurationMinutes: 1_440
+            )
         )
     }
 
@@ -644,25 +705,27 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapHomeTimeSidebarDragUsesVisibleHourRange() {
+    func testMapHomeTimeSidebarZoomCentersOnThePlayhead() {
         XCTAssertEqual(
-            MapHomeTimeSidebarMath.minuteByDragging(
-                baseMinute: 720,
-                translation: 150,
-                trackHeight: 300,
-                maxMinute: 1_439,
-                visibleStartMinute: 690,
-                visibleDurationMinutes: 60
+            MapHomeTimeSidebarMath.startMinute(
+                centerMinute: 720,
+                durationMinutes: 60
             ),
-            750
+            690
         )
         XCTAssertEqual(
-            MapHomeTimeSidebarMath.zoomLevel(for: 1_440),
-            1
-        )
-        XCTAssertEqual(
-            MapHomeTimeSidebarMath.zoomLevel(for: 60),
+            MapHomeTimeSidebarMath.startMinute(
+                centerMinute: 30,
+                durationMinutes: 60
+            ),
             0
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.startMinute(
+                centerMinute: 1_430,
+                durationMinutes: 60
+            ),
+            1_380
         )
     }
 
@@ -696,47 +759,116 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapHomeTimeSidebarFixedPlayheadMapsCenterOfZoomedWindow() {
-        XCTAssertEqual(
-            MapHomeTimeSidebarMath.minuteByFixedPlayhead(
-                trackHeight: 300,
-                verticalInset: 14,
-                maxMinute: 1_439,
-                visibleStartMinute: 690,
-                visibleDurationMinutes: 60
-            ),
-            720
+    func testMapHomeTimeSidebarHandleUsesConstantEdgeScrollSpeed() throws {
+        let drag = MapHomeTimeSidebarHandleDrag()
+        let base = MapHomeTimeSidebarNLEState(
+            selectedMinute: 720,
+            visibleStartMinute: 690,
+            visibleDurationMinutes: 60
         )
-        XCTAssertEqual(
-            MapHomeTimeSidebarMath.minuteByFixedPlayhead(
+        drag.begin(with: base, handleY: 150, nowUptime: 10)
+
+        var state = try XCTUnwrap(
+            drag.projectedState(
+                translation: 151,
                 trackHeight: 300,
-                verticalInset: 14,
-                maxMinute: 618,
-                visibleStartMinute: 600,
+                maxMinute: 1_439,
+                sensitivity: 1,
+                nowUptime: 10
+            )
+        )
+        for frame in 1...60 {
+            state = try XCTUnwrap(
+                drag.projectedState(
+                    translation: 151,
+                    trackHeight: 300,
+                    maxMinute: 1_439,
+                    sensitivity: 1,
+                    nowUptime: 10 + Double(frame) / 60
+                )
+            )
+        }
+
+        XCTAssertEqual(state.visibleStartMinute, 677)
+        XCTAssertEqual(state.selectedMinute, 677)
+    }
+
+    func testMapHomeTimeSidebarHandleScrollsOnlyAtAndStopsAtEdges() throws {
+        let drag = MapHomeTimeSidebarHandleDrag()
+        drag.begin(
+            with: MapHomeTimeSidebarNLEState(
+                selectedMinute: 30,
+                visibleStartMinute: 0,
                 visibleDurationMinutes: 60
             ),
-            618
+            handleY: 150,
+            nowUptime: 10
+        )
+
+        var state = try XCTUnwrap(
+            drag.projectedState(
+                translation: -151,
+                trackHeight: 300,
+                maxMinute: 1_439,
+                sensitivity: 1,
+                nowUptime: 10
+            )
+        )
+        for frame in 1...60 {
+            state = try XCTUnwrap(
+                drag.projectedState(
+                    translation: -151,
+                    trackHeight: 300,
+                    maxMinute: 1_439,
+                    sensitivity: 1,
+                    nowUptime: 10 + Double(frame) / 60
+                )
+            )
+        }
+
+        XCTAssertEqual(state.visibleStartMinute, 13)
+        XCTAssertEqual(state.selectedMinute, 73)
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.maximumVisibleStart(durationMinutes: 60),
+            1_380
         )
     }
 
-    func testMapHomeTimeSidebarFixedPlayheadTracksViewportScroll() {
-        let first = MapHomeTimeSidebarMath.minuteByFixedPlayhead(
-            trackHeight: 300,
-            verticalInset: 14,
-            maxMinute: 1_439,
-            visibleStartMinute: 600,
-            visibleDurationMinutes: 60
+    func testMapHomeTimeSidebarHandleDoesNotScrollPastCurrentMinute() throws {
+        let drag = MapHomeTimeSidebarHandleDrag()
+        drag.begin(
+            with: MapHomeTimeSidebarNLEState(
+                selectedMinute: 570,
+                visibleStartMinute: 540,
+                visibleDurationMinutes: 60
+            ),
+            handleY: 150,
+            nowUptime: 10
         )
-        let second = MapHomeTimeSidebarMath.minuteByFixedPlayhead(
-            trackHeight: 300,
-            verticalInset: 14,
-            maxMinute: 1_439,
-            visibleStartMinute: 660,
-            visibleDurationMinutes: 60
+
+        var state = try XCTUnwrap(
+            drag.projectedState(
+                translation: -151,
+                trackHeight: 300,
+                maxMinute: 600,
+                sensitivity: 1,
+                nowUptime: 10
+            )
         )
-        XCTAssertEqual(first, 630)
-        XCTAssertEqual(second, 690)
-        XCTAssertEqual(second - first, 60)
+        for frame in 1...180 {
+            state = try XCTUnwrap(
+                drag.projectedState(
+                    translation: -151,
+                    trackHeight: 300,
+                    maxMinute: 600,
+                    sensitivity: 1,
+                    nowUptime: 10 + Double(frame) / 60
+                )
+            )
+        }
+
+        XCTAssertEqual(state.selectedMinute, 600)
+        XCTAssertEqual(state.visibleStartMinute, 540)
     }
 
     func testMapHomeTimelineUsesFullDayForArchivedDate() {

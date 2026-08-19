@@ -305,11 +305,11 @@ private struct MapHomeAppLockView: View {
         ZStack {
             Color.tpInk.ignoresSafeArea()
             VStack(spacing: 18) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(Color.tpReferenceMint)
-                    .frame(width: 72, height: 72)
-                    .background(Color.white.opacity(0.10), in: Circle())
+                Image("MapHomeNotionMascot")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 92, height: 92)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                 Text("Taption Plan")
                     .font(.system(size: 25, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)

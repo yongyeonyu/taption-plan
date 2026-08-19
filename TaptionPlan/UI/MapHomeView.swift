@@ -3,6 +3,19 @@ import MapKit
 import SwiftUI
 import UIKit
 
+enum MapHomeCompassControlState: Equatable, Sendable {
+    case directionArrow
+    case compass
+
+    var followsHeading: Bool {
+        self == .compass
+    }
+
+    var toggled: Self {
+        self == .directionArrow ? .compass : .directionArrow
+    }
+}
+
 struct MapHomeView: View {
     @Bindable private var model: AppModel
 
@@ -11,13 +24,13 @@ struct MapHomeView: View {
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
     @State private var selectedLocationDestination: MapHomeLocationDestination?
-    @State private var isLocationMenuExpanded = true
+    @State private var isLocationMenuExpanded = false
     @State private var isCategoryMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
     @State private var isDataProtectionPresented = false
     @State private var isMutedMap = true
     @AppStorage("taption.mapHome.language") private var languageRawValue = MapHomeLanguage.korean.rawValue
-    @State private var isHeadingMode = false
+    @State private var compassControlState: MapHomeCompassControlState = .directionArrow
     @State private var isGPSLoggingActionInFlight = false
     @State private var isGPSLoggingMenuExpanded = false
     @State private var selectedScope: TimeScale = .day
@@ -65,6 +78,10 @@ struct MapHomeView: View {
 
     private var language: MapHomeLanguage {
         MapHomeLanguage(rawValue: languageRawValue) ?? .korean
+    }
+
+    private var isHeadingMode: Bool {
+        compassControlState == .compass
     }
 
     private func sectionEditSheet(for selection: MapHomeSectionEditSelection) -> some View {
@@ -256,18 +273,18 @@ struct MapHomeView: View {
 
         }
         .mapStyle(mapStyle)
+        .mapControls {
+            EmptyView()
+        }
         .onMapCameraChange(frequency: .continuous) { context in
             let uptime = ProcessInfo.processInfo.systemUptime
             guard uptime - lastMapCameraPublishUptime >= (1.0 / 60.0) else { return }
             lastMapCameraPublishUptime = uptime
             updateVisibleMapSpan(context.region.span)
             updateUserCenterState(for: context.region.center)
-            if let level = sharedZoomLevel(for: context.region.span) {
-                let duration = MapHomeTimeSidebarMath.duration(for: level)
-                let synchronizedLevel = MapHomeTimeSidebarMath.zoomLevel(for: duration)
-                if abs(synchronizedLevel - sharedZoomLevel) > 0.02 {
-                    sharedZoomLevel = synchronizedLevel
-                }
+            if let level = sharedZoomLevel(for: context.region.span),
+               abs(level - sharedZoomLevel) > 0.02 {
+                sharedZoomLevel = level
             }
         }
         .overlay {
@@ -397,7 +414,6 @@ struct MapHomeView: View {
                     segments: timeRailSegments,
                     categoryColors: model.settings.mapCategoryColors,
                     zoomResetToken: zoomResetToken,
-                    zoomLevel: sharedZoomLevel,
                     railWidth: Layout.timeRailWidth,
                     onSelectionChanged: { minute in
                         selectedTimelineMinute = minute
@@ -408,9 +424,6 @@ struct MapHomeView: View {
                             minute: minute,
                             activity: currentActivity(at: minute)
                         )
-                    },
-                    onZoomChanged: { level in
-                        applySharedZoom(level)
                     }
                 )
                 .frame(width: Layout.timeRailWidth, height: railHeight)
@@ -435,18 +448,17 @@ struct MapHomeView: View {
 
             if isHeadingMode {
                 Button {
-                    isHeadingMode = false
-                    mapPosition = .userLocation(followsHeading: false, fallback: .automatic)
+                    toggleMapHeadingMode()
                 } label: {
                     MapCompass(scope: mapScope)
                         .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                         .background(Color.white.opacity(0.94), in: Circle())
+                        .allowsHitTesting(false)
                 }
-                .accessibilityLabel(language.text("나침반 끄기", "Hide compass"))
+                .accessibilityLabel(language.text("지도 방향 고정", "Fix map direction"))
             } else {
                 Button {
-                    isHeadingMode = true
-                    mapPosition = .userLocation(followsHeading: true, fallback: .automatic)
+                    toggleMapHeadingMode()
                 } label: {
                     Image(systemName: "location.north.line")
                         .font(.system(size: Layout.mapControlIcon, weight: .bold))
@@ -521,10 +533,6 @@ struct MapHomeView: View {
             }
             .padding(.bottom, 27)
 
-            menuItem("map", language.text("지도 홈", "Map Home"), isSelected: true) {
-                isMenuOpen = false
-            }
-
             locationMenuItem
             gpsLoggingMenuItem
             categoryMenuItem
@@ -587,7 +595,7 @@ struct MapHomeView: View {
                     ForEach(
                         MapHomeSidebarMajorCategory.all(
                             categoryColors: model.settings.mapCategoryColors
-                        )
+                        ).filter { $0.id != "unconfirmed" }
                     ) { category in
                         HStack(spacing: 9) {
                             Circle()
@@ -610,6 +618,7 @@ struct MapHomeView: View {
                                     } label: {
                                         Label {
                                             Text(hex)
+                                                .foregroundStyle(Color(hex: hex))
                                         } icon: {
                                             Circle()
                                                 .fill(Color(hex: hex))
@@ -1289,11 +1298,6 @@ struct MapHomeView: View {
         )
     }
 
-    private func applySharedZoom(_ level: CGFloat) {
-        sharedZoomLevel = min(max(level, 0), 1)
-        focusMapForSharedZoom()
-    }
-
     private func sharedZoomLevel(for span: MKCoordinateSpan) -> CGFloat? {
         let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
         let subwayCoordinates = subwayRouteOverlays.flatMap(\.coordinates)
@@ -1377,6 +1381,14 @@ struct MapHomeView: View {
             )
         )
         updateUserCenterState(for: coordinate)
+    }
+
+    private func toggleMapHeadingMode() {
+        compassControlState = compassControlState.toggled
+        mapPosition = .userLocation(
+            followsHeading: compassControlState.followsHeading,
+            fallback: .automatic
+        )
     }
 
     private func applyInitialLocationIfAvailable() {

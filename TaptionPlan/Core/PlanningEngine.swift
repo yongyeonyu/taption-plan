@@ -23,6 +23,62 @@ enum TimelineInteractionFrameGate {
     }
 }
 
+/// Keeps a timeline editor's latest gesture projection separate from the
+/// presentation projection. Input can arrive at 240Hz; SwiftUI receives at
+/// most the display-budgeted projections, plus the final gesture state.
+final class TimelineNLEProjection<State: Equatable & Sendable> {
+    private(set) var latestState: State?
+    private(set) var renderedState: State?
+    private var lastRenderUptime: TimeInterval = 0
+
+    func begin(with state: State) {
+        latestState = state
+        renderedState = state
+        lastRenderUptime = 0
+    }
+
+    func synchronize(with state: State) {
+        latestState = state
+        renderedState = state
+    }
+
+    func submit(
+        _ state: State,
+        nowUptime: TimeInterval,
+        force: Bool = false
+    ) -> State? {
+        latestState = state
+        guard TimelineInteractionFrameGate.shouldRender(
+            lastUptime: &lastRenderUptime,
+            nowUptime: nowUptime,
+            force: force
+        ), renderedState != state else {
+            return nil
+        }
+        renderedState = state
+        return state
+    }
+
+    func finish(
+        with state: State,
+        nowUptime: TimeInterval
+    ) -> State? {
+        submit(state, nowUptime: nowUptime, force: true)
+    }
+
+    func reset() {
+        latestState = nil
+        renderedState = nil
+        lastRenderUptime = 0
+    }
+}
+
+struct MapHomeTimeSidebarNLEState: Equatable, Sendable {
+    var selectedMinute: Int
+    var visibleStartMinute: Int
+    var visibleDurationMinutes: Int
+}
+
 /// Integration reads are much more expensive than a timeline frame. A tab
 /// selection, foreground callback and sensor callback can all arrive for the
 /// same document window, so keep one short-lived admission gate in front of

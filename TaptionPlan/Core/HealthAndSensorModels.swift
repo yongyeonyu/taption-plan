@@ -363,6 +363,13 @@ enum SubwayWiFiSSID {
         "kt wifi",
         "kt wifi secure",
         "u+ zone",
+        "t wifi zone secure",
+        "free u+zone",
+        "free utzone 2.4ghz",
+        "kt giga wifi",
+        "kt free wifi",
+        "t free wifi zone",
+        "t wifi zone",
     ]
 
     static func normalized(_ ssid: String) -> String {
