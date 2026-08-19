@@ -49,6 +49,7 @@ struct MapHomeView: View {
     )
     @State private var sharedZoomLevel: CGFloat = 1
     @State private var zoomResetToken = 0
+    @State private var timeSidebarZoomStep = 0
     @State private var lastMapCameraPublishUptime: TimeInterval = 0
 
     private static let userCenterTolerance: CLLocationDistance = 120
@@ -414,6 +415,7 @@ struct MapHomeView: View {
                     segments: timeRailSegments,
                     categoryColors: model.settings.mapCategoryColors,
                     zoomResetToken: zoomResetToken,
+                    zoomStepToken: timeSidebarZoomStep,
                     railWidth: Layout.timeRailWidth,
                     onSelectionChanged: { minute in
                         selectedTimelineMinute = minute
@@ -479,7 +481,29 @@ struct MapHomeView: View {
                     .background(Color.white.opacity(0.94), in: Circle())
             }
             .accessibilityLabel(language.text("지도 스타일", "Map style"))
+
+            VStack(spacing: 3) {
+                timelineZoomButton(systemImage: "plus", direction: 1)
+                timelineZoomButton(systemImage: "minus", direction: -1)
+            }
         }
+    }
+
+    private func timelineZoomButton(systemImage: String, direction: Int) -> some View {
+        Button {
+            timeSidebarZoomStep += direction
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                .background(Color.white.opacity(0.94), in: Circle())
+        }
+        .accessibilityLabel(
+            direction > 0
+                ? language.text("시간 레일 확대", "Zoom timeline")
+                : language.text("시간 레일 축소", "Zoom out timeline")
+        )
     }
 
     private var menu: some View {
@@ -616,12 +640,12 @@ struct MapHomeView: View {
                                             for: category.id
                                         )
                                     } label: {
-                                        Label {
-                                            Text(hex)
-                                                .foregroundStyle(Color(hex: hex))
-                                        } icon: {
+                                        HStack(spacing: 8) {
                                             Circle()
                                                 .fill(Color(hex: hex))
+                                                .frame(width: 11, height: 11)
+                                            Text(hex)
+                                                .foregroundStyle(Color(hex: hex))
                                         }
                                     }
                                 }

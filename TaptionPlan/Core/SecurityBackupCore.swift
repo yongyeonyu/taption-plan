@@ -339,15 +339,23 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
     private static let valueKey = "keyEnvelopeBytes"
     private let container: CKContainer
     private let database: CKDatabase
+    private let documentFallback: UbiquitousPlanCloudRecoveryKeyStore
 
-    init(container: CKContainer = CKContainer(identifier: "iCloud.com.taption.plan")) {
+    init(
+        container: CKContainer = CKContainer(identifier: "iCloud.com.taption.plan"),
+        documentFallback: UbiquitousPlanCloudRecoveryKeyStore = .init()
+    ) {
         self.container = container
         database = container.privateCloudDatabase
+        self.documentFallback = documentFallback
     }
 
     func key() async throws -> Data {
         guard try await container.accountStatus() == .available else {
             throw PlanSecurityError.accountUnavailable
+        }
+        if let stored = try documentFallback.existingKey() {
+            return stored
         }
         let recordID = CKRecord.ID(recordName: Self.recordName)
         do {
@@ -372,10 +380,40 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
                     throw PlanSecurityError.accountUnavailable
                 }
                 return value
+            } catch {
+                guard Self.isProductionSchemaRejection(error) else { throw error }
+                return try documentFallback.store(generated)
             }
         } catch {
             throw PlanSecurityError.accountUnavailable
         }
+    }
+
+    private static func isProductionSchemaRejection(_ error: Error) -> Bool {
+        let value = diagnosticMessage(for: error).lowercased()
+        return value.contains("production schema")
+            && value.contains(valueKey.lowercased())
+    }
+
+    private static func diagnosticMessage(for error: Error) -> String {
+        let nsError = error as NSError
+        var values = [
+            error.localizedDescription,
+            nsError.localizedFailureReason ?? "",
+            nsError.userInfo[NSLocalizedRecoverySuggestionErrorKey] as? String
+                ?? "",
+        ]
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+            values.append(diagnosticMessage(for: underlying))
+        }
+        if let partial = nsError.userInfo[CKPartialErrorsByItemIDKey]
+            as? [AnyHashable: Any] {
+            values.append(contentsOf: partial.values.compactMap { value in
+                guard let error = value as? Error else { return nil }
+                return diagnosticMessage(for: error)
+            })
+        }
+        return values.joined(separator: " ")
     }
 
     private static func randomKey() -> Data {
@@ -386,6 +424,57 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
             return Data()
         }
         return key
+    }
+}
+
+final class UbiquitousPlanCloudRecoveryKeyStore {
+    private let containerIdentifier: String
+    private let fileManager: FileManager
+    private let containerURL: URL?
+    private let fileName = ".recovery-key-v1"
+
+    init(
+        containerIdentifier: String = "iCloud.com.taption.plan",
+        fileManager: FileManager = .default,
+        containerURL: URL? = nil
+    ) {
+        self.containerIdentifier = containerIdentifier
+        self.fileManager = fileManager
+        self.containerURL = containerURL
+    }
+
+    func existingKey() throws -> Data? {
+        guard let fileURL = try recoveryKeyURL(createDirectory: false) else { return nil }
+        guard fileManager.fileExists(atPath: fileURL.path) else { return nil }
+        let value = try Data(contentsOf: fileURL)
+        guard value.count == 32 else { throw PlanSecurityError.invalidArchive }
+        return value
+    }
+
+    func store(_ key: Data) throws -> Data {
+        guard key.count == 32 else { throw PlanSecurityError.accountUnavailable }
+        guard let fileURL = try recoveryKeyURL(createDirectory: true) else {
+            throw PlanSecurityError.accountUnavailable
+        }
+        if let stored = try existingKey() { return stored }
+        try key.write(to: fileURL, options: .atomic)
+        return key
+    }
+
+    private func recoveryKeyURL(createDirectory: Bool) throws -> URL? {
+        guard let container = containerURL ?? fileManager.url(
+            forUbiquityContainerIdentifier: containerIdentifier
+        ) else { return nil }
+        let directory = container
+            .appendingPathComponent("Documents", isDirectory: true)
+            .appendingPathComponent("Taption Plan", isDirectory: true)
+        if createDirectory {
+            try fileManager.createDirectory(
+                at: directory,
+                withIntermediateDirectories: true
+            )
+        }
+        return directory.appendingPathComponent(fileName, isDirectory: false)
     }
 }
 

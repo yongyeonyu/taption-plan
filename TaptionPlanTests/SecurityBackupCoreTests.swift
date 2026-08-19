@@ -100,6 +100,18 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertTrue(replacementDevice.hasPIN)
     }
 
+    func testCloudRecoveryKeyFallbackReusesTheStoredKey() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = UbiquitousPlanCloudRecoveryKeyStore(containerURL: directory)
+        let key = Data(repeating: 7, count: 32)
+
+        XCTAssertNil(try store.existingKey())
+        XCTAssertEqual(try store.store(key), key)
+        XCTAssertEqual(try store.existingKey(), key)
+    }
+
     private func makeService(
         biometric: PlanLocalBiometricAuthenticator = MockPlanLocalBiometricAuthenticator(),
         backupStore: PlanCloudBackupStore = InMemoryPlanCloudBackupStore(),
