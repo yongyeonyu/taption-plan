@@ -35,6 +35,7 @@ struct MapHomeView: View {
     @State private var isGPSLoggingMenuExpanded = false
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
+    @State private var isTimelineSelectionPinned = false
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
     @State private var isMapCenteredOnUser = false
     @State private var hasAppliedInitialLocation = false
@@ -191,9 +192,8 @@ struct MapHomeView: View {
             focusMapIfNeeded()
         }
         .onChange(of: model.selectedDate) { _, _ in
-            if selectedTimelineMinute != nil {
-                selectedTimelineMinute = nil
-            }
+            selectedTimelineMinute = nil
+            isTimelineSelectionPinned = false
             if Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
                currentCoordinate != nil {
                 focusUserLocation()
@@ -401,13 +401,14 @@ struct MapHomeView: View {
         GeometryReader { proxy in
             let railHeight = min(680, max(500, proxy.size.height))
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
-                let minute = selectedTimelineMinute ?? minuteOfDay(for: timeline.date)
+                let minute = timelineSelectionMinute(at: timeline.date)
                 MapHomeTimeSidebar(
                     date: model.selectedDate,
                     selectedMinute: Binding(
-                        get: { selectedTimelineMinute ?? minuteOfDay(for: timeline.date) },
+                        get: { timelineSelectionMinute(at: timeline.date) },
                         set: { minute in
                             guard selectedTimelineMinute != minute else { return }
+                            isTimelineSelectionPinned = true
                             selectedTimelineMinute = minute
                         }
                     ),
@@ -418,6 +419,7 @@ struct MapHomeView: View {
                     zoomStepToken: timeSidebarZoomStep,
                     railWidth: Layout.timeRailWidth,
                     onSelectionChanged: { minute in
+                        isTimelineSelectionPinned = true
                         selectedTimelineMinute = minute
                     },
                     onSectionEdit: {
@@ -1154,9 +1156,18 @@ struct MapHomeView: View {
     }
 
     private var effectiveTimelineMinute: Int {
-        selectedTimelineMinute ?? MapHomeTimeSidebarMath.defaultTimelineMinute(
+        timelineSelectionMinute()
+    }
+
+    private func timelineSelectionMinute(
+        at now: Date = .now
+    ) -> Int {
+        if isTimelineSelectionPinned, let selectedTimelineMinute {
+            return selectedTimelineMinute
+        }
+        return selectedTimelineMinute ?? MapHomeTimeSidebarMath.defaultTimelineMinute(
             for: model.selectedDate,
-            now: Date(),
+            now: now,
             calendar: .autoupdatingCurrent
         )
     }
@@ -1275,6 +1286,7 @@ struct MapHomeView: View {
     private func jumpToTodayAndCurrentMapPosition() {
         model.selectedDate = Date()
         selectedTimelineMinute = nil
+        isTimelineSelectionPinned = false
         sharedZoomLevel = 1
         zoomResetToken += 1
         focusMapForSharedZoom()

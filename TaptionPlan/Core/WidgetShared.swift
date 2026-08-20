@@ -8,12 +8,75 @@ enum TaptionWidgetKind {
 
 struct TaptionActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
+        private enum CodingKeys: String, CodingKey {
+            case title
+            case categoryID
+            case startedAt
+            case endsAt
+            case catStyle
+            case isRunning
+            case majorCategoryID
+            case majorCategoryTitle
+        }
+
         var title: String
         var categoryID: String
         var startedAt: Date
         var endsAt: Date
         var catStyle: String
         var isRunning: Bool
+        var majorCategoryID: String = "activity"
+        var majorCategoryTitle: String = "활동"
+
+        init(
+            title: String,
+            categoryID: String,
+            startedAt: Date,
+            endsAt: Date,
+            catStyle: String,
+            isRunning: Bool,
+            majorCategoryID: String = "activity",
+            majorCategoryTitle: String = "활동"
+        ) {
+            self.title = title
+            self.categoryID = categoryID
+            self.startedAt = startedAt
+            self.endsAt = endsAt
+            self.catStyle = catStyle
+            self.isRunning = isRunning
+            self.majorCategoryID = majorCategoryID
+            self.majorCategoryTitle = majorCategoryTitle
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.title = try container.decode(String.self, forKey: .title)
+            self.categoryID = try container.decode(String.self, forKey: .categoryID)
+            self.startedAt = try container.decode(Date.self, forKey: .startedAt)
+            self.endsAt = try container.decode(Date.self, forKey: .endsAt)
+            self.catStyle = try container.decode(String.self, forKey: .catStyle)
+            self.isRunning = try container.decode(Bool.self, forKey: .isRunning)
+            self.majorCategoryID = try container.decodeIfPresent(
+                String.self,
+                forKey: .majorCategoryID
+            ) ?? "activity"
+            self.majorCategoryTitle = try container.decodeIfPresent(
+                String.self,
+                forKey: .majorCategoryTitle
+            ) ?? "활동"
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(title, forKey: .title)
+            try container.encode(categoryID, forKey: .categoryID)
+            try container.encode(startedAt, forKey: .startedAt)
+            try container.encode(endsAt, forKey: .endsAt)
+            try container.encode(catStyle, forKey: .catStyle)
+            try container.encode(isRunning, forKey: .isRunning)
+            try container.encode(majorCategoryID, forKey: .majorCategoryID)
+            try container.encode(majorCategoryTitle, forKey: .majorCategoryTitle)
+        }
     }
 
     var planID: UUID

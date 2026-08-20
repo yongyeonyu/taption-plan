@@ -12,7 +12,9 @@ actor TaptionLiveActivityController {
 
     func start(
         plan: PlanRecord,
-        catStyle: CatStyle
+        catStyle: CatStyle,
+        majorCategoryID: String = "activity",
+        majorCategoryTitle: String = "활동"
     ) async throws -> String {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             throw LiveActivityError.unavailable
@@ -31,7 +33,9 @@ actor TaptionLiveActivityController {
             startedAt: plan.span.start,
             endsAt: plan.span.end,
             catStyle: catStyle.rawValue,
-            isRunning: true
+            isRunning: true,
+            majorCategoryID: majorCategoryID,
+            majorCategoryTitle: majorCategoryTitle
         )
         let newActivity = try Activity.request(
             attributes: TaptionActivityAttributes(planID: plan.id),
@@ -47,7 +51,9 @@ actor TaptionLiveActivityController {
 
     func update(
         plan: PlanRecord,
-        catStyle: CatStyle
+        catStyle: CatStyle,
+        majorCategoryID: String = "activity",
+        majorCategoryTitle: String = "활동"
     ) async throws {
         guard let activity else { throw LiveActivityError.missingActivity }
         let state = TaptionActivityAttributes.ContentState(
@@ -56,7 +62,9 @@ actor TaptionLiveActivityController {
             startedAt: plan.span.start,
             endsAt: plan.span.end,
             catStyle: catStyle.rawValue,
-            isRunning: plan.status == .running
+            isRunning: plan.status == .running,
+            majorCategoryID: majorCategoryID,
+            majorCategoryTitle: majorCategoryTitle
         )
         await activity.update(
             ActivityContent(state: state, staleDate: plan.span.end)
@@ -65,7 +73,9 @@ actor TaptionLiveActivityController {
 
     func stop(
         plan: PlanRecord,
-        catStyle: CatStyle
+        catStyle: CatStyle,
+        majorCategoryID: String = "activity",
+        majorCategoryTitle: String = "활동"
     ) async throws {
         guard let activity else { throw LiveActivityError.missingActivity }
         let finalState = TaptionActivityAttributes.ContentState(
@@ -74,7 +84,9 @@ actor TaptionLiveActivityController {
             startedAt: plan.span.start,
             endsAt: min(.now, plan.span.end),
             catStyle: catStyle.rawValue,
-            isRunning: false
+            isRunning: false,
+            majorCategoryID: majorCategoryID,
+            majorCategoryTitle: majorCategoryTitle
         )
         await activity.end(
             ActivityContent(state: finalState, staleDate: nil),

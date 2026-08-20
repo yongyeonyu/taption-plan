@@ -1299,6 +1299,8 @@ final class AppModel {
         for observation in airPodsActivityService.stop(at: .now) {
             applyAirPodsActivity(observation)
         }
+        resumeSensorCollectionIfNeeded()
+        await restoreTrackingSessionIfNeeded()
         foregroundRefreshTask?.cancel()
         foregroundRefreshTask = nil
         deferredVisibleRefreshTask?.cancel()
@@ -1451,6 +1453,8 @@ final class AppModel {
         await bootstrap()
         await waitForBootstrapPreparation()
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
+        self.resumeSensorCollectionIfNeeded()
+        await self.restoreTrackingSessionIfNeeded()
         await refreshEnabledData(includesCurrentDeviceDay: true)
         await persist()
         let success = userFacingError == nil
@@ -3289,9 +3293,12 @@ final class AppModel {
         groupNavigationPath.removeAll {
             deletedIDs.contains($0)
         }
+        let majorCategory = currentMajorCategory(for: plan)
         try? await liveActivityController.stop(
             plan: plan,
-            catStyle: snapshot.settings.catStyle
+            catStyle: snapshot.settings.catStyle,
+            majorCategoryID: majorCategory.id,
+            majorCategoryTitle: majorCategory.title
         )
         await persist()
     }
@@ -3312,6 +3319,13 @@ final class AppModel {
                 .map { CloudBackupRecordKey.link($0.id) }
         )
         snapshot.recordLinks.removeAll(where: shouldRemove)
+    }
+
+    private func currentMajorCategory(for plan: PlanRecord) -> (id: String, title: String) {
+        let title = snapshot.categories.first(where: { $0.id == plan.categoryID })?.name
+            ?? TimelineRowKind.title(forCategoryID: plan.categoryID)
+            ?? "활동"
+        return (plan.categoryID, title)
     }
 
     func deleteActual(_ actualID: UUID) async {
@@ -3338,9 +3352,12 @@ final class AppModel {
            snapshot.plans[planIndex].status == .running {
             snapshot.plans[planIndex].status = .planned
             snapshot.plans[planIndex].updatedAt = .now
+            let majorCategory = currentMajorCategory(for: snapshot.plans[planIndex])
             try? await liveActivityController.stop(
                 plan: snapshot.plans[planIndex],
-                catStyle: snapshot.settings.catStyle
+                catStyle: snapshot.settings.catStyle,
+                majorCategoryID: majorCategory.id,
+                majorCategoryTitle: majorCategory.title
             )
         }
 
@@ -3628,9 +3645,12 @@ final class AppModel {
                 )
                 snapshot.plans[index] = result.plan
                 snapshot.actuals = result.actuals
+                let majorCategory = currentMajorCategory(for: result.plan)
                 try? await liveActivityController.stop(
                     plan: result.plan,
-                    catStyle: snapshot.settings.catStyle
+                    catStyle: snapshot.settings.catStyle,
+                    majorCategoryID: majorCategory.id,
+                    majorCategoryTitle: majorCategory.title
                 )
             case .postponeThirtyMinutes:
                 snapshot.plans[index] = try QuickActionEngine.postpone(plan: plan)
@@ -3663,10 +3683,13 @@ final class AppModel {
         )
         snapshot.plans[index] = result.plan
         snapshot.actuals = result.actuals
+        let majorCategory = currentMajorCategory(for: result.plan)
         do {
             _ = try await liveActivityController.start(
                 plan: result.plan,
-                catStyle: snapshot.settings.catStyle
+                catStyle: snapshot.settings.catStyle,
+                majorCategoryID: majorCategory.id,
+                majorCategoryTitle: majorCategory.title
             )
         } catch LiveActivityError.unavailable {
             // The plan timer still works when Live Activities are disabled.
@@ -3691,9 +3714,12 @@ final class AppModel {
                 date
             )
         }
+        let majorCategory = currentMajorCategory(for: snapshot.plans[index])
         try? await liveActivityController.stop(
             plan: snapshot.plans[index],
-            catStyle: snapshot.settings.catStyle
+            catStyle: snapshot.settings.catStyle,
+            majorCategoryID: majorCategory.id,
+            majorCategoryTitle: majorCategory.title
         )
         await persist()
     }

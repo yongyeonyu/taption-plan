@@ -2194,13 +2194,19 @@ struct TaptionPlanLiveActivity: Widget {
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
+            DynamicIslandExpandedRegion(.leading) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(context.state.majorCategoryTitle)
+                        .font(.caption2)
+                        .foregroundStyle(Color(red: 0.90, green: 0.90, blue: 0.92))
+                        .lineLimit(1)
                     WidgetCat(style: context.state.catStyle)
                         .frame(width: 30, height: 21)
                 }
-                DynamicIslandExpandedRegion(.center) {
-                    Text(context.state.title)
-                        .font(.headline)
+            }
+            DynamicIslandExpandedRegion(.center) {
+                Text(context.state.title)
+                    .font(.headline)
                         .lineLimit(1)
                         .foregroundStyle(.white)
                 }
@@ -2249,9 +2255,15 @@ private struct TaptionLiveActivityLockScreenView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(context.state.title)
-                    .font(.system(size: 13, weight: .bold))
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(context.state.majorCategoryTitle)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color(red: 0.87, green: 0.87, blue: 0.88))
+                        .lineLimit(1)
+                    Text(context.state.title)
+                        .font(.system(size: 13, weight: .bold))
+                        .lineLimit(1)
+                }
                 Spacer()
                 Text(remainingLabel)
                     .font(.system(size: 11))
