@@ -17,6 +17,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
             case isRunning
             case majorCategoryID
             case majorCategoryTitle
+            case majorCategorySystemImage
         }
 
         var title: String
@@ -27,6 +28,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
         var isRunning: Bool
         var majorCategoryID: String = "activity"
         var majorCategoryTitle: String = "활동"
+        var majorCategorySystemImage: String = "sparkles"
 
         init(
             title: String,
@@ -36,7 +38,8 @@ struct TaptionActivityAttributes: ActivityAttributes {
             catStyle: String,
             isRunning: Bool,
             majorCategoryID: String = "activity",
-            majorCategoryTitle: String = "활동"
+            majorCategoryTitle: String = "활동",
+            majorCategorySystemImage: String = "sparkles"
         ) {
             self.title = title
             self.categoryID = categoryID
@@ -46,6 +49,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
             self.isRunning = isRunning
             self.majorCategoryID = majorCategoryID
             self.majorCategoryTitle = majorCategoryTitle
+            self.majorCategorySystemImage = majorCategorySystemImage
         }
 
         init(from decoder: Decoder) throws {
@@ -64,6 +68,10 @@ struct TaptionActivityAttributes: ActivityAttributes {
                 String.self,
                 forKey: .majorCategoryTitle
             ) ?? "활동"
+            self.majorCategorySystemImage = try container.decodeIfPresent(
+                String.self,
+                forKey: .majorCategorySystemImage
+            ) ?? "sparkles"
         }
 
         func encode(to encoder: Encoder) throws {
@@ -76,6 +84,10 @@ struct TaptionActivityAttributes: ActivityAttributes {
             try container.encode(isRunning, forKey: .isRunning)
             try container.encode(majorCategoryID, forKey: .majorCategoryID)
             try container.encode(majorCategoryTitle, forKey: .majorCategoryTitle)
+            try container.encode(
+                majorCategorySystemImage,
+                forKey: .majorCategorySystemImage
+            )
         }
     }
 

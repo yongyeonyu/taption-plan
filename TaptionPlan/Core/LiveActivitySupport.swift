@@ -14,7 +14,8 @@ actor TaptionLiveActivityController {
         plan: PlanRecord,
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
-        majorCategoryTitle: String = "활동"
+        majorCategoryTitle: String = "활동",
+        majorCategorySystemImage: String = "sparkles"
     ) async throws -> String {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             throw LiveActivityError.unavailable
@@ -35,7 +36,8 @@ actor TaptionLiveActivityController {
             catStyle: catStyle.rawValue,
             isRunning: true,
             majorCategoryID: majorCategoryID,
-            majorCategoryTitle: majorCategoryTitle
+            majorCategoryTitle: majorCategoryTitle,
+            majorCategorySystemImage: majorCategorySystemImage
         )
         let newActivity = try Activity.request(
             attributes: TaptionActivityAttributes(planID: plan.id),
@@ -53,7 +55,8 @@ actor TaptionLiveActivityController {
         plan: PlanRecord,
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
-        majorCategoryTitle: String = "활동"
+        majorCategoryTitle: String = "활동",
+        majorCategorySystemImage: String = "sparkles"
     ) async throws {
         guard let activity else { throw LiveActivityError.missingActivity }
         let state = TaptionActivityAttributes.ContentState(
@@ -64,7 +67,8 @@ actor TaptionLiveActivityController {
             catStyle: catStyle.rawValue,
             isRunning: plan.status == .running,
             majorCategoryID: majorCategoryID,
-            majorCategoryTitle: majorCategoryTitle
+            majorCategoryTitle: majorCategoryTitle,
+            majorCategorySystemImage: majorCategorySystemImage
         )
         await activity.update(
             ActivityContent(state: state, staleDate: plan.span.end)
@@ -75,7 +79,8 @@ actor TaptionLiveActivityController {
         plan: PlanRecord,
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
-        majorCategoryTitle: String = "활동"
+        majorCategoryTitle: String = "활동",
+        majorCategorySystemImage: String = "sparkles"
     ) async throws {
         guard let activity else { throw LiveActivityError.missingActivity }
         let finalState = TaptionActivityAttributes.ContentState(
@@ -86,7 +91,8 @@ actor TaptionLiveActivityController {
             catStyle: catStyle.rawValue,
             isRunning: false,
             majorCategoryID: majorCategoryID,
-            majorCategoryTitle: majorCategoryTitle
+            majorCategoryTitle: majorCategoryTitle,
+            majorCategorySystemImage: majorCategorySystemImage
         )
         await activity.end(
             ActivityContent(state: finalState, staleDate: nil),

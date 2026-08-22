@@ -3298,7 +3298,8 @@ final class AppModel {
             plan: plan,
             catStyle: snapshot.settings.catStyle,
             majorCategoryID: majorCategory.id,
-            majorCategoryTitle: majorCategory.title
+            majorCategoryTitle: majorCategory.title,
+            majorCategorySystemImage: majorCategory.systemImage
         )
         await persist()
     }
@@ -3321,11 +3322,19 @@ final class AppModel {
         snapshot.recordLinks.removeAll(where: shouldRemove)
     }
 
-    private func currentMajorCategory(for plan: PlanRecord) -> (id: String, title: String) {
+    private func currentMajorCategory(for plan: PlanRecord) -> (
+        id: String,
+        title: String,
+        systemImage: String
+    ) {
         let title = snapshot.categories.first(where: { $0.id == plan.categoryID })?.name
             ?? TimelineRowKind.title(forCategoryID: plan.categoryID)
             ?? "활동"
-        return (plan.categoryID, title)
+        let systemImage = RecordClassificationCatalog.categories.first {
+            $0.id == plan.categoryID
+        }?.systemImage ?? TimelineRowKind(categoryID: plan.categoryID)?.systemImage
+            ?? "sparkles"
+        return (plan.categoryID, title, systemImage)
     }
 
     func deleteActual(_ actualID: UUID) async {
@@ -3357,7 +3366,8 @@ final class AppModel {
                 plan: snapshot.plans[planIndex],
                 catStyle: snapshot.settings.catStyle,
                 majorCategoryID: majorCategory.id,
-                majorCategoryTitle: majorCategory.title
+                majorCategoryTitle: majorCategory.title,
+                majorCategorySystemImage: majorCategory.systemImage
             )
         }
 
@@ -3650,7 +3660,8 @@ final class AppModel {
                     plan: result.plan,
                     catStyle: snapshot.settings.catStyle,
                     majorCategoryID: majorCategory.id,
-                    majorCategoryTitle: majorCategory.title
+                    majorCategoryTitle: majorCategory.title,
+                    majorCategorySystemImage: majorCategory.systemImage
                 )
             case .postponeThirtyMinutes:
                 snapshot.plans[index] = try QuickActionEngine.postpone(plan: plan)
@@ -3689,7 +3700,8 @@ final class AppModel {
                 plan: result.plan,
                 catStyle: snapshot.settings.catStyle,
                 majorCategoryID: majorCategory.id,
-                majorCategoryTitle: majorCategory.title
+                majorCategoryTitle: majorCategory.title,
+                majorCategorySystemImage: majorCategory.systemImage
             )
         } catch LiveActivityError.unavailable {
             // The plan timer still works when Live Activities are disabled.
@@ -3719,7 +3731,8 @@ final class AppModel {
             plan: snapshot.plans[index],
             catStyle: snapshot.settings.catStyle,
             majorCategoryID: majorCategory.id,
-            majorCategoryTitle: majorCategory.title
+            majorCategoryTitle: majorCategory.title,
+            majorCategorySystemImage: majorCategory.systemImage
         )
         await persist()
     }

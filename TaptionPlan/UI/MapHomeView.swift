@@ -33,6 +33,7 @@ struct MapHomeView: View {
     @State private var compassControlState: MapHomeCompassControlState = .directionArrow
     @State private var isGPSLoggingActionInFlight = false
     @State private var isGPSLoggingMenuExpanded = false
+    @State private var gpsLoggingIntervalDraft = GPSLoggingPreferences.standard.intervalMinutes
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
     @State private var isTimelineSelectionPinned = false
@@ -895,6 +896,9 @@ struct MapHomeView: View {
         let tint = isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue
         return VStack(alignment: .leading, spacing: 7) {
             Button {
+                if !isGPSLoggingMenuExpanded {
+                    gpsLoggingIntervalDraft = preferences.intervalMinutes
+                }
                 isGPSLoggingMenuExpanded.toggle()
             } label: {
                 HStack(spacing: 13) {
@@ -990,27 +994,30 @@ struct MapHomeView: View {
                             Text(language.text("시간", "Interval"))
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                             Spacer()
-                            Text(language.text("\(preferences.effectiveIntervalMinutes)분", "\(preferences.effectiveIntervalMinutes) min"))
+                            Text(language.text("\(gpsLoggingIntervalDisplay(preferences))분", "\(gpsLoggingIntervalDisplay(preferences)) min"))
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .foregroundStyle(tint)
                         }
 
                         Slider(
                             value: Binding(
-                                get: {
-                                    Double(model.settings.gpsLoggingPreferences.intervalMinutes)
-                                },
-                                set: { model.setGPSLoggingIntervalMinutes(Int($0.rounded())) }
+                                get: { Double(gpsLoggingIntervalDraft) },
+                                set: { gpsLoggingIntervalDraft = GPSLoggingPreferences.clampedMinutes(Int($0.rounded())) }
                             ),
                             in: 1...15,
-                            step: 1
+                            step: 1,
+                            onEditingChanged: { isEditing in
+                                if !isEditing {
+                                    model.setGPSLoggingIntervalMinutes(gpsLoggingIntervalDraft)
+                                }
+                            }
                         )
                         .tint(tint)
                         .disabled(preferences.isBatteryMinimal)
                         .accessibilityLabel(language.text("GPS 기록 시간", "GPS logging interval"))
                         .accessibilityValue(language.text(
-                            "\(preferences.effectiveIntervalMinutes)분",
-                            "\(preferences.effectiveIntervalMinutes) minutes"
+                            "\(gpsLoggingIntervalDisplay(preferences))분",
+                            "\(gpsLoggingIntervalDisplay(preferences)) minutes"
                         ))
 
                         HStack {
@@ -1029,6 +1036,14 @@ struct MapHomeView: View {
                 .padding(.leading, 12)
             }
         }
+    }
+
+    private func gpsLoggingIntervalDisplay(
+        _ preferences: GPSLoggingPreferences
+    ) -> Int {
+        preferences.isBatteryMinimal
+            ? preferences.effectiveIntervalMinutes
+            : gpsLoggingIntervalDraft
     }
 
     private func toggleGPSLogging() {
