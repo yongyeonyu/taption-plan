@@ -298,6 +298,22 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testExpandedSidebarRulerUsesEveryVisibleMinute() {
+        let marks = MapHomeTimeSidebarMath.visibleMinuteMarks(window: 120...180)
+
+        XCTAssertEqual(marks.count, 61)
+        XCTAssertEqual(marks.first, 120)
+        XCTAssertEqual(marks.last, 180)
+        XCTAssertTrue(marks.filter { $0.isMultiple(of: 10) }.contains(150))
+    }
+
+    func testSidebarRulerDetailFollowsThirdAndFourthZoomSteps() {
+        XCTAssertFalse(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 360))
+        XCTAssertTrue(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 180))
+        XCTAssertFalse(MapHomeTimeSidebarMath.showsMinuteTicks(durationMinutes: 180))
+        XCTAssertTrue(MapHomeTimeSidebarMath.showsMinuteTicks(durationMinutes: 60))
+    }
+
     func testMapHomeCompassControlReturnsToArrowWithFixedDirection() {
         let compass = MapHomeCompassControlState.directionArrow.toggled
         XCTAssertEqual(compass, .compass)

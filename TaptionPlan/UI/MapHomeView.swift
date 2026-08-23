@@ -65,6 +65,7 @@ struct MapHomeView: View {
     @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var sidebarPinchDirection = 0
     @State private var activePaletteCategoryID: String?
+    @State private var customPaletteColor = Color.tpReferenceMint
     @State private var lastMapCameraPublishUptime: TimeInterval = 0
 
     private static let userCenterTolerance: CLLocationDistance = 120
@@ -344,6 +345,12 @@ struct MapHomeView: View {
                             .background(Circle().fill(.white))
                     }
                     .buttonStyle(.plain)
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 0.45)
+                            .onEnded { _ in
+                                isSearchPinMenuPresented = true
+                            }
+                    )
                     .accessibilityLabel(
                         language.text(
                             "(selectedSearchPin.title) 위치 추가",
@@ -389,17 +396,19 @@ struct MapHomeView: View {
             let weatherWidth = model.settings.weatherSidebarVisible
                 ? Layout.weatherRailWidth + Layout.weatherRailSpacing
                 : 0
+            let shieldWidth = weatherWidth
+                + Layout.timeRailWidth
+                + Layout.timeSidebarHandleOverflow
+                + Layout.horizontalInset
+            let shieldHeight = max(0, proxy.size.height - protectedTop)
             Rectangle()
                 .fill(.clear)
+                .frame(width: shieldWidth, height: shieldHeight)
                 .contentShape(Rectangle())
-                .frame(
-                    width: weatherWidth
-                        + Layout.timeRailWidth
-                        + Layout.timeSidebarHandleOverflow
-                        + Layout.horizontalInset,
-                    height: max(0, proxy.size.height - protectedTop)
+                .position(
+                    x: proxy.size.width - shieldWidth / 2,
+                    y: protectedTop + shieldHeight / 2
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .allowsHitTesting(true)
         }
         .ignoresSafeArea()
@@ -840,11 +849,12 @@ struct MapHomeView: View {
                         - MapHomeBannerAdView.reservedHeight
                         - MapHomeBannerAdView.bottomSafeAreaInset
                 )
+                let menuTop = Layout.headerVisibleHeight + 8
                 sidebarContent
-                .frame(width: 316, height: menuHeight, alignment: .top)
+                .frame(width: 316, height: max(0, menuHeight - menuTop), alignment: .top)
                 .background(.regularMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .ignoresSafeArea(edges: .top)
+                .padding(.top, menuTop)
                 .shadow(color: Color.black.opacity(0.18), radius: 22, x: 8, y: 0)
             }
         }
@@ -955,9 +965,15 @@ struct MapHomeView: View {
                                     .font(.system(size: 13, weight: .medium, design: .rounded))
                                 Spacer()
                                 Button {
-                                    activePaletteCategoryID = activePaletteCategoryID == category.id
-                                        ? nil
-                                        : category.id
+                                    if activePaletteCategoryID == category.id {
+                                        activePaletteCategoryID = nil
+                                    } else {
+                                        customPaletteColor = Color(
+                                            hex: model.settings.mapCategoryColors[category.id]
+                                                ?? category.hex
+                                        )
+                                        activePaletteCategoryID = category.id
+                                    }
                                 } label: {
                                     Circle()
                                         .fill(category.tint)
@@ -999,6 +1015,27 @@ struct MapHomeView: View {
                                         .buttonStyle(.plain)
                                         .accessibilityLabel(language.text("색상 선택", "Choose color"))
                                     }
+
+                                    ColorPicker(
+                                        language.text("사용자 지정", "Custom"),
+                                        selection: Binding(
+                                            get: { customPaletteColor },
+                                            set: { color in
+                                                customPaletteColor = color
+                                                if let hex = color.hexRGBString {
+                                                    model.setMapCategoryColor(hex, for: category.id)
+                                                }
+                                            }
+                                        ),
+                                        supportsOpacity: false
+                                    )
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .frame(maxWidth: .infinity, minHeight: 28)
+                                    .padding(.horizontal, 5)
+                                    .background(Color.tpInk.opacity(0.07), in: Capsule())
+                                    .accessibilityLabel(
+                                        language.text("사용자 지정 색상", "Custom category color")
+                                    )
                                 }
                                 .padding(.leading, 39)
                                 .padding(.bottom, 4)
@@ -2586,7 +2623,7 @@ private struct MapHomeTransitPlacePin: View {
         VStack(spacing: 4) {
             MapHomeMarkerLabel(title: name, color: Color.tpReferenceBlue)
             Image(systemName: kind.systemImage)
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
                 .background(Color.tpReferenceBlue, in: Circle())
@@ -2729,55 +2766,33 @@ private struct MapHomeCalendarGlyph: View {
         MapHomeCalendarDayStyle(date: date, calendar: calendar)
     }
 
-    private var tint: Color {
-        switch style {
-        case .weekday: .tpInk
-        case .saturday: .tpSaturday
-        case .holiday: .tpHoliday
+    private var weekday: Int {
+        calendar.component(.weekday, from: date)
+    }
+
+    private var assetName: String {
+        if style == .holiday {
+            return "MapHomeCalendarSunday"
+        }
+        switch weekday {
+        case 1: return "MapHomeCalendarSunday"
+        case 2: return "MapHomeCalendarMonday"
+        case 3: return "MapHomeCalendarTuesday"
+        case 4: return "MapHomeCalendarWednesday"
+        case 5: return "MapHomeCalendarThursday"
+        case 6: return "MapHomeCalendarFriday"
+        default: return "MapHomeCalendarSaturday"
         }
     }
 
     var body: some View {
-        NotionCalendarDaysIcon(tint: tint)
-        .frame(width: 24, height: 25)
+        Image(assetName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 24, height: 25)
         .accessibilityLabel(
             language.text("\(day)일 달력", "Calendar, day \(day)")
         )
-    }
-}
-
-private struct NotionCalendarDaysIcon: View {
-    let tint: Color
-
-    private let dateDots = [
-        CGPoint(x: 8, y: 13), CGPoint(x: 12, y: 13), CGPoint(x: 16, y: 13),
-        CGPoint(x: 8, y: 17), CGPoint(x: 12, y: 17), CGPoint(x: 16, y: 17)
-    ]
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .stroke(tint, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                .frame(width: 18, height: 18)
-
-            Path { path in
-                path.move(to: CGPoint(x: 8, y: 2))
-                path.addLine(to: CGPoint(x: 8, y: 5))
-                path.move(to: CGPoint(x: 16, y: 2))
-                path.addLine(to: CGPoint(x: 16, y: 5))
-                path.move(to: CGPoint(x: 3, y: 9))
-                path.addLine(to: CGPoint(x: 21, y: 9))
-            }
-            .stroke(tint, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-
-            ForEach(dateDots.indices, id: \.self) { index in
-                Circle()
-                    .fill(tint)
-                    .frame(width: 2, height: 2)
-                    .position(dateDots[index])
-            }
-        }
-        .frame(width: 24, height: 24)
     }
 }
 

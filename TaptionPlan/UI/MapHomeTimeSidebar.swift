@@ -609,27 +609,79 @@ struct MapHomeTimeSidebar: View {
                 )
                 .allowsHitTesting(false)
 
-                ForEach(MapHomeTimeSidebarMath.visibleHours(window: visibleWindow), id: \.self) { hour in
-                    let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
-                        minute: hour * 60,
-                        window: visibleWindow
+                if MapHomeTimeSidebarMath.showsTenMinuteRuler(
+                    durationMinutes: visibleDurationMinutes
+                ) {
+                    let showsMinuteTicks = MapHomeTimeSidebarMath.showsMinuteTicks(
+                        durationMinutes: visibleDurationMinutes
                     )
-                    HStack(spacing: 3) {
-                        Capsule()
-                            .fill(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
-                            .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5)
-                        Text(String(format: "%02d", hour))
-                            .font(.system(size: 9, weight: hour.isMultiple(of: 6) ? .bold : .medium, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
-                            .frame(width: 16, alignment: .leading)
+                    let minuteMarks = MapHomeTimeSidebarMath.visibleMinuteMarks(window: visibleWindow)
+                    Canvas { context, size in
+                        for minuteMark in minuteMarks {
+                            guard showsMinuteTicks || minuteMark.isMultiple(of: 10) else {
+                                continue
+                            }
+                            let isTenMinute = minuteMark.isMultiple(of: 10)
+                            let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
+                                minute: minuteMark,
+                                window: visibleWindow
+                            )
+                            var path = Path()
+                            path.move(to: CGPoint(x: 0, y: y))
+                            path.addLine(to: CGPoint(x: isTenMinute ? 8 : 4, y: y))
+                            context.stroke(
+                                path,
+                                with: .color(Color.tpInk.opacity(isTenMinute ? 0.54 : 0.22)),
+                                lineWidth: 1
+                            )
+                        }
                     }
-                    .frame(width: numericColumnWidth, alignment: .leading)
-                    .position(
-                        x: railWidth - numericColumnWidth / 2,
-                        y: y
-                    )
+                    .frame(width: numericColumnWidth, height: railHeight)
+                    .position(x: railWidth - numericColumnWidth / 2, y: railHeight / 2)
                     .allowsHitTesting(false)
+
+                    ForEach(
+                        minuteMarks.filter { $0.isMultiple(of: 10) },
+                        id: \.self
+                    ) { minuteMark in
+                        let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
+                            minute: minuteMark,
+                            window: visibleWindow
+                        )
+                        Text(String(format: "%02d:%02d", minuteMark / 60, minuteMark % 60))
+                            .font(.system(size: 8, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.tpInk.opacity(0.78))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .frame(width: 32, alignment: .leading)
+                            .position(
+                                x: railWidth - numericColumnWidth / 2 + 1,
+                                y: y
+                            )
+                            .allowsHitTesting(false)
+                    }
+                } else {
+                    ForEach(MapHomeTimeSidebarMath.visibleHours(window: visibleWindow), id: \.self) { hour in
+                        let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
+                            minute: hour * 60,
+                            window: visibleWindow
+                        )
+                        HStack(spacing: 3) {
+                            Capsule()
+                                .fill(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
+                                .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5)
+                            Text(String(format: "%02d", hour))
+                                .font(.system(size: 9, weight: hour.isMultiple(of: 6) ? .bold : .medium, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
+                                .frame(width: 16, alignment: .leading)
+                        }
+                        .frame(width: numericColumnWidth, alignment: .leading)
+                        .position(x: railWidth - numericColumnWidth / 2, y: y)
+                        .allowsHitTesting(false)
+                    }
                 }
 
                 selectionHandle(
@@ -724,17 +776,16 @@ struct MapHomeTimeSidebar: View {
             if let currentWeather {
                 HStack(spacing: 2) {
                     Image(systemName: currentWeather.symbolName)
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 9, weight: .semibold))
                         .symbolRenderingMode(.multicolor)
                     Text("\(Int(currentWeather.temperatureCelsius.rounded()))°")
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .font(.system(size: 8, weight: .bold, design: .rounded))
                         .monospacedDigit()
                 }
                 .foregroundStyle(Color.tpWeatherDark)
-                .padding(.horizontal, 4)
-                .frame(height: 24)
+                .frame(width: 32, height: 22)
                 .background(Color.tpWeather.opacity(0.24), in: Capsule())
-                .position(x: trackX - 55, y: handleHeight / 2)
+                .position(x: trackX - 23, y: -10)
                 .accessibilityLabel(
                     "현재 날씨 \(currentWeather.condition), \(Int(currentWeather.temperatureCelsius.rounded()))도"
                 )
@@ -1183,6 +1234,20 @@ enum MapHomeTimeSidebarMath {
         let first = max(0, Int(ceil(Double(window.lowerBound) / 60)))
         let last = min(24, Int(floor(Double(window.upperBound) / 60)))
         return Array(first...max(first, last))
+    }
+
+    static func visibleMinuteMarks(window: ClosedRange<Int>) -> [Int] {
+        let first = min(max(window.lowerBound, 0), fullDayMinutes)
+        let last = min(max(window.upperBound, first), fullDayMinutes)
+        return Array(first...last)
+    }
+
+    static func showsTenMinuteRuler(durationMinutes: Int) -> Bool {
+        durationMinutes <= 180
+    }
+
+    static func showsMinuteTicks(durationMinutes: Int) -> Bool {
+        durationMinutes <= 60
     }
 
     static func maximumSelectableMinute(for date: Date, now: Date, calendar: Calendar = .current) -> Int {

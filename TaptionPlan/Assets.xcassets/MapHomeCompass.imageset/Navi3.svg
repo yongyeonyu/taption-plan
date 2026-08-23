@@ -6,8 +6,10 @@
 <g id="레이어-1-복사-복사-복사-복사-복사" vectornator:layerName="레이어 1 복사 복사 복사 복사 복사">
 <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12Z" fill="none" opacity="1" stroke="#2d9bf0" stroke-linecap="butt" stroke-linejoin="round" stroke-width="2"/>
 <path d="M11.4697 12.5303C11.1768 12.2374 11.1768 11.7626 11.4697 11.4697C11.7626 11.1768 12.2374 11.1768 12.5303 11.4697C12.8232 11.7626 12.8232 12.2374 12.5303 12.5303C12.2374 12.8232 11.7626 12.8232 11.4697 12.5303Z" fill="#ffffff" fill-rule="nonzero" opacity="1" stroke="#ffffff" stroke-linecap="butt" stroke-linejoin="round" stroke-width="0.5"/>
+<g opacity="1">
 <path d="M9 11.75L12 5.75L15 11.75L9 11.75Z" fill="#f15c80" fill-rule="nonzero" opacity="1" stroke="#f15c80" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="0.5"/>
-<path d="M15 12.25L12 18.25L9 12.25L15 12.25Z" fill="#777777" fill-rule="nonzero" opacity="1" stroke="#777777" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="0.5"/>
+<path d="M15 12.25L12 18.25L9 12.25L15 12.25Z" fill="#2d9bf0" fill-rule="nonzero" opacity="1" stroke="#2d9bf0" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="0.5"/>
+</g>
 <path d="M12.4171 3.86446L11.7415 2.68951L11.7415 3.86446L11.4195 3.86446L11.4195 2.21033L11.7819 2.21033L12.4407 3.36508L12.4407 2.21033L12.7627 2.21033L12.7627 3.86446L12.4171 3.86446Z" fill="#ffffff" opacity="1" stroke="none"/>
 <path d="M2.5 11.523L3.5 11.9873L2.50699 12.477L2.5 11.523Z" fill="#ffffff" fill-rule="nonzero" opacity="1" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="miter" stroke-width="0.110137"/>
 <path d="M21.5 12.477L20.5 12.0127L21.493 11.523L21.5 12.477Z" fill="#ffffff" fill-rule="nonzero" opacity="1" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="miter" stroke-width="0.110137"/>
