@@ -28,7 +28,8 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .school: self = .school
         case .exercise: self = .exercise
         case .hobby: self = .hobby
-        case .academy, .custom: return nil
+        case .academy: return nil
+        case .custom: self = .user
         }
     }
 

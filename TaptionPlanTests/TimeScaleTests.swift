@@ -807,8 +807,8 @@ final class TimeScaleTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(state.visibleStartMinute, 677)
-        XCTAssertEqual(state.selectedMinute, 677)
+        XCTAssertEqual(state.visibleStartMinute, 703)
+        XCTAssertEqual(state.selectedMinute, 763)
     }
 
     func testMapHomeTimeSidebarHandleScrollsOnlyAtAndStopsAtEdges() throws {
@@ -844,8 +844,8 @@ final class TimeScaleTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(state.visibleStartMinute, 13)
-        XCTAssertEqual(state.selectedMinute, 73)
+        XCTAssertEqual(state.visibleStartMinute, 0)
+        XCTAssertEqual(state.selectedMinute, 0)
         XCTAssertEqual(
             MapHomeTimeSidebarMath.maximumVisibleStart(durationMinutes: 60),
             1_380
@@ -866,7 +866,7 @@ final class TimeScaleTests: XCTestCase {
 
         var state = try XCTUnwrap(
             drag.projectedState(
-                translation: -151,
+                translation: 151,
                 trackHeight: 300,
                 maxMinute: 600,
                 sensitivity: 1,
@@ -876,7 +876,7 @@ final class TimeScaleTests: XCTestCase {
         for frame in 1...180 {
             state = try XCTUnwrap(
                 drag.projectedState(
-                    translation: -151,
+                    translation: 151,
                     trackHeight: 300,
                     maxMinute: 600,
                     sensitivity: 1,

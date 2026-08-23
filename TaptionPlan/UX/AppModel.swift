@@ -4761,6 +4761,12 @@ final class AppModel {
         await persist()
     }
 
+    func setWeatherSidebarVisible(_ visible: Bool) {
+        guard snapshot.settings.weatherSidebarVisible != visible else { return }
+        snapshot.settings.weatherSidebarVisible = visible
+        Task { await persist() }
+    }
+
     func confirmTravel(_ travelID: UUID, mode: TravelMode) {
         confirmTravel([travelID], mode: mode)
     }
@@ -5331,6 +5337,18 @@ final class AppModel {
 
     func deleteUserTransitLocation(_ id: UUID) {
         snapshot.settings.userTransitLocations.removeAll { $0.id == id }
+        Task { await persist() }
+    }
+
+    func renameUserTransitLocation(_ locationID: UUID, name: String) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty,
+              let index = snapshot.settings.userTransitLocations.firstIndex(
+                  where: { $0.id == locationID }
+              ) else {
+            return
+        }
+        snapshot.settings.userTransitLocations[index].name = cleanName
         Task { await persist() }
     }
 
@@ -7050,6 +7068,7 @@ final class AppModel {
             local.settings.cloudResetAt,
         ].compactMap { $0 }.max()
         value.settings.weatherEnabled = local.settings.weatherEnabled
+        value.settings.weatherSidebarVisible = local.settings.weatherSidebarVisible
         value.settings.notificationsEnabled =
             local.settings.notificationsEnabled
         value.actuals = ActualRecordSuppressionEngine.visibleRecords(

@@ -305,7 +305,7 @@ private struct MapHomeAppLockView: View {
         ZStack {
             Color.tpInk.ignoresSafeArea()
             VStack(spacing: 18) {
-                Image("MapHomeNotionMascot")
+                Image("MapHomeHomeIcon")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 92, height: 92)

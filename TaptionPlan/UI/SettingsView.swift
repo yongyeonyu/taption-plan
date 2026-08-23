@@ -20,6 +20,7 @@ struct SettingsView: View {
     @State private var customFrequentPlaceName = ""
     @State private var selectedFrequentPlace: FrequentPlace?
     @State private var showsSuggestedPlaceKinds = false
+    @State private var showsUserTransitLocations = false
     @State private var expandedSettingsSections: Set<String> = [
         "나에게 맞추기",
         "화면과 동작",
@@ -120,6 +121,7 @@ struct SettingsView: View {
                             model.detail = .categoryManager
                         }
                         frequentPlacesRow
+                        userTransitLocationsRow
                     }
 
                     settingsSection(
@@ -353,6 +355,9 @@ struct SettingsView: View {
         }
         .sheet(item: $sharedExport) { value in
             ActivityShareSheet(items: [value.url])
+        }
+        .sheet(isPresented: $showsUserTransitLocations) {
+            UserTransitLocationsSettingsView(model: model)
         }
         .confirmationDialog(
             "모든 Taption Plan 데이터를 삭제할까요?",
@@ -761,6 +766,19 @@ struct SettingsView: View {
             Button("취소", role: .cancel) {}
         } message: {
             Text("위치는 이미 채워져 있습니다. 이름과 감지 범위는 다음 화면에서 고칠 수 있습니다.")
+        }
+    }
+
+    private var userTransitLocationsRow: some View {
+        settingsRow(
+            icon: "tram.fill",
+            iconBackground: Color.tpTransit.opacity(0.24),
+            iconColor: Color.tpTransitDark,
+            title: "사용자 등록 역·정류장",
+            subtitle: "지하철역·버스정류장 이름과 유형 확인",
+            value: "\(model.settings.userTransitLocations.count)개"
+        ) {
+            showsUserTransitLocations = true
         }
     }
 
@@ -1463,6 +1481,95 @@ struct SettingsView: View {
             Rectangle()
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
+        }
+    }
+}
+
+private struct UserTransitLocationsSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    @State private var selectedLocation: UserTransitLocation?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if model.settings.userTransitLocations.isEmpty {
+                    Text("등록된 역·정류장이 없습니다.")
+                        .foregroundStyle(Color.tpSecondary)
+                } else {
+                    Section("등록된 위치") {
+                        ForEach(model.settings.userTransitLocations) { location in
+                            Button {
+                                selectedLocation = location
+                            } label: {
+                                Label {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(location.name)
+                                            .foregroundStyle(Color.tpInk)
+                                        Text(location.kind.title)
+                                            .font(.caption)
+                                            .foregroundStyle(Color.tpSecondary)
+                                    }
+                                } icon: {
+                                    Image(systemName: location.kind.systemImage)
+                                        .foregroundStyle(Color.tpTransitDark)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("사용자 등록 위치")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("닫기") { dismiss() }
+                }
+            }
+        }
+        .sheet(item: $selectedLocation) { location in
+            UserTransitLocationNameEditor(model: model, location: location)
+        }
+    }
+}
+
+private struct UserTransitLocationNameEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let location: UserTransitLocation
+    @State private var name: String
+
+    init(model: AppModel, location: UserTransitLocation) {
+        self.model = model
+        self.location = location
+        _name = State(initialValue: location.name)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Label(location.kind.title, systemImage: location.kind.systemImage)
+                    TextField("이름", text: $name)
+                } header: {
+                    Text("등록된 위치 이름")
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle("이름 편집")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("취소") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("저장") {
+                        model.renameUserTransitLocation(location.id, name: name)
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
         }
     }
 }

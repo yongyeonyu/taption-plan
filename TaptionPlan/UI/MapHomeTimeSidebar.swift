@@ -384,10 +384,10 @@ final class MapHomeTimeSidebarHandleDrag {
             max(baseState.visibleDurationMinutes, 60),
             MapHomeTimeSidebarMath.fullDayMinutes
         )
-        // Match direct vertical scrolling: dragging up reveals later time and
-        // dragging down reveals earlier time. Keep the mapping linear so the
+        // In the expanded sidebar, dragging up reveals earlier time and
+        // dragging down reveals later time. Keep the mapping linear so the
         // ordinary handle never gains inertial or event-rate acceleration.
-        let rawHandleY = initialHandleY - translation * max(sensitivity, 0)
+        let rawHandleY = initialHandleY + translation * max(sensitivity, 0)
         let edgeDirection: CGFloat
         if rawHandleY <= 0 {
             edgeDirection = -1
@@ -454,6 +454,7 @@ struct MapHomeTimeSidebar: View {
     let activity: MapHomeTimeSidebarActivity?
     let segments: [MapHomeTimeRailSegment]
     let categoryColors: [String: String]
+    let currentWeather: WeatherContext?
     let zoomResetToken: Int
     let zoomStepToken: Int
     var onSelectionChanged: ((Int) -> Void)?
@@ -483,6 +484,7 @@ struct MapHomeTimeSidebar: View {
         activity: MapHomeTimeSidebarActivity? = nil,
         segments: [MapHomeTimeRailSegment] = [],
         categoryColors: [String: String] = [:],
+        currentWeather: WeatherContext? = nil,
         zoomResetToken: Int = 0,
         zoomStepToken: Int = 0,
         railWidth: CGFloat = 58,
@@ -495,6 +497,7 @@ struct MapHomeTimeSidebar: View {
         self.activity = activity
         self.segments = segments
         self.categoryColors = categoryColors
+        self.currentWeather = currentWeather
         self.zoomResetToken = zoomResetToken
         self.zoomStepToken = zoomStepToken
         self.railWidth = max(58, railWidth)
@@ -710,7 +713,26 @@ struct MapHomeTimeSidebar: View {
                 }
             .accessibilityLabel(activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel)
             .accessibilityHint("두 번 탭하면 섹션 편집을 엽니다")
-            .position(x: trackX - 23, y: handleHeight / 2)
+                .position(x: trackX - 23, y: handleHeight / 2)
+
+            if let currentWeather {
+                HStack(spacing: 2) {
+                    Image(systemName: currentWeather.symbolName)
+                        .font(.system(size: 10, weight: .semibold))
+                        .symbolRenderingMode(.multicolor)
+                    Text("\(Int(currentWeather.temperatureCelsius.rounded()))°")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                }
+                .foregroundStyle(Color.tpWeatherDark)
+                .padding(.horizontal, 4)
+                .frame(height: 24)
+                .background(Color.tpWeather.opacity(0.24), in: Capsule())
+                .position(x: trackX - 55, y: handleHeight / 2)
+                .accessibilityLabel(
+                    "현재 날씨 \(currentWeather.condition), \(Int(currentWeather.temperatureCelsius.rounded()))도"
+                )
+            }
 
             VStack(spacing: -1) {
                 Text(String(format: "%02d", minute / 60))
@@ -1003,6 +1025,10 @@ struct MapHomeWeatherSidebar: View {
                     if startMinute < endMinute {
                         let isSelected = WeatherTimelineEngine.span(for: entry.context)
                             .contains(selectedDate)
+                        let isCurrent = Calendar.autoupdatingCurrent.isDate(
+                            date,
+                            inSameDayAs: Date.now
+                        ) && WeatherTimelineEngine.span(for: entry.context).contains(Date.now)
 
                         HStack(spacing: 2) {
                             Image(systemName: entry.context.symbolName)
@@ -1017,9 +1043,9 @@ struct MapHomeWeatherSidebar: View {
                         .padding(.horizontal, 3)
                         .frame(width: railWidth - 2, height: max(22, min(30, height + 8)))
                         .background(
-                            isSelected
-                                ? Color.white.opacity(0.92)
-                                : Color.white.opacity(0.72),
+                            isCurrent
+                                ? Color.tpWeather.opacity(0.28)
+                                : Color.clear,
                             in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                         )
                         .overlay {

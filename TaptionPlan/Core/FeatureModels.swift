@@ -1838,7 +1838,7 @@ struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
         self.name = name
         self.kind = kind
         self.point = point
-        self.radiusMeters = 100
+        self.radiusMeters = radiusMeters
         self.createdAt = createdAt
     }
 }
@@ -3125,6 +3125,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     /// A full reset invalidates every cloud record written before this time.
     var cloudResetAt: Date?
     var weatherEnabled: Bool
+    var weatherSidebarVisible: Bool
     var notificationsEnabled: Bool
     var permissions: [PermissionFeature: PermissionState]
     var timelineRowOrder: [String]
@@ -3158,6 +3159,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         cloudDeletedRecordKeys: [],
         cloudResetAt: nil,
         weatherEnabled: false,
+        weatherSidebarVisible: true,
         notificationsEnabled: false,
         permissions: Dictionary(
             uniqueKeysWithValues: PermissionFeature.allCases.map { ($0, .notDetermined) }
@@ -3193,6 +3195,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         cloudDeletedRecordKeys: Set<String> = [],
         cloudResetAt: Date? = nil,
         weatherEnabled: Bool,
+        weatherSidebarVisible: Bool = true,
         notificationsEnabled: Bool,
         permissions: [PermissionFeature: PermissionState],
         timelineRowOrder: [String] = TimelineRowOrder.defaults,
@@ -3230,6 +3233,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.cloudDeletedRecordKeys = cloudDeletedRecordKeys
         self.cloudResetAt = cloudResetAt
         self.weatherEnabled = weatherEnabled
+        self.weatherSidebarVisible = weatherSidebarVisible
         self.notificationsEnabled = notificationsEnabled
         self.permissions = permissions
         self.timelineRowOrder = Self.normalizedTimelineRowOrder(timelineRowOrder)
@@ -3263,6 +3267,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case cloudDeletedRecordKeys
         case cloudResetAt
         case weatherEnabled
+        case weatherSidebarVisible
         case notificationsEnabled
         case permissions
         case timelineRowOrder
@@ -3377,6 +3382,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             Bool.self,
             forKey: .weatherEnabled
         ) ?? defaults.weatherEnabled
+        weatherSidebarVisible = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .weatherSidebarVisible
+        ) ?? defaults.weatherSidebarVisible
         notificationsEnabled = try values.decodeIfPresent(
             Bool.self,
             forKey: .notificationsEnabled
