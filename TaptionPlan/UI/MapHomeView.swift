@@ -63,6 +63,8 @@ struct MapHomeView: View {
     @State private var timeSidebarZoomStep = 0
     @State private var weatherVisibleStartMinute = 0
     @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
+    @State private var sidebarPinchDirection = 0
+    @State private var activePaletteCategoryID: String?
     @State private var lastMapCameraPublishUptime: TimeInterval = 0
 
     private static let userCenterTolerance: CLLocationDistance = 120
@@ -566,6 +568,13 @@ struct MapHomeView: View {
                 }
             }
         }
+        .containerRelativeFrame(
+            .horizontal,
+            count: 2,
+            span: 1,
+            spacing: 0,
+            alignment: .leading
+        )
         .zIndex(4)
     }
 
@@ -573,6 +582,12 @@ struct MapHomeView: View {
         guard isMapSearchFocused || !mapSearchResults.isEmpty else { return }
         isMapSearchFocused = false
         mapSearchResults = []
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     private func searchMap() {
@@ -696,13 +711,30 @@ struct MapHomeView: View {
                     width: weatherWidth + Layout.timeRailWidth,
                     height: railHeight
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .position(
+                    x: proxy.size.width - (weatherWidth + Layout.timeRailWidth) / 2,
+                    y: proxy.size.height / 2
+                )
                 .contentShape(Rectangle())
                 .simultaneousGesture(
-                    MagnificationGesture().onEnded { scale in
-                        guard abs(scale - 1) > 0.10 else { return }
-                        timeSidebarZoomStep += scale > 1 ? 1 : -1
-                    }
+                    MagnificationGesture()
+                        .onChanged { scale in
+                            let direction: Int
+                            if scale > 1.04 {
+                                direction = 1
+                            } else if scale < 0.96 {
+                                direction = -1
+                            } else {
+                                direction = 0
+                            }
+                            guard direction != 0,
+                                  direction != sidebarPinchDirection else { return }
+                            sidebarPinchDirection = direction
+                            timeSidebarZoomStep += direction
+                        }
+                        .onEnded { _ in
+                            sidebarPinchDirection = 0
+                        }
                 )
             }
         }
@@ -910,24 +942,51 @@ struct MapHomeView: View {
                             categoryColors: model.settings.mapCategoryColors
                         ).filter { $0.id != "unconfirmed" }
                     ) { category in
-                        HStack(spacing: 9) {
-                            Circle()
-                                .fill(category.tint)
-                                .frame(width: 10, height: 10)
-                            Image(systemName: category.systemImage)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(category.tint)
-                                .frame(width: 20)
-                            Text(category.localizedTitle(language))
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                            Spacer()
-                            Menu {
-                                ForEach(Self.categoryPaletteHexes, id: \.self) { hex in
-                                    Button {
-                                        model.setMapCategoryColor(
-                                            hex,
-                                            for: category.id
-                                        )
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 9) {
+                                Circle()
+                                    .fill(category.tint)
+                                    .frame(width: 10, height: 10)
+                                Image(systemName: category.systemImage)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(category.tint)
+                                    .frame(width: 20)
+                                Text(category.localizedTitle(language))
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                Spacer()
+                                Button {
+                                    activePaletteCategoryID = activePaletteCategoryID == category.id
+                                        ? nil
+                                        : category.id
+                                } label: {
+                                    Circle()
+                                        .fill(category.tint)
+                                        .frame(width: 23, height: 23)
+                                        .overlay {
+                                            Image(systemName: activePaletteCategoryID == category.id
+                                                ? "chevron.up"
+                                                : "paintpalette.fill")
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundStyle(.white)
+                                        }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(
+                                    language.text(
+                                        "\(category.localizedTitle(language)) 색상 팔레트",
+                                        "\(category.localizedTitle(language)) color palette"
+                                    )
+                                )
+                            }
+                            if activePaletteCategoryID == category.id {
+                                LazyVGrid(
+                                    columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6),
+                                    spacing: 6
+                                ) {
+                                    ForEach(Self.categoryPaletteHexes, id: \.self) { hex in
+                                        Button {
+                                            model.setMapCategoryColor(hex, for: category.id)
+                                            activePaletteCategoryID = nil
                                         } label: {
                                             Circle()
                                                 .fill(Color(hex: hex))
@@ -936,27 +995,14 @@ struct MapHomeView: View {
                                                     Circle()
                                                         .stroke(.white.opacity(0.9), lineWidth: 1)
                                                 }
-                                                .accessibilityLabel(
-                                                    language.text("색상 선택", "Choose color")
-                                                )
                                         }
-                                }
-                            } label: {
-                                Circle()
-                                    .fill(category.tint)
-                                    .frame(width: 23, height: 23)
-                                    .overlay {
-                                        Image(systemName: "paintpalette.fill")
-                                            .font(.system(size: 9, weight: .bold))
-                                            .foregroundStyle(.white)
+                                        .buttonStyle(.plain)
+                                        .accessibilityLabel(language.text("색상 선택", "Choose color"))
                                     }
+                                }
+                                .padding(.leading, 39)
+                                .padding(.bottom, 4)
                             }
-                            .accessibilityLabel(
-                                language.text(
-                                    "\(category.localizedTitle(language)) 색상 팔레트",
-                                    "\(category.localizedTitle(language)) color palette"
-                                )
-                            )
                         }
                         .foregroundStyle(Color.primary)
                         .padding(.vertical, 6)
@@ -965,8 +1011,7 @@ struct MapHomeView: View {
                             category.tint.opacity(0.06),
                             in: RoundedRectangle(cornerRadius: 9, style: .continuous)
                         )
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel(category.localizedTitle(language))
+                        .accessibilityElement(children: .contain)
                     }
                 }
                 .padding(.leading, 12)

@@ -467,6 +467,7 @@ struct MapHomeTimeSidebar: View {
     @State private var dragStartMinute: Int?
     @State private var viewportDragStartMinute: Int?
     @State private var lastRenderUptime: TimeInterval = 0
+    @State private var lastViewportRenderUptime: TimeInterval = 0
     @State private var isHandleDragging = false
     @State private var nleProjection = TimelineNLEProjection<MapHomeTimeSidebarNLEState>()
     @State private var handleDrag = MapHomeTimeSidebarHandleDrag()
@@ -520,6 +521,10 @@ struct MapHomeTimeSidebar: View {
                 durationMinutes: visibleDurationMinutes,
                 centerMinute: minute
             )
+            let visibleSegments = displaySegments.filter {
+                $0.endMinute > visibleWindow.lowerBound
+                    && $0.startMinute < visibleWindow.upperBound
+            }
             let selectedY = isViewportInteraction
                 ? verticalInset + trackHeight / 2
                 : verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
@@ -556,7 +561,7 @@ struct MapHomeTimeSidebar: View {
                     Rectangle()
                         .fill(Color.tpInk.opacity(0.72))
 
-                    ForEach(displaySegments) { segment in
+                    ForEach(visibleSegments) { segment in
                         let start = max(min(segment.startMinute, visibleWindow.upperBound), visibleWindow.lowerBound)
                         let end = min(max(segment.endMinute, visibleWindow.lowerBound), visibleWindow.upperBound)
                         if start < end {
@@ -647,6 +652,7 @@ struct MapHomeTimeSidebar: View {
         .onDisappear {
             dragStartMinute = nil
             viewportDragStartMinute = nil
+            lastViewportRenderUptime = 0
             isPrecisionMode = false
             isHandleDragging = false
             nleProjection.reset()
@@ -820,6 +826,11 @@ struct MapHomeTimeSidebar: View {
                        sensitivity: isPrecisionMode ? 0.25 : 1,
                        nowUptime: ProcessInfo.processInfo.systemUptime
                    ) {
+                    guard TimelineInteractionFrameGate.shouldRender(
+                        lastUptime: &lastViewportRenderUptime,
+                        nowUptime: ProcessInfo.processInfo.systemUptime,
+                        force: false
+                    ) else { return }
                     visibleStartMinute = projected.visibleStartMinute
                     onViewportChanged?(
                         visibleStartMinute,
@@ -893,6 +904,11 @@ struct MapHomeTimeSidebar: View {
                 guard visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
                       !isHandleDragging else { return }
                 if viewportDragStartMinute == nil { viewportDragStartMinute = visibleStartMinute }
+                guard TimelineInteractionFrameGate.shouldRender(
+                    lastUptime: &lastViewportRenderUptime,
+                    nowUptime: ProcessInfo.processInfo.systemUptime,
+                    force: false
+                ) else { return }
                 let base = viewportDragStartMinute ?? visibleStartMinute
                 let delta = Int((value.translation.height / max(trackHeight, 1) * CGFloat(visibleDurationMinutes)).rounded())
                 visibleStartMinute = min(max(base + delta, 0), MapHomeTimeSidebarMath.fullDayMinutes - visibleDurationMinutes)
