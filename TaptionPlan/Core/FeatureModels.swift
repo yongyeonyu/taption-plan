@@ -1157,6 +1157,97 @@ struct AirQualityContext: Codable, Hashable, Sendable {
     }
 }
 
+struct WeatherSymbolRGB: Equatable, Sendable {
+    let red: Double
+    let green: Double
+    let blue: Double
+
+    init(red: Double, green: Double, blue: Double) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+    }
+}
+
+enum WeatherSymbolPaletteComponent: Equatable, Sendable {
+    case primary
+    case secondary
+}
+
+struct WeatherSymbolPalette: Equatable, Sendable {
+    let primary: WeatherSymbolRGB
+    let secondary: WeatherSymbolRGB
+}
+
+enum WeatherSymbolKind: String, CaseIterable, Equatable, Sendable {
+    case sun
+    case moon
+    case cloud
+    case rain
+    case snow
+    case lightning
+    case fallback
+
+    init(symbolName: String) {
+        let symbol = symbolName.lowercased()
+        if symbol.contains("bolt") || symbol.contains("thunder") {
+            self = .lightning
+        } else if symbol.contains("snow") || symbol.contains("sleet") {
+            self = .snow
+        } else if symbol.contains("rain") || symbol.contains("drizzle") {
+            self = .rain
+        } else if symbol.contains("sun") {
+            self = .sun
+        } else if symbol.contains("moon") {
+            self = .moon
+        } else if symbol.contains("cloud") || symbol.contains("fog") {
+            self = .cloud
+        } else {
+            self = .fallback
+        }
+    }
+
+    var palette: WeatherSymbolPalette {
+        switch self {
+        case .sun:
+            return WeatherSymbolPalette(
+                primary: WeatherSymbolRGB(red: 0.95, green: 0.42, blue: 0.06),
+                secondary: WeatherSymbolRGB(red: 0.98, green: 0.68, blue: 0.12)
+            )
+        case .moon:
+            return WeatherSymbolPalette(
+                primary: WeatherSymbolRGB(red: 0.88, green: 0.58, blue: 0.06),
+                secondary: WeatherSymbolRGB(red: 0.98, green: 0.80, blue: 0.18)
+            )
+        case .cloud:
+            return WeatherSymbolPalette(
+                primary: WeatherSymbolRGB(red: 0.31, green: 0.39, blue: 0.50),
+                secondary: WeatherSymbolRGB(red: 0.50, green: 0.59, blue: 0.68)
+            )
+        case .rain:
+            return WeatherSymbolPalette(
+                primary: WeatherSymbolRGB(red: 0.08, green: 0.39, blue: 0.86),
+                secondary: WeatherSymbolRGB(red: 0.24, green: 0.62, blue: 0.92)
+            )
+        case .snow:
+            return WeatherSymbolPalette(
+                primary: WeatherSymbolRGB(red: 0.10, green: 0.58, blue: 0.82),
+                secondary: WeatherSymbolRGB(red: 0.35, green: 0.76, blue: 0.94)
+            )
+        case .lightning:
+            return WeatherSymbolPalette(
+                primary: WeatherSymbolRGB(red: 0.88, green: 0.52, blue: 0.04),
+                secondary: WeatherSymbolRGB(red: 0.99, green: 0.73, blue: 0.10)
+            )
+        case .fallback:
+            return WeatherSymbolPalette(
+                primary: WeatherSymbolRGB(red: 0.35, green: 0.43, blue: 0.52),
+                secondary: WeatherSymbolRGB(red: 0.54, green: 0.60, blue: 0.67)
+            )
+        }
+    }
+}
+
 struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var observedAt: Date

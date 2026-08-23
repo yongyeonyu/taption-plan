@@ -8,6 +8,15 @@ private let detailPanelCollapsedHeight: CGFloat = 300
 private let detailPanelMinimumHeight: CGFloat = 220
 private let minimumTimelineBoardHeight: CGFloat = 120
 
+private func weatherSymbolColor(
+    _ weather: WeatherContext,
+    component: WeatherSymbolPaletteComponent
+) -> Color {
+    let palette = WeatherSymbolKind(symbolName: weather.symbolName).palette
+    let color = component == .primary ? palette.primary : palette.secondary
+    return Color(red: color.red, green: color.green, blue: color.blue)
+}
+
 struct RouteMapViewport {
     struct Padding: Equatable {
         let top: CGFloat
@@ -2439,6 +2448,11 @@ private struct AirQualityDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: weather.symbolName)
                             .font(.taption(size: 25, weight: .semibold))
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(
+                                weatherSymbolColor(weather, component: .primary),
+                                weatherSymbolColor(weather, component: .secondary)
+                            )
                         VStack(alignment: .leading, spacing: 3) {
                             Text("\(weather.condition) · \(Int(weather.temperatureCelsius.rounded()))°")
                                 .font(.taption(size: 18, weight: .bold))
@@ -4278,7 +4292,11 @@ private struct TimelineDetailPanel: View {
                 HStack(spacing: 7) {
                     Image(systemName: weather.symbolName)
                         .font(.taption(size: 12, weight: .bold))
-                        .foregroundStyle(Color.tpWeatherDark)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(
+                            weatherSymbolColor(weather, component: .primary),
+                            weatherSymbolColor(weather, component: .secondary)
+                        )
                     VStack(alignment: .leading, spacing: 1) {
                         Text(
                             "\(weather.condition) · \(Int(weather.temperatureCelsius.rounded()))°"

@@ -9612,6 +9612,41 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(heavyRain.symbolName, "cloud.heavyrain.fill")
     }
 
+    func testWeatherSymbolKindClassifiesSharedSymbols() {
+        XCTAssertEqual(WeatherSymbolKind(symbolName: "sun.max.fill"), .sun)
+        XCTAssertEqual(WeatherSymbolKind(symbolName: "cloud.moon.fill"), .moon)
+        XCTAssertEqual(WeatherSymbolKind(symbolName: "cloud.fill"), .cloud)
+        XCTAssertEqual(WeatherSymbolKind(symbolName: "cloud.rain.fill"), .rain)
+        XCTAssertEqual(WeatherSymbolKind(symbolName: "cloud.snow.fill"), .snow)
+        XCTAssertEqual(WeatherSymbolKind(symbolName: "cloud.bolt.rain.fill"), .lightning)
+        XCTAssertEqual(WeatherSymbolKind(symbolName: "questionmark"), .fallback)
+    }
+
+    func testWeatherSymbolPalettesUseNoWhiteAndExpectedFamilies() {
+        for kind in WeatherSymbolKind.allCases {
+            let palette = kind.palette
+            for color in [palette.primary, palette.secondary] {
+                XCTAssertFalse(
+                    color.red == 1 && color.green == 1 && color.blue == 1,
+                    "\(kind.rawValue) must not use white"
+                )
+            }
+        }
+
+        XCTAssertGreaterThan(
+            WeatherSymbolKind.sun.palette.primary.red,
+            WeatherSymbolKind.sun.palette.primary.blue
+        )
+        XCTAssertGreaterThan(
+            WeatherSymbolKind.moon.palette.secondary.green,
+            WeatherSymbolKind.moon.palette.secondary.blue
+        )
+        XCTAssertGreaterThan(
+            WeatherSymbolKind.rain.palette.primary.blue,
+            WeatherSymbolKind.rain.palette.primary.red
+        )
+    }
+
     func testWeatherFreshnessMetadataSurvivesRoundTrip() throws {
         let fetchedAt = makeDate(2026, 8, 1, 18)
         let context = WeatherContext(

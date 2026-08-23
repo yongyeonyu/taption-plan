@@ -3,6 +3,37 @@ import XCTest
 
 @MainActor
 final class SecurityBackupCoreTests: XCTestCase {
+    func testBiometricAttemptGateRunsOncePerLockGeneration() {
+        XCTAssertTrue(
+            AppLockBiometricAttemptGate.shouldStart(
+                generation: 1,
+                attemptedGeneration: nil,
+                isInFlight: false
+            )
+        )
+        XCTAssertFalse(
+            AppLockBiometricAttemptGate.shouldStart(
+                generation: 1,
+                attemptedGeneration: 1,
+                isInFlight: false
+            )
+        )
+        XCTAssertFalse(
+            AppLockBiometricAttemptGate.shouldStart(
+                generation: 1,
+                attemptedGeneration: nil,
+                isInFlight: true
+            )
+        )
+        XCTAssertTrue(
+            AppLockBiometricAttemptGate.shouldStart(
+                generation: 2,
+                attemptedGeneration: 1,
+                isInFlight: false
+            )
+        )
+    }
+
     func testPINVerifierStoresOnlySaltAndDigestAndUsesFourDigits() throws {
         let verifier = try PlanPINVerifier(pin: "1234") { _ in Data(repeating: 7, count: 16) }
         XCTAssertEqual(verifier.salt, Data(repeating: 7, count: 16))
@@ -42,6 +73,28 @@ final class SecurityBackupCoreTests: XCTestCase {
         service.handleLaunch()
         XCTAssertTrue(service.status.state != .unlocked)
         try await service.unlockWithBiometrics()
+        XCTAssertEqual(service.status.state, .unlocked)
+    }
+
+    func testDisabledBiometricFallsBackToPINWhileLocked() async throws {
+        let service = makeService(
+            biometric: MockPlanLocalBiometricAuthenticator(result: true)
+        )
+        try service.setPIN("1234")
+        try service.setAppLockSettings(
+            .init(lockOnLaunch: true, lockOnForeground: false, biometricUnlockEnabled: false)
+        )
+        service.handleLaunch()
+
+        do {
+            try await service.unlockWithBiometrics()
+            XCTFail("Disabled biometrics must not unlock the app")
+        } catch {
+            XCTAssertEqual(error as? PlanSecurityError, .biometricUnavailable)
+        }
+        XCTAssertNotEqual(service.status.state, .unlocked)
+
+        try service.unlock(withPIN: "1234")
         XCTAssertEqual(service.status.state, .unlocked)
     }
 

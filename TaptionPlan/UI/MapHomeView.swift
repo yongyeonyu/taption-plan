@@ -74,7 +74,9 @@ enum MapHomeOverlayPinchMath {
         let scale = min(max(Double(magnification), 0.05), 20)
         return MapCamera(
             centerCoordinate: camera.centerCoordinate,
-            distance: min(max(camera.distance / scale, 80), 30_000_000),
+            distance: MapHomeCameraZoomMath.clampedDistance(
+                camera.distance / scale
+            ),
             heading: camera.heading,
             pitch: camera.pitch
         )
@@ -86,6 +88,119 @@ enum MapHomeOverlayPinchMath {
         isFinal: Bool
     ) -> Bool {
         isFinal || currentUptime - lastUptime >= minimumPublishInterval
+    }
+}
+
+enum MapHomeSearchLayoutMath {
+    static let menuPanelWidth: CGFloat = 316
+    static let playbackTouchSize: CGFloat = 44
+    static let playbackVisualSize: CGFloat = 40.74
+    static let playbackIconSize: CGFloat = 13.58
+    static let itemSpacing: CGFloat = 8
+
+    static func searchWidth(
+        viewportWidth: CGFloat,
+        horizontalInset: CGFloat
+    ) -> CGFloat {
+        let menuAlignedWidth = menuPanelWidth - horizontalInset
+        let availableWidth = viewportWidth
+            - horizontalInset * 2
+            - playbackTouchSize
+            - itemSpacing
+        return max(0, min(menuAlignedWidth, availableWidth))
+    }
+}
+
+enum MapHomeLayerPriority {
+    static let map: Double = 0
+    static let sidebar: Double = 2
+    static let search: Double = 4
+    static let menu: Double = 6
+    static let header: Double = 8
+}
+
+enum MapHomeCameraLayoutMath {
+    static let centeredTolerance: CGFloat = 18
+
+    static func targetPoint(
+        viewportSize: CGSize,
+        searchBottom: CGFloat,
+        sidebarLeft: CGFloat
+    ) -> CGPoint {
+        CGPoint(
+            x: max(0, sidebarLeft) / 2,
+            y: min(max(searchBottom, 0), viewportSize.height)
+                + max(0, viewportSize.height - searchBottom) / 2
+        )
+    }
+
+    static func cameraCenterSourcePoint(
+        currentLocationPoint: CGPoint,
+        targetPoint: CGPoint,
+        viewportSize: CGSize
+    ) -> CGPoint {
+        CGPoint(
+            x: viewportSize.width / 2 + currentLocationPoint.x - targetPoint.x,
+            y: viewportSize.height / 2 + currentLocationPoint.y - targetPoint.y
+        )
+    }
+
+    static func isCentered(
+        locationPoint: CGPoint,
+        targetPoint: CGPoint,
+        tolerance: CGFloat = centeredTolerance
+    ) -> Bool {
+        hypot(locationPoint.x - targetPoint.x, locationPoint.y - targetPoint.y)
+            <= tolerance
+    }
+}
+
+enum MapHomeCameraZoomMath {
+    static let minimumDistance: CLLocationDistance = 80
+    static let maximumDistance: CLLocationDistance = 30_000_000
+    static let zoomInFactor = 0.68
+    static let zoomOutFactor = 1.48
+
+    static func clampedDistance(_ distance: CLLocationDistance) -> CLLocationDistance {
+        min(max(distance, minimumDistance), maximumDistance)
+    }
+
+    static func distance(
+        from currentDistance: CLLocationDistance,
+        direction: Int
+    ) -> CLLocationDistance {
+        clampedDistance(
+            currentDistance * (direction > 0 ? zoomInFactor : zoomOutFactor)
+        )
+    }
+
+    static func isAtLimit(
+        distance: CLLocationDistance?,
+        direction: Int
+    ) -> Bool {
+        guard let distance else { return false }
+        return direction > 0
+            ? distance <= minimumDistance
+            : distance >= maximumDistance
+    }
+
+    static func centerPreservingAnchor(
+        cameraCenter: CLLocationCoordinate2D,
+        anchor: CLLocationCoordinate2D,
+        oldDistance: CLLocationDistance,
+        newDistance: CLLocationDistance
+    ) -> CLLocationCoordinate2D {
+        guard oldDistance.isFinite, oldDistance > 0,
+              newDistance.isFinite else {
+            return cameraCenter
+        }
+        let scale = newDistance / oldDistance
+        let centerPoint = MKMapPoint(cameraCenter)
+        let anchorPoint = MKMapPoint(anchor)
+        return MKMapPoint(
+            x: anchorPoint.x - (anchorPoint.x - centerPoint.x) * scale,
+            y: anchorPoint.y - (anchorPoint.y - centerPoint.y) * scale
+        ).coordinate
     }
 }
 
@@ -365,7 +480,6 @@ struct MapHomeView: View {
     @State private var dayPlaybackElapsedSeconds: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
 
-    private static let userCenterTolerance: CLLocationDistance = 120
     private static let categoryPaletteHexes = [
         "#29A383", "#2563EB", "#00A2C7", "#8B5CF6",
         "#5B5BD6", "#F76B15", "#DC2626", "#94A3B8",
@@ -386,6 +500,7 @@ struct MapHomeView: View {
         static let timeRailTopMargin: CGFloat = 18
         static let topOverlayFallbackHeight: CGFloat = 104
         static let overlayBottomMargin = MapHomeOverlayLayoutMath.sharedBottomMargin
+        static let menuWidth = MapHomeSearchLayoutMath.menuPanelWidth
     }
 
     init(
@@ -425,6 +540,42 @@ struct MapHomeView: View {
             : 0)
             + Layout.timeRailWidth
             + Layout.horizontalInset
+    }
+
+    private var sidebarLeftX: CGFloat {
+        max(0, mapViewportSize.width - sidebarInteractionWidth)
+    }
+
+    private var mapSearchWidth: CGFloat {
+        MapHomeSearchLayoutMath.searchWidth(
+            viewportWidth: mapViewportSize.width > 0
+                ? mapViewportSize.width
+                : UIScreen.main.bounds.width,
+            horizontalInset: Layout.horizontalInset
+        )
+    }
+
+    private var isMapSearchOverlayPresented: Bool {
+        isMapSearchFocused
+            || !mapSearchResults.isEmpty
+            || !mapSearchCompleter.results.isEmpty
+    }
+
+    private var mapSearchSurfaceHeight: CGFloat {
+        guard isMapSearchOverlayPresented else { return 42 }
+        let fallbackTop = CGFloat(2) + Layout.headerVisibleHeight + 8
+        let top = searchFieldFrame.minY > 0 ? searchFieldFrame.minY : fallbackTop
+        return max(42, mapViewportSize.height - top)
+    }
+
+    private var currentLocationTargetPoint: CGPoint {
+        MapHomeCameraLayoutMath.targetPoint(
+            viewportSize: mapViewportSize,
+            searchBottom: searchFieldFrame.maxY > 0
+                ? searchFieldFrame.maxY
+                : CGFloat(2) + Layout.headerVisibleHeight + 8 + 42,
+            sidebarLeft: sidebarLeftX
+        )
     }
 
     private var topOverlayHeight: CGFloat {
@@ -508,52 +659,49 @@ struct MapHomeView: View {
         ZStack(alignment: .top) {
             map
                 .ignoresSafeArea()
+                .zIndex(MapHomeLayerPriority.map)
 
-            VStack(spacing: 8) {
-                header
-                HStack(alignment: .top, spacing: 8) {
+            if !isMenuOpen {
+                currentTimeRail
+                    .padding(.top, topOverlayHeight + Layout.timeRailTopMargin)
+                    .padding(.bottom, Layout.overlayBottomMargin)
+                    .padding(.trailing, Layout.horizontalInset)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .zIndex(MapHomeLayerPriority.sidebar)
+            }
+
+            VStack(spacing: 0) {
+                Color.clear
+                    .frame(height: Layout.headerVisibleHeight + 8)
+                    .allowsHitTesting(false)
+                HStack(alignment: .top, spacing: MapHomeSearchLayoutMath.itemSpacing) {
                     mapSearchBar
                     Spacer(minLength: 0)
                     dayPlaybackButton
                 }
             }
             .padding(.horizontal, Layout.horizontalInset)
-            // The container already starts below the status-bar safe area; keep
-            // only a minimal breathing room so the top bar stays high on screen.
             .padding(.top, 2)
-            .zIndex(4)
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    if isMenuOpen {
-                        isMenuOpen = false
-                    }
-                }
-            )
+            .frame(maxHeight: .infinity, alignment: .top)
+            .zIndex(MapHomeLayerPriority.search)
 
             if isMenuOpen {
                 menu
                     .transition(.move(edge: .leading).combined(with: .opacity))
-                    .zIndex(2)
+                    .zIndex(MapHomeLayerPriority.menu)
             }
+
+            VStack(spacing: 0) {
+                header
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Layout.horizontalInset)
+            .padding(.top, 2)
+            .zIndex(MapHomeLayerPriority.header)
         }
         .coordinateSpace(name: "mapHomeViewport")
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .overlay(alignment: .trailing) {
-            if !isMenuOpen {
-                currentTimeRail
-                    .padding(.top, topOverlayHeight + Layout.timeRailTopMargin)
-                    .padding(.bottom, Layout.overlayBottomMargin)
-                    .padding(.trailing, Layout.horizontalInset)
-            }
-        }
-        .overlay(alignment: .bottomLeading) {
-            if !isMenuOpen {
-                mapControls
-                    .padding(.leading, Layout.horizontalInset)
-                    .padding(.bottom, Layout.overlayBottomMargin)
-            }
-        }
         .onGeometryChange(
             for: CGSize.self,
             of: { $0.size },
@@ -841,6 +989,20 @@ struct MapHomeView: View {
                 }
             }
 
+            if let historicalPlaybackCoordinate {
+                Annotation(
+                    historicalPlaybackAccessibilityLabel,
+                    coordinate: historicalPlaybackCoordinate,
+                    anchor: .center
+                ) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(Color.tpReferenceRose)
+                        .shadow(color: Color.black.opacity(0.18), radius: 3, y: 2)
+                        .accessibilityLabel(historicalPlaybackAccessibilityLabel)
+                }
+            }
+
                 UserAnnotation()
 
             }
@@ -857,7 +1019,7 @@ struct MapHomeView: View {
                 }
                 visibleMapCenter = context.region.center
                 updateVisibleMapSpan(context.region.span)
-                updateUserCenterState(for: context.region.center)
+                updateUserCenterState(using: proxy)
                 if let level = sharedZoomLevel(for: context.region.span),
                    abs(level - sharedZoomLevel) > 0.02 {
                     sharedZoomLevel = level
@@ -873,6 +1035,13 @@ struct MapHomeView: View {
                 }
             )
             .simultaneousGesture(mapLongPressGesture(proxy: proxy))
+            .overlay(alignment: .bottomLeading) {
+                if !isMenuOpen {
+                    mapControls(proxy: proxy)
+                        .padding(.leading, Layout.horizontalInset)
+                        .padding(.bottom, Layout.overlayBottomMargin)
+                }
+            }
         }
     }
 
@@ -1048,46 +1217,49 @@ struct MapHomeView: View {
                 }
             )
 
-            if !mapSearchResults.isEmpty || !mapSearchCompleter.results.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
-                    if mapSearchResults.isEmpty {
-                        ForEach(
-                            Array(mapSearchCompleter.results.enumerated()),
-                            id: \.offset
-                        ) { _, completion in
-                            mapSearchRow(
-                                title: completion.title,
-                                subtitle: completion.subtitle
-                            ) {
-                                searchMap(completion: completion)
+            if isMapSearchOverlayPresented {
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        if mapSearchResults.isEmpty {
+                            ForEach(
+                                Array(mapSearchCompleter.results.enumerated()),
+                                id: \.offset
+                            ) { _, completion in
+                                mapSearchRow(
+                                    title: completion.title,
+                                    subtitle: completion.subtitle
+                                ) {
+                                    searchMap(completion: completion)
+                                }
                             }
-                        }
-                    } else {
-                        ForEach(mapSearchResults) { result in
-                            mapSearchRow(
-                                title: result.title,
-                                subtitle: result.subtitle
-                            ) {
-                                selectSearchResult(result)
+                        } else {
+                            ForEach(mapSearchResults) { result in
+                                mapSearchRow(
+                                    title: result.title,
+                                    subtitle: result.subtitle
+                                ) {
+                                    selectSearchResult(result)
+                                }
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .background(Color.tpSurface.opacity(0.98), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .background(Color.tpSurface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
                 }
+                .contentShape(Rectangle())
             }
         }
-        .containerRelativeFrame(
-            .horizontal,
-            count: 2,
-            span: 1,
-            spacing: 0,
-            alignment: .leading
+        .frame(
+            width: mapSearchWidth,
+            height: mapSearchSurfaceHeight,
+            alignment: .top
         )
-        .zIndex(4)
     }
 
     private var dayPlaybackButton: some View {
@@ -1095,10 +1267,18 @@ struct MapHomeView: View {
             toggleDayPlayback()
         } label: {
             Image(systemName: isDayPlaybackRunning ? "pause.fill" : "play.fill")
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: MapHomeSearchLayoutMath.playbackIconSize, weight: .bold))
                 .foregroundStyle(Color.white)
-                .frame(width: 42, height: 42)
-                .background(Color.tpInk.opacity(0.92), in: Circle())
+                .frame(
+                    width: MapHomeSearchLayoutMath.playbackVisualSize,
+                    height: MapHomeSearchLayoutMath.playbackVisualSize
+                )
+                .background(Color.tpInk.opacity(0.46), in: Circle())
+                .frame(
+                    width: MapHomeSearchLayoutMath.playbackTouchSize,
+                    height: MapHomeSearchLayoutMath.playbackTouchSize
+                )
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
@@ -1457,6 +1637,7 @@ struct MapHomeView: View {
     ) {
         if overlayPinchRoutesToMap == nil {
             overlayPinchRoutesToMap = !isMenuOpen
+                && !isMapSearchOverlayPresented
                 && MapHomeOverlayPinchMath.shouldForwardToMap(
                     startLocation: value.startLocation,
                     viewportSize: mapViewportSize,
@@ -1484,10 +1665,10 @@ struct MapHomeView: View {
         )
     }
 
-    private var mapControls: some View {
+    private func mapControls(proxy: MapProxy) -> some View {
         VStack(spacing: Layout.mapControlSpacing) {
             Button {
-                focusUserLocation()
+                focusUserLocation(using: proxy)
             } label: {
                 MapHomeLocationButtonIcon(
                     isCentered: isMapCenteredOnUser,
@@ -1500,7 +1681,7 @@ struct MapHomeView: View {
 
             if isHeadingMode {
                 Button {
-                    toggleMapHeadingMode()
+                    toggleMapHeadingMode(using: proxy)
                 } label: {
                         Image("MapHomeCompass")
                             .resizable()
@@ -1520,7 +1701,7 @@ struct MapHomeView: View {
                 .accessibilityLabel(language.text("지도 방향 고정", "Fix map direction"))
             } else {
                 Button {
-                    toggleMapHeadingMode()
+                    toggleMapHeadingMode(using: proxy)
                 } label: {
                     Image(systemName: "location.north.line")
                         .font(.system(size: Layout.mapControlIcon, weight: .bold))
@@ -1531,8 +1712,8 @@ struct MapHomeView: View {
                 .accessibilityLabel(language.text("나침반 표시", "Show compass"))
             }
 
-            mapZoomButton(systemImage: "plus", direction: 1)
-            mapZoomButton(systemImage: "minus", direction: -1)
+            mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
+            mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
         }
         .simultaneousGesture(
             SpatialTapGesture().onEnded { _ in
@@ -1541,9 +1722,13 @@ struct MapHomeView: View {
         )
     }
 
-    private func mapZoomButton(systemImage: String, direction: Int) -> some View {
+    private func mapZoomButton(
+        systemImage: String,
+        direction: Int,
+        proxy: MapProxy
+    ) -> some View {
         Button {
-            adjustMapZoom(direction: direction)
+            adjustMapZoom(direction: direction, proxy: proxy)
         } label: {
             Image(systemName: systemImage)
                 .font(.system(size: Layout.mapControlIcon, weight: .bold))
@@ -1556,18 +1741,39 @@ struct MapHomeView: View {
                 ? language.text("지도 확대", "Zoom map in")
                 : language.text("지도 축소", "Zoom map out")
         )
+        .disabled(
+            MapHomeCameraZoomMath.isAtLimit(
+                distance: visibleMapCamera?.distance,
+                direction: direction
+            )
+        )
     }
 
-    private func adjustMapZoom(direction: Int) {
-        let factor = direction > 0 ? 0.68 : 1.48
-        let next = MKCoordinateSpan(
-            latitudeDelta: min(max(visibleMapSpan.latitudeDelta * factor, 0.002), 80),
-            longitudeDelta: min(max(visibleMapSpan.longitudeDelta * factor, 0.002), 80)
+    private func adjustMapZoom(direction: Int, proxy: MapProxy) {
+        guard let camera = visibleMapCamera else { return }
+        let distance = MapHomeCameraZoomMath.distance(
+            from: camera.distance,
+            direction: direction
         )
-        visibleMapSpan = next
-        mapPosition = .region(
-            MKCoordinateRegion(center: visibleMapCenter, span: next)
+        guard distance != camera.distance else { return }
+        let anchor = isMapCenteredOnUser
+            ? currentCoordinate ?? camera.centerCoordinate
+            : camera.centerCoordinate
+        let center = MapHomeCameraZoomMath.centerPreservingAnchor(
+            cameraCenter: camera.centerCoordinate,
+            anchor: anchor,
+            oldDistance: camera.distance,
+            newDistance: distance
         )
+        mapPosition = .camera(
+            MapCamera(
+                centerCoordinate: center,
+                distance: distance,
+                heading: camera.heading,
+                pitch: camera.pitch
+            )
+        )
+        updateUserCenterState(using: proxy)
     }
 
     private var menu: some View {
@@ -1584,7 +1790,11 @@ struct MapHomeView: View {
                     headerFrame.maxY + 8
                 )
                 sidebarContent
-                .frame(width: 316, height: max(0, menuHeight - menuTop), alignment: .top)
+                .frame(
+                    width: Layout.menuWidth,
+                    height: max(0, menuHeight - menuTop),
+                    alignment: .top
+                )
                 .background(.regularMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .padding(.top, menuTop)
@@ -2731,6 +2941,25 @@ struct MapHomeView: View {
         }
     }
 
+    private var historicalPlaybackCoordinate: CLLocationCoordinate2D? {
+        guard selectedTimelineMinute != nil,
+              let point = routeProjection?.coordinateAtCutoff,
+              isValid(point) else { return nil }
+        return CLLocationCoordinate2D(
+            latitude: point.latitude,
+            longitude: point.longitude
+        )
+    }
+
+    private var historicalPlaybackAccessibilityLabel: String {
+        let minute = min(
+            max(selectedTimelineMinute ?? 0, 0),
+            MapHomeTimeSidebarMath.fullDayMinutes
+        )
+        let time = String(format: "%02d:%02d", minute / 60, minute % 60)
+        return language.text("과거 위치 \(time)", "Past location \(time)")
+    }
+
     private var effectiveTimelineMinute: Int {
         timelineSelectionMinute()
     }
@@ -3049,29 +3278,70 @@ struct MapHomeView: View {
             latitude: point.latitude,
             longitude: point.longitude
         )
-        mapPosition = .region(
-            MKCoordinateRegion(center: coordinate, span: visibleMapSpan)
-        )
-        updateUserCenterState(for: coordinate)
+        if let camera = visibleMapCamera {
+            mapPosition = .camera(
+                MapCamera(
+                    centerCoordinate: coordinate,
+                    distance: camera.distance,
+                    heading: camera.heading,
+                    pitch: camera.pitch
+                )
+            )
+        } else {
+            mapPosition = .region(
+                MKCoordinateRegion(center: coordinate, span: visibleMapSpan)
+            )
+        }
+        isMapCenteredOnUser = false
     }
 
-    private func focusUserLocation() {
+    private func focusUserLocation(using proxy: MapProxy? = nil) {
         guard let coordinate = currentCoordinate else {
             isMapCenteredOnUser = false
             mapPosition = .automatic
             return
         }
 
-        mapPosition = .region(
-            MKCoordinateRegion(
-                center: coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.010)
+        if let proxy,
+           let camera = visibleMapCamera,
+           let locationPoint = proxy.convert(coordinate, to: .local),
+           let center = proxy.convert(
+                MapHomeCameraLayoutMath.cameraCenterSourcePoint(
+                    currentLocationPoint: locationPoint,
+                    targetPoint: currentLocationTargetPoint,
+                    viewportSize: mapViewportSize
+                ),
+                from: .local
+           ) {
+            mapPosition = .camera(
+                MapCamera(
+                    centerCoordinate: center,
+                    distance: camera.distance,
+                    heading: camera.heading,
+                    pitch: camera.pitch
+                )
             )
-        )
-        updateUserCenterState(for: coordinate)
+        } else if let camera = visibleMapCamera {
+            mapPosition = .camera(
+                MapCamera(
+                    centerCoordinate: coordinate,
+                    distance: camera.distance,
+                    heading: camera.heading,
+                    pitch: camera.pitch
+                )
+            )
+        } else {
+            mapPosition = .region(
+                MKCoordinateRegion(
+                    center: coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.010)
+                )
+            )
+        }
+        isMapCenteredOnUser = proxy != nil
     }
 
-    private func toggleMapHeadingMode() {
+    private func toggleMapHeadingMode(using proxy: MapProxy? = nil) {
         compassControlState = compassControlState.toggled
         if compassControlState.followsHeading {
             headingMonitor.start()
@@ -3081,7 +3351,7 @@ struct MapHomeView: View {
             )
         } else {
             headingMonitor.stop()
-            focusUserLocation()
+            focusUserLocation(using: proxy)
         }
     }
 
@@ -3091,23 +3361,23 @@ struct MapHomeView: View {
         hasAppliedInitialLocation = true
     }
 
-    private func updateUserCenterState(for center: CLLocationCoordinate2D) {
-        let nextValue: Bool
-        if let coordinate = currentCoordinate {
-            nextValue = CLLocation(latitude: center.latitude, longitude: center.longitude)
-                .distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
-                <= Self.userCenterTolerance
-        } else {
-            nextValue = false
-        }
+    private func updateUserCenterState(using proxy: MapProxy) {
+        let nextValue = currentCoordinate
+            .flatMap { proxy.convert($0, to: .local) }
+            .map {
+                MapHomeCameraLayoutMath.isCentered(
+                    locationPoint: $0,
+                    targetPoint: currentLocationTargetPoint
+                )
+            } ?? false
         guard isMapCenteredOnUser != nextValue else { return }
         isMapCenteredOnUser = nextValue
     }
 
     private func updateVisibleMapSpan(_ span: MKCoordinateSpan) {
         let next = MKCoordinateSpan(
-            latitudeDelta: min(max(span.latitudeDelta, 0.002), 80),
-            longitudeDelta: min(max(span.longitudeDelta, 0.002), 80)
+            latitudeDelta: min(max(span.latitudeDelta, 0.000_001), 180),
+            longitudeDelta: min(max(span.longitudeDelta, 0.000_001), 360)
         )
         guard abs(visibleMapSpan.latitudeDelta - next.latitudeDelta) > 0.000_1
             || abs(visibleMapSpan.longitudeDelta - next.longitudeDelta) > 0.000_1

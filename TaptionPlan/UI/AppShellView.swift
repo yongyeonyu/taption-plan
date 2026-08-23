@@ -223,7 +223,7 @@ struct AppShellView: View {
                 Image("LaunchIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 128, height: 128)
+                    .frame(width: 180, height: 180)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
@@ -494,71 +494,43 @@ struct AppShellView: View {
     }
 }
 
+struct AppLockBiometricAttemptGate {
+    static func shouldStart(
+        generation: Int,
+        attemptedGeneration: Int?,
+        isInFlight: Bool
+    ) -> Bool {
+        !isInFlight && attemptedGeneration != generation
+    }
+}
+
 private struct MapHomeAppLockView: View {
     @Bindable var model: AppModel
     let isCheckingInitialState: Bool
     let lockGeneration: Int
     @Binding var automaticBiometricAttemptedGeneration: Int?
     @Binding var isBiometricAuthenticationInFlight: Bool
-    @State private var pin = ""
     @State private var errorMessage: String?
     @State private var isAuthenticating = false
     @State private var showsPINInput = false
 
     var body: some View {
         ZStack {
-            Color.tpInk.ignoresSafeArea()
-            VStack(spacing: 18) {
-                Image("MapHomeHomeIcon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 92, height: 92)
-                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                Text("Taption Plan")
-                    .font(.system(size: 25, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                if isCheckingInitialState {
-                    ProgressView().tint(.white)
-                } else {
-                    Text("잠금을 해제해 주세요")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.70))
-                    if showsPINInput || !model.securityStatus.settings.biometricUnlockEnabled {
-                        SecureField("4자리 비밀번호", text: $pin)
-                            .keyboardType(.numberPad)
-                            .textContentType(.password)
-                            .multilineTextAlignment(.center)
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.tpInk)
-                            .padding(.horizontal, 18)
-                            .frame(width: 210, height: 48)
-                            .background(.white, in: RoundedRectangle(cornerRadius: 14))
-                            .onChange(of: pin) { _, value in
-                                pin = String(value.filter(\.isNumber).prefix(4))
-                                if pin.count == 4 { unlockWithPIN() }
-                            }
-                    }
-
-                    if model.securityStatus.settings.biometricUnlockEnabled {
-                        Button {
-                            unlockWithBiometrics()
-                        } label: {
-                            Label("Face ID / Touch ID", systemImage: "faceid")
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.tpReferenceMint)
-                        }
-                        .disabled(isAuthenticating)
-                    }
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color.tpReferenceRose)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 30)
-                    }
-                }
-            }
-            .padding(28)
+            Color(red: 199 / 255, green: 123 / 255, blue: 112 / 255)
+                .ignoresSafeArea()
+            Image("LaunchIcon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 180, height: 180)
+        }
+        .sheet(isPresented: $showsPINInput) {
+            AppLockPINSheet(model: model, errorMessage: errorMessage)
+                .interactiveDismissDisabled()
+                .presentationDetents([.height(220)])
+                .presentationDragIndicator(.visible)
+        }
+        .onAppear {
+            presentPINIfBiometricsAreUnavailable()
         }
         .task(id: isCheckingInitialState) {
             startAutomaticBiometricAuthenticationIfNeeded()
@@ -568,30 +540,28 @@ private struct MapHomeAppLockView: View {
     private func startAutomaticBiometricAuthenticationIfNeeded() {
         guard !isCheckingInitialState,
               model.securityStatus.settings.biometricUnlockEnabled,
-              automaticBiometricAttemptedGeneration != lockGeneration else { return }
-        automaticBiometricAttemptedGeneration = lockGeneration
-        unlockWithBiometrics(isAutomaticAttempt: true)
-    }
-
-    private func unlockWithPIN() {
-        guard !isAuthenticating, pin.count == 4 else { return }
-        do {
-            try model.unlockApp(withPIN: pin)
-            pin = ""
-            errorMessage = nil
-        } catch {
-            pin = ""
-            errorMessage = error.localizedDescription
+              AppLockBiometricAttemptGate.shouldStart(
+                  generation: lockGeneration,
+                  attemptedGeneration: automaticBiometricAttemptedGeneration,
+                  isInFlight: isBiometricAuthenticationInFlight
+              ) else {
+            presentPINIfBiometricsAreUnavailable()
+            return
         }
+        automaticBiometricAttemptedGeneration = lockGeneration
+        unlockWithBiometrics()
     }
 
-    private func unlockWithBiometrics(isAutomaticAttempt: Bool = false) {
+    private func presentPINIfBiometricsAreUnavailable() {
+        guard !isCheckingInitialState,
+              !model.securityStatus.settings.biometricUnlockEnabled else { return }
+        showsPINInput = true
+    }
+
+    private func unlockWithBiometrics() {
         guard !isAuthenticating else { return }
         isAuthenticating = true
         isBiometricAuthenticationInFlight = true
-        if isAutomaticAttempt {
-            showsPINInput = false
-        }
         Task { @MainActor in
             defer {
                 isAuthenticating = false
@@ -601,11 +571,61 @@ private struct MapHomeAppLockView: View {
                 try await model.unlockAppWithBiometrics()
                 errorMessage = nil
             } catch {
-                // Biometrics are only a fast path. Keep the PIN available after
-                // cancellation, failure, or an unavailable sensor.
                 showsPINInput = true
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+}
+
+private struct AppLockPINSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let errorMessage: String?
+    @State private var pin = ""
+    @State private var validationMessage: String?
+
+    private var displayedError: String? {
+        validationMessage ?? errorMessage
+    }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("PIN")
+                .font(.taption(size: 20, weight: .bold))
+            SecureField("4자리 비밀번호", text: $pin)
+                .keyboardType(.numberPad)
+                .textContentType(.password)
+                .multilineTextAlignment(.center)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+                .padding(.horizontal, 18)
+                .frame(width: 210, height: 48)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14))
+                .onChange(of: pin) { _, value in
+                    pin = String(value.filter(\.isNumber).prefix(4))
+                    if pin.count == 4 {
+                        unlock()
+                    }
+                }
+            if let displayedError {
+                Text(displayedError)
+                    .font(.taption(size: 12))
+                    .foregroundStyle(Color.tpReferenceRose)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+        }
+        .padding(24)
+    }
+
+    private func unlock() {
+        do {
+            try model.unlockApp(withPIN: pin)
+            dismiss()
+        } catch {
+            pin = ""
+            validationMessage = error.localizedDescription
         }
     }
 }

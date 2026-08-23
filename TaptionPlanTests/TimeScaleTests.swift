@@ -394,6 +394,134 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapSearchUsesMenuEdgeAndClampsForCompactScreens() {
+        XCTAssertEqual(
+            MapHomeSearchLayoutMath.searchWidth(
+                viewportWidth: 390,
+                horizontalInset: 10
+            ),
+            306
+        )
+        XCTAssertEqual(
+            MapHomeSearchLayoutMath.searchWidth(
+                viewportWidth: 320,
+                horizontalInset: 10
+            ),
+            248
+        )
+        XCTAssertEqual(MapHomeSearchLayoutMath.playbackVisualSize, 40.74)
+        XCTAssertEqual(MapHomeSearchLayoutMath.playbackTouchSize, 44)
+    }
+
+    func testMapSearchLayerCoversMapChromeButStaysBelowMenu() {
+        XCTAssertGreaterThan(MapHomeLayerPriority.search, MapHomeLayerPriority.sidebar)
+        XCTAssertGreaterThan(MapHomeLayerPriority.search, MapHomeLayerPriority.map)
+        XCTAssertGreaterThan(MapHomeLayerPriority.menu, MapHomeLayerPriority.search)
+        XCTAssertGreaterThan(MapHomeLayerPriority.header, MapHomeLayerPriority.menu)
+    }
+
+    func testWeatherMovesOnlyForAnIntersectingPlayhead() {
+        let weather = CGRect(x: 1, y: 100, width: 56, height: 30)
+        let intersectingPlayhead = CGRect(x: 24, y: 90, width: 44, height: 44)
+        XCTAssertEqual(
+            MapHomeWeatherCollisionMath.horizontalOffset(
+                weatherFrame: weather,
+                playheadFrame: intersectingPlayhead
+            ),
+            -37
+        )
+        XCTAssertEqual(
+            MapHomeWeatherCollisionMath.horizontalOffset(
+                weatherFrame: weather,
+                playheadFrame: CGRect(x: 24, y: 140, width: 44, height: 44)
+            ),
+            0
+        )
+    }
+
+    func testSidebarRulerFontGrowsAcrossAllZoomSteps() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.zoomDurations.map {
+                MapHomeTimeSidebarMath.rulerFontSize(durationMinutes: $0)
+            },
+            [10, 11, 12, 13, 14]
+        )
+        XCTAssertLessThanOrEqual(
+            MapHomeTimeSidebarMath.rulerTickWidth
+                + MapHomeTimeSidebarMath.rulerColumnWidth(durationMinutes: 60) * 2
+                + MapHomeTimeSidebarMath.rulerColumnSpacing,
+            MapHomeTimeSidebarMath.rulerNumericColumnWidth
+        )
+    }
+
+    func testCurrentLocationTargetUsesVisibleMapCenter() {
+        let viewport = CGSize(width: 390, height: 844)
+        let target = MapHomeCameraLayoutMath.targetPoint(
+            viewportSize: viewport,
+            searchBottom: 98,
+            sidebarLeft: 264
+        )
+        XCTAssertEqual(target.x, 132)
+        XCTAssertEqual(target.y, 471)
+
+        let source = MapHomeCameraLayoutMath.cameraCenterSourcePoint(
+            currentLocationPoint: CGPoint(x: 180, y: 500),
+            targetPoint: target,
+            viewportSize: viewport
+        )
+        XCTAssertEqual(source.x, 243)
+        XCTAssertEqual(source.y, 451)
+        XCTAssertTrue(
+            MapHomeCameraLayoutMath.isCentered(
+                locationPoint: CGPoint(x: 140, y: 476),
+                targetPoint: target
+            )
+        )
+        XCTAssertFalse(
+            MapHomeCameraLayoutMath.isCentered(
+                locationPoint: CGPoint(x: 170, y: 500),
+                targetPoint: target
+            )
+        )
+    }
+
+    func testMapZoomReachesBothDistanceLimitsAndPreservesAnchor() {
+        var distance: CLLocationDistance = 12_000
+        for _ in 0..<100 {
+            distance = MapHomeCameraZoomMath.distance(from: distance, direction: 1)
+        }
+        XCTAssertEqual(distance, MapHomeCameraZoomMath.minimumDistance)
+        XCTAssertTrue(MapHomeCameraZoomMath.isAtLimit(distance: distance, direction: 1))
+
+        for _ in 0..<100 {
+            distance = MapHomeCameraZoomMath.distance(from: distance, direction: -1)
+        }
+        XCTAssertEqual(distance, MapHomeCameraZoomMath.maximumDistance)
+        XCTAssertTrue(MapHomeCameraZoomMath.isAtLimit(distance: distance, direction: -1))
+
+        let center = CLLocationCoordinate2D(latitude: 37.5, longitude: 127)
+        let anchor = CLLocationCoordinate2D(latitude: 37.6, longitude: 127.2)
+        let zoomedCenter = MapHomeCameraZoomMath.centerPreservingAnchor(
+            cameraCenter: center,
+            anchor: anchor,
+            oldDistance: 1_000,
+            newDistance: 500
+        )
+        let centerPoint = MKMapPoint(center)
+        let anchorPoint = MKMapPoint(anchor)
+        let zoomedPoint = MKMapPoint(zoomedCenter)
+        XCTAssertEqual(
+            zoomedPoint.x,
+            (centerPoint.x + anchorPoint.x) / 2,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            zoomedPoint.y,
+            (centerPoint.y + anchorPoint.y) / 2,
+            accuracy: 0.01
+        )
+    }
+
     func testMapHomeSidebarPinchTraversesSeveralZoomStepsPerGesture() {
         XCTAssertEqual(
             MapHomeTimeSidebarPinchMath.stepOffset(magnification: 1),

@@ -89,7 +89,7 @@ enum RouteTimelineDataEngine {
         let allDayReadings = normalizedReadings(
             readings + liveReadings
         ).filter {
-            $0.timestamp >= dayStart && $0.timestamp <= dayEnd
+            $0.timestamp >= dayStart && $0.timestamp < dayEnd
         }
         let visibleReadings = allDayReadings.filter {
             $0.timestamp <= cutoff
@@ -106,7 +106,7 @@ enum RouteTimelineDataEngine {
         let selectedCategory = timelineDate.map { _ in
             category(at: cutoff, in: automatic, through: cutoff)
         }
-        let coordinateAtCutoff = coordinate(
+        let coordinateAtCutoff = playbackCoordinate(
             at: cutoff,
             in: allDayReadings
         )?.point
@@ -233,7 +233,7 @@ enum RouteTimelineDataEngine {
         let isInterpolated: Bool
     }
 
-    private static func coordinate(
+    private static func playbackCoordinate(
         at date: Date,
         in readings: [SensorReading]
     ) -> ResolvedCoordinate? {
@@ -255,7 +255,7 @@ enum RouteTimelineDataEngine {
         }
         let after = values[beforeIndex + 1]
         let gap = after.0.timeIntervalSince(before.0)
-        guard gap > 0, gap <= maximumInterpolationGap else {
+        guard gap > 0 else {
             return ResolvedCoordinate(point: before.1, isInterpolated: false)
         }
         let ratio = date.timeIntervalSince(before.0) / gap
@@ -300,8 +300,9 @@ enum RouteTimelineDataEngine {
         ).sorted()
         var result: [RouteTimelineSegment] = []
         for (start, end) in zip(boundaries, boundaries.dropFirst()) where start < end {
-            guard let startPoint = coordinate(at: start, in: allDayReadings)?.point,
-                  let endPoint = coordinate(at: end, in: allDayReadings)?.point,
+            guard hasContinuousRoute(from: start, to: end, in: allDayReadings),
+                  let startPoint = routeCoordinate(at: start, in: allDayReadings)?.point,
+                  let endPoint = routeCoordinate(at: end, in: allDayReadings)?.point,
                   !sameLocation(startPoint, endPoint) else { continue }
             let midpoint = start.addingTimeInterval(end.timeIntervalSince(start) / 2)
             let category = category(
@@ -325,6 +326,61 @@ enum RouteTimelineDataEngine {
             )
         }
         return result
+    }
+
+    private static func routeCoordinate(
+        at date: Date,
+        in readings: [SensorReading]
+    ) -> ResolvedCoordinate? {
+        let values = readings.compactMap { reading -> (Date, GeoPoint)? in
+            guard let point = validPoint(from: reading) else { return nil }
+            return (reading.timestamp, point)
+        }
+        guard let first = values.first else { return nil }
+        if date <= first.0 {
+            return date == first.0
+                ? ResolvedCoordinate(point: first.1, isInterpolated: false)
+                : nil
+        }
+        guard let beforeIndex = values.lastIndex(where: { $0.0 <= date }) else {
+            return nil
+        }
+        let before = values[beforeIndex]
+        guard before.0 < date else {
+            return ResolvedCoordinate(point: before.1, isInterpolated: false)
+        }
+        guard beforeIndex + 1 < values.count else {
+            return ResolvedCoordinate(point: before.1, isInterpolated: false)
+        }
+        let after = values[beforeIndex + 1]
+        let gap = after.0.timeIntervalSince(before.0)
+        guard gap > 0, gap <= maximumInterpolationGap else {
+            return ResolvedCoordinate(point: before.1, isInterpolated: false)
+        }
+        let ratio = date.timeIntervalSince(before.0) / gap
+        return ResolvedCoordinate(
+            point: interpolate(before.1, after.1, ratio: ratio),
+            isInterpolated: true
+        )
+    }
+
+    private static func hasContinuousRoute(
+        from start: Date,
+        to end: Date,
+        in readings: [SensorReading]
+    ) -> Bool {
+        let values = readings.compactMap { reading -> (Date, GeoPoint)? in
+            guard let point = validPoint(from: reading) else { return nil }
+            return (reading.timestamp, point)
+        }
+        guard values.count > 1 else { return true }
+        for (before, after) in zip(values, values.dropFirst()) {
+            guard before.0 < end, after.0 > start else { continue }
+            if after.0.timeIntervalSince(before.0) > maximumInterpolationGap {
+                return false
+            }
+        }
+        return true
     }
 
     private static func append(

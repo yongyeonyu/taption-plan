@@ -408,11 +408,18 @@ private struct TaptionScheduleWidgetView: View {
             HStack(spacing: 3) {
                 Image(systemName: weatherSymbol(payload: payload))
                     .font(.system(size: metrics.weatherIconSize, weight: .semibold))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(
+                        weatherSymbolColor(payload: payload, component: .primary),
+                        weatherSymbolColor(payload: payload, component: .secondary)
+                    )
                 Text(weatherAndTimeLabel(at: date, payload: payload))
                     .font(.system(size: metrics.weatherFontSize, weight: .bold))
                     .monospacedDigit()
+                    .foregroundStyle(
+                        weatherSymbolColor(payload: payload, component: .primary)
+                    )
             }
-            .foregroundStyle(WidgetPalette.weather)
         }
         .frame(height: metrics.headerHeight)
         .padding(.bottom, metrics.headerBottomSpacing)
@@ -497,6 +504,17 @@ private struct TaptionScheduleWidgetView: View {
 
     private func weatherSymbol(payload: TaptionWidgetPayload) -> String {
         payload.weatherSymbolName ?? "clock"
+    }
+
+    private func weatherSymbolColor(
+        payload: TaptionWidgetPayload,
+        component: WeatherSymbolPaletteComponent
+    ) -> Color {
+        let palette = WeatherSymbolKind(
+            symbolName: weatherSymbol(payload: payload)
+        ).palette
+        let color = component == .primary ? palette.primary : palette.secondary
+        return Color(red: color.red, green: color.green, blue: color.blue)
     }
 
     private func weatherAndTimeLabel(

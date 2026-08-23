@@ -1,6 +1,15 @@
 import SwiftUI
 import UIKit
 
+private func mapHomeWeatherSymbolColor(
+    _ weather: WeatherContext,
+    component: WeatherSymbolPaletteComponent
+) -> Color {
+    let palette = WeatherSymbolKind(symbolName: weather.symbolName).palette
+    let color = component == .primary ? palette.primary : palette.secondary
+    return Color(red: color.red, green: color.green, blue: color.blue)
+}
+
 enum MapHomeTimeSidebarDragProjection {
     static func state(
         from base: MapHomeTimeSidebarNLEState,
@@ -82,6 +91,21 @@ enum MapHomeWeatherBackgroundKind: Equatable {
         case .normal:
             .clear
         }
+    }
+}
+
+enum MapHomeWeatherCollisionMath {
+    static let clearance: CGFloat = 4
+
+    static func horizontalOffset(
+        weatherFrame: CGRect,
+        playheadFrame: CGRect
+    ) -> CGFloat {
+        let intersection = weatherFrame.intersection(playheadFrame)
+        guard !intersection.isNull,
+              intersection.width > 0,
+              intersection.height > 0 else { return 0 }
+        return -(intersection.width + clearance)
     }
 }
 
@@ -879,8 +903,13 @@ struct MapHomeTimeSidebar: View {
                         durationMinutes: visibleDurationMinutes,
                         trackHeight: trackHeight
                     )
-                    let hourColumnWidth = MapHomeTimeSidebarMath.rulerHourColumnWidth
-                    let minuteColumnWidth = MapHomeTimeSidebarMath.rulerMinuteColumnWidth
+                    let rulerFontSize = MapHomeTimeSidebarMath.rulerFontSize(
+                        durationMinutes: visibleDurationMinutes
+                    )
+                    let hourColumnWidth = MapHomeTimeSidebarMath.rulerColumnWidth(
+                        durationMinutes: visibleDurationMinutes
+                    )
+                    let minuteColumnWidth = hourColumnWidth
                     let columnSpacing = MapHomeTimeSidebarMath.rulerColumnSpacing
                     let labelsStartX = MapHomeTimeSidebarMath.rulerLabelsStartX(
                         railWidth: railWidth
@@ -919,11 +948,10 @@ struct MapHomeTimeSidebar: View {
                             window: visibleWindow
                         )
                         Text(String(format: "%02d", hour))
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Color.tpInk.opacity(0.78))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.75)
                             .fixedSize(horizontal: true, vertical: false)
                             .frame(width: hourColumnWidth, alignment: .trailing)
                             .position(
@@ -939,11 +967,10 @@ struct MapHomeTimeSidebar: View {
                             window: visibleWindow
                         )
                         Text(String(format: "%02d", minuteMark % 60))
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Color.tpInk.opacity(0.78))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.75)
                             .fixedSize(horizontal: true, vertical: false)
                             .frame(width: minuteColumnWidth, alignment: .trailing)
                             .position(
@@ -956,6 +983,9 @@ struct MapHomeTimeSidebar: View {
                             .allowsHitTesting(false)
                     }
                 } else {
+                    let rulerFontSize = MapHomeTimeSidebarMath.rulerFontSize(
+                        durationMinutes: visibleDurationMinutes
+                    )
                     ForEach(
                         MapHomeTimeSidebarMath.visibleHourLabels(
                             window: visibleWindow,
@@ -973,7 +1003,7 @@ struct MapHomeTimeSidebar: View {
                                 .fill(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
                                 .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5)
                             Text(String(format: "%02d", hour))
-                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
                                 .frame(width: 20, alignment: .trailing)
@@ -1049,6 +1079,7 @@ struct MapHomeTimeSidebar: View {
         visibleWindow: ClosedRange<Int>
     ) -> some View {
         let handleHeight: CGFloat = 44
+        let handleCenterX = trackX - 23
         let fallbackActivity = MapHomeTimeSidebarActivity.majorCategory(
             "unconfirmed",
             categoryColors: categoryColors
@@ -1072,13 +1103,33 @@ struct MapHomeTimeSidebar: View {
                 }
             .accessibilityLabel(activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel)
             .accessibilityHint("두 번 탭하면 섹션 편집을 엽니다")
-                .position(x: trackX - 23, y: handleHeight / 2)
+                .position(x: handleCenterX, y: handleHeight / 2)
 
             if let currentWeather {
+                let weatherFrame = CGRect(
+                    x: handleCenterX - 16,
+                    y: -21,
+                    width: 32,
+                    height: 22
+                )
+                let playheadFrame = CGRect(
+                    x: handleCenterX - 22,
+                    y: 0,
+                    width: 44,
+                    height: handleHeight
+                )
+                let collisionOffset = MapHomeWeatherCollisionMath.horizontalOffset(
+                    weatherFrame: weatherFrame,
+                    playheadFrame: playheadFrame
+                )
                 HStack(spacing: 2) {
                     Image(systemName: currentWeather.symbolName)
                         .font(.system(size: 9, weight: .semibold))
-                        .symbolRenderingMode(.multicolor)
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(
+                            mapHomeWeatherSymbolColor(currentWeather, component: .primary),
+                            mapHomeWeatherSymbolColor(currentWeather, component: .secondary)
+                        )
                     Text("\(Int(currentWeather.temperatureCelsius.rounded()))°")
                         .font(.system(size: 8, weight: .bold, design: .rounded))
                         .monospacedDigit()
@@ -1086,7 +1137,7 @@ struct MapHomeTimeSidebar: View {
                 .foregroundStyle(Color.tpWeatherDark)
                 .frame(width: 32, height: 22)
                 .background(Color.tpWeather.opacity(0.24), in: Capsule())
-                .position(x: trackX - 23, y: -10)
+                .position(x: handleCenterX + collisionOffset, y: -10)
                 .accessibilityLabel(
                     "현재 날씨 \(currentWeather.condition), \(Int(currentWeather.temperatureCelsius.rounded()))도"
                 )
@@ -1414,6 +1465,33 @@ struct MapHomeWeatherSidebar: View {
                     let y = verticalInset + trackHeight * (start + end) / 2
                     let height = max(2, trackHeight * (end - start))
                     if startMinute < endMinute {
+                        let itemWidth = railWidth - 2
+                        let itemHeight = max(22, min(30, height + 8))
+                        let playheadY = verticalInset + trackHeight
+                            * MapHomeTimeSidebarMath.position(
+                                minute: selectedMinute,
+                                window: window
+                            )
+                        let timeTrackX = railWidth
+                            - MapHomeTimeSidebarMath.rulerNumericColumnWidth
+                            - activeRailWidth / 2
+                            - 1
+                        let playheadFrame = CGRect(
+                            x: railWidth + 4 + timeTrackX - 23 - 22,
+                            y: playheadY - 22,
+                            width: 44,
+                            height: 44
+                        )
+                        let weatherFrame = CGRect(
+                            x: railWidth / 2 - itemWidth / 2,
+                            y: y - itemHeight / 2,
+                            width: itemWidth,
+                            height: itemHeight
+                        )
+                        let collisionOffset = MapHomeWeatherCollisionMath.horizontalOffset(
+                            weatherFrame: weatherFrame,
+                            playheadFrame: playheadFrame
+                        )
                         let clampedSelectedMinute = min(max(selectedMinute, 0), 1_439)
                         let isSelected = clampedSelectedMinute >= entry.startMinute
                             && clampedSelectedMinute < entry.endMinute
@@ -1431,7 +1509,11 @@ struct MapHomeWeatherSidebar: View {
                         HStack(spacing: 2) {
                             Image(systemName: entry.context.symbolName)
                                 .font(.system(size: 12, weight: .semibold))
-                                .symbolRenderingMode(.multicolor)
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(
+                                    mapHomeWeatherSymbolColor(entry.context, component: .primary),
+                                    mapHomeWeatherSymbolColor(entry.context, component: .secondary)
+                                )
                                 .frame(width: 20)
                             Text("\(Int(entry.context.temperatureCelsius.rounded()))°C")
                                 .font(.system(size: 9, weight: isSelected ? .bold : .medium, design: .rounded))
@@ -1439,7 +1521,7 @@ struct MapHomeWeatherSidebar: View {
                                 .foregroundStyle(isSelected ? Color.tpReferenceRose : Color.tpWeatherDark)
                         }
                         .padding(.horizontal, 3)
-                        .frame(width: railWidth - 2, height: max(22, min(30, height + 8)))
+                        .frame(width: itemWidth, height: itemHeight)
                         .background(
                             MapHomeWeatherBackgroundKind.resolve(
                                 isSelected: isSelected,
@@ -1453,7 +1535,7 @@ struct MapHomeWeatherSidebar: View {
                                     .stroke(Color.tpReferenceRose, lineWidth: 1.5)
                             }
                         }
-                        .position(x: railWidth / 2, y: y)
+                        .position(x: railWidth / 2 + collisionOffset, y: y)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(
                             language.text(
@@ -1516,6 +1598,27 @@ enum MapHomeTimeSidebarMath {
     static let rulerColumnSpacing: CGFloat = 2
     static let minimumRulerLabelSpacing: CGFloat = 12
     static let selectionTimeBlockWidth: CGFloat = 32
+
+    static func rulerFontSize(durationMinutes: Int) -> CGFloat {
+        switch durationMinutes {
+        case ...60: 14
+        case ...180: 13
+        case ...360: 12
+        case ...720: 11
+        default: 10
+        }
+    }
+
+    static func rulerColumnWidth(durationMinutes: Int) -> CGFloat {
+        min(17, max(16, ceil(rulerFontSize(durationMinutes: durationMinutes) * 1.2)))
+    }
+
+    static func minimumRulerLabelSpacing(durationMinutes: Int) -> CGFloat {
+        max(
+            minimumRulerLabelSpacing,
+            ceil(rulerFontSize(durationMinutes: durationMinutes) + 2)
+        )
+    }
 
     static func rulerLabelsStartX(railWidth: CGFloat) -> CGFloat {
         railWidth - rulerNumericColumnWidth + rulerTickWidth
@@ -1603,7 +1706,10 @@ enum MapHomeTimeSidebarMath {
         let pointsPerHour = max(trackHeight, 1) * 60 / duration
         let step = max(
             1,
-            Int(ceil(minimumRulerLabelSpacing / max(pointsPerHour, 1)))
+            Int(ceil(
+                minimumRulerLabelSpacing(durationMinutes: durationMinutes)
+                    / max(pointsPerHour, 1)
+            ))
         )
         return hours.enumerated().compactMap { index, hour in
             index.isMultiple(of: step) || index == hours.count - 1
@@ -1639,7 +1745,8 @@ enum MapHomeTimeSidebarMath {
 
         let duration = CGFloat(min(max(durationMinutes, 60), fullDayMinutes))
         let pointsPerTenMinutes = max(trackHeight, 1) * 10 / duration
-        let minuteStep = pointsPerTenMinutes >= minimumRulerLabelSpacing
+        let minuteStep = pointsPerTenMinutes
+            >= minimumRulerLabelSpacing(durationMinutes: durationMinutes)
             ? 10
             : 20
         let firstMinute = max(

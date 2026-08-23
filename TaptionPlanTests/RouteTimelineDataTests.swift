@@ -138,7 +138,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(projection.segments.map(\.opacity), [0.5, 0.5, 1.0])
     }
 
-    func testLargeGPSGapHoldsLastConfirmedCoordinate() throws {
+    func testExactSampleAndLongGPSGapInterpolatePlaybackButKeepRouteGap() throws {
         let projection = RouteTimelineDataEngine.project(
             selectedDate: date(0),
             throughMinute: 10,
@@ -152,9 +152,93 @@ final class RouteTimelineDataTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(projection.coordinateAtCutoff).latitude,
-            37,
+            38,
             accuracy: 0.0001
         )
         XCTAssertTrue(projection.segments.isEmpty)
+
+        let exactSample = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 30,
+            actuals: [],
+            readings: [
+                reading(0, latitude: 37),
+                reading(30, latitude: 40),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(exactSample.coordinateAtCutoff).latitude,
+            40,
+            accuracy: 0.0001
+        )
+        XCTAssertTrue(exactSample.segments.isEmpty)
+    }
+
+    func testPlaybackBeforeFirstSampleIsNilAndAfterLastSampleHoldsLastPoint() throws {
+        let beforeFirst = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 5,
+            actuals: [],
+            readings: [reading(10, latitude: 37)],
+            calendar: calendar
+        )
+        XCTAssertNil(beforeFirst.coordinateAtCutoff)
+
+        let afterLast = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 30,
+            actuals: [],
+            readings: [
+                reading(0, latitude: 37),
+                reading(10, latitude: 38),
+            ],
+            calendar: calendar
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(afterLast.coordinateAtCutoff).latitude,
+            38,
+            accuracy: 0.0001
+        )
+    }
+
+    func testPlaybackDoesNotInterpolateAcrossMidnight() throws {
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 1_440,
+            actuals: [],
+            readings: [
+                reading(0, latitude: 37),
+                reading(1_430, latitude: 38),
+                reading(1_445, latitude: 50),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(projection.coordinateAtCutoff).latitude,
+            38,
+            accuracy: 0.0001
+        )
+    }
+
+    func testRouteSegmentsRemainSplitAcrossGPSGapLongerThan15Minutes() {
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 40,
+            actuals: [],
+            readings: [
+                reading(0, latitude: 37),
+                reading(10, latitude: 38),
+                reading(30, latitude: 40),
+                reading(40, latitude: 41),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(projection.segments.count, 2)
+        XCTAssertEqual(projection.segments.map(\.start), [date(0), date(30)])
+        XCTAssertEqual(projection.segments.map(\.end), [date(10), date(40)])
     }
 }
