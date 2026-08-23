@@ -24,4 +24,9 @@
 - 원본 센서·HealthKit 데이터는 삭제·수정하지 않는다.
 - StoreKit 상품이 생성되기 전에는 TestFlight 구매 버튼 성공을 완료로 보고하지 않는다.
 - 새 요청은 temp.md에 10자리 ID로 등록하고 대표님의 `ㄱㄱ` 후 실행한다.
+
+2026-08-24 코드뷰 후속 UI 통합
+- `MPRV8X2K1A`로 검색 결과 영역을 행 높이 48pt·최대 320pt로 제한해 검색창 밖의 지도 탭·팬·줌을 다시 사용할 수 있게 했다.
+- `WTHANDL001`로 날씨 사이드바 OFF 상태의 날씨 캡슐을 플레이헤드 핸들과 같은 높이에 맞추고 왼쪽 4pt 간격을 유지한다.
+- 전체 XCTest 578/578, iOS Simulator Debug, 서명된 iPhone Debug build와 `git diff --check`를 통과했다.
 ```

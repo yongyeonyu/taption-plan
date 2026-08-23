@@ -413,6 +413,21 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapHomeSearchLayoutMath.playbackTouchSize, 44)
     }
 
+    func testMapSearchResultsDoNotOccupyTheMapViewport() {
+        XCTAssertEqual(
+            MapHomeSearchLayoutMath.searchResultsHeight(resultCount: 0),
+            0
+        )
+        XCTAssertEqual(
+            MapHomeSearchLayoutMath.searchResultsHeight(resultCount: 1),
+            MapHomeSearchLayoutMath.searchRowHeight
+        )
+        XCTAssertEqual(
+            MapHomeSearchLayoutMath.searchResultsHeight(resultCount: 20),
+            MapHomeSearchLayoutMath.searchResultsMaximumHeight
+        )
+    }
+
     func testMapSearchLayerCoversMapChromeButStaysBelowMenu() {
         XCTAssertGreaterThan(MapHomeLayerPriority.search, MapHomeLayerPriority.sidebar)
         XCTAssertGreaterThan(MapHomeLayerPriority.search, MapHomeLayerPriority.map)
@@ -436,6 +451,25 @@ final class TimeScaleTests: XCTestCase {
                 playheadFrame: CGRect(x: 24, y: 140, width: 44, height: 44)
             ),
             0
+        )
+    }
+
+    func testWeatherAlignsWithPlayheadAndKeepsClearanceWhenSidebarIsHidden() {
+        let playhead = CGRect(x: 24, y: 90, width: 44, height: 44)
+        let weather = MapHomeWeatherCollisionMath.alignedWeatherFrame(
+            centerX: playhead.midX,
+            playheadFrame: playhead
+        )
+        let offset = MapHomeWeatherCollisionMath.horizontalOffset(
+            weatherFrame: weather,
+            playheadFrame: playhead
+        )
+        let shiftedWeather = weather.offsetBy(dx: offset, dy: 0)
+
+        XCTAssertEqual(weather.midY, playhead.midY)
+        XCTAssertEqual(
+            shiftedWeather.maxX,
+            playhead.minX - MapHomeWeatherCollisionMath.clearance
         )
     }
 

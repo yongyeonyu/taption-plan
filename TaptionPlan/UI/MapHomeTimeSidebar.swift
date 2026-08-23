@@ -97,6 +97,19 @@ enum MapHomeWeatherBackgroundKind: Equatable {
 enum MapHomeWeatherCollisionMath {
     static let clearance: CGFloat = 4
 
+    static func alignedWeatherFrame(
+        centerX: CGFloat,
+        playheadFrame: CGRect
+    ) -> CGRect {
+        let size = CGSize(width: 32, height: 22)
+        return CGRect(
+            x: centerX - size.width / 2,
+            y: playheadFrame.midY - size.height / 2,
+            width: size.width,
+            height: size.height
+        )
+    }
+
     static func horizontalOffset(
         weatherFrame: CGRect,
         playheadFrame: CGRect
@@ -105,7 +118,10 @@ enum MapHomeWeatherCollisionMath {
         guard !intersection.isNull,
               intersection.width > 0,
               intersection.height > 0 else { return 0 }
-        return -(intersection.width + clearance)
+        return min(
+            0,
+            playheadFrame.minX - clearance - weatherFrame.maxX
+        )
     }
 }
 
@@ -1106,17 +1122,15 @@ struct MapHomeTimeSidebar: View {
                 .position(x: handleCenterX, y: handleHeight / 2)
 
             if let currentWeather {
-                let weatherFrame = CGRect(
-                    x: handleCenterX - 16,
-                    y: -21,
-                    width: 32,
-                    height: 22
-                )
                 let playheadFrame = CGRect(
                     x: handleCenterX - 22,
                     y: 0,
                     width: 44,
                     height: handleHeight
+                )
+                let weatherFrame = MapHomeWeatherCollisionMath.alignedWeatherFrame(
+                    centerX: handleCenterX,
+                    playheadFrame: playheadFrame
                 )
                 let collisionOffset = MapHomeWeatherCollisionMath.horizontalOffset(
                     weatherFrame: weatherFrame,
@@ -1135,9 +1149,12 @@ struct MapHomeTimeSidebar: View {
                         .monospacedDigit()
                 }
                 .foregroundStyle(Color.tpWeatherDark)
-                .frame(width: 32, height: 22)
+                .frame(width: weatherFrame.width, height: weatherFrame.height)
                 .background(Color.tpWeather.opacity(0.24), in: Capsule())
-                .position(x: handleCenterX + collisionOffset, y: -10)
+                .position(
+                    x: weatherFrame.midX + collisionOffset,
+                    y: weatherFrame.midY
+                )
                 .accessibilityLabel(
                     "현재 날씨 \(currentWeather.condition), \(Int(currentWeather.temperatureCelsius.rounded()))도"
                 )

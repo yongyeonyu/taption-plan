@@ -97,6 +97,8 @@ enum MapHomeSearchLayoutMath {
     static let playbackVisualSize: CGFloat = 40.74
     static let playbackIconSize: CGFloat = 13.58
     static let itemSpacing: CGFloat = 8
+    static let searchRowHeight: CGFloat = 48
+    static let searchResultsMaximumHeight: CGFloat = 320
 
     static func searchWidth(
         viewportWidth: CGFloat,
@@ -108,6 +110,13 @@ enum MapHomeSearchLayoutMath {
             - playbackTouchSize
             - itemSpacing
         return max(0, min(menuAlignedWidth, availableWidth))
+    }
+
+    static func searchResultsHeight(resultCount: Int) -> CGFloat {
+        min(
+            CGFloat(max(resultCount, 0)) * searchRowHeight,
+            searchResultsMaximumHeight
+        )
     }
 }
 
@@ -577,15 +586,24 @@ struct MapHomeView: View {
 
     private var isMapSearchOverlayPresented: Bool {
         isMapSearchFocused
-            || !mapSearchResults.isEmpty
-            || !mapSearchCompleter.results.isEmpty
+            || hasMapSearchResults
+    }
+
+    private var hasMapSearchResults: Bool {
+        !mapSearchResults.isEmpty || !mapSearchCompleter.results.isEmpty
+    }
+
+    private var mapSearchResultCount: Int {
+        mapSearchResults.isEmpty
+            ? mapSearchCompleter.results.count
+            : mapSearchResults.count
     }
 
     private var mapSearchSurfaceHeight: CGFloat {
-        guard isMapSearchOverlayPresented else { return 42 }
-        let fallbackTop = CGFloat(2) + Layout.headerVisibleHeight + 8
-        let top = searchFieldFrame.minY > 0 ? searchFieldFrame.minY : fallbackTop
-        return max(42, mapViewportSize.height - top)
+        guard hasMapSearchResults else { return 42 }
+        return 42 + 5 + MapHomeSearchLayoutMath.searchResultsHeight(
+            resultCount: mapSearchResultCount
+        )
     }
 
     private var currentLocationTargetPoint: CGPoint {
@@ -1279,7 +1297,7 @@ struct MapHomeView: View {
                 }
             )
 
-            if isMapSearchOverlayPresented {
+            if hasMapSearchResults {
                 ScrollView(showsIndicators: false) {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         if mapSearchResults.isEmpty {
@@ -1307,7 +1325,12 @@ struct MapHomeView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .frame(
+                    height: MapHomeSearchLayoutMath.searchResultsHeight(
+                        resultCount: mapSearchResultCount
+                    ),
+                    alignment: .top
+                )
                 .background(Color.tpSurface)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {
@@ -1376,6 +1399,7 @@ struct MapHomeView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            .frame(minHeight: MapHomeSearchLayoutMath.searchRowHeight)
         }
         .buttonStyle(.plain)
     }
