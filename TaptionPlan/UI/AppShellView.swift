@@ -14,12 +14,15 @@ struct AppShellView: View {
         SensorCollectionLiveActivityController()
     @State private var showsMapHome = true
     @State private var isSecurityStateReady = false
+    @State private var hasCompletedInitialProRefresh = false
+    @State private var hasRenderedInitialDestination = false
+    @State private var isInitialLaunchOverlayVisible = true
     @State private var lockGeneration = 0
     @State private var automaticBiometricAttemptedGeneration: Int?
     @State private var isBiometricAuthenticationInFlight = false
     @State private var biometricPromptInterruptedScene = false
 
-    var body: some View {
+    private var appLifecycleContent: some View {
         NavigationStack {
             Group {
                 if proAccess.grantsAccess {
@@ -28,7 +31,10 @@ struct AppShellView: View {
                     Color.tpSurface.ignoresSafeArea()
                 }
             }
-                .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                markInitialDestinationRendered()
+            }
+            .toolbar(.hidden, for: .navigationBar)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if Self.legacyUIEnabled && model.showsBottomBar && !showsMapHome {
@@ -75,29 +81,7 @@ struct AppShellView: View {
         .tint(.tpInk)
         .preferredColorScheme(.light)
         .task {
-            isSecurityStateReady = true
-            await proAccess.refresh()
-            if proAccess.grantsAccess {
-                await model.sceneBecameActive()
-            } else {
-                await model.suspendForCommerceLock()
-            }
-            if model.isAppLocked {
-                lockGeneration &+= 1
-                automaticBiometricAttemptedGeneration = nil
-            }
-            if proAccess.grantsAccess {
-                model.presentPermissionOnboardingIfNeeded()
-            }
-            if Self.legacyUIEnabled,
-               let planID = TaptionPlanAppDelegate.takePendingPlanID(),
-               let url = URL(
-                    string: "taptionplan://plan/\(planID.uuidString)"
-               ) {
-                showsMapHome = false
-                await model.openDeepLink(url)
-            }
-            await reconcileSensorLiveActivity()
+            await performInitialLaunchPreparation()
         }
         .onOpenURL { url in
             handleOpenURL(url)
@@ -112,6 +96,9 @@ struct AppShellView: View {
         .onChange(of: scenePhase) { _, phase in
             handleScenePhaseChange(phase)
         }
+        .onChange(of: proAccess.state) { _, _ in
+            dismissInitialLaunchOverlayIfReady()
+        }
         .onChange(of: proAccess.grantsAccess) { _, grantsAccess in
             Task { @MainActor in
                 if grantsAccess {
@@ -123,6 +110,12 @@ struct AppShellView: View {
                 await reconcileSensorLiveActivity()
             }
         }
+        .onChange(of: model.isBootstrapped) { _, _ in
+            dismissInitialLaunchOverlayIfReady()
+        }
+        .onChange(of: isSecurityStateReady) { _, _ in
+            dismissInitialLaunchOverlayIfReady()
+        }
         .onChange(of: model.sensorCollectionSessionState) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
@@ -132,12 +125,17 @@ struct AppShellView: View {
         .onChange(of: model.settings.gpsLoggingPreferences) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
+    }
+
+    var body: some View {
+        ZStack {
+            appLifecycleContent
+            securityOverlay
+            initialLaunchOverlay
+        }
         .alert(
             "확인해 주세요",
-            isPresented: Binding(
-                get: { model.userFacingError != nil },
-                set: { if !$0 { model.clearError() } }
-            )
+            isPresented: userFacingErrorBinding
         ) {
             Button("확인") { model.clearError() }
         } message: {
@@ -146,9 +144,6 @@ struct AppShellView: View {
         .accessibilityHidden(shouldHidePrimaryContent)
         .overlay(alignment: .top) {
             floorCalibrationNotice
-        }
-        .overlay {
-            securityOverlay
         }
         .animation(
             .easeInOut(duration: 0.25),
@@ -174,6 +169,17 @@ struct AppShellView: View {
         )
     }
 
+    private var userFacingErrorBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: { model.userFacingError != nil },
+            set: { isPresented in
+                if !isPresented {
+                    model.clearError()
+                }
+            }
+        )
+    }
+
     private var shouldHideAppSnapshot: Bool {
         guard scenePhase != .active else { return false }
         let settings = model.securityStatus.settings
@@ -181,10 +187,55 @@ struct AppShellView: View {
     }
 
     private var shouldHidePrimaryContent: Bool {
-        !isSecurityStateReady
+        isInitialLaunchOverlayVisible
+            || !isSecurityStateReady
             || model.isAppLocked
             || !proAccess.grantsAccess
             || shouldHideAppSnapshot
+    }
+
+    private var initialLaunchReady: Bool {
+        hasCompletedInitialProRefresh
+            && isSecurityStateReady
+            && hasRenderedInitialDestination
+            && (model.isBootstrapped || !proAccess.grantsAccess)
+    }
+
+    private func markInitialDestinationRendered() {
+        guard !hasRenderedInitialDestination else { return }
+        hasRenderedInitialDestination = true
+        dismissInitialLaunchOverlayIfReady()
+    }
+
+    private func dismissInitialLaunchOverlayIfReady() {
+        guard isInitialLaunchOverlayVisible, initialLaunchReady else { return }
+        withAnimation(.easeOut(duration: 0.18)) {
+            isInitialLaunchOverlayVisible = false
+        }
+    }
+
+    @ViewBuilder
+    private var initialLaunchOverlay: some View {
+        if isInitialLaunchOverlayVisible {
+            ZStack {
+                Color("LaunchBackground")
+                    .ignoresSafeArea()
+                Image("LaunchIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 128, height: 128)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(.opacity)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                AppLanguagePreference.localized(
+                    "Taption Plan 불러오는 중",
+                    rawPreference: languageRawValue
+                )
+            )
+            .zIndex(10)
+        }
     }
 
     @ViewBuilder
@@ -272,6 +323,33 @@ struct AppShellView: View {
             }
             await reconcileSensorLiveActivity()
         }
+    }
+
+    private func performInitialLaunchPreparation() async {
+        await proAccess.refresh()
+        hasCompletedInitialProRefresh = true
+        if proAccess.grantsAccess {
+            await model.sceneBecameActive()
+        } else {
+            await model.suspendForCommerceLock()
+        }
+        if model.isAppLocked {
+            lockGeneration &+= 1
+            automaticBiometricAttemptedGeneration = nil
+        }
+        if proAccess.grantsAccess {
+            model.presentPermissionOnboardingIfNeeded()
+        }
+        if Self.legacyUIEnabled,
+           let planID = TaptionPlanAppDelegate.takePendingPlanID(),
+           let url = URL(
+                string: "taptionplan://plan/\(planID.uuidString)"
+           ) {
+            showsMapHome = false
+            await model.openDeepLink(url)
+        }
+        await reconcileSensorLiveActivity()
+        isSecurityStateReady = true
     }
 
     private func reconcileSensorLiveActivity() async {

@@ -1004,6 +1004,214 @@ enum ActivityFragmentCorrectionEngine {
     }
 }
 
+struct ActivitySectionOverridePiece: Hashable, Sendable {
+    var span: TimeSpan
+    var option: ActivityCorrectionOption
+}
+
+enum ActivitySectionEditMode: Hashable, Sendable {
+    case replace(editedSpan: TimeSpan, option: ActivityCorrectionOption)
+    case cutLowerUnconfirmed(
+        cutAt: Date,
+        option: ActivityCorrectionOption
+    )
+    case insertDetail(
+        detailSpan: TimeSpan,
+        option: ActivityCorrectionOption
+    )
+}
+
+struct ActivitySectionEditRequest: Hashable, Sendable {
+    var sourceIDs: [UUID]
+    var originalSpan: TimeSpan
+    var originalOption: ActivityCorrectionOption
+    var mode: ActivitySectionEditMode
+}
+
+struct ActivitySectionEditSaveResult: Hashable, Sendable {
+    var recordIDs: [UUID]
+    var selectedSpan: TimeSpan
+}
+
+/// Builds user-owned display records over immutable sensor and travel data.
+/// Every plan covers the original section without gaps, so shrinking or
+/// slicing a section never exposes a stale automatic candidate underneath.
+enum ActivitySectionOverrideEngine {
+    static let modelVersion = "manual-activity-section-v2"
+
+    static let unconfirmedOption = ActivityCorrectionOption(
+        id: "phase.unconfirmed",
+        title: "미확인",
+        behavior: "unconfirmed-gap",
+        categoryID: "unconfirmed",
+        systemImage: "questionmark",
+        isAutomatic: false,
+        isCustom: false
+    )
+
+    static func pieces(
+        for request: ActivitySectionEditRequest
+    ) -> [ActivitySectionOverridePiece] {
+        let original = request.originalSpan
+        let values: [ActivitySectionOverridePiece]
+        switch request.mode {
+        case let .replace(editedSpan, option):
+            guard let edited = editedSpan.intersection(with: original) else {
+                return []
+            }
+            values = coveragePieces(
+                original: original,
+                middle: edited,
+                middleOption: option,
+                outsideOption: unconfirmedOption
+            )
+
+        case let .cutLowerUnconfirmed(cutAt, option):
+            guard cutAt > original.start, cutAt < original.end else { return [] }
+            values = [
+                ActivitySectionOverridePiece(
+                    span: TimeSpan(start: original.start, end: cutAt),
+                    option: option
+                ),
+                ActivitySectionOverridePiece(
+                    span: TimeSpan(start: cutAt, end: original.end),
+                    option: unconfirmedOption
+                ),
+            ]
+
+        case let .insertDetail(detailSpan, option):
+            guard let detail = detailSpan.intersection(with: original) else {
+                return []
+            }
+            values = coveragePieces(
+                original: original,
+                middle: detail,
+                middleOption: option,
+                outsideOption: request.originalOption
+            )
+        }
+        return coalesced(values)
+    }
+
+    static func records(
+        for request: ActivitySectionEditRequest,
+        createdAt: Date = .now
+    ) -> [ActualRecord] {
+        pieces(for: request).map { piece in
+            ActualRecord(
+                id: stableID(
+                    sourceIDs: request.sourceIDs,
+                    originalSpan: request.originalSpan,
+                    piece: piece
+                ),
+                planID: nil,
+                title: piece.option.title,
+                categoryID: piece.option.categoryID,
+                startedAt: piece.span.start,
+                endedAt: piece.span.end,
+                source: .manual,
+                confidence: .high,
+                createdAt: createdAt,
+                behavior: piece.option.behavior,
+                evidence: ["사용자가 행동 구간을 편집함"],
+                modelVersion: modelVersion,
+                manuallyCorrected: true
+            )
+        }
+    }
+
+    static func isEditableOverride(_ actual: ActualRecord) -> Bool {
+        actual.source == .manual && actual.manuallyCorrected
+    }
+
+    private static func coveragePieces(
+        original: TimeSpan,
+        middle: TimeSpan,
+        middleOption: ActivityCorrectionOption,
+        outsideOption: ActivityCorrectionOption
+    ) -> [ActivitySectionOverridePiece] {
+        var values: [ActivitySectionOverridePiece] = []
+        if original.start < middle.start {
+            values.append(ActivitySectionOverridePiece(
+                span: TimeSpan(start: original.start, end: middle.start),
+                option: outsideOption
+            ))
+        }
+        values.append(ActivitySectionOverridePiece(
+            span: middle,
+            option: middleOption
+        ))
+        if middle.end < original.end {
+            values.append(ActivitySectionOverridePiece(
+                span: TimeSpan(start: middle.end, end: original.end),
+                option: outsideOption
+            ))
+        }
+        return values
+    }
+
+    private static func coalesced(
+        _ pieces: [ActivitySectionOverridePiece]
+    ) -> [ActivitySectionOverridePiece] {
+        pieces.reduce(into: []) { result, piece in
+            guard piece.span.duration > 0 else { return }
+            guard var previous = result.last,
+                  previous.span.end == piece.span.start,
+                  previous.option.title == piece.option.title,
+                  previous.option.categoryID == piece.option.categoryID,
+                  previous.option.behavior == piece.option.behavior
+            else {
+                result.append(piece)
+                return
+            }
+            result.removeLast()
+            previous.span = TimeSpan(
+                start: previous.span.start,
+                end: piece.span.end
+            )
+            result.append(previous)
+        }
+    }
+
+    private static func stableID(
+        sourceIDs: [UUID],
+        originalSpan: TimeSpan,
+        piece: ActivitySectionOverridePiece
+    ) -> UUID {
+        let sources = sourceIDs.map(\.uuidString).sorted().joined(separator: ",")
+        let seed = [
+            modelVersion,
+            sources,
+            milliseconds(originalSpan.start),
+            milliseconds(originalSpan.end),
+            milliseconds(piece.span.start),
+            milliseconds(piece.span.end),
+            piece.option.categoryID,
+            piece.option.behavior ?? "",
+            piece.option.title,
+        ].joined(separator: ".")
+        var bytes = Array(repeating: UInt8(0), count: 16)
+        var hash = UInt64(14_695_981_039_346_656_037)
+        for (index, byte) in seed.utf8.enumerated() {
+            hash ^= UInt64(byte)
+            hash = hash &* 1_099_511_628_211
+            bytes[index % bytes.count] ^= UInt8(truncatingIfNeeded: hash >> 24)
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+
+    private static func milliseconds(_ date: Date) -> String {
+        String(Int64((date.timeIntervalSince1970 * 1_000).rounded()))
+    }
+}
+
 /// 일과는 이동 표시용으로 합쳐진 사본이 아니라 HealthKit·Apple Watch 원본을
 /// 읽는다. 그래야 같은 걷기가 활동에서는 `걷기`, 일과에서는 `운동`이 된다.
 enum DayPhaseEvidenceEngine {

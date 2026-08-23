@@ -669,10 +669,16 @@ final class PlanSecurityBackupService {
     }
 
     static func applicationSupport(fileManager: FileManager = .default) throws -> PlanSecurityBackupService {
+#if targetEnvironment(simulator)
+        PlanSecurityBackupService(
+            backupStore: UbiquitousPlanCloudBackupStore(fileManager: fileManager)
+        )
+#else
         PlanSecurityBackupService(
             backupStore: UbiquitousPlanCloudBackupStore(fileManager: fileManager),
             cloudRecoveryKeyProvider: CloudKitPlanCloudRecoveryKeyProvider()
         )
+#endif
     }
 
     var hasPIN: Bool { verifier != nil }

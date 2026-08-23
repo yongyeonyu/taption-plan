@@ -1238,24 +1238,24 @@ final class TimeScaleTests: XCTestCase {
             visibleStartMinute: 690,
             visibleDurationMinutes: 60
         )
-        drag.begin(with: base, handleY: 150, nowUptime: 10)
+        drag.begin(with: base, nowUptime: 10)
 
         var state = try XCTUnwrap(
             drag.projectedState(
-                translation: 151,
+                locationY: 301,
                 trackHeight: 300,
+                verticalInset: 0,
                 maxMinute: 1_439,
-                sensitivity: 1,
                 nowUptime: 10
             )
         )
         for frame in 1...60 {
             state = try XCTUnwrap(
                 drag.projectedState(
-                    translation: 151,
+                    locationY: 301,
                     trackHeight: 300,
+                    verticalInset: 0,
                     maxMinute: 1_439,
-                    sensitivity: 1,
                     nowUptime: 10 + Double(frame) / 60
                 )
             )
@@ -1273,26 +1273,25 @@ final class TimeScaleTests: XCTestCase {
                 visibleStartMinute: 0,
                 visibleDurationMinutes: 60
             ),
-            handleY: 150,
             nowUptime: 10
         )
 
         var state = try XCTUnwrap(
             drag.projectedState(
-                translation: -151,
+                locationY: -1,
                 trackHeight: 300,
+                verticalInset: 0,
                 maxMinute: 1_439,
-                sensitivity: 1,
                 nowUptime: 10
             )
         )
         for frame in 1...60 {
             state = try XCTUnwrap(
                 drag.projectedState(
-                    translation: -151,
+                    locationY: -1,
                     trackHeight: 300,
+                    verticalInset: 0,
                     maxMinute: 1_439,
-                    sensitivity: 1,
                     nowUptime: 10 + Double(frame) / 60
                 )
             )
@@ -1314,26 +1313,25 @@ final class TimeScaleTests: XCTestCase {
                 visibleStartMinute: 540,
                 visibleDurationMinutes: 60
             ),
-            handleY: 150,
             nowUptime: 10
         )
 
         var state = try XCTUnwrap(
             drag.projectedState(
-                translation: 151,
+                locationY: 301,
                 trackHeight: 300,
+                verticalInset: 0,
                 maxMinute: 600,
-                sensitivity: 1,
                 nowUptime: 10
             )
         )
         for frame in 1...180 {
             state = try XCTUnwrap(
                 drag.projectedState(
-                    translation: 151,
+                    locationY: 301,
                     trackHeight: 300,
+                    verticalInset: 0,
                     maxMinute: 600,
-                    sensitivity: 1,
                     nowUptime: 10 + Double(frame) / 60
                 )
             )
@@ -1341,6 +1339,29 @@ final class TimeScaleTests: XCTestCase {
 
         XCTAssertEqual(state.selectedMinute, 600)
         XCTAssertEqual(state.visibleStartMinute, 540)
+    }
+
+    func testMapHomeTimeSidebarHandleMapsAbsoluteTouchOneToOne() throws {
+        let drag = MapHomeTimeSidebarHandleDrag()
+        drag.begin(
+            with: MapHomeTimeSidebarNLEState(
+                selectedMinute: 660,
+                visibleStartMinute: 600,
+                visibleDurationMinutes: 120
+            ),
+            nowUptime: 10
+        )
+
+        let state = try XCTUnwrap(drag.projectedState(
+            locationY: 74,
+            trackHeight: 240,
+            verticalInset: 14,
+            maxMinute: 1_439,
+            nowUptime: 10
+        ))
+
+        XCTAssertEqual(state.selectedMinute, 630)
+        XCTAssertEqual(state.visibleStartMinute, 600)
     }
 
     func testMapHomeTimelineUsesFullDayForArchivedDate() {
@@ -1506,5 +1527,70 @@ final class TimeScaleTests: XCTestCase {
                 isFinal: true
             )
         )
+    }
+
+    func testMapHomeSectionViewportPinchKeepsAnchorMinute() {
+        let origin = MapHomeSectionViewportState(
+            startMinute: 480,
+            durationMinutes: 360
+        )
+
+        let zoomed = MapHomeSectionViewportMath.zoomed(
+            from: origin,
+            magnification: 2,
+            anchorY: 300,
+            height: 600
+        )
+
+        XCTAssertEqual(zoomed.durationMinutes, 180)
+        XCTAssertEqual(zoomed.startMinute, 570)
+        XCTAssertEqual(
+            MapHomeSectionViewportMath.minute(
+                atY: 300,
+                height: 600,
+                viewport: zoomed
+            ),
+            660
+        )
+    }
+
+    func testMapHomeSectionViewportPinchClampsZoomLimitsAndDayEdges() {
+        let origin = MapHomeSectionViewportState(
+            startMinute: 1_200,
+            durationMinutes: 240
+        )
+
+        XCTAssertEqual(
+            MapHomeSectionViewportMath.zoomed(
+                from: origin,
+                magnification: 100,
+                anchorY: 600,
+                height: 600
+            ).durationMinutes,
+            30
+        )
+        let fullDay = MapHomeSectionViewportMath.zoomed(
+            from: origin,
+            magnification: 0.01,
+            anchorY: 600,
+            height: 600
+        )
+        XCTAssertEqual(fullDay.startMinute, 0)
+        XCTAssertEqual(fullDay.durationMinutes, 1_440)
+    }
+
+    func testMapHomeSectionDetailSliceRequiresClearRightSwipe() {
+        XCTAssertTrue(MapHomeSectionViewportMath.acceptsDetailSlice(
+            translation: CGSize(width: 80, height: 12)
+        ))
+        XCTAssertFalse(MapHomeSectionViewportMath.acceptsDetailSlice(
+            translation: CGSize(width: 50, height: 0)
+        ))
+        XCTAssertFalse(MapHomeSectionViewportMath.acceptsDetailSlice(
+            translation: CGSize(width: 80, height: 70)
+        ))
+        XCTAssertFalse(MapHomeSectionViewportMath.acceptsDetailSlice(
+            translation: CGSize(width: -80, height: 0)
+        ))
     }
 }

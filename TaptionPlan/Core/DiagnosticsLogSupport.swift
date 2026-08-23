@@ -6,6 +6,13 @@ enum TaptionDiagnosticsLevel: String {
     case error
 }
 
+enum TaptionDiagnosticsWriteStatus: Equatable {
+    case neverAttempted
+    case primarySucceeded
+    case fallbackSucceeded
+    case failed
+}
+
 enum TaptionDiagnosticError {
     static func fields(for error: Error) -> [String: String] {
         let value = error as NSError
@@ -83,20 +90,29 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     static let shared = TaptionPlanDiagnosticsLogger()
 
     private let fileManager: FileManager
-    private let directoryURL: URL
+    private let primaryDirectoryURL: URL
+    private let fallbackDirectoryURL: URL?
     private let maximumBytes: Int
     private let lock = NSLock()
+    private var writeStatus = TaptionDiagnosticsWriteStatus.neverAttempted
+
+    var lastWriteStatus: TaptionDiagnosticsWriteStatus {
+        lock.lock()
+        defer { lock.unlock() }
+        return writeStatus
+    }
 
     init(
         directoryURL: URL? = nil,
+        fallbackDirectoryURL: URL? = nil,
         maximumBytes: Int = 1_000_000,
         fileManager: FileManager = .default
     ) {
         self.fileManager = fileManager
         self.maximumBytes = max(8_000, maximumBytes)
-        self.directoryURL = directoryURL ?? Self.defaultDirectory(
-            fileManager: fileManager
-        )
+        let directories = Self.defaultDirectories(fileManager: fileManager)
+        self.primaryDirectoryURL = directoryURL ?? directories.primary
+        self.fallbackDirectoryURL = fallbackDirectoryURL ?? directories.fallback
     }
 
     func record(
@@ -106,78 +122,147 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     ) {
         lock.lock()
         defer { lock.unlock() }
+
         do {
-            try fileManager.createDirectory(
-                at: directoryURL,
-                withIntermediateDirectories: true
+            let data = try makeEntryData(
+                event: event,
+                level: level,
+                fields: fields
             )
-            try rotateIfNeeded()
-            let entry: [String: Any] = [
-                "timestamp": ISO8601DateFormatter().string(from: .now),
-                "level": level.rawValue,
-                "event": event,
-                "fields": fields,
-            ]
-            var data = try JSONSerialization.data(
-                withJSONObject: entry,
-                options: [.sortedKeys]
-            )
-            data.append(0x0A)
-            if let handle = FileHandle(forWritingAtPath: currentURL.path) {
-                try handle.seekToEnd()
-                try handle.write(contentsOf: data)
-                try handle.close()
-            } else {
-                try data.write(
-                    to: currentURL,
-                    options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
-                )
-            }
+            try write(data, to: primaryDirectoryURL)
+            writeStatus = .primarySucceeded
+            return
         } catch {
-            // 진단 기록 실패가 앱 기능을 막으면 안 된다.
+            guard let fallbackDirectoryURL,
+                  fallbackDirectoryURL != primaryDirectoryURL else {
+                writeStatus = .failed
+                return
+            }
+            do {
+                let data = try makeEntryData(
+                    event: event,
+                    level: level,
+                    fields: fields
+                )
+                try write(data, to: fallbackDirectoryURL)
+                writeStatus = .fallbackSucceeded
+            } catch {
+                writeStatus = .failed
+            }
         }
     }
 
     func combinedLog() -> String {
         lock.lock()
         defer { lock.unlock() }
-        return [previousURL, currentURL]
+        var urls = [previousURL, currentURL]
+        if let fallbackDirectoryURL,
+           fallbackDirectoryURL != primaryDirectoryURL {
+            urls.append(
+                fallbackDirectoryURL.appendingPathComponent(
+                    "iphone-previous.jsonl"
+                )
+            )
+            urls.append(
+                fallbackDirectoryURL.appendingPathComponent("iphone.jsonl")
+            )
+        }
+        return urls
             .compactMap { try? String(contentsOf: $0, encoding: .utf8) }
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
     }
 
     private var currentURL: URL {
-        directoryURL.appendingPathComponent("iphone.jsonl")
+        primaryDirectoryURL.appendingPathComponent("iphone.jsonl")
     }
 
     private var previousURL: URL {
-        directoryURL.appendingPathComponent("iphone-previous.jsonl")
+        primaryDirectoryURL.appendingPathComponent("iphone-previous.jsonl")
     }
 
-    private func rotateIfNeeded() throws {
+    private func makeEntryData(
+        event: String,
+        level: TaptionDiagnosticsLevel,
+        fields: [String: String]
+    ) throws -> Data {
+        let entry: [String: Any] = [
+            "timestamp": ISO8601DateFormatter().string(from: .now),
+            "level": level.rawValue,
+            "event": event,
+            "fields": fields,
+        ]
+        var data = try JSONSerialization.data(
+            withJSONObject: entry,
+            options: [.sortedKeys]
+        )
+        data.append(0x0A)
+        return data
+    }
+
+    private func write(_ data: Data, to directoryURL: URL) throws {
+        try fileManager.createDirectory(
+            at: directoryURL,
+            withIntermediateDirectories: true
+        )
+        try rotateIfNeeded(in: directoryURL)
+        let currentURL = directoryURL.appendingPathComponent("iphone.jsonl")
+        if fileManager.fileExists(atPath: currentURL.path) {
+            let handle = try FileHandle(forWritingTo: currentURL)
+            defer { try? handle.close() }
+            try handle.seekToEnd()
+            try handle.write(contentsOf: data)
+        } else {
+            try data.write(
+                to: currentURL,
+                options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+            )
+        }
+    }
+
+    private func rotateIfNeeded(in directoryURL: URL) throws {
+        let currentURL = directoryURL.appendingPathComponent("iphone.jsonl")
         let size = (try? currentURL.resourceValues(
             forKeys: [.fileSizeKey]
         ).fileSize) ?? 0
         guard size >= maximumBytes else { return }
+        let previousURL = directoryURL.appendingPathComponent(
+            "iphone-previous.jsonl"
+        )
         try? fileManager.removeItem(at: previousURL)
         try fileManager.moveItem(at: currentURL, to: previousURL)
     }
 
-    private static func defaultDirectory(
+    private static func defaultDirectories(
         fileManager: FileManager
-    ) -> URL {
-        let root = fileManager.containerURL(
-            forSecurityApplicationGroupIdentifier: "group.com.taption.plan"
-        ) ?? (try? fileManager.url(
+    ) -> (primary: URL, fallback: URL?) {
+        let applicationSupportDirectory = (try? fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
-        )) ?? fileManager.temporaryDirectory
-        return root.appendingPathComponent(
+        ))?.appendingPathComponent(
             "TaptionPlan/Diagnostics",
             isDirectory: true
+        )
+        guard let appGroupRoot = fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier: "group.com.taption.plan"
+        ) else {
+            return (
+                primary: applicationSupportDirectory
+                    ?? fileManager.temporaryDirectory.appendingPathComponent(
+                        "TaptionPlan/Diagnostics",
+                        isDirectory: true
+                    ),
+                fallback: nil
+            )
+        }
+        return (
+            primary: appGroupRoot.appendingPathComponent(
+                "TaptionPlan/Diagnostics",
+                isDirectory: true
+            ),
+            fallback: applicationSupportDirectory
         )
     }
 }

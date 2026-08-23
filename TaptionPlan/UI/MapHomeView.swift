@@ -439,7 +439,20 @@ struct MapHomeView: View {
         MapHomeSectionEditSheet(
             model: model,
             selection: selection,
-            language: language
+            language: language,
+            onSaved: { result in
+                refreshTimeRailSegments()
+                let calendar = Calendar.autoupdatingCurrent
+                let dayStart = calendar.startOfDay(for: selection.date)
+                let midpoint = result.selectedSpan.start.addingTimeInterval(
+                    result.selectedSpan.duration / 2
+                )
+                selectedTimelineMinute = min(
+                    1_439,
+                    max(0, Int(midpoint.timeIntervalSince(dayStart) / 60))
+                )
+                isTimelineSelectionPinned = true
+            }
         )
     }
 
@@ -498,7 +511,11 @@ struct MapHomeView: View {
 
             VStack(spacing: 8) {
                 header
-                mapSearchBar
+                HStack(alignment: .top, spacing: 8) {
+                    mapSearchBar
+                    Spacer(minLength: 0)
+                    dayPlaybackButton
+                }
             }
             .padding(.horizontal, Layout.horizontalInset)
             // The container already starts below the status-bar safe area; keep
@@ -624,7 +641,13 @@ struct MapHomeView: View {
                 )
             )
         }
-        .fullScreenCover(item: $sectionEditSelection) { selection in
+        .fullScreenCover(
+            item: $sectionEditSelection,
+            onDismiss: {
+                sectionEditSelection = nil
+                refreshTimeRailSegments()
+            }
+        ) { selection in
             sectionEditSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
@@ -1067,6 +1090,24 @@ struct MapHomeView: View {
         .zIndex(4)
     }
 
+    private var dayPlaybackButton: some View {
+        Button {
+            toggleDayPlayback()
+        } label: {
+            Image(systemName: isDayPlaybackRunning ? "pause.fill" : "play.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color.white)
+                .frame(width: 42, height: 42)
+                .background(Color.tpInk.opacity(0.92), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            isDayPlaybackRunning
+                ? language.text("하루 재생 일시 정지", "Pause day playback")
+                : language.text("하루 재생", "Play day")
+        )
+    }
+
     private func mapSearchRow(
         title: String,
         subtitle: String,
@@ -1347,7 +1388,6 @@ struct MapHomeView: View {
                         maximumSelectableMinute: dayPlaybackElapsedSeconds > 0
                             ? MapHomeTimeSidebarMath.fullDayMinutes
                             : nil,
-                        isPlaybackRunning: isDayPlaybackRunning,
                         onSelectionChanged: { minute in
                             stopDayPlayback(resetProgress: true)
                             isTimelineSelectionPinned = true
@@ -1358,20 +1398,7 @@ struct MapHomeView: View {
                             weatherVisibleDurationMinutes = duration
                         },
                         onSectionEdit: {
-                            stopDayPlayback(resetProgress: true)
-                            sectionEditSelection = MapHomeSectionEditSelection(
-                                date: model.selectedDate,
-                                minute: minute,
-                                activity: currentActivity(at: minute),
-                                segment: MapHomeTimeRailSegmentEngine.segment(
-                                    at: minute,
-                                    in: timeRailSegments
-                                ) ?? .wholeDayUnconfirmed,
-                                details: sectionDetails(at: minute)
-                            )
-                        },
-                        onPlaybackToggle: {
-                            toggleDayPlayback()
+                            openSectionEditor(at: minute)
                         }
                     )
                 }
@@ -2639,6 +2666,29 @@ struct MapHomeView: View {
         timeRailSegments = next
     }
 
+    private func openSectionEditor(at minute: Int) {
+        stopDayPlayback(resetProgress: true)
+        let segment = MapHomeTimeRailSegmentEngine.segment(
+            at: minute,
+            in: timeRailSegments
+        ) ?? .wholeDayUnconfirmed
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "section_edit_open_requested",
+            fields: [
+                "minute": String(minute),
+                "category": segment.categoryID,
+                "source_count": String(segment.sourceIDs.count),
+            ]
+        )
+        sectionEditSelection = MapHomeSectionEditSelection(
+            date: model.selectedDate,
+            minute: minute,
+            activity: currentActivity(at: minute),
+            segment: segment,
+            details: sectionDetails(at: minute)
+        )
+    }
+
     /// Show the persisted, station-to-station subway path on the map.  The
     /// route is derived from the classified segment, not from a straight line
     /// between the home and office pins, so transfers remain visible.
@@ -2755,6 +2805,7 @@ struct MapHomeView: View {
                 id: actual.id,
                 title: actual.title,
                 categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
+                behavior: actual.behavior,
                 startMinute: start,
                 endMinute: end
             )
@@ -2777,6 +2828,7 @@ struct MapHomeView: View {
                 id: travel.id,
                 title: "\(MovementPresentation.title(for: travel.mode)) 탑승",
                 categoryID: "movement",
+                behavior: travel.mode.rawValue,
                 startMinute: start,
                 endMinute: end
             )
@@ -3074,20 +3126,121 @@ private struct MapHomeSectionDetail: Identifiable, Hashable {
     let id: UUID
     let title: String
     let categoryID: String
+    let behavior: String?
     let startMinute: Int
     let endMinute: Int
 }
 
 private struct MapHomeSectionEditSelection: Identifiable {
+    let id = UUID()
     let date: Date
     let minute: Int
     let activity: MapHomeTimeSidebarActivity
     let segment: MapHomeTimeRailSegment
     let details: [MapHomeSectionDetail]
 
-    var id: String {
-        "\(date.timeIntervalSinceReferenceDate)-\(minute)"
+}
+
+struct MapHomeSectionViewportState: Hashable {
+    var startMinute: Int
+    var durationMinutes: Int
+
+    var range: ClosedRange<Int> {
+        startMinute...min(1_440, startMinute + durationMinutes)
     }
+}
+
+enum MapHomeSectionViewportMath {
+    static let minimumDurationMinutes = 30
+    static let maximumDurationMinutes = 1_440
+
+    static func initialState(
+        segmentStart: Int,
+        segmentEnd: Int
+    ) -> MapHomeSectionViewportState {
+        let center = (segmentStart + segmentEnd) / 2
+        let duration = min(
+            maximumDurationMinutes,
+            max(360, segmentEnd - segmentStart + 180)
+        )
+        return state(centerMinute: center, durationMinutes: duration)
+    }
+
+    static func zoomed(
+        from origin: MapHomeSectionViewportState,
+        magnification: CGFloat,
+        anchorY: CGFloat,
+        height: CGFloat
+    ) -> MapHomeSectionViewportState {
+        guard magnification.isFinite, magnification > 0, height > 0 else {
+            return origin
+        }
+        let duration = min(
+            maximumDurationMinutes,
+            max(
+                minimumDurationMinutes,
+                Int((CGFloat(origin.durationMinutes) / magnification).rounded())
+            )
+        )
+        let fraction = min(max(anchorY / height, 0), 1)
+        let anchorMinute = CGFloat(origin.startMinute)
+            + CGFloat(origin.durationMinutes) * fraction
+        let proposedStart = Int(
+            (anchorMinute - CGFloat(duration) * fraction).rounded()
+        )
+        return MapHomeSectionViewportState(
+            startMinute: min(max(proposedStart, 0), 1_440 - duration),
+            durationMinutes: duration
+        )
+    }
+
+    static func minute(
+        atY y: CGFloat,
+        height: CGFloat,
+        viewport: MapHomeSectionViewportState
+    ) -> Int {
+        let fraction = min(max(y / max(height, 1), 0), 1)
+        return min(
+            viewport.range.upperBound,
+            max(
+                viewport.range.lowerBound,
+                viewport.startMinute
+                    + Int((fraction * CGFloat(viewport.durationMinutes)).rounded())
+            )
+        )
+    }
+
+    static func acceptsDetailSlice(
+        translation: CGSize,
+        minimumDistance: CGFloat = 64
+    ) -> Bool {
+        translation.width >= minimumDistance
+            && abs(translation.width) > abs(translation.height) * 1.5
+    }
+
+    private static func state(
+        centerMinute: Int,
+        durationMinutes: Int
+    ) -> MapHomeSectionViewportState {
+        let duration = min(
+            maximumDurationMinutes,
+            max(minimumDurationMinutes, durationMinutes)
+        )
+        return MapHomeSectionViewportState(
+            startMinute: min(
+                max(centerMinute - duration / 2, 0),
+                maximumDurationMinutes - duration
+            ),
+            durationMinutes: duration
+        )
+    }
+}
+
+private struct MapHomeSectionPreviewPiece: Identifiable {
+    let id: String
+    let startMinute: Int
+    let endMinute: Int
+    let category: MapHomeSidebarMajorCategory
 }
 
 enum MapHomeSectionBoundaryMath {
@@ -3181,25 +3334,40 @@ private struct MapHomeSectionEditSheet: View {
     @Bindable var model: AppModel
     let selection: MapHomeSectionEditSelection
     let language: MapHomeLanguage
+    let onSaved: (ActivitySectionEditSaveResult) -> Void
 
     @State private var startMinute: Int
     @State private var endMinute: Int
     @State private var selectedCategoryID: String
     @State private var dragBaseMinute: Int?
     @State private var lastDragPublishUptime: TimeInterval = 0
+    @State private var viewport: MapHomeSectionViewportState
+    @State private var magnifyOrigin: MapHomeSectionViewportState?
+    @State private var lastMagnifyPublishUptime: TimeInterval = 0
+    @State private var cutMinute: Int?
+    @State private var cutDragBaseMinute: Int?
+    @State private var insertedDetailID: UUID?
+    @State private var draggingDetailID: UUID?
+    @State private var detailDragTranslation: CGFloat = 0
     @State private var isSaving = false
 
     init(
         model: AppModel,
         selection: MapHomeSectionEditSelection,
-        language: MapHomeLanguage
+        language: MapHomeLanguage,
+        onSaved: @escaping (ActivitySectionEditSaveResult) -> Void
     ) {
         self.model = model
         self.selection = selection
         self.language = language
+        self.onSaved = onSaved
         _startMinute = State(initialValue: selection.segment.startMinute)
         _endMinute = State(initialValue: selection.segment.endMinute)
         _selectedCategoryID = State(initialValue: selection.segment.categoryID)
+        _viewport = State(initialValue: MapHomeSectionViewportMath.initialState(
+            segmentStart: selection.segment.startMinute,
+            segmentEnd: selection.segment.endMinute
+        ))
     }
 
     private var categories: [MapHomeSidebarMajorCategory] {
@@ -3217,10 +3385,24 @@ private struct MapHomeSectionEditSheet: View {
     }
 
     private var visibleRange: ClosedRange<Int> {
-        let center = (selection.segment.startMinute + selection.segment.endMinute) / 2
-        let duration = max(360, selection.segment.endMinute - selection.segment.startMinute + 180)
-        let lower = min(max(center - duration / 2, 0), 1_440 - min(duration, 1_440))
-        return lower...min(1_440, lower + duration)
+        viewport.range
+    }
+
+    private var insertedDetail: MapHomeSectionDetail? {
+        guard let insertedDetailID else { return nil }
+        return selection.details.first { $0.id == insertedDetailID }
+    }
+
+    private var originalOption: ActivityCorrectionOption {
+        ActivityCorrectionOption(
+            id: "phase.\(selection.segment.categoryID)",
+            title: selection.segment.title,
+            behavior: selection.segment.behavior,
+            categoryID: selection.segment.categoryID,
+            systemImage: selection.activity.systemImage,
+            isAutomatic: false,
+            isCustom: false
+        )
     }
 
     var body: some View {
@@ -3246,12 +3428,16 @@ private struct MapHomeSectionEditSheet: View {
                     range: selection.segment.startMinute...(endMinute - 1),
                     isStart: true
                 )
+                .disabled(cutMinute != nil || insertedDetail != nil)
+                .opacity(cutMinute != nil || insertedDetail != nil ? 0.62 : 1)
                 timeControl(
                     title: language.text("끝", "End"),
                     minute: endMinute,
                     range: (startMinute + 1)...selection.segment.endMinute,
                     isStart: false
                 )
+                .disabled(cutMinute != nil || insertedDetail != nil)
+                .opacity(cutMinute != nil || insertedDetail != nil ? 0.62 : 1)
                 Picker(language.text("대분류", "Category"), selection: $selectedCategoryID) {
                     ForEach(categories) { category in
                         Label(
@@ -3266,6 +3452,47 @@ private struct MapHomeSectionEditSheet: View {
                 .padding(.horizontal, 10)
                 .frame(height: 44)
                 .background(Color.tpSurface, in: Capsule())
+            }
+            HStack(spacing: 8) {
+                Button {
+                    if cutMinute == nil {
+                        insertedDetailID = nil
+                        cutMinute = (selection.segment.startMinute
+                            + selection.segment.endMinute) / 2
+                    } else {
+                        cutMinute = nil
+                    }
+                } label: {
+                    Label(
+                        cutMinute == nil
+                            ? language.text("대분류 자르기", "Slice category")
+                            : language.text("자르기 취소", "Cancel slice"),
+                        systemImage: cutMinute == nil ? "scissors" : "xmark"
+                    )
+                }
+                .buttonStyle(.bordered)
+
+                if cutMinute != nil || insertedDetail != nil {
+                    Button(language.text("편집 초기화", "Reset edit")) {
+                        cutMinute = nil
+                        insertedDetailID = nil
+                        startMinute = selection.segment.startMinute
+                        endMinute = selection.segment.endMinute
+                        selectedCategoryID = selection.segment.categoryID
+                    }
+                    .buttonStyle(.bordered)
+                }
+                Spacer()
+                Text(
+                    insertedDetail == nil
+                        ? language.text(
+                            "상세 활동을 오른쪽으로 밀어 삽입",
+                            "Swipe a detail right to insert"
+                        )
+                        : language.text("상세 활동 시간으로 분할됨", "Split to detail time")
+                )
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             }
 
             HStack {
@@ -3294,7 +3521,7 @@ private struct MapHomeSectionEditSheet: View {
                         )
                     }
 
-                    majorBlock(
+                    majorTimeline(
                         x: leftWidth + 9,
                         width: 112,
                         height: trackHeight
@@ -3305,6 +3532,7 @@ private struct MapHomeSectionEditSheet: View {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
                 }
+                .simultaneousGesture(sectionMagnifyGesture(height: trackHeight))
             }
         }
         .padding(.horizontal, 16)
@@ -3370,6 +3598,7 @@ private struct MapHomeSectionEditSheet: View {
         return Array(stride(from: first, through: visibleRange.upperBound, by: 60))
     }
 
+    @ViewBuilder
     private func detailBlock(
         _ detail: MapHomeSectionDetail,
         leftWidth: CGFloat,
@@ -3377,66 +3606,276 @@ private struct MapHomeSectionEditSheet: View {
     ) -> some View {
         let start = max(detail.startMinute, visibleRange.lowerBound)
         let end = min(detail.endMinute, visibleRange.upperBound)
-        let y = yPosition(start, height: height)
-        let blockHeight = max(26, yPosition(end, height: height) - y)
-        let category = MapHomeSidebarMajorCategory.presentation(
-            for: detail.categoryID,
-            categoryColors: model.settings.mapCategoryColors
-        )
-        return HStack(spacing: 5) {
-            Image(systemName: category.systemImage)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(detail.title).lineLimit(1)
-                Text("\(timeLabel(detail.startMinute))–\(timeLabel(detail.endMinute))")
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .opacity(0.72)
+        if start < end {
+            let y = yPosition(start, height: height)
+            let blockHeight = max(26, yPosition(end, height: height) - y)
+            let category = MapHomeSidebarMajorCategory.presentation(
+                for: detail.categoryID,
+                categoryColors: model.settings.mapCategoryColors
+            )
+            HStack(spacing: 5) {
+                Image(systemName: category.systemImage)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(detail.title).lineLimit(1)
+                    Text("\(timeLabel(detail.startMinute))–\(timeLabel(detail.endMinute))")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .opacity(0.72)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 9, weight: .bold))
             }
-            Spacer(minLength: 0)
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(category.tint)
+            .padding(.horizontal, 8)
+            .frame(width: leftWidth - 45, height: blockHeight, alignment: .leading)
+            .background(
+                insertedDetailID == detail.id
+                    ? category.tint.opacity(0.30)
+                    : category.tint.opacity(0.13),
+                in: RoundedRectangle(cornerRadius: 9)
+            )
+            .offset(
+                x: draggingDetailID == detail.id
+                    ? min(max(detailDragTranslation, 0), 94)
+                    : 0
+            )
+            .position(x: 35 + (leftWidth - 45) / 2, y: y + blockHeight / 2)
+            .highPriorityGesture(detailSliceGesture(detail))
+            .accessibilityLabel("\(detail.title), \(timeLabel(detail.startMinute))부터 \(timeLabel(detail.endMinute))")
+            .accessibilityHint(
+                language.text(
+                    "오른쪽으로 밀면 대분류에 삽입합니다",
+                    "Swipe right to insert into the category"
+                )
+            )
         }
-        .font(.system(size: 11, weight: .semibold, design: .rounded))
-        .foregroundStyle(category.tint)
-        .padding(.horizontal, 8)
-        .frame(width: leftWidth - 45, height: blockHeight, alignment: .leading)
-        .background(category.tint.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
-        .position(x: 35 + (leftWidth - 45) / 2, y: y + blockHeight / 2)
-        .accessibilityLabel("\(detail.title), \(timeLabel(detail.startMinute))부터 \(timeLabel(detail.endMinute))")
     }
 
-    private func majorBlock(
+    private func detailSliceGesture(
+        _ detail: MapHomeSectionDetail
+    ) -> some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                guard value.translation.width > 0,
+                      abs(value.translation.width) > abs(value.translation.height)
+                else { return }
+                draggingDetailID = detail.id
+                detailDragTranslation = value.translation.width
+            }
+            .onEnded { value in
+                if draggingDetailID == detail.id,
+                   MapHomeSectionViewportMath.acceptsDetailSlice(
+                       translation: value.translation
+                   ) {
+                    activateDetailSlice(detail)
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                }
+                draggingDetailID = nil
+                detailDragTranslation = 0
+            }
+    }
+
+    private func activateDetailSlice(_ detail: MapHomeSectionDetail) {
+        let start = max(detail.startMinute, selection.segment.startMinute)
+        let end = min(detail.endMinute, selection.segment.endMinute)
+        guard start < end else { return }
+        cutMinute = nil
+        insertedDetailID = detail.id
+        startMinute = start
+        endMinute = end
+        selectedCategoryID = categories.contains { $0.id == detail.categoryID }
+            ? detail.categoryID
+            : "activity"
+    }
+
+    private func majorTimeline(
         x: CGFloat,
         width: CGFloat,
         height: CGFloat
     ) -> some View {
-        let y = yPosition(startMinute, height: height)
-        let blockHeight = max(44, yPosition(endMinute, height: height) - y)
-        return ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(selectedCategory.tint.opacity(0.88))
-            VStack(spacing: 3) {
-                Image(systemName: selectedCategory.systemImage)
-                Text(selectedCategory.localizedTitle(language))
-                    .lineLimit(2)
-                Text("\(timeLabel(startMinute))–\(timeLabel(endMinute))")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+        ZStack(alignment: .topLeading) {
+            ForEach(majorPreviewPieces) { piece in
+                if piece.endMinute > visibleRange.lowerBound,
+                   piece.startMinute < visibleRange.upperBound {
+                    majorPreviewBlock(piece, width: width, height: height)
+                        .position(
+                            x: x + width / 2,
+                            y: yPosition(
+                                (max(piece.startMinute, visibleRange.lowerBound)
+                                    + min(piece.endMinute, visibleRange.upperBound)) / 2,
+                                height: height
+                            )
+                        )
+                }
             }
-            .font(.system(size: 11, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
 
-            Capsule()
-                .fill(.white)
-                .frame(width: 42, height: 7)
-                .position(x: width / 2, y: 8)
+            if cutMinute == nil, insertedDetail == nil {
+                boundaryHandle(isStart: true, x: x, width: width, height: height)
+                boundaryHandle(isStart: false, x: x, width: width, height: height)
+            }
+
+            if let cutMinute {
+                ZStack {
+                    Capsule().fill(Color.white)
+                    Image(systemName: "scissors")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color.tpInk)
+                }
+                .frame(width: width - 12, height: 12)
                 .contentShape(Rectangle().inset(by: -12))
-                .gesture(boundaryDragGesture(isStart: true, trackHeight: height))
-            Capsule()
-                .fill(.white)
-                .frame(width: 42, height: 7)
-                .position(x: width / 2, y: blockHeight - 8)
-                .contentShape(Rectangle().inset(by: -12))
-                .gesture(boundaryDragGesture(isStart: false, trackHeight: height))
+                .position(
+                    x: x + width / 2,
+                    y: yPosition(cutMinute, height: height)
+                )
+                .highPriorityGesture(cutDragGesture(trackHeight: height))
+                .accessibilityLabel(language.text("자르기 위치", "Slice position"))
+                .accessibilityValue(timeLabel(cutMinute))
+            }
+        }
+    }
+
+    private var majorPreviewPieces: [MapHomeSectionPreviewPiece] {
+        let originalStart = selection.segment.startMinute
+        let originalEnd = selection.segment.endMinute
+        let originalCategory = MapHomeSidebarMajorCategory(
+            id: selection.segment.categoryID,
+            title: selection.segment.title,
+            systemImage: selection.activity.systemImage,
+            hex: model.settings.mapCategoryColors[selection.segment.categoryID]
+                ?? CanonicalCategoryPalette.hex(selection.segment.categoryID)
+        )
+        let unconfirmed = MapHomeSidebarMajorCategory.presentation(
+            for: "unconfirmed",
+            categoryColors: model.settings.mapCategoryColors
+        )
+        let raw: [(Int, Int, MapHomeSidebarMajorCategory)]
+        if let detail = insertedDetail {
+            let detailStart = max(detail.startMinute, originalStart)
+            let detailEnd = min(detail.endMinute, originalEnd)
+            raw = [
+                (originalStart, detailStart, originalCategory),
+                (detailStart, detailEnd, selectedCategory),
+                (detailEnd, originalEnd, originalCategory),
+            ]
+        } else if let cutMinute {
+            raw = [
+                (originalStart, cutMinute, selectedCategory),
+                (cutMinute, originalEnd, unconfirmed),
+            ]
+        } else {
+            raw = [
+                (originalStart, startMinute, unconfirmed),
+                (startMinute, endMinute, selectedCategory),
+                (endMinute, originalEnd, unconfirmed),
+            ]
+        }
+        return raw.enumerated().compactMap { index, value in
+            guard value.0 < value.1 else { return nil }
+            return MapHomeSectionPreviewPiece(
+                id: "\(index)-\(value.0)-\(value.1)-\(value.2.id)",
+                startMinute: value.0,
+                endMinute: value.1,
+                category: value.2
+            )
+        }
+    }
+
+    private func majorPreviewBlock(
+        _ piece: MapHomeSectionPreviewPiece,
+        width: CGFloat,
+        height: CGFloat
+    ) -> some View {
+        let visibleStart = max(piece.startMinute, visibleRange.lowerBound)
+        let visibleEnd = min(piece.endMinute, visibleRange.upperBound)
+        let blockHeight = max(
+            1,
+            yPosition(visibleEnd, height: height)
+                - yPosition(visibleStart, height: height)
+        )
+        return ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(piece.category.tint.opacity(0.88))
+            if blockHeight >= 34 {
+                VStack(spacing: 2) {
+                    Image(systemName: piece.category.systemImage)
+                    Text(piece.category.localizedTitle(language)).lineLimit(1)
+                    if blockHeight >= 54 {
+                        Text("\(timeLabel(piece.startMinute))–\(timeLabel(piece.endMinute))")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                    }
+                }
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            }
         }
         .frame(width: width, height: blockHeight)
-        .position(x: x + width / 2, y: y + blockHeight / 2)
+    }
+
+    private func boundaryHandle(
+        isStart: Bool,
+        x: CGFloat,
+        width: CGFloat,
+        height: CGFloat
+    ) -> some View {
+        Capsule()
+            .fill(Color.white)
+            .overlay(Capsule().stroke(Color.tpInk.opacity(0.25), lineWidth: 1))
+            .frame(width: width - 20, height: 8)
+            .contentShape(Rectangle().inset(by: -12))
+            .position(
+                x: x + width / 2,
+                y: yPosition(isStart ? startMinute : endMinute, height: height)
+            )
+            .highPriorityGesture(
+                boundaryDragGesture(isStart: isStart, trackHeight: height)
+            )
+    }
+
+    private func cutDragGesture(trackHeight: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                updateCutMinute(
+                    translation: value.translation.height,
+                    trackHeight: trackHeight,
+                    isFinal: false
+                )
+            }
+            .onEnded { value in
+                updateCutMinute(
+                    translation: value.translation.height,
+                    trackHeight: trackHeight,
+                    isFinal: true
+                )
+                cutDragBaseMinute = nil
+                lastDragPublishUptime = 0
+            }
+    }
+
+    private func updateCutMinute(
+        translation: CGFloat,
+        trackHeight: CGFloat,
+        isFinal: Bool
+    ) {
+        if cutDragBaseMinute == nil {
+            cutDragBaseMinute = cutMinute
+        }
+        guard let cutDragBaseMinute else { return }
+        let uptime = ProcessInfo.processInfo.systemUptime
+        guard MapHomeSectionBoundaryMath.shouldPublish(
+            lastUptime: lastDragPublishUptime,
+            currentUptime: uptime,
+            isFinal: isFinal
+        ) else { return }
+        lastDragPublishUptime = uptime
+        let delta = Int(
+            (translation / max(trackHeight, 1)
+                * CGFloat(viewport.durationMinutes)).rounded()
+        )
+        cutMinute = min(
+            max(cutDragBaseMinute + delta, selection.segment.startMinute + 1),
+            selection.segment.endMinute - 1
+        )
     }
 
     private func boundaryDragGesture(
@@ -3499,6 +3938,43 @@ private struct MapHomeSectionEditSheet: View {
         }
     }
 
+    private func sectionMagnifyGesture(
+        height: CGFloat
+    ) -> some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.005)
+            .onChanged { value in
+                if magnifyOrigin == nil {
+                    magnifyOrigin = viewport
+                }
+                guard let magnifyOrigin else { return }
+                let uptime = ProcessInfo.processInfo.systemUptime
+                guard MapHomeSectionBoundaryMath.shouldPublish(
+                    lastUptime: lastMagnifyPublishUptime,
+                    currentUptime: uptime,
+                    isFinal: false
+                ) else { return }
+                lastMagnifyPublishUptime = uptime
+                viewport = MapHomeSectionViewportMath.zoomed(
+                    from: magnifyOrigin,
+                    magnification: value.magnification,
+                    anchorY: value.startLocation.y,
+                    height: height
+                )
+            }
+            .onEnded { value in
+                if let magnifyOrigin {
+                    viewport = MapHomeSectionViewportMath.zoomed(
+                        from: magnifyOrigin,
+                        magnification: value.magnification,
+                        anchorY: value.startLocation.y,
+                        height: height
+                    )
+                }
+                self.magnifyOrigin = nil
+                lastMagnifyPublishUptime = 0
+            }
+    }
+
     private func yPosition(_ minute: Int, height: CGFloat) -> CGFloat {
         let duration = max(1, visibleRange.upperBound - visibleRange.lowerBound)
         return height * CGFloat(minute - visibleRange.lowerBound) / CGFloat(duration)
@@ -3533,37 +4009,79 @@ private struct MapHomeSectionEditSheet: View {
             isSaving = false
             return
         }
+        let option = selectedEditOption
+        let originalSpan = TimeSpan(start: originalStart, end: originalEnd)
+        let mode: ActivitySectionEditMode
+        if let detail = insertedDetail,
+           let detailStart = calendar.date(
+               byAdding: .minute,
+               value: max(detail.startMinute, selection.segment.startMinute),
+               to: dayStart
+           ),
+           let detailEnd = calendar.date(
+               byAdding: .minute,
+               value: min(detail.endMinute, selection.segment.endMinute),
+               to: dayStart
+           ) {
+            mode = .insertDetail(
+                detailSpan: TimeSpan(start: detailStart, end: detailEnd),
+                option: option
+            )
+        } else if let cutMinute,
+                  let cutAt = calendar.date(
+                      byAdding: .minute,
+                      value: cutMinute,
+                      to: dayStart
+                  ) {
+            mode = .cutLowerUnconfirmed(cutAt: cutAt, option: option)
+        } else {
+            mode = .replace(
+                editedSpan: TimeSpan(start: start, end: end),
+                option: option
+            )
+        }
+        let request = ActivitySectionEditRequest(
+            sourceIDs: selection.segment.sourceIDs,
+            originalSpan: originalSpan,
+            originalOption: originalOption,
+            mode: mode
+        )
+        Task { @MainActor in
+            guard let result = await model.saveActivitySectionEdit(request) else {
+                isSaving = false
+                return
+            }
+            onSaved(result)
+            dismiss()
+        }
+    }
+
+    private var selectedEditOption: ActivityCorrectionOption {
         let category = selectedCategory
-        let option = category.id.hasPrefix("custom:")
-            ? ActivityCorrectionOption.custom(category.title)
-            : ActivityCorrectionOption(
-                id: "phase.\(category.id)",
-                title: category.title,
-                behavior: nil,
+        if category.id.hasPrefix("custom:") {
+            return ActivityCorrectionOption.custom(category.title)
+        }
+        if let detail = insertedDetail,
+           detail.categoryID == category.id {
+            return ActivityCorrectionOption(
+                id: "detail.\(detail.id.uuidString)",
+                title: detail.title,
+                behavior: detail.behavior,
                 categoryID: category.id,
                 systemImage: category.systemImage,
                 isAutomatic: false,
                 isCustom: false
             )
-        Task { @MainActor in
-            let originalSpan = TimeSpan(start: originalStart, end: originalEnd)
-            if let sourceID = selection.segment.sourceID,
-               model.snapshot.actuals.contains(where: { $0.id == sourceID }) {
-                await model.correctActualFragment(
-                    sourceID,
-                    displayedSpan: originalSpan,
-                    startAt: start,
-                    endAt: end,
-                    with: option
-                )
-            } else {
-                await model.classifyUnconfirmedSpan(
-                    TimeSpan(start: start, end: end),
-                    with: option
-                )
-            }
-            dismiss()
         }
+        return ActivityCorrectionOption(
+            id: "phase.\(category.id)",
+            title: category.title,
+            behavior: category.id == "unconfirmed" ? "unconfirmed-gap" : nil,
+            categoryID: category.id,
+            systemImage: category.systemImage,
+            isAutomatic: false,
+            isCustom: false
+        )
     }
 }
 

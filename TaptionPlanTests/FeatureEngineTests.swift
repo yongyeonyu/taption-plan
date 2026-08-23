@@ -432,6 +432,112 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(segment?.sourceID, subway.id)
     }
 
+    func testMapHomeTimeRailUserOverrideWinsConfirmedTravel() {
+        let day = makeDate(2026, 8, 12)
+        let subway = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: day.addingTimeInterval(hour),
+                end: day.addingTimeInterval(2 * hour)
+            ),
+            distanceMeters: 12_000,
+            confidence: .high,
+            evidence: ["사용자 확인"],
+            isConfirmed: true
+        )
+        let override = ActualRecord(
+            planID: nil,
+            title: "미확인",
+            categoryID: "unconfirmed",
+            startedAt: subway.span.start,
+            endedAt: subway.span.end,
+            source: .manual,
+            behavior: "unconfirmed-gap",
+            modelVersion: ActivitySectionOverrideEngine.modelVersion,
+            manuallyCorrected: true
+        )
+
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: [override],
+            travel: [subway],
+            on: day,
+            asOf: day.addingTimeInterval(24 * hour),
+            calendar: utcCalendar
+        )
+
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(at: 90, in: segments)?.categoryID,
+            "unconfirmed"
+        )
+    }
+
+    func testMapHomeTimeRailMergesSameCategoryAndKeepsAllSources() {
+        let day = makeDate(2026, 8, 12)
+        let first = ActualRecord(
+            planID: nil,
+            title: "오전 업무",
+            categoryID: "work",
+            startedAt: day.addingTimeInterval(9 * hour),
+            endedAt: day.addingTimeInterval(10 * hour),
+            source: .location
+        )
+        let second = ActualRecord(
+            planID: nil,
+            title: "회의",
+            categoryID: "work",
+            startedAt: day.addingTimeInterval(10 * hour),
+            endedAt: day.addingTimeInterval(11 * hour),
+            source: .appUsage
+        )
+
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: [first, second],
+            on: day,
+            asOf: day.addingTimeInterval(24 * hour),
+            calendar: utcCalendar
+        )
+        let work = segments.first { $0.categoryID == "work" }
+
+        XCTAssertEqual(work?.startMinute, 540)
+        XCTAssertEqual(work?.endMinute, 660)
+        XCTAssertEqual(Set(work?.sourceIDs ?? []), Set([first.id, second.id]))
+    }
+
+    func testMapHomeTimeRailDoesNotMergeDifferentMovementModes() {
+        let day = makeDate(2026, 8, 12)
+        let bus = TravelSegment(
+            mode: .bus,
+            span: TimeSpan(
+                start: day.addingTimeInterval(hour),
+                end: day.addingTimeInterval(2 * hour)
+            ),
+            distanceMeters: 8_000,
+            confidence: .high,
+            evidence: []
+        )
+        let subway = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: day.addingTimeInterval(2 * hour),
+                end: day.addingTimeInterval(3 * hour)
+            ),
+            distanceMeters: 12_000,
+            confidence: .high,
+            evidence: []
+        )
+
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: [],
+            travel: [bus, subway],
+            on: day,
+            asOf: day.addingTimeInterval(24 * hour),
+            calendar: utcCalendar
+        ).filter { $0.categoryID == "movement" }
+
+        XCTAssertEqual(segments.count, 2)
+        XCTAssertEqual(segments.map(\.behavior), ["bus", "subway"])
+    }
+
     func testMapHomeTimeRailClipsOngoingAutomaticRecordWithoutMutatingIt() {
         let day = makeDate(2026, 8, 15)
         let ongoing = ActualRecord(
@@ -781,6 +887,212 @@ final class FeatureEngineTests: XCTestCase {
                     end: source.endedAt ?? source.startedAt
                 )
             )
+        )
+    }
+
+    func testActivitySectionReplaceMakesTrimmedSidesUnconfirmed() {
+        let original = TimeSpan(
+            start: makeDate(2026, 8, 12, 9, 0),
+            end: makeDate(2026, 8, 12, 18, 0)
+        )
+        let edited = TimeSpan(
+            start: makeDate(2026, 8, 12, 10, 0),
+            end: makeDate(2026, 8, 12, 17, 0)
+        )
+        let request = ActivitySectionEditRequest(
+            sourceIDs: [UUID()],
+            originalSpan: original,
+            originalOption: phaseOption("work", title: "업무"),
+            mode: .replace(
+                editedSpan: edited,
+                option: phaseOption("study", title: "수업")
+            )
+        )
+
+        let pieces = ActivitySectionOverrideEngine.pieces(for: request)
+
+        XCTAssertEqual(pieces.map(\.span), [
+            TimeSpan(start: original.start, end: edited.start),
+            edited,
+            TimeSpan(start: edited.end, end: original.end),
+        ])
+        XCTAssertEqual(
+            pieces.map { $0.option.categoryID },
+            ["unconfirmed", "study", "unconfirmed"]
+        )
+    }
+
+    func testActivitySectionCutKeepsTopAndMarksBottomUnconfirmed() {
+        let original = TimeSpan(
+            start: makeDate(2026, 8, 12, 9, 0),
+            end: makeDate(2026, 8, 12, 18, 0)
+        )
+        let cutAt = makeDate(2026, 8, 12, 13, 0)
+        let request = ActivitySectionEditRequest(
+            sourceIDs: [],
+            originalSpan: original,
+            originalOption: phaseOption("work", title: "업무"),
+            mode: .cutLowerUnconfirmed(
+                cutAt: cutAt,
+                option: phaseOption("work", title: "업무")
+            )
+        )
+
+        let records = ActivitySectionOverrideEngine.records(for: request)
+
+        XCTAssertEqual(records.map(\.startedAt), [original.start, cutAt])
+        XCTAssertEqual(records.map(\.endedAt), [cutAt, original.end])
+        XCTAssertEqual(records.map(\.categoryID), ["work", "unconfirmed"])
+        XCTAssertTrue(records.allSatisfy(\.manuallyCorrected))
+    }
+
+    func testActivitySectionDetailInsertPreservesBeforeAndAfter() {
+        let original = TimeSpan(
+            start: makeDate(2026, 8, 12, 9, 0),
+            end: makeDate(2026, 8, 12, 18, 0)
+        )
+        let lunch = TimeSpan(
+            start: makeDate(2026, 8, 12, 12, 0),
+            end: makeDate(2026, 8, 12, 13, 0)
+        )
+        let request = ActivitySectionEditRequest(
+            sourceIDs: [UUID()],
+            originalSpan: original,
+            originalOption: phaseOption("work", title: "업무"),
+            mode: .insertDetail(
+                detailSpan: lunch,
+                option: phaseOption("eating", title: "점심")
+            )
+        )
+
+        let records = ActivitySectionOverrideEngine.records(for: request)
+
+        XCTAssertEqual(records.map(\.categoryID), ["work", "eating", "work"])
+        XCTAssertEqual(records[0].span(asOf: original.end), TimeSpan(
+            start: original.start,
+            end: lunch.start
+        ))
+        XCTAssertEqual(records[1].span(asOf: original.end), lunch)
+        XCTAssertEqual(records[2].span(asOf: original.end), TimeSpan(
+            start: lunch.end,
+            end: original.end
+        ))
+    }
+
+    func testActivitySectionOverrideIDsAreStableAcrossRepeatedSave() {
+        let span = TimeSpan(
+            start: makeDate(2026, 8, 12, 9, 0),
+            end: makeDate(2026, 8, 12, 10, 0)
+        )
+        let sourceID = UUID()
+        let request = ActivitySectionEditRequest(
+            sourceIDs: [sourceID],
+            originalSpan: span,
+            originalOption: phaseOption("work", title: "업무"),
+            mode: .replace(
+                editedSpan: span,
+                option: phaseOption("eating", title: "식사")
+            )
+        )
+
+        XCTAssertEqual(
+            ActivitySectionOverrideEngine.records(for: request).map(\.id),
+            ActivitySectionOverrideEngine.records(for: request).map(\.id)
+        )
+    }
+
+    @MainActor
+    func testActivitySectionSaveOverridesTravelAndSupportsImmediateReedit()
+        async throws {
+        let day = makeDate(2026, 8, 12)
+        let span = TimeSpan(
+            start: day.addingTimeInterval(9 * hour),
+            end: day.addingTimeInterval(10 * hour)
+        )
+        let travel = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 12_000,
+            confidence: .high,
+            evidence: ["사용자 확인"],
+            isConfirmed: true
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.updatedAt = day
+        stored.travel = [travel]
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let firstResult = await model.saveActivitySectionEdit(
+            ActivitySectionEditRequest(
+                sourceIDs: [travel.id],
+                originalSpan: span,
+                originalOption: phaseOption("movement", title: "지하철 탑승"),
+                mode: .replace(
+                    editedSpan: span,
+                    option: phaseOption("eating", title: "식사")
+                )
+            )
+        )
+        XCTAssertNotNil(firstResult)
+
+        let firstRail = MapHomeTimeRailSegmentEngine.segments(
+            from: model.snapshot.actuals,
+            travel: model.snapshot.travel,
+            on: day,
+            asOf: day.addingTimeInterval(24 * hour),
+            calendar: utcCalendar
+        )
+        let firstSegment = try XCTUnwrap(
+            MapHomeTimeRailSegmentEngine.segment(
+                at: 9 * 60 + 30,
+                in: firstRail
+            )
+        )
+        XCTAssertEqual(firstSegment.categoryID, "eating")
+        XCTAssertFalse(firstSegment.sourceIDs.isEmpty)
+
+        let secondResult = await model.saveActivitySectionEdit(
+            ActivitySectionEditRequest(
+                sourceIDs: firstSegment.sourceIDs,
+                originalSpan: span,
+                originalOption: phaseOption("eating", title: "식사"),
+                mode: .replace(
+                    editedSpan: span,
+                    option: phaseOption("work", title: "업무")
+                )
+            )
+        )
+        XCTAssertNotNil(secondResult)
+
+        let secondRail = MapHomeTimeRailSegmentEngine.segments(
+            from: model.snapshot.actuals,
+            travel: model.snapshot.travel,
+            on: day,
+            asOf: day.addingTimeInterval(24 * hour),
+            calendar: utcCalendar
+        )
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(
+                at: 9 * 60 + 30,
+                in: secondRail
+            )?.categoryID,
+            "work"
+        )
+        let persisted = try await repository.load()
+        XCTAssertEqual(
+            persisted.actuals.filter {
+                $0.modelVersion == ActivitySectionOverrideEngine.modelVersion
+            }.map(\.categoryID),
+            ["work"]
         )
     }
 
@@ -15936,6 +16248,21 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: first.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: second.path))
         XCTAssertEqual(second.lastPathComponent, "TaptionLogs-test-2.txt")
+    }
+
+    private func phaseOption(
+        _ categoryID: String,
+        title: String
+    ) -> ActivityCorrectionOption {
+        ActivityCorrectionOption(
+            id: "phase.\(categoryID)",
+            title: title,
+            behavior: categoryID == "unconfirmed" ? "unconfirmed-gap" : nil,
+            categoryID: categoryID,
+            systemImage: "circle.fill",
+            isAutomatic: false,
+            isCustom: false
+        )
     }
 
     private func makeDate(

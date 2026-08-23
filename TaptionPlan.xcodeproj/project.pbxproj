@@ -109,6 +109,7 @@
 		A2000000000000000000000E /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000B /* InfoPlist.xcstrings */; };
 		A2000000000000000000000F /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000C /* InfoPlist.xcstrings */; };
 		A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000D /* LocalizationCatalogTests.swift */; };
+		A20000000000000000000011 /* DiagnosticsLogSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
@@ -276,6 +277,7 @@
 		F2000000000000000000000B /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		F2000000000000000000000C /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		F2000000000000000000000D /* LocalizationCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationCatalogTests.swift; sourceTree = "<group>"; };
+		F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupportTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
 		F1000000000000000000007F /* MapHomeCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarSheet.swift; sourceTree = "<group>"; };
 		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
@@ -379,6 +381,7 @@
 				F20000000000000000000003 /* AppLanguagePreferenceTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
+				F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */,
 			);
 			path = TaptionPlanTests;
 			sourceTree = "<group>";
@@ -818,6 +821,7 @@
 				A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
+				A20000000000000000000011 /* DiagnosticsLogSupportTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

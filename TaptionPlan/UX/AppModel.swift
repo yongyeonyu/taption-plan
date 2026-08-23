@@ -811,6 +811,111 @@ final class AppModel {
         await persist()
     }
 
+    func saveActivitySectionEdit(
+        _ request: ActivitySectionEditRequest
+    ) async -> ActivitySectionEditSaveResult? {
+        let records = ActivitySectionOverrideEngine.records(for: request)
+        guard !records.isEmpty else { return nil }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "section_edit_save_started",
+            fields: [
+                "source_count": String(request.sourceIDs.count),
+                "piece_count": String(records.count),
+                "start": String(request.originalSpan.start.timeIntervalSince1970),
+                "end": String(request.originalSpan.end.timeIntervalSince1970),
+            ]
+        )
+
+        let previous = snapshot
+        let sourceIDs = Set(request.sourceIDs)
+        snapshot.actuals.removeAll { actual in
+            sourceIDs.contains(actual.id)
+                && ActivitySectionOverrideEngine.isEditableOverride(actual)
+        }
+        snapshot.actuals.append(contentsOf: records)
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        for option in editedOptions(in: request.mode) where option.isCustom {
+            snapshot.settings.customActivityLabels =
+                AppFeatureSettings.normalizedActivityLabels(
+                    snapshot.settings.customActivityLabels + [option.title]
+                )
+        }
+
+        guard await persist() else {
+            snapshot = previous
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "section_edit_save_failed",
+                level: .error,
+                fields: ["stage": "persist"]
+            )
+            return nil
+        }
+
+        do {
+            let stored = try await repository.load()
+            let storedIDs = Set(stored.actuals.map(\.id))
+            guard records.allSatisfy({ storedIDs.contains($0.id) }) else {
+                userFacingError = "변경 내용을 저장소에서 다시 확인하지 못했습니다."
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "section_edit_save_failed",
+                    level: .error,
+                    fields: ["stage": "readback"]
+                )
+                return nil
+            }
+        } catch {
+            userFacingError = "변경 내용을 저장소에서 다시 확인하지 못했습니다."
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "section_edit_save_failed",
+                level: .error,
+                fields: [
+                    "stage": "readback",
+                    "error": String(describing: type(of: error)),
+                ]
+            )
+            return nil
+        }
+
+        let selectedSpan = primarySpan(for: request)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "section_edit_save_completed",
+            fields: [
+                "record_count": String(records.count),
+                "selected_start": String(selectedSpan.start.timeIntervalSince1970),
+                "selected_end": String(selectedSpan.end.timeIntervalSince1970),
+            ]
+        )
+        return ActivitySectionEditSaveResult(
+            recordIDs: records.map(\.id),
+            selectedSpan: selectedSpan
+        )
+    }
+
+    private func editedOptions(
+        in mode: ActivitySectionEditMode
+    ) -> [ActivityCorrectionOption] {
+        switch mode {
+        case let .replace(_, option), let .cutLowerUnconfirmed(_, option),
+             let .insertDetail(_, option):
+            return [option]
+        }
+    }
+
+    private func primarySpan(
+        for request: ActivitySectionEditRequest
+    ) -> TimeSpan {
+        switch request.mode {
+        case let .replace(editedSpan, _):
+            return editedSpan.intersection(with: request.originalSpan)
+                ?? request.originalSpan
+        case let .cutLowerUnconfirmed(cutAt, _):
+            return TimeSpan(start: request.originalSpan.start, end: cutAt)
+        case let .insertDetail(detailSpan, _):
+            return detailSpan.intersection(with: request.originalSpan)
+                ?? request.originalSpan
+        }
+    }
+
     private func applyStoredActivityCorrections() {
         let corrected = ActivityCorrectionEngine.applying(
             snapshot.settings.activityCorrections,
@@ -7090,12 +7195,13 @@ final class AppModel {
         snapshot = value
     }
 
-    private func persist() async {
+    @discardableResult
+    private func persist() async -> Bool {
         guard !repositoryLoadFailed else {
             Self.integrationLogger.error(
                 "Persistence blocked after repository load failure; preserving existing data"
             )
-            return
+            return false
         }
         do {
             applyStoredActivityCorrections()
@@ -7155,6 +7261,7 @@ final class AppModel {
                         "계획 알림을 갱신하지 못했습니다. \(error.localizedDescription)"
                 }
             }
+            return true
         } catch {
             userFacingError = "변경 내용을 저장하지 못했습니다. \(error.localizedDescription)"
             TaptionPlanDiagnosticsLogger.shared.record(
@@ -7162,6 +7269,7 @@ final class AppModel {
                 level: .error,
                 fields: ["error": String(describing: type(of: error))]
             )
+            return false
         }
     }
 

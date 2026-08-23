@@ -252,14 +252,19 @@ struct MapHomeTimeRailSegment: Identifiable, Hashable {
     let endMinute: Int
     let categoryID: String
     let title: String
-    let sourceID: UUID?
+    let behavior: String?
+    let sourceIDs: [UUID]
+
+    var sourceID: UUID? { sourceIDs.first }
 
     init(
         startMinute: Int,
         endMinute: Int,
         categoryID: String,
         title: String,
-        sourceID: UUID? = nil
+        behavior: String? = nil,
+        sourceID: UUID? = nil,
+        sourceIDs: [UUID] = []
     ) {
         self.startMinute = min(max(startMinute, 0), 1_440)
         self.endMinute = min(max(endMinute, 0), 1_440)
@@ -267,12 +272,16 @@ struct MapHomeTimeRailSegment: Identifiable, Hashable {
             ? categoryID
             : "activity"
         self.title = title
-        self.sourceID = sourceID
+        self.behavior = behavior
+        self.sourceIDs = Array(
+            Set(sourceIDs + (sourceID.map { [$0] } ?? []))
+        ).sorted { $0.uuidString < $1.uuidString }
         id = [
             String(self.startMinute),
             String(self.endMinute),
             self.categoryID,
-            sourceID?.uuidString ?? "gap",
+            self.behavior ?? "none",
+            self.sourceIDs.map(\.uuidString).joined(separator: ","),
         ].joined(separator: "-")
     }
 
@@ -293,8 +302,10 @@ enum MapHomeTimeRailSegmentEngine {
         let categoryID: String
         let title: String
         let sourceID: UUID?
+        let behavior: String?
         let phasePrecedence: Int
-        let manuallyCorrected: Bool
+        let isUserOverride: Bool
+        let isConfirmed: Bool
         let confidence: ConfidenceLevel
         let sourceRank: Int
         let startedAt: Date
@@ -366,10 +377,13 @@ enum MapHomeTimeRailSegmentEngine {
                 categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
                 title: title(for: actual),
                 sourceID: actual.id,
+                behavior: movementBehavior(for: actual),
                 phasePrecedence: RecordAnalysisCategoryPolicy.phase(
                     for: RecordAnalysisCategoryPolicy.categoryID(for: actual)
                 ).precedence,
-                manuallyCorrected: actual.manuallyCorrected,
+                isUserOverride: actual.source == .manual
+                    && actual.manuallyCorrected,
+                isConfirmed: actual.manuallyCorrected,
                 confidence: actual.confidence,
                 sourceRank: sourceRank(actual.source),
                 startedAt: actual.startedAt,
@@ -386,10 +400,12 @@ enum MapHomeTimeRailSegmentEngine {
                 categoryID: "movement",
                 title: title(for: segment),
                 sourceID: segment.id,
+                behavior: segment.mode.rawValue,
                 phasePrecedence: RecordAnalysisCategoryPolicy.phase(
                     for: "movement"
                 ).precedence,
-                manuallyCorrected: segment.isConfirmed,
+                isUserOverride: false,
+                isConfirmed: segment.isConfirmed,
                 confidence: segment.confidence,
                 sourceRank: 8,
                 startedAt: segment.span.start,
@@ -413,6 +429,7 @@ enum MapHomeTimeRailSegmentEngine {
                 endMinute: end,
                 categoryID: winner?.categoryID ?? "unconfirmed",
                 title: winner?.title ?? "미확인",
+                behavior: winner?.behavior,
                 sourceID: winner?.sourceID
             )
             append(next, to: &result)
@@ -428,8 +445,10 @@ enum MapHomeTimeRailSegmentEngine {
         categoryID: String,
         title: String,
         sourceID: UUID,
+        behavior: String?,
         phasePrecedence: Int,
-        manuallyCorrected: Bool,
+        isUserOverride: Bool,
+        isConfirmed: Bool,
         confidence: ConfidenceLevel,
         sourceRank: Int,
         startedAt: Date,
@@ -456,8 +475,10 @@ enum MapHomeTimeRailSegmentEngine {
             categoryID: categoryID,
             title: title,
             sourceID: sourceID,
+            behavior: behavior,
             phasePrecedence: phasePrecedence,
-            manuallyCorrected: manuallyCorrected,
+            isUserOverride: isUserOverride,
+            isConfirmed: isConfirmed,
             confidence: confidence,
             sourceRank: sourceRank,
             startedAt: startedAt,
@@ -475,6 +496,14 @@ enum MapHomeTimeRailSegmentEngine {
 
     private static func title(for segment: TravelSegment) -> String {
         "\(MovementPresentation.title(for: segment.mode)) 탑승"
+    }
+
+    private static func movementBehavior(for actual: ActualRecord) -> String? {
+        guard RecordAnalysisCategoryPolicy.categoryID(for: actual) == "movement"
+        else { return actual.behavior }
+        return MovementPresentation.mode(for: actual)?.rawValue
+            ?? actual.behavior
+            ?? actual.title
     }
 
     static func segment(
@@ -502,9 +531,7 @@ enum MapHomeTimeRailSegmentEngine {
     ) {
         guard let previous = result.last,
               previous.endMinute == segment.startMinute,
-              previous.categoryID == segment.categoryID,
-              previous.title == segment.title,
-              previous.sourceID == segment.sourceID
+              mergeKey(for: previous) == mergeKey(for: segment)
         else {
             result.append(segment)
             return
@@ -516,17 +543,34 @@ enum MapHomeTimeRailSegmentEngine {
                 endMinute: segment.endMinute,
                 categoryID: previous.categoryID,
                 title: previous.title,
-                sourceID: previous.sourceID
+                behavior: previous.behavior,
+                sourceIDs: previous.sourceIDs + segment.sourceIDs
             )
         )
+    }
+
+    private static func mergeKey(
+        for segment: MapHomeTimeRailSegment
+    ) -> String {
+        switch segment.categoryID {
+        case "movement":
+            return "movement:\(segment.behavior ?? segment.title)"
+        case "activity" where segment.behavior == nil:
+            return "activity:\(segment.title.lowercased())"
+        default:
+            return segment.categoryID
+        }
     }
 
     private static func isHigherPriority(
         _ lhs: Candidate,
         than rhs: Candidate
     ) -> Bool {
-        if lhs.manuallyCorrected != rhs.manuallyCorrected {
-            return lhs.manuallyCorrected
+        if lhs.isUserOverride != rhs.isUserOverride {
+            return lhs.isUserOverride
+        }
+        if lhs.isConfirmed != rhs.isConfirmed {
+            return lhs.isConfirmed
         }
         if lhs.phasePrecedence != rhs.phasePrecedence {
             return lhs.phasePrecedence > rhs.phasePrecedence
@@ -572,26 +616,23 @@ enum MapHomeTimeRailSegmentEngine {
 /// count, so a 240 Hz stream cannot speed up automatic scrolling.
 final class MapHomeTimeSidebarHandleDrag {
     private var baseState: MapHomeTimeSidebarNLEState?
-    private var initialHandleY: CGFloat = 0
     private var accumulatedEdgePoints: CGFloat = 0
     private var lastUptime: TimeInterval = 0
 
     func begin(
         with state: MapHomeTimeSidebarNLEState,
-        handleY: CGFloat,
         nowUptime: TimeInterval
     ) {
         baseState = state
-        initialHandleY = handleY
         accumulatedEdgePoints = 0
         lastUptime = nowUptime
     }
 
     func projectedState(
-        translation: CGFloat,
+        locationY: CGFloat,
         trackHeight: CGFloat,
+        verticalInset: CGFloat,
         maxMinute: Int,
-        sensitivity: CGFloat,
         nowUptime: TimeInterval
     ) -> MapHomeTimeSidebarNLEState? {
         guard let baseState, trackHeight > 0 else { return nil }
@@ -600,10 +641,7 @@ final class MapHomeTimeSidebarHandleDrag {
             max(baseState.visibleDurationMinutes, 60),
             MapHomeTimeSidebarMath.fullDayMinutes
         )
-        // In the expanded sidebar, dragging up reveals earlier time and
-        // dragging down reveals later time. Keep the mapping linear so the
-        // ordinary handle never gains inertial or event-rate acceleration.
-        let rawHandleY = initialHandleY + translation * max(sensitivity, 0)
+        let rawHandleY = locationY - verticalInset
         let edgeDirection: CGFloat
         if rawHandleY <= 0 {
             edgeDirection = -1
@@ -657,7 +695,6 @@ final class MapHomeTimeSidebarHandleDrag {
 
     func reset() {
         baseState = nil
-        initialHandleY = 0
         accumulatedEdgePoints = 0
         lastUptime = 0
     }
@@ -674,13 +711,10 @@ struct MapHomeTimeSidebar: View {
     let zoomResetToken: Int
     let zoomStepToken: Int
     let maximumSelectableMinute: Int?
-    let isPlaybackRunning: Bool
     var onSelectionChanged: ((Int) -> Void)?
     var onViewportChanged: ((Int, Int) -> Void)?
     var onSectionEdit: (() -> Void)?
-    var onPlaybackToggle: (() -> Void)?
 
-    @State private var isPrecisionMode = false
     @State private var visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var visibleStartMinute = 0
     @State private var dragStartMinute: Int?
@@ -711,11 +745,9 @@ struct MapHomeTimeSidebar: View {
         zoomStepToken: Int = 0,
         railWidth: CGFloat = 58,
         maximumSelectableMinute: Int? = nil,
-        isPlaybackRunning: Bool = false,
         onSelectionChanged: ((Int) -> Void)? = nil,
         onViewportChanged: ((Int, Int) -> Void)? = nil,
-        onSectionEdit: (() -> Void)? = nil,
-        onPlaybackToggle: (() -> Void)? = nil
+        onSectionEdit: (() -> Void)? = nil
     ) {
         self.date = date
         self._selectedMinute = selectedMinute
@@ -727,11 +759,9 @@ struct MapHomeTimeSidebar: View {
         self.zoomStepToken = zoomStepToken
         self.railWidth = max(58, railWidth)
         self.maximumSelectableMinute = maximumSelectableMinute
-        self.isPlaybackRunning = isPlaybackRunning
         self.onSelectionChanged = onSelectionChanged
         self.onViewportChanged = onViewportChanged
         self.onSectionEdit = onSectionEdit
-        self.onPlaybackToggle = onPlaybackToggle
     }
 
     var body: some View {
@@ -963,27 +993,9 @@ struct MapHomeTimeSidebar: View {
                     visibleWindow: visibleWindow
                 )
 
-                if let onPlaybackToggle {
-                    Button(action: onPlaybackToggle) {
-                        Image(systemName: isPlaybackRunning ? "pause.fill" : "play.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.white)
-                            .frame(width: 34, height: 34)
-                            .background(Color.tpInk.opacity(0.92), in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Circle())
-                    .accessibilityLabel(isPlaybackRunning ? "하루 재생 일시 정지" : "하루 재생")
-                    .position(
-                        x: trackX - 27,
-                        y: railHeight - 19
-                    )
-                    .zIndex(4)
-                }
-
             }
             .frame(width: railWidth, height: railHeight)
+            .coordinateSpace(name: "mapHomeTimeSidebarRail")
             .contentShape(Rectangle())
             .accessibilityElement(children: .contain)
             .accessibilityLabel("시간 선택")
@@ -994,7 +1006,6 @@ struct MapHomeTimeSidebar: View {
             dragStartMinute = nil
             viewportDragStartMinute = nil
             gestureBaseState = nil
-            isPrecisionMode = false
             isHandleDragging = false
             nleProjection.reset()
             handleDrag.reset()
@@ -1059,12 +1070,6 @@ struct MapHomeTimeSidebar: View {
                             lineWidth: 1
                         )
                 }
-                .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-                .highPriorityGesture(
-                    TapGesture(count: 2).onEnded {
-                        onSectionEdit?()
-                    }
-                )
             .accessibilityLabel(activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel)
             .accessibilityHint("두 번 탭하면 섹션 편집을 엽니다")
                 .position(x: trackX - 23, y: handleHeight / 2)
@@ -1096,14 +1101,10 @@ struct MapHomeTimeSidebar: View {
             .foregroundStyle(Color.white)
             .frame(width: 32, height: 40)
             .background(
-                isPrecisionMode
-                    ? Color.green.opacity(0.90)
-                    : Color.tpInk.opacity(0.90),
+                Color.tpInk.opacity(0.90),
                 in: RoundedRectangle(cornerRadius: 4, style: .continuous)
             )
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-            .simultaneousGesture(precisionDoubleTapGesture())
             .accessibilityHidden(true)
             .zIndex(2)
             .position(
@@ -1116,20 +1117,18 @@ struct MapHomeTimeSidebar: View {
             )
         }
         .frame(width: railWidth, height: handleHeight)
+        .contentShape(Rectangle())
         .position(x: railWidth / 2, y: y)
+        .highPriorityGesture(
+            TapGesture(count: 2).onEnded {
+                onSectionEdit?()
+            }
+        )
         .simultaneousGesture(dragGesture(
             trackHeight: trackHeight,
             maxMinute: maxMinute,
             visibleWindow: visibleWindow
         ))
-    }
-
-    private func precisionDoubleTapGesture() -> some Gesture {
-        TapGesture(count: 2)
-            .onEnded {
-                isPrecisionMode.toggle()
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            }
     }
 
     private func categoryColorHex(_ id: String) -> String {
@@ -1160,7 +1159,10 @@ struct MapHomeTimeSidebar: View {
         maxMinute: Int,
         visibleWindow: ClosedRange<Int>
     ) -> some Gesture {
-        DragGesture(minimumDistance: 1)
+        DragGesture(
+            minimumDistance: 3,
+            coordinateSpace: .named("mapHomeTimeSidebarRail")
+        )
             .onChanged { value in
                 if !isHandleDragging { isHandleDragging = true }
                 if dragStartMinute == nil {
@@ -1168,77 +1170,46 @@ struct MapHomeTimeSidebar: View {
                     let base = nleState
                     gestureBaseState = base
                     nleProjection.begin(with: base)
-                    if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes {
-                        handleDrag.begin(
-                            with: base,
-                            handleY: trackHeight / 2,
-                            nowUptime: ProcessInfo.processInfo.systemUptime
-                        )
-                    }
-                }
-                let nowUptime = ProcessInfo.processInfo.systemUptime
-                let projected: MapHomeTimeSidebarNLEState
-                if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
-                   let handleProjected = handleDrag.projectedState(
-                       translation: value.translation.height,
-                       trackHeight: trackHeight,
-                       maxMinute: maxMinute,
-                       sensitivity: isPrecisionMode
-                           ? MapHomeTimeSidebarMath.precisionDragSensitivity
-                           : MapHomeTimeSidebarMath.standardDragSensitivity,
-                       nowUptime: nowUptime
-                   ) {
-                    projected = handleProjected
-                } else {
-                    let base = gestureBaseState ?? nleState
-                    projected = draggedState(
-                        base: base,
-                        translation: value.translation.height,
-                        trackHeight: trackHeight,
-                        maxMinute: maxMinute,
-                        sensitivity: isPrecisionMode
-                            ? MapHomeTimeSidebarMath.precisionDragSensitivity
-                            : MapHomeTimeSidebarMath.standardDragSensitivity
+                    handleDrag.begin(
+                        with: base,
+                        nowUptime: ProcessInfo.processInfo.systemUptime
                     )
                 }
+                let nowUptime = ProcessInfo.processInfo.systemUptime
+                guard let projected = handleDrag.projectedState(
+                    locationY: value.location.y,
+                    trackHeight: trackHeight,
+                    verticalInset: verticalInset,
+                    maxMinute: maxMinute,
+                    nowUptime: nowUptime
+                ) else { return }
                 render(projected, nowUptime: nowUptime)
             }
             .onEnded { value in
                 let nowUptime = ProcessInfo.processInfo.systemUptime
-                let base = gestureBaseState ?? nleState
-                let projected: MapHomeTimeSidebarNLEState
-                if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
-                   let handleProjected = handleDrag.projectedState(
-                       translation: value.translation.height,
-                       trackHeight: trackHeight,
-                       maxMinute: maxMinute,
-                       sensitivity: isPrecisionMode
-                           ? MapHomeTimeSidebarMath.precisionDragSensitivity
-                           : MapHomeTimeSidebarMath.standardDragSensitivity,
-                       nowUptime: nowUptime
-                   ) {
-                    projected = MapHomeTimeSidebarNLEState(
-                        selectedMinute: handleProjected.selectedMinute,
-                        visibleStartMinute: MapHomeTimeSidebarMath.startMinute(
-                            centerMinute: handleProjected.selectedMinute,
-                            durationMinutes: handleProjected.visibleDurationMinutes
-                        ),
-                        visibleDurationMinutes: handleProjected.visibleDurationMinutes
-                    )
-                } else {
-                    projected = draggedState(
-                        base: base,
-                        translation: value.translation.height,
-                        trackHeight: trackHeight,
-                        maxMinute: maxMinute,
-                        sensitivity: isPrecisionMode
-                            ? MapHomeTimeSidebarMath.precisionDragSensitivity
-                            : MapHomeTimeSidebarMath.standardDragSensitivity
-                    )
+                if let handleProjected = handleDrag.projectedState(
+                    locationY: value.location.y,
+                    trackHeight: trackHeight,
+                    verticalInset: verticalInset,
+                    maxMinute: maxMinute,
+                    nowUptime: nowUptime
+                ) {
+                    let projected: MapHomeTimeSidebarNLEState
+                    if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes {
+                        projected = MapHomeTimeSidebarNLEState(
+                            selectedMinute: handleProjected.selectedMinute,
+                            visibleStartMinute: MapHomeTimeSidebarMath.startMinute(
+                                centerMinute: handleProjected.selectedMinute,
+                                durationMinutes: handleProjected.visibleDurationMinutes
+                            ),
+                            visibleDurationMinutes: handleProjected.visibleDurationMinutes
+                        )
+                    } else {
+                        projected = handleProjected
+                    }
+                    render(projected, nowUptime: nowUptime, force: true)
                 }
-                render(projected, nowUptime: nowUptime, force: true)
                 dragStartMinute = nil
-                isPrecisionMode = false
                 isHandleDragging = false
                 gestureBaseState = nil
                 handleDrag.reset()
