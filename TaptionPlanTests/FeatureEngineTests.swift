@@ -8620,11 +8620,11 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(
             TaptionCommercePolicy.trialDuration,
-            7 * 24 * 60 * 60
+            14 * 24 * 60 * 60
         )
     }
 
-    func testProTrialStartsOnlyWhenARecordExistsAndExpiresAtSevenDays() {
+    func testProTrialStartsOnlyWhenARecordExistsAndExpiresAtFourteenDays() {
         let start = makeDate(2026, 8, 23, 12)
         XCTAssertEqual(
             TaptionProTrialPolicy.state(record: nil, now: start),
@@ -8638,20 +8638,39 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(
             TaptionProTrialPolicy.state(
                 record: record,
-                now: start.addingTimeInterval(6 * 86_400)
+                now: start.addingTimeInterval(13 * 86_400)
             ),
             .trial(
-                expiresAt: start.addingTimeInterval(7 * 86_400),
+                expiresAt: start.addingTimeInterval(14 * 86_400),
                 remainingDays: 1
             )
         )
         XCTAssertEqual(
             TaptionProTrialPolicy.state(
                 record: record,
-                now: start.addingTimeInterval(7 * 86_400)
+                now: start.addingTimeInterval(14 * 86_400)
             ),
             .expired(
-                expiresAt: start.addingTimeInterval(7 * 86_400)
+                expiresAt: start.addingTimeInterval(14 * 86_400)
+            )
+        )
+    }
+
+    func testProTrialFromSevenDayExpiredRecordRemainsTrialWithinFourteenDays() {
+        let start = makeDate(2026, 8, 23, 12)
+        let record = TaptionProTrialRecord(
+            startedAt: start,
+            lastObservedAt: start.addingTimeInterval(7 * 86_400)
+        )
+
+        XCTAssertEqual(
+            TaptionProTrialPolicy.state(
+                record: record,
+                now: start.addingTimeInterval(8 * 86_400)
+            ),
+            .trial(
+                expiresAt: start.addingTimeInterval(14 * 86_400),
+                remainingDays: 6
             )
         )
     }
@@ -8680,7 +8699,7 @@ final class FeatureEngineTests: XCTestCase {
         let start = makeDate(2026, 8, 23, 12)
         let record = TaptionProTrialRecord(
             startedAt: start,
-            lastObservedAt: start.addingTimeInterval(8 * 86_400)
+            lastObservedAt: start.addingTimeInterval(15 * 86_400)
         )
 
         XCTAssertEqual(
@@ -8689,7 +8708,7 @@ final class FeatureEngineTests: XCTestCase {
                 now: start.addingTimeInterval(86_400)
             ),
             .expired(
-                expiresAt: start.addingTimeInterval(7 * 86_400)
+                expiresAt: start.addingTimeInterval(14 * 86_400)
             )
         )
     }

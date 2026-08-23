@@ -1,3 +1,5 @@
+import MapKit
+import SwiftUI
 import XCTest
 @testable import TaptionPlan
 
@@ -408,7 +410,7 @@ final class TimeScaleTests: XCTestCase {
 
         XCTAssertGreaterThanOrEqual(center - halfWidth, 0)
         XCTAssertLessThanOrEqual(center + halfWidth, railWidth)
-        XCTAssertEqual(center, 38)
+        XCTAssertEqual(center, 30)
     }
 
     func testMapHomeCompassControlReturnsToArrowWithFixedDirection() {
@@ -433,6 +435,148 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(
             MapHomeCompassControlState.iconRotationDegrees(for: .infinity),
             0
+        )
+    }
+
+    func testMapHomeCompassUsesShortestRotationAcrossNorthAndHeadingFallback() {
+        XCTAssertEqual(
+            MapHomeCompassControlState.continuousIconRotationDegrees(
+                previousRotationDegrees: -359,
+                headingDegrees: 1
+            ),
+            -361
+        )
+        XCTAssertEqual(
+            MapHomeCompassControlState.preferredHeadingDegrees(
+                trueHeading: 42,
+                magneticHeading: 120
+            ),
+            42
+        )
+        XCTAssertEqual(
+            MapHomeCompassControlState.preferredHeadingDegrees(
+                trueHeading: -1,
+                magneticHeading: 120
+            ),
+            120
+        )
+    }
+
+    func testMapOverlayPinchRoutesOnlyCoveredControlsOutsideSidebar() {
+        let viewport = CGSize(width: 390, height: 844)
+        let route: (CGPoint) -> Bool = { point in
+            MapHomeOverlayPinchMath.shouldForwardToMap(
+                startLocation: point,
+                viewportSize: viewport,
+                sidebarWidth: 126,
+                topOverlayHeight: 190,
+                controlsWidth: 82,
+                controlsHeight: 250
+            )
+        }
+
+        XCTAssertTrue(route(CGPoint(x: 180, y: 80)))
+        XCTAssertTrue(route(CGPoint(x: 45, y: 700)))
+        XCTAssertFalse(route(CGPoint(x: 180, y: 400)))
+        XCTAssertFalse(route(CGPoint(x: 330, y: 80)))
+    }
+
+    func testMapOverlayPinchPreservesCameraAndPublishesFinalValue() {
+        let camera = MapCamera(
+            centerCoordinate: CLLocationCoordinate2D(latitude: 37.5, longitude: 127),
+            distance: 2_000,
+            heading: 24,
+            pitch: 35
+        )
+        let zoomed = MapHomeOverlayPinchMath.zoomedCamera(
+            from: camera,
+            magnification: 2
+        )
+
+        XCTAssertEqual(zoomed.centerCoordinate.latitude, 37.5, accuracy: 0.000_001)
+        XCTAssertEqual(zoomed.centerCoordinate.longitude, 127, accuracy: 0.000_001)
+        XCTAssertEqual(zoomed.distance, 1_000, accuracy: 0.01)
+        XCTAssertEqual(zoomed.heading, 24, accuracy: 0.01)
+        XCTAssertEqual(zoomed.pitch, 35, accuracy: 0.01)
+        XCTAssertEqual(
+            MapHomeOverlayPinchMath.zoomedCamera(
+                from: MapCamera(centerCoordinate: camera.centerCoordinate, distance: 1_000),
+                magnification: 1_000
+            ).distance,
+            80,
+            accuracy: 0.01
+        )
+        XCTAssertEqual(
+            MapHomeOverlayPinchMath.zoomedCamera(
+                from: MapCamera(
+                    centerCoordinate: camera.centerCoordinate,
+                    distance: 30_000_000
+                ),
+                magnification: 0.001
+            ).distance,
+            30_000_000,
+            accuracy: 0.01
+        )
+        XCTAssertFalse(
+            MapHomeOverlayPinchMath.shouldPublish(
+                lastUptime: 10,
+                currentUptime: 10.005,
+                isFinal: false
+            )
+        )
+        XCTAssertTrue(
+            MapHomeOverlayPinchMath.shouldPublish(
+                lastUptime: 10,
+                currentUptime: 10.005,
+                isFinal: true
+            )
+        )
+    }
+
+    func testSavedLocationActivationAndManagerMapKeepTheCurrentSpan() {
+        XCTAssertEqual(
+            MapHomeLocationActivation.resolve(
+                isCurrentLocation: false,
+                hasSavedPoint: true
+            ),
+            .savedLocation
+        )
+        XCTAssertEqual(
+            MapHomeLocationActivation.resolve(
+                isCurrentLocation: false,
+                hasSavedPoint: false
+            ),
+            .edit
+        )
+        XCTAssertEqual(
+            MapHomeLocationActivation.resolve(
+                isCurrentLocation: true,
+                hasSavedPoint: false
+            ),
+            .currentLocation
+        )
+
+        let center = CLLocationCoordinate2D(latitude: 37.55, longitude: 126.99)
+        let span = MKCoordinateSpan(latitudeDelta: 0.025, longitudeDelta: 0.035)
+        let region = MapHomeLocationMapMath.region(center: center, span: span)
+        XCTAssertEqual(region.center.latitude, center.latitude, accuracy: 0.000_001)
+        XCTAssertEqual(region.center.longitude, center.longitude, accuracy: 0.000_001)
+        XCTAssertEqual(region.span.latitudeDelta, span.latitudeDelta, accuracy: 0.000_001)
+        XCTAssertEqual(region.span.longitudeDelta, span.longitudeDelta, accuracy: 0.000_001)
+    }
+
+    func testWeatherBackgroundSelectionTakesPriorityOverCurrentState() {
+        XCTAssertEqual(
+            MapHomeWeatherBackgroundKind.resolve(isSelected: true, isCurrent: true),
+            .selected
+        )
+        XCTAssertEqual(
+            MapHomeWeatherBackgroundKind.resolve(isSelected: false, isCurrent: true),
+            .current
+        )
+        XCTAssertEqual(
+            MapHomeWeatherBackgroundKind.resolve(isSelected: false, isCurrent: false),
+            .normal
         )
     }
 

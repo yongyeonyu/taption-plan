@@ -7,9 +7,10 @@
 먼저 AGENTS.md를 읽고 main 최신 SHA와 git status를 확인한다.
 
 현재 기준
-- 기능 소스 커밋 a2e3c5b에 사용자 추가 지하철역·지하철 Wi-Fi 우선 판정, GPS 1초·10초·30초 기록, 지도 상세도·팝업·시간 레일 개선, 광고 완전 제거, C2 고양이 벡터 앱 아이콘이 반영되어 있다.
-- Pro는 Keychain+iCloud KVS 기반 7일 앱 자체 체험과 StoreKit 2 비소모성 `com.taption.plan.pro` 영구 구매·복원으로 구현했다. 체험 만료 시 전체 앱과 백그라운드 작업을 잠근다.
-- `FeatureEngineTests` 402/402 통과, Debug 빌드 통과, iPhone 14 Pro에 1.0(74) 설치·실행·readback 완료다.
+- 현재 main에는 사용자 추가 지하철역·지하철 Wi-Fi 우선 판정, GPS 1초·10초·30초 기록, 지도 상세도·팝업·시간 레일 개선, 광고 완전 제거, C2 고양이 벡터 앱 아이콘이 반영되어 있다.
+- `BATCH2WK01`로 지도 오버레이 핀치 전달·위치 추가 취소·저장 위치 이동/편집·사용자 위치 관리 UI·실제 헤딩 나침반·선택 날씨 배경을 통합했고 CloudKit 비공개 복구 백업의 아카이브 키 래핑을 보정했다.
+- Pro는 Keychain+iCloud KVS 기반 14일 앱 자체 체험과 StoreKit 2 비소모성 `com.taption.plan.pro` 영구 구매·복원으로 구현했다. 기존 기록도 `startedAt` 기준 14일로 재계산하며, 체험 만료 시 전체 앱과 백그라운드 작업을 잠근다.
+- 전체 XCTest 518/518 통과, Debug 빌드 통과, iPhone 14 Pro에 1.0(74) 설치·실행·readback 완료다.
 - build 74 TestFlight 업로드 UUID는 bd78668d-fb43-40dd-9d32-5ac0817dcdf1이고 처리 상태는 VALID다.
 - build 74는 `TP Taption Plan 내부 테스트` 그룹에 자동 연결되어 그룹 관계에서 노출되며 내부 테스터 1명이 있다.
 

@@ -7,7 +7,7 @@ enum TaptionCommercePolicy {
     static let isAdSupportedFreeMode = false
     static let supportsPaidPurchase = true
     static let proProductID = "com.taption.plan.pro"
-    static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
+    static let trialDuration: TimeInterval = 14 * 24 * 60 * 60
 
     static func grantsProAccess(
         productID: String,
@@ -368,7 +368,7 @@ final class TaptionProAccessController {
         case .purchased:
             "Pro 구매 완료"
         case .trial(_, let remainingDays):
-            "Pro 체험 · " + String(remainingDays) + "일 남음"
+            "14일 무료 체험 · " + String(remainingDays) + "일 남음"
         case .loading, .trialNotStarted, .expired:
             "Pro 구매"
         }
@@ -410,9 +410,9 @@ final class TaptionProAccessController {
         setState(TaptionProTrialPolicy.state(record: record, now: now))
         switch state {
         case .trial:
-            message = "7일 무료 Pro 체험이 시작되었습니다."
+            message = "14일 무료 체험이 시작되었습니다."
         case .expired:
-            message = "이 Apple 계정 또는 기기에서는 무료 체험을 이미 사용했습니다."
+            message = "이 Apple 계정 또는 기기에서는 14일 무료 체험을 이미 사용했습니다."
         case .loading, .trialNotStarted, .purchased:
             break
         }

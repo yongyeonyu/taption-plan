@@ -1,6 +1,33 @@
 import SwiftUI
 import UIKit
 
+enum MapHomeTimeSidebarStyle {
+    static let numericColumnBackground = Color.white.opacity(0.68)
+}
+
+enum MapHomeWeatherBackgroundKind: Equatable {
+    case selected
+    case current
+    case normal
+
+    static func resolve(isSelected: Bool, isCurrent: Bool) -> Self {
+        if isSelected { return .selected }
+        if isCurrent { return .current }
+        return .normal
+    }
+
+    var color: Color {
+        switch self {
+        case .selected:
+            MapHomeTimeSidebarStyle.numericColumnBackground
+        case .current:
+            Color.tpWeather.opacity(0.28)
+        case .normal:
+            .clear
+        }
+    }
+}
+
 struct MapHomeTimeSidebarActivity {
     let systemImage: String
     let tint: Color
@@ -666,7 +693,7 @@ struct MapHomeTimeSidebar: View {
                     .simultaneousGesture(viewportDragGesture(trackHeight: trackHeight))
 
                 Rectangle()
-                    .fill(Color.white.opacity(0.68))
+                    .fill(MapHomeTimeSidebarStyle.numericColumnBackground)
                     // Keep the existing white numeric gutter continuous past
                     // both ends of the coloured rail.
                     .frame(width: numericColumnWidth + 3, height: railHeight)
@@ -1286,9 +1313,10 @@ struct MapHomeWeatherSidebar: View {
                         .padding(.horizontal, 3)
                         .frame(width: railWidth - 2, height: max(22, min(30, height + 8)))
                         .background(
-                            isCurrent
-                                ? Color.tpWeather.opacity(0.28)
-                                : Color.clear,
+                            MapHomeWeatherBackgroundKind.resolve(
+                                isSelected: isSelected,
+                                isCurrent: isCurrent
+                            ).color,
                             in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                         )
                         .overlay {

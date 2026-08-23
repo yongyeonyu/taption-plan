@@ -738,10 +738,14 @@ final class PlanSecurityBackupService {
         date: Date = .now
     ) async throws -> PlanMonthlyArchive {
         guard hasPIN else { throw PlanSecurityError.pinRequiredForCloudBackup }
+        guard let cloudRecoveryKeyProvider else {
+            throw PlanSecurityError.accountUnavailable
+        }
+        let accountKey = try await cloudRecoveryKeyProvider.key()
         return try saveMonthlyArchive(
             snapshot,
             accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope,
-            accountKey: nil,
+            accountKey: accountKey,
             date: date
         )
     }

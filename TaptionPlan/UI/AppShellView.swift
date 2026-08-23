@@ -792,13 +792,13 @@ struct TaptionProAccessView: View {
         case .loading:
             "Taption Plan Pro"
         case .trialNotStarted:
-            "7일 동안 Pro를 체험하세요"
+            "14일 무료 체험"
         case .trial(_, let remainingDays):
-            "Pro 체험 " + String(remainingDays) + "일 남음"
+            "14일 무료 체험 · " + String(remainingDays) + "일 남음"
         case .purchased:
             "Pro를 영구 이용 중입니다"
         case .expired:
-            "무료 체험이 종료되었습니다"
+            "14일 무료 체험이 종료되었습니다"
         }
     }
 
@@ -807,9 +807,9 @@ struct TaptionProAccessView: View {
         case .loading:
             "구매 및 체험 상태를 확인하고 있습니다."
         case .trialNotStarted:
-            "버튼을 누르는 순간부터 7일이 시작됩니다. 자동 결제는 없습니다."
+            "버튼을 누르면 14일 무료 체험이 시작됩니다. 자동 결제는 없습니다."
         case .trial:
-            "체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다."
+            "14일 무료 체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다."
         case .purchased:
             "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다."
         case .expired:
@@ -824,7 +824,7 @@ struct TaptionProAccessView: View {
                 Button {
                     controller.startTrial()
                 } label: {
-                    Text("7일 무료 Pro 체험 시작")
+                    Text("14일 무료 체험 시작")
                         .font(.system(size: 17, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
