@@ -683,6 +683,7 @@ final class AppleSensorDataService {
     private var activeConfiguration: SensorCollectionConfiguration?
     private var collectionGeneration = 0
     private var isCollectionStreamLive = false
+    private var persistedReadingCount = 0
 
     private(set) var lastPersistenceErrorDescription: String?
     var onReadingPersisted: ((SensorReading) -> Void)?
@@ -750,6 +751,7 @@ final class AppleSensorDataService {
                 guard !Task.isCancelled, let self else { break }
                 do {
                     try await self.archive.append(reading)
+                    self.persistedReadingCount += 1
                     self.onReadingPersisted?(reading)
                 } catch {
                     self.lastPersistenceErrorDescription = error.localizedDescription
@@ -763,6 +765,27 @@ final class AppleSensorDataService {
             }
             self.isCollectionStreamLive = false
         }
+    }
+
+    /// Returns a monotonic token for waiting on the next archived sample.
+    /// Background refresh uses this instead of assuming that a sampling window
+    /// elapsed means the archive consumer finished its write.
+    func persistenceToken() -> Int {
+        persistedReadingCount
+    }
+
+    func waitForPersistedReading(
+        after token: Int,
+        timeout: TimeInterval
+    ) async -> Bool {
+        let deadline = Date.now.addingTimeInterval(max(0, timeout))
+        while !Task.isCancelled, Date.now < deadline {
+            if persistedReadingCount > token {
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        return persistedReadingCount > token
     }
 
     func stopCollection() {

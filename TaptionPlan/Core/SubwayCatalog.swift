@@ -467,7 +467,7 @@ enum SubwayStationCatalog {
             guard let coordinate = stop.coordinate else { continue }
             let distance = distanceMeters(point, coordinate)
             guard distance <= maximumDistanceMeters else { continue }
-            if nearest == nil || distance < nearest!.distance {
+            if nearest.map({ distance < $0.distance }) ?? true {
                 nearest = (stop.stationName, distance)
             }
         }
@@ -705,7 +705,7 @@ enum SubwayStationCatalog {
             guard let coordinate = station.coordinate else { continue }
             let distance = distanceMeters(point, coordinate)
             guard distance <= maximumDistanceMeters else { continue }
-            if best == nil || distance < best!.distance {
+            if best.map({ distance < $0.distance }) ?? true {
                 best = (station, distance)
             }
         }

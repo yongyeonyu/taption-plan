@@ -5626,7 +5626,7 @@ private struct TimelineDetailPanel: View {
                       to: values
                   ),
                   distance <= toleranceMeters else { continue }
-            if best == nil || distance < best!.distance {
+            if best.map({ distance < $0.distance }) ?? true {
                 best = (segment, distance)
             }
         }
@@ -10298,7 +10298,8 @@ private struct TimelineBoard: View {
             90 * 24 * 60 * 60,
         ]
         return supportedSteps.first { $0 >= target }
-            ?? supportedSteps.last!
+            ?? supportedSteps.last
+            ?? 60
     }
 
     private func axisTickLabel(_ date: Date) -> String {

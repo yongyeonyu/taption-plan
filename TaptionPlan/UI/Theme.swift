@@ -134,7 +134,7 @@ enum CanonicalCategoryPalette {
     ]
 
     static func hex(_ id: String) -> String {
-        hexes[id] ?? hexes["activity"]!
+        hexes[id] ?? hexes["activity"] ?? "#29A383"
     }
 
     static func color(_ id: String) -> Color {

@@ -238,7 +238,7 @@ enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
 
     var interval: TimeInterval {
         switch self {
-        case .batterySaver: 10 * 60
+        case .batterySaver: 15 * 60
         case .balanced: 5 * 60
         case .accuracy: 60
         }
@@ -290,7 +290,7 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
         SensorCollectionConfiguration(
             profile: profile,
             highAccuracyDuringMovement: profile != .batterySaver,
-            collectsDeviceMotion: true,
+            collectsDeviceMotion: profile != .batterySaver,
             allowsBackgroundLocation: allowsBackgroundLocation,
             minimumEmissionInterval: profile.interval
         )

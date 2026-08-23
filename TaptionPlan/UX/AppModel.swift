@@ -1299,8 +1299,7 @@ final class AppModel {
         for observation in airPodsActivityService.stop(at: .now) {
             applyAirPodsActivity(observation)
         }
-        resumeSensorCollectionIfNeeded()
-        await restoreTrackingSessionIfNeeded()
+        await resumeSensorCollectionAndRestoreTrackingIfNeeded()
         foregroundRefreshTask?.cancel()
         foregroundRefreshTask = nil
         deferredVisibleRefreshTask?.cancel()
@@ -1318,6 +1317,10 @@ final class AppModel {
 
     private func refreshCloudBackupAfterForeground() async {
         guard securityStatus.settings.cloudBackupEnabled else { return }
+        await saveCloudBackup(reason: "foreground_deferred")
+    }
+
+    private func saveCloudBackup(reason: String) async {
         do {
             guard let securityBackupService else { return }
             await refreshMidnightWeatherIfNeeded()
@@ -1325,7 +1328,7 @@ final class AppModel {
             securityStatus = securityBackupService.status
         } catch {
             TaptionPlanDiagnosticsLogger.shared.record(
-                "icloud_backup_foreground_deferred",
+                "icloud_backup_\(reason)",
                 level: .error,
                 fields: ["error": error.localizedDescription]
             )
@@ -1337,18 +1340,7 @@ final class AppModel {
         guard securityStatus.settings.cloudBackupEnabled,
               securityStatus.settings.midnightBackupEnabled,
               calendar.component(.hour, from: .now) == 0 else { return }
-        do {
-            guard let securityBackupService else { return }
-            await refreshMidnightWeatherIfNeeded()
-            _ = try await securityBackupService.saveMonthlyArchive(snapshot)
-            securityStatus = securityBackupService.status
-        } catch {
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "icloud_backup_background_deferred",
-                level: .error,
-                fields: ["error": error.localizedDescription]
-            )
-        }
+        await saveCloudBackup(reason: "background_deferred")
     }
 
     private func refreshMidnightWeatherIfNeeded() async {
@@ -1442,8 +1434,7 @@ final class AppModel {
             await self.applyPendingWidgetCommands(
                 repositoryAlreadyLoaded: false
             )
-            self.resumeSensorCollectionIfNeeded()
-            await self.restoreTrackingSessionIfNeeded()
+            await self.resumeSensorCollectionAndRestoreTrackingIfNeeded()
             await self.refreshEnabledData(
                 includesCurrentDeviceDay: true,
                 dataSpan: self.currentDeviceDataSpan,
@@ -1479,14 +1470,16 @@ final class AppModel {
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
         await refreshPermissionStates()
         let samplingWindow = settings.sensorCollectionProfile.samplingWindowDuration
-        self.resumeSensorCollectionIfNeeded()
-        await self.restoreTrackingSessionIfNeeded()
-        if isSensorCollecting {
+        let sensorService = self.sensorService
+        let persistenceToken = sensorService?.persistenceToken() ?? 0
+        await self.resumeSensorCollectionAndRestoreTrackingIfNeeded()
+        if isSensorCollecting, let sensorService {
             // BG refresh tasks may be terminated as soon as this method
-            // returns. Keep the collector alive through one sampling window
-            // so its normal archive consumer receives the next reading.
-            try? await Task.sleep(
-                for: .seconds(samplingWindow + 2)
+            // returns. Wait for the archive consumer to confirm one write,
+            // rather than assuming the sampling window completed it.
+            _ = await sensorService.waitForPersistedReading(
+                after: persistenceToken,
+                timeout: samplingWindow + 2
             )
         }
         await refreshEnabledData(includesCurrentDeviceDay: true)
@@ -5974,6 +5967,11 @@ final class AppModel {
             )
         )
         isSensorCollecting = true
+    }
+
+    private func resumeSensorCollectionAndRestoreTrackingIfNeeded() async {
+        resumeSensorCollectionIfNeeded()
+        await restoreTrackingSessionIfNeeded()
     }
 
     private func restoreTrackingSessionIfNeeded() async {

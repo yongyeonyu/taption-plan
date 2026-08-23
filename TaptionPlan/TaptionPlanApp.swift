@@ -102,7 +102,10 @@ final class TaptionPlanAppDelegate:
         UNUserNotificationCenter.current().delegate = self
         TaptionAdvertisingCoordinator.shared.start()
         TaptionPlanBackgroundRefresh.register()
-        TaptionPlanBackgroundRefresh.schedule(reason: "launch")
+        let launchReason = launchOptions?[.location] == nil
+            ? "launch"
+            : "location-event"
+        TaptionPlanBackgroundRefresh.schedule(reason: launchReason)
         AppleHealthService.shared.startObservingChanges {
             await HealthBackgroundRefreshCoordinator.shared.receiveUpdate()
         }

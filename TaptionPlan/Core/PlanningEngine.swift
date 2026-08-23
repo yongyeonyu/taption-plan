@@ -1820,7 +1820,7 @@ struct ReviewEngine: Sendable {
 
         let knownPlanIDs = Set(scopedPlans.map(\.id))
         let unplanned = scopedActuals.reduce(0) { partial, actual in
-            guard actual.planID == nil || !knownPlanIDs.contains(actual.planID!) else {
+            if let planID = actual.planID, knownPlanIDs.contains(planID) {
                 return partial
             }
             let measured = actual.span(asOf: asOf)

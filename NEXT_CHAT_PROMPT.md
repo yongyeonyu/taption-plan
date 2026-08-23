@@ -1,32 +1,37 @@
 # Taption Plan 다음 채팅 핸드오프
 
-아래 내용을 그대로 붙여넣고 작업을 이어가세요.
+아래 내용을 새 채팅에 그대로 붙여넣고 작업을 이어가세요.
 
 ```text
+요청 ID: REFA042A01
 작업 디렉토리: /Users/u_mo_c/Documents/taption plan
-먼저 AGENTS.md를 읽고 규칙을 따른다. 시작 시 main의 최신 커밋과 git status를 확인한다.
+먼저 AGENTS.md를 읽고, 시작 시 main 최신 SHA와 git status를 확인한다.
 
 현재 기준
-- 브랜치: main
-- 번들 ID: com.taption.plan
-- 확대 시간 레일: 플레이헤드 고정, 시간 축·세그먼트·경로 축 스크롤, 선택 시각의 저장 위치를 지도에 반영
-- 과거 날짜: 하루 종료 시각까지 GPS 경로를 누적 투영
-- 보안: Face ID 시스템 prompt의 inactive → active 전환으로 재잠금·재시도 루프가 발생하지 않도록 처리
-- iPhone 14 Pro 설치·실행 확인 완료
+- main에는 센서 수집 전원 정책, 백그라운드 보관 완료 대기, 보안 키 생성 안전성,
+  경로·집계 강제 언래핑 제거, 백업 진단 통합이 반영되어 있다.
+- 다음 빌드 번호는 72이다. 직전 TestFlight build 71의 Delivery UUID는
+  defe3686-57cc-4319-9b41-aeb2b3bc8f43이다.
+- `temp.md`는 새 요청을 등록할 때만 만들고, 모든 항목 완료 후 삭제한다.
 
-검증 완료
-- `TimeScaleTests`, `RouteTimelineDataTests`, `SecurityBackupCoreTests` 선택 테스트 통과
-- iOS Debug 빌드 통과
-- `com.taption.plan` 실기기 설치 및 실행 통과
+확인된 게이트
+- `git diff --check` 통과
+- REFA042A01 Debug iOS Simulator build 성공
+- XCTest는 현재 두 시뮬레이터에서 테스트 러너 부트스트랩 크래시로 본문 실행 불가
+- CloudKit 복구 테스트는 시뮬레이터 entitlement 환경과 분리해 판단
 
-다음 확인 항목
-1. iPhone에서 확대 시간 레일을 드래그해 플레이헤드가 고정되고 지도 위치가 시간에 따라 갱신되는지 확인
-2. 과거 날짜에서 원본 GPS 누적 경로가 지도에 표시되는지 확인
-3. Face ID 성공 후 재시도 없이 앱에 진입하고, 실제 백그라운드 복귀 잠금은 유지되는지 확인
-4. 수정 시 관련 테스트와 Debug 빌드를 다시 실행
+다음 작업 우선순위
+1. build 72 Release archive/export와 무알파 앱 아이콘·운영 AdMob ID·배포 서명 확인
+2. TestFlight 업로드 후 처리 상태와 Delivery UUID 기록
+3. iPhone 설치·실행·센서 백그라운드 기록을 실기기로 확인
+4. `MapHomeView`·`AppModel` 대규모 분해는 테스트 범위를 먼저 정한 뒤 별도 요청으로 진행
+5. 센서 대분류를 Dynamic Island에 반영할 상태 계약과 실기기 검증 설계
+6. AppIcon과 햄버거 홈 아이콘을 동일 원본으로 교체하고 시각/해시 확인
+7. 강제 종료와 백그라운드 센서 기록의 지원 범위를 QA 문구로 분리
 
 주의
-- 원본 센서·HealthKit 데이터와 사용자 변경값을 섞거나 삭제하지 않는다.
-- 자동 기록 원본은 보존하고, 고빈도 제스처에서 전체 데이터를 재계산하지 않는다.
-- 실기기 설치·실행과 TestFlight 업로드는 별도 검증 단계로 기록한다.
+- 원본 센서·HealthKit 데이터는 삭제·수정하지 않는다.
+- 고빈도 제스처는 60Hz 화면 갱신 예산을 유지한다.
+- 기존 사용자 변경을 덮어쓰지 말고, 요청 범위를 벗어난 asset·제품 동작 변경은 먼저 알린다.
+- 커밋·푸시·TestFlight·iPhone 설치는 각각 결과를 확인한 뒤 다음 게이트로 진행한다.
 ```

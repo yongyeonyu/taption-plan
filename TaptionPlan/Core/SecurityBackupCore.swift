@@ -17,8 +17,11 @@ struct PlanPINVerifier: Codable, Equatable, Sendable {
 
     init(pin: String, random: (Int) -> Data = { count in
         var data = Data(repeating: 0, count: count)
-        _ = data.withUnsafeMutableBytes {
-            SecRandomCopyBytes(kSecRandomDefault, count, $0.baseAddress!)
+        _ = data.withUnsafeMutableBytes { buffer -> Int32 in
+            guard let baseAddress = buffer.baseAddress else {
+                return errSecParam
+            }
+            return SecRandomCopyBytes(kSecRandomDefault, count, baseAddress)
         }
         return data
     }) throws {
@@ -374,7 +377,7 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
             }
             return existing
         } catch let error as CKError where error.code == .unknownItem {
-            let generated = Self.randomKey()
+            let generated = try Self.randomKey()
             let record = CKRecord(recordType: Self.recordType, recordID: recordID)
             record[Self.valueKey] = generated as CKRecordValue
             do {
@@ -424,12 +427,13 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
         return values.joined(separator: " ")
     }
 
-    private static func randomKey() -> Data {
+    private static func randomKey() throws -> Data {
         var key = Data(repeating: 0, count: 32)
         guard key.withUnsafeMutableBytes({
-            SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!)
+            guard let baseAddress = $0.baseAddress else { return errSecParam }
+            return SecRandomCopyBytes(kSecRandomDefault, 32, baseAddress)
         }) == errSecSuccess else {
-            return Data()
+            throw PlanSecurityError.accountUnavailable
         }
         return key
     }
@@ -504,7 +508,15 @@ final class InMemoryPlanCloudAccountKeyProvider: PlanCloudAccountKeyProvider {
         guard !accountIdentifier.isEmpty else { throw PlanSecurityError.accountUnavailable }
         if let key = keys[accountIdentifier] { return key }
         var key = Data(repeating: 0, count: 32)
-        _ = key.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
+        let status = key.withUnsafeMutableBytes { buffer -> Int32 in
+            guard let baseAddress = buffer.baseAddress else {
+                return errSecParam
+            }
+            return SecRandomCopyBytes(kSecRandomDefault, 32, baseAddress)
+        }
+        guard status == errSecSuccess else {
+            throw PlanSecurityError.accountUnavailable
+        }
         keys[accountIdentifier] = key
         return key
     }
@@ -742,12 +754,15 @@ final class PlanSecurityBackupService {
     ) throws -> PlanMonthlyArchive {
         let payload = try JSONEncoder.taptionPlan.encode(snapshot)
         let compressed = TaptionSnapshotCompression.encode(payload)
-        let archiveKey = Self.randomKey()
+        guard let verifier else {
+            throw PlanSecurityError.pinRequiredForCloudBackup
+        }
+        let archiveKey = try Self.randomKey()
         let encryptedPayload = try AES.GCM.seal(
             compressed,
             using: SymmetricKey(data: archiveKey)
         ).combined ?? { throw PlanSecurityError.invalidArchive }()
-        let pinKey = SymmetricKey(data: verifier!.keyMaterial)
+        let pinKey = SymmetricKey(data: verifier.keyMaterial)
         let wrappedPayloadKey = try AES.GCM.seal(archiveKey, using: pinKey).combined ?? { throw PlanSecurityError.invalidArchive }()
         let accountWrappedPayloadKey: Data
         if let accountKey {
@@ -810,9 +825,17 @@ final class PlanSecurityBackupService {
         return try archive.decodedSnapshot(pinKeyData: pinKeyData, accountKeyData: accountKeyData)
     }
 
-    private static func randomKey() -> Data {
+    private static func randomKey() throws -> Data {
         var key = Data(repeating: 0, count: 32)
-        _ = key.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
+        let status = key.withUnsafeMutableBytes { buffer -> Int32 in
+            guard let baseAddress = buffer.baseAddress else {
+                return errSecParam
+            }
+            return SecRandomCopyBytes(kSecRandomDefault, 32, baseAddress)
+        }
+        guard status == errSecSuccess else {
+            throw PlanSecurityError.invalidArchive
+        }
         return key
     }
 }

@@ -227,7 +227,7 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testTimelineNLEProjectionCoalesces240HzInputAndFlushesLatestState() {
-        var projection = TimelineNLEProjection<Int>()
+        let projection = TimelineNLEProjection<Int>()
         projection.begin(with: 0)
         var rendered: [Int] = []
 
@@ -251,7 +251,7 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testTimelineNLEProjectionSynchronizesExternalTimelineState() {
-        var projection = TimelineNLEProjection<Int>()
+        let projection = TimelineNLEProjection<Int>()
         projection.begin(with: 600)
         projection.synchronize(with: 720)
 
@@ -262,7 +262,7 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testMapHomeSidebarNLEProjectionCoalesces240HzDragAndFlushesFinalState() {
-        var projection = TimelineNLEProjection<MapHomeTimeSidebarNLEState>()
+        let projection = TimelineNLEProjection<MapHomeTimeSidebarNLEState>()
         let initial = MapHomeTimeSidebarNLEState(
             selectedMinute: 720,
             visibleStartMinute: 690,

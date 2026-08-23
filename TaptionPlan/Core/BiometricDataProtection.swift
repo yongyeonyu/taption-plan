@@ -313,7 +313,10 @@ final class BiometricDataProtectionKeychain {
         var value = Data(repeating: 0, count: 32)
         let count = value.count
         let status = value.withUnsafeMutableBytes { buffer in
-            SecRandomCopyBytes(kSecRandomDefault, count, buffer.baseAddress!)
+            guard let baseAddress = buffer.baseAddress else {
+                return errSecParam
+            }
+            return SecRandomCopyBytes(kSecRandomDefault, count, baseAddress)
         }
         guard status == errSecSuccess else {
             throw BiometricDataProtectionError.keychain(status)
