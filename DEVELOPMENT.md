@@ -111,7 +111,7 @@ xcodebuild build \
   테스트 본문은 실행되지 않았다. 동일한 환경의 기존 전체 실행 기준은 505개 통과이며,
   CloudKit 복구는 시뮬레이터 entitlement 환경에서 별도 실패한다.
 - 직전 TestFlight build 71은 운영 AdMob ID·무알파 앱 아이콘·배포 서명을 확인해 업로드했고,
-  다음 릴리스는 이 변경을 포함한 build 72로 증가시킨다.
+  이번 변경을 포함한 build 72도 같은 검증을 거쳐 업로드했다.
 
 ### 다음 릴리스 게이트
 
@@ -119,3 +119,9 @@ xcodebuild build \
 2. Release archive/export에서 build 72, 운영 AdMob ID, 무알파 아이콘, Apple Distribution 서명 확인
 3. IPA를 App Store Connect에 업로드하고 Delivery UUID·처리 상태 기록
 4. 연결된 iPhone 설치·실행은 TestFlight 처리 완료와 별도로 확인
+
+### build 72 업로드 결과
+
+- Delivery UUID: `58eaab2b-f245-4b90-800e-a07f3ecddc3b`
+- App Store Connect 업로드: 성공
+- 현재 처리 상태: `PROCESSING` (TestFlight 노출 전)
