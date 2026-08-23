@@ -1157,6 +1157,46 @@ actor AppleWeatherContextService {
         }
     }
 
+    func hourlyContexts(
+        latitude: Double,
+        longitude: Double,
+        from start: Date,
+        through end: Date
+    ) async throws -> [WeatherContext] {
+        let point = CLLocation(latitude: latitude, longitude: longitude)
+        do {
+            let hourly = try await service.weather(
+                for: point,
+                including: .hourly
+            )
+            let values = hourly.forecast.filter {
+                $0.date >= start && $0.date < end
+            }
+            guard !values.isEmpty else {
+                throw WeatherContextServiceError.temporarilyUnavailable
+            }
+            return values.map { value in
+                WeatherContext(
+                    observedAt: value.date,
+                    fetchedAt: .now,
+                    isStale: false,
+                    condition: String(describing: value.condition),
+                    symbolName: value.symbolName,
+                    temperatureCelsius: value.temperature.converted(to: .celsius).value,
+                    precipitationChance: value.precipitationChance,
+                    isContextOnly: true
+                )
+            }
+        } catch {
+            return try await fallbackService.hourlyContexts(
+                latitude: latitude,
+                longitude: longitude,
+                from: start,
+                through: end
+            )
+        }
+    }
+
     private func appleContext(
         at location: CLLocation,
         observedAt date: Date
@@ -1295,6 +1335,76 @@ actor OpenMeteoWeatherContextService {
         }
         throw lastError ?? OpenMeteoWeatherError.invalidResponse
     }
+
+    func hourlyContexts(
+        latitude: Double,
+        longitude: Double,
+        from start: Date,
+        through end: Date
+    ) async throws -> [WeatherContext] {
+        var components = URLComponents(
+            string: "https://api.open-meteo.com/v1/forecast"
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "latitude", value: String(latitude)),
+            URLQueryItem(name: "longitude", value: String(longitude)),
+            URLQueryItem(
+                name: "hourly",
+                value: "temperature_2m,weather_code,precipitation_probability,is_day"
+            ),
+            URLQueryItem(
+                name: "current",
+                value: "temperature_2m,weather_code,precipitation_probability,is_day"
+            ),
+            URLQueryItem(
+                name: "timezone",
+                value: TimeZone.autoupdatingCurrent.identifier
+            ),
+            URLQueryItem(name: "forecast_days", value: "2"),
+        ]
+        guard let url = components?.url else {
+            throw OpenMeteoWeatherError.invalidRequest
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 12
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        let (data, response) = try await session.data(for: request)
+        guard let response = response as? HTTPURLResponse,
+              (200..<300).contains(response.statusCode) else {
+            throw OpenMeteoWeatherError.invalidResponse
+        }
+        let payload = try JSONDecoder().decode(
+            OpenMeteoWeatherResponse.self,
+            from: data
+        )
+        guard let hourly = payload.hourly else {
+            throw OpenMeteoWeatherError.invalidResponse
+        }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        let fetchedAt = Date.now
+        return zip(hourly.time, zip(hourly.temperatureCelsius, zip(hourly.weatherCode, zip(hourly.precipitationProbability, hourly.isDay))))
+            .compactMap { value -> WeatherContext? in
+                guard let observedAt = formatter.date(from: value.0),
+                      observedAt >= start,
+                      observedAt < end else { return nil }
+                let presentation = OpenMeteoWeatherCodePresentation(
+                    code: value.1.1.0,
+                    isDay: value.1.1.1.1 != 0
+                )
+                return WeatherContext(
+                    observedAt: observedAt,
+                    fetchedAt: fetchedAt,
+                    isStale: false,
+                    condition: presentation.condition,
+                    symbolName: presentation.symbolName,
+                    temperatureCelsius: value.1.0,
+                    precipitationChance: value.1.1.1.0.map { $0 / 100 }
+                )
+            }
+    }
 }
 
 private enum OpenMeteoWeatherError: Error {
@@ -1318,6 +1428,23 @@ private struct OpenMeteoWeatherResponse: Decodable {
     }
 
     let current: Current
+    let hourly: Hourly?
+
+    struct Hourly: Decodable {
+        let time: [String]
+        let temperatureCelsius: [Double]
+        let weatherCode: [Int]
+        let precipitationProbability: [Double?]
+        let isDay: [Int]
+
+        enum CodingKeys: String, CodingKey {
+            case time
+            case temperatureCelsius = "temperature_2m"
+            case weatherCode = "weather_code"
+            case precipitationProbability = "precipitation_probability"
+            case isDay = "is_day"
+        }
+    }
 }
 
 struct OpenMeteoWeatherCodePresentation: Equatable {

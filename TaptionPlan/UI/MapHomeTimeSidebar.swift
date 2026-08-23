@@ -457,6 +457,7 @@ struct MapHomeTimeSidebar: View {
     let zoomResetToken: Int
     let zoomStepToken: Int
     var onSelectionChanged: ((Int) -> Void)?
+    var onViewportChanged: ((Int, Int) -> Void)?
     var onSectionEdit: (() -> Void)?
 
     @State private var isPrecisionMode = false
@@ -486,6 +487,7 @@ struct MapHomeTimeSidebar: View {
         zoomStepToken: Int = 0,
         railWidth: CGFloat = 58,
         onSelectionChanged: ((Int) -> Void)? = nil,
+        onViewportChanged: ((Int, Int) -> Void)? = nil,
         onSectionEdit: (() -> Void)? = nil
     ) {
         self.date = date
@@ -497,6 +499,7 @@ struct MapHomeTimeSidebar: View {
         self.zoomStepToken = zoomStepToken
         self.railWidth = max(58, railWidth)
         self.onSelectionChanged = onSelectionChanged
+        self.onViewportChanged = onViewportChanged
         self.onSectionEdit = onSectionEdit
     }
 
@@ -656,6 +659,10 @@ struct MapHomeTimeSidebar: View {
             if visibleStartMinute != reset.visibleStartMinute {
                 visibleStartMinute = reset.visibleStartMinute
             }
+            onViewportChanged?(
+                visibleStartMinute,
+                visibleDurationMinutes
+            )
             nleProjection.synchronize(with: nleState)
         }
         .onChange(of: zoomStepToken) { oldValue, newValue in
@@ -792,6 +799,10 @@ struct MapHomeTimeSidebar: View {
                        nowUptime: ProcessInfo.processInfo.systemUptime
                    ) {
                     visibleStartMinute = projected.visibleStartMinute
+                    onViewportChanged?(
+                        visibleStartMinute,
+                        visibleDurationMinutes
+                    )
                     publish(projected.selectedMinute, force: false)
                     return
                 }
@@ -820,6 +831,10 @@ struct MapHomeTimeSidebar: View {
                     visibleStartMinute = MapHomeTimeSidebarMath.startMinute(
                         centerMinute: minute,
                         durationMinutes: projected.visibleDurationMinutes
+                    )
+                    onViewportChanged?(
+                        visibleStartMinute,
+                        visibleDurationMinutes
                     )
                     publish(minute, force: true)
                     dragStartMinute = nil
@@ -859,6 +874,10 @@ struct MapHomeTimeSidebar: View {
                 let base = viewportDragStartMinute ?? visibleStartMinute
                 let delta = Int((value.translation.height / max(trackHeight, 1) * CGFloat(visibleDurationMinutes)).rounded())
                 visibleStartMinute = min(max(base + delta, 0), MapHomeTimeSidebarMath.fullDayMinutes - visibleDurationMinutes)
+                onViewportChanged?(
+                    visibleStartMinute,
+                    visibleDurationMinutes
+                )
                 let fixedMinute = MapHomeTimeSidebarMath.minuteByFixedPlayhead(
                     trackHeight: trackHeight,
                     verticalInset: verticalInset,
@@ -884,6 +903,7 @@ struct MapHomeTimeSidebar: View {
             centerMinute: selected,
             durationMinutes: duration
         )
+        onViewportChanged?(visibleStartMinute, visibleDurationMinutes)
         viewportDragStartMinute = nil
         nleProjection.synchronize(with: nleState)
     }
@@ -919,6 +939,142 @@ struct MapHomeTimeSidebar: View {
         segments.isEmpty ? [.wholeDayUnconfirmed] : segments
     }
 
+}
+
+struct MapHomeWeatherSidebar: View {
+    let date: Date
+    let contexts: [WeatherContext]
+    let selectedMinute: Int
+    let language: MapHomeLanguage
+    let visibleStartMinute: Int
+    let visibleDurationMinutes: Int
+
+    private let railWidth: CGFloat = 58
+    private let verticalInset: CGFloat = 14
+    private let activeRailWidth: CGFloat = 12
+
+    private struct Entry: Identifiable {
+        let context: WeatherContext
+        let startMinute: Int
+        let endMinute: Int
+
+        var id: UUID { context.id }
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let railHeight = max(220, proxy.size.height)
+            let trackHeight = max(1, railHeight - verticalInset * 2)
+            let entries = weatherEntries
+            let window = MapHomeTimeSidebarMath.visibleWindow(
+                startMinute: visibleStartMinute,
+                durationMinutes: visibleDurationMinutes,
+                centerMinute: selectedMinute
+            )
+            let selectedDate = Calendar.autoupdatingCurrent.date(
+                byAdding: .minute,
+                value: min(max(selectedMinute, 0), 1_439),
+                to: Calendar.autoupdatingCurrent.startOfDay(for: date)
+            ) ?? date
+
+            ZStack(alignment: .topLeading) {
+                Rectangle()
+                    .fill(Color.tpWeather.opacity(0.30))
+                    .frame(width: activeRailWidth, height: trackHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                    .position(
+                        x: railWidth / 2,
+                        y: verticalInset + trackHeight / 2
+                    )
+
+                ForEach(entries) { entry in
+                    let startMinute = max(entry.startMinute, window.lowerBound)
+                    let endMinute = min(entry.endMinute, window.upperBound)
+                    let start = MapHomeTimeSidebarMath.position(
+                        minute: startMinute,
+                        window: window
+                    )
+                    let end = MapHomeTimeSidebarMath.position(
+                        minute: endMinute,
+                        window: window
+                    )
+                    let y = verticalInset + trackHeight * (start + end) / 2
+                    let height = max(2, trackHeight * (end - start))
+                    if startMinute < endMinute {
+                        let isSelected = WeatherTimelineEngine.span(for: entry.context)
+                            .contains(selectedDate)
+
+                        HStack(spacing: 2) {
+                            Image(systemName: entry.context.symbolName)
+                                .font(.system(size: 12, weight: .semibold))
+                                .symbolRenderingMode(.multicolor)
+                                .frame(width: 20)
+                            Text("\(Int(entry.context.temperatureCelsius.rounded()))°C")
+                                .font(.system(size: 9, weight: isSelected ? .bold : .medium, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(isSelected ? Color.tpReferenceRose : Color.tpWeatherDark)
+                        }
+                        .padding(.horizontal, 3)
+                        .frame(width: railWidth - 2, height: max(22, min(30, height + 8)))
+                        .background(
+                            isSelected
+                                ? Color.white.opacity(0.92)
+                                : Color.white.opacity(0.72),
+                            in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        )
+                        .overlay {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .stroke(Color.tpReferenceRose, lineWidth: 1.5)
+                            }
+                        }
+                        .position(x: railWidth / 2, y: y)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(
+                            language.text(
+                                "날씨 \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded()))도",
+                                "Weather \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded())) degrees Celsius"
+                            )
+                        )
+                        .accessibilityValue(
+                            isSelected
+                                ? language.text("선택된 시간", "Selected time")
+                                : language.text("시간 구간", "Time interval")
+                        )
+                    }
+                }
+            }
+            .frame(width: railWidth, height: railHeight)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(language.text("시간축 날씨", "Weather timeline"))
+        }
+        .frame(width: railWidth)
+    }
+
+    private var weatherEntries: [Entry] {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? date
+        return WeatherTimelineEngine.coalesced(contexts).compactMap { context in
+            let span = WeatherTimelineEngine.span(for: context)
+            guard span.end > dayStart, span.start < dayEnd else { return nil }
+            let start = max(span.start, dayStart)
+            let end = min(span.end, dayEnd)
+            let startMinute = min(
+                max(Int(start.timeIntervalSince(dayStart) / 60), 0),
+                1_439
+            )
+            let endMinute = min(
+                max(Int(ceil(end.timeIntervalSince(dayStart) / 60)), startMinute + 1),
+                1_440
+            )
+            return Entry(
+                context: context,
+                startMinute: startMinute,
+                endMinute: endMinute
+            )
+        }
+    }
 }
 
 enum MapHomeTimeSidebarMath {

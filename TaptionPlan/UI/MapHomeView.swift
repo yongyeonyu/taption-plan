@@ -56,6 +56,8 @@ struct MapHomeView: View {
     @State private var sharedZoomLevel: CGFloat = 1
     @State private var zoomResetToken = 0
     @State private var timeSidebarZoomStep = 0
+    @State private var weatherVisibleStartMinute = 0
+    @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var lastMapCameraPublishUptime: TimeInterval = 0
 
     private static let userCenterTolerance: CLLocationDistance = 120
@@ -73,6 +75,8 @@ struct MapHomeView: View {
         static let mapControlSize: CGFloat = 44
         static let mapControlIcon: CGFloat = 15
         static let timeRailWidth: CGFloat = 58
+        static let weatherRailWidth: CGFloat = 58
+        static let weatherRailSpacing: CGFloat = 4
         static let timeSidebarHandleOverflow: CGFloat = 18
         static let timeRailTopMargin: CGFloat = 18
         static let timeRailBottomMargin: CGFloat = 28
@@ -209,6 +213,8 @@ struct MapHomeView: View {
         .onChange(of: model.selectedDate) { _, _ in
             selectedTimelineMinute = nil
             isTimelineSelectionPinned = false
+            weatherVisibleStartMinute = 0
+            weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
             if Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
                currentCoordinate != nil {
                 focusUserLocation()
@@ -316,7 +322,9 @@ struct MapHomeView: View {
                 .fill(.clear)
                 .contentShape(Rectangle())
                 .frame(
-                    width: Layout.timeRailWidth
+                    width: Layout.weatherRailWidth
+                        + Layout.weatherRailSpacing
+                        + Layout.timeRailWidth
                         + Layout.timeSidebarHandleOverflow
                         + Layout.horizontalInset,
                     height: max(0, proxy.size.height - protectedTop)
@@ -525,35 +533,54 @@ struct MapHomeView: View {
             let railHeight = min(680, max(500, proxy.size.height))
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
                 let minute = timelineSelectionMinute(at: timeline.date)
-                MapHomeTimeSidebar(
-                    date: model.selectedDate,
-                    selectedMinute: Binding(
-                        get: { timelineSelectionMinute(at: timeline.date) },
-                        set: { minute in
-                            guard selectedTimelineMinute != minute else { return }
+                HStack(spacing: Layout.weatherRailSpacing) {
+                    MapHomeWeatherSidebar(
+                        date: model.selectedDate,
+                        contexts: model.snapshot.weather,
+                        selectedMinute: minute,
+                        language: language,
+                        visibleStartMinute: weatherVisibleStartMinute,
+                        visibleDurationMinutes: weatherVisibleDurationMinutes
+                    )
+                    MapHomeTimeSidebar(
+                        date: model.selectedDate,
+                        selectedMinute: Binding(
+                            get: { timelineSelectionMinute(at: timeline.date) },
+                            set: { minute in
+                                guard selectedTimelineMinute != minute else { return }
+                                isTimelineSelectionPinned = true
+                                selectedTimelineMinute = minute
+                            }
+                        ),
+                        activity: currentActivity(at: minute),
+                        segments: timeRailSegments,
+                        categoryColors: model.settings.mapCategoryColors,
+                        zoomResetToken: zoomResetToken,
+                        zoomStepToken: timeSidebarZoomStep,
+                        railWidth: Layout.timeRailWidth,
+                        onSelectionChanged: { minute in
                             isTimelineSelectionPinned = true
                             selectedTimelineMinute = minute
+                        },
+                        onViewportChanged: { start, duration in
+                            weatherVisibleStartMinute = start
+                            weatherVisibleDurationMinutes = duration
+                        },
+                        onSectionEdit: {
+                            sectionEditSelection = MapHomeSectionEditSelection(
+                                date: model.selectedDate,
+                                minute: minute,
+                                activity: currentActivity(at: minute)
+                            )
                         }
-                    ),
-                    activity: currentActivity(at: minute),
-                    segments: timeRailSegments,
-                    categoryColors: model.settings.mapCategoryColors,
-                    zoomResetToken: zoomResetToken,
-                    zoomStepToken: timeSidebarZoomStep,
-                    railWidth: Layout.timeRailWidth,
-                    onSelectionChanged: { minute in
-                        isTimelineSelectionPinned = true
-                        selectedTimelineMinute = minute
-                    },
-                    onSectionEdit: {
-                        sectionEditSelection = MapHomeSectionEditSelection(
-                            date: model.selectedDate,
-                            minute: minute,
-                            activity: currentActivity(at: minute)
-                        )
-                    }
+                    )
+                }
+                .frame(
+                    width: Layout.weatherRailWidth
+                        + Layout.weatherRailSpacing
+                        + Layout.timeRailWidth,
+                    height: railHeight
                 )
-                .frame(width: Layout.timeRailWidth, height: railHeight)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
             }
         }
