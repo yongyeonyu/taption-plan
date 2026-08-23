@@ -300,6 +300,123 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testSidebarDragMovementDoesNotDependOn240HzSampleCount() {
+        let handleBase = MapHomeTimeSidebarNLEState(
+            selectedMinute: 720,
+            visibleStartMinute: 0,
+            visibleDurationMinutes: 1_440
+        )
+        let viewportBase = MapHomeTimeSidebarNLEState(
+            selectedMinute: 720,
+            visibleStartMinute: 690,
+            visibleDurationMinutes: 60
+        )
+        let viewportProjection: (CGFloat) -> MapHomeTimeSidebarNLEState = { translation in
+            MapHomeTimeSidebarViewportProjection.state(
+                from: viewportBase,
+                translation: translation,
+                trackHeight: 600,
+                verticalInset: 14,
+                maxMinute: 1_439,
+                sensitivity: MapHomeTimeSidebarMath.standardDragSensitivity
+            )
+        }
+
+        let finalTranslation: CGFloat = 60
+        let viewportAt240Hz = stride(from: 1, through: 240, by: 1)
+            .map { viewportProjection(CGFloat($0) / 4) }
+            .last
+        let viewportAt60Hz = stride(from: 4, through: 240, by: 4)
+            .map { viewportProjection(CGFloat($0) / 4) }
+            .last
+
+        XCTAssertEqual(viewportAt240Hz, viewportAt60Hz)
+        XCTAssertEqual(viewportAt240Hz, viewportProjection(finalTranslation))
+        XCTAssertEqual(viewportAt240Hz?.visibleStartMinute, 700)
+
+        XCTAssertEqual(MapHomeTimeSidebarMath.standardDragSensitivity, 1.6)
+        XCTAssertEqual(MapHomeTimeSidebarMath.precisionDragSensitivity, 0.25)
+        for sensitivity in [
+            MapHomeTimeSidebarMath.standardDragSensitivity,
+            MapHomeTimeSidebarMath.precisionDragSensitivity,
+        ] {
+            let handleProjection: (CGFloat) -> MapHomeTimeSidebarNLEState = { translation in
+                MapHomeTimeSidebarDragProjection.state(
+                    from: handleBase,
+                    translation: translation,
+                    trackHeight: 600,
+                    maxMinute: 1_439,
+                    sensitivity: sensitivity
+                )
+            }
+            let handleAt240Hz = stride(from: 1, through: 240, by: 1)
+                .map { handleProjection(CGFloat($0) / 4) }
+                .last
+            let handleAt60Hz = stride(from: 4, through: 240, by: 4)
+                .map { handleProjection(CGFloat($0) / 4) }
+                .last
+
+            XCTAssertEqual(handleAt240Hz, handleAt60Hz)
+            XCTAssertEqual(handleAt240Hz, handleProjection(finalTranslation))
+
+            guard sensitivity == MapHomeTimeSidebarMath.standardDragSensitivity else {
+                continue
+            }
+            var incorrectlyRebased = handleBase
+            for sample in 1...240 {
+                incorrectlyRebased = MapHomeTimeSidebarDragProjection.state(
+                    from: incorrectlyRebased,
+                    translation: CGFloat(sample) / 4,
+                    trackHeight: 600,
+                    maxMinute: 1_439,
+                    sensitivity: sensitivity
+                )
+            }
+            XCTAssertNotEqual(incorrectlyRebased, handleProjection(finalTranslation))
+        }
+    }
+
+    func testMapHomeOverlayUsesSharedBottomMarginAndUniformControlSpacing() {
+        XCTAssertEqual(MapHomeOverlayLayoutMath.sharedBottomMargin, 28)
+        XCTAssertEqual(MapHomeOverlayLayoutMath.controlSize, 44)
+        XCTAssertEqual(MapHomeOverlayLayoutMath.controlSpacing, 9)
+        XCTAssertEqual(
+            MapHomeOverlayLayoutMath.controlStackHeight(buttonCount: 4),
+            203
+        )
+        XCTAssertEqual(
+            MapHomeOverlayLayoutMath.railHeight(availableHeight: 720),
+            680
+        )
+        XCTAssertEqual(
+            MapHomeOverlayLayoutMath.railHeight(availableHeight: 620),
+            620
+        )
+    }
+
+    func testMapHomeSidebarPinchTraversesSeveralZoomStepsPerGesture() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarPinchMath.stepOffset(magnification: 1),
+            0
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarPinchMath.stepOffset(magnification: 1.2),
+            1
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarPinchMath.stepOffset(magnification: 2),
+            4
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarPinchMath.stepOffset(magnification: 0.5),
+            -4
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarPinchMath.stepOffset(magnification: .nan),
+            0
+        )
+    }
+
     func testExpandedSidebarRulerUsesEveryVisibleMinute() {
         let marks = MapHomeTimeSidebarMath.visibleMinuteMarks(window: 120...180)
 
@@ -464,12 +581,17 @@ final class TimeScaleTests: XCTestCase {
 
     func testMapOverlayPinchRoutesOnlyCoveredControlsOutsideSidebar() {
         let viewport = CGSize(width: 390, height: 844)
+        let topOverlayHeight = MapHomeOverlayLayoutMath.topOverlayHeight(
+            headerFrame: CGRect(x: 10, y: 2, width: 370, height: 46),
+            searchFrame: CGRect(x: 10, y: 56, width: 185, height: 42),
+            fallback: 104
+        )
         let route: (CGPoint) -> Bool = { point in
             MapHomeOverlayPinchMath.shouldForwardToMap(
                 startLocation: point,
                 viewportSize: viewport,
                 sidebarWidth: 126,
-                topOverlayHeight: 190,
+                topOverlayHeight: topOverlayHeight,
                 controlsWidth: 82,
                 controlsHeight: 250
             )
@@ -477,8 +599,17 @@ final class TimeScaleTests: XCTestCase {
 
         XCTAssertTrue(route(CGPoint(x: 180, y: 80)))
         XCTAssertTrue(route(CGPoint(x: 45, y: 700)))
-        XCTAssertFalse(route(CGPoint(x: 180, y: 400)))
+        XCTAssertFalse(route(CGPoint(x: 180, y: 120)))
         XCTAssertFalse(route(CGPoint(x: 330, y: 80)))
+        XCTAssertEqual(topOverlayHeight, 98)
+        XCTAssertEqual(
+            MapHomeOverlayLayoutMath.topOverlayHeight(
+                headerFrame: .zero,
+                searchFrame: .zero,
+                fallback: 104
+            ),
+            104
+        )
     }
 
     func testMapOverlayPinchPreservesCameraAndPublishesFinalValue() {
@@ -1315,6 +1446,65 @@ final class TimeScaleTests: XCTestCase {
             ),
             0.5,
             accuracy: 0.000_001
+        )
+    }
+
+    func testMapHomeDayPlaybackMapsTwentyFourSecondsToTwentyFourHours() {
+        XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 0), 0)
+        XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 1), 60)
+        XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 12), 720)
+        XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 23.999), 1_439)
+        XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 24), 1_440)
+        XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 30), 1_440)
+    }
+
+    func testMapHomeSectionBoundaryDragClampsWithoutCrossingOtherEdge() {
+        let range = 300...900
+        XCTAssertEqual(
+            MapHomeSectionBoundaryMath.minute(
+                baseMinute: 480,
+                translation: -500,
+                trackHeight: 500,
+                visibleRange: range,
+                limit: 600,
+                isStart: true
+            ),
+            300
+        )
+        XCTAssertEqual(
+            MapHomeSectionBoundaryMath.minute(
+                baseMinute: 600,
+                translation: -500,
+                trackHeight: 500,
+                visibleRange: range,
+                limit: 480,
+                isStart: false
+            ),
+            481
+        )
+    }
+
+    func testMapHomeSectionBoundaryPublishesAtSixtyHertzAndFlushesFinalValue() {
+        XCTAssertFalse(
+            MapHomeSectionBoundaryMath.shouldPublish(
+                lastUptime: 10,
+                currentUptime: 10.01,
+                isFinal: false
+            )
+        )
+        XCTAssertTrue(
+            MapHomeSectionBoundaryMath.shouldPublish(
+                lastUptime: 10,
+                currentUptime: 10.02,
+                isFinal: false
+            )
+        )
+        XCTAssertTrue(
+            MapHomeSectionBoundaryMath.shouldPublish(
+                lastUptime: 10,
+                currentUptime: 10.001,
+                isFinal: true
+            )
         )
     }
 }

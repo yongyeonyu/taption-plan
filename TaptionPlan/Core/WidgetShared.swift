@@ -94,6 +94,55 @@ struct TaptionActivityAttributes: ActivityAttributes {
     var planID: UUID
 }
 
+struct SensorCollectionActivityAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        var startedAt: Date
+        var lastSavedAt: Date?
+        var collectionKinds: [String]
+        var isCollecting: Bool
+
+        init(
+            startedAt: Date,
+            lastSavedAt: Date?,
+            collectionKinds: [String],
+            isCollecting: Bool
+        ) {
+            self.startedAt = startedAt
+            self.lastSavedAt = lastSavedAt
+            self.collectionKinds = collectionKinds
+            self.isCollecting = isCollecting
+        }
+    }
+
+    var sessionID: UUID
+}
+
+enum SensorCollectionActivityPolicy {
+    static let maximumDuration: TimeInterval = 8 * 3_600
+    static let minimumUpdateInterval: TimeInterval = 15
+
+    static func canStart(
+        isForeground: Bool,
+        intervalSeconds: Int,
+        activitiesEnabled: Bool
+    ) -> Bool {
+        isForeground && intervalSeconds == 1 && activitiesEnabled
+    }
+
+    static func expirationDate(startedAt: Date) -> Date {
+        startedAt.addingTimeInterval(maximumDuration)
+    }
+
+    static func isExpired(startedAt: Date, now: Date) -> Bool {
+        now >= expirationDate(startedAt: startedAt)
+    }
+
+    static func shouldPublish(lastPublishedAt: Date?, now: Date) -> Bool {
+        guard let lastPublishedAt else { return true }
+        return now.timeIntervalSince(lastPublishedAt) >= minimumUpdateInterval
+    }
+}
+
 enum TaptionWidgetCommandKind: String, Codable, CaseIterable, Sendable {
     case complete
     case postponeThirtyMinutes
@@ -148,6 +197,25 @@ enum TaptionWidgetLane: String, Codable, CaseIterable, Sendable {
 
     var title: String {
         rowKind?.title ?? "액션"
+    }
+
+    var localizedTitle: String {
+        switch self {
+        case .schedule:
+            AppLanguagePreference.text(korean: "일정", english: "Schedule")
+        case .location:
+            AppLanguagePreference.text(korean: "위치", english: "Location")
+        case .movement:
+            AppLanguagePreference.text(korean: "이동", english: "Movement")
+        case .sleep:
+            AppLanguagePreference.text(korean: "수면", english: "Sleep")
+        case .activity:
+            AppLanguagePreference.text(korean: "활동", english: "Activity")
+        case .appUsage:
+            AppLanguagePreference.text(korean: "어플", english: "Apps")
+        case .action:
+            AppLanguagePreference.text(korean: "액션", english: "Actions")
+        }
     }
 
     var systemImage: String {

@@ -39,7 +39,7 @@ enum RecordAnalysisScope: Sendable {
 
 /// 공용 타깃(위젯 포함)이 기록을 합칠 때 쓰는 문자열 기반 정규화기다.
 /// 상세 문맥은 iPhone 앱에서 더 풍부하게 보정하지만, 모든 타깃이 최소한
-/// 같은 여덟 상위 분류를 계산하도록 의존성을 작게 유지한다.
+/// 같은 상위 분류를 계산하도록 의존성을 작게 유지한다.
 enum RecordAnalysisCategoryNormalizer {
     static func categoryID(
         for rawCategoryID: String,
@@ -48,6 +48,8 @@ enum RecordAnalysisCategoryNormalizer {
     ) -> String {
         let value = [title, behavior ?? ""].joined(separator: " ")
             .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+        let rawValue = rawCategoryID.lowercased()
             .replacingOccurrences(of: " ", with: "")
         if rawCategoryID == "unconfirmed"
             || value.contains("unconfirmed-activity")
@@ -72,6 +74,18 @@ enum RecordAnalysisCategoryNormalizer {
         }
         if value.contains("hobby") || value.contains("취미") {
             return "hobby"
+        }
+        if rawValue.contains("meal") || rawValue.contains("eating")
+            || rawValue.contains("cooking")
+            || value.contains("meal") || value.contains("eating")
+            || value.contains("dining") || value.contains("food")
+            || value.contains("cooking") || value.contains("식사")
+            || value.contains("밥") || value.contains("요리")
+            || value.contains("음식") || value.contains("먹")
+            || value.contains("아침") || value.contains("점심")
+            || value.contains("저녁") || value.contains("간식")
+            || value.contains("외식") || value.contains("식당") {
+            return "eating"
         }
         if value.contains("exercise") || value.contains("운동") {
             return "exercise"
@@ -197,6 +211,7 @@ enum RecordClassificationCatalog {
             category("hobby", "취미", "paintpalette.fill"),
             category("sleep", "수면", "moon.zzz.fill"),
             category("movement", "이동", "figure.walk.motion"),
+            category("eating", "식사", "fork.knife"),
             category("exercise", "운동", "figure.strengthtraining.traditional"),
             category("unconfirmed", "미확인", "questionmark.circle.fill"),
         ]
@@ -3093,6 +3108,13 @@ struct WidgetSnapshot: Codable, Hashable, Sendable {
     var hidesSensitiveContent: Bool
 }
 
+struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var title: String
+    var systemImage: String
+    var hex: String
+}
+
 struct AppFeatureSettings: Codable, Hashable, Sendable {
     var startScale: TimelineLevel
     var rememberLastScale: Bool
@@ -3106,9 +3128,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var backgroundPreciseLocationEnabled: Bool
     var sensorCollectionProfile: SensorCollectionProfile
     var gpsLoggingPreferences: GPSLoggingPreferences
-    /// Optional user-selected overrides for the eight automatic major
+    /// Optional user-selected overrides for the automatic major
     /// categories. Missing values intentionally keep the shared defaults.
     var mapCategoryColors: [String: String]
+    var mapUserActivityCategories: [MapUserActivityCategory]
     var watchAccelerationProfile: TaptionWatchAccelerationProfile
     var watchDataSyncProfile: TaptionWatchDataSyncProfile
     var floorCalibration: FloorCalibration?
@@ -3147,6 +3170,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         sensorCollectionProfile: .balanced,
         gpsLoggingPreferences: .standard,
         mapCategoryColors: [:],
+        mapUserActivityCategories: [],
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,
         floorCalibration: nil,
@@ -3183,6 +3207,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         sensorCollectionProfile: SensorCollectionProfile,
         gpsLoggingPreferences: GPSLoggingPreferences = .standard,
         mapCategoryColors: [String: String] = [:],
+        mapUserActivityCategories: [MapUserActivityCategory] = [],
         watchAccelerationProfile: TaptionWatchAccelerationProfile = .off,
         watchDataSyncProfile: TaptionWatchDataSyncProfile = .off,
         floorCalibration: FloorCalibration? = nil,
@@ -3216,6 +3241,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.gpsLoggingPreferences = gpsLoggingPreferences
         self.mapCategoryColors = Self.normalizedMapCategoryColors(
             mapCategoryColors
+        )
+        self.mapUserActivityCategories = Self.normalizedMapUserActivityCategories(
+            mapUserActivityCategories
         )
         self.watchAccelerationProfile = watchAccelerationProfile
         self.watchDataSyncProfile = watchDataSyncProfile
@@ -3255,6 +3283,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case sensorCollectionProfile
         case gpsLoggingPreferences
         case mapCategoryColors
+        case mapUserActivityCategories
         case watchAccelerationProfile
         case watchDataSyncProfile
         case floorCalibration
@@ -3331,6 +3360,12 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                 [String: String].self,
                 forKey: .mapCategoryColors
             ) ?? defaults.mapCategoryColors
+        )
+        mapUserActivityCategories = Self.normalizedMapUserActivityCategories(
+            try values.decodeIfPresent(
+                [MapUserActivityCategory].self,
+                forKey: .mapUserActivityCategories
+            ) ?? defaults.mapUserActivityCategories
         )
         watchAccelerationProfile = try values.decodeIfPresent(
             TaptionWatchAccelerationProfile.self,
@@ -3446,6 +3481,29 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                       $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
                   }) else { continue }
             result.append(trimmed)
+        }
+        return result
+    }
+
+    static func normalizedMapUserActivityCategories(
+        _ categories: [MapUserActivityCategory]
+    ) -> [MapUserActivityCategory] {
+        var result: [MapUserActivityCategory] = []
+        for category in categories {
+            var value = category
+            value.title = value.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            value.systemImage = value.systemImage.trimmingCharacters(in: .whitespacesAndNewlines)
+            value.hex = value.hex.uppercased()
+            guard !value.title.isEmpty,
+                  !value.systemImage.isEmpty,
+                  value.hex.count == 7,
+                  value.hex.first == "#",
+                  value.hex.dropFirst().allSatisfy({ $0.isHexDigit }),
+                  !result.contains(where: {
+                      $0.title.localizedCaseInsensitiveCompare(value.title) == .orderedSame
+                  })
+            else { continue }
+            result.append(value)
         }
         return result
     }

@@ -67,6 +67,15 @@
       ]
     },
     {
+      "id": "eating",
+      "title": "식사",
+      "systemImage": "fork.knife",
+      "details": [
+        { "id": "eating.meal", "title": "식사", "behavior": "meal", "systemImage": "fork.knife" },
+        { "id": "eating.cooking", "title": "요리", "behavior": "cooking", "systemImage": "frying.pan" }
+      ]
+    },
+    {
       "id": "exercise",
       "title": "운동",
       "systemImage": "figure.strengthtraining.traditional",

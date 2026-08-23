@@ -94,8 +94,18 @@ private struct TaptionWatchStatusWidget: Widget {
             TaptionWatchWidgetView(entry: $0)
                 .containerBackground(.clear, for: .widget)
         }
-        .configurationDisplayName("Taption 측정")
-        .description("지금 감지된 활동과 오늘 활동 요약을 표시합니다.")
+        .configurationDisplayName(
+            AppLanguagePreference.text(
+                korean: "Taption 측정",
+                english: "Taption Measurement"
+            )
+        )
+        .description(
+            AppLanguagePreference.text(
+                korean: "지금 감지된 활동과 오늘 활동 요약을 표시합니다.",
+                english: "Shows the detected activity and today's summary."
+            )
+        )
         .supportedFamilies([
             .accessoryRectangular,
             .accessoryCircular,
@@ -112,6 +122,14 @@ private struct TaptionWatchWidgetView: View {
     /// 좁은 실행 예산을 넘긴다. 한 번만 읽어 두고 재사용한다.
     private let resolvedPayload: TaptionWatchPayload?
     private let resolvedMeasurement: TaptionWatchMeasurementSnapshot?
+
+    private var language: AppLanguagePreference.ResolvedLanguage {
+        AppLanguagePreference.resolve(rawValue: resolvedPayload?.languagePreference)
+    }
+
+    private func text(_ korean: String, _ english: String) -> String {
+        language == .korean ? korean : english
+    }
 
     init(entry: TaptionWatchWidgetEntry) {
         self.entry = entry
@@ -146,14 +164,17 @@ private struct TaptionWatchWidgetView: View {
     }
 
     var body: some View {
-        switch family {
-        case .accessoryCircular:
-            circularView
-        case .accessoryInline:
-            inlineView
-        default:
-            rectangularView
+        Group {
+            switch family {
+            case .accessoryCircular:
+                circularView
+            case .accessoryInline:
+                inlineView
+            default:
+                rectangularView
+            }
         }
+        .environment(\.locale, language.locale)
     }
 
     private var rectangularView: some View {
@@ -253,12 +274,19 @@ private struct TaptionWatchWidgetView: View {
     private var playbackDate: Date { max(entry.date, .now) }
 
     private var alert: TaptionWatchAlert? {
-        TaptionWatchAlertPolicy.primary(for: measurement, now: playbackDate)
+        TaptionWatchAlertPolicy.primary(
+            for: measurement,
+            now: playbackDate,
+            language: language
+        )
     }
 
     private var sourceTitle: String {
-        if confirmationSuggestion != nil { return "확인 요청" }
-        return measurement?.source.title ?? "측정 대기"
+        if confirmationSuggestion != nil {
+            return text("확인 요청", "Confirmation requested")
+        }
+        return measurement?.source.localizedTitle(language)
+            ?? text("측정 대기", "Waiting to measure")
     }
 
     private var sourceSymbolName: String {
@@ -271,14 +299,17 @@ private struct TaptionWatchWidgetView: View {
 
     private var activityTitle: String {
         if let suggestion = confirmationSuggestion {
-            return "\(suggestion.proposedBehavior.title) 맞나요?"
+            return text(
+                "\(suggestion.proposedBehavior.localizedTitle(.korean)) 맞나요?",
+                "Was this \(suggestion.proposedBehavior.localizedTitle(.english))?"
+            )
         }
         guard let behavior = measurement?.behavior else {
             return measurement?.isRecordingRequested == false
-                ? "기록 꺼짐"
-                : "측정 대기"
+                ? text("기록 꺼짐", "Recording off")
+                : text("측정 대기", "Waiting to measure")
         }
-        return behavior.title
+        return behavior.localizedTitle(language)
     }
 
     private var confidence: Double {
@@ -287,19 +318,29 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private var confidenceText: String {
-        if confirmationSuggestion != nil { return "Watch에서 확인" }
-        guard measurement?.behavior != nil else {
-            return "손목 움직임을 모으는 중"
+        if confirmationSuggestion != nil {
+            return text("Watch에서 확인", "Confirm on Watch")
         }
-        return "신뢰도 \(Int((confidence * 100).rounded()))%"
+        guard measurement?.behavior != nil else {
+            return text("손목 움직임을 모으는 중", "Collecting wrist motion")
+        }
+        return language == .korean
+            ? "신뢰도 \(Int((confidence * 100).rounded()))%"
+            : "Confidence \(Int((confidence * 100).rounded()))%"
     }
 
     private var freshnessText: String {
         guard let measuredAt = measurement?.measuredAt else { return "—" }
         let seconds = Int(max(0, playbackDate.timeIntervalSince(measuredAt)))
-        if seconds < 60 { return "방금" }
-        if seconds < 3_600 { return "\(seconds / 60)분 전" }
-        return "\(seconds / 3_600)시간 전"
+        if seconds < 60 { return text("방금", "Just now") }
+        if seconds < 3_600 {
+            return language == .korean
+                ? "\(seconds / 60)분 전"
+                : "\(seconds / 60) min ago"
+        }
+        return language == .korean
+            ? "\(seconds / 3_600)시간 전"
+            : "\(seconds / 3_600) hr ago"
     }
 
     /// 곧 울릴 계획 알림. iPhone이 예약한 알림이 워치로 전달되기 전에도
@@ -366,6 +407,14 @@ private struct TaptionWatchWidgetView: View {
     }
 
     private func duration(_ minutes: Int) -> String {
+        if language == .english {
+            if minutes < 60 { return "\(minutes) min" }
+            let hours = minutes / 60
+            let remainder = minutes % 60
+            return remainder == 0
+                ? "\(hours) hr"
+                : "\(hours) hr \(remainder) min"
+        }
         if minutes < 60 { return "\(minutes)분" }
         let hours = minutes / 60
         let remainder = minutes % 60
@@ -383,13 +432,19 @@ private extension TaptionWatchPayload {
             items: [
                 TaptionWatchPlanItem(
                     id: UUID(),
-                    title: "신제품 기획",
+                    title: AppLanguagePreference.text(
+                        korean: "신제품 기획",
+                        english: "New product planning"
+                    ),
                     categoryID: "project",
                     startsAt: now.addingTimeInterval(45 * 60),
                     endsAt: now.addingTimeInterval(105 * 60),
                     status: "planned",
                     actualStartedAt: nil,
-                    categoryName: "프로젝트",
+                    categoryName: AppLanguagePreference.text(
+                        korean: "프로젝트",
+                        english: "Project"
+                    ),
                     categoryHex: "7B57B2"
                 ),
             ],

@@ -1,0 +1,170 @@
+{
+  "sourceLanguage" : "ko",
+  "strings" : {
+    "iPhone 실시간 연결" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone connected"
+          }
+        }
+      }
+    },
+    "Taption Plan" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Plan"
+          }
+        }
+      }
+    },
+    "다른 활동" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another activity"
+          }
+        }
+      }
+    },
+    "동작 권한 없음" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion access unavailable"
+          }
+        }
+      }
+    },
+    "맞아요" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That's right"
+          }
+        }
+      }
+    },
+    "백그라운드 동기화" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Background sync"
+          }
+        }
+      }
+    },
+    "센서 수집 · iPhone 전송" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collect sensors · Send to iPhone"
+          }
+        }
+      }
+    },
+    "실제로 무엇을 했나요?" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What did you actually do?"
+          }
+        }
+      }
+    },
+    "연결 대기" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for connection"
+          }
+        }
+      }
+    },
+    "특정 가능한 활동이 생기면 여기에서 확인을 요청합니다." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When an activity can be identified, we will ask you to confirm it here."
+          }
+        }
+      }
+    },
+    "확인할 활동 없음" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No activity to confirm"
+          }
+        }
+      }
+    },
+    "확인해 주세요" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please check"
+          }
+        }
+      }
+    },
+    "확인했습니다" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmed"
+          }
+        }
+      }
+    },
+    "활동 선택" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose activity"
+          }
+        }
+      }
+    },
+    "활동 확인" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm activity"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

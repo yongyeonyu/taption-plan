@@ -4,8 +4,14 @@ struct AppShellView: View {
     private static let legacyUIEnabled = false
 
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(
+        AppLanguagePreference.sharedDefaultsKey,
+        store: UserDefaults(suiteName: AppLanguagePreference.appGroupIdentifier)
+    ) private var languageRawValue = AppLanguagePreference.current.rawValue
     @State private var model = AppModel()
     @State private var proAccess = TaptionProAccessController()
+    @State private var sensorLiveActivityController =
+        SensorCollectionLiveActivityController()
     @State private var showsMapHome = true
     @State private var isSecurityStateReady = false
     @State private var lockGeneration = 0
@@ -91,6 +97,7 @@ struct AppShellView: View {
                 showsMapHome = false
                 await model.openDeepLink(url)
             }
+            await reconcileSensorLiveActivity()
         }
         .onOpenURL { url in
             handleOpenURL(url)
@@ -113,7 +120,17 @@ struct AppShellView: View {
                 } else {
                     await model.suspendForCommerceLock()
                 }
+                await reconcileSensorLiveActivity()
             }
+        }
+        .onChange(of: model.sensorCollectionSessionState) { _, _ in
+            Task { await reconcileSensorLiveActivity() }
+        }
+        .onChange(of: model.lastSensorSavedAt) { _, _ in
+            Task { await reconcileSensorLiveActivity() }
+        }
+        .onChange(of: model.settings.gpsLoggingPreferences) { _, _ in
+            Task { await reconcileSensorLiveActivity() }
         }
         .alert(
             "확인해 주세요",
@@ -137,11 +154,24 @@ struct AppShellView: View {
             .easeInOut(duration: 0.25),
             value: model.floorCalibrationNotice
         )
+        .environment(\.locale, appLocale)
+    }
+
+    private var appLocale: Locale {
+        switch AppLanguagePreference.resolve(rawValue: languageRawValue) {
+        case .korean: Locale(identifier: "ko_KR")
+        case .english: Locale(identifier: "en_US")
+        }
     }
 
     private var userFacingErrorMessage: some View {
         let message = model.userFacingError ?? ""
-        return Text(message)
+        return Text(
+            AppLanguagePreference.localized(
+                message,
+                rawPreference: languageRawValue
+            )
+        )
     }
 
     private var shouldHideAppSnapshot: Bool {
@@ -182,7 +212,12 @@ struct AppShellView: View {
     @ViewBuilder
     private var floorCalibrationNotice: some View {
         if let notice = model.floorCalibrationNotice {
-            Text(notice)
+            Text(
+                AppLanguagePreference.localized(
+                    notice,
+                    rawPreference: languageRawValue
+                )
+            )
                 .font(.taption(size: 14))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
@@ -235,7 +270,53 @@ struct AppShellView: View {
             @unknown default:
                 break
             }
+            await reconcileSensorLiveActivity()
         }
+    }
+
+    private func reconcileSensorLiveActivity() async {
+        let kinds = sensorCollectionKinds
+        guard proAccess.grantsAccess,
+              model.sensorCollectionSessionState == .collecting,
+              let session = model.activeTrackingSession else {
+            await sensorLiveActivityController.removeExpired()
+            await sensorLiveActivityController.stop(
+                lastSavedAt: model.lastSensorSavedAt,
+                collectionKinds: kinds
+            )
+            return
+        }
+
+        _ = try? await sensorLiveActivityController.reconcile(
+            sessionID: session.id,
+            startedAt: session.startedAt,
+            lastSavedAt: model.lastSensorSavedAt,
+            collectionKinds: kinds,
+            isCollecting: true,
+            isForeground: scenePhase == .active,
+            intervalSeconds: model.settings.gpsLoggingPreferences
+                .effectiveIntervalSeconds
+        )
+    }
+
+    private var sensorCollectionKinds: [String] {
+        var kinds = ["location"]
+        if let availability = model.sensorAvailability {
+            if availability.motionActivity || availability.deviceMotion {
+                kinds.append("motion")
+            }
+            if availability.relativeAltitude {
+                kinds.append("altitude")
+            }
+            if availability.stepCounting {
+                kinds.append("steps")
+            }
+        }
+        if model.settings.healthEnabled {
+            kinds.append("health")
+        }
+        kinds.append("wifi")
+        return kinds
     }
 
     private func handleOpenURL(_ url: URL) {
@@ -693,6 +774,10 @@ struct TaptionProAccessView: View {
     let allowsDismiss: Bool
 
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(
+        AppLanguagePreference.sharedDefaultsKey,
+        store: UserDefaults(suiteName: AppLanguagePreference.appGroupIdentifier)
+    ) private var languageRawValue = AppLanguagePreference.current.rawValue
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -744,10 +829,22 @@ struct TaptionProAccessView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 11) {
-                    featureRow("cloud.sun.fill", "시간대별 날씨 기록")
-                    featureRow("location.fill", "실시간 GPS와 이동 경로")
-                    featureRow("tram.fill", "지하철·버스 자동 판정")
-                    featureRow("icloud.fill", "iCloud 백업과 기기 연동")
+                    featureRow(
+                        "cloud.sun.fill",
+                        text("시간대별 날씨 기록", "Hourly weather records")
+                    )
+                    featureRow(
+                        "location.fill",
+                        text("실시간 GPS와 이동 경로", "Live GPS and travel routes")
+                    )
+                    featureRow(
+                        "tram.fill",
+                        text("지하철·버스 자동 판정", "Automatic subway and bus detection")
+                    )
+                    featureRow(
+                        "icloud.fill",
+                        text("iCloud 백업과 기기 연동", "iCloud backup and device sync")
+                    )
                 }
                 .padding(18)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -783,7 +880,7 @@ struct TaptionProAccessView: View {
         ) {
             Button("확인") { controller.message = nil }
         } message: {
-            Text(controller.message ?? "")
+            proMessage
         }
     }
 
@@ -792,29 +889,55 @@ struct TaptionProAccessView: View {
         case .loading:
             "Taption Plan Pro"
         case .trialNotStarted:
-            "14일 무료 체험"
+            text("14일 무료 체험", "14-day free trial")
         case .trial(_, let remainingDays):
-            "14일 무료 체험 · " + String(remainingDays) + "일 남음"
+            text(
+                "14일 무료 체험 · \(remainingDays)일 남음",
+                "14-day free trial · \(remainingDays) days left"
+            )
         case .purchased:
-            "Pro를 영구 이용 중입니다"
+            text("Pro를 영구 이용 중입니다", "You own Pro permanently")
         case .expired:
-            "14일 무료 체험이 종료되었습니다"
+            text("14일 무료 체험이 종료되었습니다", "Your 14-day free trial has ended")
         }
     }
 
     private var detail: String {
         switch controller.state {
         case .loading:
-            "구매 및 체험 상태를 확인하고 있습니다."
+            text(
+                "구매 및 체험 상태를 확인하고 있습니다.",
+                "Checking your purchase and trial status."
+            )
         case .trialNotStarted:
-            "버튼을 누르면 14일 무료 체험이 시작됩니다. 자동 결제는 없습니다."
+            text(
+                "버튼을 누르면 14일 무료 체험이 시작됩니다. 자동 결제는 없습니다.",
+                "Tap the button to start a 14-day free trial. You will not be charged automatically."
+            )
         case .trial:
-            "14일 무료 체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다."
+            text(
+                "14일 무료 체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다.",
+                "The trial does not renew automatically. A single purchase unlocks Pro permanently."
+            )
         case .purchased:
-            "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다."
+            text(
+                "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다.",
+                "Keep using every feature with no additional payment or renewal."
+            )
         case .expired:
-            "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요."
+            text(
+                "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요.",
+                "Purchase Pro once or restore an existing purchase to continue."
+            )
         }
+    }
+
+    private func text(_ korean: String, _ english: String) -> String {
+        AppLanguagePreference.text(
+            korean: korean,
+            english: english,
+            rawPreference: languageRawValue
+        )
     }
 
     @ViewBuilder
@@ -871,6 +994,46 @@ struct TaptionProAccessView: View {
 
     private var purchasePrice: String {
         controller.product?.displayPrice ?? "US $0.99"
+    }
+
+    @ViewBuilder
+    private var proMessage: some View {
+        switch controller.message {
+        case .trialStarted:
+            Text(text("14일 무료 체험이 시작되었습니다.", "Your 14-day free trial has started."))
+        case .trialAlreadyUsed:
+            Text(text(
+                "이 Apple 계정 또는 기기에서는 14일 무료 체험을 이미 사용했습니다.",
+                "The 14-day free trial has already been used with this Apple Account or device."
+            ))
+        case .purchaseCompleted:
+            Text(text("Pro 영구 구매가 완료되었습니다.", "Your permanent Pro purchase is complete."))
+        case .purchasePending:
+            Text(text("구매 승인을 기다리고 있습니다.", "Waiting for purchase approval."))
+        case .purchaseUnavailable:
+            Text(text(
+                "App Store에서 구매 항목을 아직 불러오지 못했습니다.",
+                "The purchase is not available from the App Store yet."
+            ))
+        case .receiptVerificationFailed:
+            Text(text("구매 영수증을 확인하지 못했습니다.", "The purchase receipt could not be verified."))
+        case .purchaseFailed:
+            Text(text(
+                "구매를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+                "The purchase could not be completed. Please try again later."
+            ))
+        case .restoreCompleted:
+            Text(text("구매 내역을 복원했습니다.", "Your purchase was restored."))
+        case .restoreNotFound:
+            Text(text("복원할 Pro 구매 내역이 없습니다.", "No Pro purchase was found to restore."))
+        case .restoreFailed:
+            Text(text(
+                "구매 내역을 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+                "Your purchase could not be restored. Please try again later."
+            ))
+        case nil:
+            EmptyView()
+        }
     }
 
     private func featureRow(_ icon: String, _ title: String) -> some View {

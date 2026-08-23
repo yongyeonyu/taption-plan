@@ -7,6 +7,156 @@ enum LiveActivityError: Error, Equatable {
     case missingActivity
 }
 
+enum SensorCollectionLiveActivityError: Error, Equatable {
+    case unavailable
+}
+
+actor SensorCollectionLiveActivityController {
+    private var activity: Activity<SensorCollectionActivityAttributes>?
+    private var lastPublishedAt: Date?
+
+    @discardableResult
+    func reconcile(
+        sessionID: UUID,
+        startedAt: Date,
+        lastSavedAt: Date?,
+        collectionKinds: [String],
+        isCollecting: Bool,
+        isForeground: Bool,
+        intervalSeconds: Int,
+        now: Date = .now
+    ) async throws -> String? {
+        await recoverAndRemoveDuplicates(
+            sessionID: sessionID,
+            now: now
+        )
+
+        guard isCollecting, intervalSeconds == 1,
+              !SensorCollectionActivityPolicy.isExpired(
+                startedAt: startedAt,
+                now: now
+              ) else {
+            await stop(
+                lastSavedAt: lastSavedAt,
+                collectionKinds: collectionKinds,
+                now: now
+            )
+            return nil
+        }
+
+        let state = SensorCollectionActivityAttributes.ContentState(
+            startedAt: startedAt,
+            lastSavedAt: lastSavedAt,
+            collectionKinds: collectionKinds,
+            isCollecting: true
+        )
+        let staleDate = SensorCollectionActivityPolicy.expirationDate(
+            startedAt: startedAt
+        )
+
+        if let activity {
+            guard SensorCollectionActivityPolicy.shouldPublish(
+                lastPublishedAt: lastPublishedAt,
+                now: now
+            ) else { return activity.id }
+            await activity.update(
+                ActivityContent(state: state, staleDate: staleDate)
+            )
+            lastPublishedAt = now
+            return activity.id
+        }
+
+        let activitiesEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
+        guard SensorCollectionActivityPolicy.canStart(
+            isForeground: isForeground,
+            intervalSeconds: intervalSeconds,
+            activitiesEnabled: activitiesEnabled
+        ) else {
+            return nil
+        }
+
+        let newActivity = try Activity.request(
+            attributes: SensorCollectionActivityAttributes(sessionID: sessionID),
+            content: ActivityContent(state: state, staleDate: staleDate),
+            pushType: nil
+        )
+        activity = newActivity
+        lastPublishedAt = now
+        return newActivity.id
+    }
+
+    func stop(
+        lastSavedAt: Date?,
+        collectionKinds: [String],
+        now: Date = .now
+    ) async {
+        guard let activity else { return }
+        let finalState = SensorCollectionActivityAttributes.ContentState(
+            startedAt: activity.content.state.startedAt,
+            lastSavedAt: lastSavedAt,
+            collectionKinds: collectionKinds,
+            isCollecting: false
+        )
+        await activity.end(
+            ActivityContent(state: finalState, staleDate: nil),
+            dismissalPolicy: .immediate
+        )
+        self.activity = nil
+        lastPublishedAt = nil
+    }
+
+    func removeExpired(now: Date = .now) async {
+        await recoverAndRemoveDuplicates(sessionID: nil, now: now)
+        guard let activity,
+              SensorCollectionActivityPolicy.isExpired(
+                startedAt: activity.content.state.startedAt,
+                now: now
+              ) else { return }
+        await activity.end(nil, dismissalPolicy: .immediate)
+        self.activity = nil
+        lastPublishedAt = nil
+    }
+
+    func activeID() -> String? {
+        activity?.id
+    }
+
+    private func recoverAndRemoveDuplicates(
+        sessionID: UUID?,
+        now: Date
+    ) async {
+        if let current = activity {
+            let isExpired = SensorCollectionActivityPolicy.isExpired(
+                startedAt: current.content.state.startedAt,
+                now: now
+            )
+            let isWrongSession = sessionID.map {
+                current.attributes.sessionID != $0
+            } ?? false
+            if isExpired || isWrongSession {
+                await current.end(nil, dismissalPolicy: .immediate)
+                activity = nil
+                lastPublishedAt = nil
+            }
+        }
+        var selected = activity
+        for candidate in Activity<SensorCollectionActivityAttributes>.activities {
+            let expired = SensorCollectionActivityPolicy.isExpired(
+                startedAt: candidate.content.state.startedAt,
+                now: now
+            )
+            let matchesSession = sessionID == nil
+                || candidate.attributes.sessionID == sessionID
+            if !expired, matchesSession, selected == nil {
+                selected = candidate
+            } else if selected?.id != candidate.id {
+                await candidate.end(nil, dismissalPolicy: .immediate)
+            }
+        }
+        activity = selected
+    }
+}
+
 actor TaptionLiveActivityController {
     private var activity: Activity<TaptionActivityAttributes>?
 

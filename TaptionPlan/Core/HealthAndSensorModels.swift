@@ -320,9 +320,9 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     }
 
     /// Battery-minimal tracking is intentionally fixed at one sample every
-    /// ten minutes. The stored cadence remains available for the other mode.
+    /// fifteen minutes. The stored cadence remains available for the other mode.
     var effectiveIntervalSeconds: Int {
-        isBatteryMinimal ? 600 : intervalSeconds
+        isBatteryMinimal ? 900 : intervalSeconds
     }
 
     var isContinuous: Bool {
@@ -445,6 +445,12 @@ enum TrackingSessionPolicy {
     static let activeHorizontalAccuracyLimit: Double = 50
     static let activeDistanceFilterMeters: Double = 5
     static let automaticEmissionThrottleInterval: TimeInterval = 1
+
+    static func allowsRealtimeAutomaticTracking(
+        interval: TimeInterval
+    ) -> Bool {
+        interval > 0 && interval <= 1
+    }
 
     static func allowsPersistingLocation(
         horizontalAccuracy: Double,

@@ -91,6 +91,11 @@ final class AppModel {
     @ObservationIgnored private var repositoryLoadFailed = false
     private(set) var isRefreshingIntegrations = false
     private(set) var isSensorCollecting = false
+    private(set) var sensorCollectionSessionState: SensorCollectionSessionState =
+        .stopped
+    private(set) var lastSensorWakeReason: SensorWakeReason?
+    private(set) var lastSensorSavedAt: Date?
+    private(set) var sensorSaveToken = 0
     private(set) var isCloudSyncing = false
     private(set) var isExportingDiagnostics = false
     private(set) var diagnosticsExportStatus = "준비됨"
@@ -275,6 +280,8 @@ final class AppModel {
     @ObservationIgnored private var watchPayloadSkipCount = 0
     @ObservationIgnored private var lastWidgetSkipLogUptime: TimeInterval = 0
     @ObservationIgnored private var lastWatchSkipLogUptime: TimeInterval = 0
+    @ObservationIgnored private let sensorBackgroundCoordinator =
+        SensorBackgroundCoordinator.shared
 
     // Keep the live route bounded without shifting the whole array on every
     // GPS tick.  Trimming in batches makes long running sessions amortized
@@ -335,7 +342,8 @@ final class AppModel {
         airPodsActivityService: AirPodsActivityService =
             AirPodsActivityService(),
         screenTimeUsageService: ScreenTimeUsageService? = nil,
-        securityBackupService: PlanSecurityBackupService? = nil
+        securityBackupService: PlanSecurityBackupService? = nil,
+        registersHealthBackgroundHandler: Bool = true
     ) {
         let repositorySource: String
         if let repository {
@@ -447,10 +455,14 @@ final class AppModel {
                 }
             }
         )
-        Task { [weak self] in
-            await HealthBackgroundRefreshCoordinator.shared.register {
-                [weak self] in
-                await self?.handleObservedHealthChange()
+        if registersHealthBackgroundHandler {
+            Task { [weak self] in
+                await HealthBackgroundRefreshCoordinator.shared.register {
+                    [weak self] in
+                    guard let self else { return false }
+                    await self.handleObservedHealthChange()
+                    return true
+                }
             }
         }
     }
@@ -549,6 +561,26 @@ final class AppModel {
         let normalized = AppFeatureSettings.normalizedMapCategoryColors(values)
         guard normalized != snapshot.settings.mapCategoryColors else { return }
         snapshot.settings.mapCategoryColors = normalized
+        Task { await persist() }
+    }
+
+    func addMapUserActivityCategory(
+        title: String,
+        systemImage: String,
+        hex: String
+    ) {
+        let next = AppFeatureSettings.normalizedMapUserActivityCategories(
+            snapshot.settings.mapUserActivityCategories + [
+                MapUserActivityCategory(
+                    id: UUID(),
+                    title: title,
+                    systemImage: systemImage,
+                    hex: hex
+                ),
+            ]
+        )
+        guard next != snapshot.settings.mapUserActivityCategories else { return }
+        snapshot.settings.mapUserActivityCategories = next
         Task { await persist() }
     }
 
@@ -1318,6 +1350,8 @@ final class AppModel {
     func suspendForCommerceLock() async {
         isSceneActive = false
         sensorService?.stopCollection()
+        sensorBackgroundCoordinator.cancel()
+        syncSensorBackgroundState()
         isSensorCollecting = false
         foregroundRefreshTask?.cancel()
         foregroundRefreshTask = nil
@@ -1478,8 +1512,11 @@ final class AppModel {
 
     /// Refreshes device-backed records and republishes the shared widget
     /// payload when iOS wakes the app without presenting its UI.
-    func performBackgroundRefresh() async -> Bool {
+    func performBackgroundRefresh(
+        wakeReason: SensorWakeReason = .bgAppRefresh
+    ) async -> Bool {
         Self.integrationLogger.notice("Background model refresh started")
+        receiveSensorWake(wakeReason)
         await bootstrap()
         await waitForBootstrapPreparation()
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
@@ -1496,6 +1533,11 @@ final class AppModel {
                 after: persistenceToken,
                 timeout: samplingWindow + 2
             )
+            let savedToken = sensorService.persistenceToken()
+            _ = sensorBackgroundCoordinator.markSaved(
+                persistedToken: savedToken
+            )
+            syncSensorBackgroundState()
         }
         await refreshEnabledData(includesCurrentDeviceDay: true)
         await saveCloudBackupOnBackground()
@@ -1505,6 +1547,10 @@ final class AppModel {
             "Background model refresh finished: success=\(success, privacy: .public), snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public)"
         )
         return success
+    }
+
+    func performHealthBackgroundRefresh() async {
+        await handleObservedHealthChange()
     }
 
     func permissionState(for feature: PermissionFeature) -> PermissionState {
@@ -1744,13 +1790,12 @@ final class AppModel {
             always && sensorService.hasAlwaysLocationAuthorization()
 
         if refreshed.isGranted {
-            sensorService.startCollection(
-                configuration: .configured(
-                    for: settings.sensorCollectionProfile,
-                    allowsBackgroundLocation: always
-                )
-            )
+            sensorService.startCollection(configuration: sensorCollectionConfiguration(
+                profile: settings.sensorCollectionProfile,
+                allowsBackgroundLocation: always
+            ))
             isSensorCollecting = true
+            receiveSensorWake(.foregroundResume)
         }
         if always,
            refreshed.isGranted,
@@ -1764,6 +1809,8 @@ final class AppModel {
 
     func disableLocationCollection() async {
         sensorService?.stopCollection()
+        sensorBackgroundCoordinator.cancel()
+        syncSensorBackgroundState()
         isSensorCollecting = false
         snapshot.settings.locationEnabled = false
         snapshot.settings.backgroundPreciseLocationEnabled = false
@@ -2017,13 +2064,11 @@ final class AppModel {
         if settings.locationEnabled,
            permissionState(for: .location).isGranted,
            let sensorService {
-            sensorService.startCollection(
-                configuration: .configured(
-                    for: profile,
-                    allowsBackgroundLocation:
-                        settings.backgroundPreciseLocationEnabled
-                )
-            )
+            sensorService.startCollection(configuration: sensorCollectionConfiguration(
+                profile: profile,
+                allowsBackgroundLocation:
+                    settings.backgroundPreciseLocationEnabled
+            ))
             isSensorCollecting = true
         }
         Task { await persist() }
@@ -2044,6 +2089,9 @@ final class AppModel {
             return
         }
         snapshot.settings.gpsLoggingPreferences.intervalSeconds = resolved
+        if activeTrackingSession?.wasAutomaticallyDetected == true {
+            Task { await stopTracking() }
+        }
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
     }
@@ -2054,8 +2102,74 @@ final class AppModel {
     }
 
     private func refreshActiveGPSLoggingPreferences() {
-        guard activeTrackingSession != nil else { return }
-        sensorService?.updateTrackingPreferences(settings.gpsLoggingPreferences)
+        if activeTrackingSession != nil {
+            sensorService?.updateTrackingPreferences(
+                settings.gpsLoggingPreferences
+            )
+            return
+        }
+        guard settings.locationEnabled,
+              permissionState(for: .location).isGranted,
+              let sensorService else { return }
+        sensorService.startCollection(
+            configuration: sensorCollectionConfiguration(
+                profile: settings.sensorCollectionProfile,
+                allowsBackgroundLocation:
+                    settings.backgroundPreciseLocationEnabled
+            )
+        )
+        isSensorCollecting = true
+    }
+
+    private func sensorCollectionConfiguration(
+        profile: SensorCollectionProfile,
+        allowsBackgroundLocation: Bool
+    ) -> SensorCollectionConfiguration {
+        var configuration = SensorCollectionConfiguration.configured(
+            for: profile,
+            allowsBackgroundLocation: allowsBackgroundLocation
+        )
+        configuration.minimumEmissionInterval =
+            settings.gpsLoggingPreferences.interval
+        return configuration
+    }
+
+    private func receiveSensorWake(_ reason: SensorWakeReason) {
+        let accepted = sensorBackgroundCoordinator.receiveWake(reason)
+        syncSensorBackgroundState()
+        Self.integrationLogger.notice(
+            "Sensor wake: reason=\(reason.rawValue, privacy: .public), accepted=\(accepted, privacy: .public), token=\(self.sensorSaveToken, privacy: .public)"
+        )
+        if accepted {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_background_wake",
+                fields: [
+                    "reason": reason.rawValue,
+                    "save_token": String(sensorSaveToken),
+                ]
+            )
+        }
+    }
+
+    private func syncSensorBackgroundState() {
+        let previousState = sensorCollectionSessionState
+        sensorCollectionSessionState =
+            sensorBackgroundCoordinator.sessionState
+        lastSensorWakeReason = sensorBackgroundCoordinator.lastWakeReason
+        lastSensorSavedAt = sensorBackgroundCoordinator.lastSavedAt
+        sensorSaveToken = sensorBackgroundCoordinator.saveToken
+        if previousState != sensorCollectionSessionState {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_collection_state",
+                fields: [
+                    "state": sensorCollectionSessionState.rawValue,
+                    "save_token": String(sensorSaveToken),
+                    "saved_at": lastSensorSavedAt.map {
+                        String($0.timeIntervalSince1970)
+                    } ?? "none",
+                ]
+            )
+        }
     }
 
     func setWatchAccelerationProfile(
@@ -2407,6 +2521,8 @@ final class AppModel {
 
     func deleteAllUserData() async {
         sensorService?.stopCollection()
+        sensorBackgroundCoordinator.cancel()
+        syncSensorBackgroundState()
         TrackingSessionRecoveryStore.clear()
         activeTrackingSession = nil
         trackingSessionWasRecovered = false
@@ -2436,6 +2552,8 @@ final class AppModel {
         guard !repositoryLoadFailed else { return }
 
         sensorService?.stopCollection()
+        sensorBackgroundCoordinator.cancel()
+        syncSensorBackgroundState()
         isSensorCollecting = false
         await notificationScheduler.cancelAllPlanReminders()
 
@@ -3404,9 +3522,23 @@ final class AppModel {
         title: String,
         systemImage: String
     ) {
-        let title = snapshot.categories.first(where: { $0.id == plan.categoryID })?.name
+        let storedTitle = snapshot.categories.first(where: {
+            $0.id == plan.categoryID
+        })?.name
             ?? TimelineRowKind.title(forCategoryID: plan.categoryID)
             ?? "활동"
+        let title: String = switch plan.categoryID {
+        case "activity": AppLanguagePreference.text(korean: "활동", english: "Activity")
+        case "work": AppLanguagePreference.text(korean: "업무", english: "Work")
+        case "study": AppLanguagePreference.text(korean: "수업", english: "Study")
+        case "hobby": AppLanguagePreference.text(korean: "취미", english: "Hobby")
+        case "sleep": AppLanguagePreference.text(korean: "수면", english: "Sleep")
+        case "movement": AppLanguagePreference.text(korean: "이동", english: "Movement")
+        case "eating": AppLanguagePreference.text(korean: "식사", english: "Eating")
+        case "exercise": AppLanguagePreference.text(korean: "운동", english: "Exercise")
+        case "unconfirmed": AppLanguagePreference.text(korean: "미확인", english: "Unconfirmed")
+        default: storedTitle
+        }
         let systemImage = RecordClassificationCatalog.categories.first {
             $0.id == plan.categoryID
         }?.systemImage ?? TimelineRowKind(categoryID: plan.categoryID)?.systemImage
@@ -5615,6 +5747,8 @@ final class AppModel {
                 // 권한이 없는 동안 수집만 멈춘다. locationEnabled를 지우면
                 // iOS 설정에서 권한을 다시 허용해도 기록이 재개되지 않는다.
                 sensorService.stopCollection()
+                sensorBackgroundCoordinator.cancel()
+                syncSensorBackgroundState()
                 isSensorCollecting = false
                 snapshot.settings.backgroundPreciseLocationEnabled = false
             }
@@ -5884,6 +6018,7 @@ final class AppModel {
     }
 
     private func handleObservedHealthChange() async {
+        receiveSensorWake(.healthKitBackgroundDelivery)
         await bootstrap()
         guard settings.healthEnabled else { return }
         await refreshHealthData(
@@ -5978,16 +6113,21 @@ final class AppModel {
               permissionState(for: .location).isGranted,
               let sensorService else {
             isSensorCollecting = false
+            sensorBackgroundCoordinator.cancel()
+            syncSensorBackgroundState()
             return
         }
-        sensorService.startCollection(
-            configuration: .configured(
-                for: settings.sensorCollectionProfile,
-                allowsBackgroundLocation:
-                    settings.backgroundPreciseLocationEnabled
-            )
-        )
+        sensorService.startCollection(configuration: sensorCollectionConfiguration(
+            profile: settings.sensorCollectionProfile,
+            allowsBackgroundLocation:
+                settings.backgroundPreciseLocationEnabled
+        ))
         isSensorCollecting = true
+        if sensorBackgroundCoordinator.lastWakeReason == nil {
+            receiveSensorWake(.foregroundResume)
+        } else {
+            syncSensorBackgroundState()
+        }
     }
 
     private func resumeSensorCollectionAndRestoreTrackingIfNeeded() async {
@@ -6038,6 +6178,11 @@ final class AppModel {
             lastUpdatedAt: readings.last?.timestamp ?? restored.startedAt
         )
         TrackingSessionRecoveryStore.save(restored)
+        if restored.wasAutomaticallyDetected,
+           settings.gpsLoggingPreferences.effectiveIntervalSeconds == 1 {
+            _ = sensorBackgroundCoordinator.beginAutomaticSession(at: now)
+            syncSensorBackgroundState()
+        }
         Self.integrationLogger.notice(
             "Recovered tracking session \(restored.id.uuidString, privacy: .public) with \(readings.count, privacy: .public) archived samples"
         )
@@ -6105,6 +6250,16 @@ final class AppModel {
     }
 
     private func handleLiveSensorReading(_ reading: SensorReading) {
+        if let sensorService {
+            _ = sensorBackgroundCoordinator.markSaved(
+                at: reading.timestamp,
+                persistedToken: sensorService.persistenceToken()
+            )
+            _ = sensorBackgroundCoordinator.expireIfNeeded(
+                at: reading.timestamp
+            )
+            syncSensorBackgroundState()
+        }
         if reading.locationFixQuality == .approximate {
             latestSensorReading = reading
         } else {
@@ -6130,9 +6285,19 @@ final class AppModel {
             if liveRouteState.session?.id != sessionID {
                 liveRouteState.readings = []
             }
-        } else {
-            session = activeTrackingSession
-        }
+            } else {
+                session = activeTrackingSession
+            }
+
+            if reading.trackingSessionEnded == true {
+                sensorBackgroundCoordinator.endSession()
+            } else if session?.wasAutomaticallyDetected == true,
+                      settings.gpsLoggingPreferences.effectiveIntervalSeconds == 1 {
+                _ = sensorBackgroundCoordinator.beginAutomaticSession(
+                    at: reading.timestamp
+                )
+            }
+            syncSensorBackgroundState()
 
         if let session {
             let shouldPersistSession = reading.trackingSessionEnded == true
@@ -6793,7 +6958,8 @@ final class AppModel {
                 snapshot.settings.permissions[.location]?.rawValue,
             activitySuggestion: pendingWatchActivitySuggestion.flatMap {
                 now.timeIntervalSince($0.endedAt) <= 2 * 3_600 ? $0 : nil
-            }
+            },
+            languagePreference: AppLanguagePreference.current.watchPayloadValue
         )
         var identity = watchPayload
         identity.generatedAt = .distantPast
@@ -7083,6 +7249,8 @@ final class AppModel {
             local.settings.gpsLoggingPreferences
         value.settings.mapCategoryColors =
             local.settings.mapCategoryColors
+        value.settings.mapUserActivityCategories =
+            local.settings.mapUserActivityCategories
         value.settings.watchAccelerationProfile =
             local.settings.watchAccelerationProfile
         value.settings.watchDataSyncProfile =

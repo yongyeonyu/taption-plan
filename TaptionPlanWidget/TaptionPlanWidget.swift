@@ -9,6 +9,7 @@ struct TaptionPlanWidgetBundle: WidgetBundle {
     var body: some Widget {
         TaptionScheduleWidget()
         TaptionPlanLiveActivity()
+        SensorCollectionLiveActivity()
     }
 }
 
@@ -116,6 +117,10 @@ struct TaptionScheduleWidget: Widget {
             TaptionScheduleWidgetView(entry: entry)
                 .unredacted()
                 .containerBackground(.white, for: .widget)
+                .environment(
+                    \.locale,
+                    AppLanguagePreference.current.resolvedLanguage.locale
+                )
         }
         .configurationDisplayName("Taption 시간표")
         .description("현재선 중심의 시간표에서 계획을 바로 처리합니다.")
@@ -768,7 +773,7 @@ private struct PrototypeWidgetTrack: View {
     }
 
     private func laneLabel(_ lane: TaptionWidgetLane) -> some View {
-        Label(lane.title, systemImage: lane.systemImage)
+        Label(lane.localizedTitle, systemImage: lane.systemImage)
             .font(.system(size: 9.2, weight: .bold))
             .foregroundStyle(WidgetPalette.ink.opacity(0.9))
             .lineLimit(1)
@@ -2184,6 +2189,127 @@ private extension Color {
     }
 }
 
+struct SensorCollectionLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(
+            for: SensorCollectionActivityAttributes.self
+        ) { context in
+            SensorCollectionLockScreenView(context: context)
+                .activityBackgroundTint(
+                    Color(red: 0.08, green: 0.11, blue: 0.15)
+                )
+                .activitySystemActionForegroundColor(.white)
+                .environment(
+                    \.locale,
+                    AppLanguagePreference.current.resolvedLanguage.locale
+                )
+        } dynamicIsland: { context in
+            DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    WidgetCat(style: "calico")
+                        .frame(width: 34, height: 25)
+                }
+                DynamicIslandExpandedRegion(.center) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(widgetText("센서 정보 수집중", "Collecting sensor data"))
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Text(sensorCollectionKinds(context.state.collectionKinds))
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.72))
+                            .lineLimit(1)
+                    }
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    SensorCollectionSavedAtView(
+                        lastSavedAt: context.state.lastSavedAt
+                    )
+                }
+            } compactLeading: {
+                WidgetCat(style: "calico")
+                    .frame(width: 18, height: 14)
+            } compactTrailing: {
+                Image(systemName: "waveform.path.ecg")
+                    .foregroundStyle(Color(red: 0.18, green: 0.72, blue: 0.59))
+            } minimal: {
+                WidgetCat(style: "calico")
+                    .frame(width: 18, height: 13)
+            }
+            .keylineTint(Color(red: 0.18, green: 0.72, blue: 0.59))
+        }
+    }
+}
+
+private struct SensorCollectionLockScreenView: View {
+    let context: ActivityViewContext<SensorCollectionActivityAttributes>
+
+    var body: some View {
+        HStack(spacing: 12) {
+            WidgetCat(style: "calico")
+                .frame(width: 38, height: 29)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(widgetText("센서 정보 수집중", "Collecting sensor data"))
+                    .font(.system(size: 14, weight: .bold))
+                Text(sensorCollectionKinds(context.state.collectionKinds))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.70))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            SensorCollectionSavedAtView(
+                lastSavedAt: context.state.lastSavedAt
+            )
+        }
+        .foregroundStyle(.white)
+        .padding(14)
+        .widgetURL(URL(string: "taptionplan://sensor"))
+    }
+}
+
+private struct SensorCollectionSavedAtView: View {
+    let lastSavedAt: Date?
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(widgetText("최근 저장", "Last saved"))
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.white.opacity(0.62))
+            if let lastSavedAt {
+                Text(lastSavedAt, style: .timer)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+            } else {
+                Text(widgetText("대기", "Waiting"))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+            }
+        }
+    }
+}
+
+private func sensorCollectionKinds(_ kinds: [String]) -> String {
+    let labels = kinds.map { kind in
+        switch kind {
+        case "location": "GPS"
+        case "motion": widgetText("동작", "Motion")
+        case "altitude": widgetText("고도", "Altitude")
+        case "steps": widgetText("걸음", "Steps")
+        case "health": widgetText("건강", "Health")
+        case "wifi": "Wi-Fi"
+        default: kind
+        }
+    }
+    return labels.isEmpty
+        ? widgetText("센서", "Sensors")
+        : labels.joined(separator: " · ")
+}
+
+private func widgetText(_ korean: String, _ english: String) -> String {
+    AppLanguagePreference.text(korean: korean, english: english)
+}
+
 struct TaptionPlanLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TaptionActivityAttributes.self) { context in
@@ -2192,6 +2318,10 @@ struct TaptionPlanLiveActivity: Widget {
                     Color(red: 0.08, green: 0.08, blue: 0.09)
                 )
                 .activitySystemActionForegroundColor(.white)
+                .environment(
+                    \.locale,
+                    AppLanguagePreference.current.resolvedLanguage.locale
+                )
         } dynamicIsland: { context in
             DynamicIsland {
             DynamicIslandExpandedRegion(.leading) {
@@ -2225,7 +2355,7 @@ struct TaptionPlanLiveActivity: Widget {
                                 action: .stopCurrentActivity
                             )
                         ) {
-                            Text("종료")
+                            Text(widgetText("종료", "Stop"))
                                 .font(.caption.bold())
                                 .foregroundStyle(.black)
                                 .padding(.horizontal, 10)

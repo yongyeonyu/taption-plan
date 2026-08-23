@@ -1,0 +1,5124 @@
+{
+  "sourceLanguage" : "ko",
+  "strings" : {
+    "" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    " " : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " "
+          }
+        }
+      }
+    },
+    " %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " %@"
+          }
+        }
+      }
+    },
+    " %@°" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " %@°"
+          }
+        }
+      }
+    },
+    "!" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "!"
+          }
+        }
+      }
+    },
+    "·" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "·"
+          }
+        }
+      }
+    },
+    "· %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· %@"
+          }
+        }
+      }
+    },
+    "‘차량 추정’ 또는 ‘층 미확인’으로 남기고 한 번 탭해 수정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave as ‘Vehicle estimate’ or ‘Floor unknown’ and tap once to edit"
+          }
+        }
+      }
+    },
+    "%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@"
+          }
+        }
+      }
+    },
+    "%@ – %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ – %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ – %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %lld°" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$lld°"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld°"
+          }
+        }
+      }
+    },
+    "%@ · 사진 %lld장" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$lld photos"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · 사진 %2$lld장"
+          }
+        }
+      }
+    },
+    "%@ · 위젯 미리보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Widget preview"
+          }
+        }
+      }
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        }
+      }
+    },
+    "%@ %@ 상세 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ View details"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ 상세 보기"
+          }
+        }
+      }
+    },
+    "%@ → %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ → %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "%@ → %lld층" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ → Floor %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ → %2$lld층"
+          }
+        }
+      }
+    },
+    "%@ ▾" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ▾"
+          }
+        }
+      }
+    },
+    "%@ 기록 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ recording"
+          }
+        }
+      }
+    },
+    "%@ 기록을 이어가는 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuing %@ recording"
+          }
+        }
+      }
+    },
+    "%@ 기준 삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete %@ reference"
+          }
+        }
+      }
+    },
+    "%@ 기준점을 지웁니다. 이 장소의 위치와 다른 층 기준은 그대로 남습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete the %@ reference point. This location and its other floor references will remain."
+          }
+        }
+      }
+    },
+    "%@ 맞습니다 · 다시 눌러 보정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is correct · Tap to recalibrate"
+          }
+        }
+      }
+    },
+    "%@ 메모" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ note"
+          }
+        }
+      }
+    },
+    "%@ 메모 열기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open %@ note"
+          }
+        }
+      }
+    },
+    "%@ 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View %@"
+          }
+        }
+      }
+    },
+    "%@ 상세" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ details"
+          }
+        }
+      }
+    },
+    "%@ 상세 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View %@ details"
+          }
+        }
+      }
+    },
+    "%@ 설정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ settings"
+          }
+        }
+      }
+    },
+    "%@ 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect %@"
+          }
+        }
+      }
+    },
+    "%@ 연결이 꺼져 있어요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is disconnected"
+          }
+        }
+      }
+    },
+    "%@ 추천" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recommended %@"
+          }
+        }
+      }
+    },
+    "%@–%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@–%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@–%2$@"
+          }
+        }
+      }
+    },
+    "%@–%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@–%2$@ · %3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@–%2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@, %@ 미리보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@ preview"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@ 미리보기"
+          }
+        }
+      }
+    },
+    "%@, %@부터 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, from %2$@ to %3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@부터 %3$@"
+          }
+        }
+      }
+    },
+    "%@, 레벨 %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, Level %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, 레벨 %2$lld"
+          }
+        }
+      }
+    },
+    "%@로 Pro 영구 구매" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buy Pro permanently for %@"
+          }
+        }
+      }
+    },
+    "%@로 적용" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apply %@"
+          }
+        }
+      }
+    },
+    "%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
+    },
+    "%lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "%lld μg/m³" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld μg/m³"
+          }
+        }
+      }
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "%lld°" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld°"
+          }
+        }
+      }
+    },
+    "%lld°C" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld°C"
+          }
+        }
+      }
+    },
+    "%lldh" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lldh"
+          }
+        }
+      }
+    },
+    "%lldm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lldm"
+          }
+        }
+      }
+    },
+    "%lld개 묶음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld groups"
+          }
+        }
+      }
+    },
+    "%lld개 일과 · %lld개 상세활동" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld plans · %2$lld detail activities"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld개 일과 · %2$lld개 상세활동"
+          }
+        }
+      }
+    },
+    "%lld개 항목" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld items"
+          }
+        }
+      }
+    },
+    "%lld분" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld min"
+          }
+        }
+      }
+    },
+    "%lld주" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld weeks"
+          }
+        }
+      }
+    },
+    "%lld층" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld floors"
+          }
+        }
+      }
+    },
+    "%lld회" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld times"
+          }
+        }
+      }
+    },
+    "• %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "• %@"
+          }
+        }
+      }
+    },
+    "+%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld"
+          }
+        }
+      }
+    },
+    "▸ %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "▸ %lld"
+          }
+        }
+      }
+    },
+    "4자리 비밀번호" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4-digit passcode"
+          }
+        }
+      }
+    },
+    "4주 실제 추세" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "4-week actual trend"
+          }
+        }
+      }
+    },
+    "14일 무료 체험" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "14-day free trial"
+          }
+        }
+      }
+    },
+    "14일 무료 체험 시작" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start 14-day free trial"
+          }
+        }
+      }
+    },
+    "14일 무료 체험이 시작되었습니다." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your 14-day free trial has started."
+          }
+        }
+      }
+    },
+    "15분씩 조절할 수 있습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adjust in 15-minute increments"
+          }
+        }
+      }
+    },
+    "30m · 건물 내부" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30m · indoors"
+          }
+        }
+      }
+    },
+    "30분 기본 · 5분 단위 조정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 min default · 5-minute adjustments"
+          }
+        }
+      }
+    },
+    "500m · 넓은 구역" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "500m · wide area"
+          }
+        }
+      }
+    },
+    "App Store에서 구매 항목을 아직 불러오지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The purchase is not yet available from the App Store."
+          }
+        }
+      }
+    },
+    "Apple Watch 가속도 수집" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch motion collection"
+          }
+        }
+      }
+    },
+    "Apple Watch 데이터 가져오기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import Apple Watch data"
+          }
+        }
+      }
+    },
+    "Apple Watch 데이터 가져오기 간격" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch data import interval"
+          }
+        }
+      }
+    },
+    "Apple Watch 앱 빌드 %@ · %@ 보고" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Watch app build %1$@ · reported %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Apple Watch 앱 빌드 %1$@ · %2$@ 보고"
+          }
+        }
+      }
+    },
+    "Apple Watch 없이도 하루는 기록됩니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your day is recorded without an Apple Watch"
+          }
+        }
+      }
+    },
+    "Apple Watch가 있어야 되는 것만 적어 둡니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only items that require an Apple Watch are listed."
+          }
+        }
+      }
+    },
+    "Apple Watch에도 Taption Plan이 있습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Plan is also available on Apple Watch"
+          }
+        }
+      }
+    },
+    "Apple 건강 기록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Health records"
+          }
+        }
+      }
+    },
+    "Apple 건강·Watch 수면 기록은 반복 시간과 겹치면 자동 근거로 반영됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Health and Watch sleep records are used as automatic evidence when they overlap a repeating schedule."
+          }
+        }
+      }
+    },
+    "Apple 지도" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Maps"
+          }
+        }
+      }
+    },
+    "Apple 지도 경로" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Maps route"
+          }
+        }
+      }
+    },
+    "Apple 지도 위치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Maps location"
+          }
+        }
+      }
+    },
+    "Apple 캘린더로 보내기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send to Apple Calendar"
+          }
+        }
+      }
+    },
+    "English" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English"
+          }
+        }
+      }
+    },
+    "Face ID / Touch ID" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face ID / Touch ID"
+          }
+        }
+      }
+    },
+    "GPS · 센서 기록 간격" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPS · sensor logging interval"
+          }
+        }
+      }
+    },
+    "GPS %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld GPS points"
+          }
+        }
+      }
+    },
+    "GPS 및 센서 데이터" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPS & sensor data"
+          }
+        }
+      }
+    },
+    "GPS 오차와 건물 규모에 맞춰 위치로 인식할 범위를 정합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set the area recognized as a location based on GPS accuracy and building size."
+          }
+        }
+      }
+    },
+    "GPS와 센서 기록 간격" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPS and sensor logging interval"
+          }
+        }
+      }
+    },
+    "iPhone · Apple Watch · iCloud" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone · Apple Watch · iCloud"
+          }
+        }
+      }
+    },
+    "iPhone GPS·모션·기압이 기본 · Apple Watch 운동·경로·활동 데이터는 권한을 받은 경우에만 보조" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone GPS, motion, and barometer are primary · Apple Watch workouts, routes, and activity data supplement them only when authorized"
+          }
+        }
+      }
+    },
+    "iPhone 설정 자동 반영 · 건강·활동·가속도" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically follows iPhone settings · health · activity · motion"
+          }
+        }
+      }
+    },
+    "Lv.%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lv. %lld"
+          }
+        }
+      }
+    },
+    "PM2.5 %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PM2.5 %lld"
+          }
+        }
+      }
+    },
+    "PM10 %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PM10 %lld"
+          }
+        }
+      }
+    },
+    "Pro 상태 확인 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking Pro status"
+          }
+        }
+      }
+    },
+    "Pro 영구 구매가 완료되었습니다." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro purchase completed."
+          }
+        }
+      }
+    },
+    "Taption Plan" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Plan"
+          }
+        }
+      }
+    },
+    "Taption Plan %@ (빌드 %@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Plan %1$@ (Build %2$@)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Taption Plan %1$@ (빌드 %2$@)"
+          }
+        }
+      }
+    },
+    "Taption Plan Pro" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Plan Pro"
+          }
+        }
+      }
+    },
+    "Taption Plan은 위치·건강·캘린더·사진·앱 사용시간을 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Plan reads your location, health, calendar, photos, and app usage to record your day for you. Allow only what you need, and change permissions anytime in Settings."
+          }
+        }
+      }
+    },
+    "Watch 실행 기록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch activity records"
+          }
+        }
+      }
+    },
+    "z" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z"
+          }
+        }
+      }
+    },
+    "zZ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zZ"
+          }
+        }
+      }
+    },
+    "가까운 루틴이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No nearby routines"
+          }
+        }
+      }
+    },
+    "가장 가까움" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nearest"
+          }
+        }
+      }
+    },
+    "간트 본문을 드래그해 이동하고 두 손가락으로 최대 1분 단위까지 확대합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag the Gantt body to move it, and pinch with two fingers to zoom to one-minute precision"
+          }
+        }
+      }
+    },
+    "건너뛰기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip"
+          }
+        }
+      }
+    },
+    "걷기 시작" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start walking"
+          }
+        }
+      }
+    },
+    "검색" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search"
+          }
+        }
+      }
+    },
+    "결정이나 아이디어를 짧게 남겨보세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave a short decision or idea."
+          }
+        }
+      }
+    },
+    "경로를 선택해 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a route"
+          }
+        }
+      }
+    },
+    "계속 사용" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
+    },
+    "계획" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan"
+          }
+        }
+      }
+    },
+    "계획 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan · %@"
+          }
+        }
+      }
+    },
+    "계획 삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete plan"
+          }
+        }
+      }
+    },
+    "계획 이름" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan name"
+          }
+        }
+      }
+    },
+    "계획 타임라인" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan timeline"
+          }
+        }
+      }
+    },
+    "계획 편집" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit plan"
+          }
+        }
+      }
+    },
+    "계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 이 작업은 되돌릴 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plans, actual records, notes, and automatic travel records will be deleted. This action cannot be undone."
+          }
+        }
+      }
+    },
+    "계획명은 중분류 이름으로 추가되고, 입력한 내용은 액션 메모에 연결됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The plan name is added as a subcategory and the entered content is linked to the action note."
+          }
+        }
+      }
+    },
+    "고른 칸 모두 끄기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off all selected cells"
+          }
+        }
+      }
+    },
+    "고양이 애니메이션" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cat animation"
+          }
+        }
+      }
+    },
+    "고정밀 수집 중" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High-precision collection"
+          }
+        }
+      }
+    },
+    "구간" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Segment"
+          }
+        }
+      }
+    },
+    "구간을 누르면 해당 경로를 강조합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap a segment to highlight its route"
+          }
+        }
+      }
+    },
+    "구매" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purchase"
+          }
+        }
+      }
+    },
+    "구매 내역을 복원하지 못했습니다. 잠시 후 다시 시도해 주세요." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We couldn't restore your purchases. Please try again later."
+          }
+        }
+      }
+    },
+    "구매 내역을 복원했습니다." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purchases restored."
+          }
+        }
+      }
+    },
+    "구매 복원" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore purchases"
+          }
+        }
+      }
+    },
+    "구매 승인을 기다리고 있습니다." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for purchase approval."
+          }
+        }
+      }
+    },
+    "구매 영수증을 확인하지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We couldn't verify the purchase receipt."
+          }
+        }
+      }
+    },
+    "구매를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The purchase couldn't be completed. Please try again later."
+          }
+        }
+      }
+    },
+    "권한은 필요한 기능을 처음 켤 때만 요청하며, 설정에서 언제든 연결을 끊을 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permissions are requested only when a feature first needs them, and you can disconnect them anytime in Settings."
+          }
+        }
+      }
+    },
+    "기간 · %@–%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Period · %1$@–%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "기간 · %1$@–%2$@"
+          }
+        }
+      }
+    },
+    "기록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record"
+          }
+        }
+      }
+    },
+    "기록 경로" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recorded route"
+          }
+        }
+      }
+    },
+    "기록 상세" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record details"
+          }
+        }
+      }
+    },
+    "기록 중 · %lld분 간격 · 탭해서 경로 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recording · every %lld min · tap to view route"
+          }
+        }
+      }
+    },
+    "기록 출처 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect record source"
+          }
+        }
+      }
+    },
+    "기록 화면, 시간표, 위젯이 이 분류표를 함께 사용합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The record view, timeline, and widgets share this classification list."
+          }
+        }
+      }
+    },
+    "기록된 이동 경로가 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No recorded travel route"
+          }
+        }
+      }
+    },
+    "기록을 루틴·액션에 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect record to routine · action"
+          }
+        }
+      }
+    },
+    "기록을 루틴에 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect record to routine"
+          }
+        }
+      }
+    },
+    "기록을 찾을 수 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record not found"
+          }
+        }
+      }
+    },
+    "기본 대분류" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default major category"
+          }
+        }
+      }
+    },
+    "기본 정보" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basic information"
+          }
+        }
+      }
+    },
+    "기존 액션아이템 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect existing action item"
+          }
+        }
+      }
+    },
+    "길이 = 실제 시간 · 빨간 선 = 현재" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Length = actual time · red line = now"
+          }
+        }
+      }
+    },
+    "끄면 이 장소는 자동 분석에서 제외되고 수동 지정만 유지됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When off, this place is excluded from automatic analysis and only manual assignments remain."
+          }
+        }
+      }
+    },
+    "끝" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End"
+          }
+        }
+      }
+    },
+    "날씨 · 미세먼지" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weather · Air quality"
+          }
+        }
+      }
+    },
+    "날짜" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date"
+          }
+        }
+      }
+    },
+    "날짜 선택" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select date"
+          }
+        }
+      }
+    },
+    "내 시간표" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My timeline"
+          }
+        }
+      }
+    },
+    "다른 수단" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other mode"
+          }
+        }
+      }
+    },
+    "다른 활동" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another activity"
+          }
+        }
+      }
+    },
+    "다음 실행" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next run"
+          }
+        }
+      }
+    },
+    "닫기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "달리기 시작" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start running"
+          }
+        }
+      }
+    },
+    "대분류" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Major category"
+          }
+        }
+      }
+    },
+    "대분류 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Major category %@"
+          }
+        }
+      }
+    },
+    "대분류 이름" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Major category name"
+          }
+        }
+      }
+    },
+    "대분류 직접 추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add major category manually"
+          }
+        }
+      }
+    },
+    "대분류 추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add major category"
+          }
+        }
+      }
+    },
+    "대체 자료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alternative source"
+          }
+        }
+      }
+    },
+    "도착" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrive"
+          }
+        }
+      }
+    },
+    "동작 권한 없음" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion access unavailable"
+          }
+        }
+      }
+    },
+    "두 번 탭하면 섹션 편집을 엽니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double-tap to edit the section"
+          }
+        }
+      }
+    },
+    "두 번 탭하면 확대하고, 길게 누른 뒤 드래그하면 이동하며 양 끝점을 끌면 길이를 조절합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double-tap to zoom, long-press and drag to move, or drag either endpoint to adjust the length"
+          }
+        }
+      }
+    },
+    "등록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Register"
+          }
+        }
+      }
+    },
+    "등록된 역·정류장이 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No registered stations or stops."
+          }
+        }
+      }
+    },
+    "등록된 위치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved locations"
+          }
+        }
+      }
+    },
+    "등록된 위치 이름" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved location name"
+          }
+        }
+      }
+    },
+    "루틴" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine"
+          }
+        }
+      }
+    },
+    "루틴 근거 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine evidence · %@"
+          }
+        }
+      }
+    },
+    "루틴 기간 직접 지정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set routine period manually"
+          }
+        }
+      }
+    },
+    "루틴 기간과 겹치는 연결 가능한 액션아이템이 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No connectable action items overlap the routine period."
+          }
+        }
+      }
+    },
+    "루틴 내리기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Convert routine to plan"
+          }
+        }
+      }
+    },
+    "루틴 로드맵" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine roadmap"
+          }
+        }
+      }
+    },
+    "루틴 변경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change routine"
+          }
+        }
+      }
+    },
+    "루틴 삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete routine"
+          }
+        }
+      }
+    },
+    "루틴 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect routine"
+          }
+        }
+      }
+    },
+    "루틴 이름" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine name"
+          }
+        }
+      }
+    },
+    "루틴 제어" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine controls"
+          }
+        }
+      }
+    },
+    "루틴:" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine:"
+          }
+        }
+      }
+    },
+    "루틴·액션 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine · action connections"
+          }
+        }
+      }
+    },
+    "루틴과 연결된 하위 계획이 함께 삭제됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linked child plans will also be deleted."
+          }
+        }
+      }
+    },
+    "루틴을 월·주·일 계획으로 내려보내면 실제 기록이 다시 이 루틴으로 합쳐집니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you convert a routine into monthly, weekly, or daily plans, actual records are merged back into this routine."
+          }
+        }
+      }
+    },
+    "루틴을 찾을 수 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routine not found"
+          }
+        }
+      }
+    },
+    "마지막 위치 %@ · 경로 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last location %1$@ · %2$lld routes"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "마지막 위치 %1$@ · 경로 %2$lld개"
+          }
+        }
+      }
+    },
+    "마지막 확인 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last checked · %@"
+          }
+        }
+      }
+    },
+    "막대를 꾹 누른 뒤 이동" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press and hold the bar, then move it"
+          }
+        }
+      }
+    },
+    "막대를 눌러 해당 구간의 상세 기록 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the bar to view detailed records for that segment"
+          }
+        }
+      }
+    },
+    "막힌 메모" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blocked note"
+          }
+        }
+      }
+    },
+    "맞아요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That's right"
+          }
+        }
+      }
+    },
+    "먼저 루틴 탭에서 루틴을 만들어 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a routine in the Routine tab first."
+          }
+        }
+      }
+    },
+    "메모" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memo"
+          }
+        }
+      }
+    },
+    "메모 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld notes"
+          }
+        }
+      }
+    },
+    "메모 내용 수정…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit note…"
+          }
+        }
+      }
+    },
+    "메모 메뉴" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes menu"
+          }
+        }
+      }
+    },
+    "메모 목록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes list"
+          }
+        }
+      }
+    },
+    "메모 시각" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note time"
+          }
+        }
+      }
+    },
+    "메모 추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add note"
+          }
+        }
+      }
+    },
+    "메모를 입력…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a note…"
+          }
+        }
+      }
+    },
+    "모두 허용" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow all"
+          }
+        }
+      }
+    },
+    "모든 Taption Plan 데이터를 삭제할까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all Taption Plan data?"
+          }
+        }
+      }
+    },
+    "모든 데이터 삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete all data"
+          }
+        }
+      }
+    },
+    "모르면 확정하지 않음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave unconfirmed when unknown"
+          }
+        }
+      }
+    },
+    "목표 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Goal %@"
+          }
+        }
+      }
+    },
+    "미니 간트 시간 슬라이더" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mini Gantt time slider"
+          }
+        }
+      }
+    },
+    "미달성" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not achieved"
+          }
+        }
+      }
+    },
+    "미리보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview"
+          }
+        }
+      }
+    },
+    "미세 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fine %@"
+          }
+        }
+      }
+    },
+    "미확인" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        }
+      }
+    },
+    "밀기·핀치로 함께 탐색" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Explore with swipe and pinch"
+          }
+        }
+      }
+    },
+    "반경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Radius"
+          }
+        }
+      }
+    },
+    "반복" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat"
+          }
+        }
+      }
+    },
+    "반복 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat · %@"
+          }
+        }
+      }
+    },
+    "반복 설정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat settings"
+          }
+        }
+      }
+    },
+    "반복 세그먼트 %lld개는 시간표 간트에 표시됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld repeating segments appear in the timeline Gantt."
+          }
+        }
+      }
+    },
+    "반복 시간 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat time · %@"
+          }
+        }
+      }
+    },
+    "반복 이름 · 예: 주중 수면" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat name · e.g. Weekday sleep"
+          }
+        }
+      }
+    },
+    "백그라운드 동기화" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Background sync"
+          }
+        }
+      }
+    },
+    "복사" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "복원" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore"
+          }
+        }
+      }
+    },
+    "복원할 Pro 구매 내역이 없습니다." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are no Pro purchases to restore."
+          }
+        }
+      }
+    },
+    "부분 달성" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partially achieved"
+          }
+        }
+      }
+    },
+    "분류된 기록 (index + 1) / (classifiedRecords.count)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classified records (index + 1) / (classifiedRecords.count)"
+          }
+        }
+      }
+    },
+    "비워두면 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave blank to use %@"
+          }
+        }
+      }
+    },
+    "빠른 변경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick change"
+          }
+        }
+      }
+    },
+    "사용자 등록 위치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User-saved locations"
+          }
+        }
+      }
+    },
+    "사용자 추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add user item"
+          }
+        }
+      }
+    },
+    "사진" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photos"
+          }
+        }
+      }
+    },
+    "사진 %lld, 전체 %lld장" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo %1$lld of %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "사진 %1$lld, 전체 %2$lld장"
+          }
+        }
+      }
+    },
+    "사진 %lld장" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld photos"
+          }
+        }
+      }
+    },
+    "사진을 불러오지 못했습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load photos"
+          }
+        }
+      }
+    },
+    "삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
+    },
+    "상세 %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detail %lld"
+          }
+        }
+      }
+    },
+    "상세 동작" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detailed action"
+          }
+        }
+      }
+    },
+    "상세항목 패널 크기 조절" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resize detail panel"
+          }
+        }
+      }
+    },
+    "상세활동" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detail activity"
+          }
+        }
+      }
+    },
+    "상위 루틴" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parent routine"
+          }
+        }
+      }
+    },
+    "새 루틴을 추가하거나 상황별 루틴을 만들 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a new routine or create one for a specific situation."
+          }
+        }
+      }
+    },
+    "색상" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Color"
+          }
+        }
+      }
+    },
+    "선택 %lld개 · 분류표 관리에서 자동 분류 기준을 확인할 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld selected · manage the classification list to review automatic rules."
+          }
+        }
+      }
+    },
+    "선택 가능한 활동 없음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No activities available"
+          }
+        }
+      }
+    },
+    "선택 안 됨" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not selected"
+          }
+        }
+      }
+    },
+    "선택됨" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected"
+          }
+        }
+      }
+    },
+    "선택한 모습이 홈 위젯 · 잠금 화면 · 앱에 함께 적용" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The selected look is applied to the Home Screen widget · Lock Screen · app"
+          }
+        }
+      }
+    },
+    "선택한 액션에 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect selected action"
+          }
+        }
+      }
+    },
+    "선택한 위치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selected location"
+          }
+        }
+      }
+    },
+    "설정" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        }
+      }
+    },
+    "설정 열기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
+    "설정에서 언제든 바꿀 수 있습니다. ‘동작 줄이기’가 켜지면 선택한 고양이가 정지 자세로 표시됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can change this anytime in Settings. When Reduce Motion is on, the selected cat appears in a still pose."
+          }
+        }
+      }
+    },
+    "센서 결과는 신뢰도와 함께 기기 안에서 정리" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sensor results are organized on-device with confidence scores"
+          }
+        }
+      }
+    },
+    "센서 수집 · iPhone 전송" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collect sensors · Send to iPhone"
+          }
+        }
+      }
+    },
+    "센서 정보 수집중" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collecting sensor data"
+          }
+        }
+      }
+    },
+    "센서·HealthKit 원본은 보존되며, 수면·운동처럼 자동 기록 전용인 항목은 직접 변경할 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sensor and HealthKit originals are preserved; automatic-only records such as sleep and workouts cannot be edited directly."
+          }
+        }
+      }
+    },
+    "센서·건강 원본은 보존되고 표시 활동만 변경됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sensor and health originals are preserved; only the displayed activity can be changed."
+          }
+        }
+      }
+    },
+    "센서에서 복원한 이동 기록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Travel records restored from sensors"
+          }
+        }
+      }
+    },
+    "소분류" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minor category"
+          }
+        }
+      }
+    },
+    "소분류 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minor category %@"
+          }
+        }
+      }
+    },
+    "손목에 차고 있는 동안의 움직임까지 함께 적습니다. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also records movement while worn on your wrist. %@"
+          }
+        }
+      }
+    },
+    "수동" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manual"
+          }
+        }
+      }
+    },
+    "수면" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sleep"
+          }
+        }
+      }
+    },
+    "수면·활동 기록은 시간을 포함하는 루틴에만 연결할 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sleep and activity records can only be connected to routines that include a time."
+          }
+        }
+      }
+    },
+    "수면·활동 실적은 자동 기록 카드에서 루틴으로 연결합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect sleep and activity results to a routine from the automatic record card."
+          }
+        }
+      }
+    },
+    "수업" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Class"
+          }
+        }
+      }
+    },
+    "수정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
+    },
+    "습관 대시보드" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Habit dashboard"
+          }
+        }
+      }
+    },
+    "시간" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time"
+          }
+        }
+      }
+    },
+    "시간 선택" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select time"
+          }
+        }
+      }
+    },
+    "시간 조정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adjust time"
+          }
+        }
+      }
+    },
+    "시간 플레이헤드" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time playhead"
+          }
+        }
+      }
+    },
+    "시간표는 왼쪽 일과와 오른쪽 활동으로 보고, 아래 연결은 출처만 표시합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The timeline shows plans on the left and activities on the right; connections below show sources only."
+          }
+        }
+      }
+    },
+    "시간표에서 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View on timeline"
+          }
+        }
+      }
+    },
+    "시작" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start"
+          }
+        }
+      }
+    },
+    "시작 구성" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start setup"
+          }
+        }
+      }
+    },
+    "시작하기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get started"
+          }
+        }
+      }
+    },
+    "식사" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meal"
+          }
+        }
+      }
+    },
+    "실시간 GPS 기록 중" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recording GPS in real time"
+          }
+        }
+      }
+    },
+    "실적 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Result %@"
+          }
+        }
+      }
+    },
+    "실적은 시간표에서 항목을 탭해 루틴 또는 액션에 연결하면 반영됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Results are counted when you tap an item in the timeline and connect it to a routine or action."
+          }
+        }
+      }
+    },
+    "실제 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actual · %@"
+          }
+        }
+      }
+    },
+    "실제 기록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actual record"
+          }
+        }
+      }
+    },
+    "실제 기록 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actual record · %@"
+          }
+        }
+      }
+    },
+    "실제 기록 삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete actual record"
+          }
+        }
+      }
+    },
+    "실제 시작 시간" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actual start time"
+          }
+        }
+      }
+    },
+    "실제 종료 시간" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actual end time"
+          }
+        }
+      }
+    },
+    "아니요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
+          }
+        }
+      }
+    },
+    "아이콘 · %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Icons · %lld"
+          }
+        }
+      }
+    },
+    "아이콘으로 빠르게 선택" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose quickly with icons"
+          }
+        }
+      }
+    },
+    "아직 계획이 없습니다. ‘+’로 하위 계획을 추가하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No plans yet. Tap ‘+’ to add a child plan."
+          }
+        }
+      }
+    },
+    "아직 루틴이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No routines yet"
+          }
+        }
+      }
+    },
+    "아직 메모가 없습니다. 결정, 아이디어, 막힘, 다음 할 일을 이 액션에 바로 붙여둘 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No notes yet. Attach decisions, ideas, blockers, and next steps directly to this action."
+          }
+        }
+      }
+    },
+    "아직 연결된 액션이나 실적이 없습니다. 기존 액션을 연결하거나 새 하위 계획을 만들어 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No connected actions or results yet. Connect an existing action or create a new child plan."
+          }
+        }
+      }
+    },
+    "아직 자동으로 기록된 하루가 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No automatically recorded days yet"
+          }
+        }
+      }
+    },
+    "아직 첫 위치를 기다리는 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for the first location"
+          }
+        }
+      }
+    },
+    "아직 추가한 중분류가 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No added subcategories yet"
+          }
+        }
+      }
+    },
+    "아직 현재 위치가 지정되지 않았습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No current location has been set yet."
+          }
+        }
+      }
+    },
+    "알고리즘 결과 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Algorithm result · %@"
+          }
+        }
+      }
+    },
+    "애플·구글 캘린더에서 가져온 내용은 ‘일정’ 카드에 표시됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Items imported from Apple and Google Calendar appear on the Schedule card."
+          }
+        }
+      }
+    },
+    "액션" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Action"
+          }
+        }
+      }
+    },
+    "액션 시간을 포함하는 루틴을 먼저 만들어 주세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a routine that includes an action time first."
+          }
+        }
+      }
+    },
+    "액션아이템 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect action item"
+          }
+        }
+      }
+    },
+    "액션을 루틴에 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect action to routine"
+          }
+        }
+      }
+    },
+    "앱 사용 중만 기록 · ‘항상’ 위치 허용 필요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records only while the app is in use · Always location access required"
+          }
+        }
+      }
+    },
+    "양 끝 드래그: 5분 조정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag either end: adjust by 5 minutes"
+          }
+        }
+      }
+    },
+    "양끝을 드래그" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag either end"
+          }
+        }
+      }
+    },
+    "어떤 곳인가요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What kind of place is this?"
+          }
+        }
+      }
+    },
+    "업무" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work"
+          }
+        }
+      }
+    },
+    "없음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        }
+      }
+    },
+    "역할·상황·루틴에 맞는 항목을 시간표와 추가 메뉴에 표시합니다. 자동 기록 항목도 여기서 켜고 끌 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows items matching roles, situations, and routines in the timeline and add menu. Automatic records can also be enabled or disabled here."
+          }
+        }
+      }
+    },
+    "연결 대기" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for connection"
+          }
+        }
+      }
+    },
+    "연결 변경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change connection"
+          }
+        }
+      }
+    },
+    "연결 실적 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld connected results"
+          }
+        }
+      }
+    },
+    "연결 액션" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected action"
+          }
+        }
+      }
+    },
+    "연결 액션 %lld/%lld 완료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected actions %1$lld/%2$lld complete"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "연결 액션 %1$lld/%2$lld 완료"
+          }
+        }
+      }
+    },
+    "연결된 루틴 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected routine · %@"
+          }
+        }
+      }
+    },
+    "연결된 루틴 없음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No connected routine"
+          }
+        }
+      }
+    },
+    "연결은 직접 선택" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connections are selected manually"
+          }
+        }
+      }
+    },
+    "연결할 루틴 또는 액션이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No routines or actions to connect"
+          }
+        }
+      }
+    },
+    "연결할 루틴·액션이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No routines or actions to connect"
+          }
+        }
+      }
+    },
+    "연결할 루틴이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No routines to connect"
+          }
+        }
+      }
+    },
+    "연결할 액션아이템이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No action items to connect"
+          }
+        }
+      }
+    },
+    "영어 공부" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English study"
+          }
+        }
+      }
+    },
+    "예: 주중 23:00 취침 → 다음날 06:30 기상, 주말 01:00 → 10:00" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Example: Weekday sleep 23:00 → wake 06:30 next day, weekend 01:00 → 10:00"
+          }
+        }
+      }
+    },
+    "오늘" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        }
+      }
+    },
+    "오늘 움직인 경로" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's traveled route"
+          }
+        }
+      }
+    },
+    "오늘 이동 경로" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's travel route"
+          }
+        }
+      }
+    },
+    "오늘의 기록" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's record"
+          }
+        }
+      }
+    },
+    "오늘의 위치·이동 기록이 아직 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No location or travel records for today yet"
+          }
+        }
+      }
+    },
+    "오늘의 지도" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's map"
+          }
+        }
+      }
+    },
+    "완료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "요일별 · 시간별" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "By day · by time"
+          }
+        }
+      }
+    },
+    "운동" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise"
+          }
+        }
+      }
+    },
+    "위 시간축과 실시간 동기화" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync in real time with the timeline above"
+          }
+        }
+      }
+    },
+    "위도 %.5f · 경도 %.5f" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latitude %1$.5f · Longitude %2$.5f"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "위도 %1$.5f · 경도 %2$.5f"
+          }
+        }
+      }
+    },
+    "위치" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location"
+          }
+        }
+      }
+    },
+    "위치 기준" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location reference"
+          }
+        }
+      }
+    },
+    "위치 기준 삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete location reference"
+          }
+        }
+      }
+    },
+    "위치·동작 센서가 이동이나 층 변화를 감지하면 여기에 나타납니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movement and motion sensors appear here when they detect travel or floor changes."
+          }
+        }
+      }
+    },
+    "위치는 이미 채워져 있습니다. 이름과 감지 범위는 다음 화면에서 고칠 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The location is already filled in. You can edit its name and detection range on the next screen."
+          }
+        }
+      }
+    },
+    "음성 재생" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play voice memo"
+          }
+        }
+      }
+    },
+    "이 Apple 계정 또는 기기에서는 14일 무료 체험을 이미 사용했습니다." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Apple Account or device has already used the 14-day free trial."
+          }
+        }
+      }
+    },
+    "이 건물 층 기준" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This building's floor reference"
+          }
+        }
+      }
+    },
+    "이 건물 층 높이 · %.1fm · 기준 %lld개 층" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This building's floor height · %1$.1fm · %2$lld reference floors"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "이 건물 층 높이 · %1$.1fm · 기준 %2$lld개 층"
+          }
+        }
+      }
+    },
+    "이 계획을 삭제할까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this plan?"
+          }
+        }
+      }
+    },
+    "이 구간에 남은 앱 사용 기록이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No app usage records remain for this segment"
+          }
+        }
+      }
+    },
+    "이 기간에 작성된 메모가 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No notes were written during this period."
+          }
+        }
+      }
+    },
+    "이 기간에 저장된 실제 데이터가 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No actual data was saved during this period."
+          }
+        }
+      }
+    },
+    "이 기간을 설명한 기록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record describing this period"
+          }
+        }
+      }
+    },
+    "이 기록만 삭제되며 연결된 계획은 그대로 유지됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only this record will be deleted; linked plans will remain."
+          }
+        }
+      }
+    },
+    "이 기준점을 지울까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this reference point?"
+          }
+        }
+      }
+    },
+    "이 루틴을 삭제할까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this routine?"
+          }
+        }
+      }
+    },
+    "이 시각에 짧은 메모 남기기…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave a short note at this time…"
+          }
+        }
+      }
+    },
+    "이 시각에는 아직 메모가 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No notes at this time yet"
+          }
+        }
+      }
+    },
+    "이 시간보다 짧은 방문은 일반 장소로 남깁니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Visits shorter than this time remain general places."
+          }
+        }
+      }
+    },
+    "이 시간의 맥락" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context for this time"
+          }
+        }
+      }
+    },
+    "이 실제 기록을 삭제할까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this actual record?"
+          }
+        }
+      }
+    },
+    "이 자리를 장소의 기준점으로 삼습니다. 층수는 아래 '현재 층수'에서 알려 주면 되고, 머무는 동안의 고도 변화는 자동으로 따라갑니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use this spot as the place's reference point. Enter the floor below under 'Current floor'; elevation changes during your stay will be tracked automatically."
+          }
+        }
+      }
+    },
+    "이 장소의 자동 위치·층수 기록 기준을 삭제합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this place's automatic location and floor recording references."
+          }
+        }
+      }
+    },
+    "이 층으로 보정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calibrate to this floor"
+          }
+        }
+      }
+    },
+    "이 층으로 확인" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm this floor"
+          }
+        }
+      }
+    },
+    "이날 기록된 사진이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No photos recorded on this day"
+          }
+        }
+      }
+    },
+    "이날 등록된 액션아이템이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No action items added on this day"
+          }
+        }
+      }
+    },
+    "이날 등록된 이벤트가 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No events added on this day"
+          }
+        }
+      }
+    },
+    "이날 등록된 일정이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No events added on this day"
+          }
+        }
+      }
+    },
+    "이동" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Travel"
+          }
+        }
+      }
+    },
+    "이동 내용이 없어 현재 위치만 표시합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No travel details, so only the current location is shown."
+          }
+        }
+      }
+    },
+    "이동·위치 트래킹" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movement · location tracking"
+          }
+        }
+      }
+    },
+    "이동수단 변경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change travel mode"
+          }
+        }
+      }
+    },
+    "이동은 아래 10종류만 사용합니다. 센서가 직접 구분하지 못하는 수단은 여러 신호를 합쳐 신뢰도와 함께 표시합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Travel uses the 10 modes below. Modes sensors cannot identify directly are shown using combined signals and a confidence score."
+          }
+        }
+      }
+    },
+    "이름" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        }
+      }
+    },
+    "이름 편집" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit name"
+          }
+        }
+      }
+    },
+    "이름은 시간표의 위치 라벨과 위젯에 표시됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The name appears as the location label on the timeline and in widgets."
+          }
+        }
+      }
+    },
+    "이번 주 루틴 목표와 연결 실적" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This week's routine goals and connected results"
+          }
+        }
+      }
+    },
+    "이번 주 실행" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This week's execution"
+          }
+        }
+      }
+    },
+    "이어진 유사 경로 %lld개를 한 번에 표시" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show %lld linked similar routes at once"
+          }
+        }
+      }
+    },
+    "일과" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan"
+          }
+        }
+      }
+    },
+    "일과와 상세활동 두 줄" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Two lines: plans and detail activities"
+          }
+        }
+      }
+    },
+    "자동" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic"
+          }
+        }
+      }
+    },
+    "자동 감지 범위" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic detection range"
+          }
+        }
+      }
+    },
+    "자동 근거 · 루틴 · 액션" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic evidence · routines · actions"
+          }
+        }
+      }
+    },
+    "자동 기록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic record"
+          }
+        }
+      }
+    },
+    "자동 기록 · 수정 불가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic record · cannot edit"
+          }
+        }
+      }
+    },
+    "자동 기록은 수정할 수 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic records cannot be edited"
+          }
+        }
+      }
+    },
+    "자동 기록은 수정할 수 없습니다. 두 번 탭하면 해당 시간으로 확대합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic records cannot be edited. Double-tap to zoom to that time"
+          }
+        }
+      }
+    },
+    "자동 분류 기준" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic classification rules"
+          }
+        }
+      }
+    },
+    "자동 위치 기록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic location record"
+          }
+        }
+      }
+    },
+    "자동 판정으로 되돌리기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore automatic decision"
+          }
+        }
+      }
+    },
+    "자동으로 구분된 활동" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically classified activity"
+          }
+        }
+      }
+    },
+    "자주 가는데 등록되지 않은 곳" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frequent unregistered places"
+          }
+        }
+      }
+    },
+    "자주가는 곳" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frequent places"
+          }
+        }
+      }
+    },
+    "자주가는 곳 삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete frequent place"
+          }
+        }
+      }
+    },
+    "자주가는 곳 설정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set frequent places"
+          }
+        }
+      }
+    },
+    "잠금 화면 · 현재 활동" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lock Screen · Live Activity"
+          }
+        }
+      }
+    },
+    "잠금을 해제해 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please unlock"
+          }
+        }
+      }
+    },
+    "장소 이름" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place name"
+          }
+        }
+      }
+    },
+    "장소를 찾을 수 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place not found"
+          }
+        }
+      }
+    },
+    "장소와 이동수단 자동 추정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically estimate places and travel modes"
+          }
+        }
+      }
+    },
+    "재는 중 · %lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measuring · %1$lld/%2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "재는 중 · %1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "재생 멈춤" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause playback"
+          }
+        }
+      }
+    },
+    "저장" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        }
+      }
+    },
+    "저장된 GPS 좌표가 있는 경로부터 지도에 표시됩니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routes with saved GPS coordinates are shown on the map first"
+          }
+        }
+      }
+    },
+    "저장된 자동 기록이 변경되었을 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved automatic records may have changed."
+          }
+        }
+      }
+    },
+    "전체 건너뛰기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip all"
+          }
+        }
+      }
+    },
+    "접힘" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collapsed"
+          }
+        }
+      }
+    },
+    "정지" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopped"
+          }
+        }
+      }
+    },
+    "정확한 주소·원시 좌표는 기본 타임라인에 표시하지 않음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exact addresses and raw coordinates are not shown on the main timeline"
+          }
+        }
+      }
+    },
+    "종료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "좌우 화살표로 위젯에서 사용하는 모든 고양이 동작을 미리 볼 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use the left and right arrows to preview every cat animation used by the widget."
+          }
+        }
+      }
+    },
+    "좌우로 쓸어 다음 사진이나 이전 사진 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Swipe left or right to view the next or previous photo"
+          }
+        }
+      }
+    },
+    "좌표 정밀도가 낮아 선분을 그릴 수 없어서 위치 마커만 표시 중입니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Showing location markers only because coordinate precision is too low to draw route segments."
+          }
+        }
+      }
+    },
+    "중분류" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subcategory"
+          }
+        }
+      }
+    },
+    "중분류 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subcategory %@"
+          }
+        }
+      }
+    },
+    "중요 계획" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Important plan"
+          }
+        }
+      }
+    },
+    "지금" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now"
+          }
+        }
+      }
+    },
+    "지금 가져오기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import now"
+          }
+        }
+      }
+    },
+    "지금 있는 층" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current floor"
+          }
+        }
+      }
+    },
+    "지금으로" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use now"
+          }
+        }
+      }
+    },
+    "지금의 시간표" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current timeline"
+          }
+        }
+      }
+    },
+    "지도를 탭해 장소의 기준점을 선택하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the map to choose the place's reference point."
+          }
+        }
+      }
+    },
+    "지도에서 지정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set on map"
+          }
+        }
+      }
+    },
+    "지우기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        }
+      }
+    },
+    "지하철 노선" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subway line"
+          }
+        }
+      }
+    },
+    "직접 추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add manually"
+          }
+        }
+      }
+    },
+    "직접 확인" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm manually"
+          }
+        }
+      }
+    },
+    "진행 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In progress"
+          }
+        }
+      }
+    },
+    "집 · 학교 · 학원 · 회사 등을 현재 위치로 지정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set home, school, academy, work, and more to your current location"
+          }
+        }
+      }
+    },
+    "집중 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focusing"
+          }
+        }
+      }
+    },
+    "첫 실행 계획이 필요합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A first plan is required"
+          }
+        }
+      }
+    },
+    "첫 하위 계획 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create first child plan"
+          }
+        }
+      }
+    },
+    "최소 체류" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimum stay"
+          }
+        }
+      }
+    },
+    "추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "출발" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Depart"
+          }
+        }
+      }
+    },
+    "취미" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hobby"
+          }
+        }
+      }
+    },
+    "취소" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "측정 근거" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measurement evidence"
+          }
+        }
+      }
+    },
+    "캘리브레이션 히스토리" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calibration history"
+          }
+        }
+      }
+    },
+    "캘린더로 보내기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send to Calendar"
+          }
+        }
+      }
+    },
+    "캘린더에 추가됨" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Added to Calendar"
+          }
+        }
+      }
+    },
+    "탭하여 상세활동·시간 수정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to edit detail activity · time"
+          }
+        }
+      }
+    },
+    "탭하여 위치·감지 범위 설정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to set location · detection range"
+          }
+        }
+      }
+    },
+    "통합 미세먼지 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combined fine dust %@"
+          }
+        }
+      }
+    },
+    "틀린 기준점은 지울 수 있습니다. 나머지 기준과 이 장소의 위치는 그대로 남습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can delete an incorrect reference point. Other references and this place's location will remain."
+          }
+        }
+      }
+    },
+    "판정 근거" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decision evidence"
+          }
+        }
+      }
+    },
+    "편집" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
+    },
+    "펼침" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expanded"
+          }
+        }
+      }
+    },
+    "표시 시간" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Displayed time"
+          }
+        }
+      }
+    },
+    "표시할 사진이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No photos to show"
+          }
+        }
+      }
+    },
+    "프로" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro"
+          }
+        }
+      }
+    },
+    "필요한 일과만 골라보세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose only the plans you need"
+          }
+        }
+      }
+    },
+    "하루 24시간 눈금판" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24-hour daily scale"
+          }
+        }
+      }
+    },
+    "하루 기록 재생" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play day's record"
+          }
+        }
+      }
+    },
+    "하루 재생" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play day"
+          }
+        }
+      }
+    },
+    "하루 재생 일시 정지" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause day playback"
+          }
+        }
+      }
+    },
+    "하루는 알아서 기록됩니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your day is recorded automatically"
+          }
+        }
+      }
+    },
+    "하위 계획 내리기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Convert to child plan"
+          }
+        }
+      }
+    },
+    "하위 액션 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld child actions"
+          }
+        }
+      }
+    },
+    "한 번 결제 · 자동 갱신 없음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One-time purchase · no auto-renewal"
+          }
+        }
+      }
+    },
+    "한국어" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Korean"
+          }
+        }
+      }
+    },
+    "해발 %lldm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lldm above sea level"
+          }
+        }
+      }
+    },
+    "허용하기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow"
+          }
+        }
+      }
+    },
+    "현재 기간의 사진" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photos from this period"
+          }
+        }
+      }
+    },
+    "현재 날씨 %@, %lld도" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current weather %1$@, %2$lld°"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "현재 날씨 %1$@, %2$lld도"
+          }
+        }
+      }
+    },
+    "현재 날짜와 시간으로 이동" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to current date and time"
+          }
+        }
+      }
+    },
+    "현재 보기 전체로 맞춤" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fit current view"
+          }
+        }
+      }
+    },
+    "현재 센서 · 상대고도 %.1fm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current sensor · relative altitude %.1fm"
+          }
+        }
+      }
+    },
+    "현재 위치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current location"
+          }
+        }
+      }
+    },
+    "현재 위치로 다시 지정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set again to current location"
+          }
+        }
+      }
+    },
+    "현재 위치로 지정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set to current location"
+          }
+        }
+      }
+    },
+    "현재 위치를 지정하면 이 장소의 층 추정이 시작됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setting the current location starts floor estimation for this place."
+          }
+        }
+      }
+    },
+    "현재 층수" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current floor"
+          }
+        }
+      }
+    },
+    "홈 화면 · 중간 위젯" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home Screen · medium widget"
+          }
+        }
+      }
+    },
+    "화면 해상도" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screen resolution"
+          }
+        }
+      }
+    },
+    "화면 해상도 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screen resolution %@"
+          }
+        }
+      }
+    },
+    "확대된 하루 24시간 직선 시간표" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoomed 24-hour linear timeline"
+          }
+        }
+      }
+    },
+    "확인" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "확인할 추정 기록이 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No estimated records to review"
+          }
+        }
+      }
+    },
+    "확인할 활동 없음" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No activity to confirm"
+          }
+        }
+      }
+    },
+    "확인해 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please check"
+          }
+        }
+      }
+    },
+    "환승" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transfer"
+          }
+        }
+      }
+    },
+    "활동" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity"
+          }
+        }
+      }
+    },
+    "활동 결정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity decision"
+          }
+        }
+      }
+    },
+    "활동 근거" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity evidence"
+          }
+        }
+      }
+    },
+    "활동 근거 %lld건" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld activity evidence items"
+          }
+        }
+      }
+    },
+    "활동 변경" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change activity"
+          }
+        }
+      }
+    },
+    "활동 선택" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose activity"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

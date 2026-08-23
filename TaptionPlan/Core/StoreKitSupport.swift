@@ -246,6 +246,25 @@ enum StorePurchaseOutcome: Equatable, Sendable {
     case cancelled
 }
 
+enum TaptionProMessageCode: Equatable, Sendable {
+    case trialStarted
+    case trialAlreadyUsed
+    case purchaseCompleted
+    case purchasePending
+    case purchaseUnavailable
+    case receiptVerificationFailed
+    case purchaseFailed
+    case restoreCompleted
+    case restoreNotFound
+    case restoreFailed
+}
+
+enum TaptionProMenuPresentation: Equatable, Sendable {
+    case purchase
+    case trial(remainingDays: Int)
+    case purchased
+}
+
 enum StorePurchaseError: LocalizedError {
     case productUnavailable
     case unverifiedTransaction
@@ -253,9 +272,9 @@ enum StorePurchaseError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .productUnavailable:
-            "App Store에서 구매 항목을 아직 불러오지 못했습니다."
+            String(localized: "App Store에서 구매 항목을 아직 불러오지 못했습니다.")
         case .unverifiedTransaction:
-            "구매 영수증을 확인하지 못했습니다."
+            String(localized: "구매 영수증을 확인하지 못했습니다.")
         }
     }
 }
@@ -333,7 +352,7 @@ final class TaptionProAccessController {
     private(set) var state: TaptionProAccessState = .loading
     private(set) var product: StoreProductPresentation?
     private(set) var isActionInFlight = false
-    var message: String?
+    var message: TaptionProMessageCode?
     var isPurchaseSheetPresented = false
 
     @ObservationIgnored private let purchaseService: StoreKitPurchaseService
@@ -363,14 +382,14 @@ final class TaptionProAccessController {
         state == .purchased
     }
 
-    var menuTitle: String {
+    var menuPresentation: TaptionProMenuPresentation {
         switch state {
         case .purchased:
-            "Pro 구매 완료"
+            .purchased
         case .trial(_, let remainingDays):
-            "14일 무료 체험 · " + String(remainingDays) + "일 남음"
+            .trial(remainingDays: remainingDays)
         case .loading, .trialNotStarted, .expired:
-            "Pro 구매"
+            .purchase
         }
     }
 
@@ -410,9 +429,9 @@ final class TaptionProAccessController {
         setState(TaptionProTrialPolicy.state(record: record, now: now))
         switch state {
         case .trial:
-            message = "14일 무료 체험이 시작되었습니다."
+            message = .trialStarted
         case .expired:
-            message = "이 Apple 계정 또는 기기에서는 14일 무료 체험을 이미 사용했습니다."
+            message = .trialAlreadyUsed
         case .loading, .trialNotStarted, .purchased:
             break
         }
@@ -427,15 +446,19 @@ final class TaptionProAccessController {
             switch try await purchaseService.purchasePro() {
             case .purchased:
                 await refresh()
-                message = "Pro 영구 구매가 완료되었습니다."
+                message = .purchaseCompleted
                 isPurchaseSheetPresented = false
             case .pending:
-                message = "구매 승인을 기다리고 있습니다."
+                message = .purchasePending
             case .cancelled:
                 break
             }
+        } catch StorePurchaseError.productUnavailable {
+            message = .purchaseUnavailable
+        } catch StorePurchaseError.unverifiedTransaction {
+            message = .receiptVerificationFailed
         } catch {
-            message = error.localizedDescription
+            message = .purchaseFailed
         }
     }
 
@@ -446,13 +469,13 @@ final class TaptionProAccessController {
         do {
             if try await purchaseService.restorePurchases() {
                 await refresh()
-                message = "구매 내역을 복원했습니다."
+                message = .restoreCompleted
                 isPurchaseSheetPresented = false
             } else {
-                message = "복원할 Pro 구매 내역이 없습니다."
+                message = .restoreNotFound
             }
         } catch {
-            message = error.localizedDescription
+            message = .restoreFailed
         }
     }
 

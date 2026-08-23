@@ -5,7 +5,10 @@ import WidgetKit
 @MainActor
 final class WatchConnectivityController: NSObject, ObservableObject {
     @Published private(set) var payload: TaptionWatchPayload?
-    @Published private(set) var statusText = "iPhone 연결 중"
+    @Published private(set) var statusText = AppLanguagePreference.text(
+        korean: "iPhone 연결 중",
+        english: "Connecting to iPhone"
+    )
 
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -23,6 +26,14 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     var onDataSyncRequest: (() -> Void)?
 
     private var didPrepare = false
+
+    private var language: AppLanguagePreference.ResolvedLanguage {
+        AppLanguagePreference.resolve(rawValue: payload?.languagePreference)
+    }
+
+    private func text(_ korean: String, _ english: String) -> String {
+        language == .korean ? korean : english
+    }
 
     override init() {
         super.init()
@@ -43,7 +54,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         restorePendingHealthSnapshots()
         guard WCSession.isSupported() else {
             WatchLaunchDiagnostics.mark("connectivity unsupported")
-            statusText = "연결을 지원하지 않음"
+            statusText = text("연결을 지원하지 않음", "Connectivity unavailable")
             return
         }
         // WCSession.delegate는 weak 참조다. SwiftUI가 소유권을 넘기기 전에
@@ -318,6 +329,10 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         payload = value
+        updateStatus(
+            activationRawValue: WCSession.default.activationState.rawValue,
+            isReachable: WCSession.default.isReachable
+        )
         WatchLaunchDiagnostics.mark(
             "payload applied acceleration=\(value.accelerationSettings?.profile.rawValue.description ?? "none") sync=\(value.dataSyncProfile?.rawValue.description ?? "none")"
         )
@@ -335,6 +350,10 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         payload = value
+        updateStatus(
+            activationRawValue: WCSession.default.activationState.rawValue,
+            isReachable: WCSession.default.isReachable
+        )
         onPayloadChange?(value)
         publishToWidget(value)
     }
@@ -360,15 +379,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     ) {
         switch activationRawValue {
         case WCSessionActivationState.notActivated.rawValue:
-            statusText = "iPhone 연결 중"
+            statusText = text("iPhone 연결 중", "Connecting to iPhone")
         case WCSessionActivationState.inactive.rawValue:
-            statusText = "연결 대기"
+            statusText = text("연결 대기", "Waiting for connection")
         case WCSessionActivationState.activated.rawValue:
             statusText = isReachable
-                ? "iPhone 실시간 연결"
-                : "백그라운드 동기화"
+                ? text("iPhone 실시간 연결", "iPhone connected")
+                : text("백그라운드 동기화", "Background sync")
         default:
-            statusText = "연결 상태 확인 중"
+            statusText = text("연결 상태 확인 중", "Checking connection")
         }
     }
 

@@ -1,6 +1,63 @@
 import SwiftUI
 import UIKit
 
+enum MapHomeTimeSidebarDragProjection {
+    static func state(
+        from base: MapHomeTimeSidebarNLEState,
+        translation: CGFloat,
+        trackHeight: CGFloat,
+        maxMinute: Int,
+        sensitivity: CGFloat
+    ) -> MapHomeTimeSidebarNLEState {
+        MapHomeTimeSidebarNLEState(
+            selectedMinute: MapHomeTimeSidebarMath.minuteByDragging(
+                baseMinute: base.selectedMinute,
+                translation: translation,
+                trackHeight: trackHeight,
+                maxMinute: maxMinute,
+                visibleStartMinute: base.visibleStartMinute,
+                visibleDurationMinutes: base.visibleDurationMinutes,
+                sensitivity: sensitivity
+            ),
+            visibleStartMinute: base.visibleStartMinute,
+            visibleDurationMinutes: base.visibleDurationMinutes
+        )
+    }
+}
+
+enum MapHomeTimeSidebarViewportProjection {
+    static func state(
+        from base: MapHomeTimeSidebarNLEState,
+        translation: CGFloat,
+        trackHeight: CGFloat,
+        verticalInset: CGFloat,
+        maxMinute: Int,
+        sensitivity: CGFloat
+    ) -> MapHomeTimeSidebarNLEState {
+        let delta = Int(
+            (translation / max(trackHeight, 1)
+                * CGFloat(base.visibleDurationMinutes)
+                * max(sensitivity, 0)).rounded()
+        )
+        let start = min(
+            max(base.visibleStartMinute + delta, 0),
+            MapHomeTimeSidebarMath.fullDayMinutes - base.visibleDurationMinutes
+        )
+        let fixedMinute = MapHomeTimeSidebarMath.minuteByFixedPlayhead(
+            trackHeight: trackHeight,
+            verticalInset: verticalInset,
+            maxMinute: maxMinute,
+            visibleStartMinute: start,
+            visibleDurationMinutes: base.visibleDurationMinutes
+        )
+        return MapHomeTimeSidebarNLEState(
+            selectedMinute: fixedMinute,
+            visibleStartMinute: start,
+            visibleDurationMinutes: base.visibleDurationMinutes
+        )
+    }
+}
+
 enum MapHomeTimeSidebarStyle {
     static let numericColumnBackground = Color.white.opacity(0.68)
 }
@@ -132,6 +189,7 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
         case "hobby": return "Hobby"
         case "sleep": return "Sleep"
         case "movement": return "Movement"
+        case "eating": return "Eating"
         case "exercise": return "Exercise"
         case "unconfirmed": return "Unconfirmed"
         default: return title
@@ -140,6 +198,15 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
 
     static var all: [Self] {
         all(categoryColors: [:])
+    }
+
+    static func custom(_ category: MapUserActivityCategory) -> Self {
+        Self(
+            id: "custom:\(category.id.uuidString)",
+            title: category.title,
+            systemImage: category.systemImage,
+            hex: category.hex
+        )
     }
 
     static func all(categoryColors: [String: String] = [:]) -> [Self] {
@@ -280,11 +347,17 @@ enum MapHomeTimeRailSegmentEngine {
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
         else { return [.wholeDayUnconfirmed] }
         let day = TimeSpan(start: dayStart, end: dayEnd)
-        let actualCandidates = AutomaticRecordTimelineEngine.activities(
+        let automaticActuals = AutomaticRecordTimelineEngine.activities(
             from: actuals,
             inside: day,
             asOf: asOf
-        ).compactMap { actual -> Candidate? in
+        )
+        let displayOverrides = actuals.filter {
+            $0.source == .manual
+                && $0.manuallyCorrected
+                && $0.span(asOf: asOf).intersection(with: day) != nil
+        }
+        let actualCandidates = (automaticActuals + displayOverrides).compactMap { actual -> Candidate? in
             candidate(
                 start: actual.span(asOf: asOf).start,
                 end: actual.span(asOf: asOf).end,
@@ -452,11 +525,11 @@ enum MapHomeTimeRailSegmentEngine {
         _ lhs: Candidate,
         than rhs: Candidate
     ) -> Bool {
-        if lhs.phasePrecedence != rhs.phasePrecedence {
-            return lhs.phasePrecedence > rhs.phasePrecedence
-        }
         if lhs.manuallyCorrected != rhs.manuallyCorrected {
             return lhs.manuallyCorrected
+        }
+        if lhs.phasePrecedence != rhs.phasePrecedence {
+            return lhs.phasePrecedence > rhs.phasePrecedence
         }
         let lhsConfidence = confidenceRank(lhs.confidence)
         let rhsConfidence = confidenceRank(rhs.confidence)
@@ -600,17 +673,19 @@ struct MapHomeTimeSidebar: View {
     let currentWeather: WeatherContext?
     let zoomResetToken: Int
     let zoomStepToken: Int
+    let maximumSelectableMinute: Int?
+    let isPlaybackRunning: Bool
     var onSelectionChanged: ((Int) -> Void)?
     var onViewportChanged: ((Int, Int) -> Void)?
     var onSectionEdit: (() -> Void)?
+    var onPlaybackToggle: (() -> Void)?
 
     @State private var isPrecisionMode = false
     @State private var visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var visibleStartMinute = 0
     @State private var dragStartMinute: Int?
     @State private var viewportDragStartMinute: Int?
-    @State private var lastRenderUptime: TimeInterval = 0
-    @State private var lastViewportRenderUptime: TimeInterval = 0
+    @State private var gestureBaseState: MapHomeTimeSidebarNLEState?
     @State private var isHandleDragging = false
     @State private var nleProjection = TimelineNLEProjection<MapHomeTimeSidebarNLEState>()
     @State private var handleDrag = MapHomeTimeSidebarHandleDrag()
@@ -635,9 +710,12 @@ struct MapHomeTimeSidebar: View {
         zoomResetToken: Int = 0,
         zoomStepToken: Int = 0,
         railWidth: CGFloat = 58,
+        maximumSelectableMinute: Int? = nil,
+        isPlaybackRunning: Bool = false,
         onSelectionChanged: ((Int) -> Void)? = nil,
         onViewportChanged: ((Int, Int) -> Void)? = nil,
-        onSectionEdit: (() -> Void)? = nil
+        onSectionEdit: (() -> Void)? = nil,
+        onPlaybackToggle: (() -> Void)? = nil
     ) {
         self.date = date
         self._selectedMinute = selectedMinute
@@ -648,19 +726,23 @@ struct MapHomeTimeSidebar: View {
         self.zoomResetToken = zoomResetToken
         self.zoomStepToken = zoomStepToken
         self.railWidth = max(58, railWidth)
+        self.maximumSelectableMinute = maximumSelectableMinute
+        self.isPlaybackRunning = isPlaybackRunning
         self.onSelectionChanged = onSelectionChanged
         self.onViewportChanged = onViewportChanged
         self.onSectionEdit = onSectionEdit
+        self.onPlaybackToggle = onPlaybackToggle
     }
 
     var body: some View {
         GeometryReader { proxy in
             let railHeight = max(220, proxy.size.height)
             let trackHeight = max(1, railHeight - verticalInset * 2)
-            let maxMinute = MapHomeTimeSidebarMath.maximumSelectableMinute(
-                for: date,
-                now: Date()
-            )
+            let maxMinute = maximumSelectableMinute
+                ?? MapHomeTimeSidebarMath.maximumSelectableMinute(
+                    for: date,
+                    now: Date()
+                )
             let minute = min(max(selectedMinute, 0), maxMinute)
             let visibleWindow = MapHomeTimeSidebarMath.visibleWindow(
                 startMinute: visibleStartMinute,
@@ -881,6 +963,25 @@ struct MapHomeTimeSidebar: View {
                     visibleWindow: visibleWindow
                 )
 
+                if let onPlaybackToggle {
+                    Button(action: onPlaybackToggle) {
+                        Image(systemName: isPlaybackRunning ? "pause.fill" : "play.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.white)
+                            .frame(width: 34, height: 34)
+                            .background(Color.tpInk.opacity(0.92), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
+                    .accessibilityLabel(isPlaybackRunning ? "하루 재생 일시 정지" : "하루 재생")
+                    .position(
+                        x: trackX - 27,
+                        y: railHeight - 19
+                    )
+                    .zIndex(4)
+                }
+
             }
             .frame(width: railWidth, height: railHeight)
             .contentShape(Rectangle())
@@ -892,7 +993,7 @@ struct MapHomeTimeSidebar: View {
         .onDisappear {
             dragStartMinute = nil
             viewportDragStartMinute = nil
-            lastViewportRenderUptime = 0
+            gestureBaseState = nil
             isPrecisionMode = false
             isHandleDragging = false
             nleProjection.reset()
@@ -915,10 +1016,15 @@ struct MapHomeTimeSidebar: View {
             nleProjection.synchronize(with: nleState)
         }
         .onChange(of: zoomStepToken) { oldValue, newValue in
-            guard oldValue != newValue else { return }
-            zoomTimeline(direction: newValue > oldValue ? 1 : -1)
+            let delta = newValue - oldValue
+            guard delta != 0 else { return }
+            let direction = delta > 0 ? 1 : -1
+            for _ in 0..<abs(delta) {
+                zoomTimeline(direction: direction)
+            }
         }
         .onChange(of: selectedMinute) { _, _ in
+            guard !isHandleDragging, viewportDragStartMinute == nil else { return }
             nleProjection.synchronize(with: nleState)
         }
     }
@@ -931,7 +1037,7 @@ struct MapHomeTimeSidebar: View {
         maxMinute: Int,
         visibleWindow: ClosedRange<Int>
     ) -> some View {
-        let handleHeight: CGFloat = 40
+        let handleHeight: CGFloat = 44
         let fallbackActivity = MapHomeTimeSidebarActivity.majorCategory(
             "unconfirmed",
             categoryColors: categoryColors
@@ -940,23 +1046,25 @@ struct MapHomeTimeSidebar: View {
             Image(systemName: activity?.systemImage ?? fallbackActivity.systemImage)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(activity?.tint ?? fallbackActivity.tint)
-                .frame(width: 32, height: handleHeight)
+                .frame(width: 44, height: handleHeight)
                 .background(
                     Color.tpInk.opacity(0.90),
-                    in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: 11, style: .continuous)
                 )
                 .overlay {
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
                         .stroke(
                             (activity?.tint ?? fallbackActivity.tint)
                                 .opacity(0.45),
                             lineWidth: 1
                         )
                 }
-                .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                .onTapGesture(count: 2) {
-                    onSectionEdit?()
-                }
+                .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                .highPriorityGesture(
+                    TapGesture(count: 2).onEnded {
+                        onSectionEdit?()
+                    }
+                )
             .accessibilityLabel(activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel)
             .accessibilityHint("두 번 탭하면 섹션 편집을 엽니다")
                 .position(x: trackX - 23, y: handleHeight / 2)
@@ -1043,7 +1151,7 @@ struct MapHomeTimeSidebar: View {
                     visibleStartMinute: visibleWindow.lowerBound,
                     visibleDurationMinutes: visibleWindow.upperBound - visibleWindow.lowerBound
                 )
-                publish(minute, force: true)
+                publish(minute)
             }
     }
 
@@ -1054,90 +1162,85 @@ struct MapHomeTimeSidebar: View {
     ) -> some Gesture {
         DragGesture(minimumDistance: 1)
             .onChanged { value in
-                isHandleDragging = true
+                if !isHandleDragging { isHandleDragging = true }
                 if dragStartMinute == nil {
                     dragStartMinute = min(max(selectedMinute, 0), maxMinute)
-                    lastRenderUptime = 0
+                    let base = nleState
+                    gestureBaseState = base
+                    nleProjection.begin(with: base)
                     if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes {
                         handleDrag.begin(
-                            with: nleState,
+                            with: base,
                             handleY: trackHeight / 2,
                             nowUptime: ProcessInfo.processInfo.systemUptime
                         )
                     }
                 }
+                let nowUptime = ProcessInfo.processInfo.systemUptime
+                let projected: MapHomeTimeSidebarNLEState
                 if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
-                   let projected = handleDrag.projectedState(
+                   let handleProjected = handleDrag.projectedState(
                        translation: value.translation.height,
                        trackHeight: trackHeight,
                        maxMinute: maxMinute,
-                       sensitivity: isPrecisionMode ? 0.25 : 1,
-                       nowUptime: ProcessInfo.processInfo.systemUptime
+                       sensitivity: isPrecisionMode
+                           ? MapHomeTimeSidebarMath.precisionDragSensitivity
+                           : MapHomeTimeSidebarMath.standardDragSensitivity,
+                       nowUptime: nowUptime
                    ) {
-                    guard TimelineInteractionFrameGate.shouldRender(
-                        lastUptime: &lastViewportRenderUptime,
-                        nowUptime: ProcessInfo.processInfo.systemUptime,
-                        force: false
-                    ) else { return }
-                    visibleStartMinute = projected.visibleStartMinute
-                    onViewportChanged?(
-                        visibleStartMinute,
-                        visibleDurationMinutes
+                    projected = handleProjected
+                } else {
+                    let base = gestureBaseState ?? nleState
+                    projected = draggedState(
+                        base: base,
+                        translation: value.translation.height,
+                        trackHeight: trackHeight,
+                        maxMinute: maxMinute,
+                        sensitivity: isPrecisionMode
+                            ? MapHomeTimeSidebarMath.precisionDragSensitivity
+                            : MapHomeTimeSidebarMath.standardDragSensitivity
                     )
-                    publish(projected.selectedMinute, force: false)
-                    return
                 }
-                let base = dragStartMinute ?? selectedMinute
-                let minute = MapHomeTimeSidebarMath.minuteByDragging(
-                    baseMinute: base,
-                    translation: value.translation.height,
-                    trackHeight: trackHeight,
-                    maxMinute: maxMinute,
-                    visibleStartMinute: visibleWindow.lowerBound,
-                    visibleDurationMinutes: visibleWindow.upperBound - visibleWindow.lowerBound,
-                    sensitivity: isPrecisionMode ? 0.25 : 1
-                )
-                publish(minute, force: false)
+                render(projected, nowUptime: nowUptime)
             }
             .onEnded { value in
+                let nowUptime = ProcessInfo.processInfo.systemUptime
+                let base = gestureBaseState ?? nleState
+                let projected: MapHomeTimeSidebarNLEState
                 if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
-                   let projected = handleDrag.projectedState(
+                   let handleProjected = handleDrag.projectedState(
                        translation: value.translation.height,
                        trackHeight: trackHeight,
                        maxMinute: maxMinute,
-                       sensitivity: isPrecisionMode ? 0.25 : 1,
-                       nowUptime: ProcessInfo.processInfo.systemUptime
+                       sensitivity: isPrecisionMode
+                           ? MapHomeTimeSidebarMath.precisionDragSensitivity
+                           : MapHomeTimeSidebarMath.standardDragSensitivity,
+                       nowUptime: nowUptime
                    ) {
-                    let minute = projected.selectedMinute
-                    visibleStartMinute = MapHomeTimeSidebarMath.startMinute(
-                        centerMinute: minute,
-                        durationMinutes: projected.visibleDurationMinutes
+                    projected = MapHomeTimeSidebarNLEState(
+                        selectedMinute: handleProjected.selectedMinute,
+                        visibleStartMinute: MapHomeTimeSidebarMath.startMinute(
+                            centerMinute: handleProjected.selectedMinute,
+                            durationMinutes: handleProjected.visibleDurationMinutes
+                        ),
+                        visibleDurationMinutes: handleProjected.visibleDurationMinutes
                     )
-                    onViewportChanged?(
-                        visibleStartMinute,
-                        visibleDurationMinutes
+                } else {
+                    projected = draggedState(
+                        base: base,
+                        translation: value.translation.height,
+                        trackHeight: trackHeight,
+                        maxMinute: maxMinute,
+                        sensitivity: isPrecisionMode
+                            ? MapHomeTimeSidebarMath.precisionDragSensitivity
+                            : MapHomeTimeSidebarMath.standardDragSensitivity
                     )
-                    publish(minute, force: true)
-                    dragStartMinute = nil
-                    isPrecisionMode = false
-                    isHandleDragging = false
-                    handleDrag.reset()
-                    return
                 }
-                let base = dragStartMinute ?? selectedMinute
-                let minute = MapHomeTimeSidebarMath.minuteByDragging(
-                    baseMinute: base,
-                    translation: value.translation.height,
-                    trackHeight: trackHeight,
-                    maxMinute: maxMinute,
-                    visibleStartMinute: visibleWindow.lowerBound,
-                    visibleDurationMinutes: visibleWindow.upperBound - visibleWindow.lowerBound,
-                    sensitivity: isPrecisionMode ? 0.25 : 1
-                )
-                publish(minute, force: true)
+                render(projected, nowUptime: nowUptime, force: true)
                 dragStartMinute = nil
                 isPrecisionMode = false
                 isHandleDragging = false
+                gestureBaseState = nil
                 handleDrag.reset()
             }
     }
@@ -1151,29 +1254,43 @@ struct MapHomeTimeSidebar: View {
             .onChanged { value in
                 guard visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
                       !isHandleDragging else { return }
-                if viewportDragStartMinute == nil { viewportDragStartMinute = visibleStartMinute }
-                guard TimelineInteractionFrameGate.shouldRender(
-                    lastUptime: &lastViewportRenderUptime,
-                    nowUptime: ProcessInfo.processInfo.systemUptime,
-                    force: false
-                ) else { return }
-                let base = viewportDragStartMinute ?? visibleStartMinute
-                let delta = Int((value.translation.height / max(trackHeight, 1) * CGFloat(visibleDurationMinutes)).rounded())
-                visibleStartMinute = min(max(base + delta, 0), MapHomeTimeSidebarMath.fullDayMinutes - visibleDurationMinutes)
-                onViewportChanged?(
-                    visibleStartMinute,
-                    visibleDurationMinutes
+                if viewportDragStartMinute == nil {
+                    viewportDragStartMinute = visibleStartMinute
+                    let base = nleState
+                    gestureBaseState = base
+                    nleProjection.begin(with: base)
+                }
+                let nowUptime = ProcessInfo.processInfo.systemUptime
+                let base = gestureBaseState ?? nleState
+                render(
+                    MapHomeTimeSidebarViewportProjection.state(
+                        from: base,
+                        translation: value.translation.height,
+                        trackHeight: trackHeight,
+                        verticalInset: verticalInset,
+                        maxMinute: MapHomeTimeSidebarMath.maximumSelectableMinute(for: date, now: Date()),
+                        sensitivity: MapHomeTimeSidebarMath.standardDragSensitivity
+                    ),
+                    nowUptime: nowUptime
                 )
-                let fixedMinute = MapHomeTimeSidebarMath.minuteByFixedPlayhead(
-                    trackHeight: trackHeight,
-                    verticalInset: verticalInset,
-                    maxMinute: MapHomeTimeSidebarMath.maximumSelectableMinute(for: date, now: Date()),
-                    visibleStartMinute: visibleStartMinute,
-                    visibleDurationMinutes: visibleDurationMinutes
-                )
-                publish(fixedMinute, force: false)
             }
-            .onEnded { _ in viewportDragStartMinute = nil }
+            .onEnded { value in
+                let base = gestureBaseState ?? nleState
+                render(
+                    MapHomeTimeSidebarViewportProjection.state(
+                        from: base,
+                        translation: value.translation.height,
+                        trackHeight: trackHeight,
+                        verticalInset: verticalInset,
+                        maxMinute: MapHomeTimeSidebarMath.maximumSelectableMinute(for: date, now: Date()),
+                        sensitivity: MapHomeTimeSidebarMath.standardDragSensitivity
+                    ),
+                    nowUptime: ProcessInfo.processInfo.systemUptime,
+                    force: true
+                )
+                viewportDragStartMinute = nil
+                gestureBaseState = nil
+            }
     }
 
     private func zoomTimeline(direction: Int) {
@@ -1194,19 +1311,59 @@ struct MapHomeTimeSidebar: View {
         nleProjection.synchronize(with: nleState)
     }
 
-    private func publish(_ minute: Int, force: Bool) {
-        let resolved = min(
-            max(minute, 0),
-            MapHomeTimeSidebarMath.maximumSelectableMinute(for: date, now: Date())
+    private func publish(_ minute: Int) {
+        let state = MapHomeTimeSidebarNLEState(
+            selectedMinute: min(
+                max(minute, 0),
+                MapHomeTimeSidebarMath.maximumSelectableMinute(for: date, now: Date())
+            ),
+            visibleStartMinute: visibleStartMinute,
+            visibleDurationMinutes: visibleDurationMinutes
         )
-        let uptime = ProcessInfo.processInfo.systemUptime
-        guard TimelineInteractionFrameGate.shouldRender(
-            lastUptime: &lastRenderUptime,
-            nowUptime: uptime,
-            force: force
-        ), selectedMinute != resolved else { return }
-        selectedMinute = resolved
-        onSelectionChanged?(resolved)
+        apply(state)
+    }
+
+    private func render(
+        _ state: MapHomeTimeSidebarNLEState,
+        nowUptime: TimeInterval,
+        force: Bool = false
+    ) {
+        let rendered = force
+            ? nleProjection.finish(with: state, nowUptime: nowUptime)
+            : nleProjection.submit(state, nowUptime: nowUptime)
+        guard let rendered else { return }
+        apply(rendered)
+    }
+
+    private func apply(_ state: MapHomeTimeSidebarNLEState) {
+        let viewportChanged = visibleStartMinute != state.visibleStartMinute
+            || visibleDurationMinutes != state.visibleDurationMinutes
+        let selectionChanged = selectedMinute != state.selectedMinute
+        visibleStartMinute = state.visibleStartMinute
+        visibleDurationMinutes = state.visibleDurationMinutes
+        selectedMinute = state.selectedMinute
+        if viewportChanged {
+            onViewportChanged?(state.visibleStartMinute, state.visibleDurationMinutes)
+        }
+        if selectionChanged {
+            onSelectionChanged?(state.selectedMinute)
+        }
+    }
+
+    private func draggedState(
+        base: MapHomeTimeSidebarNLEState,
+        translation: CGFloat,
+        trackHeight: CGFloat,
+        maxMinute: Int,
+        sensitivity: CGFloat
+    ) -> MapHomeTimeSidebarNLEState {
+        MapHomeTimeSidebarDragProjection.state(
+            from: base,
+            translation: translation,
+            trackHeight: trackHeight,
+            maxMinute: maxMinute,
+            sensitivity: sensitivity
+        )
     }
 
     private var nleState: MapHomeTimeSidebarNLEState {
@@ -1378,6 +1535,8 @@ struct MapHomeWeatherSidebar: View {
 enum MapHomeTimeSidebarMath {
     static let fullDayMinutes = 1_440
     static let zoomDurations = [1_440, 720, 360, 180, 60]
+    static let standardDragSensitivity: CGFloat = 1.6
+    static let precisionDragSensitivity: CGFloat = 0.25
     static let edgeScrollPointsPerSecond: CGFloat = 192
     static let rulerNumericColumnWidth: CGFloat = 44
     static let rulerTickWidth: CGFloat = 8

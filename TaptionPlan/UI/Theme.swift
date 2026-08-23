@@ -115,11 +115,11 @@ extension Color {
     }
 }
 
-/// 지도 홈·기록·설정이 같은 색을 쓰도록 묶은 자동 기록의 여덟 대분류 팔레트다.
+/// 지도 홈·기록·설정이 같은 색을 쓰도록 묶은 자동 기록의 대분류 팔레트다.
 enum CanonicalCategoryPalette {
     static let orderedIDs = [
         "activity", "work", "study", "hobby",
-        "sleep", "movement", "exercise", "unconfirmed",
+        "sleep", "movement", "eating", "exercise", "unconfirmed",
     ]
 
     static let hexes: [String: String] = [
@@ -129,6 +129,7 @@ enum CanonicalCategoryPalette {
         "hobby": "#8B5CF6",
         "sleep": "#5B5BD6",
         "movement": "#F76B15",
+        "eating": "#E1C453",
         "exercise": "#DC2626",
         "unconfirmed": "#94A3B8",
     ]

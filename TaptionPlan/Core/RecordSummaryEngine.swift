@@ -92,6 +92,7 @@ enum RecordAnalysisCategoryPolicy {
         case "hobby": .hobby
         case "sleep": .sleep
         case "movement": .movement
+        case "eating": .activity
         case "exercise": .exercise
         case "unconfirmed": .unconfirmed
         default: .activity
@@ -163,6 +164,11 @@ enum RecordAnalysisCategoryPolicy {
         }
         if value.contains("취미") || value.contains("hobby") {
             return "hobby"
+        }
+        if value.contains("식사") || value.contains("밥")
+            || value.contains("요리") || value.contains("meal")
+            || value.contains("eating") || value.contains("cooking") {
+            return "eating"
         }
         if value.contains("운동") || value.contains("exercise") {
             return "exercise"

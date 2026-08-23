@@ -89,6 +89,46 @@ enum MapHomeOverlayPinchMath {
     }
 }
 
+enum MapHomeOverlayLayoutMath {
+    static let controlSize: CGFloat = 44
+    static let controlSpacing: CGFloat = 9
+    static let sharedBottomMargin: CGFloat = 28
+    static let minimumRailHeight: CGFloat = 500
+    static let maximumRailHeight: CGFloat = 680
+
+    static func railHeight(availableHeight: CGFloat) -> CGFloat {
+        min(maximumRailHeight, max(minimumRailHeight, availableHeight))
+    }
+
+    static func controlStackHeight(buttonCount: Int) -> CGFloat {
+        let count = max(buttonCount, 0)
+        guard count > 0 else { return 0 }
+        return CGFloat(count) * controlSize
+            + CGFloat(count - 1) * controlSpacing
+    }
+
+    static func topOverlayHeight(
+        headerFrame: CGRect,
+        searchFrame: CGRect,
+        fallback: CGFloat
+    ) -> CGFloat {
+        let measured = max(headerFrame.maxY, searchFrame.maxY)
+        return measured > 0 ? measured : fallback
+    }
+}
+
+enum MapHomeTimeSidebarPinchMath {
+    static let scalePerStep: CGFloat = 1.18
+    static let maximumStepOffset = 4
+
+    static func stepOffset(magnification: CGFloat) -> Int {
+        guard magnification.isFinite, magnification > 0 else { return 0 }
+        let raw = log(Double(magnification)) / log(Double(scalePerStep))
+        let offset = raw >= 0 ? Int(floor(raw)) : Int(ceil(raw))
+        return min(max(offset, -maximumStepOffset), maximumStepOffset)
+    }
+}
+
 enum MapHomeLocationActivation: Equatable {
     case currentLocation
     case savedLocation
@@ -155,6 +195,66 @@ final class MapHomeHeadingMonitor: NSObject, @preconcurrency CLLocationManagerDe
     }
 }
 
+@MainActor
+@Observable
+final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompleterDelegate {
+    private let completer = MKLocalSearchCompleter()
+    private(set) var results: [MKLocalSearchCompletion] = []
+
+    override init() {
+        super.init()
+        completer.delegate = self
+        completer.resultTypes = [.address, .pointOfInterest, .query]
+    }
+
+    func update(query: String, region: MKCoordinateRegion) {
+        completer.region = region
+        let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.isEmpty {
+            clear()
+        } else if completer.queryFragment != value {
+            completer.queryFragment = value
+        }
+    }
+
+    func clear() {
+        if !completer.queryFragment.isEmpty {
+            completer.queryFragment = ""
+        }
+        if !results.isEmpty {
+            results = []
+        }
+    }
+
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        let next = Array(completer.results.prefix(8))
+        guard results.map(\.title) != next.map(\.title)
+                || results.map(\.subtitle) != next.map(\.subtitle)
+        else { return }
+        results = next
+    }
+
+    func completer(
+        _ completer: MKLocalSearchCompleter,
+        didFailWithError error: Error
+    ) {
+        results = []
+    }
+}
+
+enum MapHomeDayPlaybackMath {
+    static let durationSeconds: TimeInterval = 24
+
+    static func minute(elapsedSeconds: TimeInterval) -> Int {
+        guard elapsedSeconds.isFinite else { return 0 }
+        let progress = min(max(elapsedSeconds / durationSeconds, 0), 1)
+        return min(
+            MapHomeTimeSidebarMath.fullDayMinutes,
+            max(0, Int((progress * Double(MapHomeTimeSidebarMath.fullDayMinutes)).rounded(.down)))
+        )
+    }
+}
+
 enum MapHomeWeatherTimelineMath {
     static func context(
         at date: Date,
@@ -192,6 +292,7 @@ enum MapHomeWeatherTimelineMath {
 
 @MainActor
 struct MapHomeView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Bindable private var model: AppModel
     @Bindable private var proAccess: TaptionProAccessController
 
@@ -204,11 +305,15 @@ struct MapHomeView: View {
     @State private var isLocationMenuExpanded = false
     @State private var isUserLocationsMenuExpanded = false
     @State private var isCategoryMenuExpanded = false
+    @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
     @State private var isDataProtectionPresented = false
     @State private var isSettingsResetConfirmationPresented = false
-    @AppStorage("taption.mapHome.language") private var languageRawValue = MapHomeLanguage.korean.rawValue
+    @AppStorage(
+        AppLanguagePreference.sharedDefaultsKey,
+        store: UserDefaults(suiteName: AppLanguagePreference.appGroupIdentifier)
+    ) private var languageRawValue = AppLanguagePreference.current.rawValue
     @State private var compassControlState: MapHomeCompassControlState = .directionArrow
     @State private var headingMonitor = MapHomeHeadingMonitor()
     @State private var isGPSLoggingActionInFlight = false
@@ -227,6 +332,8 @@ struct MapHomeView: View {
     @State private var selectedUserLocation: MapHomeUserLocationSelection?
     @State private var pendingUserLocationSelection: MapHomeUserLocationSelection?
     @State private var mapSearchTask: Task<Void, Never>?
+    @State private var mapSearchCompleter = MapHomeSearchCompleter()
+    @State private var mapSearchRequestID = UUID()
     @FocusState private var isMapSearchFocused: Bool
     @State private var visibleMapCenter = CLLocationCoordinate2D(latitude: 0, longitude: 0)
     @State private var timeRailSegments: [MapHomeTimeRailSegment] = [
@@ -243,15 +350,20 @@ struct MapHomeView: View {
     @State private var timeSidebarZoomStep = 0
     @State private var weatherVisibleStartMinute = 0
     @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
-    @State private var sidebarPinchDirection = 0
+    @State private var sidebarPinchStepOffset = 0
     @State private var activePaletteCategoryID: String?
     @State private var customPaletteColor = Color.tpReferenceMint
     @State private var lastMapCameraPublishUptime: TimeInterval = 0
     @State private var visibleMapCamera: MapCamera?
     @State private var mapViewportSize = CGSize.zero
+    @State private var headerFrame = CGRect.zero
+    @State private var searchFieldFrame = CGRect.zero
     @State private var overlayPinchRoutesToMap: Bool?
     @State private var overlayPinchInitialCamera: MapCamera?
     @State private var lastOverlayPinchPublishUptime: TimeInterval = 0
+    @State private var isDayPlaybackRunning = false
+    @State private var dayPlaybackElapsedSeconds: TimeInterval = 0
+    @State private var dayPlaybackTask: Task<Void, Never>?
 
     private static let userCenterTolerance: CLLocationDistance = 120
     private static let categoryPaletteHexes = [
@@ -265,13 +377,15 @@ struct MapHomeView: View {
         static let headerVisibleHeight: CGFloat = 46
         static let headerHitTarget: CGFloat = 44
         static let headerIcon: CGFloat = 19
-        static let mapControlSize: CGFloat = 44
+        static let mapControlSize = MapHomeOverlayLayoutMath.controlSize
         static let mapControlIcon: CGFloat = 15
+        static let mapControlSpacing = MapHomeOverlayLayoutMath.controlSpacing
         static let timeRailWidth: CGFloat = 58
         static let weatherRailWidth: CGFloat = 58
         static let weatherRailSpacing: CGFloat = 4
         static let timeRailTopMargin: CGFloat = 18
-        static let timeRailBottomMargin: CGFloat = 28
+        static let topOverlayFallbackHeight: CGFloat = 104
+        static let overlayBottomMargin = MapHomeOverlayLayoutMath.sharedBottomMargin
     }
 
     init(
@@ -284,7 +398,14 @@ struct MapHomeView: View {
     }
 
     private var language: MapHomeLanguage {
-        MapHomeLanguage(rawValue: languageRawValue) ?? .korean
+        switch AppLanguagePreference.resolve(rawValue: languageRawValue) {
+        case .korean: .korean
+        case .english: .english
+        }
+    }
+
+    private var languagePreference: AppLanguagePreference {
+        AppLanguagePreference(rawValue: languageRawValue) ?? .automatic
     }
 
     private var isHeadingMode: Bool {
@@ -306,10 +427,20 @@ struct MapHomeView: View {
             + Layout.horizontalInset
     }
 
+    private var topOverlayHeight: CGFloat {
+        MapHomeOverlayLayoutMath.topOverlayHeight(
+            headerFrame: headerFrame,
+            searchFrame: searchFieldFrame,
+            fallback: Layout.topOverlayFallbackHeight
+        )
+    }
+
     private func sectionEditSheet(for selection: MapHomeSectionEditSelection) -> some View {
-        MapHomeSectionEditSheet(selection: selection, language: language)
-            .presentationDetents([.height(232)])
-            .presentationDragIndicator(.visible)
+        MapHomeSectionEditSheet(
+            model: model,
+            selection: selection,
+            language: language
+        )
     }
 
     private func locationDestinationSheet(
@@ -388,13 +519,14 @@ struct MapHomeView: View {
                     .zIndex(2)
             }
         }
+        .coordinateSpace(name: "mapHomeViewport")
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .overlay(alignment: .trailing) {
             if !isMenuOpen {
                 currentTimeRail
-                    .padding(.top, Layout.headerVisibleHeight + Layout.timeRailTopMargin)
-                    .padding(.bottom, Layout.timeRailBottomMargin)
+                    .padding(.top, topOverlayHeight + Layout.timeRailTopMargin)
+                    .padding(.bottom, Layout.overlayBottomMargin)
                     .padding(.trailing, Layout.horizontalInset)
             }
         }
@@ -402,7 +534,7 @@ struct MapHomeView: View {
             if !isMenuOpen {
                 mapControls
                     .padding(.leading, Layout.horizontalInset)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, Layout.overlayBottomMargin)
             }
         }
         .onGeometryChange(
@@ -458,6 +590,11 @@ struct MapHomeView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $isCategoryAddPresented) {
+            MapHomeCategoryAddSheet(model: model, language: language)
+                .presentationDetents([.height(320)])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $proAccess.isPurchaseSheetPresented) {
             TaptionProAccessView(
                 controller: proAccess,
@@ -487,7 +624,7 @@ struct MapHomeView: View {
                 )
             )
         }
-        .sheet(item: $sectionEditSelection) { selection in
+        .fullScreenCover(item: $sectionEditSelection) { selection in
             sectionEditSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
@@ -499,6 +636,8 @@ struct MapHomeView: View {
         .onDisappear {
             mapSearchTask?.cancel()
             mapSearchTask = nil
+            mapSearchCompleter.clear()
+            stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
         }
         .task(id: model.selectedDate) {
@@ -521,6 +660,7 @@ struct MapHomeView: View {
             focusMapIfNeeded()
         }
         .onChange(of: model.selectedDate) { _, _ in
+            stopDayPlayback(resetProgress: true)
             selectedTimelineMinute = nil
             isTimelineSelectionPinned = false
             weatherVisibleStartMinute = 0
@@ -547,6 +687,11 @@ struct MapHomeView: View {
                   let point = projection.coordinateAtCutoff
             else { return }
             focusMap(on: point)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                stopDayPlayback(resetProgress: true)
+            }
         }
     }
 
@@ -810,6 +955,16 @@ struct MapHomeView: View {
                 dismissMapSearchOverlay()
             }
         )
+        .onGeometryChange(
+            for: CGRect.self,
+            of: { proxy in
+                proxy.frame(in: .named("mapHomeViewport"))
+            },
+            action: { frame in
+                guard headerFrame != frame else { return }
+                headerFrame = frame
+            }
+        )
     }
 
     private var mapSearchBar: some View {
@@ -826,6 +981,22 @@ struct MapHomeView: View {
                 .autocorrectionDisabled()
                 .submitLabel(.search)
                 .onSubmit { searchMap() }
+                .onChange(of: mapSearchText) { _, value in
+                    guard isMapSearchFocused else { return }
+                    mapSearchResults = []
+                    mapSearchCompleter.update(
+                        query: value,
+                        region: mapSearchRegion
+                    )
+                }
+                .onChange(of: isMapSearchFocused) { _, focused in
+                    if focused {
+                        mapSearchCompleter.update(
+                            query: mapSearchText,
+                            region: mapSearchRegion
+                        )
+                    }
+                }
                 if !mapSearchText.isEmpty || !mapSearchResults.isEmpty || selectedSearchPin != nil {
                     Button {
                         clearMapSearch()
@@ -843,39 +1014,40 @@ struct MapHomeView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
             }
+            .onGeometryChange(
+                for: CGRect.self,
+                of: { proxy in
+                    proxy.frame(in: .named("mapHomeViewport"))
+                },
+                action: { frame in
+                    guard searchFieldFrame != frame else { return }
+                    searchFieldFrame = frame
+                }
+            )
 
-            if !mapSearchResults.isEmpty {
+            if !mapSearchResults.isEmpty || !mapSearchCompleter.results.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(mapSearchResults) { result in
-                        Button {
-                            focusMap(
-                                on: GeoPoint(
-                                    latitude: result.coordinate.latitude,
-                                    longitude: result.coordinate.longitude,
-                                    altitude: 0,
-                                    horizontalAccuracy: -1,
-                                    verticalAccuracy: -1
-                                )
-                            )
-                            selectedSearchPin = result
-                            mapSearchResults = []
-                            mapSearchText = result.title
-                            isMapSearchFocused = false
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(result.title)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                if !result.subtitle.isEmpty {
-                                    Text(result.subtitle)
-                                        .font(.system(size: 11, weight: .regular, design: .rounded))
-                                        .foregroundStyle(.secondary)
-                                }
+                    if mapSearchResults.isEmpty {
+                        ForEach(
+                            Array(mapSearchCompleter.results.enumerated()),
+                            id: \.offset
+                        ) { _, completion in
+                            mapSearchRow(
+                                title: completion.title,
+                                subtitle: completion.subtitle
+                            ) {
+                                searchMap(completion: completion)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
                         }
-                        .buttonStyle(.plain)
+                    } else {
+                        ForEach(mapSearchResults) { result in
+                            mapSearchRow(
+                                title: result.title,
+                                subtitle: result.subtitle
+                            ) {
+                                selectSearchResult(result)
+                            }
+                        }
                     }
                 }
                 .background(Color.tpSurface.opacity(0.98), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -895,14 +1067,56 @@ struct MapHomeView: View {
         .zIndex(4)
     }
 
+    private func mapSearchRow(
+        title: String,
+        subtitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.tpReferenceBlue)
+                    .frame(width: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 11, weight: .regular, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var mapSearchRegion: MKCoordinateRegion {
+        let center = currentCoordinate ?? visibleMapCenter
+        let span = visibleMapSpan.latitudeDelta > 0 && visibleMapSpan.longitudeDelta > 0
+            ? visibleMapSpan
+            : MKCoordinateSpan(latitudeDelta: 0.25, longitudeDelta: 0.25)
+        return MKCoordinateRegion(center: center, span: span)
+    }
+
     private func dismissMapSearchOverlay() {
         if isSearchPinMenuPresented, selectedSearchPin != nil {
             cancelPendingMapLocationAddition()
             return
         }
-        guard isMapSearchFocused || !mapSearchResults.isEmpty else { return }
+        guard isMapSearchFocused
+                || !mapSearchResults.isEmpty
+                || !mapSearchCompleter.results.isEmpty
+        else { return }
         isMapSearchFocused = false
         mapSearchResults = []
+        mapSearchCompleter.clear()
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
             to: nil,
@@ -920,6 +1134,8 @@ struct MapHomeView: View {
     private func clearMapSearch() {
         mapSearchTask?.cancel()
         mapSearchTask = nil
+        mapSearchRequestID = UUID()
+        mapSearchCompleter.clear()
         mapSearchText = ""
         mapSearchResults = []
         selectedSearchPin = nil
@@ -939,26 +1155,61 @@ struct MapHomeView: View {
             mapSearchResults = []
             return
         }
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.region = mapSearchRegion
+        runMapSearch(request, fallbackTitle: query)
+    }
+
+    private func searchMap(completion: MKLocalSearchCompletion) {
+        let request = MKLocalSearch.Request(completion: completion)
+        request.region = mapSearchRegion
+        runMapSearch(request, fallbackTitle: completion.title)
+    }
+
+    private func runMapSearch(
+        _ request: MKLocalSearch.Request,
+        fallbackTitle: String
+    ) {
         mapSearchTask?.cancel()
+        let requestID = UUID()
+        mapSearchRequestID = requestID
         mapSearchTask = Task { @MainActor in
-            let request = MKLocalSearch.Request()
-            request.naturalLanguageQuery = query
-            if let coordinate = currentCoordinate {
-                request.region = MKCoordinateRegion(
-                    center: coordinate,
-                    span: MKCoordinateSpan(latitudeDelta: 0.25, longitudeDelta: 0.25)
-                )
-            }
             guard let response = try? await MKLocalSearch(request: request).start(),
-                  !Task.isCancelled else { return }
-            mapSearchResults = response.mapItems.prefix(6).map { item in
+                  !Task.isCancelled,
+                  requestID == mapSearchRequestID
+            else { return }
+            let results = response.mapItems.prefix(8).map { item in
                 MapHomeSearchResult(
-                    title: item.name ?? query,
+                    title: item.name ?? fallbackTitle,
                     subtitle: item.placemark.title ?? "",
                     coordinate: item.placemark.coordinate
                 )
             }
+            mapSearchCompleter.clear()
+            if let first = results.first {
+                selectSearchResult(first)
+            } else {
+                mapSearchResults = []
+            }
         }
+    }
+
+    private func selectSearchResult(_ result: MapHomeSearchResult) {
+        focusMap(
+            on: GeoPoint(
+                latitude: result.coordinate.latitude,
+                longitude: result.coordinate.longitude,
+                altitude: 0,
+                horizontalAccuracy: -1,
+                verticalAccuracy: -1
+            )
+        )
+        selectedSearchPin = result
+        mapSearchResults = []
+        mapSearchCompleter.clear()
+        isMapSearchFocused = false
+        mapSearchText = result.title
     }
 
     private func headerDateButton(_ icon: String, amount: Int) -> some View {
@@ -970,10 +1221,10 @@ struct MapHomeView: View {
                     Image(assetName)
                         .resizable()
                         .scaledToFit()
-                        .padding(8)
+                        .frame(width: 18, height: 18)
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 18, weight: .medium))
                 }
             }
                 .frame(width: 31, height: Layout.headerHitTarget)
@@ -995,9 +1246,68 @@ struct MapHomeView: View {
         }
     }
 
+    private func toggleDayPlayback() {
+        if isDayPlaybackRunning {
+            stopDayPlayback(resetProgress: false)
+        } else {
+            startDayPlayback()
+        }
+    }
+
+    private func startDayPlayback() {
+        dayPlaybackTask?.cancel()
+        if dayPlaybackElapsedSeconds >= MapHomeDayPlaybackMath.durationSeconds {
+            dayPlaybackElapsedSeconds = 0
+        }
+        let baseElapsed = dayPlaybackElapsedSeconds
+        if baseElapsed == 0 {
+            selectedTimelineMinute = 0
+        }
+        isTimelineSelectionPinned = true
+        isDayPlaybackRunning = true
+        let startedAt = ProcessInfo.processInfo.systemUptime
+        dayPlaybackTask = Task { @MainActor in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(nanoseconds: 16_666_667)
+                } catch {
+                    return
+                }
+                let elapsed = min(
+                    MapHomeDayPlaybackMath.durationSeconds,
+                    baseElapsed + ProcessInfo.processInfo.systemUptime - startedAt
+                )
+                let minute = MapHomeDayPlaybackMath.minute(elapsedSeconds: elapsed)
+                if dayPlaybackElapsedSeconds != elapsed {
+                    dayPlaybackElapsedSeconds = elapsed
+                }
+                if selectedTimelineMinute != minute {
+                    selectedTimelineMinute = minute
+                }
+                guard elapsed < MapHomeDayPlaybackMath.durationSeconds else {
+                    selectedTimelineMinute = MapHomeTimeSidebarMath.fullDayMinutes
+                    isDayPlaybackRunning = false
+                    dayPlaybackTask = nil
+                    return
+                }
+            }
+        }
+    }
+
+    private func stopDayPlayback(resetProgress: Bool) {
+        dayPlaybackTask?.cancel()
+        dayPlaybackTask = nil
+        isDayPlaybackRunning = false
+        if resetProgress {
+            dayPlaybackElapsedSeconds = 0
+        }
+    }
+
     private var currentTimeRail: some View {
         GeometryReader { proxy in
-            let railHeight = min(680, max(500, proxy.size.height))
+            let railHeight = MapHomeOverlayLayoutMath.railHeight(
+                availableHeight: proxy.size.height
+            )
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
                 let minute = timelineSelectionMinute(at: timeline.date)
                 let weatherWidth = model.settings.weatherSidebarVisible
@@ -1020,6 +1330,7 @@ struct MapHomeView: View {
                             get: { timelineSelectionMinute(at: timeline.date) },
                             set: { minute in
                                 guard selectedTimelineMinute != minute else { return }
+                                stopDayPlayback(resetProgress: true)
                                 isTimelineSelectionPinned = true
                                 selectedTimelineMinute = minute
                             }
@@ -1033,7 +1344,12 @@ struct MapHomeView: View {
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: timeSidebarZoomStep,
                         railWidth: Layout.timeRailWidth,
+                        maximumSelectableMinute: dayPlaybackElapsedSeconds > 0
+                            ? MapHomeTimeSidebarMath.fullDayMinutes
+                            : nil,
+                        isPlaybackRunning: isDayPlaybackRunning,
                         onSelectionChanged: { minute in
+                            stopDayPlayback(resetProgress: true)
                             isTimelineSelectionPinned = true
                             selectedTimelineMinute = minute
                         },
@@ -1042,11 +1358,20 @@ struct MapHomeView: View {
                             weatherVisibleDurationMinutes = duration
                         },
                         onSectionEdit: {
+                            stopDayPlayback(resetProgress: true)
                             sectionEditSelection = MapHomeSectionEditSelection(
                                 date: model.selectedDate,
                                 minute: minute,
-                                activity: currentActivity(at: minute)
+                                activity: currentActivity(at: minute),
+                                segment: MapHomeTimeRailSegmentEngine.segment(
+                                    at: minute,
+                                    in: timeRailSegments
+                                ) ?? .wholeDayUnconfirmed,
+                                details: sectionDetails(at: minute)
                             )
+                        },
+                        onPlaybackToggle: {
+                            toggleDayPlayback()
                         }
                     )
                 }
@@ -1056,27 +1381,24 @@ struct MapHomeView: View {
                 )
                 .position(
                     x: proxy.size.width - (weatherWidth + Layout.timeRailWidth) / 2,
-                    y: proxy.size.height / 2
+                    y: max(
+                        railHeight / 2,
+                        proxy.size.height - railHeight / 2
+                    )
                 )
                 .contentShape(Rectangle())
                 .simultaneousGesture(
                     MagnificationGesture()
                         .onChanged { scale in
-                            let direction: Int
-                            if scale > 1.04 {
-                                direction = 1
-                            } else if scale < 0.96 {
-                                direction = -1
-                            } else {
-                                direction = 0
-                            }
-                            guard direction != 0,
-                                  direction != sidebarPinchDirection else { return }
-                            sidebarPinchDirection = direction
-                            timeSidebarZoomStep += direction
+                            let offset = MapHomeTimeSidebarPinchMath.stepOffset(
+                                magnification: scale
+                            )
+                            guard offset != sidebarPinchStepOffset else { return }
+                            timeSidebarZoomStep += offset - sidebarPinchStepOffset
+                            sidebarPinchStepOffset = offset
                         }
                         .onEnded { _ in
-                            sidebarPinchDirection = 0
+                            sidebarPinchStepOffset = 0
                         }
                 )
             }
@@ -1112,7 +1434,7 @@ struct MapHomeView: View {
                     startLocation: value.startLocation,
                     viewportSize: mapViewportSize,
                     sidebarWidth: sidebarInteractionWidth,
-                    topOverlayHeight: 190,
+                    topOverlayHeight: topOverlayHeight,
                     controlsWidth: 82,
                     controlsHeight: 250
                 )
@@ -1136,7 +1458,7 @@ struct MapHomeView: View {
     }
 
     private var mapControls: some View {
-        VStack(spacing: 9) {
+        VStack(spacing: Layout.mapControlSpacing) {
             Button {
                 focusUserLocation()
             } label: {
@@ -1182,10 +1504,8 @@ struct MapHomeView: View {
                 .accessibilityLabel(language.text("나침반 표시", "Show compass"))
             }
 
-            VStack(spacing: 3) {
-                mapZoomButton(systemImage: "plus", direction: 1)
-                mapZoomButton(systemImage: "minus", direction: -1)
-            }
+            mapZoomButton(systemImage: "plus", direction: 1)
+            mapZoomButton(systemImage: "minus", direction: -1)
         }
         .simultaneousGesture(
             SpatialTapGesture().onEnded { _ in
@@ -1232,7 +1552,10 @@ struct MapHomeView: View {
                     .onTapGesture { isMenuOpen = false }
 
                 let menuHeight = max(0, proxy.size.height)
-                let menuTop = Layout.headerVisibleHeight + 8
+                let menuTop = max(
+                    Layout.headerVisibleHeight + 8,
+                    headerFrame.maxY + 8
+                )
                 sidebarContent
                 .frame(width: 316, height: max(0, menuHeight - menuTop), alignment: .top)
                 .background(.regularMaterial)
@@ -1254,7 +1577,7 @@ struct MapHomeView: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(language.text("오늘의 지도", "Today's Map"))
+                    Text(language.text("오늘의 기록", "Today's Record"))
                         .font(.system(size: 21, weight: .bold, design: .rounded))
                     Text(language.text("자동으로 남은 하루의 기록", "Today's activity, automatically recorded"))
                         .font(.system(size: 12, weight: .medium))
@@ -1271,7 +1594,6 @@ struct MapHomeView: View {
             .padding(.bottom, 27)
 
             locationMenuItem
-            gpsLoggingMenuItem
             categoryMenuItem
             displayMenuItem
             languageMenuItem
@@ -1281,7 +1603,7 @@ struct MapHomeView: View {
 
             menuItem(
                 "sparkles",
-                proAccess.menuTitle,
+                proMenuTitle,
                 isSelected: proAccess.hasPermanentAccess
             ) {
                 proAccess.isPurchaseSheetPresented = true
@@ -1443,6 +1765,43 @@ struct MapHomeView: View {
                             in: RoundedRectangle(cornerRadius: 9, style: .continuous)
                         )
                         .accessibilityElement(children: .contain)
+                    }
+
+                    Button {
+                        isCategoryAddPresented = true
+                    } label: {
+                        HStack(spacing: 9) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text(language.text("사용자 추가", "Add custom"))
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            Spacer()
+                        }
+                        .foregroundStyle(Color.tpReferenceBlue)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 8)
+                    }
+                    .buttonStyle(.plain)
+
+                    ForEach(model.settings.mapUserActivityCategories) { category in
+                        HStack(spacing: 9) {
+                            Circle()
+                                .fill(Color(hex: category.hex))
+                                .frame(width: 10, height: 10)
+                            Image(systemName: category.systemImage)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color(hex: category.hex))
+                                .frame(width: 20)
+                            Text(category.title)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                            Spacer()
+                        }
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 8)
+                        .background(
+                            Color.tpReferenceMint.opacity(0.06),
+                            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        )
                     }
                 }
                 .padding(.leading, 12)
@@ -1755,22 +2114,61 @@ struct MapHomeView: View {
     }
 
     private var languageMenuItem: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(language.text("언어", "Language"), systemImage: "globe")
-                .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundStyle(Color.primary)
-
-            Picker(language.text("언어", "Language"), selection: $languageRawValue) {
-                ForEach(MapHomeLanguage.allCases) { option in
-                    Text(option.displayName).tag(option.rawValue)
+        Menu {
+            ForEach(AppLanguagePreference.allCases) { option in
+                Button {
+                    guard languageRawValue != option.rawValue else { return }
+                    languageRawValue = option.rawValue
+                    AppLanguagePreference.save(option)
+                } label: {
+                    if option == languagePreference {
+                        Label(
+                            languagePreferenceTitle(option),
+                            systemImage: "checkmark"
+                        )
+                    } else {
+                        Text(languagePreferenceTitle(option))
+                    }
                 }
             }
-            .pickerStyle(.segmented)
-            .accessibilityLabel(language.text("언어", "Language"))
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: "globe")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Color.tpReferenceBlue)
+                    .frame(width: 24)
+                Text(language.text("언어", "Language"))
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                Spacer()
+                Text(languagePreferenceTitle(languagePreference))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(Color.primary)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .background(
+                Color.tpReferenceBlue.opacity(0.07),
+                in: RoundedRectangle(cornerRadius: 12)
+            )
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 12)
-        .background(Color.tpReferenceBlue.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityLabel(language.text("언어 선택", "Choose language"))
+    }
+
+    private func languagePreferenceTitle(
+        _ preference: AppLanguagePreference
+    ) -> String {
+        switch preference {
+        case .automatic:
+            language.text("자동", "Automatic")
+        case .korean:
+            language.text("한국어", "Korean")
+        case .english:
+            "English"
+        }
     }
 
     private var displayMenuItem: some View {
@@ -1918,6 +2316,9 @@ struct MapHomeView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(language.text("설정 초기화", "Reset settings"))
                 .padding(.leading, 12)
+
+                gpsLoggingMenuItem
+                    .padding(.leading, 12)
             }
         }
     }
@@ -1937,8 +2338,22 @@ struct MapHomeView: View {
             : language.text("보호 설정 안 됨", "Not configured")
     }
 
+    private var proMenuTitle: String {
+        switch proAccess.menuPresentation {
+        case .purchase:
+            language.text("Pro 구매", "Buy Pro")
+        case .trial(let remainingDays):
+            language.text(
+                "14일 무료 체험 · \(remainingDays)일 남음",
+                "14-day free trial · \(remainingDays) days left"
+            )
+        case .purchased:
+            language.text("Pro 구매 완료", "Pro purchased")
+        }
+    }
+
     private var gpsLoggingMenuItem: some View {
-        let isLogging = true
+        let isLogging = model.sensorCollectionSessionState == .collecting
         let preferences = model.settings.gpsLoggingPreferences
         let tint = Color.tpReferenceRose
         return VStack(alignment: .leading, spacing: 7) {
@@ -1956,14 +2371,19 @@ struct MapHomeView: View {
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(
-                            isLogging
-                                ? language.text("실시간 GPS 기록 중", "Live GPS logging")
-                                : language.text("실시간 GPS 기록", "Live GPS logging")
+                            language.text(
+                                "GPS 및 센서 데이터",
+                                "GPS & Sensor Data"
+                            )
                         )
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
 
                         Text(
-                            gpsLoggingIntervalText(preferences.effectiveIntervalSeconds)
+                            sensorCollectionStatusText
+                                + " · "
+                                + gpsLoggingIntervalText(
+                                    preferences.effectiveIntervalSeconds
+                                )
                         )
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -1981,7 +2401,7 @@ struct MapHomeView: View {
                 .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(language.text("실시간 GPS 기록 설정", "Live GPS logging settings"))
+            .accessibilityLabel(language.text("GPS 및 센서 데이터 설정", "GPS and sensor data settings"))
 
             if isGPSLoggingMenuExpanded {
                 VStack(alignment: .leading, spacing: 11) {
@@ -1996,8 +2416,8 @@ struct MapHomeView: View {
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                             Text(
                                 language.text(
-                                    "10분마다 GPS와 사용 가능한 센서값을 기록",
-                                    "Records GPS and available sensor values every 10 min"
+                                    "15분마다 GPS와 사용 가능한 센서값을 기록",
+                                    "Records GPS and available sensor values every 15 min"
                                 )
                             )
                             .font(.system(size: 10.5, weight: .medium, design: .rounded))
@@ -2056,11 +2476,32 @@ struct MapHomeView: View {
                         .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                     }
+
+                    Text(
+                        language.text(
+                            "1초 모드는 이동 감지 시 자동으로 시작되고 정지 감지 시 끝납니다. 백그라운드에서는 iOS가 허용한 위치·HealthKit·BGTask 이벤트에서 최선으로 복구하며, 앱 강제 종료 뒤 정확한 주기는 보장되지 않습니다.",
+                            "The 1-second mode starts when movement is detected and stops when you become stationary. In the background, collection resumes best-effort from location, HealthKit, and BGTask events allowed by iOS; exact timing after force quit is not guaranteed."
+                        )
+                    )
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(11)
                 .background(tint.opacity(0.055), in: RoundedRectangle(cornerRadius: 10))
                 .padding(.leading, 12)
             }
+        }
+    }
+
+    private var sensorCollectionStatusText: String {
+        switch model.sensorCollectionSessionState {
+        case .waiting:
+            language.text("대기", "Waiting")
+        case .collecting:
+            language.text("수집 중", "Collecting")
+        case .stopped:
+            language.text("종료", "Stopped")
         }
     }
 
@@ -2273,6 +2714,80 @@ struct MapHomeView: View {
             to: dayStart
         ) else { return nil }
         return TimeSpan(start: start, end: end)
+    }
+
+    private func sectionDetails(at minute: Int) -> [MapHomeSectionDetail] {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart),
+              let segment = MapHomeTimeRailSegmentEngine.segment(
+                at: minute,
+                in: timeRailSegments
+              ),
+              let segmentStart = calendar.date(
+                byAdding: .minute,
+                value: segment.startMinute,
+                to: dayStart
+              ),
+              let segmentEnd = calendar.date(
+                byAdding: .minute,
+                value: segment.endMinute,
+                to: dayStart
+              )
+        else { return [] }
+        let segmentSpan = TimeSpan(start: segmentStart, end: segmentEnd)
+        var details: [MapHomeSectionDetail] = model.snapshot.actuals.compactMap {
+            actual -> MapHomeSectionDetail? in
+            let span = actual.span(asOf: .now)
+            guard let clipped = span.intersection(with: segmentSpan),
+                  clipped.start < dayEnd,
+                  clipped.end > dayStart
+            else { return nil }
+            let start = min(
+                1_440,
+                max(0, Int((clipped.start.timeIntervalSince(dayStart) / 60).rounded(.down)))
+            )
+            let end = min(
+                1_440,
+                max(start + 1, Int((clipped.end.timeIntervalSince(dayStart) / 60).rounded(.up)))
+            )
+            return MapHomeSectionDetail(
+                id: actual.id,
+                title: actual.title,
+                categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
+                startMinute: start,
+                endMinute: end
+            )
+        }
+        let travelDetails: [MapHomeSectionDetail] = model.snapshot.travel.compactMap {
+            travel -> MapHomeSectionDetail? in
+            guard let clipped = travel.span.intersection(with: segmentSpan),
+                  clipped.start < dayEnd,
+                  clipped.end > dayStart
+            else { return nil }
+            let start = min(
+                1_440,
+                max(0, Int((clipped.start.timeIntervalSince(dayStart) / 60).rounded(.down)))
+            )
+            let end = min(
+                1_440,
+                max(start + 1, Int((clipped.end.timeIntervalSince(dayStart) / 60).rounded(.up)))
+            )
+            return MapHomeSectionDetail(
+                id: travel.id,
+                title: "\(MovementPresentation.title(for: travel.mode)) 탑승",
+                categoryID: "movement",
+                startMinute: start,
+                endMinute: end
+            )
+        }
+        details.append(contentsOf: travelDetails)
+        return details.sorted { lhs, rhs in
+            if lhs.startMinute == rhs.startMinute {
+                return lhs.endMinute < rhs.endMinute
+            }
+            return lhs.startMinute < rhs.startMinute
+        }
     }
 
     private func refreshRouteReadings(for date: Date) async {
@@ -2555,13 +3070,53 @@ struct MapHomeView: View {
     }
 }
 
+private struct MapHomeSectionDetail: Identifiable, Hashable {
+    let id: UUID
+    let title: String
+    let categoryID: String
+    let startMinute: Int
+    let endMinute: Int
+}
+
 private struct MapHomeSectionEditSelection: Identifiable {
     let date: Date
     let minute: Int
     let activity: MapHomeTimeSidebarActivity
+    let segment: MapHomeTimeRailSegment
+    let details: [MapHomeSectionDetail]
 
     var id: String {
         "\(date.timeIntervalSinceReferenceDate)-\(minute)"
+    }
+}
+
+enum MapHomeSectionBoundaryMath {
+    static let minimumPublishInterval: TimeInterval = 1.0 / 60.0
+
+    static func minute(
+        baseMinute: Int,
+        translation: CGFloat,
+        trackHeight: CGFloat,
+        visibleRange: ClosedRange<Int>,
+        limit: Int,
+        isStart: Bool
+    ) -> Int {
+        let duration = max(1, visibleRange.upperBound - visibleRange.lowerBound)
+        let delta = Int(
+            (translation / max(trackHeight, 1) * CGFloat(duration)).rounded()
+        )
+        let raw = baseMinute + delta
+        return isStart
+            ? min(max(raw, visibleRange.lowerBound), limit - 1)
+            : max(min(raw, visibleRange.upperBound), limit + 1)
+    }
+
+    static func shouldPublish(
+        lastUptime: TimeInterval,
+        currentUptime: TimeInterval,
+        isFinal: Bool
+    ) -> Bool {
+        isFinal || currentUptime - lastUptime >= minimumPublishInterval
     }
 }
 
@@ -2623,58 +3178,482 @@ enum MapHomeLanguage: String, CaseIterable, Identifiable {
 
 private struct MapHomeSectionEditSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
     let selection: MapHomeSectionEditSelection
     let language: MapHomeLanguage
 
-    private var timeText: String {
-        String(format: "%02d:%02d", selection.minute / 60, selection.minute % 60)
+    @State private var startMinute: Int
+    @State private var endMinute: Int
+    @State private var selectedCategoryID: String
+    @State private var dragBaseMinute: Int?
+    @State private var lastDragPublishUptime: TimeInterval = 0
+    @State private var isSaving = false
+
+    init(
+        model: AppModel,
+        selection: MapHomeSectionEditSelection,
+        language: MapHomeLanguage
+    ) {
+        self.model = model
+        self.selection = selection
+        self.language = language
+        _startMinute = State(initialValue: selection.segment.startMinute)
+        _endMinute = State(initialValue: selection.segment.endMinute)
+        _selectedCategoryID = State(initialValue: selection.segment.categoryID)
+    }
+
+    private var categories: [MapHomeSidebarMajorCategory] {
+        MapHomeSidebarMajorCategory.all(
+            categoryColors: model.settings.mapCategoryColors
+        ) + model.settings.mapUserActivityCategories.map(MapHomeSidebarMajorCategory.custom)
+    }
+
+    private var selectedCategory: MapHomeSidebarMajorCategory {
+        categories.first { $0.id == selectedCategoryID }
+            ?? MapHomeSidebarMajorCategory.presentation(
+                for: selectedCategoryID,
+                categoryColors: model.settings.mapCategoryColors
+            )
+    }
+
+    private var visibleRange: ClosedRange<Int> {
+        let center = (selection.segment.startMinute + selection.segment.endMinute) / 2
+        let duration = max(360, selection.segment.endMinute - selection.segment.startMinute + 180)
+        let lower = min(max(center - duration / 2, 0), 1_440 - min(duration, 1_440))
+        return lower...min(1_440, lower + duration)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(spacing: 14) {
             HStack {
-                Text(language.text("섹션 편집", "Edit section"))
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
-                Spacer()
                 Button(language.text("닫기", "Close")) { dismiss() }
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .buttonStyle(.bordered)
+                Spacer()
+                Text(language.text("행동 구간 편집", "Edit activity section"))
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                Spacer()
+                Button(language.text("저장", "Save")) {
+                    save()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isSaving || startMinute >= endMinute)
             }
 
             HStack(spacing: 10) {
-                Image(systemName: selection.activity.systemImage)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(selection.activity.tint)
-                    .frame(width: 38, height: 38)
-                    .background(
-                        selection.activity.tint.opacity(0.13),
-                        in: RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    )
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(selection.activity.accessibilityLabel)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    Text(language.text("선택 시각", "Selected time") + " \(timeText)")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            .padding(12)
-            .background(
-                Color.tpSurface,
-                in: RoundedRectangle(cornerRadius: 15, style: .continuous)
-            )
-
-            Text(
-                language.text(
-                    "오른쪽 핸들을 위·아래로 끌어 선택 시각을 바꿀 수 있습니다.",
-                    "Drag the right handle up or down to change the selected time."
+                timeControl(
+                    title: language.text("시작", "Start"),
+                    minute: startMinute,
+                    range: selection.segment.startMinute...(endMinute - 1),
+                    isStart: true
                 )
-            )
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
+                timeControl(
+                    title: language.text("끝", "End"),
+                    minute: endMinute,
+                    range: (startMinute + 1)...selection.segment.endMinute,
+                    isStart: false
+                )
+                Picker(language.text("대분류", "Category"), selection: $selectedCategoryID) {
+                    ForEach(categories) { category in
+                        Label(
+                            category.localizedTitle(language),
+                            systemImage: category.systemImage
+                        )
+                        .tag(category.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 10)
+                .frame(height: 44)
+                .background(Color.tpSurface, in: Capsule())
+            }
+
+            HStack {
+                Text(language.text("상세 활동", "Detailed activities"))
+                    .frame(maxWidth: .infinity)
+                Text(language.text("대분류", "Category"))
+                    .frame(width: 118)
+            }
+            .font(.system(size: 13, weight: .bold, design: .rounded))
+            .foregroundStyle(.secondary)
+
+            GeometryReader { proxy in
+                let trackHeight = max(proxy.size.height, 1)
+                let leftWidth = max(120, proxy.size.width - 130)
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.tpSurface)
+
+                    timelineGrid(height: trackHeight)
+
+                    ForEach(selection.details) { detail in
+                        detailBlock(
+                            detail,
+                            leftWidth: leftWidth,
+                            height: trackHeight
+                        )
+                    }
+
+                    majorBlock(
+                        x: leftWidth + 9,
+                        width: 112,
+                        height: trackHeight
+                    )
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
+                }
+            }
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 22)
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 14)
+        .background(Color.tpBackground.ignoresSafeArea())
+    }
+
+    private func timeControl(
+        title: String,
+        minute: Int,
+        range: ClosedRange<Int>,
+        isStart: Bool
+    ) -> some View {
+        Menu {
+            Picker(
+                title,
+                selection: Binding(
+                    get: { isStart ? startMinute : endMinute },
+                    set: { value in
+                        if isStart {
+                            startMinute = value
+                        } else {
+                            endMinute = value
+                        }
+                    }
+                )
+            ) {
+                ForEach(Array(stride(from: range.lowerBound, through: range.upperBound, by: 5)), id: \.self) {
+                    Text(timeLabel($0)).tag($0)
+                }
+            }
+        } label: {
+            VStack(spacing: 1) {
+                Text(title).font(.caption2).foregroundStyle(.secondary)
+                Text(timeLabel(minute)).font(.system(size: 13, weight: .bold, design: .rounded))
+            }
+            .frame(width: 70, height: 44)
+            .background(Color.tpSurface, in: Capsule())
+        }
+    }
+
+    private func timelineGrid(height: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(hourMarks, id: \.self) { minute in
+                let y = yPosition(minute, height: height)
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: 1_000, y: y))
+                }
+                .stroke(Color.tpLine.opacity(0.45), lineWidth: 1)
+                Text(timeLabel(minute))
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 5)
+                    .position(x: 23, y: max(7, y + 7))
+            }
+        }
+    }
+
+    private var hourMarks: [Int] {
+        let first = Int(ceil(Double(visibleRange.lowerBound) / 60)) * 60
+        return Array(stride(from: first, through: visibleRange.upperBound, by: 60))
+    }
+
+    private func detailBlock(
+        _ detail: MapHomeSectionDetail,
+        leftWidth: CGFloat,
+        height: CGFloat
+    ) -> some View {
+        let start = max(detail.startMinute, visibleRange.lowerBound)
+        let end = min(detail.endMinute, visibleRange.upperBound)
+        let y = yPosition(start, height: height)
+        let blockHeight = max(26, yPosition(end, height: height) - y)
+        let category = MapHomeSidebarMajorCategory.presentation(
+            for: detail.categoryID,
+            categoryColors: model.settings.mapCategoryColors
+        )
+        return HStack(spacing: 5) {
+            Image(systemName: category.systemImage)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(detail.title).lineLimit(1)
+                Text("\(timeLabel(detail.startMinute))–\(timeLabel(detail.endMinute))")
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .opacity(0.72)
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 11, weight: .semibold, design: .rounded))
+        .foregroundStyle(category.tint)
+        .padding(.horizontal, 8)
+        .frame(width: leftWidth - 45, height: blockHeight, alignment: .leading)
+        .background(category.tint.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+        .position(x: 35 + (leftWidth - 45) / 2, y: y + blockHeight / 2)
+        .accessibilityLabel("\(detail.title), \(timeLabel(detail.startMinute))부터 \(timeLabel(detail.endMinute))")
+    }
+
+    private func majorBlock(
+        x: CGFloat,
+        width: CGFloat,
+        height: CGFloat
+    ) -> some View {
+        let y = yPosition(startMinute, height: height)
+        let blockHeight = max(44, yPosition(endMinute, height: height) - y)
+        return ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(selectedCategory.tint.opacity(0.88))
+            VStack(spacing: 3) {
+                Image(systemName: selectedCategory.systemImage)
+                Text(selectedCategory.localizedTitle(language))
+                    .lineLimit(2)
+                Text("\(timeLabel(startMinute))–\(timeLabel(endMinute))")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+            }
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+
+            Capsule()
+                .fill(.white)
+                .frame(width: 42, height: 7)
+                .position(x: width / 2, y: 8)
+                .contentShape(Rectangle().inset(by: -12))
+                .gesture(boundaryDragGesture(isStart: true, trackHeight: height))
+            Capsule()
+                .fill(.white)
+                .frame(width: 42, height: 7)
+                .position(x: width / 2, y: blockHeight - 8)
+                .contentShape(Rectangle().inset(by: -12))
+                .gesture(boundaryDragGesture(isStart: false, trackHeight: height))
+        }
+        .frame(width: width, height: blockHeight)
+        .position(x: x + width / 2, y: y + blockHeight / 2)
+    }
+
+    private func boundaryDragGesture(
+        isStart: Bool,
+        trackHeight: CGFloat
+    ) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                updateBoundary(
+                    translation: value.translation.height,
+                    isStart: isStart,
+                    trackHeight: trackHeight,
+                    isFinal: false
+                )
+            }
+            .onEnded { value in
+                updateBoundary(
+                    translation: value.translation.height,
+                    isStart: isStart,
+                    trackHeight: trackHeight,
+                    isFinal: true
+                )
+                dragBaseMinute = nil
+                lastDragPublishUptime = 0
+            }
+    }
+
+    private func updateBoundary(
+        translation: CGFloat,
+        isStart: Bool,
+        trackHeight: CGFloat,
+        isFinal: Bool
+    ) {
+        if dragBaseMinute == nil {
+            dragBaseMinute = isStart ? startMinute : endMinute
+        }
+        guard let dragBaseMinute else { return }
+        let uptime = ProcessInfo.processInfo.systemUptime
+        guard MapHomeSectionBoundaryMath.shouldPublish(
+            lastUptime: lastDragPublishUptime,
+            currentUptime: uptime,
+            isFinal: isFinal
+        ) else { return }
+        lastDragPublishUptime = uptime
+        let projectedMinute = MapHomeSectionBoundaryMath.minute(
+            baseMinute: dragBaseMinute,
+            translation: translation,
+            trackHeight: trackHeight,
+            visibleRange: visibleRange,
+            limit: isStart ? endMinute : startMinute,
+            isStart: isStart
+        )
+        let minute = isStart
+            ? max(projectedMinute, selection.segment.startMinute)
+            : min(projectedMinute, selection.segment.endMinute)
+        if isStart {
+            if startMinute != minute { startMinute = minute }
+        } else if endMinute != minute {
+            endMinute = minute
+        }
+    }
+
+    private func yPosition(_ minute: Int, height: CGFloat) -> CGFloat {
+        let duration = max(1, visibleRange.upperBound - visibleRange.lowerBound)
+        return height * CGFloat(minute - visibleRange.lowerBound) / CGFloat(duration)
+    }
+
+    private func timeLabel(_ minute: Int) -> String {
+        String(format: "%02d:%02d", minute / 60, minute % 60)
+    }
+
+    private func save() {
+        guard !isSaving, startMinute < endMinute else { return }
+        isSaving = true
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: selection.date)
+        guard let originalStart = calendar.date(
+            byAdding: .minute,
+            value: selection.segment.startMinute,
+            to: dayStart
+        ), let originalEnd = calendar.date(
+            byAdding: .minute,
+            value: selection.segment.endMinute,
+            to: dayStart
+        ), let start = calendar.date(
+            byAdding: .minute,
+            value: startMinute,
+            to: dayStart
+        ), let end = calendar.date(
+            byAdding: .minute,
+            value: endMinute,
+            to: dayStart
+        ) else {
+            isSaving = false
+            return
+        }
+        let category = selectedCategory
+        let option = category.id.hasPrefix("custom:")
+            ? ActivityCorrectionOption.custom(category.title)
+            : ActivityCorrectionOption(
+                id: "phase.\(category.id)",
+                title: category.title,
+                behavior: nil,
+                categoryID: category.id,
+                systemImage: category.systemImage,
+                isAutomatic: false,
+                isCustom: false
+            )
+        Task { @MainActor in
+            let originalSpan = TimeSpan(start: originalStart, end: originalEnd)
+            if let sourceID = selection.segment.sourceID,
+               model.snapshot.actuals.contains(where: { $0.id == sourceID }) {
+                await model.correctActualFragment(
+                    sourceID,
+                    displayedSpan: originalSpan,
+                    startAt: start,
+                    endAt: end,
+                    with: option
+                )
+            } else {
+                await model.classifyUnconfirmedSpan(
+                    TimeSpan(start: start, end: end),
+                    with: option
+                )
+            }
+            dismiss()
+        }
+    }
+}
+
+private struct MapHomeCategoryAddSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+    @State private var title = ""
+    @State private var systemImage = "tag.fill"
+    @State private var color = Color.tpReferenceMint
+    @FocusState private var isFocused: Bool
+
+    private let iconNames = [
+        "tag.fill", "star.fill", "heart.fill", "fork.knife",
+        "figure.walk", "book.fill", "gamecontroller.fill", "music.note",
+    ]
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text(language.text("행동분류 추가", "Add activity category"))
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                Spacer()
+                Button(language.text("닫기", "Close")) { dismiss() }
+            }
+
+            TextField(
+                language.text("행동분류 이름", "Category name"),
+                text: $title
+            )
+            .focused($isFocused)
+            .textInputAutocapitalization(.words)
+            .submitLabel(.done)
+            .onSubmit(save)
+            .padding(.horizontal, 14)
+            .frame(height: 48)
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
+            }
+
+            HStack(spacing: 12) {
+                Picker(language.text("아이콘", "Icon"), selection: $systemImage) {
+                    ForEach(iconNames, id: \.self) { name in
+                        Image(systemName: name).tag(name)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.tpSurface, in: Capsule())
+
+                ColorPicker(
+                    language.text("색상", "Color"),
+                    selection: $color,
+                    supportsOpacity: false
+                )
+                .padding(.horizontal, 14)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.tpSurface, in: Capsule())
+            }
+
+            Button(action: save) {
+                Text(language.text("추가", "Add"))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(trimmedTitle.isEmpty)
+        }
+        .padding(20)
+        .background(Color.tpBackground)
+        .task { isFocused = true }
+    }
+
+    private func save() {
+        guard !trimmedTitle.isEmpty else { return }
+        model.addMapUserActivityCategory(
+            title: trimmedTitle,
+            systemImage: systemImage,
+            hex: color.hexRGBString ?? "#29A383"
+        )
+        dismiss()
     }
 }
 

@@ -112,10 +112,21 @@ final class WatchMeasurementAlertTests: XCTestCase {
     func testDrainFailuresReportTheirCount() {
         let alerts = TaptionWatchAlertPolicy.alerts(
             for: snapshot(drainFailureCount: 3),
-            now: now
+            now: now,
+            language: .korean
         )
         XCTAssertEqual(alerts.map(\.kind), [.recordingGap])
         XCTAssertEqual(alerts.first?.detail, "읽지 못한 구간 3회")
+
+        let englishAlerts = TaptionWatchAlertPolicy.alerts(
+            for: snapshot(drainFailureCount: 3),
+            now: now,
+            language: .english
+        )
+        XCTAssertEqual(
+            englishAlerts.first?.detail,
+            "3 unread interval(s)"
+        )
     }
 
     func testStalledMeasurementNeedsTheFullInterval() {

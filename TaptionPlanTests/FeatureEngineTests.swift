@@ -83,7 +83,7 @@ final class FeatureEngineTests: XCTestCase {
             .map(\.title)
         XCTAssertEqual(
             phaseTitles,
-            ["활동", "업무", "수업", "취미", "수면", "이동", "운동", "미확인"]
+            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "미확인"]
         )
 
         let detailTitles = Set(
@@ -95,19 +95,80 @@ final class FeatureEngineTests: XCTestCase {
             "휴식", "미확인", "업무(집 - 회사)", "수업(집 - 학교·학원)",
             "취미(집 - 취미)", "코어 수면", "깊은 수면", "REM 수면",
             "걷기", "자동차", "지하철", "자가용", "버스", "배", "비행기",
-            "자전거", "운동",
+            "자전거", "식사", "요리", "운동",
         ]))
     }
 
-    func testMapHomeSidebarUsesEightDistinctMajorCategoryVisuals() {
+    func testEatingCategoryIsStableAndFollowsMovement() {
+        let ids = RecordClassificationCatalog.categories.map(\.id)
+        XCTAssertEqual(ids.firstIndex(of: "eating"), ids.firstIndex(of: "movement")! + 1)
+        XCTAssertEqual(
+            RecordAnalysisCategoryNormalizer.categoryID(
+                for: "meal",
+                title: "점심 식사"
+            ),
+            "eating"
+        )
+        XCTAssertEqual(
+            RecordAnalysisCategoryNormalizer.categoryID(
+                for: "activity",
+                title: "밥"
+            ),
+            "eating"
+        )
+        XCTAssertEqual(
+            RecordAnalysisCategoryNormalizer.categoryID(
+                for: "activity",
+                behavior: "cooking"
+            ),
+            "eating"
+        )
+        XCTAssertEqual(
+            RecordAnalysisCategoryNormalizer.categoryID(
+                for: "eating",
+                behavior: "meal"
+            ),
+            "eating"
+        )
+    }
+
+    func testMapUserActivityCategoriesNormalizeAndRoundTrip() throws {
+        let id = UUID()
+        var settings = AppFeatureSettings.defaults
+        settings.mapUserActivityCategories =
+            AppFeatureSettings.normalizedMapUserActivityCategories([
+                MapUserActivityCategory(
+                    id: id,
+                    title: "  독서  ",
+                    systemImage: "book.fill",
+                    hex: "#29a383"
+                ),
+                MapUserActivityCategory(
+                    id: UUID(),
+                    title: "독서",
+                    systemImage: "star.fill",
+                    hex: "#FFFFFF"
+                ),
+            ])
+
+        XCTAssertEqual(settings.mapUserActivityCategories.count, 1)
+        XCTAssertEqual(settings.mapUserActivityCategories.first?.title, "독서")
+        XCTAssertEqual(settings.mapUserActivityCategories.first?.hex, "#29A383")
+
+        let data = try JSONEncoder().encode(settings)
+        let restored = try JSONDecoder().decode(AppFeatureSettings.self, from: data)
+        XCTAssertEqual(restored.mapUserActivityCategories, settings.mapUserActivityCategories)
+    }
+
+    func testMapHomeSidebarUsesDistinctMajorCategoryVisuals() {
         let categories = MapHomeSidebarMajorCategory.all
 
         XCTAssertEqual(categories.map(\.id), CanonicalCategoryPalette.orderedIDs)
-        XCTAssertEqual(Set(categories.map(\.hex)).count, 8)
-        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 8)
+        XCTAssertEqual(Set(categories.map(\.hex)).count, 9)
+        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 9)
         XCTAssertEqual(
             categories.map(\.title),
-            ["활동", "업무", "수업", "취미", "수면", "이동", "운동", "미확인"]
+            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "미확인"]
         )
     }
 
@@ -127,7 +188,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testMapCategoryColorOverridesAcceptOnlyTheEightValidHexValues() {
+    func testMapCategoryColorOverridesAcceptOnlyValidHexValues() {
         let colors = AppFeatureSettings.normalizedMapCategoryColors([
             "work": "#4f46e5",
             "sleep": "#ABCDEF",
@@ -200,17 +261,26 @@ final class FeatureEngineTests: XCTestCase {
             ),
             ActualRecord(
                 planID: nil,
+                title: "식사",
+                categoryID: "eating",
+                startedAt: day.addingTimeInterval(18 * hour),
+                endedAt: day.addingTimeInterval(20 * hour),
+                source: .location,
+                behavior: "meal"
+            ),
+            ActualRecord(
+                planID: nil,
                 title: "운동",
                 categoryID: "exercise",
-                startedAt: day.addingTimeInterval(18 * hour),
-                endedAt: day.addingTimeInterval(21 * hour),
+                startedAt: day.addingTimeInterval(20 * hour),
+                endedAt: day.addingTimeInterval(22 * hour),
                 source: .healthKit
             ),
             ActualRecord(
                 planID: nil,
                 title: "미확인",
                 categoryID: "activity",
-                startedAt: day.addingTimeInterval(21 * hour),
+                startedAt: day.addingTimeInterval(22 * hour),
                 endedAt: day.addingTimeInterval(24 * hour),
                 source: .motion,
                 behavior: "unconfirmed-activity"
@@ -292,6 +362,44 @@ final class FeatureEngineTests: XCTestCase {
             "unconfirmed"
         )
         XCTAssertFalse(segments.contains { $0.categoryID == "work" })
+    }
+
+    func testMapHomeTimeRailLetsManualDisplayOverrideWinWithoutMutatingSensorRecord() {
+        let day = makeDate(2026, 8, 15)
+        let sensor = ActualRecord(
+            planID: nil,
+            title: "지하철",
+            categoryID: "movement",
+            startedAt: day.addingTimeInterval(hour),
+            endedAt: day.addingTimeInterval(2 * hour),
+            source: .motion,
+            behavior: "subway"
+        )
+        let override = ActualRecord(
+            planID: nil,
+            title: "식사",
+            categoryID: "eating",
+            startedAt: day.addingTimeInterval(hour),
+            endedAt: day.addingTimeInterval(2 * hour),
+            source: .manual,
+            confidence: .high,
+            behavior: "meal",
+            manuallyCorrected: true
+        )
+
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: [sensor, override],
+            on: day,
+            asOf: day.addingTimeInterval(25 * hour),
+            calendar: utcCalendar
+        )
+
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(at: 90, in: segments)?.categoryID,
+            "eating"
+        )
+        XCTAssertEqual(sensor.categoryID, "movement")
+        XCTAssertEqual(sensor.behavior, "subway")
     }
 
     func testMapHomeTimeRailIncludesPersistedSubwayTravel() {
@@ -5973,9 +6081,14 @@ final class FeatureEngineTests: XCTestCase {
             isBatteryMinimal: true,
             intervalSeconds: 900
         )
-        XCTAssertEqual(batteryMinimal.effectiveIntervalSeconds, 600)
-        XCTAssertEqual(batteryMinimal.interval, 10 * 60)
+        XCTAssertEqual(batteryMinimal.effectiveIntervalSeconds, 900)
+        XCTAssertEqual(batteryMinimal.interval, 15 * 60)
         XCTAssertFalse(batteryMinimal.isContinuous)
+        var restoredRealtime = GPSLoggingPreferences(intervalSeconds: 1)
+        restoredRealtime.isBatteryMinimal = true
+        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 900)
+        restoredRealtime.isBatteryMinimal = false
+        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 1)
         XCTAssertTrue(GPSLoggingPreferences(intervalSeconds: 1).isContinuous)
         XCTAssertEqual(
             GPSLoggingPreferences.supportedIntervalSeconds,
@@ -6080,7 +6193,77 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testSensorLiveActivityStartsOnlyForForegroundRealtimeSessions() {
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.canStart(
+                isForeground: true,
+                intervalSeconds: 1,
+                activitiesEnabled: true
+            )
+        )
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.canStart(
+                isForeground: false,
+                intervalSeconds: 1,
+                activitiesEnabled: true
+            )
+        )
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.canStart(
+                isForeground: true,
+                intervalSeconds: 10,
+                activitiesEnabled: true
+            )
+        )
+
+        let startedAt = Date(timeIntervalSinceReferenceDate: 10_000)
+        let justBeforeExpiration = startedAt.addingTimeInterval(
+            SensorCollectionActivityPolicy.maximumDuration - 1
+        )
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.isExpired(
+                startedAt: startedAt,
+                now: justBeforeExpiration
+            )
+        )
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.isExpired(
+                startedAt: startedAt,
+                now: SensorCollectionActivityPolicy.expirationDate(
+                    startedAt: startedAt
+                )
+            )
+        )
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.shouldPublish(
+                lastPublishedAt: nil,
+                now: startedAt
+            )
+        )
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.shouldPublish(
+                lastPublishedAt: startedAt,
+                now: startedAt.addingTimeInterval(14)
+            )
+        )
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.shouldPublish(
+                lastPublishedAt: startedAt,
+                now: startedAt.addingTimeInterval(15)
+            )
+        )
+    }
+
     func testAutomaticTrackingPromotionAndStopPolicy() {
+        XCTAssertTrue(
+            TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 1)
+        )
+        XCTAssertFalse(
+            TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 10)
+        )
+        XCTAssertFalse(
+            TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 900)
+        )
         XCTAssertFalse(
             TrackingSessionPolicy.shouldAutomaticallyStart(
                 motion: .walking,

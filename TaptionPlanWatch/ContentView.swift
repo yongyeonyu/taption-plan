@@ -22,6 +22,16 @@ struct WatchContentView: View {
     @State private var acknowledgedSubjectID: String?
     @State private var acknowledgedLabel: String?
 
+    private var language: AppLanguagePreference.ResolvedLanguage {
+        AppLanguagePreference.resolve(
+            rawValue: connectivity.payload?.languagePreference
+        )
+    }
+
+    private func text(_ korean: String, _ english: String) -> String {
+        language == .korean ? korean : english
+    }
+
     var body: some View {
         NavigationStack {
             TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -43,17 +53,20 @@ struct WatchContentView: View {
                 correctionList(for: subject)
             }
             .alert(
-                "확인해 주세요",
+                text("확인해 주세요", "Please check"),
                 isPresented: Binding(
                     get: { workout.errorMessage != nil },
                     set: { if !$0 { workout.dismissError() } }
                 )
             ) {
-                Button("확인", role: .cancel) { workout.dismissError() }
+                Button(text("확인", "OK"), role: .cancel) {
+                    workout.dismissError()
+                }
             } message: {
                 Text(workout.errorMessage ?? "")
             }
         }
+        .environment(\.locale, language.locale)
     }
 
     private func dashboard(at date: Date) -> some View {
@@ -89,13 +102,17 @@ struct WatchContentView: View {
 
     private func transferCard(at date: Date) -> some View {
         let measurement = workout.measurement
-        let alerts = TaptionWatchAlertPolicy.alerts(for: measurement, now: date)
+        let alerts = TaptionWatchAlertPolicy.alerts(
+            for: measurement,
+            now: date,
+            language: language
+        )
         return VStack(alignment: .leading, spacing: 7) {
             Button { connectivity.requestSync() } label: {
                 HStack(spacing: 5) {
                     Image(systemName: "iphone.and.arrow.forward")
                         .foregroundStyle(.green)
-                    Text("센서 수집 · iPhone 전송")
+                        Text(text("센서 수집 · iPhone 전송", "Collect sensors · Send to iPhone"))
                         .font(.caption.weight(.semibold))
                     Spacer(minLength: 2)
                     Image(systemName: "arrow.clockwise")
@@ -105,15 +122,20 @@ struct WatchContentView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            statusRow("수집", value: collectionStatus(measurement))
-            statusRow("전송", value: connectivity.statusText)
-            statusRow("최근 측정", value: freshnessText(at: date))
+            statusRow(text("수집", "Collection"), value: collectionStatus(measurement))
+            statusRow(text("전송", "Transfer"), value: connectivity.statusText)
+            statusRow(text("최근 측정", "Last measurement"), value: freshnessText(at: date))
             if let summary = connectivity.payload?.todaySummary {
-                statusRow("일과", value: durationText(summary.recordedMinutes))
-                statusRow("활동", value: durationText(summary.activeMinutes))
+                statusRow(text("일과", "Day"), value: durationText(summary.recordedMinutes))
+                statusRow(text("활동", "Active"), value: durationText(summary.activeMinutes))
             }
             if workout.isActive {
-                statusRow("원시 표본", value: "\(workout.sensorSampleCount)개")
+                statusRow(
+                    text("원시 표본", "Raw samples"),
+                    value: language == .korean
+                        ? "\(workout.sensorSampleCount)개"
+                        : "\(workout.sensorSampleCount)"
+                )
             }
             if let alert = alerts.first {
                 Label(alert.detail, systemImage: alert.symbolName)
@@ -132,10 +154,13 @@ struct WatchContentView: View {
 
     private func confirmationCard(_ subject: WatchConfirmationSubject) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("활동 확인", systemImage: "questionmark.bubble.fill")
+            Label(text("활동 확인", "Confirm activity"), systemImage: "questionmark.bubble.fill")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.orange)
-            Text("\(subject.behavior.title) 맞나요?")
+            Text(text(
+                "\(subject.behavior.localizedTitle(.korean)) 맞나요?",
+                "Was this \(subject.behavior.localizedTitle(.english))?"
+            ))
                 .font(.title3.weight(.bold))
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)
@@ -151,14 +176,14 @@ struct WatchContentView: View {
             } else {
                 HStack(spacing: 6) {
                     Button { confirm(subject) } label: {
-                        Text("맞아요")
+                        Text(text("맞아요", "That's right"))
                             .font(.caption.weight(.bold))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
                     Button { correctionSubject = subject } label: {
-                        Text("다른 활동")
+                        Text(text("다른 활동", "Another activity"))
                             .font(.caption.weight(.bold))
                             .frame(maxWidth: .infinity)
                     }
@@ -177,10 +202,13 @@ struct WatchContentView: View {
 
     private var waitingCard: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Label("확인할 활동 없음", systemImage: "checkmark.circle")
+            Label(text("확인할 활동 없음", "No activity to confirm"), systemImage: "checkmark.circle")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.green)
-            Text("특정 가능한 활동이 생기면 여기에서 확인을 요청합니다.")
+            Text(text(
+                "특정 가능한 활동이 생기면 여기에서 확인을 요청합니다.",
+                "When an activity can be identified, we will ask you to confirm it here."
+            ))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -195,15 +223,18 @@ struct WatchContentView: View {
     private func correctionList(for subject: WatchConfirmationSubject) -> some View {
         NavigationStack {
             List {
-                Section("실제로 무엇을 했나요?") {
+                Section(text("실제로 무엇을 했나요?", "What did you actually do?")) {
                     ForEach(correctionOptions(for: subject), id: \.self) { kind in
                         Button { correct(subject, to: kind) } label: {
-                            Label(kind.title, systemImage: symbol(for: kind))
+                            Label(
+                                kind.localizedTitle(language),
+                                systemImage: symbol(for: kind)
+                            )
                         }
                     }
                 }
             }
-            .navigationTitle("활동 선택")
+            .navigationTitle(text("활동 선택", "Choose activity"))
         }
     }
 
@@ -222,7 +253,7 @@ struct WatchContentView: View {
     private func confirm(_ subject: WatchConfirmationSubject) {
         sendConfirmation(subject, correctedBehavior: nil)
         acknowledgedSubjectID = subject.id
-        acknowledgedLabel = "확인했습니다"
+        acknowledgedLabel = text("확인했습니다", "Confirmed")
     }
 
     private func correct(
@@ -231,7 +262,10 @@ struct WatchContentView: View {
     ) {
         sendConfirmation(subject, correctedBehavior: kind)
         acknowledgedSubjectID = subject.id
-        acknowledgedLabel = "\(kind.title)(으)로 확인했습니다"
+        acknowledgedLabel = text(
+            "\(kind.localizedTitle(.korean))(으)로 확인했습니다",
+            "Confirmed as \(kind.localizedTitle(.english))"
+        )
         correctionSubject = nil
     }
 
@@ -256,24 +290,34 @@ struct WatchContentView: View {
     private func collectionStatus(
         _ measurement: TaptionWatchMeasurementSnapshot
     ) -> String {
-        if workout.isActive { return "고정밀 수집 중" }
+        if workout.isActive { return text("고정밀 수집 중", "High-precision collection") }
         guard let settings = workout.accelerationSettings else {
-            return "iPhone 설정 대기"
+            return text("iPhone 설정 대기", "Waiting for iPhone settings")
         }
-        guard settings.isEnabled else { return "꺼짐 · iPhone 설정" }
-        if measurement.isMotionAccessDenied { return "동작 권한 없음" }
-        guard measurement.isRecorderAvailable else { return "이 Watch에서 불가" }
-        return settings.profile.displayName
+        guard settings.isEnabled else { return text("꺼짐 · iPhone 설정", "Off · iPhone settings") }
+        if measurement.isMotionAccessDenied {
+            return text("동작 권한 없음", "Motion access unavailable")
+        }
+        guard measurement.isRecorderAvailable else {
+            return text("이 Watch에서 불가", "Unavailable on this Watch")
+        }
+        return settings.profile.localizedDisplayName(language)
     }
 
     private func freshnessText(at date: Date) -> String {
         guard let measuredAt = workout.measurement.measuredAt else {
-            return "측정 없음"
+            return text("측정 없음", "No measurement")
         }
         let seconds = Int(max(0, date.timeIntervalSince(measuredAt)))
-        if seconds < 60 { return "방금" }
-        if seconds < 3_600 { return "\(seconds / 60)분 전" }
-        return "\(seconds / 3_600)시간 전"
+        if seconds < 60 { return text("방금", "Just now") }
+        if seconds < 3_600 {
+            return language == .korean
+                ? "\(seconds / 60)분 전"
+                : "\(seconds / 60) min ago"
+        }
+        return language == .korean
+            ? "\(seconds / 3_600)시간 전"
+            : "\(seconds / 3_600) hr ago"
     }
 
     private func statusRow(_ title: String, value: String) -> some View {
@@ -291,6 +335,11 @@ struct WatchContentView: View {
     private func durationText(_ minutes: Int) -> String {
         let hours = max(0, minutes) / 60
         let remainder = max(0, minutes) % 60
+        if language == .english {
+            if hours == 0 { return "\(remainder) min" }
+            if remainder == 0 { return "\(hours) hr" }
+            return "\(hours) hr \(remainder) min"
+        }
         if hours == 0 { return "\(remainder)분" }
         if remainder == 0 { return "\(hours)시간" }
         return "\(hours)시간 \(remainder)분"

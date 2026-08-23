@@ -43,6 +43,20 @@ enum TaptionWatchWorkoutKind: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    func localizedTitle(
+        _ language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
+    ) -> String {
+        switch (self, language) {
+        case (.walking, .korean): "걷기"
+        case (.running, .korean): "달리기"
+        case (.cycling, .korean): "자전거"
+        case (.walking, .english): "Walking"
+        case (.running, .english): "Running"
+        case (.cycling, .english): "Cycling"
+        }
+    }
+
     var symbolName: String {
         switch self {
         case .walking: "figure.walk"
@@ -102,6 +116,40 @@ enum WatchBehaviorKind: String, Codable, CaseIterable, Sendable {
         case .showering: "샤워"
         case .sleep: "수면"
         case .unknown: "활동"
+        }
+    }
+
+    func localizedTitle(
+        _ language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
+    ) -> String {
+        switch language {
+        case .korean:
+            return title
+        case .english:
+            return switch self {
+            case .stationary: "Resting"
+            case .standing: "Standing"
+            case .sitting: "Sitting"
+            case .lying: "Lying down"
+            case .walking: "Walking"
+            case .running: "Running"
+            case .cycling: "Cycling"
+            case .stairsUp: "Going upstairs"
+            case .stairsDown: "Going downstairs"
+            case .elevator: "Elevator"
+            case .automotive: "In a car"
+            case .publicTransit: "Public transit"
+            case .subway: "Subway"
+            case .exercise: "Exercise"
+            case .brushingTeeth: "Brushing teeth"
+            case .eating: "Eating"
+            case .typing: "Typing"
+            case .housework: "Housework"
+            case .showering: "Showering"
+            case .sleep: "Sleeping"
+            case .unknown: "Activity"
+            }
         }
     }
 
@@ -1301,6 +1349,20 @@ enum TaptionWatchMeasurementSource: String, Codable, Hashable, Sendable {
         case .idle: "측정 대기"
         }
     }
+
+    func localizedTitle(
+        _ language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
+    ) -> String {
+        switch (self, language) {
+        case (.workout, .korean): "운동 측정 중"
+        case (.ambient, .korean): "배경 기록 중"
+        case (.idle, .korean): "측정 대기"
+        case (.workout, .english): "Workout measuring"
+        case (.ambient, .english): "Background recording"
+        case (.idle, .english): "Waiting to measure"
+        }
+    }
 }
 
 /// 워치 앱이 앱 그룹에 남기는 "지금 재고 있는 것" 스냅숏.
@@ -1389,7 +1451,9 @@ enum TaptionWatchAlertPolicy {
 
     static func alerts(
         for snapshot: TaptionWatchMeasurementSnapshot?,
-        now: Date = .now
+        now: Date = .now,
+        language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
     ) -> [TaptionWatchAlert] {
         // 워치 앱이 한 번도 실행되지 않았으면 상태를 단정할 근거가 없다.
         guard let snapshot else { return [] }
@@ -1398,7 +1462,9 @@ enum TaptionWatchAlertPolicy {
             alerts.append(
                 TaptionWatchAlert(
                     kind: .recordingFailed,
-                    title: "기록이 멈췄어요",
+                    title: language == .korean
+                        ? "기록이 멈췄어요"
+                        : "Recording stopped",
                     detail: message
                 )
             )
@@ -1407,16 +1473,24 @@ enum TaptionWatchAlertPolicy {
             alerts.append(
                 TaptionWatchAlert(
                     kind: .motionAccessDenied,
-                    title: "동작 권한 없음",
-                    detail: "워치 설정에서 동작 및 피트니스를 켜 주세요"
+                    title: language == .korean
+                        ? "동작 권한 없음"
+                        : "Motion access unavailable",
+                    detail: language == .korean
+                        ? "워치 설정에서 동작 및 피트니스를 켜 주세요"
+                        : "Turn on Motion & Fitness in Watch settings"
                 )
             )
         } else if snapshot.isRecordingRequested, !snapshot.isRecorderAvailable {
             alerts.append(
                 TaptionWatchAlert(
                     kind: .recorderUnavailable,
-                    title: "배경 기록 불가",
-                    detail: "이 워치에서 가속도 기록을 쓸 수 없어요"
+                    title: language == .korean
+                        ? "배경 기록 불가"
+                        : "Background recording unavailable",
+                    detail: language == .korean
+                        ? "이 워치에서 가속도 기록을 쓸 수 없어요"
+                        : "This Watch cannot record acceleration"
                 )
             )
         }
@@ -1424,8 +1498,12 @@ enum TaptionWatchAlertPolicy {
             alerts.append(
                 TaptionWatchAlert(
                     kind: .recordingGap,
-                    title: "기록 일부 유실",
-                    detail: "읽지 못한 구간 \(snapshot.drainFailureCount)회"
+                    title: language == .korean
+                        ? "기록 일부 유실"
+                        : "Recording gap",
+                    detail: language == .korean
+                        ? "읽지 못한 구간 \(snapshot.drainFailureCount)회"
+                        : "\(snapshot.drainFailureCount) unread interval(s)"
                 )
             )
         }
@@ -1433,8 +1511,12 @@ enum TaptionWatchAlertPolicy {
             alerts.append(
                 TaptionWatchAlert(
                     kind: .measurementStalled,
-                    title: "새 측정 없음",
-                    detail: "워치 앱을 한 번 열면 밀린 기록을 가져와요"
+                    title: language == .korean
+                        ? "새 측정 없음"
+                        : "No new measurement",
+                    detail: language == .korean
+                        ? "워치 앱을 한 번 열면 밀린 기록을 가져와요"
+                        : "Open the Watch app once to fetch pending records"
                 )
             )
         }
@@ -1443,9 +1525,11 @@ enum TaptionWatchAlertPolicy {
 
     static func primary(
         for snapshot: TaptionWatchMeasurementSnapshot?,
-        now: Date = .now
+        now: Date = .now,
+        language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
     ) -> TaptionWatchAlert? {
-        alerts(for: snapshot, now: now).first
+        alerts(for: snapshot, now: now, language: language).first
     }
 
     private static func isMeasurementStalled(
@@ -1543,6 +1627,34 @@ enum TaptionWatchAccelerationProfile: Int, Codable, CaseIterable, Hashable, Send
         guard interval > 0 else { return "자동 수집 안 함" }
         return "앱이 꺼져 있어도 배경에서 계속 기록"
     }
+
+    func localizedDisplayName(
+        _ language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
+    ) -> String {
+        switch (self, language) {
+        case (.off, .korean): "끔"
+        case (.batterySaver, .korean): "배터리 최소화"
+        case (.balanced, .korean): "균형"
+        case (.accuracy, .korean): "정확도 최적화"
+        case (.off, .english): "Off"
+        case (.batterySaver, .english): "Battery saver"
+        case (.balanced, .english): "Balanced"
+        case (.accuracy, .english): "Accuracy optimized"
+        }
+    }
+
+    func localizedSubtitle(
+        _ language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
+    ) -> String {
+        guard interval > 0 else {
+            return language == .korean ? "자동 수집 안 함" : "Automatic collection off"
+        }
+        return language == .korean
+            ? "앱이 꺼져 있어도 배경에서 계속 기록"
+            : "Keeps recording in the background when the app is closed"
+    }
 }
 
 enum TaptionWatchDataSyncProfile: Int, Codable, CaseIterable, Hashable, Sendable {
@@ -1578,6 +1690,34 @@ enum TaptionWatchDataSyncProfile: Int, Codable, CaseIterable, Hashable, Sendable
         guard let intervalMinutes else { return "자동 가져오기 안 함" }
         return intervalMinutes.description + "분마다 건강·활동 데이터 가져오기"
     }
+
+    func localizedDisplayName(
+        _ language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
+    ) -> String {
+        switch (self, language) {
+        case (.off, .korean): "끔"
+        case (.batterySaver, .korean): "배터리 최소화"
+        case (.balanced, .korean): "균형"
+        case (.accuracy, .korean): "최신 데이터 우선"
+        case (.off, .english): "Off"
+        case (.batterySaver, .english): "Battery saver"
+        case (.balanced, .english): "Balanced"
+        case (.accuracy, .english): "Latest data first"
+        }
+    }
+
+    func localizedSubtitle(
+        _ language: AppLanguagePreference.ResolvedLanguage =
+            AppLanguagePreference.current.resolvedLanguage
+    ) -> String {
+        guard let intervalMinutes else {
+            return language == .korean ? "자동 가져오기 안 함" : "Automatic import off"
+        }
+        return language == .korean
+            ? "\(intervalMinutes)분마다 건강·활동 데이터 가져오기"
+            : "Import health and activity data every \(intervalMinutes) min"
+    }
 }
 
 struct TaptionWatchAccelerationSettings: Codable, Hashable, Sendable {
@@ -1611,6 +1751,9 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var locationTrackingEnabled: Bool? = nil
     var locationPermissionState: String? = nil
     var activitySuggestion: TaptionWatchActivitySuggestion? = nil
+    /// Optional so payloads cached by older iPhone builds continue to decode.
+    /// `automatic` is resolved on the receiving Watch using its own locale.
+    var languagePreference: String? = nil
 }
 
 struct TaptionWatchHealthSnapshot: Codable, Hashable, Sendable {

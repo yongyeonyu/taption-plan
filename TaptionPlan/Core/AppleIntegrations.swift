@@ -256,7 +256,7 @@ enum HealthRefreshPolicy {
 }
 
 actor HealthBackgroundRefreshCoordinator {
-    typealias Handler = @Sendable () async -> Void
+    typealias Handler = @Sendable () async -> Bool
 
     static let shared = HealthBackgroundRefreshCoordinator()
 
@@ -269,7 +269,7 @@ actor HealthBackgroundRefreshCoordinator {
         pendingHandlerWaiters.removeAll()
         guard !waiters.isEmpty else { return }
         Task {
-            await handler()
+            _ = await handler()
             waiters.forEach { $0.resume() }
         }
     }
@@ -281,7 +281,12 @@ actor HealthBackgroundRefreshCoordinator {
             }
             return
         }
-        await handler()
+        _ = await handler()
+    }
+
+    func dispatchIfRegistered() async -> Bool {
+        guard let handler else { return false }
+        return await handler()
     }
 }
 
@@ -2261,6 +2266,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     func updateTrackingPreferences(_ preferences: GPSLoggingPreferences) {
         guard activeTrackingSession != nil else { return }
+        if activeTrackingSession?.wasAutomaticallyDetected == true,
+           activeTrackingPreferences != preferences {
+            endTracking()
+            return
+        }
         activeTrackingPreferences = preferences
         applyLocationPolicy(isMoving: true)
         if sensorStreamsRunning { stopHardwareStreams() }
@@ -2663,6 +2673,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     ) {
         guard isCollecting,
               configuration.allowsBackgroundLocation,
+              TrackingSessionPolicy.allowsRealtimeAutomaticTracking(
+                interval: configuration.minimumEmissionInterval
+              ),
               !sensorStreamsRunning,
               activeTrackingSession == nil else { return }
         let batchStart = batch.first { $0.horizontalAccuracy >= 0 }
@@ -2685,6 +2698,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         activeTrackingSession = TrackingSession(
             kind: .automatic,
             wasAutomaticallyDetected: true
+        )
+        activeTrackingPreferences = GPSLoggingPreferences(
+            intervalSeconds: max(1, Int(configuration.minimumEmissionInterval))
         )
         trackingSequence = 0
         startHardwareStreams()
@@ -2743,6 +2759,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 manager.stopUpdatingLocation()
                 restartSamplingTask()
             }
+        } else if activeTrackingSession != nil {
+            endTracking()
         }
     }
 
@@ -2757,6 +2775,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         samplingTask?.cancel()
         samplingTask = nil
         stopHardwareStreams()
+        if activeTrackingSession != nil {
+            endTracking()
+        }
         locationManager.stopMonitoringSignificantLocationChanges()
         locationManager.stopMonitoringVisits()
     }
@@ -2932,6 +2953,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         // 차량·자전거 이동도 연속 추적으로 승격한다. 듀티사이클 표본만으로는
         // 경로가 출발·도착을 잇는 직선으로만 남는다.
         guard activeTrackingSession == nil,
+              TrackingSessionPolicy.allowsRealtimeAutomaticTracking(
+                interval: configuration.minimumEmissionInterval
+              ),
               motion == .walking
                 || motion == .running
                 || motion == .cycling
@@ -2961,6 +2985,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             self.activeTrackingSession = TrackingSession(
                 kind: kind,
                 wasAutomaticallyDetected: true
+            )
+            self.activeTrackingPreferences = GPSLoggingPreferences(
+                intervalSeconds: max(
+                    1,
+                    Int(self.configuration.minimumEmissionInterval)
+                )
             )
             self.trackingSequence = 0
             self.applyLocationPolicy(isMoving: true)

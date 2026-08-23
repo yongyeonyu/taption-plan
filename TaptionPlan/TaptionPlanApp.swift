@@ -71,13 +71,16 @@ enum TaptionPlanBackgroundRefresh {
         schedule(reason: "task-start")
         let taskBox = TaptionBackgroundTaskBox(task)
         let operation = Task { @MainActor in
+            _ = SensorBackgroundCoordinator.shared.receiveWake(.bgAppRefresh)
             guard await TaptionProAccessController.currentAccessGranted() else {
                 taskBox.complete(success: true)
                 logger.notice("Background refresh skipped while Pro is locked")
                 return
             }
-            let model = AppModel()
-            let success = await model.performBackgroundRefresh()
+            let model = AppModel(registersHealthBackgroundHandler: false)
+            let success = await model.performBackgroundRefresh(
+                wakeReason: .bgAppRefresh
+            )
             taskBox.complete(success: success)
             logger.notice(
                 "Background refresh completed: success=\(success, privacy: .public)"
@@ -98,6 +101,7 @@ final class TaptionPlanAppDelegate:
 {
     private static let pendingPlanKey =
         "TaptionPlan.pendingNotificationPlanID"
+    private var sensorRecoveryTask: Task<Void, Never>?
 
     func application(
         _ application: UIApplication,
@@ -109,12 +113,40 @@ final class TaptionPlanAppDelegate:
         let launchReason = launchOptions?[.location] == nil
             ? "launch"
             : "location-event"
+        _ = SensorBackgroundCoordinator.shared.receiveWake(
+            launchOptions?[.location] == nil
+                ? .appLaunch
+                : .locationRelaunch
+        )
         TaptionPlanBackgroundRefresh.schedule(reason: launchReason)
+        if launchOptions?[.location] != nil {
+            sensorRecoveryTask = Task { @MainActor in
+                guard await TaptionProAccessController.currentAccessGranted()
+                else { return }
+                let model = AppModel(
+                    registersHealthBackgroundHandler: false
+                )
+                _ = await model.performBackgroundRefresh(
+                    wakeReason: .locationRelaunch
+                )
+            }
+        }
         AppleHealthService.shared.startObservingChanges {
             guard await TaptionProAccessController.currentAccessGranted() else {
                 return
             }
-            await HealthBackgroundRefreshCoordinator.shared.receiveUpdate()
+            let accepted = await SensorBackgroundCoordinator.shared.receiveWake(
+                .healthKitBackgroundDelivery
+            )
+            guard accepted else { return }
+            if await HealthBackgroundRefreshCoordinator.shared
+                .dispatchIfRegistered() {
+                return
+            }
+            let model = await MainActor.run {
+                AppModel(registersHealthBackgroundHandler: false)
+            }
+            await model.performHealthBackgroundRefresh()
         }
         return true
     }

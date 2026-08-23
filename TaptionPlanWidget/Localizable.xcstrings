@@ -1,0 +1,396 @@
+{
+  "sourceLanguage" : "ko",
+  "strings" : {
+    "!" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "!"
+          }
+        }
+      }
+
+    },
+    "%@ 고양이가 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ cat is %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ 고양이가 %2$@"
+          }
+        }
+      }
+    },
+    "GPS 트래킹 권한 안내" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPS tracking permission guide"
+          }
+        }
+      }
+
+    },
+    "GPS 트래킹 권한 안내 열기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open GPS tracking permission guide"
+          }
+        }
+      }
+
+    },
+    "Taption Plan" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Plan"
+          }
+        }
+      }
+    },
+    "Taption 계획 처리" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage Taption plans"
+          }
+        }
+      }
+
+    },
+    "Taption 시간표" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption timeline"
+          }
+        }
+      }
+
+    },
+    "Taption 측정" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Measurement"
+          }
+        }
+      }
+    },
+    "Watch에서 확인" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm on Watch"
+          }
+        }
+      }
+    },
+    "z" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z"
+          }
+        }
+      }
+
+    },
+    "zZ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "zZ"
+          }
+        }
+      }
+
+    },
+    "계획 ID" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plan ID"
+          }
+        }
+      }
+
+    },
+    "고양이 애니메이션" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cat animation"
+          }
+        }
+      }
+
+    },
+    "기록 꺼짐" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recording off"
+          }
+        }
+      }
+    },
+    "동작" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion"
+          }
+        }
+      }
+
+    },
+    "방금" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Just now"
+          }
+        }
+      }
+    },
+    "손목 움직임을 모으는 중" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collecting wrist motion"
+          }
+        }
+      }
+    },
+    "신뢰도" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confidence"
+          }
+        }
+      }
+    },
+    "아이폰에서 위치 권한 안내를 다시 엽니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reopen the location permission guide on iPhone."
+          }
+        }
+      }
+
+    },
+    "아이폰의 이동 위치 기록을 켜거나 끕니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn iPhone travel location logging on or off."
+          }
+        }
+      }
+
+    },
+    "앱을 열어 오늘 기록을 동기화하세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the app to sync today's record"
+          }
+        }
+      }
+
+    },
+    "오늘의 기록" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's record"
+          }
+        }
+      }
+    },
+    "오늘의 지도" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's map"
+          }
+        }
+      }
+    },
+    "위젯에서 계획을 완료하거나 이동합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete or move plans from the widget."
+          }
+        }
+      }
+
+    },
+    "이동 위치 트래킹" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Travel location tracking"
+          }
+        }
+      }
+
+    },
+    "이동 위치 트래킹 끄기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off travel location tracking"
+          }
+        }
+      }
+
+    },
+    "이동 위치 트래킹 켜기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on travel location tracking"
+          }
+        }
+      }
+
+    },
+    "일정 · 위치 · 이동 · 활동이 여기에 표시됩니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schedules · locations · travel · activities appear here"
+          }
+        }
+      }
+
+    },
+    "종료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+
+    },
+    "지금 감지된 활동과 오늘 활동 요약을 표시합니다." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows the detected activity and today's summary."
+          }
+        }
+      }
+    },
+    "지금의 시간표" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current timeline"
+          }
+        }
+      }
+
+    },
+    "측정 대기" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting to measure"
+          }
+        }
+      }
+    },
+    "켜기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on"
+          }
+        }
+      }
+
+    },
+    "현재선 중심의 시간표에서 계획을 바로 처리합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage plans directly on a timeline centered on now"
+          }
+        }
+      }
+
+    },
+    "확인 요청" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmation requested"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

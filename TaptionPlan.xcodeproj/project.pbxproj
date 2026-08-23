@@ -93,6 +93,22 @@
 		A10000000000000000000088 /* BiometricDataProtection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000088 /* BiometricDataProtection.swift */; };
 		A10000000000000000000089 /* SecurityBackupCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000089 /* SecurityBackupCore.swift */; };
 		A1000000000000000000008A /* SecurityBackupCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000008A /* SecurityBackupCoreTests.swift */; };
+		A20000000000000000000001 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
+		A20000000000000000000002 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
+		A20000000000000000000003 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
+		A20000000000000000000004 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
+		A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000002 /* SensorBackgroundCoordinator.swift */; };
+		A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000003 /* AppLanguagePreferenceTests.swift */; };
+		A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */; };
+		A20000000000000000000008 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000005 /* Localizable.xcstrings */; };
+		A20000000000000000000009 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000006 /* Localizable.xcstrings */; };
+		A2000000000000000000000A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000007 /* Localizable.xcstrings */; };
+		A2000000000000000000000B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000008 /* Localizable.xcstrings */; };
+		A2000000000000000000000C /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000009 /* InfoPlist.xcstrings */; };
+		A2000000000000000000000D /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000A /* InfoPlist.xcstrings */; };
+		A2000000000000000000000E /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000B /* InfoPlist.xcstrings */; };
+		A2000000000000000000000F /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000C /* InfoPlist.xcstrings */; };
+		A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000D /* LocalizationCatalogTests.swift */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
@@ -247,6 +263,19 @@
 		F10000000000000000000091 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
 		F10000000000000000000089 /* SecurityBackupCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityBackupCore.swift; sourceTree = "<group>"; };
 		F1000000000000000000008A /* SecurityBackupCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityBackupCoreTests.swift; sourceTree = "<group>"; };
+		F20000000000000000000001 /* AppLanguagePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguagePreference.swift; sourceTree = "<group>"; };
+		F20000000000000000000002 /* SensorBackgroundCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinator.swift; sourceTree = "<group>"; };
+		F20000000000000000000003 /* AppLanguagePreferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguagePreferenceTests.swift; sourceTree = "<group>"; };
+		F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinatorTests.swift; sourceTree = "<group>"; };
+		F20000000000000000000005 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		F20000000000000000000006 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		F20000000000000000000007 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		F20000000000000000000008 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		F20000000000000000000009 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		F2000000000000000000000A /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		F2000000000000000000000B /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		F2000000000000000000000C /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		F2000000000000000000000D /* LocalizationCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationCatalogTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
 		F1000000000000000000007F /* MapHomeCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarSheet.swift; sourceTree = "<group>"; };
 		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
@@ -332,6 +361,8 @@
 				F10000000000000000000027 /* TaptionPlanDebug.entitlements */,
 				F1000000000000000000001E /* Info.plist */,
 				F1000000000000000000000B /* Assets.xcassets */,
+				F20000000000000000000005 /* Localizable.xcstrings */,
+				F20000000000000000000009 /* InfoPlist.xcstrings */,
 			);
 			path = TaptionPlan;
 			sourceTree = "<group>";
@@ -345,6 +376,9 @@
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
 				F1000000000000000000008A /* SecurityBackupCoreTests.swift */,
+				F20000000000000000000003 /* AppLanguagePreferenceTests.swift */,
+				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
+				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
 			);
 			path = TaptionPlanTests;
 			sourceTree = "<group>";
@@ -417,6 +451,8 @@
 				F10000000000000000000085 /* RouteTimelineData.swift */,
 				F10000000000000000000088 /* BiometricDataProtection.swift */,
 				F10000000000000000000089 /* SecurityBackupCore.swift */,
+				F20000000000000000000001 /* AppLanguagePreference.swift */,
+				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -429,6 +465,8 @@
 				F10000000000000000000021 /* Info.plist */,
 				F10000000000000000000022 /* TaptionPlanWidget.entitlements */,
 				F10000000000000000000028 /* TaptionPlanWidgetDebug.entitlements */,
+				F20000000000000000000006 /* Localizable.xcstrings */,
+				F2000000000000000000000A /* InfoPlist.xcstrings */,
 			);
 			path = TaptionPlanWidget;
 			sourceTree = "<group>";
@@ -449,6 +487,8 @@
 				F10000000000000000000031 /* Info.plist */,
 				F1000000000000000000002F /* TaptionPlanWatch.entitlements */,
 				F10000000000000000000030 /* TaptionPlanWatchDebug.entitlements */,
+				F20000000000000000000007 /* Localizable.xcstrings */,
+				F2000000000000000000000B /* InfoPlist.xcstrings */,
 			);
 			path = TaptionPlanWatch;
 			sourceTree = "<group>";
@@ -461,6 +501,8 @@
 				F10000000000000000000036 /* Info.plist */,
 				F10000000000000000000037 /* TaptionPlanWatchWidget.entitlements */,
 				F10000000000000000000038 /* TaptionPlanWatchWidgetDebug.entitlements */,
+				F20000000000000000000008 /* Localizable.xcstrings */,
+				F2000000000000000000000C /* InfoPlist.xcstrings */,
 			);
 			path = TaptionPlanWatchWidget;
 			sourceTree = "<group>";
@@ -631,6 +673,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				ko,
+				en,
 				Base,
 			);
 			packageReferences = (
@@ -656,6 +699,8 @@
 			files = (
 				A1000000000000000000000B /* Assets.xcassets in Resources */,
 				A10000000000000000000080 /* record-classification.json in Resources */,
+				A20000000000000000000008 /* Localizable.xcstrings in Resources */,
+				A2000000000000000000000C /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -673,6 +718,8 @@
 			files = (
 				A10000000000000000000078 /* Assets.xcassets in Resources */,
 				A10000000000000000000082 /* record-classification.json in Resources */,
+				A20000000000000000000009 /* Localizable.xcstrings in Resources */,
+				A2000000000000000000000D /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -681,6 +728,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000033 /* Assets.xcassets in Resources */,
+				A2000000000000000000000A /* Localizable.xcstrings in Resources */,
+				A2000000000000000000000E /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -689,6 +738,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000079 /* Assets.xcassets in Resources */,
+				A2000000000000000000000B /* Localizable.xcstrings in Resources */,
+				A2000000000000000000000F /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -749,6 +800,8 @@
 				A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */,
 				A10000000000000000000088 /* BiometricDataProtection.swift in Sources */,
 				A10000000000000000000089 /* SecurityBackupCore.swift in Sources */,
+				A20000000000000000000001 /* AppLanguagePreference.swift in Sources */,
+				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -762,6 +815,9 @@
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
 				A1000000000000000000008A /* SecurityBackupCoreTests.swift in Sources */,
+				A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */,
+				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
+				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -779,6 +835,7 @@
 				A1000000000000000000003D /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000041 /* CatAnimationShared.swift in Sources */,
 				A1000000000000000000007B /* DiagnosticsLogSupport.swift in Sources */,
+				A20000000000000000000002 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -796,6 +853,7 @@
 				A1000000000000000000002F /* ContentView.swift in Sources */,
 				A10000000000000000000030 /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000038 /* WatchWidgetShared.swift in Sources */,
+				A20000000000000000000003 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -806,6 +864,7 @@
 				A10000000000000000000034 /* TaptionPlanWatchWidget.swift in Sources */,
 				A10000000000000000000035 /* WatchWidgetShared.swift in Sources */,
 				A10000000000000000000036 /* WatchSyncModels.swift in Sources */,
+				A20000000000000000000004 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
