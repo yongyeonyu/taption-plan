@@ -125,3 +125,26 @@ xcodebuild build \
 - Delivery UUID: `58eaab2b-f245-4b90-800e-a07f3ecddc3b`
 - App Store Connect 업로드: 성공
 - 현재 처리 상태: `PROCESSING` (TestFlight 노출 전)
+
+## 2026-08-23 build 74 Pro·지도·센서 릴리스
+
+- 사용자 추가 지하철역과 지하철 Wi-Fi 증거를 이동 판정 우선순위에 반영했다.
+- 지도 길게 누르기 후 지하철역·버스 정류장을 추가하면 위치 이름 편집 화면으로 바로 연결한다.
+- GPS 기록 간격에 1초·10초·30초를 추가하고 지도 상세도·축소 반응·시간 레일 표시를 정리했다.
+- 광고 SDK·광고 설정·배너 영역을 제거하고 7일 앱 자체 체험과 `com.taption.plan.pro` 비소모성 영구 구매·복원을 추가했다. 체험 시작은 Keychain과 iCloud KVS에 보존하며 가장 이른 시작 시각과 가장 늦은 관측 시각으로 재설치·시계 역행을 방어한다.
+- C2 고양이 벡터 아이콘을 iPhone 일반·다크·틴트와 Watch 아이콘에 동일 원본으로 반영했다.
+
+### 검증 및 배포
+
+- `FeatureEngineTests`: 402/402 통과, 실패·스킵 0
+- iOS Simulator Debug build 통과
+- iPhone 14 Pro 설치·실행·readback: `1.0 (74)`
+- 기능 소스 커밋: `a2e3c5b`, `origin/main` 푸시 확인
+- Release IPA: Apple Distribution 서명, build 74, iCloud KVS 권한 포함, GoogleMobileAds 미포함, 앱 아이콘 1024px·무알파 확인
+- TestFlight 업로드 성공: Delivery UUID `bd78668d-fb43-40dd-9d32-5ac0817dcdf1`
+- 처리 상태: `VALID`
+- 내부 그룹: `TP Taption Plan 내부 테스트`에 build 74 자동 연결, 그룹 관계에서 build 74 노출과 내부 테스터 1명 확인
+
+### 남은 외부 게이트
+
+App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 업데이트 후 계약·세금·은행 정보 완료가 필요하다. 이 절차 전에는 실제 US$0.99 비소모성 상품 생성과 TestFlight 구매 성공 검증을 완료할 수 없다. 로컬 StoreKit 구성과 앱 내 결제 경로는 준비되어 있다.
