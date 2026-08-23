@@ -1332,7 +1332,10 @@ final class AppModel {
     }
 
     private func saveCloudBackupOnBackground() async {
-        guard securityStatus.settings.cloudBackupEnabled else { return }
+        let calendar = Calendar.autoupdatingCurrent
+        guard securityStatus.settings.cloudBackupEnabled,
+              securityStatus.settings.midnightBackupEnabled,
+              calendar.component(.hour, from: .now) == 0 else { return }
         do {
             guard let securityBackupService else { return }
             _ = try await securityBackupService.saveMonthlyArchive(snapshot)
@@ -1466,6 +1469,7 @@ final class AppModel {
             )
         }
         await refreshEnabledData(includesCurrentDeviceDay: true)
+        await saveCloudBackupOnBackground()
         await persist()
         let success = userFacingError == nil
         Self.integrationLogger.notice(
@@ -4443,6 +4447,7 @@ final class AppModel {
                 $0.source == .motion
                     && $0.modelVersion
                         != ChargingInactivitySleepEngine.modelVersion
+                    && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
                     && $0.span(asOf: span.end).intersection(with: span) != nil
             }
             snapshot.actuals.append(contentsOf: generatedMotionActuals)
@@ -4513,7 +4518,10 @@ final class AppModel {
                 ).sorted { $0.timestamp < $1.timestamp },
                 activities: motionActivities
             )
-        readings = await transportContextService.enriching(readings)
+        readings = await transportContextService.enriching(
+            readings,
+            userTransitLocations: settings.userTransitLocations
+        )
         let knownPlaces = snapshot.places
         let knownNames = knownPlaces.reduce(into: [String: String]()) {
             $0[$1.placeKey] = $1.displayName
@@ -4686,10 +4694,10 @@ final class AppModel {
         readings: [SensorReading],
         inside span: TimeSpan
     ) {
-        let evidence = readings.filter { $0.powerState != nil }
-        guard !evidence.isEmpty else { return }
+        guard !readings.isEmpty else { return }
         let prior = snapshot.actuals.filter {
             $0.modelVersion != ChargingInactivitySleepEngine.modelVersion
+                && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
         }
         let watchAvailable = appleWatchConnectionState != .unsupported
             && appleWatchConnectionState != .notPaired
@@ -4698,7 +4706,7 @@ final class AppModel {
                 $0.source == .appleWatch
                     && $0.span(asOf: span.end).intersection(with: span) != nil
             }
-        let records = ChargingInactivitySleepEngine.records(
+        let records = PhoneSleepWakeEngine.records(
             readings: readings,
             actuals: prior,
             inside: span,
@@ -4709,11 +4717,12 @@ final class AppModel {
             )
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
         let evidenceSpan = TimeSpan(
-            start: evidence.map(\.timestamp).min() ?? span.start,
-            end: evidence.map(\.timestamp).max() ?? span.start
+            start: readings.map(\.timestamp).min() ?? span.start,
+            end: readings.map(\.timestamp).max() ?? span.start
         )
         snapshot.actuals.removeAll { actual in
-            actual.modelVersion == ChargingInactivitySleepEngine.modelVersion
+            (actual.modelVersion == ChargingInactivitySleepEngine.modelVersion
+                || actual.modelVersion == PhoneSleepWakeEngine.modelVersion)
                 && actual.span(asOf: span.end)
                     .intersection(with: evidenceSpan) != nil
         }
@@ -5265,6 +5274,42 @@ final class AppModel {
         snapshot.settings.frequentPlaces.append(
             FrequentPlace(kind: .custom, name: cleanName)
         )
+        Task { await persist() }
+    }
+
+    func addUserTransitLocation(
+        name: String,
+        kind: UserTransitLocationKind,
+        latitude: Double,
+        longitude: Double
+    ) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else {
+            userFacingError = "위치 이름을 입력해 주세요."
+            return
+        }
+        guard abs(latitude) <= 90, abs(longitude) <= 180 else {
+            userFacingError = "위치 좌표를 확인해 주세요."
+            return
+        }
+        snapshot.settings.userTransitLocations.append(
+            UserTransitLocation(
+                name: cleanName,
+                kind: kind,
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 0,
+                    horizontalAccuracy: 25,
+                    verticalAccuracy: -1
+                )
+            )
+        )
+        Task { await persist() }
+    }
+
+    func deleteUserTransitLocation(_ id: UUID) {
+        snapshot.settings.userTransitLocations.removeAll { $0.id == id }
         Task { await persist() }
     }
 

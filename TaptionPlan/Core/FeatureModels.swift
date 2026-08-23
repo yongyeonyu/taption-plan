@@ -1799,6 +1799,50 @@ enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
     }
 }
 
+enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable {
+    case subwayStation
+    case busStop
+
+    var title: String {
+        switch self {
+        case .subwayStation: "지하철역"
+        case .busStop: "버스정류장"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .subwayStation: "tram.fill"
+        case .busStop: "bus.fill"
+        }
+    }
+}
+
+struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var name: String
+    var kind: UserTransitLocationKind
+    var point: GeoPoint
+    var radiusMeters: Double
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        kind: UserTransitLocationKind,
+        point: GeoPoint,
+        radiusMeters: Double = 100,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+        self.point = point
+        self.radiusMeters = 100
+        self.createdAt = createdAt
+    }
+}
+
 struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var kind: FrequentPlaceKind
@@ -2574,6 +2618,11 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var watchAccelerationMeanJerkGPerSecond: Double?
     var systemFloor: Int?
     var powerState: DevicePowerState?
+    /// The last screen state observed by the app. iOS does not expose a
+    /// background lux sensor, so brightness and screen state are persisted as
+    /// the display-light proxy for sleep/wake inference.
+    var screenBrightness: Double?
+    var screenIsOn: Bool?
     var gpsAvailable: Bool
     /// The SSID returned by Apple's current-network API, when available.
     /// It is nil when Wi-Fi information access or location authorization is
@@ -2634,6 +2683,8 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         watchAccelerationMeanJerkGPerSecond: Double? = nil,
         systemFloor: Int? = nil,
         powerState: DevicePowerState? = nil,
+        screenBrightness: Double? = nil,
+        screenIsOn: Bool? = nil,
         gpsAvailable: Bool = true,
         connectedWiFiSSID: String? = nil,
         subwayWiFiObservationStreak: Int? = nil,
@@ -2687,6 +2738,8 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
             watchAccelerationMeanJerkGPerSecond
         self.systemFloor = systemFloor
         self.powerState = powerState
+        self.screenBrightness = screenBrightness.map { min(1, max(0, $0)) }
+        self.screenIsOn = screenIsOn
         self.gpsAvailable = gpsAvailable
         self.connectedWiFiSSID = connectedWiFiSSID
         self.subwayWiFiObservationStreak = subwayWiFiObservationStreak.map {
@@ -3061,6 +3114,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var floorCalibration: FloorCalibration?
     var floorCalibrationHistory: [FloorCalibrationEvent]
     var frequentPlaces: [FrequentPlace]
+    var userTransitLocations: [UserTransitLocation]
     /// 기기 위치 기록에서만 나오는 값이라 iCloud로 내보내지 않는다.
     var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
     var movementCorrections: [TravelModeCorrection]
@@ -3097,6 +3151,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         floorCalibration: nil,
         floorCalibrationHistory: [],
         frequentPlaces: FrequentPlace.defaults,
+        userTransitLocations: [],
         dismissedPlaceSuggestions: [],
         movementCorrections: [],
         suppressedActualIDs: [],
@@ -3131,6 +3186,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         floorCalibration: FloorCalibration? = nil,
         floorCalibrationHistory: [FloorCalibrationEvent] = [],
         frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
+        userTransitLocations: [UserTransitLocation] = [],
         dismissedPlaceSuggestions: [DismissedPlaceSuggestion] = [],
         movementCorrections: [TravelModeCorrection] = [],
         suppressedActualIDs: Set<UUID> = [],
@@ -3163,6 +3219,11 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.floorCalibration = floorCalibration
         self.floorCalibrationHistory = floorCalibrationHistory
         self.frequentPlaces = Self.mergedFrequentPlaces(frequentPlaces)
+        self.userTransitLocations = userTransitLocations.map {
+            var value = $0
+            value.radiusMeters = 100
+            return value
+        }
         self.dismissedPlaceSuggestions = dismissedPlaceSuggestions
         self.movementCorrections = movementCorrections
         self.suppressedActualIDs = suppressedActualIDs
@@ -3195,6 +3256,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case floorCalibration
         case floorCalibrationHistory
         case frequentPlaces
+        case userTransitLocations
         case dismissedPlaceSuggestions
         case movementCorrections
         case suppressedActualIDs
@@ -3287,6 +3349,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                 forKey: .frequentPlaces
             ) ?? defaults.frequentPlaces
         )
+        userTransitLocations = try values.decodeIfPresent(
+            [UserTransitLocation].self,
+            forKey: .userTransitLocations
+        ) ?? defaults.userTransitLocations
         dismissedPlaceSuggestions = try values.decodeIfPresent(
             [DismissedPlaceSuggestion].self,
             forKey: .dismissedPlaceSuggestions

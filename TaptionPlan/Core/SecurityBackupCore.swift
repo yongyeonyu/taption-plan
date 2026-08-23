@@ -186,17 +186,20 @@ struct PlanAppLockSettings: Codable, Equatable, Sendable {
     /// A backup is opt-in. Turning it on requires the four-digit recovery
     /// code, but does not force an app lock for ordinary use.
     var cloudBackupEnabled: Bool
+    var midnightBackupEnabled: Bool
 
     init(
         lockOnLaunch: Bool = false,
         lockOnForeground: Bool = false,
         biometricUnlockEnabled: Bool = false,
-        cloudBackupEnabled: Bool = false
+        cloudBackupEnabled: Bool = false,
+        midnightBackupEnabled: Bool = false
     ) {
         self.lockOnLaunch = lockOnLaunch
         self.lockOnForeground = lockOnForeground
         self.biometricUnlockEnabled = biometricUnlockEnabled
         self.cloudBackupEnabled = cloudBackupEnabled
+        self.midnightBackupEnabled = midnightBackupEnabled
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -204,6 +207,7 @@ struct PlanAppLockSettings: Codable, Equatable, Sendable {
         case lockOnForeground
         case biometricUnlockEnabled
         case cloudBackupEnabled
+        case midnightBackupEnabled
     }
 
     init(from decoder: Decoder) throws {
@@ -224,6 +228,10 @@ struct PlanAppLockSettings: Codable, Equatable, Sendable {
             cloudBackupEnabled: try values.decodeIfPresent(
                 Bool.self,
                 forKey: .cloudBackupEnabled
+            ) ?? false,
+            midnightBackupEnabled: try values.decodeIfPresent(
+                Bool.self,
+                forKey: .midnightBackupEnabled
             ) ?? false
         )
     }
@@ -718,14 +726,10 @@ final class PlanSecurityBackupService {
         date: Date = .now
     ) async throws -> PlanMonthlyArchive {
         guard hasPIN else { throw PlanSecurityError.pinRequiredForCloudBackup }
-        guard let cloudRecoveryKeyProvider else {
-            throw PlanSecurityError.accountUnavailable
-        }
-        let accountKey = try await cloudRecoveryKeyProvider.key()
         return try saveMonthlyArchive(
             snapshot,
             accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope,
-            accountKey: accountKey,
+            accountKey: nil,
             date: date
         )
     }
@@ -733,7 +737,7 @@ final class PlanSecurityBackupService {
     private func saveMonthlyArchive(
         _ snapshot: TaptionDataSnapshot,
         accountIdentifier: String,
-        accountKey: Data,
+        accountKey: Data?,
         date: Date
     ) throws -> PlanMonthlyArchive {
         let payload = try JSONEncoder.taptionPlan.encode(snapshot)
@@ -745,8 +749,13 @@ final class PlanSecurityBackupService {
         ).combined ?? { throw PlanSecurityError.invalidArchive }()
         let pinKey = SymmetricKey(data: verifier!.keyMaterial)
         let wrappedPayloadKey = try AES.GCM.seal(archiveKey, using: pinKey).combined ?? { throw PlanSecurityError.invalidArchive }()
-        guard accountKey.count == 32 else { throw PlanSecurityError.accountUnavailable }
-        let accountWrappedPayloadKey = try AES.GCM.seal(archiveKey, using: SymmetricKey(data: accountKey)).combined ?? { throw PlanSecurityError.invalidArchive }()
+        let accountWrappedPayloadKey: Data
+        if let accountKey {
+            guard accountKey.count == 32 else { throw PlanSecurityError.accountUnavailable }
+            accountWrappedPayloadKey = try AES.GCM.seal(archiveKey, using: SymmetricKey(data: accountKey)).combined ?? { throw PlanSecurityError.invalidArchive }()
+        } else {
+            accountWrappedPayloadKey = Data()
+        }
         let archive = PlanMonthlyArchive(monthKey: PlanArchiveSchedule.monthKey(for: date), accountIdentifier: accountIdentifier, encryptedPayload: encryptedPayload, wrappedPayloadKey: wrappedPayloadKey, accountWrappedPayloadKey: accountWrappedPayloadKey, createdAt: date)
         try backupStore.save(archive, at: PlanCloudBackupPath(monthKey: archive.monthKey))
         return archive
@@ -760,18 +769,10 @@ final class PlanSecurityBackupService {
 
     func loadLatestArchive() async throws -> TaptionDataSnapshot {
         guard hasPIN else { throw PlanSecurityError.pinRequiredForCloudBackup }
-        guard let cloudRecoveryKeyProvider else {
-            throw PlanSecurityError.accountUnavailable
-        }
-        let accountKey = try await cloudRecoveryKeyProvider.key()
-        do {
-            return try loadLatestArchiveWithoutPIN(
-                accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope,
-                accountKeyData: accountKey
-            )
-        } catch PlanSecurityError.invalidArchive {
-            throw PlanSecurityError.accountMismatch
-        }
+        return try loadLatestArchiveWithoutPIN(
+            accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope,
+            pinKeyData: verifier?.keyMaterial
+        )
     }
 
     /// PIN loss and biometric changes are recoverable only when iCloud still

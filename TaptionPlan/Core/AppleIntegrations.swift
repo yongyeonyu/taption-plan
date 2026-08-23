@@ -2661,6 +2661,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             )
         }
         let session = completedSession ?? activeTrackingSession
+        let screen = screenSnapshot()
         if session != nil { trackingSequence += 1 }
         continuation?.yield(
             SensorReading(
@@ -2691,6 +2692,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 deviceMotionSummary: deviceMotionAccumulator.summary,
                 systemFloor: location?.floor?.level,
                 powerState: Self.powerState(UIDevice.current.batteryState),
+                screenBrightness: screen.brightness,
+                screenIsOn: screen.isOn,
                 gpsAvailable: locationFixQuality == .precise,
                 connectedWiFiSSID: latestConnectedWiFiSSID,
                 subwayWiFiObservationStreak: subwayWiFiObservationStreak,
@@ -2702,6 +2705,21 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             )
         )
         deviceMotionAccumulator.reset()
+    }
+
+    private func screenSnapshot() -> PhoneScreenSnapshot {
+        if UIApplication.shared.applicationState == .active {
+            let snapshot = PhoneScreenSnapshot(
+                brightness: Double(UIScreen.main.brightness),
+                isOn: true
+            )
+            PhoneScreenActivityStore.update(
+                brightness: snapshot.brightness,
+                isOn: snapshot.isOn
+            )
+            return snapshot
+        }
+        return PhoneScreenActivityStore.snapshot()
     }
 
     private static func powerState(
@@ -3074,7 +3092,7 @@ struct AppleTransportContext: Hashable, Sendable {
 final class AppleTransportContextService {
     /// Bump when persisted raw sensor readings need a fresh transport
     /// enrichment pass even if their archive fingerprint is unchanged.
-    static let enrichmentModelVersion = 2
+    static let enrichmentModelVersion = 3
 
     private struct CacheEntry {
         let context: AppleTransportContext
@@ -3083,27 +3101,33 @@ final class AppleTransportContextService {
 
     private var cache: [String: CacheEntry] = [:]
 
-    func enriching(_ readings: [SensorReading]) async -> [SensorReading] {
+    func enriching(
+        _ readings: [SensorReading],
+        userTransitLocations: [UserTransitLocation] = []
+    ) async -> [SensorReading] {
+        let userEnriched = readings.map {
+            applyingUserTransitLocations($0, locations: userTransitLocations)
+        }
         let staticOnly = readings.indices.filter { index in
-            guard let point = readings[index].point,
+            guard let point = userEnriched[index].point,
                   SubwayStationCatalog.nearest(
                       to: point,
                       maximumDistanceMeters: 220
                   ) != nil else { return false }
-            let reading = readings[index]
+            let reading = userEnriched[index]
             return reading.motion != .stationary
                 || (reading.speedMetersPerSecond ?? 0) >= 1
                 || !reading.gpsAvailable
                 || reading.nearbyStation
         }
         let candidates = readings.indices.filter { index in
-            guard readings[index].point != nil else { return false }
-            return readings[index].motion == .automotive
-                || (readings[index].speedMetersPerSecond ?? 0) >= 3
+            guard userEnriched[index].point != nil else { return false }
+            return userEnriched[index].motion == .automotive
+                || (userEnriched[index].speedMetersPerSecond ?? 0) >= 3
         }
         guard candidates.count >= 2 || staticOnly.count >= 2 else {
             return deterministicStationJourneyEnrichment(
-                readings.map(refiningStaticStation)
+                userEnriched.map(refiningStaticStation)
             )
         }
 
@@ -3118,11 +3142,11 @@ final class AppleTransportContextService {
         }
         guard !resolved.isEmpty else {
             return deterministicStationJourneyEnrichment(
-                readings.map(refiningStaticStation)
+                userEnriched.map(refiningStaticStation)
             )
         }
 
-        let enriched = readings.map { reading in
+        let enriched = userEnriched.map { reading in
             let reading = refiningStaticStation(reading)
             guard let point = reading.point,
                   let match = resolved.min(by: {
@@ -3163,6 +3187,33 @@ final class AppleTransportContextService {
             return value
         }
         return deterministicStationJourneyEnrichment(enriched)
+    }
+
+    private func applyingUserTransitLocations(
+        _ reading: SensorReading,
+        locations: [UserTransitLocation]
+    ) -> SensorReading {
+        guard let point = reading.point,
+              let location = locations.first(where: {
+                  distanceMeters(point, $0.point) <= 100
+              }) else {
+            return reading
+        }
+        var value = reading
+        value.nearbyStation = true
+        value.nearbyStationName = location.name
+        switch location.kind {
+        case .subwayStation:
+            value.matchesRailRoute = true
+            value.matchesPublicTransitRoute = true
+        case .busStop:
+            value.matchesPublicTransitRoute = true
+        }
+        var evidence = value.behaviorEvidence ?? []
+        let marker = "사용자 등록 (location.kind.title): (location.name)"
+        if !evidence.contains(marker) { evidence.append(marker) }
+        value.behaviorEvidence = evidence
+        return value
     }
 
     /// Apple의 일시적인 교통 컨텍스트에 의존하지 않고, 보관된 좌표에서

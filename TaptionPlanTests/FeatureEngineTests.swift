@@ -3069,6 +3069,117 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testPhoneSleepWakeRequiresDarkScreenAndConfirmsFromExpectedTime() {
+        let start = makeDate(2026, 8, 9, 22, 0)
+        let readings = (0...14).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 5 * 60),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .unplugged,
+                screenBrightness: 0.1,
+                screenIsOn: false
+            )
+        }
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(2 * hour))
+        let records = PhoneSleepWakeEngine.records(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            watchAvailable: false,
+            maximumSampleGap: 20 * 60,
+            asOf: span.end
+        )
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].startedAt, start.addingTimeInterval(5 * 60))
+        XCTAssertEqual(records[0].endedAt, readings.last?.timestamp)
+        XCTAssertEqual(
+            PhoneSleepWakeEngine.status(
+                readings: readings,
+                maximumSampleGap: 20 * 60,
+                asOf: span.end
+            ).phase,
+            .sleeping
+        )
+
+        let bright = readings.map {
+            var value = $0
+            value.screenBrightness = 0.8
+            value.screenIsOn = true
+            return value
+        }
+        XCTAssertTrue(
+            PhoneSleepWakeEngine.records(
+                readings: bright,
+                actuals: [],
+                inside: span,
+                watchAvailable: false,
+                maximumSampleGap: 20 * 60,
+                asOf: span.end
+            ).isEmpty
+        )
+    }
+
+    func testPhoneSleepWakeChargingShortensConfirmationAndAwakeningCanResettle() {
+        let start = makeDate(2026, 8, 10, 22, 0)
+        var readings = (0...8).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 5 * 60),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .charging,
+                screenBrightness: 0.1,
+                screenIsOn: false
+            )
+        }
+        let movementAt = start.addingTimeInterval(45 * 60)
+        readings.append(
+            SensorReading(
+                timestamp: movementAt,
+                motion: .walking,
+                motionConfidence: .high,
+                stepCount: 4,
+                powerState: .charging,
+                screenBrightness: 0.8,
+                screenIsOn: true
+            )
+        )
+        readings.append(
+            SensorReading(
+                timestamp: movementAt.addingTimeInterval(5 * 60),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .charging,
+                screenBrightness: 0.1,
+                screenIsOn: false
+            )
+        )
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(2 * hour))
+        let records = PhoneSleepWakeEngine.records(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            watchAvailable: false,
+            maximumSampleGap: 20 * 60,
+            asOf: span.end
+        )
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].startedAt, start.addingTimeInterval(5 * 60))
+        XCTAssertEqual(
+            PhoneSleepWakeEngine.status(
+                readings: readings,
+                maximumSampleGap: 20 * 60,
+                asOf: span.end
+            ).phase,
+            .sleeping
+        )
+    }
+
     func testAutomotivePersistsWhenCoreMotionAlsoReportsStationary() {
         XCTAssertEqual(
             MotionKindResolver.resolve(

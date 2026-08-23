@@ -1,6 +1,37 @@
 import Foundation
 import OSLog
 
+struct PhoneScreenSnapshot: Codable, Hashable, Sendable {
+    var brightness: Double
+    var isOn: Bool
+
+    init(brightness: Double, isOn: Bool) {
+        self.brightness = min(1, max(0, brightness))
+        self.isOn = isOn
+    }
+}
+
+/// Keeps the last display observation available to a background sensor wake.
+/// iOS does not provide a general-purpose ambient-light/lux API to apps.
+enum PhoneScreenActivityStore {
+    private static let brightnessKey = "TaptionPlan.screenBrightness"
+    private static let isOnKey = "TaptionPlan.screenIsOn"
+
+    static func update(brightness: Double, isOn: Bool) {
+        let defaults = UserDefaults.standard
+        defaults.set(min(1, max(0, brightness)), forKey: brightnessKey)
+        defaults.set(isOn, forKey: isOnKey)
+    }
+
+    static func snapshot() -> PhoneScreenSnapshot {
+        let defaults = UserDefaults.standard
+        return PhoneScreenSnapshot(
+            brightness: defaults.object(forKey: brightnessKey) as? Double ?? 0,
+            isOn: defaults.object(forKey: isOnKey) as? Bool ?? false
+        )
+    }
+}
+
 enum RawDeviceDataSource: String, Codable, Sendable {
     case gps
     case iPhoneSensor

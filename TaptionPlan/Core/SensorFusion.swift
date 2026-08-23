@@ -3531,6 +3531,259 @@ enum ChargingInactivitySleepEngine {
     }
 }
 
+enum PhoneSleepWakePhase: String, Codable, Hashable, Sendable {
+    case awake
+    case sleepExpected
+    case sleeping
+    case wakeExpected
+}
+
+struct PhoneSleepWakeStatus: Equatable, Sendable {
+    var phase: PhoneSleepWakePhase
+    var expectedAt: Date?
+    var sleepStartedAt: Date?
+    var charging: Bool
+}
+
+/// Infers sleep and wake transitions from iPhone-only observations. A sleep
+/// candidate needs five minutes of inactivity while the display is dark/off;
+/// the candidate is confirmed after one hour (or thirty minutes when charging)
+/// and starts at the expected-sleep timestamp. A wake candidate follows the
+/// same explicit one-hour confirmation and is cancelled when the phone settles
+/// again, allowing an interrupted sleep to continue.
+enum PhoneSleepWakeEngine {
+    static let modelVersion = "iphone-sleep-wake-v1"
+    static let inactivityDuration: TimeInterval = 5 * 60
+    static let confirmationDuration: TimeInterval = 60 * 60
+    static let chargingConfirmationDuration: TimeInterval = 30 * 60
+    static let wakeConfirmationDuration: TimeInterval = 60 * 60
+    static let darkBrightness = 0.25
+    static let brightBrightness = 0.60
+
+    static func status(
+        readings: [SensorReading],
+        maximumSampleGap: TimeInterval = 20 * 60,
+        asOf: Date = .now
+    ) -> PhoneSleepWakeStatus {
+        let ordered = readings
+            .filter { $0.timestamp <= asOf }
+            .sorted { $0.timestamp < $1.timestamp }
+        var state = InferenceState()
+        for (index, reading) in ordered.enumerated() {
+            let previous = index > 0 ? ordered[index - 1] : nil
+            advance(&state, reading: reading, previous: previous, maximumSampleGap: maximumSampleGap)
+        }
+        return state.status
+    }
+
+    static func records(
+        readings: [SensorReading],
+        actuals: [ActualRecord],
+        inside span: TimeSpan,
+        watchAvailable: Bool,
+        maximumSampleGap: TimeInterval,
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        guard !watchAvailable else { return [] }
+        let observed = readings
+            .filter { span.contains($0.timestamp) && $0.timestamp <= asOf }
+            .sorted { $0.timestamp < $1.timestamp }
+        guard observed.count >= 2 else { return [] }
+
+        let blockers = actuals.compactMap { actual -> TimeSpan? in
+            guard actual.source == .appUsage
+                    || AutomaticRecordTimelineEngine.isSleep(actual)
+                    || ActualRecordCategoryResolver.categoryID(for: actual) == "movement" else {
+                return nil
+            }
+            return actual.span(asOf: asOf).intersection(with: span)
+        }
+        var state = InferenceState()
+        var sleepSpans: [TimeSpan] = []
+        var previous: SensorReading?
+        for reading in observed {
+            if let previous,
+               reading.timestamp.timeIntervalSince(previous.timestamp) > maximumSampleGap {
+                state.sleepCandidateStart = nil
+                state.wakeCandidateStart = nil
+            }
+            let wasSleeping = state.sleepStartedAt
+            advance(
+                &state,
+                reading: reading,
+                previous: previous,
+                maximumSampleGap: maximumSampleGap,
+                blocked: blockers.contains { $0.contains(reading.timestamp) }
+            )
+            if let started = wasSleeping,
+               state.sleepStartedAt == nil,
+               let wakeExpected = state.lastWakeExpectedAt,
+               wakeExpected > started {
+                sleepSpans.append(TimeSpan(start: started, end: wakeExpected))
+                state.lastWakeExpectedAt = nil
+            }
+            previous = reading
+        }
+        if let started = state.sleepStartedAt,
+           let last = observed.last?.timestamp,
+           last > started {
+            sleepSpans.append(TimeSpan(start: started, end: min(last, asOf)))
+        }
+
+        return sleepSpans
+            .filter { $0.duration >= chargingConfirmationDuration }
+            .map { span in
+                ActualRecord(
+                    id: stableID(for: span),
+                    planID: nil,
+                    title: "수면",
+                    categoryID: "sleep",
+                    startedAt: span.start,
+                    endedAt: span.end,
+                    source: .motion,
+                    confidence: .medium,
+                    createdAt: span.end,
+                    behavior: "iphone-sleep",
+                    evidence: [
+                        "iPhone 가속도·걸음 무활동",
+                        "화면 꺼짐·어두움",
+                        "수면 예상 1시간 확인",
+                    ],
+                    modelVersion: modelVersion
+                )
+            }
+    }
+
+    private struct InferenceState {
+        var sleepCandidateStart: Date?
+        var sleepExpectedAt: Date?
+        var sleepStartedAt: Date?
+        var sleepCharging = false
+        var wakeCandidateStart: Date?
+        var lastWakeExpectedAt: Date?
+
+        var status: PhoneSleepWakeStatus {
+            if sleepStartedAt != nil {
+                return PhoneSleepWakeStatus(
+                    phase: wakeCandidateStart == nil ? .sleeping : .wakeExpected,
+                    expectedAt: wakeCandidateStart,
+                    sleepStartedAt: sleepStartedAt,
+                    charging: sleepCharging
+                )
+            }
+            return PhoneSleepWakeStatus(
+                phase: sleepExpectedAt == nil ? .awake : .sleepExpected,
+                expectedAt: sleepExpectedAt,
+                sleepStartedAt: nil,
+                charging: sleepCharging
+            )
+        }
+    }
+
+    private static func advance(
+        _ state: inout InferenceState,
+        reading: SensorReading,
+        previous: SensorReading?,
+        maximumSampleGap: TimeInterval,
+        blocked: Bool = false
+    ) {
+        if let previous,
+           reading.timestamp.timeIntervalSince(previous.timestamp) > maximumSampleGap {
+            state.sleepCandidateStart = nil
+            state.wakeCandidateStart = nil
+        }
+
+        if state.sleepStartedAt != nil {
+            if isWakeSignal(reading) {
+                state.wakeCandidateStart = state.wakeCandidateStart ?? reading.timestamp
+                state.lastWakeExpectedAt = state.wakeCandidateStart
+                if reading.timestamp.timeIntervalSince(state.wakeCandidateStart ?? reading.timestamp)
+                    >= wakeConfirmationDuration {
+                    state.sleepStartedAt = nil
+                    state.sleepExpectedAt = nil
+                    state.sleepCandidateStart = nil
+                    state.sleepCharging = false
+                    state.wakeCandidateStart = nil
+                }
+            } else if isSleepSignal(reading) || blocked {
+                // A brief awakening that settles before confirmation is part
+                // of the same sleep session; a later movement can start a new
+                // wake candidate.
+                state.wakeCandidateStart = nil
+                state.lastWakeExpectedAt = nil
+            }
+            return
+        }
+
+        guard !blocked, isSleepSignal(reading) else {
+            state.sleepCandidateStart = nil
+            state.sleepExpectedAt = nil
+            state.sleepCharging = false
+            return
+        }
+        let candidateStart = state.sleepCandidateStart ?? reading.timestamp
+        state.sleepCandidateStart = candidateStart
+        let expectedAt = candidateStart.addingTimeInterval(inactivityDuration)
+        guard reading.timestamp >= expectedAt else { return }
+        if state.sleepExpectedAt == nil {
+            state.sleepExpectedAt = expectedAt
+            state.sleepCharging = reading.powerState?.isCharging == true
+        }
+        let confirmation = state.sleepCharging
+            ? chargingConfirmationDuration
+            : confirmationDuration
+        guard reading.timestamp.timeIntervalSince(expectedAt) >= confirmation else {
+            return
+        }
+        state.sleepStartedAt = expectedAt
+        state.wakeCandidateStart = nil
+    }
+
+    private static func isSleepSignal(_ reading: SensorReading) -> Bool {
+        let inactive: Bool
+        switch reading.motion {
+        case .stationary: inactive = true
+        case .unknown:
+            let summary = reading.deviceMotionSummary
+            inactive = (reading.stepCount ?? 0) <= 2
+                && (summary == nil
+                    || (summary?.userAccelerationStandardDeviationG ?? 1) <= 0.01
+                    && (summary?.meanRotationRateRadiansPerSecond ?? 1) <= 0.03)
+        default: inactive = false
+        }
+        let screenOff = reading.screenIsOn == false
+        let dark = reading.screenBrightness.map { $0 <= darkBrightness } ?? false
+        return inactive && screenOff && dark
+    }
+
+    private static func isWakeSignal(_ reading: SensorReading) -> Bool {
+        reading.motion.isMovement
+            || reading.stepCount.map { $0 > 0 } == true
+            || reading.screenIsOn == true
+            || reading.screenBrightness.map { $0 >= brightBrightness } == true
+    }
+
+    private static func stableID(for span: TimeSpan) -> UUID {
+        let key = "(modelVersion)|(Int(span.start.timeIntervalSince1970))|(Int(span.end.timeIntervalSince1970))"
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        var bytes = [UInt8](repeating: 0, count: 16)
+        for byte in key.utf8 {
+            hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
+        }
+        for index in bytes.indices {
+            hash = (hash ^ UInt64(index + 1)) &* 1_099_511_628_211
+            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5],
+            bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+}
+
 /// Turns the iPhone's passive Core Motion intervals into immutable activity
 /// records. A HealthKit workout or an explicit tracking session wins when it
 /// covers the same interval, so the activity lane never shows two copies of

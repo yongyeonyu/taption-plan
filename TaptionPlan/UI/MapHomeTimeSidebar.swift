@@ -96,6 +96,21 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
         Color(hex: hex)
     }
 
+    func localizedTitle(_ language: MapHomeLanguage) -> String {
+        guard language == .english else { return title }
+        switch id {
+        case "activity": return "Activity"
+        case "work": return "Work"
+        case "study": return "Study"
+        case "hobby": return "Hobby"
+        case "sleep": return "Sleep"
+        case "movement": return "Movement"
+        case "exercise": return "Exercise"
+        case "unconfirmed": return "Unconfirmed"
+        default: return title
+        }
+    }
+
     static var all: [Self] {
         all(categoryColors: [:])
     }
@@ -593,7 +608,7 @@ struct MapHomeTimeSidebar: View {
                             .fill(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
                             .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5)
                         Text(String(format: "%02d", hour))
-                            .font(.system(size: 8, weight: hour.isMultiple(of: 6) ? .bold : .medium, design: .rounded))
+                            .font(.system(size: 9, weight: hour.isMultiple(of: 6) ? .bold : .medium, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
                             .frame(width: 16, alignment: .leading)
@@ -694,7 +709,7 @@ struct MapHomeTimeSidebar: View {
                 Text(String(format: "%02d", minute / 60))
                 Text(String(format: "%02d", minute % 60))
             }
-            .font(.system(size: 9, weight: .bold, design: .rounded))
+            .font(.system(size: 10, weight: .bold, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(Color.white)
             .frame(width: 32, height: 40)

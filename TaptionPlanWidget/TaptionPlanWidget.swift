@@ -2196,9 +2196,8 @@ struct TaptionPlanLiveActivity: Widget {
             DynamicIsland {
             DynamicIslandExpandedRegion(.leading) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Image(systemName: context.state.majorCategorySystemImage)
-                        .font(.caption.bold())
-                        .foregroundStyle(Color(red: 0.62, green: 0.52, blue: 0.82))
+                    WidgetCat(style: "calico")
+                        .frame(width: 24, height: 20)
                     Text(context.state.majorCategoryTitle)
                         .font(.caption2)
                         .foregroundStyle(Color(red: 0.90, green: 0.90, blue: 0.92))
@@ -2237,16 +2236,14 @@ struct TaptionPlanLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                Image(systemName: context.state.majorCategorySystemImage)
-                    .font(.caption2.bold())
+                WidgetCat(style: "calico")
                     .frame(width: 18, height: 14)
             } compactTrailing: {
                 Text(timerInterval: context.state.startedAt...context.state.endsAt)
                     .monospacedDigit()
                     .frame(width: 42)
             } minimal: {
-                Image(systemName: context.state.majorCategorySystemImage)
-                    .font(.caption2.bold())
+                WidgetCat(style: "calico")
                     .frame(width: 18, height: 13)
             }
             .keylineTint(Color(red: 0.48, green: 0.37, blue: 0.65))

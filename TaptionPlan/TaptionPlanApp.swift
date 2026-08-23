@@ -118,7 +118,18 @@ final class TaptionPlanAppDelegate:
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        PhoneScreenActivityStore.update(
+            brightness: Double(UIScreen.main.brightness),
+            isOn: true
+        )
         TaptionAdvertisingCoordinator.shared.requestStartupPresentation()
+    }
+
+    func applicationWillResignActive(_ application: UIApplication) {
+        PhoneScreenActivityStore.update(
+            brightness: Double(UIScreen.main.brightness),
+            isOn: false
+        )
     }
 
     func userNotificationCenter(

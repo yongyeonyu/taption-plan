@@ -24,6 +24,7 @@ struct MapHomeView: View {
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
     @State private var selectedLocationDestination: MapHomeLocationDestination?
+    @State private var isTransitLocationsPresented = false
     @State private var isLocationMenuExpanded = false
     @State private var isCategoryMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
@@ -40,6 +41,9 @@ struct MapHomeView: View {
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
     @State private var isMapCenteredOnUser = false
     @State private var hasAppliedInitialLocation = false
+    @State private var mapSearchText = ""
+    @State private var mapSearchResults: [MapHomeSearchResult] = []
+    @State private var mapSearchTask: Task<Void, Never>?
     @State private var timeRailSegments: [MapHomeTimeRailSegment] = [
         .wholeDayUnconfirmed,
     ]
@@ -103,8 +107,9 @@ struct MapHomeView: View {
             // shield, so its controls remain tappable.
             trailingMapGestureShield
 
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 header
+                mapSearchBar
                 Spacer()
             }
             .padding(.horizontal, Layout.horizontalInset)
@@ -159,6 +164,11 @@ struct MapHomeView: View {
                 .presentationDetents([.height(260)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $isTransitLocationsPresented) {
+            MapHomeTransitLocationsSheet(model: model, language: language)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
                 .presentationDetents([.medium, .large])
@@ -172,6 +182,10 @@ struct MapHomeView: View {
             focusMapIfNeeded()
             applyInitialLocationIfAvailable()
             refreshTimeRailSegments()
+        }
+        .onDisappear {
+            mapSearchTask?.cancel()
+            mapSearchTask = nil
         }
         .task(id: model.selectedDate) {
             let date = model.selectedDate
@@ -330,6 +344,12 @@ struct MapHomeView: View {
     private var header: some View {
         HStack(spacing: 3) {
             Button {
+                if !isMenuOpen {
+                    isLocationMenuExpanded = false
+                    isCategoryMenuExpanded = false
+                    isSettingsMenuExpanded = false
+                    isGPSLoggingMenuExpanded = false
+                }
                 isMenuOpen.toggle()
             } label: {
                     Image(systemName: isMenuOpen ? "xmark" : "line.3.horizontal")
@@ -381,6 +401,108 @@ struct MapHomeView: View {
                 .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.07), radius: 9, y: 3)
+    }
+
+    private var mapSearchBar: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField(
+                    language.text("장소·주소 검색", "Search places or addresses"),
+                    text: $mapSearchText
+                )
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onSubmit { searchMap() }
+                if !mapSearchText.isEmpty {
+                    Button {
+                        mapSearchTask?.cancel()
+                        mapSearchText = ""
+                        mapSearchResults = []
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 42)
+            .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
+            }
+
+            if !mapSearchResults.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(mapSearchResults) { result in
+                        Button {
+                            focusMap(
+                                on: GeoPoint(
+                                    latitude: result.coordinate.latitude,
+                                    longitude: result.coordinate.longitude,
+                                    altitude: 0,
+                                    horizontalAccuracy: -1,
+                                    verticalAccuracy: -1
+                                )
+                            )
+                            mapSearchResults = []
+                            mapSearchText = result.title
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(result.title)
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                if !result.subtitle.isEmpty {
+                                    Text(result.subtitle)
+                                        .font(.system(size: 11, weight: .regular, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .background(Color.tpSurface.opacity(0.98), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
+                }
+            }
+        }
+    }
+
+    private func searchMap() {
+        let query = mapSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            mapSearchResults = []
+            return
+        }
+        mapSearchTask?.cancel()
+        mapSearchTask = Task { @MainActor in
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = query
+            if let coordinate = currentCoordinate {
+                request.region = MKCoordinateRegion(
+                    center: coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.25, longitudeDelta: 0.25)
+                )
+            }
+            guard let response = try? await MKLocalSearch(request: request).start(),
+                  !Task.isCancelled else { return }
+            mapSearchResults = response.mapItems.prefix(6).map { item in
+                MapHomeSearchResult(
+                    title: item.name ?? query,
+                    subtitle: item.placemark.title ?? "",
+                    coordinate: item.placemark.coordinate
+                )
+            }
+        }
     }
 
     private func headerDateButton(_ icon: String, amount: Int) -> some View {
@@ -632,7 +754,7 @@ struct MapHomeView: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(category.tint)
                                 .frame(width: 20)
-                            Text(category.title)
+                            Text(category.localizedTitle(language))
                                 .font(.system(size: 13, weight: .medium, design: .rounded))
                             Spacer()
                             Menu {
@@ -664,8 +786,8 @@ struct MapHomeView: View {
                             }
                             .accessibilityLabel(
                                 language.text(
-                                    "\(category.title) 색상 팔레트",
-                                    "\(category.title) color palette"
+                                    "\(category.localizedTitle(language)) 색상 팔레트",
+                                    "\(category.localizedTitle(language)) color palette"
                                 )
                             )
                         }
@@ -677,7 +799,7 @@ struct MapHomeView: View {
                             in: RoundedRectangle(cornerRadius: 9, style: .continuous)
                         )
                         .accessibilityElement(children: .combine)
-                        .accessibilityLabel(category.title)
+                        .accessibilityLabel(category.localizedTitle(language))
                     }
                 }
                 .padding(.leading, 12)
@@ -719,6 +841,32 @@ struct MapHomeView: View {
 
             if isLocationMenuExpanded {
                 VStack(spacing: 5) {
+                    Button {
+                        isTransitLocationsPresented = true
+                        isMenuOpen = false
+                    } label: {
+                        HStack(spacing: 10) {
+                            MapHomeLocationThumbnail(
+                                destination: .user,
+                                size: 34
+                            )
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(language.text("사용자 위치", "User locations"))
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                Text(language.text("지하철역·버스정류장 추가", "Add subway stations or bus stops"))
+                                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .foregroundStyle(Color.primary)
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 8)
+                    }
+                    .buttonStyle(.plain)
                     ForEach(MapHomeLocationDestination.allCases) { destination in
                         locationDestinationRow(destination)
                     }
@@ -878,6 +1026,9 @@ struct MapHomeView: View {
     }
 
     private var dataProtectionStatusText: String {
+        if model.securityStatus.settings.midnightBackupEnabled {
+            return language.text("00:00 자동 백업 켜짐", "00:00 automatic backup on")
+        }
         if model.securityStatus.settings.cloudBackupEnabled {
             return language.text("월별 iCloud 백업 켜짐", "Monthly iCloud backup on")
         }
@@ -890,10 +1041,9 @@ struct MapHomeView: View {
     }
 
     private var gpsLoggingMenuItem: some View {
-        let session = model.activeTrackingSession
-        let isLogging = session != nil
+        let isLogging = true
         let preferences = model.settings.gpsLoggingPreferences
-        let tint = isLogging ? Color.tpReferenceRose : Color.tpReferenceBlue
+        let tint = Color.tpReferenceRose
         return VStack(alignment: .leading, spacing: 7) {
             Button {
                 if !isGPSLoggingMenuExpanded {
@@ -941,33 +1091,6 @@ struct MapHomeView: View {
 
             if isGPSLoggingMenuExpanded {
                 VStack(alignment: .leading, spacing: 11) {
-                    Button {
-                        toggleGPSLogging()
-                    } label: {
-                        HStack(spacing: 9) {
-                            Image(systemName: isLogging ? "stop.fill" : "play.fill")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(tint)
-                                .frame(width: 28, height: 28)
-                                .background(Color.white.opacity(0.76), in: Circle())
-                            Text(
-                                isLogging
-                                    ? language.text("기록 종료", "Stop recording")
-                                    : language.text("기록 시작", "Start recording")
-                            )
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Spacer()
-                            if isGPSLoggingActionInFlight {
-                                ProgressView().controlSize(.small)
-                            }
-                        }
-                        .foregroundStyle(Color.primary)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isGPSLoggingActionInFlight)
-
-                    Divider()
-
                     Toggle(
                         isOn: Binding(
                             get: { model.settings.gpsLoggingPreferences.isBatteryMinimal },
@@ -979,8 +1102,8 @@ struct MapHomeView: View {
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                             Text(
                                 language.text(
-                                    "5분마다 GPS를 우선 읽고, 불가하면 Wi-Fi·기지국 근사 위치를 저장",
-                                    "Every 5 min, prefers GPS and falls back to Wi-Fi or cellular location"
+                                    "10분마다 GPS와 사용 가능한 센서값을 기록",
+                                    "Records GPS and available sensor values every 10 min"
                                 )
                             )
                             .font(.system(size: 10.5, weight: .medium, design: .rounded))
@@ -1023,7 +1146,7 @@ struct MapHomeView: View {
                         HStack {
                             Text(language.text("1분", "1 min"))
                             Spacer()
-                            Text(language.text("기본 5분", "Default 5 min"))
+                            Text(language.text("기본 10분", "Default 10 min"))
                             Spacer()
                             Text(language.text("15분", "15 min"))
                         }
@@ -1436,10 +1559,14 @@ struct MapHomeView: View {
 
     private func toggleMapHeadingMode() {
         compassControlState = compassControlState.toggled
-        mapPosition = .userLocation(
-            followsHeading: compassControlState.followsHeading,
-            fallback: .automatic
-        )
+        if compassControlState.followsHeading {
+            mapPosition = .userLocation(
+                followsHeading: true,
+                fallback: .automatic
+            )
+        } else {
+            focusUserLocation()
+        }
     }
 
     private func applyInitialLocationIfAvailable() {
@@ -1775,7 +1902,6 @@ private struct MapHomeSecuritySheet: View {
     let language: MapHomeLanguage
     @State private var pin = ""
     @State private var confirmation = ""
-    @State private var recoveryPIN = ""
     @State private var message: String?
     @State private var pendingRestore: TaptionDataSnapshot?
     @State private var isRestoreConfirmationPresented = false
@@ -1865,6 +1991,14 @@ private struct MapHomeSecuritySheet: View {
                         )
                     )
                     .tint(Color.tpReferenceBlue)
+                    Toggle(
+                        language.text("00:00에 백업", "Back up at 00:00"),
+                        isOn: Binding(
+                            get: { security.settings.midnightBackupEnabled },
+                            set: { setMidnightBackup($0) }
+                        )
+                    )
+                    .tint(Color.tpReferenceMint)
                     Text(language.text(
                         "iCloud Drive/Taption Plan에 월별 단일 암호화 파일로 저장합니다. 같은 iCloud 계정이면 새 기기와 비밀번호 분실 후에도 복구할 수 있습니다.",
                         "One encrypted file is saved per month in iCloud Drive/Taption Plan. The same iCloud account can recover it on a new device or after password loss."
@@ -1879,18 +2013,6 @@ private struct MapHomeSecuritySheet: View {
                             .buttonStyle(.bordered)
                             .disabled(!hasPIN)
                     }
-                }
-
-                card(language.text("비밀번호를 잊었나요?", "Forgot your password?")) {
-                    SecureField(language.text("새 4자리 비밀번호", "New 4-digit password"), text: $recoveryPIN)
-                        .keyboardType(.numberPad)
-                        .textContentType(.newPassword)
-                        .onChange(of: recoveryPIN) { _, value in recoveryPIN = numericPIN(value) }
-                    Button(language.text("같은 iCloud 계정으로 복구", "Recover with this iCloud account")) {
-                        recoverBackup()
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(recoveryPIN.count != 4)
                 }
 
                 if let message {
@@ -1973,6 +2095,12 @@ private struct MapHomeSecuritySheet: View {
         configure(value)
     }
 
+    private func setMidnightBackup(_ enabled: Bool) {
+        var value = security.settings
+        value.midnightBackupEnabled = enabled
+        configure(value)
+    }
+
     private func configure(_ value: PlanAppLockSettings) {
         perform {
             try model.configureAppLock(value)
@@ -1990,14 +2118,6 @@ private struct MapHomeSecuritySheet: View {
     private func prepareRestore() {
         performAsync {
             pendingRestore = try await model.loadCloudBackup()
-            isRestoreConfirmationPresented = pendingRestore != nil
-        }
-    }
-
-    private func recoverBackup() {
-        performAsync {
-            pendingRestore = try await model.recoverCloudBackup(newPIN: recoveryPIN)
-            recoveryPIN = ""
             isRestoreConfirmationPresented = pendingRestore != nil
         }
     }
@@ -2344,5 +2464,162 @@ private struct NotionCalendarDaysIcon: View {
             }
         }
         .frame(width: 24, height: 24)
+    }
+}
+
+private struct MapHomeSearchResult: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let coordinate: CLLocationCoordinate2D
+}
+
+private struct MapHomeTransitLocationsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let language: MapHomeLanguage
+
+    @State private var name = ""
+    @State private var kind: UserTransitLocationKind = .subwayStation
+    @State private var searchText = ""
+    @State private var searchResults: [MapHomeSearchResult] = []
+    @State private var selectedCoordinate: CLLocationCoordinate2D?
+    @State private var mapPosition: MapCameraPosition = .automatic
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 10) {
+                HStack(spacing: 8) {
+                    TextField(
+                        language.text("역·정류장 검색", "Search station or stop"),
+                        text: $searchText
+                    )
+                    .textFieldStyle(.roundedBorder)
+                    .submitLabel(.search)
+                    .onSubmit { search() }
+                    Button(language.text("검색", "Search")) { search() }
+                        .buttonStyle(.bordered)
+                }
+                if !searchResults.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(searchResults) { result in
+                                Button(result.title) {
+                                    selectedCoordinate = result.coordinate
+                                    mapPosition = .region(
+                                        MKCoordinateRegion(
+                                            center: result.coordinate,
+                                            span: MKCoordinateSpan(
+                                                latitudeDelta: 0.006,
+                                                longitudeDelta: 0.008
+                                            )
+                                        )
+                                    )
+                                    if name.isEmpty { name = result.title }
+                                    searchResults = []
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                    }
+                }
+
+                MapReader { proxy in
+                    Map(position: $mapPosition) {
+                        if let selectedCoordinate {
+                            Marker(
+                                name,
+                                coordinate: selectedCoordinate
+                            )
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .onTapGesture { point in
+                        selectedCoordinate = proxy.convert(point, from: .local)
+                    }
+                }
+                .frame(height: 220)
+
+                Picker(language.text("유형", "Type"), selection: $kind) {
+                    ForEach(UserTransitLocationKind.allCases, id: \.self) { value in
+                        Text(language.text(value.title, value == .subwayStation ? "Subway station" : "Bus stop"))
+                            .tag(value)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                HStack(spacing: 8) {
+                    TextField(language.text("이름", "Name"), text: $name)
+                        .textFieldStyle(.roundedBorder)
+                    Button(language.text("추가", "Add")) { addLocation() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedCoordinate == nil)
+                }
+
+                List {
+                    Section(language.text("등록된 위치", "Saved locations")) {
+                        ForEach(model.settings.userTransitLocations) { location in
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(location.name)
+                                    Text(language.text(location.kind.title, location.kind == .subwayStation ? "Subway station" : "Bus stop"))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: location.kind.systemImage)
+                            }
+                        }
+                        .onDelete { offsets in
+                            let ids = offsets.compactMap { index in
+                                model.settings.userTransitLocations.indices.contains(index)
+                                    ? model.settings.userTransitLocations[index].id
+                                    : nil
+                            }
+                            ids.forEach(model.deleteUserTransitLocation)
+                        }
+                    }
+                }
+                .listStyle(.plain)
+            }
+            .padding(14)
+            .navigationTitle(language.text("사용자 위치", "User locations"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(language.text("닫기", "Close")) { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func addLocation() {
+        guard let selectedCoordinate else { return }
+        model.addUserTransitLocation(
+            name: name,
+            kind: kind,
+            latitude: selectedCoordinate.latitude,
+            longitude: selectedCoordinate.longitude
+        )
+        name = ""
+        searchText = ""
+        self.selectedCoordinate = nil
+    }
+
+    private func search() {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return }
+        Task { @MainActor in
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = query
+            guard let response = try? await MKLocalSearch(request: request).start() else { return }
+            searchResults = response.mapItems.prefix(8).map { item in
+                MapHomeSearchResult(
+                    title: item.name ?? query,
+                    subtitle: item.placemark.title ?? "",
+                    coordinate: item.placemark.coordinate
+                )
+            }
+        }
     }
 }
