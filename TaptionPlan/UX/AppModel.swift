@@ -2417,6 +2417,35 @@ final class AppModel {
         await persist()
     }
 
+    func resetSettingsToDefaults() async {
+        await bootstrap()
+        await waitForBootstrapPreparation()
+        guard !repositoryLoadFailed else { return }
+
+        sensorService?.stopCollection()
+        isSensorCollecting = false
+        await notificationScheduler.cancelAllPlanReminders()
+
+        let defaults = AppFeatureSettings.defaults
+        var reset = snapshot
+        reset.settings = defaults
+        snapshot = reset
+        selectedScale = TimeScale(
+            timelineLevel: defaults.startScale
+        ).scheduleEquivalent
+        selectedCatCoat = CatCoat(catStyle: defaults.catStyle)
+        await persist()
+
+        guard let persisted = try? await repository.load() else { return }
+        let reloaded = Self.preparedLoadedSnapshot(persisted)
+        snapshot = reloaded
+        selectedScale = TimeScale(
+            timelineLevel: reloaded.settings.startScale
+        ).scheduleEquivalent
+        selectedCatCoat = CatCoat(catStyle: reloaded.settings.catStyle)
+        publishWatchPayload()
+    }
+
     var setupCategories: [CategoryDefinition] {
         snapshot.categories.sorted { $0.sortOrder < $1.sortOrder }
     }

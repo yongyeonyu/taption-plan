@@ -313,7 +313,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(labels.hours, [13, 14, 15])
         XCTAssertEqual(
             labels.minutes,
-            [790, 800, 810, 830, 840, 850, 870, 880, 890]
+            [790, 800, 810, 820, 830, 850, 860, 870, 880, 890]
         )
     }
 
@@ -322,6 +322,22 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertTrue(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 180))
         XCTAssertFalse(MapHomeTimeSidebarMath.showsMinuteTicks(durationMinutes: 180))
         XCTAssertTrue(MapHomeTimeSidebarMath.showsMinuteTicks(durationMinutes: 60))
+    }
+
+    func testExpandedSidebarRulerLabelsStartAfterTickColumn() {
+        let railWidth: CGFloat = 58
+        let labelsStart = MapHomeTimeSidebarMath.rulerLabelsStartX(railWidth: railWidth)
+        let tickEnd = railWidth - MapHomeTimeSidebarMath.rulerNumericColumnWidth
+            + MapHomeTimeSidebarMath.rulerTickWidth
+
+        XCTAssertGreaterThanOrEqual(labelsStart, tickEnd)
+        XCTAssertLessThanOrEqual(
+            labelsStart
+                + MapHomeTimeSidebarMath.rulerHourColumnWidth
+                + MapHomeTimeSidebarMath.rulerColumnSpacing
+                + MapHomeTimeSidebarMath.rulerMinuteColumnWidth,
+            railWidth
+        )
     }
 
     func testMapHomeCompassControlReturnsToArrowWithFixedDirection() {
@@ -899,8 +915,8 @@ final class TimeScaleTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(state.visibleStartMinute, 703)
-        XCTAssertEqual(state.selectedMinute, 763)
+        XCTAssertEqual(state.visibleStartMinute, 728)
+        XCTAssertEqual(state.selectedMinute, 788)
     }
 
     func testMapHomeTimeSidebarHandleScrollsOnlyAtAndStopsAtEdges() throws {

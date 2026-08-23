@@ -67,10 +67,12 @@ struct MapHomeView: View {
     @State private var selectedLocationDestination: MapHomeLocationDestination?
     @State private var isTransitLocationsPresented = false
     @State private var isLocationMenuExpanded = false
+    @State private var isUserLocationsMenuExpanded = false
     @State private var isCategoryMenuExpanded = false
     @State private var isDisplayMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
     @State private var isDataProtectionPresented = false
+    @State private var isSettingsResetConfirmationPresented = false
     @State private var isMutedMap = true
     @AppStorage("taption.mapHome.language") private var languageRawValue = MapHomeLanguage.korean.rawValue
     @State private var compassControlState: MapHomeCompassControlState = .directionArrow
@@ -87,6 +89,7 @@ struct MapHomeView: View {
     @State private var mapSearchResults: [MapHomeSearchResult] = []
     @State private var selectedSearchPin: MapHomeSearchResult?
     @State private var isSearchPinMenuPresented = false
+    @State private var selectedUserLocation: MapHomeUserLocationSelection?
     @State private var mapSearchTask: Task<Void, Never>?
     @FocusState private var isMapSearchFocused: Bool
     @State private var visibleMapCenter = CLLocationCoordinate2D(latitude: 0, longitude: 0)
@@ -155,6 +158,50 @@ struct MapHomeView: View {
             .presentationDragIndicator(.visible)
     }
 
+    private func locationDestinationSheet(
+        for destination: MapHomeLocationDestination
+    ) -> some View {
+        MapHomeLocationSheet(
+            model: model,
+            destination: destination,
+            language: language
+        ) {
+            mapPosition = .automatic
+            focusMapIfNeeded()
+        }
+        .presentationDetents([.height(260)])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func userLocationSheet(
+        for selection: MapHomeUserLocationSelection
+    ) -> some View {
+        MapHomeUserLocationActionSheet(
+            model: model,
+            selection: selection,
+            language: language
+        )
+        .presentationDetents([.height(300)])
+        .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder
+    private var searchPinSheet: some View {
+        if let selectedSearchPin = self.selectedSearchPin {
+            MapHomeSearchPinLocationSheet(
+                model: model,
+                result: selectedSearchPin,
+                language: language,
+                onSaved: {
+                    isSearchPinMenuPresented = false
+                    self.selectedSearchPin = nil
+                }
+            )
+            .presentationDetents([.height(390)])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .top) {
             map
@@ -163,27 +210,19 @@ struct MapHomeView: View {
             VStack(spacing: 8) {
                 header
                 mapSearchBar
-                Spacer()
             }
             .padding(.horizontal, Layout.horizontalInset)
             // The container already starts below the status-bar safe area; keep
             // only a minimal breathing room so the top bar stays high on screen.
             .padding(.top, 2)
             .zIndex(4)
-
-            currentTimeRail
-                .padding(.top, Layout.headerVisibleHeight + Layout.timeRailTopMargin)
-                .padding(
-                    .bottom,
-                    Layout.timeRailBottomMargin + MapHomeBannerAdView.reservedHeight
-                )
-                .padding(.trailing, Layout.horizontalInset)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-
-            mapControls
-                .padding(.leading, Layout.horizontalInset)
-                .padding(.bottom, 12 + MapHomeBannerAdView.reservedHeight)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    if isMenuOpen {
+                        isMenuOpen = false
+                    }
+                }
+            )
 
             if isMenuOpen {
                 menu
@@ -192,6 +231,24 @@ struct MapHomeView: View {
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        .overlay(alignment: .trailing) {
+            if !isMenuOpen {
+                currentTimeRail
+                    .padding(.top, Layout.headerVisibleHeight + Layout.timeRailTopMargin)
+                    .padding(
+                        .bottom,
+                        Layout.timeRailBottomMargin + MapHomeBannerAdView.reservedHeight
+                    )
+                    .padding(.trailing, Layout.horizontalInset)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if !isMenuOpen {
+                mapControls
+                    .padding(.leading, Layout.horizontalInset)
+                    .padding(.bottom, 12 + MapHomeBannerAdView.reservedHeight)
+            }
+        }
         .preferredColorScheme(.light)
         .overlay(alignment: .bottom) {
             MapHomeBannerAdView()
@@ -207,40 +264,44 @@ struct MapHomeView: View {
             )
         }
         .sheet(item: $selectedLocationDestination) { destination in
-            MapHomeLocationSheet(
-                model: model,
-                destination: destination,
-                language: language
-            ) {
-                mapPosition = .automatic
-                focusMapIfNeeded()
-            }
-                .presentationDetents([.height(260)])
-                .presentationDragIndicator(.visible)
+            locationDestinationSheet(for: destination)
         }
         .sheet(isPresented: $isTransitLocationsPresented) {
             MapHomeTransitLocationsSheet(model: model, language: language)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(item: $selectedUserLocation) { selection in
+            userLocationSheet(for: selection)
+        }
         .sheet(isPresented: $isSearchPinMenuPresented) {
-            if let selectedSearchPin {
-                MapHomeSearchPinLocationSheet(
-                    model: model,
-                    result: selectedSearchPin,
-                    language: language,
-                    onSaved: {
-                        isSearchPinMenuPresented = false
-                    }
-                )
-                .presentationDetents([.height(390)])
-                .presentationDragIndicator(.visible)
-            }
+            searchPinSheet
         }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog(
+            language.text("설정을 기본값으로 초기화할까요?", "Reset settings to defaults?"),
+            isPresented: $isSettingsResetConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(
+                language.text("설정 초기화", "Reset settings"),
+                role: .destructive
+            ) {
+                isMenuOpen = false
+                Task { await model.resetSettingsToDefaults() }
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(
+                language.text(
+                    "계획과 기록은 삭제되지 않습니다.",
+                    "Your plans and records will not be deleted."
+                )
+            )
         }
         .sheet(item: $sectionEditSelection) { selection in
             sectionEditSheet(for: selection)
@@ -345,23 +406,54 @@ struct MapHomeView: View {
 
             ForEach(placeAnnotations) { place in
                 Annotation("", coordinate: place.coordinate, anchor: .bottom) {
-                    MapHomePlacePin(
-                        name: place.name,
-                        floor: place.floor,
-                        destination: place.destination
-                    )
+                    if place.destination == .user {
+                        Button {
+                            selectedUserLocation = .frequentPlace(place.id)
+                        } label: {
+                            MapHomePlacePin(
+                                name: place.name,
+                                floor: place.floor,
+                                destination: place.destination
+                            )
+                            .fixedSize()
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            language.text(
+                                place.name + " 사용자 위치 메뉴",
+                                place.name + " user location menu"
+                            )
+                        )
+                    } else {
+                        MapHomePlacePin(
+                            name: place.name,
+                            floor: place.floor,
+                            destination: place.destination
+                        )
                         .fixedSize()
                         .zIndex(0)
+                    }
                 }
             }
 
             ForEach(transitAnnotations) { place in
                 Annotation("", coordinate: place.coordinate, anchor: .bottom) {
-                    MapHomeTransitPlacePin(
-                        name: place.name,
-                        kind: place.kind
+                    Button {
+                        selectedUserLocation = .transit(place.id)
+                    } label: {
+                        MapHomeTransitPlacePin(
+                            name: place.name,
+                            kind: place.kind
+                        )
+                        .fixedSize()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(
+                        language.text(
+                            place.name + " 사용자 위치 메뉴",
+                            place.name + " user location menu"
+                        )
                     )
-                    .fixedSize()
                 }
             }
 
@@ -443,6 +535,7 @@ struct MapHomeView: View {
             Button {
                 if !isMenuOpen {
                     isLocationMenuExpanded = false
+                    isUserLocationsMenuExpanded = false
                     isCategoryMenuExpanded = false
                     isDisplayMenuExpanded = false
                     isSettingsMenuExpanded = false
@@ -873,6 +966,7 @@ struct MapHomeView: View {
             ZStack(alignment: .topLeading) {
                 Color.black.opacity(0.18)
                     .ignoresSafeArea(edges: .top)
+                    .contentShape(Rectangle())
                     .onTapGesture { isMenuOpen = false }
 
                 let menuHeight = max(
@@ -1122,39 +1216,202 @@ struct MapHomeView: View {
 
             if isLocationMenuExpanded {
                 VStack(spacing: 5) {
-                    Button {
-                        isTransitLocationsPresented = true
-                        isMenuOpen = false
-                    } label: {
-                        HStack(spacing: 10) {
-                            MapHomeLocationThumbnail(
-                                destination: .user,
-                                size: 34
-                            )
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(language.text("사용자 위치", "User locations"))
-                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                Text(language.text("지하철역·버스정류장 추가", "Add subway stations or bus stops"))
-                                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .foregroundStyle(Color.primary)
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 8)
-                    }
-                    .buttonStyle(.plain)
-                    ForEach(MapHomeLocationDestination.allCases) { destination in
+                    userLocationsMenuItem
+                    ForEach(MapHomeLocationDestination.allCases.filter { $0 != .user }) { destination in
                         locationDestinationRow(destination)
                     }
+                    currentLocationMenuRow
                 }
                 .padding(.leading, 12)
             }
         }
+    }
+
+    private var userLocationsMenuItem: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Button {
+                isUserLocationsMenuExpanded.toggle()
+            } label: {
+                HStack(spacing: 10) {
+                    MapHomeLocationThumbnail(
+                        destination: .user,
+                        size: 34
+                    )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(language.text("사용자", "User"))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        Text(
+                            language.text(
+                                "등록된 사용자 위치 " + String(userLocationCount) + "개",
+                                String(userLocationCount) + " saved user locations"
+                            )
+                        )
+                            .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: isUserLocationsMenuExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(Color.primary)
+                .padding(.vertical, 7)
+                .padding(.horizontal, 8)
+                .background(
+                    Color.tpReferenceRose.opacity(0.07),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(
+                language.text("사용자 위치 목록", "User location list")
+            )
+
+            if isUserLocationsMenuExpanded {
+                VStack(alignment: .leading, spacing: 4) {
+                    if userLocationCount == 0 {
+                        Text(language.text("등록된 사용자 위치가 없습니다.", "No saved user locations."))
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 6)
+                    }
+
+                    ForEach(userFrequentPlaces) { place in
+                        userFrequentPlaceRow(place)
+                    }
+                    ForEach(model.settings.userTransitLocations) { location in
+                        userTransitLocationRow(location)
+                    }
+
+                    Button {
+                        isTransitLocationsPresented = true
+                        isMenuOpen = false
+                    } label: {
+                        Label(
+                            language.text("사용자 위치 관리", "Manage user locations"),
+                            systemImage: "slider.horizontal.3"
+                        )
+                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpReferenceBlue)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 6)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.leading, 12)
+            }
+        }
+    }
+
+    private var currentLocationMenuRow: some View {
+        Button {
+            focusUserLocation()
+            isMenuOpen = false
+        } label: {
+            HStack(spacing: 10) {
+                MapHomeLocationThumbnail(destination: .user, size: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(language.text("현재 위치", "Current location"))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    Text(locationDestinationSubtitle(.user))
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "location.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(MapHomeLocationDestination.user.tint)
+            }
+            .foregroundStyle(Color.primary)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 8)
+            .background(
+                MapHomeLocationDestination.user.tint.opacity(0.055),
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            language.text("현재 위치 보기", "Show current location")
+        )
+    }
+
+    private var userFrequentPlaces: [FrequentPlace] {
+        model.settings.frequentPlaces.filter { $0.kind == .custom }
+    }
+
+    private var userLocationCount: Int {
+        userFrequentPlaces.count + model.settings.userTransitLocations.count
+    }
+
+    private func userFrequentPlaceRow(_ place: FrequentPlace) -> some View {
+        Button {
+            if let point = place.point {
+                focusMap(on: point)
+                isMenuOpen = false
+            } else {
+                selectedUserLocation = .frequentPlace(place.id)
+                isMenuOpen = false
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: FrequentPlaceKind.custom.systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(MapHomeLocationDestination.user.tint)
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(place.name)
+                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
+                    Text(
+                        place.point == nil
+                            ? language.text("위치 미지정", "Location not set")
+                            : language.text("사용자 위치", "User location")
+                    )
+                        .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: place.point == nil ? "pencil" : "location.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(Color.primary)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func userTransitLocationRow(_ location: UserTransitLocation) -> some View {
+        Button {
+            focusMap(on: location.point)
+            isMenuOpen = false
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: location.kind.systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.tpReferenceBlue)
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(location.name)
+                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
+                    Text(language.text(location.kind.title, location.kind == .subwayStation ? "Subway station" : "Bus stop"))
+                        .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "location.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(Color.primary)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
     }
 
     private func locationDestinationRow(
@@ -1349,6 +1606,43 @@ struct MapHomeView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(language.text("데이터 보호 열기", "Open data protection"))
+                .padding(.leading, 12)
+
+                Button {
+                    isSettingsResetConfirmationPresented = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.tpReferenceRose)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(language.text("설정 초기화", "Reset settings"))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Text(
+                                language.text(
+                                    "화면·연동 설정을 기본값으로 복원",
+                                    "Restore display and integration settings"
+                                )
+                            )
+                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(Color.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                    .background(
+                        Color.tpReferenceRose.opacity(0.055),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("설정 초기화", "Reset settings"))
                 .padding(.leading, 12)
             }
         }
@@ -2656,12 +2950,12 @@ private struct MapHomeTransitPlacePin: View {
         VStack(spacing: 4) {
             MapHomeMarkerLabel(title: name, color: Color.tpReferenceBlue)
             Image(systemName: kind.systemImage)
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 5.5, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
+                .frame(width: 22, height: 22)
                 .background(Color.tpReferenceBlue, in: Circle())
-                .overlay { Circle().stroke(.white, lineWidth: 2) }
-                .shadow(color: .black.opacity(0.15), radius: 5, y: 2)
+                .overlay { Circle().stroke(.white, lineWidth: 1) }
+                .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
         }
         .accessibilityLabel("\(name), \(kind.title)")
     }
@@ -2834,6 +3128,172 @@ private struct MapHomeSearchResult: Identifiable {
     let title: String
     let subtitle: String
     let coordinate: CLLocationCoordinate2D
+}
+
+private enum MapHomeUserLocationSelection: Identifiable, Hashable {
+    case frequentPlace(UUID)
+    case transit(UUID)
+
+    var id: String {
+        switch self {
+        case .frequentPlace(let id): "frequent-" + id.uuidString
+        case .transit(let id): "transit-" + id.uuidString
+        }
+    }
+}
+
+private struct MapHomeUserLocationActionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let selection: MapHomeUserLocationSelection
+    let language: MapHomeLanguage
+
+    @State private var name = ""
+    @State private var isEditing = false
+    @State private var showsDeleteConfirmation = false
+
+    private var frequentPlace: FrequentPlace? {
+        guard case .frequentPlace(let id) = selection else { return nil }
+        return model.settings.frequentPlaces.first { $0.id == id }
+    }
+
+    private var transitLocation: UserTransitLocation? {
+        guard case .transit(let id) = selection else { return nil }
+        return model.settings.userTransitLocations.first { $0.id == id }
+    }
+
+    private var locationName: String {
+        frequentPlace?.name ?? transitLocation?.name ?? ""
+    }
+
+    private var locationSubtitle: String {
+        if let transitLocation {
+            return language.text(
+                transitLocation.kind.title,
+                transitLocation.kind == .subwayStation ? "Subway station" : "Bus stop"
+            )
+        }
+        return language.text("사용자 위치", "User location")
+    }
+
+    private var locationIcon: String {
+        transitLocation?.kind.systemImage ?? FrequentPlaceKind.custom.systemImage
+    }
+
+    private var locationTint: Color {
+        transitLocation == nil
+            ? MapHomeLocationDestination.user.tint
+            : Color.tpReferenceBlue
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: locationIcon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(locationTint)
+                    .frame(width: 34, height: 34)
+                    .background(
+                        locationTint.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(locationName)
+                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                    Text(locationSubtitle)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            if isEditing {
+                TextField(
+                    language.text("위치 이름", "Location name"),
+                    text: $name
+                )
+                .textFieldStyle(.roundedBorder)
+
+                HStack(spacing: 8) {
+                    Button(language.text("취소", "Cancel")) {
+                        name = locationName
+                        isEditing = false
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(language.text("저장", "Save")) {
+                        saveName()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            } else {
+                Button {
+                    name = locationName
+                    isEditing = true
+                } label: {
+                    Label(
+                        language.text("위치 편집", "Edit location"),
+                        systemImage: "pencil"
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered)
+
+                Button(role: .destructive) {
+                    showsDeleteConfirmation = true
+                } label: {
+                    Label(
+                        language.text("위치 삭제", "Delete location"),
+                        systemImage: "trash"
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .background(Color.tpSurface)
+        .onAppear {
+            name = locationName
+        }
+        .confirmationDialog(
+            language.text("이 위치를 삭제할까요?", "Delete this location?"),
+            isPresented: $showsDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(language.text("위치 삭제", "Delete location"), role: .destructive) {
+                deleteLocation()
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        }
+    }
+
+    private func saveName() {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else { return }
+        switch selection {
+        case .frequentPlace(let id):
+            model.renameFrequentPlace(id, name: cleanName)
+        case .transit(let id):
+            model.renameUserTransitLocation(id, name: cleanName)
+        }
+        name = cleanName
+        isEditing = false
+    }
+
+    private func deleteLocation() {
+        switch selection {
+        case .frequentPlace(let id):
+            model.deleteFrequentPlace(id)
+        case .transit(let id):
+            model.deleteUserTransitLocation(id)
+        }
+        dismiss()
+    }
 }
 
 private struct MapHomeSearchPinLocationSheet: View {

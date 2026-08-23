@@ -11850,6 +11850,34 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(saved.first?.planID)
     }
 
+    @MainActor
+    func testResetSettingsRestoresDefaultsAndReloadsPersistedState() async throws {
+        let plan = PlanRecord(
+            title: "남겨 둘 계획",
+            span: TimeSpan(
+                start: makeDate(2026, 8, 4, 9),
+                end: makeDate(2026, 8, 4, 10)
+            ),
+            categoryID: "activity"
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.updatedAt = .now
+        stored.plans = [plan]
+        stored.settings.startScale = .month
+        stored.settings.rememberLastScale = true
+        stored.settings.reduceMotion = true
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(repository: repository, cloudSyncService: nil)
+
+        await model.resetSettingsToDefaults()
+
+        XCTAssertEqual(model.settings, .defaults)
+        XCTAssertEqual(model.snapshot.plans.map(\.id), [plan.id])
+        let persisted = try await repository.load()
+        XCTAssertEqual(persisted.settings, .defaults)
+        XCTAssertEqual(persisted.plans.map(\.id), [plan.id])
+    }
+
     // MARK: - 메모 줄
 
     /// 메모 입력의 입구는 하나뿐이다. 계획도 기록도 카테고리도 고르지 않고

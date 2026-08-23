@@ -477,7 +477,10 @@ struct MapHomeTimeSidebar: View {
     // the bottom ad boundary while preserving the same minute-to-pixel scale.
     private let verticalInset: CGFloat = 14
     private let activeRailWidth: CGFloat = 12
-    private let numericColumnWidth: CGFloat = 30
+    // Reserve the leading tick length inside the numeric gutter so labels do
+    // not sit on top of ruler marks at the tighter zoom steps.
+    private let numericColumnWidth = MapHomeTimeSidebarMath.rulerNumericColumnWidth
+    private let rulerTickWidth = MapHomeTimeSidebarMath.rulerTickWidth
 
     init(
         date: Date,
@@ -617,10 +620,12 @@ struct MapHomeTimeSidebar: View {
                     )
                     let minuteMarks = MapHomeTimeSidebarMath.visibleMinuteMarks(window: visibleWindow)
                     let rulerLabels = MapHomeTimeSidebarMath.visibleRulerLabels(window: visibleWindow)
-                    let hourColumnWidth: CGFloat = 13
-                    let minuteColumnWidth: CGFloat = 13
-                    let columnSpacing: CGFloat = 1
-                    let labelsStartX = railWidth - numericColumnWidth
+                    let hourColumnWidth = MapHomeTimeSidebarMath.rulerHourColumnWidth
+                    let minuteColumnWidth = MapHomeTimeSidebarMath.rulerMinuteColumnWidth
+                    let columnSpacing = MapHomeTimeSidebarMath.rulerColumnSpacing
+                    let labelsStartX = MapHomeTimeSidebarMath.rulerLabelsStartX(
+                        railWidth: railWidth
+                    )
                     Canvas { context, size in
                         for minuteMark in minuteMarks {
                             guard showsMinuteTicks || minuteMark.isMultiple(of: 10) else {
@@ -633,7 +638,10 @@ struct MapHomeTimeSidebar: View {
                             )
                             var path = Path()
                             path.move(to: CGPoint(x: 0, y: y))
-                            path.addLine(to: CGPoint(x: isTenMinute ? 8 : 4, y: y))
+                            path.addLine(to: CGPoint(
+                                x: isTenMinute ? rulerTickWidth : rulerTickWidth / 2,
+                                y: y
+                            ))
                             context.stroke(
                                 path,
                                 with: .color(Color.tpInk.opacity(isTenMinute ? 0.54 : 0.22)),
@@ -1206,7 +1214,16 @@ struct MapHomeWeatherSidebar: View {
 enum MapHomeTimeSidebarMath {
     static let fullDayMinutes = 1_440
     static let zoomDurations = [1_440, 720, 360, 180, 60]
-    static let edgeScrollPointsPerSecond: CGFloat = 64
+    static let edgeScrollPointsPerSecond: CGFloat = 192
+    static let rulerNumericColumnWidth: CGFloat = 36
+    static let rulerTickWidth: CGFloat = 8
+    static let rulerHourColumnWidth: CGFloat = 12
+    static let rulerMinuteColumnWidth: CGFloat = 12
+    static let rulerColumnSpacing: CGFloat = 1
+
+    static func rulerLabelsStartX(railWidth: CGFloat) -> CGFloat {
+        railWidth - rulerNumericColumnWidth + rulerTickWidth
+    }
 
     static func duration(afterZoomStep step: Int, from durationMinutes: Int) -> Int {
         let index = zoomDurations.firstIndex(of: durationMinutes)
