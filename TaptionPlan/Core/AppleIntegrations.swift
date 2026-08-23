@@ -2059,6 +2059,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var isLocationDenied = false
     private var sensorStreamsRunning = false
     private var lastEmissionAt: Date?
+    private var lastPersistedLocationTimestamp: Date?
     private var latestLocation: CLLocation?
     private var latestPreciseLocation: CLLocation?
     private var lastBackgroundWakeLocation: CLLocation?
@@ -2182,6 +2183,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.allowsBackgroundLocationUpdates = false
         isCollecting = false
         isLocationDenied = false
+        lastPersistedLocationTimestamp = nil
         lastEmissionAt = nil
         latestPreciseLocation = nil
         latestRelativeAltitude = nil
@@ -2223,6 +2225,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         activeTrackingSession = session
         activeTrackingPreferences = preferences
         trackingSequence = 0
+        lastEmissionAt = nil
+        lastPersistedLocationTimestamp = nil
         movementCandidateTask?.cancel()
         stationaryStopTask?.cancel()
         applyLocationPolicy(isMoving: true)
@@ -2242,6 +2246,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         activeTrackingSession = session
         activeTrackingPreferences = preferences
         trackingSequence = 0
+        lastEmissionAt = nil
+        lastPersistedLocationTimestamp = nil
         movementCandidateTask?.cancel()
         stationaryStopTask?.cancel()
         applyLocationPolicy(isMoving: true)
@@ -2316,8 +2322,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     private func restartSamplingTask() {
         samplingTask?.cancel()
+        samplingTask = nil
         guard isCollecting,
               !isLocationDenied else {
+            return
+        }
+        if activeTrackingSession != nil, activeTrackingPreferences.isContinuous {
+            startHardwareStreams()
             return
         }
         samplingTask = Task { [weak self] in
@@ -2635,6 +2646,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
         if activeTrackingSession?.wasAutomaticallyDetected == true {
             emit(force: true)
+        } else if activeTrackingSession?.wasAutomaticallyDetected == false,
+                  activeTrackingPreferences.isContinuous {
+            emit(force: true, allowManualTrackingSample: true)
         } else if activeTrackingSession == nil,
                   isFirstLocationFix,
                   latestLocation != nil {
@@ -2765,7 +2779,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
            activeTrackingSession?.wasAutomaticallyDetected == true,
            let lastEmissionAt,
            now.timeIntervalSince(lastEmissionAt)
-                < TrackingSessionPolicy.automaticEmissionThrottleInterval {
+                < max(
+                    TrackingSessionPolicy.automaticEmissionThrottleInterval,
+                    activeEmissionInterval
+                ) {
             return
         }
         if !force,
@@ -2774,8 +2791,29 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 < max(0.25, activeEmissionInterval) {
             return
         }
-        lastEmissionAt = now
+        if force,
+           completedSession == nil,
+           activeTrackingSession?.wasAutomaticallyDetected == false,
+           let lastEmissionAt,
+           now.timeIntervalSince(lastEmissionAt) < activeEmissionInterval {
+            return
+        }
         let location = latestLocation
+        if activeTrackingSession != nil,
+           completedSession == nil,
+           activeTrackingPreferences.isContinuous {
+            guard let location,
+                  lastPersistedLocationTimestamp.map({
+                      location.timestamp > $0
+                  }) ?? true else {
+                return
+            }
+        }
+        lastEmissionAt = now
+        if activeTrackingSession != nil,
+           completedSession == nil {
+            lastPersistedLocationTimestamp = location?.timestamp
+        }
         let locationFixQuality = Self.locationFixQuality(for: location)
         let capturedAt = location?.timestamp ?? now
         let point = location.map {

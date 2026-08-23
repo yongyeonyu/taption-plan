@@ -71,6 +71,11 @@ enum TaptionPlanBackgroundRefresh {
         schedule(reason: "task-start")
         let taskBox = TaptionBackgroundTaskBox(task)
         let operation = Task { @MainActor in
+            guard await TaptionProAccessController.currentAccessGranted() else {
+                taskBox.complete(success: true)
+                logger.notice("Background refresh skipped while Pro is locked")
+                return
+            }
             let model = AppModel()
             let success = await model.performBackgroundRefresh()
             taskBox.complete(success: success)
@@ -100,13 +105,15 @@ final class TaptionPlanAppDelegate:
             [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        TaptionAdvertisingCoordinator.shared.start()
         TaptionPlanBackgroundRefresh.register()
         let launchReason = launchOptions?[.location] == nil
             ? "launch"
             : "location-event"
         TaptionPlanBackgroundRefresh.schedule(reason: launchReason)
         AppleHealthService.shared.startObservingChanges {
+            guard await TaptionProAccessController.currentAccessGranted() else {
+                return
+            }
             await HealthBackgroundRefreshCoordinator.shared.receiveUpdate()
         }
         return true
@@ -125,7 +132,6 @@ final class TaptionPlanAppDelegate:
             brightness: Double(UIScreen.main.brightness),
             isOn: true
         )
-        TaptionAdvertisingCoordinator.shared.requestStartupPresentation()
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

@@ -72,8 +72,9 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(inference.mode, .subway)
         XCTAssertTrue(inference.evidence.contains(
-            "지하철 Wi-Fi KT_WiFi 연속 3회 16:20"
+            "지하철 Wi-Fi KT 계열 연속 3회 16:20"
         ))
+        XCTAssertFalse(inference.evidence.contains { $0.contains("KT_WiFi") })
     }
 
     func testRecordAnalysisPolicyUsesOnlyCanonicalAutomaticCategories() {
@@ -291,6 +292,36 @@ final class FeatureEngineTests: XCTestCase {
             "unconfirmed"
         )
         XCTAssertFalse(segments.contains { $0.categoryID == "work" })
+    }
+
+    func testMapHomeTimeRailIncludesPersistedSubwayTravel() {
+        let day = makeDate(2026, 8, 12)
+        let subway = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: day.addingTimeInterval(21 * hour),
+                end: day.addingTimeInterval(21 * hour + 35 * 60)
+            ),
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["사용자 지정 지하철역 일치"]
+        )
+
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: [],
+            travel: [subway],
+            on: day,
+            asOf: day.addingTimeInterval(24 * hour),
+            calendar: utcCalendar
+        )
+        let segment = MapHomeTimeRailSegmentEngine.segment(
+            at: 21 * 60 + 10,
+            in: segments
+        )
+
+        XCTAssertEqual(segment?.categoryID, "movement")
+        XCTAssertEqual(segment?.title, "지하철 탑승")
+        XCTAssertEqual(segment?.sourceID, subway.id)
     }
 
     func testMapHomeTimeRailClipsOngoingAutomaticRecordWithoutMutatingIt() {
@@ -4178,6 +4209,45 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testSingleUserSubwayStationAndCarrierWiFiOverrideAutomotive() {
+        let base = makeDate(2026, 8, 12, 21, 0)
+        let point = GeoPoint(
+            latitude: 37.5667,
+            longitude: 126.8273,
+            altitude: 20,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 8
+        )
+        let location = UserTransitLocation(
+            name: "마곡나루역",
+            kind: .subwayStation,
+            point: point,
+            radiusMeters: 150
+        )
+        let readings = [1, 2].map { streak in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(streak - 1) * 10),
+                point: point,
+                speedMetersPerSecond: 11,
+                motion: .automotive,
+                motionConfidence: .high,
+                connectedWiFiSSID: streak == 1 ? "T wifi" : "T wifi_secure",
+                subwayWiFiObservationStreak: streak
+            )
+        }
+
+        let result = TravelModeClassifier().classify(
+            readings: readings,
+            userTransitLocations: [location]
+        )
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.confidence, .medium)
+        XCTAssertTrue(result.evidence.contains("사용자 지정 지하철역 일치 1곳"))
+        XCTAssertTrue(result.evidence.contains { $0.contains("T 계열 연속 2회") })
+        XCTAssertFalse(result.evidence.contains { $0.contains("T wifi_secure") })
+    }
+
     func testSubwayCatalogRejectsRoundTripRoute() {
         let route = SubwayStationCatalog.route(
             for: [
@@ -5885,26 +5955,32 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     func testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes() throws {
-        XCTAssertEqual(GPSLoggingPreferences.standard.intervalMinutes, 5)
+        XCTAssertEqual(GPSLoggingPreferences.standard.intervalSeconds, 300)
         XCTAssertFalse(GPSLoggingPreferences.standard.isBatteryMinimal)
         XCTAssertEqual(
-            GPSLoggingPreferences(intervalMinutes: 0).intervalMinutes,
+            GPSLoggingPreferences(intervalSeconds: 0).intervalSeconds,
             1
         )
         XCTAssertEqual(
-            GPSLoggingPreferences(intervalMinutes: 16).intervalMinutes,
-            15
+            GPSLoggingPreferences(intervalSeconds: 16).intervalSeconds,
+            10
         )
         XCTAssertEqual(
-            GPSLoggingPreferences(intervalMinutes: 7).interval,
-            7 * 60
+            GPSLoggingPreferences(intervalSeconds: 30).interval,
+            30
         )
         let batteryMinimal = GPSLoggingPreferences(
             isBatteryMinimal: true,
-            intervalMinutes: 15
+            intervalSeconds: 900
         )
-        XCTAssertEqual(batteryMinimal.effectiveIntervalMinutes, 5)
-        XCTAssertEqual(batteryMinimal.interval, 5 * 60)
+        XCTAssertEqual(batteryMinimal.effectiveIntervalSeconds, 600)
+        XCTAssertEqual(batteryMinimal.interval, 10 * 60)
+        XCTAssertFalse(batteryMinimal.isContinuous)
+        XCTAssertTrue(GPSLoggingPreferences(intervalSeconds: 1).isContinuous)
+        XCTAssertEqual(
+            GPSLoggingPreferences.supportedIntervalSeconds,
+            [1, 10, 30, 60, 120, 300, 600, 900]
+        )
         XCTAssertTrue(
             TrackingSessionPolicy.allowsPersistingLocation(
                 horizontalAccuracy: 800,
@@ -5925,11 +6001,17 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         let encoded = try JSONEncoder().encode(
-            GPSLoggingPreferences(isBatteryMinimal: true, intervalMinutes: 15)
+            GPSLoggingPreferences(isBatteryMinimal: true, intervalSeconds: 900)
         )
         XCTAssertEqual(
             try JSONDecoder().decode(GPSLoggingPreferences.self, from: encoded),
-            GPSLoggingPreferences(isBatteryMinimal: true, intervalMinutes: 15)
+            GPSLoggingPreferences(isBatteryMinimal: true, intervalSeconds: 900)
+        )
+        let legacy = Data(#"{"isBatteryMinimal":false,"intervalMinutes":5}"#.utf8)
+        XCTAssertEqual(
+            try JSONDecoder().decode(GPSLoggingPreferences.self, from: legacy)
+                .intervalSeconds,
+            300
         )
 
         let approximate = SensorReading(
@@ -8529,30 +8611,106 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testCommercePolicyDefaultsToAdSupportedFreeUse() {
-        XCTAssertTrue(TaptionCommercePolicy.isAdSupportedFreeMode)
-        XCTAssertFalse(TaptionCommercePolicy.supportsPaidPurchase)
+    func testCommercePolicyHasPaidPurchaseWithoutAds() {
+        XCTAssertFalse(TaptionCommercePolicy.isAdSupportedFreeMode)
+        XCTAssertTrue(TaptionCommercePolicy.supportsPaidPurchase)
+        XCTAssertEqual(
+            TaptionCommercePolicy.proProductID,
+            "com.taption.plan.pro"
+        )
+        XCTAssertEqual(
+            TaptionCommercePolicy.trialDuration,
+            7 * 24 * 60 * 60
+        )
     }
 
-    func testLaunchAdPolicyCapsFullScreenAdsAtFourHours() {
-        let now = Date(timeIntervalSince1970: 1_000_000)
+    func testProTrialStartsOnlyWhenARecordExistsAndExpiresAtSevenDays() {
+        let start = makeDate(2026, 8, 23, 12)
+        XCTAssertEqual(
+            TaptionProTrialPolicy.state(record: nil, now: start),
+            .trialNotStarted
+        )
 
+        let record = TaptionProTrialRecord(
+            startedAt: start,
+            lastObservedAt: start
+        )
+        XCTAssertEqual(
+            TaptionProTrialPolicy.state(
+                record: record,
+                now: start.addingTimeInterval(6 * 86_400)
+            ),
+            .trial(
+                expiresAt: start.addingTimeInterval(7 * 86_400),
+                remainingDays: 1
+            )
+        )
+        XCTAssertEqual(
+            TaptionProTrialPolicy.state(
+                record: record,
+                now: start.addingTimeInterval(7 * 86_400)
+            ),
+            .expired(
+                expiresAt: start.addingTimeInterval(7 * 86_400)
+            )
+        )
+    }
+
+    func testProTrialMergeKeepsEarliestStartAndLatestObservedDate() {
+        let start = makeDate(2026, 8, 23, 12)
+        let merged = TaptionProTrialPolicy.merged([
+            TaptionProTrialRecord(
+                startedAt: start.addingTimeInterval(86_400),
+                lastObservedAt: start.addingTimeInterval(2 * 86_400)
+            ),
+            TaptionProTrialRecord(
+                startedAt: start,
+                lastObservedAt: start.addingTimeInterval(4 * 86_400)
+            ),
+        ])
+
+        XCTAssertEqual(merged?.startedAt, start)
+        XCTAssertEqual(
+            merged?.lastObservedAt,
+            start.addingTimeInterval(4 * 86_400)
+        )
+    }
+
+    func testProTrialLastObservedDateBlocksClockRollback() {
+        let start = makeDate(2026, 8, 23, 12)
+        let record = TaptionProTrialRecord(
+            startedAt: start,
+            lastObservedAt: start.addingTimeInterval(8 * 86_400)
+        )
+
+        XCTAssertEqual(
+            TaptionProTrialPolicy.state(
+                record: record,
+                now: start.addingTimeInterval(86_400)
+            ),
+            .expired(
+                expiresAt: start.addingTimeInterval(7 * 86_400)
+            )
+        )
+    }
+
+    func testProEntitlementRejectsOtherOrRevokedProducts() {
         XCTAssertTrue(
-            TaptionAdvertisingPolicy.shouldPresentLaunchAd(
-                lastShownAt: nil,
-                now: now
+            TaptionCommercePolicy.grantsProAccess(
+                productID: TaptionCommercePolicy.proProductID,
+                revocationDate: nil
             )
         )
         XCTAssertFalse(
-            TaptionAdvertisingPolicy.shouldPresentLaunchAd(
-                lastShownAt: now.addingTimeInterval(-3_999),
-                now: now
+            TaptionCommercePolicy.grantsProAccess(
+                productID: "com.taption.plan.other",
+                revocationDate: nil
             )
         )
-        XCTAssertTrue(
-            TaptionAdvertisingPolicy.shouldPresentLaunchAd(
-                lastShownAt: now.addingTimeInterval(-4 * 60 * 60),
-                now: now
+        XCTAssertFalse(
+            TaptionCommercePolicy.grantsProAccess(
+                productID: TaptionCommercePolicy.proProductID,
+                revocationDate: .now
             )
         )
     }

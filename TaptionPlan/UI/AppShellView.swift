@@ -5,6 +5,7 @@ struct AppShellView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var model = AppModel()
+    @State private var proAccess = TaptionProAccessController()
     @State private var showsMapHome = true
     @State private var isSecurityStateReady = false
     @State private var lockGeneration = 0
@@ -14,7 +15,13 @@ struct AppShellView: View {
 
     var body: some View {
         NavigationStack {
-            content
+            Group {
+                if proAccess.grantsAccess {
+                    content
+                } else {
+                    Color.tpSurface.ignoresSafeArea()
+                }
+            }
                 .toolbar(.hidden, for: .navigationBar)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -62,13 +69,20 @@ struct AppShellView: View {
         .tint(.tpInk)
         .preferredColorScheme(.light)
         .task {
-            await model.sceneBecameActive()
+            isSecurityStateReady = true
+            await proAccess.refresh()
+            if proAccess.grantsAccess {
+                await model.sceneBecameActive()
+            } else {
+                await model.suspendForCommerceLock()
+            }
             if model.isAppLocked {
                 lockGeneration &+= 1
                 automaticBiometricAttemptedGeneration = nil
             }
-            isSecurityStateReady = true
-            model.presentPermissionOnboardingIfNeeded()
+            if proAccess.grantsAccess {
+                model.presentPermissionOnboardingIfNeeded()
+            }
             if Self.legacyUIEnabled,
                let planID = TaptionPlanAppDelegate.takePendingPlanID(),
                let url = URL(
@@ -91,6 +105,16 @@ struct AppShellView: View {
         .onChange(of: scenePhase) { _, phase in
             handleScenePhaseChange(phase)
         }
+        .onChange(of: proAccess.grantsAccess) { _, grantsAccess in
+            Task { @MainActor in
+                if grantsAccess {
+                    await model.sceneBecameActive()
+                    model.presentPermissionOnboardingIfNeeded()
+                } else {
+                    await model.suspendForCommerceLock()
+                }
+            }
+        }
         .alert(
             "확인해 주세요",
             isPresented: Binding(
@@ -102,6 +126,7 @@ struct AppShellView: View {
         } message: {
             userFacingErrorMessage
         }
+        .accessibilityHidden(shouldHidePrimaryContent)
         .overlay(alignment: .top) {
             floorCalibrationNotice
         }
@@ -125,6 +150,13 @@ struct AppShellView: View {
         return settings.lockOnForeground || settings.lockOnLaunch
     }
 
+    private var shouldHidePrimaryContent: Bool {
+        !isSecurityStateReady
+            || model.isAppLocked
+            || !proAccess.grantsAccess
+            || shouldHideAppSnapshot
+    }
+
     @ViewBuilder
     private var securityOverlay: some View {
         if !isSecurityStateReady || model.isAppLocked {
@@ -134,6 +166,11 @@ struct AppShellView: View {
                 lockGeneration: lockGeneration,
                 automaticBiometricAttemptedGeneration: $automaticBiometricAttemptedGeneration,
                 isBiometricAuthenticationInFlight: $isBiometricAuthenticationInFlight
+            )
+        } else if !proAccess.grantsAccess {
+            TaptionProAccessView(
+                controller: proAccess,
+                allowsDismiss: false
             )
         } else if shouldHideAppSnapshot {
             Color.tpInk
@@ -180,11 +217,19 @@ struct AppShellView: View {
         Task { @MainActor in
             switch phase {
             case .active:
-                TaptionAdvertisingCoordinator.shared.requestStartupPresentation()
-                await model.sceneBecameActive()
+                await proAccess.refresh()
+                if proAccess.grantsAccess {
+                    await model.sceneBecameActive()
+                } else {
+                    await model.suspendForCommerceLock()
+                }
                 isSecurityStateReady = true
             case .background:
-                await model.sceneEnteredBackground()
+                if proAccess.grantsAccess {
+                    await model.sceneEnteredBackground()
+                } else {
+                    await model.suspendForCommerceLock()
+                }
             case .inactive:
                 break
             @unknown default:
@@ -271,7 +316,7 @@ struct AppShellView: View {
         if Self.legacyUIEnabled && !showsMapHome {
             legacyRootContent
         } else {
-            MapHomeView(model: model)
+            MapHomeView(model: model, proAccess: proAccess)
         }
     }
 
@@ -640,6 +685,204 @@ struct PermissionOnboardingSheet: View {
 
     private func finish() {
         Task { await model.finishPermissionOnboarding() }
+    }
+}
+
+struct TaptionProAccessView: View {
+    @Bindable var controller: TaptionProAccessController
+    let allowsDismiss: Bool
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 20) {
+                if allowsDismiss {
+                    HStack {
+                        Spacer()
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 15, weight: .bold))
+                                .frame(width: 40, height: 40)
+                                .background(
+                                    Color.black.opacity(0.06),
+                                    in: Circle()
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("닫기")
+                    }
+                }
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(Color.tpReferenceBlue)
+                    .frame(width: 72, height: 72)
+                    .background(
+                        Color.tpReferenceBlue.opacity(0.12),
+                        in: RoundedRectangle(
+                            cornerRadius: 22,
+                            style: .continuous
+                        )
+                    )
+
+                VStack(spacing: 7) {
+                    Text(title)
+                        .font(.system(
+                            size: 25,
+                            weight: .bold,
+                            design: .rounded
+                        ))
+                        .foregroundStyle(Color.tpInk)
+                    Text(detail)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                VStack(alignment: .leading, spacing: 11) {
+                    featureRow("cloud.sun.fill", "시간대별 날씨 기록")
+                    featureRow("location.fill", "실시간 GPS와 이동 경로")
+                    featureRow("tram.fill", "지하철·버스 자동 판정")
+                    featureRow("icloud.fill", "iCloud 백업과 기기 연동")
+                }
+                .padding(18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    Color.white,
+                    in: RoundedRectangle(
+                        cornerRadius: 20,
+                        style: .continuous
+                    )
+                )
+
+                if controller.state == .loading {
+                    ProgressView("Pro 상태 확인 중")
+                        .padding(.vertical, 18)
+                } else {
+                    actionButtons
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, allowsDismiss ? 12 : 72)
+            .padding(.bottom, 28)
+            .frame(maxWidth: 520)
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.tpBackground.ignoresSafeArea())
+        .alert(
+            "Taption Plan Pro",
+            isPresented: Binding(
+                get: { controller.message != nil },
+                set: { if !$0 { controller.message = nil } }
+            )
+        ) {
+            Button("확인") { controller.message = nil }
+        } message: {
+            Text(controller.message ?? "")
+        }
+    }
+
+    private var title: String {
+        switch controller.state {
+        case .loading:
+            "Taption Plan Pro"
+        case .trialNotStarted:
+            "7일 동안 Pro를 체험하세요"
+        case .trial(_, let remainingDays):
+            "Pro 체험 " + String(remainingDays) + "일 남음"
+        case .purchased:
+            "Pro를 영구 이용 중입니다"
+        case .expired:
+            "무료 체험이 종료되었습니다"
+        }
+    }
+
+    private var detail: String {
+        switch controller.state {
+        case .loading:
+            "구매 및 체험 상태를 확인하고 있습니다."
+        case .trialNotStarted:
+            "버튼을 누르는 순간부터 7일이 시작됩니다. 자동 결제는 없습니다."
+        case .trial:
+            "체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다."
+        case .purchased:
+            "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다."
+        case .expired:
+            "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요."
+        }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        VStack(spacing: 12) {
+            if controller.state == .trialNotStarted {
+                Button {
+                    controller.startTrial()
+                } label: {
+                    Text("7일 무료 Pro 체험 시작")
+                        .font(.system(size: 17, weight: .bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.tpInk)
+            }
+
+            if !controller.hasPermanentAccess {
+                Button {
+                    Task { await controller.purchase() }
+                } label: {
+                    VStack(spacing: 3) {
+                        Text("\(purchasePrice)로 Pro 영구 구매")
+                            .font(.system(size: 16, weight: .bold))
+                        Text("한 번 결제 · 자동 갱신 없음")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.bordered)
+
+                Button("구매 복원") {
+                    Task { await controller.restore() }
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.tpReferenceBlue)
+            } else if allowsDismiss {
+                Button("계속 사용") { dismiss() }
+                    .font(.system(size: 17, weight: .bold))
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.tpInk)
+            }
+        }
+        .disabled(controller.isActionInFlight)
+        .overlay {
+            if controller.isActionInFlight {
+                ProgressView()
+            }
+        }
+    }
+
+    private var purchasePrice: String {
+        controller.product?.displayPrice ?? "US $0.99"
+    }
+
+    private func featureRow(_ icon: String, _ title: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.tpReferenceBlue)
+                .frame(width: 24)
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.tpInk)
+        }
     }
 }
 

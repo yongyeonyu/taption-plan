@@ -1315,6 +1315,21 @@ final class AppModel {
         await saveCloudBackupOnBackground()
     }
 
+    func suspendForCommerceLock() async {
+        isSceneActive = false
+        sensorService?.stopCollection()
+        isSensorCollecting = false
+        foregroundRefreshTask?.cancel()
+        foregroundRefreshTask = nil
+        deferredVisibleRefreshTask?.cancel()
+        deferredVisibleRefreshTask = nil
+        foregroundHealthRefreshTask?.cancel()
+        foregroundHealthRefreshTask = nil
+        if activeTrackingSession != nil {
+            await stopTracking()
+        }
+    }
+
     private func refreshCloudBackupAfterForeground() async {
         guard securityStatus.settings.cloudBackupEnabled else { return }
         await saveCloudBackup(reason: "foreground_deferred")
@@ -2023,14 +2038,19 @@ final class AppModel {
         Task { await persist() }
     }
 
-    func setGPSLoggingIntervalMinutes(_ minutes: Int) {
-        let resolved = GPSLoggingPreferences.clampedMinutes(minutes)
-        guard snapshot.settings.gpsLoggingPreferences.intervalMinutes != resolved else {
+    func setGPSLoggingIntervalSeconds(_ seconds: Int) {
+        let resolved = GPSLoggingPreferences.clampedSeconds(seconds)
+        guard snapshot.settings.gpsLoggingPreferences.intervalSeconds != resolved else {
             return
         }
-        snapshot.settings.gpsLoggingPreferences.intervalMinutes = resolved
+        snapshot.settings.gpsLoggingPreferences.intervalSeconds = resolved
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
+    }
+
+    @available(*, deprecated, message: "Use setGPSLoggingIntervalSeconds")
+    func setGPSLoggingIntervalMinutes(_ minutes: Int) {
+        setGPSLoggingIntervalSeconds(minutes * 60)
     }
 
     private func refreshActiveGPSLoggingPreferences() {
@@ -5328,35 +5348,36 @@ final class AppModel {
         Task { await persist() }
     }
 
+    @discardableResult
     func addUserTransitLocation(
         name: String,
         kind: UserTransitLocationKind,
         latitude: Double,
         longitude: Double
-    ) {
+    ) -> UUID? {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty else {
             userFacingError = "위치 이름을 입력해 주세요."
-            return
+            return nil
         }
         guard abs(latitude) <= 90, abs(longitude) <= 180 else {
             userFacingError = "위치 좌표를 확인해 주세요."
-            return
+            return nil
         }
-        snapshot.settings.userTransitLocations.append(
-            UserTransitLocation(
-                name: cleanName,
-                kind: kind,
-                point: GeoPoint(
-                    latitude: latitude,
-                    longitude: longitude,
-                    altitude: 0,
-                    horizontalAccuracy: 25,
-                    verticalAccuracy: -1
-                )
+        let location = UserTransitLocation(
+            name: cleanName,
+            kind: kind,
+            point: GeoPoint(
+                latitude: latitude,
+                longitude: longitude,
+                altitude: 0,
+                horizontalAccuracy: 25,
+                verticalAccuracy: -1
             )
         )
+        snapshot.settings.userTransitLocations.append(location)
         Task { await persist() }
+        return location.id
     }
 
     func deleteUserTransitLocation(_ id: UUID) {

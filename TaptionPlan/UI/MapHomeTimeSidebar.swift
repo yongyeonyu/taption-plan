@@ -194,10 +194,18 @@ struct MapHomeTimeRailSegment: Identifiable, Hashable {
 /// derives a presentation copy only; source records remain untouched.
 enum MapHomeTimeRailSegmentEngine {
     private struct Candidate {
-        let actual: ActualRecord
         let startMinute: Int
         let endMinute: Int
         let categoryID: String
+        let title: String
+        let sourceID: UUID?
+        let phasePrecedence: Int
+        let manuallyCorrected: Bool
+        let confidence: ConfidenceLevel
+        let sourceRank: Int
+        let startedAt: Date
+        let createdAt: Date
+        let tieBreaker: String
     }
 
     static func segments(
@@ -206,37 +214,90 @@ enum MapHomeTimeRailSegmentEngine {
         asOf: Date = .now,
         calendar: Calendar = .autoupdatingCurrent
     ) -> [MapHomeTimeRailSegment] {
+        makeSegments(
+            actuals: actuals,
+            travel: [],
+            on: date,
+            asOf: asOf,
+            calendar: calendar
+        )
+    }
+
+    /// Builds the same rail from automatic records plus inferred travel. The
+    /// overload keeps existing callers source-compatible while letting the
+    /// map show persisted subway/bus segments that have no ActualRecord.
+    static func segments(
+        from actuals: [ActualRecord],
+        travel: [TravelSegment],
+        on date: Date,
+        asOf: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [MapHomeTimeRailSegment] {
+        makeSegments(
+            actuals: actuals,
+            travel: travel,
+            on: date,
+            asOf: asOf,
+            calendar: calendar
+        )
+    }
+
+    private static func makeSegments(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        on date: Date,
+        asOf: Date,
+        calendar: Calendar
+    ) -> [MapHomeTimeRailSegment] {
         let dayStart = calendar.startOfDay(for: date)
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
         else { return [.wholeDayUnconfirmed] }
         let day = TimeSpan(start: dayStart, end: dayEnd)
-        let candidates = AutomaticRecordTimelineEngine.activities(
+        let actualCandidates = AutomaticRecordTimelineEngine.activities(
             from: actuals,
             inside: day,
             asOf: asOf
         ).compactMap { actual -> Candidate? in
-            let span = actual.span(asOf: asOf)
-            let start = max(span.start, dayStart)
-            let end = min(span.end, dayEnd)
-            guard start < end else { return nil }
-            let startMinute = minute(
-                for: start,
-                relativeTo: dayStart,
-                rounding: .down
-            )
-            let endMinute = minute(
-                for: end,
-                relativeTo: dayStart,
-                rounding: .up
-            )
-            guard startMinute < endMinute else { return nil }
-            return Candidate(
-                actual: actual,
-                startMinute: startMinute,
-                endMinute: endMinute,
-                categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual)
+            candidate(
+                start: actual.span(asOf: asOf).start,
+                end: actual.span(asOf: asOf).end,
+                dayStart: dayStart,
+                dayEnd: dayEnd,
+                categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
+                title: title(for: actual),
+                sourceID: actual.id,
+                phasePrecedence: RecordAnalysisCategoryPolicy.phase(
+                    for: RecordAnalysisCategoryPolicy.categoryID(for: actual)
+                ).precedence,
+                manuallyCorrected: actual.manuallyCorrected,
+                confidence: actual.confidence,
+                sourceRank: sourceRank(actual.source),
+                startedAt: actual.startedAt,
+                createdAt: actual.createdAt,
+                tieBreaker: actual.id.uuidString
             )
         }
+        let travelCandidates = travel.compactMap { segment -> Candidate? in
+            candidate(
+                start: segment.span.start,
+                end: segment.span.end,
+                dayStart: dayStart,
+                dayEnd: dayEnd,
+                categoryID: "movement",
+                title: title(for: segment),
+                sourceID: segment.id,
+                phasePrecedence: RecordAnalysisCategoryPolicy.phase(
+                    for: "movement"
+                ).precedence,
+                manuallyCorrected: segment.isConfirmed,
+                confidence: segment.confidence,
+                sourceRank: 8,
+                startedAt: segment.span.start,
+                createdAt: segment.span.start,
+                tieBreaker: segment.id.uuidString
+            )
+        }
+        let candidates = actualCandidates + travelCandidates
 
         let boundaries = Set(
             candidates.flatMap { [$0.startMinute, $0.endMinute] } + [0, 1_440]
@@ -251,12 +312,69 @@ enum MapHomeTimeRailSegmentEngine {
                 startMinute: start,
                 endMinute: end,
                 categoryID: winner?.categoryID ?? "unconfirmed",
-                title: winner?.actual.title ?? "미확인",
-                sourceID: winner?.actual.id
+                title: winner?.title ?? "미확인",
+                sourceID: winner?.sourceID
             )
             append(next, to: &result)
         }
         return result.isEmpty ? [.wholeDayUnconfirmed] : result
+    }
+
+    private static func candidate(
+        start: Date,
+        end: Date,
+        dayStart: Date,
+        dayEnd: Date,
+        categoryID: String,
+        title: String,
+        sourceID: UUID,
+        phasePrecedence: Int,
+        manuallyCorrected: Bool,
+        confidence: ConfidenceLevel,
+        sourceRank: Int,
+        startedAt: Date,
+        createdAt: Date,
+        tieBreaker: String
+    ) -> Candidate? {
+        let clippedStart = max(start, dayStart)
+        let clippedEnd = min(end, dayEnd)
+        guard clippedStart < clippedEnd else { return nil }
+        let startMinute = minute(
+            for: clippedStart,
+            relativeTo: dayStart,
+            rounding: .down
+        )
+        let endMinute = minute(
+            for: clippedEnd,
+            relativeTo: dayStart,
+            rounding: .up
+        )
+        guard startMinute < endMinute else { return nil }
+        return Candidate(
+            startMinute: startMinute,
+            endMinute: endMinute,
+            categoryID: categoryID,
+            title: title,
+            sourceID: sourceID,
+            phasePrecedence: phasePrecedence,
+            manuallyCorrected: manuallyCorrected,
+            confidence: confidence,
+            sourceRank: sourceRank,
+            startedAt: startedAt,
+            createdAt: createdAt,
+            tieBreaker: tieBreaker
+        )
+    }
+
+    private static func title(for actual: ActualRecord) -> String {
+        let categoryID = RecordAnalysisCategoryPolicy.categoryID(for: actual)
+        return categoryID == "movement"
+            ? MovementPresentation.title(for: actual)
+            : actual.title
+    }
+
+    private static func title(for segment: TravelSegment) -> String {
+        "\(MovementPresentation.title(for: segment.mode)) 탑승"
     }
 
     static func segment(
@@ -307,27 +425,25 @@ enum MapHomeTimeRailSegmentEngine {
         _ lhs: Candidate,
         than rhs: Candidate
     ) -> Bool {
-        let lhsPhase = RecordAnalysisCategoryPolicy.phase(for: lhs.categoryID)
-        let rhsPhase = RecordAnalysisCategoryPolicy.phase(for: rhs.categoryID)
-        if lhsPhase.precedence != rhsPhase.precedence {
-            return lhsPhase.precedence > rhsPhase.precedence
+        if lhs.phasePrecedence != rhs.phasePrecedence {
+            return lhs.phasePrecedence > rhs.phasePrecedence
         }
-        if lhs.actual.manuallyCorrected != rhs.actual.manuallyCorrected {
-            return lhs.actual.manuallyCorrected
+        if lhs.manuallyCorrected != rhs.manuallyCorrected {
+            return lhs.manuallyCorrected
         }
-        let lhsConfidence = confidenceRank(lhs.actual.confidence)
-        let rhsConfidence = confidenceRank(rhs.actual.confidence)
+        let lhsConfidence = confidenceRank(lhs.confidence)
+        let rhsConfidence = confidenceRank(rhs.confidence)
         if lhsConfidence != rhsConfidence { return lhsConfidence > rhsConfidence }
-        let lhsSource = sourceRank(lhs.actual.source)
-        let rhsSource = sourceRank(rhs.actual.source)
-        if lhsSource != rhsSource { return lhsSource > rhsSource }
-        if lhs.actual.startedAt != rhs.actual.startedAt {
-            return lhs.actual.startedAt > rhs.actual.startedAt
+        if lhs.sourceRank != rhs.sourceRank {
+            return lhs.sourceRank > rhs.sourceRank
         }
-        if lhs.actual.createdAt != rhs.actual.createdAt {
-            return lhs.actual.createdAt > rhs.actual.createdAt
+        if lhs.startedAt != rhs.startedAt {
+            return lhs.startedAt > rhs.startedAt
         }
-        return lhs.actual.id.uuidString > rhs.actual.id.uuidString
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt > rhs.createdAt
+        }
+        return lhs.tieBreaker > rhs.tieBreaker
     }
 
     private static func confidenceRank(_ confidence: ConfidenceLevel) -> Int {
@@ -664,13 +780,13 @@ struct MapHomeTimeSidebar: View {
                             window: visibleWindow
                         )
                         Text(String(format: "%02d", hour))
-                            .font(.system(size: 8, weight: .semibold, design: .rounded))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Color.tpInk.opacity(0.78))
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
                             .fixedSize(horizontal: true, vertical: false)
-                            .frame(width: hourColumnWidth, alignment: .leading)
+                            .frame(width: hourColumnWidth, alignment: .trailing)
                             .position(
                                 x: labelsStartX + hourColumnWidth / 2,
                                 y: y
@@ -684,13 +800,13 @@ struct MapHomeTimeSidebar: View {
                             window: visibleWindow
                         )
                         Text(String(format: "%02d", minuteMark % 60))
-                            .font(.system(size: 8, weight: .semibold, design: .rounded))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Color.tpInk.opacity(0.78))
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
                             .fixedSize(horizontal: true, vertical: false)
-                            .frame(width: minuteColumnWidth, alignment: .leading)
+                            .frame(width: minuteColumnWidth, alignment: .trailing)
                             .position(
                                 x: labelsStartX
                                     + hourColumnWidth
@@ -718,10 +834,10 @@ struct MapHomeTimeSidebar: View {
                                 .fill(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
                                 .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5)
                             Text(String(format: "%02d", hour))
-                                .font(.system(size: 9, weight: hour.isMultiple(of: 6) ? .bold : .medium, design: .rounded))
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
-                                .frame(width: 16, alignment: .leading)
+                                .frame(width: 20, alignment: .trailing)
                         }
                         .frame(width: numericColumnWidth, alignment: .leading)
                         .position(x: railWidth - numericColumnWidth / 2, y: y)
@@ -1235,11 +1351,11 @@ enum MapHomeTimeSidebarMath {
     static let fullDayMinutes = 1_440
     static let zoomDurations = [1_440, 720, 360, 180, 60]
     static let edgeScrollPointsPerSecond: CGFloat = 192
-    static let rulerNumericColumnWidth: CGFloat = 36
+    static let rulerNumericColumnWidth: CGFloat = 44
     static let rulerTickWidth: CGFloat = 8
-    static let rulerHourColumnWidth: CGFloat = 12
-    static let rulerMinuteColumnWidth: CGFloat = 12
-    static let rulerColumnSpacing: CGFloat = 1
+    static let rulerHourColumnWidth: CGFloat = 16
+    static let rulerMinuteColumnWidth: CGFloat = 16
+    static let rulerColumnSpacing: CGFloat = 2
     static let minimumRulerLabelSpacing: CGFloat = 12
     static let selectionTimeBlockWidth: CGFloat = 32
 

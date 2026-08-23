@@ -348,7 +348,11 @@ struct TravelModeClassifier: Sendable {
         let latestSubwayWiFi = ordered.last {
             SubwayWiFiSSID.isAllowed($0.connectedWiFiSSID)
         }
-        let subwayWiFiSignal = subwayWiFiStreak >= 2
+        let subwayWiFiFamily = subwayWiFiFamily(
+            for: latestSubwayWiFi?.connectedWiFiSSID
+        )
+        let subwayWiFiSignal = subwayWiFiFamily != nil
+            && subwayWiFiStreak >= 2
             && railSpeedSignal
             && railContext
         let stationStopPattern = resolvedSubwayRoute.map {
@@ -384,6 +388,23 @@ struct TravelModeClassifier: Sendable {
         let lowStepsForTransit = !stepSignal.hasCoverage
             || stepsPerMinute <= 5
                 && stepSignal.cadenceStepsPerSecond <= 0.2
+        let observedLowStepsSignal = stepSignal.hasCoverage
+            && stepsPerMinute <= 5
+            && stepSignal.cadenceStepsPerSecond <= 0.2
+        let userStationMatchCount = Set(
+            userStationNames.map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            }
+        ).count
+        let userStationIndependentSignals = [
+            railRatio >= 0.25,
+            gpsLossRatio >= 0.35 || altitudeDelta <= -2,
+            observedLowStepsSignal,
+            watchVibration,
+            subwayWiFiFamily != nil && subwayWiFiStreak >= 2,
+        ].filter { $0 }.count
+        let prioritizedSingleUserStation = userStationMatchCount == 1
+            && userStationIndependentSignals >= 1
         let watchVibrationUnavailable = watchAcceleration.sampleCount < 2
         let watchVibrationAbsent = watchAcceleration.sampleCount >= 2
             && watchAcceleration.standardDeviationG < 0.012
@@ -422,12 +443,12 @@ struct TravelModeClassifier: Sendable {
         if altitudeDelta <= -2 && railContext {
             add(.subway, 0.16, "상대고도 하강")
         }
-        if subwayWiFiSignal {
+        if subwayWiFiSignal, let subwayWiFiFamily {
             add(
                 .subway,
                 0.82,
                 subwayWiFiEvidence(
-                    ssid: latestSubwayWiFi?.connectedWiFiSSID,
+                    family: subwayWiFiFamily,
                     streak: subwayWiFiStreak,
                     observedAt: latestSubwayWiFi?.timestamp
                 )
@@ -530,6 +551,32 @@ struct TravelModeClassifier: Sendable {
                 score: 0.96,
                 evidence: Array(Set(evidence)).sorted(),
                 subwayRoute: subwayRoute
+            )
+        }
+
+        // 사용자 등록 역 하나는 역 자체만으로 확정하지 않는다. 독립적인
+        // 철도 신호가 하나 이상 붙은 경우에만 자동차 후보보다 먼저 처리한다.
+        // 두 역 이상 경로는 위의 노선·역 순서 판정에서 높은 신뢰도로 확정한다.
+        if prioritizedSingleUserStation {
+            var evidence = [
+                "사용자 지정 지하철역 일치 1곳",
+                "독립 철도 신호 \(userStationIndependentSignals)개",
+            ]
+            if let subwayWiFiFamily, subwayWiFiStreak >= 2 {
+                evidence.append(
+                    subwayWiFiEvidence(
+                        family: subwayWiFiFamily,
+                        streak: subwayWiFiStreak,
+                        observedAt: latestSubwayWiFi?.timestamp
+                    )
+                )
+            }
+            return MovementInference(
+                mode: .subway,
+                confidence: .medium,
+                score: 0.88,
+                evidence: evidence,
+                subwayRoute: nil
             )
         }
 
@@ -733,7 +780,7 @@ struct TravelModeClassifier: Sendable {
     }
 
     private func subwayWiFiEvidence(
-        ssid: String?,
+        family: String,
         streak: Int,
         observedAt: Date?
     ) -> String {
@@ -743,7 +790,22 @@ struct TravelModeClassifier: Sendable {
             let values = calendar.dateComponents([.hour, .minute], from: $0)
             return String(format: "%02d:%02d", values.hour ?? 0, values.minute ?? 0)
         } ?? "시각 미확인"
-        return "지하철 Wi-Fi \(ssid ?? "미확인") 연속 \(streak)회 \(time)"
+        return "지하철 Wi-Fi \(family) 계열 연속 \(streak)회 \(time)"
+    }
+
+    private func subwayWiFiFamily(for ssid: String?) -> String? {
+        guard let ssid, SubwayWiFiSSID.isAllowed(ssid) else { return nil }
+        let normalized = SubwayWiFiSSID.normalized(ssid)
+        if normalized.hasPrefix("t ") || normalized == "t" {
+            return "T"
+        }
+        if normalized.hasPrefix("kt ") || normalized == "kt" {
+            return "KT"
+        }
+        if normalized.contains("u+") || normalized.contains("utzone") {
+            return "U+"
+        }
+        return nil
     }
 
     private func speedSeries(for readings: [SensorReading]) -> [Double] {

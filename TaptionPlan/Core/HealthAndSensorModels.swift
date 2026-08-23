@@ -298,57 +298,86 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
 }
 
 struct GPSLoggingPreferences: Codable, Hashable, Sendable {
+    static let supportedIntervalSeconds: [Int] = [
+        1, 10, 30, 60, 120, 300, 600, 900
+    ]
+
     var isBatteryMinimal: Bool
-    var intervalMinutes: Int
+    var intervalSeconds: Int
 
     static let standard = GPSLoggingPreferences()
 
     init(
         isBatteryMinimal: Bool = false,
-        intervalMinutes: Int = 5
+        intervalSeconds: Int = 300
     ) {
         self.isBatteryMinimal = isBatteryMinimal
-        self.intervalMinutes = Self.clampedMinutes(intervalMinutes)
+        self.intervalSeconds = Self.clampedSeconds(intervalSeconds)
     }
 
     var interval: TimeInterval {
-        TimeInterval(effectiveIntervalMinutes * 60)
+        TimeInterval(effectiveIntervalSeconds)
     }
 
     /// Battery-minimal tracking is intentionally fixed at one sample every
-    /// five minutes. The stored minute value remains available for the other
-    /// mode so changing modes does not lose the user's cadence choice.
+    /// ten minutes. The stored cadence remains available for the other mode.
+    var effectiveIntervalSeconds: Int {
+        isBatteryMinimal ? 600 : intervalSeconds
+    }
+
+    var isContinuous: Bool {
+        effectiveIntervalSeconds < 60
+    }
+
+    @available(*, deprecated, message: "Use intervalSeconds")
+    var intervalMinutes: Int {
+        max(1, Int(ceil(Double(intervalSeconds) / 60)))
+    }
+
+    @available(*, deprecated, message: "Use effectiveIntervalSeconds")
     var effectiveIntervalMinutes: Int {
-        isBatteryMinimal ? 5 : intervalMinutes
+        max(1, Int(ceil(Double(effectiveIntervalSeconds) / 60)))
     }
 
     private enum CodingKeys: String, CodingKey {
         case isBatteryMinimal
+        case intervalSeconds
         case intervalMinutes
     }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let isBatteryMinimal = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .isBatteryMinimal
+        ) ?? false
+        let seconds = try values.decodeIfPresent(
+            Int.self,
+            forKey: .intervalSeconds
+        ) ?? (try values.decodeIfPresent(Int.self, forKey: .intervalMinutes))
+            .map { $0 * 60 }
+            ?? Self.standard.intervalSeconds
         self.init(
-            isBatteryMinimal: try values.decodeIfPresent(
-                Bool.self,
-                forKey: .isBatteryMinimal
-            ) ?? false,
-            intervalMinutes: try values.decodeIfPresent(
-                Int.self,
-                forKey: .intervalMinutes
-            ) ?? Self.standard.intervalMinutes
+            isBatteryMinimal: isBatteryMinimal,
+            intervalSeconds: seconds
         )
     }
 
     func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(isBatteryMinimal, forKey: .isBatteryMinimal)
-        try values.encode(intervalMinutes, forKey: .intervalMinutes)
+        try values.encode(intervalSeconds, forKey: .intervalSeconds)
     }
 
+    static func clampedSeconds(_ value: Int) -> Int {
+        supportedIntervalSeconds.min {
+            abs($0 - value) < abs($1 - value)
+        } ?? 300
+    }
+
+    @available(*, deprecated, message: "Use clampedSeconds")
     static func clampedMinutes(_ value: Int) -> Int {
-        min(max(value, 1), 15)
+        max(1, Int(ceil(Double(clampedSeconds(value * 60)) / 60)))
     }
 }
 

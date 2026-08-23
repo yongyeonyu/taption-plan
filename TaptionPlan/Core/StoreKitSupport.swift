@@ -1,16 +1,235 @@
 import Foundation
+import Observation
+import Security
 import StoreKit
 
 enum TaptionCommercePolicy {
-    static let isAdSupportedFreeMode = true
-    static let supportsPaidPurchase = false
+    static let isAdSupportedFreeMode = false
+    static let supportsPaidPurchase = true
     static let proProductID = "com.taption.plan.pro"
+    static let trialDuration: TimeInterval = 7 * 24 * 60 * 60
 
     static func grantsProAccess(
         productID: String,
         revocationDate: Date?
     ) -> Bool {
         productID == proProductID && revocationDate == nil
+    }
+}
+
+struct TaptionProTrialRecord: Equatable, Sendable {
+    var startedAt: Date
+    var lastObservedAt: Date
+}
+
+enum TaptionProAccessState: Equatable, Sendable {
+    case loading
+    case trialNotStarted
+    case trial(expiresAt: Date, remainingDays: Int)
+    case purchased
+    case expired(expiresAt: Date)
+
+    var grantsAccess: Bool {
+        switch self {
+        case .trial, .purchased:
+            true
+        case .loading, .trialNotStarted, .expired:
+            false
+        }
+    }
+}
+
+enum TaptionProTrialPolicy {
+    static func merged(
+        _ records: [TaptionProTrialRecord]
+    ) -> TaptionProTrialRecord? {
+        guard let first = records.first else { return nil }
+        return records.dropFirst().reduce(first) { current, next in
+            TaptionProTrialRecord(
+                startedAt: min(current.startedAt, next.startedAt),
+                lastObservedAt: max(
+                    current.lastObservedAt,
+                    next.lastObservedAt
+                )
+            )
+        }
+    }
+
+    static func state(
+        record: TaptionProTrialRecord?,
+        now: Date
+    ) -> TaptionProAccessState {
+        guard let record else { return .trialNotStarted }
+        let effectiveNow = max(now, record.lastObservedAt)
+        let expiresAt = record.startedAt.addingTimeInterval(
+            TaptionCommercePolicy.trialDuration
+        )
+        guard effectiveNow < expiresAt else {
+            return .expired(expiresAt: expiresAt)
+        }
+        let remainingDays = max(
+            1,
+            Int(ceil(expiresAt.timeIntervalSince(effectiveNow) / 86_400))
+        )
+        return .trial(
+            expiresAt: expiresAt,
+            remainingDays: remainingDays
+        )
+    }
+}
+
+private enum TaptionProKeychainError: Error {
+    case unexpectedData
+    case status(OSStatus)
+}
+
+private struct TaptionProKeychain {
+    private let service = "com.taption.plan.pro-trial"
+
+    func date(for account: String) throws -> Date? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else {
+            throw TaptionProKeychainError.status(status)
+        }
+        guard let data = item as? Data,
+              let rawValue = String(data: data, encoding: .utf8),
+              let interval = TimeInterval(rawValue),
+              interval.isFinite else {
+            throw TaptionProKeychainError.unexpectedData
+        }
+        return Date(timeIntervalSince1970: interval)
+    }
+
+    func setDate(_ date: Date, for account: String) throws {
+        let data = Data(
+            String(date.timeIntervalSince1970).utf8
+        )
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        let updateStatus = SecItemUpdate(
+            query as CFDictionary,
+            attributes as CFDictionary
+        )
+        if updateStatus == errSecSuccess { return }
+        guard updateStatus == errSecItemNotFound else {
+            throw TaptionProKeychainError.status(updateStatus)
+        }
+        var addQuery = query
+        attributes.forEach { addQuery[$0.key] = $0.value }
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+            throw TaptionProKeychainError.status(addStatus)
+        }
+    }
+}
+
+@MainActor
+final class TaptionProTrialPersistence {
+    private static let startedAtKey = "TaptionPlan.proTrial.startedAt"
+    private static let lastObservedAtKey =
+        "TaptionPlan.proTrial.lastObservedAt"
+
+    private let keychain: TaptionProKeychain
+    private let cloudStore: NSUbiquitousKeyValueStore
+
+    init(
+        cloudStore: NSUbiquitousKeyValueStore = .default
+    ) {
+        self.keychain = TaptionProKeychain()
+        self.cloudStore = cloudStore
+    }
+
+    func record(observedAt now: Date) -> TaptionProTrialRecord? {
+        _ = cloudStore.synchronize()
+        let merged = TaptionProTrialPolicy.merged(
+            [keychainRecord(), cloudRecord()].compactMap { $0 }
+        )
+        guard var merged else { return nil }
+        merged.lastObservedAt = max(merged.lastObservedAt, now)
+        persist(merged)
+        return merged
+    }
+
+    func startTrial(at now: Date) -> TaptionProTrialRecord {
+        if let existing = record(observedAt: now) {
+            return existing
+        }
+        let record = TaptionProTrialRecord(
+            startedAt: now,
+            lastObservedAt: now
+        )
+        persist(record)
+        return record
+    }
+
+    private func keychainRecord() -> TaptionProTrialRecord? {
+        guard let startedAt = try? keychain.date(
+            for: Self.startedAtKey
+        ) else {
+            return nil
+        }
+        let lastObservedAt = try? keychain.date(
+            for: Self.lastObservedAtKey
+        )
+        return TaptionProTrialRecord(
+            startedAt: startedAt,
+            lastObservedAt: max(lastObservedAt ?? startedAt, startedAt)
+        )
+    }
+
+    private func cloudRecord() -> TaptionProTrialRecord? {
+        guard let startedAt = cloudDate(for: Self.startedAtKey) else {
+            return nil
+        }
+        return TaptionProTrialRecord(
+            startedAt: startedAt,
+            lastObservedAt: max(
+                cloudDate(for: Self.lastObservedAtKey) ?? startedAt,
+                startedAt
+            )
+        )
+    }
+
+    private func cloudDate(for key: String) -> Date? {
+        guard cloudStore.object(forKey: key) != nil else { return nil }
+        let interval = cloudStore.double(forKey: key)
+        guard interval.isFinite else { return nil }
+        return Date(timeIntervalSince1970: interval)
+    }
+
+    private func persist(_ record: TaptionProTrialRecord) {
+        cloudStore.set(
+            record.startedAt.timeIntervalSince1970,
+            forKey: Self.startedAtKey
+        )
+        cloudStore.set(
+            record.lastObservedAt.timeIntervalSince1970,
+            forKey: Self.lastObservedAtKey
+        )
+        try? keychain.setDate(
+            record.startedAt,
+            for: Self.startedAtKey
+        )
+        try? keychain.setDate(
+            record.lastObservedAt,
+            for: Self.lastObservedAtKey
+        )
     }
 }
 
@@ -105,5 +324,169 @@ actor StoreKitPurchaseService {
     func restorePurchases() async throws -> Bool {
         try await AppStore.sync()
         return await hasProEntitlement()
+    }
+}
+
+@MainActor
+@Observable
+final class TaptionProAccessController {
+    private(set) var state: TaptionProAccessState = .loading
+    private(set) var product: StoreProductPresentation?
+    private(set) var isActionInFlight = false
+    var message: String?
+    var isPurchaseSheetPresented = false
+
+    @ObservationIgnored private let purchaseService: StoreKitPurchaseService
+    @ObservationIgnored private let trialPersistence:
+        TaptionProTrialPersistence
+    @ObservationIgnored private var transactionUpdatesTask: Task<Void, Never>?
+    @ObservationIgnored private var trialExpirationTask: Task<Void, Never>?
+    @ObservationIgnored private var refreshGeneration = 0
+
+    init(
+        purchaseService: StoreKitPurchaseService = StoreKitPurchaseService(),
+        trialPersistence: TaptionProTrialPersistence =
+            TaptionProTrialPersistence(),
+        now: Date = .now
+    ) {
+        self.purchaseService = purchaseService
+        self.trialPersistence = trialPersistence
+        state = TaptionProTrialPolicy.state(
+            record: trialPersistence.record(observedAt: now),
+            now: now
+        )
+    }
+
+    var grantsAccess: Bool { state.grantsAccess }
+
+    var hasPermanentAccess: Bool {
+        state == .purchased
+    }
+
+    var menuTitle: String {
+        switch state {
+        case .purchased:
+            "Pro 구매 완료"
+        case .trial(_, let remainingDays):
+            "Pro 체험 · " + String(remainingDays) + "일 남음"
+        case .loading, .trialNotStarted, .expired:
+            "Pro 구매"
+        }
+    }
+
+    static func currentAccessGranted(now: Date = .now) async -> Bool {
+        if await StoreKitPurchaseService().hasProEntitlement() {
+            return true
+        }
+        let persistence = TaptionProTrialPersistence()
+        let record = persistence.record(observedAt: now)
+        return TaptionProTrialPolicy.state(
+            record: record,
+            now: now
+        ).grantsAccess
+    }
+
+    func refresh(now: Date = .now) async {
+        startTransactionUpdatesIfNeeded()
+        refreshGeneration &+= 1
+        let generation = refreshGeneration
+        let hasEntitlement = await purchaseService.hasProEntitlement()
+        guard generation == refreshGeneration else { return }
+        if hasEntitlement {
+            setState(.purchased)
+        } else {
+            let record = trialPersistence.record(observedAt: now)
+            setState(TaptionProTrialPolicy.state(record: record, now: now))
+        }
+        if product == nil {
+            product = try? await purchaseService.loadProProduct()
+        }
+    }
+
+    func startTrial(now: Date = .now) {
+        guard !isActionInFlight else { return }
+        isActionInFlight = true
+        let record = trialPersistence.startTrial(at: now)
+        setState(TaptionProTrialPolicy.state(record: record, now: now))
+        switch state {
+        case .trial:
+            message = "7일 무료 Pro 체험이 시작되었습니다."
+        case .expired:
+            message = "이 Apple 계정 또는 기기에서는 무료 체험을 이미 사용했습니다."
+        case .loading, .trialNotStarted, .purchased:
+            break
+        }
+        isActionInFlight = false
+    }
+
+    func purchase() async {
+        guard !isActionInFlight else { return }
+        isActionInFlight = true
+        defer { isActionInFlight = false }
+        do {
+            switch try await purchaseService.purchasePro() {
+            case .purchased:
+                await refresh()
+                message = "Pro 영구 구매가 완료되었습니다."
+                isPurchaseSheetPresented = false
+            case .pending:
+                message = "구매 승인을 기다리고 있습니다."
+            case .cancelled:
+                break
+            }
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    func restore() async {
+        guard !isActionInFlight else { return }
+        isActionInFlight = true
+        defer { isActionInFlight = false }
+        do {
+            if try await purchaseService.restorePurchases() {
+                await refresh()
+                message = "구매 내역을 복원했습니다."
+                isPurchaseSheetPresented = false
+            } else {
+                message = "복원할 Pro 구매 내역이 없습니다."
+            }
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    private func startTransactionUpdatesIfNeeded() {
+        guard transactionUpdatesTask == nil else { return }
+        transactionUpdatesTask = Task { [weak self] in
+            for await result in Transaction.updates {
+                guard !Task.isCancelled else { return }
+                if case .verified(let transaction) = result,
+                   transaction.productID == TaptionCommercePolicy.proProductID {
+                    await transaction.finish()
+                }
+                await self?.refresh()
+            }
+        }
+    }
+
+    private func setState(_ newState: TaptionProAccessState) {
+        state = newState
+        trialExpirationTask?.cancel()
+        trialExpirationTask = nil
+        guard case .trial(let expiresAt, _) = newState else { return }
+        let delay = max(0, expiresAt.timeIntervalSinceNow)
+        let nanoseconds = UInt64(
+            min(delay, Double(UInt64.max) / 1_000_000_000)
+                * 1_000_000_000
+        )
+        trialExpirationTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: nanoseconds)
+            } catch {
+                return
+            }
+            await self?.refresh()
+        }
     }
 }

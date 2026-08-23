@@ -1,0 +1,47 @@
+{
+  "identifier" : "TPPLANPRO0001",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "TPPLANPRO0002",
+      "localizations" : [
+        {
+          "description" : "모든 Taption Plan 기능을 영구적으로 사용합니다.",
+          "displayName" : "Taption Plan Pro 영구 이용권",
+          "locale" : "ko_KR"
+        },
+        {
+          "description" : "Unlock every Taption Plan feature permanently.",
+          "displayName" : "Taption Plan Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.taption.plan.pro",
+      "referenceName" : "Taption Plan Pro Lifetime",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6797370230",
+    "_developerTeamID" : "4FWG8XXYM7",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "ko_KR",
+    "_storefront" : "KOR",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 1
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

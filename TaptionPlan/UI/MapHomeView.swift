@@ -59,6 +59,7 @@ enum MapHomeWeatherTimelineMath {
 
 struct MapHomeView: View {
     @Bindable private var model: AppModel
+    @Bindable private var proAccess: TaptionProAccessController
 
     @State private var mapPosition: MapCameraPosition = .automatic
     @Namespace private var mapScope
@@ -73,12 +74,11 @@ struct MapHomeView: View {
     @State private var isSettingsMenuExpanded = false
     @State private var isDataProtectionPresented = false
     @State private var isSettingsResetConfirmationPresented = false
-    @State private var isMutedMap = true
     @AppStorage("taption.mapHome.language") private var languageRawValue = MapHomeLanguage.korean.rawValue
     @State private var compassControlState: MapHomeCompassControlState = .directionArrow
     @State private var isGPSLoggingActionInFlight = false
     @State private var isGPSLoggingMenuExpanded = false
-    @State private var gpsLoggingIntervalDraft = GPSLoggingPreferences.standard.intervalMinutes
+    @State private var gpsLoggingIntervalDraftSeconds = GPSLoggingPreferences.standard.intervalSeconds
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
     @State private var isTimelineSelectionPinned = false
@@ -90,6 +90,7 @@ struct MapHomeView: View {
     @State private var selectedSearchPin: MapHomeSearchResult?
     @State private var isSearchPinMenuPresented = false
     @State private var selectedUserLocation: MapHomeUserLocationSelection?
+    @State private var pendingUserLocationSelection: MapHomeUserLocationSelection?
     @State private var mapSearchTask: Task<Void, Never>?
     @FocusState private var isMapSearchFocused: Bool
     @State private var visibleMapCenter = CLLocationCoordinate2D(latitude: 0, longitude: 0)
@@ -133,8 +134,12 @@ struct MapHomeView: View {
         static let timeRailBottomMargin: CGFloat = 28
     }
 
-    init(model: AppModel) {
+    init(
+        model: AppModel,
+        proAccess: TaptionProAccessController
+    ) {
         self._model = Bindable(model)
+        self._proAccess = Bindable(proAccess)
         _selectedScope = State(initialValue: .day)
     }
 
@@ -192,7 +197,8 @@ struct MapHomeView: View {
                 model: model,
                 result: selectedSearchPin,
                 language: language,
-                onSaved: {
+                onSaved: { createdSelection in
+                    pendingUserLocationSelection = createdSelection
                     isSearchPinMenuPresented = false
                     self.selectedSearchPin = nil
                 }
@@ -236,10 +242,7 @@ struct MapHomeView: View {
             if !isMenuOpen {
                 currentTimeRail
                     .padding(.top, Layout.headerVisibleHeight + Layout.timeRailTopMargin)
-                    .padding(
-                        .bottom,
-                        Layout.timeRailBottomMargin + MapHomeBannerAdView.reservedHeight
-                    )
+                    .padding(.bottom, Layout.timeRailBottomMargin)
                     .padding(.trailing, Layout.horizontalInset)
             }
         }
@@ -247,14 +250,10 @@ struct MapHomeView: View {
             if !isMenuOpen {
                 mapControls
                     .padding(.leading, Layout.horizontalInset)
-                    .padding(.bottom, 12 + MapHomeBannerAdView.reservedHeight)
+                    .padding(.bottom, 12)
             }
         }
         .preferredColorScheme(.light)
-        .overlay(alignment: .bottom) {
-            MapHomeBannerAdView()
-                .offset(y: -MapHomeBannerAdView.bottomSafeAreaInset)
-        }
         .sheet(isPresented: $isCalendarPresented) {
             MapHomeCalendarSheet(
                 selectedDate: $model.selectedDate,
@@ -275,13 +274,28 @@ struct MapHomeView: View {
         .sheet(item: $selectedUserLocation) { selection in
             userLocationSheet(for: selection)
         }
-        .sheet(isPresented: $isSearchPinMenuPresented) {
+        .sheet(
+            isPresented: $isSearchPinMenuPresented,
+            onDismiss: {
+                guard let selection = pendingUserLocationSelection else { return }
+                pendingUserLocationSelection = nil
+                selectedUserLocation = selection
+            }
+        ) {
             searchPinSheet
         }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $proAccess.isPurchaseSheetPresented) {
+            TaptionProAccessView(
+                controller: proAccess,
+                allowsDismiss: true
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .confirmationDialog(
             language.text("설정을 기본값으로 초기화할까요?", "Reset settings to defaults?"),
@@ -544,16 +558,7 @@ struct MapHomeView: View {
     }
 
     private var mapStyle: MapStyle {
-        if isMutedMap {
-            .standard(
-                elevation: .flat,
-                emphasis: .muted,
-                pointsOfInterest: .excludingAll,
-                showsTraffic: false
-            )
-        } else {
-            .standard(elevation: .realistic)
-        }
+        .standard(elevation: .realistic)
     }
 
     private var header: some View {
@@ -948,17 +953,6 @@ struct MapHomeView: View {
                 .accessibilityLabel(language.text("나침반 표시", "Show compass"))
             }
 
-            Button {
-                isMutedMap.toggle()
-            } label: {
-                Image(systemName: isMutedMap ? "paintpalette" : "paintpalette.fill")
-                    .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                    .foregroundStyle(Color.tpReferenceMint)
-                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                    .background(Color.white.opacity(0.94), in: Circle())
-            }
-            .accessibilityLabel(language.text("지도 스타일", "Map style"))
-
             VStack(spacing: 3) {
                 mapZoomButton(systemImage: "plus", direction: 1)
                 mapZoomButton(systemImage: "minus", direction: -1)
@@ -994,6 +988,7 @@ struct MapHomeView: View {
             latitudeDelta: min(max(visibleMapSpan.latitudeDelta * factor, 0.002), 80),
             longitudeDelta: min(max(visibleMapSpan.longitudeDelta * factor, 0.002), 80)
         )
+        visibleMapSpan = next
         mapPosition = .region(
             MKCoordinateRegion(center: visibleMapCenter, span: next)
         )
@@ -1007,12 +1002,7 @@ struct MapHomeView: View {
                     .contentShape(Rectangle())
                     .onTapGesture { isMenuOpen = false }
 
-                let menuHeight = max(
-                    0,
-                    proxy.size.height
-                        - MapHomeBannerAdView.reservedHeight
-                        - MapHomeBannerAdView.bottomSafeAreaInset
-                )
+                let menuHeight = max(0, proxy.size.height)
                 let menuTop = Layout.headerVisibleHeight + 8
                 sidebarContent
                 .frame(width: 316, height: max(0, menuHeight - menuTop), alignment: .top)
@@ -1059,6 +1049,17 @@ struct MapHomeView: View {
             settingsMenuItem
 
             Spacer(minLength: 28)
+
+            menuItem(
+                "sparkles",
+                proAccess.menuTitle,
+                isSelected: proAccess.hasPermanentAccess
+            ) {
+                proAccess.isPurchaseSheetPresented = true
+            }
+
+            Divider()
+                .padding(.vertical, 12)
 
             HStack(spacing: 7) {
                 Image(systemName: "map.fill")
@@ -1674,7 +1675,7 @@ struct MapHomeView: View {
         return VStack(alignment: .leading, spacing: 7) {
             Button {
                 if !isGPSLoggingMenuExpanded {
-                    gpsLoggingIntervalDraft = preferences.intervalMinutes
+                    gpsLoggingIntervalDraftSeconds = preferences.intervalSeconds
                 }
                 isGPSLoggingMenuExpanded.toggle()
             } label: {
@@ -1693,10 +1694,7 @@ struct MapHomeView: View {
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
 
                         Text(
-                            language.text(
-                                "\(preferences.effectiveIntervalMinutes)분마다 위치 확인",
-                                "Checks location every \(preferences.effectiveIntervalMinutes) min"
-                            )
+                            gpsLoggingIntervalText(preferences.effectiveIntervalSeconds)
                         )
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -1744,36 +1742,45 @@ struct MapHomeView: View {
                             Text(language.text("시간", "Interval"))
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                             Spacer()
-                            Text(language.text("\(gpsLoggingIntervalDisplay(preferences))분", "\(gpsLoggingIntervalDisplay(preferences)) min"))
+                            Text(gpsLoggingIntervalText(gpsLoggingIntervalDisplay(preferences)))
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .foregroundStyle(tint)
                         }
 
                         Slider(
                             value: Binding(
-                                get: { Double(gpsLoggingIntervalDraft) },
-                                set: { gpsLoggingIntervalDraft = GPSLoggingPreferences.clampedMinutes(Int($0.rounded())) }
+                                get: {
+                                    Double(
+                                        GPSLoggingPreferences.supportedIntervalSeconds
+                                            .firstIndex(of: gpsLoggingIntervalDraftSeconds) ?? 0
+                                    )
+                                },
+                                set: { value in
+                                    let index = min(
+                                        max(Int(value.rounded()), 0),
+                                        GPSLoggingPreferences.supportedIntervalSeconds.count - 1
+                                    )
+                                    gpsLoggingIntervalDraftSeconds =
+                                        GPSLoggingPreferences.supportedIntervalSeconds[index]
+                                }
                             ),
-                            in: 1...15,
+                            in: 0...Double(GPSLoggingPreferences.supportedIntervalSeconds.count - 1),
                             step: 1,
                             onEditingChanged: { isEditing in
                                 if !isEditing {
-                                    model.setGPSLoggingIntervalMinutes(gpsLoggingIntervalDraft)
+                                    model.setGPSLoggingIntervalSeconds(gpsLoggingIntervalDraftSeconds)
                                 }
                             }
                         )
                         .tint(tint)
                         .disabled(preferences.isBatteryMinimal)
                         .accessibilityLabel(language.text("GPS 기록 시간", "GPS logging interval"))
-                        .accessibilityValue(language.text(
-                            "\(gpsLoggingIntervalDisplay(preferences))분",
-                            "\(gpsLoggingIntervalDisplay(preferences)) minutes"
-                        ))
+                        .accessibilityValue(gpsLoggingIntervalText(gpsLoggingIntervalDisplay(preferences)))
 
                         HStack {
-                            Text(language.text("1분", "1 min"))
+                            Text(language.text("실시간 1초", "Live 1 sec"))
                             Spacer()
-                            Text(language.text("기본 10분", "Default 10 min"))
+                            Text(language.text("기본 5분", "Default 5 min"))
                             Spacer()
                             Text(language.text("15분", "15 min"))
                         }
@@ -1792,8 +1799,22 @@ struct MapHomeView: View {
         _ preferences: GPSLoggingPreferences
     ) -> Int {
         preferences.isBatteryMinimal
-            ? preferences.effectiveIntervalMinutes
-            : gpsLoggingIntervalDraft
+            ? preferences.effectiveIntervalSeconds
+            : gpsLoggingIntervalDraftSeconds
+    }
+
+    private func gpsLoggingIntervalText(_ seconds: Int) -> String {
+        if seconds < 60 {
+            return language.text(
+                seconds == 1 ? "실시간 · 1초마다" : "\(seconds)초마다 위치 확인",
+                seconds == 1 ? "Live · every second" : "Checks location every \(seconds) sec"
+            )
+        }
+        let minutes = seconds / 60
+        return language.text(
+            "\(minutes)분마다 위치 확인",
+            "Checks location every \(minutes) min"
+        )
     }
 
     private func toggleGPSLogging() {
@@ -1901,6 +1922,7 @@ struct MapHomeView: View {
     private func refreshTimeRailSegments() {
         let next = MapHomeTimeRailSegmentEngine.segments(
             from: model.snapshot.actuals,
+            travel: model.snapshot.travel,
             on: model.selectedDate
         )
         guard next != timeRailSegments else { return }
@@ -3304,7 +3326,7 @@ private struct MapHomeSearchPinLocationSheet: View {
     @Bindable var model: AppModel
     let result: MapHomeSearchResult
     let language: MapHomeLanguage
-    let onSaved: () -> Void
+    let onSaved: (MapHomeUserLocationSelection?) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -3412,18 +3434,18 @@ private struct MapHomeSearchPinLocationSheet: View {
                 )
             }
         }
-        onSaved()
+        onSaved(nil)
     }
 
     private func saveTransit(_ kind: UserTransitLocationKind) {
         let cleanName = result.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        model.addUserTransitLocation(
+        guard let createdID = model.addUserTransitLocation(
             name: cleanName.isEmpty ? kind.title : cleanName,
             kind: kind,
             latitude: result.coordinate.latitude,
             longitude: result.coordinate.longitude
-        )
-        onSaved()
+        ) else { return }
+        onSaved(.transit(createdID))
     }
 }
 
