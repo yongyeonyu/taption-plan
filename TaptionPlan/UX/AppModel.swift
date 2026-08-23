@@ -1453,8 +1453,18 @@ final class AppModel {
         await bootstrap()
         await waitForBootstrapPreparation()
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
+        await refreshPermissionStates()
+        let samplingWindow = settings.sensorCollectionProfile.samplingWindowDuration
         self.resumeSensorCollectionIfNeeded()
         await self.restoreTrackingSessionIfNeeded()
+        if isSensorCollecting {
+            // BG refresh tasks may be terminated as soon as this method
+            // returns. Keep the collector alive through one sampling window
+            // so its normal archive consumer receives the next reading.
+            try? await Task.sleep(
+                for: .seconds(samplingWindow + 2)
+            )
+        }
         await refreshEnabledData(includesCurrentDeviceDay: true)
         await persist()
         let success = userFacingError == nil

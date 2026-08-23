@@ -5705,6 +5705,21 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(balanced.minimumEmissionInterval, 5 * 60)
     }
 
+    func testBackgroundCollectionKeepsEachProfileCadence() {
+        for profile in SensorCollectionProfile.allCases {
+            let configuration = SensorCollectionConfiguration.configured(
+                for: profile,
+                allowsBackgroundLocation: true
+            )
+
+            XCTAssertTrue(configuration.allowsBackgroundLocation)
+            XCTAssertEqual(
+                configuration.minimumEmissionInterval,
+                profile.interval
+            )
+        }
+    }
+
     func testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes() throws {
         XCTAssertEqual(GPSLoggingPreferences.standard.intervalMinutes, 5)
         XCTAssertFalse(GPSLoggingPreferences.standard.isBatteryMinimal)
