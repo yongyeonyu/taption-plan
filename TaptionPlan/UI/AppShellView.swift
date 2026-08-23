@@ -229,8 +229,9 @@ struct AppShellView: View {
             .transition(.opacity)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(
-                AppLanguagePreference.localized(
-                    "Taption Plan 불러오는 중",
+                AppLanguagePreference.text(
+                    korean: "Taption Plan 불러오는 중",
+                    english: "Loading Taption Plan",
                     rawPreference: languageRawValue
                 )
             )
@@ -245,6 +246,7 @@ struct AppShellView: View {
                 model: model,
                 isCheckingInitialState: !isSecurityStateReady,
                 lockGeneration: lockGeneration,
+                languageRawValue: languageRawValue,
                 automaticBiometricAttemptedGeneration: $automaticBiometricAttemptedGeneration,
                 isBiometricAuthenticationInFlight: $isBiometricAuthenticationInFlight
             )
@@ -508,6 +510,7 @@ private struct MapHomeAppLockView: View {
     @Bindable var model: AppModel
     let isCheckingInitialState: Bool
     let lockGeneration: Int
+    let languageRawValue: String
     @Binding var automaticBiometricAttemptedGeneration: Int?
     @Binding var isBiometricAuthenticationInFlight: Bool
     @State private var errorMessage: String?
@@ -522,9 +525,20 @@ private struct MapHomeAppLockView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 180, height: 180)
+                .accessibilityLabel(
+                    AppLanguagePreference.text(
+                        korean: "앱 잠금 해제 필요",
+                        english: "App unlock required",
+                        rawPreference: languageRawValue
+                    )
+                )
         }
         .sheet(isPresented: $showsPINInput) {
-            AppLockPINSheet(model: model, errorMessage: errorMessage)
+            AppLockPINSheet(
+                model: model,
+                errorMessage: errorMessage,
+                languageRawValue: languageRawValue
+            )
                 .interactiveDismissDisabled()
                 .presentationDetents([.height(220)])
                 .presentationDragIndicator(.visible)
@@ -582,6 +596,7 @@ private struct AppLockPINSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
     let errorMessage: String?
+    let languageRawValue: String
     @State private var pin = ""
     @State private var validationMessage: String?
 
@@ -591,9 +606,22 @@ private struct AppLockPINSheet: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text("PIN")
+            Text(
+                AppLanguagePreference.text(
+                    korean: "PIN",
+                    english: "PIN",
+                    rawPreference: languageRawValue
+                )
+            )
                 .font(.taption(size: 20, weight: .bold))
-            SecureField("4자리 비밀번호", text: $pin)
+            SecureField(
+                AppLanguagePreference.text(
+                    korean: "4자리 비밀번호",
+                    english: "4-digit PIN",
+                    rawPreference: languageRawValue
+                ),
+                text: $pin
+            )
                 .keyboardType(.numberPad)
                 .textContentType(.password)
                 .multilineTextAlignment(.center)

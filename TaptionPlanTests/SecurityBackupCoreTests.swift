@@ -1,3 +1,4 @@
+import CryptoKit
 import XCTest
 @testable import TaptionPlan
 
@@ -36,12 +37,58 @@ final class SecurityBackupCoreTests: XCTestCase {
 
     func testPINVerifierStoresOnlySaltAndDigestAndUsesFourDigits() throws {
         let verifier = try PlanPINVerifier(pin: "1234") { _ in Data(repeating: 7, count: 16) }
+        XCTAssertEqual(verifier.version, PlanPINVerifier.currentVersion)
         XCTAssertEqual(verifier.salt, Data(repeating: 7, count: 16))
         XCTAssertNotEqual(verifier.digest, Data("1234".utf8))
         XCTAssertTrue(verifier.matches("1234"))
         XCTAssertFalse(verifier.matches("1235"))
         XCTAssertThrowsError(try PlanPINVerifier(pin: "12345"))
         XCTAssertThrowsError(try PlanPINVerifier(pin: "12a4"))
+    }
+
+    func testPINVerifierRejectsRandomGenerationFailure() {
+        XCTAssertThrowsError(
+            try PlanPINVerifier(pin: "1234") { _ in
+                throw PlanSecurityError.invalidCredential
+            }
+        ) { error in
+            XCTAssertEqual(error as? PlanSecurityError, .invalidCredential)
+        }
+    }
+
+    func testSecurityErrorsFollowTheSelectedLanguage() {
+        XCTAssertEqual(
+            PlanSecurityError.invalidPIN.localizedDescription(
+                preference: .english
+            ),
+            "Check your 4-digit PIN and try again."
+        )
+        XCTAssertEqual(
+            PlanSecurityError.biometricRejected.localizedDescription(
+                preference: .korean
+            ),
+            "생체 인증을 완료하지 못했습니다."
+        )
+    }
+
+    func testLegacyPINVerifierStillMatchesAfterPBKDF2Migration() throws {
+        let salt = Data(repeating: 4, count: 16)
+        var digest = Data("1234".utf8) + salt
+        for _ in 0..<PlanPINVerifier.legacyIterations {
+            digest = Data(SHA256.hash(data: digest))
+        }
+        let encoded = try JSONSerialization.data(withJSONObject: [
+            "version": 1,
+            "salt": salt.base64EncodedString(),
+            "digest": digest.base64EncodedString(),
+        ])
+        let verifier = try JSONDecoder().decode(
+            PlanPINVerifier.self,
+            from: encoded
+        )
+
+        XCTAssertTrue(verifier.matches("1234"))
+        XCTAssertFalse(verifier.matches("1235"))
     }
 
     func testCloudBackupAndAppLockRequirePIN() throws {
@@ -153,16 +200,26 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertTrue(replacementDevice.hasPIN)
     }
 
-    func testCloudRecoveryKeyFallbackReusesTheStoredKey() throws {
+    func testLegacyCloudRecoveryKeyCanOnlyBeReadAndRemoved() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = UbiquitousPlanCloudRecoveryKeyStore(containerURL: directory)
         let key = Data(repeating: 7, count: 32)
+        let legacyDirectory = directory
+            .appendingPathComponent("Documents", isDirectory: true)
+            .appendingPathComponent("Taption Plan", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: legacyDirectory,
+            withIntermediateDirectories: true
+        )
+        try key.write(
+            to: legacyDirectory.appendingPathComponent(".recovery-key-v1")
+        )
 
-        XCTAssertNil(try store.existingKey())
-        XCTAssertEqual(try store.store(key), key)
         XCTAssertEqual(try store.existingKey(), key)
+        try store.removeExistingKey()
+        XCTAssertNil(try store.existingKey())
     }
 
     private func makeService(

@@ -160,6 +160,13 @@ actor SensorCollectionLiveActivityController {
 actor TaptionLiveActivityController {
     private var activity: Activity<TaptionActivityAttributes>?
 
+    func concealAll() async {
+        for candidate in Activity<TaptionActivityAttributes>.activities {
+            await candidate.end(nil, dismissalPolicy: .immediate)
+        }
+        activity = nil
+    }
+
     func start(
         plan: PlanRecord,
         catStyle: CatStyle,

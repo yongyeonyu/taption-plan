@@ -4,7 +4,8 @@ enum TaptionWidgetPayloadFactory {
     static func make(
         from snapshot: TaptionDataSnapshot,
         now: Date = .now,
-        calendar: Calendar = .autoupdatingCurrent
+        calendar: Calendar = .autoupdatingCurrent,
+        hidesSensitiveContent: Bool = false
     ) -> TaptionWidgetPayload {
         let dayStart = calendar.startOfDay(for: now)
         let widgetStart = calendar.date(
@@ -206,20 +207,25 @@ enum TaptionWidgetPayloadFactory {
         )
         .sorted { $0.startsAt < $1.startsAt }
 
+        let visibleItems = hidesSensitiveContent ? [] : items
         return TaptionWidgetPayload(
             generatedAt: now,
             sourceSnapshotUpdatedAt: snapshot.updatedAt,
-            sourceFingerprint: TaptionWidgetSyncFingerprint.make(items: items),
+            sourceFingerprint: TaptionWidgetSyncFingerprint.make(
+                items: visibleItems
+            ),
             viewportStart: widgetStart,
             viewportEnd: widgetEnd,
             displayCenterDate: now,
             displayDuration: TaptionWidgetPlaybackEngine.defaultWindowDuration,
             displayResolutionLabel: TaptionWidgetPlaybackEngine.defaultResolutionLabel,
-            items: items,
+            items: visibleItems,
             catStyle: snapshot.settings.catStyle.rawValue,
-            hidesSensitiveContent: false,
-            weatherSymbolName: weather?.symbolName,
-            temperatureCelsius: weather?.temperatureCelsius,
+            hidesSensitiveContent: hidesSensitiveContent,
+            weatherSymbolName: hidesSensitiveContent ? nil : weather?.symbolName,
+            temperatureCelsius: hidesSensitiveContent
+                ? nil
+                : weather?.temperatureCelsius,
             reducesMotion: snapshot.settings.reduceMotion,
             locationTrackingEnabled: snapshot.settings.locationEnabled,
             locationPermissionState:

@@ -155,6 +155,21 @@ enum MapHomeCameraLayoutMath {
     }
 }
 
+enum MapHomeLongPressRoutingMath {
+    static let exclusionPadding: CGFloat = 8
+
+    static func shouldPresentLocation(
+        at point: CGPoint,
+        excluding frame: CGRect
+    ) -> Bool {
+        guard !frame.isNull, !frame.isEmpty else { return true }
+        return !frame.insetBy(
+            dx: -exclusionPadding,
+            dy: -exclusionPadding
+        ).contains(point)
+    }
+}
+
 enum MapHomeCameraZoomMath {
     static let minimumDistance: CLLocationDistance = 80
     static let maximumDistance: CLLocationDistance = 30_000_000
@@ -456,6 +471,10 @@ struct MapHomeView: View {
     ]
     @State private var routeProjection: RouteTimelineProjection?
     @State private var routeReadings: [SensorReading] = []
+    @State private var normalizedRouteReadings: [SensorReading] = []
+    @State private var displayRouteReadings: [SensorReading] = []
+    @State private var historicalPlaybackPoint: GeoPoint?
+    @State private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] = []
     @State private var visibleMapSpan = MKCoordinateSpan(
         latitudeDelta: 0.025,
         longitudeDelta: 0.035
@@ -473,6 +492,7 @@ struct MapHomeView: View {
     @State private var mapViewportSize = CGSize.zero
     @State private var headerFrame = CGRect.zero
     @State private var searchFieldFrame = CGRect.zero
+    @State private var mapControlsFrame = CGRect.zero
     @State private var overlayPinchRoutesToMap: Bool?
     @State private var overlayPinchInitialCamera: MapCamera?
     @State private var lastOverlayPinchPublishUptime: TimeInterval = 0
@@ -825,7 +845,12 @@ struct MapHomeView: View {
         }
         .onChange(of: model.latestSensorReading?.point) { _, _ in
             applyInitialLocationIfAvailable()
+            guard Calendar.autoupdatingCurrent.isDateInToday(
+                model.selectedDate
+            ) else { return }
+            prepareRouteProjectionReadings()
             refreshRouteProjection()
+            refreshHistoricalPlaybackPoint()
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
@@ -833,6 +858,12 @@ struct MapHomeView: View {
         .onChange(of: model.selectedDate) { _, _ in
             stopDayPlayback(resetProgress: true)
             selectedTimelineMinute = nil
+            routeReadings = []
+            normalizedRouteReadings = []
+            displayRouteReadings = []
+            routeProjection = nil
+            timelineRouteOverlays = []
+            historicalPlaybackPoint = nil
             isTimelineSelectionPinned = false
             weatherVisibleStartMinute = 0
             weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
@@ -850,13 +881,24 @@ struct MapHomeView: View {
             refreshRouteProjection()
         }
         .onChange(of: model.liveRouteState.readings) { _, _ in
+            prepareRouteProjectionReadings()
             refreshRouteProjection()
+            refreshHistoricalPlaybackPoint()
         }
         .onChange(of: selectedTimelineMinute) { _, minute in
-            guard minute != nil,
-                  let projection = refreshRouteProjection(),
-                  let point = projection.coordinateAtCutoff
-            else { return }
+            guard minute != nil else {
+                historicalPlaybackPoint = nil
+                return
+            }
+            let point: GeoPoint?
+            if isDayPlaybackRunning {
+                point = refreshHistoricalPlaybackPoint()
+            } else {
+                let projection = refreshRouteProjection()
+                point = refreshHistoricalPlaybackPoint()
+                    ?? projection?.coordinateAtCutoff
+            }
+            guard let point else { return }
             focusMap(on: point)
         }
         .onChange(of: scenePhase) { _, phase in
@@ -982,8 +1024,8 @@ struct MapHomeView: View {
                     )
                     .accessibilityLabel(
                         language.text(
-                            "(selectedSearchPin.title) 위치 추가",
-                            "Add (selectedSearchPin.title) location"
+                            "\(selectedSearchPin.title) 위치 추가",
+                            "Add \(selectedSearchPin.title) location"
                         )
                     )
                 }
@@ -1040,6 +1082,16 @@ struct MapHomeView: View {
                     mapControls(proxy: proxy)
                         .padding(.leading, Layout.horizontalInset)
                         .padding(.bottom, Layout.overlayBottomMargin)
+                        .onGeometryChange(
+                            for: CGRect.self,
+                            of: { geometry in
+                                geometry.frame(in: .named("mapHomeViewport"))
+                            },
+                            action: { frame in
+                                guard mapControlsFrame != frame else { return }
+                                mapControlsFrame = frame
+                            }
+                        )
                 }
             }
         }
@@ -1047,10 +1099,20 @@ struct MapHomeView: View {
 
     private func mapLongPressGesture(proxy: MapProxy) -> some Gesture {
         LongPressGesture(minimumDuration: 0.55, maximumDistance: 12)
-            .sequenced(before: DragGesture(minimumDistance: 0))
+            .sequenced(before: DragGesture(
+                minimumDistance: 0,
+                coordinateSpace: .named("mapHomeViewport")
+            ))
             .onEnded { value in
                 guard case .second(true, let drag?) = value,
-                      let coordinate = proxy.convert(drag.startLocation, from: .local)
+                      MapHomeLongPressRoutingMath.shouldPresentLocation(
+                          at: drag.startLocation,
+                          excluding: mapControlsFrame
+                      ),
+                      let coordinate = proxy.convert(
+                          drag.startLocation,
+                          from: .named("mapHomeViewport")
+                      )
                 else { return }
                 presentLocationAddition(at: coordinate)
             }
@@ -1481,16 +1543,18 @@ struct MapHomeView: View {
             dayPlaybackElapsedSeconds = 0
         }
         let baseElapsed = dayPlaybackElapsedSeconds
+        isTimelineSelectionPinned = true
+        isDayPlaybackRunning = true
+        refreshRouteProjection()
         if baseElapsed == 0 {
             selectedTimelineMinute = 0
         }
-        isTimelineSelectionPinned = true
-        isDayPlaybackRunning = true
+        refreshHistoricalPlaybackPoint()
         let startedAt = ProcessInfo.processInfo.systemUptime
         dayPlaybackTask = Task { @MainActor in
             while !Task.isCancelled {
                 do {
-                    try await Task.sleep(nanoseconds: 16_666_667)
+                    try await Task.sleep(nanoseconds: 41_666_667)
                 } catch {
                     return
                 }
@@ -1508,6 +1572,9 @@ struct MapHomeView: View {
                 guard elapsed < MapHomeDayPlaybackMath.durationSeconds else {
                     selectedTimelineMinute = MapHomeTimeSidebarMath.fullDayMinutes
                     isDayPlaybackRunning = false
+                    historicalPlaybackPoint = nil
+                    refreshRouteProjection()
+                    refreshHistoricalPlaybackPoint()
                     dayPlaybackTask = nil
                     return
                 }
@@ -1516,11 +1583,17 @@ struct MapHomeView: View {
     }
 
     private func stopDayPlayback(resetProgress: Bool) {
+        let wasRunning = isDayPlaybackRunning
         dayPlaybackTask?.cancel()
         dayPlaybackTask = nil
         isDayPlaybackRunning = false
+        historicalPlaybackPoint = nil
         if resetProgress {
             dayPlaybackElapsedSeconds = 0
+        }
+        if wasRunning {
+            refreshRouteProjection()
+            refreshHistoricalPlaybackPoint()
         }
     }
 
@@ -2922,8 +2995,10 @@ struct MapHomeView: View {
         }
     }
 
-    private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] {
-        (routeProjection?.segments ?? []).compactMap { segment in
+    private func makeTimelineRouteOverlays(
+        _ projection: RouteTimelineProjection
+    ) -> [MapHomeTimelineRouteOverlay] {
+        projection.segments.compactMap { segment in
             let coordinates = segment.coordinates.compactMap { point -> CLLocationCoordinate2D? in
                 guard isValid(point) else { return nil }
                 return CLLocationCoordinate2D(
@@ -2943,7 +3018,8 @@ struct MapHomeView: View {
 
     private var historicalPlaybackCoordinate: CLLocationCoordinate2D? {
         guard selectedTimelineMinute != nil,
-              let point = routeProjection?.coordinateAtCutoff,
+              let point = historicalPlaybackPoint
+                ?? routeProjection?.coordinateAtCutoff,
               isValid(point) else { return nil }
         return CLLocationCoordinate2D(
             latitude: point.latitude,
@@ -3083,9 +3159,11 @@ struct MapHomeView: View {
               calendar.isDate(date, inSameDayAs: model.selectedDate)
         else { return }
         routeReadings = readings
+        prepareRouteProjectionReadings()
         let projection = refreshRouteProjection()
         if selectedTimelineMinute != nil,
-           let point = projection?.coordinateAtCutoff {
+           let point = refreshHistoricalPlaybackPoint()
+                ?? projection?.coordinateAtCutoff {
             focusMap(on: point)
         } else {
             focusMapIfNeeded()
@@ -3095,25 +3173,61 @@ struct MapHomeView: View {
     @discardableResult
     private func refreshRouteProjection() -> RouteTimelineProjection? {
         let calendar = Calendar.autoupdatingCurrent
-        let liveReadings = model.liveRouteState.readings
-            + (model.latestSensorReading.map { [$0] } ?? [])
-        let timelineDate = calendar.date(
-            byAdding: .minute,
-            value: effectiveTimelineMinute,
-            to: calendar.startOfDay(for: model.selectedDate)
-        )
+        let timelineDate = isDayPlaybackRunning
+            ? nil
+            : RouteTimelineDataEngine.timelineDate(
+                selectedDate: model.selectedDate,
+                minute: effectiveTimelineMinute,
+                calendar: calendar
+            )
         let next = RouteTimelineDataEngine.project(
             selectedDate: model.selectedDate,
             through: timelineDate,
-            selectedSpan: timelineSelectionSpan,
+            selectedSpan: isDayPlaybackRunning ? nil : timelineSelectionSpan,
             actuals: model.snapshot.actuals,
-            readings: routeReadings,
-            liveReadings: liveReadings,
+            readings: displayRouteReadings,
+            readingsAreNormalized: true,
             calendar: calendar
         )
         guard routeProjection != next else { return next }
         routeProjection = next
+        timelineRouteOverlays = makeTimelineRouteOverlays(next)
         return next
+    }
+
+    private func prepareRouteProjectionReadings() {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        normalizedRouteReadings = RouteTimelineDataEngine.normalizedReadings(
+            routeReadings
+                + model.liveRouteState.readings
+                + (model.latestSensorReading.map { [$0] } ?? [])
+        ).filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
+        displayRouteReadings = RouteTimelineDataEngine.displayReadings(
+            from: normalizedRouteReadings
+        )
+    }
+
+    @discardableResult
+    private func refreshHistoricalPlaybackPoint() -> GeoPoint? {
+        guard selectedTimelineMinute != nil else {
+            historicalPlaybackPoint = nil
+            return nil
+        }
+        let date = RouteTimelineDataEngine.timelineDate(
+            selectedDate: model.selectedDate,
+            minute: effectiveTimelineMinute
+        )
+        let point = RouteTimelineDataEngine.playbackCoordinate(
+            at: date,
+            inNormalizedReadings: normalizedRouteReadings
+        )
+        if historicalPlaybackPoint != point {
+            historicalPlaybackPoint = point
+        }
+        return point
     }
 
     private var dateTitle: String {
@@ -3304,14 +3418,17 @@ struct MapHomeView: View {
 
         if let proxy,
            let camera = visibleMapCamera,
-           let locationPoint = proxy.convert(coordinate, to: .local),
+           let locationPoint = proxy.convert(
+               coordinate,
+               to: .named("mapHomeViewport")
+           ),
            let center = proxy.convert(
                 MapHomeCameraLayoutMath.cameraCenterSourcePoint(
                     currentLocationPoint: locationPoint,
                     targetPoint: currentLocationTargetPoint,
                     viewportSize: mapViewportSize
                 ),
-                from: .local
+                from: .named("mapHomeViewport")
            ) {
             mapPosition = .camera(
                 MapCamera(
@@ -3363,7 +3480,9 @@ struct MapHomeView: View {
 
     private func updateUserCenterState(using proxy: MapProxy) {
         let nextValue = currentCoordinate
-            .flatMap { proxy.convert($0, to: .local) }
+            .flatMap {
+                proxy.convert($0, to: .named("mapHomeViewport"))
+            }
             .map {
                 MapHomeCameraLayoutMath.isCentered(
                     locationPoint: $0,

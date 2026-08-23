@@ -10,9 +10,10 @@
 - 현재 main에는 사용자 추가 지하철역·지하철 Wi-Fi 우선 판정, GPS 1초·10초·30초 기록, 지도 상세도·팝업·시간 레일 개선, 광고 완전 제거, C2 고양이 벡터 앱 아이콘이 반영되어 있다.
 - `BATCH2WK01`로 지도 오버레이 핀치 전달·위치 추가 취소·저장 위치 이동/편집·사용자 위치 관리 UI·실제 헤딩 나침반·선택 날씨 배경을 통합했고 CloudKit 비공개 복구 백업의 아카이브 키 래핑을 보정했다.
 - Pro는 Keychain+iCloud KVS 기반 14일 앱 자체 체험과 StoreKit 2 비소모성 `com.taption.plan.pro` 영구 구매·복원으로 구현했다. 기존 기록도 `startedAt` 기준 14일로 재계산하며, 체험 만료 시 전체 앱과 백그라운드 작업을 잠근다.
-- 전체 XCTest 518/518 통과, Debug 빌드 통과, iPhone 14 Pro에 1.0(74) 설치·실행·readback 완료다.
-- build 74 TestFlight 업로드 UUID는 bd78668d-fb43-40dd-9d32-5ac0817dcdf1이고 처리 상태는 VALID다.
-- build 74는 `TP Taption Plan 내부 테스트` 그룹에 자동 연결되어 그룹 관계에서 노출되며 내부 테스터 1명이 있다.
+- build 77 다방면 리뷰에서 1초 GPS 경로의 O(N²) 비용과 재생 중 오버레이 재계산, 시간 경계, 지도 입력 좌표계, 잠금 외부 노출, iCloud 복구키 fallback, PIN KDF·난수 실패와 영어 접근성 문구를 보정했다.
+- 전체 XCTest 576/576, 정적 분석, 전 타깃 Debug와 Release archive/export를 통과했다. iPhone 14 Pro에는 직전 1.0(76)이 설치되어 있고 build 77 Debug 설치는 기기 잠금으로 개발자 이미지 마운트가 거부됐다.
+- build 77 TestFlight Delivery UUID는 f962c2b8-f430-44e0-88a8-0a00b7b489c4이고 처리 상태는 VALID/제출 준비 완료다.
+- build 77은 `TP Taption Plan 내부 테스트` 그룹에 연결되어 API 관계와 App Store Connect 실제 화면 모두에서 노출된다.
 
 남은 외부 게이트
 - App Store Connect Paid Apps Agreement가 `신규` 상태다. 계정 소유자가 법인 정보와 계약·세금·은행 정보를 완료해야 실제 US$0.99 상품을 생성할 수 있다.

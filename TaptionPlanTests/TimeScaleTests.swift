@@ -485,6 +485,29 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapLongPressExcludesControlsAndTheirTouchPadding() {
+        let controls = CGRect(x: 10, y: 560, width: 44, height: 203)
+
+        XCTAssertFalse(
+            MapHomeLongPressRoutingMath.shouldPresentLocation(
+                at: CGPoint(x: 32, y: 650),
+                excluding: controls
+            )
+        )
+        XCTAssertFalse(
+            MapHomeLongPressRoutingMath.shouldPresentLocation(
+                at: CGPoint(x: 58, y: 650),
+                excluding: controls
+            )
+        )
+        XCTAssertTrue(
+            MapHomeLongPressRoutingMath.shouldPresentLocation(
+                at: CGPoint(x: 90, y: 650),
+                excluding: controls
+            )
+        )
+    }
+
     func testMapZoomReachesBothDistanceLimitsAndPreservesAnchor() {
         var distance: CLLocationDistance = 12_000
         for _ in 0..<100 {

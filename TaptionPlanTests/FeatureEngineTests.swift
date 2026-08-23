@@ -3204,7 +3204,7 @@ final class FeatureEngineTests: XCTestCase {
 
     func testSubwayNeedsCombinedSignals() {
         let base = makeDate(2026, 7, 30, 8, 0)
-        let readings = (0..<6).map { index in
+        let readings: [SensorReading] = (0..<6).map { index -> SensorReading in
             SensorReading(
                 timestamp: base.addingTimeInterval(Double(index) * 60),
                 speedMetersPerSecond: 12,
@@ -3224,7 +3224,7 @@ final class FeatureEngineTests: XCTestCase {
 
     func testAppleWatchAccelerationAndUndergroundWindowIdentifySubway() {
         let base = makeDate(2026, 7, 30, 8, 0)
-        let readings = (0..<6).map { index in
+        let readings: [SensorReading] = (0..<6).map { index -> SensorReading in
             SensorReading(
                 timestamp: base.addingTimeInterval(Double(index) * 60),
                 speedMetersPerSecond: index < 2 ? 14 : nil,
@@ -8045,6 +8045,44 @@ final class FeatureEngineTests: XCTestCase {
             ["자동차"]
         )
         XCTAssertFalse(payload.items.contains { $0.resolvedLane == .activity })
+    }
+
+    func testWidgetPrivacyPayloadRemovesTimelineAndWeatherDetails() {
+        let now = makeDate(2026, 8, 1, 18, 0)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "민감한 활동",
+                categoryID: "activity",
+                startedAt: now.addingTimeInterval(-10 * 60),
+                endedAt: now,
+                source: .manual
+            ),
+        ]
+        snapshot.weather = [
+            WeatherContext(
+                observedAt: now,
+                condition: "맑음",
+                symbolName: "sun.max.fill",
+                temperatureCelsius: 27
+            ),
+        ]
+
+        let payload = TaptionWidgetPayloadFactory.make(
+            from: snapshot,
+            now: now,
+            hidesSensitiveContent: true
+        )
+
+        XCTAssertTrue(payload.hidesSensitiveContent)
+        XCTAssertTrue(payload.items.isEmpty)
+        XCTAssertNil(payload.weatherSymbolName)
+        XCTAssertNil(payload.temperatureCelsius)
+        XCTAssertEqual(
+            payload.sourceFingerprint,
+            TaptionWidgetSyncFingerprint.make(items: [])
+        )
     }
 
     func testWidgetFingerprintStaysStableWhileHealthActivityIsOpen() {

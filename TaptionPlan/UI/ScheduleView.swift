@@ -1898,7 +1898,10 @@ struct ScheduleView: View {
                 onTrailingTap: closestWeather?.airQuality == nil
                     ? nil
                     : { showsAirQualityDetails = true },
-                trailingAccessibilityLabel: "현재 날씨와 미세먼지 상세 보기",
+                trailingAccessibilityLabel: AppLanguagePreference.text(
+                    korean: "현재 날씨와 미세먼지 상세 보기",
+                    english: "View current weather and air quality details"
+                ),
                 isPreviousEnabled: model.canShiftToPreviousPeriod,
                 isNextEnabled: model.canShiftToNextPeriod
             )

@@ -267,35 +267,40 @@ private struct TaptionScheduleWidgetView: View {
             let metrics = TaptionScheduleWidgetMetrics(family: family)
             let trackDate = timelineCenterDate(playbackDate: playbackDate)
             let trackDuration = timelineWindowDuration(metrics: metrics)
-            VStack(spacing: 0) {
-                header(
-                    at: playbackDate,
-                    payload: payload,
-                    metrics: metrics,
-                    catStyle: payload.catStyle,
-                    reducesMotion: payload.reducesMotion ?? false,
-                    walkPose: TaptionWidgetCatWalkEngine.pose(
+            if payload.hidesSensitiveContent {
+                lockedWidgetState
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 0) {
+                    header(
                         at: playbackDate,
-                        preferredAction: preferredCatAction(
+                        payload: payload,
+                        metrics: metrics,
+                        catStyle: payload.catStyle,
+                        reducesMotion: payload.reducesMotion ?? false,
+                        walkPose: TaptionWidgetCatWalkEngine.pose(
                             at: playbackDate,
-                            payload: payload
+                            preferredAction: preferredCatAction(
+                                at: playbackDate,
+                                payload: payload
+                            )
                         )
                     )
-                )
 
-                if payload.items.isEmpty {
-                    emptyWidgetState
+                    if payload.items.isEmpty {
+                        emptyWidgetState
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        PrototypeWidgetTrack(
+                            payload: payload,
+                            date: trackDate,
+                            visibleRowLimit: metrics.visibleRowLimit,
+                            maxItemsPerLane: metrics.maxItemsPerLane,
+                            windowDuration: trackDuration,
+                            resolutionLabel: TaptionWidgetPlaybackEngine.defaultResolutionLabel
+                        )
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    PrototypeWidgetTrack(
-                        payload: payload,
-                        date: trackDate,
-                        visibleRowLimit: metrics.visibleRowLimit,
-                        maxItemsPerLane: metrics.maxItemsPerLane,
-                        windowDuration: trackDuration,
-                        resolutionLabel: TaptionWidgetPlaybackEngine.defaultResolutionLabel
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 }
             }
         }
@@ -308,6 +313,23 @@ private struct TaptionScheduleWidgetView: View {
             )
         }
         .widgetURL(deepLinkURL(payload: renderPayload, at: .now))
+    }
+
+    private var lockedWidgetState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(WidgetPalette.secondary)
+            Text(widgetText("앱을 열어 잠금을 해제하세요", "Open the app to unlock"))
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(WidgetPalette.ink)
+                .multilineTextAlignment(.center)
+        }
+        .padding(12)
+        .background(
+            WidgetPalette.automaticFill,
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
     }
 
     private var emptyWidgetState: some View {
@@ -495,11 +517,11 @@ private struct TaptionScheduleWidgetView: View {
             from: payload.items,
             at: date
         ).isEmpty == false {
-            return "집중 중"
+            return widgetText("집중 중", "Focusing")
         }
         return currentItem(at: date, payload: payload) == nil
-            ? "대기"
-            : "기록 중"
+            ? widgetText("대기", "Waiting")
+            : widgetText("기록 중", "Recording")
     }
 
     private func weatherSymbol(payload: TaptionWidgetPayload) -> String {
@@ -2117,7 +2139,8 @@ struct TaptionWidgetActionIntent: AppIntent {
             )
             try await repository.save(updated)
             refreshedPayload = TaptionWidgetPayloadFactory.make(
-                from: updated
+                from: updated,
+                hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
             )
             command.appliedToSharedRepository = true
         } catch {
@@ -2161,7 +2184,10 @@ struct TaptionWidgetLocationTrackingIntent: AppIntent {
             }
             snapshot.updatedAt = .now
             try? await repository.save(snapshot)
-            let payload = TaptionWidgetPayloadFactory.make(from: snapshot)
+            let payload = TaptionWidgetPayloadFactory.make(
+                from: snapshot,
+                hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
+            )
             try? TaptionWidgetSharedStore.writePayload(payload)
         }
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)

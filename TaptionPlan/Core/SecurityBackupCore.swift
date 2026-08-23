@@ -1,5 +1,6 @@
 import CryptoKit
 import CloudKit
+import CommonCrypto
 import Foundation
 import LocalAuthentication
 import Security
@@ -8,34 +9,50 @@ import Security
 /// cloud-backup credential; it is not an app-login credential unless the user
 /// explicitly enables an app lock.
 struct PlanPINVerifier: Codable, Equatable, Sendable {
-    static let currentVersion = 1
-    static let iterations = 120_000
+    static let currentVersion = 2
+    static let legacyIterations = 120_000
+    static let pbkdf2Iterations = 600_000
 
     let version: Int
     let salt: Data
     let digest: Data
 
-    init(pin: String, random: (Int) -> Data = { count in
+    init(pin: String, random: (Int) throws -> Data = { count in
         var data = Data(repeating: 0, count: count)
-        _ = data.withUnsafeMutableBytes { buffer -> Int32 in
+        let status = data.withUnsafeMutableBytes { buffer -> Int32 in
             guard let baseAddress = buffer.baseAddress else {
                 return errSecParam
             }
             return SecRandomCopyBytes(kSecRandomDefault, count, baseAddress)
         }
+        guard status == errSecSuccess else {
+            throw PlanSecurityError.invalidCredential
+        }
         return data
     }) throws {
         guard Self.isValid(pin) else { throw PlanSecurityError.invalidPIN }
-        let salt = random(16)
+        let salt = try random(16)
         guard salt.count == 16 else { throw PlanSecurityError.invalidCredential }
+        guard let digest = Self.derive(
+            pin: pin,
+            salt: salt,
+            version: Self.currentVersion
+        ) else {
+            throw PlanSecurityError.invalidCredential
+        }
         self.version = Self.currentVersion
         self.salt = salt
-        self.digest = Self.derive(pin: pin, salt: salt)
+        self.digest = digest
     }
 
     func matches(_ pin: String) -> Bool {
-        guard Self.isValid(pin) else { return false }
-        return Self.constantTimeEqual(digest, Self.derive(pin: pin, salt: salt))
+        guard Self.isValid(pin),
+              let candidate = Self.derive(
+                pin: pin,
+                salt: salt,
+                version: version
+              ) else { return false }
+        return Self.constantTimeEqual(digest, candidate)
     }
 
     /// PBKDF output is retained only as a verifier and key-encryption key; the
@@ -46,12 +63,51 @@ struct PlanPINVerifier: Codable, Equatable, Sendable {
         pin.utf8.count == 4 && pin.utf8.allSatisfy { $0 >= 48 && $0 <= 57 }
     }
 
-    private static func derive(pin: String, salt: Data) -> Data {
+    private static func derive(
+        pin: String,
+        salt: Data,
+        version: Int
+    ) -> Data? {
+        switch version {
+        case 1:
+            legacyDigest(pin: pin, salt: salt)
+        case currentVersion:
+            pbkdf2Digest(pin: pin, salt: salt)
+        default:
+            nil
+        }
+    }
+
+    private static func legacyDigest(pin: String, salt: Data) -> Data {
         var value = Data(pin.utf8) + salt
-        for _ in 0..<iterations {
+        for _ in 0..<legacyIterations {
             value = Data(SHA256.hash(data: value))
         }
         return value
+    }
+
+    private static func pbkdf2Digest(pin: String, salt: Data) -> Data? {
+        let outputCount = 32
+        var output = Data(repeating: 0, count: outputCount)
+        let passwordLength = pin.lengthOfBytes(using: .utf8)
+        let status = output.withUnsafeMutableBytes { outputBytes in
+            salt.withUnsafeBytes { saltBytes in
+                pin.withCString { password in
+                    CCKeyDerivationPBKDF(
+                        CCPBKDFAlgorithm(kCCPBKDF2),
+                        password,
+                        passwordLength,
+                        saltBytes.bindMemory(to: UInt8.self).baseAddress,
+                        salt.count,
+                        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
+                        UInt32(pbkdf2Iterations),
+                        outputBytes.bindMemory(to: UInt8.self).baseAddress,
+                        outputCount
+                    )
+                }
+            }
+        }
+        return status == kCCSuccess ? output : nil
     }
 
     private static func constantTimeEqual(_ lhs: Data, _ rhs: Data) -> Bool {
@@ -77,27 +133,73 @@ enum PlanSecurityError: Error, Equatable {
 
 extension PlanSecurityError: LocalizedError {
     var errorDescription: String? {
+        localizedDescription()
+    }
+
+    func localizedDescription(
+        preference: AppLanguagePreference = .current
+    ) -> String {
         switch self {
         case .invalidPIN:
-            "4자리 숫자 비밀번호를 다시 확인해 주세요."
+            AppLanguagePreference.text(
+                korean: "4자리 숫자 비밀번호를 다시 확인해 주세요.",
+                english: "Check your 4-digit PIN and try again.",
+                preference: preference
+            )
         case .invalidCredential:
-            "보안 자격 증명을 확인하지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "보안 자격 증명을 확인하지 못했습니다.",
+                english: "The security credential could not be verified.",
+                preference: preference
+            )
         case .pinRequiredForCloudBackup:
-            "이 기능을 사용하려면 4자리 비밀번호를 먼저 등록해 주세요."
+            AppLanguagePreference.text(
+                korean: "이 기능을 사용하려면 4자리 비밀번호를 먼저 등록해 주세요.",
+                english: "Set a 4-digit PIN before using this feature.",
+                preference: preference
+            )
         case .invalidArchive:
-            "백업 파일의 암호화 또는 무결성을 확인하지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "백업 파일의 암호화 또는 무결성을 확인하지 못했습니다.",
+                english: "The backup encryption or integrity check failed.",
+                preference: preference
+            )
         case .archiveNotFound:
-            "불러올 iCloud 백업이 없습니다."
+            AppLanguagePreference.text(
+                korean: "불러올 iCloud 백업이 없습니다.",
+                english: "No iCloud backup is available to restore.",
+                preference: preference
+            )
         case .accountUnavailable:
-            "iCloud 계정을 확인한 뒤 다시 시도해 주세요."
+            AppLanguagePreference.text(
+                korean: "iCloud 계정을 확인한 뒤 다시 시도해 주세요.",
+                english: "Check your iCloud account and try again.",
+                preference: preference
+            )
         case .accountMismatch:
-            "이 백업을 만든 iCloud 계정과 다릅니다."
+            AppLanguagePreference.text(
+                korean: "이 백업을 만든 iCloud 계정과 다릅니다.",
+                english: "This is not the iCloud account that created the backup.",
+                preference: preference
+            )
         case .biometricUnavailable:
-            "Face ID 또는 Touch ID를 사용할 수 없습니다."
+            AppLanguagePreference.text(
+                korean: "Face ID 또는 Touch ID를 사용할 수 없습니다.",
+                english: "Face ID or Touch ID is unavailable.",
+                preference: preference
+            )
         case .biometricRejected:
-            "생체 인증을 완료하지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "생체 인증을 완료하지 못했습니다.",
+                english: "Biometric authentication was not completed.",
+                preference: preference
+            )
         case .tooManyAttempts:
-            "입력 횟수가 많습니다. 잠시 뒤 다시 시도해 주세요."
+            AppLanguagePreference.text(
+                korean: "입력 횟수가 많습니다. 잠시 뒤 다시 시도해 주세요.",
+                english: "Too many attempts. Try again shortly.",
+                preference: preference
+            )
         }
     }
 }
@@ -365,9 +467,7 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
         guard try await container.accountStatus() == .available else {
             throw PlanSecurityError.accountUnavailable
         }
-        if let stored = try documentFallback.existingKey() {
-            return stored
-        }
+        let legacyKey = try documentFallback.existingKey()
         let recordID = CKRecord.ID(recordName: Self.recordName)
         do {
             let record = try await database.record(for: recordID)
@@ -375,13 +475,15 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
                   existing.count == 32 else {
                 throw PlanSecurityError.accountUnavailable
             }
+            try? documentFallback.removeExistingKey()
             return existing
         } catch let error as CKError where error.code == .unknownItem {
-            let generated = try Self.randomKey()
+            let generated = try legacyKey ?? Self.randomKey()
             let record = CKRecord(recordType: Self.recordType, recordID: recordID)
             record[Self.valueKey] = generated as CKRecordValue
             do {
                 _ = try await database.save(record)
+                try? documentFallback.removeExistingKey()
                 return generated
             } catch let saveError as CKError
             where saveError.code == .serverRecordChanged {
@@ -390,10 +492,13 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
                       value.count == 32 else {
                     throw PlanSecurityError.accountUnavailable
                 }
+                try? documentFallback.removeExistingKey()
                 return value
             } catch {
-                guard Self.isProductionSchemaRejection(error) else { throw error }
-                return try documentFallback.store(generated)
+                if Self.isProductionSchemaRejection(error) {
+                    throw PlanSecurityError.accountUnavailable
+                }
+                throw error
             }
         } catch {
             throw PlanSecurityError.accountUnavailable
@@ -463,14 +568,10 @@ final class UbiquitousPlanCloudRecoveryKeyStore {
         return value
     }
 
-    func store(_ key: Data) throws -> Data {
-        guard key.count == 32 else { throw PlanSecurityError.accountUnavailable }
-        guard let fileURL = try recoveryKeyURL(createDirectory: true) else {
-            throw PlanSecurityError.accountUnavailable
-        }
-        if let stored = try existingKey() { return stored }
-        try key.write(to: fileURL, options: .atomic)
-        return key
+    func removeExistingKey() throws {
+        guard let fileURL = try recoveryKeyURL(createDirectory: false),
+              fileManager.fileExists(atPath: fileURL.path) else { return }
+        try fileManager.removeItem(at: fileURL)
     }
 
     private func recoveryKeyURL(createDirectory: Bool) throws -> URL? {
@@ -721,7 +822,11 @@ final class PlanSecurityBackupService {
 
     func unlockWithBiometrics() async throws {
         guard settings.biometricUnlockEnabled else { throw PlanSecurityError.biometricUnavailable }
-        guard await biometricAuthenticator.authenticate(reason: "Taption Plan 잠금 해제") else {
+        let reason = AppLanguagePreference.text(
+            korean: "Taption Plan 잠금 해제",
+            english: "Unlock Taption Plan"
+        )
+        guard await biometricAuthenticator.authenticate(reason: reason) else {
             throw PlanSecurityError.biometricRejected
         }
         state = .unlocked

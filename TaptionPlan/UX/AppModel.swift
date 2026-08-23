@@ -495,6 +495,9 @@ final class AppModel {
         guard let securityBackupService else { throw PlanSecurityError.invalidCredential }
         try securityBackupService.setAppLockSettings(settings)
         securityStatus = securityBackupService.status
+        if !settings.lockOnLaunch && !settings.lockOnForeground {
+            setExternalPrivacyLocked(false)
+        }
     }
 
     func setCloudBackupEnabled(_ enabled: Bool) throws {
@@ -507,12 +510,14 @@ final class AppModel {
         guard let securityBackupService else { throw PlanSecurityError.invalidCredential }
         try securityBackupService.unlock(withPIN: pin)
         securityStatus = securityBackupService.status
+        setExternalPrivacyLocked(false)
     }
 
     func unlockAppWithBiometrics() async throws {
         guard let securityBackupService else { throw PlanSecurityError.biometricUnavailable }
         try await securityBackupService.unlockWithBiometrics()
         securityStatus = securityBackupService.status
+        setExternalPrivacyLocked(false)
     }
 
     func recoverBackup(accountIdentifier: String, newPIN: String) throws -> TaptionDataSnapshot {
@@ -1381,8 +1386,16 @@ final class AppModel {
                 securityBackupService.handleForeground()
             }
             securityStatus = securityBackupService.status
+            if isAppLocked {
+                TaptionExternalPrivacyStore.setLocked(true)
+            }
         }
         await bootstrap()
+        if isAppLocked {
+            await concealExternalSurfaces()
+        } else {
+            setExternalPrivacyLocked(false)
+        }
         await refreshCloudBackupAfterForeground()
         await applyPendingLocationTrackingRequest()
         await hydrateLatestMapLocationAnchor()
@@ -1433,6 +1446,10 @@ final class AppModel {
 
     func sceneEnteredBackground() async {
         isSceneActive = false
+        if securityStatus.settings.lockOnLaunch
+            || securityStatus.settings.lockOnForeground {
+            await concealExternalSurfaces()
+        }
         for observation in airPodsActivityService.stop(at: .now) {
             applyAirPodsActivity(observation)
         }
@@ -6921,13 +6938,18 @@ final class AppModel {
         return normalized
     }
 
-    private func publishWidgetPayload() {
+    private func publishWidgetPayload(
+        hidesSensitiveContent: Bool? = nil
+    ) {
         let calendar = Calendar.autoupdatingCurrent
         let now = Date.now
+        let hidesSensitiveContent = hidesSensitiveContent
+            ?? TaptionExternalPrivacyStore.isLocked
         let payload = TaptionWidgetPayloadFactory.make(
             from: snapshot,
             now: now,
-            calendar: calendar
+            calendar: calendar,
+            hidesSensitiveContent: hidesSensitiveContent
         )
         let identity = normalizedWidgetPayload(payload)
         if lastWidgetPayloadIdentity == identity {
@@ -6981,6 +7003,16 @@ final class AppModel {
         publishWatchPayload(now: now, calendar: calendar)
     }
 
+    private func setExternalPrivacyLocked(_ isLocked: Bool) {
+        TaptionExternalPrivacyStore.setLocked(isLocked)
+        publishWidgetPayload(hidesSensitiveContent: isLocked)
+    }
+
+    private func concealExternalSurfaces() async {
+        setExternalPrivacyLocked(true)
+        await liveActivityController.concealAll()
+    }
+
     /// The iPhone snapshot is the only Watch settings source. This method is
     /// intentionally separate from widget serialization so a settings toggle
     /// reaches the Watch immediately, before disk or iCloud work finishes.
@@ -6988,6 +7020,7 @@ final class AppModel {
         now: Date = .now,
         calendar: Calendar = .autoupdatingCurrent
     ) {
+        let hidesSensitiveContent = TaptionExternalPrivacyStore.isLocked
         let dayStart = calendar.startOfDay(for: now)
         let weekStart = calendar.dateInterval(
             of: .weekOfYear,
@@ -7015,7 +7048,7 @@ final class AppModel {
         // historical timeline.  Keep a currently-running item even when it
         // started before this moment, include upcoming items through the
         // current week, and omit ended/completed/skipped records entirely.
-        let watchItems = snapshot.plans
+        let watchItems = (hidesSensitiveContent ? [] : snapshot.plans)
             .filter { plan in
                 guard plan.span.end > now,
                       plan.span.start < weekEnd else {
@@ -7048,12 +7081,14 @@ final class AppModel {
             items: watchItems,
             catStyle: snapshot.settings.catStyle.rawValue,
             reducesMotion: snapshot.settings.reduceMotion,
-            todaySummary: TaptionWatchDaySummaryFactory.make(
-                plans: snapshot.plans,
-                actuals: snapshot.actuals,
-                at: now,
-                calendar: calendar
-            ),
+            todaySummary: hidesSensitiveContent
+                ? nil
+                : TaptionWatchDaySummaryFactory.make(
+                    plans: snapshot.plans,
+                    actuals: snapshot.actuals,
+                    at: now,
+                    calendar: calendar
+                ),
             accelerationSettings: TaptionWatchAccelerationSettings(
                 profile: snapshot.settings.watchAccelerationProfile
             ),
@@ -7061,9 +7096,11 @@ final class AppModel {
             locationTrackingEnabled: snapshot.settings.locationEnabled,
             locationPermissionState:
                 snapshot.settings.permissions[.location]?.rawValue,
-            activitySuggestion: pendingWatchActivitySuggestion.flatMap {
-                now.timeIntervalSince($0.endedAt) <= 2 * 3_600 ? $0 : nil
-            },
+            activitySuggestion: hidesSensitiveContent
+                ? nil
+                : pendingWatchActivitySuggestion.flatMap {
+                    now.timeIntervalSince($0.endedAt) <= 2 * 3_600 ? $0 : nil
+                },
             languagePreference: AppLanguagePreference.current.watchPayloadValue
         )
         var identity = watchPayload

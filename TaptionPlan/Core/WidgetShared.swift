@@ -795,6 +795,22 @@ enum TaptionWidgetCommandEngine {
     }
 }
 
+enum TaptionExternalPrivacyStore {
+    private static let key = "taption.externalPrivacy.isLocked"
+
+    static var isLocked: Bool {
+        UserDefaults(
+            suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+        )?.bool(forKey: key) ?? false
+    }
+
+    static func setLocked(_ isLocked: Bool) {
+        UserDefaults(
+            suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+        )?.set(isLocked, forKey: key)
+    }
+}
+
 struct TaptionWidgetPayload: Codable, Hashable, Sendable {
     var generatedAt: Date
     var sourceSnapshotUpdatedAt: Date?
@@ -1158,7 +1174,11 @@ enum TaptionWidgetSharedStore {
         let snapshotResult = decodeSnapshot(snapshotData)
         let payloadResult = decodePayload(payloadData)
         let groundTruth = snapshotResult.value.map {
-            TaptionWidgetPayloadFactory.make(from: $0, now: now)
+            TaptionWidgetPayloadFactory.make(
+                from: $0,
+                now: now,
+                hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
+            )
         }
         let result = Diagnostics(
             appGroupAvailable: appGroupContainerURL() != nil,
@@ -1221,7 +1241,8 @@ enum TaptionWidgetSharedStore {
         }
         let payload = TaptionWidgetPayloadFactory.make(
             from: snapshot,
-            now: now
+            now: now,
+            hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
         )
         logger.debug(
             "Ground-truth payload built: updated=\(snapshot.updatedAt.timeIntervalSince1970, privacy: .public), items=\(payload.items.count, privacy: .public), fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public)"

@@ -241,4 +241,158 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(projection.segments.map(\.start), [date(0), date(30)])
         XCTAssertEqual(projection.segments.map(\.end), [date(10), date(40)])
     }
+
+    func testCategoryAtExactCutoffAndOngoingMidnightRecordAreIncluded() {
+        let exactStart = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "work",
+            startedAt: date(10),
+            endedAt: date(20),
+            source: .location
+        )
+        let exactProjection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 10,
+            actuals: [exactStart],
+            readings: [],
+            calendar: calendar
+        )
+        XCTAssertEqual(exactProjection.selectedCategory, .work)
+
+        let ongoing = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: date(-30),
+            endedAt: nil,
+            source: .healthKit
+        )
+        let midnightProjection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 0,
+            actuals: [ongoing],
+            readings: [],
+            calendar: calendar
+        )
+        XCTAssertEqual(midnightProjection.selectedCategory, .sleep)
+    }
+
+    func testFullDayCutoffUsesCalendarDayEndAcrossDSTFallback() throws {
+        var newYork = Calendar(identifier: .gregorian)
+        newYork.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let selectedDate = try XCTUnwrap(
+            newYork.date(from: DateComponents(year: 2026, month: 11, day: 1))
+        )
+        let dayStart = newYork.startOfDay(for: selectedDate)
+        let dayEnd = try XCTUnwrap(
+            newYork.date(byAdding: .day, value: 1, to: dayStart)
+        )
+
+        let cutoff = RouteTimelineDataEngine.timelineDate(
+            selectedDate: selectedDate,
+            minute: 1_440,
+            calendar: newYork
+        )
+
+        XCTAssertEqual(cutoff, dayEnd)
+        XCTAssertEqual(cutoff.timeIntervalSince(dayStart), 25 * 60 * 60)
+    }
+
+    func testInvalidAccuracyLosesDuplicatePreferenceAndInterpolationStaysFinite() throws {
+        let invalid = reading(5, latitude: 40, accuracy: .nan)
+        let accurate = reading(5, latitude: 37, accuracy: 4)
+        let normalized = RouteTimelineDataEngine.normalizedReadings([
+            invalid,
+            accurate,
+        ])
+
+        XCTAssertEqual(
+            try XCTUnwrap(try XCTUnwrap(normalized.first).point).latitude,
+            37,
+            accuracy: 0.0001
+        )
+
+        let nonFiniteMetadata = SensorReading(
+            timestamp: date(0),
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: .nan,
+                horizontalAccuracy: .nan,
+                verticalAccuracy: .infinity
+            )
+        )
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 5,
+            actuals: [],
+            readings: [
+                nonFiniteMetadata,
+                reading(10, latitude: 38, accuracy: 5),
+            ],
+            calendar: calendar
+        )
+        let point = try XCTUnwrap(projection.coordinateAtCutoff)
+        XCTAssertTrue(point.altitude.isFinite)
+        XCTAssertTrue(point.horizontalAccuracy.isFinite)
+        XCTAssertTrue(point.verticalAccuracy.isFinite)
+    }
+
+    func testDenseRealtimeRouteProjectionStaysLinearAndMerged() {
+        let start = date(0)
+        let readings = (0..<10_000).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(TimeInterval(index)),
+                point: GeoPoint(
+                    latitude: 37 + Double(index) / 1_000_000,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+        }
+        let startedAt = ProcessInfo.processInfo.systemUptime
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: start,
+            through: start.addingTimeInterval(9_999),
+            actuals: [],
+            readings: readings,
+            readingsAreNormalized: true,
+            calendar: calendar
+        )
+        let elapsed = ProcessInfo.processInfo.systemUptime - startedAt
+
+        XCTAssertEqual(projection.segments.count, 1)
+        XCTAssertEqual(projection.segments.first?.coordinates.count, 10_000)
+        XCTAssertLessThan(elapsed, 3)
+
+        let displayReadings = RouteTimelineDataEngine.displayReadings(
+            from: readings
+        )
+        XCTAssertEqual(
+            displayReadings.count,
+            RouteTimelineDataEngine.maximumDisplayReadingCount
+        )
+        XCTAssertEqual(displayReadings.first?.timestamp, readings.first?.timestamp)
+        XCTAssertEqual(displayReadings.last?.timestamp, readings.last?.timestamp)
+        XCTAssertEqual(
+            Set(displayReadings.map(\.timestamp)).count,
+            displayReadings.count
+        )
+
+        let markerStartedAt = ProcessInfo.processInfo.systemUptime
+        var marker: GeoPoint?
+        for index in 0..<1_000 {
+            marker = RouteTimelineDataEngine.playbackCoordinate(
+                at: start.addingTimeInterval(TimeInterval(index * 9)),
+                inNormalizedReadings: readings
+            )
+        }
+        let markerElapsed = ProcessInfo.processInfo.systemUptime
+            - markerStartedAt
+        XCTAssertNotNil(marker)
+        XCTAssertLessThan(markerElapsed, 0.2)
+    }
 }
