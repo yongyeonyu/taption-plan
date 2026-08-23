@@ -152,6 +152,76 @@ enum SubwayStationCatalog {
         return names
     }
 
+    /// 사용자 등록 지하철역을 원본 좌표의 시간 순서로 역 이름에 매핑한다.
+    /// 이름이 카탈로그와 달라도 등록 좌표가 공식 역 좌표에 가까우면
+    /// 카탈로그 이름으로 정규화해 노선·환승 계산에 사용할 수 있다.
+    static func userStationNames(
+        from readings: [SensorReading],
+        locations: [UserTransitLocation]
+    ) -> [String] {
+        let stations = locations.filter { $0.kind == .subwayStation }
+        guard !stations.isEmpty else { return [] }
+
+        var names: [String] = []
+        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
+            guard let point = reading.point else { continue }
+            guard let location = stations.min(by: {
+                distanceMeters(point, $0.point) < distanceMeters(point, $1.point)
+            }) else { continue }
+            let radius = location.radiusMeters.isFinite && location.radiusMeters > 0
+                ? location.radiusMeters
+                : 100
+            guard distanceMeters(point, location.point) <= radius else { continue }
+
+            let stationName = nearest(
+                to: location.point,
+                maximumDistanceMeters: 450
+            )?.stationName ?? location.name
+            let cleanName = stationName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleanName.isEmpty,
+                  stationIndices[normalized(cleanName)] != nil,
+                  names.last.map({ normalized($0) }) != normalized(cleanName)
+            else { continue }
+            names.append(cleanName)
+        }
+        return names
+    }
+
+    /// 노선의 출발·환승·도착 지점 중 사용자 등록 지하철역과 일치하는
+    /// 지점을 반환한다. 이름 또는 등록 좌표로 비교한다.
+    static func userStationRouteMatches(
+        route: SubwayRoutePath,
+        locations: [UserTransitLocation]
+    ) -> [String] {
+        let stations = locations.filter { $0.kind == .subwayStation }
+        guard !stations.isEmpty,
+              let first = route.stops.first,
+              let last = route.stops.last else { return [] }
+
+        var pointNames = [first.stationName]
+        pointNames.append(contentsOf: route.transferStationNames)
+        if normalized(pointNames.last ?? "") != normalized(last.stationName) {
+            pointNames.append(last.stationName)
+        }
+
+        return pointNames.filter { name in
+            let routeStops = route.stops.filter {
+                normalized($0.stationName) == normalized(name)
+            }
+            return stations.contains { location in
+                let locationNameMatches = normalized(location.name) == normalized(name)
+                let radius = location.radiusMeters.isFinite && location.radiusMeters > 0
+                    ? location.radiusMeters
+                    : 100
+                let coordinateMatches = routeStops.contains { stop in
+                    guard let coordinate = stop.coordinate else { return false }
+                    return distanceMeters(location.point, coordinate) <= radius
+                }
+                return locationNameMatches || coordinateMatches
+            }
+        }
+    }
+
     /// 노선에 포함된 역 주변에서 `가다 → 서다 → 다시 가다`가 반복되는지
     /// 계산한다. 원본 GPS·Core Motion 표본은 건드리지 않고, 분류에 필요한
     /// 파생 근거만 반환한다.

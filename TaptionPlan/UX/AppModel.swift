@@ -4623,7 +4623,8 @@ final class AppModel {
         let gpsSegments = MovementRouteBuilder().build(
             stays: basePlaces,
             readings: readings,
-            healthEvidence: healthMovementEvidence
+            healthEvidence: healthMovementEvidence,
+            userTransitLocations: settings.userTransitLocations
         )
         let previousSubwaySegments = snapshot.travel.filter {
             $0.mode == .subway
@@ -4635,7 +4636,8 @@ final class AppModel {
             pedometer: pedometer,
             healthEvidence: healthMovementEvidence,
             readings: readings,
-            preservedSubwaySegments: previousSubwaySegments
+            preservedSubwaySegments: previousSubwaySegments,
+            userTransitLocations: settings.userTransitLocations
         )
         let travel = AppleDeviceGroundTruthEngine.coalescingTravel(
             AppleDeviceGroundTruthEngine.resolvingOverlaps(

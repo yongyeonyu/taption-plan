@@ -197,7 +197,7 @@ struct MapHomeView: View {
                     self.selectedSearchPin = nil
                 }
             )
-            .presentationDetents([.height(390)])
+            .presentationDetents([.height(470)])
             .presentationDragIndicator(.visible)
         }
     }
@@ -231,6 +231,7 @@ struct MapHomeView: View {
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .overlay(alignment: .trailing) {
             if !isMenuOpen {
                 currentTimeRail
@@ -252,7 +253,7 @@ struct MapHomeView: View {
         .preferredColorScheme(.light)
         .overlay(alignment: .bottom) {
             MapHomeBannerAdView()
-                .offset(y: MapHomeBannerAdView.bottomSafeAreaInset)
+                .offset(y: -MapHomeBannerAdView.bottomSafeAreaInset)
         }
         .sheet(isPresented: $isCalendarPresented) {
             MapHomeCalendarSheet(
@@ -367,11 +368,12 @@ struct MapHomeView: View {
 
     @ViewBuilder
     private var map: some View {
-        Map(
-            position: $mapPosition,
-            interactionModes: [.pan, .zoom, .rotate],
-            scope: mapScope
-        ) {
+        MapReader { proxy in
+            Map(
+                position: $mapPosition,
+                interactionModes: [.pan, .zoom, .rotate],
+                scope: mapScope
+            ) {
             if timelineRouteOverlays.isEmpty {
                 ForEach(subwayRouteOverlays) { overlay in
                     // Keep the inferred subway path as a fallback when raw
@@ -487,34 +489,58 @@ struct MapHomeView: View {
                 }
             }
 
-            UserAnnotation()
+                UserAnnotation()
 
-        }
-        .mapStyle(mapStyle)
-        .mapControls {
-            EmptyView()
-        }
-        .onMapCameraChange(frequency: .continuous) { context in
-            let uptime = ProcessInfo.processInfo.systemUptime
-            guard uptime - lastMapCameraPublishUptime >= (1.0 / 60.0) else { return }
-            lastMapCameraPublishUptime = uptime
-            visibleMapCenter = context.region.center
-            updateVisibleMapSpan(context.region.span)
-            updateUserCenterState(for: context.region.center)
-            if let level = sharedZoomLevel(for: context.region.span),
-               abs(level - sharedZoomLevel) > 0.02 {
-                sharedZoomLevel = level
             }
-        }
-        .overlay {
-            MapHomeFairyAtmosphere()
-                .allowsHitTesting(false)
-        }
-        .simultaneousGesture(
-            SpatialTapGesture().onEnded { _ in
-                dismissMapSearchOverlay()
+            .mapStyle(mapStyle)
+            .mapControls {
+                EmptyView()
             }
+            .onMapCameraChange(frequency: .continuous) { context in
+                let uptime = ProcessInfo.processInfo.systemUptime
+                guard uptime - lastMapCameraPublishUptime >= (1.0 / 60.0) else { return }
+                lastMapCameraPublishUptime = uptime
+                visibleMapCenter = context.region.center
+                updateVisibleMapSpan(context.region.span)
+                updateUserCenterState(for: context.region.center)
+                if let level = sharedZoomLevel(for: context.region.span),
+                   abs(level - sharedZoomLevel) > 0.02 {
+                    sharedZoomLevel = level
+                }
+            }
+            .overlay {
+                MapHomeFairyAtmosphere()
+                    .allowsHitTesting(false)
+            }
+            .simultaneousGesture(
+                SpatialTapGesture().onEnded { _ in
+                    dismissMapSearchOverlay()
+                }
+            )
+            .simultaneousGesture(mapLongPressGesture(proxy: proxy))
+        }
+    }
+
+    private func mapLongPressGesture(proxy: MapProxy) -> some Gesture {
+        LongPressGesture(minimumDuration: 0.55, maximumDistance: 12)
+            .sequenced(before: DragGesture(minimumDistance: 0))
+            .onEnded { value in
+                guard case .second(true, let drag?) = value,
+                      let coordinate = proxy.convert(drag.startLocation, from: .local)
+                else { return }
+                presentLocationAddition(at: coordinate)
+            }
+    }
+
+    private func presentLocationAddition(at coordinate: CLLocationCoordinate2D) {
+        mapSearchResults = []
+        isMapSearchFocused = false
+        selectedSearchPin = MapHomeSearchResult(
+            title: language.text("사용자 지점", "User location"),
+            subtitle: language.text("지도에서 선택한 위치", "Long-pressed map location"),
+            coordinate: coordinate
         )
+        isSearchPinMenuPresented = true
     }
 
     private var mapStyle: MapStyle {
@@ -622,13 +648,9 @@ struct MapHomeView: View {
                 .autocorrectionDisabled()
                 .submitLabel(.search)
                 .onSubmit { searchMap() }
-                if !mapSearchText.isEmpty {
+                if !mapSearchText.isEmpty || !mapSearchResults.isEmpty || selectedSearchPin != nil {
                     Button {
-                        mapSearchTask?.cancel()
-                        mapSearchText = ""
-                        mapSearchResults = []
-                        selectedSearchPin = nil
-                        isMapSearchFocused = false
+                        clearMapSearch()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
@@ -699,6 +721,22 @@ struct MapHomeView: View {
         guard isMapSearchFocused || !mapSearchResults.isEmpty else { return }
         isMapSearchFocused = false
         mapSearchResults = []
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+    }
+
+    private func clearMapSearch() {
+        mapSearchTask?.cancel()
+        mapSearchTask = nil
+        mapSearchText = ""
+        mapSearchResults = []
+        selectedSearchPin = nil
+        isSearchPinMenuPresented = false
+        isMapSearchFocused = false
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
             to: nil,
@@ -1076,7 +1114,7 @@ struct MapHomeView: View {
                     ForEach(
                         MapHomeSidebarMajorCategory.all(
                             categoryColors: model.settings.mapCategoryColors
-                        ).filter { $0.id != "unconfirmed" }
+                        )
                     ) { category in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 9) {
@@ -1220,7 +1258,6 @@ struct MapHomeView: View {
                     ForEach(MapHomeLocationDestination.allCases.filter { $0 != .user }) { destination in
                         locationDestinationRow(destination)
                     }
-                    currentLocationMenuRow
                 }
                 .padding(.leading, 12)
             }
@@ -1302,39 +1339,6 @@ struct MapHomeView: View {
                 .padding(.leading, 12)
             }
         }
-    }
-
-    private var currentLocationMenuRow: some View {
-        Button {
-            focusUserLocation()
-            isMenuOpen = false
-        } label: {
-            HStack(spacing: 10) {
-                MapHomeLocationThumbnail(destination: .user, size: 34)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(language.text("현재 위치", "Current location"))
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    Text(locationDestinationSubtitle(.user))
-                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "location.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(MapHomeLocationDestination.user.tint)
-            }
-            .foregroundStyle(Color.primary)
-            .padding(.vertical, 7)
-            .padding(.horizontal, 8)
-            .background(
-                MapHomeLocationDestination.user.tint.opacity(0.055),
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(
-            language.text("현재 위치 보기", "Show current location")
-        )
     }
 
     private var userFrequentPlaces: [FrequentPlace] {
@@ -3342,6 +3346,44 @@ private struct MapHomeSearchPinLocationSheet: View {
                     .buttonStyle(.plain)
                 }
             }
+
+            Divider()
+
+            Text(language.text("대중교통 위치", "Transit location"))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+
+            LazyVGrid(
+                columns: [GridItem(.flexible()), GridItem(.flexible())],
+                spacing: 8
+            ) {
+                ForEach(UserTransitLocationKind.allCases, id: \.self) { kind in
+                    Button {
+                        saveTransit(kind)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: kind.systemImage)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.tpReferenceBlue)
+                            Text(
+                                language.text(
+                                    kind.title,
+                                    kind == .subwayStation ? "Subway station" : "Bus stop"
+                                )
+                            )
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            Spacer()
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 11)
+                        .background(
+                            Color.tpReferenceBlue.opacity(0.10),
+                            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             Spacer()
         }
         .padding(20)
@@ -3370,6 +3412,17 @@ private struct MapHomeSearchPinLocationSheet: View {
                 )
             }
         }
+        onSaved()
+    }
+
+    private func saveTransit(_ kind: UserTransitLocationKind) {
+        let cleanName = result.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        model.addUserTransitLocation(
+            name: cleanName.isEmpty ? kind.title : cleanName,
+            kind: kind,
+            latitude: result.coordinate.latitude,
+            longitude: result.coordinate.longitude
+        )
         onSaved()
     }
 }

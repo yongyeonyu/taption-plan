@@ -174,6 +174,12 @@ private struct MapHomeBannerAdContainer: UIViewRepresentable {
 
         let banner = BannerView(adSize: adSize)
         banner.adUnitID = unitID
+        banner.rootViewController = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .filter { $0.activationState == .foregroundActive }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?
+            .rootViewController
         banner.load(Request())
         return banner
     }

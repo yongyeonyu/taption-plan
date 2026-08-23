@@ -619,7 +619,11 @@ struct MapHomeTimeSidebar: View {
                         durationMinutes: visibleDurationMinutes
                     )
                     let minuteMarks = MapHomeTimeSidebarMath.visibleMinuteMarks(window: visibleWindow)
-                    let rulerLabels = MapHomeTimeSidebarMath.visibleRulerLabels(window: visibleWindow)
+                    let rulerLabels = MapHomeTimeSidebarMath.visibleRulerLabels(
+                        window: visibleWindow,
+                        durationMinutes: visibleDurationMinutes,
+                        trackHeight: trackHeight
+                    )
                     let hourColumnWidth = MapHomeTimeSidebarMath.rulerHourColumnWidth
                     let minuteColumnWidth = MapHomeTimeSidebarMath.rulerMinuteColumnWidth
                     let columnSpacing = MapHomeTimeSidebarMath.rulerColumnSpacing
@@ -697,7 +701,14 @@ struct MapHomeTimeSidebar: View {
                             .allowsHitTesting(false)
                     }
                 } else {
-                    ForEach(MapHomeTimeSidebarMath.visibleHours(window: visibleWindow), id: \.self) { hour in
+                    ForEach(
+                        MapHomeTimeSidebarMath.visibleHourLabels(
+                            window: visibleWindow,
+                            durationMinutes: visibleDurationMinutes,
+                            trackHeight: trackHeight
+                        ),
+                        id: \.self
+                    ) { hour in
                         let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
                             minute: hour * 60,
                             window: visibleWindow
@@ -829,7 +840,7 @@ struct MapHomeTimeSidebar: View {
                 Text(String(format: "%02d", minute / 60))
                 Text(String(format: "%02d", minute % 60))
             }
-            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .font(.system(size: 11, weight: .bold, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(Color.white)
             .frame(width: 32, height: 40)
@@ -839,10 +850,19 @@ struct MapHomeTimeSidebar: View {
                     : Color.tpInk.opacity(0.90),
                 in: RoundedRectangle(cornerRadius: 4, style: .continuous)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             .simultaneousGesture(precisionDoubleTapGesture())
             .accessibilityHidden(true)
-            .position(x: trackX + activeRailWidth / 2 + 17, y: handleHeight / 2)
+            .zIndex(2)
+            .position(
+                x: MapHomeTimeSidebarMath.selectionTimeBlockCenterX(
+                    railWidth: railWidth,
+                    trackX: trackX,
+                    activeRailWidth: activeRailWidth
+                ),
+                y: handleHeight / 2
+            )
         }
         .frame(width: railWidth, height: handleHeight)
         .position(x: railWidth / 2, y: y)
@@ -1220,9 +1240,21 @@ enum MapHomeTimeSidebarMath {
     static let rulerHourColumnWidth: CGFloat = 12
     static let rulerMinuteColumnWidth: CGFloat = 12
     static let rulerColumnSpacing: CGFloat = 1
+    static let minimumRulerLabelSpacing: CGFloat = 12
+    static let selectionTimeBlockWidth: CGFloat = 32
 
     static func rulerLabelsStartX(railWidth: CGFloat) -> CGFloat {
         railWidth - rulerNumericColumnWidth + rulerTickWidth
+    }
+
+    static func selectionTimeBlockCenterX(
+        railWidth: CGFloat,
+        trackX: CGFloat,
+        activeRailWidth: CGFloat
+    ) -> CGFloat {
+        let ideal = trackX + activeRailWidth / 2 + 17
+        let halfWidth = selectionTimeBlockWidth / 2
+        return min(max(ideal, halfWidth), railWidth - halfWidth)
     }
 
     static func duration(afterZoomStep step: Int, from durationMinutes: Int) -> Int {
@@ -1286,6 +1318,26 @@ enum MapHomeTimeSidebarMath {
         return Array(first...max(first, last))
     }
 
+    static func visibleHourLabels(
+        window: ClosedRange<Int>,
+        durationMinutes: Int,
+        trackHeight: CGFloat
+    ) -> [Int] {
+        let hours = visibleHours(window: window)
+        guard hours.count > 1 else { return hours }
+        let duration = CGFloat(min(max(durationMinutes, 60), fullDayMinutes))
+        let pointsPerHour = max(trackHeight, 1) * 60 / duration
+        let step = max(
+            1,
+            Int(ceil(minimumRulerLabelSpacing / max(pointsPerHour, 1)))
+        )
+        return hours.enumerated().compactMap { index, hour in
+            index.isMultiple(of: step) || index == hours.count - 1
+                ? hour
+                : nil
+        }
+    }
+
     static func visibleMinuteMarks(window: ClosedRange<Int>) -> [Int] {
         let first = min(max(window.lowerBound, 0), fullDayMinutes)
         let last = min(max(window.upperBound, first), fullDayMinutes)
@@ -1293,17 +1345,40 @@ enum MapHomeTimeSidebarMath {
     }
 
     static func visibleRulerLabels(window: ClosedRange<Int>) -> MapHomeTimeRulerLabels {
+        visibleRulerLabels(
+            window: window,
+            durationMinutes: fullDayMinutes,
+            trackHeight: 1_000_000
+        )
+    }
+
+    static func visibleRulerLabels(
+        window: ClosedRange<Int>,
+        durationMinutes: Int,
+        trackHeight: CGFloat
+    ) -> MapHomeTimeRulerLabels {
         let firstHour = max(0, Int(ceil(Double(window.lowerBound) / 60)))
         let lastHour = min(24, Int(floor(Double(window.upperBound) / 60)))
         let hours = firstHour <= lastHour
             ? Array(firstHour...lastHour)
             : []
 
-        let firstTenMinute = max(0, ((window.lowerBound + 9) / 10) * 10)
-        let lastTenMinute = min(fullDayMinutes, (window.upperBound / 10) * 10)
+        let duration = CGFloat(min(max(durationMinutes, 60), fullDayMinutes))
+        let pointsPerTenMinutes = max(trackHeight, 1) * 10 / duration
+        let minuteStep = pointsPerTenMinutes >= minimumRulerLabelSpacing
+            ? 10
+            : 20
+        let firstMinute = max(
+            0,
+            ((window.lowerBound + minuteStep - 1) / minuteStep) * minuteStep
+        )
+        let lastMinute = min(
+            fullDayMinutes,
+            (window.upperBound / minuteStep) * minuteStep
+        )
         let minutes: [Int]
-        if firstTenMinute <= lastTenMinute {
-            minutes = stride(from: firstTenMinute, through: lastTenMinute, by: 10)
+        if firstMinute <= lastMinute {
+            minutes = stride(from: firstMinute, through: lastMinute, by: minuteStep)
                 .filter { !$0.isMultiple(of: 60) }
         } else {
             minutes = []

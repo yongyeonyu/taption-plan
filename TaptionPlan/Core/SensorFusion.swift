@@ -5,7 +5,8 @@ struct TravelModeClassifier: Sendable {
         readings: [SensorReading],
         inside requestedSpan: TimeSpan? = nil,
         healthEvidence: [AppleMovementEvidence] = [],
-        correctedMode: TravelMode? = nil
+        correctedMode: TravelMode? = nil,
+        userTransitLocations: [UserTransitLocation] = []
     ) -> MovementInference {
         if let correctedMode {
             return MovementInference(
@@ -308,22 +309,39 @@ struct TravelModeClassifier: Sendable {
         let signaledSubwayRoute = signaledRailStations.count >= 2
             ? SubwayStationCatalog.route(for: signaledRailStations)
             : nil
+        let userStationNames = SubwayStationCatalog.userStationNames(
+            from: ordered,
+            locations: userTransitLocations
+        )
+        let userSubwayRoute = userStationNames.count >= 2
+            ? SubwayStationCatalog.route(for: userStationNames)
+            : nil
         // 원본 좌표로 복원한 역 순서는 하루 전체의 역 이름을 이어 붙인
         // 보강값보다 우선한다. 보강값만 고르면 출근·퇴근이 한 경로로
         // 합쳐져 환승역을 다시 통과하는 순환 노선이 선택될 수 있다.
         let resolvedSubwayRoute = stationJourney?.route
             ?? coordinateTrajectory?.route
             ?? signaledSubwayRoute
+            ?? userSubwayRoute
+        let userStationRouteMatches = resolvedSubwayRoute.map {
+            SubwayStationCatalog.userStationRouteMatches(
+                route: $0,
+                locations: userTransitLocations
+            )
+        } ?? []
+        let userStationRouteConfirmation = userSubwayRoute != nil
+            || userStationRouteMatches.count >= 1
         let usesCoordinateRoute = coordinateTrajectory != nil
         let railStations = stationJourney?.stationNames
             ?? (usesCoordinateRoute
             ? coordinateTrajectory?.observedStationNames ?? signaledRailStations
-            : signaledRailStations)
+            : (signaledRailStations.isEmpty ? userStationNames : signaledRailStations))
         let coordinateRailContext = usesCoordinateRoute
         let railContext = stationRatio >= 0.2
             || railRatio >= 0.25
             || coordinateRailContext
             || stationStateConfirmation
+            || userStationRouteConfirmation
         let subwayWiFiStreak = ordered.compactMap {
             $0.subwayWiFiObservationStreak
         }.max() ?? 0
@@ -383,6 +401,7 @@ struct TravelModeClassifier: Sendable {
                 || undergroundDescent
                     && lowStepsForTransit
                     && (watchVibrationAbsent || watchVibrationUnavailable)
+                || userStationRouteConfirmation
             )
 
         if stationRatio >= 0.25 {
@@ -484,6 +503,17 @@ struct TravelModeClassifier: Sendable {
             }
             if routeHasTransferPattern {
                 add(.subway, 0.36, "출발역·환승역·도착역 순서")
+            }
+            if userStationRouteConfirmation {
+                let names = userStationRouteMatches.isEmpty
+                    ? userStationNames
+                    : userStationRouteMatches
+                add(
+                    .subway,
+                    0.55,
+                    "사용자 지정 지하철역 일치"
+                        + (names.isEmpty ? "" : " (" + names.joined(separator: ", ") + ")")
+                )
             }
             if stationStopConfirmation {
                 add(.subway, 0.5, "역별 가다·서다 정차 패턴")
@@ -2334,7 +2364,8 @@ struct MovementRouteBuilder: Sendable {
         stays: [PlaceStay],
         readings: [SensorReading],
         healthEvidence: [AppleMovementEvidence] = [],
-        correctedModes: [String: TravelMode] = [:]
+        correctedModes: [String: TravelMode] = [:],
+        userTransitLocations: [UserTransitLocation] = []
     ) -> [TravelSegment] {
         let orderedStays = stays.sorted { $0.span.start < $1.span.start }
         guard orderedStays.count >= 2 else { return [] }
@@ -2351,7 +2382,8 @@ struct MovementRouteBuilder: Sendable {
                 readings: segmentReadings,
                 inside: span,
                 healthEvidence: healthEvidence,
-                correctedMode: correctedModes[signature]
+                correctedMode: correctedModes[signature],
+                userTransitLocations: userTransitLocations
             )
             let distance = pathDistance(segmentReadings.compactMap(\.point))
             return TravelSegment(
@@ -2385,13 +2417,15 @@ enum SubwayTravelSegmentEngine {
 
     static func segments(
         from readings: [SensorReading],
-        maximumReadingGap: TimeInterval = defaultMaximumReadingGap
+        maximumReadingGap: TimeInterval = defaultMaximumReadingGap,
+        userTransitLocations: [UserTransitLocation] = []
     ) -> [TravelSegment] {
         let maximumGap = maximumReadingGap.isFinite
             ? max(0, maximumReadingGap)
             : defaultMaximumReadingGap
         return inferSegments(
-            from: groups(from: readings, maximumGap: maximumGap)
+            from: groups(from: readings, maximumGap: maximumGap),
+            userTransitLocations: userTransitLocations
         )
     }
 
@@ -2402,12 +2436,14 @@ enum SubwayTravelSegmentEngine {
     static func segments(
         from readings: [SensorReading],
         within candidateSpans: [TimeSpan],
-        maximumReadingGap: TimeInterval = defaultMaximumReadingGap
+        maximumReadingGap: TimeInterval = defaultMaximumReadingGap,
+        userTransitLocations: [UserTransitLocation] = []
     ) -> [TravelSegment] {
         guard !candidateSpans.isEmpty else {
             return segments(
                 from: readings,
-                maximumReadingGap: maximumReadingGap
+                maximumReadingGap: maximumReadingGap,
+                userTransitLocations: userTransitLocations
             )
         }
         let maximumGap = maximumReadingGap.isFinite
@@ -2423,7 +2459,10 @@ enum SubwayTravelSegmentEngine {
                 maximumGap: maximumGap
             )
         }
-        return inferSegments(from: candidateGroups)
+        return inferSegments(
+            from: candidateGroups,
+            userTransitLocations: userTransitLocations
+        )
             .filter { segment in
                 candidateSpans.contains { span in
                     segment.span.intersection(with: span) != nil
@@ -2432,7 +2471,8 @@ enum SubwayTravelSegmentEngine {
     }
 
     private static func inferSegments(
-        from groups: [[SensorReading]]
+        from groups: [[SensorReading]],
+        userTransitLocations: [UserTransitLocation]
     ) -> [TravelSegment] {
         var result: [TravelSegment] = []
         for group in groups {
@@ -2459,7 +2499,8 @@ enum SubwayTravelSegmentEngine {
             let context = group.filter { contextSpan.contains($0.timestamp) }
             let inference = TravelModeClassifier().classify(
                 readings: context,
-                inside: span
+                inside: span,
+                userTransitLocations: userTransitLocations
             )
             guard inference.mode == .subway else { continue }
             guard let route = inference.subwayRoute
@@ -2784,13 +2825,15 @@ enum AppleDeviceGroundTruthEngine {
         pedometer: PedometerSummary?,
         healthEvidence: [AppleMovementEvidence] = [],
         readings: [SensorReading] = [],
-        preservedSubwaySegments: [TravelSegment] = []
+        preservedSubwaySegments: [TravelSegment] = [],
+        userTransitLocations: [UserTransitLocation] = []
     ) -> [TravelSegment] {
         let candidateSpans = gpsSegments.map(\.span)
         let detectedSubwaySegments = SubwayTravelSegmentEngine
             .segments(
                 from: readings,
-                within: candidateSpans
+                within: candidateSpans,
+                userTransitLocations: userTransitLocations
             )
         let trajectorySubwaySegments = stabilizedSubwaySegments(
             detected: detectedSubwaySegments,
@@ -2875,7 +2918,8 @@ enum AppleDeviceGroundTruthEngine {
                 let inference = TravelModeClassifier().classify(
                     readings: context,
                     inside: activity.span,
-                    healthEvidence: healthEvidence
+                    healthEvidence: healthEvidence,
+                    userTransitLocations: userTransitLocations
                 )
                 return (activity, inference)
             }

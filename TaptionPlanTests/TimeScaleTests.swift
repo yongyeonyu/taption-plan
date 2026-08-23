@@ -340,6 +340,77 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testSidebarLabelsKeepSafeVerticalSpacingAcrossZoomSteps() {
+        let trackHeight: CGFloat = 192
+        let centerMinute = 720
+
+        for duration in MapHomeTimeSidebarMath.zoomDurations {
+            let window = MapHomeTimeSidebarMath.visibleWindow(
+                centerMinute: centerMinute,
+                durationMinutes: duration
+            )
+            if MapHomeTimeSidebarMath.showsTenMinuteRuler(
+                durationMinutes: duration
+            ) {
+                let labels = MapHomeTimeSidebarMath.visibleRulerLabels(
+                    window: window,
+                    durationMinutes: duration,
+                    trackHeight: trackHeight
+                )
+                let minutePositions = labels.minutes.map {
+                    MapHomeTimeSidebarMath.position(
+                        minute: $0,
+                        window: window
+                    ) * trackHeight
+                }
+                XCTAssertTrue(
+                    zip(minutePositions, minutePositions.dropFirst())
+                        .allSatisfy {
+                            $1 - $0 >= MapHomeTimeSidebarMath.minimumRulerLabelSpacing
+                        },
+                    "minute labels overlap at \(duration) minutes"
+                )
+            } else {
+                let labels = MapHomeTimeSidebarMath.visibleHourLabels(
+                    window: window,
+                    durationMinutes: duration,
+                    trackHeight: trackHeight
+                )
+                let hourPositions = labels.map {
+                    MapHomeTimeSidebarMath.position(
+                        minute: $0 * 60,
+                        window: window
+                    ) * trackHeight
+                }
+                XCTAssertTrue(
+                    zip(hourPositions, hourPositions.dropFirst())
+                        .allSatisfy {
+                            $1 - $0 >= MapHomeTimeSidebarMath.minimumRulerLabelSpacing
+                        },
+                    "hour labels overlap at \(duration) minutes"
+                )
+            }
+        }
+    }
+
+    func testSidebarSelectionTimeBlockFitsTheExistingRailWidth() {
+        let railWidth: CGFloat = 58
+        let trackX = railWidth
+            - MapHomeTimeSidebarMath.rulerNumericColumnWidth
+            - 12 / 2
+            - 1
+        let center = MapHomeTimeSidebarMath.selectionTimeBlockCenterX(
+            railWidth: railWidth,
+            trackX: trackX,
+            activeRailWidth: 12
+        )
+        let halfWidth = MapHomeTimeSidebarMath.selectionTimeBlockWidth / 2
+
+        XCTAssertGreaterThanOrEqual(center - halfWidth, 0)
+        XCTAssertLessThanOrEqual(center + halfWidth, railWidth)
+        XCTAssertEqual(center, 38)
+    }
+
     func testMapHomeCompassControlReturnsToArrowWithFixedDirection() {
         let compass = MapHomeCompassControlState.directionArrow.toggled
         XCTAssertEqual(compass, .compass)

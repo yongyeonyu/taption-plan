@@ -4125,6 +4125,59 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(route?.stops.last?.stationName, "가정")
     }
 
+    func testUserSubwayLocationsConfirmDepartureTransferArrivalRoute() {
+        let base = makeDate(2026, 8, 12, 8, 0)
+        let stationData: [(String, Double)] = [
+            ("가정역", 0),
+            ("검암역", 0.01),
+            ("마곡나루역", 0.02),
+        ]
+        let locations = stationData.map { value in
+            UserTransitLocation(
+                name: value.0,
+                kind: .subwayStation,
+                point: GeoPoint(
+                    latitude: 0,
+                    longitude: value.1,
+                    altitude: 0,
+                    horizontalAccuracy: -1,
+                    verticalAccuracy: -1
+                ),
+                radiusMeters: 100
+            )
+        }
+        let readings = stationData.enumerated().map { index, value in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                point: GeoPoint(
+                    latitude: 0,
+                    longitude: value.1,
+                    altitude: 0,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 10
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            )
+        }
+
+        let result = TravelModeClassifier().classify(
+            readings: readings,
+            userTransitLocations: locations
+        )
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.confidence, .high)
+        XCTAssertEqual(result.subwayRoute?.stops.first?.stationName, "가정")
+        XCTAssertEqual(result.subwayRoute?.stops.last?.stationName, "마곡나루")
+        XCTAssertTrue(
+            result.evidence.contains {
+                $0.hasPrefix("사용자 지정 지하철역 일치")
+            }
+        )
+    }
+
     func testSubwayCatalogRejectsRoundTripRoute() {
         let route = SubwayStationCatalog.route(
             for: [
