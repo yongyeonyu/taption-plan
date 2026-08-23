@@ -477,7 +477,7 @@ struct MapHomeTimeSidebar: View {
     // the bottom ad boundary while preserving the same minute-to-pixel scale.
     private let verticalInset: CGFloat = 14
     private let activeRailWidth: CGFloat = 12
-    private let numericColumnWidth: CGFloat = 27
+    private let numericColumnWidth: CGFloat = 30
 
     init(
         date: Date,
@@ -616,6 +616,11 @@ struct MapHomeTimeSidebar: View {
                         durationMinutes: visibleDurationMinutes
                     )
                     let minuteMarks = MapHomeTimeSidebarMath.visibleMinuteMarks(window: visibleWindow)
+                    let rulerLabels = MapHomeTimeSidebarMath.visibleRulerLabels(window: visibleWindow)
+                    let hourColumnWidth: CGFloat = 13
+                    let minuteColumnWidth: CGFloat = 13
+                    let columnSpacing: CGFloat = 1
+                    let labelsStartX = railWidth - numericColumnWidth
                     Canvas { context, size in
                         for minuteMark in minuteMarks {
                             guard showsMinuteTicks || minuteMark.isMultiple(of: 10) else {
@@ -640,24 +645,45 @@ struct MapHomeTimeSidebar: View {
                     .position(x: railWidth - numericColumnWidth / 2, y: railHeight / 2)
                     .allowsHitTesting(false)
 
-                    ForEach(
-                        minuteMarks.filter { $0.isMultiple(of: 10) },
-                        id: \.self
-                    ) { minuteMark in
+                    ForEach(rulerLabels.hours, id: \.self) { hour in
+                        let minuteMark = hour * 60
                         let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
                             minute: minuteMark,
                             window: visibleWindow
                         )
-                        Text(String(format: "%02d:%02d", minuteMark / 60, minuteMark % 60))
+                        Text(String(format: "%02d", hour))
                             .font(.system(size: 8, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Color.tpInk.opacity(0.78))
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
                             .fixedSize(horizontal: true, vertical: false)
-                            .frame(width: 32, alignment: .leading)
+                            .frame(width: hourColumnWidth, alignment: .leading)
                             .position(
-                                x: railWidth - numericColumnWidth / 2 + 1,
+                                x: labelsStartX + hourColumnWidth / 2,
+                                y: y
+                            )
+                            .allowsHitTesting(false)
+                    }
+
+                    ForEach(rulerLabels.minutes, id: \.self) { minuteMark in
+                        let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
+                            minute: minuteMark,
+                            window: visibleWindow
+                        )
+                        Text(String(format: "%02d", minuteMark % 60))
+                            .font(.system(size: 8, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.tpInk.opacity(0.78))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .frame(width: minuteColumnWidth, alignment: .leading)
+                            .position(
+                                x: labelsStartX
+                                    + hourColumnWidth
+                                    + columnSpacing
+                                    + minuteColumnWidth / 2,
                                 y: y
                             )
                             .allowsHitTesting(false)
@@ -1030,6 +1056,11 @@ struct MapHomeTimeSidebar: View {
 
 }
 
+struct MapHomeTimeRulerLabels: Equatable, Sendable {
+    let hours: [Int]
+    let minutes: [Int]
+}
+
 struct MapHomeWeatherSidebar: View {
     let date: Date
     let contexts: [WeatherContext]
@@ -1060,12 +1091,6 @@ struct MapHomeWeatherSidebar: View {
                 durationMinutes: visibleDurationMinutes,
                 centerMinute: selectedMinute
             )
-            let selectedDate = Calendar.autoupdatingCurrent.date(
-                byAdding: .minute,
-                value: min(max(selectedMinute, 0), 1_439),
-                to: Calendar.autoupdatingCurrent.startOfDay(for: date)
-            ) ?? date
-
             ZStack(alignment: .topLeading) {
                 Rectangle()
                     .fill(Color.tpWeather.opacity(0.30))
@@ -1090,12 +1115,19 @@ struct MapHomeWeatherSidebar: View {
                     let y = verticalInset + trackHeight * (start + end) / 2
                     let height = max(2, trackHeight * (end - start))
                     if startMinute < endMinute {
-                        let isSelected = WeatherTimelineEngine.span(for: entry.context)
-                            .contains(selectedDate)
+                        let clampedSelectedMinute = min(max(selectedMinute, 0), 1_439)
+                        let isSelected = clampedSelectedMinute >= entry.startMinute
+                            && clampedSelectedMinute < entry.endMinute
+                        let nowMinute = Calendar.autoupdatingCurrent.dateComponents(
+                            [.hour, .minute],
+                            from: Date.now
+                        )
+                        let currentMinute = (nowMinute.hour ?? 0) * 60 + (nowMinute.minute ?? 0)
                         let isCurrent = Calendar.autoupdatingCurrent.isDate(
                             date,
                             inSameDayAs: Date.now
-                        ) && WeatherTimelineEngine.span(for: entry.context).contains(Date.now)
+                        ) && currentMinute >= entry.startMinute
+                            && currentMinute < entry.endMinute
 
                         HStack(spacing: 2) {
                             Image(systemName: entry.context.symbolName)
@@ -1147,12 +1179,13 @@ struct MapHomeWeatherSidebar: View {
     private var weatherEntries: [Entry] {
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: date)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? date
-        return WeatherTimelineEngine.coalesced(contexts).compactMap { context in
-            let span = WeatherTimelineEngine.span(for: context)
-            guard span.end > dayStart, span.start < dayEnd else { return nil }
-            let start = max(span.start, dayStart)
-            let end = min(span.end, dayEnd)
+        return MapHomeWeatherTimelineMath.persistentSpans(
+            for: date,
+            contexts: contexts,
+            calendar: calendar
+        ).compactMap { entry in
+            let start = entry.span.start
+            let end = entry.span.end
             let startMinute = min(
                 max(Int(start.timeIntervalSince(dayStart) / 60), 0),
                 1_439
@@ -1162,7 +1195,7 @@ struct MapHomeWeatherSidebar: View {
                 1_440
             )
             return Entry(
-                context: context,
+                context: entry.context,
                 startMinute: startMinute,
                 endMinute: endMinute
             )
@@ -1240,6 +1273,25 @@ enum MapHomeTimeSidebarMath {
         let first = min(max(window.lowerBound, 0), fullDayMinutes)
         let last = min(max(window.upperBound, first), fullDayMinutes)
         return Array(first...last)
+    }
+
+    static func visibleRulerLabels(window: ClosedRange<Int>) -> MapHomeTimeRulerLabels {
+        let firstHour = max(0, Int(ceil(Double(window.lowerBound) / 60)))
+        let lastHour = min(24, Int(floor(Double(window.upperBound) / 60)))
+        let hours = firstHour <= lastHour
+            ? Array(firstHour...lastHour)
+            : []
+
+        let firstTenMinute = max(0, ((window.lowerBound + 9) / 10) * 10)
+        let lastTenMinute = min(fullDayMinutes, (window.upperBound / 10) * 10)
+        let minutes: [Int]
+        if firstTenMinute <= lastTenMinute {
+            minutes = stride(from: firstTenMinute, through: lastTenMinute, by: 10)
+                .filter { !$0.isMultiple(of: 60) }
+        } else {
+            minutes = []
+        }
+        return MapHomeTimeRulerLabels(hours: hours, minutes: minutes)
     }
 
     static func showsTenMinuteRuler(durationMinutes: Int) -> Bool {

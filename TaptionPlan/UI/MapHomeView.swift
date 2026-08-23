@@ -14,6 +14,47 @@ enum MapHomeCompassControlState: Equatable, Sendable {
     var toggled: Self {
         self == .directionArrow ? .compass : .directionArrow
     }
+
+    static func iconRotationDegrees(for headingDegrees: Double) -> Double {
+        guard headingDegrees.isFinite else { return 0 }
+        let normalized = headingDegrees.truncatingRemainder(dividingBy: 360)
+        return normalized == 0 ? 0 : -normalized
+    }
+}
+
+enum MapHomeWeatherTimelineMath {
+    static func context(
+        at date: Date,
+        contexts: [WeatherContext]
+    ) -> WeatherContext? {
+        WeatherTimelineEngine.coalesced(contexts)
+            .filter { $0.observedAt <= date }
+            .max { $0.observedAt < $1.observedAt }
+    }
+
+    static func persistentSpans(
+        for date: Date,
+        contexts: [WeatherContext],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [(context: WeatherContext, span: TimeSpan)] {
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? date
+        let ordered = WeatherTimelineEngine.coalesced(contexts)
+            .sorted { $0.observedAt < $1.observedAt }
+
+        return ordered.enumerated().compactMap { index, context in
+            let nextObservedAt = index + 1 < ordered.count
+                ? ordered[index + 1].observedAt
+                : dayEnd
+            let start = max(context.observedAt, dayStart)
+            let end = min(
+                max(nextObservedAt, context.observedAt.addingTimeInterval(1)),
+                dayEnd
+            )
+            guard start < end, start < dayEnd, end > dayStart else { return nil }
+            return (context: context, span: TimeSpan(start: start, end: end))
+        }
+    }
 }
 
 struct MapHomeView: View {
@@ -85,7 +126,6 @@ struct MapHomeView: View {
         static let timeRailWidth: CGFloat = 58
         static let weatherRailWidth: CGFloat = 58
         static let weatherRailSpacing: CGFloat = 4
-        static let timeSidebarHandleOverflow: CGFloat = 18
         static let timeRailTopMargin: CGFloat = 18
         static let timeRailBottomMargin: CGFloat = 28
     }
@@ -119,11 +159,6 @@ struct MapHomeView: View {
         ZStack(alignment: .top) {
             map
                 .ignoresSafeArea()
-
-            // Keep the time rail and its trailing breathing room outside the
-            // map's gesture arena.  The rail itself is rendered above this
-            // shield, so its controls remain tappable.
-            trailingMapGestureShield
 
             VStack(spacing: 8) {
                 header
@@ -384,35 +419,10 @@ struct MapHomeView: View {
                 .allowsHitTesting(false)
         }
         .simultaneousGesture(
-            TapGesture().onEnded {
+            SpatialTapGesture().onEnded { _ in
                 dismissMapSearchOverlay()
             }
         )
-    }
-
-    private var trailingMapGestureShield: some View {
-        GeometryReader { proxy in
-            let protectedTop = Layout.headerVisibleHeight + Layout.timeRailTopMargin
-            let weatherWidth = model.settings.weatherSidebarVisible
-                ? Layout.weatherRailWidth + Layout.weatherRailSpacing
-                : 0
-            let shieldWidth = weatherWidth
-                + Layout.timeRailWidth
-                + Layout.timeSidebarHandleOverflow
-                + Layout.horizontalInset
-            let shieldHeight = max(0, proxy.size.height - protectedTop)
-            Rectangle()
-                .fill(.clear)
-                .frame(width: shieldWidth, height: shieldHeight)
-                .contentShape(Rectangle())
-                .position(
-                    x: proxy.size.width - shieldWidth / 2,
-                    y: protectedTop + shieldHeight / 2
-                )
-                .allowsHitTesting(true)
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
     }
 
     private var mapStyle: MapStyle {
@@ -498,6 +508,11 @@ struct MapHomeView: View {
                 .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.07), radius: 9, y: 3)
+        .simultaneousGesture(
+            SpatialTapGesture().onEnded { _ in
+                dismissMapSearchOverlay()
+            }
+        )
     }
 
     private var mapSearchBar: some View {
@@ -695,7 +710,7 @@ struct MapHomeView: View {
                         categoryColors: model.settings.mapCategoryColors,
                         currentWeather: model.settings.weatherSidebarVisible
                             ? nil
-                            : currentWeatherContext,
+                            : weatherContext(at: minute),
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: timeSidebarZoomStep,
                         railWidth: Layout.timeRailWidth,
@@ -747,6 +762,12 @@ struct MapHomeView: View {
                 )
             }
         }
+        .frame(
+            width: (model.settings.weatherSidebarVisible
+                ? Layout.weatherRailWidth + Layout.weatherRailSpacing
+                : 0) + Layout.timeRailWidth
+        )
+        .frame(maxHeight: .infinity, alignment: .trailing)
     }
 
     private var mapControls: some View {
@@ -767,11 +788,17 @@ struct MapHomeView: View {
                 Button {
                     toggleMapHeadingMode()
                 } label: {
-                    Image("MapHomeCompass")
-                        .resizable()
-                        .scaledToFit()
-                        .padding(9)
-                        .rotationEffect(.degrees(compassHeadingDegrees))
+                        Image("MapHomeCompass")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(9)
+                            .rotationEffect(
+                                .degrees(
+                                    MapHomeCompassControlState.iconRotationDegrees(
+                                        for: compassHeadingDegrees
+                                    )
+                                )
+                            )
                         .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                         .background(Color.white.opacity(0.94), in: Circle())
                         .allowsHitTesting(false)
@@ -806,6 +833,11 @@ struct MapHomeView: View {
                 mapZoomButton(systemImage: "minus", direction: -1)
             }
         }
+        .simultaneousGesture(
+            SpatialTapGesture().onEnded { _ in
+                dismissMapSearchOverlay()
+            }
+        )
     }
 
     private func mapZoomButton(systemImage: String, direction: Int) -> some View {
@@ -1535,17 +1567,18 @@ struct MapHomeView: View {
         return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
     }
 
-    private var currentWeatherContext: WeatherContext? {
-        guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) else {
-            return nil
-        }
-        let now = Date.now
-        let current = model.snapshot.weather.first {
-            WeatherTimelineEngine.span(for: $0).contains(now)
-        }
-        return current ?? model.snapshot.weather
-            .filter { $0.observedAt <= now }
-            .max { $0.observedAt < $1.observedAt }
+    private func weatherContext(at minute: Int) -> WeatherContext? {
+        let calendar = Calendar.autoupdatingCurrent
+        let clampedMinute = min(max(minute, 0), MapHomeTimeSidebarMath.fullDayMinutes - 1)
+        guard let date = calendar.date(
+            byAdding: .minute,
+            value: clampedMinute,
+            to: calendar.startOfDay(for: model.selectedDate)
+        ) else { return nil }
+        return MapHomeWeatherTimelineMath.context(
+            at: date,
+            contexts: model.snapshot.weather
+        )
     }
 
     private func currentActivity(at minute: Int) -> MapHomeTimeSidebarActivity {

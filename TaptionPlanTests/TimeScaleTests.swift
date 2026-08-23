@@ -307,6 +307,16 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertTrue(marks.filter { $0.isMultiple(of: 10) }.contains(150))
     }
 
+    func testExpandedSidebarRulerSeparatesHourAndMinuteLabels() {
+        let labels = MapHomeTimeSidebarMath.visibleRulerLabels(window: 780...900)
+
+        XCTAssertEqual(labels.hours, [13, 14, 15])
+        XCTAssertEqual(
+            labels.minutes,
+            [790, 800, 810, 830, 840, 850, 870, 880, 890]
+        )
+    }
+
     func testSidebarRulerDetailFollowsThirdAndFourthZoomSteps() {
         XCTAssertFalse(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 360))
         XCTAssertTrue(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 180))
@@ -322,6 +332,72 @@ final class TimeScaleTests: XCTestCase {
         let fixedDirection = compass.toggled
         XCTAssertEqual(fixedDirection, .directionArrow)
         XCTAssertFalse(fixedDirection.followsHeading)
+    }
+
+    func testMapHomeCompassIconCounterRotatesToKeepNorthUp() {
+        XCTAssertEqual(
+            MapHomeCompassControlState.iconRotationDegrees(for: 90),
+            -90
+        )
+        XCTAssertEqual(
+            MapHomeCompassControlState.iconRotationDegrees(for: -90),
+            90
+        )
+        XCTAssertEqual(
+            MapHomeCompassControlState.iconRotationDegrees(for: .infinity),
+            0
+        )
+    }
+
+    func testMapHomeWeatherKeepsThePreviousValueUntilTheNextObservation() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 23))
+        )
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 10, to: day))
+        let secondDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 12, to: day))
+        let first = WeatherContext(
+            observedAt: firstDate,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20
+        )
+        let second = WeatherContext(
+            observedAt: secondDate,
+            condition: "흐림",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 18
+        )
+        let atEleven = try XCTUnwrap(
+            calendar.date(byAdding: .hour, value: 11, to: day)
+        )
+        let atTwelve = try XCTUnwrap(
+            calendar.date(byAdding: .hour, value: 12, to: day)
+        )
+
+        XCTAssertEqual(
+            MapHomeWeatherTimelineMath.context(
+                at: atEleven,
+                contexts: [first, second]
+            )?.id,
+            first.id
+        )
+        XCTAssertEqual(
+            MapHomeWeatherTimelineMath.context(
+                at: atTwelve,
+                contexts: [first, second]
+            )?.id,
+            second.id
+        )
+        XCTAssertEqual(
+            MapHomeWeatherTimelineMath.persistentSpans(
+                for: day,
+                contexts: [first, second],
+                calendar: calendar
+            ).first?.span.end,
+            secondDate
+        )
     }
 
     func testIntegrationRefreshGateSuppressesSameWindowButAllowsNewWindow() {
