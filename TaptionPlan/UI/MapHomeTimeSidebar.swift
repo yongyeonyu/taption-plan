@@ -775,6 +775,25 @@ struct MapHomeTimeSidebar: View {
                 if dragStartMinute == nil {
                     dragStartMinute = min(max(selectedMinute, 0), maxMinute)
                     lastRenderUptime = 0
+                    if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes {
+                        handleDrag.begin(
+                            with: nleState,
+                            handleY: trackHeight / 2,
+                            nowUptime: ProcessInfo.processInfo.systemUptime
+                        )
+                    }
+                }
+                if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
+                   let projected = handleDrag.projectedState(
+                       translation: value.translation.height,
+                       trackHeight: trackHeight,
+                       maxMinute: maxMinute,
+                       sensitivity: isPrecisionMode ? 0.25 : 1,
+                       nowUptime: ProcessInfo.processInfo.systemUptime
+                   ) {
+                    visibleStartMinute = projected.visibleStartMinute
+                    publish(projected.selectedMinute, force: false)
+                    return
                 }
                 let base = dragStartMinute ?? selectedMinute
                 let minute = MapHomeTimeSidebarMath.minuteByDragging(
@@ -789,6 +808,26 @@ struct MapHomeTimeSidebar: View {
                 publish(minute, force: false)
             }
             .onEnded { value in
+                if visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes,
+                   let projected = handleDrag.projectedState(
+                       translation: value.translation.height,
+                       trackHeight: trackHeight,
+                       maxMinute: maxMinute,
+                       sensitivity: isPrecisionMode ? 0.25 : 1,
+                       nowUptime: ProcessInfo.processInfo.systemUptime
+                   ) {
+                    let minute = projected.selectedMinute
+                    visibleStartMinute = MapHomeTimeSidebarMath.startMinute(
+                        centerMinute: minute,
+                        durationMinutes: projected.visibleDurationMinutes
+                    )
+                    publish(minute, force: true)
+                    dragStartMinute = nil
+                    isPrecisionMode = false
+                    isHandleDragging = false
+                    handleDrag.reset()
+                    return
+                }
                 let base = dragStartMinute ?? selectedMinute
                 let minute = MapHomeTimeSidebarMath.minuteByDragging(
                     baseMinute: base,

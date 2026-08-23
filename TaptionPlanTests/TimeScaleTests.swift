@@ -729,6 +729,24 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeTimeSidebarHandleReleaseRecentersZoomedWindow() {
+        let releasedMinute = 840
+        let centeredStart = MapHomeTimeSidebarMath.startMinute(
+            centerMinute: releasedMinute,
+            durationMinutes: 60
+        )
+
+        XCTAssertEqual(centeredStart, 810)
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.visibleWindow(
+                startMinute: centeredStart,
+                durationMinutes: 60,
+                centerMinute: releasedMinute
+            ),
+            810...870
+        )
+    }
+
     func testMapHomeTimeSidebarTapMapsAndClampsToVisibleRail() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.minuteByLocation(
