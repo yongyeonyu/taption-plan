@@ -43,6 +43,166 @@ enum MapCurrentLocationAnchorPolicy {
     }
 }
 
+enum PlanBackupRouteFallbackEngine {
+    static let maximumPlaceGap: TimeInterval = 2 * 60 * 60
+
+    static func readings(
+        travel: [TravelSegment],
+        places: [PlaceStay],
+        in span: TimeSpan
+    ) -> [SensorReading] {
+        let placesByID = Dictionary(uniqueKeysWithValues: places.map {
+            ($0.id, $0)
+        })
+        return travel
+            .filter { $0.span.intersection(with: span) != nil }
+            .sorted { $0.span.start < $1.span.start }
+            .flatMap { segment -> [SensorReading] in
+                routeSamples(
+                    for: segment,
+                    places: places,
+                    placesByID: placesByID,
+                    in: span
+                ).map { sample in
+                    SensorReading(
+                        timestamp: sample.date,
+                        point: sample.point,
+                        locationFixQuality: .precise,
+                        motion: motion(for: segment.mode),
+                        motionConfidence: segment.confidence,
+                        gpsAvailable: true,
+                        behavior: segment.mode.rawValue
+                    )
+                }
+            }
+    }
+
+    private struct RouteSample {
+        let date: Date
+        let point: GeoPoint
+    }
+
+    private static func routeSamples(
+        for segment: TravelSegment,
+        places: [PlaceStay],
+        placesByID: [UUID: PlaceStay],
+        in requestedSpan: TimeSpan
+    ) -> [RouteSample] {
+        let coordinates = routeCoordinates(
+            for: segment,
+            places: places,
+            placesByID: placesByID
+        )
+        guard coordinates.count >= 2,
+              segment.span.duration > 0,
+              let visibleSpan = segment.span.intersection(with: requestedSpan)
+        else { return [] }
+        let startProgress = visibleSpan.start.timeIntervalSince(
+            segment.span.start
+        ) / segment.span.duration
+        let endProgress = visibleSpan.end.timeIntervalSince(
+            segment.span.start
+        ) / segment.span.duration
+        var samples = [RouteSample(
+            date: visibleSpan.start,
+            point: coordinate(in: coordinates, progress: startProgress)
+        )]
+        if coordinates.count > 2 {
+            for index in 1..<(coordinates.count - 1) {
+                let progress = Double(index) / Double(coordinates.count - 1)
+                guard progress > startProgress, progress < endProgress else {
+                    continue
+                }
+                samples.append(RouteSample(
+                    date: segment.span.start.addingTimeInterval(
+                        segment.span.duration * progress
+                    ),
+                    point: coordinates[index]
+                ))
+            }
+        }
+        samples.append(RouteSample(
+            date: visibleSpan.end,
+            point: coordinate(in: coordinates, progress: endProgress)
+        ))
+        return samples
+    }
+
+    private static func coordinate(
+        in coordinates: [GeoPoint],
+        progress: Double
+    ) -> GeoPoint {
+        let clamped = min(max(progress, 0), 1)
+        let position = clamped * Double(coordinates.count - 1)
+        let lowerIndex = min(Int(position.rounded(.down)), coordinates.count - 1)
+        let upperIndex = min(lowerIndex + 1, coordinates.count - 1)
+        let fraction = position - Double(lowerIndex)
+        let lower = coordinates[lowerIndex]
+        let upper = coordinates[upperIndex]
+        return GeoPoint(
+            latitude: lower.latitude
+                + (upper.latitude - lower.latitude) * fraction,
+            longitude: lower.longitude
+                + (upper.longitude - lower.longitude) * fraction,
+            altitude: lower.altitude
+                + (upper.altitude - lower.altitude) * fraction,
+            horizontalAccuracy: max(
+                lower.horizontalAccuracy,
+                upper.horizontalAccuracy
+            ),
+            verticalAccuracy: max(
+                lower.verticalAccuracy,
+                upper.verticalAccuracy
+            )
+        )
+    }
+
+    private static func routeCoordinates(
+        for segment: TravelSegment,
+        places: [PlaceStay],
+        placesByID: [UUID: PlaceStay]
+    ) -> [GeoPoint] {
+        if let subway = segment.subwayRoute?.coordinates,
+           subway.count >= 2 {
+            return subway
+        }
+        let from = segment.fromPlaceID.map { placesByID[$0]?.point }
+            ?? places
+                .filter {
+                    $0.span.end <= segment.span.start
+                        && segment.span.start.timeIntervalSince($0.span.end)
+                            <= maximumPlaceGap
+                        && $0.point != nil
+                }
+                .max { $0.span.end < $1.span.end }?.point
+        let to = segment.toPlaceID.map { placesByID[$0]?.point }
+            ?? places
+                .filter {
+                    $0.span.start >= segment.span.end
+                        && $0.span.start.timeIntervalSince(segment.span.end)
+                            <= maximumPlaceGap
+                        && $0.point != nil
+                }
+                .min { $0.span.start < $1.span.start }?.point
+        return [from, to].compactMap { $0 }
+    }
+
+    private static func motion(for mode: TravelMode) -> MotionKind {
+        switch mode {
+        case .walking: .walking
+        case .running: .running
+        case .cycling: .cycling
+        case .bus, .subway, .taxi, .car, .train, .airplane, .ship:
+            .automotive
+        }
+    }
+}
+
+enum PlanCloudBackupRestoreResult: Equatable {
+    case complete
+    case snapshotOnly
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -102,6 +262,7 @@ final class AppModel {
     }
     @ObservationIgnored private(set) var snapshotRevision: UInt64 = 0
     @ObservationIgnored private(set) var timelineRevision: UInt64 = 0
+    private(set) var backupRestoreRevision: UInt64 = 0
     @ObservationIgnored private var timestampOnlySnapshotAssignment = false
     private(set) var isBootstrapped = false
     /// 저장소를 읽지 못한 상태에서 빈 스냅샷을 저장하면 기존 기록을
@@ -559,9 +720,9 @@ final class AppModel {
         return recovered
     }
 
-    func loadCloudBackup() async throws -> TaptionDataSnapshot {
+    func loadCloudBackup() async throws -> PlanCloudBackupPayload {
         guard let securityBackupService else { throw PlanSecurityError.archiveNotFound }
-        let recovered = try await securityBackupService.loadLatestArchive()
+        let recovered = try await securityBackupService.loadLatestBackup()
         securityStatus = securityBackupService.status
         return recovered
     }
@@ -571,13 +732,83 @@ final class AppModel {
         guard securityStatus.settings.cloudBackupEnabled else {
             throw PlanSecurityError.pinRequiredForCloudBackup
         }
-        _ = try await securityBackupService.saveMonthlyArchive(snapshot)
+        _ = try await securityBackupService.saveMonthlyArchive(
+            await cloudBackupPayload()
+        )
         securityStatus = securityBackupService.status
     }
 
-    func applyCloudBackup(_ restored: TaptionDataSnapshot) async {
-        snapshot = restored
-        await persist()
+    func applyCloudBackup(
+        _ restored: PlanCloudBackupPayload
+    ) async throws -> PlanCloudBackupRestoreResult {
+        guard !repositoryLoadFailed else {
+            throw RepositoryError.invalidSnapshot
+        }
+        let localPermissions = snapshot.settings.permissions
+        var value = restored.snapshot
+        value.settings.permissions = localPermissions
+        value.settings.cloudResetAt = .now
+        value.updatedAt = .now
+        snapshot = value
+        try await repository.save(snapshot)
+
+        var result = PlanCloudBackupRestoreResult.complete
+        if !restored.routePoints.isEmpty, let sensorService {
+            do {
+                try await sensorService.recordExternalReadings(
+                    restored.routePoints.map(\.sensorReading)
+                )
+            } catch {
+                result = .snapshotOnly
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "icloud_backup_restore_route_merge_failed",
+                    level: .error,
+                    fields: ["error": String(describing: type(of: error))]
+                )
+            }
+        } else if !restored.routePoints.isEmpty {
+            result = .snapshotOnly
+        }
+        liveMergeCacheKey = nil
+        liveMergeCacheValue = []
+        sensorRefreshFingerprints.removeAll()
+
+        if permissionState(for: .cloud).isGranted,
+           let cloudSyncService {
+            do {
+                let uploaded = try await cloudSyncService.upload(
+                    cloudPortableSnapshot(snapshot)
+                )
+                assignCloudMergedSnapshot(mergeDeviceLocalData(
+                    cloud: uploaded,
+                    local: snapshot
+                ))
+                try await repository.save(snapshot)
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "icloud_backup_restore_cloud_upload_deferred",
+                    level: .notice,
+                    fields: ["error": String(describing: type(of: error))]
+                )
+            }
+        }
+        backupRestoreRevision &+= 1
+        publishWidgetPayload()
+        return result
+    }
+
+    private func cloudBackupPayload(now: Date = .now) async -> PlanCloudBackupPayload {
+        guard let sensorService else {
+            return PlanCloudBackupPayload(snapshot: snapshot)
+        }
+        let span = PlanBackupRoutePointReducer.backupSpan(containing: now)
+        let readings = (try? await sensorService.archivedReadings(
+            in: span
+        )) ?? []
+        return PlanCloudBackupPayload(
+            snapshot: snapshot,
+            routePoints: PlanBackupRoutePointReducer.reduce(readings)
+        )
     }
 
     func setMapCategoryColor(_ hex: String, for categoryID: String) {
@@ -1528,7 +1759,9 @@ final class AppModel {
         do {
             guard let securityBackupService else { return }
             await refreshMidnightWeatherIfNeeded()
-            _ = try await securityBackupService.saveMonthlyArchive(snapshot)
+            _ = try await securityBackupService.saveMonthlyArchive(
+                await cloudBackupPayload()
+            )
             securityStatus = securityBackupService.status
         } catch {
             TaptionPlanDiagnosticsLogger.shared.record(
@@ -5168,15 +5401,24 @@ final class AppModel {
     }
 
     func sensorReadings(in span: TimeSpan) async -> [SensorReading] {
-        guard let sensorService else {
-            return photoBackfillReadings(in: span, existingReadings: [])
+        let archived: [SensorReading]
+        if let sensorService {
+            archived = (try? await sensorService.archivedReadings(in: span)) ?? []
+        } else {
+            archived = []
         }
-        let archived = (try? await sensorService.archivedReadings(in: span)) ?? []
-        return (archived + photoBackfillReadings(
+        var readings = archived + photoBackfillReadings(
             in: span,
             existingReadings: archived
-        ))
-        .sorted { $0.timestamp < $1.timestamp }
+        )
+        if archived.lazy.compactMap(\.point).prefix(2).count < 2 {
+            readings += PlanBackupRouteFallbackEngine.readings(
+                travel: snapshot.travel,
+                places: snapshot.places,
+                in: span
+            )
+        }
+        return readings.sorted { $0.timestamp < $1.timestamp }
     }
 
     private func photoBackfillReadings(

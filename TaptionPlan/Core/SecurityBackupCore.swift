@@ -373,6 +373,85 @@ struct PlanCloudBackupPath: Equatable, Sendable {
     }
 }
 
+struct PlanBackupRoutePoint: Codable, Equatable, Sendable {
+    let sensorReading: SensorReading
+
+    init?(_ reading: SensorReading) {
+        guard reading.point != nil else { return nil }
+        sensorReading = reading
+    }
+
+    var id: UUID { sensorReading.id }
+}
+
+struct PlanCloudBackupPayload: Codable, Equatable, Sendable {
+    static let currentVersion = 1
+
+    let version: Int
+    let snapshot: TaptionDataSnapshot
+    let routePoints: [PlanBackupRoutePoint]
+
+    init(
+        snapshot: TaptionDataSnapshot,
+        routePoints: [PlanBackupRoutePoint] = []
+    ) {
+        version = Self.currentVersion
+        self.snapshot = snapshot
+        self.routePoints = routePoints
+    }
+}
+
+enum PlanBackupRoutePointReducer {
+    static let minimumInterval: TimeInterval = 10
+    static let maximumCount = 60_000
+
+    static func backupSpan(
+        containing date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> TimeSpan {
+        let start = calendar.dateInterval(of: .month, for: date)?.start
+            ?? date.addingTimeInterval(-31 * 86_400)
+        return TimeSpan(
+            start: start,
+            end: date.addingTimeInterval(5 * 60)
+        )
+    }
+
+    static func reduce(_ readings: [SensorReading]) -> [PlanBackupRoutePoint] {
+        let candidates = readings
+            .filter { $0.point != nil }
+            .sorted { $0.timestamp < $1.timestamp }
+        guard !candidates.isEmpty else { return [] }
+
+        var retained: [SensorReading] = []
+        retained.reserveCapacity(min(candidates.count, maximumCount))
+        for reading in candidates {
+            guard let previous = retained.last else {
+                retained.append(reading)
+                continue
+            }
+            guard let previousPoint = previous.point,
+                  let point = reading.point else { continue }
+            let elapsed = reading.timestamp.timeIntervalSince(previous.timestamp)
+            let moved = distanceMeters(previousPoint, point) >= 25
+            if elapsed >= minimumInterval || moved
+                || reading.behavior != previous.behavior {
+                retained.append(reading)
+            }
+        }
+        if let last = candidates.last, retained.last?.id != last.id {
+            retained.append(last)
+        }
+        if retained.count > maximumCount {
+            let stride = Double(retained.count - 1) / Double(maximumCount - 1)
+            retained = (0..<maximumCount).map {
+                retained[Int((Double($0) * stride).rounded())]
+            }
+        }
+        return retained.compactMap(PlanBackupRoutePoint.init)
+    }
+}
+
 struct PlanMonthlyArchive: Codable, Equatable, Sendable {
     static let currentVersion = 1
     let version: Int
@@ -395,32 +474,58 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
         self.payloadDigest = Data(SHA256.hash(data: encryptedPayload))
     }
 
-    func decodedSnapshot(pinKeyData: Data? = nil, accountKeyData: Data? = nil) throws -> TaptionDataSnapshot {
+    func decodedPayload(
+        pinKeyData: Data? = nil,
+        accountKeyData: Data? = nil
+    ) throws -> PlanCloudBackupPayload {
         guard version == Self.currentVersion,
               payloadDigest == Data(SHA256.hash(data: encryptedPayload)) else {
             throw PlanSecurityError.invalidArchive
         }
-        let archiveKey: Data
-        if let pinKeyData {
-            archiveKey = try Self.openKey(wrappedPayloadKey, with: pinKeyData)
-        } else if let accountKeyData {
-            archiveKey = try Self.openKey(accountWrappedPayloadKey, with: accountKeyData)
-        } else {
-            throw PlanSecurityError.invalidArchive
-        }
-        guard archiveKey.count == 32 else { throw PlanSecurityError.invalidArchive }
         do {
+            let archiveKey: Data
+            if let pinKeyData {
+                archiveKey = try Self.openKey(wrappedPayloadKey, with: pinKeyData)
+            } else if let accountKeyData {
+                archiveKey = try Self.openKey(
+                    accountWrappedPayloadKey,
+                    with: accountKeyData
+                )
+            } else {
+                throw PlanSecurityError.invalidArchive
+            }
+            guard archiveKey.count == 32 else {
+                throw PlanSecurityError.invalidArchive
+            }
             let sealed = try AES.GCM.SealedBox(combined: encryptedPayload)
             let compressed = try AES.GCM.open(
                 sealed,
                 using: SymmetricKey(data: archiveKey)
             )
             let data = TaptionSnapshotCompression.decode(compressed)
-            return try JSONDecoder.taptionPlan.decode(
-                TaptionDataSnapshot.self,
+            if let payload = try? JSONDecoder.taptionPlan.decode(
+                PlanCloudBackupPayload.self,
                 from: data
+            ), payload.version == PlanCloudBackupPayload.currentVersion {
+                return payload
+            }
+            return PlanCloudBackupPayload(
+                snapshot: try JSONDecoder.taptionPlan.decode(
+                    TaptionDataSnapshot.self,
+                    from: data
+                )
             )
         } catch { throw PlanSecurityError.invalidArchive }
+    }
+
+    func decodedSnapshot(
+        pinKeyData: Data? = nil,
+        accountKeyData: Data? = nil
+    ) throws -> TaptionDataSnapshot {
+        try decodedPayload(
+            pinKeyData: pinKeyData,
+            accountKeyData: accountKeyData
+        ).snapshot
     }
 
     private static func openKey(_ wrapped: Data, with keyData: Data) throws -> Data {
@@ -862,11 +967,23 @@ final class PlanSecurityBackupService {
     }
 
     func saveMonthlyArchive(_ snapshot: TaptionDataSnapshot, accountIdentifier: String, date: Date = .now) throws -> PlanMonthlyArchive {
+        try saveMonthlyArchive(
+            PlanCloudBackupPayload(snapshot: snapshot),
+            accountIdentifier: accountIdentifier,
+            date: date
+        )
+    }
+
+    func saveMonthlyArchive(
+        _ payload: PlanCloudBackupPayload,
+        accountIdentifier: String,
+        date: Date = .now
+    ) throws -> PlanMonthlyArchive {
         guard hasPIN else { throw PlanSecurityError.pinRequiredForCloudBackup }
         guard !accountIdentifier.isEmpty else { throw PlanSecurityError.accountUnavailable }
         let accountKey = try accountKeyProvider.key(for: accountIdentifier)
         return try saveMonthlyArchive(
-            snapshot,
+            payload,
             accountIdentifier: accountIdentifier,
             accountKey: accountKey,
             date: date
@@ -877,13 +994,23 @@ final class PlanSecurityBackupService {
         _ snapshot: TaptionDataSnapshot,
         date: Date = .now
     ) async throws -> PlanMonthlyArchive {
+        try await saveMonthlyArchive(
+            PlanCloudBackupPayload(snapshot: snapshot),
+            date: date
+        )
+    }
+
+    func saveMonthlyArchive(
+        _ payload: PlanCloudBackupPayload,
+        date: Date = .now
+    ) async throws -> PlanMonthlyArchive {
         guard hasPIN else { throw PlanSecurityError.pinRequiredForCloudBackup }
         guard let cloudRecoveryKeyProvider else {
             throw PlanSecurityError.accountUnavailable
         }
         let accountKey = try await cloudRecoveryKeyProvider.key()
         return try saveMonthlyArchive(
-            snapshot,
+            payload,
             accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope,
             accountKey: accountKey,
             date: date
@@ -891,13 +1018,13 @@ final class PlanSecurityBackupService {
     }
 
     private func saveMonthlyArchive(
-        _ snapshot: TaptionDataSnapshot,
+        _ payload: PlanCloudBackupPayload,
         accountIdentifier: String,
         accountKey: Data?,
         date: Date
     ) throws -> PlanMonthlyArchive {
-        let payload = try JSONEncoder.taptionPlan.encode(snapshot)
-        let compressed = TaptionSnapshotCompression.encode(payload)
+        let encoded = try JSONEncoder.taptionPlan.encode(payload)
+        let compressed = TaptionSnapshotCompression.encode(encoded)
         guard let verifier else {
             throw PlanSecurityError.pinRequiredForCloudBackup
         }
@@ -921,17 +1048,50 @@ final class PlanSecurityBackupService {
     }
 
     func loadLatestArchive(accountIdentifier: String) throws -> TaptionDataSnapshot {
+        try loadLatestBackup(accountIdentifier: accountIdentifier).snapshot
+    }
+
+    func loadLatestBackup(
+        accountIdentifier: String
+    ) throws -> PlanCloudBackupPayload {
         guard hasPIN else { throw PlanSecurityError.pinRequiredForCloudBackup }
         guard let verifier else { throw PlanSecurityError.pinRequiredForCloudBackup }
-        return try loadLatestArchiveWithoutPIN(accountIdentifier: accountIdentifier, pinKeyData: verifier.keyMaterial)
+        return try loadLatestBackup(
+            accountIdentifier: accountIdentifier,
+            pinKeyData: verifier.keyMaterial
+        )
     }
 
     func loadLatestArchive() async throws -> TaptionDataSnapshot {
+        try await loadLatestBackup().snapshot
+    }
+
+    func loadLatestBackup() async throws -> PlanCloudBackupPayload {
         guard hasPIN else { throw PlanSecurityError.pinRequiredForCloudBackup }
-        return try loadLatestArchiveWithoutPIN(
-            accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope,
-            pinKeyData: verifier?.keyMaterial
-        )
+        let accountIdentifier =
+            CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope
+        do {
+            return try loadLatestBackup(
+                accountIdentifier: accountIdentifier,
+                pinKeyData: verifier?.keyMaterial
+            )
+        } catch PlanSecurityError.invalidArchive {
+            guard let cloudRecoveryKeyProvider else {
+                throw PlanSecurityError.accountUnavailable
+            }
+            let accountKey = try await cloudRecoveryKeyProvider.key()
+            let payload = try loadLatestBackup(
+                accountIdentifier: accountIdentifier,
+                accountKeyData: accountKey
+            )
+            _ = try? saveMonthlyArchive(
+                payload,
+                accountIdentifier: accountIdentifier,
+                accountKey: accountKey,
+                date: .now
+            )
+            return payload
+        }
     }
 
     /// PIN loss and biometric changes are recoverable only when iCloud still
@@ -939,7 +1099,10 @@ final class PlanSecurityBackupService {
     /// it never silently clears data or resets the account.
     func recoverLatestArchive(accountIdentifier: String, newPIN: String) throws -> TaptionDataSnapshot {
         guard !accountIdentifier.isEmpty else { throw PlanSecurityError.accountUnavailable }
-        let snapshot = try loadLatestArchiveWithoutPIN(accountIdentifier: accountIdentifier, accountKeyData: try accountKeyProvider.key(for: accountIdentifier))
+        let snapshot = try loadLatestBackup(
+            accountIdentifier: accountIdentifier,
+            accountKeyData: try accountKeyProvider.key(for: accountIdentifier)
+        ).snapshot
         try setPIN(newPIN)
         return snapshot
     }
@@ -951,10 +1114,10 @@ final class PlanSecurityBackupService {
         let accountKey = try await cloudRecoveryKeyProvider.key()
         let snapshot: TaptionDataSnapshot
         do {
-            snapshot = try loadLatestArchiveWithoutPIN(
+            snapshot = try loadLatestBackup(
                 accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope,
                 accountKeyData: accountKey
-            )
+            ).snapshot
         } catch PlanSecurityError.invalidArchive {
             throw PlanSecurityError.accountMismatch
         }
@@ -962,11 +1125,18 @@ final class PlanSecurityBackupService {
         return snapshot
     }
 
-    private func loadLatestArchiveWithoutPIN(accountIdentifier: String, pinKeyData: Data? = nil, accountKeyData: Data? = nil) throws -> TaptionDataSnapshot {
+    private func loadLatestBackup(
+        accountIdentifier: String,
+        pinKeyData: Data? = nil,
+        accountKeyData: Data? = nil
+    ) throws -> PlanCloudBackupPayload {
         guard !accountIdentifier.isEmpty else { throw PlanSecurityError.accountUnavailable }
         guard let archive = try backupStore.latest() else { throw PlanSecurityError.archiveNotFound }
         guard archive.accountIdentifier == accountIdentifier else { throw PlanSecurityError.accountMismatch }
-        return try archive.decodedSnapshot(pinKeyData: pinKeyData, accountKeyData: accountKeyData)
+        return try archive.decodedPayload(
+            pinKeyData: pinKeyData,
+            accountKeyData: accountKeyData
+        )
     }
 
     private static func randomKey() throws -> Data {

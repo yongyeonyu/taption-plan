@@ -1936,6 +1936,58 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testLocationButtonDotFollowsTrackingStateNotCameraTransition() {
+        XCTAssertEqual(
+            MapHomeLocationButtonState.resolve(
+                hasLocation: false,
+                isFollowing: true
+            ),
+            .unavailable
+        )
+        XCTAssertEqual(
+            MapHomeLocationButtonState.resolve(
+                hasLocation: true,
+                isFollowing: false
+            ),
+            .available
+        )
+        let following = MapHomeLocationButtonState.resolve(
+            hasLocation: true,
+            isFollowing: true
+        )
+        XCTAssertEqual(following, .following)
+        XCTAssertTrue(following.showsTrackingDot)
+    }
+
+    func testMovementEditOptionsUseRequestedOrderAndRestoreStoredMode() {
+        XCTAssertEqual(
+            MapHomeMovementEditOption.modes,
+            [.walking, .cycling, .car, .subway, .bus, .ship, .airplane, .train]
+        )
+        XCTAssertEqual(
+            MapHomeMovementEditOption.mode(
+                categoryID: "movement",
+                behavior: TravelMode.subway.rawValue,
+                title: "이동"
+            ),
+            .subway
+        )
+        XCTAssertNil(
+            MapHomeMovementEditOption.mode(
+                categoryID: "movement",
+                behavior: TravelMode.running.rawValue,
+                title: "이동"
+            )
+        )
+        XCTAssertEqual(
+            MapHomeMovementEditOption.localizedTitle(
+                for: .ship,
+                language: .english
+            ),
+            "Ship"
+        )
+    }
+
     func testNonDayFractionsKeepCalendarBucketsEqual() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

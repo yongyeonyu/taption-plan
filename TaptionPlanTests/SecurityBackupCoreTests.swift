@@ -200,6 +200,368 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertTrue(replacementDevice.hasPIN)
     }
 
+    func testCloudLoadFallsBackToAccountKeyAfterPINIsRegisteredAgain() async throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let recoveryKeys = InMemoryPlanCloudRecoveryKeyProvider()
+        let writer = makeService(
+            backupStore: backupStore,
+            cloudRecoveryKeyProvider: recoveryKeys
+        )
+        try writer.setPIN("1234")
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.settings.frequentPlaces[0].point = GeoPoint(
+            latitude: 37.5665,
+            longitude: 126.978,
+            altitude: 12,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        snapshot.settings.userTransitLocations = [
+            UserTransitLocation(
+                name: "시청역",
+                kind: .subwayStation,
+                point: GeoPoint(
+                    latitude: 37.5657,
+                    longitude: 126.9769,
+                    altitude: 0,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: -1
+                )
+            ),
+        ]
+        let reading = SensorReading(
+            timestamp: Date(timeIntervalSince1970: 1_787_538_400),
+            point: snapshot.settings.frequentPlaces[0].point,
+            locationFixQuality: .precise,
+            motion: .walking,
+            motionConfidence: .high
+        )
+        _ = try await writer.saveMonthlyArchive(
+            PlanCloudBackupPayload(
+                snapshot: snapshot,
+                routePoints: PlanBackupRoutePointReducer.reduce([reading])
+            )
+        )
+
+        let reinstalled = makeService(
+            backupStore: backupStore,
+            cloudRecoveryKeyProvider: recoveryKeys
+        )
+        try reinstalled.setPIN("1234")
+        let restored = try await reinstalled.loadLatestBackup()
+
+        XCTAssertEqual(
+            restored.snapshot.settings.frequentPlaces[0].point,
+            snapshot.settings.frequentPlaces[0].point
+        )
+        let restoredTransit = try XCTUnwrap(restored.snapshot.settings.userTransitLocations.first)
+        let originalTransit = try XCTUnwrap(snapshot.settings.userTransitLocations.first)
+        XCTAssertEqual(restoredTransit.id, originalTransit.id)
+        XCTAssertEqual(restoredTransit.name, originalTransit.name)
+        XCTAssertEqual(restoredTransit.kind, originalTransit.kind)
+        XCTAssertEqual(restoredTransit.point, originalTransit.point)
+        XCTAssertEqual(restoredTransit.radiusMeters, originalTransit.radiusMeters)
+        XCTAssertEqual(restoredTransit.createdAt.timeIntervalSince1970,
+                       originalTransit.createdAt.timeIntervalSince1970,
+                       accuracy: 0.001)
+        XCTAssertEqual(restored.routePoints.map(\.id), [reading.id])
+    }
+
+    func testBackupPayloadKeepsTravel() throws {
+        let service = makeService()
+        try service.setPIN("1234")
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.travel = [
+            TravelSegment(
+                mode: .subway,
+                span: TimeSpan(
+                    start: Date(timeIntervalSince1970: 1_787_538_400),
+                    end: Date(timeIntervalSince1970: 1_787_542_000)
+                ),
+                distanceMeters: 12_000,
+                confidence: .high,
+                evidence: ["지하철"]
+            ),
+        ]
+
+        _ = try service.saveMonthlyArchive(snapshot, accountIdentifier: "account-a")
+        XCTAssertEqual(
+            try service.loadLatestArchive(accountIdentifier: "account-a").travel,
+            snapshot.travel
+        )
+    }
+
+    func testLegacySnapshotArchiveStillDecodes() throws {
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.settings.userTransitLocations = [
+            UserTransitLocation(
+                name: "가정역",
+                kind: .subwayStation,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6759,
+                    altitude: 0,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: -1
+                ),
+                createdAt: Date(timeIntervalSince1970: 1_787_538_400)
+            ),
+        ]
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        let compressed = TaptionSnapshotCompression.encode(
+            try encoder.encode(snapshot)
+        )
+        let archiveKey = Data(repeating: 9, count: 32)
+        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+            Data(repeating: 4, count: 16)
+        }
+        let encrypted = try AES.GCM.seal(
+            compressed,
+            using: SymmetricKey(data: archiveKey)
+        ).combined!
+        let wrapped = try AES.GCM.seal(
+            archiveKey,
+            using: SymmetricKey(data: verifier.keyMaterial)
+        ).combined!
+        let archive = PlanMonthlyArchive(
+            monthKey: "2026-08",
+            accountIdentifier: "account-a",
+            encryptedPayload: encrypted,
+            wrappedPayloadKey: wrapped,
+            accountWrappedPayloadKey: Data(),
+            createdAt: Date(timeIntervalSince1970: 1_787_538_400)
+        )
+
+        XCTAssertEqual(
+            try archive.decodedPayload(pinKeyData: verifier.keyMaterial)
+                .snapshot.settings.userTransitLocations,
+            snapshot.settings.userTransitLocations
+        )
+    }
+
+    func testBackupRouteReducerKeepsEndpointsAndBoundsDenseGPS() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let readings = (0..<70_000).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index)),
+                point: GeoPoint(
+                    latitude: 37.5 + Double(index) * 0.000_001,
+                    longitude: 126.9,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                ),
+                locationFixQuality: .precise,
+                motion: .walking,
+                motionConfidence: .high
+            )
+        }
+        let reduced = PlanBackupRoutePointReducer.reduce(readings)
+
+        XCTAssertEqual(reduced.first?.id, readings.first?.id)
+        XCTAssertEqual(reduced.last?.id, readings.last?.id)
+        XCTAssertEqual(reduced.first?.sensorReading, readings.first)
+        XCTAssertEqual(reduced.last?.sensorReading, readings.last)
+        XCTAssertLessThanOrEqual(
+            reduced.count,
+            PlanBackupRoutePointReducer.maximumCount
+        )
+    }
+
+    func testBackupRouteWindowCoversTheCurrentCalendarMonth() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 9 * 3_600)!
+        let now = calendar.date(
+            from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 24,
+                hour: 12
+            )
+        )!
+        let span = PlanBackupRoutePointReducer.backupSpan(
+            containing: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            span.start,
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 1))
+        )
+        XCTAssertEqual(span.end, now.addingTimeInterval(5 * 60))
+    }
+
+    func testLegacyBackupCanDrawApproximateRouteFromTravelAndPlaces() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let home = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            span: TimeSpan(
+                start: start.addingTimeInterval(-3_600),
+                end: start
+            ),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let office = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            span: TimeSpan(
+                start: start.addingTimeInterval(1_800),
+                end: start.addingTimeInterval(7_200)
+            ),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127.0,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .bus,
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(1_800)
+            ),
+            distanceMeters: 15_000,
+            confidence: .high,
+            evidence: []
+        )
+
+        let readings = PlanBackupRouteFallbackEngine.readings(
+            travel: [travel],
+            places: [home, office],
+            in: TimeSpan(
+                start: start.addingTimeInterval(-60),
+                end: start.addingTimeInterval(1_860)
+            )
+        )
+
+        XCTAssertEqual(readings.map(\.point), [home.point, office.point])
+        XCTAssertEqual(readings.map(\.behavior), ["bus", "bus"])
+    }
+
+    func testLegacyRouteFallbackClipsToTheRequestedDay() throws {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let from = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let to = GeoPoint(
+            latitude: 37.6,
+            longitude: 127.0,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let travel = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(3_600)
+            ),
+            distanceMeters: 20_000,
+            confidence: .high,
+            evidence: [],
+            subwayRoute: SubwayRoutePath(
+                stops: [
+                    SubwayRouteStop(
+                        lineName: "테스트",
+                        order: 0,
+                        stationName: "출발",
+                        latitude: from.latitude,
+                        longitude: from.longitude
+                    ),
+                    SubwayRouteStop(
+                        lineName: "테스트",
+                        order: 1,
+                        stationName: "도착",
+                        latitude: to.latitude,
+                        longitude: to.longitude
+                    ),
+                ],
+                lineNames: ["테스트"],
+                transferStationNames: []
+            )
+        )
+        let requested = TimeSpan(
+            start: start.addingTimeInterval(900),
+            end: start.addingTimeInterval(1_800)
+        )
+        let readings = PlanBackupRouteFallbackEngine.readings(
+            travel: [travel],
+            places: [],
+            in: requested
+        )
+
+        XCTAssertEqual(readings.map(\.timestamp), [requested.start, requested.end])
+        let first = try XCTUnwrap(readings.first?.point)
+        let last = try XCTUnwrap(readings.last?.point)
+        XCTAssertEqual(first.latitude, 37.525, accuracy: 0.000_001)
+        XCTAssertEqual(last.latitude, 37.55, accuracy: 0.000_001)
+    }
+
+    func testLegacyRouteFallbackDoesNotConnectDistantUnrelatedPlaces() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let oldPlace = PlaceStay(
+            placeKey: "old",
+            displayName: "이전 장소",
+            span: TimeSpan(
+                start: start.addingTimeInterval(-12 * 3_600),
+                end: start.addingTimeInterval(-10 * 3_600)
+            ),
+            confidence: .high,
+            point: point
+        )
+        let futurePlace = PlaceStay(
+            placeKey: "future",
+            displayName: "다음 장소",
+            span: TimeSpan(
+                start: start.addingTimeInterval(10 * 3_600),
+                end: start.addingTimeInterval(12 * 3_600)
+            ),
+            confidence: .high,
+            point: point
+        )
+        let travel = TravelSegment(
+            mode: .bus,
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(30 * 60)
+            ),
+            distanceMeters: 1_000,
+            confidence: .low,
+            evidence: []
+        )
+
+        XCTAssertTrue(PlanBackupRouteFallbackEngine.readings(
+            travel: [travel],
+            places: [oldPlace, futurePlace],
+            in: travel.span
+        ).isEmpty)
+    }
+
     func testUbiquitousCloudRecoveryKeyCanBePersistedReadAndRemoved() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

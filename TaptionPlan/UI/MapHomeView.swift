@@ -441,6 +441,22 @@ enum MapHomeUserTrackingPolicy {
     }
 }
 
+enum MapHomeLocationButtonState: Equatable {
+    case unavailable
+    case available
+    case following
+
+    static func resolve(
+        hasLocation: Bool,
+        isFollowing: Bool
+    ) -> MapHomeLocationButtonState {
+        guard hasLocation else { return .unavailable }
+        return isFollowing ? .following : .available
+    }
+
+    var showsTrackingDot: Bool { self == .following }
+}
+
 @MainActor
 struct MapHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -475,7 +491,8 @@ struct MapHomeView: View {
     @State private var isTimelineSelectionPinned = false
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
     @State private var isMapCenteredOnUser = false
-    @State private var isFollowingUserLocation = false
+    @SceneStorage("MapHome.isFollowingUserLocation")
+    private var isFollowingUserLocation = false
     @State private var hasAppliedInitialLocation = false
     @State private var mapSearchText = ""
     @State private var mapSearchResults: [MapHomeSearchResult] = []
@@ -906,6 +923,9 @@ struct MapHomeView: View {
         .onChange(of: model.snapshot.actuals) { _, _ in
             refreshTimeRailSegments()
             refreshRouteProjection()
+        }
+        .onChange(of: model.backupRestoreRevision) { _, _ in
+            Task { await refreshRouteReadings(for: model.selectedDate) }
         }
         .onChange(of: model.liveRouteState.readings) { _, _ in
             prepareRouteProjectionReadings()
@@ -1801,8 +1821,10 @@ struct MapHomeView: View {
                 focusUserLocation(using: proxy)
             } label: {
                 MapHomeLocationButtonIcon(
-                    isCentered: isFollowingUserLocation && isMapCenteredOnUser,
-                    hasLocation: currentCoordinate != nil
+                    state: MapHomeLocationButtonState.resolve(
+                        hasLocation: currentCoordinate != nil,
+                        isFollowing: isFollowingUserLocation
+                    )
                 )
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                     .background(Color.white.opacity(0.94), in: Circle())
@@ -3816,6 +3838,61 @@ enum MapHomeLanguage: String, CaseIterable, Identifiable {
     }
 }
 
+enum MapHomeMovementEditOption {
+    static let modes: [TravelMode] = [
+        .walking,
+        .cycling,
+        .car,
+        .subway,
+        .bus,
+        .ship,
+        .airplane,
+        .train,
+    ]
+
+    static func mode(
+        categoryID: String,
+        behavior: String?,
+        title: String
+    ) -> TravelMode? {
+        guard categoryID == "movement" else { return nil }
+        if let behavior,
+           let mode = TravelMode(rawValue: behavior),
+           modes.contains(mode) {
+            return mode
+        }
+        return modes.first {
+            MovementPresentation.title(for: $0) == title
+                || englishTitle(for: $0) == title
+        }
+    }
+
+    static func localizedTitle(
+        for mode: TravelMode,
+        language: MapHomeLanguage
+    ) -> String {
+        language.text(
+            MovementPresentation.title(for: mode),
+            englishTitle(for: mode)
+        )
+    }
+
+    private static func englishTitle(for mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "Walking"
+        case .cycling: "Bicycle"
+        case .car: "Car"
+        case .subway: "Subway"
+        case .bus: "Bus"
+        case .ship: "Ship"
+        case .airplane: "Airplane"
+        case .train: "Train"
+        case .running: "Running"
+        case .taxi: "Taxi"
+        }
+    }
+}
+
 private struct MapHomeSectionEditSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
@@ -3826,6 +3903,8 @@ private struct MapHomeSectionEditSheet: View {
     @State private var startMinute: Int
     @State private var endMinute: Int
     @State private var selectedCategoryID: String
+    @State private var selectedMovementMode: TravelMode?
+    @State private var movementSelectionWasChanged = false
     @State private var dragBaseMinute: Int?
     @State private var lastDragPublishUptime: TimeInterval = 0
     @State private var viewport: MapHomeSectionViewportState
@@ -3851,6 +3930,11 @@ private struct MapHomeSectionEditSheet: View {
         _startMinute = State(initialValue: selection.segment.startMinute)
         _endMinute = State(initialValue: selection.segment.endMinute)
         _selectedCategoryID = State(initialValue: selection.segment.categoryID)
+        _selectedMovementMode = State(initialValue: MapHomeMovementEditOption.mode(
+            categoryID: selection.segment.categoryID,
+            behavior: selection.segment.behavior,
+            title: selection.segment.title
+        ))
         _viewport = State(initialValue: MapHomeSectionViewportMath.initialState(
             segmentStart: selection.segment.startMinute,
             segmentEnd: selection.segment.endMinute
@@ -3869,6 +3953,21 @@ private struct MapHomeSectionEditSheet: View {
                 for: selectedCategoryID,
                 categoryColors: model.settings.mapCategoryColors
             )
+    }
+
+    private var selectedPreviewCategory: MapHomeSidebarMajorCategory {
+        guard selectedCategoryID == "movement",
+              let selectedMovementMode else { return selectedCategory }
+        return MapHomeSidebarMajorCategory(
+            id: "movement:\(selectedMovementMode.rawValue)",
+            title: MapHomeMovementEditOption.localizedTitle(
+                for: selectedMovementMode,
+                language: language
+            ),
+            systemImage: MovementPresentation.symbol(for: selectedMovementMode),
+            hex: model.settings.mapCategoryColors["movement"]
+                ?? CanonicalCategoryPalette.hex("movement")
+        )
     }
 
     private var visibleRange: ClosedRange<Int> {
@@ -3925,16 +4024,7 @@ private struct MapHomeSectionEditSheet: View {
                 )
                 .disabled(cutMinute != nil || insertedDetail != nil)
                 .opacity(cutMinute != nil || insertedDetail != nil ? 0.62 : 1)
-                Picker(language.text("대분류", "Category"), selection: $selectedCategoryID) {
-                    ForEach(categories) { category in
-                        Label(
-                            category.localizedTitle(language),
-                            systemImage: category.systemImage
-                        )
-                        .tag(category.id)
-                    }
-                }
-                .pickerStyle(.menu)
+                categorySelectionMenu
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 10)
                 .frame(height: 44)
@@ -3966,6 +4056,12 @@ private struct MapHomeSectionEditSheet: View {
                         startMinute = selection.segment.startMinute
                         endMinute = selection.segment.endMinute
                         selectedCategoryID = selection.segment.categoryID
+                        selectedMovementMode = MapHomeMovementEditOption.mode(
+                            categoryID: selection.segment.categoryID,
+                            behavior: selection.segment.behavior,
+                            title: selection.segment.title
+                        )
+                        movementSelectionWasChanged = false
                     }
                     .buttonStyle(.bordered)
                 }
@@ -4026,6 +4122,75 @@ private struct MapHomeSectionEditSheet: View {
         .padding(.top, 12)
         .padding(.bottom, 14)
         .background(Color.tpBackground.ignoresSafeArea())
+    }
+
+    private var categorySelectionMenu: some View {
+        Menu {
+            ForEach(categories) { category in
+                if category.id == "movement" {
+                    Menu {
+                        Button {
+                            selectCategory(category, movementMode: nil)
+                        } label: {
+                            Label(
+                                category.localizedTitle(language),
+                                systemImage: category.systemImage
+                            )
+                        }
+                        Divider()
+                        ForEach(MapHomeMovementEditOption.modes, id: \.self) { mode in
+                            Button {
+                                selectCategory(category, movementMode: mode)
+                            } label: {
+                                Label(
+                                    MapHomeMovementEditOption.localizedTitle(
+                                        for: mode,
+                                        language: language
+                                    ),
+                                    systemImage: MovementPresentation.symbol(for: mode)
+                                )
+                            }
+                        }
+                    } label: {
+                        Label(
+                            category.localizedTitle(language),
+                            systemImage: category.systemImage
+                        )
+                    }
+                } else {
+                    Button {
+                        selectCategory(category, movementMode: nil)
+                    } label: {
+                        Label(
+                            category.localizedTitle(language),
+                            systemImage: category.systemImage
+                        )
+                    }
+                }
+            }
+        } label: {
+            Label(
+                selectedMovementMode.map {
+                    MapHomeMovementEditOption.localizedTitle(
+                        for: $0,
+                        language: language
+                    )
+                } ?? selectedCategory.localizedTitle(language),
+                systemImage: selectedMovementMode.map {
+                    MovementPresentation.symbol(for: $0)
+                } ?? selectedCategory.systemImage
+            )
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+        }
+    }
+
+    private func selectCategory(
+        _ category: MapHomeSidebarMajorCategory,
+        movementMode: TravelMode?
+    ) {
+        selectedCategoryID = category.id
+        selectedMovementMode = category.id == "movement" ? movementMode : nil
+        movementSelectionWasChanged = true
     }
 
     private func timeControl(
@@ -4177,6 +4342,12 @@ private struct MapHomeSectionEditSheet: View {
         selectedCategoryID = categories.contains { $0.id == detail.categoryID }
             ? detail.categoryID
             : "activity"
+        selectedMovementMode = MapHomeMovementEditOption.mode(
+            categoryID: detail.categoryID,
+            behavior: detail.behavior,
+            title: detail.title
+        )
+        movementSelectionWasChanged = false
     }
 
     private func majorTimeline(
@@ -4245,18 +4416,18 @@ private struct MapHomeSectionEditSheet: View {
             let detailEnd = min(detail.endMinute, originalEnd)
             raw = [
                 (originalStart, detailStart, originalCategory),
-                (detailStart, detailEnd, selectedCategory),
+                (detailStart, detailEnd, selectedPreviewCategory),
                 (detailEnd, originalEnd, originalCategory),
             ]
         } else if let cutMinute {
             raw = [
-                (originalStart, cutMinute, selectedCategory),
+                (originalStart, cutMinute, selectedPreviewCategory),
                 (cutMinute, originalEnd, unconfirmed),
             ]
         } else {
             raw = [
                 (originalStart, startMinute, unconfirmed),
-                (startMinute, endMinute, selectedCategory),
+                (startMinute, endMinute, selectedPreviewCategory),
                 (endMinute, originalEnd, unconfirmed),
             ]
         }
@@ -4550,6 +4721,32 @@ private struct MapHomeSectionEditSheet: View {
         let category = selectedCategory
         if category.id.hasPrefix("custom:") {
             return ActivityCorrectionOption.custom(category.title)
+        }
+        if category.id == "movement" {
+            if let selectedMovementMode {
+                return ActivityCorrectionOption(
+                    id: "phase.movement.\(selectedMovementMode.rawValue)",
+                    title: MovementPresentation.title(for: selectedMovementMode),
+                    behavior: selectedMovementMode.rawValue,
+                    categoryID: category.id,
+                    systemImage: MovementPresentation.symbol(
+                        for: selectedMovementMode
+                    ),
+                    isAutomatic: false,
+                    isCustom: false
+                )
+            }
+            if movementSelectionWasChanged {
+                return ActivityCorrectionOption(
+                    id: "phase.movement",
+                    title: category.title,
+                    behavior: nil,
+                    categoryID: category.id,
+                    systemImage: category.systemImage,
+                    isAutomatic: false,
+                    isCustom: false
+                )
+            }
         }
         if let detail = insertedDetail,
            detail.categoryID == category.id {
@@ -4857,7 +5054,7 @@ private struct MapHomeSecuritySheet: View {
     @State private var pin = ""
     @State private var confirmation = ""
     @State private var message: String?
-    @State private var pendingRestore: TaptionDataSnapshot?
+    @State private var pendingRestore: PlanCloudBackupPayload?
     @State private var isRestoreConfirmationPresented = false
     @State private var isApplyingRestore = false
 
@@ -5080,10 +5277,25 @@ private struct MapHomeSecuritySheet: View {
         guard let pendingRestore, !isApplyingRestore else { return }
         isApplyingRestore = true
         Task { @MainActor in
-            await model.applyCloudBackup(pendingRestore)
-            self.pendingRestore = nil
+            do {
+                let result = try await model.applyCloudBackup(pendingRestore)
+                self.pendingRestore = nil
+                switch result {
+                case .complete:
+                    message = language.text(
+                        "백업을 불러왔습니다.",
+                        "Backup restored."
+                    )
+                case .snapshotOnly:
+                    message = language.text(
+                        "저장 위치는 복구했지만 이동경로 저장에 실패했습니다.",
+                        "Saved locations were restored, but the route could not be saved."
+                    )
+                }
+            } catch {
+                message = error.localizedDescription
+            }
             self.isApplyingRestore = false
-            message = language.text("백업을 불러왔습니다.", "Backup restored.")
         }
     }
 
@@ -5304,8 +5516,7 @@ private struct MapHomeTransitPlacePin: View {
 }
 
 private struct MapHomeLocationButtonIcon: View {
-    let isCentered: Bool
-    let hasLocation: Bool
+    let state: MapHomeLocationButtonState
 
     private let targetColor = Color(red: 0.20, green: 0.48, blue: 0.78)
     private let dotColor = Color(red: 0.92, green: 0.25, blue: 0.28)
@@ -5316,7 +5527,7 @@ private struct MapHomeLocationButtonIcon: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(targetColor)
 
-            if isCentered && hasLocation {
+            if state.showsTrackingDot {
                 Circle()
                     .fill(dotColor)
                     .frame(width: 7, height: 7)

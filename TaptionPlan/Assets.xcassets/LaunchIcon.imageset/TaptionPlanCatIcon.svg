@@ -1,45 +1,52 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="cat" x1="150" y1="100" x2="900" y2="950" gradientUnits="userSpaceOnUse">
+    <linearGradient id="cat" x1="180" y1="190" x2="840" y2="930" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#223A59"/>
       <stop offset="1" stop-color="#182D49"/>
     </linearGradient>
-    <linearGradient id="face" x1="310" y1="620" x2="830" y2="970" gradientUnits="userSpaceOnUse">
+    <linearGradient id="face" x1="340" y1="350" x2="720" y2="720" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#FFF4D8"/>
       <stop offset="1" stop-color="#F6E6C5"/>
     </linearGradient>
-    <mask id="timeline-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-      <rect width="1024" height="1024" fill="white"/>
-      <path d="M260 236 C425 128 676 139 814 277 C934 397 947 620 856 802"
-            fill="none" stroke="black" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="260" cy="236" r="44" fill="black"/>
-      <circle cx="705" cy="174" r="44" fill="black"/>
-      <circle cx="910" cy="520" r="44" fill="black"/>
-    </mask>
   </defs>
 
   <rect width="1024" height="1024" fill="#C77B70"/>
 
-  <path d="M260 236 C425 128 676 139 814 277 C934 397 947 620 856 802"
-        fill="none" stroke="url(#cat)" stroke-width="134" stroke-linecap="round" stroke-linejoin="round"
-        mask="url(#timeline-cutout)"/>
+  <path d="M138 244 C302 122 550 120 744 252 C865 334 907 477 864 638"
+        fill="none" stroke="url(#cat)" stroke-width="74" stroke-linecap="round" stroke-linejoin="round"/>
   <g fill="#223A59">
-    <circle cx="260" cy="236" r="22"/>
-    <circle cx="705" cy="174" r="22"/>
-    <circle cx="910" cy="520" r="22"/>
+    <circle cx="138" cy="244" r="20"/>
+    <circle cx="532" cy="160" r="20"/>
+    <circle cx="882" cy="486" r="20"/>
   </g>
 
-  <path d="M264 1024 C270 888 315 802 390 748 C356 692 351 620 390 545 C399 523 415 526 423 545
-           C445 565 475 591 505 608 C560 581 632 570 697 590 C735 566 765 538 782 527 C792 510 811 510 819 526
-           C838 530 850 535 856 539 C875 621 866 699 832 760 C911 816 963 903 986 1024 Z"
+  <path d="M232 944 C232 814 264 708 330 632 C303 591 294 540 300 490
+           C304 440 322 400 350 365 L384 262 Q398 232 424 260 L514 345
+           Q563 322 612 345 L702 260 Q728 232 742 262 L776 365
+           C804 400 822 440 826 490 C832 540 823 591 796 632 C862 708 894 814 894 944
+           C894 964 878 980 858 980 L268 980 C248 980 232 964 232 944 Z"
         fill="url(#cat)"/>
 
-  <path d="M410 738 C480 650 665 630 775 698 C846 742 844 840 782 901
-           C707 974 497 978 408 910 C347 864 352 789 410 738 Z"
+  <path d="M330 468 C330 382 410 338 563 350 C716 338 796 382 796 468
+           C796 579 711 674 563 674 C415 674 330 579 330 468 Z"
         fill="url(#face)"/>
 
-  <circle cx="506" cy="793" r="35" fill="#182D49"/>
-  <circle cx="704" cy="768" r="35" fill="#182D49"/>
-  <path d="M613 847 C595 883 552 884 533 855 M613 847 C630 877 668 878 686 847"
-        fill="none" stroke="#182D49" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="458" cy="488" r="30" fill="#182D49"/>
+  <circle cx="668" cy="488" r="30" fill="#182D49"/>
+  <path d="M563 528 C548 558 520 568 494 548 M563 528 C578 558 606 568 632 548"
+        fill="none" stroke="#182D49" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M424 684 C393 724 378 786 384 880 C387 925 414 950 452 950
+           C486 950 506 928 506 894 L506 730 C488 700 460 684 424 684 Z"
+        fill="url(#face)"/>
+  <path d="M702 684 C733 724 748 786 742 880 C739 925 712 950 674 950
+           C640 950 620 928 620 894 L620 730 C638 700 666 684 702 684 Z"
+        fill="url(#face)"/>
+
+  <path d="M278 812 C246 829 230 866 238 908 C246 952 276 974 324 974
+           C350 974 374 962 390 940 C366 900 354 854 360 816 C334 800 304 798 278 812 Z"
+        fill="url(#face)"/>
+  <path d="M848 812 C880 829 896 866 888 908 C880 952 850 974 802 974
+           C776 974 752 962 736 940 C760 900 772 854 766 816 C792 800 822 798 848 812 Z"
+        fill="url(#face)"/>
 </svg>

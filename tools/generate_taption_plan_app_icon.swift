@@ -77,49 +77,59 @@ private func bodyPath() -> NSBezierPath {
     let path = NSBezierPath()
     path.move(to: CGPoint(x: 264, y: 1024))
     path.curve(
-        to: CGPoint(x: 390, y: 748),
+        to: CGPoint(x: 370, y: 742),
         controlPoint1: CGPoint(x: 270, y: 888),
         controlPoint2: CGPoint(x: 315, y: 802)
     )
     path.curve(
-        to: CGPoint(x: 390, y: 545),
-        controlPoint1: CGPoint(x: 356, y: 692),
-        controlPoint2: CGPoint(x: 351, y: 620)
+        to: CGPoint(x: 382, y: 638),
+        controlPoint1: CGPoint(x: 352, y: 700),
+        controlPoint2: CGPoint(x: 356, y: 664)
     )
     path.curve(
-        to: CGPoint(x: 423, y: 545),
-        controlPoint1: CGPoint(x: 399, y: 523),
-        controlPoint2: CGPoint(x: 415, y: 526)
+        to: CGPoint(x: 447, y: 486),
+        controlPoint1: CGPoint(x: 398, y: 594),
+        controlPoint2: CGPoint(x: 424, y: 520)
     )
     path.curve(
-        to: CGPoint(x: 505, y: 608),
-        controlPoint1: CGPoint(x: 445, y: 565),
-        controlPoint2: CGPoint(x: 475, y: 591)
+        to: CGPoint(x: 485, y: 493),
+        controlPoint1: CGPoint(x: 458, y: 472),
+        controlPoint2: CGPoint(x: 474, y: 476)
     )
     path.curve(
-        to: CGPoint(x: 697, y: 590),
-        controlPoint1: CGPoint(x: 560, y: 581),
-        controlPoint2: CGPoint(x: 632, y: 570)
+        to: CGPoint(x: 544, y: 620),
+        controlPoint1: CGPoint(x: 511, y: 528),
+        controlPoint2: CGPoint(x: 531, y: 585)
     )
     path.curve(
-        to: CGPoint(x: 782, y: 527),
-        controlPoint1: CGPoint(x: 735, y: 566),
-        controlPoint2: CGPoint(x: 765, y: 538)
+        to: CGPoint(x: 614, y: 647),
+        controlPoint1: CGPoint(x: 566, y: 634),
+        controlPoint2: CGPoint(x: 589, y: 647)
     )
     path.curve(
-        to: CGPoint(x: 819, y: 526),
-        controlPoint1: CGPoint(x: 792, y: 510),
-        controlPoint2: CGPoint(x: 811, y: 510)
+        to: CGPoint(x: 684, y: 620),
+        controlPoint1: CGPoint(x: 639, y: 647),
+        controlPoint2: CGPoint(x: 662, y: 634)
     )
     path.curve(
-        to: CGPoint(x: 856, y: 539),
-        controlPoint1: CGPoint(x: 838, y: 530),
-        controlPoint2: CGPoint(x: 850, y: 535)
+        to: CGPoint(x: 743, y: 493),
+        controlPoint1: CGPoint(x: 697, y: 585),
+        controlPoint2: CGPoint(x: 717, y: 528)
     )
     path.curve(
-        to: CGPoint(x: 832, y: 760),
-        controlPoint1: CGPoint(x: 875, y: 621),
-        controlPoint2: CGPoint(x: 866, y: 699)
+        to: CGPoint(x: 781, y: 486),
+        controlPoint1: CGPoint(x: 754, y: 476),
+        controlPoint2: CGPoint(x: 770, y: 472)
+    )
+    path.curve(
+        to: CGPoint(x: 846, y: 638),
+        controlPoint1: CGPoint(x: 804, y: 520),
+        controlPoint2: CGPoint(x: 830, y: 594)
+    )
+    path.curve(
+        to: CGPoint(x: 838, y: 752),
+        controlPoint1: CGPoint(x: 872, y: 671),
+        controlPoint2: CGPoint(x: 870, y: 712)
     )
     path.curve(
         to: CGPoint(x: 986, y: 1024),
