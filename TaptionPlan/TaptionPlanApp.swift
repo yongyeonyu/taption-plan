@@ -152,6 +152,10 @@ final class TaptionPlanAppDelegate:
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        PhoneScreenActivityStore.update(
+            brightness: Double(UIScreen.main.brightness),
+            isOn: false
+        )
         TaptionPlanBackgroundRefresh.schedule(reason: "application-background")
     }
 
@@ -170,6 +174,25 @@ final class TaptionPlanAppDelegate:
         PhoneScreenActivityStore.update(
             brightness: Double(UIScreen.main.brightness),
             isOn: false
+        )
+    }
+
+    func applicationProtectedDataWillBecomeUnavailable(
+        _ application: UIApplication
+    ) {
+        PhoneScreenActivityStore.update(
+            brightness: Double(UIScreen.main.brightness),
+            isOn: false
+        )
+    }
+
+    func applicationProtectedDataDidBecomeAvailable(
+        _ application: UIApplication
+    ) {
+        guard application.applicationState == .active else { return }
+        PhoneScreenActivityStore.update(
+            brightness: Double(UIScreen.main.brightness),
+            isOn: true
         )
     }
 

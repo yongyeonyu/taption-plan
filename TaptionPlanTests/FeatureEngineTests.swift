@@ -3631,6 +3631,113 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testPhoneSleepWakeUsesDistinctStableIDsForDifferentSpans() {
+        let start = makeDate(2026, 8, 10, 22, 0)
+        func record(startedAt: Date) -> ActualRecord? {
+            let readings = (0...14).map { index in
+                SensorReading(
+                    timestamp: startedAt.addingTimeInterval(
+                        Double(index) * 5 * 60
+                    ),
+                    motion: .stationary,
+                    stepCount: 0,
+                    powerState: .charging,
+                    screenBrightness: 0.1,
+                    screenIsOn: false
+                )
+            }
+            return PhoneSleepWakeEngine.records(
+                readings: readings,
+                actuals: [],
+                inside: TimeSpan(
+                    start: startedAt,
+                    end: startedAt.addingTimeInterval(2 * hour)
+                ),
+                watchAvailable: false,
+                maximumSampleGap: 20 * 60,
+                asOf: startedAt.addingTimeInterval(2 * hour)
+            ).first
+        }
+
+        let first = record(startedAt: start)
+        let second = record(startedAt: start.addingTimeInterval(24 * hour))
+
+        XCTAssertNotNil(first)
+        XCTAssertNotNil(second)
+        XCTAssertNotEqual(first?.id, second?.id)
+    }
+
+    func testPhoneSleepFallbackBridgesSparseChargingNight() {
+        let start = makeDate(2026, 8, 24, 0, 0)
+        let readings = [0.0, 2, 4, 7].map { hourOffset in
+            SensorReading(
+                timestamp: start.addingTimeInterval(hourOffset * hour),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .full,
+                screenBrightness: 0.8,
+                screenIsOn: true
+            )
+        }
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(8 * hour)
+        )
+
+        let records = PhoneSleepFallbackEngine.records(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            nominalMaximumSampleGap: 20 * 60,
+            asOf: span.end
+        )
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].startedAt, start)
+        XCTAssertEqual(records[0].endedAt, start.addingTimeInterval(7 * hour))
+        XCTAssertEqual(
+            records[0].modelVersion,
+            ChargingInactivitySleepEngine.modelVersion
+        )
+    }
+
+    func testPhoneSleepFallbackDoesNotDuplicateAuthoritativeSleep() {
+        let start = makeDate(2026, 8, 24, 0, 0)
+        let readings = [0.0, 2, 4, 7].map { hourOffset in
+            SensorReading(
+                timestamp: start.addingTimeInterval(hourOffset * hour),
+                motion: .stationary,
+                stepCount: 0,
+                powerState: .charging,
+                screenBrightness: 0.8,
+                screenIsOn: true
+            )
+        }
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(8 * hour)
+        )
+        let healthSleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(7 * hour),
+            source: .healthKit
+        )
+
+        XCTAssertTrue(
+            PhoneSleepFallbackEngine.records(
+                readings: readings,
+                actuals: [healthSleep],
+                inside: span,
+                nominalMaximumSampleGap: 20 * 60,
+                asOf: span.end
+            ).isEmpty
+        )
+    }
+
     func testAutomotivePersistsWhenCoreMotionAlsoReportsStationary() {
         XCTAssertEqual(
             MotionKindResolver.resolve(

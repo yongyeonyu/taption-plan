@@ -5018,19 +5018,11 @@ final class AppModel {
             $0.modelVersion != ChargingInactivitySleepEngine.modelVersion
                 && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
         }
-        let watchAvailable = appleWatchConnectionState != .unsupported
-            && appleWatchConnectionState != .notPaired
-            || readings.contains { $0.sourceDevice == .appleWatch }
-            || prior.contains {
-                $0.source == .appleWatch
-                    && $0.span(asOf: span.end).intersection(with: span) != nil
-            }
-        let records = PhoneSleepWakeEngine.records(
+        let records = PhoneSleepFallbackEngine.records(
             readings: readings,
             actuals: prior,
             inside: span,
-            watchAvailable: watchAvailable,
-            maximumSampleGap: max(
+            nominalMaximumSampleGap: max(
                 20 * 60,
                 settings.sensorCollectionProfile.interval * 1.6 + 60
             )

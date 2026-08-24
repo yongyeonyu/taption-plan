@@ -436,9 +436,9 @@ protocol PlanCloudAccountKeyProvider: AnyObject {
     func key(for accountIdentifier: String) throws -> Data
 }
 
-/// iCloud Drive carries the encrypted monthly archive. The recovery key is
-/// stored separately in CloudKit's private database, so it is readable only
-/// by the same signed-in iCloud account on a replacement device.
+/// iCloud Drive carries the encrypted monthly archive. The recovery key lives
+/// in the account's private CloudKit database, with an account-scoped hidden
+/// iCloud Drive fallback for production-schema recovery.
 @MainActor
 protocol PlanCloudRecoveryKeyProvider: AnyObject {
     func key() async throws -> Data
@@ -464,10 +464,17 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
     }
 
     func key() async throws -> Data {
-        guard try await container.accountStatus() == .available else {
+        let fallbackKey = try? documentFallback.existingKey()
+        let accountStatus: CKAccountStatus
+        do {
+            accountStatus = try await container.accountStatus()
+        } catch {
+            if let fallbackKey { return fallbackKey }
+            throw error
+        }
+        guard accountStatus == .available else {
             throw PlanSecurityError.accountUnavailable
         }
-        let legacyKey = try documentFallback.existingKey()
         let recordID = CKRecord.ID(recordName: Self.recordName)
         do {
             let record = try await database.record(for: recordID)
@@ -475,15 +482,15 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
                   existing.count == 32 else {
                 throw PlanSecurityError.accountUnavailable
             }
-            try? documentFallback.removeExistingKey()
+            try? documentFallback.save(existing)
             return existing
         } catch let error as CKError where error.code == .unknownItem {
-            let generated = try legacyKey ?? Self.randomKey()
+            let generated = try fallbackKey ?? Self.randomKey()
             let record = CKRecord(recordType: Self.recordType, recordID: recordID)
             record[Self.valueKey] = generated as CKRecordValue
             do {
                 _ = try await database.save(record)
-                try? documentFallback.removeExistingKey()
+                try? documentFallback.save(generated)
                 return generated
             } catch let saveError as CKError
             where saveError.code == .serverRecordChanged {
@@ -492,16 +499,24 @@ final class CloudKitPlanCloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider {
                       value.count == 32 else {
                     throw PlanSecurityError.accountUnavailable
                 }
-                try? documentFallback.removeExistingKey()
+                try? documentFallback.save(value)
                 return value
             } catch {
                 if Self.isProductionSchemaRejection(error) {
-                    throw PlanSecurityError.accountUnavailable
+                    try documentFallback.save(generated)
+                    return generated
                 }
+                if let fallbackKey { return fallbackKey }
                 throw error
             }
         } catch {
-            throw PlanSecurityError.accountUnavailable
+            if Self.isProductionSchemaRejection(error) {
+                let generated = try fallbackKey ?? Self.randomKey()
+                try documentFallback.save(generated)
+                return generated
+            }
+            if let fallbackKey { return fallbackKey }
+            throw error
         }
     }
 
@@ -566,6 +581,20 @@ final class UbiquitousPlanCloudRecoveryKeyStore {
         let value = try Data(contentsOf: fileURL)
         guard value.count == 32 else { throw PlanSecurityError.invalidArchive }
         return value
+    }
+
+    func save(_ key: Data) throws {
+        guard key.count == 32,
+              let fileURL = try recoveryKeyURL(createDirectory: true) else {
+            throw PlanSecurityError.accountUnavailable
+        }
+        try key.write(
+            to: fileURL,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
+        )
     }
 
     func removeExistingKey() throws {

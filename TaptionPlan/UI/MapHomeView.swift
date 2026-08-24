@@ -567,7 +567,7 @@ struct MapHomeView: View {
         (model.settings.weatherSidebarVisible
             ? Layout.weatherRailWidth + Layout.weatherRailSpacing
             : 0)
-            + Layout.timeRailWidth
+            + MapHomeTimeSidebarMath.totalWidth(railWidth: Layout.timeRailWidth)
             + Layout.horizontalInset
     }
 
@@ -1631,6 +1631,9 @@ struct MapHomeView: View {
                 let weatherWidth = model.settings.weatherSidebarVisible
                     ? Layout.weatherRailWidth + Layout.weatherRailSpacing
                     : 0
+                let timeSidebarWidth = MapHomeTimeSidebarMath.totalWidth(
+                    railWidth: Layout.timeRailWidth
+                )
                 HStack(spacing: Layout.weatherRailSpacing) {
                     if model.settings.weatherSidebarVisible {
                         MapHomeWeatherSidebar(
@@ -1680,11 +1683,11 @@ struct MapHomeView: View {
                     )
                 }
                 .frame(
-                    width: weatherWidth + Layout.timeRailWidth,
+                    width: weatherWidth + timeSidebarWidth,
                     height: railHeight
                 )
                 .position(
-                    x: proxy.size.width - (weatherWidth + Layout.timeRailWidth) / 2,
+                    x: proxy.size.width - (weatherWidth + timeSidebarWidth) / 2,
                     y: max(
                         railHeight / 2,
                         proxy.size.height - railHeight / 2
@@ -3102,73 +3105,16 @@ struct MapHomeView: View {
               let segment = MapHomeTimeRailSegmentEngine.segment(
                 at: minute,
                 in: timeRailSegments
-              ),
-              let segmentStart = calendar.date(
-                byAdding: .minute,
-                value: segment.startMinute,
-                to: dayStart
-              ),
-              let segmentEnd = calendar.date(
-                byAdding: .minute,
-                value: segment.endMinute,
-                to: dayStart
               )
         else { return [] }
-        let segmentSpan = TimeSpan(start: segmentStart, end: segmentEnd)
-        var details: [MapHomeSectionDetail] = model.snapshot.actuals.compactMap {
-            actual -> MapHomeSectionDetail? in
-            let span = actual.span(asOf: .now)
-            guard let clipped = span.intersection(with: segmentSpan),
-                  clipped.start < dayEnd,
-                  clipped.end > dayStart
-            else { return nil }
-            let start = min(
-                1_440,
-                max(0, Int((clipped.start.timeIntervalSince(dayStart) / 60).rounded(.down)))
-            )
-            let end = min(
-                1_440,
-                max(start + 1, Int((clipped.end.timeIntervalSince(dayStart) / 60).rounded(.up)))
-            )
-            return MapHomeSectionDetail(
-                id: actual.id,
-                title: actual.title,
-                categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
-                behavior: actual.behavior,
-                startMinute: start,
-                endMinute: end
-            )
-        }
-        let travelDetails: [MapHomeSectionDetail] = model.snapshot.travel.compactMap {
-            travel -> MapHomeSectionDetail? in
-            guard let clipped = travel.span.intersection(with: segmentSpan),
-                  clipped.start < dayEnd,
-                  clipped.end > dayStart
-            else { return nil }
-            let start = min(
-                1_440,
-                max(0, Int((clipped.start.timeIntervalSince(dayStart) / 60).rounded(.down)))
-            )
-            let end = min(
-                1_440,
-                max(start + 1, Int((clipped.end.timeIntervalSince(dayStart) / 60).rounded(.up)))
-            )
-            return MapHomeSectionDetail(
-                id: travel.id,
-                title: "\(MovementPresentation.title(for: travel.mode)) 탑승",
-                categoryID: "movement",
-                behavior: travel.mode.rawValue,
-                startMinute: start,
-                endMinute: end
-            )
-        }
-        details.append(contentsOf: travelDetails)
-        return details.sorted { lhs, rhs in
-            if lhs.startMinute == rhs.startMinute {
-                return lhs.endMinute < rhs.endMinute
-            }
-            return lhs.startMinute < rhs.startMinute
-        }
+        return MapHomeSectionDetailEngine.details(
+            actuals: model.snapshot.actuals,
+            travel: model.snapshot.travel,
+            segment: segment,
+            dayStart: dayStart,
+            dayEnd: dayEnd,
+            asOf: .now
+        )
     }
 
     private func refreshRouteReadings(for date: Date) async {
@@ -3535,13 +3481,89 @@ struct MapHomeView: View {
     }
 }
 
-private struct MapHomeSectionDetail: Identifiable, Hashable {
+struct MapHomeSectionDetail: Identifiable, Hashable {
     let id: UUID
     let title: String
     let categoryID: String
     let behavior: String?
     let startMinute: Int
     let endMinute: Int
+}
+
+enum MapHomeSectionDetailEngine {
+    static func details(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        segment: MapHomeTimeRailSegment,
+        dayStart: Date,
+        dayEnd: Date,
+        asOf: Date
+    ) -> [MapHomeSectionDetail] {
+        let calendar = Calendar.autoupdatingCurrent
+        guard let segmentStart = calendar.date(
+            byAdding: .minute,
+            value: segment.startMinute,
+            to: dayStart
+        ), let segmentEnd = calendar.date(
+            byAdding: .minute,
+            value: segment.endMinute,
+            to: dayStart
+        ) else { return [] }
+        let segmentSpan = TimeSpan(start: segmentStart, end: segmentEnd)
+        let majorSourceIDs = Set(segment.sourceIDs)
+        var result = actuals.compactMap { actual -> MapHomeSectionDetail? in
+            guard !majorSourceIDs.contains(actual.id),
+                  let clipped = actual.span(asOf: asOf).intersection(with: segmentSpan),
+                  clipped.start < dayEnd,
+                  clipped.end > dayStart
+            else { return nil }
+            let minutes = clippedMinutes(clipped, dayStart: dayStart)
+            return MapHomeSectionDetail(
+                id: actual.id,
+                title: actual.title,
+                categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
+                behavior: actual.behavior,
+                startMinute: minutes.start,
+                endMinute: minutes.end
+            )
+        }
+        result.append(contentsOf: travel.compactMap { item -> MapHomeSectionDetail? in
+            guard !majorSourceIDs.contains(item.id),
+                  let clipped = item.span.intersection(with: segmentSpan),
+                  clipped.start < dayEnd,
+                  clipped.end > dayStart
+            else { return nil }
+            let minutes = clippedMinutes(clipped, dayStart: dayStart)
+            return MapHomeSectionDetail(
+                id: item.id,
+                title: "\(MovementPresentation.title(for: item.mode)) 탑승",
+                categoryID: "movement",
+                behavior: item.mode.rawValue,
+                startMinute: minutes.start,
+                endMinute: minutes.end
+            )
+        })
+        return result.sorted { lhs, rhs in
+            lhs.startMinute == rhs.startMinute
+                ? lhs.endMinute < rhs.endMinute
+                : lhs.startMinute < rhs.startMinute
+        }
+    }
+
+    private static func clippedMinutes(
+        _ span: TimeSpan,
+        dayStart: Date
+    ) -> (start: Int, end: Int) {
+        let start = min(
+            1_440,
+            max(0, Int((span.start.timeIntervalSince(dayStart) / 60).rounded(.down)))
+        )
+        let end = min(
+            1_440,
+            max(start + 1, Int((span.end.timeIntervalSince(dayStart) / 60).rounded(.up)))
+        )
+        return (start, end)
+    }
 }
 
 private struct MapHomeSectionEditSelection: Identifiable {
@@ -3645,6 +3667,22 @@ enum MapHomeSectionViewportMath {
                 maximumDurationMinutes - duration
             ),
             durationMinutes: duration
+        )
+    }
+}
+
+enum MapHomeSectionTimelineLayoutMath {
+    static let timeGutterWidth: CGFloat = 52
+    static let minimumGap: CGFloat = 8
+    static let trailingInset: CGFloat = 8
+
+    static func detailFrame(leftWidth: CGFloat) -> CGRect {
+        let minX = timeGutterWidth + minimumGap
+        return CGRect(
+            x: minX,
+            y: 0,
+            width: max(1, leftWidth - minX - trailingInset),
+            height: 1
         )
     }
 }
@@ -4022,6 +4060,9 @@ private struct MapHomeSectionEditSheet: View {
         if start < end {
             let y = yPosition(start, height: height)
             let blockHeight = max(26, yPosition(end, height: height) - y)
+            let detailFrame = MapHomeSectionTimelineLayoutMath.detailFrame(
+                leftWidth: leftWidth
+            )
             let category = MapHomeSidebarMajorCategory.presentation(
                 for: detail.categoryID,
                 categoryColors: model.settings.mapCategoryColors
@@ -4041,7 +4082,7 @@ private struct MapHomeSectionEditSheet: View {
             .font(.system(size: 11, weight: .semibold, design: .rounded))
             .foregroundStyle(category.tint)
             .padding(.horizontal, 8)
-            .frame(width: leftWidth - 45, height: blockHeight, alignment: .leading)
+            .frame(width: detailFrame.width, height: blockHeight, alignment: .leading)
             .background(
                 insertedDetailID == detail.id
                     ? category.tint.opacity(0.30)
@@ -4053,7 +4094,7 @@ private struct MapHomeSectionEditSheet: View {
                     ? min(max(detailDragTranslation, 0), 94)
                     : 0
             )
-            .position(x: 35 + (leftWidth - 45) / 2, y: y + blockHeight / 2)
+            .position(x: detailFrame.midX, y: y + blockHeight / 2)
             .highPriorityGesture(detailSliceGesture(detail))
             .accessibilityLabel("\(detail.title), \(timeLabel(detail.startMinute))부터 \(timeLabel(detail.endMinute))")
             .accessibilityHint(

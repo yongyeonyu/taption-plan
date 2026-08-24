@@ -200,26 +200,30 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertTrue(replacementDevice.hasPIN)
     }
 
-    func testLegacyCloudRecoveryKeyCanOnlyBeReadAndRemoved() throws {
+    func testUbiquitousCloudRecoveryKeyCanBePersistedReadAndRemoved() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = UbiquitousPlanCloudRecoveryKeyStore(containerURL: directory)
         let key = Data(repeating: 7, count: 32)
-        let legacyDirectory = directory
-            .appendingPathComponent("Documents", isDirectory: true)
-            .appendingPathComponent("Taption Plan", isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: legacyDirectory,
-            withIntermediateDirectories: true
-        )
-        try key.write(
-            to: legacyDirectory.appendingPathComponent(".recovery-key-v1")
-        )
 
+        try store.save(key)
         XCTAssertEqual(try store.existingKey(), key)
         try store.removeExistingKey()
         XCTAssertNil(try store.existingKey())
+    }
+
+    func testUbiquitousCloudRecoveryKeyRejectsInvalidLength() {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = UbiquitousPlanCloudRecoveryKeyStore(containerURL: directory)
+
+        XCTAssertThrowsError(
+            try store.save(Data(repeating: 1, count: 31))
+        ) { error in
+            XCTAssertEqual(error as? PlanSecurityError, .accountUnavailable)
+        }
     }
 
     private func makeService(

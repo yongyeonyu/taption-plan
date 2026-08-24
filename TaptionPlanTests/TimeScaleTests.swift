@@ -715,6 +715,143 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(center, 30)
     }
 
+    func testSidebarHandleLaneContainsExpandedHitAreaWithoutRailOverlap() {
+        let railWidth: CGFloat = 58
+        let activeRailWidth: CGFloat = 12
+        let totalWidth = MapHomeTimeSidebarMath.totalWidth(railWidth: railWidth)
+        let trackX = MapHomeTimeSidebarMath.trackCenterX(
+            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
+            railWidth: railWidth,
+            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
+            activeRailWidth: activeRailWidth
+        )
+        let handleX = MapHomeTimeSidebarMath.handleCenterX(
+            trackX: trackX,
+            activeRailWidth: activeRailWidth
+        )
+        let hitSize = MapHomeTimeSidebarMath.handleDoubleTapHitSize(
+            railWidth: railWidth,
+            handleHeight: MapHomeTimeSidebarMath.handleVisualSize.height
+        )
+        let activeRailMinX = trackX - activeRailWidth / 2
+        let handleMaxX = handleX + MapHomeTimeSidebarMath.handleVisualSize.width / 2
+
+        XCTAssertEqual(totalWidth, 127)
+        XCTAssertEqual(activeRailMinX - handleMaxX, MapHomeTimeSidebarMath.handleRailGap)
+        XCTAssertGreaterThanOrEqual(handleX - hitSize.width / 2, 0)
+        XCTAssertLessThanOrEqual(handleX + hitSize.width / 2, totalWidth)
+    }
+
+    func testSidebarHandleHitAreaAndWeatherStayInsideRailAtEdges() {
+        let railHeight: CGFloat = 600
+        let hitHeight: CGFloat = 66
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.handleHitCenterY(
+                handleCenterY: 14,
+                railHeight: railHeight,
+                hitHeight: hitHeight
+            ),
+            33
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.handleHitCenterY(
+                handleCenterY: 590,
+                railHeight: railHeight,
+                hitHeight: hitHeight
+            ),
+            567
+        )
+
+        let above = MapHomeTimeSidebarMath.compactWeatherFrame(
+            handleCenterX: 44,
+            handleCenterY: 200,
+            railHeight: railHeight
+        )
+        let flipped = MapHomeTimeSidebarMath.compactWeatherFrame(
+            handleCenterX: 44,
+            handleCenterY: 14,
+            railHeight: railHeight
+        )
+        XCTAssertEqual(200 - MapHomeTimeSidebarMath.handleVisualSize.height / 2 - above.maxY, 4)
+        XCTAssertEqual(flipped.minY - (14 + MapHomeTimeSidebarMath.handleVisualSize.height / 2), 4)
+    }
+
+    func testSectionTimelineDetailFrameKeepsTimeGutterClear() {
+        for width: CGFloat in [180, 240, 320] {
+            let frame = MapHomeSectionTimelineLayoutMath.detailFrame(leftWidth: width)
+            XCTAssertEqual(
+                frame.minX - MapHomeSectionTimelineLayoutMath.timeGutterWidth,
+                MapHomeSectionTimelineLayoutMath.minimumGap
+            )
+            XCTAssertGreaterThan(frame.width, 0)
+            XCTAssertLessThanOrEqual(frame.maxX, width)
+        }
+    }
+
+    func testSectionDetailsExcludeMajorSleepSourceAndKeepActualHomeRest() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = calendar.date(from: DateComponents(
+            timeZone: calendar.timeZone,
+            year: 2026,
+            month: 8,
+            day: 24
+        ))!
+        let sleepID = UUID()
+        let restID = UUID()
+        let start = dayStart.addingTimeInterval(13 * 60)
+        let end = dayStart.addingTimeInterval(8 * 3_600 + 60)
+        let sleep = ActualRecord(
+            id: sleepID,
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start,
+            endedAt: end,
+            source: .healthKit,
+            behavior: "sleep"
+        )
+        let homeRest = ActualRecord(
+            id: restID,
+            planID: nil,
+            title: "집에서 휴식",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: end,
+            source: .location,
+            behavior: StationaryContextKind.homeRest.rawValue
+        )
+        let segment = MapHomeTimeRailSegment(
+            startMinute: 13,
+            endMinute: 481,
+            categoryID: "sleep",
+            title: "수면",
+            sourceIDs: [sleepID]
+        )
+
+        let details = MapHomeSectionDetailEngine.details(
+            actuals: [sleep, homeRest],
+            travel: [],
+            segment: segment,
+            dayStart: dayStart,
+            dayEnd: dayStart.addingTimeInterval(86_400),
+            asOf: end
+        )
+
+        XCTAssertEqual(details.map(\.id), [restID])
+        XCTAssertEqual(details.first?.title, "집에서 휴식")
+        XCTAssertTrue(
+            MapHomeSectionDetailEngine.details(
+                actuals: [sleep],
+                travel: [],
+                segment: segment,
+                dayStart: dayStart,
+                dayEnd: dayStart.addingTimeInterval(86_400),
+                asOf: end
+            ).isEmpty
+        )
+    }
+
     func testMapHomeCompassControlReturnsToArrowWithFixedDirection() {
         let compass = MapHomeCompassControlState.directionArrow.toggled
         XCTAssertEqual(compass, .compass)
@@ -1547,6 +1684,16 @@ final class TimeScaleTests: XCTestCase {
 
         XCTAssertEqual(state.selectedMinute, 630)
         XCTAssertEqual(state.visibleStartMinute, 600)
+    }
+
+    func testMapHomeTimeSidebarHandleDoubleTapAreaIsOnePointFiveTimesLarger() {
+        let size = MapHomeTimeSidebarMath.handleDoubleTapHitSize(
+            railWidth: 58,
+            handleHeight: 44
+        )
+
+        XCTAssertEqual(size.width, 87, accuracy: 0.001)
+        XCTAssertEqual(size.height, 66, accuracy: 0.001)
     }
 
     func testMapHomeTimelineUsesFullDayForArchivedDate() {

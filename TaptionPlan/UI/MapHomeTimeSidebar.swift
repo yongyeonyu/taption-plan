@@ -774,6 +774,10 @@ struct MapHomeTimeSidebar: View {
     private let numericColumnWidth = MapHomeTimeSidebarMath.rulerNumericColumnWidth
     private let rulerTickWidth = MapHomeTimeSidebarMath.rulerTickWidth
 
+    private var totalWidth: CGFloat {
+        MapHomeTimeSidebarMath.totalWidth(railWidth: railWidth)
+    }
+
     init(
         date: Date,
         selectedMinute: Binding<Int>,
@@ -829,12 +833,23 @@ struct MapHomeTimeSidebar: View {
                     minute: minute,
                     window: visibleWindow
                 )
-            let trackX = railWidth - numericColumnWidth - activeRailWidth / 2 - 1
+            let railOriginX = MapHomeTimeSidebarMath.handleLaneWidth
+            let trackX = MapHomeTimeSidebarMath.trackCenterX(
+                railOriginX: railOriginX,
+                railWidth: railWidth,
+                numericColumnWidth: numericColumnWidth,
+                activeRailWidth: activeRailWidth
+            )
 
             ZStack(alignment: .topLeading) {
                 Rectangle()
                     .fill(.clear)
+                    .frame(width: railWidth, height: railHeight)
                     .contentShape(Rectangle())
+                    .position(
+                        x: railOriginX + railWidth / 2,
+                        y: railHeight / 2
+                    )
                     .gesture(
                         timeTapGesture(
                             trackHeight: trackHeight,
@@ -850,7 +865,9 @@ struct MapHomeTimeSidebar: View {
                     // both ends of the coloured rail.
                     .frame(width: numericColumnWidth + 3, height: railHeight)
                     .position(
-                        x: railWidth - (numericColumnWidth + 3) / 2,
+                        x: railOriginX
+                            + railWidth
+                            - (numericColumnWidth + 3) / 2,
                         y: railHeight / 2
                     )
                     .allowsHitTesting(false)
@@ -929,7 +946,7 @@ struct MapHomeTimeSidebar: View {
                     let columnSpacing = MapHomeTimeSidebarMath.rulerColumnSpacing
                     let labelsStartX = MapHomeTimeSidebarMath.rulerLabelsStartX(
                         railWidth: railWidth
-                    )
+                    ) + railOriginX
                     Canvas { context, size in
                         for minuteMark in minuteMarks {
                             guard showsMinuteTicks || minuteMark.isMultiple(of: 10) else {
@@ -954,7 +971,10 @@ struct MapHomeTimeSidebar: View {
                         }
                     }
                     .frame(width: numericColumnWidth, height: railHeight)
-                    .position(x: railWidth - numericColumnWidth / 2, y: railHeight / 2)
+                    .position(
+                        x: railOriginX + railWidth - numericColumnWidth / 2,
+                        y: railHeight / 2
+                    )
                     .allowsHitTesting(false)
 
                     ForEach(rulerLabels.hours, id: \.self) { hour in
@@ -1025,7 +1045,10 @@ struct MapHomeTimeSidebar: View {
                                 .frame(width: 20, alignment: .trailing)
                         }
                         .frame(width: numericColumnWidth, alignment: .leading)
-                        .position(x: railWidth - numericColumnWidth / 2, y: y)
+                        .position(
+                            x: railOriginX + railWidth - numericColumnWidth / 2,
+                            y: y
+                        )
                         .allowsHitTesting(false)
                     }
                 }
@@ -1035,19 +1058,32 @@ struct MapHomeTimeSidebar: View {
                     y: selectedY,
                     trackX: trackX,
                     trackHeight: trackHeight,
+                    railHeight: railHeight,
                     maxMinute: maxMinute,
                     visibleWindow: visibleWindow
                 )
 
+                if let currentWeather {
+                    compactWeather(
+                        currentWeather,
+                        handleCenterX: MapHomeTimeSidebarMath.handleCenterX(
+                            trackX: trackX,
+                            activeRailWidth: activeRailWidth
+                        ),
+                        handleCenterY: selectedY,
+                        railHeight: railHeight
+                    )
+                }
+
             }
-            .frame(width: railWidth, height: railHeight)
+            .frame(width: totalWidth, height: railHeight)
             .coordinateSpace(name: "mapHomeTimeSidebarRail")
             .contentShape(Rectangle())
             .accessibilityElement(children: .contain)
             .accessibilityLabel("시간 선택")
             .accessibilityValue(timeLabel(for: minute))
         }
-        .frame(width: railWidth)
+        .frame(width: totalWidth)
         .onDisappear {
             dragStartMinute = nil
             viewportDragStartMinute = nil
@@ -1091,20 +1127,33 @@ struct MapHomeTimeSidebar: View {
         y: CGFloat,
         trackX: CGFloat,
         trackHeight: CGFloat,
+        railHeight: CGFloat,
         maxMinute: Int,
         visibleWindow: ClosedRange<Int>
     ) -> some View {
-        let handleHeight: CGFloat = 44
-        let handleCenterX = trackX - 23
+        let handleSize = MapHomeTimeSidebarMath.handleVisualSize
+        let doubleTapHitSize = MapHomeTimeSidebarMath.handleDoubleTapHitSize(
+            railWidth: railWidth,
+            handleHeight: handleSize.height
+        )
+        let handleCenterX = MapHomeTimeSidebarMath.handleCenterX(
+            trackX: trackX,
+            activeRailWidth: activeRailWidth
+        )
+        let hitCenterY = MapHomeTimeSidebarMath.handleHitCenterY(
+            handleCenterY: y,
+            railHeight: railHeight,
+            hitHeight: doubleTapHitSize.height
+        )
         let fallbackActivity = MapHomeTimeSidebarActivity.majorCategory(
             "unconfirmed",
             categoryColors: categoryColors
         )
-        return ZStack {
+        return ZStack(alignment: .topLeading) {
             Image(systemName: activity?.systemImage ?? fallbackActivity.systemImage)
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(activity?.tint ?? fallbackActivity.tint)
-                .frame(width: 44, height: handleHeight)
+                .frame(width: handleSize.width, height: handleSize.height)
                 .background(
                     Color.tpInk.opacity(0.90),
                     in: RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -1117,48 +1166,9 @@ struct MapHomeTimeSidebar: View {
                             lineWidth: 1
                         )
                 }
-            .accessibilityLabel(activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel)
-            .accessibilityHint("두 번 탭하면 섹션 편집을 엽니다")
-                .position(x: handleCenterX, y: handleHeight / 2)
-
-            if let currentWeather {
-                let playheadFrame = CGRect(
-                    x: handleCenterX - 22,
-                    y: 0,
-                    width: 44,
-                    height: handleHeight
-                )
-                let weatherFrame = MapHomeWeatherCollisionMath.alignedWeatherFrame(
-                    centerX: handleCenterX,
-                    playheadFrame: playheadFrame
-                )
-                let collisionOffset = MapHomeWeatherCollisionMath.horizontalOffset(
-                    weatherFrame: weatherFrame,
-                    playheadFrame: playheadFrame
-                )
-                HStack(spacing: 2) {
-                    Image(systemName: currentWeather.symbolName)
-                        .font(.system(size: 9, weight: .semibold))
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(
-                            mapHomeWeatherSymbolColor(currentWeather, component: .primary),
-                            mapHomeWeatherSymbolColor(currentWeather, component: .secondary)
-                        )
-                    Text("\(Int(currentWeather.temperatureCelsius.rounded()))°")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                }
-                .foregroundStyle(Color.tpWeatherDark)
-                .frame(width: weatherFrame.width, height: weatherFrame.height)
-                .background(Color.tpWeather.opacity(0.24), in: Capsule())
-                .position(
-                    x: weatherFrame.midX + collisionOffset,
-                    y: weatherFrame.midY
-                )
-                .accessibilityLabel(
-                    "현재 날씨 \(currentWeather.condition), \(Int(currentWeather.temperatureCelsius.rounded()))도"
-                )
-            }
+                .position(x: handleCenterX, y: y)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
 
             VStack(spacing: -1) {
                 Text(String(format: "%02d", minute / 60))
@@ -1178,25 +1188,66 @@ struct MapHomeTimeSidebar: View {
             .position(
                 x: MapHomeTimeSidebarMath.selectionTimeBlockCenterX(
                     railWidth: railWidth,
+                    railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
                     trackX: trackX,
                     activeRailWidth: activeRailWidth
                 ),
-                y: handleHeight / 2
+                y: y
             )
+
+            Color.clear
+                .frame(width: doubleTapHitSize.width, height: doubleTapHitSize.height)
+                .contentShape(Rectangle())
+                .position(x: handleCenterX, y: hitCenterY)
+                .highPriorityGesture(
+                    TapGesture(count: 2).onEnded {
+                        onSectionEdit?()
+                    }
+                )
+                .simultaneousGesture(dragGesture(
+                    trackHeight: trackHeight,
+                    maxMinute: maxMinute,
+                    visibleWindow: visibleWindow
+                ))
+                .accessibilityLabel(
+                    activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
+                )
+                .accessibilityHint("두 번 탭하면 섹션 편집을 엽니다")
         }
-        .frame(width: railWidth, height: handleHeight)
-        .contentShape(Rectangle())
-        .position(x: railWidth / 2, y: y)
-        .highPriorityGesture(
-            TapGesture(count: 2).onEnded {
-                onSectionEdit?()
-            }
+        .frame(width: totalWidth, height: railHeight)
+    }
+
+    private func compactWeather(
+        _ weather: WeatherContext,
+        handleCenterX: CGFloat,
+        handleCenterY: CGFloat,
+        railHeight: CGFloat
+    ) -> some View {
+        let frame = MapHomeTimeSidebarMath.compactWeatherFrame(
+            handleCenterX: handleCenterX,
+            handleCenterY: handleCenterY,
+            railHeight: railHeight
         )
-        .simultaneousGesture(dragGesture(
-            trackHeight: trackHeight,
-            maxMinute: maxMinute,
-            visibleWindow: visibleWindow
-        ))
+        return HStack(spacing: 2) {
+            Image(systemName: weather.symbolName)
+                .font(.system(size: 9, weight: .semibold))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(
+                    mapHomeWeatherSymbolColor(weather, component: .primary),
+                    mapHomeWeatherSymbolColor(weather, component: .secondary)
+                )
+            Text("\(Int(weather.temperatureCelsius.rounded()))°")
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .monospacedDigit()
+        }
+        .foregroundStyle(Color.tpWeatherDark)
+        .frame(width: frame.width, height: frame.height)
+        .background(Color.tpWeather.opacity(0.24), in: Capsule())
+        .position(x: frame.midX, y: frame.midY)
+        .allowsHitTesting(false)
+        .accessibilityLabel(
+            "현재 날씨 \(weather.condition), \(Int(weather.temperatureCelsius.rounded()))도"
+        )
     }
 
     private func categoryColorHex(_ id: String) -> String {
@@ -1228,7 +1279,7 @@ struct MapHomeTimeSidebar: View {
         visibleWindow: ClosedRange<Int>
     ) -> some Gesture {
         DragGesture(
-            minimumDistance: 3,
+            minimumDistance: 8,
             coordinateSpace: .named("mapHomeTimeSidebarRail")
         )
             .onChanged { value in
@@ -1489,15 +1540,22 @@ struct MapHomeWeatherSidebar: View {
                                 minute: selectedMinute,
                                 window: window
                             )
-                        let timeTrackX = railWidth
-                            - MapHomeTimeSidebarMath.rulerNumericColumnWidth
-                            - activeRailWidth / 2
-                            - 1
+                        let timeTrackX = MapHomeTimeSidebarMath.trackCenterX(
+                            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
+                            railWidth: railWidth,
+                            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
+                            activeRailWidth: activeRailWidth
+                        )
+                        let timeHandleCenterX = MapHomeTimeSidebarMath.handleCenterX(
+                            trackX: timeTrackX,
+                            activeRailWidth: activeRailWidth
+                        )
                         let playheadFrame = CGRect(
-                            x: railWidth + 4 + timeTrackX - 23 - 22,
+                            x: railWidth + 4 + timeHandleCenterX
+                                - MapHomeTimeSidebarMath.handleVisualSize.width / 2,
                             y: playheadY - 22,
-                            width: 44,
-                            height: 44
+                            width: MapHomeTimeSidebarMath.handleVisualSize.width,
+                            height: MapHomeTimeSidebarMath.handleVisualSize.height
                         )
                         let weatherFrame = CGRect(
                             x: railWidth / 2 - itemWidth / 2,
@@ -1615,6 +1673,70 @@ enum MapHomeTimeSidebarMath {
     static let rulerColumnSpacing: CGFloat = 2
     static let minimumRulerLabelSpacing: CGFloat = 12
     static let selectionTimeBlockWidth: CGFloat = 32
+    static let handleDoubleTapHitScale: CGFloat = 1.5
+    static let handleLaneWidth: CGFloat = 69
+    static let handleVisualSize = CGSize(width: 44, height: 44)
+    static let handleRailGap: CGFloat = 4
+    static let compactWeatherSize = CGSize(width: 32, height: 22)
+    static let compactWeatherGap: CGFloat = 4
+
+    static func totalWidth(railWidth: CGFloat) -> CGFloat {
+        handleLaneWidth + railWidth
+    }
+
+    static func trackCenterX(
+        railOriginX: CGFloat,
+        railWidth: CGFloat,
+        numericColumnWidth: CGFloat,
+        activeRailWidth: CGFloat
+    ) -> CGFloat {
+        railOriginX + railWidth - numericColumnWidth - activeRailWidth / 2 - 1
+    }
+
+    static func handleCenterX(
+        trackX: CGFloat,
+        activeRailWidth: CGFloat
+    ) -> CGFloat {
+        trackX - activeRailWidth / 2 - handleRailGap - handleVisualSize.width / 2
+    }
+
+    static func handleHitCenterY(
+        handleCenterY: CGFloat,
+        railHeight: CGFloat,
+        hitHeight: CGFloat
+    ) -> CGFloat {
+        min(max(handleCenterY, hitHeight / 2), railHeight - hitHeight / 2)
+    }
+
+    static func compactWeatherFrame(
+        handleCenterX: CGFloat,
+        handleCenterY: CGFloat,
+        railHeight: CGFloat
+    ) -> CGRect {
+        let offset = handleVisualSize.height / 2
+            + compactWeatherGap
+            + compactWeatherSize.height / 2
+        let preferredCenterY = handleCenterY - offset
+        let centerY = preferredCenterY - compactWeatherSize.height / 2 >= 0
+            ? preferredCenterY
+            : min(railHeight - compactWeatherSize.height / 2, handleCenterY + offset)
+        return CGRect(
+            x: handleCenterX - compactWeatherSize.width / 2,
+            y: centerY - compactWeatherSize.height / 2,
+            width: compactWeatherSize.width,
+            height: compactWeatherSize.height
+        )
+    }
+
+    static func handleDoubleTapHitSize(
+        railWidth: CGFloat,
+        handleHeight: CGFloat
+    ) -> CGSize {
+        CGSize(
+            width: railWidth * handleDoubleTapHitScale,
+            height: handleHeight * handleDoubleTapHitScale
+        )
+    }
 
     static func rulerFontSize(durationMinutes: Int) -> CGFloat {
         switch durationMinutes {
@@ -1643,12 +1765,16 @@ enum MapHomeTimeSidebarMath {
 
     static func selectionTimeBlockCenterX(
         railWidth: CGFloat,
+        railOriginX: CGFloat = 0,
         trackX: CGFloat,
         activeRailWidth: CGFloat
     ) -> CGFloat {
         let ideal = trackX + activeRailWidth / 2 + 17
         let halfWidth = selectionTimeBlockWidth / 2
-        return min(max(ideal, halfWidth), railWidth - halfWidth)
+        return min(
+            max(ideal, railOriginX + halfWidth),
+            railOriginX + railWidth - halfWidth
+        )
     }
 
     static func duration(afterZoomStep step: Int, from durationMinutes: Int) -> Int {

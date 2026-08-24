@@ -3531,9 +3531,9 @@ enum AppleWatchSensorActivityEngine {
     }
 }
 
-/// Apple Watch가 없는 경우에만 충전 중인 iPhone의 무활동을 수면 후보로 쓴다.
-/// 원본 센서와 앱 사용 기록은 그대로 두고, 한 시간 이상 이어진 구간만
-/// 수정 불가 파생 기록으로 만든다.
+/// HealthKit·Watch 수면 기록을 보완할 때 충전 중인 iPhone의
+/// 무활동을 수면 후보로 쓴다. 원본 센서와 앱 사용 기록은 그대로
+/// 두고, 한 시간 이상 이어진 구간만 수정 불가 파생 기록으로 만든다.
 enum ChargingInactivitySleepEngine {
     static let modelVersion = "charging-inactivity-sleep-v1"
     static let minimumDuration: TimeInterval = 60 * 60
@@ -3870,7 +3870,7 @@ enum PhoneSleepWakeEngine {
     }
 
     private static func stableID(for span: TimeSpan) -> UUID {
-        let key = "(modelVersion)|(Int(span.start.timeIntervalSince1970))|(Int(span.end.timeIntervalSince1970))"
+        let key = "\(modelVersion)|\(Int(span.start.timeIntervalSince1970))|\(Int(span.end.timeIntervalSince1970))"
         var hash: UInt64 = 14_695_981_039_346_656_037
         var bytes = [UInt8](repeating: 0, count: 16)
         for byte in key.utf8 {
@@ -3887,6 +3887,41 @@ enum PhoneSleepWakeEngine {
             bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11],
             bytes[12], bytes[13], bytes[14], bytes[15]
         ))
+    }
+}
+
+enum PhoneSleepFallbackEngine {
+    static let maximumBackgroundSampleGap: TimeInterval = 4 * 60 * 60
+
+    static func records(
+        readings: [SensorReading],
+        actuals: [ActualRecord],
+        inside span: TimeSpan,
+        nominalMaximumSampleGap: TimeInterval,
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        let iPhoneReadings = readings.filter { $0.sourceDevice != .appleWatch }
+        let maximumSampleGap = max(
+            nominalMaximumSampleGap,
+            maximumBackgroundSampleGap
+        )
+        let screenBased = PhoneSleepWakeEngine.records(
+            readings: iPhoneReadings,
+            actuals: actuals,
+            inside: span,
+            watchAvailable: false,
+            maximumSampleGap: maximumSampleGap,
+            asOf: asOf
+        )
+        guard screenBased.isEmpty else { return screenBased }
+        return ChargingInactivitySleepEngine.records(
+            readings: iPhoneReadings,
+            actuals: actuals,
+            inside: span,
+            watchAvailable: false,
+            maximumSampleGap: maximumSampleGap,
+            asOf: asOf
+        )
     }
 }
 

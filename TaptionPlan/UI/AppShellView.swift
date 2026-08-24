@@ -256,8 +256,14 @@ struct AppShellView: View {
                 allowsDismiss: false
             )
         } else if shouldHideAppSnapshot {
-            Color.tpInk
-                .ignoresSafeArea()
+            ZStack {
+                Color("LaunchBackground")
+                    .ignoresSafeArea()
+                Image("LaunchIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 180, height: 180)
+            }
                 .accessibilityHidden(true)
         }
     }
