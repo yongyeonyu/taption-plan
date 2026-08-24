@@ -538,7 +538,6 @@ struct MapHomeView: View {
         static let mapControlSpacing = MapHomeOverlayLayoutMath.controlSpacing
         static let timeRailWidth: CGFloat = 58
         static let weatherRailWidth: CGFloat = 58
-        static let weatherRailSpacing: CGFloat = 4
         static let timeRailTopMargin: CGFloat = 18
         static let topOverlayFallbackHeight: CGFloat = 104
         static let overlayBottomMargin = MapHomeOverlayLayoutMath.sharedBottomMargin
@@ -577,10 +576,7 @@ struct MapHomeView: View {
     }
 
     private var sidebarInteractionWidth: CGFloat {
-        (model.settings.weatherSidebarVisible
-            ? Layout.weatherRailWidth + Layout.weatherRailSpacing
-            : 0)
-            + MapHomeTimeSidebarMath.totalWidth(railWidth: Layout.timeRailWidth)
+        MapHomeTimeSidebarMath.totalWidth(railWidth: Layout.timeRailWidth)
             + Layout.horizontalInset
     }
 
@@ -1659,13 +1655,14 @@ struct MapHomeView: View {
             )
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
                 let minute = timelineSelectionMinute(at: timeline.date)
-                let weatherWidth = model.settings.weatherSidebarVisible
-                    ? Layout.weatherRailWidth + Layout.weatherRailSpacing
-                    : 0
                 let timeSidebarWidth = MapHomeTimeSidebarMath.totalWidth(
                     railWidth: Layout.timeRailWidth
                 )
-                HStack(spacing: Layout.weatherRailSpacing) {
+                let weatherOriginX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
+                    weatherRailWidth: Layout.weatherRailWidth,
+                    timeRailWidth: Layout.timeRailWidth
+                )
+                ZStack(alignment: .topLeading) {
                     if model.settings.weatherSidebarVisible {
                         MapHomeWeatherSidebar(
                             date: model.selectedDate,
@@ -1673,8 +1670,13 @@ struct MapHomeView: View {
                             selectedMinute: minute,
                             language: language,
                             visibleStartMinute: weatherVisibleStartMinute,
-                            visibleDurationMinutes: weatherVisibleDurationMinutes
+                            visibleDurationMinutes: weatherVisibleDurationMinutes,
+                            playheadCenterX: MapHomeWeatherRailAlignmentMath.playheadCenterX(
+                                weatherOriginX: weatherOriginX,
+                                timeRailWidth: Layout.timeRailWidth
+                            )
                         )
+                        .offset(x: weatherOriginX)
                     }
                     MapHomeTimeSidebar(
                         date: model.selectedDate,
@@ -1714,11 +1716,11 @@ struct MapHomeView: View {
                     )
                 }
                 .frame(
-                    width: weatherWidth + timeSidebarWidth,
+                    width: timeSidebarWidth,
                     height: railHeight
                 )
                 .position(
-                    x: proxy.size.width - (weatherWidth + timeSidebarWidth) / 2,
+                    x: proxy.size.width - timeSidebarWidth / 2,
                     y: max(
                         railHeight / 2,
                         proxy.size.height - railHeight / 2
@@ -1741,11 +1743,7 @@ struct MapHomeView: View {
                 )
             }
         }
-        .frame(
-            width: (model.settings.weatherSidebarVisible
-                ? Layout.weatherRailWidth + Layout.weatherRailSpacing
-                : 0) + Layout.timeRailWidth
-        )
+        .frame(width: Layout.timeRailWidth)
         .frame(maxHeight: .infinity, alignment: .trailing)
     }
 

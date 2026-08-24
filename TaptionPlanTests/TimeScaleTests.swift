@@ -473,6 +473,60 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testWeatherTimelineRightEdgeAttachesToActivityRail() {
+        let weatherRailWidth: CGFloat = 58
+        let timeRailWidth: CGFloat = 58
+        let originX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
+            weatherRailWidth: weatherRailWidth,
+            timeRailWidth: timeRailWidth
+        )
+        let trackX = MapHomeTimeSidebarMath.trackCenterX(
+            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
+            railWidth: timeRailWidth,
+            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
+            activeRailWidth: MapHomeTimeSidebarMath.activeRailWidth
+        )
+        let weatherItemRightX = originX + weatherRailWidth - 1
+
+        XCTAssertEqual(
+            weatherItemRightX,
+            trackX
+                - MapHomeTimeSidebarMath.activeRailWidth / 2
+                - MapHomeWeatherCollisionMath.clearance
+        )
+    }
+
+    func testWeatherTimelineUsesTheActualHandleForCollision() {
+        let weatherOriginX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
+            weatherRailWidth: 58,
+            timeRailWidth: 58
+        )
+        let localHandleCenterX = MapHomeWeatherRailAlignmentMath.playheadCenterX(
+            weatherOriginX: weatherOriginX,
+            timeRailWidth: 58
+        )
+        let weather = CGRect(x: 1, y: 100, width: 56, height: 30)
+        let playhead = CGRect(
+            x: localHandleCenterX
+                - MapHomeTimeSidebarMath.handleVisualSize.width / 2,
+            y: 93,
+            width: MapHomeTimeSidebarMath.handleVisualSize.width,
+            height: MapHomeTimeSidebarMath.handleVisualSize.height
+        )
+        let shifted = weather.offsetBy(
+            dx: MapHomeWeatherCollisionMath.horizontalOffset(
+                weatherFrame: weather,
+                playheadFrame: playhead
+            ),
+            dy: 0
+        )
+
+        XCTAssertEqual(
+            shifted.maxX,
+            playhead.minX - MapHomeWeatherCollisionMath.clearance
+        )
+    }
+
     func testSidebarRulerFontGrowsAcrossAllZoomSteps() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.zoomDurations.map {

@@ -125,6 +125,41 @@ enum MapHomeWeatherCollisionMath {
     }
 }
 
+enum MapHomeWeatherRailAlignmentMath {
+    static func weatherOriginX(
+        weatherRailWidth: CGFloat,
+        timeRailWidth: CGFloat
+    ) -> CGFloat {
+        let trackX = MapHomeTimeSidebarMath.trackCenterX(
+            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
+            railWidth: timeRailWidth,
+            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
+            activeRailWidth: MapHomeTimeSidebarMath.activeRailWidth
+        )
+        let itemRightX = weatherRailWidth - 1
+        return trackX
+            - MapHomeTimeSidebarMath.activeRailWidth / 2
+            - MapHomeWeatherCollisionMath.clearance
+            - itemRightX
+    }
+
+    static func playheadCenterX(
+        weatherOriginX: CGFloat,
+        timeRailWidth: CGFloat
+    ) -> CGFloat {
+        let trackX = MapHomeTimeSidebarMath.trackCenterX(
+            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
+            railWidth: timeRailWidth,
+            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
+            activeRailWidth: MapHomeTimeSidebarMath.activeRailWidth
+        )
+        return MapHomeTimeSidebarMath.handleCenterX(
+            trackX: trackX,
+            activeRailWidth: MapHomeTimeSidebarMath.activeRailWidth
+        ) - weatherOriginX
+    }
+}
+
 struct MapHomeTimeSidebarActivity {
     let systemImage: String
     let tint: Color
@@ -1486,10 +1521,10 @@ struct MapHomeWeatherSidebar: View {
     let language: MapHomeLanguage
     let visibleStartMinute: Int
     let visibleDurationMinutes: Int
+    let playheadCenterX: CGFloat
 
     private let railWidth: CGFloat = 58
     private let verticalInset: CGFloat = 14
-    private let activeRailWidth: CGFloat = 12
 
     private struct Entry: Identifiable {
         let context: WeatherContext
@@ -1510,15 +1545,6 @@ struct MapHomeWeatherSidebar: View {
                 centerMinute: selectedMinute
             )
             ZStack(alignment: .topLeading) {
-                Rectangle()
-                    .fill(Color.tpWeather.opacity(0.30))
-                    .frame(width: activeRailWidth, height: trackHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-                    .position(
-                        x: railWidth / 2,
-                        y: verticalInset + trackHeight / 2
-                    )
-
                 ForEach(entries) { entry in
                     let startMinute = max(entry.startMinute, window.lowerBound)
                     let endMinute = min(entry.endMinute, window.upperBound)
@@ -1540,18 +1566,8 @@ struct MapHomeWeatherSidebar: View {
                                 minute: selectedMinute,
                                 window: window
                             )
-                        let timeTrackX = MapHomeTimeSidebarMath.trackCenterX(
-                            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
-                            railWidth: railWidth,
-                            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
-                            activeRailWidth: activeRailWidth
-                        )
-                        let timeHandleCenterX = MapHomeTimeSidebarMath.handleCenterX(
-                            trackX: timeTrackX,
-                            activeRailWidth: activeRailWidth
-                        )
                         let playheadFrame = CGRect(
-                            x: railWidth + 4 + timeHandleCenterX
+                            x: playheadCenterX
                                 - MapHomeTimeSidebarMath.handleVisualSize.width / 2,
                             y: playheadY - 22,
                             width: MapHomeTimeSidebarMath.handleVisualSize.width,
@@ -1675,6 +1691,7 @@ enum MapHomeTimeSidebarMath {
     static let selectionTimeBlockWidth: CGFloat = 32
     static let handleDoubleTapHitScale: CGFloat = 1.5
     static let handleLaneWidth: CGFloat = 69
+    static let activeRailWidth: CGFloat = 12
     static let handleVisualSize = CGSize(width: 44, height: 44)
     static let handleRailGap: CGFloat = 4
     static let compactWeatherSize = CGSize(width: 32, height: 22)
