@@ -788,6 +788,7 @@ struct MapHomeTimeSidebar: View {
     let maximumSelectableMinute: Int?
     var onSelectionChanged: ((Int) -> Void)?
     var onViewportChanged: ((Int, Int) -> Void)?
+    var onInteractionChanged: ((Bool) -> Void)?
     var onSectionEdit: (() -> Void)?
 
     @State private var visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
@@ -826,6 +827,7 @@ struct MapHomeTimeSidebar: View {
         maximumSelectableMinute: Int? = nil,
         onSelectionChanged: ((Int) -> Void)? = nil,
         onViewportChanged: ((Int, Int) -> Void)? = nil,
+        onInteractionChanged: ((Bool) -> Void)? = nil,
         onSectionEdit: (() -> Void)? = nil
     ) {
         self.date = date
@@ -840,6 +842,7 @@ struct MapHomeTimeSidebar: View {
         self.maximumSelectableMinute = maximumSelectableMinute
         self.onSelectionChanged = onSelectionChanged
         self.onViewportChanged = onViewportChanged
+        self.onInteractionChanged = onInteractionChanged
         self.onSectionEdit = onSectionEdit
     }
 
@@ -1120,6 +1123,9 @@ struct MapHomeTimeSidebar: View {
         }
         .frame(width: totalWidth)
         .onDisappear {
+            if isHandleDragging || viewportDragStartMinute != nil {
+                onInteractionChanged?(false)
+            }
             dragStartMinute = nil
             viewportDragStartMinute = nil
             gestureBaseState = nil
@@ -1314,11 +1320,14 @@ struct MapHomeTimeSidebar: View {
         visibleWindow: ClosedRange<Int>
     ) -> some Gesture {
         DragGesture(
-            minimumDistance: 8,
+            minimumDistance: MapHomeTimeSidebarMath.handleDragMinimumDistance,
             coordinateSpace: .named("mapHomeTimeSidebarRail")
         )
             .onChanged { value in
-                if !isHandleDragging { isHandleDragging = true }
+                if !isHandleDragging {
+                    isHandleDragging = true
+                    onInteractionChanged?(true)
+                }
                 if dragStartMinute == nil {
                     dragStartMinute = min(max(selectedMinute, 0), maxMinute)
                     let base = nleState
@@ -1367,6 +1376,7 @@ struct MapHomeTimeSidebar: View {
                 isHandleDragging = false
                 gestureBaseState = nil
                 handleDrag.reset()
+                onInteractionChanged?(false)
             }
     }
 
@@ -1381,6 +1391,7 @@ struct MapHomeTimeSidebar: View {
                       !isHandleDragging else { return }
                 if viewportDragStartMinute == nil {
                     viewportDragStartMinute = visibleStartMinute
+                    onInteractionChanged?(true)
                     let base = nleState
                     gestureBaseState = base
                     nleProjection.begin(with: base)
@@ -1415,6 +1426,7 @@ struct MapHomeTimeSidebar: View {
                 )
                 viewportDragStartMinute = nil
                 gestureBaseState = nil
+                onInteractionChanged?(false)
             }
     }
 
@@ -1690,6 +1702,7 @@ enum MapHomeTimeSidebarMath {
     static let minimumRulerLabelSpacing: CGFloat = 12
     static let selectionTimeBlockWidth: CGFloat = 32
     static let handleDoubleTapHitScale: CGFloat = 1.5
+    static let handleDragMinimumDistance: CGFloat = 1
     static let handleLaneWidth: CGFloat = 69
     static let activeRailWidth: CGFloat = 12
     static let handleVisualSize = CGSize(width: 44, height: 44)

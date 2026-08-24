@@ -489,6 +489,7 @@ struct MapHomeView: View {
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
     @State private var isTimelineSelectionPinned = false
+    @State private var isTimeSidebarInteracting = false
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
     @State private var isMapCenteredOnUser = false
     @SceneStorage("MapHome.isFollowingUserLocation")
@@ -936,20 +937,8 @@ struct MapHomeView: View {
             refreshHistoricalPlaybackPoint()
         }
         .onChange(of: selectedTimelineMinute) { _, minute in
-            guard minute != nil else {
-                historicalPlaybackPoint = nil
-                return
-            }
-            let point: GeoPoint?
-            if isDayPlaybackRunning {
-                point = refreshHistoricalPlaybackPoint()
-            } else {
-                let projection = refreshRouteProjection()
-                point = refreshHistoricalPlaybackPoint()
-                    ?? projection?.coordinateAtCutoff
-            }
-            guard let point else { return }
-            focusMap(on: point)
+            guard !isTimeSidebarInteracting else { return }
+            refreshSelectedTimelineMapPosition(minute: minute)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
@@ -1732,6 +1721,16 @@ struct MapHomeView: View {
                         onViewportChanged: { start, duration in
                             weatherVisibleStartMinute = start
                             weatherVisibleDurationMinutes = duration
+                        },
+                        onInteractionChanged: { isInteracting in
+                            if isTimeSidebarInteracting != isInteracting {
+                                isTimeSidebarInteracting = isInteracting
+                            }
+                            if !isInteracting {
+                                refreshSelectedTimelineMapPosition(
+                                    minute: selectedTimelineMinute
+                                )
+                            }
                         },
                         onSectionEdit: {
                             openSectionEditor(at: minute)
@@ -3032,6 +3031,23 @@ struct MapHomeView: View {
         )
         guard next != timeRailSegments else { return }
         timeRailSegments = next
+    }
+
+    private func refreshSelectedTimelineMapPosition(minute: Int?) {
+        guard minute != nil else {
+            historicalPlaybackPoint = nil
+            return
+        }
+        let point: GeoPoint?
+        if isDayPlaybackRunning {
+            point = refreshHistoricalPlaybackPoint()
+        } else {
+            let projection = refreshRouteProjection()
+            point = refreshHistoricalPlaybackPoint()
+                ?? projection?.coordinateAtCutoff
+        }
+        guard let point else { return }
+        focusMap(on: point)
     }
 
     private func openSectionEditor(at minute: Int) {

@@ -448,8 +448,13 @@ final class SecurityBackupCoreTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(readings.map(\.point), [home.point, office.point])
-        XCTAssertEqual(readings.map(\.behavior), ["bus", "bus"])
+        XCTAssertEqual(readings.first?.point, home.point)
+        XCTAssertEqual(readings.last?.point, office.point)
+        XCTAssertEqual(readings.map(\.behavior), Array(repeating: "bus", count: 4))
+        XCTAssertTrue(zip(readings, readings.dropFirst()).allSatisfy {
+            $1.timestamp.timeIntervalSince($0.timestamp)
+                <= PlanBackupRouteFallbackEngine.maximumRouteGap
+        })
     }
 
     func testLegacyRouteFallbackClipsToTheRequestedDay() throws {
@@ -508,7 +513,12 @@ final class SecurityBackupCoreTests: XCTestCase {
             in: requested
         )
 
-        XCTAssertEqual(readings.map(\.timestamp), [requested.start, requested.end])
+        XCTAssertEqual(readings.first?.timestamp, requested.start)
+        XCTAssertEqual(readings.last?.timestamp, requested.end)
+        XCTAssertTrue(zip(readings, readings.dropFirst()).allSatisfy {
+            $1.timestamp.timeIntervalSince($0.timestamp)
+                <= PlanBackupRouteFallbackEngine.maximumRouteGap
+        })
         let first = try XCTUnwrap(readings.first?.point)
         let last = try XCTUnwrap(readings.last?.point)
         XCTAssertEqual(first.latitude, 37.525, accuracy: 0.000_001)
@@ -559,6 +569,112 @@ final class SecurityBackupCoreTests: XCTestCase {
             travel: [travel],
             places: [oldPlace, futurePlace],
             in: travel.span
+        ).isEmpty)
+    }
+
+    func testBackupRouteFallbackSupplementsSparseArchivedEndpoints() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let home = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            span: TimeSpan(start: start.addingTimeInterval(-600), end: start),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let office = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            span: TimeSpan(
+                start: start.addingTimeInterval(3_600),
+                end: start.addingTimeInterval(4_200)
+            ),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127.0,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .car,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(3_600)),
+            distanceMeters: 15_000,
+            confidence: .high,
+            evidence: []
+        )
+        let archived = [home.point, office.point].enumerated().map { index, point in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 3_600),
+                point: point,
+                locationFixQuality: .precise,
+                motion: .automotive,
+                motionConfidence: .high,
+                gpsAvailable: true
+            )
+        }
+
+        let readings = PlanBackupRouteFallbackEngine.readings(
+            travel: [travel],
+            places: [home, office],
+            in: travel.span,
+            supplementing: archived
+        )
+
+        XCTAssertGreaterThan(readings.count, 2)
+        XCTAssertTrue(zip(readings, readings.dropFirst()).allSatisfy {
+            $1.timestamp.timeIntervalSince($0.timestamp)
+                <= PlanBackupRouteFallbackEngine.maximumRouteGap
+        })
+        XCTAssertFalse(RouteTimelineDataEngine.project(
+            selectedDate: start,
+            through: travel.span.end,
+            actuals: [],
+            readings: archived + readings
+        ).segments.isEmpty)
+    }
+
+    func testBackupRouteFallbackSkipsContinuouslyArchivedTravel() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let travel = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(20 * 60)),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: []
+        )
+        let archived = [0, 10, 20].map { minute in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(minute * 60)),
+                point: point,
+                locationFixQuality: .precise,
+                motion: .walking,
+                motionConfidence: .high,
+                gpsAvailable: true
+            )
+        }
+
+        XCTAssertTrue(PlanBackupRouteFallbackEngine.readings(
+            travel: [travel],
+            places: [],
+            in: travel.span,
+            supplementing: archived
         ).isEmpty)
     }
 

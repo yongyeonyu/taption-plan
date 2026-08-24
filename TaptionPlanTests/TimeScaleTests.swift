@@ -1750,6 +1750,14 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(size.height, 66, accuracy: 0.001)
     }
 
+    func testMapHomeTimeSidebarHandleStartsWithinOnePoint() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.handleDragMinimumDistance,
+            1,
+            accuracy: 0.001
+        )
+    }
+
     func testMapHomeTimelineUsesFullDayForArchivedDate() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

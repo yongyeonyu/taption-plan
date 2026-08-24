@@ -45,17 +45,28 @@ enum MapCurrentLocationAnchorPolicy {
 
 enum PlanBackupRouteFallbackEngine {
     static let maximumPlaceGap: TimeInterval = 2 * 60 * 60
+    static let maximumRouteGap: TimeInterval = 15 * 60
+    static let fallbackSampleInterval: TimeInterval = 10 * 60
 
     static func readings(
         travel: [TravelSegment],
         places: [PlaceStay],
-        in span: TimeSpan
+        in span: TimeSpan,
+        supplementing archivedReadings: [SensorReading] = []
     ) -> [SensorReading] {
         let placesByID = Dictionary(uniqueKeysWithValues: places.map {
             ($0.id, $0)
         })
         return travel
-            .filter { $0.span.intersection(with: span) != nil }
+            .filter {
+                guard let visibleSpan = $0.span.intersection(with: span) else {
+                    return false
+                }
+                return needsFallback(
+                    in: visibleSpan,
+                    archivedReadings: archivedReadings
+                )
+            }
             .sorted { $0.span.start < $1.span.start }
             .flatMap { segment -> [SensorReading] in
                 routeSamples(
@@ -75,6 +86,33 @@ enum PlanBackupRouteFallbackEngine {
                     )
                 }
             }
+    }
+
+    private static func needsFallback(
+        in span: TimeSpan,
+        archivedReadings: [SensorReading]
+    ) -> Bool {
+        let timestamps = archivedReadings.compactMap { reading -> Date? in
+            guard reading.gpsAvailable,
+                  let point = reading.point,
+                  point.latitude.isFinite,
+                  point.longitude.isFinite,
+                  (-90...90).contains(point.latitude),
+                  (-180...180).contains(point.longitude),
+                  reading.timestamp >= span.start,
+                  reading.timestamp <= span.end else { return nil }
+            return reading.timestamp
+        }.sorted()
+        guard timestamps.count >= 2,
+              let first = timestamps.first,
+              let last = timestamps.last,
+              first.timeIntervalSince(span.start) <= maximumRouteGap,
+              span.end.timeIntervalSince(last) <= maximumRouteGap else {
+            return true
+        }
+        return zip(timestamps, timestamps.dropFirst()).contains {
+            $1.timeIntervalSince($0) > maximumRouteGap
+        }
     }
 
     private struct RouteSample {
@@ -103,29 +141,35 @@ enum PlanBackupRouteFallbackEngine {
         let endProgress = visibleSpan.end.timeIntervalSince(
             segment.span.start
         ) / segment.span.duration
-        var samples = [RouteSample(
-            date: visibleSpan.start,
-            point: coordinate(in: coordinates, progress: startProgress)
-        )]
+        var progressValues = Set([startProgress, endProgress])
         if coordinates.count > 2 {
             for index in 1..<(coordinates.count - 1) {
                 let progress = Double(index) / Double(coordinates.count - 1)
                 guard progress > startProgress, progress < endProgress else {
                     continue
                 }
-                samples.append(RouteSample(
-                    date: segment.span.start.addingTimeInterval(
-                        segment.span.duration * progress
-                    ),
-                    point: coordinates[index]
-                ))
+                progressValues.insert(progress)
             }
         }
-        samples.append(RouteSample(
-            date: visibleSpan.end,
-            point: coordinate(in: coordinates, progress: endProgress)
-        ))
-        return samples
+        var elapsed = (
+            floor(
+                visibleSpan.start.timeIntervalSince(segment.span.start)
+                    / fallbackSampleInterval
+            ) + 1
+        ) * fallbackSampleInterval
+        let visibleEndElapsed = visibleSpan.end.timeIntervalSince(segment.span.start)
+        while elapsed < visibleEndElapsed {
+            progressValues.insert(elapsed / segment.span.duration)
+            elapsed += fallbackSampleInterval
+        }
+        return progressValues.sorted().map { progress in
+            RouteSample(
+                date: segment.span.start.addingTimeInterval(
+                    segment.span.duration * progress
+                ),
+                point: coordinate(in: coordinates, progress: progress)
+            )
+        }
     }
 
     private static func coordinate(
@@ -5453,13 +5497,12 @@ final class AppModel {
             in: span,
             existingReadings: archived
         )
-        if archived.lazy.compactMap(\.point).prefix(2).count < 2 {
-            readings += PlanBackupRouteFallbackEngine.readings(
-                travel: snapshot.travel,
-                places: snapshot.places,
-                in: span
-            )
-        }
+        readings += PlanBackupRouteFallbackEngine.readings(
+            travel: snapshot.travel,
+            places: snapshot.places,
+            in: span,
+            supplementing: readings
+        )
         return readings.sorted { $0.timestamp < $1.timestamp }
     }
 
