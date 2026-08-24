@@ -66,6 +66,7 @@ struct RouteTimelineProjection: Hashable, Sendable {
 enum RouteTimelineDataEngine {
     static let maximumInterpolationGap: TimeInterval = 15 * 60
     static let maximumDisplayReadingCount = 4_096
+    static let maximumApproximateDisplayAccuracy: Double = 1_000
 
     static func project(
         selectedDate: Date,
@@ -94,12 +95,18 @@ enum RouteTimelineDataEngine {
             : normalizedReadings(combinedReadings)).filter {
             $0.timestamp >= dayStart && $0.timestamp < dayEnd
         }
-        let coordinateIndex = CoordinateIndex(readings: allDayReadings)
+        let coordinateIndex = CoordinateIndex(
+            readings: allDayReadings,
+            includesApproximateLocations: readingsAreNormalized
+        )
         let visibleReadings = allDayReadings.filter {
             $0.timestamp <= cutoff
         }
         let samples = visibleReadings.compactMap { reading -> RouteTimelineSample? in
-            guard let point = validPoint(from: reading) else { return nil }
+            guard let point = validPoint(
+                from: reading,
+                includesApproximateLocations: readingsAreNormalized
+            ) else { return nil }
             return RouteTimelineSample(
                 id: reading.id,
                 timestamp: reading.timestamp,
@@ -179,7 +186,25 @@ enum RouteTimelineDataEngine {
     static func normalizedReadings(
         _ readings: [SensorReading]
     ) -> [SensorReading] {
-        let candidates = readings.filter { validPoint(from: $0) != nil }
+        normalizedReadings(readings, includesApproximateLocations: false)
+    }
+
+    static func normalizedDisplayReadings(
+        _ readings: [SensorReading]
+    ) -> [SensorReading] {
+        normalizedReadings(readings, includesApproximateLocations: true)
+    }
+
+    private static func normalizedReadings(
+        _ readings: [SensorReading],
+        includesApproximateLocations: Bool
+    ) -> [SensorReading] {
+        let candidates = readings.filter {
+            validPoint(
+                from: $0,
+                includesApproximateLocations: includesApproximateLocations
+            ) != nil
+        }
         let grouped = Dictionary(grouping: candidates, by: \.timestamp)
         return grouped.values
             .compactMap { $0.min(by: preferredReading) }
@@ -196,7 +221,10 @@ enum RouteTimelineDataEngine {
         inNormalizedReadings readings: [SensorReading]
     ) -> GeoPoint? {
         guard let first = readings.first,
-              validPoint(from: first) != nil,
+              validPoint(
+                from: first,
+                includesApproximateLocations: true
+              ) != nil,
               date >= first.timestamp else { return nil }
 
         var lower = 0
@@ -211,10 +239,16 @@ enum RouteTimelineDataEngine {
         }
         let beforeIndex = lower - 1
         let before = readings[beforeIndex]
-        guard let beforePoint = validPoint(from: before) else { return nil }
+        guard let beforePoint = validPoint(
+            from: before,
+            includesApproximateLocations: true
+        ) else { return nil }
         guard before.timestamp < date else { return beforePoint }
         guard lower < readings.count,
-              let afterPoint = validPoint(from: readings[lower]) else {
+              let afterPoint = validPoint(
+                from: readings[lower],
+                includesApproximateLocations: true
+              ) else {
             return beforePoint
         }
         let gap = readings[lower].timestamp.timeIntervalSince(before.timestamp)
@@ -319,9 +353,15 @@ enum RouteTimelineDataEngine {
     private struct CoordinateIndex {
         private let values: [(timestamp: Date, point: GeoPoint)]
 
-        init(readings: [SensorReading]) {
+        init(
+            readings: [SensorReading],
+            includesApproximateLocations: Bool = false
+        ) {
             values = readings.compactMap { reading in
-                guard let point = validPoint(from: reading) else { return nil }
+                guard let point = validPoint(
+                    from: reading,
+                    includesApproximateLocations: includesApproximateLocations
+                ) else { return nil }
                 return (reading.timestamp, point)
             }
         }
@@ -552,11 +592,22 @@ enum RouteTimelineDataEngine {
         return value
     }
 
-    private static func validPoint(from reading: SensorReading) -> GeoPoint? {
-        guard reading.gpsAvailable, let point = reading.point,
+    private static func validPoint(
+        from reading: SensorReading,
+        includesApproximateLocations: Bool = false
+    ) -> GeoPoint? {
+        guard let point = reading.point,
               point.latitude.isFinite, point.longitude.isFinite,
               (-90...90).contains(point.latitude),
               (-180...180).contains(point.longitude) else { return nil }
+        let isPrecise = reading.gpsAvailable
+            || reading.locationFixQuality == .precise
+        let isUsableApproximate = includesApproximateLocations
+            && reading.locationFixQuality == .approximate
+            && point.horizontalAccuracy.isFinite
+            && point.horizontalAccuracy >= 0
+            && point.horizontalAccuracy <= maximumApproximateDisplayAccuracy
+        guard isPrecise || isUsableApproximate else { return nil }
         return GeoPoint(
             latitude: point.latitude,
             longitude: point.longitude,

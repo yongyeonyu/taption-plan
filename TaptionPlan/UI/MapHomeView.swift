@@ -473,6 +473,25 @@ enum MapHomeRouteReadingsPolicy {
         guard existingCount >= 2 else { return true }
         return loadedCount >= existingCount
     }
+
+    static func shouldReplace(
+        existing: [SensorReading],
+        loaded: [SensorReading]
+    ) -> Bool {
+        let existingPreciseCount = existing.filter(isPrecise).count
+        let loadedPreciseCount = loaded.filter(isPrecise).count
+        if existingPreciseCount > 0, loadedPreciseCount == 0 {
+            return false
+        }
+        return shouldReplace(
+            existingCount: existing.count,
+            loadedCount: loaded.count
+        )
+    }
+
+    private static func isPrecise(_ reading: SensorReading) -> Bool {
+        reading.gpsAvailable || reading.locationFixQuality == .precise
+    }
 }
 
 @MainActor
@@ -904,7 +923,8 @@ struct MapHomeView: View {
             await refreshRouteReadings(for: date)
             while !Task.isCancelled {
                 refreshTimeRailSegments()
-                if RouteTimelineDataEngine.normalizedReadings(routeReadings).count < 2 {
+                if RouteTimelineDataEngine
+                    .normalizedDisplayReadings(routeReadings).count < 2 {
                     await refreshRouteReadings(for: date)
                 }
                 do {
@@ -3251,15 +3271,13 @@ struct MapHomeView: View {
         guard !Task.isCancelled,
               calendar.isDate(date, inSameDayAs: model.selectedDate)
         else { return }
-        let loadedRouteReadings = RouteTimelineDataEngine.normalizedReadings(
-            readings
-        )
-        let cachedRouteReadings = RouteTimelineDataEngine.normalizedReadings(
-            routeReadings
-        )
+        let loadedRouteReadings = RouteTimelineDataEngine
+            .normalizedDisplayReadings(readings)
+        let cachedRouteReadings = RouteTimelineDataEngine
+            .normalizedDisplayReadings(routeReadings)
         guard MapHomeRouteReadingsPolicy.shouldReplace(
-            existingCount: cachedRouteReadings.count,
-            loadedCount: loadedRouteReadings.count
+            existing: cachedRouteReadings,
+            loaded: loadedRouteReadings
         ) else { return }
         routeReadings = readings
         prepareRouteProjectionReadings()
@@ -3309,23 +3327,15 @@ struct MapHomeView: View {
         let sourceReadings = routeReadings
             + model.liveRouteState.readings
             + (model.latestSensorReading.map { [$0] } ?? [])
-        let normalizedSourceReadings = RouteTimelineDataEngine
-            .normalizedReadings(sourceReadings)
+        let fallbackReadings = PlanBackupRouteFallbackEngine.readings(
+            travel: model.snapshot.travel,
+            places: model.snapshot.places,
+            in: TimeSpan(start: dayStart, end: dayEnd),
+            supplementing: sourceReadings
+        )
+        normalizedRouteReadings = RouteTimelineDataEngine
+            .normalizedDisplayReadings(sourceReadings + fallbackReadings)
             .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
-        let fallbackReadings: [SensorReading]
-        if normalizedSourceReadings.count < 2 {
-            fallbackReadings = PlanBackupRouteFallbackEngine.readings(
-                travel: model.snapshot.travel,
-                places: model.snapshot.places,
-                in: TimeSpan(start: dayStart, end: dayEnd),
-                supplementing: sourceReadings
-            )
-        } else {
-            fallbackReadings = []
-        }
-        normalizedRouteReadings = RouteTimelineDataEngine.normalizedReadings(
-            sourceReadings + fallbackReadings
-        ).filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
         displayRouteReadings = RouteTimelineDataEngine.displayReadings(
             from: normalizedRouteReadings
         )

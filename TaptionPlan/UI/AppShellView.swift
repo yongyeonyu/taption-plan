@@ -226,7 +226,7 @@ struct AppShellView: View {
                 Image("LaunchIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 180, height: 180)
+                    .frame(width: 250, height: 445)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
@@ -265,7 +265,7 @@ struct AppShellView: View {
                 Image("LaunchIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 180, height: 180)
+                    .frame(width: 250, height: 445)
             }
                 .accessibilityHidden(true)
         }
@@ -534,7 +534,7 @@ private struct MapHomeAppLockView: View {
             Image("LaunchIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 180, height: 180)
+                .frame(width: 250, height: 445)
                 .accessibilityLabel(
                     AppLanguagePreference.text(
                         korean: "앱 잠금 해제 필요",

@@ -78,23 +78,24 @@ final class RouteTimelineDataTests: XCTestCase {
                 horizontalAccuracy: 20,
                 verticalAccuracy: 5
             ),
+            locationFixQuality: .approximate,
             gpsAvailable: false
         )
         let cached = reading(0, latitude: 37)
 
-        let loadedRouteCount = RouteTimelineDataEngine.normalizedReadings(
-            [approximate]
-        ).count
-        let cachedRouteCount = RouteTimelineDataEngine.normalizedReadings(
-            [cached]
-        ).count
+        let loadedRouteCount = RouteTimelineDataEngine
+            .normalizedDisplayReadings([approximate]).count
+        let cachedRouteCount = RouteTimelineDataEngine
+            .normalizedDisplayReadings([cached]).count
 
         XCTAssertFalse(
             MapHomeRouteReadingsPolicy.shouldReplace(
-                existingCount: cachedRouteCount,
-                loadedCount: loadedRouteCount
+                existing: [cached],
+                loaded: [approximate]
             )
         )
+        XCTAssertEqual(loadedRouteCount, 1)
+        XCTAssertEqual(cachedRouteCount, 1)
     }
 
     func testMapRouteTaskUsesCalendarDayKey() {
@@ -186,6 +187,93 @@ final class RouteTimelineDataTests: XCTestCase {
             37.1,
             accuracy: 0.0001
         )
+    }
+
+    func testMapDisplayUsesBoundedApproximateLocationsWithoutChangingInferenceInput() {
+        let approximate = SensorReading(
+            timestamp: date(5),
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 250,
+                verticalAccuracy: 100
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: false
+        )
+
+        XCTAssertTrue(
+            RouteTimelineDataEngine.normalizedReadings([approximate]).isEmpty
+        )
+        XCTAssertEqual(
+            RouteTimelineDataEngine.normalizedDisplayReadings([approximate]),
+            [approximate]
+        )
+    }
+
+    func testMapDisplayRejectsUnboundedApproximateLocation() {
+        let approximate = SensorReading(
+            timestamp: date(5),
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy:
+                    RouteTimelineDataEngine.maximumApproximateDisplayAccuracy + 1,
+                verticalAccuracy: 100
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: false
+        )
+
+        XCTAssertTrue(
+            RouteTimelineDataEngine
+                .normalizedDisplayReadings([approximate]).isEmpty
+        )
+    }
+
+    func testMapProjectionDrawsBoundedApproximateRoute() {
+        let readings = [
+            SensorReading(
+                timestamp: date(0),
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 250,
+                    verticalAccuracy: 100
+                ),
+                locationFixQuality: .approximate,
+                gpsAvailable: false
+            ),
+            SensorReading(
+                timestamp: date(10),
+                point: GeoPoint(
+                    latitude: 37.51,
+                    longitude: 127.01,
+                    altitude: 0,
+                    horizontalAccuracy: 300,
+                    verticalAccuracy: 100
+                ),
+                locationFixQuality: .approximate,
+                gpsAvailable: false
+            ),
+        ]
+        let normalized = RouteTimelineDataEngine.normalizedDisplayReadings(
+            readings
+        )
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 10,
+            actuals: [],
+            readings: normalized,
+            readingsAreNormalized: true,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(projection.samples.count, 2)
+        XCTAssertEqual(projection.segments.count, 1)
     }
 
     func testSelectedTimelineSpanDoesNotBrightenEarlierMatchingCategory() {

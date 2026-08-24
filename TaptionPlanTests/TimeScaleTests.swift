@@ -1896,6 +1896,19 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testCurrentLocationRefreshPreservesAlwaysAuthorizedCollection() {
+        XCTAssertTrue(
+            BackgroundLocationCollectionPolicy.isEnabled(
+                hasAlwaysAuthorization: true
+            )
+        )
+        XCTAssertFalse(
+            BackgroundLocationCollectionPolicy.isEnabled(
+                hasAlwaysAuthorization: false
+            )
+        )
+    }
+
     func testMapLocationAnchorPrefersRecentPreciseReading() {
         let now = Date(timeIntervalSince1970: 20_000)
         let precise = SensorReading(

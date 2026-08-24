@@ -43,6 +43,12 @@ enum MapCurrentLocationAnchorPolicy {
     }
 }
 
+enum BackgroundLocationCollectionPolicy {
+    static func isEnabled(hasAlwaysAuthorization: Bool) -> Bool {
+        hasAlwaysAuthorization
+    }
+}
+
 enum PlanBackupRouteFallbackEngine {
     static let maximumPlaceGap: TimeInterval = 2 * 60 * 60
     static let maximumRouteGap: TimeInterval = 15 * 60
@@ -57,15 +63,13 @@ enum PlanBackupRouteFallbackEngine {
         let placesByID = Dictionary(uniqueKeysWithValues: places.map {
             ($0.id, $0)
         })
+        let routeCoverage = RouteCoverageIndex(readings: archivedReadings)
         return travel
             .filter {
                 guard let visibleSpan = $0.span.intersection(with: span) else {
                     return false
                 }
-                return needsFallback(
-                    in: visibleSpan,
-                    archivedReadings: archivedReadings
-                )
+                return routeCoverage.needsFallback(in: visibleSpan)
             }
             .sorted { $0.span.start < $1.span.start }
             .flatMap { segment -> [SensorReading] in
@@ -88,30 +92,68 @@ enum PlanBackupRouteFallbackEngine {
             }
     }
 
-    private static func needsFallback(
-        in span: TimeSpan,
-        archivedReadings: [SensorReading]
-    ) -> Bool {
-        let timestamps = archivedReadings.compactMap { reading -> Date? in
-            guard reading.gpsAvailable,
-                  let point = reading.point,
-                  point.latitude.isFinite,
-                  point.longitude.isFinite,
-                  (-90...90).contains(point.latitude),
-                  (-180...180).contains(point.longitude),
-                  reading.timestamp >= span.start,
-                  reading.timestamp <= span.end else { return nil }
-            return reading.timestamp
-        }.sorted()
-        guard timestamps.count >= 2,
-              let first = timestamps.first,
-              let last = timestamps.last,
-              first.timeIntervalSince(span.start) <= maximumRouteGap,
-              span.end.timeIntervalSince(last) <= maximumRouteGap else {
-            return true
+    private struct RouteCoverageIndex {
+        private let timestamps: [Date]
+
+        init(readings: [SensorReading]) {
+            timestamps = readings.compactMap { reading -> Date? in
+                guard reading.gpsAvailable,
+                      let point = reading.point,
+                      point.latitude.isFinite,
+                      point.longitude.isFinite,
+                      (-90...90).contains(point.latitude),
+                      (-180...180).contains(point.longitude) else { return nil }
+                return reading.timestamp
+            }.sorted()
         }
-        return zip(timestamps, timestamps.dropFirst()).contains {
-            $1.timeIntervalSince($0) > maximumRouteGap
+
+        func needsFallback(in span: TimeSpan) -> Bool {
+            let startIndex = lowerBound(for: span.start)
+            let endIndex = upperBound(for: span.end)
+            guard endIndex - startIndex >= 2 else { return true }
+            let first = timestamps[startIndex]
+            let last = timestamps[endIndex - 1]
+            guard first.timeIntervalSince(span.start)
+                    <= PlanBackupRouteFallbackEngine.maximumRouteGap,
+                  span.end.timeIntervalSince(last)
+                    <= PlanBackupRouteFallbackEngine.maximumRouteGap else {
+                return true
+            }
+            guard startIndex + 1 < endIndex else { return false }
+            for index in (startIndex + 1)..<endIndex
+            where timestamps[index].timeIntervalSince(timestamps[index - 1])
+                > PlanBackupRouteFallbackEngine.maximumRouteGap {
+                return true
+            }
+            return false
+        }
+
+        private func lowerBound(for date: Date) -> Int {
+            var lower = 0
+            var upper = timestamps.count
+            while lower < upper {
+                let middle = lower + (upper - lower) / 2
+                if timestamps[middle] < date {
+                    lower = middle + 1
+                } else {
+                    upper = middle
+                }
+            }
+            return lower
+        }
+
+        private func upperBound(for date: Date) -> Int {
+            var lower = 0
+            var upper = timestamps.count
+            while lower < upper {
+                let middle = lower + (upper - lower) / 2
+                if timestamps[middle] <= date {
+                    lower = middle + 1
+                } else {
+                    upper = middle
+                }
+            }
+            return lower
         }
     }
 
@@ -2218,13 +2260,18 @@ final class AppModel {
         snapshot.settings.permissions[.location] = refreshed
         snapshot.settings.permissions[.motion] = sensorService.motionPermissionState()
         snapshot.settings.locationEnabled = refreshed.isGranted
+        let allowsBackgroundLocation =
+            BackgroundLocationCollectionPolicy.isEnabled(
+                hasAlwaysAuthorization:
+                    sensorService.hasAlwaysLocationAuthorization()
+            )
         snapshot.settings.backgroundPreciseLocationEnabled =
-            always && sensorService.hasAlwaysLocationAuthorization()
+            allowsBackgroundLocation
 
         if refreshed.isGranted {
             sensorService.startCollection(configuration: sensorCollectionConfiguration(
                 profile: settings.sensorCollectionProfile,
-                allowsBackgroundLocation: always
+                allowsBackgroundLocation: allowsBackgroundLocation
             ))
             isSensorCollecting = true
             receiveSensorWake(.foregroundResume)
@@ -6609,10 +6656,16 @@ final class AppModel {
             syncSensorBackgroundState()
             return
         }
+        let allowsBackgroundLocation =
+            BackgroundLocationCollectionPolicy.isEnabled(
+                hasAlwaysAuthorization:
+                    sensorService.hasAlwaysLocationAuthorization()
+            )
+        snapshot.settings.backgroundPreciseLocationEnabled =
+            allowsBackgroundLocation
         sensorService.startCollection(configuration: sensorCollectionConfiguration(
             profile: settings.sensorCollectionProfile,
-            allowsBackgroundLocation:
-                settings.backgroundPreciseLocationEnabled
+            allowsBackgroundLocation: allowsBackgroundLocation
         ))
         isSensorCollecting = true
         if sensorBackgroundCoordinator.lastWakeReason == nil {
