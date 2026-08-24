@@ -559,6 +559,8 @@ final class AppModel {
 
     private static let permissionOnboardingKey =
         "taption.permission-onboarding.v1"
+    private static let healthAuthorizationRequestedKey =
+        "taption.health-authorization-requested.v1"
     private static let permissionFlagsMigrationKey =
         "taption.permission-flags-sync.v2"
 
@@ -1505,6 +1507,8 @@ final class AppModel {
         _ source: TaptionDataSnapshot
     ) -> TaptionDataSnapshot {
         var loaded = source
+        loaded.settings.sensorCollectionProfile = .accuracy
+        loaded.settings.gpsLoggingPreferences = .standard
         loaded.plans = Self.deduplicatedGeneratedRepeatPlans(loaded.plans)
         if loaded.categories.isEmpty {
             loaded.categories = CategoryCatalog.builtIn
@@ -2097,6 +2101,88 @@ final class AppModel {
         snapshot.settings.permissions[feature] ?? .notDetermined
     }
 
+    func requiredPermissionGate(
+        liveActivitiesEnabled: Bool
+    ) -> RequiredPermissionGate {
+        RequiredPermissionGate.evaluate(
+            RequiredPermissionSnapshot(
+                permissions: snapshot.settings.permissions,
+                locationAlwaysAuthorized:
+                    sensorService?.hasAlwaysLocationAuthorization() == true,
+                locationPrecise:
+                    sensorService?.hasPreciseLocationAuthorization() == true,
+                healthKitRequestCompleted: UserDefaults.standard.bool(
+                    forKey: Self.healthAuthorizationRequestedKey
+                ),
+                liveActivitiesEnabled: liveActivitiesEnabled
+            )
+        )
+    }
+
+    func requestRequiredPermission(
+        _ permission: RequiredPermission
+    ) async {
+        switch permission {
+        case .locationAlways:
+            if sensorService?.locationPermissionState() == .denied {
+                openSystemSettings()
+            } else {
+                await enableLocationCollection(always: true)
+            }
+        case .locationPrecise:
+            if sensorService?.hasPreciseLocationAuthorization() != true {
+                openSystemSettings()
+            }
+        case .motion:
+            guard let sensorService else { return }
+            if sensorService.motionPermissionState() == .denied {
+                openSystemSettings()
+            } else {
+                snapshot.settings.permissions[.motion] =
+                    await sensorService.requestMotionPermission()
+                await persist()
+            }
+        case .healthKitRequestCompleted:
+            await requestHealth()
+        case .photos:
+            if photoService.permissionState() == .denied {
+                openSystemSettings()
+            } else {
+                await requestPhotos()
+            }
+        case .calendar:
+            if calendarService.permissionState() == .denied {
+                openSystemSettings()
+            } else {
+                await requestCalendar()
+            }
+        case .notifications:
+            if await notificationScheduler.authorizationState() == .denied {
+                openSystemSettings()
+            } else {
+                await requestNotifications()
+            }
+        case .appUsage:
+            await requestAppUsageAuthorization()
+        case .liveActivities:
+            openSystemSettings()
+        }
+        await refreshPermissions()
+    }
+
+    func activateRequiredSensorCollection() async {
+        snapshot.settings.sensorCollectionProfile = .accuracy
+        snapshot.settings.gpsLoggingPreferences = .standard
+        await enableLocationCollection(always: true)
+    }
+
+    func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else {
+            return
+        }
+        UIApplication.shared.open(url)
+    }
+
     /// Re-reads the system permission centers when Settings becomes visible.
     /// The saved snapshot is only a cache; iOS permissions can change while
     /// the app is suspended or in Settings.
@@ -2237,6 +2323,10 @@ final class AppModel {
         isRefreshingIntegrations = true
         do {
             let granted = try await healthService.requestReadAccess()
+            UserDefaults.standard.set(
+                true,
+                forKey: Self.healthAuthorizationRequestedKey
+            )
             snapshot.settings.healthEnabled = granted
             snapshot.settings.permissions[.health] = granted ? .authorized : .denied
             if granted {
@@ -2312,14 +2402,26 @@ final class AppModel {
         }
 
         sensorAvailability = sensorService.hardwareAvailability()
-        let state = sensorService.locationPermissionState()
-        snapshot.settings.permissions[.location] = state
+        var status = sensorService.locationAuthorizationStatus()
+        snapshot.settings.permissions[.location] =
+            sensorService.locationPermissionState()
         snapshot.settings.permissions[.motion] = sensorService.motionPermissionState()
 
-        if state == .notDetermined
-            || (always && state == .authorized) {
-            sensorService.requestLocationPermission(always: always)
-            try? await Task.sleep(for: .milliseconds(700))
+        if status == .notDetermined {
+            sensorService.requestLocationPermission(always: false)
+            for _ in 0..<120 where status == .notDetermined {
+                guard !Task.isCancelled else { return }
+                try? await Task.sleep(for: .milliseconds(100))
+                status = sensorService.locationAuthorizationStatus()
+            }
+        }
+        if always, status == .authorizedWhenInUse {
+            sensorService.requestLocationPermission(always: true)
+            for _ in 0..<120 where status == .authorizedWhenInUse {
+                guard !Task.isCancelled else { return }
+                try? await Task.sleep(for: .milliseconds(100))
+                status = sensorService.locationAuthorizationStatus()
+            }
         }
 
         let refreshed = sensorService.locationPermissionState()
@@ -2645,17 +2747,17 @@ final class AppModel {
     }
 
     func setSensorCollectionProfile(
-        _ profile: SensorCollectionProfile
+        _ _: SensorCollectionProfile
     ) {
-        guard snapshot.settings.sensorCollectionProfile != profile else {
+        guard snapshot.settings.sensorCollectionProfile != .accuracy else {
             return
         }
-        snapshot.settings.sensorCollectionProfile = profile
+        snapshot.settings.sensorCollectionProfile = .accuracy
         if settings.locationEnabled,
            permissionState(for: .location).isGranted,
            let sensorService {
             sensorService.startCollection(configuration: sensorCollectionConfiguration(
-                profile: profile,
+                profile: .accuracy,
                 allowsBackgroundLocation:
                     settings.backgroundPreciseLocationEnabled
             ))
@@ -2666,23 +2768,15 @@ final class AppModel {
     }
 
     func setGPSLoggingBatteryMinimal(_ enabled: Bool) {
-        guard snapshot.settings.gpsLoggingPreferences.isBatteryMinimal != enabled else {
-            return
-        }
-        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = enabled
+        guard snapshot.settings.gpsLoggingPreferences != .standard else { return }
+        snapshot.settings.gpsLoggingPreferences = .standard
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
     }
 
     func setGPSLoggingIntervalSeconds(_ seconds: Int) {
-        let resolved = GPSLoggingPreferences.clampedSeconds(seconds)
-        guard snapshot.settings.gpsLoggingPreferences.intervalSeconds != resolved else {
-            return
-        }
-        snapshot.settings.gpsLoggingPreferences.intervalSeconds = resolved
-        if activeTrackingSession?.wasAutomaticallyDetected == true {
-            Task { await stopTracking() }
-        }
+        guard snapshot.settings.gpsLoggingPreferences != .standard else { return }
+        snapshot.settings.gpsLoggingPreferences = .standard
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
     }
@@ -2714,15 +2808,14 @@ final class AppModel {
     }
 
     private func sensorCollectionConfiguration(
-        profile: SensorCollectionProfile,
+        profile _: SensorCollectionProfile,
         allowsBackgroundLocation: Bool
     ) -> SensorCollectionConfiguration {
         var configuration = SensorCollectionConfiguration.configured(
-            for: profile,
+            for: .accuracy,
             allowsBackgroundLocation: allowsBackgroundLocation
         )
-        configuration.minimumEmissionInterval =
-            settings.gpsLoggingPreferences.interval
+        configuration.minimumEmissionInterval = 1
         return configuration
     }
 
@@ -6358,6 +6451,12 @@ final class AppModel {
         } catch {
             healthState = healthService.permissionState()
         }
+        if healthState == .authorized {
+            UserDefaults.standard.set(
+                true,
+                forKey: Self.healthAuthorizationRequestedKey
+            )
+        }
         snapshot.settings.permissions[.health] = healthState
         var locationState = PermissionState.unavailable
         if let sensorService {
@@ -6369,7 +6468,11 @@ final class AppModel {
                 snapshot.settings.locationEnabled
                 && sensorService.hasAlwaysLocationAuthorization()
             sensorAvailability = sensorService.hardwareAvailability()
-            if !permissionState(for: .location).isGranted {
+            if permissionState(for: .location).isGranted {
+                snapshot.settings.locationEnabled = true
+                snapshot.settings.backgroundPreciseLocationEnabled =
+                    sensorService.hasAlwaysLocationAuthorization()
+            } else {
                 // 권한이 없는 동안 수집만 멈춘다. locationEnabled를 지우면
                 // iOS 설정에서 권한을 다시 허용해도 기록이 재개되지 않는다.
                 sensorService.stopCollection()
@@ -7927,10 +8030,8 @@ final class AppModel {
         value.settings.locationEnabled = local.settings.locationEnabled
         value.settings.backgroundPreciseLocationEnabled =
             local.settings.backgroundPreciseLocationEnabled
-        value.settings.sensorCollectionProfile =
-            local.settings.sensorCollectionProfile
-        value.settings.gpsLoggingPreferences =
-            local.settings.gpsLoggingPreferences
+        value.settings.sensorCollectionProfile = .accuracy
+        value.settings.gpsLoggingPreferences = .standard
         value.settings.mapCategoryColors =
             local.settings.mapCategoryColors
         value.settings.mapUserActivityCategories =

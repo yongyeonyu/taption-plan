@@ -1,3 +1,4 @@
+@preconcurrency import ActivityKit
 import SwiftUI
 
 struct AppShellView: View {
@@ -65,18 +66,6 @@ struct AppShellView: View {
         ) { request in
             PlanEditorSheet(model: model, planID: request.id)
         }
-        .sheet(
-            isPresented: Binding(
-                get: { Self.legacyUIEnabled && model.isPermissionOnboardingPresented },
-                set: { model.isPermissionOnboardingPresented = $0 }
-            )
-        ) {
-            PermissionOnboardingSheet(
-                model: model,
-                initialFeature: model.permissionOnboardingStartFeature
-            )
-                .interactiveDismissDisabled()
-        }
         .font(.taption(size: 17))
         .tint(.tpInk)
         .preferredColorScheme(.light)
@@ -103,7 +92,8 @@ struct AppShellView: View {
             Task { @MainActor in
                 if grantsAccess {
                     await model.sceneBecameActive()
-                    model.presentPermissionOnboardingIfNeeded()
+                    await model.refreshPermissions()
+                    await activateRequiredSensorsIfReady()
                 } else {
                     await model.suspendForCommerceLock()
                 }
@@ -128,11 +118,20 @@ struct AppShellView: View {
         .onChange(of: model.settings.gpsLoggingPreferences) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
+        .onChange(of: requiredPermissionGate.allSatisfied) { _, satisfied in
+            guard satisfied else { return }
+            Task {
+                await activateRequiredSensorsIfReady()
+                await reconcileSensorLiveActivity()
+            }
+        }
     }
 
     var body: some View {
         ZStack {
             appLifecycleContent
+                .accessibilityHidden(shouldHidePrimaryContent)
+            requiredPermissionOverlay
             securityOverlay
             initialLaunchOverlay
         }
@@ -144,7 +143,6 @@ struct AppShellView: View {
         } message: {
             userFacingErrorMessage
         }
-        .accessibilityHidden(shouldHidePrimaryContent)
         .overlay(alignment: .top) {
             floorCalibrationNotice
         }
@@ -194,7 +192,36 @@ struct AppShellView: View {
             || !isSecurityStateReady
             || model.isAppLocked
             || !proAccess.grantsAccess
+            || showsRequiredPermissionOverlay
             || shouldHideAppSnapshot
+    }
+
+    private var requiredPermissionGate: RequiredPermissionGate {
+        model.requiredPermissionGate(
+            liveActivitiesEnabled:
+                ActivityAuthorizationInfo().areActivitiesEnabled
+        )
+    }
+
+    private var showsRequiredPermissionOverlay: Bool {
+        proAccess.grantsAccess
+            && scenePhase == .active
+            && isSecurityStateReady
+            && model.isBootstrapped
+            && !model.isAppLocked
+            && !requiredPermissionGate.allSatisfied
+    }
+
+    @ViewBuilder
+    private var requiredPermissionOverlay: some View {
+        if showsRequiredPermissionOverlay {
+            RequiredPermissionGateView(
+                model: model,
+                gate: requiredPermissionGate,
+                languageRawValue: languageRawValue
+            )
+            .zIndex(8)
+        }
     }
 
     private var initialLaunchReady: Bool {
@@ -317,6 +344,8 @@ struct AppShellView: View {
                 await proAccess.refresh()
                 if proAccess.grantsAccess {
                     await model.sceneBecameActive()
+                    await model.refreshPermissions()
+                    await activateRequiredSensorsIfReady()
                 } else {
                     await model.suspendForCommerceLock()
                 }
@@ -328,7 +357,11 @@ struct AppShellView: View {
                     await model.suspendForCommerceLock()
                 }
             case .inactive:
-                break
+                if proAccess.grantsAccess {
+                    await model.reconcileSensorCollectionLiveActivity(
+                        isForeground: true
+                    )
+                }
             @unknown default:
                 break
             }
@@ -341,15 +374,14 @@ struct AppShellView: View {
         hasCompletedInitialProRefresh = true
         if proAccess.grantsAccess {
             await model.sceneBecameActive()
+            await model.refreshPermissions()
+            await activateRequiredSensorsIfReady()
         } else {
             await model.suspendForCommerceLock()
         }
         if model.isAppLocked {
             lockGeneration &+= 1
             automaticBiometricAttemptedGeneration = nil
-        }
-        if proAccess.grantsAccess {
-            model.presentPermissionOnboardingIfNeeded()
         }
         if Self.legacyUIEnabled,
            let planID = TaptionPlanAppDelegate.takePendingPlanID(),
@@ -372,8 +404,13 @@ struct AppShellView: View {
             return
         }
         await model.reconcileSensorCollectionLiveActivity(
-            isForeground: scenePhase == .active
+            isForeground: scenePhase != .background
         )
+    }
+
+    private func activateRequiredSensorsIfReady() async {
+        guard requiredPermissionGate.allSatisfied else { return }
+        await model.activateRequiredSensorCollection()
     }
 
     private func handleOpenURL(_ url: URL) {
@@ -632,6 +669,173 @@ private struct AppLockPINSheet: View {
             pin = ""
             validationMessage = error.localizedDescription
         }
+    }
+}
+
+private struct RequiredPermissionGateView: View {
+    @Bindable var model: AppModel
+    let gate: RequiredPermissionGate
+    let languageRawValue: String
+
+    @State private var requesting: RequiredPermission?
+
+    var body: some View {
+        ZStack {
+            Color.tpBackground.ignoresSafeArea()
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    header
+                    VStack(spacing: 9) {
+                        ForEach(RequiredPermission.allCases, id: \.rawValue) {
+                            permissionCard($0)
+                        }
+                    }
+                    Text(
+                        text(
+                            "모든 권한이 확인되면 GPS와 센서 기록이 1초 간격으로 자동 시작됩니다.",
+                            "GPS and sensor recording starts automatically every second after all permissions are verified."
+                        )
+                    )
+                    .font(.taption(size: 12))
+                    .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 24)
+            }
+        }
+        .preferredColorScheme(.light)
+        .accessibilityAddTraits(.isModal)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: "sensor.fill")
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(Color.tpReferenceRose)
+            Text(text("필수 권한 설정", "Required permissions"))
+                .font(.taption(size: 27, weight: .black))
+                .foregroundStyle(Color.tpInk)
+            Text(
+                text(
+                    "자동 기록에 필요한 권한입니다. 빠진 권한이 있으면 기록 화면을 사용할 수 없습니다.",
+                    "These permissions are required for automatic recording. The timeline remains locked until all are enabled."
+                )
+            )
+            .font(.taption(size: 14))
+            .foregroundStyle(Color.tpSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func permissionCard(
+        _ permission: RequiredPermission
+    ) -> some View {
+        let missing = gate.missing.contains(permission)
+        return HStack(spacing: 12) {
+            Image(systemName: metadata(permission).icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(
+                    missing ? Color.tpReferenceRose : Color.tpReferenceMint
+                )
+                .frame(width: 38, height: 38)
+                .background(
+                    (missing ? Color.tpReferenceRose : Color.tpReferenceMint)
+                        .opacity(0.1),
+                    in: RoundedRectangle(cornerRadius: 12)
+                )
+            VStack(alignment: .leading, spacing: 3) {
+                Text(metadata(permission).title)
+                    .font(.taption(size: 15, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Text(
+                    missing
+                        ? text("설정 필요", "Required")
+                        : text("허용됨", "Allowed")
+                )
+                .font(.taption(size: 11, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+            }
+            Spacer(minLength: 8)
+            if missing {
+                Button {
+                    request(permission)
+                } label: {
+                    if requesting == permission {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Text(actionTitle(permission))
+                    }
+                }
+                .font(.taption(size: 12, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(minWidth: 78, minHeight: 38)
+                .background(Color.tpInk, in: Capsule())
+                .buttonStyle(.plain)
+                .disabled(requesting != nil)
+            } else {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Color.tpReferenceMint)
+            }
+        }
+        .padding(13)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func request(_ permission: RequiredPermission) {
+        guard requesting == nil else { return }
+        requesting = permission
+        Task { @MainActor in
+            await model.requestRequiredPermission(permission)
+            requesting = nil
+        }
+    }
+
+    private func actionTitle(_ permission: RequiredPermission) -> String {
+        switch permission {
+        case .locationPrecise, .liveActivities:
+            text("설정 열기", "Open Settings")
+        default:
+            text("허용하기", "Allow")
+        }
+    }
+
+    private func metadata(
+        _ permission: RequiredPermission
+    ) -> (icon: String, title: String) {
+        switch permission {
+        case .locationAlways:
+            ("location.fill", text("위치 항상 허용", "Always Location"))
+        case .locationPrecise:
+            ("scope", text("정확한 위치", "Precise Location"))
+        case .motion:
+            ("figure.walk.motion", text("동작 및 피트니스", "Motion & Fitness"))
+        case .healthKitRequestCompleted:
+            ("heart.fill", text("건강 데이터", "Health Data"))
+        case .photos:
+            ("photo.fill", text("사진 전체 접근", "Full Photo Access"))
+        case .calendar:
+            ("calendar", text("캘린더 전체 접근", "Full Calendar Access"))
+        case .notifications:
+            ("bell.fill", text("알림", "Notifications"))
+        case .appUsage:
+            ("app.badge.clock", text("앱 사용시간", "App Usage"))
+        case .liveActivities:
+            ("iphone.radiowaves.left.and.right", text("실시간 현황", "Live Activities"))
+        }
+    }
+
+    private func text(_ korean: String, _ english: String) -> String {
+        AppLanguagePreference.text(
+            korean: korean,
+            english: english,
+            rawPreference: languageRawValue
+        )
     }
 }
 

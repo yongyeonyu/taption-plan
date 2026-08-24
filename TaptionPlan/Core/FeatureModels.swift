@@ -602,6 +602,89 @@ enum PermissionState: String, Codable, CaseIterable, Sendable {
     case unavailable
 }
 
+enum RequiredPermission: String, CaseIterable, Equatable, Sendable {
+    case locationAlways
+    case locationPrecise
+    case motion
+    case healthKitRequestCompleted
+    case photos
+    case calendar
+    case notifications
+    case appUsage
+    case liveActivities
+}
+
+struct RequiredPermissionSnapshot: Equatable, Sendable {
+    var permissions: [PermissionFeature: PermissionState]
+    var locationAlwaysAuthorized: Bool
+    var locationPrecise: Bool
+    var healthKitRequestCompleted: Bool
+    var liveActivitiesEnabled: Bool
+
+    init(
+        permissions: [PermissionFeature: PermissionState] = [:],
+        locationAlwaysAuthorized: Bool = false,
+        locationPrecise: Bool = false,
+        healthKitRequestCompleted: Bool = false,
+        liveActivitiesEnabled: Bool = false
+    ) {
+        self.permissions = permissions
+        self.locationAlwaysAuthorized = locationAlwaysAuthorized
+        self.locationPrecise = locationPrecise
+        self.healthKitRequestCompleted = healthKitRequestCompleted
+        self.liveActivitiesEnabled = liveActivitiesEnabled
+    }
+}
+
+struct RequiredPermissionGate: Equatable, Sendable {
+    let missing: [RequiredPermission]
+
+    var allSatisfied: Bool { missing.isEmpty }
+
+    init(snapshot: RequiredPermissionSnapshot) {
+        missing = RequiredPermission.allCases.filter {
+            !Self.isSatisfied($0, in: snapshot)
+        }
+    }
+
+    static func evaluate(
+        _ snapshot: RequiredPermissionSnapshot
+    ) -> RequiredPermissionGate {
+        RequiredPermissionGate(snapshot: snapshot)
+    }
+
+    private static func isSatisfied(
+        _ requirement: RequiredPermission,
+        in snapshot: RequiredPermissionSnapshot
+    ) -> Bool {
+        let state: (PermissionFeature) -> PermissionState = {
+            snapshot.permissions[$0] ?? .notDetermined
+        }
+        return switch requirement {
+        case .locationAlways:
+            state(.location) == .authorized
+                && snapshot.locationAlwaysAuthorized
+        case .locationPrecise:
+            state(.location) == .authorized
+                && snapshot.locationPrecise
+        case .motion:
+            state(.motion) == .authorized
+        case .healthKitRequestCompleted:
+            snapshot.healthKitRequestCompleted
+        case .photos:
+            state(.photos) == .authorized
+        case .calendar:
+            state(.calendar) == .authorized
+        case .notifications:
+            state(.notifications) == .authorized
+        case .appUsage:
+            state(.appUsage) == .authorized
+        case .liveActivities:
+            snapshot.liveActivitiesEnabled
+        }
+    }
+}
+
 // MARK: - Plan and actual records
 
 struct TimeSpan: Codable, Hashable, Sendable {
@@ -3294,7 +3377,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         healthEnabled: false,
         locationEnabled: false,
         backgroundPreciseLocationEnabled: false,
-        sensorCollectionProfile: .balanced,
+        sensorCollectionProfile: .accuracy,
         gpsLoggingPreferences: .standard,
         mapCategoryColors: [:],
         mapUserActivityCategories: [],

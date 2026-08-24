@@ -298,31 +298,28 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
 }
 
 struct GPSLoggingPreferences: Codable, Hashable, Sendable {
-    static let supportedIntervalSeconds: [Int] = [
-        1, 10, 30, 60, 120, 300, 600, 900
-    ]
+    static let supportedIntervalSeconds = [1]
 
     var isBatteryMinimal: Bool
     var intervalSeconds: Int
 
-    static let standard = GPSLoggingPreferences()
+    static let standard = GPSLoggingPreferences(intervalSeconds: 1)
 
     init(
         isBatteryMinimal: Bool = false,
-        intervalSeconds: Int = 300
+        intervalSeconds: Int = 1
     ) {
-        self.isBatteryMinimal = isBatteryMinimal
-        self.intervalSeconds = Self.clampedSeconds(intervalSeconds)
+        self.isBatteryMinimal = false
+        self.intervalSeconds = 1
     }
 
     var interval: TimeInterval {
         TimeInterval(effectiveIntervalSeconds)
     }
 
-    /// Battery-minimal tracking is intentionally fixed at one sample every
-    /// fifteen minutes. The stored cadence remains available for the other mode.
+    /// GPS and available sensors are always collected at the realtime cadence.
     var effectiveIntervalSeconds: Int {
-        isBatteryMinimal ? 900 : intervalSeconds
+        1
     }
 
     var isContinuous: Bool {
@@ -370,9 +367,7 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     }
 
     static func clampedSeconds(_ value: Int) -> Int {
-        supportedIntervalSeconds.min {
-            abs($0 - value) < abs($1 - value)
-        } ?? 300
+        1
     }
 
     @available(*, deprecated, message: "Use clampedSeconds")

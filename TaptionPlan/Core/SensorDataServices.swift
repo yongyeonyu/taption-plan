@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import OSLog
 
@@ -872,8 +873,20 @@ final class AppleSensorDataService {
         collector.hasAlwaysLocationAuthorization()
     }
 
+    func locationAuthorizationStatus() -> CLAuthorizationStatus {
+        collector.locationAuthorizationStatus()
+    }
+
+    func hasPreciseLocationAuthorization() -> Bool {
+        collector.hasPreciseLocationAuthorization()
+    }
+
     func requestLocationPermission(always: Bool = false) {
         collector.requestLocationPermission(always: always)
+    }
+
+    func requestMotionPermission() async -> PermissionState {
+        await history.requestAuthorization()
     }
 
     func startCollection(

@@ -6662,7 +6662,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(accuracy.minimumEmissionInterval, 60)
         XCTAssertEqual(
             AppFeatureSettings.defaults.sensorCollectionProfile,
-            .balanced
+            .accuracy
         )
         let balanced = SensorCollectionConfiguration.configured(
             for: .balanced,
@@ -6688,7 +6688,7 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     func testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes() throws {
-        XCTAssertEqual(GPSLoggingPreferences.standard.intervalSeconds, 300)
+        XCTAssertEqual(GPSLoggingPreferences.standard.intervalSeconds, 1)
         XCTAssertFalse(GPSLoggingPreferences.standard.isBatteryMinimal)
         XCTAssertEqual(
             GPSLoggingPreferences(intervalSeconds: 0).intervalSeconds,
@@ -6696,28 +6696,28 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(
             GPSLoggingPreferences(intervalSeconds: 16).intervalSeconds,
-            10
+            1
         )
         XCTAssertEqual(
             GPSLoggingPreferences(intervalSeconds: 30).interval,
-            30
+            1
         )
         let batteryMinimal = GPSLoggingPreferences(
             isBatteryMinimal: true,
             intervalSeconds: 900
         )
-        XCTAssertEqual(batteryMinimal.effectiveIntervalSeconds, 900)
-        XCTAssertEqual(batteryMinimal.interval, 15 * 60)
-        XCTAssertFalse(batteryMinimal.isContinuous)
+        XCTAssertEqual(batteryMinimal.effectiveIntervalSeconds, 1)
+        XCTAssertEqual(batteryMinimal.interval, 1)
+        XCTAssertTrue(batteryMinimal.isContinuous)
         var restoredRealtime = GPSLoggingPreferences(intervalSeconds: 1)
         restoredRealtime.isBatteryMinimal = true
-        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 900)
+        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 1)
         restoredRealtime.isBatteryMinimal = false
         XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 1)
         XCTAssertTrue(GPSLoggingPreferences(intervalSeconds: 1).isContinuous)
         XCTAssertEqual(
             GPSLoggingPreferences.supportedIntervalSeconds,
-            [1, 10, 30, 60, 120, 300, 600, 900]
+            [1]
         )
         XCTAssertTrue(
             TrackingSessionPolicy.allowsPersistingLocation(
@@ -6739,17 +6739,17 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         let encoded = try JSONEncoder().encode(
-            GPSLoggingPreferences(isBatteryMinimal: true, intervalSeconds: 900)
+            GPSLoggingPreferences.standard
         )
         XCTAssertEqual(
             try JSONDecoder().decode(GPSLoggingPreferences.self, from: encoded),
-            GPSLoggingPreferences(isBatteryMinimal: true, intervalSeconds: 900)
+                GPSLoggingPreferences.standard
         )
         let legacy = Data(#"{"isBatteryMinimal":false,"intervalMinutes":5}"#.utf8)
         XCTAssertEqual(
             try JSONDecoder().decode(GPSLoggingPreferences.self, from: legacy)
                 .intervalSeconds,
-            300
+            1
         )
 
         let approximate = SensorReading(

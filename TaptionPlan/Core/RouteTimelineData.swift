@@ -62,6 +62,148 @@ struct RouteTimelineProjection: Hashable, Sendable {
     let coordinateAtCutoff: GeoPoint?
 }
 
+enum ExpectedRouteTransport: String, Hashable, Sendable {
+    case automobile
+    case transit
+    case walking
+}
+
+struct ExpectedRouteRequest: Identifiable, Hashable, Sendable {
+    let segmentID: UUID
+    let mode: TravelMode
+    let transport: ExpectedRouteTransport
+    let start: GeoPoint
+    let end: GeoPoint
+    let departureDate: Date
+    let arrivalDate: Date
+
+    var id: UUID { segmentID }
+}
+
+/// Produces display-only network-route requests. The returned requests never
+/// replace archived GPS points or mutate classified travel segments.
+enum ExpectedRouteRequestEngine {
+    static let endpointSearchMargin: TimeInterval = 15 * 60
+    static let minimumRouteDistanceMeters: Double = 20
+
+    static func requests(
+        travel: [TravelSegment],
+        places: [PlaceStay],
+        readings: [SensorReading],
+        in day: TimeSpan,
+        through cutoff: Date
+    ) -> [ExpectedRouteRequest] {
+        let placesByID = places.reduce(into: [UUID: PlaceStay]()) {
+            $0[$1.id] = $1
+        }
+        let orderedReadings = readings
+            .filter { reading in
+                guard let point = reading.point else { return false }
+                return isValid(point)
+                    && reading.timestamp >= day.start
+                        .addingTimeInterval(-endpointSearchMargin)
+                    && reading.timestamp <= day.end
+                        .addingTimeInterval(endpointSearchMargin)
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+
+        return travel
+            .sorted { $0.span.start < $1.span.start }
+            .compactMap { segment in
+                guard segment.span.intersection(with: day) != nil,
+                      segment.span.start < cutoff,
+                      let transport = transport(for: segment),
+                      !usesStoredSubwayPath(segment) else { return nil }
+
+                let visibleEnd = min(segment.span.end, cutoff)
+                guard segment.span.start < visibleEnd else { return nil }
+                let visibleSpan = TimeSpan(
+                    start: max(segment.span.start, day.start),
+                    end: min(visibleEnd, day.end)
+                )
+                let readingsInSegment = orderedReadings.filter {
+                    $0.timestamp >= visibleSpan.start
+                        .addingTimeInterval(-endpointSearchMargin)
+                        && $0.timestamp <= visibleSpan.end
+                            .addingTimeInterval(endpointSearchMargin)
+                }
+
+                let start = segment.fromPlaceID
+                    .flatMap { placesByID[$0]?.point }
+                    .flatMap { isValid($0) ? $0 : nil }
+                    ?? nearestPoint(
+                        to: visibleSpan.start,
+                        in: readingsInSegment
+                    )
+                let end: GeoPoint?
+                if visibleEnd < segment.span.end {
+                    end = readingsInSegment
+                        .last(where: { $0.timestamp <= visibleEnd })?
+                        .point
+                } else {
+                    end = segment.toPlaceID
+                        .flatMap { placesByID[$0]?.point }
+                        .flatMap { isValid($0) ? $0 : nil }
+                        ?? nearestPoint(
+                            to: visibleSpan.end,
+                            in: readingsInSegment
+                        )
+                }
+
+                guard let start, let end,
+                      distanceMeters(start, end) >= minimumRouteDistanceMeters
+                else { return nil }
+                return ExpectedRouteRequest(
+                    segmentID: segment.id,
+                    mode: segment.mode,
+                    transport: transport,
+                    start: start,
+                    end: end,
+                    departureDate: visibleSpan.start,
+                    arrivalDate: visibleSpan.end
+                )
+            }
+    }
+
+    private static func usesStoredSubwayPath(_ segment: TravelSegment) -> Bool {
+        segment.mode == .subway
+            && segment.isConfirmed
+            && (segment.subwayRoute?.coordinates.count ?? 0) >= 2
+    }
+
+    private static func transport(
+        for segment: TravelSegment
+    ) -> ExpectedRouteTransport? {
+        switch segment.mode {
+        case .car, .taxi, .bus:
+            .automobile
+        case .subway, .train:
+            .transit
+        case .walking, .running, .cycling:
+            .walking
+        case .airplane, .ship:
+            nil
+        }
+    }
+
+    private static func nearestPoint(
+        to date: Date,
+        in readings: [SensorReading]
+    ) -> GeoPoint? {
+        readings.min {
+            abs($0.timestamp.timeIntervalSince(date))
+                < abs($1.timestamp.timeIntervalSince(date))
+        }?.point
+    }
+
+    private static func isValid(_ point: GeoPoint) -> Bool {
+        point.latitude.isFinite
+            && point.longitude.isFinite
+            && (-90...90).contains(point.latitude)
+            && (-180...180).contains(point.longitude)
+    }
+}
+
 /// Builds a display-only route from archived and live sensor readings.  It
 /// never writes to either input collection or changes an `ActualRecord`.
 enum RouteTimelineDataEngine {

@@ -48,49 +48,6 @@ enum MapHomeCompassControlState: Equatable, Sendable {
     }
 }
 
-enum MapHomeOverlayPinchMath {
-    static let minimumPublishInterval: TimeInterval = 1.0 / 60.0
-
-    static func shouldForwardToMap(
-        startLocation: CGPoint,
-        viewportSize: CGSize,
-        sidebarWidth: CGFloat,
-        topOverlayHeight: CGFloat,
-        controlsWidth: CGFloat,
-        controlsHeight: CGFloat
-    ) -> Bool {
-        guard viewportSize.width > 0, viewportSize.height > 0 else { return false }
-        let sidebarStartX = viewportSize.width - max(0, sidebarWidth)
-        guard startLocation.x < sidebarStartX else { return false }
-        return startLocation.y <= topOverlayHeight
-            || (startLocation.x <= controlsWidth
-                && startLocation.y >= viewportSize.height - controlsHeight)
-    }
-
-    static func zoomedCamera(
-        from camera: MapCamera,
-        magnification: CGFloat
-    ) -> MapCamera {
-        let scale = min(max(Double(magnification), 0.05), 20)
-        return MapCamera(
-            centerCoordinate: camera.centerCoordinate,
-            distance: MapHomeCameraZoomMath.clampedDistance(
-                camera.distance / scale
-            ),
-            heading: camera.heading,
-            pitch: camera.pitch
-        )
-    }
-
-    static func shouldPublish(
-        lastUptime: TimeInterval,
-        currentUptime: TimeInterval,
-        isFinal: Bool
-    ) -> Bool {
-        isFinal || currentUptime - lastUptime >= minimumPublishInterval
-    }
-}
-
 enum MapHomeSearchLayoutMath {
     static let menuPanelWidth: CGFloat = 316
     static let playbackTouchSize: CGFloat = 44
@@ -235,12 +192,11 @@ enum MapHomeCameraZoomMath {
 enum MapHomeOverlayLayoutMath {
     static let controlSize: CGFloat = 44
     static let controlSpacing: CGFloat = 9
-    static let sharedBottomMargin: CGFloat = 28
-    static let minimumRailHeight: CGFloat = 500
+    static let sharedBottomMargin: CGFloat = 76
     static let maximumRailHeight: CGFloat = 680
 
     static func railHeight(availableHeight: CGFloat) -> CGFloat {
-        min(maximumRailHeight, max(minimumRailHeight, availableHeight))
+        min(maximumRailHeight, max(0, availableHeight))
     }
 
     static func controlStackHeight(buttonCount: Int) -> CGFloat {
@@ -530,9 +486,6 @@ struct MapHomeView: View {
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
     @State private var compassControlState: MapHomeCompassControlState = .directionArrow
     @State private var headingMonitor = MapHomeHeadingMonitor()
-    @State private var isGPSLoggingActionInFlight = false
-    @State private var isGPSLoggingMenuExpanded = false
-    @State private var gpsLoggingIntervalDraftSeconds = GPSLoggingPreferences.standard.intervalSeconds
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
     @State private var isTimelineSelectionPinned = false
@@ -564,6 +517,9 @@ struct MapHomeView: View {
     @State private var displayRouteReadings: [SensorReading] = []
     @State private var historicalPlaybackPoint: GeoPoint?
     @State private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] = []
+    @State private var expectedRouteOverlays: [MapHomeExpectedRouteOverlay] = []
+    @State private var expectedRouteCache: [ExpectedRouteRequest: [CLLocationCoordinate2D]] = [:]
+    @State private var expectedRouteRefreshTask: Task<Void, Never>?
     @State private var visibleMapSpan = MKCoordinateSpan(
         latitudeDelta: 0.025,
         longitudeDelta: 0.035
@@ -582,8 +538,6 @@ struct MapHomeView: View {
     @State private var headerFrame = CGRect.zero
     @State private var searchFieldFrame = CGRect.zero
     @State private var mapControlsFrame = CGRect.zero
-    @State private var overlayPinchInitialCamera: MapCamera?
-    @State private var lastOverlayPinchPublishUptime: TimeInterval = 0
     @State private var isDayPlaybackRunning = false
     @State private var dayPlaybackElapsedSeconds: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
@@ -801,7 +755,6 @@ struct MapHomeView: View {
                     }
                     .padding(.leading, MapHomeSearchLayoutMath.itemSpacing)
                 }
-                .simultaneousGesture(mapForwardingPinchGesture)
             }
             .padding(.horizontal, Layout.horizontalInset)
             .padding(.top, 2)
@@ -816,7 +769,6 @@ struct MapHomeView: View {
 
             VStack(spacing: 0) {
                 header
-                    .simultaneousGesture(mapForwardingPinchGesture)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, Layout.horizontalInset)
@@ -933,6 +885,8 @@ struct MapHomeView: View {
             initialLocationRequestTask = nil
             mapSearchTask?.cancel()
             mapSearchTask = nil
+            expectedRouteRefreshTask?.cancel()
+            expectedRouteRefreshTask = nil
             mapSearchCompleter.clear()
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
@@ -942,6 +896,7 @@ struct MapHomeView: View {
             prepareRouteProjectionReadings()
             refreshRouteProjection()
             await refreshRouteReadings(for: date)
+            scheduleExpectedRouteRefresh()
             while !Task.isCancelled {
                 refreshTimeRailSegments()
                 await refreshRouteReadings(for: date)
@@ -978,6 +933,7 @@ struct MapHomeView: View {
                 displayRouteReadings = []
                 routeProjection = nil
                 timelineRouteOverlays = []
+                expectedRouteOverlays = []
                 historicalPlaybackPoint = nil
                 prepareRouteProjectionReadings()
                 refreshRouteProjection()
@@ -1005,13 +961,20 @@ struct MapHomeView: View {
             prepareRouteProjectionReadings()
             refreshRouteProjection()
             refreshHistoricalPlaybackPoint()
+            scheduleExpectedRouteRefresh()
+        }
+        .onChange(of: model.snapshot.places) { _, _ in
+            scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.isBootstrapped) { _, isBootstrapped in
             guard isBootstrapped else { return }
             Task { await refreshRouteReadings(for: model.selectedDate) }
         }
         .onChange(of: model.backupRestoreRevision) { _, _ in
-            Task { await refreshRouteReadings(for: model.selectedDate) }
+            Task {
+                await refreshRouteReadings(for: model.selectedDate)
+                scheduleExpectedRouteRefresh()
+            }
         }
         .onChange(of: model.liveRouteState.readings) { _, _ in
             prepareRouteProjectionReadings()
@@ -1035,9 +998,22 @@ struct MapHomeView: View {
         MapReader { proxy in
             Map(
                 position: $mapPosition,
-                interactionModes: [.pan, .zoom, .rotate],
+                interactionModes: .all,
                 scope: mapScope
             ) {
+            ForEach(visibleExpectedRouteOverlays) { overlay in
+                MapPolyline(coordinates: overlay.coordinates)
+                    .stroke(
+                        mapCategoryColor("movement").opacity(0.48),
+                        style: StrokeStyle(
+                            lineWidth: 3,
+                            lineCap: .round,
+                            lineJoin: .round,
+                            dash: [7, 5]
+                        )
+                    )
+            }
+
             ForEach(subwayRouteOverlays) { overlay in
                 MapPolyline(coordinates: overlay.coordinates)
                     .stroke(
@@ -1155,10 +1131,7 @@ struct MapHomeView: View {
                     coordinate: historicalPlaybackCoordinate,
                     anchor: .center
                 ) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundStyle(Color.tpReferenceRose)
-                        .shadow(color: Color.black.opacity(0.18), radius: 3, y: 2)
+                    MapHomeHistoricalLocationMarker()
                         .accessibilityLabel(historicalPlaybackAccessibilityLabel)
                 }
             }
@@ -1182,8 +1155,6 @@ struct MapHomeView: View {
                 let isCentered = updateUserCenterState(using: proxy)
                 if userTrackingMode == .locating, isCentered {
                     setUserTrackingMode(.following)
-                } else if userTrackingMode == .following, !isCentered {
-                    focusUserLocation(using: proxy)
                 }
                 if let level = sharedZoomLevel(for: context.region.span),
                    abs(level - sharedZoomLevel) > 0.02 {
@@ -1291,7 +1262,6 @@ struct MapHomeView: View {
                     isCategoryMenuExpanded = false
                     isDisplayMenuExpanded = false
                     isSettingsMenuExpanded = false
-                    isGPSLoggingMenuExpanded = false
                 }
                 isMenuOpen.toggle()
             } label: {
@@ -1915,43 +1885,6 @@ struct MapHomeView: View {
         .frame(maxHeight: .infinity, alignment: .trailing)
     }
 
-    private var mapForwardingPinchGesture: some Gesture {
-        MagnifyGesture(minimumScaleDelta: 0.01)
-            .onChanged { value in
-                updateForwardedMapPinch(value, force: false)
-            }
-            .onEnded { value in
-                updateForwardedMapPinch(value, force: true)
-                overlayPinchInitialCamera = nil
-                lastOverlayPinchPublishUptime = 0
-            }
-    }
-
-    private func updateForwardedMapPinch(
-        _ value: MagnifyGesture.Value,
-        force: Bool
-    ) {
-        if overlayPinchInitialCamera == nil {
-            overlayPinchInitialCamera = visibleMapCamera
-        }
-        guard !isMenuOpen,
-              !isMapSearchOverlayPresented,
-              let initialCamera = overlayPinchInitialCamera else { return }
-        let uptime = ProcessInfo.processInfo.systemUptime
-        guard MapHomeOverlayPinchMath.shouldPublish(
-            lastUptime: lastOverlayPinchPublishUptime,
-            currentUptime: uptime,
-            isFinal: force
-        ) else { return }
-        lastOverlayPinchPublishUptime = uptime
-        mapPosition = .camera(
-            MapHomeOverlayPinchMath.zoomedCamera(
-                from: initialCamera,
-                magnification: value.magnification
-            )
-        )
-    }
-
     private func mapControls(proxy: MapProxy) -> some View {
         VStack(spacing: Layout.mapControlSpacing) {
             Button {
@@ -2005,7 +1938,6 @@ struct MapHomeView: View {
             mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
             mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
         }
-        .simultaneousGesture(mapForwardingPinchGesture)
         .simultaneousGesture(
             SpatialTapGesture().onEnded { _ in
                 dismissMapSearchOverlay()
@@ -2882,144 +2814,34 @@ struct MapHomeView: View {
 
     private var gpsLoggingMenuItem: some View {
         let isLogging = model.sensorCollectionSessionState == .collecting
-        let preferences = model.settings.gpsLoggingPreferences
         let tint = Color.tpReferenceRose
-        return VStack(alignment: .leading, spacing: 7) {
-            Button {
-                if !isGPSLoggingMenuExpanded {
-                    gpsLoggingIntervalDraftSeconds = preferences.intervalSeconds
-                }
-                isGPSLoggingMenuExpanded.toggle()
-            } label: {
-                HStack(spacing: 13) {
-                    Image(systemName: isLogging ? "location.fill" : "location.viewfinder")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(tint)
-                        .frame(width: 24)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(
-                            language.text(
-                                "GPS 및 센서 데이터",
-                                "GPS & Sensor Data"
-                            )
-                        )
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-
-                        Text(
-                            sensorCollectionStatusText
-                                + " · "
-                                + gpsLoggingIntervalText(
-                                    preferences.effectiveIntervalSeconds
-                                )
-                        )
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: isGPSLoggingMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .foregroundStyle(Color.primary)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 12)
-                .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(language.text("GPS 및 센서 데이터 설정", "GPS and sensor data settings"))
-
-            if isGPSLoggingMenuExpanded {
-                VStack(alignment: .leading, spacing: 11) {
-                    Toggle(
-                        isOn: Binding(
-                            get: { model.settings.gpsLoggingPreferences.isBatteryMinimal },
-                            set: { model.setGPSLoggingBatteryMinimal($0) }
-                        )
-                    ) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(language.text("배터리 최소", "Minimum battery"))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Text(
-                                language.text(
-                                    "15분마다 GPS와 사용 가능한 센서값을 기록",
-                                    "Records GPS and available sensor values every 15 min"
-                                )
-                            )
-                            .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-                    .tint(Color.tpReferenceMint)
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text(language.text("시간", "Interval"))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Spacer()
-                            Text(gpsLoggingIntervalText(gpsLoggingIntervalDisplay(preferences)))
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
-                                .foregroundStyle(tint)
-                        }
-
-                        Slider(
-                            value: Binding(
-                                get: {
-                                    Double(
-                                        GPSLoggingPreferences.supportedIntervalSeconds
-                                            .firstIndex(of: gpsLoggingIntervalDraftSeconds) ?? 0
-                                    )
-                                },
-                                set: { value in
-                                    let index = min(
-                                        max(Int(value.rounded()), 0),
-                                        GPSLoggingPreferences.supportedIntervalSeconds.count - 1
-                                    )
-                                    gpsLoggingIntervalDraftSeconds =
-                                        GPSLoggingPreferences.supportedIntervalSeconds[index]
-                                }
-                            ),
-                            in: 0...Double(GPSLoggingPreferences.supportedIntervalSeconds.count - 1),
-                            step: 1,
-                            onEditingChanged: { isEditing in
-                                if !isEditing {
-                                    model.setGPSLoggingIntervalSeconds(gpsLoggingIntervalDraftSeconds)
-                                }
-                            }
-                        )
-                        .tint(tint)
-                        .disabled(preferences.isBatteryMinimal)
-                        .accessibilityLabel(language.text("GPS 기록 시간", "GPS logging interval"))
-                        .accessibilityValue(gpsLoggingIntervalText(gpsLoggingIntervalDisplay(preferences)))
-
-                        HStack {
-                            Text(language.text("실시간 1초", "Live 1 sec"))
-                            Spacer()
-                            Text(language.text("기본 5분", "Default 5 min"))
-                            Spacer()
-                            Text(language.text("15분", "15 min"))
-                        }
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                    }
-
-                    Text(
-                        language.text(
-                            "1초 모드는 이동 감지 시 자동으로 시작되고 정지 감지 시 끝납니다. 백그라운드에서는 iOS가 허용한 위치·HealthKit·BGTask 이벤트에서 최선으로 복구하며, 앱 강제 종료 뒤 정확한 주기는 보장되지 않습니다.",
-                            "The 1-second mode starts when movement is detected and stops when you become stationary. In the background, collection resumes best-effort from location, HealthKit, and BGTask events allowed by iOS; exact timing after force quit is not guaranteed."
-                        )
-                    )
-                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+        return HStack(spacing: 13) {
+            Image(systemName: isLogging ? "location.fill" : "location.viewfinder")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(language.text("GPS 및 센서 데이터", "GPS & Sensor Data"))
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                Text(sensorCollectionStatusText + " · " + gpsLoggingIntervalText(1))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(11)
-                .background(tint.opacity(0.055), in: RoundedRectangle(cornerRadius: 10))
-                .padding(.leading, 12)
             }
+            Spacer()
+            Image(systemName: "lock.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
         }
+        .foregroundStyle(Color.primary)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityLabel(
+            language.text(
+                "GPS 및 센서 데이터 실시간 기록 고정",
+                "GPS and sensor data fixed to realtime recording"
+            )
+        )
     }
 
     private var sensorCollectionStatusText: String {
@@ -3031,14 +2853,6 @@ struct MapHomeView: View {
         case .stopped:
             language.text("종료", "Stopped")
         }
-    }
-
-    private func gpsLoggingIntervalDisplay(
-        _ preferences: GPSLoggingPreferences
-    ) -> Int {
-        preferences.isBatteryMinimal
-            ? preferences.effectiveIntervalSeconds
-            : gpsLoggingIntervalDraftSeconds
     }
 
     private func gpsLoggingIntervalText(_ seconds: Int) -> String {
@@ -3053,19 +2867,6 @@ struct MapHomeView: View {
             "\(minutes)분마다 위치 확인",
             "Checks location every \(minutes) min"
         )
-    }
-
-    private func toggleGPSLogging() {
-        guard !isGPSLoggingActionInFlight else { return }
-        isGPSLoggingActionInFlight = true
-        Task { @MainActor in
-            defer { isGPSLoggingActionInFlight = false }
-            if model.activeTrackingSession == nil {
-                await model.startTracking(.walking)
-            } else {
-                await model.stopTracking()
-            }
-        }
     }
 
     @ViewBuilder
@@ -3209,6 +3010,108 @@ struct MapHomeView: View {
             segment: segment,
             details: sectionDetails(at: minute)
         )
+    }
+
+    private var visibleExpectedRouteOverlays: [MapHomeExpectedRouteOverlay] {
+        let cutoff = RouteTimelineDataEngine.timelineDate(
+            selectedDate: model.selectedDate,
+            minute: effectiveTimelineMinute
+        )
+        return expectedRouteOverlays.compactMap {
+            $0.visible(through: cutoff)
+        }
+    }
+
+    private func scheduleExpectedRouteRefresh() {
+        expectedRouteRefreshTask?.cancel()
+        expectedRouteRefreshTask = Task { @MainActor in
+            defer { expectedRouteRefreshTask = nil }
+            await refreshExpectedRouteOverlays()
+        }
+    }
+
+    private func refreshExpectedRouteOverlays() async {
+        let calendar = Calendar.autoupdatingCurrent
+        let selectedDay = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: selectedDay)
+            ?? selectedDay.addingTimeInterval(24 * 60 * 60)
+        let requests = ExpectedRouteRequestEngine.requests(
+            travel: model.snapshot.travel,
+            places: model.snapshot.places,
+            readings: normalizedRouteReadings,
+            in: TimeSpan(start: selectedDay, end: dayEnd),
+            through: dayEnd
+        )
+        guard !requests.isEmpty else {
+            expectedRouteOverlays = []
+            return
+        }
+        if expectedRouteCache.count > 128 {
+            expectedRouteCache.removeAll(keepingCapacity: true)
+        }
+
+        var overlays: [MapHomeExpectedRouteOverlay] = []
+        for request in requests.prefix(24) {
+            guard !Task.isCancelled else { return }
+            let coordinates: [CLLocationCoordinate2D]
+            if let cached = expectedRouteCache[request] {
+                coordinates = cached
+            } else {
+                coordinates = await mapKitRouteCoordinates(for: request)
+                expectedRouteCache[request] = coordinates
+            }
+            guard coordinates.count >= 2 else { continue }
+            overlays.append(
+                MapHomeExpectedRouteOverlay(
+                    id: request.segmentID,
+                    mode: request.mode,
+                    departureDate: request.departureDate,
+                    arrivalDate: request.arrivalDate,
+                    coordinates: coordinates
+                )
+            )
+        }
+        guard !Task.isCancelled,
+              calendar.isDate(selectedDay, inSameDayAs: model.selectedDate)
+        else { return }
+        expectedRouteOverlays = overlays
+    }
+
+    private func mapKitRouteCoordinates(
+        for routeRequest: ExpectedRouteRequest
+    ) async -> [CLLocationCoordinate2D] {
+        let request = MKDirections.Request()
+        request.source = MKMapItem(
+            placemark: MKPlacemark(
+                coordinate: CLLocationCoordinate2D(
+                    latitude: routeRequest.start.latitude,
+                    longitude: routeRequest.start.longitude
+                )
+            )
+        )
+        request.destination = MKMapItem(
+            placemark: MKPlacemark(
+                coordinate: CLLocationCoordinate2D(
+                    latitude: routeRequest.end.latitude,
+                    longitude: routeRequest.end.longitude
+                )
+            )
+        )
+        request.requestsAlternateRoutes = false
+        request.transportType = switch routeRequest.transport {
+        case .automobile: .automobile
+        case .transit: .transit
+        case .walking: .walking
+        }
+        if routeRequest.transport == .transit {
+            request.departureDate = .now
+        }
+        guard let response = try? await MKDirections(request: request).calculate(),
+              let route = response.routes.min(by: {
+                  $0.expectedTravelTime < $1.expectedTravelTime
+              }) else { return [] }
+        let points = route.polyline.points()
+        return (0..<route.polyline.pointCount).map { points[$0].coordinate }
     }
 
     private var subwayRouteOverlays: [MapHomeSubwayRouteOverlay] {
@@ -3506,10 +3409,9 @@ struct MapHomeView: View {
     }
 
     private func focusMapIfNeeded() {
-        let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
-        let coordinates = routeCoordinates.isEmpty
-            ? subwayRouteOverlays.flatMap(\.coordinates)
-            : routeCoordinates
+        let coordinates = timelineRouteOverlays.flatMap(\.coordinates)
+            + visibleExpectedRouteOverlays.flatMap(\.coordinates)
+            + subwayRouteOverlays.flatMap(\.coordinates)
         guard let first = coordinates.first else {
             mapPosition = .automatic
             return
@@ -3531,17 +3433,11 @@ struct MapHomeView: View {
     }
 
     private func sharedZoomLevel(for span: MKCoordinateSpan) -> CGFloat? {
-        let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
-        let subwayCoordinates = subwayRouteOverlays.flatMap(\.coordinates)
-        let coordinates: [CLLocationCoordinate2D]
-        if !routeCoordinates.isEmpty {
-            coordinates = routeCoordinates
-        } else if !subwayCoordinates.isEmpty {
-            coordinates = subwayCoordinates
-        } else if let currentCoordinate {
+        var coordinates = timelineRouteOverlays.flatMap(\.coordinates)
+            + visibleExpectedRouteOverlays.flatMap(\.coordinates)
+            + subwayRouteOverlays.flatMap(\.coordinates)
+        if coordinates.isEmpty, let currentCoordinate {
             coordinates = [currentCoordinate]
-        } else {
-            return nil
         }
         guard let first = coordinates.first else { return nil }
         let fitLatitude = max(0.025, ((coordinates.map(\.latitude).max() ?? first.latitude) - (coordinates.map(\.latitude).min() ?? first.latitude)) * 1.8)
@@ -3551,18 +3447,11 @@ struct MapHomeView: View {
     }
 
     private func focusMapForSharedZoom() {
-        let routeCoordinates = timelineRouteOverlays.flatMap(\.coordinates)
-        let subwayCoordinates = subwayRouteOverlays.flatMap(\.coordinates)
-        let coordinates: [CLLocationCoordinate2D]
-        if !routeCoordinates.isEmpty {
-            coordinates = routeCoordinates
-        } else if !subwayCoordinates.isEmpty {
-            coordinates = subwayCoordinates
-        } else if let currentCoordinate {
+        var coordinates = timelineRouteOverlays.flatMap(\.coordinates)
+            + visibleExpectedRouteOverlays.flatMap(\.coordinates)
+            + subwayRouteOverlays.flatMap(\.coordinates)
+        if coordinates.isEmpty, let currentCoordinate {
             coordinates = [currentCoordinate]
-        } else {
-            mapPosition = .automatic
-            return
         }
         guard let first = coordinates.first else {
             mapPosition = .automatic
@@ -5824,6 +5713,39 @@ private struct MapHomeLocationSheet: View {
     }
 }
 
+private struct MapHomeExpectedRouteOverlay: Identifiable {
+    let id: UUID
+    let mode: TravelMode
+    let departureDate: Date
+    let arrivalDate: Date
+    let coordinates: [CLLocationCoordinate2D]
+
+    func visible(through cutoff: Date) -> Self? {
+        guard cutoff > departureDate, coordinates.count >= 2 else { return nil }
+        guard cutoff < arrivalDate else { return self }
+        let duration = arrivalDate.timeIntervalSince(departureDate)
+        guard duration > 0 else { return self }
+        let fraction = min(
+            max(cutoff.timeIntervalSince(departureDate) / duration, 0),
+            1
+        )
+        let lastIndex = max(
+            1,
+            min(
+                coordinates.count - 1,
+                Int(ceil(Double(coordinates.count - 1) * fraction))
+            )
+        )
+        return Self(
+            id: id,
+            mode: mode,
+            departureDate: departureDate,
+            arrivalDate: arrivalDate,
+            coordinates: Array(coordinates.prefix(lastIndex + 1))
+        )
+    }
+}
+
 private struct MapHomeSubwayRouteOverlay: Identifiable {
     let id: UUID
     let coordinates: [CLLocationCoordinate2D]
@@ -5922,6 +5844,60 @@ private struct MapHomeLocationButtonIcon: View {
     }
 }
 
+private struct MapHomeHistoricalLocationMarker: View {
+    var body: some View {
+        Canvas { context, size in
+            let scaleX = size.width / 22
+            let scaleY = size.height / 22
+            let point: (CGFloat, CGFloat) -> CGPoint = {
+                CGPoint(x: $0 * scaleX, y: $1 * scaleY)
+            }
+            let lineWidth = min(scaleX, scaleY) * 2.4
+            let color = Color.tpReferenceRose
+
+            context.fill(
+                Path(
+                    ellipseIn: CGRect(
+                        x: point(7.8, 1.2).x,
+                        y: point(7.8, 1.2).y,
+                        width: 6.4 * scaleX,
+                        height: 6.4 * scaleY
+                    )
+                ),
+                with: .color(color)
+            )
+
+            var body = Path()
+            body.move(to: point(11, 8.2))
+            body.addLine(to: point(11, 14.2))
+            body.move(to: point(5.2, 10.7))
+            body.addLine(to: point(11, 9.5))
+            body.addLine(to: point(16.8, 10.7))
+            body.move(to: point(11, 14.2))
+            body.addLine(to: point(6.4, 20.2))
+            body.move(to: point(11, 14.2))
+            body.addLine(to: point(15.6, 20.2))
+            context.stroke(
+                body,
+                with: .color(color),
+                style: StrokeStyle(
+                    lineWidth: lineWidth,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
+        }
+        .frame(width: 22, height: 22)
+        .padding(4)
+        .background(.white, in: Circle())
+        .overlay {
+            Circle().stroke(Color.tpReferenceRose.opacity(0.25), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.18), radius: 3, y: 2)
+        .accessibilityHidden(true)
+    }
+}
+
 private struct MapHomePanGestureObserver: UIViewRepresentable {
     let onSingleFingerPanBegan: () -> Void
 
@@ -5980,13 +5956,7 @@ private struct MapHomePanGestureObserver: UIViewRepresentable {
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
             guard gesture.state == .began,
                   gesture.numberOfTouches == 1 else { return }
-            DispatchQueue.main.async { [weak self, weak gesture] in
-                guard let self, let gesture,
-                      gesture.numberOfTouches == 1,
-                      gesture.state == .began || gesture.state == .changed
-                else { return }
-                self.onSingleFingerPanBegan?()
-            }
+            onSingleFingerPanBegan?()
         }
 
         private func mapViews(in view: UIView) -> [MKMapView] {

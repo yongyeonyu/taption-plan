@@ -90,7 +90,7 @@
 		<key>UIColorName</key>
 		<string>LaunchBackground</string>
 		<key>UIImageName</key>
-		<string>LaunchIcon</string>
+		<string>NativeLaunchIcon</string>
 		<key>UIImageRespectsSafeAreaInsets</key>
 		<false/>
 	</dict>

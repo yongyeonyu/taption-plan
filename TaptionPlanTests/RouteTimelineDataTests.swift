@@ -715,4 +715,148 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertNotNil(marker)
         XCTAssertLessThan(markerElapsed, 0.2)
     }
+
+    func testExpectedRoadRouteUsesSavedPlaceEndpointsWithoutMutatingTravel() throws {
+        let from = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.50,
+                longitude: 126.90,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let to = PlaceStay(
+            placeKey: "work",
+            displayName: "회사",
+            span: TimeSpan(start: date(60), end: date(120)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.60,
+                longitude: 127.00,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: from.id,
+            toPlaceID: to.id,
+            mode: .bus,
+            span: TimeSpan(start: date(10), end: date(60)),
+            distanceMeters: 10_000,
+            confidence: .high,
+            evidence: ["버스"]
+        )
+        let original = travel
+
+        let request = try XCTUnwrap(
+            ExpectedRouteRequestEngine.requests(
+                travel: [travel],
+                places: [from, to],
+                readings: [],
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440)
+            ).first
+        )
+
+        XCTAssertEqual(request.transport, .automobile)
+        XCTAssertEqual(request.start, from.point)
+        XCTAssertEqual(request.end, to.point)
+        XCTAssertEqual(travel, original)
+    }
+
+    func testExpectedRouteSkipsStoredSubwayAndUsesTransitForTrain() throws {
+        let subway = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: date(10), end: date(30)),
+            distanceMeters: 4_000,
+            confidence: .high,
+            evidence: ["지하철"],
+            isConfirmed: true,
+            subwayRoute: SubwayRoutePath(
+                stops: [
+                    SubwayRouteStop(
+                        lineName: "1호선",
+                        order: 0,
+                        stationName: "A",
+                        latitude: 37.5,
+                        longitude: 126.9
+                    ),
+                    SubwayRouteStop(
+                        lineName: "1호선",
+                        order: 1,
+                        stationName: "B",
+                        latitude: 37.6,
+                        longitude: 127.0
+                    ),
+                ],
+                lineNames: ["1호선"],
+                transferStationNames: []
+            )
+        )
+        let train = TravelSegment(
+            mode: .train,
+            span: TimeSpan(start: date(40), end: date(80)),
+            distanceMeters: 20_000,
+            confidence: .high,
+            evidence: ["기차"]
+        )
+        let requests = ExpectedRouteRequestEngine.requests(
+            travel: [subway, train],
+            places: [],
+            readings: [
+                reading(40, latitude: 37.1),
+                reading(80, latitude: 37.3),
+            ],
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        )
+
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertEqual(requests.first?.segmentID, train.id)
+        XCTAssertEqual(requests.first?.transport, .transit)
+    }
+
+    func testExpectedRouteAtPartialCutoffUsesLatestObservedEndpoint() throws {
+        let destination = PlaceStay(
+            placeKey: "destination",
+            displayName: "도착지",
+            span: TimeSpan(start: date(60), end: date(90)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 38,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let segment = TravelSegment(
+            toPlaceID: destination.id,
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(60)),
+            distanceMeters: 10_000,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+        let observed = reading(30, latitude: 37.4)
+        let request = try XCTUnwrap(
+            ExpectedRouteRequestEngine.requests(
+                travel: [segment],
+                places: [destination],
+                readings: [reading(10, latitude: 37.1), observed],
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(30)
+            ).first
+        )
+
+        XCTAssertEqual(request.end, observed.point)
+        XCTAssertNotEqual(request.end, destination.point)
+        XCTAssertEqual(request.arrivalDate, date(30))
+    }
 }

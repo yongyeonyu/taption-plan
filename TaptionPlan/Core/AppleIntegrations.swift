@@ -2146,6 +2146,14 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.authorizationStatus == .authorizedAlways
     }
 
+    func locationAuthorizationStatus() -> CLAuthorizationStatus {
+        locationManager.authorizationStatus
+    }
+
+    func hasPreciseLocationAuthorization() -> Bool {
+        locationManager.accuracyAuthorization == .fullAccuracy
+    }
+
     func requestLocationPermission(always: Bool = false) {
         if always {
             locationManager.requestAlwaysAuthorization()
@@ -2337,7 +2345,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
               !isLocationDenied else {
             return
         }
-        if activeTrackingSession != nil, activeTrackingPreferences.isContinuous {
+        if configuration.minimumEmissionInterval <= 1
+            || (activeTrackingSession != nil
+                && activeTrackingPreferences.isContinuous) {
             startHardwareStreams()
             return
         }
@@ -2448,7 +2458,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             && locationManager.authorizationStatus == .authorizedAlways
         locationManager.showsBackgroundLocationIndicator =
             locationManager.allowsBackgroundLocationUpdates
-        applyLocationPolicy(isMoving: activeTrackingSession != nil)
+        applyLocationPolicy(
+            isMoving: activeTrackingSession != nil
+                || configuration.minimumEmissionInterval <= 1
+        )
         if permissionState() == .authorized {
             locationManager.startUpdatingLocation()
         }
@@ -2660,9 +2673,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                   activeTrackingPreferences.isContinuous {
             emit(force: true, allowManualTrackingSample: true)
         } else if activeTrackingSession == nil,
-                  isFirstLocationFix,
                   latestLocation != nil {
-            emit(force: true)
+            if configuration.minimumEmissionInterval <= 1 {
+                emit()
+            } else if isFirstLocationFix {
+                emit(force: true)
+            }
         }
     }
 
@@ -3090,7 +3106,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             locationManager.distanceFilter = 5
         }
         locationManager.pausesLocationUpdatesAutomatically =
-            configuration.profile != .accuracy
+            configuration.minimumEmissionInterval > 1
+                && configuration.profile != .accuracy
     }
 
     private var activeEmissionInterval: TimeInterval {
@@ -3157,6 +3174,24 @@ final class AppleMotionHistoryService: @unchecked Sendable {
             return .authorized
         @unknown default:
             return .unavailable
+        }
+    }
+
+    func requestAuthorization() async -> PermissionState {
+        guard CMMotionActivityManager.isActivityAvailable() else {
+            return .unavailable
+        }
+        let end = Date.now
+        return await withCheckedContinuation { continuation in
+            activityManager.queryActivityStarting(
+                from: end.addingTimeInterval(-1),
+                to: end,
+                to: .main
+            ) { [weak self] _, _ in
+                continuation.resume(
+                    returning: self?.permissionState() ?? .unavailable
+                )
+            }
         }
     }
 

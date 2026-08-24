@@ -377,7 +377,7 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testMapHomeOverlayUsesSharedBottomMarginAndUniformControlSpacing() {
-        XCTAssertEqual(MapHomeOverlayLayoutMath.sharedBottomMargin, 28)
+        XCTAssertEqual(MapHomeOverlayLayoutMath.sharedBottomMargin, 76)
         XCTAssertEqual(MapHomeOverlayLayoutMath.controlSize, 44)
         XCTAssertEqual(MapHomeOverlayLayoutMath.controlSpacing, 9)
         XCTAssertEqual(
@@ -391,6 +391,10 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(
             MapHomeOverlayLayoutMath.railHeight(availableHeight: 620),
             620
+        )
+        XCTAssertEqual(
+            MapHomeOverlayLayoutMath.railHeight(availableHeight: 460),
+            460
         )
     }
 
@@ -1063,91 +1067,6 @@ final class TimeScaleTests: XCTestCase {
                 magneticHeading: 120
             ),
             120
-        )
-    }
-
-    func testMapOverlayPinchRoutesOnlyCoveredControlsOutsideSidebar() {
-        let viewport = CGSize(width: 390, height: 844)
-        let topOverlayHeight = MapHomeOverlayLayoutMath.topOverlayHeight(
-            headerFrame: CGRect(x: 10, y: 2, width: 370, height: 46),
-            searchFrame: CGRect(x: 10, y: 56, width: 185, height: 42),
-            fallback: 104
-        )
-        let route: (CGPoint) -> Bool = { point in
-            MapHomeOverlayPinchMath.shouldForwardToMap(
-                startLocation: point,
-                viewportSize: viewport,
-                sidebarWidth: 126,
-                topOverlayHeight: topOverlayHeight,
-                controlsWidth: 82,
-                controlsHeight: 250
-            )
-        }
-
-        XCTAssertTrue(route(CGPoint(x: 180, y: 80)))
-        XCTAssertTrue(route(CGPoint(x: 45, y: 700)))
-        XCTAssertFalse(route(CGPoint(x: 180, y: 120)))
-        XCTAssertFalse(route(CGPoint(x: 330, y: 80)))
-        XCTAssertEqual(topOverlayHeight, 98)
-        XCTAssertEqual(
-            MapHomeOverlayLayoutMath.topOverlayHeight(
-                headerFrame: .zero,
-                searchFrame: .zero,
-                fallback: 104
-            ),
-            104
-        )
-    }
-
-    func testMapOverlayPinchPreservesCameraAndPublishesFinalValue() {
-        let camera = MapCamera(
-            centerCoordinate: CLLocationCoordinate2D(latitude: 37.5, longitude: 127),
-            distance: 2_000,
-            heading: 24,
-            pitch: 35
-        )
-        let zoomed = MapHomeOverlayPinchMath.zoomedCamera(
-            from: camera,
-            magnification: 2
-        )
-
-        XCTAssertEqual(zoomed.centerCoordinate.latitude, 37.5, accuracy: 0.000_001)
-        XCTAssertEqual(zoomed.centerCoordinate.longitude, 127, accuracy: 0.000_001)
-        XCTAssertEqual(zoomed.distance, 1_000, accuracy: 0.01)
-        XCTAssertEqual(zoomed.heading, 24, accuracy: 0.01)
-        XCTAssertEqual(zoomed.pitch, 35, accuracy: 0.01)
-        XCTAssertEqual(
-            MapHomeOverlayPinchMath.zoomedCamera(
-                from: MapCamera(centerCoordinate: camera.centerCoordinate, distance: 1_000),
-                magnification: 1_000
-            ).distance,
-            80,
-            accuracy: 0.01
-        )
-        XCTAssertEqual(
-            MapHomeOverlayPinchMath.zoomedCamera(
-                from: MapCamera(
-                    centerCoordinate: camera.centerCoordinate,
-                    distance: 30_000_000
-                ),
-                magnification: 0.001
-            ).distance,
-            30_000_000,
-            accuracy: 0.01
-        )
-        XCTAssertFalse(
-            MapHomeOverlayPinchMath.shouldPublish(
-                lastUptime: 10,
-                currentUptime: 10.005,
-                isFinal: false
-            )
-        )
-        XCTAssertTrue(
-            MapHomeOverlayPinchMath.shouldPublish(
-                lastUptime: 10,
-                currentUptime: 10.005,
-                isFinal: true
-            )
         )
     }
 
@@ -2356,5 +2275,68 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertFalse(MapHomeSectionViewportMath.acceptsDetailSlice(
             translation: CGSize(width: -80, height: 0)
         ))
+    }
+
+    func testRequiredPermissionGateRequiresEveryVerifiedIntegration() {
+        let gate = RequiredPermissionGate.evaluate(
+            RequiredPermissionSnapshot(
+                permissions: [
+                    .location: .authorized,
+                    .motion: .authorized,
+                    .photos: .authorized,
+                    .calendar: .authorized,
+                    .notifications: .authorized,
+                    .appUsage: .authorized,
+                ],
+                locationAlwaysAuthorized: true,
+                locationPrecise: true,
+                healthKitRequestCompleted: true,
+                liveActivitiesEnabled: true
+            )
+        )
+
+        XCTAssertTrue(gate.allSatisfied)
+        XCTAssertTrue(gate.missing.isEmpty)
+    }
+
+    func testRequiredPermissionGateReportsStableMissingOrder() {
+        XCTAssertEqual(
+            RequiredPermissionGate.evaluate(
+                RequiredPermissionSnapshot()
+            ).missing,
+            [
+                .locationAlways,
+                .locationPrecise,
+                .motion,
+                .healthKitRequestCompleted,
+                .photos,
+                .calendar,
+                .notifications,
+                .appUsage,
+                .liveActivities,
+            ]
+        )
+    }
+
+    func testRequiredPermissionGateRejectsLimitedPhotosAndUsesHealthRequestCompletion() {
+        let gate = RequiredPermissionGate.evaluate(
+            RequiredPermissionSnapshot(
+                permissions: [
+                    .location: .authorized,
+                    .motion: .authorized,
+                    .health: .denied,
+                    .photos: .limited,
+                    .calendar: .authorized,
+                    .notifications: .authorized,
+                    .appUsage: .authorized,
+                ],
+                locationAlwaysAuthorized: true,
+                locationPrecise: true,
+                healthKitRequestCompleted: true,
+                liveActivitiesEnabled: true
+            )
+        )
+
+        XCTAssertEqual(gate.missing, [.photos])
     }
 }
