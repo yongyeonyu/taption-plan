@@ -96,4 +96,64 @@ final class SensorBackgroundCoordinatorTests: XCTestCase {
         _ = coordinator.markSaved(at: start.addingTimeInterval(-60))
         XCTAssertEqual(coordinator.lastSavedAt, start)
     }
+
+    func testBackgroundCollectionSessionPersistsAcrossProcessRecreation() {
+        let suite = "SensorBackgroundCoordinatorTests.persistence"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let key = "session"
+        let startedAt = Date(timeIntervalSince1970: 8_000)
+
+        let first = SensorBackgroundCoordinator(
+            defaults: defaults,
+            storageKey: key
+        )
+        XCTAssertTrue(first.beginCollectionSession(at: startedAt))
+        let sessionID = first.sessionID
+        _ = first.markSaved(at: startedAt.addingTimeInterval(30))
+
+        let restored = SensorBackgroundCoordinator(
+            defaults: defaults,
+            storageKey: key
+        )
+        XCTAssertEqual(restored.sessionState, .collecting)
+        XCTAssertEqual(restored.sessionID, sessionID)
+        XCTAssertEqual(restored.sessionStartedAt, startedAt)
+        XCTAssertEqual(
+            restored.lastSavedAt,
+            startedAt.addingTimeInterval(30)
+        )
+        XCTAssertFalse(
+            restored.expireIfNeeded(
+                at: startedAt.addingTimeInterval(24 * 60 * 60)
+            )
+        )
+
+        restored.cancel()
+        defaults.removePersistentDomain(forName: suite)
+    }
+
+    func testBackgroundRefreshUsesSystemSafeMinimumAndSavedInterval() {
+        XCTAssertEqual(
+            SensorBackgroundRefreshPolicy.delay(for: 1),
+            15 * 60
+        )
+        XCTAssertEqual(
+            SensorBackgroundRefreshPolicy.delay(for: 30 * 60),
+            30 * 60
+        )
+
+        let suite = "SensorBackgroundCoordinatorTests.refresh-policy"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        SensorBackgroundRefreshPolicy.save(
+            intervalSeconds: 1_800,
+            defaults: defaults
+        )
+        XCTAssertEqual(
+            SensorBackgroundRefreshPolicy.savedDelay(defaults: defaults),
+            1_800
+        )
+        defaults.removePersistentDomain(forName: suite)
+    }
 }

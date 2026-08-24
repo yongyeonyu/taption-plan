@@ -119,6 +119,9 @@ struct AppShellView: View {
         .onChange(of: model.sensorCollectionSessionState) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
+        .onChange(of: model.sensorCollectionSessionID) { _, _ in
+            Task { await reconcileSensorLiveActivity() }
+        }
         .onChange(of: model.lastSensorSavedAt) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
@@ -364,7 +367,8 @@ struct AppShellView: View {
         let kinds = sensorCollectionKinds
         guard proAccess.grantsAccess,
               model.sensorCollectionSessionState == .collecting,
-              let session = model.activeTrackingSession else {
+              let sessionID = model.sensorCollectionSessionID,
+              let startedAt = model.sensorCollectionStartedAt else {
             await sensorLiveActivityController.removeExpired()
             await sensorLiveActivityController.stop(
                 lastSavedAt: model.lastSensorSavedAt,
@@ -374,8 +378,8 @@ struct AppShellView: View {
         }
 
         _ = try? await sensorLiveActivityController.reconcile(
-            sessionID: session.id,
-            startedAt: session.startedAt,
+            sessionID: sessionID,
+            startedAt: startedAt,
             lastSavedAt: model.lastSensorSavedAt,
             collectionKinds: kinds,
             isCollecting: true,

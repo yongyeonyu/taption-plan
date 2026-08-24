@@ -429,6 +429,18 @@ enum MapHomeWeatherTimelineMath {
     }
 }
 
+enum MapHomeUserTrackingPolicy {
+    enum Interaction: Equatable {
+        case pan
+        case pinch
+        case rotation
+    }
+
+    static func keepsFollowing(after interaction: Interaction) -> Bool {
+        interaction != .pan
+    }
+}
+
 @MainActor
 struct MapHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -463,6 +475,7 @@ struct MapHomeView: View {
     @State private var isTimelineSelectionPinned = false
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
     @State private var isMapCenteredOnUser = false
+    @State private var isFollowingUserLocation = false
     @State private var hasAppliedInitialLocation = false
     @State private var mapSearchText = ""
     @State private var mapSearchResults: [MapHomeSearchResult] = []
@@ -1094,7 +1107,25 @@ struct MapHomeView: View {
                     dismissMapSearchOverlay()
                 }
             )
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 8)
+                    .onChanged { _ in
+                        guard isFollowingUserLocation,
+                              !MapHomeUserTrackingPolicy.keepsFollowing(
+                                after: .pan
+                              ) else { return }
+                        isFollowingUserLocation = false
+                    }
+            )
             .simultaneousGesture(mapLongPressGesture(proxy: proxy))
+            .onChange(of: model.latestSensorReading?.id) { _, _ in
+                guard isFollowingUserLocation else { return }
+                focusUserLocation(using: proxy)
+            }
+            .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
+                guard isFollowingUserLocation else { return }
+                focusUserLocation(using: proxy)
+            }
             .overlay(alignment: .bottomLeading) {
                 if !isMenuOpen {
                     mapControls(proxy: proxy)
@@ -1768,10 +1799,11 @@ struct MapHomeView: View {
     private func mapControls(proxy: MapProxy) -> some View {
         VStack(spacing: Layout.mapControlSpacing) {
             Button {
+                isFollowingUserLocation = true
                 focusUserLocation(using: proxy)
             } label: {
                 MapHomeLocationButtonIcon(
-                    isCentered: isMapCenteredOnUser,
+                    isCentered: isFollowingUserLocation && isMapCenteredOnUser,
                     hasLocation: currentCoordinate != nil
                 )
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
@@ -2928,7 +2960,11 @@ struct MapHomeView: View {
     }
 
     private var currentCoordinate: CLLocationCoordinate2D? {
-        let point = model.latestSensorReading?.point ?? model.liveRouteState.readings.last?.point
+        let reading = MapCurrentLocationAnchorPolicy.latestValidReading(
+            in: [model.latestSensorReading, model.liveRouteState.readings.last]
+                .compactMap { $0 }
+        )
+        let point = reading?.point
         guard let point, isValid(point) else { return nil }
         return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
     }
@@ -3376,11 +3412,13 @@ struct MapHomeView: View {
                 MKCoordinateRegion(center: coordinate, span: visibleMapSpan)
             )
         }
+        isFollowingUserLocation = false
         isMapCenteredOnUser = false
     }
 
     private func focusUserLocation(using proxy: MapProxy? = nil) {
         guard let coordinate = currentCoordinate else {
+            isFollowingUserLocation = false
             isMapCenteredOnUser = false
             mapPosition = .automatic
             return
@@ -4548,10 +4586,11 @@ private struct MapHomeCategoryAddSheet: View {
     @State private var color = Color.tpReferenceMint
     @FocusState private var isFocused: Bool
 
-    private let iconNames = [
-        "tag.fill", "star.fill", "heart.fill", "fork.knife",
-        "figure.walk", "book.fill", "gamecontroller.fill", "music.note",
-    ]
+    private var iconNames: [String] {
+        MapUserActivityIconCatalog.available(
+            for: model.settings.mapUserActivityCategories
+        )
+    }
 
     private var trimmedTitle: String {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -4589,6 +4628,7 @@ private struct MapHomeCategoryAddSheet: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .disabled(iconNames.isEmpty)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(Color.tpSurface, in: Capsule())
@@ -4611,20 +4651,36 @@ private struct MapHomeCategoryAddSheet: View {
                     .frame(height: 48)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(trimmedTitle.isEmpty)
+            .disabled(trimmedTitle.isEmpty || systemImage.isEmpty)
+
+            if iconNames.isEmpty {
+                Text(
+                    language.text(
+                        "사용할 수 있는 새 아이콘이 없습니다.",
+                        "No unused icons are available."
+                    )
+                )
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+            }
         }
         .padding(20)
         .background(Color.tpBackground)
-        .task { isFocused = true }
+        .task {
+            if !iconNames.contains(systemImage) {
+                systemImage = iconNames.first ?? ""
+            }
+            isFocused = true
+        }
     }
 
     private func save() {
-        guard !trimmedTitle.isEmpty else { return }
-        model.addMapUserActivityCategory(
+        guard !trimmedTitle.isEmpty, !systemImage.isEmpty else { return }
+        guard model.addMapUserActivityCategory(
             title: trimmedTitle,
             systemImage: systemImage,
             hex: color.hexRGBString ?? "#29A383"
-        )
+        ) else { return }
         dismiss()
     }
 }

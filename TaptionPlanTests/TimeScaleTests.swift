@@ -1756,10 +1756,129 @@ final class TimeScaleTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            StartupMapLocationPolicy.latestValidReading(
-                in: [validEarlier, invalidNewer, newestValid]
+            MapCurrentLocationAnchorPolicy.latestValidReading(
+                in: [validEarlier, invalidNewer, newestValid],
+                now: base.addingTimeInterval(180)
             )?.id,
             newestValid.id
+        )
+    }
+
+    func testMapLocationAnchorFallsBackToRecentApproximateReading() {
+        let now = Date(timeIntervalSince1970: 10_000)
+        let precise = SensorReading(
+            timestamp: now.addingTimeInterval(-7 * 60 * 60),
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true
+        )
+        let approximate = SensorReading(
+            timestamp: now.addingTimeInterval(-5 * 60),
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127.0,
+                altitude: 0,
+                horizontalAccuracy: 2_000,
+                verticalAccuracy: 100
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: false
+        )
+
+        XCTAssertEqual(
+            MapCurrentLocationAnchorPolicy.latestValidReading(
+                in: [precise, approximate],
+                now: now
+            )?.id,
+            approximate.id
+        )
+    }
+
+    func testMapLocationAnchorPrefersRecentPreciseReading() {
+        let now = Date(timeIntervalSince1970: 20_000)
+        let precise = SensorReading(
+            timestamp: now.addingTimeInterval(-30 * 60),
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 0,
+                horizontalAccuracy: 15,
+                verticalAccuracy: 10
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true
+        )
+        let approximate = SensorReading(
+            timestamp: now,
+            point: GeoPoint(
+                latitude: 35.1,
+                longitude: 129.0,
+                altitude: 0,
+                horizontalAccuracy: 4_000,
+                verticalAccuracy: 100
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: false
+        )
+
+        XCTAssertEqual(
+            MapCurrentLocationAnchorPolicy.latestValidReading(
+                in: [precise, approximate],
+                now: now
+            )?.id,
+            precise.id
+        )
+    }
+
+    func testMapLocationAnchorAcceptsSixHourBoundaryAndRejectsOlderFix() {
+        let now = Date(timeIntervalSince1970: 30_000)
+        func approximate(age: TimeInterval) -> SensorReading {
+            SensorReading(
+                timestamp: now.addingTimeInterval(-age),
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 126.9,
+                    altitude: 0,
+                    horizontalAccuracy: 3_000,
+                    verticalAccuracy: 100
+                ),
+                locationFixQuality: .approximate,
+                gpsAvailable: false
+            )
+        }
+        let boundary = approximate(age: 6 * 60 * 60)
+        let stale = approximate(age: 6 * 60 * 60 + 1)
+
+        XCTAssertEqual(
+            MapCurrentLocationAnchorPolicy.latestValidReading(
+                in: [stale, boundary],
+                now: now
+            )?.id,
+            boundary.id
+        )
+        XCTAssertNil(
+            MapCurrentLocationAnchorPolicy.latestValidReading(
+                in: [stale],
+                now: now
+            )
+        )
+    }
+
+    func testUserTrackingStopsForPanButKeepsPinchAndRotation() {
+        XCTAssertFalse(
+            MapHomeUserTrackingPolicy.keepsFollowing(after: .pan)
+        )
+        XCTAssertTrue(
+            MapHomeUserTrackingPolicy.keepsFollowing(after: .pinch)
+        )
+        XCTAssertTrue(
+            MapHomeUserTrackingPolicy.keepsFollowing(after: .rotation)
         )
     }
 

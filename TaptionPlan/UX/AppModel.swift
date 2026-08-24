@@ -5,23 +5,41 @@ import OSLog
 import UIKit
 import WidgetKit
 
-enum StartupMapLocationPolicy {
+enum MapCurrentLocationAnchorPolicy {
+    static let maximumAge: TimeInterval = 6 * 60 * 60
+
     static func latestValidReading(
-        in readings: [SensorReading]
+        in readings: [SensorReading],
+        now: Date = .now
     ) -> SensorReading? {
-        readings
-            .filter(isValid)
+        let valid = readings.filter { isValid($0, now: now) }
+        return valid
+            .filter(isPrecise)
             .max { $0.timestamp < $1.timestamp }
+            ?? valid
+                .filter { $0.locationFixQuality == .approximate }
+                .max { $0.timestamp < $1.timestamp }
     }
 
-    private static func isValid(_ reading: SensorReading) -> Bool {
-        guard reading.gpsAvailable,
-              let point = reading.point else {
+    private static func isValid(
+        _ reading: SensorReading,
+        now: Date
+    ) -> Bool {
+        guard let point = reading.point,
+              reading.timestamp <= now.addingTimeInterval(5 * 60),
+              now.timeIntervalSince(reading.timestamp) <= maximumAge else {
             return false
         }
         return (-90...90).contains(point.latitude)
             && (-180...180).contains(point.longitude)
-            && (0...50).contains(point.horizontalAccuracy)
+            && point.horizontalAccuracy >= 0
+            && (isPrecise(reading) || reading.locationFixQuality == .approximate)
+    }
+
+    private static func isPrecise(_ reading: SensorReading) -> Bool {
+        guard reading.gpsAvailable || reading.locationFixQuality == .precise,
+              let point = reading.point else { return false }
+        return point.horizontalAccuracy <= 50
     }
 }
 
@@ -93,6 +111,8 @@ final class AppModel {
     private(set) var isSensorCollecting = false
     private(set) var sensorCollectionSessionState: SensorCollectionSessionState =
         .stopped
+    private(set) var sensorCollectionSessionID: UUID?
+    private(set) var sensorCollectionStartedAt: Date?
     private(set) var lastSensorWakeReason: SensorWakeReason?
     private(set) var lastSensorSavedAt: Date?
     private(set) var sensorSaveToken = 0
@@ -569,11 +589,21 @@ final class AppModel {
         Task { await persist() }
     }
 
+    @discardableResult
     func addMapUserActivityCategory(
         title: String,
         systemImage: String,
         hex: String
-    ) {
+    ) -> Bool {
+        guard MapUserActivityIconCatalog.available(
+            for: snapshot.settings.mapUserActivityCategories
+        ).contains(systemImage) else {
+            userFacingError = AppLanguagePreference.text(
+                korean: "이미 사용 중인 행동분류 아이콘입니다.",
+                english: "This activity category icon is already in use."
+            )
+            return false
+        }
         let next = AppFeatureSettings.normalizedMapUserActivityCategories(
             snapshot.settings.mapUserActivityCategories + [
                 MapUserActivityCategory(
@@ -584,9 +614,12 @@ final class AppModel {
                 ),
             ]
         )
-        guard next != snapshot.settings.mapUserActivityCategories else { return }
+        guard next != snapshot.settings.mapUserActivityCategories else {
+            return false
+        }
         snapshot.settings.mapUserActivityCategories = next
         Task { await persist() }
+        return true
     }
 
     func protectCurrentDataWithBiometrics() async throws {
@@ -1435,7 +1468,7 @@ final class AppModel {
             containing: .now
         )
         guard let readings = try? await sensorService.archivedReadings(in: span),
-              let latest = StartupMapLocationPolicy.latestValidReading(
+              let latest = MapCurrentLocationAnchorPolicy.latestValidReading(
                 in: readings
               ),
               latestSensorReading != latest else {
@@ -1918,6 +1951,7 @@ final class AppModel {
             ))
             isSensorCollecting = true
             receiveSensorWake(.foregroundResume)
+            reconcileBackgroundSensorSession()
         }
         if always,
            refreshed.isGranted,
@@ -2192,6 +2226,7 @@ final class AppModel {
                     settings.backgroundPreciseLocationEnabled
             ))
             isSensorCollecting = true
+            reconcileBackgroundSensorSession()
         }
         Task { await persist() }
     }
@@ -2241,6 +2276,7 @@ final class AppModel {
             )
         )
         isSensorCollecting = true
+        reconcileBackgroundSensorSession()
     }
 
     private func sensorCollectionConfiguration(
@@ -2277,6 +2313,8 @@ final class AppModel {
         let previousState = sensorCollectionSessionState
         sensorCollectionSessionState =
             sensorBackgroundCoordinator.sessionState
+        sensorCollectionSessionID = sensorBackgroundCoordinator.sessionID
+        sensorCollectionStartedAt = sensorBackgroundCoordinator.sessionStartedAt
         lastSensorWakeReason = sensorBackgroundCoordinator.lastWakeReason
         lastSensorSavedAt = sensorBackgroundCoordinator.lastSavedAt
         sensorSaveToken = sensorBackgroundCoordinator.saveToken
@@ -4682,7 +4720,7 @@ final class AppModel {
             return
         }
         if Calendar.autoupdatingCurrent.isDate(span.start, inSameDayAs: .now),
-           let latest = StartupMapLocationPolicy.latestValidReading(
+           let latest = MapCurrentLocationAnchorPolicy.latestValidReading(
             in: archivedReadings
            ) {
             // Seed the live map anchor when the app is reopened before the
@@ -6242,6 +6280,25 @@ final class AppModel {
         } else {
             syncSensorBackgroundState()
         }
+        reconcileBackgroundSensorSession()
+    }
+
+    private func reconcileBackgroundSensorSession(at date: Date = .now) {
+        SensorBackgroundRefreshPolicy.save(
+            intervalSeconds: settings.gpsLoggingPreferences
+                .effectiveIntervalSeconds
+        )
+        guard isSensorCollecting,
+              settings.backgroundPreciseLocationEnabled,
+              sensorService?.hasAlwaysLocationAuthorization() == true else {
+            if activeTrackingSession == nil {
+                sensorBackgroundCoordinator.endSession()
+                syncSensorBackgroundState()
+            }
+            return
+        }
+        _ = sensorBackgroundCoordinator.beginCollectionSession(at: date)
+        syncSensorBackgroundState()
     }
 
     private func resumeSensorCollectionAndRestoreTrackingIfNeeded() async {
@@ -6369,9 +6426,11 @@ final class AppModel {
                 at: reading.timestamp,
                 persistedToken: sensorService.persistenceToken()
             )
-            _ = sensorBackgroundCoordinator.expireIfNeeded(
-                at: reading.timestamp
-            )
+            if !settings.backgroundPreciseLocationEnabled {
+                _ = sensorBackgroundCoordinator.expireIfNeeded(
+                    at: reading.timestamp
+                )
+            }
             syncSensorBackgroundState()
         }
         if reading.locationFixQuality == .approximate {
@@ -6399,19 +6458,21 @@ final class AppModel {
             if liveRouteState.session?.id != sessionID {
                 liveRouteState.readings = []
             }
-            } else {
-                session = activeTrackingSession
-            }
+        } else {
+            session = activeTrackingSession
+        }
 
-            if reading.trackingSessionEnded == true {
-                sensorBackgroundCoordinator.endSession()
-            } else if session?.wasAutomaticallyDetected == true,
-                      settings.gpsLoggingPreferences.effectiveIntervalSeconds == 1 {
-                _ = sensorBackgroundCoordinator.beginAutomaticSession(
-                    at: reading.timestamp
-                )
-            }
-            syncSensorBackgroundState()
+        if reading.trackingSessionEnded == true {
+            sensorBackgroundCoordinator.endSession()
+        } else if session?.wasAutomaticallyDetected == true,
+                  settings.gpsLoggingPreferences.effectiveIntervalSeconds == 1 {
+            _ = sensorBackgroundCoordinator.beginAutomaticSession(
+                at: reading.timestamp
+            )
+        }
+        syncSensorBackgroundState()
+
+        reconcileBackgroundSensorSession(at: reading.timestamp)
 
         if let session {
             let shouldPersistSession = reading.trackingSessionEnded == true

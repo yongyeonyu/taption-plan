@@ -160,6 +160,40 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored.mapUserActivityCategories, settings.mapUserActivityCategories)
     }
 
+    func testMapUserActivityIconCatalogExcludesBuiltInAndCustomIcons() {
+        let custom = MapUserActivityCategory(
+            id: UUID(),
+            title: "게임",
+            systemImage: "gamecontroller.fill",
+            hex: "#29A383"
+        )
+        let available = MapUserActivityIconCatalog.available(for: [custom])
+
+        XCTAssertFalse(available.contains("gamecontroller.fill"))
+        for builtIn in RecordClassificationCatalog.categories {
+            XCTAssertFalse(available.contains(builtIn.systemImage))
+        }
+        XCTAssertEqual(available.count, Set(available).count)
+    }
+
+    func testMapUserActivityIconReturnsAfterCategoryDeletion() {
+        let custom = MapUserActivityCategory(
+            id: UUID(),
+            title: "게임",
+            systemImage: "gamecontroller.fill",
+            hex: "#29A383"
+        )
+
+        XCTAssertFalse(
+            MapUserActivityIconCatalog.available(for: [custom])
+                .contains("gamecontroller.fill")
+        )
+        XCTAssertTrue(
+            MapUserActivityIconCatalog.available(for: [])
+                .contains("gamecontroller.fill")
+        )
+    }
+
     func testMapHomeSidebarUsesDistinctMajorCategoryVisuals() {
         let categories = MapHomeSidebarMajorCategory.all
 
@@ -6612,7 +6646,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testSensorLiveActivityStartsOnlyForForegroundRealtimeSessions() {
+    func testSensorLiveActivityStartsForForegroundSensorSessions() {
         XCTAssertTrue(
             SensorCollectionActivityPolicy.canStart(
                 isForeground: true,
@@ -6627,10 +6661,24 @@ final class FeatureEngineTests: XCTestCase {
                 activitiesEnabled: true
             )
         )
-        XCTAssertFalse(
+        XCTAssertTrue(
             SensorCollectionActivityPolicy.canStart(
                 isForeground: true,
                 intervalSeconds: 10,
+                activitiesEnabled: true
+            )
+        )
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.canStart(
+                isForeground: true,
+                intervalSeconds: 900,
+                activitiesEnabled: true
+            )
+        )
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.canStart(
+                isForeground: true,
+                intervalSeconds: 0,
                 activitiesEnabled: true
             )
         )

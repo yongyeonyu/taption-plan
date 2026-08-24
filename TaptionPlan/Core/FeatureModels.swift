@@ -3206,6 +3206,35 @@ struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
     var hex: String
 }
 
+enum MapUserActivityIconCatalog {
+    static let candidates = [
+        "tag.fill", "star.fill", "heart.fill", "bolt.fill",
+        "flag.fill", "bookmark.fill", "pin.fill", "bell.fill",
+        "gift.fill", "trophy.fill", "medal.fill", "crown.fill",
+        "lightbulb.fill", "brain.head.profile", "puzzlepiece.fill",
+        "gamecontroller.fill", "headphones", "music.note", "mic.fill",
+        "camera.fill", "photo.fill", "film.fill", "paintbrush.fill",
+        "hammer.fill", "wrench.and.screwdriver.fill", "leaf.fill",
+        "flame.fill", "drop.fill", "sun.max.fill", "moon.stars.fill",
+        "cup.and.saucer.fill", "takeoutbag.and.cup.and.straw.fill",
+        "cart.fill", "bag.fill", "creditcard.fill", "banknote.fill",
+        "person.2.fill", "person.3.fill", "bubble.left.and.bubble.right.fill",
+        "phone.fill", "envelope.fill", "paperplane.fill",
+        "desktopcomputer", "laptopcomputer", "keyboard.fill",
+        "printer.fill", "shippingbox.fill", "archivebox.fill",
+    ]
+
+    static func available(
+        for customCategories: [MapUserActivityCategory]
+    ) -> [String] {
+        let used = Set(
+            RecordClassificationCatalog.categories.map(\.systemImage)
+                + customCategories.map(\.systemImage)
+        )
+        return candidates.filter { !used.contains($0) }
+    }
+}
+
 struct AppFeatureSettings: Codable, Hashable, Sendable {
     var startScale: TimelineLevel
     var rememberLastScale: Bool

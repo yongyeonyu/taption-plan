@@ -31,11 +31,7 @@ actor SensorCollectionLiveActivityController {
             now: now
         )
 
-        guard isCollecting, intervalSeconds == 1,
-              !SensorCollectionActivityPolicy.isExpired(
-                startedAt: startedAt,
-                now: now
-              ) else {
+        guard isCollecting else {
             await stop(
                 lastSavedAt: lastSavedAt,
                 collectionKinds: collectionKinds,
@@ -44,14 +40,21 @@ actor SensorCollectionLiveActivityController {
             return nil
         }
 
+        let activityStartedAt = activity?.content.state.startedAt
+            ?? (SensorCollectionActivityPolicy.isExpired(
+                startedAt: startedAt,
+                now: now
+            ) ? now : startedAt)
         let state = SensorCollectionActivityAttributes.ContentState(
-            startedAt: startedAt,
+            startedAt: activityStartedAt,
             lastSavedAt: lastSavedAt,
             collectionKinds: collectionKinds,
-            isCollecting: true
+            isCollecting: true,
+            intervalSeconds: intervalSeconds,
+            sessionStateRawValue: SensorCollectionSessionState.collecting.rawValue
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
-            startedAt: startedAt
+            startedAt: activityStartedAt
         )
 
         if let activity {
@@ -95,7 +98,9 @@ actor SensorCollectionLiveActivityController {
             startedAt: activity.content.state.startedAt,
             lastSavedAt: lastSavedAt,
             collectionKinds: collectionKinds,
-            isCollecting: false
+            isCollecting: false,
+            intervalSeconds: activity.content.state.intervalSeconds,
+            sessionStateRawValue: SensorCollectionSessionState.stopped.rawValue
         )
         await activity.end(
             ActivityContent(state: finalState, staleDate: nil),

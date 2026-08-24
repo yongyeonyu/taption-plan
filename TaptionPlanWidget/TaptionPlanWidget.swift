@@ -2250,7 +2250,7 @@ struct SensorCollectionLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    WidgetCat(style: "calico")
+                    SensorCollectionAppIcon()
                         .frame(width: 34, height: 25)
                 }
                 DynamicIslandExpandedRegion(.center) {
@@ -2270,13 +2270,13 @@ struct SensorCollectionLiveActivity: Widget {
                     )
                 }
             } compactLeading: {
-                WidgetCat(style: "calico")
+                SensorCollectionAppIcon()
                     .frame(width: 18, height: 14)
             } compactTrailing: {
                 Image(systemName: "waveform.path.ecg")
                     .foregroundStyle(Color(red: 0.18, green: 0.72, blue: 0.59))
             } minimal: {
-                WidgetCat(style: "calico")
+                SensorCollectionAppIcon()
                     .frame(width: 18, height: 13)
             }
             .keylineTint(Color(red: 0.18, green: 0.72, blue: 0.59))
@@ -2289,7 +2289,7 @@ private struct SensorCollectionLockScreenView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            WidgetCat(style: "calico")
+            SensorCollectionAppIcon()
                 .frame(width: 38, height: 29)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -2309,8 +2309,33 @@ private struct SensorCollectionLockScreenView: View {
         }
         .foregroundStyle(.white)
         .padding(14)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            sensorCollectionAccessibilityLabel(for: context.state)
+        )
         .widgetURL(URL(string: "taptionplan://sensor"))
     }
+}
+
+private struct SensorCollectionAppIcon: View {
+    var body: some View {
+        Image("SensorCollectionAppIcon")
+            .resizable()
+            .scaledToFit()
+            .accessibilityLabel(
+                widgetText("Taption Plan 센서 수집 아이콘", "Taption Plan sensor collection icon")
+            )
+    }
+}
+
+private func sensorCollectionAccessibilityLabel(
+    for state: SensorCollectionActivityAttributes.ContentState
+) -> String {
+    let kinds = sensorCollectionKinds(state.collectionKinds)
+    return widgetText(
+        "센서 정보 수집중, \(kinds)",
+        "Collecting sensor data, \(kinds)"
+    )
 }
 
 private struct SensorCollectionSavedAtView: View {

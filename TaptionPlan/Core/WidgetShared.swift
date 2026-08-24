@@ -100,17 +100,23 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var lastSavedAt: Date?
         var collectionKinds: [String]
         var isCollecting: Bool
+        var intervalSeconds: Int?
+        var sessionStateRawValue: String?
 
         init(
             startedAt: Date,
             lastSavedAt: Date?,
             collectionKinds: [String],
-            isCollecting: Bool
+            isCollecting: Bool,
+            intervalSeconds: Int? = nil,
+            sessionStateRawValue: String? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
             self.collectionKinds = collectionKinds
             self.isCollecting = isCollecting
+            self.intervalSeconds = intervalSeconds
+            self.sessionStateRawValue = sessionStateRawValue
         }
     }
 
@@ -126,7 +132,7 @@ enum SensorCollectionActivityPolicy {
         intervalSeconds: Int,
         activitiesEnabled: Bool
     ) -> Bool {
-        isForeground && intervalSeconds == 1 && activitiesEnabled
+        isForeground && intervalSeconds > 0 && activitiesEnabled
     }
 
     static func expirationDate(startedAt: Date) -> Date {

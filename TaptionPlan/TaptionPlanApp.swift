@@ -1,4 +1,5 @@
 import BackgroundTasks
+import Foundation
 import OSLog
 import SwiftUI
 import UIKit
@@ -7,12 +8,21 @@ import WidgetKit
 
 private final class TaptionBackgroundTaskBox: @unchecked Sendable {
     private let task: BGTask
+    private let lock = NSLock()
+    private var isCompleted = false
 
     init(_ task: BGTask) {
         self.task = task
     }
 
     func complete(success: Bool) {
+        lock.lock()
+        guard !isCompleted else {
+            lock.unlock()
+            return
+        }
+        isCompleted = true
+        lock.unlock()
         task.setTaskCompleted(success: success)
     }
 }
@@ -54,7 +64,9 @@ enum TaptionPlanBackgroundRefresh {
             taskRequestWithIdentifier: taskIdentifier
         )
         let request = BGAppRefreshTaskRequest(identifier: taskIdentifier)
-        request.earliestBeginDate = Date.now.addingTimeInterval(15 * 60)
+        request.earliestBeginDate = Date.now.addingTimeInterval(
+            SensorBackgroundRefreshPolicy.savedDelay()
+        )
         do {
             try BGTaskScheduler.shared.submit(request)
             logger.notice(
@@ -88,6 +100,7 @@ enum TaptionPlanBackgroundRefresh {
         }
         task.expirationHandler = {
             operation.cancel()
+            taskBox.complete(success: false)
             logger.error("Background refresh expired")
         }
     }
