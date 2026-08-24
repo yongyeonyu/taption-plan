@@ -1750,6 +1750,40 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(size.height, 66, accuracy: 0.001)
     }
 
+    func testSidebarBothHandleHitTargetsShareOneDragAndEditZone() {
+        let frame = MapHomeTimeSidebarMath.selectionHandleInteractionFrame(
+            leadingCenterX: 44,
+            trailingCenterX: 99,
+            leadingHitWidth: 87,
+            trailingHitWidth: MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
+            totalWidth: 127
+        )
+
+        XCTAssertLessThanOrEqual(frame.minX, 44 - 87 / 2)
+        XCTAssertGreaterThanOrEqual(frame.maxX, 99 + 48 / 2)
+        XCTAssertGreaterThanOrEqual(frame.minX, 0)
+        XCTAssertLessThanOrEqual(frame.maxX, 127)
+    }
+
+    func testExpandedRulerRowsKeepHourAndMinuteInOneVerticalColumn() {
+        let rows = MapHomeTimeSidebarMath.visibleRulerRows(
+            window: 480...600,
+            durationMinutes: 120,
+            trackHeight: 600
+        )
+
+        XCTAssertEqual(
+            rows.map(\.minute),
+            [480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600]
+        )
+        XCTAssertEqual(rows.first?.hour, 8)
+        XCTAssertNil(rows.first?.minuteComponent)
+        XCTAssertEqual(rows[1].minuteComponent, 10)
+        XCTAssertNil(rows[1].hour)
+        XCTAssertEqual(rows[6].hour, 9)
+        XCTAssertNil(rows[6].minuteComponent)
+    }
+
     func testMapHomeTimeSidebarHandleStartsWithinOnePoint() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.handleDragMinimumDistance,

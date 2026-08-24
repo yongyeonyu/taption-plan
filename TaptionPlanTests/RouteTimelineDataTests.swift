@@ -35,6 +35,78 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
+    func testMapRouteRefreshDoesNotEraseCachedReadingsOnEmptyLoad() {
+        XCTAssertFalse(
+            MapHomeRouteReadingsPolicy.shouldReplace(
+                existingCount: 12,
+                loadedCount: 0
+            )
+        )
+        XCTAssertFalse(
+            MapHomeRouteReadingsPolicy.shouldReplace(
+                existingCount: 12,
+                loadedCount: 1
+            )
+        )
+        XCTAssertFalse(
+            MapHomeRouteReadingsPolicy.shouldReplace(
+                existingCount: 12,
+                loadedCount: 3
+            )
+        )
+        XCTAssertTrue(
+            MapHomeRouteReadingsPolicy.shouldReplace(
+                existingCount: 0,
+                loadedCount: 0
+            )
+        )
+        XCTAssertTrue(
+            MapHomeRouteReadingsPolicy.shouldReplace(
+                existingCount: 12,
+                loadedCount: 12
+            )
+        )
+    }
+
+    func testApproximateLocationDoesNotReplaceCachedRouteReadings() {
+        let approximate = SensorReading(
+            timestamp: date(1),
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 20,
+                verticalAccuracy: 5
+            ),
+            gpsAvailable: false
+        )
+        let cached = reading(0, latitude: 37)
+
+        let loadedRouteCount = RouteTimelineDataEngine.normalizedReadings(
+            [approximate]
+        ).count
+        let cachedRouteCount = RouteTimelineDataEngine.normalizedReadings(
+            [cached]
+        ).count
+
+        XCTAssertFalse(
+            MapHomeRouteReadingsPolicy.shouldReplace(
+                existingCount: cachedRouteCount,
+                loadedCount: loadedRouteCount
+            )
+        )
+    }
+
+    func testMapRouteTaskUsesCalendarDayKey() {
+        let first = date(30)
+        let second = date(1_200)
+
+        XCTAssertEqual(
+            MapHomeRouteReadingsPolicy.dayKey(for: first, calendar: calendar),
+            MapHomeRouteReadingsPolicy.dayKey(for: second, calendar: calendar)
+        )
+    }
+
     func testProjectClipsAtTimelineAndDimsPastCategory() throws {
         let activity = ActualRecord(
             planID: nil,

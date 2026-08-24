@@ -457,6 +457,24 @@ enum MapHomeLocationButtonState: Equatable {
     var showsTrackingDot: Bool { self == .following }
 }
 
+enum MapHomeRouteReadingsPolicy {
+    static func dayKey(
+        for date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date {
+        calendar.startOfDay(for: date)
+    }
+
+    static func shouldReplace(
+        existingCount: Int,
+        loadedCount: Int
+    ) -> Bool {
+        guard loadedCount > 0 else { return existingCount == 0 }
+        guard existingCount >= 2 else { return true }
+        return loadedCount >= existingCount
+    }
+}
+
 @MainActor
 struct MapHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -879,11 +897,14 @@ struct MapHomeView: View {
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
         }
-        .task(id: model.selectedDate) {
+        .task(id: MapHomeRouteReadingsPolicy.dayKey(for: model.selectedDate)) {
             let date = model.selectedDate
             await refreshRouteReadings(for: date)
             while !Task.isCancelled {
                 refreshTimeRailSegments()
+                if RouteTimelineDataEngine.normalizedReadings(routeReadings).count < 2 {
+                    await refreshRouteReadings(for: date)
+                }
                 do {
                     try await Task.sleep(nanoseconds: 60_000_000_000)
                 } catch {
@@ -903,22 +924,32 @@ struct MapHomeView: View {
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
         }
-        .onChange(of: model.selectedDate) { _, _ in
+        .onChange(of: model.selectedDate) { oldDate, newDate in
+            let calendar = Calendar.autoupdatingCurrent
+            let dayChanged = !calendar.isDate(oldDate, inSameDayAs: newDate)
             stopDayPlayback(resetProgress: true)
             selectedTimelineMinute = nil
-            routeReadings = []
-            normalizedRouteReadings = []
-            displayRouteReadings = []
-            routeProjection = nil
-            timelineRouteOverlays = []
-            historicalPlaybackPoint = nil
             isTimelineSelectionPinned = false
             weatherVisibleStartMinute = 0
             weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
-            if Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
+
+            if dayChanged {
+                routeReadings = []
+                normalizedRouteReadings = []
+                displayRouteReadings = []
+                routeProjection = nil
+                timelineRouteOverlays = []
+                historicalPlaybackPoint = nil
+            } else {
+                prepareRouteProjectionReadings()
+                refreshRouteProjection()
+                refreshHistoricalPlaybackPoint()
+            }
+
+            if calendar.isDateInToday(newDate),
                currentCoordinate != nil {
                 focusUserLocation()
-            } else {
+            } else if dayChanged {
                 mapPosition = .automatic
                 focusMapIfNeeded()
             }
@@ -1732,8 +1763,8 @@ struct MapHomeView: View {
                                 )
                             }
                         },
-                        onSectionEdit: {
-                            openSectionEditor(at: minute)
+                        onSectionEdit: { selectedMinute in
+                            openSectionEditor(at: selectedMinute)
                         }
                     )
                 }
@@ -3202,6 +3233,16 @@ struct MapHomeView: View {
         guard !Task.isCancelled,
               calendar.isDate(date, inSameDayAs: model.selectedDate)
         else { return }
+        let loadedRouteReadings = RouteTimelineDataEngine.normalizedReadings(
+            readings
+        )
+        let cachedRouteReadings = RouteTimelineDataEngine.normalizedReadings(
+            routeReadings
+        )
+        guard MapHomeRouteReadingsPolicy.shouldReplace(
+            existingCount: cachedRouteReadings.count,
+            loadedCount: loadedRouteReadings.count
+        ) else { return }
         routeReadings = readings
         prepareRouteProjectionReadings()
         let projection = refreshRouteProjection()
@@ -3233,9 +3274,12 @@ struct MapHomeView: View {
             readingsAreNormalized: true,
             calendar: calendar
         )
-        guard routeProjection != next else { return next }
+        let overlays = makeTimelineRouteOverlays(next)
+        guard routeProjection != next
+            || timelineRouteOverlays.map(\.id) != overlays.map(\.id)
+        else { return next }
         routeProjection = next
-        timelineRouteOverlays = makeTimelineRouteOverlays(next)
+        timelineRouteOverlays = overlays
         return next
     }
 
@@ -5087,6 +5131,7 @@ private struct MapHomeSecuritySheet: View {
     @State private var pin = ""
     @State private var confirmation = ""
     @State private var message: String?
+    @State private var backupAlertMessage: String?
     @State private var pendingRestore: PlanCloudBackupPayload?
     @State private var isRestoreConfirmationPresented = false
     @State private var isApplyingRestore = false
@@ -5206,6 +5251,21 @@ private struct MapHomeSecuritySheet: View {
                 }
             }
             .padding(22)
+            .alert(
+                language.text("iCloud 백업 결과", "iCloud Backup Result"),
+                isPresented: Binding(
+                    get: { backupAlertMessage != nil },
+                    set: { isPresented in
+                        if !isPresented { backupAlertMessage = nil }
+                    }
+                )
+            ) {
+                Button(language.text("확인", "OK")) {
+                    backupAlertMessage = nil
+                }
+            } message: {
+                Text(backupAlertMessage ?? "")
+            }
         }
         .background(Color.tpSurface)
         .alert(
@@ -5295,7 +5355,9 @@ private struct MapHomeSecuritySheet: View {
     private func saveBackup() {
         performAsync {
             try await model.saveCloudBackupNow()
-            message = language.text("iCloud 백업을 저장했습니다.", "iCloud backup saved.")
+            showBackupFeedback(
+                language.text("iCloud 백업을 저장했습니다.", "iCloud backup saved.")
+            )
         }
     }
 
@@ -5315,18 +5377,22 @@ private struct MapHomeSecuritySheet: View {
                 self.pendingRestore = nil
                 switch result {
                 case .complete:
-                    message = language.text(
-                        "백업을 불러왔습니다.",
-                        "Backup restored."
+                    showBackupFeedback(
+                        language.text(
+                            "백업을 불러왔습니다.",
+                            "Backup restored."
+                        )
                     )
                 case .snapshotOnly:
-                    message = language.text(
-                        "저장 위치는 복구했지만 이동경로 저장에 실패했습니다.",
-                        "Saved locations were restored, but the route could not be saved."
+                    showBackupFeedback(
+                        language.text(
+                            "저장 위치는 복구했지만 이동경로 저장에 실패했습니다.",
+                            "Saved locations were restored, but the route could not be saved."
+                        )
                     )
                 }
             } catch {
-                message = error.localizedDescription
+                showBackupFeedback(error.localizedDescription)
             }
             self.isApplyingRestore = false
         }
@@ -5345,9 +5411,14 @@ private struct MapHomeSecuritySheet: View {
             do {
                 try await action()
             } catch {
-                message = error.localizedDescription
+                showBackupFeedback(error.localizedDescription)
             }
         }
+    }
+
+    private func showBackupFeedback(_ text: String) {
+        message = text
+        backupAlertMessage = text
     }
 }
 

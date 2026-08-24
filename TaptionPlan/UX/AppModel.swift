@@ -5489,7 +5489,20 @@ final class AppModel {
     func sensorReadings(in span: TimeSpan) async -> [SensorReading] {
         let archived: [SensorReading]
         if let sensorService {
-            archived = (try? await sensorService.archivedReadings(in: span)) ?? []
+            do {
+                archived = try await sensorService.archivedReadings(in: span)
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "route_readings_load_failed",
+                    level: .error,
+                    fields: [
+                        "error": String(describing: type(of: error)),
+                        "start": String(span.start.timeIntervalSince1970),
+                        "end": String(span.end.timeIntervalSince1970),
+                    ]
+                )
+                archived = []
+            }
         } else {
             archived = []
         }

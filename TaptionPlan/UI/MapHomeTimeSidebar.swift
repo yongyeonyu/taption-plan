@@ -789,7 +789,7 @@ struct MapHomeTimeSidebar: View {
     var onSelectionChanged: ((Int) -> Void)?
     var onViewportChanged: ((Int, Int) -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
-    var onSectionEdit: (() -> Void)?
+    var onSectionEdit: ((Int) -> Void)?
 
     @State private var visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var visibleStartMinute = 0
@@ -828,7 +828,7 @@ struct MapHomeTimeSidebar: View {
         onSelectionChanged: ((Int) -> Void)? = nil,
         onViewportChanged: ((Int, Int) -> Void)? = nil,
         onInteractionChanged: ((Bool) -> Void)? = nil,
-        onSectionEdit: (() -> Void)? = nil
+        onSectionEdit: ((Int) -> Void)? = nil
     ) {
         self.date = date
         self._selectedMinute = selectedMinute
@@ -969,7 +969,7 @@ struct MapHomeTimeSidebar: View {
                         durationMinutes: visibleDurationMinutes
                     )
                     let minuteMarks = MapHomeTimeSidebarMath.visibleMinuteMarks(window: visibleWindow)
-                    let rulerLabels = MapHomeTimeSidebarMath.visibleRulerLabels(
+                    let rulerRows = MapHomeTimeSidebarMath.visibleRulerRows(
                         window: visibleWindow,
                         durationMinutes: visibleDurationMinutes,
                         trackHeight: trackHeight
@@ -1015,46 +1015,31 @@ struct MapHomeTimeSidebar: View {
                     )
                     .allowsHitTesting(false)
 
-                    ForEach(rulerLabels.hours, id: \.self) { hour in
-                        let minuteMark = hour * 60
+                    ForEach(rulerRows) { row in
+                        let minuteMark = row.minute
                         let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
                             minute: minuteMark,
                             window: visibleWindow
                         )
-                        Text(String(format: "%02d", hour))
-                            .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundStyle(Color.tpInk.opacity(0.78))
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                            .frame(width: hourColumnWidth, alignment: .trailing)
-                            .position(
-                                x: labelsStartX + hourColumnWidth / 2,
-                                y: y
-                            )
-                            .allowsHitTesting(false)
-                    }
-
-                    ForEach(rulerLabels.minutes, id: \.self) { minuteMark in
-                        let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
-                            minute: minuteMark,
-                            window: visibleWindow
-                        )
-                        Text(String(format: "%02d", minuteMark % 60))
-                            .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundStyle(Color.tpInk.opacity(0.78))
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                            .frame(width: minuteColumnWidth, alignment: .trailing)
-                            .position(
-                                x: labelsStartX
-                                    + hourColumnWidth
+                        HStack(spacing: columnSpacing) {
+                            Text(row.hour.map { String(format: "%02d", $0) } ?? " ")
+                                .frame(width: hourColumnWidth, alignment: .trailing)
+                            Text(row.minuteComponent.map { String(format: "%02d", $0) } ?? " ")
+                                .frame(width: minuteColumnWidth, alignment: .trailing)
+                        }
+                        .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.tpInk.opacity(0.78))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .position(
+                            x: labelsStartX
+                                + (hourColumnWidth
                                     + columnSpacing
-                                    + minuteColumnWidth / 2,
-                                y: y
-                            )
-                            .allowsHitTesting(false)
+                                    + minuteColumnWidth) / 2,
+                            y: y
+                        )
+                        .allowsHitTesting(false)
                     }
                 } else {
                     let rulerFontSize = MapHomeTimeSidebarMath.rulerFontSize(
@@ -1181,6 +1166,19 @@ struct MapHomeTimeSidebar: View {
             trackX: trackX,
             activeRailWidth: activeRailWidth
         )
+        let timeBlockCenterX = MapHomeTimeSidebarMath.selectionTimeBlockCenterX(
+            railWidth: railWidth,
+            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
+            trackX: trackX,
+            activeRailWidth: activeRailWidth
+        )
+        let interactionFrame = MapHomeTimeSidebarMath.selectionHandleInteractionFrame(
+            leadingCenterX: handleCenterX,
+            trailingCenterX: timeBlockCenterX,
+            leadingHitWidth: doubleTapHitSize.width,
+            trailingHitWidth: MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
+            totalWidth: totalWidth
+        )
         let hitCenterY = MapHomeTimeSidebarMath.handleHitCenterY(
             handleCenterY: y,
             railHeight: railHeight,
@@ -1227,22 +1225,24 @@ struct MapHomeTimeSidebar: View {
             .accessibilityHidden(true)
             .zIndex(2)
             .position(
-                x: MapHomeTimeSidebarMath.selectionTimeBlockCenterX(
-                    railWidth: railWidth,
-                    railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
-                    trackX: trackX,
-                    activeRailWidth: activeRailWidth
-                ),
+                x: timeBlockCenterX,
                 y: y
             )
 
-            Color.clear
-                .frame(width: doubleTapHitSize.width, height: doubleTapHitSize.height)
+            Rectangle()
+                .fill(.clear)
+                // One gesture surface covers both visible handles. This
+                // avoids competing recognizers in their expanded hit areas
+                // while keeping the final state coalesced by the NLE gate.
+                .frame(
+                    width: interactionFrame.width,
+                    height: doubleTapHitSize.height
+                )
                 .contentShape(Rectangle())
-                .position(x: handleCenterX, y: hitCenterY)
+                .position(x: interactionFrame.midX, y: hitCenterY)
                 .highPriorityGesture(
                     TapGesture(count: 2).onEnded {
-                        onSectionEdit?()
+                        onSectionEdit?(minute)
                     }
                 )
                 .simultaneousGesture(dragGesture(
@@ -1526,6 +1526,14 @@ struct MapHomeTimeRulerLabels: Equatable, Sendable {
     let minutes: [Int]
 }
 
+struct MapHomeTimeRulerRow: Identifiable, Equatable, Sendable {
+    let minute: Int
+    let hour: Int?
+    let minuteComponent: Int?
+
+    var id: Int { minute }
+}
+
 struct MapHomeWeatherSidebar: View {
     let date: Date
     let contexts: [WeatherContext]
@@ -1702,6 +1710,8 @@ enum MapHomeTimeSidebarMath {
     static let minimumRulerLabelSpacing: CGFloat = 12
     static let selectionTimeBlockWidth: CGFloat = 32
     static let handleDoubleTapHitScale: CGFloat = 1.5
+    static let selectionTimeBlockHitWidth: CGFloat =
+        selectionTimeBlockWidth * handleDoubleTapHitScale
     static let handleDragMinimumDistance: CGFloat = 1
     static let handleLaneWidth: CGFloat = 69
     static let activeRailWidth: CGFloat = 12
@@ -1765,6 +1775,31 @@ enum MapHomeTimeSidebarMath {
         CGSize(
             width: railWidth * handleDoubleTapHitScale,
             height: handleHeight * handleDoubleTapHitScale
+        )
+    }
+
+    static func selectionHandleInteractionFrame(
+        leadingCenterX: CGFloat,
+        trailingCenterX: CGFloat,
+        leadingHitWidth: CGFloat,
+        trailingHitWidth: CGFloat,
+        totalWidth: CGFloat
+    ) -> CGRect {
+        let minimumX = min(
+            leadingCenterX - leadingHitWidth / 2,
+            trailingCenterX - trailingHitWidth / 2
+        )
+        let maximumX = max(
+            leadingCenterX + leadingHitWidth / 2,
+            trailingCenterX + trailingHitWidth / 2
+        )
+        let clampedMinimumX = min(max(minimumX, 0), max(totalWidth, 1))
+        let clampedMaximumX = min(max(maximumX, clampedMinimumX), max(totalWidth, 1))
+        return CGRect(
+            x: clampedMinimumX,
+            y: 0,
+            width: max(clampedMaximumX - clampedMinimumX, 1),
+            height: 1
         )
     }
 
@@ -1938,6 +1973,28 @@ enum MapHomeTimeSidebarMath {
             minutes = []
         }
         return MapHomeTimeRulerLabels(hours: hours, minutes: minutes)
+    }
+
+    static func visibleRulerRows(
+        window: ClosedRange<Int>,
+        durationMinutes: Int,
+        trackHeight: CGFloat
+    ) -> [MapHomeTimeRulerRow] {
+        let labels = visibleRulerLabels(
+            window: window,
+            durationMinutes: durationMinutes,
+            trackHeight: trackHeight
+        )
+        let hourMinutes = labels.hours.map { $0 * 60 }
+        let marks = Set(hourMinutes + labels.minutes).sorted()
+        return marks.map { minute in
+            let isHour = hourMinutes.contains(minute)
+            return MapHomeTimeRulerRow(
+                minute: minute,
+                hour: isHour ? minute / 60 : nil,
+                minuteComponent: isHour ? nil : minute % 60
+            )
+        }
     }
 
     static func showsTenMinuteRuler(durationMinutes: Int) -> Bool {
