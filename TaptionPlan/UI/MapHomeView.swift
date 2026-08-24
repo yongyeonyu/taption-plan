@@ -493,6 +493,7 @@ struct MapHomeView: View {
     @State private var isMapCenteredOnUser = false
     @SceneStorage("MapHome.isFollowingUserLocation")
     private var isFollowingUserLocation = false
+    @State private var currentLocationRequestTask: Task<Void, Never>?
     @State private var hasAppliedInitialLocation = false
     @State private var mapSearchText = ""
     @State private var mapSearchResults: [MapHomeSearchResult] = []
@@ -869,6 +870,8 @@ struct MapHomeView: View {
             refreshTimeRailSegments()
         }
         .onDisappear {
+            currentLocationRequestTask?.cancel()
+            currentLocationRequestTask = nil
             mapSearchTask?.cancel()
             mapSearchTask = nil
             mapSearchCompleter.clear()
@@ -1817,8 +1820,7 @@ struct MapHomeView: View {
     private func mapControls(proxy: MapProxy) -> some View {
         VStack(spacing: Layout.mapControlSpacing) {
             Button {
-                isFollowingUserLocation = true
-                focusUserLocation(using: proxy)
+                requestAndFollowUserLocation(using: proxy)
             } label: {
                 MapHomeLocationButtonIcon(
                     state: MapHomeLocationButtonState.resolve(
@@ -3438,9 +3440,7 @@ struct MapHomeView: View {
 
     private func focusUserLocation(using proxy: MapProxy? = nil) {
         guard let coordinate = currentCoordinate else {
-            isFollowingUserLocation = false
             isMapCenteredOnUser = false
-            mapPosition = .automatic
             return
         }
 
@@ -3484,6 +3484,23 @@ struct MapHomeView: View {
             )
         }
         isMapCenteredOnUser = proxy != nil
+    }
+
+    private func requestAndFollowUserLocation(using proxy: MapProxy) {
+        isFollowingUserLocation = true
+        if currentCoordinate != nil {
+            focusUserLocation(using: proxy)
+            return
+        }
+        currentLocationRequestTask?.cancel()
+        currentLocationRequestTask = Task { @MainActor in
+            let isAvailable = await model.requestMapCurrentLocation()
+            guard !Task.isCancelled,
+                  isAvailable,
+                  isFollowingUserLocation else { return }
+            focusUserLocation(using: proxy)
+            currentLocationRequestTask = nil
+        }
     }
 
     private func toggleMapHeadingMode(using proxy: MapProxy? = nil) {

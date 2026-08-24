@@ -2196,6 +2196,48 @@ final class AppModel {
         await persist()
     }
 
+    @discardableResult
+    func requestMapCurrentLocation() async -> Bool {
+        guard let sensorService else {
+            snapshot.settings.permissions[.location] = .unavailable
+            userFacingError = AppLanguagePreference.text(
+                korean: "이 기기에서는 현재 위치를 확인할 수 없습니다.",
+                english: "Current location is unavailable on this device."
+            )
+            return false
+        }
+
+        var state = sensorService.locationPermissionState()
+        if state == .notDetermined {
+            sensorService.requestLocationPermission(always: false)
+            for _ in 0..<120 where state == .notDetermined {
+                guard !Task.isCancelled else { return false }
+                try? await Task.sleep(for: .milliseconds(100))
+                state = sensorService.locationPermissionState()
+            }
+        }
+        snapshot.settings.permissions[.location] = state
+        guard state.isGranted else {
+            presentPermissionOnboarding(for: .location)
+            return false
+        }
+
+        let persistenceToken = sensorService.persistenceToken()
+        await enableLocationCollection(always: false)
+        if MapCurrentLocationAnchorPolicy.latestValidReading(
+            in: [latestSensorReading].compactMap { $0 }
+        ) == nil {
+            _ = await sensorService.waitForPersistedReading(
+                after: persistenceToken,
+                timeout: 12
+            )
+            await hydrateLatestMapLocationAnchor()
+        }
+        return MapCurrentLocationAnchorPolicy.latestValidReading(
+            in: [latestSensorReading].compactMap { $0 }
+        ) != nil
+    }
+
     func disableLocationCollection() async {
         sensorService?.stopCollection()
         sensorBackgroundCoordinator.cancel()
