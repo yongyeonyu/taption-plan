@@ -850,6 +850,109 @@ final class TimeScaleTests: XCTestCase {
         }
     }
 
+    func testSectionTimelineDetailsSplitOverlapsIntoEqualColumns() {
+        let twoIDs = [UUID(), UUID()]
+        let threeIDs = [UUID(), UUID(), UUID()]
+        let adjacentIDs = [UUID(), UUID()]
+        let details = [
+            MapHomeSectionDetail(
+                id: twoIDs[0], title: "A", categoryID: "activity",
+                behavior: nil, startMinute: 60, endMinute: 120
+            ),
+            MapHomeSectionDetail(
+                id: twoIDs[1], title: "B", categoryID: "activity",
+                behavior: nil, startMinute: 90, endMinute: 110
+            ),
+            MapHomeSectionDetail(
+                id: threeIDs[0], title: "C", categoryID: "activity",
+                behavior: nil, startMinute: 180, endMinute: 240
+            ),
+            MapHomeSectionDetail(
+                id: threeIDs[1], title: "D", categoryID: "activity",
+                behavior: nil, startMinute: 190, endMinute: 230
+            ),
+            MapHomeSectionDetail(
+                id: threeIDs[2], title: "E", categoryID: "activity",
+                behavior: nil, startMinute: 200, endMinute: 220
+            ),
+            MapHomeSectionDetail(
+                id: adjacentIDs[0], title: "F", categoryID: "activity",
+                behavior: nil, startMinute: 300, endMinute: 320
+            ),
+            MapHomeSectionDetail(
+                id: adjacentIDs[1], title: "G", categoryID: "activity",
+                behavior: nil, startMinute: 320, endMinute: 340
+            ),
+        ]
+        let columns = MapHomeSectionTimelineLayoutMath.detailColumns(
+            for: details,
+            visibleRange: 0...1_440
+        )
+
+        let twoColumns = twoIDs.compactMap { columns[$0] }
+            .sorted { $0.index < $1.index }
+        XCTAssertEqual(twoColumns.map(\.count), [2, 2])
+        XCTAssertEqual(twoColumns.map(\.index), [0, 1])
+
+        let threeColumns = threeIDs.compactMap { columns[$0] }
+            .sorted { $0.index < $1.index }
+        XCTAssertEqual(threeColumns.map(\.count), [3, 3, 3])
+        XCTAssertEqual(threeColumns.map(\.index), [0, 1, 2])
+        XCTAssertEqual(columns[adjacentIDs[0]], .single)
+        XCTAssertEqual(columns[adjacentIDs[1]], .single)
+
+        let container = MapHomeSectionTimelineLayoutMath.detailFrame(
+            leftWidth: 320
+        )
+        let twoFrames = twoColumns.map {
+            MapHomeSectionTimelineLayoutMath.detailFrame(
+                leftWidth: 320,
+                column: $0
+            )
+        }
+        XCTAssertEqual(
+            twoFrames[0].width,
+            (container.width - MapHomeSectionTimelineLayoutMath.detailColumnSpacing) / 2,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            twoFrames[1].minX - twoFrames[0].maxX,
+            MapHomeSectionTimelineLayoutMath.detailColumnSpacing,
+            accuracy: 0.001
+        )
+
+        let threeFrames = threeColumns.map {
+            MapHomeSectionTimelineLayoutMath.detailFrame(
+                leftWidth: 320,
+                column: $0
+            )
+        }
+        XCTAssertEqual(threeFrames[0].width, threeFrames[1].width, accuracy: 0.001)
+        XCTAssertEqual(threeFrames[1].width, threeFrames[2].width, accuracy: 0.001)
+        XCTAssertEqual(threeFrames[2].maxX, container.maxX, accuracy: 0.001)
+    }
+
+    func testSectionTimelineOverlapColumnsUseOnlyVisibleIntervals() {
+        let clippedID = UUID()
+        let visibleID = UUID()
+        let columns = MapHomeSectionTimelineLayoutMath.detailColumns(
+            for: [
+                MapHomeSectionDetail(
+                    id: clippedID, title: "A", categoryID: "activity",
+                    behavior: nil, startMinute: 60, endMinute: 130
+                ),
+                MapHomeSectionDetail(
+                    id: visibleID, title: "B", categoryID: "activity",
+                    behavior: nil, startMinute: 120, endMinute: 180
+                ),
+            ],
+            visibleRange: 130...180
+        )
+
+        XCTAssertNil(columns[clippedID])
+        XCTAssertEqual(columns[visibleID], .single)
+    }
+
     func testSectionDetailsExcludeMajorSleepSourceAndKeepActualHomeRest() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -2128,6 +2231,10 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testMapHomeDayPlaybackMapsTwentyFourSecondsToTwentyFourHours() {
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.frameIntervalNanoseconds,
+            16_666_667
+        )
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 0), 0)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 1), 60)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 12), 720)

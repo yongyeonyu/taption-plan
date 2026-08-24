@@ -6308,6 +6308,119 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored[0].deviceMotion, motion)
     }
 
+    @MainActor
+    func testMapRouteReadingsDoNotInjectSavedPlaceTravelFallback()
+        async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taption-route-source-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let archive = SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let start = makeDate(2026, 8, 24, 9)
+        let realReadings = [
+            SensorReading(
+                timestamp: start.addingTimeInterval(10 * 60),
+                point: GeoPoint(
+                    latitude: 37.56,
+                    longitude: 126.82,
+                    altitude: 20,
+                    horizontalAccuracy: 8,
+                    verticalAccuracy: 10
+                ),
+                locationFixQuality: .precise,
+                gpsAvailable: true
+            ),
+            SensorReading(
+                timestamp: start.addingTimeInterval(20 * 60),
+                point: GeoPoint(
+                    latitude: 37.55,
+                    longitude: 126.80,
+                    altitude: 20,
+                    horizontalAccuracy: 7,
+                    verticalAccuracy: 10
+                ),
+                locationFixQuality: .precise,
+                gpsAvailable: true
+            ),
+        ]
+        for reading in realReadings {
+            try await archive.append(
+                reading,
+                now: start.addingTimeInterval(2 * hour)
+            )
+        }
+
+        let home = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            span: TimeSpan(
+                start: start.addingTimeInterval(-hour),
+                end: start
+            ),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.56,
+                longitude: 126.83,
+                altitude: 20,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let office = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            span: TimeSpan(
+                start: start.addingTimeInterval(hour),
+                end: start.addingTimeInterval(2 * hour)
+            ),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.52,
+                longitude: 126.67,
+                altitude: 20,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .bus,
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(hour)
+            ),
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: []
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.updatedAt = start
+        stored.places = [home, office]
+        stored.travel = [travel]
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            sensorService: AppleSensorDataService(archive: archive),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let readings = await model.sensorReadings(
+            in: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(hour)
+            )
+        )
+
+        XCTAssertEqual(Set(readings.map(\.id)), Set(realReadings.map(\.id)))
+        XCTAssertFalse(readings.contains { $0.behavior == TravelMode.bus.rawValue })
+    }
+
     func testRouteReadingsRecoverGPSFromMonthlyRawArchiveAfterIndexPrune()
         async throws {
         let directory = FileManager.default.temporaryDirectory

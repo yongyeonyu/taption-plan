@@ -387,6 +387,7 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
 
 enum MapHomeDayPlaybackMath {
     static let durationSeconds: TimeInterval = 24
+    static let frameIntervalNanoseconds: UInt64 = 16_666_667
 
     static func minute(elapsedSeconds: TimeInterval) -> Int {
         guard elapsedSeconds.isFinite else { return 0 }
@@ -1758,7 +1759,10 @@ struct MapHomeView: View {
         dayPlaybackTask = Task { @MainActor in
             while !Task.isCancelled {
                 do {
-                    try await Task.sleep(nanoseconds: 41_666_667)
+                    try await Task.sleep(
+                        nanoseconds: MapHomeDayPlaybackMath
+                            .frameIntervalNanoseconds
+                    )
                 } catch {
                     return
                 }
@@ -3399,14 +3403,8 @@ struct MapHomeView: View {
         let sourceReadings = routeReadings
             + model.liveRouteState.readings
             + (model.latestSensorReading.map { [$0] } ?? [])
-        let fallbackReadings = PlanBackupRouteFallbackEngine.readings(
-            travel: model.snapshot.travel,
-            places: model.snapshot.places,
-            in: TimeSpan(start: dayStart, end: dayEnd),
-            supplementing: sourceReadings
-        )
         normalizedRouteReadings = RouteTimelineDataEngine
-            .normalizedDisplayReadings(sourceReadings + fallbackReadings)
+            .normalizedReadings(sourceReadings)
             .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
         displayRouteReadings = RouteTimelineDataEngine.displayReadings(
             from: normalizedRouteReadings
@@ -3968,6 +3966,20 @@ enum MapHomeSectionTimelineLayoutMath {
     static let timeGutterWidth: CGFloat = 52
     static let minimumGap: CGFloat = 8
     static let trailingInset: CGFloat = 8
+    static let detailColumnSpacing: CGFloat = 4
+
+    struct DetailColumn: Hashable {
+        let index: Int
+        let count: Int
+
+        static let single = DetailColumn(index: 0, count: 1)
+    }
+
+    private struct DetailInterval {
+        let id: UUID
+        let startMinute: Int
+        let endMinute: Int
+    }
 
     static func detailFrame(leftWidth: CGFloat) -> CGRect {
         let minX = timeGutterWidth + minimumGap
@@ -3977,6 +3989,94 @@ enum MapHomeSectionTimelineLayoutMath {
             width: max(1, leftWidth - minX - trailingInset),
             height: 1
         )
+    }
+
+    static func detailFrame(
+        leftWidth: CGFloat,
+        column: DetailColumn
+    ) -> CGRect {
+        let container = detailFrame(leftWidth: leftWidth)
+        let count = max(1, column.count)
+        let index = min(max(column.index, 0), count - 1)
+        let totalSpacing = detailColumnSpacing * CGFloat(count - 1)
+        let width = max(
+            1,
+            (container.width - totalSpacing) / CGFloat(count)
+        )
+        return CGRect(
+            x: container.minX
+                + CGFloat(index) * (width + detailColumnSpacing),
+            y: container.minY,
+            width: width,
+            height: container.height
+        )
+    }
+
+    static func detailColumns(
+        for details: [MapHomeSectionDetail],
+        visibleRange: ClosedRange<Int>
+    ) -> [UUID: DetailColumn] {
+        let intervals = details.compactMap { detail -> DetailInterval? in
+            let start = max(detail.startMinute, visibleRange.lowerBound)
+            let end = min(detail.endMinute, visibleRange.upperBound)
+            guard start < end else { return nil }
+            return DetailInterval(
+                id: detail.id,
+                startMinute: start,
+                endMinute: end
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.startMinute == rhs.startMinute {
+                if lhs.endMinute == rhs.endMinute {
+                    return lhs.id.uuidString < rhs.id.uuidString
+                }
+                return lhs.endMinute < rhs.endMinute
+            }
+            return lhs.startMinute < rhs.startMinute
+        }
+
+        var result: [UUID: DetailColumn] = [:]
+        var group: [DetailInterval] = []
+        var groupEnd = Int.min
+        for interval in intervals {
+            if !group.isEmpty, interval.startMinute >= groupEnd {
+                assignColumns(in: group, to: &result)
+                group.removeAll(keepingCapacity: true)
+                groupEnd = Int.min
+            }
+            group.append(interval)
+            groupEnd = max(groupEnd, interval.endMinute)
+        }
+        assignColumns(in: group, to: &result)
+        return result
+    }
+
+    private static func assignColumns(
+        in group: [DetailInterval],
+        to result: inout [UUID: DetailColumn]
+    ) {
+        guard !group.isEmpty else { return }
+        var columnEnds: [Int] = []
+        var indices: [UUID: Int] = [:]
+        for interval in group {
+            let index = columnEnds.firstIndex {
+                $0 <= interval.startMinute
+            } ?? columnEnds.count
+            if index == columnEnds.count {
+                columnEnds.append(interval.endMinute)
+            } else {
+                columnEnds[index] = interval.endMinute
+            }
+            indices[interval.id] = index
+        }
+        let count = max(1, columnEnds.count)
+        for interval in group {
+            result[interval.id] = DetailColumn(
+                index: indices[interval.id] ?? 0,
+                count: count
+            )
+        }
     }
 }
 
@@ -4325,6 +4425,11 @@ private struct MapHomeSectionEditSheet: View {
             GeometryReader { proxy in
                 let trackHeight = max(proxy.size.height, 1)
                 let leftWidth = max(120, proxy.size.width - 130)
+                let detailColumns = MapHomeSectionTimelineLayoutMath
+                    .detailColumns(
+                        for: selection.details,
+                        visibleRange: visibleRange
+                    )
                 ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(Color.tpSurface)
@@ -4334,6 +4439,7 @@ private struct MapHomeSectionEditSheet: View {
                     ForEach(selection.details) { detail in
                         detailBlock(
                             detail,
+                            column: detailColumns[detail.id] ?? .single,
                             leftWidth: leftWidth,
                             height: trackHeight
                         )
@@ -4488,6 +4594,7 @@ private struct MapHomeSectionEditSheet: View {
     @ViewBuilder
     private func detailBlock(
         _ detail: MapHomeSectionDetail,
+        column: MapHomeSectionTimelineLayoutMath.DetailColumn,
         leftWidth: CGFloat,
         height: CGFloat
     ) -> some View {
@@ -4497,27 +4604,39 @@ private struct MapHomeSectionEditSheet: View {
             let y = yPosition(start, height: height)
             let blockHeight = max(26, yPosition(end, height: height) - y)
             let detailFrame = MapHomeSectionTimelineLayoutMath.detailFrame(
-                leftWidth: leftWidth
+                leftWidth: leftWidth,
+                column: column
             )
+            let isCompact = column.count > 1
             let category = MapHomeSidebarMajorCategory.presentation(
                 for: detail.categoryID,
                 categoryColors: model.settings.mapCategoryColors
             )
-            HStack(spacing: 5) {
+            HStack(spacing: isCompact ? 2 : 5) {
                 Image(systemName: category.systemImage)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(detail.title).lineLimit(1)
                     Text("\(timeLabel(detail.startMinute))–\(timeLabel(detail.endMinute))")
-                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .font(.system(
+                            size: isCompact ? 8 : 9,
+                            weight: .medium,
+                            design: .rounded
+                        ))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
                         .opacity(0.72)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "arrow.right")
                     .font(.system(size: 9, weight: .bold))
             }
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .font(.system(
+                size: isCompact ? 9 : 11,
+                weight: .semibold,
+                design: .rounded
+            ))
             .foregroundStyle(category.tint)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, isCompact ? 5 : 8)
             .frame(width: detailFrame.width, height: blockHeight, alignment: .leading)
             .background(
                 insertedDetailID == detail.id

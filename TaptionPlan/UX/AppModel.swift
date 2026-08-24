@@ -2880,7 +2880,7 @@ final class AppModel {
         lastTrackingSessionRecoveryPersistAt = .now
         liveRouteState = LiveRouteState(
             session: session,
-            readings: liveRouteState.readings,
+            readings: [],
             lastUpdatedAt: .now
         )
         try? watchConnectivityService.requestWorkout(
@@ -5646,17 +5646,11 @@ final class AppModel {
         } else {
             archived = []
         }
-        var readings = archived + photoBackfillReadings(
+        return (archived + photoBackfillReadings(
             in: span,
             existingReadings: archived
-        )
-        readings += PlanBackupRouteFallbackEngine.readings(
-            travel: snapshot.travel,
-            places: snapshot.places,
-            in: span,
-            supplementing: readings
-        )
-        return readings.sorted { $0.timestamp < $1.timestamp }
+        ))
+        .sorted { $0.timestamp < $1.timestamp }
     }
 
     private func photoBackfillReadings(
@@ -6940,6 +6934,9 @@ final class AppModel {
                         && reading.sourceDevice == .iPhone
                 )
                 activeTrackingSession = session
+            }
+            if liveRouteState.session?.id != sessionID {
+                liveRouteState.readings = []
             }
         } else {
             session = activeTrackingSession
