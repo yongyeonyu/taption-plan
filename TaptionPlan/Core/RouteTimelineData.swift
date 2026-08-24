@@ -50,6 +50,7 @@ struct RouteTimelineSegment: Identifiable, Hashable, Sendable {
     let colorHex: String
     let opacity: Double
     let coordinates: [GeoPoint]
+    let confirmedSubwayTravelID: UUID?
 }
 
 struct RouteTimelineProjection: Hashable, Sendable {
@@ -65,6 +66,8 @@ struct RouteTimelineProjection: Hashable, Sendable {
 /// never writes to either input collection or changes an `ActualRecord`.
 enum RouteTimelineDataEngine {
     static let maximumInterpolationGap: TimeInterval = 15 * 60
+    static let sparseConnectionMinimumGap: TimeInterval = 5 * 60
+    static let sparseConnectionMaximumDistanceMeters: Double = 1_000
     static let maximumDisplayReadingCount = 4_096
     static let maximumApproximateDisplayAccuracy: Double = 1_000
 
@@ -73,9 +76,11 @@ enum RouteTimelineDataEngine {
         through timelineDate: Date? = nil,
         selectedSpan: TimeSpan? = nil,
         actuals: [ActualRecord],
+        travel: [TravelSegment] = [],
         readings: [SensorReading],
         liveReadings: [SensorReading] = [],
         readingsAreNormalized: Bool = false,
+        filtersSparseRouteConnections: Bool = false,
         calendar: Calendar = .autoupdatingCurrent
     ) -> RouteTimelineProjection {
         let dayStart = calendar.startOfDay(for: selectedDate)
@@ -97,7 +102,8 @@ enum RouteTimelineDataEngine {
         }
         let coordinateIndex = CoordinateIndex(
             readings: allDayReadings,
-            includesApproximateLocations: readingsAreNormalized
+            includesApproximateLocations: readingsAreNormalized,
+            filtersSparseConnections: filtersSparseRouteConnections
         )
         let visibleReadings = allDayReadings.filter {
             $0.timestamp <= cutoff
@@ -117,11 +123,15 @@ enum RouteTimelineDataEngine {
         let selectedCategory = timelineDate.map { _ in
             category(at: cutoff, in: automatic, through: cutoff)
         }
-        let coordinateAtCutoff = coordinateIndex.playbackCoordinate(at: cutoff)?.point
+        let coordinateAtCutoff = confirmedSubwayCoordinate(
+            at: cutoff,
+            in: travel
+        ) ?? coordinateIndex.playbackCoordinate(at: cutoff)?.point
         let segments = makeSegments(
             samples: samples,
             coordinateIndex: coordinateIndex,
             actuals: automatic,
+            travel: travel,
             cutoff: cutoff,
             selectedCategory: selectedCategory,
             selectedSpan: selectedSpan
@@ -141,9 +151,11 @@ enum RouteTimelineDataEngine {
         throughMinute minute: Int?,
         selectedSpan: TimeSpan? = nil,
         actuals: [ActualRecord],
+        travel: [TravelSegment] = [],
         readings: [SensorReading],
         liveReadings: [SensorReading] = [],
         readingsAreNormalized: Bool = false,
+        filtersSparseRouteConnections: Bool = false,
         calendar: Calendar = .autoupdatingCurrent
     ) -> RouteTimelineProjection {
         let cutoff = minute.map {
@@ -158,9 +170,11 @@ enum RouteTimelineDataEngine {
             through: cutoff,
             selectedSpan: selectedSpan,
             actuals: actuals,
+            travel: travel,
             readings: readings,
             liveReadings: liveReadings,
             readingsAreNormalized: readingsAreNormalized,
+            filtersSparseRouteConnections: filtersSparseRouteConnections,
             calendar: calendar
         )
     }
@@ -352,11 +366,14 @@ enum RouteTimelineDataEngine {
 
     private struct CoordinateIndex {
         private let values: [(timestamp: Date, point: GeoPoint)]
+        private let filtersSparseConnections: Bool
 
         init(
             readings: [SensorReading],
-            includesApproximateLocations: Bool = false
+            includesApproximateLocations: Bool = false,
+            filtersSparseConnections: Bool = false
         ) {
+            self.filtersSparseConnections = filtersSparseConnections
             values = readings.compactMap { reading in
                 guard let point = validPoint(
                     from: reading,
@@ -381,10 +398,15 @@ enum RouteTimelineDataEngine {
                 let before = values[index - 1]
                 let after = values[index]
                 guard before.timestamp < end else { break }
-                if after.timestamp > start,
-                   after.timestamp.timeIntervalSince(before.timestamp)
-                    > maximumInterpolationGap {
-                    return false
+                if after.timestamp > start {
+                    let gap = after.timestamp.timeIntervalSince(before.timestamp)
+                    if gap > maximumInterpolationGap
+                        || (filtersSparseConnections
+                            && gap > sparseConnectionMinimumGap
+                            && distanceMeters(before.point, after.point)
+                                > sparseConnectionMaximumDistanceMeters) {
+                        return false
+                    }
                 }
                 if after.timestamp >= end { break }
                 index += 1
@@ -444,6 +466,7 @@ enum RouteTimelineDataEngine {
         var end: Date
         let category: RouteTimelineCategory
         let opacity: Double
+        let confirmedSubwayTravelID: UUID?
         var coordinates: [GeoPoint]
 
         var segment: RouteTimelineSegment {
@@ -454,7 +477,8 @@ enum RouteTimelineDataEngine {
                 category: category,
                 colorHex: category.colorHex,
                 opacity: opacity,
-                coordinates: coordinates
+                coordinates: coordinates,
+                confirmedSubwayTravelID: confirmedSubwayTravelID
             )
         }
     }
@@ -500,22 +524,99 @@ enum RouteTimelineDataEngine {
         return values.max() ?? -1
     }
 
+    static func confirmedSubwayCoordinates(
+        for segment: TravelSegment,
+        through cutoff: Date
+    ) -> [GeoPoint] {
+        guard isConfirmedSubway(segment),
+              let coordinates = segment.subwayRoute?.coordinates,
+              let first = coordinates.first,
+              cutoff >= segment.span.start else { return [] }
+        guard cutoff < segment.span.end, segment.span.duration > 0 else {
+            return coordinates
+        }
+        let progress = min(
+            1,
+            max(
+                0,
+                cutoff.timeIntervalSince(segment.span.start)
+                    / segment.span.duration
+            )
+        )
+        guard progress > 0 else { return [first] }
+        let lengths = zip(coordinates, coordinates.dropFirst()).map {
+            distanceMeters($0.0, $0.1)
+        }
+        let target = lengths.reduce(0, +) * progress
+        var traversed = 0.0
+        var result = [first]
+        for (index, length) in lengths.enumerated() {
+            let next = coordinates[index + 1]
+            guard traversed + length < target, length > 0 else {
+                let ratio = length > 0
+                    ? min(1, max(0, (target - traversed) / length))
+                    : 1
+                result.append(interpolate(coordinates[index], next, ratio: ratio))
+                return result
+            }
+            result.append(next)
+            traversed += length
+        }
+        return coordinates
+    }
+
+    private static func confirmedSubwayCoordinate(
+        at date: Date,
+        in travel: [TravelSegment]
+    ) -> GeoPoint? {
+        guard let segment = confirmedSubwaySegment(at: date, in: travel) else {
+            return nil
+        }
+        return confirmedSubwayCoordinates(for: segment, through: date).last
+    }
+
+    private static func confirmedSubwaySegments(
+        in travel: [TravelSegment]
+    ) -> [TravelSegment] {
+        travel.filter(isConfirmedSubway)
+    }
+
+    private static func confirmedSubwaySegment(
+        at date: Date,
+        in travel: [TravelSegment]
+    ) -> TravelSegment? {
+        confirmedSubwaySegments(in: travel)
+            .filter { $0.span.contains(date) }
+            .max { $0.span.start < $1.span.start }
+    }
+
+    private static func isConfirmedSubway(_ segment: TravelSegment) -> Bool {
+        segment.mode == .subway
+            && segment.isConfirmed
+            && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
+    }
+
     private static func makeSegments(
         samples: [RouteTimelineSample],
         coordinateIndex: CoordinateIndex,
         actuals: [ActualRecord],
+        travel: [TravelSegment],
         cutoff: Date,
         selectedCategory: RouteTimelineCategory?,
         selectedSpan: TimeSpan?
     ) -> [RouteTimelineSegment] {
         guard let first = samples.first, first.timestamp < cutoff else { return [] }
-        let boundaries = Set(
-            [first.timestamp, cutoff]
-                + samples.map(\.timestamp)
+        let interiorBoundaries = (
+            samples.map(\.timestamp)
                 + actuals.flatMap { actual in
                     [actual.startedAt, actual.endedAt ?? cutoff]
                 }
-                .filter { $0 > first.timestamp && $0 < cutoff }
+                + confirmedSubwaySegments(in: travel).flatMap {
+                    [$0.span.start, $0.span.end]
+                }
+        ).filter { $0 > first.timestamp && $0 < cutoff }
+        let boundaries = Set(
+            [first.timestamp, cutoff] + interiorBoundaries
         ).sorted()
         var result: [RouteTimelineSegment] = []
         var accumulator: SegmentAccumulator?
@@ -530,6 +631,10 @@ enum RouteTimelineDataEngine {
                 in: actuals,
                 through: cutoff
             )
+            let confirmedSubwayTravelID = confirmedSubwaySegment(
+                at: midpoint,
+                in: travel
+            )?.id
             let opacity: Double
             if let selectedSpan {
                 opacity = selectedSpan.contains(midpoint) ? 1.0 : 0.5
@@ -539,6 +644,7 @@ enum RouteTimelineDataEngine {
             if var current = accumulator,
                current.category == category,
                current.opacity == opacity,
+               current.confirmedSubwayTravelID == confirmedSubwayTravelID,
                current.end == start {
                 current.end = end
                 if !sameLocation(current.coordinates.last, endPoint) {
@@ -554,6 +660,7 @@ enum RouteTimelineDataEngine {
                     end: end,
                     category: category,
                     opacity: opacity,
+                    confirmedSubwayTravelID: confirmedSubwayTravelID,
                     coordinates: sameLocation(startPoint, endPoint)
                         ? [startPoint]
                         : [startPoint, endPoint]

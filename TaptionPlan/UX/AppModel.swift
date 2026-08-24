@@ -4,6 +4,7 @@ import Observation
 import OSLog
 import UIKit
 import WidgetKit
+import TaptionPlanCore
 
 enum MapCurrentLocationAnchorPolicy {
     static let maximumAge: TimeInterval = 6 * 60 * 60
@@ -888,7 +889,7 @@ final class AppModel {
             return PlanCloudBackupPayload(snapshot: snapshot)
         }
         let span = PlanBackupRoutePointReducer.backupSpan(containing: now)
-        let readings = (try? await sensorService.archivedReadings(
+        let readings = (try? await sensorService.archivedRouteReadings(
             in: span
         )) ?? []
         return PlanCloudBackupPayload(
@@ -1727,6 +1728,7 @@ final class AppModel {
     }
 
     func sceneBecameActive() async {
+        SensorBackgroundWakeNotification.cancel()
         let wasSceneActive = isSceneActive
         isSceneActive = true
         if let securityBackupService {
@@ -1804,6 +1806,7 @@ final class AppModel {
             applyAirPodsActivity(observation)
         }
         await resumeSensorCollectionAndRestoreTrackingIfNeeded()
+        await scheduleSensorWakeNotificationIfNeeded()
         foregroundRefreshTask?.cancel()
         foregroundRefreshTask = nil
         deferredVisibleRefreshTask?.cancel()
@@ -1823,6 +1826,7 @@ final class AppModel {
         isSceneActive = false
         sensorService?.stopCollection()
         sensorBackgroundCoordinator.cancel()
+        SensorBackgroundWakeNotification.cancel()
         syncSensorBackgroundState()
         isSensorCollecting = false
         foregroundRefreshTask?.cancel()
@@ -2016,6 +2020,8 @@ final class AppModel {
         await refreshEnabledData(includesCurrentDeviceDay: true)
         await saveCloudBackupOnBackground()
         await persist()
+        await reconcileSensorCollectionLiveActivity(isForeground: false)
+        await scheduleSensorWakeNotificationIfNeeded()
         let success = userFacingError == nil
         Self.integrationLogger.notice(
             "Background model refresh finished: success=\(success, privacy: .public), snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public)"
@@ -2025,6 +2031,66 @@ final class AppModel {
 
     func performHealthBackgroundRefresh() async {
         await handleObservedHealthChange()
+        await reconcileSensorCollectionLiveActivity(isForeground: false)
+    }
+
+    func reconcileSensorCollectionLiveActivity(
+        isForeground: Bool
+    ) async {
+        let controller = SensorCollectionLiveActivityController.shared
+        let kinds = sensorCollectionKinds
+        guard sensorCollectionSessionState == .collecting,
+              let sessionID = sensorCollectionSessionID,
+              let startedAt = sensorCollectionStartedAt else {
+            await controller.removeExpired()
+            await controller.stop(
+                lastSavedAt: lastSensorSavedAt,
+                collectionKinds: kinds
+            )
+            return
+        }
+        _ = try? await controller.reconcile(
+            sessionID: sessionID,
+            startedAt: startedAt,
+            lastSavedAt: lastSensorSavedAt,
+            collectionKinds: kinds,
+            isCollecting: true,
+            isForeground: isForeground,
+            intervalSeconds: settings.gpsLoggingPreferences
+                .effectiveIntervalSeconds
+        )
+    }
+
+    private var sensorCollectionKinds: [String] {
+        var kinds = ["location"]
+        if let availability = sensorAvailability {
+            if availability.motionActivity || availability.deviceMotion {
+                kinds.append("motion")
+            }
+            if availability.relativeAltitude {
+                kinds.append("altitude")
+            }
+            if availability.stepCounting {
+                kinds.append("steps")
+            }
+        }
+        if settings.healthEnabled {
+            kinds.append("health")
+        }
+        kinds.append("wifi")
+        return kinds
+    }
+
+    private func scheduleSensorWakeNotificationIfNeeded() async {
+        guard settings.notificationsEnabled,
+              permissionState(for: .notifications).isGranted,
+              sensorCollectionSessionState == .collecting else {
+            SensorBackgroundWakeNotification.cancel()
+            return
+        }
+        await SensorBackgroundWakeNotification.schedule(
+            after: SensorBackgroundRefreshPolicy.savedDelay()
+        )
     }
 
     func permissionState(for feature: PermissionFeature) -> PermissionState {
@@ -2288,7 +2354,9 @@ final class AppModel {
     }
 
     @discardableResult
-    func requestMapCurrentLocation() async -> Bool {
+    func requestMapCurrentLocation(
+        requiresFreshReading: Bool = false
+    ) async -> Bool {
         guard let sensorService else {
             snapshot.settings.permissions[.location] = .unavailable
             userFacingError = AppLanguagePreference.text(
@@ -2315,7 +2383,7 @@ final class AppModel {
 
         let persistenceToken = sensorService.persistenceToken()
         await enableLocationCollection(always: false)
-        if MapCurrentLocationAnchorPolicy.latestValidReading(
+        if requiresFreshReading || MapCurrentLocationAnchorPolicy.latestValidReading(
             in: [latestSensorReading].compactMap { $0 }
         ) == nil {
             _ = await sensorService.waitForPersistedReading(
@@ -2812,7 +2880,7 @@ final class AppModel {
         lastTrackingSessionRecoveryPersistAt = .now
         liveRouteState = LiveRouteState(
             session: session,
-            readings: [],
+            readings: liveRouteState.readings,
             lastUpdatedAt: .now
         )
         try? watchConnectivityService.requestWorkout(
@@ -3212,12 +3280,14 @@ final class AppModel {
     ) {
         guard let entry = memoEntry else { return }
         let fallbackText = attachmentKind == .photo ? "사진 메모" : "음성 메모"
+        guard let memoText = validatedMemoText(text ?? fallbackText) else {
+            return
+        }
         let memo = ActionMemo(
             categoryID: MemoTimelineEngine.categoryID,
             occurredAt: entry.occurredAt,
             kind: kind,
-            text: text?.trimmingCharacters(in: .whitespacesAndNewlines)
-                .nilIfEmpty ?? fallbackText,
+            text: memoText,
             attachments: [
                 MemoAttachment(
                     kind: attachmentKind,
@@ -3268,8 +3338,7 @@ final class AppModel {
         kind: MemoKind,
         to planID: UUID
     ) {
-        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty,
+        guard let cleanText = validatedMemoText(text),
               let plan = snapshot.plans.first(where: { $0.id == planID })
         else {
             return
@@ -3293,8 +3362,8 @@ final class AppModel {
         categoryID: String,
         on date: Date
     ) -> UUID? {
-        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanText.isEmpty, !categoryID.isEmpty else { return nil }
+        guard let cleanText = validatedMemoText(text),
+              !categoryID.isEmpty else { return nil }
         let memo = ActionMemo(
             categoryID: categoryID,
             occurredAt: date,
@@ -3324,17 +3393,33 @@ final class AppModel {
         text: String,
         kind: MemoKind
     ) {
-        guard let index = snapshot.memos.firstIndex(where: {
+        guard let cleanText = validatedMemoText(text),
+              let index = snapshot.memos.firstIndex(where: {
             $0.id == memoID
         }), let updated = ActionMemoEditingEngine.updating(
             snapshot.memos[index],
-            text: text,
+            text: cleanText,
             kind: kind
         ) else {
             return
         }
         snapshot.memos[index] = updated
         Task { await persist() }
+    }
+
+    private func validatedMemoText(_ text: String) -> String? {
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty else { return nil }
+        do {
+            try TaptionPlanMemoRecord.validate(text: cleanText)
+            return cleanText
+        } catch {
+            userFacingError = AppLanguagePreference.text(
+                korean: "메모는 1,000자까지 저장할 수 있습니다.",
+                english: "Memos can contain up to 1,000 characters."
+            )
+            return nil
+        }
     }
 
     /// 음성 메모도 붙일 항목을 찾지 않는다. 메모 입력이 열려 있으면 그 순간에
@@ -5461,6 +5546,12 @@ final class AppModel {
         Task { await persist() }
     }
 
+    func setMapDisplayStyle(_ style: MapDisplayStyle) {
+        guard snapshot.settings.mapDisplayStyle != style else { return }
+        snapshot.settings.mapDisplayStyle = style
+        Task { await persist() }
+    }
+
     func confirmTravel(_ travelID: UUID, mode: TravelMode) {
         confirmTravel([travelID], mode: mode)
     }
@@ -5537,7 +5628,9 @@ final class AppModel {
         let archived: [SensorReading]
         if let sensorService {
             do {
-                archived = try await sensorService.archivedReadings(in: span)
+                archived = try await sensorService.archivedRouteReadings(
+                    in: span
+                )
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "route_readings_load_failed",
@@ -6725,7 +6818,7 @@ final class AppModel {
         activeTrackingSession = restored
         trackingSessionWasRecovered = true
         lastTrackingSessionRecoveryPersistAt = now
-        let readings = (try? await sensorService.archivedReadings(
+        let readings = (try? await sensorService.archivedRouteReadings(
             for: restored,
             through: now
         )) ?? []
@@ -6848,9 +6941,6 @@ final class AppModel {
                 )
                 activeTrackingSession = session
             }
-            if liveRouteState.session?.id != sessionID {
-                liveRouteState.readings = []
-            }
         } else {
             session = activeTrackingSession
         }
@@ -6908,6 +6998,12 @@ final class AppModel {
         }
         liveRouteState.session = session
         liveRouteState.lastUpdatedAt = reading.timestamp
+        Task { [weak self] in
+            guard let self else { return }
+            await self.reconcileSensorCollectionLiveActivity(
+                isForeground: self.isSceneActive
+            )
+        }
 
         if reading.trackingSessionEnded == true,
            var completed = session {

@@ -6308,6 +6308,65 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored[0].deviceMotion, motion)
     }
 
+    func testRouteReadingsRecoverGPSFromMonthlyRawArchiveAfterIndexPrune()
+        async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taption-route-recovery-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let rawArchive = RawDeviceDataMonthlyArchive(
+            rootDirectory: directory.appendingPathComponent("raw")
+        )
+        let trackingArchive = TrackingSessionChunkArchive(
+            rootDirectory: directory.appendingPathComponent("raw")
+        )
+        let archive = SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl"),
+            retentionInterval: 86_400,
+            rawArchive: rawArchive,
+            trackingChunkArchive: trackingArchive
+        )
+        let now = makeDate(2026, 8, 24, 12)
+        let historical = SensorReading(
+            timestamp: now.addingTimeInterval(-3 * 86_400),
+            point: GeoPoint(
+                latitude: 37.524,
+                longitude: 126.673,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true
+        )
+        let sessionID = UUID()
+        let tracked = SensorReading(
+            timestamp: historical.timestamp.addingTimeInterval(30),
+            point: GeoPoint(
+                latitude: 37.525,
+                longitude: 126.674,
+                altitude: 20,
+                horizontalAccuracy: 7,
+                verticalAccuracy: 10
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true,
+            trackingSessionID: sessionID,
+            trackingSessionEnded: true
+        )
+        try await archive.append(historical, now: now)
+        try await archive.append(tracked, now: now)
+        try await archive.compact(now: now)
+
+        let span = TimeSpan(
+            start: historical.timestamp.addingTimeInterval(-60),
+            end: historical.timestamp.addingTimeInterval(60)
+        )
+        let indexed = try await archive.readings(in: span)
+        let recovered = try await archive.routeReadings(in: span)
+        XCTAssertTrue(indexed.isEmpty)
+        XCTAssertEqual(recovered.map(\.id), [historical.id, tracked.id])
+    }
+
     func testRawDeviceDataArchiveStoresMonthlyCompressedPayloads() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-raw-\(UUID().uuidString)")

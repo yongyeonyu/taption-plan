@@ -84,6 +84,9 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
     )
     private let flushDelay: TimeInterval
     private var scheduledMonths = Set<String>()
+    private var monthEnvelopeCache: [String: [RawDeviceDataEnvelope]] = [:]
+    private var monthEnvelopeCacheOrder: [String] = []
+    private static let monthEnvelopeCacheLimit = 2
 
     init(
         rootDirectory: URL,
@@ -147,6 +150,7 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
                 monthKey(for: $0.capturedAt)
             }
             for (monthKey, values) in grouped {
+                invalidateCachedMonth(monthKey)
                 let journalURL = try journalFileURL(for: monthKey)
                 var payload = Data()
                 for envelope in values.sorted(by: {
@@ -185,6 +189,9 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         let monthKey = monthKey(for: date)
+        if let cached = cachedEnvelopes(for: monthKey) {
+            return cached
+        }
         let directory = try monthDirectory(for: monthKey)
         var payloads: [Data] = []
         let legacyURL = legacyCompressedFileURL(
@@ -218,7 +225,7 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
             }
         }
         var seen = Set<UUID>()
-        return payloads
+        let envelopes = payloads
             .flatMap { payload in
                 payload.split(separator: 0x0A).compactMap {
                     try? decoder.decode(
@@ -229,6 +236,34 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
             }
             .filter { seen.insert($0.id).inserted }
             .sorted { $0.capturedAt < $1.capturedAt }
+        cache(envelopes, for: monthKey)
+        return envelopes
+    }
+
+    private func cachedEnvelopes(
+        for monthKey: String
+    ) -> [RawDeviceDataEnvelope]? {
+        guard let cached = monthEnvelopeCache[monthKey] else { return nil }
+        monthEnvelopeCacheOrder.removeAll { $0 == monthKey }
+        monthEnvelopeCacheOrder.append(monthKey)
+        return cached
+    }
+
+    private func cache(
+        _ envelopes: [RawDeviceDataEnvelope],
+        for monthKey: String
+    ) {
+        monthEnvelopeCache[monthKey] = envelopes
+        monthEnvelopeCacheOrder.removeAll { $0 == monthKey }
+        monthEnvelopeCacheOrder.append(monthKey)
+        while monthEnvelopeCacheOrder.count > Self.monthEnvelopeCacheLimit {
+            monthEnvelopeCache[monthEnvelopeCacheOrder.removeFirst()] = nil
+        }
+    }
+
+    private func invalidateCachedMonth(_ monthKey: String) {
+        monthEnvelopeCache[monthKey] = nil
+        monthEnvelopeCacheOrder.removeAll { $0 == monthKey }
     }
 
     func flushPendingWrites() throws {
@@ -438,6 +473,75 @@ final class TrackingSessionChunkArchive: @unchecked Sendable {
         pending.removeAll()
     }
 
+    func readings(in span: TimeSpan) throws -> [SensorReading] {
+        lock.lock()
+        let pendingReadings = pending.values.flatMap(\.readings)
+        lock.unlock()
+
+        var values = pendingReadings.filter {
+            span.contains($0.timestamp)
+        }
+        var seen = Set(values.map(\.id))
+        var month = calendar.dateInterval(of: .month, for: span.start)?.start
+            ?? span.start
+        let lastMonth = calendar.dateInterval(of: .month, for: span.end)?.start
+            ?? span.end
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+
+        while month <= lastMonth {
+            let components = calendar.dateComponents([.year, .month], from: month)
+            let monthKey = String(
+                format: "%04d-%02d",
+                components.year ?? 1970,
+                components.month ?? 1
+            )
+            let monthDirectory = rootDirectory.appendingPathComponent(
+                monthKey,
+                isDirectory: true
+            )
+            let sessionDirectories = (
+                try? FileManager.default.contentsOfDirectory(
+                    at: monthDirectory,
+                    includingPropertiesForKeys: nil
+                )
+            ) ?? []
+            for sessionDirectory in sessionDirectories
+            where UUID(uuidString: sessionDirectory.lastPathComponent) != nil {
+                let files = (
+                    try? FileManager.default.contentsOfDirectory(
+                        at: sessionDirectory,
+                        includingPropertiesForKeys: nil
+                    )
+                ) ?? []
+                for file in files where file.lastPathComponent.hasSuffix(
+                    ".jsonl.zlib"
+                ) {
+                    guard let compressed = try? Data(contentsOf: file),
+                          let data = try? (compressed as NSData).decompressed(
+                              using: .zlib
+                          ) as Data else { continue }
+                    for line in data.split(separator: 0x0A) {
+                        guard let reading = try? decoder.decode(
+                            SensorReading.self,
+                            from: Data(line)
+                        ),
+                        span.contains(reading.timestamp),
+                        seen.insert(reading.id).inserted else { continue }
+                        values.append(reading)
+                    }
+                }
+            }
+            guard let next = calendar.date(
+                byAdding: .month,
+                value: 1,
+                to: month
+            ), next > month else { break }
+            month = next
+        }
+        return values.sorted { $0.timestamp < $1.timestamp }
+    }
+
     private func write(_ chunk: PendingChunk, sessionID: UUID) throws {
         guard !chunk.readings.isEmpty else { return }
         let components = calendar.dateComponents(
@@ -612,6 +716,50 @@ actor SensorReadingArchive {
         try allReadings()
             .filter { span.contains($0.timestamp) }
             .sorted { $0.timestamp < $1.timestamp }
+    }
+
+    func routeReadings(in span: TimeSpan) throws -> [SensorReading] {
+        let indexed = try readings(in: span)
+        var merged = indexed
+        var seen = Set(indexed.map(\.id))
+        if let trackingChunkArchive {
+            for reading in try trackingChunkArchive.readings(in: span)
+            where seen.insert(reading.id).inserted {
+                merged.append(reading)
+            }
+        }
+        guard let rawArchive else {
+            return merged.sorted { $0.timestamp < $1.timestamp }
+        }
+
+        let calendar = Calendar.autoupdatingCurrent
+        var month = calendar.dateInterval(of: .month, for: span.start)?.start
+            ?? span.start
+        let lastMonth = calendar.dateInterval(of: .month, for: span.end)?.start
+            ?? span.end
+
+        while month <= lastMonth {
+            let envelopes = try rawArchive.envelopes(
+                inMonthContaining: month
+            )
+            for envelope in envelopes where envelope.kind == "sensor-reading" {
+                guard let data = envelope.payloadJSON.data(using: .utf8),
+                      let reading = try? decoder.decode(
+                          SensorReading.self,
+                          from: data
+                      ),
+                      span.contains(reading.timestamp),
+                      seen.insert(reading.id).inserted else { continue }
+                merged.append(reading)
+            }
+            guard let next = calendar.date(
+                byAdding: .month,
+                value: 1,
+                to: month
+            ), next > month else { break }
+            month = next
+        }
+        return merged.sorted { $0.timestamp < $1.timestamp }
     }
 
     func compact(now: Date = .now) throws {
@@ -847,6 +995,12 @@ final class AppleSensorDataService {
         try await archive.readings(in: span)
     }
 
+    func archivedRouteReadings(
+        in span: TimeSpan
+    ) async throws -> [SensorReading] {
+        try await archive.routeReadings(in: span)
+    }
+
     func archivedReadings(
         for session: TrackingSession,
         through date: Date = .now
@@ -857,13 +1011,23 @@ final class AppleSensorDataService {
         ).filter { $0.trackingSessionID == session.id }
     }
 
+    func archivedRouteReadings(
+        for session: TrackingSession,
+        through date: Date = .now
+    ) async throws -> [SensorReading] {
+        let end = max(session.startedAt, session.endedAt ?? date)
+        return try await archive.routeReadings(
+            in: TimeSpan(start: session.startedAt, end: end)
+        ).filter { $0.trackingSessionID == session.id }
+    }
+
     func recordExternalReadings(_ readings: [SensorReading]) async throws {
         guard let first = readings.min(by: { $0.timestamp < $1.timestamp }),
               let last = readings.max(by: { $0.timestamp < $1.timestamp }) else {
             return
         }
         let existingIDs = Set(
-            try await archive.readings(
+            try await archive.routeReadings(
                 in: TimeSpan(
                     start: first.timestamp.addingTimeInterval(-1),
                     end: last.timestamp.addingTimeInterval(1)

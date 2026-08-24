@@ -35,67 +35,33 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
-    func testMapRouteRefreshDoesNotEraseCachedReadingsOnEmptyLoad() {
-        XCTAssertFalse(
-            MapHomeRouteReadingsPolicy.shouldReplace(
-                existingCount: 12,
-                loadedCount: 0
-            )
-        )
-        XCTAssertFalse(
-            MapHomeRouteReadingsPolicy.shouldReplace(
-                existingCount: 12,
-                loadedCount: 1
-            )
-        )
-        XCTAssertFalse(
-            MapHomeRouteReadingsPolicy.shouldReplace(
-                existingCount: 12,
-                loadedCount: 3
-            )
-        )
-        XCTAssertTrue(
-            MapHomeRouteReadingsPolicy.shouldReplace(
-                existingCount: 0,
-                loadedCount: 0
-            )
-        )
-        XCTAssertTrue(
-            MapHomeRouteReadingsPolicy.shouldReplace(
-                existingCount: 12,
-                loadedCount: 12
-            )
+    func testMapRouteRefreshDoesNotEraseSameDayCachedReadingsOnEmptyLoad() {
+        let cached = [reading(10, latitude: 37)]
+        let day = TimeSpan(start: date(0), end: date(1_439))
+
+        XCTAssertEqual(
+            MapHomeRouteReadingsPolicy.merging(
+                existing: cached,
+                loaded: [],
+                in: day
+            ),
+            cached
         )
     }
 
-    func testApproximateLocationDoesNotReplaceCachedRouteReadings() {
-        let approximate = SensorReading(
-            timestamp: date(1),
-            point: GeoPoint(
-                latitude: 37,
-                longitude: 127,
-                altitude: 0,
-                horizontalAccuracy: 20,
-                verticalAccuracy: 5
+    func testMapRouteRefreshDropsReadingsFromAnotherDay() {
+        let previousDay = reading(-10, latitude: 36)
+        let currentDay = reading(10, latitude: 37)
+        let day = TimeSpan(start: date(0), end: date(1_439))
+
+        XCTAssertEqual(
+            MapHomeRouteReadingsPolicy.merging(
+                existing: [previousDay],
+                loaded: [currentDay],
+                in: day
             ),
-            locationFixQuality: .approximate,
-            gpsAvailable: false
+            [currentDay]
         )
-        let cached = reading(0, latitude: 37)
-
-        let loadedRouteCount = RouteTimelineDataEngine
-            .normalizedDisplayReadings([approximate]).count
-        let cachedRouteCount = RouteTimelineDataEngine
-            .normalizedDisplayReadings([cached]).count
-
-        XCTAssertFalse(
-            MapHomeRouteReadingsPolicy.shouldReplace(
-                existing: [cached],
-                loaded: [approximate]
-            )
-        )
-        XCTAssertEqual(loadedRouteCount, 1)
-        XCTAssertEqual(cachedRouteCount, 1)
     }
 
     func testMapRouteTaskUsesCalendarDayKey() {
@@ -422,6 +388,178 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(projection.segments.count, 2)
         XCTAssertEqual(projection.segments.map(\.start), [date(0), date(30)])
         XCTAssertEqual(projection.segments.map(\.end), [date(10), date(40)])
+    }
+
+    func testBackgroundWakePatternStillDrawsRecordedTravelCluster() {
+        let readings = [
+            reading(19 * 60 + 14, latitude: 37.56228),
+            reading(19 * 60 + 20, latitude: 37.56434),
+            reading(19 * 60 + 24, latitude: 37.56508),
+            reading(19 * 60 + 36, latitude: 37.57165),
+            reading(19 * 60 + 38, latitude: 37.57025),
+            reading(19 * 60 + 40, latitude: 37.56919),
+            reading(19 * 60 + 54, latitude: 37.55173),
+            reading(20 * 60 + 38, latitude: 37.52400),
+        ]
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 20 * 60 + 40,
+            actuals: [],
+            readings: readings,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(projection.samples.count, readings.count)
+        XCTAssertEqual(projection.segments.count, 1)
+        XCTAssertGreaterThanOrEqual(
+            projection.segments.flatMap(\.coordinates).count,
+            7
+        )
+    }
+
+    func testSparseGPSFilterKeepsPlaybackPointButDropsLongStraightLine() throws {
+        let readings = [
+            reading(0, latitude: 37),
+            reading(10, latitude: 37.02),
+        ]
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 10,
+            actuals: [],
+            readings: readings,
+            filtersSparseRouteConnections: true,
+            calendar: calendar
+        )
+
+        XCTAssertTrue(projection.segments.isEmpty)
+        XCTAssertEqual(
+            try XCTUnwrap(projection.coordinateAtCutoff).latitude,
+            37.02,
+            accuracy: 0.0001
+        )
+    }
+
+    func testConfirmedSubwayUsesStoredRouteForLineAndPlayback() throws {
+        let route = SubwayRoutePath(
+            stops: [
+                SubwayRouteStop(
+                    lineName: "공항철도",
+                    order: 0,
+                    stationName: "출발",
+                    latitude: 37,
+                    longitude: 127
+                ),
+                SubwayRouteStop(
+                    lineName: "공항철도",
+                    order: 1,
+                    stationName: "중간",
+                    latitude: 37.01,
+                    longitude: 127
+                ),
+                SubwayRouteStop(
+                    lineName: "공항철도",
+                    order: 2,
+                    stationName: "도착",
+                    latitude: 37.02,
+                    longitude: 127
+                ),
+            ],
+            lineNames: ["공항철도"],
+            transferStationNames: []
+        )
+        let travel = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: date(0), end: date(30)),
+            distanceMeters: 2_200,
+            confidence: .high,
+            evidence: ["사용자 확인"],
+            isConfirmed: true,
+            subwayRoute: route
+        )
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 15,
+            actuals: [],
+            travel: [travel],
+            readings: [
+                reading(0, latitude: 36.5),
+                reading(10, latitude: 36.6),
+                reading(20, latitude: 36.7),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(projection.coordinateAtCutoff).latitude,
+            37.01,
+            accuracy: 0.0001
+        )
+        XCTAssertTrue(
+            projection.segments.allSatisfy {
+                $0.confirmedSubwayTravelID == travel.id
+            }
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(
+                RouteTimelineDataEngine.confirmedSubwayCoordinates(
+                    for: travel,
+                    through: date(15)
+                ).last
+            ).latitude,
+            37.01,
+            accuracy: 0.0001
+        )
+    }
+
+    func testUnconfirmedSubwayKeepsGPSRoute() {
+        let route = SubwayRoutePath(
+            stops: [
+                SubwayRouteStop(
+                    lineName: "1호선",
+                    order: 0,
+                    stationName: "출발",
+                    latitude: 37,
+                    longitude: 127
+                ),
+                SubwayRouteStop(
+                    lineName: "1호선",
+                    order: 1,
+                    stationName: "도착",
+                    latitude: 37.01,
+                    longitude: 127
+                ),
+            ],
+            lineNames: ["1호선"],
+            transferStationNames: []
+        )
+        let travel = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: date(0), end: date(10)),
+            distanceMeters: 1_100,
+            confidence: .medium,
+            evidence: [],
+            isConfirmed: false,
+            subwayRoute: route
+        )
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 10,
+            actuals: [],
+            travel: [travel],
+            readings: [
+                reading(0, latitude: 36.5),
+                reading(10, latitude: 36.6),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertFalse(projection.segments.isEmpty)
+        XCTAssertTrue(
+            projection.segments.allSatisfy {
+                $0.confirmedSubwayTravelID == nil
+            }
+        )
+        XCTAssertEqual(projection.coordinateAtCutoff?.latitude, 36.6)
     }
 
     func testCategoryAtExactCutoffAndOngoingMidnightRecordAreIncluded() {

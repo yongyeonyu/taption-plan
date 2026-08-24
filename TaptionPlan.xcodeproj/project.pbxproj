@@ -110,6 +110,7 @@
 		A2000000000000000000000F /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000C /* InfoPlist.xcstrings */; };
 		A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000D /* LocalizationCatalogTests.swift */; };
 		A20000000000000000000011 /* DiagnosticsLogSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */; };
+		A30000000000000000000001 /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
@@ -294,6 +295,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -531,6 +533,7 @@
 			);
 			name = TaptionPlan;
 			packageProductDependencies = (
+				X30000000000000000000002 /* TaptionPlanCore */,
 			);
 			productName = TaptionPlan;
 			productReference = C10000000000000000000001 /* TaptionPlan.app */;
@@ -680,6 +683,7 @@
 				Base,
 			);
 			packageReferences = (
+				X30000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanCore" */,
 			);
 			mainGroup = 810000000000000000000001;
 			productRefGroup = 810000000000000000000002 /* Products */;
@@ -1288,6 +1292,21 @@
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		X30000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TaptionPlanCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		X30000000000000000000002 /* TaptionPlanCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = X30000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanCore" */;
+			productName = TaptionPlanCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCConfigurationList section */
 		710000000000000000000001 /* Build configuration list for PBXProject "TaptionPlan" */ = {

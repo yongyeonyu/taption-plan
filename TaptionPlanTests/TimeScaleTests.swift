@@ -411,6 +411,14 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(MapHomeSearchLayoutMath.playbackVisualSize, 40.74)
         XCTAssertEqual(MapHomeSearchLayoutMath.playbackTouchSize, 44)
+        XCTAssertEqual(
+            MapHomeSearchLayoutMath.searchWidth(
+                viewportWidth: 320,
+                horizontalInset: 10,
+                trailingControlCount: 2
+            ),
+            196
+        )
     }
 
     func testMapSearchResultsDoNotOccupyTheMapViewport() {
@@ -1991,27 +1999,64 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testLocationButtonDotFollowsTrackingStateNotCameraTransition() {
+    func testLocationButtonDotRequiresFollowingAndCenteredCamera() {
         XCTAssertEqual(
             MapHomeLocationButtonState.resolve(
                 hasLocation: false,
-                isFollowing: true
+                trackingMode: .idle,
+                isCentered: false
             ),
             .unavailable
         )
         XCTAssertEqual(
             MapHomeLocationButtonState.resolve(
                 hasLocation: true,
-                isFollowing: false
+                trackingMode: .locating,
+                isCentered: false
+            ),
+            .locating
+        )
+        XCTAssertEqual(
+            MapHomeLocationButtonState.resolve(
+                hasLocation: true,
+                trackingMode: .following,
+                isCentered: false
             ),
             .available
         )
         let following = MapHomeLocationButtonState.resolve(
             hasLocation: true,
-            isFollowing: true
+            trackingMode: .following,
+            isCentered: true
         )
         XCTAssertEqual(following, .following)
         XCTAssertTrue(following.showsTrackingDot)
+    }
+
+    func testMapDisplayStylePersistsAndMissingValueUsesStandard() throws {
+        var settings = AppFeatureSettings.defaults
+        settings.mapDisplayStyle = .hybrid
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                AppFeatureSettings.self,
+                from: JSONEncoder().encode(settings)
+            ).mapDisplayStyle,
+            .hybrid
+        )
+
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(settings)
+            ) as? [String: Any]
+        )
+        object.removeValue(forKey: "mapDisplayStyle")
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                AppFeatureSettings.self,
+                from: JSONSerialization.data(withJSONObject: object)
+            ).mapDisplayStyle,
+            .standard
+        )
     }
 
     func testMovementEditOptionsUseRequestedOrderAndRestoreStoredMode() {

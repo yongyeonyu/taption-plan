@@ -12,6 +12,8 @@ enum SensorCollectionLiveActivityError: Error, Equatable {
 }
 
 actor SensorCollectionLiveActivityController {
+    static let shared = SensorCollectionLiveActivityController()
+
     private var activity: Activity<SensorCollectionActivityAttributes>?
     private var lastPublishedAt: Date?
 

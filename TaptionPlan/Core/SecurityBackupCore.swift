@@ -4,6 +4,7 @@ import CommonCrypto
 import Foundation
 import LocalAuthentication
 import Security
+import TaptionPlanCore
 
 /// The local gate is deliberately separate from normal app use.  A PIN is a
 /// cloud-backup credential; it is not an app-login credential unless the user
@@ -390,6 +391,7 @@ struct PlanCloudBackupPayload: Codable, Equatable, Sendable {
     let version: Int
     let snapshot: TaptionDataSnapshot
     let routePoints: [PlanBackupRoutePoint]
+    let portableContent: TaptionPlanStorageEnvelopeV2?
 
     init(
         snapshot: TaptionDataSnapshot,
@@ -398,6 +400,71 @@ struct PlanCloudBackupPayload: Codable, Equatable, Sendable {
         version = Self.currentVersion
         self.snapshot = snapshot
         self.routePoints = routePoints
+        portableContent = try? Self.makePortableContent(from: snapshot)
+    }
+
+    private static func makePortableContent(
+        from snapshot: TaptionDataSnapshot
+    ) throws -> TaptionPlanStorageEnvelopeV2 {
+        var mediaByID: [String: TaptionPlanMediaReference] = [:]
+        for photo in snapshot.photos {
+            mediaByID[photo.id] = TaptionPlanMediaReference(
+                id: photo.id,
+                localIdentifier: photo.id,
+                capturedAt: photo.capturedAt
+            )
+        }
+        var links: [TaptionPlanContentLink] = []
+        let memos = try snapshot.memos.map { memo in
+            var linkedMediaIDs = Set<String>()
+            let mediaIDs = memo.attachments.compactMap { attachment -> String? in
+                guard attachment.kind == .photo else { return nil }
+                let id = attachment.localIdentifier
+                guard linkedMediaIDs.insert(id).inserted else { return nil }
+                if mediaByID[id] == nil {
+                    mediaByID[id] = TaptionPlanMediaReference(
+                        id: id,
+                        localIdentifier: id,
+                        capturedAt: attachment.createdAt
+                    )
+                }
+                links.append(
+                    TaptionPlanContentLink(
+                        from: .memo(memo.id),
+                        to: .media(id)
+                    )
+                )
+                return id
+            }
+            return try TaptionPlanMemoRecord(
+                id: memo.id,
+                occurredAt: memo.occurredAt,
+                text: memo.text,
+                mediaReferenceIDs: mediaIDs,
+                createdAt: memo.createdAt,
+                updatedAt: memo.updatedAt
+            )
+        }
+        let account = TaptionPlanExternalCalendarAccountIdentity(
+            provider: .apple,
+            accountID: "eventkit.local"
+        )
+        let calendars = snapshot.settings.selectedCalendarIDs.map {
+            TaptionPlanExternalCalendarIdentity(
+                account: account,
+                calendarID: $0
+            )
+        }
+        return try TaptionPlanStorageEnvelopeV2(
+            updatedAt: snapshot.updatedAt,
+            userContent: TaptionPlanUserContent(memos: memos),
+            externalCalendarPreferences: TaptionPlanExternalCalendarPreferences(
+                preferredProvider: calendars.isEmpty ? nil : .apple,
+                selectedCalendars: calendars
+            ),
+            mediaReferences: mediaByID.values.sorted { $0.id < $1.id },
+            contentLinks: links
+        )
     }
 }
 
@@ -450,6 +517,34 @@ enum PlanBackupRoutePointReducer {
         }
         return retained.compactMap(PlanBackupRoutePoint.init)
     }
+
+    static func merging(
+        existing: [PlanBackupRoutePoint],
+        incoming: [PlanBackupRoutePoint]
+    ) -> [PlanBackupRoutePoint] {
+        var readingsByID: [UUID: SensorReading] = [:]
+        for point in existing {
+            readingsByID[point.id] = point.sensorReading
+        }
+        for point in incoming {
+            readingsByID[point.id] = point.sensorReading
+        }
+        return reduce(Array(readingsByID.values))
+    }
+
+    static func restoring(
+        _ archives: [[PlanBackupRoutePoint]]
+    ) -> [PlanBackupRoutePoint] {
+        var pointsByID: [UUID: PlanBackupRoutePoint] = [:]
+        for points in archives {
+            for point in points {
+                pointsByID[point.id] = point
+            }
+        }
+        return pointsByID.values.sorted {
+            $0.sensorReading.timestamp < $1.sensorReading.timestamp
+        }
+    }
 }
 
 struct PlanMonthlyArchive: Codable, Equatable, Sendable {
@@ -482,40 +577,48 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
               payloadDigest == Data(SHA256.hash(data: encryptedPayload)) else {
             throw PlanSecurityError.invalidArchive
         }
-        do {
-            let archiveKey: Data
-            if let pinKeyData {
-                archiveKey = try Self.openKey(wrappedPayloadKey, with: pinKeyData)
-            } else if let accountKeyData {
-                archiveKey = try Self.openKey(
-                    accountWrappedPayloadKey,
-                    with: accountKeyData
-                )
-            } else {
-                throw PlanSecurityError.invalidArchive
+        var archiveKeys: [Data] = []
+        if let pinKeyData,
+           let key = try? Self.openKey(wrappedPayloadKey, with: pinKeyData) {
+            archiveKeys.append(key)
+        }
+        if let accountKeyData,
+           let key = try? Self.openKey(
+               accountWrappedPayloadKey,
+               with: accountKeyData
+           ), !archiveKeys.contains(key) {
+            archiveKeys.append(key)
+        }
+        for archiveKey in archiveKeys where archiveKey.count == 32 {
+            guard let payload = try? decodePayload(archiveKey: archiveKey) else {
+                continue
             }
-            guard archiveKey.count == 32 else {
-                throw PlanSecurityError.invalidArchive
-            }
-            let sealed = try AES.GCM.SealedBox(combined: encryptedPayload)
-            let compressed = try AES.GCM.open(
-                sealed,
-                using: SymmetricKey(data: archiveKey)
-            )
-            let data = TaptionSnapshotCompression.decode(compressed)
-            if let payload = try? JSONDecoder.taptionPlan.decode(
-                PlanCloudBackupPayload.self,
+            return payload
+        }
+        throw PlanSecurityError.invalidArchive
+    }
+
+    private func decodePayload(
+        archiveKey: Data
+    ) throws -> PlanCloudBackupPayload {
+        let sealed = try AES.GCM.SealedBox(combined: encryptedPayload)
+        let compressed = try AES.GCM.open(
+            sealed,
+            using: SymmetricKey(data: archiveKey)
+        )
+        let data = TaptionSnapshotCompression.decode(compressed)
+        if let payload = try? JSONDecoder.taptionPlan.decode(
+            PlanCloudBackupPayload.self,
+            from: data
+        ), payload.version == PlanCloudBackupPayload.currentVersion {
+            return payload
+        }
+        return PlanCloudBackupPayload(
+            snapshot: try JSONDecoder.taptionPlan.decode(
+                TaptionDataSnapshot.self,
                 from: data
-            ), payload.version == PlanCloudBackupPayload.currentVersion {
-                return payload
-            }
-            return PlanCloudBackupPayload(
-                snapshot: try JSONDecoder.taptionPlan.decode(
-                    TaptionDataSnapshot.self,
-                    from: data
-                )
             )
-        } catch { throw PlanSecurityError.invalidArchive }
+        )
     }
 
     func decodedSnapshot(
@@ -760,6 +863,13 @@ final class InMemoryPlanCloudAccountKeyProvider: PlanCloudAccountKeyProvider {
 protocol PlanCloudBackupStore: AnyObject {
     func save(_ archive: PlanMonthlyArchive, at path: PlanCloudBackupPath) throws
     func latest() throws -> PlanMonthlyArchive?
+    func allArchives() throws -> [PlanMonthlyArchive]
+}
+
+extension PlanCloudBackupStore {
+    func allArchives() throws -> [PlanMonthlyArchive] {
+        try latest().map { [$0] } ?? []
+    }
 }
 
 final class FilePlanCloudBackupStore: PlanCloudBackupStore {
@@ -785,13 +895,28 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
     }
 
     func latest() throws -> PlanMonthlyArchive? {
+        try allArchives().max { $0.monthKey < $1.monthKey }
+    }
+
+    func allArchives() throws -> [PlanMonthlyArchive] {
         let root = root.appendingPathComponent("Taption Plan", isDirectory: true)
-        guard let months = try? fileManager.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else { return nil }
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(
+            atPath: root.path,
+            isDirectory: &isDirectory
+        ) else { return [] }
+        guard isDirectory.boolValue else {
+            throw PlanSecurityError.invalidArchive
+        }
+        let months = try fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: nil
+        )
         return try months.compactMap { month in
-            guard month.pathExtension == "taptionbackup",
-                  let data = try? Data(contentsOf: month) else { return nil }
+            guard month.pathExtension == "taptionbackup" else { return nil }
+            let data = try Data(contentsOf: month)
             return try JSONDecoder.taptionPlan.decode(PlanMonthlyArchive.self, from: data)
-        }.max { $0.monthKey < $1.monthKey }
+        }
     }
 }
 
@@ -818,6 +943,10 @@ final class UbiquitousPlanCloudBackupStore: PlanCloudBackupStore {
         try fileStore().latest()
     }
 
+    func allArchives() throws -> [PlanMonthlyArchive] {
+        try fileStore().allArchives()
+    }
+
     private func fileStore() throws -> FilePlanCloudBackupStore {
         guard let container = fileManager.url(
             forUbiquityContainerIdentifier: containerIdentifier
@@ -841,6 +970,10 @@ final class InMemoryPlanCloudBackupStore: PlanCloudBackupStore {
     func save(_ archive: PlanMonthlyArchive, at path: PlanCloudBackupPath) throws { archives[path.monthKey] = archive }
     func latest() throws -> PlanMonthlyArchive? {
         archives.values.max { $0.monthKey < $1.monthKey }
+    }
+
+    func allArchives() throws -> [PlanMonthlyArchive] {
+        Array(archives.values)
     }
 }
 
@@ -1023,11 +1156,19 @@ final class PlanSecurityBackupService {
         accountKey: Data?,
         date: Date
     ) throws -> PlanMonthlyArchive {
-        let encoded = try JSONEncoder.taptionPlan.encode(payload)
-        let compressed = TaptionSnapshotCompression.encode(encoded)
         guard let verifier else {
             throw PlanSecurityError.pinRequiredForCloudBackup
         }
+        let monthKey = PlanArchiveSchedule.monthKey(for: date)
+        let payload = try payloadPreservingCurrentMonthRoutes(
+            payload,
+            monthKey: monthKey,
+            accountIdentifier: accountIdentifier,
+            pinKeyData: verifier.keyMaterial,
+            accountKeyData: accountKey
+        )
+        let encoded = try JSONEncoder.taptionPlan.encode(payload)
+        let compressed = TaptionSnapshotCompression.encode(encoded)
         let archiveKey = try Self.randomKey()
         let encryptedPayload = try AES.GCM.seal(
             compressed,
@@ -1042,9 +1183,45 @@ final class PlanSecurityBackupService {
         } else {
             accountWrappedPayloadKey = Data()
         }
-        let archive = PlanMonthlyArchive(monthKey: PlanArchiveSchedule.monthKey(for: date), accountIdentifier: accountIdentifier, encryptedPayload: encryptedPayload, wrappedPayloadKey: wrappedPayloadKey, accountWrappedPayloadKey: accountWrappedPayloadKey, createdAt: date)
+        let archive = PlanMonthlyArchive(monthKey: monthKey, accountIdentifier: accountIdentifier, encryptedPayload: encryptedPayload, wrappedPayloadKey: wrappedPayloadKey, accountWrappedPayloadKey: accountWrappedPayloadKey, createdAt: date)
         try backupStore.save(archive, at: PlanCloudBackupPath(monthKey: archive.monthKey))
         return archive
+    }
+
+    private func payloadPreservingCurrentMonthRoutes(
+        _ incoming: PlanCloudBackupPayload,
+        monthKey: String,
+        accountIdentifier: String,
+        pinKeyData: Data,
+        accountKeyData: Data?
+    ) throws -> PlanCloudBackupPayload {
+        guard let existingArchive = try backupStore.allArchives().first(
+            where: { $0.monthKey == monthKey }
+        ) else {
+            return incoming
+        }
+        guard existingArchive.accountIdentifier == accountIdentifier else {
+            throw PlanSecurityError.accountMismatch
+        }
+
+        let existing: PlanCloudBackupPayload
+        do {
+            existing = try existingArchive.decodedPayload(
+                pinKeyData: pinKeyData
+            )
+        } catch {
+            guard let accountKeyData else { throw error }
+            existing = try existingArchive.decodedPayload(
+                accountKeyData: accountKeyData
+            )
+        }
+        return PlanCloudBackupPayload(
+            snapshot: incoming.snapshot,
+            routePoints: PlanBackupRoutePointReducer.merging(
+                existing: existing.routePoints,
+                incoming: incoming.routePoints
+            )
+        )
     }
 
     func loadLatestArchive(accountIdentifier: String) throws -> TaptionDataSnapshot {
@@ -1084,8 +1261,16 @@ final class PlanSecurityBackupService {
                 accountIdentifier: accountIdentifier,
                 accountKeyData: accountKey
             )
+            let currentMonth = PlanBackupRoutePointReducer.backupSpan(
+                containing: .now
+            )
             _ = try? saveMonthlyArchive(
-                payload,
+                PlanCloudBackupPayload(
+                    snapshot: payload.snapshot,
+                    routePoints: payload.routePoints.filter {
+                        currentMonth.contains($0.sensorReading.timestamp)
+                    }
+                ),
                 accountIdentifier: accountIdentifier,
                 accountKey: accountKey,
                 date: .now
@@ -1131,11 +1316,37 @@ final class PlanSecurityBackupService {
         accountKeyData: Data? = nil
     ) throws -> PlanCloudBackupPayload {
         guard !accountIdentifier.isEmpty else { throw PlanSecurityError.accountUnavailable }
-        guard let archive = try backupStore.latest() else { throw PlanSecurityError.archiveNotFound }
-        guard archive.accountIdentifier == accountIdentifier else { throw PlanSecurityError.accountMismatch }
-        return try archive.decodedPayload(
+        let archives = try backupStore.allArchives().sorted {
+            if $0.monthKey == $1.monthKey {
+                return $0.createdAt < $1.createdAt
+            }
+            return $0.monthKey < $1.monthKey
+        }
+        guard let latest = archives.last else {
+            throw PlanSecurityError.archiveNotFound
+        }
+        guard latest.accountIdentifier == accountIdentifier else {
+            throw PlanSecurityError.accountMismatch
+        }
+        let latestPayload = try latest.decodedPayload(
             pinKeyData: pinKeyData,
             accountKeyData: accountKeyData
+        )
+        let routeArchives = try archives.map { archive -> [PlanBackupRoutePoint] in
+            guard archive.accountIdentifier == accountIdentifier else {
+                throw PlanSecurityError.accountMismatch
+            }
+            if archive == latest {
+                return latestPayload.routePoints
+            }
+            return try archive.decodedPayload(
+                pinKeyData: pinKeyData,
+                accountKeyData: accountKeyData
+            ).routePoints
+        }
+        return PlanCloudBackupPayload(
+            snapshot: latestPayload.snapshot,
+            routePoints: PlanBackupRoutePointReducer.restoring(routeArchives)
         )
     }
 

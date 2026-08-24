@@ -10,8 +10,8 @@ struct AppShellView: View {
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
     @State private var model = AppModel()
     @State private var proAccess = TaptionProAccessController()
-    @State private var sensorLiveActivityController =
-        SensorCollectionLiveActivityController()
+    private let sensorLiveActivityController =
+        SensorCollectionLiveActivityController.shared
     @State private var showsMapHome = true
     @State private var isSecurityStateReady = false
     @State private var hasCompletedInitialProRefresh = false
@@ -364,49 +364,16 @@ struct AppShellView: View {
     }
 
     private func reconcileSensorLiveActivity() async {
-        let kinds = sensorCollectionKinds
-        guard proAccess.grantsAccess,
-              model.sensorCollectionSessionState == .collecting,
-              let sessionID = model.sensorCollectionSessionID,
-              let startedAt = model.sensorCollectionStartedAt else {
-            await sensorLiveActivityController.removeExpired()
+        guard proAccess.grantsAccess else {
             await sensorLiveActivityController.stop(
                 lastSavedAt: model.lastSensorSavedAt,
-                collectionKinds: kinds
+                collectionKinds: []
             )
             return
         }
-
-        _ = try? await sensorLiveActivityController.reconcile(
-            sessionID: sessionID,
-            startedAt: startedAt,
-            lastSavedAt: model.lastSensorSavedAt,
-            collectionKinds: kinds,
-            isCollecting: true,
-            isForeground: scenePhase == .active,
-            intervalSeconds: model.settings.gpsLoggingPreferences
-                .effectiveIntervalSeconds
+        await model.reconcileSensorCollectionLiveActivity(
+            isForeground: scenePhase == .active
         )
-    }
-
-    private var sensorCollectionKinds: [String] {
-        var kinds = ["location"]
-        if let availability = model.sensorAvailability {
-            if availability.motionActivity || availability.deviceMotion {
-                kinds.append("motion")
-            }
-            if availability.relativeAltitude {
-                kinds.append("altitude")
-            }
-            if availability.stepCounting {
-                kinds.append("steps")
-            }
-        }
-        if model.settings.healthEnabled {
-            kinds.append("health")
-        }
-        kinds.append("wifi")
-        return kinds
     }
 
     private func handleOpenURL(_ url: URL) {

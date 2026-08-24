@@ -3206,6 +3206,12 @@ struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
     var hex: String
 }
 
+enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
+    case standard
+    case hybrid
+    case imagery
+}
+
 enum MapUserActivityIconCatalog {
     static let candidates = [
         "tag.fill", "star.fill", "heart.fill", "bolt.fill",
@@ -3252,6 +3258,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     /// categories. Missing values intentionally keep the shared defaults.
     var mapCategoryColors: [String: String]
     var mapUserActivityCategories: [MapUserActivityCategory]
+    var mapDisplayStyle: MapDisplayStyle
     var watchAccelerationProfile: TaptionWatchAccelerationProfile
     var watchDataSyncProfile: TaptionWatchDataSyncProfile
     var floorCalibration: FloorCalibration?
@@ -3291,6 +3298,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         gpsLoggingPreferences: .standard,
         mapCategoryColors: [:],
         mapUserActivityCategories: [],
+        mapDisplayStyle: .standard,
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,
         floorCalibration: nil,
@@ -3328,6 +3336,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         gpsLoggingPreferences: GPSLoggingPreferences = .standard,
         mapCategoryColors: [String: String] = [:],
         mapUserActivityCategories: [MapUserActivityCategory] = [],
+        mapDisplayStyle: MapDisplayStyle = .standard,
         watchAccelerationProfile: TaptionWatchAccelerationProfile = .off,
         watchDataSyncProfile: TaptionWatchDataSyncProfile = .off,
         floorCalibration: FloorCalibration? = nil,
@@ -3365,6 +3374,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.mapUserActivityCategories = Self.normalizedMapUserActivityCategories(
             mapUserActivityCategories
         )
+        self.mapDisplayStyle = mapDisplayStyle
         self.watchAccelerationProfile = watchAccelerationProfile
         self.watchDataSyncProfile = watchDataSyncProfile
         self.floorCalibration = floorCalibration
@@ -3404,6 +3414,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case gpsLoggingPreferences
         case mapCategoryColors
         case mapUserActivityCategories
+        case mapDisplayStyle
         case watchAccelerationProfile
         case watchDataSyncProfile
         case floorCalibration
@@ -3487,6 +3498,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                 forKey: .mapUserActivityCategories
             ) ?? defaults.mapUserActivityCategories
         )
+        mapDisplayStyle = try values.decodeIfPresent(
+            MapDisplayStyle.self,
+            forKey: .mapDisplayStyle
+        ) ?? defaults.mapDisplayStyle
         watchAccelerationProfile = try values.decodeIfPresent(
             TaptionWatchAccelerationProfile.self,
             forKey: .watchAccelerationProfile

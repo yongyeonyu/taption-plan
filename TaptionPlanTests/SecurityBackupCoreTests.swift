@@ -247,7 +247,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try reinstalled.setPIN("1234")
+        try reinstalled.setPIN("9876")
         let restored = try await reinstalled.loadLatestBackup()
 
         XCTAssertEqual(
@@ -265,6 +265,214 @@ final class SecurityBackupCoreTests: XCTestCase {
                        originalTransit.createdAt.timeIntervalSince1970,
                        accuracy: 0.001)
         XCTAssertEqual(restored.routePoints.map(\.id), [reading.id])
+    }
+
+    func testPortableBackupDeduplicatesPhotoAndMemoMediaReferences() throws {
+        let photoID = "photos-asset-1"
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.photos = [
+            PhotoMoment(
+                id: photoID,
+                capturedAt: Date(timeIntervalSince1970: 100),
+                pixelWidth: 100,
+                pixelHeight: 100,
+                isFavorite: false,
+                isHiddenFromTimeline: false
+            ),
+            PhotoMoment(
+                id: photoID,
+                capturedAt: Date(timeIntervalSince1970: 101),
+                pixelWidth: 200,
+                pixelHeight: 200,
+                isFavorite: true,
+                isHiddenFromTimeline: false
+            ),
+        ]
+        snapshot.memos = [
+            ActionMemo(
+                kind: .idea,
+                text: "사진 메모",
+                attachments: [
+                    MemoAttachment(
+                        kind: .photo,
+                        localIdentifier: photoID
+                    ),
+                    MemoAttachment(
+                        kind: .photo,
+                        localIdentifier: photoID
+                    ),
+                ]
+            ),
+        ]
+
+        let portable = try XCTUnwrap(
+            PlanCloudBackupPayload(snapshot: snapshot).portableContent
+        )
+        XCTAssertEqual(portable.mediaReferences.map(\.id), [photoID])
+        XCTAssertEqual(portable.userContent.memos[0].mediaReferenceIDs, [photoID])
+        XCTAssertEqual(portable.contentLinks.count, 1)
+    }
+
+    func testSameMonthBackupMergesGPSAndKeepsLatestFullSettings() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let service = makeService(backupStore: backupStore)
+        try service.setPIN("1234")
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 9 * 3_600)!
+        let firstDate = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 8,
+            day: 3,
+            hour: 9
+        ))!
+        let latestDate = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 8,
+            day: 24,
+            hour: 19
+        ))!
+        let oldReading = SensorReading(
+            timestamp: firstDate,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 10,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            )
+        )
+        _ = try service.saveMonthlyArchive(
+            PlanCloudBackupPayload(
+                snapshot: .empty,
+                routePoints: PlanBackupRoutePointReducer.reduce([oldReading])
+            ),
+            accountIdentifier: "account-a",
+            date: firstDate
+        )
+
+        var latestSnapshot = TaptionDataSnapshot.empty
+        latestSnapshot.settings.locationEnabled = true
+        latestSnapshot.settings.weatherEnabled = true
+        latestSnapshot.settings.weatherSidebarVisible = false
+        latestSnapshot.settings.frequentPlaces[0].point = GeoPoint(
+            latitude: 37.5665,
+            longitude: 126.978,
+            altitude: 12,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        latestSnapshot.settings.userTransitLocations = [
+            UserTransitLocation(
+                name: "시청역",
+                kind: .subwayStation,
+                point: GeoPoint(
+                    latitude: 37.5657,
+                    longitude: 126.9769,
+                    altitude: 0,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: -1
+                )
+            ),
+        ]
+        let latestReading = SensorReading(
+            timestamp: latestDate,
+            point: latestSnapshot.settings.frequentPlaces[0].point
+        )
+        _ = try service.saveMonthlyArchive(
+            PlanCloudBackupPayload(
+                snapshot: latestSnapshot,
+                routePoints: PlanBackupRoutePointReducer.reduce([
+                    latestReading,
+                ])
+            ),
+            accountIdentifier: "account-a",
+            date: latestDate
+        )
+
+        let restored = try service.loadLatestBackup(
+            accountIdentifier: "account-a"
+        )
+        XCTAssertEqual(
+            Set(restored.routePoints.map(\.id)),
+            Set([oldReading.id, latestReading.id])
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let encodedSettings = try encoder.encode(latestSnapshot.settings)
+        XCTAssertEqual(
+            restored.snapshot.settings,
+            try decoder.decode(AppFeatureSettings.self, from: encodedSettings)
+        )
+    }
+
+    func testBackupRestoreCombinesRoutesAcrossMonthlyArchives() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let service = makeService(backupStore: backupStore)
+        try service.setPIN("1234")
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 9 * 3_600)!
+        let july = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 31,
+            hour: 23
+        ))!
+        let august = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 8,
+            day: 24,
+            hour: 19
+        ))!
+        let julyReading = SensorReading(
+            timestamp: july,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 10,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            )
+        )
+        let augustReading = SensorReading(
+            timestamp: august,
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127,
+                altitude: 12,
+                horizontalAccuracy: 7,
+                verticalAccuracy: 10
+            )
+        )
+        _ = try service.saveMonthlyArchive(
+            PlanCloudBackupPayload(
+                snapshot: .empty,
+                routePoints: PlanBackupRoutePointReducer.reduce([
+                    julyReading,
+                ])
+            ),
+            accountIdentifier: "account-a",
+            date: july
+        )
+        _ = try service.saveMonthlyArchive(
+            PlanCloudBackupPayload(
+                snapshot: .empty,
+                routePoints: PlanBackupRoutePointReducer.reduce([
+                    augustReading,
+                ])
+            ),
+            accountIdentifier: "account-a",
+            date: august
+        )
+
+        let restored = try service.loadLatestBackup(
+            accountIdentifier: "account-a"
+        )
+        XCTAssertEqual(
+            restored.routePoints.map(\.id),
+            [julyReading.id, augustReading.id]
+        )
     }
 
     func testBackupPayloadKeepsTravel() throws {
