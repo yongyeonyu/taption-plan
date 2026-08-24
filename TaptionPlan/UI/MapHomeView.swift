@@ -899,6 +899,8 @@ struct MapHomeView: View {
         }
         .task(id: MapHomeRouteReadingsPolicy.dayKey(for: model.selectedDate)) {
             let date = model.selectedDate
+            prepareRouteProjectionReadings()
+            refreshRouteProjection()
             await refreshRouteReadings(for: date)
             while !Task.isCancelled {
                 refreshTimeRailSegments()
@@ -940,6 +942,9 @@ struct MapHomeView: View {
                 routeProjection = nil
                 timelineRouteOverlays = []
                 historicalPlaybackPoint = nil
+                prepareRouteProjectionReadings()
+                refreshRouteProjection()
+                refreshHistoricalPlaybackPoint()
             } else {
                 prepareRouteProjectionReadings()
                 refreshRouteProjection()

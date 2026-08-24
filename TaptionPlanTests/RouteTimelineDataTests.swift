@@ -107,6 +107,28 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
+    func testPastDayFullCutoffKeepsRouteVisible() throws {
+        let dayEnd = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: calendar.startOfDay(for: date(0))
+        )!
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            through: dayEnd,
+            actuals: [],
+            readings: [
+                reading(0, latitude: 37),
+                reading(10, latitude: 38),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(projection.cutoff, dayEnd)
+        XCTAssertFalse(projection.segments.isEmpty)
+        XCTAssertEqual(projection.segments.first?.coordinates.count, 2)
+    }
+
     func testProjectClipsAtTimelineAndDimsPastCategory() throws {
         let activity = ActualRecord(
             planID: nil,
