@@ -959,6 +959,15 @@ struct MapHomeView: View {
             refreshTimeRailSegments()
             refreshRouteProjection()
         }
+        .onChange(of: model.snapshot.travel) { _, _ in
+            prepareRouteProjectionReadings()
+            refreshRouteProjection()
+            refreshHistoricalPlaybackPoint()
+        }
+        .onChange(of: model.isBootstrapped) { _, isBootstrapped in
+            guard isBootstrapped else { return }
+            Task { await refreshRouteReadings(for: model.selectedDate) }
+        }
         .onChange(of: model.backupRestoreRevision) { _, _ in
             Task { await refreshRouteReadings(for: model.selectedDate) }
         }
@@ -1796,7 +1805,11 @@ struct MapHomeView: View {
                 )
             }
         }
-        .frame(width: Layout.timeRailWidth)
+        .frame(
+            width: MapHomeTimeSidebarMath.totalWidth(
+                railWidth: Layout.timeRailWidth
+            )
+        )
         .frame(maxHeight: .infinity, alignment: .trailing)
     }
 
@@ -3288,10 +3301,25 @@ struct MapHomeView: View {
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
             ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let sourceReadings = routeReadings
+            + model.liveRouteState.readings
+            + (model.latestSensorReading.map { [$0] } ?? [])
+        let normalizedSourceReadings = RouteTimelineDataEngine
+            .normalizedReadings(sourceReadings)
+            .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
+        let fallbackReadings: [SensorReading]
+        if normalizedSourceReadings.count < 2 {
+            fallbackReadings = PlanBackupRouteFallbackEngine.readings(
+                travel: model.snapshot.travel,
+                places: model.snapshot.places,
+                in: TimeSpan(start: dayStart, end: dayEnd),
+                supplementing: sourceReadings
+            )
+        } else {
+            fallbackReadings = []
+        }
         normalizedRouteReadings = RouteTimelineDataEngine.normalizedReadings(
-            routeReadings
-                + model.liveRouteState.readings
-                + (model.latestSensorReading.map { [$0] } ?? [])
+            sourceReadings + fallbackReadings
         ).filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
         displayRouteReadings = RouteTimelineDataEngine.displayReadings(
             from: normalizedRouteReadings

@@ -1241,21 +1241,24 @@ struct MapHomeTimeSidebar: View {
                 .contentShape(Rectangle())
                 .position(x: interactionFrame.midX, y: hitCenterY)
                 .highPriorityGesture(
+                    dragGesture(
+                        trackHeight: trackHeight,
+                        maxMinute: maxMinute,
+                        visibleWindow: visibleWindow
+                    )
+                )
+                .simultaneousGesture(
                     TapGesture(count: 2).onEnded {
                         onSectionEdit?(minute)
                     }
                 )
-                .simultaneousGesture(dragGesture(
-                    trackHeight: trackHeight,
-                    maxMinute: maxMinute,
-                    visibleWindow: visibleWindow
-                ))
                 .accessibilityLabel(
                     activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
                 )
                 .accessibilityHint("두 번 탭하면 섹션 편집을 엽니다")
         }
         .frame(width: totalWidth, height: railHeight)
+        .zIndex(3)
     }
 
     private func compactWeather(
