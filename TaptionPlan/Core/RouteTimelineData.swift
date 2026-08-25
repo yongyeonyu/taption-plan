@@ -83,7 +83,6 @@ struct ExpectedRouteRequest: Identifiable, Hashable, Sendable {
 /// Produces display-only network-route requests. The returned requests never
 /// replace archived GPS points or mutate classified travel segments.
 enum ExpectedRouteRequestEngine {
-    static let endpointSearchMargin: TimeInterval = 15 * 60
     static let minimumRouteDistanceMeters: Double = 20
 
     static func requests(
@@ -101,9 +100,7 @@ enum ExpectedRouteRequestEngine {
                 guard let point = reading.point else { return false }
                 return isValid(point)
                     && reading.timestamp >= day.start
-                        .addingTimeInterval(-endpointSearchMargin)
                     && reading.timestamp <= day.end
-                        .addingTimeInterval(endpointSearchMargin)
             }
             .sorted { $0.timestamp < $1.timestamp }
 
@@ -113,7 +110,11 @@ enum ExpectedRouteRequestEngine {
                 guard segment.span.intersection(with: day) != nil,
                       segment.span.start < cutoff,
                       let transport = transport(for: segment),
-                      !usesStoredSubwayPath(segment) else { return nil }
+                      !usesStoredSubwayPath(segment),
+                      TaptionRouteEngineAdapter.allowsDottedRoute(
+                          for: segment,
+                          readings: orderedReadings
+                      ) else { return nil }
 
                 let visibleEnd = min(segment.span.end, cutoff)
                 guard segment.span.start < visibleEnd else { return nil }
@@ -123,30 +124,30 @@ enum ExpectedRouteRequestEngine {
                 )
                 let readingsInSegment = orderedReadings.filter {
                     $0.timestamp >= visibleSpan.start
-                        .addingTimeInterval(-endpointSearchMargin)
                         && $0.timestamp <= visibleSpan.end
-                            .addingTimeInterval(endpointSearchMargin)
                 }
 
-                let start = segment.fromPlaceID
-                    .flatMap { placesByID[$0]?.point }
-                    .flatMap { isValid($0) ? $0 : nil }
-                    ?? nearestPoint(
-                        to: visibleSpan.start,
-                        in: readingsInSegment
+                let start = readingsInSegment
+                    .first(where: reliableLocationReading)?
+                    .point
+                    ?? confirmedPlacePoint(
+                        id: segment.fromPlaceID,
+                        segment: segment,
+                        placesByID: placesByID
                     )
                 let end: GeoPoint?
                 if visibleEnd < segment.span.end {
                     end = readingsInSegment
-                        .last(where: { $0.timestamp <= visibleEnd })?
+                        .last(where: reliableLocationReading)?
                         .point
                 } else {
-                    end = segment.toPlaceID
-                        .flatMap { placesByID[$0]?.point }
-                        .flatMap { isValid($0) ? $0 : nil }
-                        ?? nearestPoint(
-                            to: visibleSpan.end,
-                            in: readingsInSegment
+                    end = readingsInSegment
+                        .last(where: reliableLocationReading)?
+                        .point
+                        ?? confirmedPlacePoint(
+                            id: segment.toPlaceID,
+                            segment: segment,
+                            placesByID: placesByID
                         )
                 }
 
@@ -186,14 +187,26 @@ enum ExpectedRouteRequestEngine {
         }
     }
 
-    private static func nearestPoint(
-        to date: Date,
-        in readings: [SensorReading]
+    private static func reliableLocationReading(
+        _ reading: SensorReading
+    ) -> Bool {
+        guard let point = reading.point else { return false }
+        return isValid(point)
+            && reading.locationFixQuality != .approximate
+            && (point.horizontalAccuracy < 0
+                || point.horizontalAccuracy <= 150)
+    }
+
+    private static func confirmedPlacePoint(
+        id: UUID?,
+        segment: TravelSegment,
+        placesByID: [UUID: PlaceStay]
     ) -> GeoPoint? {
-        readings.min {
-            abs($0.timestamp.timeIntervalSince(date))
-                < abs($1.timestamp.timeIntervalSince(date))
-        }?.point
+        guard segment.isConfirmed,
+              let id,
+              let point = placesByID[id]?.point,
+              isValid(point) else { return nil }
+        return point
     }
 
     private static func isValid(_ point: GeoPoint) -> Bool {

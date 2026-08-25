@@ -1,9 +1,9 @@
 {
   "images" : [
     {
-      "filename" : "TaptionPlanLaunchCat.png",
+      "filename" : "TaptionSplashIcon.png",
       "idiom" : "universal",
-      "scale" : "3x"
+      "scale" : "1x"
     }
   ],
   "info" : {

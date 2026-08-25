@@ -2,10 +2,43 @@ import CloudKit
 import Compression
 import Foundation
 import OSLog
+#if canImport(TaptionPlanCore)
+import TaptionPlanCore
+#endif
 
 protocol PlanDataRepository: Sendable {
     func load() async throws -> TaptionDataSnapshot
     func save(_ snapshot: TaptionDataSnapshot) async throws
+}
+
+enum TaptionLocalDatabaseLocation {
+    static let fileName = "taption-data-v2.sqlite"
+
+    static func sharedOrApplicationSupport(
+        fileManager: FileManager = .default
+    ) throws -> URL {
+        if let directory = fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier:
+                TaptionWidgetSharedStore.appGroupIdentifier
+        ) {
+            return directory.appendingPathComponent(fileName)
+        }
+        let root = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let directory = root.appendingPathComponent(
+            "TaptionPlan",
+            isDirectory: true
+        )
+        try fileManager.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        return directory.appendingPathComponent(fileName)
+    }
 }
 
 actor MigratingPlanRepository: PlanDataRepository {
@@ -172,8 +205,18 @@ actor FilePlanRepository: PlanDataRepository {
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
         encoder.outputFormatting = [.sortedKeys]
-        encoder.dateEncodingStrategy = .secondsSince1970
-        decoder.dateDecodingStrategy = .secondsSince1970
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(date.timeIntervalSinceReferenceDate.bitPattern)
+        }
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            return Date(
+                timeIntervalSinceReferenceDate: Double(
+                    bitPattern: try container.decode(UInt64.self)
+                )
+            )
+        }
     }
 
     static func applicationSupport(
@@ -305,6 +348,179 @@ actor FilePlanRepository: PlanDataRepository {
         return (snapshot, storedData.count, data.count)
     }
 }
+
+#if canImport(TaptionPlanCore)
+actor SQLitePlanRepository: PlanDataRepository {
+    private static let metadataDomain = "plan.metadata"
+    private static let day = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+
+    private let store: TaptionPlanDayStore
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
+    private var nextRevision: UInt64 = 0
+
+    init(databaseURL: URL) throws {
+        self.store = try TaptionPlanDayStore(url: databaseURL)
+        self.encoder = JSONEncoder()
+        self.decoder = JSONDecoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .secondsSince1970
+        decoder.dateDecodingStrategy = .secondsSince1970
+    }
+
+    static func applicationSupport(
+        fileManager: FileManager = .default
+    ) throws -> SQLitePlanRepository {
+        let root = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let directory = root.appendingPathComponent("TaptionPlan", isDirectory: true)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        return try SQLitePlanRepository(
+            databaseURL: directory.appendingPathComponent(
+                TaptionLocalDatabaseLocation.fileName
+            )
+        )
+    }
+
+    static func appGroup(
+        identifier: String = TaptionWidgetSharedStore.appGroupIdentifier,
+        fileManager: FileManager = .default
+    ) throws -> SQLitePlanRepository {
+        guard let directory = fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier: identifier
+        ) else {
+            throw RepositoryError.appGroupUnavailable
+        }
+        return try SQLitePlanRepository(
+            databaseURL: directory.appendingPathComponent(
+                TaptionLocalDatabaseLocation.fileName
+            )
+        )
+    }
+
+    func load() async throws -> TaptionDataSnapshot {
+        try await loadFromStore()
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        var value = snapshot
+        value.updatedAt = .now
+        let existingRows = try await store.snapshots(day: Self.day)
+        let rowsByDomain = Dictionary(
+            uniqueKeysWithValues: existingRows.map { ($0.domain, $0) }
+        )
+        let revisions = Dictionary(
+            uniqueKeysWithValues: existingRows.map { ($0.domain, $0.revision) }
+        )
+        var writes: [TaptionPlanDayStore.Snapshot] = []
+
+        try append(
+            domain: Self.metadataDomain,
+            value: Metadata(schemaVersion: value.schemaVersion, updatedAt: value.updatedAt),
+            existingPayload: rowsByDomain[Self.metadataDomain]?.payload,
+            force: true,
+            revisions: revisions,
+            to: &writes
+        )
+        try append(domain: "plan.plans", value: value.plans, existingPayload: rowsByDomain["plan.plans"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.actuals", value: value.actuals, existingPayload: rowsByDomain["plan.actuals"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.recordLinks", value: value.recordLinks, existingPayload: rowsByDomain["plan.recordLinks"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.memos", value: value.memos, existingPayload: rowsByDomain["plan.memos"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.categories", value: value.categories, existingPayload: rowsByDomain["plan.categories"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.photos", value: value.photos, existingPayload: rowsByDomain["plan.photos"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.calendarEvents", value: value.calendarEvents, existingPayload: rowsByDomain["plan.calendarEvents"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.weather", value: value.weather, existingPayload: rowsByDomain["plan.weather"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.places", value: value.places, existingPayload: rowsByDomain["plan.places"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.travel", value: value.travel, existingPayload: rowsByDomain["plan.travel"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.floorTransitions", value: value.floorTransitions, existingPayload: rowsByDomain["plan.floorTransitions"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.yearlyReports", value: value.yearlyReports, existingPayload: rowsByDomain["plan.yearlyReports"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.settings", value: value.settings, existingPayload: rowsByDomain["plan.settings"]?.payload, revisions: revisions, to: &writes)
+        guard !writes.isEmpty else { return }
+        try await store.saveSnapshots(writes)
+        nextRevision = max(nextRevision, writes.map(\.revision).max() ?? 0)
+    }
+
+    private struct Metadata: Codable, Equatable, Sendable {
+        let schemaVersion: Int
+        let updatedAt: Date
+    }
+
+    private func loadFromStore() async throws -> TaptionDataSnapshot {
+        let rows = try await store.snapshots(day: Self.day)
+        guard !rows.isEmpty else { return .empty }
+        let value = try snapshot(from: rows)
+        nextRevision = max(nextRevision, rows.map(\.revision).max() ?? 0)
+        return value
+    }
+
+    private func snapshot(
+        from rows: [TaptionPlanDayStore.Snapshot]
+    ) throws -> TaptionDataSnapshot {
+        var value = TaptionDataSnapshot.empty
+        let rowByDomain = Dictionary(uniqueKeysWithValues: rows.map { ($0.domain, $0) })
+        if let metadata = rowByDomain[Self.metadataDomain] {
+            let decoded = try decoder.decode(Metadata.self, from: metadata.payload)
+            value.schemaVersion = decoded.schemaVersion
+            value.updatedAt = decoded.updatedAt
+        }
+        try decode("plan.plans", from: rowByDomain, into: &value.plans)
+        try decode("plan.actuals", from: rowByDomain, into: &value.actuals)
+        try decode("plan.recordLinks", from: rowByDomain, into: &value.recordLinks)
+        try decode("plan.memos", from: rowByDomain, into: &value.memos)
+        try decode("plan.categories", from: rowByDomain, into: &value.categories)
+        try decode("plan.photos", from: rowByDomain, into: &value.photos)
+        try decode("plan.calendarEvents", from: rowByDomain, into: &value.calendarEvents)
+        try decode("plan.weather", from: rowByDomain, into: &value.weather)
+        try decode("plan.places", from: rowByDomain, into: &value.places)
+        try decode("plan.travel", from: rowByDomain, into: &value.travel)
+        try decode("plan.floorTransitions", from: rowByDomain, into: &value.floorTransitions)
+        try decode("plan.yearlyReports", from: rowByDomain, into: &value.yearlyReports)
+        try decode("plan.settings", from: rowByDomain, into: &value.settings)
+        guard value.schemaVersion <= TaptionDataSnapshot.empty.schemaVersion else {
+            throw RepositoryError.unsupportedSchema(value.schemaVersion)
+        }
+        return value
+    }
+
+    private func decode<Value: Decodable>(
+        _ domain: String,
+        from rows: [String: TaptionPlanDayStore.Snapshot],
+        into value: inout Value
+    ) throws {
+        guard let row = rows[domain] else { return }
+        value = try decoder.decode(Value.self, from: row.payload)
+    }
+
+    private func append<Value: Encodable>(
+        domain: String,
+        value: Value,
+        existingPayload: Data?,
+        force: Bool = false,
+        revisions: [String: UInt64],
+        to writes: inout [TaptionPlanDayStore.Snapshot]
+    ) throws {
+        let payload = try encoder.encode(value)
+        guard force || payload != existingPayload else { return }
+        let currentRevision = revisions[domain] ?? 0
+        guard currentRevision < UInt64.max else {
+            throw TaptionPlanDayStoreError.revisionOverflow
+        }
+        writes.append(
+            .init(
+                domain: domain,
+                day: Self.day,
+                revision: currentRevision + 1,
+                updatedAt: .now,
+                payload: payload
+            )
+        )
+    }
+}
+#endif
 
 actor InMemoryPlanRepository: PlanDataRepository {
     private var snapshot: TaptionDataSnapshot

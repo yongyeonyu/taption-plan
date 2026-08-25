@@ -55,6 +55,58 @@ enum BackgroundLocationCollectionPolicy {
     }
 }
 
+enum ConfirmedSleepSpanEditor {
+    static func replacing(
+        _ existing: [TimeSpan],
+        removing: [TimeSpan] = [],
+        adding: [TimeSpan] = []
+    ) -> [TimeSpan] {
+        let cuts = normalized(removing)
+        let remaining = normalized(existing).flatMap { span in
+            cuts.reduce(into: [span]) { pieces, cut in
+                pieces = pieces.flatMap { subtracting($0, by: cut) }
+            }
+        }
+        return normalized(remaining + adding)
+    }
+
+    private static func subtracting(
+        _ span: TimeSpan,
+        by cut: TimeSpan
+    ) -> [TimeSpan] {
+        guard let overlap = span.intersection(with: cut) else {
+            return [span]
+        }
+        var result: [TimeSpan] = []
+        if span.start < overlap.start {
+            result.append(TimeSpan(start: span.start, end: overlap.start))
+        }
+        if overlap.end < span.end {
+            result.append(TimeSpan(start: overlap.end, end: span.end))
+        }
+        return result
+    }
+
+    private static func normalized(_ spans: [TimeSpan]) -> [TimeSpan] {
+        let ordered = spans
+            .filter { $0.duration > 0 }
+            .sorted { $0.start < $1.start }
+        var result: [TimeSpan] = []
+        for span in ordered {
+            guard let previous = result.last,
+                  span.start <= previous.end else {
+                result.append(span)
+                continue
+            }
+            result[result.count - 1] = TimeSpan(
+                start: previous.start,
+                end: max(previous.end, span.end)
+            )
+        }
+        return result
+    }
+}
+
 enum PlanBackupRouteFallbackEngine {
     static let maximumPlaceGap: TimeInterval = 2 * 60 * 60
     static let maximumRouteGap: TimeInterval = 15 * 60
@@ -509,7 +561,7 @@ final class AppModel {
     @ObservationIgnored private let watchSensorArchive:
         AppleWatchSensorActivityArchive?
     @ObservationIgnored private let rawDeviceDataArchive:
-        RawDeviceDataMonthlyArchive?
+        RawDeviceDataDayArchive?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapPreparationTask: Task<Void, Never>?
     @ObservationIgnored private var foregroundPreparationTask:
@@ -625,21 +677,38 @@ final class AppModel {
         if let repository {
             self.repository = repository
             repositorySource = "injected"
-        } else if let sharedRepository = try? FilePlanRepository.appGroup(),
+        } else if let sqliteRepository = try? SQLitePlanRepository.appGroup(),
+                  let sharedFileRepository = try? FilePlanRepository.appGroup(),
+                  let applicationSupportRepository =
+                    try? FilePlanRepository.applicationSupport() {
+            self.repository = MigratingPlanRepository(
+                primary: sqliteRepository,
+                legacy: MigratingPlanRepository(
+                    primary: sharedFileRepository,
+                    legacy: applicationSupportRepository
+                )
+            )
+            repositorySource = "sqlite-app-group+one-time-import"
+        } else if let sqliteRepository = try? SQLitePlanRepository.appGroup(),
+                  let sharedFileRepository = try? FilePlanRepository.appGroup() {
+            self.repository = MigratingPlanRepository(
+                primary: sqliteRepository,
+                legacy: sharedFileRepository
+            )
+            repositorySource = "sqlite-app-group+shared-import"
+        } else if let sqliteRepository =
+                    try? SQLitePlanRepository.applicationSupport(),
                   let legacyRepository =
                     try? FilePlanRepository.applicationSupport() {
             self.repository = MigratingPlanRepository(
-                primary: sharedRepository,
+                primary: sqliteRepository,
                 legacy: legacyRepository
             )
-            repositorySource = "app-group+migration"
-        } else if let sharedRepository =
-                    try? FilePlanRepository.appGroup() {
-            self.repository = sharedRepository
-            repositorySource = "app-group"
-        } else if let fileRepository = try? FilePlanRepository.applicationSupport() {
-            self.repository = fileRepository
-            repositorySource = "application-support"
+            repositorySource = "sqlite-application-support+one-time-import"
+        } else if let sqliteRepository =
+                    try? SQLitePlanRepository.applicationSupport() {
+            self.repository = sqliteRepository
+            repositorySource = "sqlite-application-support"
         } else {
             self.repository = InMemoryPlanRepository()
             repositorySource = "in-memory"
@@ -647,13 +716,15 @@ final class AppModel {
         let protectionStore = try? BiometricProtectedSnapshotStore.applicationSupport()
         self.biometricProtectedSnapshotStore = protectionStore
         self.biometricDataProtectionStatus = protectionStore?.status ?? .unavailable
-        let rawArchive = try? RawDeviceDataMonthlyArchive.applicationSupport()
+        let legacyRawArchive = try?
+            RawDeviceDataMonthlyArchive.applicationSupport()
+        let rawArchive = try? RawDeviceDataDayArchive.applicationSupport()
         self.calendarService = calendarService ?? AppleCalendarService()
         self.photoService = photoService
         self.healthService = healthService
         self.sensorService = sensorService
             ?? (try? AppleSensorDataService.applicationSupport(
-                rawArchive: rawArchive
+                rawArchive: legacyRawArchive
             ))
         self.weatherService = weatherService
         self.airQualityService = airQualityService
@@ -842,6 +913,16 @@ final class AppModel {
         let localPermissions = snapshot.settings.permissions
         var value = restored.snapshot
         value.settings.permissions = localPermissions
+        value.settings.confirmedSleepSpans =
+            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                existing: value.settings.confirmedSleepSpans,
+                corrections: value.settings.activityCorrections,
+                actuals: value.actuals
+            )
+        value.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            value.settings.confirmedSleepSpans,
+            to: value.actuals
+        )
         value.settings.cloudResetAt = .now
         value.updatedAt = .now
         snapshot = value
@@ -976,6 +1057,11 @@ final class AppModel {
         }) else {
             return
         }
+        let previousSpan = actual.endedAt.map {
+            TimeSpan(start: actual.startedAt, end: $0)
+        }
+        let wasConfirmedSleep = actual.modelVersion
+            == TaptionActivityEngineAdapter.confirmedSleepModelVersion
         snapshot.settings.activityCorrections[actualID] =
             ActivityCorrectionEngine.replacingActivity(
                 in: snapshot.settings.activityCorrections[actualID],
@@ -991,6 +1077,12 @@ final class AppModel {
             snapshot.settings.activityCorrections,
             to: snapshot.actuals
         )
+        if wasConfirmedSleep, let previousSpan {
+            replaceConfirmedSleepSpans(removing: [previousSpan])
+        }
+        if option.categoryID == "sleep", let previousSpan {
+            replaceConfirmedSleepSpans(adding: [previousSpan])
+        }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
         await persist()
         TaptionPlanDiagnosticsLogger.shared.record(
@@ -1012,6 +1104,11 @@ final class AppModel {
         guard endAt > startAt,
               let actual = snapshot.actuals.first(where: { $0.id == actualID })
         else { return }
+        let previousSpan = actual.endedAt.map {
+            TimeSpan(start: actual.startedAt, end: $0)
+        }
+        let wasConfirmedSleep = actual.modelVersion
+            == TaptionActivityEngineAdapter.confirmedSleepModelVersion
 
         var correction = snapshot.settings.activityCorrections[actualID]
             ?? ActivityCorrection(
@@ -1026,6 +1123,14 @@ final class AppModel {
             snapshot.settings.activityCorrections,
             to: snapshot.actuals
         )
+        if wasConfirmedSleep, let previousSpan {
+            replaceConfirmedSleepSpans(removing: [previousSpan])
+        }
+        if correction.categoryID == "sleep" {
+            replaceConfirmedSleepSpans(
+                adding: [TimeSpan(start: startAt, end: endAt)]
+            )
+        }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
         await persist()
         TaptionPlanDiagnosticsLogger.shared.record(
@@ -1056,6 +1161,8 @@ final class AppModel {
               }) else {
             return
         }
+        let wasConfirmedSleep = actual.modelVersion
+            == TaptionActivityEngineAdapter.confirmedSleepModelVersion
 
         if !ActivityFragmentCorrectionEngine.needsSeparateRecord(
             source: actual,
@@ -1110,6 +1217,16 @@ final class AppModel {
             snapshot.settings.activityCorrections,
             to: snapshot.actuals
         )
+        if wasConfirmedSleep {
+            replaceConfirmedSleepSpans(removing: [displayedSpan])
+            if option == nil || option?.categoryID == "sleep" {
+                replaceConfirmedSleepSpans(
+                    adding: [TimeSpan(start: startAt, end: endAt)]
+                )
+            }
+        } else if option?.categoryID == "sleep" {
+            storeConfirmedSleepSpan(TimeSpan(start: startAt, end: endAt))
+        }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
         await persist()
         TaptionPlanDiagnosticsLogger.shared.record(
@@ -1172,6 +1289,9 @@ final class AppModel {
             )
         )
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        if option.categoryID == "sleep" {
+            storeConfirmedSleepSpan(span)
+        }
         await persist()
     }
 
@@ -1204,6 +1324,12 @@ final class AppModel {
                     snapshot.settings.customActivityLabels + [option.title]
                 )
         }
+        let editedSpan = primarySpan(for: request)
+        if editedOptions(in: request.mode).contains(where: { $0.categoryID == "sleep" }) {
+            replaceConfirmedSleepSpans(adding: [editedSpan])
+        } else {
+            replaceConfirmedSleepSpans(removing: [editedSpan])
+        }
 
         guard await persist() else {
             snapshot = previous
@@ -1218,7 +1344,12 @@ final class AppModel {
         do {
             let stored = try await repository.load()
             let storedIDs = Set(stored.actuals.map(\.id))
-            guard records.allSatisfy({ storedIDs.contains($0.id) }) else {
+            let replacedByConfirmedSleep = records
+                .filter { $0.categoryID == "sleep" }
+            let expectedRecords = records.filter {
+                !replacedByConfirmedSleep.contains($0)
+            }
+            guard expectedRecords.allSatisfy({ storedIDs.contains($0.id) }) else {
                 userFacingError = "변경 내용을 저장소에서 다시 확인하지 못했습니다."
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "section_edit_save_failed",
@@ -1240,7 +1371,7 @@ final class AppModel {
             return nil
         }
 
-        let selectedSpan = primarySpan(for: request)
+        let selectedSpan = editedSpan
         TaptionPlanDiagnosticsLogger.shared.record(
             "section_edit_save_completed",
             fields: [
@@ -1281,12 +1412,43 @@ final class AppModel {
     }
 
     private func applyStoredActivityCorrections() {
-        let corrected = ActivityCorrectionEngine.applying(
+        snapshot.settings.confirmedSleepSpans =
+            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                existing: snapshot.settings.confirmedSleepSpans,
+                corrections: snapshot.settings.activityCorrections,
+                actuals: snapshot.actuals
+            )
+        var corrected = ActivityCorrectionEngine.applying(
             snapshot.settings.activityCorrections,
             to: snapshot.actuals
         )
+        corrected = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            snapshot.settings.confirmedSleepSpans,
+            to: corrected
+        )
         guard corrected != snapshot.actuals else { return }
         snapshot.actuals = corrected
+    }
+
+    private func storeConfirmedSleepSpan(_ span: TimeSpan) {
+        guard span.duration > 0 else { return }
+        replaceConfirmedSleepSpans(adding: [span])
+    }
+
+    private func replaceConfirmedSleepSpans(
+        removing: [TimeSpan] = [],
+        adding: [TimeSpan] = []
+    ) {
+        snapshot.settings.confirmedSleepSpans =
+            ConfirmedSleepSpanEditor.replacing(
+                snapshot.settings.confirmedSleepSpans,
+                removing: removing,
+                adding: adding
+            )
+        snapshot.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            snapshot.settings.confirmedSleepSpans,
+            to: snapshot.actuals
+        )
     }
 
     var currentAltitudeStatus: String? {
@@ -1513,8 +1675,6 @@ final class AppModel {
         _ source: TaptionDataSnapshot
     ) -> TaptionDataSnapshot {
         var loaded = source
-        loaded.settings.sensorCollectionProfile = .accuracy
-        loaded.settings.gpsLoggingPreferences = .standard
         loaded.plans = Self.deduplicatedGeneratedRepeatPlans(loaded.plans)
         if loaded.categories.isEmpty {
             loaded.categories = CategoryCatalog.builtIn
@@ -1533,8 +1693,18 @@ final class AppModel {
             from: loaded.actuals,
             suppressedIDs: loaded.settings.suppressedActualIDs
         )
+        loaded.settings.confirmedSleepSpans =
+            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                existing: loaded.settings.confirmedSleepSpans,
+                corrections: loaded.settings.activityCorrections,
+                actuals: loaded.actuals
+            )
         loaded.actuals = ActivityCorrectionEngine.applying(
             loaded.settings.activityCorrections,
+            to: loaded.actuals
+        )
+        loaded.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            loaded.settings.confirmedSleepSpans,
             to: loaded.actuals
         )
         loaded.weather = WeatherTimelineEngine.coalesced(loaded.weather)
@@ -1658,14 +1828,29 @@ final class AppModel {
                 var source = try await repository.load()
                 repositoryLoadFailed = false
                 source.weather = WeatherTimelineEngine.coalesced(source.weather)
+                let originalConfirmedSleepSpans = source.settings.confirmedSleepSpans
+                source.settings.confirmedSleepSpans =
+                    TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                        existing: source.settings.confirmedSleepSpans,
+                        corrections: source.settings.activityCorrections,
+                        actuals: source.actuals
+                    )
                 source.actuals = ActivityCorrectionEngine.applying(
                     source.settings.activityCorrections,
+                    to: source.actuals
+                )
+                source.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+                    source.settings.confirmedSleepSpans,
                     to: source.actuals
                 )
                 // Publish the local snapshot first. Normalizing historical
                 // records and loading device integrations can be expensive;
                 // neither should hold the first timeline frame hostage.
                 snapshot = source
+                if source.settings.confirmedSleepSpans
+                    != originalConfirmedSleepSpans {
+                    _ = await persist()
+                }
                 selectedScale = TimeScale(
                     timelineLevel: source.settings.startScale
                 ).scheduleEquivalent
@@ -1867,9 +2052,7 @@ final class AppModel {
         foregroundHealthRefreshTask?.cancel()
         foregroundHealthRefreshTask = nil
         if let rawDeviceDataArchive {
-            await Task.detached(priority: .utility) {
-                try? rawDeviceDataArchive.flushPendingWrites()
-            }.value
+            try? await rawDeviceDataArchive.checkpoint()
         }
         await persist()
         await saveCloudBackupOnBackground()
@@ -2218,7 +2401,6 @@ final class AppModel {
 
     func activateRequiredSensorCollection() async {
         snapshot.settings.sensorCollectionProfile = .accuracy
-        snapshot.settings.gpsLoggingPreferences = .standard
         await enableLocationCollection(always: true)
     }
 
@@ -2847,15 +3029,22 @@ final class AppModel {
     }
 
     func setGPSLoggingBatteryMinimal(_ enabled: Bool) {
-        guard snapshot.settings.gpsLoggingPreferences != .standard else { return }
-        snapshot.settings.gpsLoggingPreferences = .standard
+        guard snapshot.settings.gpsLoggingPreferences.isBatteryMinimal != enabled else {
+            return
+        }
+        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = enabled
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
     }
 
     func setGPSLoggingIntervalSeconds(_ seconds: Int) {
-        guard snapshot.settings.gpsLoggingPreferences != .standard else { return }
-        snapshot.settings.gpsLoggingPreferences = .standard
+        let clamped = GPSLoggingPreferences.clampedSeconds(seconds)
+        guard snapshot.settings.gpsLoggingPreferences.intervalSeconds != clamped
+                || snapshot.settings.gpsLoggingPreferences.isBatteryMinimal else {
+            return
+        }
+        snapshot.settings.gpsLoggingPreferences.intervalSeconds = clamped
+        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = false
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
     }
@@ -2879,7 +3068,9 @@ final class AppModel {
             configuration: sensorCollectionConfiguration(
                 profile: settings.sensorCollectionProfile,
                 allowsBackgroundLocation:
-                    settings.backgroundPreciseLocationEnabled
+                    settings.backgroundPreciseLocationEnabled,
+                minimumEmissionInterval:
+                    settings.gpsLoggingPreferences.interval
             )
         )
         isSensorCollecting = true
@@ -2897,6 +3088,9 @@ final class AppModel {
         )
         if let minimumEmissionInterval {
             configuration.minimumEmissionInterval = minimumEmissionInterval
+        } else {
+            configuration.minimumEmissionInterval =
+                settings.gpsLoggingPreferences.interval
         }
         return configuration
     }
@@ -5235,7 +5429,15 @@ final class AppModel {
                 kind: kind,
                 payload: payload
             )
-            try rawDeviceDataArchive.append(envelopes: [envelope])
+            Task(priority: .utility) {
+                do {
+                    try await rawDeviceDataArchive.append(envelope)
+                } catch {
+                    Self.integrationLogger.error(
+                        "Raw device data archive failed: \(kind, privacy: .public) \(error.localizedDescription, privacy: .public)"
+                    )
+                }
+            }
         } catch {
             Self.integrationLogger.error(
                 "Raw device data archive failed: \(kind, privacy: .public) \(error.localizedDescription, privacy: .public)"
@@ -5662,6 +5864,16 @@ final class AppModel {
         applyChargingInactivitySleepRecords(
             readings: readings,
             inside: span
+        )
+        snapshot.settings.confirmedSleepSpans =
+            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                existing: snapshot.settings.confirmedSleepSpans,
+                corrections: snapshot.settings.activityCorrections,
+                actuals: snapshot.actuals
+            )
+        snapshot.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            snapshot.settings.confirmedSleepSpans,
+            to: snapshot.actuals
         )
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
@@ -8116,6 +8328,18 @@ final class AppModel {
         local: TaptionDataSnapshot
     ) -> TaptionDataSnapshot {
         var value = cloud
+        let cloudSleepSpans = TaptionActivityEngineAdapter
+            .migratedConfirmedSleepSpans(
+                existing: cloud.settings.confirmedSleepSpans,
+                corrections: cloud.settings.activityCorrections,
+                actuals: cloud.actuals
+            )
+        let localSleepSpans = TaptionActivityEngineAdapter
+            .migratedConfirmedSleepSpans(
+                existing: local.settings.confirmedSleepSpans,
+                corrections: local.settings.activityCorrections,
+                actuals: local.actuals
+            )
         let deviceActuals = local.actuals.filter(Self.isDeviceLocalActual)
         let cloudIDs = Set(value.actuals.map(\.id))
         value.actuals.append(contentsOf: deviceActuals.filter {
@@ -8147,8 +8371,10 @@ final class AppModel {
         value.settings.locationEnabled = local.settings.locationEnabled
         value.settings.backgroundPreciseLocationEnabled =
             local.settings.backgroundPreciseLocationEnabled
-        value.settings.sensorCollectionProfile = .accuracy
-        value.settings.gpsLoggingPreferences = .standard
+        value.settings.sensorCollectionProfile =
+            local.settings.sensorCollectionProfile
+        value.settings.gpsLoggingPreferences =
+            local.settings.gpsLoggingPreferences
         value.settings.mapCategoryColors =
             local.settings.mapCategoryColors
         value.settings.mapUserActivityCategories =
@@ -8168,6 +8394,16 @@ final class AppModel {
             local.settings.movementCorrections
         value.settings.activityCorrections =
             local.settings.activityCorrections
+        value.settings.confirmedSleepSpans =
+            AppFeatureSettings.normalizedConfirmedSleepSpans(
+                cloudSleepSpans + localSleepSpans
+            )
+        value.settings.confirmedSleepSpans =
+            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                existing: value.settings.confirmedSleepSpans,
+                corrections: value.settings.activityCorrections,
+                actuals: value.actuals
+            )
         value.settings.customActivityLabels =
             AppFeatureSettings.normalizedActivityLabels(
                 local.settings.customActivityLabels
@@ -8199,6 +8435,10 @@ final class AppModel {
             value.settings.activityCorrections,
             to: value.actuals
         )
+        value.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            value.settings.confirmedSleepSpans,
+            to: value.actuals
+        )
         // iCloud can still hand back placeholder plans written by an older
         // build on this or another device.
         MemoShellPlanMigration.apply(to: &value)
@@ -8215,13 +8455,23 @@ final class AppModel {
     }
 
     private func assignCloudMergedSnapshot(_ value: TaptionDataSnapshot) {
-        guard value != snapshot else { return }
         var content = value
+        content.settings.confirmedSleepSpans =
+            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                existing: content.settings.confirmedSleepSpans,
+                corrections: content.settings.activityCorrections,
+                actuals: content.actuals
+            )
+        content.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            content.settings.confirmedSleepSpans,
+            to: content.actuals
+        )
+        guard content != snapshot else { return }
         content.updatedAt = snapshot.updatedAt
         if content == snapshot {
-            assignTimestampOnlySnapshot(value)
+            assignTimestampOnlySnapshot(content)
         } else {
-            snapshot = value
+            snapshot = content
         }
     }
 

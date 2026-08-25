@@ -7,6 +7,44 @@ import SwiftUI // TEMP-CAT-SHEET
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    func testInitialLaunchGateWaitsForMapDataWhenAccessIsGranted() {
+        let common = (
+            hasCompletedInitialProRefresh: true,
+            isSecurityStateReady: true,
+            hasRenderedInitialDestination: true,
+            isBootstrapped: true,
+            grantsAccess: true
+        )
+
+        XCTAssertFalse(
+            AppShellInitialLaunchGate.isReady(
+                hasCompletedInitialProRefresh: common.hasCompletedInitialProRefresh,
+                isSecurityStateReady: common.isSecurityStateReady,
+                hasRenderedInitialDestination: common.hasRenderedInitialDestination,
+                hasCompletedInitialMapDataLoad: false,
+                isBootstrapped: common.isBootstrapped,
+                grantsAccess: common.grantsAccess
+            )
+        )
+        XCTAssertTrue(
+            AppShellInitialLaunchGate.isReady(
+                hasCompletedInitialProRefresh: common.hasCompletedInitialProRefresh,
+                isSecurityStateReady: common.isSecurityStateReady,
+                hasRenderedInitialDestination: common.hasRenderedInitialDestination,
+                hasCompletedInitialMapDataLoad: true,
+                isBootstrapped: common.isBootstrapped,
+                grantsAccess: common.grantsAccess
+            )
+        )
+    }
+
+    func testInitialMapLoadTreatsFailedArchiveAttemptAsResolved() {
+        let day = makeDate(2026, 8, 25)
+        XCTAssertFalse(MapHomeRouteReadingsLoadState.loading(day).isResolved(for: day))
+        XCTAssertTrue(MapHomeRouteReadingsLoadState.failed(day).isResolved(for: day))
+        XCTAssertTrue(MapHomeRouteReadingsLoadState.loaded(day).isResolved(for: day))
+    }
+
     func testSubwayWiFiSSIDAllowListNormalizesCarrierNames() {
         XCTAssertTrue(SubwayWiFiSSID.isAllowed("  T WIFI  "))
         XCTAssertTrue(SubwayWiFiSSID.isAllowed("t wifi_secure"))
@@ -177,6 +215,9 @@ final class FeatureEngineTests: XCTestCase {
             evidence: ["철도 경로"],
             isConfirmed: false
         )
+        let route = try XCTUnwrap(
+            SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"])
+        )
         let day = TimeSpan(
             start: base.addingTimeInterval(-60),
             end: base.addingTimeInterval(31 * 60)
@@ -199,6 +240,19 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertGreaterThan(partial[0].coordinates.count, 1)
         XCTAssertLessThan(partial[0].coordinates.count, complete[0].coordinates.count)
         XCTAssertTrue(complete[0].estimated)
+        XCTAssertEqual(complete[0].coordinates.count, route.coordinates.count)
+        for (actual, expected) in zip(
+            complete[0].coordinates,
+            route.coordinates.map {
+                CLLocationCoordinate2D(
+                    latitude: $0.latitude,
+                    longitude: $0.longitude
+                )
+            }
+        ) {
+            XCTAssertEqual(actual.latitude, expected.latitude, accuracy: 0.000001)
+            XCTAssertEqual(actual.longitude, expected.longitude, accuracy: 0.000001)
+        }
         XCTAssertEqual(readings.count, 3)
     }
 
@@ -5399,6 +5453,98 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(segment.subwayRoute?.stops.last?.stationName, "마곡나루")
     }
 
+    func testRailEndpointsBridgeThirtyMinuteGPSGapOnlyOnCatalogRoute() throws {
+        let base = makeDate(2026, 8, 25, 7, 0)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "가정역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(20 * 60),
+                point: GeoPoint(
+                    latitude: 37.5667,
+                    longitude: 126.8273,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "마곡나루역",
+                matchesRailRoute: true
+            ),
+        ]
+
+        let segment = try XCTUnwrap(
+            SubwayTravelSegmentEngine.segments(from: readings).first
+        )
+        XCTAssertEqual(segment.mode, .subway)
+        XCTAssertEqual(
+            segment.subwayRoute?.transferStationNames,
+            ["검암"]
+        )
+        XCTAssertEqual(segment.subwayRoute?.stops.first?.stationName, "가정")
+        XCTAssertEqual(segment.subwayRoute?.stops.last?.stationName, "마곡나루")
+        XCTAssertTrue(
+            SubwayTravelSegmentEngine.segments(
+                from: [
+                    readings[0],
+                    SensorReading(
+                        timestamp: base.addingTimeInterval(31 * 60),
+                        point: readings[1].point,
+                        speedMetersPerSecond: 12,
+                        motion: .automotive,
+                        motionConfidence: .high,
+                        nearbyStation: true,
+                        nearbyStationName: "마곡나루역",
+                        matchesRailRoute: true
+                    ),
+                ]
+            ).isEmpty
+        )
+
+        let day = TimeSpan(
+            start: makeDate(2026, 8, 25),
+            end: makeDate(2026, 8, 26)
+        )
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [segment],
+            readings: readings,
+            day: day,
+            through: base.addingTimeInterval(20 * 60)
+        )
+        XCTAssertEqual(overlays.count, 1)
+        XCTAssertTrue(overlays[0].estimated)
+        XCTAssertGreaterThanOrEqual(overlays[0].coordinates.count, 2)
+        let firstCoordinate = try XCTUnwrap(overlays[0].coordinates.first)
+        let lastCoordinate = try XCTUnwrap(overlays[0].coordinates.last)
+        XCTAssertEqual(
+            firstCoordinate.latitude,
+            37.5248,
+            accuracy: 0.000001
+        )
+        XCTAssertEqual(
+            lastCoordinate.longitude,
+            126.8273,
+            accuracy: 0.000001
+        )
+    }
+
     func testStationJourneyRequiresFiveMinuteStaysAndFiftyMeterExit() throws {
         let base = makeDate(2026, 8, 18, 7, 0)
         let samples: [(Double, Double, Double, Bool)] = [
@@ -6447,7 +6593,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testSensorArchivePersistsMotionAndPrunesOldReadings() async throws {
+    func testSensorArchivePersistsFullHistoryWithoutRetentionPruning() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-sensors-\(UUID().uuidString)")
         let fileURL = directory.appendingPathComponent("readings.jsonl")
@@ -6483,16 +6629,22 @@ final class FeatureEngineTests: XCTestCase {
         )
         try await archive.compact(now: now)
 
-        let restored = try await archive.readings(
+        let reopened = SensorReadingArchive(
+            fileURL: fileURL,
+            retentionInterval: 86_400
+        )
+        let restored = try await reopened.readings(
             in: TimeSpan(
                 start: now.addingTimeInterval(-3 * 86_400),
                 end: now.addingTimeInterval(hour)
             )
         )
-        XCTAssertEqual(restored.count, 1)
-        XCTAssertEqual(restored[0].motion, .running)
-        XCTAssertEqual(restored[0].stepCount, 220)
-        XCTAssertEqual(restored[0].deviceMotion, motion)
+        XCTAssertEqual(restored.count, 2)
+        XCTAssertEqual(restored[0].motion, .walking)
+        XCTAssertEqual(restored[0].stepCount, 100)
+        XCTAssertEqual(restored[1].motion, .running)
+        XCTAssertEqual(restored[1].stepCount, 220)
+        XCTAssertEqual(restored[1].deviceMotion, motion)
     }
 
     @MainActor
@@ -6608,7 +6760,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(readings.contains { $0.behavior == TravelMode.bus.rawValue })
     }
 
-    func testRouteReadingsRecoverGPSFromMonthlyRawArchiveAfterIndexPrune()
+    func testRouteReadingsAndDayReadingsUseTheSameUnprunedDatabase()
         async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-route-recovery-\(UUID().uuidString)")
@@ -6663,7 +6815,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         let indexed = try await archive.readings(in: span)
         let recovered = try await archive.routeReadings(in: span)
-        XCTAssertTrue(indexed.isEmpty)
+        XCTAssertEqual(indexed.map(\.id), [historical.id, tracked.id])
         XCTAssertEqual(recovered.map(\.id), [historical.id, tracked.id])
     }
 
@@ -6883,28 +7035,28 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(
             GPSLoggingPreferences(intervalSeconds: 16).intervalSeconds,
-            1
+            10
         )
         XCTAssertEqual(
             GPSLoggingPreferences(intervalSeconds: 30).interval,
-            1
+            30
         )
         let batteryMinimal = GPSLoggingPreferences(
             isBatteryMinimal: true,
             intervalSeconds: 900
         )
-        XCTAssertEqual(batteryMinimal.effectiveIntervalSeconds, 1)
-        XCTAssertEqual(batteryMinimal.interval, 1)
-        XCTAssertTrue(batteryMinimal.isContinuous)
+        XCTAssertEqual(batteryMinimal.effectiveIntervalSeconds, 900)
+        XCTAssertEqual(batteryMinimal.interval, 900)
+        XCTAssertFalse(batteryMinimal.isContinuous)
         var restoredRealtime = GPSLoggingPreferences(intervalSeconds: 1)
         restoredRealtime.isBatteryMinimal = true
-        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 1)
+        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 900)
         restoredRealtime.isBatteryMinimal = false
         XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 1)
         XCTAssertTrue(GPSLoggingPreferences(intervalSeconds: 1).isContinuous)
         XCTAssertEqual(
             GPSLoggingPreferences.supportedIntervalSeconds,
-            [1]
+            [1, 10, 30, 60, 120, 300, 600, 900]
         )
         XCTAssertTrue(
             TrackingSessionPolicy.allowsPersistingLocation(
@@ -6936,7 +7088,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(
             try JSONDecoder().decode(GPSLoggingPreferences.self, from: legacy)
                 .intervalSeconds,
-            1
+            300
         )
 
         let approximate = SensorReading(

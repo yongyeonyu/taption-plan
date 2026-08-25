@@ -316,6 +316,57 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeSidebarRailSnapshotIndexesOnlyVisibleIntervals() {
+        let snapshot = MapHomeTimeSidebarRailSnapshot([
+            MapHomeTimeRailSegment(
+                startMinute: 0,
+                endMinute: 120,
+                categoryID: "work",
+                title: "이전"
+            ),
+            MapHomeTimeRailSegment(
+                startMinute: 30,
+                endMinute: 90,
+                categoryID: "study",
+                title: "표시"
+            ),
+            MapHomeTimeRailSegment(
+                startMinute: 90,
+                endMinute: 120,
+                categoryID: "sleep",
+                title: "다음"
+            ),
+        ])
+
+        XCTAssertEqual(
+            snapshot.visibleSegments(in: 45...90).map(\.title),
+            ["이전", "표시"]
+        )
+        XCTAssertEqual(
+            snapshot.visibleSegments(in: 90...120).map(\.title),
+            ["이전", "다음"]
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarRailSnapshot([])
+                .visibleSegments(in: 0...1_440),
+            [.wholeDayUnconfirmed]
+        )
+    }
+
+    func testMapRouteDocumentGateCollapses240HzSourceCallbacksIntoOneCommit() {
+        let gate = MapHomeRouteDocumentProjectionGate()
+
+        for sample in 1...240 {
+            gate.deferRefresh(preparingReadings: sample == 120)
+        }
+
+        XCTAssertEqual(
+            gate.consumeDeferredRefresh(),
+            MapHomeRouteDocumentRefresh(preparesReadings: true)
+        )
+        XCTAssertNil(gate.consumeDeferredRefresh())
+    }
+
     func testMapHomeCameraProjectionCoalescesContinuousInputAndFlushesLatestFrame() {
         let baseCenter = CLLocationCoordinate2D(latitude: 37.5, longitude: 127.0)
         let baseCamera = MapCamera(
@@ -755,7 +806,11 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testExpandedSidebarRulerSeparatesHourAndMinuteLabels() {
-        let labels = MapHomeTimeSidebarMath.visibleRulerLabels(window: 780...900)
+        let labels = MapHomeTimeSidebarMath.visibleRulerLabels(
+            window: 780...900,
+            durationMinutes: 120,
+            trackHeight: 192
+        )
 
         XCTAssertEqual(labels.hours, [13, 14, 15])
         XCTAssertEqual(
@@ -765,10 +820,62 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testSidebarRulerDetailFollowsThirdAndFourthZoomSteps() {
-        XCTAssertFalse(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 360))
+        XCTAssertTrue(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 720))
+        XCTAssertTrue(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 360))
         XCTAssertTrue(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 180))
+        XCTAssertFalse(MapHomeTimeSidebarMath.showsTenMinuteRuler(durationMinutes: 1440))
         XCTAssertFalse(MapHomeTimeSidebarMath.showsMinuteTicks(durationMinutes: 180))
         XCTAssertTrue(MapHomeTimeSidebarMath.showsMinuteTicks(durationMinutes: 60))
+    }
+
+    func testZoomedOutExpandedRulerKeepsMinuteComponents() {
+        let rows = MapHomeTimeSidebarMath.visibleRulerRows(
+            window: 360...1080,
+            durationMinutes: 720,
+            trackHeight: 680
+        )
+
+        XCTAssertTrue(rows.contains { $0.minuteComponent == 15 })
+        XCTAssertTrue(rows.contains { $0.minuteComponent == 30 })
+        XCTAssertTrue(rows.contains { $0.minuteComponent == 45 })
+
+        let compactRows = MapHomeTimeSidebarMath.visibleRulerRows(
+            window: 360...1080,
+            durationMinutes: 720,
+            trackHeight: 220
+        )
+        XCTAssertTrue(compactRows.contains { $0.minuteComponent == 30 })
+    }
+
+    func testExpandedSidebarRulerChoosesReadableMinuteSteps() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteRulerStep(
+                durationMinutes: 15,
+                trackHeight: 600
+            ),
+            1
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteRulerStep(
+                durationMinutes: 60,
+                trackHeight: 600
+            ),
+            5
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteRulerStep(
+                durationMinutes: 180,
+                trackHeight: 400
+            ),
+            10
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.minuteRulerStep(
+                durationMinutes: 180,
+                trackHeight: 192
+            ),
+            15
+        )
     }
 
     func testExpandedSidebarRulerLabelsStartAfterTickColumn() {
@@ -2010,7 +2117,7 @@ final class TimeScaleTests: XCTestCase {
         let rows = MapHomeTimeSidebarMath.visibleRulerRows(
             window: 480...600,
             durationMinutes: 120,
-            trackHeight: 600
+            trackHeight: 192
         )
 
         XCTAssertEqual(
@@ -2581,6 +2688,70 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 23.999), 1_439)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 24), 1_440)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 30), 1_440)
+    }
+
+    func testMapHomeDayPlaybackUsesQuarterSpeedOnlyInsideMovement() {
+        let ranges = [
+            MapHomePlaybackMovementRange(startMinute: 60, endMinute: 120)
+        ]
+
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.advancedMinute(
+                from: 0,
+                elapsedSeconds: 1,
+                movingRanges: ranges
+            ),
+            60,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.advancedMinute(
+                from: 60,
+                elapsedSeconds: 1,
+                movingRanges: ranges
+            ),
+            75,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testMapHomeDayPlaybackSplitsElapsedTimeAtMovementBoundary() {
+        let ranges = [
+            MapHomePlaybackMovementRange(startMinute: 60, endMinute: 120)
+        ]
+
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.advancedMinute(
+                from: 30,
+                elapsedSeconds: 1,
+                movingRanges: ranges
+            ),
+            67.5,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.advancedMinute(
+                from: 110,
+                elapsedSeconds: 1,
+                movingRanges: ranges
+            ),
+            140,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testMapHomePlaybackMovementRangesMergeOverlaps() {
+        XCTAssertEqual(
+            MapHomePlaybackMovementRange.normalized([
+                .init(startMinute: 100, endMinute: 200),
+                .init(startMinute: 50, endMinute: 120),
+                .init(startMinute: 300, endMinute: 320),
+            ]),
+            [
+                .init(startMinute: 50, endMinute: 200),
+                .init(startMinute: 300, endMinute: 320),
+            ]
+        )
     }
 
     func testMapHomeSectionBoundaryDragClampsWithoutCrossingOtherEdge() {

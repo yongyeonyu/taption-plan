@@ -368,6 +368,64 @@ struct MapHomeTimeRailSegment: Identifiable, Hashable {
     )
 }
 
+/// Keeps the rail input immutable while a gesture is rendering. A prefix
+/// maximum-end index avoids scanning off-screen records for every frame while
+/// retaining long intervals that overlap the visible window.
+struct MapHomeTimeSidebarRailSnapshot: Equatable, Sendable {
+    private let segments: [MapHomeTimeRailSegment]
+    private let maximumEnds: [Int]
+
+    init(_ segments: [MapHomeTimeRailSegment]) {
+        let normalized = segments.isEmpty
+            ? [.wholeDayUnconfirmed]
+            : segments.sorted {
+                if $0.startMinute != $1.startMinute {
+                    return $0.startMinute < $1.startMinute
+                }
+                if $0.endMinute != $1.endMinute {
+                    return $0.endMinute < $1.endMinute
+                }
+                return $0.id < $1.id
+            }
+        self.segments = normalized
+        var maximumEnd = 0
+        self.maximumEnds = normalized.map {
+            maximumEnd = max(maximumEnd, $0.endMinute)
+            return maximumEnd
+        }
+    }
+
+    func visibleSegments(in window: ClosedRange<Int>) -> [MapHomeTimeRailSegment] {
+        guard !segments.isEmpty else { return [] }
+        var index = firstPotentialIndex(after: window.lowerBound)
+
+        var visible: [MapHomeTimeRailSegment] = []
+        while index < segments.count {
+            let segment = segments[index]
+            guard segment.startMinute < window.upperBound else { break }
+            if segment.endMinute > window.lowerBound {
+                visible.append(segment)
+            }
+            index += 1
+        }
+        return visible
+    }
+
+    private func firstPotentialIndex(after minute: Int) -> Int {
+        var lower = 0
+        var upper = maximumEnds.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if maximumEnds[middle] > minute {
+                upper = middle
+            } else {
+                lower = middle + 1
+            }
+        }
+        return lower
+    }
+}
+
 /// Produces one winning automatic category for every minute in a day.  It
 /// derives a presentation copy only; source records remain untouched.
 enum MapHomeTimeRailSegmentEngine {
@@ -799,6 +857,8 @@ struct MapHomeTimeSidebar: View {
     @State private var isHandleDragging = false
     @State private var nleProjection = TimelineNLEProjection<MapHomeTimeSidebarNLEState>()
     @State private var handleDrag = MapHomeTimeSidebarHandleDrag()
+    @State private var railSnapshot: MapHomeTimeSidebarRailSnapshot
+    @State private var pendingRailSegments: [MapHomeTimeRailSegment]?
 
     private let railWidth: CGFloat
     // Keep the numeric rail visibly separated from both the map header and
@@ -844,6 +904,9 @@ struct MapHomeTimeSidebar: View {
         self.onViewportChanged = onViewportChanged
         self.onInteractionChanged = onInteractionChanged
         self.onSectionEdit = onSectionEdit
+        self._railSnapshot = State(
+            initialValue: MapHomeTimeSidebarRailSnapshot(segments)
+        )
     }
 
     var body: some View {
@@ -861,10 +924,7 @@ struct MapHomeTimeSidebar: View {
                 durationMinutes: visibleDurationMinutes,
                 centerMinute: minute
             )
-            let visibleSegments = displaySegments.filter {
-                $0.endMinute > visibleWindow.lowerBound
-                    && $0.startMinute < visibleWindow.upperBound
-            }
+            let visibleSegments = railSnapshot.visibleSegments(in: visibleWindow)
             let selectedY = isViewportInteraction
                 ? verticalInset + trackHeight / 2
                 : verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
@@ -977,14 +1037,6 @@ struct MapHomeTimeSidebar: View {
                     let rulerFontSize = MapHomeTimeSidebarMath.rulerFontSize(
                         durationMinutes: visibleDurationMinutes
                     )
-                    let hourColumnWidth = MapHomeTimeSidebarMath.rulerColumnWidth(
-                        durationMinutes: visibleDurationMinutes
-                    )
-                    let minuteColumnWidth = hourColumnWidth
-                    let columnSpacing = MapHomeTimeSidebarMath.rulerColumnSpacing
-                    let labelsStartX = MapHomeTimeSidebarMath.rulerLabelsStartX(
-                        railWidth: railWidth
-                    ) + railOriginX
                     Canvas { context, size in
                         for minuteMark in minuteMarks {
                             guard showsMinuteTicks || minuteMark.isMultiple(of: 10) else {
@@ -1021,22 +1073,16 @@ struct MapHomeTimeSidebar: View {
                             minute: minuteMark,
                             window: visibleWindow
                         )
-                        HStack(spacing: columnSpacing) {
-                            Text(row.hour.map { String(format: "%02d", $0) } ?? " ")
-                                .frame(width: hourColumnWidth, alignment: .trailing)
-                            Text(row.minuteComponent.map { String(format: "%02d", $0) } ?? " ")
-                                .frame(width: minuteColumnWidth, alignment: .trailing)
-                        }
+                        Text(String(format: "%02d:%02d", minuteMark / 60, minuteMark % 60))
                         .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
                         .monospacedDigit()
+                        .minimumScaleFactor(0.55)
+                        .allowsTightening(true)
                         .foregroundStyle(Color.tpInk.opacity(0.78))
                         .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
+                        .frame(width: numericColumnWidth, alignment: .trailing)
                         .position(
-                            x: labelsStartX
-                                + (hourColumnWidth
-                                    + columnSpacing
-                                    + minuteColumnWidth) / 2,
+                            x: railOriginX + railWidth - numericColumnWidth / 2,
                             y: y
                         )
                         .allowsHitTesting(false)
@@ -1117,6 +1163,16 @@ struct MapHomeTimeSidebar: View {
             isHandleDragging = false
             nleProjection.reset()
             handleDrag.reset()
+            pendingRailSegments = nil
+        }
+        .onChange(of: segments) { _, newSegments in
+            if isTimelineInteractionActive {
+                pendingRailSegments = newSegments
+            } else {
+                let snapshot = MapHomeTimeSidebarRailSnapshot(newSegments)
+                guard railSnapshot != snapshot else { return }
+                railSnapshot = snapshot
+            }
         }
         .onChange(of: zoomResetToken) { _, _ in
             let reset = MapHomeTimeSidebarMath.resetState(
@@ -1379,6 +1435,7 @@ struct MapHomeTimeSidebar: View {
                 isHandleDragging = false
                 gestureBaseState = nil
                 handleDrag.reset()
+                commitPendingRailSnapshot()
                 onInteractionChanged?(false)
             }
     }
@@ -1429,6 +1486,7 @@ struct MapHomeTimeSidebar: View {
                 )
                 viewportDragStartMinute = nil
                 gestureBaseState = nil
+                commitPendingRailSnapshot()
                 onInteractionChanged?(false)
             }
     }
@@ -1479,15 +1537,30 @@ struct MapHomeTimeSidebar: View {
         let viewportChanged = visibleStartMinute != state.visibleStartMinute
             || visibleDurationMinutes != state.visibleDurationMinutes
         let selectionChanged = selectedMinute != state.selectedMinute
-        visibleStartMinute = state.visibleStartMinute
-        visibleDurationMinutes = state.visibleDurationMinutes
-        selectedMinute = state.selectedMinute
         if viewportChanged {
+            if visibleStartMinute != state.visibleStartMinute {
+                visibleStartMinute = state.visibleStartMinute
+            }
+            if visibleDurationMinutes != state.visibleDurationMinutes {
+                visibleDurationMinutes = state.visibleDurationMinutes
+            }
             onViewportChanged?(state.visibleStartMinute, state.visibleDurationMinutes)
         }
         if selectionChanged {
+            selectedMinute = state.selectedMinute
             onSelectionChanged?(state.selectedMinute)
         }
+    }
+
+    private var isTimelineInteractionActive: Bool {
+        isHandleDragging || viewportDragStartMinute != nil
+    }
+
+    private func commitPendingRailSnapshot() {
+        guard !isTimelineInteractionActive,
+              let pendingRailSegments else { return }
+        railSnapshot = MapHomeTimeSidebarRailSnapshot(pendingRailSegments)
+        self.pendingRailSegments = nil
     }
 
     private func draggedState(
@@ -1516,10 +1589,6 @@ struct MapHomeTimeSidebar: View {
 
     private func timeLabel(for minute: Int) -> String {
         String(format: "%02d:%02d", minute / 60, minute % 60)
-    }
-
-    private var displaySegments: [MapHomeTimeRailSegment] {
-        segments.isEmpty ? [.wholeDayUnconfirmed] : segments
     }
 
 }
@@ -1954,12 +2023,10 @@ enum MapHomeTimeSidebarMath {
             ? Array(firstHour...lastHour)
             : []
 
-        let duration = CGFloat(min(max(durationMinutes, 60), fullDayMinutes))
-        let pointsPerTenMinutes = max(trackHeight, 1) * 10 / duration
-        let minuteStep = pointsPerTenMinutes
-            >= minimumRulerLabelSpacing(durationMinutes: durationMinutes)
-            ? 10
-            : 20
+        let minuteStep = minuteRulerStep(
+            durationMinutes: durationMinutes,
+            trackHeight: trackHeight
+        )
         let firstMinute = max(
             0,
             ((window.lowerBound + minuteStep - 1) / minuteStep) * minuteStep
@@ -1976,6 +2043,18 @@ enum MapHomeTimeSidebarMath {
             minutes = []
         }
         return MapHomeTimeRulerLabels(hours: hours, minutes: minutes)
+    }
+
+    static func minuteRulerStep(
+        durationMinutes: Int,
+        trackHeight: CGFloat
+    ) -> Int {
+        let duration = CGFloat(min(max(durationMinutes, 1), fullDayMinutes))
+        let pointsPerMinute = max(trackHeight, 1) / duration
+        let spacing = minimumRulerLabelSpacing(durationMinutes: durationMinutes)
+        return [1, 5, 10, 15, 20, 30].first {
+            pointsPerMinute * CGFloat($0) >= spacing
+        } ?? 30
     }
 
     static func visibleRulerRows(
@@ -2001,7 +2080,7 @@ enum MapHomeTimeSidebarMath {
     }
 
     static func showsTenMinuteRuler(durationMinutes: Int) -> Bool {
-        durationMinutes <= 180
+        durationMinutes < fullDayMinutes
     }
 
     static func showsMinuteTicks(durationMinutes: Int) -> Bool {

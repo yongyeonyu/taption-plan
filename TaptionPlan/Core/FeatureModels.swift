@@ -3365,6 +3365,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     /// 사용자 교정은 원본 센서와 분리한 표시용 파생값이다.
     var activityCorrections: [UUID: ActivityCorrection]
     var customActivityLabels: [String]
+    /// UUID가 바뀌는 자동 재분류 뒤에도 유지되는 사용자 확인 수면 구간.
+    var confirmedSleepSpans: [TimeSpan]
 
     static let defaults = AppFeatureSettings(
         startScale: .day,
@@ -3401,7 +3403,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         ),
         timelineRowOrder: TimelineRowOrder.defaults,
         activityCorrections: [:],
-        customActivityLabels: []
+        customActivityLabels: [],
+        confirmedSleepSpans: []
     )
 
     init(
@@ -3437,7 +3440,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         permissions: [PermissionFeature: PermissionState],
         timelineRowOrder: [String] = TimelineRowOrder.defaults,
         activityCorrections: [UUID: ActivityCorrection] = [:],
-        customActivityLabels: [String] = []
+        customActivityLabels: [String] = [],
+        confirmedSleepSpans: [TimeSpan] = []
     ) {
         self.startScale = startScale
         self.rememberLastScale = rememberLastScale
@@ -3480,6 +3484,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.timelineRowOrder = Self.normalizedTimelineRowOrder(timelineRowOrder)
         self.activityCorrections = activityCorrections
         self.customActivityLabels = Self.normalizedActivityLabels(customActivityLabels)
+        self.confirmedSleepSpans = Self.normalizedConfirmedSleepSpans(
+            confirmedSleepSpans
+        )
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -3516,6 +3523,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case timelineRowOrder
         case activityCorrections
         case customActivityLabels
+        case confirmedSleepSpans
     }
 
     init(from decoder: Decoder) throws {
@@ -3663,6 +3671,12 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                 forKey: .customActivityLabels
             ) ?? defaults.customActivityLabels
         )
+        confirmedSleepSpans = Self.normalizedConfirmedSleepSpans(
+            try values.decodeIfPresent(
+                [TimeSpan].self,
+                forKey: .confirmedSleepSpans
+            ) ?? defaults.confirmedSleepSpans
+        )
         for feature in PermissionFeature.allCases
         where permissions[feature] == nil {
             permissions[feature] = .notDetermined
@@ -3699,6 +3713,27 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                       $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
                   }) else { continue }
             result.append(trimmed)
+        }
+        return result
+    }
+
+    static func normalizedConfirmedSleepSpans(
+        _ spans: [TimeSpan]
+    ) -> [TimeSpan] {
+        let ordered = spans
+            .filter { $0.duration > 0 }
+            .sorted { $0.start < $1.start }
+        var result: [TimeSpan] = []
+        for span in ordered {
+            guard let previous = result.last,
+                  span.start <= previous.end else {
+                result.append(span)
+                continue
+            }
+            result[result.count - 1] = TimeSpan(
+                start: previous.start,
+                end: max(previous.end, span.end)
+            )
         }
         return result
     }

@@ -2475,7 +2475,10 @@ struct MovementRouteBuilder: Sendable {
 enum SubwayTravelSegmentEngine {
     /// 배터리 절약 프로필은 15분 간격으로 표본을 남긴다. 예약 실행의
     /// 지연까지 감안해 한 번의 표본 공백은 18분까지 같은 이동으로 잇는다.
+    /// 역 GPS가 출발·도착만 남은 경우에는 두 끝점의 철도 근거와 연결된
+    /// 카탈로그 경로를 확인한 뒤에만 30분까지 이어서 지하 구간을 복원한다.
     static let defaultMaximumReadingGap: TimeInterval = 18 * 60
+    private static let railEndpointMaximumReadingGap: TimeInterval = 30 * 60
 
     static func segments(
         from readings: [SensorReading],
@@ -2611,7 +2614,11 @@ enum SubwayTravelSegmentEngine {
                 continue
             }
             if let previous = current.last,
-               reading.timestamp.timeIntervalSince(previous.timestamp) <= maximumGap {
+               shouldJoin(
+                   previous,
+                   reading,
+                   maximumGap: maximumGap
+               ) {
                 current.append(reading)
                 result.append(current)
             } else {
@@ -2620,6 +2627,29 @@ enum SubwayTravelSegmentEngine {
             }
         }
         return result
+    }
+
+    private static func shouldJoin(
+        _ previous: SensorReading,
+        _ next: SensorReading,
+        maximumGap: TimeInterval
+    ) -> Bool {
+        let gap = next.timestamp.timeIntervalSince(previous.timestamp)
+        if gap <= maximumGap { return true }
+        guard maximumGap == defaultMaximumReadingGap,
+              gap <= railEndpointMaximumReadingGap,
+              previous.point != nil,
+              next.point != nil,
+              previous.nearbyStation,
+              next.nearbyStation,
+              previous.matchesRailRoute,
+              next.matchesRailRoute,
+              let previousName = previous.nearbyStationName,
+              let nextName = next.nearbyStationName,
+              !previousName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !nextName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return false }
+        return SubwayStationCatalog.route(for: [previousName, nextName]) != nil
     }
 
     private static func pathDistance(_ points: [GeoPoint]) -> Double {

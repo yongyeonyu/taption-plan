@@ -1044,7 +1044,8 @@ final class RouteTimelineDataTests: XCTestCase {
             span: TimeSpan(start: date(10), end: date(60)),
             distanceMeters: 10_000,
             confidence: .high,
-            evidence: ["버스"]
+            evidence: ["버스"],
+            isConfirmed: true
         )
         let original = travel
 

@@ -1,6 +1,7 @@
 import CoreLocation
 import Foundation
 import OSLog
+import TaptionPlanCore
 
 struct PhoneScreenSnapshot: Codable, Hashable, Sendable {
     var brightness: Double
@@ -277,6 +278,31 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         compressionQueue.sync {}
     }
 
+    func sensorReadings() throws -> [SensorReading] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let directories = (try? FileManager.default.contentsOfDirectory(
+            at: rootDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey]
+        )) ?? []
+        var result: [SensorReading] = []
+        var seen = Set<UUID>()
+        for directory in directories where directory.lastPathComponent.range(of: #"^\d{4}-\d{2}$"#, options: .regularExpression) != nil {
+            let parts = directory.lastPathComponent.split(separator: "-")
+            guard parts.count == 2,
+                  let year = Int(parts[0]),
+                  let month = Int(parts[1]),
+                  let date = Calendar.autoupdatingCurrent.date(from: DateComponents(year: year, month: month, day: 1)) else { continue }
+            for envelope in try envelopes(inMonthContaining: date) where envelope.kind == "sensor-reading" {
+                guard let payload = envelope.payloadJSON.data(using: .utf8),
+                      let reading = try? decoder.decode(SensorReading.self, from: payload),
+                      seen.insert(reading.id).inserted else { continue }
+                result.append(reading)
+            }
+        }
+        return result.sorted { $0.timestamp < $1.timestamp }
+    }
+
     private func monthDirectory(for monthKey: String) throws -> URL {
         let directory = rootDirectory.appendingPathComponent(
             monthKey,
@@ -543,6 +569,29 @@ final class TrackingSessionChunkArchive: @unchecked Sendable {
         return values.sorted { $0.timestamp < $1.timestamp }
     }
 
+    func allPersistedReadings() throws -> [SensorReading] {
+        lock.lock()
+        let files = FileManager.default.enumerator(
+            at: rootDirectory,
+            includingPropertiesForKeys: nil
+        )?.compactMap { $0 as? URL } ?? []
+        lock.unlock()
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        var result: [SensorReading] = []
+        var seen = Set<UUID>()
+        for file in files where file.pathExtension == "zlib" {
+            guard let compressed = try? Data(contentsOf: file),
+                  let data = try? (compressed as NSData).decompressed(using: .zlib) as Data else { continue }
+            for line in data.split(separator: 0x0A) {
+                guard let reading = try? decoder.decode(SensorReading.self, from: Data(line)),
+                      seen.insert(reading.id).inserted else { continue }
+                result.append(reading)
+            }
+        }
+        return result.sorted { $0.timestamp < $1.timestamp }
+    }
+
     private func write(_ chunk: PendingChunk, sessionID: UUID) throws {
         guard !chunk.readings.isEmpty else { return }
         let components = calendar.dateComponents(
@@ -613,29 +662,101 @@ enum TrackingSessionRecoveryStore {
     }
 }
 
+actor RawDeviceDataDayArchive {
+    private static let domain = "raw-device-data"
+    private let store: TaptionPlanDayStore
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
+
+    init(databaseURL: URL) throws {
+        try FileManager.default.createDirectory(
+            at: databaseURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        store = try TaptionPlanDayStore(url: databaseURL)
+        encoder = RawDeviceDataMonthlyArchive.payloadEncoder()
+        decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+    }
+
+    static func applicationSupport() throws -> RawDeviceDataDayArchive {
+        try RawDeviceDataDayArchive(
+            databaseURL: TaptionLocalDatabaseLocation
+                .sharedOrApplicationSupport()
+        )
+    }
+
+    func append(_ envelope: RawDeviceDataEnvelope) async throws {
+        try await store.appendEvents([
+            .init(
+                day: TaptionPlanDayKey(date: envelope.capturedAt),
+                timestamp: envelope.capturedAt,
+                sequence: 0,
+                id: envelope.id.uuidString,
+                domain: Self.domain,
+                payload: try encoder.encode(envelope)
+            )
+        ])
+    }
+
+    func envelopes(in span: TimeSpan) async throws
+        -> [RawDeviceDataEnvelope] {
+        let events = try await store.events(
+            from: TaptionPlanDayKey(date: span.start),
+            through: TaptionPlanDayKey(date: span.end),
+            domain: Self.domain
+        )
+        return events.compactMap { event in
+            guard let value = try? decoder.decode(
+                RawDeviceDataEnvelope.self,
+                from: event.payload
+            ), span.contains(value.capturedAt) else { return nil }
+            return value
+        }
+    }
+
+    func checkpoint() async throws {
+        try await store.checkpoint()
+    }
+}
+
 actor SensorReadingArchive {
     private static let logger = Logger(
         subsystem: "com.taption.plan",
         category: "RawDeviceDataArchive"
     )
+    private enum Error: Swift.Error {
+        case dayStoreUnavailable
+    }
+
+    private static let migrationKey = "sensor-reading-v1-to-day-store-v2"
     private let fileURL: URL
+    private let dayStore: TaptionPlanDayStore?
     private let retentionInterval: TimeInterval
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private let rawArchive: RawDeviceDataMonthlyArchive?
     private let trackingChunkArchive: TrackingSessionChunkArchive?
-    private var lastCompactionAt: Date?
 
     init(
         fileURL: URL,
         retentionInterval: TimeInterval = 7 * 86_400,
         rawArchive: RawDeviceDataMonthlyArchive? = nil,
-        trackingChunkArchive: TrackingSessionChunkArchive? = nil
+        trackingChunkArchive: TrackingSessionChunkArchive? = nil,
+        dayStoreURL: URL? = nil
     ) {
         self.fileURL = fileURL
         self.retentionInterval = max(86_400, retentionInterval)
         self.rawArchive = rawArchive
         self.trackingChunkArchive = trackingChunkArchive
+        let storeURL = dayStoreURL ?? fileURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("taption-plan-v2.sqlite")
+        try? FileManager.default.createDirectory(
+            at: storeURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        self.dayStore = try? TaptionPlanDayStore(url: storeURL)
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
         encoder.dateEncodingStrategy = .secondsSince1970
@@ -656,166 +777,132 @@ actor SensorReadingArchive {
             "TaptionPlan/Sensors",
             isDirectory: true
         )
+        let storeRoot = fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier: "group.com.taption.plan"
+        ) ?? root.appendingPathComponent("TaptionPlan", isDirectory: true)
+        let storeURL = storeRoot.appendingPathComponent(
+            "taption-data-v2.sqlite",
+            isDirectory: false
+        )
         return SensorReadingArchive(
             fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
             rawArchive: rawArchive
                 ?? (try? RawDeviceDataMonthlyArchive.applicationSupport()),
-            trackingChunkArchive: try? TrackingSessionChunkArchive.applicationSupport()
+            trackingChunkArchive: try? TrackingSessionChunkArchive.applicationSupport(),
+            dayStoreURL: storeURL
         )
     }
 
-    func append(_ reading: SensorReading, now: Date = .now) throws {
-        try trackingChunkArchive?.append(reading)
-        if let rawArchive, reading.trackingSessionID == nil {
-            do {
-                try rawArchive.append(
-                    source: (
-                        reading.locationFixQuality == .approximate
-                            || reading.point == nil
-                    )
-                        ? .iPhoneSensor
-                        : .gps,
-                    kind: "sensor-reading",
-                    payload: reading,
-                    capturedAt: reading.timestamp
+    func append(_ reading: SensorReading, now: Date = .now) async throws {
+        try await append([reading], now: now)
+    }
+
+    func append(_ readings: [SensorReading], now: Date = .now) async throws {
+        guard !readings.isEmpty else { return }
+        try await ensureMigrated()
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        let encoder = encoder
+        let unique = Dictionary(grouping: readings, by: \.id).compactMap { $0.value.first }
+        var knownIDs = Set<String>()
+        let days = unique.map { TaptionPlanDayKey(date: $0.timestamp) }
+        if let start = days.min(), let end = days.max() {
+            let events = try await dayStore.events(from: start, through: end, domain: "sensor-reading")
+            knownIDs.formUnion(events.map(\.id))
+        }
+        let events = try unique
+            .filter { !knownIDs.contains($0.id.uuidString) }
+            .map { reading in
+                TaptionPlanDayStore.Event(
+                    day: TaptionPlanDayKey(date: reading.timestamp),
+                    timestamp: reading.timestamp,
+                    sequence: UInt64(max(0, reading.sequence ?? 0)),
+                    id: reading.id.uuidString,
+                    domain: "sensor-reading",
+                    payload: try encoder.encode(reading)
                 )
-            } catch {
-                Self.logger.error(
-                    "Raw sensor archive failed: \(error.localizedDescription, privacy: .public)"
-                )
             }
-        }
-        if lastCompactionAt.map({ now.timeIntervalSince($0) >= 86_400 }) ?? true {
-            try compact(now: now)
-            lastCompactionAt = now
-        }
-        try FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try applyBackgroundFileProtectionIfNeeded()
-        var line = try encoder.encode(reading)
-        line.append(0x0A)
-
-        if FileManager.default.fileExists(atPath: fileURL.path) {
-            let handle = try FileHandle(forWritingTo: fileURL)
-            defer { try? handle.close() }
-            try handle.seekToEnd()
-            try handle.write(contentsOf: line)
-        } else {
-            try line.write(
-                to: fileURL,
-                options: [
-                    .atomic,
-                    .completeFileProtectionUntilFirstUserAuthentication,
-                ]
-            )
-        }
+        try await dayStore.appendEvents(events)
+        _ = now
     }
 
-    func readings(in span: TimeSpan) throws -> [SensorReading] {
-        try allReadings()
-            .filter { span.contains($0.timestamp) }
-            .sorted { $0.timestamp < $1.timestamp }
+    func readings(in span: TimeSpan) async throws -> [SensorReading] {
+        try await ensureMigrated()
+        let values = try await loadEvents(in: span)
+        return values.sorted(by: readingOrder)
     }
 
-    func routeReadings(in span: TimeSpan) throws -> [SensorReading] {
-        let indexed = try readings(in: span)
-        var merged = indexed
-        var seen = Set(indexed.map(\.id))
-        if let trackingChunkArchive {
-            for reading in try trackingChunkArchive.readings(in: span)
-            where seen.insert(reading.id).inserted {
-                merged.append(reading)
-            }
-        }
-        guard let rawArchive else {
-            return merged.sorted { $0.timestamp < $1.timestamp }
-        }
-
-        let calendar = Calendar.autoupdatingCurrent
-        var month = calendar.dateInterval(of: .month, for: span.start)?.start
-            ?? span.start
-        let lastMonth = calendar.dateInterval(of: .month, for: span.end)?.start
-            ?? span.end
-
-        while month <= lastMonth {
-            let envelopes = try rawArchive.envelopes(
-                inMonthContaining: month
-            )
-            for envelope in envelopes where envelope.kind == "sensor-reading" {
-                guard let data = envelope.payloadJSON.data(using: .utf8),
-                      let reading = try? decoder.decode(
-                          SensorReading.self,
-                          from: data
-                      ),
-                      span.contains(reading.timestamp),
-                      seen.insert(reading.id).inserted else { continue }
-                merged.append(reading)
-            }
-            guard let next = calendar.date(
-                byAdding: .month,
-                value: 1,
-                to: month
-            ), next > month else { break }
-            month = next
-        }
-        return merged.sorted { $0.timestamp < $1.timestamp }
+    func routeReadings(in span: TimeSpan) async throws -> [SensorReading] {
+        try await ensureMigrated()
+        return try await loadEvents(in: span).sorted(by: readingOrder)
     }
 
-    func compact(now: Date = .now) throws {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
-        let cutoff = now.addingTimeInterval(-retentionInterval)
-        let retained = try allReadings().filter { $0.timestamp >= cutoff }
-        guard !retained.isEmpty else {
-            try FileManager.default.removeItem(at: fileURL)
-            return
-        }
-        let payload = try retained.reduce(into: Data()) { data, reading in
-            data.append(try encoder.encode(reading))
-            data.append(0x0A)
-        }
-        try payload.write(
-            to: fileURL,
-            options: [
-                .atomic,
-                .completeFileProtectionUntilFirstUserAuthentication,
-            ]
-        )
+    func compact(now: Date = .now) async throws {
+        _ = now
+        try await ensureMigrated()
     }
 
-    func deleteAll() throws {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
-        try FileManager.default.removeItem(at: fileURL)
+    func deleteAll() async throws {
+        try await ensureMigrated()
     }
 
-    func rawEnvelopes(inMonthContaining date: Date) throws
+    func rawEnvelopes(inMonthContaining date: Date) async throws
         -> [RawDeviceDataEnvelope] {
         guard let rawArchive else { return [] }
         return try rawArchive.envelopes(inMonthContaining: date)
     }
 
-    private func allReadings() throws -> [SensorReading] {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            return []
+    private func ensureMigrated() async throws {
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        if try await dayStore.migrationCompleted(Self.migrationKey) { return }
+        var migrated = readLegacyFile()
+        if let rawArchive { migrated.append(contentsOf: try rawArchive.sensorReadings()) }
+        if let trackingChunkArchive { migrated.append(contentsOf: try trackingChunkArchive.allPersistedReadings()) }
+        var seen = Set<UUID>()
+        let unique = migrated.filter { seen.insert($0.id).inserted }
+        let days = unique.map { TaptionPlanDayKey(date: $0.timestamp) }
+        var existingIDs = Set<String>()
+        if let start = days.min(), let end = days.max() {
+            let existing = try await dayStore.events(
+                from: start,
+                through: end,
+                domain: "sensor-reading"
+            )
+            existingIDs.formUnion(existing.map(\.id))
         }
-        let data = try Data(contentsOf: fileURL)
-        return data.split(separator: 0x0A).compactMap {
-            try? decoder.decode(SensorReading.self, from: Data($0))
+        let events = try unique.filter { !existingIDs.contains($0.id.uuidString) }.map { reading in
+            TaptionPlanDayStore.Event(
+                day: TaptionPlanDayKey(date: reading.timestamp),
+                timestamp: reading.timestamp,
+                sequence: UInt64(max(0, reading.sequence ?? 0)),
+                id: reading.id.uuidString,
+                domain: "sensor-reading",
+                payload: try encoder.encode(reading)
+            )
         }
+        if !events.isEmpty { try await dayStore.appendEvents(events) }
+        _ = try await dayStore.markMigrationCompleted(Self.migrationKey)
     }
 
-    private func applyBackgroundFileProtectionIfNeeded() throws {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            return
-        }
-        try FileManager.default.setAttributes(
-            [
-                .protectionKey:
-                    FileProtectionType.completeUntilFirstUserAuthentication,
-            ],
-            ofItemAtPath: fileURL.path
-        )
+    private func loadEvents(in span: TimeSpan) async throws -> [SensorReading] {
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        let start = TaptionPlanDayKey(date: span.start)
+        let end = TaptionPlanDayKey(date: span.end)
+        return try await dayStore.events(from: start, through: end, domain: "sensor-reading")
+            .compactMap { event in
+                guard let reading = try? decoder.decode(SensorReading.self, from: event.payload), span.contains(reading.timestamp) else { return nil }
+                return reading
+            }
+    }
+
+    private func readLegacyFile() -> [SensorReading] {
+        guard let data = try? Data(contentsOf: fileURL) else { return [] }
+        return data.split(separator: 0x0A).compactMap { try? decoder.decode(SensorReading.self, from: Data($0)) }
+    }
+
+    private func readingOrder(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
+        if lhs.timestamp != rhs.timestamp { return lhs.timestamp < rhs.timestamp }
+        if lhs.sequence != rhs.sequence { return (lhs.sequence ?? .max) < (rhs.sequence ?? .max) }
+        return lhs.id.uuidString < rhs.id.uuidString
     }
 }
 

@@ -16,6 +16,7 @@ struct AppShellView: View {
     @State private var showsMapHome = true
     @State private var isSecurityStateReady = false
     @State private var hasCompletedInitialProRefresh = false
+    @State private var hasCompletedInitialMapDataLoad = false
     @State private var hasRenderedInitialDestination = false
     @State private var isInitialLaunchOverlayVisible = true
     @State private var lockGeneration = 0
@@ -224,10 +225,14 @@ struct AppShellView: View {
     }
 
     private var initialLaunchReady: Bool {
-        hasCompletedInitialProRefresh
-            && isSecurityStateReady
-            && hasRenderedInitialDestination
-            && (model.isBootstrapped || !proAccess.grantsAccess)
+        AppShellInitialLaunchGate.isReady(
+            hasCompletedInitialProRefresh: hasCompletedInitialProRefresh,
+            isSecurityStateReady: isSecurityStateReady,
+            hasRenderedInitialDestination: hasRenderedInitialDestination,
+            hasCompletedInitialMapDataLoad: hasCompletedInitialMapDataLoad,
+            isBootstrapped: model.isBootstrapped,
+            grantsAccess: proAccess.grantsAccess
+        )
     }
 
     private func markInitialDestinationRendered() {
@@ -249,10 +254,30 @@ struct AppShellView: View {
             ZStack {
                 Color("LaunchBackground")
                     .ignoresSafeArea()
-                Image("LaunchIcon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 250, height: 445)
+                VStack(spacing: 20) {
+                    Image("TaptionSplashIcon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 230, height: 230)
+                    Text("Taption Plan")
+                        .font(.system(size: 25, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                    ProgressView()
+                        .progressViewStyle(.linear)
+                        .frame(width: 220)
+                        .tint(.white)
+                        .background(
+                            Capsule()
+                                .fill(.white.opacity(0.22))
+                        )
+                        .accessibilityLabel(
+                            AppLanguagePreference.text(
+                                korean: "활동과 이동 경로 불러오는 중",
+                                english: "Loading activities and routes",
+                                rawPreference: languageRawValue
+                            )
+                        )
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)
@@ -288,10 +313,10 @@ struct AppShellView: View {
             ZStack {
                 Color("LaunchBackground")
                     .ignoresSafeArea()
-                Image("LaunchIcon")
+                Image("TaptionSplashIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 250, height: 445)
+                    .frame(width: 250, height: 250)
             }
                 .accessibilityHidden(true)
         }
@@ -505,7 +530,14 @@ struct AppShellView: View {
         if Self.legacyUIEnabled && !showsMapHome {
             legacyRootContent
         } else {
-            MapHomeView(model: model, proAccess: proAccess)
+            MapHomeView(
+                model: model,
+                proAccess: proAccess,
+                onInitialDataReady: {
+                    hasCompletedInitialMapDataLoad = true
+                    dismissInitialLaunchOverlayIfReady()
+                }
+            )
         }
     }
 
@@ -521,6 +553,23 @@ struct AppShellView: View {
         case .settings:
             SettingsView(model: model)
         }
+    }
+}
+
+enum AppShellInitialLaunchGate {
+    static func isReady(
+        hasCompletedInitialProRefresh: Bool,
+        isSecurityStateReady: Bool,
+        hasRenderedInitialDestination: Bool,
+        hasCompletedInitialMapDataLoad: Bool,
+        isBootstrapped: Bool,
+        grantsAccess: Bool
+    ) -> Bool {
+        hasCompletedInitialProRefresh
+            && isSecurityStateReady
+            && hasRenderedInitialDestination
+            && (hasCompletedInitialMapDataLoad || !grantsAccess)
+            && (isBootstrapped || !grantsAccess)
     }
 }
 
@@ -549,10 +598,10 @@ private struct MapHomeAppLockView: View {
         ZStack {
             Color(red: 199 / 255, green: 123 / 255, blue: 112 / 255)
                 .ignoresSafeArea()
-            Image("LaunchIcon")
+            Image("TaptionSplashIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 250, height: 445)
+                .frame(width: 250, height: 250)
                 .accessibilityLabel(
                     AppLanguagePreference.text(
                         korean: "앱 잠금 해제 필요",
