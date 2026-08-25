@@ -2357,10 +2357,8 @@ final class TimeScaleTests: XCTestCase {
                 permissions: [
                     .location: .authorized,
                     .motion: .authorized,
-                    .photos: .authorized,
                     .calendar: .authorized,
                     .notifications: .authorized,
-                    .appUsage: .authorized,
                 ],
                 locationAlwaysAuthorized: true,
                 locationPrecise: true,
@@ -2383,16 +2381,14 @@ final class TimeScaleTests: XCTestCase {
                 .locationPrecise,
                 .motion,
                 .healthKitRequestCompleted,
-                .photos,
                 .calendar,
                 .notifications,
-                .appUsage,
                 .liveActivities,
             ]
         )
     }
 
-    func testRequiredPermissionGateRejectsLimitedPhotosAndUsesHealthRequestCompletion() {
+    func testRequiredPermissionGateDoesNotRequirePhotosOrAppUsage() {
         let gate = RequiredPermissionGate.evaluate(
             RequiredPermissionSnapshot(
                 permissions: [
@@ -2411,6 +2407,6 @@ final class TimeScaleTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(gate.missing, [.photos])
+        XCTAssertTrue(gate.allSatisfied)
     }
 }

@@ -480,10 +480,6 @@ final class AppModel {
         }
         if !settings.healthEnabled { missing.append("건강·Apple Watch") }
         if settings.selectedCalendarIDs.isEmpty { missing.append("캘린더") }
-        if !settings.showsPhotos { missing.append("사진") }
-        if appUsageAuthorizationState != .approved {
-            missing.append("앱 사용시간")
-        }
         return missing.isEmpty ? nil : missing
     }
 
@@ -2151,12 +2147,6 @@ final class AppModel {
             }
         case .healthKitRequestCompleted:
             await requestHealth()
-        case .photos:
-            if photoService.permissionState() == .denied {
-                openSystemSettings()
-            } else {
-                await requestPhotos()
-            }
         case .calendar:
             if calendarService.permissionState() == .denied {
                 openSystemSettings()
@@ -2169,8 +2159,6 @@ final class AppModel {
             } else {
                 await requestNotifications()
             }
-        case .appUsage:
-            await requestAppUsageAuthorization()
         case .liveActivities:
             openSystemSettings()
         }

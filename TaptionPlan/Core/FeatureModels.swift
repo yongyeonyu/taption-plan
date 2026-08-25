@@ -607,10 +607,8 @@ enum RequiredPermission: String, CaseIterable, Equatable, Sendable {
     case locationPrecise
     case motion
     case healthKitRequestCompleted
-    case photos
     case calendar
     case notifications
-    case appUsage
     case liveActivities
 }
 
@@ -671,14 +669,10 @@ struct RequiredPermissionGate: Equatable, Sendable {
             state(.motion) == .authorized
         case .healthKitRequestCompleted:
             snapshot.healthKitRequestCompleted
-        case .photos:
-            state(.photos) == .authorized
         case .calendar:
             state(.calendar) == .authorized
         case .notifications:
             state(.notifications) == .authorized
-        case .appUsage:
-            state(.appUsage) == .authorized
         case .liveActivities:
             snapshot.liveActivitiesEnabled
         }

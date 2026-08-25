@@ -129,26 +129,6 @@ struct SettingsView: View {
                         summary: model.integrationStatusSummary
                     ) {
                         settingsToggleRow(
-                            icon: "photo",
-                            iconBackground: .tpPhoto,
-                            iconColor: .tpPhotoDark,
-                            title: "사진",
-                            subtitle: "촬영 시각에 타임라인 표시",
-                            isOn: Binding(
-                                get: {
-                                    model.settings.showsPhotos
-                                        && model.permissionState(
-                                            for: .photos
-                                        ).isGranted
-                                },
-                                set: { enabled in
-                                    Task {
-                                        await model.setPhotosEnabled(enabled)
-                                    }
-                                }
-                            )
-                        )
-                        settingsToggleRow(
                             icon: "calendar",
                             title: "캘린더",
                             subtitle: "Apple · Google 캘린더 일정 가져오기",
@@ -212,7 +192,6 @@ struct SettingsView: View {
                             )
                         )
                         watchInstallRow
-                        appUsageRow
                         locationIntegrationRow
                         if let session = model.activeTrackingSession {
                             liveTrackingRow(session)
@@ -253,19 +232,6 @@ struct SettingsView: View {
                         "데이터와 개인정보",
                         summary: "기기 안에 안전하게 저장"
                     ) {
-                        settingsToggleRow(
-                            icon: "lock.shield",
-                            title: "위젯 개인정보",
-                            subtitle: "켜면 위젯에 계획 제목을 표시",
-                            isOn: Binding(
-                                get: {
-                                    model.settings.showsPhotosInWidgets
-                                },
-                                set: { value in
-                                    model.setWidgetPhotosVisible(value)
-                                }
-                            )
-                        )
                         settingsRow(
                             icon: "square.and.arrow.up",
                             title: "내 데이터 내보내기",
@@ -456,39 +422,6 @@ struct SettingsView: View {
                 .lineLimit(12)
         }
         .padding(.leading, 37)
-    }
-
-    private var appUsageRow: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            settingsRow(
-                icon: "app.badge.clock",
-                iconBackground: Color(red: 0.93, green: 0.90, blue: 0.98),
-                iconColor: Color(red: 0.42, green: 0.34, blue: 0.64),
-                title: ScreenTimeUsageRecordEngine.laneTitle,
-                subtitle: "Screen Time 앱별 사용 기록",
-                value: model.appUsageStatusText
-            ) {
-                Task { await model.requestAppUsageAuthorization() }
-            }
-
-            if let guidance = model.appUsageAuthorizationState.guidance {
-                HStack(alignment: .top, spacing: 7) {
-                    Text(guidance)
-                        .font(.taption(size: SettingsTypography.footnote))
-                        .foregroundStyle(Color.tpSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button("설정 열기") {
-                        model.openAppUsageSettings()
-                    }
-                    .font(.taption(size: SettingsTypography.footnote, weight: .bold))
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.tpInk)
-                    .fixedSize()
-                }
-                .padding(.horizontal, 37)
-                .padding(.bottom, 7)
-            }
-        }
     }
 
     private var locationIntegrationRow: some View {

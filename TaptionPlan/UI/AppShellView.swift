@@ -817,14 +817,10 @@ private struct RequiredPermissionGateView: View {
             ("figure.walk.motion", text("동작 및 피트니스", "Motion & Fitness"))
         case .healthKitRequestCompleted:
             ("heart.fill", text("건강 데이터", "Health Data"))
-        case .photos:
-            ("photo.fill", text("사진 전체 접근", "Full Photo Access"))
         case .calendar:
             ("calendar", text("캘린더 전체 접근", "Full Calendar Access"))
         case .notifications:
             ("bell.fill", text("알림", "Notifications"))
-        case .appUsage:
-            ("app.badge.clock", text("앱 사용시간", "App Usage"))
         case .liveActivities:
             ("iphone.radiowaves.left.and.right", text("실시간 현황", "Live Activities"))
         }
@@ -874,22 +870,10 @@ struct PermissionOnboardingSheet: View {
             detail: "이미 잡혀 있는 일정을 시간표에 함께 보여줍니다."
         ),
         PermissionOnboardingStep(
-            feature: .photos,
-            icon: "photo",
-            title: "사진",
-            detail: "촬영 시각에 맞춰 하루를 되짚을 수 있습니다."
-        ),
-        PermissionOnboardingStep(
             feature: .notifications,
             icon: "bell.badge",
             title: "알림",
             detail: "계획한 시각에 맞춰 알려줍니다."
-        ),
-        PermissionOnboardingStep(
-            feature: .appUsage,
-            icon: "app.badge.clock",
-            title: "앱 사용시간",
-            detail: "시간대별 앱 사용 기록을 시간표에 더합니다."
         ),
     ]
 
@@ -927,7 +911,7 @@ struct PermissionOnboardingSheet: View {
             Text("하루는 알아서 기록됩니다")
                 .font(.taption(size: 15, weight: .black))
                 .foregroundStyle(Color.tpInk)
-            Text("Taption Plan은 위치·건강·캘린더·사진·앱 사용시간을 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다.")
+            Text("Taption Plan은 위치·건강·캘린더를 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다.")
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1042,9 +1026,9 @@ struct PermissionOnboardingSheet: View {
         case .location: await model.enableLocationCollection()
         case .health: await model.requestHealth()
         case .calendar: await model.requestCalendar()
-        case .photos: await model.requestPhotos()
+        case .photos: break
         case .notifications: await model.requestNotifications()
-        case .appUsage: await model.requestAppUsageAuthorization()
+        case .appUsage: break
         default: break
         }
         // 시트가 떠 있는 동안에는 루트 경고창이 뜨지 않는다. 결과는 각 줄의
