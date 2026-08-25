@@ -2021,6 +2021,80 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapPanObserverAcceptsOneFingerBeganOrChangedOnly() {
+        XCTAssertTrue(
+            MapHomeUserTrackingPolicy.isSingleFingerPanStart(
+                state: .began,
+                numberOfTouches: 1
+            )
+        )
+        XCTAssertTrue(
+            MapHomeUserTrackingPolicy.isSingleFingerPanStart(
+                state: .changed,
+                numberOfTouches: 1
+            )
+        )
+        XCTAssertFalse(
+            MapHomeUserTrackingPolicy.isSingleFingerPanStart(
+                state: .began,
+                numberOfTouches: 2
+            )
+        )
+        XCTAssertFalse(
+            MapHomeUserTrackingPolicy.isSingleFingerPanStart(
+                state: .ended,
+                numberOfTouches: 1
+            )
+        )
+    }
+
+    func testTodayTimelineCutoffNeverMovesPastNow() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = try XCTUnwrap(
+            calendar.date(from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 25,
+                hour: 12
+            ))
+        )
+        let future = try XCTUnwrap(
+            calendar.date(byAdding: .hour, value: 6, to: now)
+        )
+
+        XCTAssertEqual(
+            MapHomeRouteReadingsPolicy.clampedTimelineDate(
+                selectedDate: now,
+                timelineDate: future,
+                now: now,
+                calendar: calendar
+            ),
+            now
+        )
+    }
+
+    func testCompletedRouteLoadOnlyMatchesItsOwnCalendarDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 25))
+        )
+        let nextDay = try XCTUnwrap(
+            calendar.date(byAdding: .day, value: 1, to: day)
+        )
+        let state = MapHomeRouteReadingsLoadState.loaded(day)
+
+        XCTAssertTrue(state.isLoaded(for: day, calendar: calendar))
+        XCTAssertFalse(state.isLoaded(for: nextDay, calendar: calendar))
+        XCTAssertFalse(
+            MapHomeRouteReadingsLoadState.failed(day).isLoaded(
+                for: day,
+                calendar: calendar
+            )
+        )
+    }
+
     func testLocationButtonDotRequiresFollowingAndCenteredCamera() {
         XCTAssertEqual(
             MapHomeLocationButtonState.resolve(

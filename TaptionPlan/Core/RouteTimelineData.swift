@@ -204,6 +204,390 @@ enum ExpectedRouteRequestEngine {
     }
 }
 
+/// Reduces raw location observations to a deterministic, display-only track.
+/// The source readings remain untouched and are still the archive of record.
+enum GPSLoggerRouteFilter {
+    struct Configuration: Hashable, Sendable {
+        var maximumPreciseAccuracy: Double = 150
+        var maximumDisplayAccuracy: Double = 1_000
+        var minimumMovementDistance: Double = 2
+        var stationarySpeed: Double = 0.75
+        var maximumPlausibleSpeed: Double = 55
+        var absoluteMaximumSpeed: Double = 120
+        var maximumGap: TimeInterval = 15 * 60
+        var sparseGap: TimeInterval = 5 * 60
+        var sparseDistance: Double = 1_000
+        var innovationSigma: Double = 3
+        var processAcceleration: Double = 4
+
+        static let `default` = Configuration()
+    }
+
+    private struct MeterPoint: Hashable {
+        var east: Double
+        var north: Double
+
+        static let zero = MeterPoint(east: 0, north: 0)
+    }
+
+    private struct Candidate {
+        let reading: SensorReading
+        let point: GeoPoint
+        let accuracy: Double
+        let isPrecise: Bool
+    }
+
+    private struct KalmanState {
+        var originLatitude: Double
+        var originLongitude: Double
+        var position: MeterPoint
+        var velocity: MeterPoint
+        var positionVariance: Double
+        var velocityVariance: Double
+
+        init(candidate: Candidate) {
+            originLatitude = candidate.point.latitude
+            originLongitude = candidate.point.longitude
+            position = MeterPoint.zero
+            velocity = MeterPoint.zero
+            positionVariance = max(25, candidate.accuracy * candidate.accuracy)
+            velocityVariance = 25
+        }
+
+        mutating func update(
+            candidate: Candidate,
+            after elapsed: TimeInterval,
+            sigmaLimit: Double,
+            processAcceleration: Double
+        ) -> (point: GeoPoint, uncertainty: Double)? {
+            let dt = max(0, elapsed)
+            let measurement = Self.project(
+                candidate.point,
+                originLatitude: originLatitude,
+                originLongitude: originLongitude
+            )
+            let accelerationVariance = max(0.25, processAcceleration * processAcceleration)
+            let predictedPosition = MeterPoint(
+                east: position.east + velocity.east * dt,
+                north: position.north + velocity.north * dt
+            )
+            let predictedVariance = max(
+                1,
+                positionVariance
+                    + velocityVariance * dt * dt
+                    + accelerationVariance * max(dt, 1) * max(dt, 1) / 4
+            )
+            let measurementVariance = max(25, candidate.accuracy * candidate.accuracy)
+            let innovation = MeterPoint(
+                east: measurement.east - predictedPosition.east,
+                north: measurement.north - predictedPosition.north
+            )
+            let innovationDistance = hypot(innovation.east, innovation.north)
+            let innovationSigma = sqrt(predictedVariance + measurementVariance)
+            guard innovationDistance <= sigmaLimit * innovationSigma else {
+                return nil
+            }
+
+            let gain = predictedVariance / (predictedVariance + measurementVariance)
+            let correctedPosition = MeterPoint(
+                east: predictedPosition.east + gain * innovation.east,
+                north: predictedPosition.north + gain * innovation.north
+            )
+            let velocityGain = dt > 0 ? min(0.5, gain / max(dt, 1)) : 0
+            let correctedVelocity = MeterPoint(
+                east: velocity.east + velocityGain * innovation.east,
+                north: velocity.north + velocityGain * innovation.north
+            )
+            position = correctedPosition
+            velocity = correctedVelocity
+            positionVariance = max(1, (1 - gain) * predictedVariance)
+            velocityVariance = max(1, velocityVariance * (1 - min(0.5, gain)))
+
+            let output = Self.unproject(
+                correctedPosition,
+                originLatitude: originLatitude,
+                originLongitude: originLongitude,
+                source: candidate.point,
+                uncertainty: sqrt(positionVariance)
+            )
+            return (output, sqrt(positionVariance))
+        }
+
+        private static func project(
+            _ point: GeoPoint,
+            originLatitude: Double,
+            originLongitude: Double
+        ) -> MeterPoint {
+            let latitudeScale = 111_132.92
+            let longitudeScale = 111_412.84
+                * cos(originLatitude * .pi / 180)
+            return MeterPoint(
+                east: (point.longitude - originLongitude) * longitudeScale,
+                north: (point.latitude - originLatitude) * latitudeScale
+            )
+        }
+
+        private static func unproject(
+            _ point: MeterPoint,
+            originLatitude: Double,
+            originLongitude: Double,
+            source: GeoPoint,
+            uncertainty: Double
+        ) -> GeoPoint {
+            let latitudeScale = 111_132.92
+            let longitudeScale = 111_412.84
+                * cos(originLatitude * .pi / 180)
+            return GeoPoint(
+                latitude: originLatitude + point.north / latitudeScale,
+                longitude: originLongitude + point.east / longitudeScale,
+                altitude: source.altitude.isFinite ? source.altitude : 0,
+                horizontalAccuracy: max(
+                    source.horizontalAccuracy,
+                    uncertainty.isFinite ? uncertainty : 0
+                ),
+                verticalAccuracy: source.verticalAccuracy.isFinite
+                    && source.verticalAccuracy >= 0
+                    ? source.verticalAccuracy
+                    : -1
+            )
+        }
+    }
+
+    static func filter(
+        _ readings: [SensorReading],
+        configuration: Configuration = .default
+    ) -> [SensorReading] {
+        let candidates = normalizedCandidates(
+            readings,
+            configuration: configuration
+        )
+        guard !candidates.isEmpty else { return [] }
+
+        let lowConfidenceBoundaries = boundaryCandidates(
+            from: candidates
+        ).map { derivedReading($0, point: $0.point) }
+        let preciseCandidates = candidates.filter(\.isPrecise)
+        guard let first = preciseCandidates.first else {
+            return lowConfidenceBoundaries
+                .sorted(by: deterministicReadingOrder)
+        }
+
+        var result: [SensorReading] = []
+        result.reserveCapacity(preciseCandidates.count + lowConfidenceBoundaries.count)
+        var lastCandidate = first
+        var lastOutput = first.point
+        var state = KalmanState(candidate: first)
+        var startsNewSegment = false
+        result.append(derivedReading(first, point: first.point))
+
+        for candidate in preciseCandidates.dropFirst() {
+            let elapsed = candidate.reading.timestamp.timeIntervalSince(
+                lastCandidate.reading.timestamp
+            )
+            guard elapsed > 0 else { continue }
+
+            if startsNewSegment || elapsed > configuration.maximumGap {
+                closeLastSegment(&result)
+                state = KalmanState(candidate: candidate)
+                lastCandidate = candidate
+                lastOutput = candidate.point
+                result.append(derivedReading(candidate, point: candidate.point))
+                startsNewSegment = false
+                continue
+            }
+
+            let displacement = distanceMeters(lastOutput, candidate.point)
+            let threshold = max(
+                configuration.minimumMovementDistance,
+                min(8, candidate.accuracy * 0.35)
+            )
+            let reportedSpeed = candidate.reading.speedMetersPerSecond
+            let isStationary: Bool
+            if candidate.reading.motion == .stationary {
+                isStationary = true
+            } else if let reportedSpeed {
+                isStationary = reportedSpeed.isFinite
+                    && reportedSpeed >= 0
+                    && reportedSpeed <= configuration.stationarySpeed
+            } else {
+                isStationary = displacement <= threshold
+            }
+            if displacement <= threshold, isStationary {
+                continue
+            }
+
+            let previousAccuracy = max(5, lastCandidate.accuracy)
+            let accuracyAllowance = 3 * hypot(previousAccuracy, candidate.accuracy)
+            let measuredSpeed: Double? = {
+                guard let speed = candidate.reading.speedMetersPerSecond,
+                      speed.isFinite, speed >= 0,
+                      let speedAccuracy = candidate.reading
+                        .speedAccuracyMetersPerSecond,
+                      speedAccuracy.isFinite, speedAccuracy >= 0
+                else { return nil }
+                return speed + 3 * speedAccuracy
+            }()
+            let maximumSpeed = min(
+                configuration.absoluteMaximumSpeed,
+                max(
+                    maximumModeSpeed(
+                        for: candidate.reading,
+                        configuration: configuration
+                    ),
+                    measuredSpeed ?? 0
+                )
+            )
+            let maximumDisplacement = maximumSpeed * elapsed + accuracyAllowance
+            guard displacement <= max(25, maximumDisplacement) else {
+                closeLastSegment(&result)
+                startsNewSegment = true
+                continue
+            }
+
+            guard let update = state.update(
+                candidate: candidate,
+                after: elapsed,
+                sigmaLimit: configuration.innovationSigma,
+                processAcceleration: configuration.processAcceleration
+            ) else {
+                closeLastSegment(&result)
+                startsNewSegment = true
+                continue
+            }
+
+            lastCandidate = candidate
+            lastOutput = update.point
+            var output = derivedReading(candidate, point: update.point)
+            output.point?.horizontalAccuracy = max(
+                candidate.accuracy,
+                update.uncertainty
+            )
+            result.append(output)
+        }
+        return (result + lowConfidenceBoundaries)
+            .sorted(by: deterministicReadingOrder)
+    }
+
+    private static func closeLastSegment(
+        _ readings: inout [SensorReading]
+    ) {
+        guard !readings.isEmpty else { return }
+        readings[readings.count - 1].trackingSessionEnded = true
+    }
+
+    private static func boundaryCandidates(
+        from candidates: [Candidate]
+    ) -> [Candidate] {
+        var result: [Candidate] = []
+        var index = 0
+        while index < candidates.count {
+            guard !candidates[index].isPrecise else {
+                index += 1
+                continue
+            }
+            let start = index
+            while index < candidates.count, !candidates[index].isPrecise {
+                index += 1
+            }
+            result.append(candidates[start])
+            if index - 1 > start {
+                result.append(candidates[index - 1])
+            }
+        }
+        return result
+    }
+
+    private static func maximumModeSpeed(
+        for reading: SensorReading,
+        configuration: Configuration
+    ) -> Double {
+        let modeLimit: Double
+        switch reading.motion {
+        case .walking:
+            modeLimit = 4.5
+        case .running:
+            modeLimit = 9
+        case .cycling:
+            modeLimit = 25
+        case .automotive:
+            modeLimit = 90
+        case .stationary:
+            modeLimit = configuration.stationarySpeed
+        case .unknown:
+            modeLimit = configuration.maximumPlausibleSpeed
+        }
+        return modeLimit
+    }
+
+    private static func deterministicReadingOrder(
+        _ lhs: SensorReading,
+        _ rhs: SensorReading
+    ) -> Bool {
+        if lhs.timestamp != rhs.timestamp {
+            return lhs.timestamp < rhs.timestamp
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    private static func normalizedCandidates(
+        _ readings: [SensorReading],
+        configuration: Configuration
+    ) -> [Candidate] {
+        let candidates = readings.compactMap { reading -> Candidate? in
+            guard let point = reading.point,
+                  point.latitude.isFinite,
+                  point.longitude.isFinite,
+                  (-90...90).contains(point.latitude),
+                  (-180...180).contains(point.longitude),
+                  point.horizontalAccuracy.isFinite,
+                  point.horizontalAccuracy >= 0,
+                  point.horizontalAccuracy <= configuration.maximumDisplayAccuracy
+            else { return nil }
+            let isPrecise = point.horizontalAccuracy
+                <= configuration.maximumPreciseAccuracy
+                && reading.locationFixQuality != .approximate
+            return Candidate(
+                reading: reading,
+                point: point,
+                accuracy: point.horizontalAccuracy,
+                isPrecise: isPrecise
+            )
+        }
+        let grouped = Dictionary(grouping: candidates, by: \.reading.timestamp)
+        return grouped.values
+            .compactMap { group in
+                group.min { lhs, rhs in
+                    if lhs.isPrecise != rhs.isPrecise {
+                        return lhs.isPrecise
+                    }
+                    if lhs.accuracy != rhs.accuracy {
+                        return lhs.accuracy < rhs.accuracy
+                    }
+                    if lhs.reading.sequence != rhs.reading.sequence {
+                        return (lhs.reading.sequence ?? .max)
+                            < (rhs.reading.sequence ?? .max)
+                    }
+                    return lhs.reading.id.uuidString < rhs.reading.id.uuidString
+                }
+            }
+            .sorted {
+                if $0.reading.timestamp != $1.reading.timestamp {
+                    return $0.reading.timestamp < $1.reading.timestamp
+                }
+                return $0.reading.id.uuidString < $1.reading.id.uuidString
+            }
+    }
+
+    private static func derivedReading(
+        _ candidate: Candidate,
+        point: GeoPoint
+    ) -> SensorReading {
+        var reading = candidate.reading
+        reading.point = point
+        return reading
+    }
+}
+
 /// Builds a display-only route from archived and live sensor readings.  It
 /// never writes to either input collection or changes an `ActualRecord`.
 enum RouteTimelineDataEngine {
@@ -212,6 +596,11 @@ enum RouteTimelineDataEngine {
     static let sparseConnectionMaximumDistanceMeters: Double = 1_000
     static let maximumDisplayReadingCount = 4_096
     static let maximumApproximateDisplayAccuracy: Double = 1_000
+
+    private struct DisplayMeterPoint {
+        var east: Double
+        var north: Double
+    }
 
     static func project(
         selectedDate: Date,
@@ -380,8 +769,18 @@ enum RouteTimelineDataEngine {
               validPoint(
                 from: first,
                 includesApproximateLocations: true
-              ) != nil,
-              date >= first.timestamp else { return nil }
+              ) != nil else { return nil }
+
+        // A route archive can begin after the selected timeline time (for
+        // example, when only the recent live window has been loaded). Keep
+        // the earliest archived/location anchor visible instead of removing
+        // the historical marker until a newer sample is available.
+        if date < first.timestamp {
+            return validPoint(
+                from: first,
+                includesApproximateLocations: true
+            )
+        }
 
         var lower = 0
         var upper = readings.count
@@ -424,14 +823,233 @@ enum RouteTimelineDataEngine {
         guard normalizedReadings.count > maximumCount else {
             return normalizedReadings
         }
-        let lastIndex = normalizedReadings.count - 1
-        let scale = Double(lastIndex) / Double(maximumCount - 1)
-        return (0..<maximumCount).map { outputIndex in
-            let sourceIndex = min(
-                lastIndex,
-                Int((Double(outputIndex) * scale).rounded())
-            )
-            return normalizedReadings[sourceIndex]
+
+        let reduced = reducedDisplayIndices(
+            normalizedReadings,
+            maximumCount: maximumCount
+        )
+        let indices: [Int]
+        if reduced.count > maximumCount {
+            indices = evenlySampledIndices(reduced, count: maximumCount)
+        } else {
+            var selected = Set(reduced)
+            let lastIndex = normalizedReadings.count - 1
+            let scale = Double(lastIndex) / Double(maximumCount - 1)
+            for outputIndex in 0..<maximumCount where selected.count < maximumCount {
+                selected.insert(
+                    min(
+                        lastIndex,
+                        Int((Double(outputIndex) * scale).rounded())
+                    )
+                )
+            }
+            if selected.count < maximumCount {
+                for index in normalizedReadings.indices {
+                    guard selected.count < maximumCount else { break }
+                    selected.insert(index)
+                }
+            }
+            indices = selected.sorted()
+        }
+        return indices.map { normalizedReadings[$0] }
+    }
+
+    private static func segmentAwareDisplayIndices(
+        _ readings: [SensorReading],
+        epsilon: Double
+    ) -> [Int] {
+        guard readings.count > 1 else { return readings.indices.map { $0 } }
+        var result: [Int] = []
+        var segmentStart = 0
+        for index in 1..<readings.count {
+            if startsNewDisplaySegment(
+                after: readings[index - 1],
+                before: readings[index]
+            ) {
+                result.append(contentsOf: rdpIndices(
+                    readings,
+                    lower: segmentStart,
+                    upper: index - 1,
+                    epsilon: epsilon
+                ))
+                segmentStart = index
+            }
+        }
+        result.append(contentsOf: rdpIndices(
+            readings,
+            lower: segmentStart,
+            upper: readings.count - 1,
+            epsilon: epsilon
+        ))
+        return result
+    }
+
+    private static func reducedDisplayIndices(
+        _ readings: [SensorReading],
+        maximumCount: Int
+    ) -> [Int] {
+        let mandatory = mandatoryDisplayIndices(readings)
+        func selected(at epsilon: Double) -> Set<Int> {
+            Set(segmentAwareDisplayIndices(readings, epsilon: epsilon))
+                .union(mandatory)
+        }
+
+        var high = 4.0
+        while selected(at: high).count > maximumCount, high < 1_000_000 {
+            high *= 2
+        }
+        if selected(at: high).count > maximumCount {
+            return mandatory.sorted()
+        }
+
+        var low = 0.0
+        for _ in 0..<24 {
+            let middle = (low + high) / 2
+            if selected(at: middle).count > maximumCount {
+                low = middle
+            } else {
+                high = middle
+            }
+        }
+        return selected(at: high).sorted()
+    }
+
+    private static func mandatoryDisplayIndices(
+        _ readings: [SensorReading]
+    ) -> Set<Int> {
+        guard !readings.isEmpty else { return [] }
+        var result: Set<Int> = [readings.startIndex, readings.index(before: readings.endIndex)]
+        guard readings.count > 2 else { return result }
+
+        for index in 1..<readings.count {
+            if startsNewDisplaySegment(
+                after: readings[index - 1],
+                before: readings[index]
+            ) {
+                result.insert(index - 1)
+                result.insert(index)
+            }
+        }
+
+        for index in 1..<(readings.count - 1) {
+            guard let previous = readings[index - 1].point,
+                  let current = readings[index].point,
+                  let next = readings[index + 1].point else { continue }
+            let first = displayMeterPoint(previous, origin: current)
+            let third = displayMeterPoint(next, origin: current)
+            let firstDistance = hypot(first.east, first.north)
+            let thirdDistance = hypot(third.east, third.north)
+            guard firstDistance >= 2, thirdDistance >= 2 else { continue }
+            let dot = first.east * third.east + first.north * third.north
+            let cross = first.east * third.north - first.north * third.east
+            let angle = abs(atan2(cross, dot))
+            if angle >= 15 * .pi / 180 {
+                result.insert(index)
+            }
+        }
+        return result
+    }
+
+    private static func startsNewDisplaySegment(
+        after previous: SensorReading,
+        before current: SensorReading
+    ) -> Bool {
+        if previous.trackingSessionEnded == true {
+            return true
+        }
+        guard let previousPoint = previous.point,
+              let currentPoint = current.point else { return true }
+        let gap = current.timestamp.timeIntervalSince(previous.timestamp)
+        guard gap > 0 else { return true }
+        if gap > maximumInterpolationGap { return true }
+        return gap > sparseConnectionMinimumGap
+            && distanceMeters(previousPoint, currentPoint)
+                > sparseConnectionMaximumDistanceMeters
+    }
+
+    private static func rdpIndices(
+        _ readings: [SensorReading],
+        lower: Int,
+        upper: Int,
+        epsilon: Double = 4
+    ) -> [Int] {
+        guard upper >= lower else { return [] }
+        guard upper > lower else { return [lower] }
+        let origin = readings[lower].point
+        let coordinates = (lower...upper).map { index in
+            displayMeterPoint(readings[index].point, origin: origin)
+        }
+        var retained = Set([lower, upper])
+        var stack: [(start: Int, end: Int)] = [(0, upper - lower)]
+        while let pair = stack.popLast() {
+            guard pair.end - pair.start > 1 else { continue }
+            let start = coordinates[pair.start]
+            let end = coordinates[pair.end]
+            var farthestOffset = -1
+            var farthestDistance = epsilon
+            for offset in (pair.start + 1)..<pair.end {
+                let distance = perpendicularDistance(
+                    coordinates[offset],
+                    from: start,
+                    to: end
+                )
+                if distance > farthestDistance {
+                    farthestDistance = distance
+                    farthestOffset = offset
+                }
+            }
+            guard farthestOffset >= 0 else { continue }
+            retained.insert(lower + farthestOffset)
+            stack.append((pair.start, farthestOffset))
+            stack.append((farthestOffset, pair.end))
+        }
+        return retained.sorted()
+    }
+
+    private static func displayMeterPoint(
+        _ point: GeoPoint?,
+        origin: GeoPoint?
+    ) -> DisplayMeterPoint {
+        guard let point, let origin else {
+            return DisplayMeterPoint(east: 0, north: 0)
+        }
+        let latitudeScale = 111_132.92
+        let longitudeScale = max(
+            1,
+            111_412.84 * cos(origin.latitude * .pi / 180)
+        )
+        return DisplayMeterPoint(
+            east: (point.longitude - origin.longitude) * longitudeScale,
+            north: (point.latitude - origin.latitude) * latitudeScale
+        )
+    }
+
+    private static func perpendicularDistance(
+        _ point: DisplayMeterPoint,
+        from start: DisplayMeterPoint,
+        to end: DisplayMeterPoint
+    ) -> Double {
+        let dx = end.east - start.east
+        let dy = end.north - start.north
+        let lengthSquared = dx * dx + dy * dy
+        guard lengthSquared > 0 else {
+            return hypot(point.east - start.east, point.north - start.north)
+        }
+        let cross = abs(
+            dx * (start.north - point.north)
+                - (start.east - point.east) * dy
+        )
+        return cross / sqrt(lengthSquared)
+    }
+
+    private static func evenlySampledIndices(
+        _ indices: [Int],
+        count: Int
+    ) -> [Int] {
+        guard count > 1, indices.count > count else { return indices }
+        let scale = Double(indices.count - 1) / Double(count - 1)
+        return (0..<count).map { outputIndex in
+            indices[Int((Double(outputIndex) * scale).rounded())]
         }
     }
 
@@ -507,7 +1125,9 @@ enum RouteTimelineDataEngine {
     }
 
     private struct CoordinateIndex {
-        private let values: [(timestamp: Date, point: GeoPoint)]
+        private let values: [
+            (timestamp: Date, point: GeoPoint, endsSegment: Bool)
+        ]
         private let filtersSparseConnections: Bool
 
         init(
@@ -521,7 +1141,11 @@ enum RouteTimelineDataEngine {
                     from: reading,
                     includesApproximateLocations: includesApproximateLocations
                 ) else { return nil }
-                return (reading.timestamp, point)
+                return (
+                    reading.timestamp,
+                    point,
+                    reading.trackingSessionEnded == true
+                )
             }
         }
 
@@ -542,7 +1166,8 @@ enum RouteTimelineDataEngine {
                 guard before.timestamp < end else { break }
                 if after.timestamp > start {
                     let gap = after.timestamp.timeIntervalSince(before.timestamp)
-                    if gap > maximumInterpolationGap
+                    if before.endsSegment
+                        || gap > maximumInterpolationGap
                         || (filtersSparseConnections
                             && gap > sparseConnectionMinimumGap
                             && distanceMeters(before.point, after.point)
@@ -561,7 +1186,9 @@ enum RouteTimelineDataEngine {
             maximumGap: TimeInterval?
         ) -> ResolvedCoordinate? {
             guard let first = values.first else { return nil }
-            if date < first.timestamp { return nil }
+            if date < first.timestamp {
+                return ResolvedCoordinate(point: first.point, isInterpolated: false)
+            }
 
             let insertionIndex = upperBound(for: date)
             let before = values[insertionIndex - 1]
@@ -574,7 +1201,8 @@ enum RouteTimelineDataEngine {
 
             let after = values[insertionIndex]
             let gap = after.timestamp.timeIntervalSince(before.timestamp)
-            guard gap > 0,
+            guard !before.endsSegment,
+                  gap > 0,
                   maximumGap.map({ gap <= $0 }) ?? true else {
                 return ResolvedCoordinate(point: before.point, isInterpolated: false)
             }
@@ -852,7 +1480,9 @@ enum RouteTimelineDataEngine {
         let isPrecise = reading.gpsAvailable
             || reading.locationFixQuality == .precise
         let isUsableApproximate = includesApproximateLocations
-            && reading.locationFixQuality == .approximate
+            && !isPrecise
+            && (reading.locationFixQuality == .approximate
+                || reading.locationFixQuality == nil)
             && point.horizontalAccuracy.isFinite
             && point.horizontalAccuracy >= 0
             && point.horizontalAccuracy <= maximumApproximateDisplayAccuracy

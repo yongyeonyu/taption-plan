@@ -2851,7 +2851,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
            completedSession == nil {
             lastPersistedLocationTimestamp = location?.timestamp
         }
-        let locationFixQuality = Self.locationFixQuality(for: location)
+        let locationFixQuality = Self.locationFixQuality(
+            for: location,
+            hasFullAccuracyAuthorization:
+                locationManager.accuracyAuthorization == .fullAccuracy
+        )
         let capturedAt = location?.timestamp ?? now
         let point = location.map {
             GeoPoint(
@@ -3117,11 +3121,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     private static func locationFixQuality(
-        for location: CLLocation?
+        for location: CLLocation?,
+        hasFullAccuracyAuthorization: Bool
     ) -> LocationFixQuality? {
         guard let location, location.horizontalAccuracy >= 0 else {
             return nil
         }
+        guard hasFullAccuracyAuthorization else { return .approximate }
         return location.horizontalAccuracy
             <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
             ? .precise

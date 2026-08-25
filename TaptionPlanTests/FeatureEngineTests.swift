@@ -6893,6 +6893,106 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testSensorLiveActivityPhaseTimelineAndLegacyFallback() {
+        let startedAt = Date(timeIntervalSinceReferenceDate: 20_000)
+        let waiting = SensorCollectionActivityAttributes.ContentState(
+            startedAt: startedAt,
+            lastSavedAt: nil,
+            collectionKinds: ["location"],
+            isCollecting: true,
+            phaseRawValue: SensorCollectionActivityPhase.waiting.rawValue
+        )
+        XCTAssertEqual(waiting.phase, .waiting)
+
+        let pulseUntil = SensorCollectionActivityPolicy.pulseUntil(
+            now: startedAt
+        )
+        let pulse = SensorCollectionActivityAttributes.ContentState(
+            startedAt: startedAt,
+            lastSavedAt: startedAt,
+            collectionKinds: ["location"],
+            isCollecting: true,
+            saveToken: 4,
+            phaseRawValue: SensorCollectionActivityPhase.pulse.rawValue,
+            phaseUntil: pulseUntil
+        )
+        XCTAssertEqual(pulse.phase, .pulse)
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.isPhaseExpired(
+                pulse.phase,
+                until: pulse.phaseUntil,
+                now: startedAt.addingTimeInterval(0.999)
+            )
+        )
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.isPhaseExpired(
+                pulse.phase,
+                until: pulse.phaseUntil,
+                now: pulseUntil
+            )
+        )
+
+        let flatline = SensorCollectionActivityAttributes.ContentState(
+            startedAt: startedAt,
+            lastSavedAt: startedAt,
+            collectionKinds: ["location"],
+            isCollecting: true,
+            saveToken: 4,
+            phaseRawValue: SensorCollectionActivityPhase.flatline.rawValue
+        )
+        XCTAssertEqual(flatline.phase, .flatline)
+
+        let stopped = SensorCollectionActivityAttributes.ContentState(
+            startedAt: startedAt,
+            lastSavedAt: startedAt,
+            collectionKinds: ["location"],
+            isCollecting: false
+        )
+        XCTAssertEqual(stopped.phase, .hidden)
+    }
+
+    func testSensorLiveActivitySaveTokenPublishesBeforePeriodicInterval() {
+        let startedAt = Date(timeIntervalSinceReferenceDate: 21_000)
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.shouldPublish(
+                lastPublishedAt: startedAt,
+                now: startedAt.addingTimeInterval(1)
+            )
+        )
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.hasNewSavedSample(
+                previousSaveToken: nil,
+                currentSaveToken: 0,
+                previousSavedAt: nil,
+                currentSavedAt: nil
+            )
+        )
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.hasNewSavedSample(
+                previousSaveToken: 10,
+                currentSaveToken: 11,
+                previousSavedAt: startedAt,
+                currentSavedAt: startedAt
+            )
+        )
+        XCTAssertFalse(
+            SensorCollectionActivityPolicy.hasNewSavedSample(
+                previousSaveToken: 11,
+                currentSaveToken: 11,
+                previousSavedAt: startedAt,
+                currentSavedAt: startedAt.addingTimeInterval(1)
+            )
+        )
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.hasNewSavedSample(
+                previousSaveToken: nil,
+                currentSaveToken: nil,
+                previousSavedAt: startedAt,
+                currentSavedAt: startedAt.addingTimeInterval(1)
+            )
+        )
+    }
+
     func testAutomaticTrackingPromotionAndStopPolicy() {
         XCTAssertTrue(
             TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 1)

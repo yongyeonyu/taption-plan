@@ -18,6 +18,8 @@ private struct Palette {
     let cat: [NSColor]
     let face: [NSColor]
     let mark: NSColor
+    let timelineHighlight: NSColor
+    let whisker: NSColor
 }
 
 private extension NSColor {
@@ -38,21 +40,27 @@ private func palette(for variant: IconVariant) -> Palette {
             background: NSColor(hex: 0xC77B70),
             cat: [NSColor(hex: 0x223A59), NSColor(hex: 0x182D49)],
             face: [NSColor(hex: 0xFFF4D8), NSColor(hex: 0xF6E6C5)],
-            mark: NSColor(hex: 0x182D49)
+            mark: NSColor(hex: 0x182D49),
+            timelineHighlight: NSColor(hex: 0xFFF4D8),
+            whisker: NSColor(hex: 0xC77B70)
         )
     case .dark:
         return Palette(
             background: NSColor(hex: 0x17202E),
             cat: [NSColor(hex: 0x8AAFC0), NSColor(hex: 0x7798AB)],
             face: [NSColor(hex: 0xFFF0CE), NSColor(hex: 0xF4DFB8)],
-            mark: NSColor(hex: 0x17202E)
+            mark: NSColor(hex: 0x17202E),
+            timelineHighlight: NSColor(hex: 0xFFF0CE),
+            whisker: NSColor(hex: 0x8AAFC0)
         )
     case .tinted:
         return Palette(
             background: NSColor(hex: 0xE0E0E0),
             cat: [NSColor(hex: 0x2A2A2A), NSColor(hex: 0x202020)],
             face: [NSColor(hex: 0xF7F7F7), NSColor(hex: 0xEEEEEE)],
-            mark: NSColor(hex: 0x202020)
+            mark: NSColor(hex: 0x202020),
+            timelineHighlight: NSColor(hex: 0xF7F7F7),
+            whisker: NSColor(hex: 0x2A2A2A)
         )
     }
 }
@@ -262,14 +270,14 @@ private func drawIcon(variant: IconVariant) -> NSImage {
     context.setLineWidth(40)
     context.setLineCap(.round)
     context.setLineJoin(.round)
-    context.setStrokeColor(palette.background.cgColor)
+    context.setStrokeColor(palette.timelineHighlight.cgColor)
     context.strokePath()
     [
         CGPoint(x: 260, y: 236),
         CGPoint(x: 705, y: 174),
         CGPoint(x: 910, y: 520),
     ].forEach {
-        fillCircle(center: $0, radius: 44, color: palette.background, in: context)
+        fillCircle(center: $0, radius: 44, color: palette.timelineHighlight, in: context)
     }
     [
         CGPoint(x: 260, y: 236),
@@ -280,6 +288,34 @@ private func drawIcon(variant: IconVariant) -> NSImage {
     }
 
     drawGradient(palette.cat, clippedTo: bodyPath(), in: context)
+    let ears = NSBezierPath()
+    ears.move(to: CGPoint(x: 421, y: 616))
+    ears.curve(
+        to: CGPoint(x: 497, y: 616),
+        controlPoint1: CGPoint(x: 429, y: 566),
+        controlPoint2: CGPoint(x: 472, y: 566)
+    )
+    ears.curve(
+        to: CGPoint(x: 421, y: 616),
+        controlPoint1: CGPoint(x: 469, y: 527),
+        controlPoint2: CGPoint(x: 447, y: 503)
+    )
+    ears.close()
+    ears.move(to: CGPoint(x: 699, y: 616))
+    ears.curve(
+        to: CGPoint(x: 776, y: 616),
+        controlPoint1: CGPoint(x: 724, y: 566),
+        controlPoint2: CGPoint(x: 767, y: 566)
+    )
+    ears.curve(
+        to: CGPoint(x: 699, y: 616),
+        controlPoint1: CGPoint(x: 772, y: 529),
+        controlPoint2: CGPoint(x: 749, y: 504)
+    )
+    ears.close()
+    context.addPath(ears.cgPath)
+    context.setFillColor(palette.whisker.cgColor)
+    context.fillPath()
     drawGradient(palette.face, clippedTo: facePath(), in: context)
     fillCircle(center: CGPoint(x: 506, y: 793), radius: 35, color: palette.mark, in: context)
     fillCircle(center: CGPoint(x: 704, y: 768), radius: 35, color: palette.mark, in: context)
@@ -301,6 +337,42 @@ private func drawIcon(variant: IconVariant) -> NSImage {
     context.setLineWidth(22)
     context.setLineCap(.round)
     context.setLineJoin(.round)
+    context.setStrokeColor(palette.mark.cgColor)
+    context.strokePath()
+
+    let whiskers = NSBezierPath()
+    [
+        (CGPoint(x: 342, y: 802), CGPoint(x: 216, y: 818)),
+        (CGPoint(x: 350, y: 837), CGPoint(x: 232, y: 862)),
+        (CGPoint(x: 370, y: 870), CGPoint(x: 260, y: 910)),
+        (CGPoint(x: 774, y: 798), CGPoint(x: 894, y: 818)),
+        (CGPoint(x: 766, y: 834), CGPoint(x: 884, y: 860)),
+        (CGPoint(x: 748, y: 868), CGPoint(x: 866, y: 906)),
+    ].forEach { start, end in
+        whiskers.move(to: start)
+        whiskers.line(to: end)
+    }
+    context.addPath(whiskers.cgPath)
+    context.setLineWidth(14)
+    context.setLineCap(.round)
+    context.setStrokeColor(palette.whisker.cgColor)
+    context.strokePath()
+
+    let innerWhiskers = NSBezierPath()
+    [
+        (CGPoint(x: 414, y: 791), CGPoint(x: 342, y: 802)),
+        (CGPoint(x: 419, y: 817), CGPoint(x: 350, y: 837)),
+        (CGPoint(x: 421, y: 842), CGPoint(x: 370, y: 870)),
+        (CGPoint(x: 776, y: 792), CGPoint(x: 714, y: 786)),
+        (CGPoint(x: 774, y: 818), CGPoint(x: 708, y: 809)),
+        (CGPoint(x: 762, y: 846), CGPoint(x: 700, y: 833)),
+    ].forEach { start, end in
+        innerWhiskers.move(to: start)
+        innerWhiskers.line(to: end)
+    }
+    context.addPath(innerWhiskers.cgPath)
+    context.setLineWidth(14)
+    context.setLineCap(.round)
     context.setStrokeColor(palette.mark.cgColor)
     context.strokePath()
 

@@ -94,6 +94,13 @@ struct TaptionActivityAttributes: ActivityAttributes {
     var planID: UUID
 }
 
+enum SensorCollectionActivityPhase: String, Codable, Hashable {
+    case waiting
+    case pulse
+    case flatline
+    case hidden
+}
+
 struct SensorCollectionActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         var startedAt: Date
@@ -102,6 +109,19 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var isCollecting: Bool
         var intervalSeconds: Int?
         var sessionStateRawValue: String?
+        var saveToken: Int?
+        var phaseRawValue: String?
+        var phaseUntil: Date?
+
+        var phase: SensorCollectionActivityPhase {
+            guard let phaseRawValue,
+                  let phase = SensorCollectionActivityPhase(
+                      rawValue: phaseRawValue
+                  ) else {
+                return isCollecting ? .waiting : .hidden
+            }
+            return phase
+        }
 
         init(
             startedAt: Date,
@@ -109,7 +129,10 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             collectionKinds: [String],
             isCollecting: Bool,
             intervalSeconds: Int? = nil,
-            sessionStateRawValue: String? = nil
+            sessionStateRawValue: String? = nil,
+            saveToken: Int? = nil,
+            phaseRawValue: String? = nil,
+            phaseUntil: Date? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -117,6 +140,9 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.isCollecting = isCollecting
             self.intervalSeconds = intervalSeconds
             self.sessionStateRawValue = sessionStateRawValue
+            self.saveToken = saveToken
+            self.phaseRawValue = phaseRawValue
+            self.phaseUntil = phaseUntil
         }
     }
 
@@ -126,6 +152,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
 enum SensorCollectionActivityPolicy {
     static let maximumDuration: TimeInterval = 8 * 3_600
     static let minimumUpdateInterval: TimeInterval = 15
+    static let pulseDuration: TimeInterval = 1
+    static let completionFlatlineDuration: TimeInterval = 1
 
     static func canStart(
         isForeground: Bool,
@@ -146,6 +174,40 @@ enum SensorCollectionActivityPolicy {
     static func shouldPublish(lastPublishedAt: Date?, now: Date) -> Bool {
         guard let lastPublishedAt else { return true }
         return now.timeIntervalSince(lastPublishedAt) >= minimumUpdateInterval
+    }
+
+    static func pulseUntil(now: Date) -> Date {
+        now.addingTimeInterval(pulseDuration)
+    }
+
+    static func completionFlatlineUntil(now: Date) -> Date {
+        now.addingTimeInterval(completionFlatlineDuration)
+    }
+
+    static func hasNewSavedSample(
+        previousSaveToken: Int?,
+        currentSaveToken: Int?,
+        previousSavedAt: Date?,
+        currentSavedAt: Date?
+    ) -> Bool {
+        if let currentSaveToken {
+            guard let previousSaveToken else {
+                return previousSavedAt != currentSavedAt
+                    && currentSavedAt != nil
+            }
+            return currentSaveToken > previousSaveToken
+        }
+        return currentSavedAt != previousSavedAt
+            && currentSavedAt != nil
+    }
+
+    static func isPhaseExpired(
+        _ phase: SensorCollectionActivityPhase,
+        until: Date?,
+        now: Date
+    ) -> Bool {
+        guard phase == .pulse, let until else { return false }
+        return now >= until
     }
 }
 

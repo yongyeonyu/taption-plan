@@ -400,6 +400,13 @@ enum MapHomeUserTrackingPolicy {
     static func keepsFollowing(after interaction: Interaction) -> Bool {
         interaction != .pan
     }
+
+    static func isSingleFingerPanStart(
+        state: UIGestureRecognizer.State,
+        numberOfTouches: Int
+    ) -> Bool {
+        (state == .began || state == .changed) && numberOfTouches == 1
+    }
 }
 
 enum MapHomeUserTrackingMode: String, Equatable {
@@ -458,6 +465,32 @@ enum MapHomeRouteReadingsPolicy {
             return $0.timestamp < $1.timestamp
         }
     }
+
+    static func clampedTimelineDate(
+        selectedDate: Date,
+        timelineDate: Date,
+        now: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date {
+        calendar.isDate(selectedDate, inSameDayAs: now)
+            ? min(timelineDate, now)
+            : timelineDate
+    }
+}
+
+enum MapHomeRouteReadingsLoadState: Equatable {
+    case idle
+    case loading(Date)
+    case loaded(Date)
+    case failed(Date)
+
+    func isLoaded(
+        for date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Bool {
+        guard case .loaded(let loadedDay) = self else { return false }
+        return calendar.isDate(loadedDay, inSameDayAs: date)
+    }
 }
 
 @MainActor
@@ -513,7 +546,9 @@ struct MapHomeView: View {
     ]
     @State private var routeProjection: RouteTimelineProjection?
     @State private var routeReadings: [SensorReading] = []
+    @State private var routeReadingsLoadState: MapHomeRouteReadingsLoadState = .idle
     @State private var normalizedRouteReadings: [SensorReading] = []
+    @State private var historicalPlaybackReadings: [SensorReading] = []
     @State private var displayRouteReadings: [SensorReading] = []
     @State private var historicalPlaybackPoint: GeoPoint?
     @State private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] = []
@@ -893,6 +928,10 @@ struct MapHomeView: View {
         }
         .task(id: MapHomeRouteReadingsPolicy.dayKey(for: model.selectedDate)) {
             let date = model.selectedDate
+            let dayKey = MapHomeRouteReadingsPolicy.dayKey(for: date)
+            if !routeReadingsLoadState.isLoaded(for: date) {
+                routeReadingsLoadState = .loading(dayKey)
+            }
             prepareRouteProjectionReadings()
             refreshRouteProjection()
             await refreshRouteReadings(for: date)
@@ -929,7 +968,11 @@ struct MapHomeView: View {
 
             if dayChanged {
                 routeReadings = []
+                routeReadingsLoadState = .loading(
+                    MapHomeRouteReadingsPolicy.dayKey(for: newDate)
+                )
                 normalizedRouteReadings = []
+                historicalPlaybackReadings = []
                 displayRouteReadings = []
                 routeProjection = nil
                 timelineRouteOverlays = []
@@ -2977,14 +3020,11 @@ struct MapHomeView: View {
             historicalPlaybackPoint = nil
             return
         }
-        let point: GeoPoint?
-        if isDayPlaybackRunning {
-            point = refreshHistoricalPlaybackPoint()
-        } else {
-            let projection = refreshRouteProjection()
-            point = refreshHistoricalPlaybackPoint()
-                ?? projection?.coordinateAtCutoff
-        }
+        let projection = refreshRouteProjection()
+        let point = refreshHistoricalPlaybackPoint()
+            ?? (routeReadingsLoadState.isLoaded(for: model.selectedDate)
+                ? projection?.coordinateAtCutoff
+                : nil)
         guard let point else { return }
         focusMap(on: point)
     }
@@ -3013,9 +3053,11 @@ struct MapHomeView: View {
     }
 
     private var visibleExpectedRouteOverlays: [MapHomeExpectedRouteOverlay] {
-        let cutoff = RouteTimelineDataEngine.timelineDate(
-            selectedDate: model.selectedDate,
-            minute: effectiveTimelineMinute
+        let cutoff = clampedTimelineDate(
+            RouteTimelineDataEngine.timelineDate(
+                selectedDate: model.selectedDate,
+                minute: effectiveTimelineMinute
+            )
         )
         return expectedRouteOverlays.compactMap {
             $0.visible(through: cutoff)
@@ -3120,9 +3162,12 @@ struct MapHomeView: View {
               let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
         else { return [] }
         let day = TimeSpan(start: dayStart, end: dayEnd)
-        let cutoff = RouteTimelineDataEngine.timelineDate(
-            selectedDate: model.selectedDate,
-            minute: effectiveTimelineMinute,
+        let cutoff = clampedTimelineDate(
+            RouteTimelineDataEngine.timelineDate(
+                selectedDate: model.selectedDate,
+                minute: effectiveTimelineMinute,
+                calendar: calendar
+            ),
             calendar: calendar
         )
         return model.snapshot.travel.compactMap { segment in
@@ -3244,7 +3289,7 @@ struct MapHomeView: View {
         let dayStart = calendar.startOfDay(for: date)
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
         else { return }
-        let readings = await model.sensorReadings(
+        let result = await model.sensorReadingsLoadResult(
             in: TimeSpan(start: dayStart, end: dayEnd)
         )
         guard !Task.isCancelled,
@@ -3252,17 +3297,22 @@ struct MapHomeView: View {
         else { return }
         let merged = MapHomeRouteReadingsPolicy.merging(
             existing: routeReadings,
-            loaded: readings,
+            loaded: result.readings,
             in: TimeSpan(start: dayStart, end: dayEnd)
         )
-        guard merged != routeReadings else { return }
-        routeReadings = merged
+        routeReadingsLoadState = result.isComplete
+            ? .loaded(dayStart)
+            : .failed(dayStart)
+        if merged != routeReadings {
+            routeReadings = merged
+        }
         prepareRouteProjectionReadings()
         let projection = refreshRouteProjection()
-        if selectedTimelineMinute != nil,
-           let point = refreshHistoricalPlaybackPoint()
-                ?? projection?.coordinateAtCutoff {
-            focusMap(on: point)
+        if selectedTimelineMinute != nil {
+            if let point = refreshHistoricalPlaybackPoint()
+                ?? (result.isComplete ? projection?.coordinateAtCutoff : nil) {
+                focusMap(on: point)
+            }
         } else {
             focusMapIfNeeded()
         }
@@ -3271,13 +3321,13 @@ struct MapHomeView: View {
     @discardableResult
     private func refreshRouteProjection() -> RouteTimelineProjection? {
         let calendar = Calendar.autoupdatingCurrent
-        let timelineDate = isDayPlaybackRunning
-            ? nil
-            : RouteTimelineDataEngine.timelineDate(
+        let timelineDate = clampedTimelineDate(
+            RouteTimelineDataEngine.timelineDate(
                 selectedDate: model.selectedDate,
                 minute: effectiveTimelineMinute,
                 calendar: calendar
             )
+        )
         let next = RouteTimelineDataEngine.project(
             selectedDate: model.selectedDate,
             through: timelineDate,
@@ -3307,7 +3357,12 @@ struct MapHomeView: View {
             + model.liveRouteState.readings
             + (model.latestSensorReading.map { [$0] } ?? [])
         normalizedRouteReadings = RouteTimelineDataEngine
-            .normalizedReadings(sourceReadings)
+            .normalizedDisplayReadings(
+                GPSLoggerRouteFilter.filter(sourceReadings)
+            )
+            .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
+        historicalPlaybackReadings = RouteTimelineDataEngine
+            .normalizedDisplayReadings(sourceReadings)
             .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
         displayRouteReadings = RouteTimelineDataEngine.displayReadings(
             from: normalizedRouteReadings
@@ -3316,22 +3371,38 @@ struct MapHomeView: View {
 
     @discardableResult
     private func refreshHistoricalPlaybackPoint() -> GeoPoint? {
-        guard selectedTimelineMinute != nil else {
+        guard selectedTimelineMinute != nil,
+              routeReadingsLoadState.isLoaded(for: model.selectedDate) else {
             historicalPlaybackPoint = nil
             return nil
         }
-        let date = RouteTimelineDataEngine.timelineDate(
-            selectedDate: model.selectedDate,
-            minute: effectiveTimelineMinute
+        let date = clampedTimelineDate(
+            RouteTimelineDataEngine.timelineDate(
+                selectedDate: model.selectedDate,
+                minute: effectiveTimelineMinute
+            )
         )
         let point = RouteTimelineDataEngine.playbackCoordinate(
             at: date,
-            inNormalizedReadings: normalizedRouteReadings
+            inNormalizedReadings: historicalPlaybackReadings
         )
         if historicalPlaybackPoint != point {
             historicalPlaybackPoint = point
         }
         return point
+    }
+
+    private func clampedTimelineDate(
+        _ date: Date,
+        now: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date {
+        MapHomeRouteReadingsPolicy.clampedTimelineDate(
+            selectedDate: model.selectedDate,
+            timelineDate: date,
+            now: now,
+            calendar: calendar
+        )
     }
 
     private var dateTitle: String {
@@ -3548,6 +3619,7 @@ struct MapHomeView: View {
     }
 
     private func requestAndFollowUserLocation(using proxy: MapProxy) {
+        hasCancelledInitialLocationFocus = false
         setUserTrackingMode(.locating)
         if currentCoordinate != nil {
             focusUserLocation(using: proxy)
@@ -5918,13 +5990,18 @@ private struct MapHomePanGestureObserver: UIViewRepresentable {
 
     final class ObservationView: UIView {
         var onSingleFingerPanBegan: (() -> Void)?
-        private weak var observedPanGesture: UIPanGestureRecognizer?
+        private var observedPanGestures: [UIPanGestureRecognizer] = []
+        private var notifiedPanGestureIDs = Set<ObjectIdentifier>()
+        private var attachmentRetryWorkItem: DispatchWorkItem?
 
         override func didMoveToWindow() {
             super.didMoveToWindow()
-            DispatchQueue.main.async { [weak self] in
-                self?.attachToVisibleMapIfNeeded()
-            }
+            scheduleAttachmentRetries()
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            attachToVisibleMapIfNeeded()
         }
 
         func attachToVisibleMapIfNeeded() {
@@ -5937,26 +6014,67 @@ private struct MapHomePanGestureObserver: UIViewRepresentable {
                 overlapArea(lhs, with: ownFrame, in: window)
                     < overlapArea(rhs, with: ownFrame, in: window)
             }
-            guard let mapView,
-                  let panGesture = panGesture(in: mapView),
-                  observedPanGesture !== panGesture else { return }
-            detach()
-            observedPanGesture = panGesture
-            panGesture.addTarget(self, action: #selector(handlePan(_:)))
+            guard let mapView else { return }
+            let panGestures = panGestures(in: mapView)
+            guard !panGestures.isEmpty else { return }
+
+            let currentIDs = Set(observedPanGestures.map(ObjectIdentifier.init))
+            let nextIDs = Set(panGestures.map(ObjectIdentifier.init))
+            guard currentIDs != nextIDs else { return }
+
+            detachObservedPanGestures()
+            observedPanGestures = panGestures
+            for panGesture in panGestures {
+                panGesture.addTarget(self, action: #selector(handlePan(_:)))
+            }
         }
 
         func detach() {
-            observedPanGesture?.removeTarget(
-                self,
-                action: #selector(handlePan(_:))
-            )
-            observedPanGesture = nil
+            attachmentRetryWorkItem?.cancel()
+            attachmentRetryWorkItem = nil
+            detachObservedPanGestures()
+        }
+
+        private func detachObservedPanGestures() {
+            for panGesture in observedPanGestures {
+                panGesture.removeTarget(
+                    self,
+                    action: #selector(handlePan(_:))
+                )
+            }
+            observedPanGestures = []
+            notifiedPanGestureIDs.removeAll()
+        }
+
+        private func scheduleAttachmentRetries() {
+            attachmentRetryWorkItem?.cancel()
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.attachToVisibleMapIfNeeded()
+            }
+            attachmentRetryWorkItem = workItem
+            for delay in [0.0, 0.05, 0.2, 0.5, 1.0] {
+                DispatchQueue.main.asyncAfter(
+                    deadline: .now() + delay,
+                    execute: workItem
+                )
+            }
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            guard gesture.state == .began,
-                  gesture.numberOfTouches == 1 else { return }
-            onSingleFingerPanBegan?()
+            let gestureID = ObjectIdentifier(gesture)
+            if MapHomeUserTrackingPolicy.isSingleFingerPanStart(
+                state: gesture.state,
+                numberOfTouches: gesture.numberOfTouches
+            ) {
+                guard notifiedPanGestureIDs.insert(gestureID).inserted else {
+                    return
+                }
+                onSingleFingerPanBegan?()
+            } else if gesture.state == .ended
+                        || gesture.state == .cancelled
+                        || gesture.state == .failed {
+                notifiedPanGestureIDs.remove(gestureID)
+            }
         }
 
         private func mapViews(in view: UIView) -> [MKMapView] {
@@ -5970,16 +6088,15 @@ private struct MapHomePanGestureObserver: UIViewRepresentable {
             return result
         }
 
-        private func panGesture(in view: UIView) -> UIPanGestureRecognizer? {
-            if let scrollView = view as? UIScrollView {
-                return scrollView.panGestureRecognizer
-            }
+        private func panGestures(in view: UIView) -> [UIPanGestureRecognizer] {
+            var result = view.gestureRecognizers?.compactMap {
+                $0 as? UIPanGestureRecognizer
+            } ?? []
             for child in view.subviews {
-                if let gesture = panGesture(in: child) {
-                    return gesture
-                }
+                result.append(contentsOf: panGestures(in: child))
             }
-            return nil
+            var seen = Set<ObjectIdentifier>()
+            return result.filter { seen.insert(ObjectIdentifier($0)).inserted }
         }
 
         private func overlapArea(

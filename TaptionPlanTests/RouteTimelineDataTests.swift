@@ -178,6 +178,30 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
+    func testHistoricalDisplayKeepsLegacyLocationBackfillWithoutUsingItForRouteInference() {
+        let locationBackfill = SensorReading(
+            timestamp: date(5),
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 250,
+                verticalAccuracy: 100
+            ),
+            gpsAvailable: false,
+            watchWorkoutKind: "사진 위치"
+        )
+
+        XCTAssertTrue(
+            RouteTimelineDataEngine.normalizedReadings([locationBackfill])
+                .isEmpty
+        )
+        XCTAssertEqual(
+            RouteTimelineDataEngine.normalizedDisplayReadings([locationBackfill]),
+            [locationBackfill]
+        )
+    }
+
     func testMapDisplayRejectsUnboundedApproximateLocation() {
         let approximate = SensorReading(
             timestamp: date(5),
@@ -324,7 +348,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertTrue(exactSample.segments.isEmpty)
     }
 
-    func testPlaybackBeforeFirstSampleIsNilAndAfterLastSampleHoldsLastPoint() throws {
+    func testPlaybackBeforeFirstSampleHoldsEarliestArchivePointAndAfterLastHoldsLastPoint() throws {
         let beforeFirst = RouteTimelineDataEngine.project(
             selectedDate: date(0),
             throughMinute: 5,
@@ -332,7 +356,11 @@ final class RouteTimelineDataTests: XCTestCase {
             readings: [reading(10, latitude: 37)],
             calendar: calendar
         )
-        XCTAssertNil(beforeFirst.coordinateAtCutoff)
+        XCTAssertEqual(
+            try XCTUnwrap(beforeFirst.coordinateAtCutoff).latitude,
+            37,
+            accuracy: 0.0001
+        )
 
         let afterLast = RouteTimelineDataEngine.project(
             selectedDate: date(0),
@@ -347,6 +375,37 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(
             try XCTUnwrap(afterLast.coordinateAtCutoff).latitude,
             38,
+            accuracy: 0.0001
+        )
+    }
+
+    func testHistoricalPlaybackKeepsMarkerWhenArchiveStartsAfterOldTimelineTime() throws {
+        let archive = [reading(1_420, latitude: 37.4)]
+        let live = [reading(1_435, latitude: 37.5)]
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 900,
+            actuals: [],
+            readings: archive,
+            liveReadings: live,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(projection.coordinateAtCutoff).latitude,
+            37.4,
+            accuracy: 0.0001
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(
+                RouteTimelineDataEngine.playbackCoordinate(
+                    at: date(900),
+                    inNormalizedReadings: RouteTimelineDataEngine.normalizedReadings(
+                        archive + live
+                    )
+                )
+            ).latitude,
+            37.4,
             accuracy: 0.0001
         )
     }
@@ -714,6 +773,241 @@ final class RouteTimelineDataTests: XCTestCase {
             - markerStartedAt
         XCTAssertNotNil(marker)
         XCTAssertLessThan(markerElapsed, 0.2)
+    }
+
+    func testGPSLoggerRouteFilterRemovesDriftAndImpossibleJumpWithoutMutatingRawReadings() {
+        let start = date(0)
+        func sample(
+            _ seconds: TimeInterval,
+            latitude: Double,
+            id: String,
+            accuracy: Double = 5,
+            motion: MotionKind = .unknown
+        ) -> SensorReading {
+            SensorReading(
+                id: UUID(uuidString: id)!,
+                timestamp: start.addingTimeInterval(seconds),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: accuracy,
+                    verticalAccuracy: 5
+                ),
+                motion: motion
+            )
+        }
+
+        let readings = [
+            sample(0, latitude: 37, id: "00000000-0000-0000-0000-000000000001"),
+            sample(1, latitude: 37.000005, id: "00000000-0000-0000-0000-000000000002"),
+            sample(5, latitude: 37.0001, id: "00000000-0000-0000-0000-000000000003"),
+            sample(6, latitude: 37.005, id: "00000000-0000-0000-0000-000000000004"),
+            sample(10, latitude: 37.0002, id: "00000000-0000-0000-0000-000000000005"),
+        ]
+        let original = readings
+
+        let filtered = GPSLoggerRouteFilter.filter(readings)
+
+        XCTAssertEqual(readings, original)
+        XCTAssertEqual(
+            filtered.map(\.id.uuidString),
+            [
+                "00000000-0000-0000-0000-000000000001",
+                "00000000-0000-0000-0000-000000000003",
+                "00000000-0000-0000-0000-000000000005",
+            ]
+        )
+        XCTAssertEqual(filtered.count, 3)
+        XCTAssertTrue(filtered[1].trackingSessionEnded == true)
+    }
+
+    func testGPSLoggerRouteFilterBoundsAccuracyAndIsDeterministic() {
+        let start = date(0)
+        func sample(
+            _ seconds: TimeInterval,
+            latitude: Double,
+            id: String,
+            accuracy: Double
+        ) -> SensorReading {
+            SensorReading(
+                id: UUID(uuidString: id)!,
+                timestamp: start.addingTimeInterval(seconds),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: accuracy,
+                    verticalAccuracy: 5
+                ),
+                locationFixQuality: .approximate,
+                gpsAvailable: false
+            )
+        }
+
+        let readings = [
+            sample(
+                0,
+                latitude: 37,
+                id: "00000000-0000-0000-0000-000000000011",
+                accuracy: 500
+            ),
+            sample(
+                10,
+                latitude: 37.0001,
+                id: "00000000-0000-0000-0000-000000000012",
+                accuracy: 500
+            ),
+            sample(
+                20,
+                latitude: 37.0002,
+                id: "00000000-0000-0000-0000-000000000013",
+                accuracy: 1_001
+            ),
+        ]
+
+        let first = GPSLoggerRouteFilter.filter(readings)
+        let second = GPSLoggerRouteFilter.filter(readings)
+
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(first.map(\.id.uuidString), [
+            "00000000-0000-0000-0000-000000000011",
+            "00000000-0000-0000-0000-000000000012",
+        ])
+        XCTAssertTrue(first.allSatisfy { $0.point?.horizontalAccuracy ?? .infinity <= 1_000 })
+    }
+
+    func testGPSLoggerRouteFilterStartsNewSegmentAfterLongGap() {
+        let start = date(0)
+        let readings = [
+            SensorReading(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000021")!,
+                timestamp: start,
+                point: GeoPoint(
+                    latitude: 37,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            ),
+            SensorReading(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000022")!,
+                timestamp: start.addingTimeInterval(16 * 60),
+                point: GeoPoint(
+                    latitude: 38,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            ),
+        ]
+
+        XCTAssertEqual(
+            GPSLoggerRouteFilter.filter(readings).map(\.id),
+            readings.map(\.id)
+        )
+    }
+
+    func testGPSLoggerRouteFilterKeepsOnlyLowConfidenceRunBoundaries() {
+        let start = date(0)
+        func sample(
+            _ seconds: TimeInterval,
+            latitude: Double,
+            id: String,
+            accuracy: Double
+        ) -> SensorReading {
+            SensorReading(
+                id: UUID(uuidString: id)!,
+                timestamp: start.addingTimeInterval(seconds),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: accuracy,
+                    verticalAccuracy: 5
+                ),
+                gpsAvailable: accuracy <= 150
+            )
+        }
+
+        let readings = [
+            sample(
+                0,
+                latitude: 37,
+                id: "00000000-0000-0000-0000-000000000031",
+                accuracy: 5
+            ),
+            sample(
+                1,
+                latitude: 37.0002,
+                id: "00000000-0000-0000-0000-000000000032",
+                accuracy: 500
+            ),
+            sample(
+                2,
+                latitude: 37.0003,
+                id: "00000000-0000-0000-0000-000000000033",
+                accuracy: 500
+            ),
+            sample(
+                3,
+                latitude: 37.0004,
+                id: "00000000-0000-0000-0000-000000000034",
+                accuracy: 500
+            ),
+            sample(
+                4,
+                latitude: 37.0005,
+                id: "00000000-0000-0000-0000-000000000035",
+                accuracy: 5
+            ),
+        ]
+
+        let filtered = GPSLoggerRouteFilter.filter(readings)
+
+        XCTAssertTrue(filtered.contains { $0.id == readings[1].id })
+        XCTAssertTrue(filtered.contains { $0.id == readings[3].id })
+        XCTAssertFalse(filtered.contains { $0.id == readings[2].id })
+    }
+
+    func testDisplayReadingsKeepsCornersAndGapSegmentBoundaries() {
+        let start = date(0)
+        let readings = (0..<200).map { index in
+            let timestampOffset = index >= 120
+                ? Double(index) + 16 * 60
+                : Double(index)
+            let latitude = index <= 50
+                ? 37 + Double(index) / 1_000_000
+                : 37.00005
+            let longitude = index <= 50
+                ? 127
+                : 127 + Double(index - 50) / 1_000_000
+            return SensorReading(
+                timestamp: start.addingTimeInterval(timestampOffset),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+        }
+
+        let displayed = RouteTimelineDataEngine.displayReadings(
+            from: readings,
+            maximumCount: 20
+        )
+        let timestamps = Set(displayed.map(\.timestamp))
+
+        XCTAssertEqual(displayed.count, 20)
+        XCTAssertEqual(displayed.first?.timestamp, readings.first?.timestamp)
+        XCTAssertEqual(displayed.last?.timestamp, readings.last?.timestamp)
+        XCTAssertTrue(timestamps.contains(readings[50].timestamp))
+        XCTAssertTrue(timestamps.contains(readings[119].timestamp))
+        XCTAssertTrue(timestamps.contains(readings[120].timestamp))
     }
 
     func testExpectedRoadRouteUsesSavedPlaceEndpointsWithoutMutatingTravel() throws {

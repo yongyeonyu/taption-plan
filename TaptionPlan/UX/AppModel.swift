@@ -6,6 +6,11 @@ import UIKit
 import WidgetKit
 import TaptionPlanCore
 
+struct SensorReadingsLoadResult: Equatable, Sendable {
+    let readings: [SensorReading]
+    let isComplete: Bool
+}
+
 enum MapCurrentLocationAnchorPolicy {
     static let maximumAge: TimeInterval = 6 * 60 * 60
 
@@ -2049,7 +2054,8 @@ final class AppModel {
             await controller.removeExpired()
             await controller.stop(
                 lastSavedAt: lastSensorSavedAt,
-                collectionKinds: kinds
+                collectionKinds: kinds,
+                saveToken: sensorSaveToken
             )
             return
         }
@@ -2061,7 +2067,8 @@ final class AppModel {
             isCollecting: true,
             isForeground: isForeground,
             intervalSeconds: settings.gpsLoggingPreferences
-                .effectiveIntervalSeconds
+                .effectiveIntervalSeconds,
+            saveToken: sensorSaveToken
         )
     }
 
@@ -5717,13 +5724,17 @@ final class AppModel {
         }
     }
 
-    func sensorReadings(in span: TimeSpan) async -> [SensorReading] {
+    func sensorReadingsLoadResult(
+        in span: TimeSpan
+    ) async -> SensorReadingsLoadResult {
         let archived: [SensorReading]
+        let isComplete: Bool
         if let sensorService {
             do {
                 archived = try await sensorService.archivedRouteReadings(
                     in: span
                 )
+                isComplete = true
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "route_readings_load_failed",
@@ -5735,15 +5746,23 @@ final class AppModel {
                     ]
                 )
                 archived = []
+                isComplete = false
             }
         } else {
             archived = []
+            isComplete = false
         }
-        return (archived + photoBackfillReadings(
-            in: span,
-            existingReadings: archived
-        ))
-        .sorted { $0.timestamp < $1.timestamp }
+        return SensorReadingsLoadResult(
+            readings: (archived + photoBackfillReadings(
+                in: span,
+                existingReadings: archived
+            )).sorted { $0.timestamp < $1.timestamp },
+            isComplete: isComplete
+        )
+    }
+
+    func sensorReadings(in span: TimeSpan) async -> [SensorReading] {
+        await sensorReadingsLoadResult(in: span).readings
     }
 
     private func photoBackfillReadings(

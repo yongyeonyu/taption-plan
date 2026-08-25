@@ -2269,12 +2269,14 @@ struct SensorCollectionLiveActivity: Widget {
                         lastSavedAt: context.state.lastSavedAt
                     )
                 }
+                DynamicIslandExpandedRegion(.trailing) {
+                    SensorCollectionWaveformView(state: context.state)
+                }
             } compactLeading: {
                 SensorCollectionAppIcon()
                     .frame(width: 18, height: 14)
             } compactTrailing: {
-                Image(systemName: "waveform.path.ecg")
-                    .foregroundStyle(Color(red: 0.18, green: 0.72, blue: 0.59))
+                SensorCollectionWaveformView(state: context.state)
             } minimal: {
                 SensorCollectionAppIcon()
                     .frame(width: 18, height: 13)
@@ -2322,9 +2324,113 @@ private struct SensorCollectionAppIcon: View {
         Image("SensorCollectionAppIcon")
             .resizable()
             .scaledToFit()
+            .clipShape(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+            )
             .accessibilityLabel(
                 widgetText("Taption Plan 센서 수집 아이콘", "Taption Plan sensor collection icon")
             )
+    }
+}
+
+private struct SensorCollectionWaveformView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let state: SensorCollectionActivityAttributes.ContentState
+
+    private enum Trigger: Equatable {
+        case saveToken(Int)
+        case legacySavedAt(Date)
+    }
+
+    private var trigger: Trigger {
+        if let saveToken = state.saveToken {
+            return .saveToken(saveToken)
+        }
+        return .legacySavedAt(state.lastSavedAt ?? state.startedAt)
+    }
+
+    var body: some View {
+        ZStack {
+            if state.phase != .hidden {
+                SensorCollectionFlatlineShape()
+                    .stroke(
+                        Color(red: 0.18, green: 0.72, blue: 0.59),
+                        style: StrokeStyle(lineWidth: 1, lineCap: .round)
+                    )
+            }
+            if state.phase == .pulse {
+                if reduceMotion {
+                    SensorCollectionECGShape()
+                        .stroke(
+                            Color(red: 0.18, green: 0.72, blue: 0.59),
+                            style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
+                        )
+                } else {
+                    SensorCollectionECGShape()
+                        .stroke(
+                            Color(red: 0.18, green: 0.72, blue: 0.59),
+                            style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
+                        )
+                        .keyframeAnimator(
+                            initialValue: CGFloat.zero,
+                            trigger: trigger
+                        ) { content, amplitude in
+                            content
+                                .scaleEffect(
+                                    y: max(0.01, amplitude),
+                                    anchor: .center
+                                )
+                                .opacity(amplitude)
+                        } keyframes: { _ in
+                            CubicKeyframe(0, duration: 0)
+                            CubicKeyframe(1, duration: 0.18)
+                            CubicKeyframe(0.35, duration: 0.22)
+                            CubicKeyframe(0, duration: 0.45)
+                        }
+                }
+            }
+        }
+        .frame(width: 24, height: 14)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct SensorCollectionFlatlineShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
+    }
+}
+
+private struct SensorCollectionECGShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let baseline = rect.midY
+        let width = rect.width
+        let height = rect.height
+        var path = Path()
+        path.move(to: CGPoint(x: 0, y: baseline))
+        path.addLine(to: CGPoint(x: width * 0.25, y: baseline))
+        path.addLine(
+            to: CGPoint(x: width * 0.34, y: baseline - height * 0.16)
+        )
+        path.addLine(
+            to: CGPoint(x: width * 0.40, y: baseline + height * 0.10)
+        )
+        path.addLine(
+            to: CGPoint(x: width * 0.47, y: baseline - height * 0.86)
+        )
+        path.addLine(
+            to: CGPoint(x: width * 0.54, y: baseline + height * 0.42)
+        )
+        path.addLine(
+            to: CGPoint(x: width * 0.62, y: baseline - height * 0.18)
+        )
+        path.addLine(to: CGPoint(x: width * 0.72, y: baseline))
+        path.addLine(to: CGPoint(x: width, y: baseline))
+        return path
     }
 }
 
@@ -2332,10 +2438,18 @@ private func sensorCollectionAccessibilityLabel(
     for state: SensorCollectionActivityAttributes.ContentState
 ) -> String {
     let kinds = sensorCollectionKinds(state.collectionKinds)
-    return widgetText(
-        "센서 정보 수집중, \(kinds)",
-        "Collecting sensor data, \(kinds)"
-    )
+    let status: String
+    switch state.phase {
+    case .waiting:
+        status = widgetText("센서 정보 대기중", "Waiting for sensor data")
+    case .pulse:
+        status = widgetText("센서 정보 저장중", "Saving sensor data")
+    case .flatline:
+        status = widgetText("다음 센서 정보 대기중", "Waiting for the next sample")
+    case .hidden:
+        status = widgetText("센서 수집 종료", "Sensor collection ended")
+    }
+    return "\(status), \(kinds)"
 }
 
 private struct SensorCollectionSavedAtView: View {

@@ -26,17 +26,25 @@ actor SensorCollectionLiveActivityController {
         isCollecting: Bool,
         isForeground: Bool,
         intervalSeconds: Int,
+        saveToken: Int? = nil,
         now: Date = .now
     ) async throws -> String? {
         await recoverAndRemoveDuplicates(
             sessionID: sessionID,
             now: now
         )
+        let effectiveSaveToken: Int
+        if let saveToken {
+            effectiveSaveToken = saveToken
+        } else {
+            effectiveSaveToken = await SensorBackgroundCoordinator.shared.saveToken
+        }
 
         guard isCollecting else {
             await stop(
                 lastSavedAt: lastSavedAt,
                 collectionKinds: collectionKinds,
+                saveToken: effectiveSaveToken,
                 now: now
             )
             return nil
@@ -47,23 +55,67 @@ actor SensorCollectionLiveActivityController {
                 startedAt: startedAt,
                 now: now
             ) ? now : startedAt)
+        let previousState = activity?.content.state
+        let hasNewSample: Bool
+        if let previousState {
+            hasNewSample = SensorCollectionActivityPolicy.hasNewSavedSample(
+                previousSaveToken: previousState.saveToken,
+                currentSaveToken: effectiveSaveToken,
+                previousSavedAt: previousState.lastSavedAt,
+                currentSavedAt: lastSavedAt
+            )
+        } else {
+            hasNewSample = false
+        }
+        let phase: SensorCollectionActivityPhase
+        if hasNewSample {
+            phase = .pulse
+        } else if let previousState,
+                  previousState.phase == .pulse,
+                  !SensorCollectionActivityPolicy.isPhaseExpired(
+                      previousState.phase,
+                      until: previousState.phaseUntil,
+                      now: now
+                  ) {
+            phase = .pulse
+        } else if previousState?.phase == .flatline {
+            phase = .flatline
+        } else if previousState?.phase == .pulse {
+            phase = .flatline
+        } else {
+            phase = .waiting
+        }
+        let phaseUntil: Date?
+        if hasNewSample {
+            phaseUntil = SensorCollectionActivityPolicy.pulseUntil(now: now)
+        } else if phase == .pulse {
+            phaseUntil = previousState?.phaseUntil
+        } else {
+            phaseUntil = nil
+        }
         let state = SensorCollectionActivityAttributes.ContentState(
             startedAt: activityStartedAt,
             lastSavedAt: lastSavedAt,
             collectionKinds: collectionKinds,
             isCollecting: true,
             intervalSeconds: intervalSeconds,
-            sessionStateRawValue: SensorCollectionSessionState.collecting.rawValue
+            sessionStateRawValue: SensorCollectionSessionState.collecting.rawValue,
+            saveToken: effectiveSaveToken,
+            phaseRawValue: phase.rawValue,
+            phaseUntil: phaseUntil
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt
         )
 
         if let activity {
-            guard SensorCollectionActivityPolicy.shouldPublish(
-                lastPublishedAt: lastPublishedAt,
-                now: now
-            ) else { return activity.id }
+            let shouldPublish = hasNewSample
+                || state != activity.content.state
+                || SensorCollectionActivityPolicy.shouldPublish(
+                    lastPublishedAt: lastPublishedAt,
+                    now: now
+                )
+            guard shouldPublish else { return activity.id }
             await activity.update(
                 ActivityContent(state: state, staleDate: staleDate)
             )
@@ -93,20 +145,26 @@ actor SensorCollectionLiveActivityController {
     func stop(
         lastSavedAt: Date?,
         collectionKinds: [String],
+        saveToken: Int? = nil,
         now: Date = .now
     ) async {
         guard let activity else { return }
+        let flatlineUntil = SensorCollectionActivityPolicy
+            .completionFlatlineUntil(now: now)
         let finalState = SensorCollectionActivityAttributes.ContentState(
             startedAt: activity.content.state.startedAt,
             lastSavedAt: lastSavedAt,
             collectionKinds: collectionKinds,
             isCollecting: false,
             intervalSeconds: activity.content.state.intervalSeconds,
-            sessionStateRawValue: SensorCollectionSessionState.stopped.rawValue
+            sessionStateRawValue: SensorCollectionSessionState.stopped.rawValue,
+            saveToken: saveToken ?? activity.content.state.saveToken,
+            phaseRawValue: SensorCollectionActivityPhase.flatline.rawValue,
+            phaseUntil: flatlineUntil
         )
         await activity.end(
-            ActivityContent(state: finalState, staleDate: nil),
-            dismissalPolicy: .immediate
+            ActivityContent(state: finalState, staleDate: flatlineUntil),
+            dismissalPolicy: .after(flatlineUntil)
         )
         self.activity = nil
         lastPublishedAt = nil
@@ -132,6 +190,10 @@ actor SensorCollectionLiveActivityController {
         sessionID: UUID?,
         now: Date
     ) async {
+        if let current = activity, !isLive(current) {
+            activity = nil
+            lastPublishedAt = nil
+        }
         if let current = activity {
             let isExpired = SensorCollectionActivityPolicy.isExpired(
                 startedAt: current.content.state.startedAt,
@@ -148,6 +210,7 @@ actor SensorCollectionLiveActivityController {
         }
         var selected = activity
         for candidate in Activity<SensorCollectionActivityAttributes>.activities {
+            guard isLive(candidate) else { continue }
             let expired = SensorCollectionActivityPolicy.isExpired(
                 startedAt: candidate.content.state.startedAt,
                 now: now
@@ -161,6 +224,19 @@ actor SensorCollectionLiveActivityController {
             }
         }
         activity = selected
+    }
+
+    private func isLive(
+        _ activity: Activity<SensorCollectionActivityAttributes>
+    ) -> Bool {
+        switch activity.activityState {
+        case .active, .pending, .stale:
+            return true
+        case .ended, .dismissed:
+            return false
+        @unknown default:
+            return false
+        }
     }
 }
 
