@@ -1058,16 +1058,29 @@ struct MapHomeView: View {
             }
 
             ForEach(subwayRouteOverlays) { overlay in
-                MapPolyline(coordinates: overlay.coordinates)
-                    .stroke(
-                        mapCategoryColor("movement").opacity(0.20),
-                        style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round)
-                    )
-                MapPolyline(coordinates: overlay.coordinates)
-                    .stroke(
-                        mapCategoryColor("movement").opacity(0.92),
-                        style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
-                    )
+                if overlay.estimated {
+                    MapPolyline(coordinates: overlay.coordinates)
+                        .stroke(
+                            mapCategoryColor("movement").opacity(0.55),
+                            style: StrokeStyle(
+                                lineWidth: 3,
+                                lineCap: .round,
+                                lineJoin: .round,
+                                dash: [8, 6]
+                            )
+                        )
+                } else {
+                    MapPolyline(coordinates: overlay.coordinates)
+                        .stroke(
+                            mapCategoryColor("movement").opacity(0.20),
+                            style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round)
+                        )
+                    MapPolyline(coordinates: overlay.coordinates)
+                        .stroke(
+                            mapCategoryColor("movement").opacity(0.92),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+                        )
+                }
             }
 
             ForEach(timelineRouteOverlays) { overlay in
@@ -1289,6 +1302,13 @@ struct MapHomeView: View {
         switch model.settings.mapDisplayStyle {
         case .standard:
             .standard(elevation: .realistic)
+        case .simplified:
+            .standard(
+                elevation: .flat,
+                emphasis: .muted,
+                pointsOfInterest: .excludingAll,
+                showsTraffic: false
+            )
         case .hybrid:
             .hybrid(elevation: .realistic)
         case .imagery:
@@ -1554,6 +1574,7 @@ struct MapHomeView: View {
     private func mapStyleTitle(_ style: MapDisplayStyle) -> String {
         switch style {
         case .standard: language.text("표준", "Standard")
+        case .simplified: language.text("간략화", "Simplified")
         case .hybrid: language.text("하이브리드", "Hybrid")
         case .imagery: language.text("위성", "Satellite")
         }
@@ -1562,6 +1583,7 @@ struct MapHomeView: View {
     private func mapStyleSystemImage(_ style: MapDisplayStyle) -> String {
         switch style {
         case .standard: "map"
+        case .simplified: "map.fill"
         case .hybrid: "square.3.layers.3d"
         case .imagery: "globe.asia.australia.fill"
         }
@@ -2702,6 +2724,38 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
+                Text(language.text("지도 스타일", "Map style"))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 6)
+                    .padding(.horizontal, 12)
+
+                ForEach(MapDisplayStyle.allCases, id: \.self) { style in
+                    Button {
+                        model.setMapDisplayStyle(style)
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: mapStyleSystemImage(style))
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 22)
+                            Text(mapStyleTitle(style))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Spacer()
+                            if model.settings.mapDisplayStyle == style {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                        }
+                        .foregroundStyle(Color.primary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(
+                        model.settings.mapDisplayStyle == style ? .isSelected : []
+                    )
+                }
+
                 Toggle(
                     isOn: Binding(
                         get: { model.settings.weatherSidebarVisible },
@@ -3146,7 +3200,7 @@ struct MapHomeView: View {
         case .walking: .walking
         }
         if routeRequest.transport == .transit {
-            request.departureDate = .now
+            request.departureDate = routeRequest.departureDate
         }
         guard let response = try? await MKDirections(request: request).calculate(),
               let route = response.routes.min(by: {
@@ -3170,22 +3224,14 @@ struct MapHomeView: View {
             ),
             calendar: calendar
         )
-        return model.snapshot.travel.compactMap { segment in
-            guard segment.mode == .subway,
-                  segment.isConfirmed,
-                  segment.span.intersection(with: day) != nil,
-                  let route = segment.subwayRoute,
-                  SubwayStationCatalog.isValid(route) else { return nil }
-            let coordinates = RouteTimelineDataEngine.confirmedSubwayCoordinates(
-                for: segment,
-                through: cutoff
-            ).compactMap { point -> CLLocationCoordinate2D? in
-                guard isValid(point) else { return nil }
-                return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
-            }
-            guard coordinates.count >= 2 else { return nil }
-            return MapHomeSubwayRouteOverlay(id: segment.id, coordinates: coordinates)
-        }
+        return MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: model.snapshot.travel,
+            readings: routeReadings
+                + model.liveRouteState.readings
+                + (model.latestSensorReading.map { [$0] } ?? []),
+            day: day,
+            through: cutoff
+        )
     }
 
     private func makeTimelineRouteOverlays(
@@ -3743,6 +3789,30 @@ struct MapHomeSectionDetail: Identifiable, Hashable {
 }
 
 enum MapHomeSectionDetailEngine {
+    private struct DuplicateKey: Hashable {
+        let categoryID: String
+        let title: String
+        let behavior: String?
+        let startMinute: Int
+        let endMinute: Int
+    }
+
+    private struct Candidate {
+        let detail: MapHomeSectionDetail
+        let priority: Int
+        let tieBreak: String
+
+        var key: DuplicateKey {
+            DuplicateKey(
+                categoryID: detail.categoryID,
+                title: detail.title,
+                behavior: detail.behavior,
+                startMinute: detail.startMinute,
+                endMinute: detail.endMinute
+            )
+        }
+    }
+
     static func details(
         actuals: [ActualRecord],
         travel: [TravelSegment],
@@ -3763,43 +3833,103 @@ enum MapHomeSectionDetailEngine {
         ) else { return [] }
         let segmentSpan = TimeSpan(start: segmentStart, end: segmentEnd)
         let majorSourceIDs = Set(segment.sourceIDs)
-        var result = actuals.compactMap { actual -> MapHomeSectionDetail? in
+        var candidates = actuals.compactMap { actual -> Candidate? in
             guard !majorSourceIDs.contains(actual.id),
                   let clipped = actual.span(asOf: asOf).intersection(with: segmentSpan),
                   clipped.start < dayEnd,
                   clipped.end > dayStart
             else { return nil }
             let minutes = clippedMinutes(clipped, dayStart: dayStart)
-            return MapHomeSectionDetail(
-                id: actual.id,
-                title: actual.title,
-                categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
-                behavior: actual.behavior,
-                startMinute: minutes.start,
-                endMinute: minutes.end
+            let detail = MapHomeSectionDetail(
+                    id: actual.id,
+                    title: actual.title,
+                    categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
+                    behavior: actual.behavior,
+                    startMinute: minutes.start,
+                    endMinute: minutes.end
+            )
+            return Candidate(
+                detail: detail,
+                priority: actualPriority(actual),
+                tieBreak: "actual|\(actual.source.rawValue)|\(actual.id.uuidString)"
             )
         }
-        result.append(contentsOf: travel.compactMap { item -> MapHomeSectionDetail? in
+        candidates.append(contentsOf: travel.compactMap { item -> Candidate? in
             guard !majorSourceIDs.contains(item.id),
                   let clipped = item.span.intersection(with: segmentSpan),
                   clipped.start < dayEnd,
                   clipped.end > dayStart
             else { return nil }
             let minutes = clippedMinutes(clipped, dayStart: dayStart)
-            return MapHomeSectionDetail(
-                id: item.id,
-                title: "\(MovementPresentation.title(for: item.mode)) 탑승",
-                categoryID: "movement",
-                behavior: item.mode.rawValue,
-                startMinute: minutes.start,
-                endMinute: minutes.end
+            let detail = MapHomeSectionDetail(
+                    id: item.id,
+                    title: "\(MovementPresentation.title(for: item.mode)) 탑승",
+                    categoryID: "movement",
+                    behavior: item.mode.rawValue,
+                    startMinute: minutes.start,
+                    endMinute: minutes.end
+            )
+            return Candidate(
+                detail: detail,
+                priority: 0,
+                tieBreak: "travel|\(item.mode.rawValue)|\(item.id.uuidString)"
             )
         })
-        return result.sorted { lhs, rhs in
-            lhs.startMinute == rhs.startMinute
-                ? lhs.endMinute < rhs.endMinute
-                : lhs.startMinute < rhs.startMinute
+
+        var selected: [DuplicateKey: Candidate] = [:]
+        for candidate in candidates {
+            guard let current = selected[candidate.key] else {
+                selected[candidate.key] = candidate
+                continue
+            }
+            if isPreferred(candidate, over: current) {
+                selected[candidate.key] = candidate
+            }
         }
+        return selected.values.map(\.detail).sorted { lhs, rhs in
+            if lhs.startMinute != rhs.startMinute {
+                return lhs.startMinute < rhs.startMinute
+            }
+            if lhs.endMinute != rhs.endMinute {
+                return lhs.endMinute < rhs.endMinute
+            }
+            if lhs.categoryID != rhs.categoryID {
+                return lhs.categoryID < rhs.categoryID
+            }
+            if lhs.title != rhs.title {
+                return lhs.title < rhs.title
+            }
+            if lhs.behavior != rhs.behavior {
+                return (lhs.behavior ?? "") < (rhs.behavior ?? "")
+            }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+    }
+
+    private static func actualPriority(_ actual: ActualRecord) -> Int {
+        if actual.manuallyCorrected || actual.source == .manual {
+            return 4
+        }
+        switch actual.source {
+        case .healthKit, .appleWatch:
+            return 3
+        case .motion:
+            return 2
+        case .location:
+            return 1
+        default:
+            return 0
+        }
+    }
+
+    private static func isPreferred(
+        _ candidate: Candidate,
+        over current: Candidate
+    ) -> Bool {
+        if candidate.priority != current.priority {
+            return candidate.priority > current.priority
+        }
+        return candidate.tieBreak < current.tieBreak
     }
 
     private static func clippedMinutes(
@@ -5818,9 +5948,151 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
     }
 }
 
-private struct MapHomeSubwayRouteOverlay: Identifiable {
+struct MapHomeSubwayRouteOverlay: Identifiable {
     let id: UUID
     let coordinates: [CLLocationCoordinate2D]
+    let estimated: Bool
+}
+
+enum MapHomeSubwayRouteOverlayEngine {
+    private static let readingMargin: TimeInterval = 2 * 60
+
+    static func overlays(
+        travel: [TravelSegment],
+        readings: [SensorReading],
+        day: TimeSpan,
+        through cutoff: Date
+    ) -> [MapHomeSubwayRouteOverlay] {
+        let subwaySegments = travel
+            .filter { $0.mode == .subway && $0.span.intersection(with: day) != nil }
+            .sorted { $0.span.start < $1.span.start }
+        let confirmedSpans = subwaySegments.compactMap { segment -> TimeSpan? in
+            guard segment.isConfirmed,
+                  let route = segment.subwayRoute,
+                  SubwayStationCatalog.isValid(route) else { return nil }
+            return segment.span
+        }
+
+        return subwaySegments.compactMap { segment in
+            if segment.isConfirmed,
+               let route = segment.subwayRoute,
+               SubwayStationCatalog.isValid(route) {
+                let points = RouteTimelineDataEngine.confirmedSubwayCoordinates(
+                    for: segment,
+                    through: cutoff
+                )
+                return makeOverlay(
+                    id: segment.id,
+                    points: points,
+                    estimated: false
+                )
+            }
+
+            // A confirmed route is authoritative for an overlapping interval;
+            // do not draw an inferred path on top of it.
+            guard !confirmedSpans.contains(where: {
+                $0.intersection(with: segment.span) != nil
+            }) else { return nil }
+            let sourceReadings = readings.filter {
+                $0.timestamp >= segment.span.start.addingTimeInterval(-readingMargin)
+                    && $0.timestamp <= segment.span.end.addingTimeInterval(readingMargin)
+            }
+            guard hasSupportingEvidence(in: sourceReadings) else { return nil }
+            let preciseReadings = sourceReadings.filter {
+                $0.locationFixQuality != .approximate
+            }
+            let trajectory = SubwayStationCatalog.coordinateTrajectory(
+                from: preciseReadings
+            ) ?? SubwayStationCatalog.sparseEndpointTrajectory(
+                from: preciseReadings
+            )
+            let route = trajectory?.route
+                ?? SubwayStationCatalog.route(for: sourceReadings)
+            guard let route,
+                  SubwayStationCatalog.isValid(route) else { return nil }
+            let points = visibleCoordinates(
+                route.coordinates,
+                start: segment.span.start,
+                end: segment.span.end,
+                through: cutoff
+            )
+            return makeOverlay(
+                id: segment.id,
+                points: points,
+                estimated: true
+            )
+        }
+    }
+
+    private static func hasSupportingEvidence(
+        in readings: [SensorReading]
+    ) -> Bool {
+        guard !readings.isEmpty else { return false }
+        let railRatio = Double(readings.filter(\.matchesRailRoute).count)
+            / Double(readings.count)
+        if railRatio >= 0.25 {
+            return true
+        }
+        if SubwayWiFiSSID.hasContinuousEvidence(
+            readings.map(\.connectedWiFiSSID)
+        ) {
+            return true
+        }
+        let stationNames = Set(
+            readings.compactMap(\.nearbyStationName).map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "역", with: "")
+            }
+        )
+        return stationNames.count >= 2
+            || readings.filter(\.nearbyStation).count >= 3
+    }
+
+    private static func visibleCoordinates(
+        _ points: [GeoPoint],
+        start: Date,
+        end: Date,
+        through cutoff: Date
+    ) -> [GeoPoint] {
+        guard points.count >= 2, cutoff > start else { return [] }
+        guard cutoff < end, end > start else { return points }
+        let fraction = min(
+            max(cutoff.timeIntervalSince(start) / end.timeIntervalSince(start), 0),
+            1
+        )
+        let lastIndex = max(
+            1,
+            min(points.count - 1, Int(ceil(Double(points.count - 1) * fraction)))
+        )
+        return Array(points.prefix(lastIndex + 1))
+    }
+
+    private static func makeOverlay(
+        id: UUID,
+        points: [GeoPoint],
+        estimated: Bool
+    ) -> MapHomeSubwayRouteOverlay? {
+        let coordinates = points.compactMap { point -> CLLocationCoordinate2D? in
+            guard isValid(point) else { return nil }
+            return CLLocationCoordinate2D(
+                latitude: point.latitude,
+                longitude: point.longitude
+            )
+        }
+        guard coordinates.count >= 2 else { return nil }
+        return MapHomeSubwayRouteOverlay(
+            id: id,
+            coordinates: coordinates,
+            estimated: estimated
+        )
+    }
+
+    private static func isValid(_ point: GeoPoint) -> Bool {
+        point.latitude.isFinite
+            && point.longitude.isFinite
+            && (-90...90).contains(point.latitude)
+            && (-180...180).contains(point.longitude)
+    }
 }
 
 private struct MapHomeTimelineRouteOverlay: Identifiable {

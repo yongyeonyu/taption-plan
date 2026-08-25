@@ -77,6 +77,131 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(inference.evidence.contains { $0.contains("KT_WiFi") })
     }
 
+    func testMapHomeSubwayOverlayUsesConfirmedRouteBeforeEstimatedRoute() throws {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let readings = [
+            (0.0, 37.5248, 126.6744, "가정역"),
+            (10.0, 37.5692, 126.6737, "검암역"),
+            (20.0, 37.5667, 126.8273, "마곡나루역"),
+        ].map { minute, latitude, longitude, station in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: station,
+                matchesRailRoute: true
+            )
+        }
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(30 * 60)
+        )
+        let route = try XCTUnwrap(
+            SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"])
+        )
+        let estimated = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .low,
+            evidence: ["철도 경로"],
+            isConfirmed: false
+        )
+        let confirmed = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["사용자 확인"],
+            isConfirmed: true,
+            subwayRoute: route
+        )
+
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [estimated, confirmed],
+            readings: readings,
+            day: TimeSpan(
+                start: base.addingTimeInterval(-60),
+                end: base.addingTimeInterval(31 * 60)
+            ),
+            through: base.addingTimeInterval(31 * 60)
+        )
+
+        XCTAssertEqual(overlays.count, 1)
+        XCTAssertEqual(overlays.first?.id, confirmed.id)
+        XCTAssertFalse(try XCTUnwrap(overlays.first).estimated)
+    }
+
+    func testMapHomeSubwayOverlayEstimatesUnconfirmedRouteAndHonorsCutoff() throws {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let readings = [
+            (0.0, 37.5248, 126.6744, "가정역"),
+            (10.0, 37.5692, 126.6737, "검암역"),
+            (20.0, 37.5667, 126.8273, "마곡나루역"),
+        ].map { minute, latitude, longitude, station in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: station,
+                matchesRailRoute: true
+            )
+        }
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(30 * 60)
+        )
+        let segment = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .low,
+            evidence: ["철도 경로"],
+            isConfirmed: false
+        )
+        let day = TimeSpan(
+            start: base.addingTimeInterval(-60),
+            end: base.addingTimeInterval(31 * 60)
+        )
+        let partial = MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [segment],
+            readings: readings,
+            day: day,
+            through: base.addingTimeInterval(15 * 60)
+        )
+        let complete = MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [segment],
+            readings: readings,
+            day: day,
+            through: base.addingTimeInterval(31 * 60)
+        )
+
+        XCTAssertEqual(partial.count, 1)
+        XCTAssertTrue(try XCTUnwrap(partial.first).estimated)
+        XCTAssertGreaterThan(partial[0].coordinates.count, 1)
+        XCTAssertLessThan(partial[0].coordinates.count, complete[0].coordinates.count)
+        XCTAssertTrue(complete[0].estimated)
+        XCTAssertEqual(readings.count, 3)
+    }
+
     func testRecordAnalysisPolicyUsesOnlyCanonicalAutomaticCategories() {
         let phaseTitles = RecordAnalysisCategoryPolicy.options
             .filter(RecordAnalysisCategoryPolicy.isPhaseOption)
@@ -1036,6 +1161,29 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testSceneActivationPublishesLocalSnapshotBeforeDeferredRefresh()
+        async {
+        let updatedAt = makeDate(2026, 8, 12, 9, 0)
+        var stored = TaptionDataSnapshot.empty
+        stored.updatedAt = updatedAt
+        stored.settings.locationEnabled = false
+        stored.settings.healthEnabled = false
+        stored.settings.weatherEnabled = false
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+
+        await model.sceneBecameActive()
+
+        XCTAssertTrue(model.isBootstrapped)
+        XCTAssertEqual(model.snapshot.updatedAt, updatedAt)
+
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
     func testActivitySectionSaveOverridesTravelAndSupportsImmediateReedit()
         async throws {
         let day = makeDate(2026, 8, 12)
@@ -1981,6 +2129,45 @@ final class FeatureEngineTests: XCTestCase {
             groups.first { $0.id == "sleep" }?.duration,
             5 * hour
         )
+    }
+
+    func testSleepReconciliationRemovesMisclassifiedActivityAndRestoresSession() {
+        let start = makeDate(2026, 8, 6, 1)
+        let session = SleepSession(
+            id: UUID(),
+            span: TimeSpan(start: start, end: start.addingTimeInterval(3 * hour)),
+            asleepDuration: 3 * hour,
+            awakeDuration: 0,
+            inBedDuration: 3 * hour,
+            stageDurations: [.asleepUnspecified: 3 * hour],
+            sourceNames: ["Apple Watch"],
+            segments: []
+        )
+        let activity = makeActual(
+            "활동",
+            "activity",
+            start: start,
+            minutes: 3 * 60,
+            source: .motion,
+            behavior: MotionKind.stationary.rawValue
+        )
+        let original = activity
+
+        let result = SleepActualReconciliationEngine.applying(
+            [activity],
+            sessions: [session],
+            inside: TimeSpan(
+                start: makeDate(2026, 8, 6),
+                end: makeDate(2026, 8, 7)
+            ),
+            asOf: makeDate(2026, 8, 6, 12)
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.id, session.id)
+        XCTAssertEqual(result.first?.categoryID, "sleep")
+        XCTAssertEqual(result.first?.source, .appleWatch)
+        XCTAssertEqual(activity, original)
     }
 
     func testPartialSleepOverlapTrimsEachEdge() {

@@ -4,6 +4,22 @@ import XCTest
 @testable import TaptionPlan
 
 final class TimeScaleTests: XCTestCase {
+    private func makeDate(
+        _ year: Int,
+        _ month: Int,
+        _ day: Int,
+        _ hour: Int = 0
+    ) -> Date {
+        Calendar(identifier: .gregorian).date(
+            from: DateComponents(
+                year: year,
+                month: month,
+                day: day,
+                hour: hour
+            )
+        )!
+    }
+
     func testEveryScaleHasAxisLabels() {
         for scale in TimeScale.allCases {
             XCTAssertFalse(scale.axisLabels.isEmpty)
@@ -1019,6 +1035,140 @@ final class TimeScaleTests: XCTestCase {
                 asOf: end
             ).isEmpty
         )
+    }
+
+    func testSectionDetailsDeduplicateExactSourcesByPriorityWithoutMutatingInputs() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = calendar.date(from: DateComponents(
+            timeZone: calendar.timeZone,
+            year: 2026,
+            month: 8,
+            day: 24
+        ))!
+        let start = dayStart.addingTimeInterval(9 * 3_600 + 22 * 60)
+        let end = start.addingTimeInterval(14 * 60)
+        let correctedID = UUID()
+        let healthID = UUID()
+        let motionID = UUID()
+        let locationID = UUID()
+        let travelID = UUID()
+        func actual(
+            id: UUID,
+            source: ActualSource,
+            manuallyCorrected: Bool = false
+        ) -> ActualRecord {
+            ActualRecord(
+                id: id,
+                planID: nil,
+                title: "걷기 탑승",
+                categoryID: "activity",
+                startedAt: start,
+                endedAt: end,
+                source: source,
+                behavior: "walking",
+                manuallyCorrected: manuallyCorrected
+            )
+        }
+        let actuals = [
+            actual(id: locationID, source: .location),
+            actual(id: motionID, source: .motion),
+            actual(id: healthID, source: .healthKit),
+            actual(id: correctedID, source: .location, manuallyCorrected: true),
+        ]
+        let travel = [
+            TravelSegment(
+                id: travelID,
+                mode: .walking,
+                span: TimeSpan(start: start, end: end),
+                distanceMeters: 500,
+                confidence: .high,
+                evidence: ["GPS"]
+            ),
+        ]
+        let originalActuals = actuals
+        let originalTravel = travel
+        let segment = MapHomeTimeRailSegment(
+            startMinute: 9 * 60,
+            endMinute: 10 * 60,
+            categoryID: "movement",
+            title: "이동",
+            sourceIDs: []
+        )
+
+        let details = MapHomeSectionDetailEngine.details(
+            actuals: actuals,
+            travel: travel,
+            segment: segment,
+            dayStart: dayStart,
+            dayEnd: dayStart.addingTimeInterval(86_400),
+            asOf: end.addingTimeInterval(60)
+        )
+
+        XCTAssertEqual(details.count, 1)
+        XCTAssertEqual(details.first?.id, correctedID)
+        XCTAssertEqual(details.first?.categoryID, "movement")
+        XCTAssertEqual(details.first?.behavior, "walking")
+        XCTAssertEqual(details, MapHomeSectionDetailEngine.details(
+            actuals: actuals,
+            travel: travel,
+            segment: segment,
+            dayStart: dayStart,
+            dayEnd: dayStart.addingTimeInterval(86_400),
+            asOf: end.addingTimeInterval(60)
+        ))
+        XCTAssertEqual(actuals, originalActuals)
+        XCTAssertEqual(travel, originalTravel)
+    }
+
+    func testSectionDetailsKeepsOverlappingDetailsWithDifferentKeys() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = calendar.date(from: DateComponents(
+            timeZone: calendar.timeZone,
+            year: 2026,
+            month: 8,
+            day: 24
+        ))!
+        let firstStart = dayStart.addingTimeInterval(9 * 3_600 + 22 * 60)
+        let secondStart = dayStart.addingTimeInterval(9 * 3_600 + 25 * 60)
+        let first = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "activity",
+            startedAt: firstStart,
+            endedAt: dayStart.addingTimeInterval(9 * 3_600 + 36 * 60),
+            source: .location,
+            behavior: "walking"
+        )
+        let second = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "activity",
+            startedAt: secondStart,
+            endedAt: dayStart.addingTimeInterval(9 * 3_600 + 36 * 60),
+            source: .motion,
+            behavior: "walking"
+        )
+        let segment = MapHomeTimeRailSegment(
+            startMinute: 9 * 60,
+            endMinute: 10 * 60,
+            categoryID: "movement",
+            title: "이동",
+            sourceIDs: []
+        )
+
+        let details = MapHomeSectionDetailEngine.details(
+            actuals: [first, second],
+            travel: [],
+            segment: segment,
+            dayStart: dayStart,
+            dayEnd: dayStart.addingTimeInterval(86_400),
+            asOf: dayStart.addingTimeInterval(10 * 3_600)
+        )
+
+        XCTAssertEqual(details.count, 2)
+        XCTAssertEqual(details.map(\.startMinute), [562, 565])
     }
 
     func testMapHomeCompassControlReturnsToArrowWithFixedDirection() {
@@ -2153,6 +2303,102 @@ final class TimeScaleTests: XCTestCase {
             ).mapDisplayStyle,
             .standard
         )
+    }
+
+    func testMapDisplayStyleIncludesSimplifiedAndUnknownValuesFallback() throws {
+        XCTAssertEqual(
+            MapDisplayStyle.allCases,
+            [.standard, .simplified, .hybrid, .imagery]
+        )
+        for style in MapDisplayStyle.allCases {
+            XCTAssertEqual(
+                try JSONDecoder().decode(
+                    MapDisplayStyle.self,
+                    from: JSONEncoder().encode(style)
+                ),
+                style
+            )
+        }
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                MapDisplayStyle.self,
+                from: Data("\"legacy-map-style\"".utf8)
+            ),
+            .standard
+        )
+    }
+
+    func testSubwayOverlayEngineDrawsEstimatedCatalogPathForGPSGap() {
+        let stations = SubwayStationCatalog.stations
+            .filter { $0.coordinate != nil }
+        guard let first = stations.first else {
+            XCTFail("subway catalog is empty")
+            return
+        }
+        let stops = stations.filter { $0.lineName == first.lineName }.prefix(4)
+        guard stops.count == 4,
+              let route = SubwayStationCatalog.route(
+                  for: stops.map(\.stationName)
+              ) else {
+            XCTFail("subway catalog route is incomplete")
+            return
+        }
+        let start = makeDate(2026, 8, 24, 9)
+        let segment = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(20 * 60)),
+            distanceMeters: 2_000,
+            confidence: .medium,
+            evidence: ["철도 지도 신호"],
+            subwayRoute: nil
+        )
+        let readings: [SensorReading] = stops.enumerated().compactMap {
+            index, station in
+            guard let point = station.coordinate else { return nil }
+            return SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 10 * 60),
+                point: point,
+                locationFixQuality: .precise,
+                nearbyStationName: station.stationName,
+                matchesRailRoute: true
+            )
+        }
+
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [segment],
+            readings: readings,
+            day: TimeSpan(
+                start: makeDate(2026, 8, 24),
+                end: makeDate(2026, 8, 25)
+            ),
+            through: start.addingTimeInterval(20 * 60)
+        )
+
+        XCTAssertEqual(overlays.count, 1)
+        XCTAssertTrue(overlays.first?.estimated == true)
+        XCTAssertGreaterThanOrEqual(overlays.first?.coordinates.count ?? 0, 2)
+
+        let confirmed = TravelSegment(
+            id: segment.id,
+            mode: .subway,
+            span: segment.span,
+            distanceMeters: segment.distanceMeters,
+            confidence: .high,
+            evidence: segment.evidence,
+            isConfirmed: true,
+            subwayRoute: route
+        )
+        let confirmedOverlays = MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [confirmed],
+            readings: readings,
+            day: TimeSpan(
+                start: makeDate(2026, 8, 24),
+                end: makeDate(2026, 8, 25)
+            ),
+            through: segment.span.end
+        )
+        XCTAssertEqual(confirmedOverlays.count, 1)
+        XCTAssertFalse(confirmedOverlays[0].estimated)
     }
 
     func testMovementEditOptionsUseRequestedOrderAndRestoreStoredMode() {

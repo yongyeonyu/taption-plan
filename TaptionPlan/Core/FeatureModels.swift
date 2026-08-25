@@ -3285,8 +3285,14 @@ struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
 
 enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case standard
+    case simplified
     case hybrid
     case imagery
+
+    init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        self = Self(rawValue: value) ?? .standard
+    }
 }
 
 enum MapUserActivityIconCatalog {

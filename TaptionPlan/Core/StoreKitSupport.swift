@@ -405,7 +405,7 @@ final class TaptionProAccessController {
         ).grantsAccess
     }
 
-    func refresh(now: Date = .now) async {
+    func refreshAccess(now: Date = .now) async {
         startTransactionUpdatesIfNeeded()
         refreshGeneration &+= 1
         let generation = refreshGeneration
@@ -417,9 +417,17 @@ final class TaptionProAccessController {
             let record = trialPersistence.record(observedAt: now)
             setState(TaptionProTrialPolicy.state(record: record, now: now))
         }
+    }
+
+    func loadProductIfNeeded() async {
         if product == nil {
             product = try? await purchaseService.loadProProduct()
         }
+    }
+
+    func refresh(now: Date = .now) async {
+        await refreshAccess(now: now)
+        await loadProductIfNeeded()
     }
 
     func startTrial(now: Date = .now) {

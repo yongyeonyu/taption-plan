@@ -510,6 +510,9 @@ final class AppModel {
         RawDeviceDataMonthlyArchive?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapPreparationTask: Task<Void, Never>?
+    @ObservationIgnored private var foregroundPreparationTask:
+        Task<Void, Never>?
+    @ObservationIgnored private var foregroundPreparationGeneration = 0
     @ObservationIgnored private var foregroundRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var deferredVisibleRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
@@ -1753,14 +1756,49 @@ final class AppModel {
         } else {
             setExternalPrivacyLocked(false)
         }
-        await refreshCloudBackupAfterForeground()
-        await applyPendingLocationTrackingRequest()
-        await hydrateLatestMapLocationAnchor()
-        applyPendingLocationTrackingGuidance()
-        airPodsActivityService.start { [weak self] observation in
-            self?.applyAirPodsActivity(observation)
+        scheduleForegroundPreparation()
+    }
+
+    private func scheduleForegroundPreparation() {
+        foregroundPreparationTask?.cancel()
+        foregroundPreparationGeneration &+= 1
+        let generation = foregroundPreparationGeneration
+        foregroundPreparationTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if self.foregroundPreparationGeneration == generation {
+                    self.foregroundPreparationTask = nil
+                }
+            }
+            await Task.yield()
+            guard !Task.isCancelled,
+                  self.isSceneActive,
+                  self.foregroundPreparationGeneration == generation else {
+                return
+            }
+
+            await self.refreshPermissions()
+            guard !Task.isCancelled,
+                  self.isSceneActive,
+                  self.foregroundPreparationGeneration == generation else {
+                return
+            }
+
+            await self.refreshCloudBackupAfterForeground()
+            guard !Task.isCancelled,
+                  self.isSceneActive,
+                  self.foregroundPreparationGeneration == generation else {
+                return
+            }
+
+            await self.applyPendingLocationTrackingRequest()
+            await self.hydrateLatestMapLocationAnchor()
+            self.applyPendingLocationTrackingGuidance()
+            self.airPodsActivityService.start { [weak self] observation in
+                self?.applyAirPodsActivity(observation)
+            }
+            self.scheduleForegroundRefresh()
         }
-        scheduleForegroundRefresh()
     }
 
     private func applyPendingLocationTrackingRequest() async {
@@ -1803,6 +1841,9 @@ final class AppModel {
 
     func sceneEnteredBackground() async {
         isSceneActive = false
+        foregroundPreparationGeneration &+= 1
+        foregroundPreparationTask?.cancel()
+        foregroundPreparationTask = nil
         if securityStatus.settings.lockOnLaunch
             || securityStatus.settings.lockOnForeground {
             await concealExternalSurfaces()
@@ -1829,6 +1870,9 @@ final class AppModel {
 
     func suspendForCommerceLock() async {
         isSceneActive = false
+        foregroundPreparationGeneration &+= 1
+        foregroundPreparationTask?.cancel()
+        foregroundPreparationTask = nil
         sensorService?.stopCollection()
         sensorBackgroundCoordinator.cancel()
         SensorBackgroundWakeNotification.cancel()
@@ -6650,6 +6694,29 @@ final class AppModel {
                 Self.integrationLogger.notice(
                     "HealthKit returned no sleep sessions; preserving existing records"
                 )
+            }
+            let coveredAutomaticIDs = SleepActualReconciliationEngine
+                .coveredAutomaticIDs(
+                    in: snapshot.actuals,
+                    by: sleepSessions,
+                    inside: span,
+                    asOf: min(span.end, .now)
+                )
+            let reconciledActuals = SleepActualReconciliationEngine.applying(
+                snapshot.actuals,
+                sessions: sleepSessions,
+                inside: span,
+                asOf: min(span.end, .now)
+            )
+            if reconciledActuals != snapshot.actuals {
+                snapshot.actuals = reconciledActuals
+            }
+            // A previous manual correction can otherwise be reapplied by the
+            // next persistence pass and turn the authoritative sleep window
+            // back into an activity. Keep its time edit only when the record
+            // was not covered by HealthKit sleep.
+            for id in coveredAutomaticIDs {
+                snapshot.settings.activityCorrections.removeValue(forKey: id)
             }
             lastHealthRefreshAt = .now
             Self.integrationLogger.notice(

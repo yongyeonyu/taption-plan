@@ -92,8 +92,7 @@ struct AppShellView: View {
             Task { @MainActor in
                 if grantsAccess {
                     await model.sceneBecameActive()
-                    await model.refreshPermissions()
-                    await activateRequiredSensorsIfReady()
+                    scheduleDeferredSensorActivation()
                 } else {
                     await model.suspendForCommerceLock()
                 }
@@ -341,11 +340,11 @@ struct AppShellView: View {
         Task { @MainActor in
             switch phase {
             case .active:
-                await proAccess.refresh()
+                await proAccess.refreshAccess()
+                scheduleDeferredStoreKitProductLoad()
                 if proAccess.grantsAccess {
                     await model.sceneBecameActive()
-                    await model.refreshPermissions()
-                    await activateRequiredSensorsIfReady()
+                    scheduleDeferredSensorActivation()
                 } else {
                     await model.suspendForCommerceLock()
                 }
@@ -370,12 +369,12 @@ struct AppShellView: View {
     }
 
     private func performInitialLaunchPreparation() async {
-        await proAccess.refresh()
+        await proAccess.refreshAccess()
         hasCompletedInitialProRefresh = true
+        scheduleDeferredStoreKitProductLoad()
         if proAccess.grantsAccess {
             await model.sceneBecameActive()
-            await model.refreshPermissions()
-            await activateRequiredSensorsIfReady()
+            scheduleDeferredSensorActivation()
         } else {
             await model.suspendForCommerceLock()
         }
@@ -393,6 +392,21 @@ struct AppShellView: View {
         }
         await reconcileSensorLiveActivity()
         isSecurityStateReady = true
+    }
+
+    private func scheduleDeferredStoreKitProductLoad() {
+        Task { @MainActor in
+            await Task.yield()
+            await proAccess.loadProductIfNeeded()
+        }
+    }
+
+    private func scheduleDeferredSensorActivation() {
+        Task { @MainActor in
+            await Task.yield()
+            guard proAccess.grantsAccess else { return }
+            await activateRequiredSensorsIfReady()
+        }
     }
 
     private func reconcileSensorLiveActivity() async {
