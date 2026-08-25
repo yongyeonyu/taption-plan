@@ -2249,10 +2249,6 @@ struct SensorCollectionLiveActivity: Widget {
                 )
         } dynamicIsland: { context in
             DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
-                    SensorCollectionAppIcon()
-                        .frame(width: 34, height: 25)
-                }
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(widgetText("센서 정보 수집중", "Collecting sensor data"))
@@ -2273,13 +2269,11 @@ struct SensorCollectionLiveActivity: Widget {
                     SensorCollectionWaveformView(state: context.state)
                 }
             } compactLeading: {
-                SensorCollectionAppIcon()
-                    .frame(width: 18, height: 14)
+                EmptyView()
             } compactTrailing: {
                 SensorCollectionWaveformView(state: context.state)
             } minimal: {
-                SensorCollectionAppIcon()
-                    .frame(width: 18, height: 13)
+                EmptyView()
             }
             .keylineTint(Color(red: 0.18, green: 0.72, blue: 0.59))
         }

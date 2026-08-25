@@ -249,10 +249,10 @@ struct AppShellView: View {
             ZStack {
                 Color("LaunchBackground")
                     .ignoresSafeArea()
-                Image("AppIcon")
+                Image("LaunchIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 250, height: 250)
+                    .frame(width: 250, height: 445)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .transition(.opacity)

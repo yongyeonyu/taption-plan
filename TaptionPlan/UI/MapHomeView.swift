@@ -189,6 +189,84 @@ enum MapHomeCameraZoomMath {
     }
 }
 
+struct MapHomeCameraFrame: Equatable {
+    let camera: MapCamera
+    let centerLatitude: CLLocationDegrees
+    let centerLongitude: CLLocationDegrees
+    let latitudeDelta: CLLocationDegrees
+    let longitudeDelta: CLLocationDegrees
+
+    init(camera: MapCamera, region: MKCoordinateRegion) {
+        self.camera = camera
+        centerLatitude = region.center.latitude
+        centerLongitude = region.center.longitude
+        latitudeDelta = region.span.latitudeDelta
+        longitudeDelta = region.span.longitudeDelta
+    }
+
+    var center: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(
+            latitude: centerLatitude,
+            longitude: centerLongitude
+        )
+    }
+
+    var span: MKCoordinateSpan {
+        MKCoordinateSpan(
+            latitudeDelta: latitudeDelta,
+            longitudeDelta: longitudeDelta
+        )
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.camera.centerCoordinate.latitude == rhs.camera.centerCoordinate.latitude
+            && lhs.camera.centerCoordinate.longitude == rhs.camera.centerCoordinate.longitude
+            && lhs.camera.distance == rhs.camera.distance
+            && lhs.camera.heading == rhs.camera.heading
+            && lhs.camera.pitch == rhs.camera.pitch
+            && lhs.centerLatitude == rhs.centerLatitude
+            && lhs.centerLongitude == rhs.centerLongitude
+            && lhs.latitudeDelta == rhs.latitudeDelta
+            && lhs.longitudeDelta == rhs.longitudeDelta
+    }
+}
+
+/// Coalesces continuous MapKit camera callbacks into display-rate frames while
+/// retaining the latest input for the next render or gesture-end flush.
+final class MapHomeCameraFrameProjection {
+    private(set) var latestFrame: MapHomeCameraFrame?
+    private var renderedFrame: MapHomeCameraFrame?
+    private var lastRenderUptime: TimeInterval = 0
+
+    func submit(
+        _ frame: MapHomeCameraFrame,
+        nowUptime: TimeInterval,
+        force: Bool = false
+    ) -> MapHomeCameraFrame? {
+        latestFrame = frame
+        guard force
+            || lastRenderUptime == 0
+            || nowUptime - lastRenderUptime
+                >= TimelineInteractionFrameGate.minimumInterval
+        else { return nil }
+        lastRenderUptime = nowUptime
+        guard renderedFrame != frame else { return nil }
+        renderedFrame = frame
+        return frame
+    }
+
+    func finish(nowUptime: TimeInterval) -> MapHomeCameraFrame? {
+        guard let latestFrame else { return nil }
+        return submit(latestFrame, nowUptime: nowUptime, force: true)
+    }
+
+    func reset() {
+        latestFrame = nil
+        renderedFrame = nil
+        lastRenderUptime = 0
+    }
+}
+
 enum MapHomeOverlayLayoutMath {
     static let controlSize: CGFloat = 44
     static let controlSpacing: CGFloat = 9
@@ -567,7 +645,7 @@ struct MapHomeView: View {
     @State private var sidebarPinchStepOffset = 0
     @State private var activePaletteCategoryID: String?
     @State private var customPaletteColor = Color.tpReferenceMint
-    @State private var lastMapCameraPublishUptime: TimeInterval = 0
+    @State private var mapCameraFrameProjection = MapHomeCameraFrameProjection()
     @State private var visibleMapCamera: MapCamera?
     @State private var mapViewportSize = CGSize.zero
     @State private var headerFrame = CGRect.zero
@@ -606,6 +684,13 @@ struct MapHomeView: View {
         self._model = Bindable(model)
         self._proAccess = Bindable(proAccess)
         _selectedScope = State(initialValue: .day)
+        _timeRailSegments = State(
+            initialValue: MapHomeTimeRailSegmentEngine.segments(
+                from: model.snapshot.actuals,
+                travel: model.snapshot.travel,
+                on: model.selectedDate
+            )
+        )
     }
 
     private var language: MapHomeLanguage {
@@ -1001,6 +1086,7 @@ struct MapHomeView: View {
             refreshRouteProjection()
         }
         .onChange(of: model.snapshot.travel) { _, _ in
+            refreshTimeRailSegments()
             prepareRouteProjectionReadings()
             refreshRouteProjection()
             refreshHistoricalPlaybackPoint()
@@ -1011,6 +1097,7 @@ struct MapHomeView: View {
         }
         .onChange(of: model.isBootstrapped) { _, isBootstrapped in
             guard isBootstrapped else { return }
+            refreshTimeRailSegments()
             Task { await refreshRouteReadings(for: model.selectedDate) }
         }
         .onChange(of: model.backupRestoreRevision) { _, _ in
@@ -1200,31 +1287,29 @@ struct MapHomeView: View {
                 EmptyView()
             }
             .onMapCameraChange(frequency: .continuous) { context in
-                let uptime = ProcessInfo.processInfo.systemUptime
-                guard uptime - lastMapCameraPublishUptime >= (1.0 / 60.0) else { return }
-                lastMapCameraPublishUptime = uptime
-                if visibleMapCamera != context.camera {
-                    visibleMapCamera = context.camera
-                }
-                visibleMapCenter = context.region.center
-                updateVisibleMapSpan(context.region.span)
-                let isCentered = updateUserCenterState(using: proxy)
-                if userTrackingMode == .locating, isCentered {
-                    setUserTrackingMode(.following)
-                }
-                if let level = sharedZoomLevel(for: context.region.span),
-                   abs(level - sharedZoomLevel) > 0.02 {
-                    sharedZoomLevel = level
-                }
+                let frame = MapHomeCameraFrame(
+                    camera: context.camera,
+                    region: context.region
+                )
+                guard let rendered = mapCameraFrameProjection.submit(
+                    frame,
+                    nowUptime: ProcessInfo.processInfo.systemUptime
+                ) else { return }
+                applyMapCameraFrame(rendered, using: proxy)
             }
             .overlay {
                 MapHomeFairyAtmosphere()
                     .allowsHitTesting(false)
             }
             .background {
-                MapHomePanGestureObserver {
-                    handleUserMapPan()
-                }
+                MapHomePanGestureObserver(
+                    onSingleFingerPanBegan: {
+                        handleUserMapPan()
+                    },
+                    onSingleFingerPanEnded: {
+                        flushMapCameraFrame(using: proxy)
+                    }
+                )
                 .allowsHitTesting(false)
             }
             .simultaneousGesture(
@@ -3772,6 +3857,35 @@ struct MapHomeView: View {
         visibleMapSpan = next
     }
 
+    private func applyMapCameraFrame(
+        _ frame: MapHomeCameraFrame,
+        using proxy: MapProxy
+    ) {
+        if visibleMapCamera != frame.camera {
+            visibleMapCamera = frame.camera
+        }
+        if visibleMapCenter.latitude != frame.centerLatitude
+            || visibleMapCenter.longitude != frame.centerLongitude {
+            visibleMapCenter = frame.center
+        }
+        updateVisibleMapSpan(frame.span)
+        let isCentered = updateUserCenterState(using: proxy)
+        if userTrackingMode == .locating, isCentered {
+            setUserTrackingMode(.following)
+        }
+        if let level = sharedZoomLevel(for: frame.span),
+           abs(level - sharedZoomLevel) > 0.02 {
+            sharedZoomLevel = level
+        }
+    }
+
+    private func flushMapCameraFrame(using proxy: MapProxy) {
+        guard let frame = mapCameraFrameProjection.finish(
+            nowUptime: ProcessInfo.processInfo.systemUptime
+        ) else { return }
+        applyMapCameraFrame(frame, using: proxy)
+    }
+
     private func isValid(_ point: GeoPoint) -> Bool {
         (-90...90).contains(point.latitude)
             && (-180...180).contains(point.longitude)
@@ -5993,6 +6107,20 @@ enum MapHomeSubwayRouteOverlayEngine {
             guard !confirmedSpans.contains(where: {
                 $0.intersection(with: segment.span) != nil
             }) else { return nil }
+            if let route = segment.subwayRoute,
+               SubwayStationCatalog.isValid(route) {
+                let points = visibleCoordinates(
+                    route.coordinates,
+                    start: segment.span.start,
+                    end: segment.span.end,
+                    through: cutoff
+                )
+                return makeOverlay(
+                    id: segment.id,
+                    points: points,
+                    estimated: true
+                )
+            }
             let sourceReadings = readings.filter {
                 $0.timestamp >= segment.span.start.addingTimeInterval(-readingMargin)
                     && $0.timestamp <= segment.span.end.addingTimeInterval(readingMargin)
@@ -6244,15 +6372,18 @@ private struct MapHomeHistoricalLocationMarker: View {
 
 private struct MapHomePanGestureObserver: UIViewRepresentable {
     let onSingleFingerPanBegan: () -> Void
+    let onSingleFingerPanEnded: () -> Void
 
     func makeUIView(context: Context) -> ObservationView {
         let view = ObservationView()
         view.onSingleFingerPanBegan = onSingleFingerPanBegan
+        view.onSingleFingerPanEnded = onSingleFingerPanEnded
         return view
     }
 
     func updateUIView(_ view: ObservationView, context: Context) {
         view.onSingleFingerPanBegan = onSingleFingerPanBegan
+        view.onSingleFingerPanEnded = onSingleFingerPanEnded
         view.attachToVisibleMapIfNeeded()
     }
 
@@ -6262,6 +6393,7 @@ private struct MapHomePanGestureObserver: UIViewRepresentable {
 
     final class ObservationView: UIView {
         var onSingleFingerPanBegan: (() -> Void)?
+        var onSingleFingerPanEnded: (() -> Void)?
         private var observedPanGestures: [UIPanGestureRecognizer] = []
         private var notifiedPanGestureIDs = Set<ObjectIdentifier>()
         private var attachmentRetryWorkItem: DispatchWorkItem?
@@ -6346,6 +6478,7 @@ private struct MapHomePanGestureObserver: UIViewRepresentable {
                         || gesture.state == .cancelled
                         || gesture.state == .failed {
                 notifiedPanGestureIDs.remove(gestureID)
+                onSingleFingerPanEnded?()
             }
         }
 

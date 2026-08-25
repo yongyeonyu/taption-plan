@@ -316,6 +316,67 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeCameraProjectionCoalescesContinuousInputAndFlushesLatestFrame() {
+        let baseCenter = CLLocationCoordinate2D(latitude: 37.5, longitude: 127.0)
+        let baseCamera = MapCamera(
+            centerCoordinate: baseCenter,
+            distance: 1_000,
+            heading: 0,
+            pitch: 0
+        )
+        let baseRegion = MKCoordinateRegion(
+            center: baseCenter,
+            span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+        )
+        let projection = MapHomeCameraFrameProjection()
+        let initial = MapHomeCameraFrame(camera: baseCamera, region: baseRegion)
+        XCTAssertEqual(projection.submit(initial, nowUptime: 1), initial)
+
+        let latestCenter = CLLocationCoordinate2D(
+            latitude: baseCenter.latitude + 0.001,
+            longitude: baseCenter.longitude + 0.001
+        )
+        let latest = MapHomeCameraFrame(
+            camera: MapCamera(
+                centerCoordinate: latestCenter,
+                distance: 1_000,
+                heading: 0,
+                pitch: 0
+            ),
+            region: MKCoordinateRegion(
+                center: latestCenter,
+                span: baseRegion.span
+            )
+        )
+        XCTAssertNil(projection.submit(latest, nowUptime: 1.001))
+        XCTAssertEqual(projection.finish(nowUptime: 1.001), latest)
+
+        var renderedCount = 0
+        for sample in 1...240 {
+            let center = CLLocationCoordinate2D(
+                latitude: baseCenter.latitude + Double(sample) * 0.000_001,
+                longitude: baseCenter.longitude
+            )
+            let frame = MapHomeCameraFrame(
+                camera: MapCamera(
+                    centerCoordinate: center,
+                    distance: 1_000,
+                    heading: 0,
+                    pitch: 0
+                ),
+                region: MKCoordinateRegion(center: center, span: baseRegion.span)
+            )
+            if projection.submit(frame, nowUptime: 1 + Double(sample) / 240) != nil {
+                renderedCount += 1
+            }
+        }
+        XCTAssertLessThanOrEqual(renderedCount, 61)
+        XCTAssertEqual(
+            projection.latestFrame?.centerLatitude,
+            baseCenter.latitude + 240 * 0.000_001
+        )
+    }
+
     func testSidebarDragMovementDoesNotDependOn240HzSampleCount() {
         let handleBase = MapHomeTimeSidebarNLEState(
             selectedMinute: 720,
@@ -2399,6 +2460,46 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(confirmedOverlays.count, 1)
         XCTAssertFalse(confirmedOverlays[0].estimated)
+    }
+
+    func testSubwayOverlayEngineUsesStoredRouteWhenGPSReadingsAreMissing() {
+        let stations = SubwayStationCatalog.stations
+            .filter { $0.coordinate != nil }
+        guard let first = stations.first else {
+            XCTFail("subway catalog is empty")
+            return
+        }
+        let stops = stations.filter { $0.lineName == first.lineName }.prefix(4)
+        guard stops.count == 4,
+              let route = SubwayStationCatalog.route(
+                  for: stops.map(\.stationName)
+              ) else {
+            XCTFail("subway catalog route is incomplete")
+            return
+        }
+
+        let start = makeDate(2026, 8, 24, 9)
+        let segment = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(20 * 60)),
+            distanceMeters: 2_000,
+            confidence: .medium,
+            evidence: ["저장된 역 경로"],
+            subwayRoute: route
+        )
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [segment],
+            readings: [],
+            day: TimeSpan(
+                start: makeDate(2026, 8, 24),
+                end: makeDate(2026, 8, 25)
+            ),
+            through: segment.span.end
+        )
+
+        XCTAssertEqual(overlays.count, 1)
+        XCTAssertTrue(overlays[0].estimated)
+        XCTAssertGreaterThanOrEqual(overlays[0].coordinates.count, 2)
     }
 
     func testMovementEditOptionsUseRequestedOrderAndRestoreStoredMode() {
