@@ -2345,13 +2345,36 @@ private struct SensorCollectionWaveformView: View {
     }
 
     var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+            waveform(at: timeline.date)
+        }
+        .frame(minWidth: 24, maxWidth: .infinity)
+        .frame(height: 14)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func waveform(at date: Date) -> some View {
+        let progress = SensorCollectionProgressPolicy.progress(
+            at: date,
+            startedAt: state.startedAt,
+            lastSavedAt: state.lastSavedAt,
+            intervalSeconds: state.intervalSeconds
+        )
         ZStack {
             if state.phase != .hidden {
                 SensorCollectionFlatlineShape()
                     .stroke(
-                        Color(red: 0.18, green: 0.72, blue: 0.59),
+                        Color(red: 0.18, green: 0.72, blue: 0.59).opacity(0.38),
                         style: StrokeStyle(lineWidth: 1, lineCap: .round)
                     )
+                if let progress {
+                    SensorCollectionProgressLineShape(progress: progress)
+                        .stroke(
+                            Color(red: 0.18, green: 0.72, blue: 0.59),
+                            style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
+                        )
+                }
             }
             if state.phase == .pulse {
                 if reduceMotion {
@@ -2385,8 +2408,6 @@ private struct SensorCollectionWaveformView: View {
                 }
             }
         }
-        .frame(width: 24, height: 14)
-        .accessibilityHidden(true)
     }
 }
 
@@ -2395,6 +2416,22 @@ private struct SensorCollectionFlatlineShape: Shape {
         var path = Path()
         path.move(to: CGPoint(x: rect.minX, y: rect.midY))
         path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
+    }
+}
+
+private struct SensorCollectionProgressLineShape: Shape {
+    var progress: Double
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(
+            to: CGPoint(
+                x: rect.minX + rect.width * CGFloat(min(max(progress, 0), 1)),
+                y: rect.midY
+            )
+        )
         return path
     }
 }

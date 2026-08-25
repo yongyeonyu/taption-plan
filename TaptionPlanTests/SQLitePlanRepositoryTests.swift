@@ -4,6 +4,86 @@ import XCTest
 import TaptionPlanCore
 
 final class SQLitePlanRepositoryTests: XCTestCase {
+    func testFileRepositoryDecodesSecondsSince1970LZFSESnapshot() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("taption-plan-legacy-\(UUID().uuidString)", isDirectory: true)
+        let fileURL = directory.appendingPathComponent("snapshot.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        var value = TaptionDataSnapshot.empty
+        value.updatedAt = Date(timeIntervalSince1970: 1_725_000_123.25)
+        value.plans = [
+            PlanRecord(
+                title: "Unix 시간 기록",
+                span: TimeSpan(
+                    start: Date(timeIntervalSince1970: 1_725_000_000.5),
+                    end: Date(timeIntervalSince1970: 1_725_000_060.75)
+                ),
+                categoryID: "activity"
+            )
+        ]
+        let json = try SnapshotExporter.jsonData(value, prettyPrinted: false)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        try TaptionSnapshotCompression.encode(json).write(
+            to: fileURL,
+            options: [.atomic]
+        )
+
+        let restored = try await FilePlanRepository(fileURL: fileURL).load()
+        XCTAssertEqual(restored.updatedAt, value.updatedAt)
+        let restoredPlan = try XCTUnwrap(restored.plans.first)
+        let originalPlan = try XCTUnwrap(value.plans.first)
+        XCTAssertEqual(restoredPlan.id, originalPlan.id)
+        XCTAssertEqual(restoredPlan.title, originalPlan.title)
+        XCTAssertEqual(restoredPlan.categoryID, originalPlan.categoryID)
+        XCTAssertEqual(
+            restoredPlan.span.start.timeIntervalSince1970,
+            originalPlan.span.start.timeIntervalSince1970,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            restoredPlan.span.end.timeIntervalSince1970,
+            originalPlan.span.end.timeIntervalSince1970,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testLegacyMigrationReturnsBeforePrimaryWriteFinishes() async throws {
+        var existing = TaptionDataSnapshot.empty
+        existing.updatedAt = Date(timeIntervalSince1970: 1_725_000_000)
+        existing.plans = [
+            PlanRecord(
+                title: "기존 기록",
+                span: TimeSpan(
+                    start: existing.updatedAt,
+                    end: existing.updatedAt.addingTimeInterval(60)
+                ),
+                categoryID: "activity"
+            )
+        ]
+        let primary = BlockingPlanRepository()
+        let repository = MigratingPlanRepository(
+            primary: primary,
+            legacy: InMemoryPlanRepository(snapshot: existing)
+        )
+
+        let loaded = try await repository.load()
+        XCTAssertEqual(loaded.plans, existing.plans)
+        await primary.waitUntilSaveStarted()
+        let primaryBeforeRelease = try await primary.load()
+        XCTAssertTrue(primaryBeforeRelease.plans.isEmpty)
+
+        await primary.releaseSave()
+        for _ in 0..<100 {
+            if (try await primary.load()).plans == existing.plans { return }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTFail("background legacy migration did not finish")
+    }
+
     func testRoundTripReopenAndUncompressedJSONPayload() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -112,5 +192,35 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         for suffix in ["", "-wal", "-shm"] {
             try? FileManager.default.removeItem(atPath: url.path + suffix)
         }
+    }
+}
+
+private actor BlockingPlanRepository: PlanDataRepository {
+    private var value = TaptionDataSnapshot.empty
+    private var saveStarted = false
+    private var pendingSave: CheckedContinuation<Void, Never>?
+
+    func load() async throws -> TaptionDataSnapshot {
+        value
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        saveStarted = true
+        await withCheckedContinuation { continuation in
+            pendingSave = continuation
+        }
+        value = snapshot
+    }
+
+    func waitUntilSaveStarted() async {
+        for _ in 0..<100 {
+            if saveStarted { return }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    func releaseSave() {
+        pendingSave?.resume()
+        pendingSave = nil
     }
 }

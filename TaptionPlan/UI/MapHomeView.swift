@@ -615,13 +615,14 @@ enum MapHomeDayPlaybackMath {
         var minute = min(1_440, max(0, currentMinute))
         var remaining = elapsedSeconds
         while remaining > 0, minute < 1_440 {
-            let active = ranges.first {
+            let active = ranges.filter {
                 $0.startMinute <= minute && minute < $0.endMinute
             }
-            let rate = active == nil
+            let rate = active.isEmpty
                 ? stationaryMinutesPerSecond
-                : movingMinutesPerSecond
-            let nextBoundary = active?.endMinute
+                : active.map { $0.minutesPerSecond }.min()
+                    ?? movingMinutesPerSecond
+            let nextBoundary = active.map(\.endMinute).min()
                 ?? ranges.first { $0.startMinute > minute }?.startMinute
                 ?? 1_440
             let minutesToBoundary = max(0, nextBoundary - minute)
@@ -643,10 +644,27 @@ enum MapHomeDayPlaybackMath {
 struct MapHomePlaybackMovementRange: Hashable, Sendable {
     let startMinute: Double
     let endMinute: Double
+    let mode: TravelMode?
 
-    init(startMinute: Double, endMinute: Double) {
+    init(
+        startMinute: Double,
+        endMinute: Double,
+        mode: TravelMode? = nil
+    ) {
         self.startMinute = min(1_440, max(0, startMinute))
         self.endMinute = min(1_440, max(self.startMinute, endMinute))
+        self.mode = mode
+    }
+
+    var minutesPerSecond: Double {
+        switch mode {
+        case .walking, .running, nil:
+            return mode == .walking || mode == .running
+                ? MapHomeDayPlaybackMath.stationaryMinutesPerSecond
+                : MapHomeDayPlaybackMath.movingMinutesPerSecond
+        case .cycling, .bus, .subway, .taxi, .car, .train, .airplane, .ship:
+            return MapHomeDayPlaybackMath.movingMinutesPerSecond
+        }
     }
 
     static func normalized(
@@ -658,13 +676,15 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
         var result: [Self] = []
         for range in ordered {
             guard let previous = result.last,
-                  range.startMinute <= previous.endMinute else {
+                  range.startMinute <= previous.endMinute,
+                  range.mode == previous.mode else {
                 result.append(range)
                 continue
             }
             result[result.count - 1] = Self(
                 startMinute: previous.startMinute,
-                endMinute: max(previous.endMinute, range.endMinute)
+                endMinute: max(previous.endMinute, range.endMinute),
+                mode: previous.mode
             )
         }
         return result
@@ -823,6 +843,20 @@ enum MapHomeRouteReadingsLoadState: Equatable {
     }
 }
 
+struct MapHomeRouteReadingsTaskKey: Hashable {
+    let day: Date
+    let isBootstrapped: Bool
+
+    init(
+        date: Date,
+        isBootstrapped: Bool,
+        calendar: Calendar = .autoupdatingCurrent
+    ) {
+        day = calendar.startOfDay(for: date)
+        self.isBootstrapped = isBootstrapped
+    }
+}
+
 @MainActor
 struct MapHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -888,6 +922,7 @@ struct MapHomeView: View {
     @State private var expectedRouteOverlays: [MapHomeExpectedRouteOverlay] = []
     @State private var expectedRouteCache: [ExpectedRouteRequest: [CLLocationCoordinate2D]] = [:]
     @State private var expectedRouteRefreshTask: Task<Void, Never>?
+    @State private var liveRouteProjectionRefreshTask: Task<Void, Never>?
     @State private var visibleMapSpan = MKCoordinateSpan(
         latitudeDelta: 0.025,
         longitudeDelta: 0.035
@@ -1257,11 +1292,6 @@ struct MapHomeView: View {
             sectionEditSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
-        .task {
-            focusMapIfNeeded()
-            refreshTimeRailSegments()
-            await loadMapDayCache(for: model.selectedDate)
-        }
         .onDisappear {
             currentLocationRequestTask?.cancel()
             currentLocationRequestTask = nil
@@ -1271,11 +1301,19 @@ struct MapHomeView: View {
             mapSearchTask = nil
             expectedRouteRefreshTask?.cancel()
             expectedRouteRefreshTask = nil
+            liveRouteProjectionRefreshTask?.cancel()
+            liveRouteProjectionRefreshTask = nil
             mapSearchCompleter.clear()
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
         }
-        .task(id: MapHomeRouteReadingsPolicy.dayKey(for: model.selectedDate)) {
+        .task(
+            id: MapHomeRouteReadingsTaskKey(
+                date: model.selectedDate,
+                isBootstrapped: model.isBootstrapped
+            )
+        ) {
+            guard model.isBootstrapped else { return }
             let date = model.selectedDate
             let dayKey = MapHomeRouteReadingsPolicy.dayKey(for: date)
             if !routeReadingsLoadState.isLoaded(for: date) {
@@ -1283,25 +1321,34 @@ struct MapHomeView: View {
             }
             prepareRouteProjectionReadings()
             refreshRouteProjection()
-            await loadInitialMapData(for: date)
+            focusMapIfNeeded()
+            refreshTimeRailSegments()
+            await loadMapDayCache(for: date)
+            guard !Task.isCancelled,
+                  Calendar.autoupdatingCurrent.isDate(
+                      date,
+                      inSameDayAs: model.selectedDate
+                  ) else { return }
+            refreshTimeRailSegments()
+            reportInitialMapShellReadyIfNeeded(for: date)
+            scheduleExpectedRouteRefresh()
+            persistMapDayCache()
+            await refreshRouteReadings(for: date)
             while !Task.isCancelled {
-                refreshTimeRailSegments()
-                await refreshRouteReadings(for: date)
                 do {
                     try await Task.sleep(nanoseconds: 60_000_000_000)
                 } catch {
                     return
                 }
+                refreshTimeRailSegments()
+                await refreshRouteReadings(for: date)
             }
         }
         .onChange(of: model.latestSensorReading?.point) { _, _ in
             guard Calendar.autoupdatingCurrent.isDateInToday(
                 model.selectedDate
             ) else { return }
-            requestRouteProjectionRefresh(preparingReadings: true)
-        }
-        .onChange(of: model.latestSensorReading?.id) { _, _ in
-            mapRenderCache.invalidateRouteData()
+            scheduleLiveRouteProjectionRefresh()
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
@@ -1360,29 +1407,14 @@ struct MapHomeView: View {
         .onChange(of: model.snapshot.places) { _, _ in
             scheduleExpectedRouteRefresh()
         }
-        .onChange(of: model.isBootstrapped) { _, isBootstrapped in
-            guard isBootstrapped else { return }
-            refreshTimeRailSegments()
-            Task {
-                let date = model.selectedDate
-                await loadInitialMapData(for: date)
-            }
-        }
         .onChange(of: model.backupRestoreRevision) { _, _ in
             Task {
                 await refreshRouteReadings(for: model.selectedDate)
                 scheduleExpectedRouteRefresh()
             }
         }
-        .onChange(of: model.liveRouteState.readings) { _, _ in
-            requestRouteProjectionRefresh(preparingReadings: true)
-        }
-        .onChange(of: selectedTimelineMinute) { _, minute in
-            if isTimelineInteractionActive || isDayPlaybackRunning {
-                refreshHistoricalPlaybackPoint()
-            } else {
-                refreshSelectedTimelineMapPosition(minute: minute)
-            }
+        .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
+            scheduleLiveRouteProjectionRefresh()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
@@ -1483,6 +1515,7 @@ struct MapHomeView: View {
                         )
                         .fixedSize()
                         .zIndex(0)
+                        .allowsHitTesting(false)
                     }
                 }
             }
@@ -1538,6 +1571,19 @@ struct MapHomeView: View {
                 }
             }
 
+            if let coordinate = displayedLocationCoordinate {
+                Annotation(
+                    displayedLocationAccessibilityLabel,
+                    coordinate: coordinate,
+                    anchor: .center
+                ) {
+                    MapHomeHistoricalLocationMarker()
+                        .zIndex(100)
+                        .accessibilityLabel(displayedLocationAccessibilityLabel)
+                        .allowsHitTesting(false)
+                }
+            }
+
             }
             .mapStyle(mapStyle)
             .mapControls {
@@ -1557,15 +1603,6 @@ struct MapHomeView: View {
             .overlay {
                 MapHomeFairyAtmosphere()
                     .allowsHitTesting(false)
-            }
-            .overlay(alignment: .topLeading) {
-                if let coordinate = displayedLocationCoordinate,
-                   let point = proxy.convert(coordinate, to: .local) {
-                    MapHomeHistoricalLocationMarker()
-                        .position(point)
-                        .accessibilityLabel(displayedLocationAccessibilityLabel)
-                        .allowsHitTesting(false)
-                }
             }
             .background {
                 MapHomePanGestureObserver(
@@ -1590,14 +1627,32 @@ struct MapHomeView: View {
                 applyInitialLocationIfAvailable(using: proxy)
                 beginInitialLocationRequest(using: proxy)
             }
+            .onChange(of: selectedTimelineMinute) { _, minute in
+                if isTimelineInteractionActive || isDayPlaybackRunning {
+                    refreshHistoricalPlaybackPoint()
+                } else {
+                    refreshSelectedTimelineMapPosition(
+                        minute: minute,
+                        using: proxy
+                    )
+                }
+            }
+            .onChange(of: isTimelineInteractionActive) { _, isInteracting in
+                guard !isInteracting, !isDayPlaybackRunning,
+                      selectedTimelineMinute != nil else { return }
+                refreshSelectedTimelineMapPosition(
+                    minute: selectedTimelineMinute,
+                    using: proxy
+                )
+            }
             .onChange(of: model.latestSensorReading?.id) { _, _ in
                 applyInitialLocationIfAvailable(using: proxy)
                 guard userTrackingMode.keepsCameraLocked else { return }
-                focusUserLocation(using: proxy)
+                focusDisplayedLocation(using: proxy)
             }
             .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
                 guard userTrackingMode.keepsCameraLocked else { return }
-                focusUserLocation(using: proxy)
+                focusDisplayedLocation(using: proxy)
             }
             .overlay(alignment: .bottomLeading) {
                 if !isMenuOpen {
@@ -2176,16 +2231,13 @@ struct MapHomeView: View {
     private var dayPlaybackMovementRanges: [MapHomePlaybackMovementRange] {
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: model.selectedDate)
-        let readingRanges = TaptionRouteEngineAdapter
-            .movingMinuteRanges(
-                from: routeReadings + model.liveRouteState.readings
-            )
-            .map {
-                MapHomePlaybackMovementRange(
-                    startMinute: $0.start.timeIntervalSince(dayStart) / 60,
-                    endMinute: $0.end.timeIntervalSince(dayStart) / 60
-                )
-            }
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let readingRanges = dayPlaybackReadingRanges(
+            from: routeReadings + model.liveRouteState.readings,
+            dayStart: dayStart,
+            dayEnd: dayEnd
+        )
         let travelRanges = model.snapshot.travel.compactMap {
             segment -> MapHomePlaybackMovementRange? in
             guard segment.distanceMeters > 0
@@ -2195,12 +2247,78 @@ struct MapHomeView: View {
             else { return nil }
             return MapHomePlaybackMovementRange(
                 startMinute: segment.span.start.timeIntervalSince(dayStart) / 60,
-                endMinute: segment.span.end.timeIntervalSince(dayStart) / 60
+                endMinute: segment.span.end.timeIntervalSince(dayStart) / 60,
+                mode: segment.mode
             )
         }
         return MapHomePlaybackMovementRange.normalized(
             readingRanges + travelRanges
         )
+    }
+
+    private func dayPlaybackReadingRanges(
+        from readings: [SensorReading],
+        dayStart: Date,
+        dayEnd: Date
+    ) -> [MapHomePlaybackMovementRange] {
+        let ordered = readings
+            .filter {
+                $0.timestamp >= dayStart
+                    && $0.timestamp < dayEnd
+                    && $0.point != nil
+                    && $0.motion.isMovement
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+        guard let first = ordered.first else { return [] }
+
+        var result: [MapHomePlaybackMovementRange] = []
+        var start = first.timestamp
+        var previous = first.timestamp
+        var mode = playbackMode(for: first)
+        for reading in ordered.dropFirst() {
+            let nextMode = playbackMode(for: reading)
+            if reading.timestamp.timeIntervalSince(previous) > 15 * 60
+                || nextMode != mode {
+                result.append(
+                    MapHomePlaybackMovementRange(
+                        startMinute: start.timeIntervalSince(dayStart) / 60,
+                        endMinute: previous.timeIntervalSince(dayStart) / 60,
+                        mode: mode
+                    )
+                )
+                start = reading.timestamp
+                mode = nextMode
+            }
+            previous = reading.timestamp
+        }
+        result.append(
+            MapHomePlaybackMovementRange(
+                startMinute: start.timeIntervalSince(dayStart) / 60,
+                endMinute: previous.timeIntervalSince(dayStart) / 60,
+                mode: mode
+            )
+        )
+        return result
+    }
+
+    private func playbackMode(for reading: SensorReading) -> TravelMode? {
+        if reading.matchesRailRoute
+            || (reading.subwayWiFiObservationStreak ?? 0) > 0 {
+            return .subway
+        }
+        if reading.matchesPublicTransitRoute {
+            return .bus
+        }
+        if reading.onWater {
+            return .ship
+        }
+        switch reading.motion {
+        case .walking: return .walking
+        case .running: return .running
+        case .cycling: return .cycling
+        case .automotive: return .car
+        case .stationary, .unknown: return nil
+        }
     }
 
     private func stopDayPlayback(resetProgress: Bool) {
@@ -2284,11 +2402,6 @@ struct MapHomeView: View {
                         },
                         onInteractionChanged: { isInteracting in
                             isTimelineInteractionActive = isInteracting
-                            if !isInteracting {
-                                refreshSelectedTimelineMapPosition(
-                                    minute: selectedTimelineMinute
-                                )
-                            }
                         },
                         onSectionEdit: { selectedMinute in
                             openSectionEditor(at: selectedMinute)
@@ -2338,7 +2451,7 @@ struct MapHomeView: View {
             } label: {
                 MapHomeLocationButtonIcon(
                     state: MapHomeLocationButtonState.resolve(
-                        hasLocation: currentCoordinate != nil,
+                        hasLocation: displayedLocationCoordinate != nil,
                         trackingMode: userTrackingMode,
                         isCentered: isMapCenteredOnUser
                     )
@@ -2426,7 +2539,7 @@ struct MapHomeView: View {
         )
         guard distance != camera.distance else { return }
         let anchor = userTrackingMode.keepsCameraLocked || isMapCenteredOnUser
-            ? currentCoordinate ?? camera.centerCoordinate
+            ? displayedLocationCoordinate ?? camera.centerCoordinate
             : camera.centerCoordinate
         let center = MapHomeCameraZoomMath.centerPreservingAnchor(
             cameraCenter: camera.centerCoordinate,
@@ -3369,37 +3482,51 @@ struct MapHomeView: View {
                         preferences.isBatteryMinimal ? tint : Color.primary
                     )
 
-                    LazyVGrid(
-                        columns: Array(
-                            repeating: GridItem(.flexible()),
-                            count: 3
-                        ),
-                        spacing: 6
-                    ) {
-                        ForEach(
-                            GPSLoggingPreferences.supportedIntervalSeconds,
-                            id: \.self
-                        ) { seconds in
-                            let selected = !preferences.isBatteryMinimal
-                                && preferences.intervalSeconds == seconds
-                            Button(gpsLoggingIntervalText(seconds)) {
-                                model.setGPSLoggingIntervalSeconds(seconds)
-                            }
-                            .font(
-                                .system(
-                                    size: 11,
-                                    weight: .semibold,
-                                    design: .rounded
+                    VStack(spacing: 5) {
+                        Slider(
+                            value: Binding(
+                                get: {
+                                    Double(
+                                        GPSLoggingPreferences.supportedIntervalSeconds
+                                            .firstIndex(
+                                                of: preferences.effectiveIntervalSeconds
+                                            ) ?? 0
+                                    )
+                                },
+                                set: { value in
+                                    let index = min(
+                                        max(Int(value.rounded()), 0),
+                                        GPSLoggingPreferences.supportedIntervalSeconds.count - 1
+                                    )
+                                    model.setGPSLoggingIntervalSeconds(
+                                        GPSLoggingPreferences.supportedIntervalSeconds[index]
+                                    )
+                                }
+                            ),
+                            in: 0...Double(
+                                max(
+                                    0,
+                                    GPSLoggingPreferences.supportedIntervalSeconds.count - 1
+                                )
+                            ),
+                            step: 1
+                        )
+                        .tint(tint)
+                        HStack {
+                            Text(
+                                gpsLoggingIntervalText(
+                                    GPSLoggingPreferences.supportedIntervalSeconds.first ?? 1
                                 )
                             )
-                            .foregroundStyle(selected ? Color.white : tint)
-                            .frame(maxWidth: .infinity, minHeight: 34)
-                            .background(
-                                selected ? tint : tint.opacity(0.09),
-                                in: Capsule()
+                            Spacer()
+                            Text(
+                                gpsLoggingIntervalText(
+                                    GPSLoggingPreferences.supportedIntervalSeconds.last ?? 900
+                                )
                             )
-                            .buttonStyle(.plain)
                         }
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
                     }
                 }
                 .padding(.horizontal, 12)
@@ -3536,7 +3663,10 @@ struct MapHomeView: View {
         timeRailSegments = next
     }
 
-    private func refreshSelectedTimelineMapPosition(minute: Int?) {
+    private func refreshSelectedTimelineMapPosition(
+        minute: Int?,
+        using proxy: MapProxy? = nil
+    ) {
         let deferredProjection = flushDeferredRouteProjection()
         guard minute != nil else {
             historicalPlaybackPoint = nil
@@ -3549,7 +3679,7 @@ struct MapHomeView: View {
                 ? projection?.coordinateAtCutoff
                 : nil)
         guard let point else { return }
-        focusMap(on: point)
+        focusMap(on: point, using: proxy, followsTracking: true)
     }
 
     private func openSectionEditor(at minute: Int) {
@@ -3844,25 +3974,14 @@ struct MapHomeView: View {
         if selectedTimelineMinute != nil {
             if let point = refreshHistoricalPlaybackPoint()
                 ?? (result.isComplete ? projection?.coordinateAtCutoff : nil) {
-                focusMap(on: point)
+                focusMap(
+                    on: point,
+                    followsTracking: true
+                )
             }
         } else {
             focusMapIfNeeded()
         }
-    }
-
-    private func loadInitialMapData(for date: Date) async {
-        await loadMapDayCache(for: date)
-        await refreshRouteReadings(for: date)
-        guard !Task.isCancelled,
-              Calendar.autoupdatingCurrent.isDate(
-                  date,
-                  inSameDayAs: model.selectedDate
-              ) else { return }
-        refreshTimeRailSegments()
-        reportInitialDataReadyIfNeeded(for: date)
-        scheduleExpectedRouteRefresh()
-        persistMapDayCache()
     }
 
     private func loadMapDayCache(for date: Date) async {
@@ -4053,10 +4172,9 @@ struct MapHomeView: View {
         }
     }
 
-    private func reportInitialDataReadyIfNeeded(for date: Date) {
+    private func reportInitialMapShellReadyIfNeeded(for date: Date) {
         guard !hasReportedInitialDataReady,
               model.isBootstrapped,
-              routeReadingsLoadState.isResolved(for: date),
               Calendar.autoupdatingCurrent.isDate(
                   date,
                   inSameDayAs: model.selectedDate
@@ -4091,6 +4209,20 @@ struct MapHomeView: View {
         }
         refreshRouteProjection()
         refreshHistoricalPlaybackPoint()
+    }
+
+    private func scheduleLiveRouteProjectionRefresh() {
+        liveRouteProjectionRefreshTask?.cancel()
+        liveRouteProjectionRefreshTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 100_000_000)
+            } catch {
+                return
+            }
+            mapRenderCache.invalidateRouteData()
+            requestRouteProjectionRefresh(preparingReadings: true)
+            liveRouteProjectionRefreshTask = nil
+        }
     }
 
     @discardableResult
@@ -4343,12 +4475,39 @@ struct MapHomeView: View {
         )
     }
 
-    private func focusMap(on point: GeoPoint) {
+    private func focusMap(
+        on point: GeoPoint,
+        using proxy: MapProxy? = nil,
+        followsTracking: Bool = false
+    ) {
         let coordinate = CLLocationCoordinate2D(
             latitude: point.latitude,
             longitude: point.longitude
         )
-        if let camera = visibleMapCamera {
+        if followsTracking,
+           let proxy,
+           let camera = visibleMapCamera,
+           let locationPoint = proxy.convert(
+               coordinate,
+               to: .named("mapHomeViewport")
+           ),
+           let center = proxy.convert(
+               MapHomeCameraLayoutMath.cameraCenterSourcePoint(
+                   currentLocationPoint: locationPoint,
+                   targetPoint: currentLocationTargetPoint,
+                   viewportSize: mapViewportSize
+               ),
+               from: .named("mapHomeViewport")
+           ) {
+            mapPosition = .camera(
+                MapCamera(
+                    centerCoordinate: center,
+                    distance: camera.distance,
+                    heading: camera.heading,
+                    pitch: camera.pitch
+                )
+            )
+        } else if let camera = visibleMapCamera {
             mapPosition = .camera(
                 MapCamera(
                     centerCoordinate: coordinate,
@@ -4362,8 +4521,22 @@ struct MapHomeView: View {
                 MKCoordinateRegion(center: coordinate, span: visibleMapSpan)
             )
         }
-        setUserTrackingMode(.idle)
-        isMapCenteredOnUser = false
+        if followsTracking {
+            setUserTrackingMode(.following)
+            isMapCenteredOnUser = true
+        } else {
+            setUserTrackingMode(.idle)
+            isMapCenteredOnUser = false
+        }
+    }
+
+    private func focusDisplayedLocation(using proxy: MapProxy) {
+        if selectedTimelineMinute != nil {
+            guard let point = historicalPlaybackPoint else { return }
+            focusMap(on: point, using: proxy, followsTracking: true)
+        } else {
+            focusUserLocation(using: proxy)
+        }
     }
 
     private func focusUserLocation(using proxy: MapProxy? = nil) {
@@ -4494,7 +4667,7 @@ struct MapHomeView: View {
 
     @discardableResult
     private func updateUserCenterState(using proxy: MapProxy) -> Bool {
-        let nextValue = currentCoordinate
+        let nextValue = displayedLocationCoordinate
             .flatMap {
                 proxy.convert($0, to: .named("mapHomeViewport"))
             }

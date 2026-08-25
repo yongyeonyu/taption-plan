@@ -821,11 +821,16 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
     var sensorChunkID: UUID?
     var modelVersion: String?
     var manuallyCorrected: Bool
+    /// Once an automatic major category has been stored, later sensor
+    /// refreshes may extend its evidence but may not replace its category.
+    /// Manual corrections remain the only override.
+    var isClassificationLocked: Bool
 
     private enum CodingKeys: String, CodingKey {
         case id, planID, routineID, title, categoryID, startedAt, endedAt
         case source, confidence, createdAt, behavior, evidence, routeID
         case sensorChunkID, modelVersion, manuallyCorrected
+        case isClassificationLocked
     }
 
     init(
@@ -844,7 +849,8 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         routeID: UUID? = nil,
         sensorChunkID: UUID? = nil,
         modelVersion: String? = nil,
-        manuallyCorrected: Bool = false
+        manuallyCorrected: Bool = false,
+        isClassificationLocked: Bool? = nil
     ) {
         self.id = id
         self.planID = planID
@@ -862,6 +868,8 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         self.sensorChunkID = sensorChunkID
         self.modelVersion = modelVersion
         self.manuallyCorrected = manuallyCorrected
+        self.isClassificationLocked = isClassificationLocked
+            ?? source.usesAutomaticClassification
     }
 
     init(from decoder: Decoder) throws {
@@ -895,6 +903,10 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
             Bool.self,
             forKey: .manuallyCorrected
         ) ?? false
+        isClassificationLocked = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .isClassificationLocked
+        ) ?? source.usesAutomaticClassification
     }
 
     func encode(to encoder: Encoder) throws {
@@ -915,6 +927,7 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         try values.encodeIfPresent(sensorChunkID, forKey: .sensorChunkID)
         try values.encodeIfPresent(modelVersion, forKey: .modelVersion)
         try values.encode(manuallyCorrected, forKey: .manuallyCorrected)
+        try values.encode(isClassificationLocked, forKey: .isClassificationLocked)
     }
 
     func span(asOf date: Date = .now) -> TimeSpan {
@@ -923,6 +936,18 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         }
         let observedEnd = min(endedAt ?? date, date)
         return TimeSpan(start: startedAt, end: max(startedAt, observedEnd))
+    }
+}
+
+extension ActualSource {
+    var usesAutomaticClassification: Bool {
+        switch self {
+        case .manual, .timer, .calendar, .photo:
+            false
+        case .healthKit, .appleWatch, .motion, .location, .media, .call,
+             .appUsage:
+            true
+        }
     }
 }
 
@@ -2494,6 +2519,16 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
     var evidence: [String]
     var isConfirmed: Bool
     var subwayRoute: SubwayRoutePath?
+    /// Persisted automatic mode classification. User confirmation is still
+    /// represented by `isConfirmed`; this flag protects inferred modes from
+    /// changing during a later archive refresh.
+    var isClassificationLocked: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case id, fromPlaceID, toPlaceID, mode, span, distanceMeters,
+             confidence, evidence, isConfirmed, subwayRoute,
+             isClassificationLocked
+    }
 
     init(
         id: UUID = UUID(),
@@ -2505,7 +2540,8 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
         confidence: ConfidenceLevel,
         evidence: [String],
         isConfirmed: Bool = false,
-        subwayRoute: SubwayRoutePath? = nil
+        subwayRoute: SubwayRoutePath? = nil,
+        isClassificationLocked: Bool = false
     ) {
         self.id = id
         self.fromPlaceID = fromPlaceID
@@ -2517,6 +2553,43 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
         self.evidence = evidence
         self.isConfirmed = isConfirmed
         self.subwayRoute = subwayRoute
+        self.isClassificationLocked = isClassificationLocked
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        fromPlaceID = try values.decodeIfPresent(UUID.self, forKey: .fromPlaceID)
+        toPlaceID = try values.decodeIfPresent(UUID.self, forKey: .toPlaceID)
+        mode = try values.decode(TravelMode.self, forKey: .mode)
+        span = try values.decode(TimeSpan.self, forKey: .span)
+        distanceMeters = max(
+            0,
+            try values.decodeIfPresent(Double.self, forKey: .distanceMeters) ?? 0
+        )
+        confidence = try values.decode(ConfidenceLevel.self, forKey: .confidence)
+        evidence = try values.decodeIfPresent([String].self, forKey: .evidence) ?? []
+        isConfirmed = try values.decodeIfPresent(Bool.self, forKey: .isConfirmed) ?? false
+        subwayRoute = try values.decodeIfPresent(SubwayRoutePath.self, forKey: .subwayRoute)
+        isClassificationLocked = try values.decodeIfPresent(
+            Bool.self,
+            forKey: .isClassificationLocked
+        ) ?? true
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encodeIfPresent(fromPlaceID, forKey: .fromPlaceID)
+        try values.encodeIfPresent(toPlaceID, forKey: .toPlaceID)
+        try values.encode(mode, forKey: .mode)
+        try values.encode(span, forKey: .span)
+        try values.encode(distanceMeters, forKey: .distanceMeters)
+        try values.encode(confidence, forKey: .confidence)
+        try values.encode(evidence, forKey: .evidence)
+        try values.encode(isConfirmed, forKey: .isConfirmed)
+        try values.encodeIfPresent(subwayRoute, forKey: .subwayRoute)
+        try values.encode(isClassificationLocked, forKey: .isClassificationLocked)
     }
 }
 

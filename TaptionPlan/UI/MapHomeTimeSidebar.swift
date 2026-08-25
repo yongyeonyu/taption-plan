@@ -1235,10 +1235,14 @@ struct MapHomeTimeSidebar: View {
             trailingHitWidth: MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
             totalWidth: totalWidth
         )
+        let dragInteractionFrame = interactionFrame.insetBy(
+            dx: -MapHomeTimeSidebarMath.handleDragHitExpansion,
+            dy: 0
+        )
         let hitCenterY = MapHomeTimeSidebarMath.handleHitCenterY(
             handleCenterY: y,
             railHeight: railHeight,
-            hitHeight: doubleTapHitSize.height
+            hitHeight: MapHomeTimeSidebarMath.handleDragHitHeight
         )
         let fallbackActivity = MapHomeTimeSidebarActivity.majorCategory(
             "unconfirmed",
@@ -1291,11 +1295,11 @@ struct MapHomeTimeSidebar: View {
                 // avoids competing recognizers in their expanded hit areas
                 // while keeping the final state coalesced by the NLE gate.
                 .frame(
-                    width: interactionFrame.width,
-                    height: doubleTapHitSize.height
+                    width: dragInteractionFrame.width,
+                    height: MapHomeTimeSidebarMath.handleDragHitHeight
                 )
                 .contentShape(Rectangle())
-                .position(x: interactionFrame.midX, y: hitCenterY)
+                .position(x: dragInteractionFrame.midX, y: hitCenterY)
                 .highPriorityGesture(
                     dragGesture(
                         trackHeight: trackHeight,
@@ -1785,6 +1789,8 @@ enum MapHomeTimeSidebarMath {
     static let selectionTimeBlockHitWidth: CGFloat =
         selectionTimeBlockWidth * handleDoubleTapHitScale
     static let handleDragMinimumDistance: CGFloat = 1
+    static let handleDragHitHeight: CGFloat = 88
+    static let handleDragHitExpansion: CGFloat = 12
     static let handleLaneWidth: CGFloat = 69
     static let activeRailWidth: CGFloat = 12
     static let handleVisualSize = CGSize(width: 44, height: 44)

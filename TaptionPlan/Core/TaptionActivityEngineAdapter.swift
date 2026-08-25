@@ -405,3 +405,159 @@ enum TaptionActivityEngineAdapter {
         )
     }
 }
+
+/// Makes automatic major-category decisions durable without touching the
+/// sensor archive. A refresh may produce a new span or more evidence, but a
+/// stored automatic record keeps its previous category. Explicit activity
+/// corrections are copied first and therefore remain the only override.
+enum ActivityClassificationLockEngine {
+    static func lockingAutomaticClassifications(
+        _ actuals: [ActualRecord]
+    ) -> [ActualRecord] {
+        actuals.map { actual in
+            guard actual.source.usesAutomaticClassification else {
+                return actual
+            }
+            var value = actual
+            value.isClassificationLocked = true
+            return value
+        }
+    }
+
+    static func mergingLockedClassifications(
+        existing: [ActualRecord],
+        fresh: [ActualRecord],
+        inside: TimeSpan
+    ) -> [ActualRecord] {
+        let locked = existing.filter { actual in
+            actual.isClassificationLocked
+                && actual.source.usesAutomaticClassification
+                && actual.span(asOf: inside.end).intersection(with: inside) != nil
+        }
+        var merged = fresh.map { candidate in
+            guard candidate.source.usesAutomaticClassification else {
+                return candidate
+            }
+            var value = candidate
+            value.isClassificationLocked = true
+            let candidates = locked.filter { previous in
+                previous.source == candidate.source
+                    && overlapRatio(previous, candidate) >= 0.2
+            }
+            guard let previous = candidates.max(by: {
+                overlapDuration($0, candidate)
+                    < overlapDuration($1, candidate)
+            }) else {
+                return value
+            }
+            value.categoryID = previous.categoryID
+            value.title = previous.title
+            value.behavior = previous.behavior
+            if previous.manuallyCorrected {
+                value.manuallyCorrected = true
+            }
+            return value
+        }
+        let retained = locked.filter { previous in
+            !fresh.contains { candidate in
+                candidate.source == previous.source
+                    && overlapRatio(previous, candidate) >= 0.2
+            }
+        }
+        merged.append(contentsOf: retained)
+        return merged.sorted {
+            if $0.startedAt != $1.startedAt {
+                return $0.startedAt < $1.startedAt
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    static func mergingLockedTravel(
+        existing: [TravelSegment],
+        fresh: [TravelSegment],
+        inside: TimeSpan
+    ) -> [TravelSegment] {
+        let locked = existing.filter {
+            $0.isClassificationLocked
+                && $0.span.intersection(with: inside) != nil
+        }
+        var merged = fresh.map { candidate in
+            var value = candidate
+            let matches = locked.filter {
+                overlapRatio($0.span, candidate.span) >= 0.2
+            }
+            guard let previous = matches.max(by: {
+                overlapDuration($0.span, candidate.span)
+                    < overlapDuration($1.span, candidate.span)
+            }) else {
+                value.isClassificationLocked = true
+                return value
+            }
+            if !candidate.isConfirmed {
+                value.mode = previous.mode
+                value.subwayRoute = previous.subwayRoute ?? value.subwayRoute
+                value.isConfirmed = previous.isConfirmed
+            }
+            value.isClassificationLocked = true
+            return value
+        }
+        let retained = locked.filter { previous in
+            !fresh.contains {
+                overlapRatio(previous.span, $0.span) >= 0.2
+            }
+        }
+        merged.append(contentsOf: retained)
+        return merged.sorted {
+            if $0.span.start != $1.span.start {
+                return $0.span.start < $1.span.start
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    private static func overlapRatio(
+        _ lhs: ActualRecord,
+        _ rhs: ActualRecord
+    ) -> Double {
+        let lhsSpan = TimeSpan(
+            start: lhs.startedAt,
+            end: lhs.endedAt ?? lhs.startedAt.addingTimeInterval(1)
+        )
+        let rhsSpan = TimeSpan(
+            start: rhs.startedAt,
+            end: rhs.endedAt ?? rhs.startedAt.addingTimeInterval(1)
+        )
+        return overlapDuration(lhsSpan, rhsSpan)
+            / max(1, min(lhsSpan.duration, rhsSpan.duration))
+    }
+
+    private static func overlapDuration(
+        _ lhs: ActualRecord,
+        _ rhs: ActualRecord
+    ) -> TimeInterval {
+        let lhsSpan = TimeSpan(
+            start: lhs.startedAt,
+            end: lhs.endedAt ?? lhs.startedAt.addingTimeInterval(1)
+        )
+        let rhsSpan = TimeSpan(
+            start: rhs.startedAt,
+            end: rhs.endedAt ?? rhs.startedAt.addingTimeInterval(1)
+        )
+        return overlapDuration(lhsSpan, rhsSpan)
+    }
+
+    private static func overlapDuration(
+        _ lhs: TimeSpan,
+        _ rhs: TimeSpan
+    ) -> TimeInterval {
+        lhs.intersection(with: rhs)?.duration ?? 0
+    }
+
+    private static func overlapRatio(
+        _ lhs: TimeSpan,
+        _ rhs: TimeSpan
+    ) -> Double {
+        overlapDuration(lhs, rhs) / max(1, min(lhs.duration, rhs.duration))
+    }
+}

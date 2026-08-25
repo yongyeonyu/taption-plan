@@ -3409,11 +3409,22 @@ enum AppleWatchSensorActivityEngine {
                     Set(evidence + segment.evidence + ["2.56초 IMU 창"])
                 ).sorted()
                 let previousSegment = existing.first { $0.id == segment.id }
+                let frozenCategory = previousSegment.flatMap { previous in
+                    previous.isClassificationLocked
+                        ? previous.categoryID
+                        : nil
+                }
+                let frozenTitle = previousSegment.flatMap { previous in
+                    previous.isClassificationLocked ? previous.title : nil
+                }
+                let frozenBehavior = previousSegment.flatMap { previous in
+                    previous.isClassificationLocked ? previous.behavior : nil
+                }
                 return ActualRecord(
                     id: segment.id,
                     planID: planID,
-                    title: title,
-                    categoryID: categoryID,
+                    title: frozenTitle ?? title,
+                    categoryID: frozenCategory ?? categoryID,
                     startedAt: segment.startedAt,
                     endedAt: segment.endedAt,
                     source: .appleWatch,
@@ -3422,7 +3433,7 @@ enum AppleWatchSensorActivityEngine {
                     ),
                     createdAt: previousSegment?.createdAt
                         ?? segment.startedAt,
-                    behavior: segment.behavior.rawValue,
+                    behavior: frozenBehavior ?? segment.behavior.rawValue,
                     evidence: segmentEvidence,
                     sensorChunkID: summary.sessionID,
                     modelVersion: segment.modelVersion
@@ -3459,14 +3470,20 @@ enum AppleWatchSensorActivityEngine {
         let record = ActualRecord(
             id: summary.sessionID,
             planID: planID,
-            title: title,
-            categoryID: categoryID,
+            title: previous?.isClassificationLocked == true
+                ? previous?.title ?? title
+                : title,
+            categoryID: previous?.isClassificationLocked == true
+                ? previous?.categoryID ?? categoryID
+                : categoryID,
             startedAt: summary.startedAt,
             endedAt: max(summary.startedAt, summary.endedAt),
             source: .appleWatch,
             confidence: confidence,
             createdAt: previous?.createdAt ?? summary.startedAt,
-            behavior: summary.behavior?.rawValue,
+            behavior: previous?.isClassificationLocked == true
+                ? previous?.behavior
+                : summary.behavior?.rawValue,
             evidence: Array(Set(evidence)).sorted(),
             sensorChunkID: summary.sessionID,
             modelVersion: summary.behaviorModelVersion
@@ -3887,8 +3904,14 @@ enum PhoneSleepWakeEngine {
                     && (summary?.meanRotationRateRadiansPerSecond ?? 1) <= 0.03)
         default: inactive = false
         }
+        // Older background archives often omit display telemetry entirely.
+        // A missing brightness value must not turn an otherwise continuous
+        // stationary run into an awake run; an explicit screen-on signal is
+        // still treated as wake evidence below.
         let screenOff = reading.screenIsOn == false
-        let dark = reading.screenBrightness.map { $0 <= darkBrightness } ?? false
+            || (reading.screenIsOn == nil && reading.screenBrightness == nil)
+        let dark = reading.screenBrightness.map { $0 <= darkBrightness }
+            ?? screenOff
         return inactive && screenOff && dark
     }
 
@@ -3943,8 +3966,7 @@ enum PhoneSleepFallbackEngine {
             maximumSampleGap: maximumSampleGap,
             asOf: asOf
         )
-        guard screenBased.isEmpty else { return screenBased }
-        return ChargingInactivitySleepEngine.records(
+        let chargingBased = ChargingInactivitySleepEngine.records(
             readings: iPhoneReadings,
             actuals: actuals,
             inside: span,
@@ -3952,6 +3974,18 @@ enum PhoneSleepFallbackEngine {
             maximumSampleGap: maximumSampleGap,
             asOf: asOf
         )
+        guard !screenBased.isEmpty else { return chargingBased }
+        let supplemental = chargingBased.filter { candidate in
+            !screenBased.contains {
+                $0.span(asOf: asOf).intersection(with: candidate.span(asOf: asOf)) != nil
+            }
+        }
+        return (screenBased + supplemental).sorted {
+            if $0.startedAt != $1.startedAt {
+                return $0.startedAt < $1.startedAt
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
     }
 }
 

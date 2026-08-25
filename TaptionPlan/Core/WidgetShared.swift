@@ -101,6 +101,27 @@ enum SensorCollectionActivityPhase: String, Codable, Hashable {
     case hidden
 }
 
+enum SensorCollectionProgressPolicy {
+    static func halfWindowDuration(intervalSeconds: Int?) -> TimeInterval? {
+        guard let intervalSeconds, intervalSeconds > 1 else { return nil }
+        return TimeInterval(intervalSeconds) / 2
+    }
+
+    static func progress(
+        at date: Date,
+        startedAt: Date,
+        lastSavedAt: Date?,
+        intervalSeconds: Int?
+    ) -> Double? {
+        guard let duration = halfWindowDuration(intervalSeconds: intervalSeconds),
+              duration > 0 else { return nil }
+        let cycleStart = lastSavedAt ?? startedAt
+        let elapsed = date.timeIntervalSince(cycleStart)
+        guard elapsed.isFinite else { return 0 }
+        return min(max(elapsed / duration, 0), 1)
+    }
+}
+
 struct SensorCollectionActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         var startedAt: Date

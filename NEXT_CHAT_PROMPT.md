@@ -1,39 +1,44 @@
-# Taption Plan 다음 채팅 핸드오프
+# Taption Plan 다음 채팅 인계 프롬프트
 
-아래 내용을 새 채팅에 그대로 붙여넣고 작업을 이어가세요.
+Taption Plan 작업을 이어간다. 작업 디렉터리는 `/Users/u_mo_c/Documents/taption plan`이다.
 
-```text
-작업 디렉토리: /Users/u_mo_c/Documents/taption plan
-먼저 AGENTS.md를 읽고 main 최신 SHA와 git status를 확인한다.
+먼저 `AGENTS.md`를 읽고 다음 현재 상태를 직접 확인한다. 이 문서에 기록된 SHA나 기기 상태를 최신 상태로 가정하지 않는다.
 
-현재 기준
-- 현재 main에는 사용자 추가 지하철역·지하철 Wi-Fi 우선 판정, GPS 1초·10초·30초 기록, 지도 상세도·팝업·시간 레일 개선, 광고 완전 제거, C2 고양이 벡터 앱 아이콘이 반영되어 있다.
-- `BATCH2WK01`로 지도 오버레이 핀치 전달·위치 추가 취소·저장 위치 이동/편집·사용자 위치 관리 UI·실제 헤딩 나침반·선택 날씨 배경을 통합했고 CloudKit 비공개 복구 백업의 아카이브 키 래핑을 보정했다.
-- Pro는 Keychain+iCloud KVS 기반 14일 앱 자체 체험과 StoreKit 2 비소모성 `com.taption.plan.pro` 영구 구매·복원으로 구현했다. 기존 기록도 `startedAt` 기준 14일로 재계산하며, 체험 만료 시 전체 앱과 백그라운드 작업을 잠근다.
-- 최신 main SHA와 `git status`를 먼저 확인한다. 현재 통합에는 GPS·센서 1초 고정, 필수 권한 게이트, MKDirections 예상 경로, 현재위치 추적 해제, 팬토그래픽 과거 위치 마커, 중앙 몸통·발·수염 고양이 스플래시가 포함돼 있다.
-- 전체 XCTest 636/636, iOS Debug build, `git diff --check`를 통과했다.
-- 연결된 iPhone 14 Pro에 `com.taption.plan` `1.0 (88)`을 설치·실행했고 프로세스 `TaptionPlan` PID `49149`를 readback했다.
-- build 88 TestFlight archive/upload는 아직 수행하지 않았다. 이전 build 77 TestFlight Delivery UUID는 f962c2b8-f430-44e0-88a8-0a00b7b489c4이며 VALID/제출 준비 완료 상태였고 내부 그룹 노출까지 확인했다.
+- `git status --short --branch`
+- `git log -3 --oneline --decorate`
+- `git rev-parse HEAD origin/main`
+- `DEVELOPMENT.md`
+- `temp.md`
+- 연결된 iPhone의 `com.taption.plan` 설치 버전·build와 실행 프로세스
 
-남은 외부 게이트
-- App Store Connect Paid Apps Agreement가 `신규` 상태다. 계정 소유자가 법인 정보와 계약·세금·은행 정보를 완료해야 실제 US$0.99 상품을 생성할 수 있다.
-- 계약 완료 후 App Store Connect에 비소모성 상품 ID `com.taption.plan.pro`, 가격 US$0.99, 한국어·영어 현지화를 만들고 TestFlight에서 구매·복원을 검증한다.
+현재 구조와 제품 계약:
 
-주의
-- TestFlight 업로드 성공, 처리 VALID, 내부 그룹 연결·노출은 서로 다른 게이트로 계속 확인한다.
-- 원본 센서·HealthKit 데이터는 삭제·수정하지 않는다.
-- StoreKit 상품이 생성되기 전에는 TestFlight 구매 버튼 성공을 완료로 보고하지 않는다.
-- 새 요청은 temp.md에 10자리 ID로 등록하고 대표님의 `ㄱㄱ` 후 실행한다.
+- `Packages/TaptionPlanCore`: 일자 단위 SQLite 저장소와 generation 기반 60Hz NLE 입력 예산
+- `Packages/TaptionActivityEngine`: 상세·대분류 활동 taxonomy, 센서 근거 분류, 자동 분류 결과 잠금
+- `Packages/TaptionRouteEngine`: GPS 경로 필터, 2D Kalman, 정지 드리프트 억제, 점프·15분 공백 세그먼트, RDP 축약
+- 앱 시작은 로컬 스냅샷과 일자 데이터 hydrate가 완료된 뒤 홈으로 진입하고, 사이드바·경로·지도 파생값을 캐시한다.
+- 현재·과거 위치는 장소 아이콘보다 앞의 native annotation 졸라맨으로 통일한다. 추적 중에는 선택 시각 위치를 중앙에 유지하고 지도 이동은 추적을 해제한다.
+- 지하철 확정 분류와 선로 기반 점선 경로, 수면 등 자동 분류 결과는 저장 후 재로딩해도 바꾸지 않는다. 사용자 편집만 덮어쓰고 원본 센서는 보존한다.
+- 핀치 줌과 사이드바 핸들의 확장 터치 영역을 유지한다.
+- 재생은 걷기·달리기는 빠르게, 자동차·자전거·지하철·기차·배·비행기는 느리게 적용한다.
+- GPS·센서 수집 간격은 슬라이더로 설정한다.
+- Dynamic Island는 우측에만 GPS 주기의 절반 길이 진행 파형을 표시하고, 센서 저장 때 ECG 1회 펄스 후 평선으로 돌아간다. 1초 주기에서는 시간 진행이 없다.
 
-2026-08-24 코드뷰 후속 UI 통합
-- `MPRV8X2K1A`로 검색 결과 영역을 행 높이 48pt·최대 320pt로 제한해 검색창 밖의 지도 탭·팬·줌을 다시 사용할 수 있게 했다.
-- `WTHANDL001`로 날씨 사이드바 OFF 상태의 날씨 캡슐을 플레이헤드 핸들과 같은 높이에 맞추고 왼쪽 4pt 간격을 유지한다.
-- 전체 XCTest 578/578, iOS Simulator Debug, 서명된 iPhone Debug build와 `git diff --check`를 통과했다.
+최근 검증 기준:
 
-2026-08-25 통합 후속
-- GPS 및 센서는 필수·실시간 1초 기록으로 고정되며, `RequiredPermissionGate`가 모든 필수 권한을 확인하기 전에는 기록 화면을 열지 않는다.
-- 확정 지하철 경로는 저장된 노선 경로를 유지하고, 그 밖의 이동 구간은 자동차·대중교통·도보별 `MKDirections` 예상 경로를 지도에 표시한다. 예상 경로는 표시 전용이며 원본 GPS와 사용자 분류를 변경하지 않는다.
-- 사이드바를 움직이거나 지도를 한 손가락으로 드래그하면 현재위치 추적을 해제하고, 현재위치 버튼을 다시 누를 때만 추적을 재개한다.
-- 새 시작 화면 자산은 `TaptionPlanLaunchCat.svg` 기반이며 몸통·앞발·뒷발·수염, 기존 여정 꼬리, 중앙 배치를 사용한다. 네이티브 시작 화면과 SwiftUI 오버레이는 각각 불투명·투명 자산을 사용한다.
-- 새 요청은 10자리 영문·숫자 ID로 `temp.md`에 등록하고 대표님의 `ㄱㄱ` 후 실행한다.
-```
+- 전체 XCTest 695/695, 실패·스킵 0
+- `TaptionPlanCore` 24/24, `TaptionActivityEngine` 4/4, `TaptionRouteEngine` 11/11
+- iOS Simulator Debug build 통과
+- 서명된 iPhone Debug build 95 통과
+- iPhone 14 Pro 설치·실행·readback: `com.taption.plan` `1.0 (95)`, `TaptionPlan` PID `55910`
+- `git diff --check` 통과
+- TestFlight archive/upload는 이번 배치 범위가 아니므로 수행하지 않았다.
+
+다음 확인 항목:
+
+1. 실기기에서 현재 위치 지연, 지도 핀치·드래그, 졸라맨 중앙 고정·흔들림, 사이드바 핸들을 확인한다.
+2. 오늘 수면·지하철 분류와 선로 점선 경로가 재실행 후 유지되는지 확인한다.
+3. Dynamic Island 우측 파형과 15분·1분·1초 경계를 실기기에서 확인한다.
+4. `IAP73PAID1`은 Paid Apps Agreement·세금/은행·상품 연결·Sandbox 구매/복원 전까지 완료 처리하지 않는다.
+5. TestFlight를 요청받으면 업로드, 처리 완료, `TP Taption Plan 내부 테스트` 그룹 연결·노출을 각각 확인한다.
+6. 새 요청은 10자리 영문·숫자 ID로 `temp.md`에 먼저 기록하고 대표님의 `ㄱㄱ` 뒤 실행한다.

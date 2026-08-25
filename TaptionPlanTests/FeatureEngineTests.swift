@@ -7,7 +7,7 @@ import SwiftUI // TEMP-CAT-SHEET
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
-    func testInitialLaunchGateWaitsForMapDataWhenAccessIsGranted() {
+    func testInitialLaunchGateWaitsForMapShellWhenAccessIsGranted() {
         let common = (
             hasCompletedInitialProRefresh: true,
             isSecurityStateReady: true,
@@ -21,7 +21,7 @@ final class FeatureEngineTests: XCTestCase {
                 hasCompletedInitialProRefresh: common.hasCompletedInitialProRefresh,
                 isSecurityStateReady: common.isSecurityStateReady,
                 hasRenderedInitialDestination: common.hasRenderedInitialDestination,
-                hasCompletedInitialMapDataLoad: false,
+                hasCompletedInitialMapShellPreparation: false,
                 isBootstrapped: common.isBootstrapped,
                 grantsAccess: common.grantsAccess
             )
@@ -31,9 +31,39 @@ final class FeatureEngineTests: XCTestCase {
                 hasCompletedInitialProRefresh: common.hasCompletedInitialProRefresh,
                 isSecurityStateReady: common.isSecurityStateReady,
                 hasRenderedInitialDestination: common.hasRenderedInitialDestination,
-                hasCompletedInitialMapDataLoad: true,
+                hasCompletedInitialMapShellPreparation: true,
                 isBootstrapped: common.isBootstrapped,
                 grantsAccess: common.grantsAccess
+            )
+        )
+    }
+
+    func testRouteReadingsTaskRestartsAfterBootstrapAndOnlyForNewDays() {
+        let day = makeDate(2026, 8, 25, 8)
+        let sameDay = makeDate(2026, 8, 25, 20)
+
+        XCTAssertNotEqual(
+            MapHomeRouteReadingsTaskKey(
+                date: day,
+                isBootstrapped: false,
+                calendar: utcCalendar
+            ),
+            MapHomeRouteReadingsTaskKey(
+                date: day,
+                isBootstrapped: true,
+                calendar: utcCalendar
+            )
+        )
+        XCTAssertEqual(
+            MapHomeRouteReadingsTaskKey(
+                date: day,
+                isBootstrapped: true,
+                calendar: utcCalendar
+            ),
+            MapHomeRouteReadingsTaskKey(
+                date: sameDay,
+                isBootstrapped: true,
+                calendar: utcCalendar
             )
         )
     }
@@ -3848,6 +3878,96 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testPhoneSleepWakeAcceptsMissingDisplayTelemetryAfterInactivity() {
+        let start = makeDate(2026, 8, 11, 22, 0)
+        let readings = (0...14).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 5 * 60),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .full
+            )
+        }
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(2 * hour))
+
+        let records = PhoneSleepWakeEngine.records(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            watchAvailable: false,
+            maximumSampleGap: 20 * 60,
+            asOf: span.end
+        )
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].categoryID, "sleep")
+        XCTAssertTrue(records[0].isClassificationLocked)
+    }
+
+    func testAutomaticMajorCategoryRemainsLockedAcrossRefresh() {
+        let start = makeDate(2026, 8, 12, 9, 0)
+        let old = ActualRecord(
+            planID: nil,
+            title: "활동",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(20 * 60),
+            source: .motion,
+            isClassificationLocked: true
+        )
+        let fresh = ActualRecord(
+            planID: nil,
+            title: "이동",
+            categoryID: "movement",
+            startedAt: start.addingTimeInterval(60),
+            endedAt: start.addingTimeInterval(21 * 60),
+            source: .motion
+        )
+
+        let result = ActivityClassificationLockEngine.mergingLockedClassifications(
+            existing: [old],
+            fresh: [fresh],
+            inside: TimeSpan(start: start, end: start.addingTimeInterval(hour))
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].categoryID, "activity")
+        XCTAssertTrue(result[0].isClassificationLocked)
+    }
+
+    func testSubwayModeRemainsLockedAcrossRefresh() {
+        let start = makeDate(2026, 8, 12, 10, 0)
+        let old = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            distanceMeters: 5_000,
+            confidence: .high,
+            evidence: ["철도 경로"],
+            isClassificationLocked: true
+        )
+        let fresh = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start.addingTimeInterval(60),
+                end: start.addingTimeInterval(hour + 60)
+            ),
+            distanceMeters: 5_100,
+            confidence: .medium,
+            evidence: ["차량 후보"]
+        )
+
+        let result = ActivityClassificationLockEngine.mergingLockedTravel(
+            existing: [old],
+            fresh: [fresh],
+            inside: TimeSpan(start: start, end: start.addingTimeInterval(2 * hour))
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].mode, .subway)
+        XCTAssertTrue(result[0].isClassificationLocked)
+    }
+
     func testPhoneSleepWakeChargingShortensConfirmationAndAwakeningCanResettle() {
         let start = makeDate(2026, 8, 10, 22, 0)
         var readings = (0...8).map { index in
@@ -7332,6 +7452,55 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testSensorCollectionProgressUsesHalfIntervalAndDisablesOneSecond() {
+        let startedAt = Date(timeIntervalSinceReferenceDate: 22_000)
+        XCTAssertEqual(
+            SensorCollectionProgressPolicy.halfWindowDuration(
+                intervalSeconds: 900
+            ),
+            450
+        )
+        XCTAssertEqual(
+            SensorCollectionProgressPolicy.halfWindowDuration(
+                intervalSeconds: 60
+            ),
+            30
+        )
+        XCTAssertNil(
+            SensorCollectionProgressPolicy.halfWindowDuration(
+                intervalSeconds: 1
+            )
+        )
+        XCTAssertEqual(
+            SensorCollectionProgressPolicy.progress(
+                at: startedAt.addingTimeInterval(225),
+                startedAt: startedAt,
+                lastSavedAt: nil,
+                intervalSeconds: 900
+            ) ?? -1,
+            0.5,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            SensorCollectionProgressPolicy.progress(
+                at: startedAt.addingTimeInterval(30),
+                startedAt: startedAt,
+                lastSavedAt: startedAt,
+                intervalSeconds: 60
+            ) ?? -1,
+            1,
+            accuracy: 0.000_001
+        )
+        XCTAssertNil(
+            SensorCollectionProgressPolicy.progress(
+                at: startedAt.addingTimeInterval(0.5),
+                startedAt: startedAt,
+                lastSavedAt: nil,
+                intervalSeconds: 1
+            )
+        )
+    }
+
     func testAutomaticTrackingPromotionAndStopPolicy() {
         XCTAssertTrue(
             TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 1)
@@ -9797,6 +9966,10 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         let loaded = try await repository.load()
+        for _ in 0..<100 {
+            if try await primary.load().plans == loaded.plans { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
         let shared = try await primary.load()
 
         XCTAssertEqual(loaded.plans.first?.title, "기존 계획")

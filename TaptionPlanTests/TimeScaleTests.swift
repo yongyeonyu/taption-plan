@@ -1011,6 +1011,8 @@ final class TimeScaleTests: XCTestCase {
             ),
             567
         )
+        XCTAssertGreaterThan(MapHomeTimeSidebarMath.handleDragHitHeight, hitHeight)
+        XCTAssertGreaterThan(MapHomeTimeSidebarMath.handleDragHitExpansion, 0)
 
         let above = MapHomeTimeSidebarMath.compactWeatherFrame(
             handleCenterX: 44,
@@ -2709,6 +2711,31 @@ final class TimeScaleTests: XCTestCase {
                 from: 60,
                 elapsedSeconds: 1,
                 movingRanges: ranges
+            ),
+            75,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testMapHomeDayPlaybackKeepsWalkingFastAndVehiclesSlow() {
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.advancedMinute(
+                from: 60,
+                elapsedSeconds: 1,
+                movingRanges: [
+                    .init(startMinute: 60, endMinute: 120, mode: .walking),
+                ]
+            ),
+            120,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.advancedMinute(
+                from: 60,
+                elapsedSeconds: 1,
+                movingRanges: [
+                    .init(startMinute: 60, endMinute: 120, mode: .car),
+                ]
             ),
             75,
             accuracy: 0.000_001

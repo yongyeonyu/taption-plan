@@ -16,7 +16,7 @@ struct AppShellView: View {
     @State private var showsMapHome = true
     @State private var isSecurityStateReady = false
     @State private var hasCompletedInitialProRefresh = false
-    @State private var hasCompletedInitialMapDataLoad = false
+    @State private var hasCompletedInitialMapShellPreparation = false
     @State private var hasRenderedInitialDestination = false
     @State private var isInitialLaunchOverlayVisible = true
     @State private var lockGeneration = 0
@@ -229,7 +229,8 @@ struct AppShellView: View {
             hasCompletedInitialProRefresh: hasCompletedInitialProRefresh,
             isSecurityStateReady: isSecurityStateReady,
             hasRenderedInitialDestination: hasRenderedInitialDestination,
-            hasCompletedInitialMapDataLoad: hasCompletedInitialMapDataLoad,
+            hasCompletedInitialMapShellPreparation:
+                hasCompletedInitialMapShellPreparation,
             isBootstrapped: model.isBootstrapped,
             grantsAccess: proAccess.grantsAccess
         )
@@ -534,7 +535,7 @@ struct AppShellView: View {
                 model: model,
                 proAccess: proAccess,
                 onInitialDataReady: {
-                    hasCompletedInitialMapDataLoad = true
+                    hasCompletedInitialMapShellPreparation = true
                     dismissInitialLaunchOverlayIfReady()
                 }
             )
@@ -561,14 +562,14 @@ enum AppShellInitialLaunchGate {
         hasCompletedInitialProRefresh: Bool,
         isSecurityStateReady: Bool,
         hasRenderedInitialDestination: Bool,
-        hasCompletedInitialMapDataLoad: Bool,
+        hasCompletedInitialMapShellPreparation: Bool,
         isBootstrapped: Bool,
         grantsAccess: Bool
     ) -> Bool {
         hasCompletedInitialProRefresh
             && isSecurityStateReady
             && hasRenderedInitialDestination
-            && (hasCompletedInitialMapDataLoad || !grantsAccess)
+            && (hasCompletedInitialMapShellPreparation || !grantsAccess)
             && (isBootstrapped || !grantsAccess)
     }
 }

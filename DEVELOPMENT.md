@@ -180,3 +180,24 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - 기기 프로세스 readback: `TaptionPlan` PID `49149`
 - `git diff --check`: 통과
 - 이번 배치에서는 TestFlight archive/upload를 수행하지 않았다. App Store Connect Paid Apps Agreement `신규` 및 실제 `com.taption.plan.pro` 상품 생성 게이트는 계속 `IAP73PAID1`로 유지한다.
+
+## 2026-08-26 경로·분류 잠금·NLE 반응성 통합
+
+- `TaptionPlanCore`는 일자 단위 SQLite 저장소와 generation 기반 NLE 입력 예산을 제공한다. 고빈도 제스처 입력은 최대 60Hz로 제한하고 제스처 종료 최종값은 즉시 반영한다.
+- `TaptionActivityEngine`은 상세·대분류 taxonomy와 센서 근거 분류를 담당하며, 자동 생성된 수면·이동·HealthKit·위치·지하철 분류와 `TravelSegment`는 저장 후 다시 분류되지 않는다. 사용자 편집만 저장된 결과를 덮어쓰며 원본 센서 자료는 보존한다.
+- `TaptionRouteEngine`은 동일 시각 중복 우선순위, 2D constant-velocity Kalman 필터, 정지 드리프트 억제, 정확도 경계, 불가능한 점프·15분 공백 세그먼트 분리와 RDP 표시 축약을 담당한다.
+- 앱 시작은 로컬 스냅샷과 일자 데이터를 먼저 hydrate한 뒤 홈을 연다. 사이드바·경로·지도 파생값은 캐시하고 드래그 중 전체 일자 재계산을 피한다.
+- 지도 현재·과거 위치는 native annotation 졸라맨으로 통일해 장소 아이콘보다 앞에 표시한다. 추적 중 선택 시각 위치를 중앙에 유지하고, 지도 이동 시 추적을 해제하며 핀치 줌·사이드바 핸들의 터치 영역을 확장했다.
+- 지하철 확정 구간은 저장된 선로 기반 점선 경로와 분류를 유지한다. 재생 속도는 걷기·달리기는 빠르게, 자동차·자전거·지하철·기차·배·비행기는 느리게 적용한다.
+- GPS·센서 수집 간격 슬라이더를 복원했다. Dynamic Island 우측 파형은 GPS 주기의 절반을 전체 폭으로 사용하고 실제 센서 저장 시 ECG 1회 펄스 후 평선으로 돌아간다. 1초 주기에서는 시간 진행을 표시하지 않는다.
+
+### 검증 및 배포
+
+- 전체 XCTest: 695/695 통과, 실패·스킵 0
+- `TaptionPlanCore`: 24/24, `TaptionActivityEngine`: 4/4, `TaptionRouteEngine`: 11/11 통과
+- iOS Simulator Debug build: 통과
+- 서명된 iPhone Debug build: build 95로 통과
+- iPhone 14 Pro 설치·실행·readback: `com.taption.plan` `1.0 (95)`, `TaptionPlan` PID `55910`
+- `git diff --check`: 통과
+- 이번 배치에서는 TestFlight archive/upload를 수행하지 않았다.
+- Paid Apps Agreement·세금/은행 정보·실제 `com.taption.plan.pro` 상품 생성과 Sandbox 구매·복원은 `IAP73PAID1` 외부 게이트로 유지한다.

@@ -1829,6 +1829,15 @@ final class AppModel {
                 repositoryLoadFailed = false
                 source.weather = WeatherTimelineEngine.coalesced(source.weather)
                 let originalConfirmedSleepSpans = source.settings.confirmedSleepSpans
+                let originalActuals = source.actuals
+                let originalTravel = source.travel
+                source.actuals = ActivityClassificationLockEngine
+                    .lockingAutomaticClassifications(source.actuals)
+                source.travel = source.travel.map { segment in
+                    var value = segment
+                    value.isClassificationLocked = true
+                    return value
+                }
                 source.settings.confirmedSleepSpans =
                     TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
                         existing: source.settings.confirmedSleepSpans,
@@ -1848,7 +1857,9 @@ final class AppModel {
                 // neither should hold the first timeline frame hostage.
                 snapshot = source
                 if source.settings.confirmedSleepSpans
-                    != originalConfirmedSleepSpans {
+                    != originalConfirmedSleepSpans
+                    || source.actuals != originalActuals
+                    || source.travel != originalTravel {
                     _ = await persist()
                 }
                 selectedScale = TimeScale(
@@ -5493,10 +5504,16 @@ final class AppModel {
             watchSummaries: watchSummaries,
             inside: span
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        let stableContextRecords = ActivityClassificationLockEngine
+            .mergingLockedClassifications(
+                existing: snapshot.actuals.filter { $0.source == .location },
+                fresh: contextRecords,
+                inside: span
+            )
         // 판독은 7일만 남는다. 그보다 오래된 날을 열면 문맥을 다시 만들 근거가
         // 없는데, 그때 저장된 기록까지 지우면 되살릴 길이 없다. 이번 갱신이
         // 실제로 들여다본 구간과 새로 만든 기록의 구간만 갈아끼운다.
-        let refreshed = contextRecords.map { $0.span(asOf: span.end) }
+        let refreshed = stableContextRecords.map { $0.span(asOf: span.end) }
             + [evidence].compactMap { $0?.intersection(with: span) }
         snapshot.actuals.removeAll { actual in
             guard actual.source == .location,
@@ -5509,13 +5526,13 @@ final class AppModel {
                 $0.intersection(with: stored) != nil
             }
         }
-        guard !contextRecords.isEmpty else { return }
+        guard !stableContextRecords.isEmpty else { return }
         snapshot.actuals = StationaryContextActualEngine
             .suppressingStationaryMotion(
                 snapshot.actuals,
-                coveredBy: contextRecords,
+                coveredBy: stableContextRecords,
                 asOf: span.end
-            ) + contextRecords
+            ) + stableContextRecords
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 
@@ -5621,8 +5638,19 @@ final class AppModel {
                 existing: existingAutomatic,
                 inside: span
             ).filter {
-                    !snapshot.settings.suppressedActualIDs.contains($0.id)
+                !snapshot.settings.suppressedActualIDs.contains($0.id)
             }
+            let existingMotionActuals = snapshot.actuals.filter {
+                $0.source == .motion
+                    && $0.modelVersion != ChargingInactivitySleepEngine.modelVersion
+                    && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
+            }
+            let mergedMotionActuals = ActivityClassificationLockEngine
+                .mergingLockedClassifications(
+                    existing: existingMotionActuals,
+                    fresh: generatedMotionActuals,
+                    inside: span
+                )
             Self.integrationLogger.notice(
                 "Motion history refresh: activities=\(motionActivities.count, privacy: .public), generated=\(generatedMotionActuals.count, privacy: .public), spanStart=\(span.start.timeIntervalSince1970, privacy: .public), observationEnd=\(min(span.end, Date.now).timeIntervalSince1970, privacy: .public)"
             )
@@ -5633,7 +5661,7 @@ final class AppModel {
                     && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
                     && $0.span(asOf: span.end).intersection(with: span) != nil
             }
-            snapshot.actuals.append(contentsOf: generatedMotionActuals)
+            snapshot.actuals.append(contentsOf: mergedMotionActuals)
             snapshot.actuals.sort { $0.startedAt < $1.startedAt }
         }
         archiveRawDeviceData(
@@ -5772,7 +5800,7 @@ final class AppModel {
             preservedSubwaySegments: previousSubwaySegments,
             userTransitLocations: settings.userTransitLocations
         )
-        let travel = AppleDeviceGroundTruthEngine.coalescingTravel(
+        let generatedTravel = AppleDeviceGroundTruthEngine.coalescingTravel(
             AppleDeviceGroundTruthEngine.resolvingOverlaps(
                 AppleDeviceGroundTruthEngine.enforcingMotionFamily(
                     MovementCorrectionEngine.applying(
@@ -5789,6 +5817,11 @@ final class AppModel {
                 5 * 60,
                 snapshot.settings.sensorCollectionProfile.interval + 60
             )
+        )
+        let travel = ActivityClassificationLockEngine.mergingLockedTravel(
+            existing: snapshot.travel,
+            fresh: generatedTravel,
+            inside: span
         )
 
         // A photo location is only a fallback anchor. It must not erase a
@@ -5890,6 +5923,11 @@ final class AppModel {
         inside span: TimeSpan
     ) {
         guard !readings.isEmpty else { return }
+        let existingSleepActuals = snapshot.actuals.filter {
+            ($0.modelVersion == ChargingInactivitySleepEngine.modelVersion
+                || $0.modelVersion == PhoneSleepWakeEngine.modelVersion)
+                && $0.span(asOf: span.end).intersection(with: span) != nil
+        }
         let prior = snapshot.actuals.filter {
             $0.modelVersion != ChargingInactivitySleepEngine.modelVersion
                 && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
@@ -5902,7 +5940,13 @@ final class AppModel {
                 20 * 60,
                 settings.sensorCollectionProfile.interval * 1.6 + 60
             )
-        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+            ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        let mergedRecords = ActivityClassificationLockEngine
+            .mergingLockedClassifications(
+                existing: existingSleepActuals,
+                fresh: records,
+                inside: span
+            )
         let evidenceSpan = TimeSpan(
             start: readings.map(\.timestamp).min() ?? span.start,
             end: readings.map(\.timestamp).max() ?? span.start
@@ -5913,7 +5957,7 @@ final class AppModel {
                 && actual.span(asOf: span.end)
                     .intersection(with: evidenceSpan) != nil
         }
-        snapshot.actuals.append(contentsOf: records)
+        snapshot.actuals.append(contentsOf: mergedRecords)
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 
@@ -6905,6 +6949,12 @@ final class AppModel {
                 ($0.source == .healthKit || $0.source == .appleWatch)
                     && $0.span(asOf: span.end).intersection(with: span) != nil
             }
+            let stableHealthActuals = ActivityClassificationLockEngine
+                .mergingLockedClassifications(
+                    existing: existingHealthActuals,
+                    fresh: visibleFreshActuals,
+                    inside: span
+                )
             let existingSleepSessions = sleepSessions.filter {
                 $0.span.intersection(with: span) != nil
             }
@@ -6931,7 +6981,7 @@ final class AppModel {
                 snapshot.actuals = AppleDeviceGroundTruthEngine
                     .replacingHealthKitActuals(
                         existing: snapshot.actuals,
-                        with: visibleFreshActuals,
+                        with: stableHealthActuals,
                         inside: span
                     )
             } else {
@@ -8212,6 +8262,7 @@ final class AppModel {
             return false
         }
         do {
+            lockAutomaticClassificationsForPersistence()
             applyStoredActivityCorrections()
             await refreshReviewArchives(force: true)
             var value = snapshot
@@ -8551,6 +8602,7 @@ final class AppModel {
         pendingDeviceLocalPersistTask = nil
         lastDeviceSnapshotPersistAt = .now
         do {
+            lockAutomaticClassificationsForPersistence()
             applyStoredActivityCorrections()
             await refreshReviewArchives(force: false)
             var value = snapshot
@@ -8561,6 +8613,16 @@ final class AppModel {
         } catch {
             userFacingError =
                 "센서 기록을 저장하지 못했습니다. \(error.localizedDescription)"
+        }
+    }
+
+    private func lockAutomaticClassificationsForPersistence() {
+        snapshot.actuals = ActivityClassificationLockEngine
+            .lockingAutomaticClassifications(snapshot.actuals)
+        snapshot.travel = snapshot.travel.map { segment in
+            var value = segment
+            value.isClassificationLocked = true
+            return value
         }
     }
 

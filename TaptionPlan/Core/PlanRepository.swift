@@ -44,6 +44,7 @@ enum TaptionLocalDatabaseLocation {
 actor MigratingPlanRepository: PlanDataRepository {
     private let primary: any PlanDataRepository
     private let legacy: any PlanDataRepository
+    private var migrationTask: Task<Void, Never>?
 
     init(
         primary: any PlanDataRepository,
@@ -62,7 +63,7 @@ actor MigratingPlanRepository: PlanDataRepository {
             // empty snapshot and overwrite the last good device copy.
             if let existing = try? await legacy.load(),
                existing.updatedAt != .distantPast {
-                try? await primary.save(existing)
+                schedulePrimaryMigration(existing)
                 return existing
             }
             throw error
@@ -74,12 +75,32 @@ actor MigratingPlanRepository: PlanDataRepository {
         guard existing.updatedAt != .distantPast else {
             return shared
         }
-        try await primary.save(existing)
+        schedulePrimaryMigration(existing)
         return existing
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
+        migrationTask?.cancel()
+        migrationTask = nil
         try await primary.save(snapshot)
+    }
+
+    private func schedulePrimaryMigration(_ snapshot: TaptionDataSnapshot) {
+        guard migrationTask == nil else { return }
+        let primary = self.primary
+        migrationTask = Task.detached(priority: .utility) {
+            // A caller may save a newer snapshot as soon as the legacy value
+            // is returned. Never let this one-time import overwrite it, and
+            // never replace a primary that failed to decode.
+            guard !Task.isCancelled,
+                  let current = try? await primary.load(),
+                  !Task.isCancelled,
+                  current.updatedAt == .distantPast else {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            try? await primary.save(snapshot)
+        }
     }
 }
 
@@ -211,11 +232,27 @@ actor FilePlanRepository: PlanDataRepository {
         }
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
-            return Date(
-                timeIntervalSinceReferenceDate: Double(
-                    bitPattern: try container.decode(UInt64.self)
+            // Older files used the bit pattern of a reference-date Double;
+            // exported and newer legacy files use seconds since 1970. Decode
+            // the integer form first so a UInt64 bit pattern is lossless, and
+            // use Double for fractional or negative Unix timestamps.
+            if let raw = try? container.decode(UInt64.self) {
+                if raw <= 1_000_000_000_000 {
+                    return Date(timeIntervalSince1970: Double(raw))
+                }
+                return Date(
+                    timeIntervalSinceReferenceDate: Double(bitPattern: raw)
                 )
-            )
+            }
+            let seconds = try container.decode(Double.self)
+            guard seconds.isFinite,
+                  abs(seconds) <= 1_000_000_000_000 else {
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Unsupported date encoding"
+                )
+            }
+            return Date(timeIntervalSince1970: seconds)
         }
     }
 
