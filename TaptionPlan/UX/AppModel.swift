@@ -302,6 +302,7 @@ final class AppModel {
         subsystem: "com.taption.plan",
         category: "AutomaticRecords"
     )
+    private static let mapLocationReadingTimeout: TimeInterval = 3
 
     var selectedTab: RootTab = .schedule
     var selectedScale: TimeScale = .day
@@ -377,6 +378,7 @@ final class AppModel {
     private(set) var playingVoiceAttachmentID: UUID?
     private(set) var sensorAvailability: SensorHardwareAvailability?
     private(set) var latestSensorReading: SensorReading?
+    private var latestMapAnchorHydratedDay: Date?
     private(set) var liveRouteState: LiveRouteState = .empty
     private(set) var activeTrackingSession: TrackingSession?
     private(set) var trackingSessionWasRecovered = false
@@ -1825,18 +1827,23 @@ final class AppModel {
               let sensorService else {
             return
         }
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: .now)
+        guard latestMapAnchorHydratedDay != dayStart else { return }
         let span = TimelineAggregationEngine().interval(
             for: .day,
             containing: .now
         )
-        guard let readings = try? await sensorService.archivedReadings(in: span),
-              let latest = MapCurrentLocationAnchorPolicy.latestValidReading(
-                in: readings
-              ),
-              latestSensorReading != latest else {
+        guard let readings = try? await sensorService.archivedReadings(in: span) else {
             return
         }
-        latestSensorReading = latest
+        latestMapAnchorHydratedDay = dayStart
+        guard let latest = MapCurrentLocationAnchorPolicy.latestValidReading(
+            in: readings
+        ) else { return }
+        if latestSensorReading != latest {
+            latestSensorReading = latest
+        }
     }
 
     func sceneEnteredBackground() async {
@@ -2523,18 +2530,51 @@ final class AppModel {
         }
 
         let persistenceToken = sensorService.persistenceToken()
-        await enableLocationCollection(always: false)
-        if requiresFreshReading || MapCurrentLocationAnchorPolicy.latestValidReading(
-            in: [latestSensorReading].compactMap { $0 }
-        ) == nil {
+        let mapConfiguration = sensorCollectionConfiguration(
+            profile: settings.sensorCollectionProfile,
+            allowsBackgroundLocation: settings.backgroundPreciseLocationEnabled,
+            minimumEmissionInterval: requiresFreshReading ? 1 : nil
+        )
+        if settings.locationEnabled {
+            sensorService.startCollection(configuration: mapConfiguration)
+            isSensorCollecting = true
+            receiveSensorWake(.foregroundResume)
+            reconcileBackgroundSensorSession()
+        } else {
+            await enableLocationCollection(always: false)
+            if requiresFreshReading, settings.locationEnabled {
+                sensorService.startCollection(configuration: mapConfiguration)
+                isSensorCollecting = true
+            }
+        }
+        let cachedAnchor = MapCurrentLocationAnchorPolicy.latestValidReading(
+            in: [latestSensorReading, liveRouteState.readings.last]
+                .compactMap { $0 }
+        )
+        if cachedAnchor == nil {
+            await hydrateLatestMapLocationAnchor()
+        }
+        let hasAnchor = MapCurrentLocationAnchorPolicy.latestValidReading(
+            in: [latestSensorReading, liveRouteState.readings.last]
+                .compactMap { $0 }
+        ) != nil
+        if !hasAnchor {
             _ = await sensorService.waitForPersistedReading(
                 after: persistenceToken,
-                timeout: 12
+                timeout: Self.mapLocationReadingTimeout
             )
             await hydrateLatestMapLocationAnchor()
         }
+        if requiresFreshReading {
+            sensorService.startCollection(configuration: sensorCollectionConfiguration(
+                profile: settings.sensorCollectionProfile,
+                allowsBackgroundLocation:
+                    settings.backgroundPreciseLocationEnabled
+            ))
+        }
         return MapCurrentLocationAnchorPolicy.latestValidReading(
-            in: [latestSensorReading].compactMap { $0 }
+            in: [latestSensorReading, liveRouteState.readings.last]
+                .compactMap { $0 }
         ) != nil
     }
 
@@ -2847,14 +2887,17 @@ final class AppModel {
     }
 
     private func sensorCollectionConfiguration(
-        profile _: SensorCollectionProfile,
-        allowsBackgroundLocation: Bool
+        profile: SensorCollectionProfile,
+        allowsBackgroundLocation: Bool,
+        minimumEmissionInterval: TimeInterval? = nil
     ) -> SensorCollectionConfiguration {
         var configuration = SensorCollectionConfiguration.configured(
-            for: .accuracy,
+            for: profile,
             allowsBackgroundLocation: allowsBackgroundLocation
         )
-        configuration.minimumEmissionInterval = 1
+        if let minimumEmissionInterval {
+            configuration.minimumEmissionInterval = minimumEmissionInterval
+        }
         return configuration
     }
 
