@@ -266,3 +266,19 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - App Store Connect 처리 상태 `VALID` / `APP_STORE_ELIGIBLE`
 - `TP Taption Plan 내부 테스트` 그룹에 build 100 연결 및 그룹 builds 관계 노출 확인
 - 실기기 설치·실행·readback은 별도 게이트이며 Paid Apps Agreement·상품 생성·Sandbox 구매/복원은 `IAP73PAID1` 외부 게이트로 유지한다.
+
+## 2026-08-26 build 101 식당·수면·Dynamic Island 수정 TestFlight
+
+- 등록 식당 체류를 15분 이상일 때 `식사`로 자동 분류하고 여러 식당·수동 식사 기록을 보존한다.
+- 오늘 센서 원본을 전날 18:00부터 당일 12:00까지 다시 분석해 수면 결과를 갱신하고, 데이터가 부족하면 기존 결과를 보존한다.
+- 식당 위치 아이콘의 일반 사용자 지점 라벨을 식당으로 보정하고, Dynamic Island 파형 이동·평선·2px 스캔 효과를 반영했다.
+
+### 검증 및 배포
+
+- 전체 XCTest 성공(실패·스킵 0), iOS Simulator Debug build 성공
+- Release archive/export: `1.0 (101)`, Apple Distribution 서명, IPA SHA-256 `4a47982d8e89cd64ac58f0ade6c645abf4b450144c2b17af55a77e08349f572d`
+- TestFlight 업로드 성공: Delivery UUID `f8661c57-3157-41e3-9e86-dcb295ee3215`
+- App Store Connect 처리 상태 `VALID` / `APP_STORE_ELIGIBLE`, Apple ID `6797370230`
+- `TP Taption Plan 내부 테스트` 그룹에 build 101 연결 및 그룹 builds 관계 노출 확인
+- 기능 커밋 `2c1278d`, `origin/main` 푸시 확인
+- 실기기 설치·실행·readback은 별도 게이트이며 Paid Apps Agreement·상품 생성·Sandbox 구매/복원은 `IAP73PAID1` 외부 게이트로 유지한다.
