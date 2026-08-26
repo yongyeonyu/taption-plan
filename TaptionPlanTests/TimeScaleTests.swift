@@ -992,7 +992,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertLessThanOrEqual(handleX + hitSize.width / 2, totalWidth)
     }
 
-    func testSidebarHandleHitAreaAndWeatherStayInsideRailAtEdges() {
+    func testSidebarHandleHitAreaStaysInsideRailAtEdges() {
         let railHeight: CGFloat = 600
         let hitHeight: CGFloat = 66
         XCTAssertEqual(
@@ -1014,18 +1014,6 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertGreaterThan(MapHomeTimeSidebarMath.handleDragHitHeight, hitHeight)
         XCTAssertGreaterThan(MapHomeTimeSidebarMath.handleDragHitExpansion, 0)
 
-        let above = MapHomeTimeSidebarMath.compactWeatherFrame(
-            handleCenterX: 44,
-            handleCenterY: 200,
-            railHeight: railHeight
-        )
-        let flipped = MapHomeTimeSidebarMath.compactWeatherFrame(
-            handleCenterX: 44,
-            handleCenterY: 14,
-            railHeight: railHeight
-        )
-        XCTAssertEqual(200 - MapHomeTimeSidebarMath.handleVisualSize.height / 2 - above.maxY, 4)
-        XCTAssertEqual(flipped.minY - (14 + MapHomeTimeSidebarMath.handleVisualSize.height / 2), 4)
     }
 
     func testSectionTimelineDetailFrameKeepsTimeGutterClear() {
@@ -1435,6 +1423,41 @@ final class TimeScaleTests: XCTestCase {
             MapHomeWeatherBackgroundKind.resolve(isSelected: false, isCurrent: false),
             .normal
         )
+    }
+
+    func testMapHomeWeatherDisplayRequiresACompleteFetchedContext() {
+        let observedAt = makeDate(2026, 8, 23, 11)
+        let complete = WeatherContext(
+            observedAt: observedAt,
+            fetchedAt: observedAt,
+            isStale: false,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 26
+        )
+        XCTAssertTrue(MapHomeWeatherDisplayPolicy.isComplete(complete))
+
+        var notFetched = complete
+        notFetched.fetchedAt = nil
+        XCTAssertFalse(MapHomeWeatherDisplayPolicy.isComplete(notFetched))
+
+        var partial = complete
+        partial.symbolName = ""
+        XCTAssertFalse(MapHomeWeatherDisplayPolicy.isComplete(partial))
+
+        var stale = complete
+        stale.isStale = true
+        XCTAssertFalse(MapHomeWeatherDisplayPolicy.isComplete(stale))
+
+        var invalidAirQuality = complete
+        invalidAirQuality.airQuality = AirQualityContext(
+            pm10MicrogramsPerCubicMeter: .nan,
+            pm25MicrogramsPerCubicMeter: 12,
+            observedAt: observedAt,
+            providerName: "",
+            isFallback: false
+        )
+        XCTAssertFalse(MapHomeWeatherDisplayPolicy.isComplete(invalidAirQuality))
     }
 
     func testMapHomeWeatherKeepsThePreviousValueUntilTheNextObservation() throws {

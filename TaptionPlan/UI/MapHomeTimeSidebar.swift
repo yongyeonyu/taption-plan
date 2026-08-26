@@ -20,12 +20,25 @@ private func mapHomeAirQualityColor(_ weather: WeatherContext) -> Color {
     }
 }
 
-private func mapHomeWeatherAccessibilityLabel(_ weather: WeatherContext) -> String {
-    var label = "현재 날씨 \(weather.condition), \(Int(weather.temperatureCelsius.rounded()))도"
-    if let grade = weather.airQuality?.overallGrade {
-        label += ", 미세먼지 \(grade.displayName)"
+enum MapHomeWeatherDisplayPolicy {
+    static func isComplete(_ context: WeatherContext) -> Bool {
+        guard context.fetchedAt != nil,
+              context.isStale != true,
+              !context.condition.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !context.symbolName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              context.temperatureCelsius.isFinite else {
+            return false
+        }
+
+        if let airQuality = context.airQuality {
+            guard airQuality.pm10MicrogramsPerCubicMeter.isFinite,
+                  airQuality.pm25MicrogramsPerCubicMeter.isFinite,
+                  !airQuality.providerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return false
+            }
+        }
+        return true
     }
-    return label
 }
 
 enum MapHomeTimeSidebarDragProjection {
@@ -858,7 +871,6 @@ struct MapHomeTimeSidebar: View {
     let activity: MapHomeTimeSidebarActivity?
     let segments: [MapHomeTimeRailSegment]
     let categoryColors: [String: String]
-    let currentWeather: WeatherContext?
     let zoomResetToken: Int
     let zoomStepToken: Int
     let maximumSelectableMinute: Int?
@@ -898,7 +910,6 @@ struct MapHomeTimeSidebar: View {
         activity: MapHomeTimeSidebarActivity? = nil,
         segments: [MapHomeTimeRailSegment] = [],
         categoryColors: [String: String] = [:],
-        currentWeather: WeatherContext? = nil,
         zoomResetToken: Int = 0,
         zoomStepToken: Int = 0,
         railWidth: CGFloat = 58,
@@ -913,7 +924,6 @@ struct MapHomeTimeSidebar: View {
         self.activity = activity
         self.segments = segments
         self.categoryColors = categoryColors
-        self.currentWeather = currentWeather
         self.zoomResetToken = zoomResetToken
         self.zoomStepToken = zoomStepToken
         self.railWidth = max(58, railWidth)
@@ -1150,18 +1160,6 @@ struct MapHomeTimeSidebar: View {
                     visibleWindow: visibleWindow
                 )
 
-                if let currentWeather {
-                    compactWeather(
-                        currentWeather,
-                        handleCenterX: MapHomeTimeSidebarMath.handleCenterX(
-                            trackX: trackX,
-                            activeRailWidth: activeRailWidth
-                        ),
-                        handleCenterY: selectedY,
-                        railHeight: railHeight
-                    )
-                }
-
             }
             .frame(width: totalWidth, height: railHeight)
             .coordinateSpace(name: "mapHomeTimeSidebarRail")
@@ -1337,44 +1335,6 @@ struct MapHomeTimeSidebar: View {
         }
         .frame(width: totalWidth, height: railHeight)
         .zIndex(3)
-    }
-
-    private func compactWeather(
-        _ weather: WeatherContext,
-        handleCenterX: CGFloat,
-        handleCenterY: CGFloat,
-        railHeight: CGFloat
-    ) -> some View {
-        let frame = MapHomeTimeSidebarMath.compactWeatherFrame(
-            handleCenterX: handleCenterX,
-            handleCenterY: handleCenterY,
-            railHeight: railHeight
-        )
-        return HStack(spacing: 2) {
-            Image(systemName: weather.symbolName)
-                .font(.system(size: 12, weight: .semibold))
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(
-                    mapHomeWeatherSymbolColor(weather, component: .primary),
-                    mapHomeWeatherSymbolColor(weather, component: .secondary)
-                )
-            Text("\(Int(weather.temperatureCelsius.rounded()))°C")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .monospacedDigit()
-        }
-        .foregroundStyle(mapHomeAirQualityColor(weather))
-        .frame(width: frame.width, height: frame.height)
-        .background(Color.white.opacity(0.92), in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(Color.tpReferenceRose, lineWidth: 1.5)
-        }
-        .position(x: frame.midX, y: frame.midY)
-        .allowsHitTesting(false)
-        .zIndex(4)
-        .accessibilityLabel(
-            mapHomeWeatherAccessibilityLabel(weather)
-        )
     }
 
     private func categoryColorHex(_ id: String) -> String {
@@ -1779,7 +1739,7 @@ struct MapHomeWeatherSidebar: View {
         let dayStart = calendar.startOfDay(for: date)
         return MapHomeWeatherTimelineMath.persistentSpans(
             for: date,
-            contexts: contexts,
+            contexts: contexts.filter(MapHomeWeatherDisplayPolicy.isComplete),
             calendar: calendar
         ).compactMap { entry in
             let start = entry.span.start
@@ -1824,8 +1784,6 @@ enum MapHomeTimeSidebarMath {
     static let activeRailWidth: CGFloat = 12
     static let handleVisualSize = CGSize(width: 44, height: 44)
     static let handleRailGap: CGFloat = 4
-    static let compactWeatherSize = CGSize(width: 56, height: 28)
-    static let compactWeatherGap: CGFloat = 4
 
     static func totalWidth(railWidth: CGFloat) -> CGFloat {
         handleLaneWidth + railWidth
@@ -1853,26 +1811,6 @@ enum MapHomeTimeSidebarMath {
         hitHeight: CGFloat
     ) -> CGFloat {
         min(max(handleCenterY, hitHeight / 2), railHeight - hitHeight / 2)
-    }
-
-    static func compactWeatherFrame(
-        handleCenterX: CGFloat,
-        handleCenterY: CGFloat,
-        railHeight: CGFloat
-    ) -> CGRect {
-        let offset = handleVisualSize.height / 2
-            + compactWeatherGap
-            + compactWeatherSize.height / 2
-        let preferredCenterY = handleCenterY - offset
-        let centerY = preferredCenterY - compactWeatherSize.height / 2 >= 0
-            ? preferredCenterY
-            : min(railHeight - compactWeatherSize.height / 2, handleCenterY + offset)
-        return CGRect(
-            x: handleCenterX - compactWeatherSize.width / 2,
-            y: centerY - compactWeatherSize.height / 2,
-            width: compactWeatherSize.width,
-            height: compactWeatherSize.height
-        )
     }
 
     static func handleDoubleTapHitSize(

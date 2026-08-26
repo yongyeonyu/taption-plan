@@ -2424,11 +2424,6 @@ struct MapHomeView: View {
                         activity: currentActivity(at: minute),
                         segments: timeRailSegments,
                         categoryColors: model.settings.mapCategoryColors,
-                        // Keep the compact current-weather chip on the left
-                        // handle even when the full weather rail is visible.
-                        // The rail provides the forecast context; the handle
-                        // remains the selected-time/current-condition anchor.
-                        currentWeather: weatherContext(at: minute),
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: timeSidebarZoomStep,
                         railWidth: Layout.timeRailWidth,
@@ -3667,20 +3662,6 @@ struct MapHomeView: View {
         )?.point
         guard let point, isValid(point) else { return nil }
         return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
-    }
-
-    private func weatherContext(at minute: Int) -> WeatherContext? {
-        let calendar = Calendar.autoupdatingCurrent
-        let clampedMinute = min(max(minute, 0), MapHomeTimeSidebarMath.fullDayMinutes - 1)
-        guard let date = calendar.date(
-            byAdding: .minute,
-            value: clampedMinute,
-            to: calendar.startOfDay(for: model.selectedDate)
-        ) else { return nil }
-        return MapHomeWeatherTimelineMath.context(
-            at: date,
-            contexts: model.snapshot.weather
-        )
     }
 
     private func currentActivity(at minute: Int) -> MapHomeTimeSidebarActivity {

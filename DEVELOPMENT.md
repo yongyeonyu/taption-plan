@@ -228,3 +228,10 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `TP Taption Plan 내부 테스트` 그룹에 build 97 연결, builds 관계에서 build 97 노출 확인
 - 실기기 설치·실행·readback은 별도 게이트이며, 다른 앱의 센서 사용 감지는 iOS 공개 API 제한으로 추정하지 않는다.
 - Paid Apps Agreement·세금/은행 정보·실제 `com.taption.plan.pro` 상품과 Sandbox 구매·복원은 `IAP73PAID1` 외부 게이트로 유지한다.
+
+## 2026-08-26 WXHIDE97A1 날씨 카드 완성 스냅샷 게이트
+
+- 시간 레일 핸들 왼쪽에 붙던 compact 날씨 케이스를 제거했다.
+- 날씨 카드는 수집 시각·비 stale 상태·조건·심볼·유한 온도가 모두 준비된 스냅샷만 표시한다. 미세먼지 응답이 포함된 경우 PM10·PM2.5·제공자도 유효해야 하며, 부분 응답은 카드 전체를 숨긴다.
+- `TimeScaleTests` 111/111 통과, iOS Simulator Debug build 성공.
+- build 97에는 포함되지 않은 소스 수정이며, 다음 TestFlight 배포 시 build 번호를 올려야 한다.
