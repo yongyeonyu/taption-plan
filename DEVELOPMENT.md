@@ -297,3 +297,25 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `TP Taption Plan 내부 테스트` 그룹에 build 102 연결 및 그룹 builds 관계 노출 확인
 - 기능 커밋 `16d864b`, `origin/main` 푸시 확인
 - 실기기 설치·실행·readback은 별도 게이트이며 Paid Apps Agreement·상품 생성·Sandbox 구매/복원은 `IAP73PAID1` 외부 게이트로 유지한다.
+
+## 2026-08-27 Dynamic Island 앱 아이콘·재생 경로 마무리
+
+- `SensorCollectionLiveActivity`의 Dynamic Island 확장형 leading 영역에 `SensorCollectionAppIcon`을 연결했다.
+- compact leading은 센서 수집 중 항상 앱 아이콘을 렌더링하고 비수집 상태에는 고정된 투명 프레임을 사용해 회색 플레이스홀더가 나타나지 않게 했다. compact trailing 심박 HUD의 기존 10초 표시 정책은 유지한다.
+- 위젯 전용 `SensorCollectionAppIcon` 리소스가 `Assets.car`에 포함되는 것을 확인했다.
+- 재생 시작 시 기존 경로 투영을 비우고 원본 센서 읽기를 다시 준비하며, 재생 중 플레이헤드가 이동할 때마다 경로·현재 위치를 갱신해 시간에 따라 경로가 생성되도록 했다. 경로 절단 시각은 선택된 플레이헤드를 상한으로 사용한다.
+
+### 검증 및 설치
+
+- `git diff --check`: 통과
+- `TaptionPlanWidget` Debug 시뮬레이터 빌드: 성공
+- 서명된 iPhone Debug 빌드: `1.0 (102)` 성공
+- 연결된 iPhone 14 Pro(`C44AF739-127D-572D-AD83-417C7E879045`)에 `com.taption.plan` 설치·실행 성공
+- `origin/main` 푸시 커밋: `5bcd766 fix: show app icon in sensor live activity`
+- 실기기 앱 설치·실행은 확인했지만 Dynamic Island 확장/축소 터치와 센서 실시간 렌더링은 별도 수동 게이트로 남긴다.
+
+### 저장소 정리
+
+- 이번 작업에서 생성한 실기기 빌드 산출물과 오래된 Taption Plan DerivedData·임시 테스트 캐시를 삭제했다.
+- 테스트 결과·릴리스 아카이브·시각 QA 증거와 다른 프로젝트가 공유하는 시뮬레이터 데이터는 보존했다.
+- 현재 Git 워크트리는 clean이며 `main`과 `origin/main`이 일치한다.
