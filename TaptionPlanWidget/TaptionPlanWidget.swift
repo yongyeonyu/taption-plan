@@ -2292,6 +2292,7 @@ private struct SensorCollectionCompactSensorIcon: View {
             if state.isCollecting,
                state.sensorHUDUntil.map({ timeline.date < $0 }) == true {
                 Image("SensorCollectionAppIcon")
+                    .renderingMode(.original)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 18, height: 18)
@@ -2362,6 +2363,7 @@ private struct SensorCollectionLockScreenView: View {
 private struct SensorCollectionAppIcon: View {
     var body: some View {
         Image("SensorCollectionAppIcon")
+            .renderingMode(.original)
             .resizable()
             .scaledToFit()
             .clipShape(

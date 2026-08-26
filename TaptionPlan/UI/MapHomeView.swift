@@ -5,6 +5,11 @@ import SwiftUI
 import UIKit
 import TaptionPlanCore
 
+enum RouteMapLineStyle {
+    static let lineWidth: CGFloat = 3
+    static let minimumOpacity: Double = 0.72
+}
+
 enum MapHomeCompassControlState: Equatable, Sendable {
     case directionArrow
     case compass
@@ -682,6 +687,16 @@ enum MapHomeDayPlaybackMath {
             }
         }
         return min(1_440, max(0, minute))
+    }
+}
+
+enum MapHomeRouteOverlayCutoffPolicy {
+    static func cutoff(
+        selectedDayEnd: Date,
+        timelineDate: Date,
+        isPlaybackRunning: Bool
+    ) -> Date {
+        isPlaybackRunning ? selectedDayEnd : timelineDate
     }
 }
 
@@ -1528,13 +1543,12 @@ struct MapHomeView: View {
                 if !overlay.estimated {
                     MapPolyline(coordinates: overlay.coordinates)
                         .stroke(
-                            mapCategoryColor("movement").opacity(0.20),
-                            style: StrokeStyle(lineWidth: 9, lineCap: .round, lineJoin: .round)
-                        )
-                    MapPolyline(coordinates: overlay.coordinates)
-                        .stroke(
-                            mapCategoryColor("movement").opacity(0.92),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+                            mapCategoryColor("movement"),
+                            style: StrokeStyle(
+                                lineWidth: RouteMapLineStyle.lineWidth,
+                                lineCap: .round,
+                                lineJoin: .round
+                            )
                         )
                 }
             }
@@ -1543,14 +1557,12 @@ struct MapHomeView: View {
                 MapPolyline(coordinates: overlay.coordinates)
                     .stroke(
                         timelineRouteColor(overlay)
-                            .opacity(overlay.opacity * 0.20),
-                        style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round)
-                    )
-                MapPolyline(coordinates: overlay.coordinates)
-                    .stroke(
-                        timelineRouteColor(overlay)
-                            .opacity(overlay.opacity),
-                        style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+                            .opacity(max(overlay.opacity, RouteMapLineStyle.minimumOpacity)),
+                        style: StrokeStyle(
+                            lineWidth: RouteMapLineStyle.lineWidth,
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
                     )
             }
 
@@ -1717,7 +1729,7 @@ struct MapHomeView: View {
             .onChange(of: selectedTimelineMinute) { _, minute in
                 if isTimelineInteractionActive || isDayPlaybackRunning {
                     let point = refreshHistoricalPlaybackPoint()
-                    if isDayPlaybackRunning, let point {
+                    if let point {
                         focusMap(on: point, using: proxy, followsTracking: true)
                     }
                 } else {
@@ -1778,7 +1790,12 @@ struct MapHomeView: View {
     private var mapStyle: MapStyle {
         switch model.settings.mapDisplayStyle {
         case .standard:
-            .standard(elevation: .realistic)
+            .standard(
+                elevation: .flat,
+                emphasis: .muted,
+                pointsOfInterest: .excludingAll,
+                showsTraffic: false
+            )
         case .simplified:
             .standard(
                 elevation: .flat,
@@ -3248,7 +3265,7 @@ struct MapHomeView: View {
         guard let kind = destination.placeKind,
               let place = model.settings.frequentPlaces.first(where: { $0.kind == kind })
         else {
-            return language.text("설정 준비 중", "Setting up")
+            return language.text("현재 위치로 설정", "Set from current location")
         }
         if place.point != nil {
             return language.text("설정됨", "Set") + " · Lv.\(place.floor ?? 1)"
@@ -4383,11 +4400,20 @@ struct MapHomeView: View {
         if isTimelineInteractionActive, let routeProjection {
             return routeProjection.cutoff
         }
-        return clampedTimelineDate(
+        let timelineDate = clampedTimelineDate(
             RouteTimelineDataEngine.timelineDate(
                 selectedDate: model.selectedDate,
                 minute: effectiveTimelineMinute
             )
+        )
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        return MapHomeRouteOverlayCutoffPolicy.cutoff(
+            selectedDayEnd: dayEnd,
+            timelineDate: timelineDate,
+            isPlaybackRunning: isDayPlaybackRunning
         )
     }
 
@@ -4446,9 +4472,17 @@ struct MapHomeView: View {
                 calendar: calendar
             )
         )
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let projectionDate = MapHomeRouteOverlayCutoffPolicy.cutoff(
+            selectedDayEnd: dayEnd,
+            timelineDate: timelineDate,
+            isPlaybackRunning: isDayPlaybackRunning
+        )
         let next = RouteTimelineDataEngine.project(
             selectedDate: model.selectedDate,
-            through: timelineDate,
+            through: projectionDate,
             selectedSpan: isDayPlaybackRunning ? nil : timelineSelectionSpan,
             actuals: model.snapshot.actuals,
             travel: model.snapshot.travel,
@@ -5113,6 +5147,21 @@ private struct MapHomeSectionEditSelection: Identifiable {
 
 }
 
+enum MapHomeSectionEditLayout {
+    static let boundaryHandleHeight: CGFloat = 8
+
+    static func handleCenterY(
+        boundaryY: CGFloat,
+        frameHeight: CGFloat
+    ) -> CGFloat {
+        let halfHeight = boundaryHandleHeight / 2
+        return min(
+            max(halfHeight, boundaryY + halfHeight),
+            max(halfHeight, frameHeight - halfHeight)
+        )
+    }
+}
+
 struct MapHomeSectionViewportState: Hashable {
     var startMinute: Int
     var durationMinutes: Int
@@ -5572,44 +5621,53 @@ private struct MapHomeSectionEditSheet: View {
         )
     }
 
+    private var editHeader: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Text(language.text("닫기", "Close"))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpReferenceRose)
+                    .padding(.horizontal, 15)
+                    .frame(minHeight: 38)
+                    .background(
+                        Color.tpReferenceRose.opacity(0.10),
+                        in: Capsule()
+                    )
+            }
+            .buttonStyle(.plain)
+            Spacer()
+            Text(language.text("행동 구간 편집", "Edit activity section"))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer()
+            Button {
+                save()
+            } label: {
+                Text(language.text("저장", "Save"))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 15)
+                    .frame(minHeight: 38)
+                    .background(
+                        Color.tpReferenceBlue,
+                        in: Capsule()
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(isSaving || startMinute >= endMinute)
+            .opacity(isSaving || startMinute >= endMinute ? 0.45 : 1)
+        }
+        .frame(minHeight: 44)
+        .background(Color.tpBackground)
+        .zIndex(1)
+    }
+
     var body: some View {
         VStack(spacing: 14) {
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Text(language.text("닫기", "Close"))
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.tpReferenceRose)
-                        .padding(.horizontal, 15)
-                        .frame(minHeight: 38)
-                        .background(
-                            Color.tpReferenceRose.opacity(0.10),
-                            in: Capsule()
-                        )
-                }
-                .buttonStyle(.plain)
-                Spacer()
-                Text(language.text("행동 구간 편집", "Edit activity section"))
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                Spacer()
-                Button {
-                    save()
-                } label: {
-                    Text(language.text("저장", "Save"))
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 15)
-                        .frame(minHeight: 38)
-                        .background(
-                            Color.tpReferenceBlue,
-                            in: Capsule()
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(isSaving || startMinute >= endMinute)
-                .opacity(isSaving || startMinute >= endMinute ? 0.45 : 1)
-            }
+            editHeader
 
             HStack(spacing: 10) {
                 timeControl(
@@ -5704,6 +5762,8 @@ private struct MapHomeSectionEditSheet: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             }
+            .padding(.horizontal, 6)
+            .padding(.bottom, 6)
 
             HStack {
                 Text(language.text("상세 활동", "Detailed activities"))
@@ -6128,11 +6188,20 @@ private struct MapHomeSectionEditSheet: View {
         Capsule()
             .fill(Color.white)
             .overlay(Capsule().stroke(Color.tpInk.opacity(0.25), lineWidth: 1))
-            .frame(width: width - 20, height: 8)
+            .frame(
+                width: width - 20,
+                height: MapHomeSectionEditLayout.boundaryHandleHeight
+            )
             .contentShape(Rectangle().inset(by: -12))
             .position(
                 x: x + width / 2,
-                y: yPosition(isStart ? startMinute : endMinute, height: height)
+                y: MapHomeSectionEditLayout.handleCenterY(
+                    boundaryY: yPosition(
+                        isStart ? startMinute : endMinute,
+                        height: height
+                    ),
+                    frameHeight: height
+                )
             )
             .highPriorityGesture(
                 boundaryDragGesture(isStart: isStart, trackHeight: height)

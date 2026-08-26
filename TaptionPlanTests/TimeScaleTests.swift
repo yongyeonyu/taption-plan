@@ -2749,6 +2749,28 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 30), 1_440)
     }
 
+    func testMapHomePlaybackKeepsFullDayRouteWhilePlaying() {
+        let dayEnd = makeDate(2026, 8, 26).addingTimeInterval(24 * 60 * 60)
+        let playhead = makeDate(2026, 8, 26, 9)
+
+        XCTAssertEqual(
+            MapHomeRouteOverlayCutoffPolicy.cutoff(
+                selectedDayEnd: dayEnd,
+                timelineDate: playhead,
+                isPlaybackRunning: true
+            ),
+            dayEnd
+        )
+        XCTAssertEqual(
+            MapHomeRouteOverlayCutoffPolicy.cutoff(
+                selectedDayEnd: dayEnd,
+                timelineDate: playhead,
+                isPlaybackRunning: false
+            ),
+            playhead
+        )
+    }
+
     func testMapHomeDayPlaybackUsesQuarterSpeedOnlyInsideMovement() {
         let ranges = [
             MapHomePlaybackMovementRange(startMinute: 60, endMinute: 120)
@@ -2885,6 +2907,30 @@ final class TimeScaleTests: XCTestCase {
                 currentUptime: 10.001,
                 isFinal: true
             )
+        )
+    }
+
+    func testMapHomeSectionEditHandlesSitOnTheLowerBoundaryEdge() {
+        XCTAssertEqual(
+            MapHomeSectionEditLayout.handleCenterY(
+                boundaryY: 120,
+                frameHeight: 600
+            ),
+            124
+        )
+        XCTAssertEqual(
+            MapHomeSectionEditLayout.handleCenterY(
+                boundaryY: 600,
+                frameHeight: 600
+            ),
+            596
+        )
+        XCTAssertEqual(
+            MapHomeSectionEditLayout.handleCenterY(
+                boundaryY: 0,
+                frameHeight: 600
+            ),
+            4
         )
     }
 

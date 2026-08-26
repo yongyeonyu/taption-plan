@@ -1281,10 +1281,12 @@ struct InferenceDetailView: View {
                             MapPolyline(coordinates: coordinates)
                                 .stroke(
                                     group.mode.routeColor.opacity(
-                                        selectedGroupID == group.id ? 1 : 0.42
+                                        selectedGroupID == group.id
+                                            ? 1
+                                            : RouteMapLineStyle.minimumOpacity
                                     ),
                                     style: StrokeStyle(
-                                        lineWidth: selectedGroupID == group.id ? 5 : 3,
+                                        lineWidth: RouteMapLineStyle.lineWidth,
                                         lineCap: .round,
                                         lineJoin: .round
                                     )

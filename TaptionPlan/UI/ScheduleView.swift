@@ -3867,44 +3867,19 @@ private struct TimelineDetailPanel: View {
                             .tint(Color.tpNow)
                     }
 
-                    // 기간 전체의 지난 경로를 먼저 옅게 깔고, 고른 구간을
-                    // 그 위에 진하게 얹는다. 순서가 바뀌면 강조가 배경에
-                    // 묻힌다.
                     ForEach(dimmedRouteSegments) { segment in
                         let coordinates = coordinates(for: segment)
                         if coordinates.count >= 2 {
                             MapPolyline(coordinates: coordinates)
                                 .stroke(
                                     routeColor(for: segment.mode)
-                                        .opacity(dimmedRouteOpacity),
+                                        .opacity(RouteMapLineStyle.minimumOpacity),
                                     style: StrokeStyle(
-                                        lineWidth: dimmedRouteWidth,
+                                        lineWidth: RouteMapLineStyle.lineWidth,
                                         lineCap: .round,
                                         lineJoin: .round
                                     )
                                 )
-                        }
-                    }
-
-                    // 옅은 경로 위를 나란히 지나가도 구분되도록 강조 선
-                    // 아래에 흰 테두리를 한 겹 깐다. 지도는 그린 차례가
-                    // 아니라 겹 층으로 위아래를 정하므로, 테두리는 아래
-                    // 층에 두고 강조 선만 글자 위 층으로 올린다. 층을
-                    // 나누지 않으면 테두리가 강조 색을 덮어 선이 하얗게
-                    // 보인다.
-                    ForEach(haloedRouteSegments) { segment in
-                        let coordinates = coordinates(for: segment)
-                        if coordinates.count >= 2 {
-                            MapPolyline(coordinates: coordinates)
-                                .stroke(
-                                    Color.white.opacity(0.9),
-                                    style: StrokeStyle(
-                                        lineWidth: highlightedRouteWidth + 3,
-                                        lineCap: .round,
-                                        lineJoin: .round
-                                    )
-                                )
-                                .mapOverlayLevel(level: .aboveRoads)
                         }
                     }
 
@@ -3916,12 +3891,12 @@ private struct TimelineDetailPanel: View {
                             MapPolyline(coordinates: coordinates)
                                 .stroke(
                                     routeColor(for: segment.mode).opacity(
-                                        isHighlighted ? 1 : 0.44
+                                        isHighlighted
+                                            ? 1
+                                            : RouteMapLineStyle.minimumOpacity
                                     ),
                                     style: StrokeStyle(
-                                        lineWidth: isHighlighted
-                                            ? highlightedRouteWidth
-                                            : 2.5,
+                                        lineWidth: RouteMapLineStyle.lineWidth,
                                         lineCap: .round,
                                         lineJoin: .round
                                     )
@@ -3937,9 +3912,9 @@ private struct TimelineDetailPanel: View {
                        displayedRouteCoordinates.count >= 2 {
                         MapPolyline(coordinates: displayedRouteCoordinates)
                             .stroke(
-                                Color.tpTransitDark.opacity(0.72),
+                                Color.tpTransitDark.opacity(RouteMapLineStyle.minimumOpacity),
                                 style: StrokeStyle(
-                                    lineWidth: 3,
+                                    lineWidth: RouteMapLineStyle.lineWidth,
                                     lineCap: .round,
                                     lineJoin: .round
                                 )
@@ -3947,8 +3922,12 @@ private struct TimelineDetailPanel: View {
                     } else if shouldDrawFallbackRoutePath {
                         MapPolyline(coordinates: fallbackRouteCoordinates)
                             .stroke(
-                                Color.tpTransitDark.opacity(0.45),
-                                style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round)
+                                Color.tpTransitDark.opacity(RouteMapLineStyle.minimumOpacity),
+                                style: StrokeStyle(
+                                    lineWidth: RouteMapLineStyle.lineWidth,
+                                    lineCap: .round,
+                                    lineJoin: .round
+                                )
                             )
                     }
                     if let selected = selectedSegment {
@@ -5572,12 +5551,6 @@ private struct TimelineDetailPanel: View {
     }
 
     private var routeMapHeight: CGFloat { 216 }
-    /// 배경 경로는 읽히되 눈을 끌지 않아야 한다. Apple 지도 바탕색 위에서
-    /// 0.22까지 내리면 아예 보이지 않아 0.45로 잡았다. 강조 선은 진하기
-    /// 2.2배, 굵기 1.5배에 흰 테두리까지 둘러 한눈에 갈린다.
-    private var dimmedRouteOpacity: Double { 0.45 }
-    private var dimmedRouteWidth: CGFloat { 3 }
-    private var highlightedRouteWidth: CGFloat { 4.5 }
 
     /// 지도에 함께 깔 기간. 시간표가 보여 주는 기간과 같다.
     private var routeContextSpan: TimeSpan? {
@@ -5611,12 +5584,6 @@ private struct TimelineDetailPanel: View {
 
     private var hasDimmedRoutes: Bool {
         !dimmedRouteSegments.isEmpty
-    }
-
-    /// 흰 테두리를 두를 구간. 배경 경로가 없으면 두를 이유도 없다.
-    private var haloedRouteSegments: [TravelSegment] {
-        guard hasDimmedRoutes else { return [] }
-        return routeSegments.filter { selectedSegmentIDs.contains($0.id) }
     }
 
     private var routePeriodName: String? {

@@ -6430,10 +6430,7 @@ final class AppModel {
             readings: [reading]
         )
         updateFloorEstimate(with: reading)
-        Task {
-            await persist()
-            await refreshSensorTimeline(containing: selectedDate)
-        }
+        scheduleFrequentPlaceDerivedRefresh()
     }
 
     func setFrequentPlaceLocation(
@@ -6461,10 +6458,7 @@ final class AppModel {
             AppFeatureSettings.mergedFrequentPlaces(
                 snapshot.settings.frequentPlaces
             )
-        Task {
-            await persist()
-            await refreshSensorTimeline(containing: selectedDate)
-        }
+        scheduleFrequentPlaceDerivedRefresh()
     }
 
     func clearFrequentPlaceLocation(_ placeID: UUID) {
@@ -6483,9 +6477,55 @@ final class AppModel {
         } else {
             latestAltitudeEstimate = nil
         }
+        scheduleFrequentPlaceDerivedRefresh()
+    }
+
+    /// 장소 기준점이 바뀌면 기존 파생 기록을 같은 원본 센서 구간으로
+    /// 다시 판정하고, 계산 결과까지 저장해 다음 화면·기기에서도 즉시 쓴다.
+    private func scheduleFrequentPlaceDerivedRefresh() {
+        let affectedDate = selectedDate
+        unlockDerivedClassifications(for: affectedDate)
+        liveMergeCacheKey = nil
+        liveMergeCacheValue.removeAll(keepingCapacity: true)
+        sensorRefreshFingerprints.removeAll()
         Task {
+            await refreshSensorTimeline(containing: affectedDate)
             await persist()
-            await refreshSensorTimeline(containing: selectedDate)
+        }
+    }
+
+    private func unlockDerivedClassifications(for date: Date) {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let daySpan = TimeSpan(start: dayStart, end: dayEnd)
+        let sleepSpan = SleepAnalysisEngine.overnightSpan(
+            containing: date,
+            calendar: calendar
+        )
+        let affects: (TimeSpan) -> Bool = { candidate in
+            candidate.intersection(with: daySpan) != nil
+                || candidate.intersection(with: sleepSpan) != nil
+        }
+        snapshot.actuals = snapshot.actuals.map { actual in
+            guard actual.source.usesAutomaticClassification,
+                  !actual.manuallyCorrected,
+                  affects(actual.span(asOf: max(dayEnd, sleepSpan.end))) else {
+                return actual
+            }
+            var value = actual
+            value.isClassificationLocked = false
+            return value
+        }
+        snapshot.travel = snapshot.travel.map { segment in
+            guard !segment.isConfirmed,
+                  affects(segment.span) else {
+                return segment
+            }
+            var value = segment
+            value.isClassificationLocked = false
+            return value
         }
     }
 
