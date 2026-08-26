@@ -282,3 +282,18 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `TP Taption Plan 내부 테스트` 그룹에 build 101 연결 및 그룹 builds 관계 노출 확인
 - 기능 커밋 `2c1278d`, `origin/main` 푸시 확인
 - 실기기 설치·실행·readback은 별도 게이트이며 Paid Apps Agreement·상품 생성·Sandbox 구매/복원은 `IAP73PAID1` 외부 게이트로 유지한다.
+
+## 2026-08-26 build 102 센서 상태 미터·Dynamic Island 파형 TestFlight
+
+- 센서별 최근 10개 수집 상태를 누적 미터로 표시하고 수집·지연·대기 상태를 구분한다.
+- Dynamic Island 확장 영역 전체에 무노이즈 파형과 1초 스캔 효과를 적용하고 센서 저장 시 펄스를 반영한다.
+
+### 검증 및 배포
+
+- 센서 미터·상태·1초 파형 주기 XCTest 3건 통과, generic iOS Release archive 컴파일 통과
+- Release archive/export: `1.0 (102)`, Apple Distribution 서명, IPA SHA-256 `47d417a4d51758f514c105ab3a3ec7ff578370ac052d91cf3dd195a616de0ee9`
+- TestFlight 업로드 성공: Delivery UUID `9bec24ce-e0da-4868-8398-5c75e8b3421b`
+- App Store Connect 처리 상태 `VALID` / `APP_STORE_ELIGIBLE`, Apple ID `6797370230`
+- `TP Taption Plan 내부 테스트` 그룹에 build 102 연결 및 그룹 builds 관계 노출 확인
+- 기능 커밋 `16d864b`, `origin/main` 푸시 확인
+- 실기기 설치·실행·readback은 별도 게이트이며 Paid Apps Agreement·상품 생성·Sandbox 구매/복원은 `IAP73PAID1` 외부 게이트로 유지한다.
