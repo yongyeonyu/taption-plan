@@ -243,3 +243,9 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - App Store Connect 처리 상태: `VALID` / `APP_STORE_ELIGIBLE`
 - `TP Taption Plan 내부 테스트` 그룹 연결 및 그룹 빌드 목록에서 build 98 노출 확인
 - 실기기 설치·실행·readback은 별도 게이트로 남긴다.
+
+## 2026-08-26 build 99 센서·메뉴·백업 게이트 TestFlight
+
+- Release archive/export: `1.0 (99)`, IPA SHA-256 `6701314b618ac7c452e60f1ab285b163a07dad8697df771c4bd35921acb44dde`
+- TestFlight 업로드·처리 상태 `VALID` 확인, `TP Taption Plan 내부 테스트` 그룹 연결 및 build 99 노출 확인
+- GPS 주기 설정 저장·수집 주기 동기화, 미세먼지 기반 날씨 색상·사용자 팔레트·백업 최근 날짜·메뉴 축소를 포함한다.

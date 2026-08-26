@@ -29,14 +29,14 @@ Taption Plan 작업을 이어간다. 작업 디렉터리는 `/Users/u_mo_c/Docum
 
 - 전체 XCTest 695/695, 실패·스킵 0; `TaptionPlanCore` 28/28, `TaptionActivityEngine` 4/4, `TaptionRouteEngine` 11/11, 어댑터 Swift 테스트 10/10
 - iOS Simulator Debug build와 Release archive/export 통과
-- 최신 TestFlight build 98은 IPA 검증·업로드·처리 완료(`VALID`, `APP_STORE_ELIGIBLE`) 후 `TP Taption Plan 내부 테스트` 그룹 연결·그룹 빌드 목록 노출까지 확인했다. Delivery UUID `e5c531e6-6f53-41ab-b6e7-982e73a626c6`.
+- 최신 TestFlight build 99는 IPA 검증·업로드·처리 완료(`VALID`) 후 `TP Taption Plan 내부 테스트` 그룹 연결·그룹 빌드 목록 노출까지 확인했다. Delivery UUID `22454381-4382-4101-93e3-333d1cc0f5f4`.
 - 실기기 설치·실행·readback은 아직 별도 게이트이며, 마지막 확인된 기기 기록은 `1.0 (95)`이다.
 - `git diff --check` 통과
-- 최신 날씨 게이트 수정은 TestFlight build 98에 포함됐다. 실기기 설치·실행·readback은 별도 게이트다.
+- 최신 센서·메뉴·백업·날씨 게이트 수정은 TestFlight build 99에 포함됐다. 실기기 설치·실행·readback은 별도 게이트다.
 
 다음 확인 항목:
 
-1. build 98을 연결된 iPhone에 설치·실행하고 버전/readback 및 실제 터치 화면을 확인한다.
+1. build 99를 연결된 iPhone에 설치·실행하고 버전/readback 및 실제 터치 화면을 확인한다.
 2. 현재 위치 지연, 지도 핀치·드래그, 졸라맨 중앙 고정·흔들림, 사이드바 핸들을 확인한다.
 3. 오늘 수면·지하철 분류와 선로 경로, Dynamic Island 우측 파형·15분·1분·1초 경계를 실기기에서 확인한다.
 4. `IAP73PAID1`은 Paid Apps Agreement·세금/은행·상품 연결·Sandbox 구매/복원 전까지 완료 처리하지 않는다.
