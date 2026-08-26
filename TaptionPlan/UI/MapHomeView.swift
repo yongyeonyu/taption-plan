@@ -696,7 +696,9 @@ enum MapHomeRouteOverlayCutoffPolicy {
         timelineDate: Date,
         isPlaybackRunning: Bool
     ) -> Date {
-        isPlaybackRunning ? selectedDayEnd : timelineDate
+        // Playback grows the displayed route up to the current playhead.  The
+        // day end remains the hard upper bound for a malformed/future date.
+        min(selectedDayEnd, timelineDate)
     }
 }
 
@@ -2280,13 +2282,17 @@ struct MapHomeView: View {
         }
         var currentMinute = Double(selectedTimelineMinute ?? 0)
         let movingRanges = dayPlaybackMovementRanges
-        isTimelineSelectionPinned = true
-        isTimelineInteractionActive = true
-        isDayPlaybackRunning = true
-        refreshRouteProjection()
         if currentMinute == 0 {
             selectedTimelineMinute = 0
         }
+        isTimelineSelectionPinned = true
+        isTimelineInteractionActive = true
+        isDayPlaybackRunning = true
+        mapRenderCache.invalidateRouteData()
+        routeProjection = nil
+        timelineRouteOverlays = []
+        prepareRouteProjectionReadings()
+        refreshRouteProjection()
         refreshHistoricalPlaybackPoint()
         var lastUptime = ProcessInfo.processInfo.systemUptime
         dayPlaybackTask = Task { @MainActor in
@@ -2318,6 +2324,8 @@ struct MapHomeView: View {
                 if selectedTimelineMinute != minute {
                     selectedTimelineMinute = minute
                 }
+                refreshRouteProjection()
+                refreshHistoricalPlaybackPoint()
                 guard currentMinute < Double(
                     MapHomeTimeSidebarMath.fullDayMinutes
                 ) else {

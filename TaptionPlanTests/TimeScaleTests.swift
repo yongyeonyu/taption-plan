@@ -2749,7 +2749,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 30), 1_440)
     }
 
-    func testMapHomePlaybackKeepsFullDayRouteWhilePlaying() {
+    func testMapHomePlaybackRouteFollowsPlayheadWhilePlaying() {
         let dayEnd = makeDate(2026, 8, 26).addingTimeInterval(24 * 60 * 60)
         let playhead = makeDate(2026, 8, 26, 9)
 
@@ -2759,7 +2759,7 @@ final class TimeScaleTests: XCTestCase {
                 timelineDate: playhead,
                 isPlaybackRunning: true
             ),
-            dayEnd
+            playhead
         )
         XCTAssertEqual(
             MapHomeRouteOverlayCutoffPolicy.cutoff(

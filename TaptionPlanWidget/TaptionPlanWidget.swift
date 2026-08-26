@@ -2249,6 +2249,10 @@ struct SensorCollectionLiveActivity: Widget {
                 )
         } dynamicIsland: { context in
             DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    SensorCollectionAppIcon()
+                        .frame(width: 28, height: 28)
+                }
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(widgetText("센서 정보 수집중", "Collecting sensor data"))
@@ -2288,17 +2292,13 @@ private struct SensorCollectionCompactSensorIcon: View {
     let state: SensorCollectionActivityAttributes.ContentState
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1, paused: false)) { timeline in
-            if state.isCollecting,
-               state.sensorHUDUntil.map({ timeline.date < $0 }) == true {
-                Image("SensorCollectionAppIcon")
-                    .renderingMode(.original)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-                    .accessibilityLabel(widgetText("센서 아이콘", "Sensor icon"))
-            }
+        if state.isCollecting {
+            SensorCollectionAppIcon()
+                .frame(width: 18, height: 18)
+                .accessibilityLabel(widgetText("센서 아이콘", "Sensor icon"))
+        } else {
+            Color.clear
+                .frame(width: 18, height: 18)
         }
     }
 }
