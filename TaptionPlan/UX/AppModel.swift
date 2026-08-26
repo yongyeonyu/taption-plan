@@ -2348,6 +2348,9 @@ final class AppModel {
             intervalSeconds: settings.gpsLoggingPreferences
                 .effectiveIntervalSeconds,
             saveToken: sensorSaveToken,
+            validSampleKinds: latestSensorReading.map {
+                validSensorCollectionKinds(for: $0)
+            } ?? [],
             isExternalSample: latestSensorReading?.sourceDevice == .appleWatch
         )
     }
@@ -2369,6 +2372,49 @@ final class AppModel {
             kinds.append("health")
         }
         kinds.append("wifi")
+        return kinds
+    }
+
+    private func validSensorCollectionKinds(
+        for reading: SensorReading
+    ) -> [String] {
+        var kinds: [String] = []
+        if reading.gpsAvailable,
+           let point = reading.point,
+           (-90...90).contains(point.latitude),
+           (-180...180).contains(point.longitude),
+           point.horizontalAccuracy.isFinite,
+           point.horizontalAccuracy >= 0,
+           point.horizontalAccuracy <= 150 {
+            kinds.append("location")
+        }
+        if reading.motion != .unknown
+            || reading.deviceMotion != nil
+            || reading.deviceMotionSummary != nil {
+            kinds.append("motion")
+        }
+        if reading.relativeAltitudeMeters?.isFinite == true
+            || reading.pressureKilopascals?.isFinite == true {
+            kinds.append("altitude")
+        }
+        let hasValidStepCount = reading.stepCount.map { $0 >= 0 } ?? false
+        let hasValidWalkingDistance = reading.walkingRunningDistanceMeters.map {
+            $0.isFinite && $0 >= 0
+        } ?? false
+        let hasValidCadence = reading.currentCadenceStepsPerSecond.map {
+            $0.isFinite && $0 >= 0
+        } ?? false
+        if hasValidStepCount || hasValidWalkingDistance || hasValidCadence {
+            kinds.append("steps")
+        }
+        if settings.healthEnabled,
+           reading.sourceDevice == .appleWatch {
+            kinds.append("health")
+        }
+        if let ssid = reading.connectedWiFiSSID,
+           !ssid.isEmpty {
+            kinds.append("wifi")
+        }
         return kinds
     }
 

@@ -2261,32 +2261,53 @@ struct SensorCollectionLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    ZStack(alignment: .trailing) {
-                        SensorCollectionWaveformView(state: context.state)
-                            .frame(maxWidth: .infinity)
-                        SensorCollectionSavedAtView(
-                            lastSavedAt: context.state.lastSavedAt
-                        )
+                    VStack(alignment: .leading, spacing: 5) {
+                        ZStack(alignment: .trailing) {
+                            SensorCollectionWaveformView(state: context.state)
+                                .frame(maxWidth: .infinity)
+                            SensorCollectionSavedAtView(
+                                lastSavedAt: context.state.lastSavedAt
+                            )
+                        }
+                        SensorCollectionMeterRows(state: context.state)
                     }
                 }
             } compactLeading: {
-                SensorCollectionWaveformView(
-                    state: context.state,
-                    positionOffset: 0.5,
-                    positionScale: 0.5,
-                    scanOffset: 0,
-                    scanScale: 0.5,
-                    showsIndicator: false
-                )
+                VStack(spacing: 1) {
+                    SensorCollectionWaveformView(
+                        state: context.state,
+                        positionOffset: 0,
+                        positionScale: 0.5,
+                        scanOffset: 0,
+                        scanScale: 0.5,
+                        showsIndicator: false
+                    )
+                    SensorCollectionMeterView(
+                        level: SensorCollectionMeterModel.aggregateLevel(
+                            state: context.state
+                        ),
+                        color: Color(red: 0.18, green: 0.72, blue: 0.59)
+                    )
+                }
             } compactTrailing: {
-                SensorCollectionWaveformView(
-                    state: context.state,
-                    positionOffset: 0,
-                    positionScale: 0.5,
-                    scanOffset: 0.5,
-                    scanScale: 0.5,
-                    showsIndicator: true
-                )
+                VStack(spacing: 1) {
+                    SensorCollectionWaveformView(
+                        state: context.state,
+                        positionOffset: 0.5,
+                        positionScale: 0.5,
+                        scanOffset: 0.5,
+                        scanScale: 0.5,
+                        showsIndicator: true
+                    )
+                    SensorCollectionMeterView(
+                        level: SensorCollectionMeterModel.aggregateLevel(
+                            state: context.state
+                        ),
+                        color: context.state.isExternalSample == true
+                            ? .red
+                            : Color(red: 0.18, green: 0.72, blue: 0.59)
+                    )
+                }
             } minimal: {
                 EmptyView()
             }
@@ -2412,34 +2433,27 @@ private struct SensorCollectionWaveformView: View {
     private func waveform(at date: Date) -> some View {
         if state.phase == .hidden {
             Color.clear
-        } else if pulseProgress(at: date) == nil {
-            SensorCollectionFlatlineShape()
-                .stroke(
-                    Color(red: 0.18, green: 0.72, blue: 0.59).opacity(0.38),
-                    style: StrokeStyle(lineWidth: 1, lineCap: .round)
-                )
         } else {
-            let halfWindow = SensorCollectionProgressPolicy
-                .halfWindowDuration(intervalSeconds: state.intervalSeconds)
-                ?? 0.5
-            let origin = state.lastSavedAt ?? state.startedAt
-            let progress = SensorCollectionWaveformMath.cycleProgress(
-                at: date,
-                origin: origin,
-                duration: halfWindow
-            )
-            SensorCollectionStreamingWaveformShape(
-                phase: reduceMotion ? 0.32 : progress,
-                amplitude: 1.12,
-                positionOffset: positionOffset,
-                positionScale: positionScale
-            )
-                .stroke(
-                    state.isExternalSample == true
-                        ? .red
-                        : Color(red: 0.18, green: 0.72, blue: 0.59),
-                    style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
-                )
+            ZStack {
+                SensorCollectionFlatlineShape()
+                    .stroke(
+                        Color(red: 0.18, green: 0.72, blue: 0.59).opacity(0.38),
+                        style: StrokeStyle(lineWidth: 1, lineCap: .round)
+                    )
+                if let progress = pulseProgress(at: date) {
+                    SensorCollectionSamplePulseShape(
+                        progress: reduceMotion ? 0.5 : progress,
+                        positionOffset: positionOffset,
+                        positionScale: positionScale
+                    )
+                    .stroke(
+                        state.isExternalSample == true
+                            ? .red
+                            : Color(red: 0.18, green: 0.72, blue: 0.59),
+                        style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round)
+                    )
+                }
+            }
         }
     }
 
@@ -2449,7 +2463,7 @@ private struct SensorCollectionWaveformView: View {
             GeometryReader { proxy in
                 Rectangle()
                     .fill(.black)
-                    .frame(width: 2, height: proxy.size.height)
+                    .frame(width: 7, height: 2)
                     .position(
                         x: CGFloat(
                             SensorCollectionWaveformMath.leftToRightEndpoint(
@@ -2482,8 +2496,14 @@ private struct SensorCollectionWaveformView: View {
     }
 
     private func scanProgress(at date: Date) -> Double? {
-        guard let progress = pulseProgress(at: date) else { return nil }
-        let globalProgress = reduceMotion ? 0 : progress
+        guard state.isCollecting else { return nil }
+        let globalProgress = reduceMotion
+            ? 0.5
+            : SensorCollectionWaveformMath.cycleProgress(
+                at: date,
+                origin: state.waveformScanStartedAt ?? state.startedAt,
+                duration: SensorCollectionActivityPolicy.waveformScanDuration
+            )
         let scale = max(scanScale, 0.000_001)
         let localProgress = (globalProgress - scanOffset) / scale
         guard localProgress >= 0, localProgress <= 1 else { return nil }
@@ -2500,34 +2520,28 @@ private struct SensorCollectionFlatlineShape: Shape {
     }
 }
 
-private struct SensorCollectionStreamingWaveformShape: Shape {
-    var phase: Double
-    var amplitude: Double
+private struct SensorCollectionSamplePulseShape: Shape {
+    var progress: Double
     var positionOffset: Double = 0
     var positionScale: Double = 1
 
     func path(in rect: CGRect) -> Path {
         guard rect.width > 0, rect.height > 0 else { return Path() }
-        let sampleCount = max(32, Int((rect.width * 2).rounded(.up)))
+        let localProgress = (progress - positionOffset) / max(positionScale, 0.000_001)
+        guard localProgress >= 0, localProgress <= 1 else { return Path() }
+        let sampleCount = max(24, Int((rect.width * 2).rounded(.up)))
         let baseline = rect.midY
-        let verticalScale = rect.height * 0.42 * amplitude
+        let verticalScale = rect.height * 0.42
+        let pulseWidth = 0.34
         var path = Path()
 
         for index in 0...sampleCount {
             let position = Double(index) / Double(sampleCount)
-            let x = rect.maxX - rect.width * CGFloat(position)
-            let globalPosition = SensorCollectionWaveformMath.segmentedPosition(
-                localPosition: position,
-                offset: positionOffset,
-                scale: positionScale
-            )
-            let waveformPhase = SensorCollectionWaveformMath.rightToLeftPhase(
-                position: globalPosition,
-                progress: phase
-            )
-            let signal = SensorCollectionWaveformMath.heartbeat(
-                at: waveformPhase
-            )
+            let x = rect.minX + rect.width * CGFloat(position)
+            let pulsePhase = (position - localProgress) / pulseWidth + 0.5
+            let signal = pulsePhase >= 0 && pulsePhase <= 1
+                ? SensorCollectionWaveformMath.heartbeat(at: pulsePhase)
+                : 0
             let y = baseline - CGFloat(signal) * verticalScale
             let point = CGPoint(x: x, y: y)
             if index == 0 {
@@ -2538,7 +2552,101 @@ private struct SensorCollectionStreamingWaveformShape: Shape {
         }
         return path
     }
+}
 
+private struct SensorCollectionMeterView: View {
+    let mask: Int?
+    let level: Double
+    let color: Color
+
+    init(mask: Int? = nil, level: Double = 0, color: Color) {
+        self.mask = mask
+        self.level = level
+        self.color = color
+    }
+
+    var body: some View {
+        HStack(spacing: 1) {
+            ForEach(0..<10, id: \.self) { index in
+                Capsule(style: .continuous)
+                    .fill(isFilled(at: index) ? color : .white.opacity(0.22))
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 2)
+        .accessibilityHidden(true)
+    }
+
+    private func isFilled(at index: Int) -> Bool {
+        if let mask {
+            return mask & (1 << index) != 0
+        }
+        return Double(index) < level * 10
+    }
+}
+
+private struct SensorCollectionMeterRows: View {
+    let state: SensorCollectionActivityAttributes.ContentState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(displayKinds.enumerated()), id: \.offset) { index, kind in
+                HStack(spacing: 4) {
+                    Text(SensorCollectionMeterModel.label(for: kind))
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .frame(width: 42, alignment: .leading)
+                    SensorCollectionMeterView(
+                        mask: state.sensorMeterMasks?[kind],
+                        level: SensorCollectionMeterModel.level(
+                            mask: state.sensorMeterMasks?[kind]
+                        ),
+                        color: sensorCollectionMeterColor(
+                            for: kind,
+                            index: index,
+                            state: state
+                        )
+                    )
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            widgetText("센서별 최근 수신량", "Recent samples by sensor")
+        )
+    }
+
+    private var displayKinds: [String] {
+        let kinds = state.collectionKinds.filter { !$0.isEmpty }
+        return kinds.isEmpty
+            ? Array(SensorCollectionMeterModel.orderedKinds.prefix(6))
+            : Array(kinds.prefix(6))
+    }
+}
+
+private func sensorCollectionMeterColor(
+    for kind: String,
+    index: Int,
+    state: SensorCollectionActivityAttributes.ContentState
+) -> Color {
+    switch SensorCollectionMeterModel.status(for: kind, state: state) {
+    case .delayed: return .orange
+    case .unavailable: return .red
+    case .waiting: return .white.opacity(0.40)
+    case .receiving:
+        break
+    }
+    switch kind {
+    case "location": return Color(red: 0.26, green: 0.61, blue: 1)
+    case "motion", "steps": return Color(red: 0.22, green: 0.78, blue: 0.54)
+    case "altitude": return Color(red: 0.62, green: 0.47, blue: 0.95)
+    case "health": return .red
+    case "wifi": return Color(red: 0.22, green: 0.72, blue: 0.86)
+    default:
+        let colors: [Color] = [.teal, .blue, .purple, .orange, .pink]
+        return colors[index % colors.count]
+    }
 }
 
 private func sensorCollectionAccessibilityLabel(

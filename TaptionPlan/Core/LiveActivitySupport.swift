@@ -27,6 +27,7 @@ actor SensorCollectionLiveActivityController {
         isForeground: Bool,
         intervalSeconds: Int,
         saveToken: Int? = nil,
+        validSampleKinds: [String] = [],
         isExternalSample: Bool = false,
         now: Date = .now
     ) async throws -> String? {
@@ -97,6 +98,26 @@ actor SensorCollectionLiveActivityController {
         } else {
             phaseUntil = nil
         }
+        let sensorMeterMasks = SensorCollectionActivityPolicy
+            .updatedSensorMeterMasks(
+                previous: previousState?.sensorMeterMasks,
+                collectionKinds: collectionKinds,
+                validSampleKinds: validSampleKinds,
+                hasNewSample: hasNewSample
+            )
+        let sensorStatusRawValues = SensorCollectionActivityPolicy
+            .updatedSensorStatuses(
+                previous: previousState?.sensorStatusRawValues,
+                collectionKinds: collectionKinds,
+                validSampleKinds: validSampleKinds,
+                hasNewSample: hasNewSample,
+                now: now,
+                lastSavedAt: lastSavedAt,
+                intervalSeconds: intervalSeconds
+            )
+        let waveformScanStartedAt = hasNewSample
+            ? now
+            : (previousState?.waveformScanStartedAt ?? now)
         let state = SensorCollectionActivityAttributes.ContentState(
             startedAt: activityStartedAt,
             lastSavedAt: lastSavedAt,
@@ -107,6 +128,9 @@ actor SensorCollectionLiveActivityController {
             saveToken: effectiveSaveToken,
             phaseRawValue: phase.rawValue,
             phaseUntil: phaseUntil,
+            sensorMeterMasks: sensorMeterMasks,
+            sensorStatusRawValues: sensorStatusRawValues,
+            waveformScanStartedAt: waveformScanStartedAt,
             isExternalSample: isExternalSample
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
@@ -166,6 +190,9 @@ actor SensorCollectionLiveActivityController {
             saveToken: saveToken ?? activity.content.state.saveToken,
             phaseRawValue: SensorCollectionActivityPhase.flatline.rawValue,
             phaseUntil: flatlineUntil,
+            sensorMeterMasks: activity.content.state.sensorMeterMasks,
+            sensorStatusRawValues: activity.content.state.sensorStatusRawValues,
+            waveformScanStartedAt: activity.content.state.waveformScanStartedAt,
             isExternalSample: false
         )
         await activity.end(

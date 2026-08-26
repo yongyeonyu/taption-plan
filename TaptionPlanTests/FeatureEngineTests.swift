@@ -7629,6 +7629,110 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testSensorLiveActivityMetersRollOverLatestTenSamplesPerKind() {
+        let kinds = ["location", "motion"]
+        var masks: [String: Int]?
+
+        for index in 0..<12 {
+            masks = SensorCollectionActivityPolicy.updatedSensorMeterMasks(
+                previous: masks,
+                collectionKinds: kinds,
+                validSampleKinds: index.isMultiple(of: 2)
+                    ? ["location"]
+                    : ["motion"],
+                hasNewSample: true
+            )
+        }
+
+        XCTAssertEqual(masks?["location"], 0b1010101010)
+        XCTAssertEqual(masks?["motion"], 0b0101010101)
+
+        let unchanged = SensorCollectionActivityPolicy.updatedSensorMeterMasks(
+            previous: masks,
+            collectionKinds: ["location", "location", "motion"],
+            validSampleKinds: [],
+            hasNewSample: false
+        )
+        XCTAssertEqual(unchanged, masks)
+    }
+
+    func testSensorLiveActivityMeterStatusesTrackValidAndStaleSamples() {
+        let now = Date(timeIntervalSinceReferenceDate: 23_000)
+        let initial = SensorCollectionActivityPolicy.updatedSensorStatuses(
+            previous: nil,
+            collectionKinds: ["location", "location", "motion"],
+            validSampleKinds: [],
+            hasNewSample: false,
+            now: now,
+            lastSavedAt: nil,
+            intervalSeconds: 10
+        )
+        XCTAssertEqual(initial.count, 2)
+        XCTAssertEqual(
+            initial["location"],
+            SensorCollectionActivityAttributes.SensorStatus.waiting.rawValue
+        )
+
+        let receiving = SensorCollectionActivityPolicy.updatedSensorStatuses(
+            previous: nil,
+            collectionKinds: ["location", "motion"],
+            validSampleKinds: ["location"],
+            hasNewSample: true,
+            now: now,
+            lastSavedAt: now,
+            intervalSeconds: 10
+        )
+        XCTAssertEqual(
+            receiving["location"],
+            SensorCollectionActivityAttributes.SensorStatus.receiving.rawValue
+        )
+        XCTAssertEqual(
+            receiving["motion"],
+            SensorCollectionActivityAttributes.SensorStatus.waiting.rawValue
+        )
+
+        let delayed = SensorCollectionActivityPolicy.updatedSensorStatuses(
+            previous: receiving,
+            collectionKinds: ["location", "motion"],
+            validSampleKinds: [],
+            hasNewSample: false,
+            now: now.addingTimeInterval(31),
+            lastSavedAt: now,
+            intervalSeconds: 10
+        )
+        XCTAssertEqual(
+            delayed["location"],
+            SensorCollectionActivityAttributes.SensorStatus.delayed.rawValue
+        )
+        XCTAssertEqual(
+            delayed["motion"],
+            SensorCollectionActivityAttributes.SensorStatus.delayed.rawValue
+        )
+    }
+
+    func testSensorLiveActivityWaveformScanUsesOneSecondCycle() {
+        XCTAssertEqual(SensorCollectionActivityPolicy.waveformScanDuration, 1)
+        let origin = Date(timeIntervalSinceReferenceDate: 24_000)
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.cycleProgress(
+                at: origin.addingTimeInterval(0.25),
+                origin: origin,
+                duration: SensorCollectionActivityPolicy.waveformScanDuration
+            ),
+            0.25,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.cycleProgress(
+                at: origin.addingTimeInterval(1),
+                origin: origin,
+                duration: SensorCollectionActivityPolicy.waveformScanDuration
+            ),
+            0,
+            accuracy: 0.000_001
+        )
+    }
+
     func testSensorCollectionProgressUsesHalfIntervalIncludingOneSecond() {
         let startedAt = Date(timeIntervalSinceReferenceDate: 22_000)
         XCTAssertEqual(
