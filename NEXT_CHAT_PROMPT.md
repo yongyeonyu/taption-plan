@@ -18,7 +18,7 @@ Taption Plan 작업을 이어간다. 작업 디렉터리는 `/Users/u_mo_c/Docum
 - `Packages/TaptionRouteEngine`: GPS 경로 필터, 2D Kalman, 정지 드리프트 억제, 점프·15분 공백 세그먼트, RDP 축약
 - 앱 시작은 로컬 스냅샷과 일자 데이터 hydrate가 완료된 뒤 홈으로 진입하고, 사이드바·경로·지도 파생값을 캐시한다.
 - 현재·과거 위치는 장소 아이콘보다 앞의 native annotation 졸라맨으로 통일한다. 추적 중에는 선택 시각 위치를 중앙에 유지하고 지도 이동은 추적을 해제한다.
-- 지하철 확정 분류와 선로 기반 점선 경로, 수면 등 자동 분류 결과는 저장 후 재로딩해도 바꾸지 않는다. 사용자 편집만 덮어쓰고 원본 센서는 보존한다.
+- 지하철 확정 분류와 확정 선로 경로, 수면 등 자동 분류 결과는 저장 후 재로딩해도 바꾸지 않는다. 예상·점선 경로 오버레이는 현재 비활성화하고 사용자 편집만 덮어쓰며 원본 센서는 보존한다.
 - 핀치 줌과 사이드바 핸들의 확장 터치 영역을 유지한다.
 - 재생은 걷기·달리기는 빠르게, 자동차·자전거·지하철·기차·배·비행기는 느리게 적용한다.
 - GPS·센서 수집 간격은 슬라이더로 설정한다.
@@ -26,19 +26,17 @@ Taption Plan 작업을 이어간다. 작업 디렉터리는 `/Users/u_mo_c/Docum
 
 최근 검증 기준:
 
-- 전체 XCTest 695/695, 실패·스킵 0
-- `TaptionPlanCore` 24/24, `TaptionActivityEngine` 4/4, `TaptionRouteEngine` 11/11
-- iOS Simulator Debug build 통과
-- 서명된 iPhone Debug build 95 통과
-- iPhone 14 Pro 설치·실행·readback: `com.taption.plan` `1.0 (95)`, `TaptionPlan` PID `55910`
+- 전체 XCTest 695/695, 실패·스킵 0; `TaptionPlanCore` 28/28, `TaptionActivityEngine` 4/4, `TaptionRouteEngine` 11/11, 어댑터 Swift 테스트 10/10
+- iOS Simulator Debug build와 Release archive/export 통과
+- 최신 TestFlight build 97은 IPA 검증·업로드·처리 완료(`VALID`, `APP_STORE_ELIGIBLE`) 후 `TP Taption Plan 내부 테스트` 그룹 연결·노출까지 확인했다. Delivery UUID `785306ae-b642-4679-a0ed-123ca25e1565`.
+- 실기기 설치·실행·readback은 아직 별도 게이트이며, 마지막 확인된 기기 기록은 `1.0 (95)`이다.
 - `git diff --check` 통과
-- TestFlight archive/upload는 이번 배치 범위가 아니므로 수행하지 않았다.
 
 다음 확인 항목:
 
-1. 실기기에서 현재 위치 지연, 지도 핀치·드래그, 졸라맨 중앙 고정·흔들림, 사이드바 핸들을 확인한다.
-2. 오늘 수면·지하철 분류와 선로 점선 경로가 재실행 후 유지되는지 확인한다.
-3. Dynamic Island 우측 파형과 15분·1분·1초 경계를 실기기에서 확인한다.
+1. build 97을 연결된 iPhone에 설치·실행하고 버전/readback 및 실제 터치 화면을 확인한다.
+2. 현재 위치 지연, 지도 핀치·드래그, 졸라맨 중앙 고정·흔들림, 사이드바 핸들을 확인한다.
+3. 오늘 수면·지하철 분류와 선로 경로, Dynamic Island 우측 파형·15분·1분·1초 경계를 실기기에서 확인한다.
 4. `IAP73PAID1`은 Paid Apps Agreement·세금/은행·상품 연결·Sandbox 구매/복원 전까지 완료 처리하지 않는다.
-5. TestFlight를 요청받으면 업로드, 처리 완료, `TP Taption Plan 내부 테스트` 그룹 연결·노출을 각각 확인한다.
+5. 다음 TestFlight 요청은 새 build 번호를 사용하고, 업로드·처리 완료·`TP Taption Plan 내부 테스트` 그룹 연결·노출을 각각 확인한다.
 6. 새 요청은 10자리 영문·숫자 ID로 `temp.md`에 먼저 기록하고 대표님의 `ㄱㄱ` 뒤 실행한다.

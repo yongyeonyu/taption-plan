@@ -1,5 +1,60 @@
 import Foundation
 
+/// Display-only position projection for live map updates. It interpolates
+/// between adjacent valid fixes and falls back to a catalog station anchor
+/// when GPS is unavailable; no sensor record is rewritten.
+struct RealtimeSensorMapProjection: Hashable, Sendable {
+    let timestamp: Date
+    let point: GeoPoint
+    let isEstimated: Bool
+    let source: String
+
+    static func project(
+        readings: [SensorReading],
+        at timestamp: Date,
+        temporaryLocations: [SubwayStationCatalog.TemporaryLocation] = []
+    ) -> Self? {
+        let ordered = readings.filter { $0.point != nil }.sorted { $0.timestamp < $1.timestamp }
+        if let exact = ordered.first(where: { $0.timestamp == timestamp }), let point = exact.point {
+            return Self(timestamp: timestamp, point: point, isEstimated: false, source: "GPS")
+        }
+        if let before = ordered.last(where: { $0.timestamp <= timestamp }),
+           let after = ordered.first(where: { $0.timestamp >= timestamp }),
+           let start = before.point, let end = after.point {
+            let duration = after.timestamp.timeIntervalSince(before.timestamp)
+            let fraction = duration > 0
+                ? min(1, max(0, timestamp.timeIntervalSince(before.timestamp) / duration))
+                : 0
+            return Self(
+                timestamp: timestamp,
+                point: interpolate(start, end, fraction: fraction),
+                isEstimated: true,
+                source: "GPS 보간"
+            )
+        }
+        if let fallback = temporaryLocations.min(by: {
+            abs($0.timestamp.timeIntervalSince(timestamp))
+                < abs($1.timestamp.timeIntervalSince(timestamp))
+        }) {
+            return Self(timestamp: timestamp, point: fallback.point, isEstimated: true, source: fallback.reason)
+        }
+        return ordered.last.flatMap { reading in
+            reading.point.map { Self(timestamp: timestamp, point: $0, isEstimated: true, source: "최근 GPS") }
+        }
+    }
+
+    private static func interpolate(_ start: GeoPoint, _ end: GeoPoint, fraction: Double) -> GeoPoint {
+        let f = min(1, max(0, fraction))
+        return GeoPoint(
+            latitude: start.latitude + (end.latitude - start.latitude) * f,
+            longitude: start.longitude + (end.longitude - start.longitude) * f,
+            altitude: start.altitude + (end.altitude - start.altitude) * f,
+            horizontalAccuracy: max(start.horizontalAccuracy, end.horizontalAccuracy),
+            verticalAccuracy: max(start.verticalAccuracy, end.verticalAccuracy)
+        )
+    }
+}
+
 struct TravelModeClassifier: Sendable {
     func classify(
         readings: [SensorReading],
@@ -385,6 +440,7 @@ struct TravelModeClassifier: Sendable {
         let undergroundDescent = altitudeDropMeters >= 8
             || altitudeDelta <= -8
             || gpsLossRatio >= 0.45
+        let stationAltitudeDrop = stationAltitudeDropSignal(ordered)
         let lowStepsForTransit = !stepSignal.hasCoverage
             || stepsPerMinute <= 5
                 && stepSignal.cadenceStepsPerSecond <= 0.2
@@ -442,6 +498,9 @@ struct TravelModeClassifier: Sendable {
         }
         if altitudeDelta <= -2 && railContext {
             add(.subway, 0.16, "상대고도 하강")
+        }
+        if stationAltitudeDrop {
+            add(.subway, 0.24, "지하철역 주변 고도 하강")
         }
         if subwayWiFiSignal, let subwayWiFiFamily {
             add(
@@ -551,6 +610,36 @@ struct TravelModeClassifier: Sendable {
                 score: 0.96,
                 evidence: Array(Set(evidence)).sorted(),
                 subwayRoute: subwayRoute
+            )
+        }
+
+        // 역 이름·노선이 두 곳 이상 확인됐지만 아직 5분 체류/이탈
+        // 상태가 끝나지 않은 실시간 구간도 지하철 노선을 유지한다.
+        // 그렇지 않으면 철도 경로의 일반적인 속도 점수가 `.train`을
+        // 앞서면서 이미 확인한 지하철 노선이 표시에서 사라질 수 있다.
+        if let resolvedSubwayRoute,
+           SubwayStationCatalog.isValid(resolvedSubwayRoute),
+           railContext,
+           railStations.count >= 2,
+           (railRatio >= 0.25 || stationAltitudeDrop || undergroundDescent) {
+            var evidence = [
+                "지하철 노선 후보 확정",
+                "노선 " + resolvedSubwayRoute.lineNames.joined(separator: " → "),
+            ]
+            if !resolvedSubwayRoute.transferStationNames.isEmpty {
+                evidence.append(
+                    "환승 " + resolvedSubwayRoute.transferStationNames.joined(separator: ", ")
+                )
+            }
+            if stationAltitudeDrop {
+                evidence.append("지하철역 주변 고도 하강")
+            }
+            return MovementInference(
+                mode: .subway,
+                confidence: .high,
+                score: 0.92,
+                evidence: Array(Set(evidence)).sorted(),
+                subwayRoute: resolvedSubwayRoute
             )
         }
 
@@ -777,6 +866,23 @@ struct TravelModeClassifier: Sendable {
         let points = readings.compactMap(\.point)
         guard let first = points.first, let last = points.last else { return 0 }
         return distanceMeters(first, last)
+    }
+
+    private func stationAltitudeDropSignal(_ readings: [SensorReading]) -> Bool {
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        for pair in zip(ordered, ordered.dropFirst()) {
+            let first = pair.0
+            let second = pair.1
+            guard second.timestamp.timeIntervalSince(first.timestamp) <= 10 * 60,
+                  first.nearbyStation || second.nearbyStation,
+                  let start = first.relativeAltitudeMeters,
+                  let end = second.relativeAltitudeMeters,
+                  start.isFinite,
+                  end.isFinite,
+                  start - end >= 1.5 else { continue }
+            return true
+        }
+        return false
     }
 
     private func subwayWiFiEvidence(

@@ -3,6 +3,30 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class StorageContractsTests: XCTestCase {
+    func testCanonicalBinaryRoundTripAndChecksum() throws {
+        let value = try TaptionPlanStorageEnvelopeV2(updatedAt: Date(timeIntervalSince1970: 12))
+        let encoded = try TaptionPlanCanonicalStorage.encode(value)
+        XCTAssertEqual(try TaptionPlanCanonicalStorage.decode(TaptionPlanStorageEnvelopeV2.self, from: encoded), value)
+        var bytes = encoded.data
+        bytes[bytes.startIndex] ^= 0xff
+        let corrupted = TaptionPlanEncodedPayload(data: bytes, checksum: encoded.checksum, uncompressedSize: encoded.uncompressedSize, isCompressed: encoded.isCompressed)
+        XCTAssertThrowsError(try TaptionPlanCanonicalStorage.decode(TaptionPlanStorageEnvelopeV2.self, from: corrupted))
+    }
+
+    func testBoundedCacheEvictsLRUAndRespondsToPressure() async throws {
+        let cache = TaptionPlanDayLRUCache<String, Int>(capacity: 2)
+        await cache.insert(1, for: "a")
+        await cache.insert(2, for: "b")
+        _ = try await cache.value(for: "a")
+        await cache.insert(3, for: "c")
+        let missing = try await cache.value(for: "b")
+        let count = await cache.count
+        XCTAssertNil(missing)
+        XCTAssertEqual(count, 2)
+        await cache.handleMemoryPressure()
+        let cleared = await cache.count
+        XCTAssertEqual(cleared, 0)
+    }
     func testEnvelopeSeparatesV2StorageDomains() throws {
         let memo = try TaptionPlanMemoRecord(
             occurredAt: Date(timeIntervalSince1970: 100),

@@ -27,6 +27,7 @@ actor SensorCollectionLiveActivityController {
         isForeground: Bool,
         intervalSeconds: Int,
         saveToken: Int? = nil,
+        isExternalSample: Bool = false,
         now: Date = .now
     ) async throws -> String? {
         await recoverAndRemoveDuplicates(
@@ -102,7 +103,8 @@ actor SensorCollectionLiveActivityController {
             sessionStateRawValue: SensorCollectionSessionState.collecting.rawValue,
             saveToken: effectiveSaveToken,
             phaseRawValue: phase.rawValue,
-            phaseUntil: phaseUntil
+            phaseUntil: phaseUntil,
+            isExternalSample: isExternalSample
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt
@@ -160,7 +162,8 @@ actor SensorCollectionLiveActivityController {
             sessionStateRawValue: SensorCollectionSessionState.stopped.rawValue,
             saveToken: saveToken ?? activity.content.state.saveToken,
             phaseRawValue: SensorCollectionActivityPhase.flatline.rawValue,
-            phaseUntil: flatlineUntil
+            phaseUntil: flatlineUntil,
+            isExternalSample: false
         )
         await activity.end(
             ActivityContent(state: finalState, staleDate: flatlineUntil),

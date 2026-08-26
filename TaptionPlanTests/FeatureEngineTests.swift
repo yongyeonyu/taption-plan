@@ -5717,6 +5717,173 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(segment.evidence.contains("출발역·환승역·도착역 상태 확정"))
     }
 
+    func testSubwayRoutePriorityKeepsExactLineDuringLiveGPSWindow() throws {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 11,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "가정역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                speedMetersPerSecond: 11,
+                motion: .automotive,
+                motionConfidence: .high,
+                gpsAvailable: false,
+                nearbyStation: true,
+                nearbyStationName: "검암역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(120),
+                speedMetersPerSecond: 11,
+                motion: .automotive,
+                motionConfidence: .high,
+                gpsAvailable: false,
+                nearbyStation: true,
+                nearbyStationName: "마곡나루역",
+                matchesRailRoute: true
+            ),
+        ]
+
+        let result = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertEqual(result.subwayRoute?.lineNames, ["인천2호선", "공항철도"])
+        XCTAssertEqual(result.subwayRoute?.transferStationNames, ["검암"])
+        XCTAssertTrue(result.evidence.contains("노선 인천2호선 → 공항철도"))
+    }
+
+    func testStationAltitudeChangeAddsSubwayEvidenceNearStation() throws {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 3,
+                motion: .automotive,
+                motionConfidence: .high,
+                relativeAltitudeMeters: 5,
+                nearbyStation: true,
+                nearbyStationName: "가정역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                point: GeoPoint(
+                    latitude: 37.5667,
+                    longitude: 126.8273,
+                    altitude: 12,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 11,
+                motion: .automotive,
+                motionConfidence: .high,
+                relativeAltitudeMeters: 3,
+                nearbyStation: true,
+                nearbyStationName: "마곡나루역",
+                matchesRailRoute: true
+            ),
+        ]
+
+        let result = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertEqual(result.mode, .subway)
+        XCTAssertTrue(result.evidence.contains("지하철역 주변 고도 하강"))
+        XCTAssertNotNil(result.subwayRoute)
+    }
+
+    func testTemporarySubwayLocationsUseArrivalTimeWithoutRewritingRawGPS() throws {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                nearbyStation: true,
+                nearbyStationName: "가정역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                gpsAvailable: false,
+                nearbyStation: true,
+                nearbyStationName: "검암역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(120),
+                locationFixQuality: .approximate,
+                gpsAvailable: false,
+                nearbyStation: true,
+                nearbyStationName: "마곡나루역",
+                matchesRailRoute: true
+            ),
+        ]
+
+        let temporary = SubwayStationCatalog.temporaryLocations(from: readings)
+
+        XCTAssertEqual(temporary.map(\.stationName), ["검암", "마곡나루"])
+        XCTAssertEqual(temporary.map(\.timestamp), [
+            base.addingTimeInterval(60),
+            base.addingTimeInterval(120),
+        ])
+        XCTAssertTrue(temporary.allSatisfy { $0.reason.contains("도착 시각") })
+        XCTAssertNil(readings[1].point)
+        XCTAssertEqual(readings[2].locationFixQuality, .approximate)
+    }
+
+    func testRealtimeMapProjectionFallsBackToTemporaryStationWhenGPSIsMissing() throws {
+        let timestamp = makeDate(2026, 8, 18, 7, 1)
+        let readings = [
+            SensorReading(
+                timestamp: timestamp,
+                nearbyStation: true,
+                nearbyStationName: "검암역",
+                matchesRailRoute: true
+            )
+        ]
+
+        let temporary = SubwayStationCatalog.temporaryLocations(from: readings)
+        let projection = try XCTUnwrap(
+            RealtimeSensorMapProjection.project(
+                readings: readings,
+                at: timestamp.addingTimeInterval(60),
+                temporaryLocations: temporary
+            )
+        )
+
+        XCTAssertTrue(projection.isEstimated)
+        XCTAssertEqual(projection.source, "지하철역 도착 시각 기반 임시 위치")
+        XCTAssertEqual(projection.point.latitude, 37.5692, accuracy: 0.0001)
+        XCTAssertEqual(projection.point.longitude, 126.6737, accuracy: 0.0001)
+        XCTAssertNil(readings[0].point)
+    }
+
     func testAppleTransportEnrichmentPersistsConfirmedMagongnaruGeomamGajeongJourney() async throws {
         let base = makeDate(2026, 8, 18, 20, 22)
         let samples: [(Double, Double, Double)] = [
@@ -7452,7 +7619,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testSensorCollectionProgressUsesHalfIntervalAndDisablesOneSecond() {
+    func testSensorCollectionProgressUsesHalfIntervalIncludingOneSecond() {
         let startedAt = Date(timeIntervalSinceReferenceDate: 22_000)
         XCTAssertEqual(
             SensorCollectionProgressPolicy.halfWindowDuration(
@@ -7466,10 +7633,11 @@ final class FeatureEngineTests: XCTestCase {
             ),
             30
         )
-        XCTAssertNil(
+        XCTAssertEqual(
             SensorCollectionProgressPolicy.halfWindowDuration(
                 intervalSeconds: 1
-            )
+            ),
+            0.5
         )
         XCTAssertEqual(
             SensorCollectionProgressPolicy.progress(
@@ -7491,13 +7659,129 @@ final class FeatureEngineTests: XCTestCase {
             1,
             accuracy: 0.000_001
         )
-        XCTAssertNil(
+        XCTAssertEqual(
             SensorCollectionProgressPolicy.progress(
                 at: startedAt.addingTimeInterval(0.5),
                 startedAt: startedAt,
                 lastSavedAt: nil,
                 intervalSeconds: 1
-            )
+            ) ?? -1,
+            1,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testSensorCollectionWaveformProgressAdvancesFromRightToLeft() {
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.rightToLeftEndpoint(
+                progress: 0,
+                width: 24
+            ),
+            24
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.rightToLeftEndpoint(
+                progress: 0.25,
+                width: 24
+            ),
+            18
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.rightToLeftEndpoint(
+                progress: 1.5,
+                width: 24
+            ),
+            0
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.rightToLeftEndpoint(
+                progress: -0.5,
+                width: 24
+            ),
+            24
+        )
+    }
+
+    func testSensorCollectionWaveformCycleProgressWrapsAtHalfInterval() {
+        let origin = Date(timeIntervalSinceReferenceDate: 22_000)
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.cycleProgress(
+                at: origin,
+                origin: origin,
+                duration: 0.5
+            ),
+            0,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.cycleProgress(
+                at: origin.addingTimeInterval(0.25),
+                origin: origin,
+                duration: 0.5
+            ),
+            0.5,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.cycleProgress(
+                at: origin.addingTimeInterval(0.5),
+                origin: origin,
+                duration: 0.5
+            ),
+            0,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.cycleProgress(
+                at: origin.addingTimeInterval(-0.1),
+                origin: origin,
+                duration: 0.5
+            ),
+            0,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testSensorCollectionWaveformPhaseAdvancesRightToLeft() {
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.rightToLeftPhase(
+                position: 0.4,
+                progress: 0
+            ),
+            0.4,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.rightToLeftPhase(
+                position: 0.4,
+                progress: 0.25
+            ),
+            0.15,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.rightToLeftPhase(
+                position: 0.1,
+                progress: 0.25
+            ),
+            0.85,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testSensorCollectionWaveformHeartbeatIsPeriodicAndHasQRS() {
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.heartbeat(at: 0.405),
+            SensorCollectionWaveformMath.heartbeat(at: 1.405),
+            accuracy: 0.000_001
+        )
+        XCTAssertGreaterThan(
+            SensorCollectionWaveformMath.heartbeat(at: 0.405),
+            0.9
+        )
+        XCTAssertLessThan(
+            SensorCollectionWaveformMath.heartbeat(at: 0.37),
+            0
         )
     }
 
@@ -17260,6 +17544,17 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: first.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: second.path))
         XCTAssertEqual(second.lastPathComponent, "TaptionLogs-test-2.txt")
+        let manifestURL = first.deletingLastPathComponent()
+            .appendingPathComponent(TaptionDiagnosticsLatestLogManifest.fileName)
+        let manifestData = try Data(contentsOf: manifestURL)
+        let manifestDecoder = JSONDecoder()
+        manifestDecoder.dateDecodingStrategy = .iso8601
+        let manifest = try manifestDecoder.decode(
+            TaptionDiagnosticsLatestLogManifest.self,
+            from: manifestData
+        )
+        XCTAssertEqual(manifest.fileName, second.lastPathComponent)
+        XCTAssertEqual(manifest.byteCount, "diagnostics".utf8.count)
     }
 
     private func phaseOption(

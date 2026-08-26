@@ -1154,4 +1154,61 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertNotEqual(request.end, destination.point)
         XCTAssertEqual(request.arrivalDate, date(30))
     }
+
+    func testObservedRouteSegmentsDeriveSpeedFromEndpointTimestamps() throws {
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 20,
+            actuals: [],
+            readings: [
+                reading(0, latitude: 37),
+                reading(10, latitude: 37.01),
+                reading(20, latitude: 37.03),
+            ],
+            calendar: calendar
+        )
+
+        let speeds = try XCTUnwrap(
+            projection.segments.map(\.speedMetersPerSecond)
+                .compactMap { $0 }
+        )
+        XCTAssertEqual(speeds.count, 2)
+        XCTAssertGreaterThan(speeds[0], 0)
+        XCTAssertGreaterThan(speeds[1], speeds[0])
+    }
+
+    func testRouteSpeedGradientUsesVisibleRouteRange() {
+        let speeds = [1.0, 5.0, 10.0]
+
+        XCTAssertEqual(
+            RouteSpeedGradient.normalized(
+                speedMetersPerSecond: 1,
+                in: speeds
+            ),
+            0
+        )
+        XCTAssertEqual(
+            RouteSpeedGradient.normalized(
+                speedMetersPerSecond: 10,
+                in: speeds
+            ),
+            1
+        )
+        XCTAssertNotEqual(
+            RouteSpeedGradient.colorHex(
+                speedMetersPerSecond: 1,
+                in: speeds
+            ),
+            RouteSpeedGradient.colorHex(
+                speedMetersPerSecond: 10,
+                in: speeds
+            )
+        )
+        XCTAssertNil(
+            RouteSpeedGradient.colorHex(
+                speedMetersPerSecond: nil,
+                in: speeds
+            )
+        )
+    }
 }

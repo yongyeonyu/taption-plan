@@ -119,6 +119,75 @@ public actor TaptionPlanDayStore {
         try saveSnapshots([snapshot])
     }
 
+    /// Persists a Codable value using the canonical binary/LZFSE/checksummed format.
+    public func saveCodableSnapshot<Value: Encodable>(
+        _ value: Value, domain: String, day: TaptionPlanDayKey,
+        revision: UInt64, updatedAt: Date = .now
+    ) throws {
+        let encoded = try TaptionPlanCanonicalStorage.encode(value)
+        try saveSnapshot(.init(
+            domain: domain,
+            day: day,
+            revision: revision,
+            updatedAt: updatedAt,
+            payload: TaptionPlanCanonicalStorage.envelope(for: encoded)
+        ))
+    }
+
+    public func codableSnapshot<Value: Decodable>(
+        _ type: Value.Type, domain: String, day: TaptionPlanDayKey
+    ) throws -> Value? {
+        guard let snapshot = try snapshot(domain: domain, day: day) else { return nil }
+        let encoded = try TaptionPlanCanonicalStorage.encodedPayload(from: snapshot.payload)
+        return try TaptionPlanCanonicalStorage.decode(type, from: encoded)
+    }
+
+    public func saveCodableMapDayDocument<Value: Encodable>(
+        _ value: Value,
+        day: TaptionPlanDayKey,
+        algorithmKey: String,
+        styleKey: String,
+        updatedAt: Date = .now
+    ) throws -> TaptionPlanMapDayDocument {
+        let encoded = try TaptionPlanCanonicalStorage.encode(value)
+        return try saveMapDayDocument(
+            day: day,
+            algorithmKey: algorithmKey,
+            styleKey: styleKey,
+            updatedAt: updatedAt,
+            payload: TaptionPlanCanonicalStorage.envelope(for: encoded)
+        )
+    }
+
+    public func codableMapDayDocument<Value: Decodable>(
+        _ type: Value.Type,
+        day: TaptionPlanDayKey,
+        algorithmKey: String,
+        styleKey: String
+    ) throws -> Value? {
+        guard let document = try mapDayDocument(
+            day: day,
+            algorithmKey: algorithmKey,
+            styleKey: styleKey
+        ) else { return nil }
+        let encoded = try TaptionPlanCanonicalStorage.encodedPayload(from: document.payload)
+        return try TaptionPlanCanonicalStorage.decode(type, from: encoded)
+    }
+
+    /// Converts an already-current canonical record once. There is intentionally no legacy decoder.
+    @discardableResult
+    public func convertCodableSnapshotOnce<Value: Codable>(
+        _ type: Value.Type, from sourceDomain: String, to destinationDomain: String? = nil,
+        day: TaptionPlanDayKey, marker: String
+    ) throws -> Bool {
+        guard !(try migrationCompleted(marker)) else { return false }
+        guard let value = try codableSnapshot(type, domain: sourceDomain, day: day),
+              let source = try snapshot(domain: sourceDomain, day: day) else { return false }
+        try saveCodableSnapshot(value, domain: destinationDomain ?? sourceDomain, day: day,
+                                revision: source.revision, updatedAt: source.updatedAt)
+        return try markMigrationCompleted(marker)
+    }
+
     public func saveSnapshots(_ snapshots: [Snapshot]) throws {
         try withTransaction {
             for snapshot in snapshots {

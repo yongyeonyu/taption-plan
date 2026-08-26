@@ -188,7 +188,7 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `TaptionRouteEngine`은 동일 시각 중복 우선순위, 2D constant-velocity Kalman 필터, 정지 드리프트 억제, 정확도 경계, 불가능한 점프·15분 공백 세그먼트 분리와 RDP 표시 축약을 담당한다.
 - 앱 시작은 로컬 스냅샷과 일자 데이터를 먼저 hydrate한 뒤 홈을 연다. 사이드바·경로·지도 파생값은 캐시하고 드래그 중 전체 일자 재계산을 피한다.
 - 지도 현재·과거 위치는 native annotation 졸라맨으로 통일해 장소 아이콘보다 앞에 표시한다. 추적 중 선택 시각 위치를 중앙에 유지하고, 지도 이동 시 추적을 해제하며 핀치 줌·사이드바 핸들의 터치 영역을 확장했다.
-- 지하철 확정 구간은 저장된 선로 기반 점선 경로와 분류를 유지한다. 재생 속도는 걷기·달리기는 빠르게, 자동차·자전거·지하철·기차·배·비행기는 느리게 적용한다.
+- 지하철 확정 구간은 저장된 선로 기반 확정 경로와 분류를 유지한다. 예상·점선 경로 오버레이는 비활성화했다. 재생 속도는 걷기·달리기는 빠르게, 자동차·자전거·지하철·기차·배·비행기는 느리게 적용한다.
 - GPS·센서 수집 간격 슬라이더를 복원했다. Dynamic Island 우측 파형은 GPS 주기의 절반을 전체 폭으로 사용하고 실제 센서 저장 시 ECG 1회 펄스 후 평선으로 돌아간다. 1초 주기에서는 시간 진행을 표시하지 않는다.
 
 ### 검증 및 배포
@@ -201,3 +201,30 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `git diff --check`: 통과
 - 이번 배치에서는 TestFlight archive/upload를 수행하지 않았다.
 - Paid Apps Agreement·세금/은행 정보·실제 `com.taption.plan.pro` 상품 생성과 Sandbox 구매·복원은 `IAP73PAID1` 외부 게이트로 유지한다.
+
+## 2026-08-26 build 96 경로·센서·UI 통합 TestFlight
+
+- Release archive/export: `1.0 (96)`, `com.taption.plan`, Apple Distribution 서명, IPA 검증 성공
+- TestFlight 업로드 성공: Delivery UUID `932ca076-b9ed-4a5f-9598-c7ba2c45b2f9`
+- App Store Connect 처리 상태: `VALID` / `APP_STORE_ELIGIBLE`
+- `TP Taption Plan 내부 테스트` 그룹에 build 96 연결 및 그룹 builds 관계 노출 확인
+- 이번 빌드의 실기기 설치·실행은 별도 게이트로 남긴다.
+
+## 2026-08-26 build 97 엔진·저장소·실시간 UI 통합
+
+- `TaptionPlanEngine` umbrella Swift Package를 추가하고 Core·Activity·Route 엔진의 공개 경계를 하나로 묶었다.
+- SQLite 정본과 센서·지도 캐시의 Codable payload를 binary plist + LZFSE(가능한 경우) + 원본 바이트 수 + SHA-256 envelope로 통일했다. 이전 JSON payload는 호환하지 않는다.
+- 일자 데이터·지도 캐시에 bounded LRU와 지연 로딩·메모리 압력 축출을 적용하고, NLE 파생 projection은 generation으로 오래된 계산을 폐기한다.
+- GPS 임시 역 위치, 지하철 확정 경로, 속도 기반 경로 팔레트, 현재 위치 전면 annotation, 날씨·미세먼지 색상, 시작 화면 `Taption Plan`/0–100% 진행 표시, 첨부 고양이 아이콘·스플래시를 통합했다.
+- Dynamic Island는 우측에서 좌측으로 흐르는 파형만 표시하며 센서 저장 시 1회 ECG 펄스 후 평선으로 돌아간다. 외부 수신 센서는 지원된 provenance일 때만 빨간색으로 표시하고, 우측 상단 2px 단일 점을 1초 주기로 점멸한다.
+
+### 검증 및 배포
+
+- `TaptionPlanCore`: 28/28, `TaptionActivityEngine`: 4/4, `TaptionRouteEngine`: 11/11, 앱 XCTest: 695/695, 어댑터 Swift 테스트: 10/10 통과
+- iOS Simulator Debug build: `BUILD SUCCEEDED`
+- Release archive/export: `1.0 (97)`, `com.taption.plan`, IPA 검증 성공 (`d8f6ab1d458daecf4df5a2ddacc2b32a4d7793207e2c9e0f4f4d508b34d2b5bb`)
+- TestFlight 업로드 성공: Delivery UUID `785306ae-b642-4679-a0ed-123ca25e1565`
+- App Store Connect 처리 상태: `VALID` / `APP_STORE_ELIGIBLE`, `IS-ON-APP-STORE-CONNECT: true`
+- `TP Taption Plan 내부 테스트` 그룹에 build 97 연결, builds 관계에서 build 97 노출 확인
+- 실기기 설치·실행·readback은 별도 게이트이며, 다른 앱의 센서 사용 감지는 iOS 공개 API 제한으로 추정하지 않는다.
+- Paid Apps Agreement·세금/은행 정보·실제 `com.taption.plan.pro` 상품과 Sandbox 구매·복원은 `IAP73PAID1` 외부 게이트로 유지한다.

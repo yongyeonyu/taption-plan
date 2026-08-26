@@ -3,6 +3,20 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreTests: XCTestCase {
+    func testCanonicalSnapshotAndOneTimeConversion() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 8, day: 26)
+        let value = try TaptionPlanStorageEnvelopeV2()
+        try await store.saveCodableSnapshot(value, domain: "canonical", day: day, revision: 1)
+        let decoded = try await store.codableSnapshot(TaptionPlanStorageEnvelopeV2.self, domain: "canonical", day: day)
+        XCTAssertEqual(decoded, value)
+        let first = try await store.convertCodableSnapshotOnce(TaptionPlanStorageEnvelopeV2.self, from: "canonical", day: day, marker: "v2")
+        let second = try await store.convertCodableSnapshotOnce(TaptionPlanStorageEnvelopeV2.self, from: "canonical", day: day, marker: "v2")
+        XCTAssertTrue(first)
+        XCTAssertFalse(second)
+    }
     func testSQLiteWALSnapshotUpsertAndReopen() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -125,6 +139,34 @@ final class DayStoreTests: XCTestCase {
             styleKey: "standard"
         )
         XCTAssertNil(differentStyle)
+    }
+
+    func testCodableMapDayDocumentUsesCanonicalEnvelope() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 8, day: 26)
+        let value = try TaptionPlanStorageEnvelopeV2()
+
+        _ = try await store.saveCodableMapDayDocument(
+            value,
+            day: day,
+            algorithmKey: "route-v2",
+            styleKey: "simplified"
+        )
+        let raw = try await store.mapDayDocument(
+            day: day,
+            algorithmKey: "route-v2",
+            styleKey: "simplified"
+        )?.payload
+        XCTAssertEqual(String(decoding: raw?.prefix(8) ?? Data(), as: UTF8.self), "TP-CANON")
+        let decoded = try await store.codableMapDayDocument(
+            TaptionPlanStorageEnvelopeV2.self,
+            day: day,
+            algorithmKey: "route-v2",
+            styleKey: "simplified"
+        )
+        XCTAssertEqual(decoded, value)
     }
 
     func testTimestampIndexQueriesAFullDayOfSamples() {

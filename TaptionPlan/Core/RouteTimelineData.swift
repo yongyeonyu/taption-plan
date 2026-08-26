@@ -50,7 +50,63 @@ struct RouteTimelineSegment: Identifiable, Hashable, Sendable {
     let colorHex: String
     let opacity: Double
     let coordinates: [GeoPoint]
+    /// Display-only speed derived from the observed endpoints and timestamps.
+    /// It is nil when an interval has no measurable movement.
+    let speedMetersPerSecond: Double?
     let confirmedSubwayTravelID: UUID?
+}
+
+/// Maps observed movement speeds to a stable cool-to-warm route palette.
+/// The range is calculated from the visible route, so a walking route and a
+/// driving route each use the full gradient without changing stored readings.
+enum RouteSpeedGradient {
+    private static let stops: [(position: Double, red: Double, green: Double, blue: Double)] = [
+        (0.0, 37 / 255, 99 / 255, 235 / 255),       // blue
+        (0.5, 20 / 255, 184 / 255, 166 / 255),      // teal
+        (0.78, 249 / 255, 115 / 255, 22 / 255),     // orange
+        (1.0, 220 / 255, 38 / 255, 38 / 255),       // red
+    ]
+
+    static func normalized(
+        speedMetersPerSecond speed: Double?,
+        in speeds: [Double]
+    ) -> Double? {
+        guard let speed, speed.isFinite, speed >= 0 else { return nil }
+        let finite = speeds.filter { $0.isFinite && $0 >= 0 }
+        guard let minimum = finite.min(),
+              let maximum = finite.max() else { return nil }
+        let range = maximum - minimum
+        guard range > 0.001 else { return 0.5 }
+        return min(1, max(0, (speed - minimum) / range))
+    }
+
+    static func colorHex(
+        speedMetersPerSecond speed: Double?,
+        in speeds: [Double]
+    ) -> String? {
+        guard let normalized = normalized(
+            speedMetersPerSecond: speed,
+            in: speeds
+        ) else { return nil }
+        let lowerIndex = stops.lastIndex { $0.position <= normalized } ?? 0
+        let upperIndex = min(stops.count - 1, lowerIndex + 1)
+        let lower = stops[lowerIndex]
+        let upper = stops[upperIndex]
+        let interval = upper.position - lower.position
+        let ratio = interval > 0
+            ? (normalized - lower.position) / interval
+            : 0
+        func blend(_ lhs: Double, _ rhs: Double) -> Int {
+            let value = lhs + (rhs - lhs) * ratio
+            return Int((value * 255.0).rounded())
+        }
+        return String(
+            format: "#%02X%02X%02X",
+            blend(lower.red, upper.red),
+            blend(lower.green, upper.green),
+            blend(lower.blue, upper.blue)
+        )
+    }
 }
 
 struct RouteTimelineProjection: Hashable, Sendable {
@@ -60,6 +116,39 @@ struct RouteTimelineProjection: Hashable, Sendable {
     let samples: [RouteTimelineSample]
     let segments: [RouteTimelineSegment]
     let coordinateAtCutoff: GeoPoint?
+}
+
+/// Projects an immutable route snapshot into the current visible window.
+/// This is intentionally display-only: archived readings and segments remain
+/// untouched while a viewport is panned or zoomed.
+enum RouteTimelineRenderProjection {
+    static func segments(
+        _ source: [RouteTimelineSegment],
+        in span: TimeSpan
+    ) -> [RouteTimelineSegment] {
+        source.compactMap { segment in
+            guard let overlap = segmentSpan(segment).intersection(with: span),
+                  overlap.duration > 0 else { return nil }
+            guard overlap.start != segment.start || overlap.end != segment.end else {
+                return segment
+            }
+            return RouteTimelineSegment(
+                id: segment.id,
+                start: overlap.start,
+                end: overlap.end,
+                category: segment.category,
+                colorHex: segment.colorHex,
+                opacity: segment.opacity,
+                coordinates: segment.coordinates,
+                speedMetersPerSecond: segment.speedMetersPerSecond,
+                confirmedSubwayTravelID: segment.confirmedSubwayTravelID
+            )
+        }
+    }
+
+    private static func segmentSpan(_ segment: RouteTimelineSegment) -> TimeSpan {
+        TimeSpan(start: segment.start, end: segment.end)
+    }
 }
 
 enum ExpectedRouteTransport: String, Hashable, Sendable {
@@ -1249,6 +1338,7 @@ enum RouteTimelineDataEngine {
         var end: Date
         let category: RouteTimelineCategory
         let opacity: Double
+        var speedMetersPerSecond: Double?
         let confirmedSubwayTravelID: UUID?
         var coordinates: [GeoPoint]
 
@@ -1261,6 +1351,7 @@ enum RouteTimelineDataEngine {
                 colorHex: category.colorHex,
                 opacity: opacity,
                 coordinates: coordinates,
+                speedMetersPerSecond: speedMetersPerSecond,
                 confirmedSubwayTravelID: confirmedSubwayTravelID
             )
         }
@@ -1418,6 +1509,11 @@ enum RouteTimelineDataEngine {
                 at: midpoint,
                 in: travel
             )?.id
+            let speedMetersPerSecond = measuredSpeed(
+                from: startPoint,
+                to: endPoint,
+                over: end.timeIntervalSince(start)
+            )
             let opacity: Double
             if let selectedSpan {
                 opacity = selectedSpan.contains(midpoint) ? 1.0 : 0.5
@@ -1428,11 +1524,22 @@ enum RouteTimelineDataEngine {
                current.category == category,
                current.opacity == opacity,
                current.confirmedSubwayTravelID == confirmedSubwayTravelID,
+               speedsCanMerge(
+                   current.speedMetersPerSecond,
+                   speedMetersPerSecond,
+                   interval: end.timeIntervalSince(start),
+                   sampleCount: samples.count
+               ),
                current.end == start {
                 current.end = end
                 if !sameLocation(current.coordinates.last, endPoint) {
                     current.coordinates.append(endPoint)
                 }
+                current.speedMetersPerSecond = measuredSpeed(
+                    from: current.coordinates[0],
+                    to: endPoint,
+                    over: current.end.timeIntervalSince(current.start)
+                )
                 accumulator = current
             } else {
                 if let accumulator {
@@ -1443,6 +1550,7 @@ enum RouteTimelineDataEngine {
                     end: end,
                     category: category,
                     opacity: opacity,
+                    speedMetersPerSecond: speedMetersPerSecond,
                     confirmedSubwayTravelID: confirmedSubwayTravelID,
                     coordinates: sameLocation(startPoint, endPoint)
                         ? [startPoint]
@@ -1462,6 +1570,43 @@ enum RouteTimelineDataEngine {
         category: RouteTimelineCategory
     ) -> String {
         "\(category.rawValue)-\(start.timeIntervalSinceReferenceDate)-\(end.timeIntervalSinceReferenceDate)"
+    }
+
+    private static func measuredSpeed(
+        from start: GeoPoint,
+        to end: GeoPoint,
+        over duration: TimeInterval
+    ) -> Double? {
+        guard duration > 0, duration.isFinite else { return nil }
+        let distance = distanceMeters(start, end)
+        guard distance.isFinite, distance > 0 else { return nil }
+        let speed = distance / duration
+        return speed.isFinite && speed >= 0 ? speed : nil
+    }
+
+    private static func speedsCanMerge(
+        _ lhs: Double?,
+        _ rhs: Double?,
+        interval: TimeInterval,
+        sampleCount: Int
+    ) -> Bool {
+        // A dense archive is one continuous logger cluster. The map can
+        // still use the aggregate speed for its gradient without fragmenting
+        // that cluster into dozens of tiny polylines.
+        guard sampleCount <= 3 else { return true }
+        // Sub-minute samples are logger cadence, not a meaningful speed
+        // change. Keep those points in one polyline and only split the
+        // display segment when a longer observation supports a gradient.
+        guard interval >= 60 else { return true }
+        switch (lhs, rhs) {
+        case (nil, nil):
+            return true
+        case let (left?, right?):
+            let tolerance = max(0.25, max(abs(left), abs(right)) * 0.1)
+            return abs(left - right) <= tolerance
+        default:
+            return false
+        }
     }
 
     private static func preferredReading(

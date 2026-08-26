@@ -493,6 +493,21 @@ final class AppModel {
         TaptionWidgetSharedStore.diagnostics().summary
     }
 
+    var diagnosticsLatestLogSummary: String {
+        let defaults = UserDefaults(
+            suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+        ) ?? .standard
+        guard let fileName = defaults.string(
+            forKey: Self.diagnosticsLatestFileKey
+        ),
+        let savedAt = defaults.object(
+            forKey: Self.diagnosticsLatestSavedAtKey
+        ) as? Date else {
+            return "최신 로그 없음"
+        }
+        return "최신 \(fileName) · \(savedAt.formatted(date: .abbreviated, time: .shortened))"
+    }
+
     var appUsageStatusText: String {
         guard appUsageAuthorizationState == .approved else {
             return appUsageAuthorizationState.displayName
@@ -621,6 +636,10 @@ final class AppModel {
         "taption.health-authorization-requested.v1"
     private static let permissionFlagsMigrationKey =
         "taption.permission-flags-sync.v2"
+    private static let diagnosticsLatestFileKey =
+        "taption.diagnostics.latest.file.v1"
+    private static let diagnosticsLatestSavedAtKey =
+        "taption.diagnostics.latest.saved-at.v1"
 
     private struct LiveMergeCacheKey: Equatable {
         let spanStart: TimeInterval
@@ -2309,7 +2328,8 @@ final class AppModel {
             isForeground: isForeground,
             intervalSeconds: settings.gpsLoggingPreferences
                 .effectiveIntervalSeconds,
-            saveToken: sensorSaveToken
+            saveToken: sensorSaveToken,
+            isExternalSample: latestSensorReading?.sourceDevice == .appleWatch
         )
     }
 
@@ -3442,9 +3462,23 @@ final class AppModel {
                 try TaptionPlanDiagnosticsICloudExporter().export(package)
             }.value
             diagnosticsExportStatus = "전송됨"
+            let defaults = UserDefaults(
+                suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+            ) ?? .standard
+            defaults.set(
+                destination.lastPathComponent,
+                forKey: Self.diagnosticsLatestFileKey
+            )
+            defaults.set(
+                Date.now,
+                forKey: Self.diagnosticsLatestSavedAtKey
+            )
             TaptionPlanDiagnosticsLogger.shared.record(
                 "diagnostics_export_completed",
-                fields: ["file": destination.lastPathComponent]
+                fields: [
+                    "file": destination.lastPathComponent,
+                    "latest_pointer": TaptionDiagnosticsLatestLogManifest.fileName,
+                ]
             )
         } catch {
             diagnosticsExportStatus = "실패"

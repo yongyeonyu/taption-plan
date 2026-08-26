@@ -10,6 +10,24 @@ private func mapHomeWeatherSymbolColor(
     return Color(red: color.red, green: color.green, blue: color.blue)
 }
 
+private func mapHomeAirQualityColor(_ weather: WeatherContext) -> Color {
+    guard let grade = weather.airQuality?.overallGrade else { return .tpWeatherDark }
+    switch grade {
+    case .good: return Color(hex: "#2E9B72")
+    case .moderate: return Color(hex: "#C3942E")
+    case .bad: return Color(hex: "#DD6B3D")
+    case .veryBad: return Color(hex: "#C44767")
+    }
+}
+
+private func mapHomeWeatherAccessibilityLabel(_ weather: WeatherContext) -> String {
+    var label = "현재 날씨 \(weather.condition), \(Int(weather.temperatureCelsius.rounded()))도"
+    if let grade = weather.airQuality?.overallGrade {
+        label += ", 미세먼지 \(grade.displayName)"
+    }
+    return label
+}
+
 enum MapHomeTimeSidebarDragProjection {
     static func state(
         from base: MapHomeTimeSidebarNLEState,
@@ -1334,23 +1352,28 @@ struct MapHomeTimeSidebar: View {
         )
         return HStack(spacing: 2) {
             Image(systemName: weather.symbolName)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(
                     mapHomeWeatherSymbolColor(weather, component: .primary),
                     mapHomeWeatherSymbolColor(weather, component: .secondary)
                 )
-            Text("\(Int(weather.temperatureCelsius.rounded()))°")
-                .font(.system(size: 8, weight: .bold, design: .rounded))
+            Text("\(Int(weather.temperatureCelsius.rounded()))°C")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
                 .monospacedDigit()
         }
-        .foregroundStyle(Color.tpWeatherDark)
+        .foregroundStyle(mapHomeAirQualityColor(weather))
         .frame(width: frame.width, height: frame.height)
-        .background(Color.tpWeather.opacity(0.24), in: Capsule())
+        .background(Color.white.opacity(0.92), in: Capsule())
+        .overlay {
+            Capsule()
+                .stroke(Color.tpReferenceRose, lineWidth: 1.5)
+        }
         .position(x: frame.midX, y: frame.midY)
         .allowsHitTesting(false)
+        .zIndex(4)
         .accessibilityLabel(
-            "현재 날씨 \(weather.condition), \(Int(weather.temperatureCelsius.rounded()))도"
+            mapHomeWeatherAccessibilityLabel(weather)
         )
     }
 
@@ -1705,7 +1728,11 @@ struct MapHomeWeatherSidebar: View {
                             Text("\(Int(entry.context.temperatureCelsius.rounded()))°C")
                                 .font(.system(size: 9, weight: isSelected ? .bold : .medium, design: .rounded))
                                 .monospacedDigit()
-                                .foregroundStyle(isSelected ? Color.tpReferenceRose : Color.tpWeatherDark)
+                                .foregroundStyle(
+                                    isSelected
+                                        ? Color.tpReferenceRose
+                                        : mapHomeAirQualityColor(entry.context)
+                                )
                         }
                         .padding(.horizontal, 3)
                         .frame(width: itemWidth, height: itemHeight)
@@ -1726,8 +1753,10 @@ struct MapHomeWeatherSidebar: View {
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(
                             language.text(
-                                "날씨 \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded()))도",
+                                "날씨 \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded()))도"
+                                    + (entry.context.airQuality.map { ", 미세먼지 \($0.overallGrade.displayName)" } ?? ""),
                                 "Weather \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded())) degrees Celsius"
+                                    + (entry.context.airQuality.map { ", air quality \($0.overallGrade.displayName)" } ?? "")
                             )
                         )
                         .accessibilityValue(
@@ -1795,7 +1824,7 @@ enum MapHomeTimeSidebarMath {
     static let activeRailWidth: CGFloat = 12
     static let handleVisualSize = CGSize(width: 44, height: 44)
     static let handleRailGap: CGFloat = 4
-    static let compactWeatherSize = CGSize(width: 32, height: 22)
+    static let compactWeatherSize = CGSize(width: 56, height: 28)
     static let compactWeatherGap: CGFloat = 4
 
     static func totalWidth(railWidth: CGFloat) -> CGFloat {

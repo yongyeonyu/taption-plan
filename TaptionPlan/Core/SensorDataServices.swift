@@ -665,8 +665,6 @@ enum TrackingSessionRecoveryStore {
 actor RawDeviceDataDayArchive {
     private static let domain = "raw-device-data"
     private let store: TaptionPlanDayStore
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
 
     init(databaseURL: URL) throws {
         try FileManager.default.createDirectory(
@@ -674,9 +672,6 @@ actor RawDeviceDataDayArchive {
             withIntermediateDirectories: true
         )
         store = try TaptionPlanDayStore(url: databaseURL)
-        encoder = RawDeviceDataMonthlyArchive.payloadEncoder()
-        decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .secondsSince1970
     }
 
     static func applicationSupport() throws -> RawDeviceDataDayArchive {
@@ -694,7 +689,9 @@ actor RawDeviceDataDayArchive {
                 sequence: 0,
                 id: envelope.id.uuidString,
                 domain: Self.domain,
-                payload: try encoder.encode(envelope)
+                payload: TaptionPlanCanonicalStorage.envelope(
+                    for: try TaptionPlanCanonicalStorage.encode(envelope)
+                )
             )
         ])
     }
@@ -707,9 +704,11 @@ actor RawDeviceDataDayArchive {
             domain: Self.domain
         )
         return events.compactMap { event in
-            guard let value = try? decoder.decode(
-                RawDeviceDataEnvelope.self,
+            guard let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
                 from: event.payload
+            ), let value = try? TaptionPlanCanonicalStorage.decode(
+                RawDeviceDataEnvelope.self,
+                from: encoded
             ), span.contains(value.capturedAt) else { return nil }
             return value
         }
@@ -733,8 +732,7 @@ actor SensorReadingArchive {
     private let fileURL: URL
     private let dayStore: TaptionPlanDayStore?
     private let retentionInterval: TimeInterval
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
+    private let legacyDecoder: JSONDecoder
     private let rawArchive: RawDeviceDataMonthlyArchive?
     private let trackingChunkArchive: TrackingSessionChunkArchive?
 
@@ -757,10 +755,8 @@ actor SensorReadingArchive {
             withIntermediateDirectories: true
         )
         self.dayStore = try? TaptionPlanDayStore(url: storeURL)
-        self.encoder = JSONEncoder()
-        self.decoder = JSONDecoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        decoder.dateDecodingStrategy = .secondsSince1970
+        self.legacyDecoder = JSONDecoder()
+        legacyDecoder.dateDecodingStrategy = .secondsSince1970
     }
 
     static func applicationSupport(
@@ -801,7 +797,6 @@ actor SensorReadingArchive {
         guard !readings.isEmpty else { return }
         try await ensureMigrated()
         guard let dayStore else { throw Error.dayStoreUnavailable }
-        let encoder = encoder
         let unique = Dictionary(grouping: readings, by: \.id).compactMap { $0.value.first }
         var knownIDs = Set<String>()
         let days = unique.map { TaptionPlanDayKey(date: $0.timestamp) }
@@ -818,7 +813,9 @@ actor SensorReadingArchive {
                     sequence: UInt64(max(0, reading.sequence ?? 0)),
                     id: reading.id.uuidString,
                     domain: "sensor-reading",
-                    payload: try encoder.encode(reading)
+                    payload: TaptionPlanCanonicalStorage.envelope(
+                        for: try TaptionPlanCanonicalStorage.encode(reading)
+                    )
                 )
             }
         try await dayStore.appendEvents(events)
@@ -876,7 +873,9 @@ actor SensorReadingArchive {
                 sequence: UInt64(max(0, reading.sequence ?? 0)),
                 id: reading.id.uuidString,
                 domain: "sensor-reading",
-                payload: try encoder.encode(reading)
+                payload: TaptionPlanCanonicalStorage.envelope(
+                    for: try TaptionPlanCanonicalStorage.encode(reading)
+                )
             )
         }
         if !events.isEmpty { try await dayStore.appendEvents(events) }
@@ -889,14 +888,21 @@ actor SensorReadingArchive {
         let end = TaptionPlanDayKey(date: span.end)
         return try await dayStore.events(from: start, through: end, domain: "sensor-reading")
             .compactMap { event in
-                guard let reading = try? decoder.decode(SensorReading.self, from: event.payload), span.contains(reading.timestamp) else { return nil }
+                guard let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
+                    from: event.payload
+                ), let reading = try? TaptionPlanCanonicalStorage.decode(
+                    SensorReading.self,
+                    from: encoded
+                ), span.contains(reading.timestamp) else { return nil }
                 return reading
             }
     }
 
     private func readLegacyFile() -> [SensorReading] {
         guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        return data.split(separator: 0x0A).compactMap { try? decoder.decode(SensorReading.self, from: Data($0)) }
+        return data.split(separator: 0x0A).compactMap {
+            try? legacyDecoder.decode(SensorReading.self, from: Data($0))
+        }
     }
 
     private func readingOrder(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {

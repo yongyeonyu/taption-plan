@@ -103,7 +103,7 @@ enum SensorCollectionActivityPhase: String, Codable, Hashable {
 
 enum SensorCollectionProgressPolicy {
     static func halfWindowDuration(intervalSeconds: Int?) -> TimeInterval? {
-        guard let intervalSeconds, intervalSeconds > 1 else { return nil }
+        guard let intervalSeconds, intervalSeconds > 0 else { return nil }
         return TimeInterval(intervalSeconds) / 2
     }
 
@@ -122,6 +122,58 @@ enum SensorCollectionProgressPolicy {
     }
 }
 
+enum SensorCollectionWaveformMath {
+    static func rightToLeftEndpoint(
+        progress: Double,
+        width: Double
+    ) -> Double {
+        let clampedProgress = min(max(progress, 0), 1)
+        return width * (1 - clampedProgress)
+    }
+
+    static func cycleProgress(
+        at date: Date,
+        origin: Date,
+        duration: TimeInterval
+    ) -> Double {
+        guard duration.isFinite, duration > 0 else { return 0 }
+        let elapsed = date.timeIntervalSince(origin)
+        guard elapsed.isFinite, elapsed >= 0 else { return 0 }
+        let progress = (elapsed / duration).truncatingRemainder(dividingBy: 1)
+        return progress >= 0 ? progress : progress + 1
+    }
+
+    static func rightToLeftPhase(
+        position: Double,
+        progress: Double
+    ) -> Double {
+        let value = position - progress
+        let remainder = value.truncatingRemainder(dividingBy: 1)
+        return remainder >= 0 ? remainder : remainder + 1
+    }
+
+    static func heartbeat(at phase: Double) -> Double {
+        guard phase.isFinite else { return 0 }
+        let normalizedPhase = phase.truncatingRemainder(dividingBy: 1)
+        let wrappedPhase = normalizedPhase >= 0
+            ? normalizedPhase
+            : normalizedPhase + 1
+
+        func gaussian(center: Double, width: Double, amplitude: Double) -> Double {
+            let distance = abs(wrappedPhase - center)
+            let wrappedDistance = min(distance, 1 - distance)
+            return amplitude * exp(-0.5 * (wrappedDistance / width) * (wrappedDistance / width))
+        }
+
+        let value = gaussian(center: 0.18, width: 0.055, amplitude: 0.22)
+            + gaussian(center: 0.37, width: 0.018, amplitude: -0.24)
+            + gaussian(center: 0.405, width: 0.014, amplitude: 1.05)
+            + gaussian(center: 0.44, width: 0.018, amplitude: -0.45)
+            + gaussian(center: 0.63, width: 0.075, amplitude: 0.30)
+        return min(max(value, -1), 1)
+    }
+}
+
 struct SensorCollectionActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         var startedAt: Date
@@ -133,6 +185,10 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var saveToken: Int?
         var phaseRawValue: String?
         var phaseUntil: Date?
+        /// True when the most recent saved sample came from a supported
+        /// external device such as Apple Watch. A different app's sensor use
+        /// is never inferred.
+        var isExternalSample: Bool?
 
         var phase: SensorCollectionActivityPhase {
             guard let phaseRawValue,
@@ -153,7 +209,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             sessionStateRawValue: String? = nil,
             saveToken: Int? = nil,
             phaseRawValue: String? = nil,
-            phaseUntil: Date? = nil
+            phaseUntil: Date? = nil,
+            isExternalSample: Bool? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -164,6 +221,7 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.saveToken = saveToken
             self.phaseRawValue = phaseRawValue
             self.phaseUntil = phaseUntil
+            self.isExternalSample = isExternalSample
         }
     }
 

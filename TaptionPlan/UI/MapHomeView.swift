@@ -273,6 +273,7 @@ private struct MapHomeCachedRouteOverlay: Codable, Sendable {
     let id: String
     let categoryID: String
     let opacity: Double
+    let speedMetersPerSecond: Double?
     let coordinates: [MapHomeCachedCoordinate]
 }
 
@@ -290,6 +291,15 @@ private struct MapHomeCachedSubwayRouteOverlay: Codable, Sendable {
     let coordinates: [MapHomeCachedCoordinate]
 }
 
+private struct MapHomeCachedTemporaryLocation: Codable, Sendable {
+    let id: UUID
+    let timestamp: Date
+    let stationName: String
+    let latitude: Double
+    let longitude: Double
+    let reason: String
+}
+
 private struct MapHomeDayCachePayload: Codable, Sendable {
     let centerLatitude: Double
     let centerLongitude: Double
@@ -299,6 +309,40 @@ private struct MapHomeDayCachePayload: Codable, Sendable {
     let expected: [MapHomeCachedExpectedRouteOverlay]?
     let subway: [MapHomeCachedSubwayRouteOverlay]?
     let subwayMinute: Int?
+    let temporaryLocations: [MapHomeCachedTemporaryLocation]?
+
+    private enum CodingKeys: String, CodingKey {
+        case centerLatitude, centerLongitude, latitudeDelta, longitudeDelta
+        case timeline, expected, subway, subwayMinute, temporaryLocations
+    }
+
+    init(centerLatitude: Double, centerLongitude: Double, latitudeDelta: Double, longitudeDelta: Double,
+         timeline: [MapHomeCachedRouteOverlay], expected: [MapHomeCachedExpectedRouteOverlay]?,
+         subway: [MapHomeCachedSubwayRouteOverlay]?, subwayMinute: Int?,
+         temporaryLocations: [MapHomeCachedTemporaryLocation]? = nil) {
+        self.centerLatitude = centerLatitude
+        self.centerLongitude = centerLongitude
+        self.latitudeDelta = latitudeDelta
+        self.longitudeDelta = longitudeDelta
+        self.timeline = timeline
+        self.expected = expected
+        self.subway = subway
+        self.subwayMinute = subwayMinute
+        self.temporaryLocations = temporaryLocations
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        centerLatitude = try container.decode(Double.self, forKey: .centerLatitude)
+        centerLongitude = try container.decode(Double.self, forKey: .centerLongitude)
+        latitudeDelta = try container.decode(Double.self, forKey: .latitudeDelta)
+        longitudeDelta = try container.decode(Double.self, forKey: .longitudeDelta)
+        timeline = try container.decode([MapHomeCachedRouteOverlay].self, forKey: .timeline)
+        expected = try container.decodeIfPresent([MapHomeCachedExpectedRouteOverlay].self, forKey: .expected)
+        subway = try container.decodeIfPresent([MapHomeCachedSubwayRouteOverlay].self, forKey: .subway)
+        subwayMinute = try container.decodeIfPresent(Int.self, forKey: .subwayMinute)
+        temporaryLocations = try container.decodeIfPresent([MapHomeCachedTemporaryLocation].self, forKey: .temporaryLocations)
+    }
 }
 
 struct MapHomeRouteDocumentRefresh: Equatable, Sendable {
@@ -919,6 +963,7 @@ struct MapHomeView: View {
     @State private var displayRouteReadings: [SensorReading] = []
     @State private var historicalPlaybackPoint: GeoPoint?
     @State private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] = []
+    @State private var cachedTemporaryLocations: [SubwayStationCatalog.TemporaryLocation] = []
     @State private var expectedRouteOverlays: [MapHomeExpectedRouteOverlay] = []
     @State private var expectedRouteCache: [ExpectedRouteRequest: [CLLocationCoordinate2D]] = [:]
     @State private var expectedRouteRefreshTask: Task<Void, Never>?
@@ -1375,6 +1420,7 @@ struct MapHomeView: View {
                 displayRouteReadings = []
                 routeProjection = nil
                 timelineRouteOverlays = []
+                cachedTemporaryLocations = []
                 expectedRouteOverlays = []
                 historicalPlaybackPoint = nil
                 prepareRouteProjectionReadings()
@@ -1433,32 +1479,8 @@ struct MapHomeView: View {
                 interactionModes: .all,
                 scope: mapScope
             ) {
-            ForEach(visibleExpectedRouteOverlays) { overlay in
-                MapPolyline(coordinates: overlay.coordinates)
-                    .stroke(
-                        mapCategoryColor("movement").opacity(0.48),
-                        style: StrokeStyle(
-                            lineWidth: 3,
-                            lineCap: .round,
-                            lineJoin: .round,
-                            dash: [7, 5]
-                        )
-                    )
-            }
-
             ForEach(subwayRouteOverlays) { overlay in
-                if overlay.estimated {
-                    MapPolyline(coordinates: overlay.coordinates)
-                        .stroke(
-                            mapCategoryColor("movement").opacity(0.55),
-                            style: StrokeStyle(
-                                lineWidth: 3,
-                                lineCap: .round,
-                                lineJoin: .round,
-                                dash: [8, 6]
-                            )
-                        )
-                } else {
+                if !overlay.estimated {
                     MapPolyline(coordinates: overlay.coordinates)
                         .stroke(
                             mapCategoryColor("movement").opacity(0.20),
@@ -1475,16 +1497,34 @@ struct MapHomeView: View {
             ForEach(timelineRouteOverlays) { overlay in
                 MapPolyline(coordinates: overlay.coordinates)
                     .stroke(
-                        mapCategoryColor(overlay.categoryID)
+                        timelineRouteColor(overlay)
                             .opacity(overlay.opacity * 0.20),
                         style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round)
                     )
                 MapPolyline(coordinates: overlay.coordinates)
                     .stroke(
-                        mapCategoryColor(overlay.categoryID)
+                        timelineRouteColor(overlay)
                             .opacity(overlay.opacity),
                         style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
                     )
+            }
+
+            ForEach(temporaryLocationAnnotations) { location in
+                Annotation(location.stationName, coordinate: location.coordinate) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "tram.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.tpReferenceBlue.opacity(0.72))
+                        Text(language.text("임시 위치", "Temporary"))
+                            .font(.system(size: 9, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpInk.opacity(0.72))
+                    }
+                    .padding(5)
+                    .background(Color.tpSurface.opacity(0.66), in: Capsule())
+                    .overlay(Capsule().stroke(Color.tpReferenceBlue.opacity(0.45), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(language.text("\(location.stationName) 지하철 임시 위치", "\(location.stationName) temporary subway location"))
+                }
             }
 
             ForEach(placeAnnotations) { place in
@@ -1571,19 +1611,6 @@ struct MapHomeView: View {
                 }
             }
 
-            if let coordinate = displayedLocationCoordinate {
-                Annotation(
-                    displayedLocationAccessibilityLabel,
-                    coordinate: coordinate,
-                    anchor: .center
-                ) {
-                    MapHomeHistoricalLocationMarker()
-                        .zIndex(100)
-                        .accessibilityLabel(displayedLocationAccessibilityLabel)
-                        .allowsHitTesting(false)
-                }
-            }
-
             }
             .mapStyle(mapStyle)
             .mapControls {
@@ -1603,6 +1630,16 @@ struct MapHomeView: View {
             .overlay {
                 MapHomeFairyAtmosphere()
                     .allowsHitTesting(false)
+            }
+            .overlay(alignment: .topLeading) {
+                if let coordinate = displayedLocationCoordinate,
+                   let point = proxy.convert(coordinate, to: .local) {
+                    MapHomeHistoricalLocationMarker()
+                        .position(point)
+                        .zIndex(100)
+                        .accessibilityLabel(displayedLocationAccessibilityLabel)
+                        .allowsHitTesting(false)
+                }
             }
             .background {
                 MapHomePanGestureObserver(
@@ -1624,6 +1661,11 @@ struct MapHomeView: View {
                 }
             )
             .task {
+                applyInitialLocationIfAvailable(using: proxy)
+                beginInitialLocationRequest(using: proxy)
+            }
+            .onChange(of: mapViewportSize) { _, size in
+                guard size.width > 0, size.height > 0 else { return }
                 applyInitialLocationIfAvailable(using: proxy)
                 beginInitialLocationRequest(using: proxy)
             }
@@ -2382,9 +2424,11 @@ struct MapHomeView: View {
                         activity: currentActivity(at: minute),
                         segments: timeRailSegments,
                         categoryColors: model.settings.mapCategoryColors,
-                        currentWeather: model.settings.weatherSidebarVisible
-                            ? nil
-                            : weatherContext(at: minute),
+                        // Keep the compact current-weather chip on the left
+                        // handle even when the full weather rail is visible.
+                        // The rail provides the forecast context; the handle
+                        // remains the selected-time/current-condition anchor.
+                        currentWeather: weatherContext(at: minute),
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: timeSidebarZoomStep,
                         railWidth: Layout.timeRailWidth,
@@ -2644,7 +2688,7 @@ struct MapHomeView: View {
                     .foregroundStyle(.secondary)
             }
             }
-            .padding(.horizontal, 22)
+            .padding(.horizontal, 20)
             .padding(.top, 60)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -3416,15 +3460,10 @@ struct MapHomeView: View {
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(tint)
                         .frame(width: 24)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(language.text("GPS 및 센서 데이터", "GPS & Sensor Data"))
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        Text(
-                            sensorCollectionStatusText + " · "
-                                + gpsLoggingIntervalText(
-                                    preferences.effectiveIntervalSeconds
-                                )
-                        )
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(language.text("GPS 및 센서 데이터", "GPS & Sensor Data"))
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        Text(sensorCollectionStatusText)
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                     }
@@ -3472,6 +3511,9 @@ struct MapHomeView: View {
                                 systemImage: "battery.25percent"
                             )
                             Spacer()
+                            Text(gpsLoggingIntervalText(preferences.effectiveIntervalSeconds))
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.secondary)
                             if preferences.isBatteryMinimal {
                                 Image(systemName: "checkmark.circle.fill")
                             }
@@ -3611,11 +3653,18 @@ struct MapHomeView: View {
     }
 
     private var currentCoordinate: CLLocationCoordinate2D? {
-        let reading = MapCurrentLocationAnchorPolicy.latestValidReading(
-            in: [model.latestSensorReading, model.liveRouteState.readings.last]
-                .compactMap { $0 }
-        )
-        let point = reading?.point
+        let readings = [model.latestSensorReading, model.liveRouteState.readings.last]
+            .compactMap { $0 }
+        let temporaryLocations = SubwayStationCatalog.temporaryLocations(from: readings)
+        let point = MapCurrentLocationAnchorPolicy.latestValidReading(
+            in: readings
+        )?.point ?? RealtimeSensorMapProjection.project(
+            readings: readings,
+            at: .now,
+            temporaryLocations: temporaryLocations.isEmpty
+                ? cachedTemporaryLocations
+                : temporaryLocations
+        )?.point
         guard let point, isValid(point) else { return nil }
         return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
     }
@@ -3651,6 +3700,26 @@ struct MapHomeView: View {
             hex: model.settings.mapCategoryColors[id]
                 ?? CanonicalCategoryPalette.hex(id)
         )
+    }
+
+    private var timelineRouteSpeeds: [Double] {
+        timelineRouteOverlays.compactMap { overlay in
+            guard let speed = overlay.speedMetersPerSecond,
+                  speed.isFinite, speed >= 0 else { return nil }
+            return speed
+        }
+    }
+
+    private func timelineRouteColor(
+        _ overlay: MapHomeTimelineRouteOverlay
+    ) -> Color {
+        guard let hex = RouteSpeedGradient.colorHex(
+            speedMetersPerSecond: overlay.speedMetersPerSecond,
+            in: timelineRouteSpeeds
+        ) else {
+            return mapCategoryColor(overlay.categoryID)
+        }
+        return Color(hex: hex)
     }
 
     private func refreshTimeRailSegments() {
@@ -3837,6 +3906,25 @@ struct MapHomeView: View {
         }
     }
 
+    private var temporaryLocationAnnotations: [MapHomeTemporaryLocationAnnotation] {
+        let readings = routeReadings
+            + model.liveRouteState.readings
+            + (model.latestSensorReading.map { [$0] } ?? [])
+        let derived = SubwayStationCatalog.temporaryLocations(from: readings)
+        let locations = derived.isEmpty ? cachedTemporaryLocations : derived
+        return locations
+            .filter { $0.timestamp <= routeOverlayCutoff }
+            .map {
+                MapHomeTemporaryLocationAnnotation(
+                    id: $0.id,
+                    stationName: $0.stationName,
+                    timestamp: $0.timestamp,
+                    point: $0.point,
+                    reason: $0.reason
+                )
+            }
+    }
+
     private func makeTimelineRouteOverlays(
         _ projection: RouteTimelineProjection
     ) -> [MapHomeTimelineRouteOverlay] {
@@ -3854,6 +3942,7 @@ struct MapHomeView: View {
                 id: segment.id,
                 categoryID: segment.category.rawValue,
                 opacity: segment.opacity,
+                speedMetersPerSecond: segment.speedMetersPerSecond,
                 coordinates: coordinates
             )
         }
@@ -3991,14 +4080,11 @@ struct MapHomeView: View {
         guard let mapDayCacheStore else { return }
         let key = TaptionPlanDayKey(date: date)
         let styleKey = model.settings.mapDisplayStyle.rawValue
-        guard let document = try? await mapDayCacheStore.mapDayDocument(
+        guard let payload = try? await mapDayCacheStore.codableMapDayDocument(
+            MapHomeDayCachePayload.self,
             day: key,
             algorithmKey: Self.mapCacheAlgorithmKey,
             styleKey: styleKey
-        ),
-        let payload = try? JSONDecoder().decode(
-            MapHomeDayCachePayload.self,
-            from: document.payload
         ), Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
         else { return }
 
@@ -4034,7 +4120,20 @@ struct MapHomeView: View {
                 id: overlay.id,
                 categoryID: overlay.categoryID,
                 opacity: overlay.opacity,
+                speedMetersPerSecond: overlay.speedMetersPerSecond,
                 coordinates: coordinates
+            )
+        }
+        cachedTemporaryLocations = (payload.temporaryLocations ?? []).compactMap { item in
+            guard item.latitude.isFinite, item.longitude.isFinite,
+                  (-90...90).contains(item.latitude), (-180...180).contains(item.longitude)
+            else { return nil }
+            return SubwayStationCatalog.TemporaryLocation(
+                id: item.id, timestamp: item.timestamp, stationName: item.stationName,
+                point: GeoPoint(
+                    latitude: item.latitude, longitude: item.longitude,
+                    altitude: .nan, horizontalAccuracy: .nan, verticalAccuracy: .nan
+                ), reason: item.reason
             )
         }
         expectedRouteOverlays = (payload.expected ?? []).compactMap { overlay in
@@ -4123,6 +4222,7 @@ struct MapHomeView: View {
                     id: overlay.id,
                     categoryID: overlay.categoryID,
                     opacity: overlay.opacity,
+                    speedMetersPerSecond: overlay.speedMetersPerSecond,
                     coordinates: overlay.coordinates.map {
                         MapHomeCachedCoordinate(
                             latitude: $0.latitude,
@@ -4157,17 +4257,24 @@ struct MapHomeView: View {
                     }
                 )
             },
-            subwayMinute: subwayMinute
+            subwayMinute: subwayMinute,
+            temporaryLocations: temporaryLocationAnnotations.map { location in
+                MapHomeCachedTemporaryLocation(
+                    id: location.id, timestamp: location.timestamp,
+                    stationName: location.stationName,
+                    latitude: location.point.latitude, longitude: location.point.longitude,
+                    reason: location.reason
+                )
+            }
         )
-        guard let data = try? JSONEncoder().encode(payload) else { return }
         let day = TaptionPlanDayKey(date: model.selectedDate)
         let styleKey = model.settings.mapDisplayStyle.rawValue
         Task {
-            try? await mapDayCacheStore.saveMapDayDocument(
+            try? await mapDayCacheStore.saveCodableMapDayDocument(
+                payload,
                 day: day,
                 algorithmKey: Self.mapCacheAlgorithmKey,
-                styleKey: styleKey,
-                payload: data
+                styleKey: styleKey
             )
         }
     }
@@ -4625,13 +4732,18 @@ struct MapHomeView: View {
     }
 
     private func applyInitialLocationIfAvailable(using proxy: MapProxy) {
-        guard !hasAppliedInitialLocation, currentCoordinate != nil else { return }
+        guard mapViewportSize.width > 0,
+              mapViewportSize.height > 0,
+              !hasAppliedInitialLocation,
+              currentCoordinate != nil else { return }
         focusUserLocation(using: proxy)
         hasAppliedInitialLocation = true
     }
 
     private func beginInitialLocationRequest(using proxy: MapProxy) {
-        guard initialLocationRequestTask == nil else { return }
+        guard mapViewportSize.width > 0,
+              mapViewportSize.height > 0,
+              initialLocationRequestTask == nil else { return }
         initialLocationRequestTask = Task { @MainActor in
             defer { initialLocationRequestTask = nil }
             let isAvailable = await model.requestMapCurrentLocation(
@@ -5371,17 +5483,40 @@ private struct MapHomeSectionEditSheet: View {
     var body: some View {
         VStack(spacing: 14) {
             HStack {
-                Button(language.text("닫기", "Close")) { dismiss() }
-                    .buttonStyle(.bordered)
+                Button {
+                    dismiss()
+                } label: {
+                    Text(language.text("닫기", "Close"))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpReferenceRose)
+                        .padding(.horizontal, 15)
+                        .frame(minHeight: 38)
+                        .background(
+                            Color.tpReferenceRose.opacity(0.10),
+                            in: Capsule()
+                        )
+                }
+                .buttonStyle(.plain)
                 Spacer()
                 Text(language.text("행동 구간 편집", "Edit activity section"))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                 Spacer()
-                Button(language.text("저장", "Save")) {
+                Button {
                     save()
+                } label: {
+                    Text(language.text("저장", "Save"))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 15)
+                        .frame(minHeight: 38)
+                        .background(
+                            Color.tpReferenceBlue,
+                            in: Capsule()
+                        )
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.plain)
                 .disabled(isSaving || startMinute >= endMinute)
+                .opacity(isSaving || startMinute >= endMinute ? 0.45 : 1)
             }
 
             HStack(spacing: 10) {
@@ -7087,7 +7222,20 @@ private struct MapHomeTimelineRouteOverlay: Identifiable {
     let id: String
     let categoryID: String
     let opacity: Double
+    let speedMetersPerSecond: Double?
     let coordinates: [CLLocationCoordinate2D]
+}
+
+private struct MapHomeTemporaryLocationAnnotation: Identifiable {
+    let id: UUID
+    let stationName: String
+    let timestamp: Date
+    let point: GeoPoint
+    let reason: String
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+    }
 }
 
 private struct MapHomePlaceAnnotation: Identifiable {

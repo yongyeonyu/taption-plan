@@ -392,17 +392,10 @@ actor SQLitePlanRepository: PlanDataRepository {
     private static let day = TaptionPlanDayKey(year: 0, month: 0, day: 0)
 
     private let store: TaptionPlanDayStore
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
     private var nextRevision: UInt64 = 0
 
     init(databaseURL: URL) throws {
         self.store = try TaptionPlanDayStore(url: databaseURL)
-        self.encoder = JSONEncoder()
-        self.decoder = JSONDecoder()
-        encoder.outputFormatting = [.sortedKeys]
-        encoder.dateEncodingStrategy = .secondsSince1970
-        decoder.dateDecodingStrategy = .secondsSince1970
     }
 
     static func applicationSupport(
@@ -500,7 +493,7 @@ actor SQLitePlanRepository: PlanDataRepository {
         var value = TaptionDataSnapshot.empty
         let rowByDomain = Dictionary(uniqueKeysWithValues: rows.map { ($0.domain, $0) })
         if let metadata = rowByDomain[Self.metadataDomain] {
-            let decoded = try decoder.decode(Metadata.self, from: metadata.payload)
+            let decoded = try decode(Metadata.self, from: metadata.payload)
             value.schemaVersion = decoded.schemaVersion
             value.updatedAt = decoded.updatedAt
         }
@@ -529,7 +522,15 @@ actor SQLitePlanRepository: PlanDataRepository {
         into value: inout Value
     ) throws {
         guard let row = rows[domain] else { return }
-        value = try decoder.decode(Value.self, from: row.payload)
+        value = try decode(Value.self, from: row.payload)
+    }
+
+    private func decode<Value: Decodable>(
+        _ type: Value.Type,
+        from payload: Data
+    ) throws -> Value {
+        let encoded = try TaptionPlanCanonicalStorage.encodedPayload(from: payload)
+        return try TaptionPlanCanonicalStorage.decode(type, from: encoded)
     }
 
     private func append<Value: Encodable>(
@@ -540,7 +541,9 @@ actor SQLitePlanRepository: PlanDataRepository {
         revisions: [String: UInt64],
         to writes: inout [TaptionPlanDayStore.Snapshot]
     ) throws {
-        let payload = try encoder.encode(value)
+        let payload = TaptionPlanCanonicalStorage.envelope(
+            for: try TaptionPlanCanonicalStorage.encode(value)
+        )
         guard force || payload != existingPayload else { return }
         let currentRevision = revisions[domain] ?? 0
         guard currentRevision < UInt64.max else {

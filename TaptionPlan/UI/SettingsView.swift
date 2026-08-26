@@ -247,23 +247,29 @@ struct SettingsView: View {
                                     "데이터 파일을 만들지 못했습니다."
                             }
                         }
-                        settingsRow(
-                            icon: "icloud.and.arrow.up",
-                            iconBackground: Color(
-                                red: 0.90,
-                                green: 0.95,
-                                blue: 1.00
-                            ),
-                            iconColor: Color(
-                                red: 0.16,
-                                green: 0.45,
-                                blue: 0.75
-                            ),
-                            title: "로그 보내기",
-                            subtitle: "iPhone · Apple Watch 진단 로그를 iCloud Drive > TaptionLogs에 저장",
-                            value: model.diagnosticsExportStatus
-                        ) {
-                            Task { await model.exportDiagnosticsToICloud() }
+                        VStack(alignment: .leading, spacing: 4) {
+                            settingsRow(
+                                icon: "icloud.and.arrow.up",
+                                iconBackground: Color(
+                                    red: 0.90,
+                                    green: 0.95,
+                                    blue: 1.00
+                                ),
+                                iconColor: Color(
+                                    red: 0.16,
+                                    green: 0.45,
+                                    blue: 0.75
+                                ),
+                                title: "로그 보내기",
+                                subtitle: "iPhone · Apple Watch 진단 로그를 iCloud Drive > TaptionLogs에 저장",
+                                value: model.diagnosticsExportStatus
+                            ) {
+                                Task { await model.exportDiagnosticsToICloud() }
+                            }
+                            Text(model.diagnosticsLatestLogSummary)
+                                .font(.taption(size: SettingsTypography.footnote))
+                                .foregroundStyle(Color.tpSecondary)
+                                .padding(.leading, 45)
                         }
                         settingsRow(
                             icon: "trash",

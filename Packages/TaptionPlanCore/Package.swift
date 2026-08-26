@@ -5,7 +5,7 @@ let package = Package(
     name: "TaptionPlanCore",
     platforms: [
         .macOS(.v13),
-        .iOS(.v16)
+        .iOS(.v18)
     ],
     products: [
         .library(name: "TaptionPlanCore", targets: ["TaptionPlanCore"])

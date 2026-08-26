@@ -87,7 +87,7 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertTrue(files.contains { $0.lastPathComponent == "taption-plan-v2.sqlite" })
     }
 
-    func testRawDeviceEnvelopeUsesUncompressedDayDatabase() async throws {
+    func testRawDeviceEnvelopeUsesCanonicalDayDatabase() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("raw-day-store-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -117,7 +117,10 @@ final class SensorDayStoreTests: XCTestCase {
             through: TaptionPlanDayKey(date: date),
             domain: "raw-device-data"
         )
-        XCTAssertEqual(events.first?.payload.first, 0x7B)
+        XCTAssertEqual(
+            String(decoding: events.first?.payload.prefix(8) ?? Data(), as: UTF8.self),
+            "TP-CANON"
+        )
         XCTAssertFalse(events.first?.payload.starts(with: [0x54, 0x50, 0x5A, 0x31]) == true)
     }
 
@@ -143,7 +146,9 @@ final class SensorDayStoreTests: XCTestCase {
                 sequence: 11,
                 id: reading.id.uuidString,
                 domain: "sensor-reading",
-                payload: try encoder.encode(reading)
+                payload: TaptionPlanCanonicalStorage.envelope(
+                    for: try TaptionPlanCanonicalStorage.encode(reading)
+                )
             )
         ])
         let archive = SensorReadingArchive(fileURL: fileURL)

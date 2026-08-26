@@ -236,6 +236,17 @@ struct AppShellView: View {
         )
     }
 
+    private var initialLaunchProgress: Double {
+        let checkpoints = [
+            hasCompletedInitialProRefresh,
+            isSecurityStateReady,
+            hasRenderedInitialDestination,
+            hasCompletedInitialMapShellPreparation || !proAccess.grantsAccess,
+            model.isBootstrapped || !proAccess.grantsAccess
+        ]
+        return Double(checkpoints.filter { $0 }.count) / Double(checkpoints.count)
+    }
+
     private func markInitialDestinationRendered() {
         guard !hasRenderedInitialDestination else { return }
         hasRenderedInitialDestination = true
@@ -263,7 +274,7 @@ struct AppShellView: View {
                     Text("Taption Plan")
                         .font(.system(size: 25, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
-                    ProgressView()
+                    ProgressView(value: initialLaunchProgress, total: 1)
                         .progressViewStyle(.linear)
                         .frame(width: 220)
                         .tint(.white)
@@ -271,6 +282,7 @@ struct AppShellView: View {
                             Capsule()
                                 .fill(.white.opacity(0.22))
                         )
+                        .accessibilityValue("\(Int((initialLaunchProgress * 100).rounded()))%")
                         .accessibilityLabel(
                             AppLanguagePreference.text(
                                 korean: "활동과 이동 경로 불러오는 중",
@@ -278,6 +290,9 @@ struct AppShellView: View {
                                 rawPreference: languageRawValue
                             )
                         )
+                    Text("\(Int((initialLaunchProgress * 100).rounded()))%")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.82))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -597,7 +612,7 @@ private struct MapHomeAppLockView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 199 / 255, green: 123 / 255, blue: 112 / 255)
+            Color("LaunchBackground")
                 .ignoresSafeArea()
             Image("TaptionSplashIcon")
                 .resizable()
@@ -1226,6 +1241,9 @@ struct TaptionProAccessView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.tpBackground.ignoresSafeArea())
+        .task {
+            await controller.refresh()
+        }
         .alert(
             "Taption Plan Pro",
             isPresented: Binding(

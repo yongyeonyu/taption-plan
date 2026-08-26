@@ -400,6 +400,67 @@ struct NLETimelineViewport: Equatable, Sendable {
     }
 }
 
+/// Immutable render input for an NLE timeline. A new generation supersedes
+/// prior work; source tracks are never mutated by viewport interaction.
+struct NLETimelineGeneration: Equatable, Sendable {
+    let id: UInt64
+    let viewport: NLETimelineViewport
+    let sourceSpan: TimeSpan
+
+    init(id: UInt64, viewport: NLETimelineViewport, sourceSpan: TimeSpan) {
+        self.id = id
+        self.viewport = viewport
+        self.sourceSpan = sourceSpan
+    }
+
+    var visibleSpan: TimeSpan {
+        viewport.span.intersection(with: sourceSpan) ?? sourceSpan
+    }
+}
+
+/// Coalesces high-frequency drag/pinch updates to the display refresh budget.
+/// The latest input is retained, so the final gesture value is not lost.
+struct TimelineInputCoalescer<Input: Sendable>: Sendable {
+    static var defaultFrameInterval: TimeInterval { 1.0 / 60.0 }
+    private(set) var pending: Input?
+    private var lastEmission: Date?
+    let frameInterval: TimeInterval
+
+    init(frameInterval: TimeInterval = Self.defaultFrameInterval) {
+        self.frameInterval = max(0, frameInterval)
+    }
+
+    mutating func push(_ input: Input) {
+        pending = input
+    }
+
+    mutating func emit(at now: Date, force: Bool = false) -> Input? {
+        guard let pending else { return nil }
+        if !force, let lastEmission,
+           now.timeIntervalSince(lastEmission) < frameInterval {
+            return nil
+        }
+        self.pending = nil
+        lastEmission = now
+        return pending
+    }
+}
+
+/// Lightweight generation gate used by asynchronous projection tasks.
+/// Callers discard results whose token is no longer current.
+struct TimelineGenerationGate: Sendable {
+    private(set) var current: UInt64 = 0
+
+    mutating func begin() -> UInt64 {
+        current &+= 1
+        return current
+    }
+
+    func accepts(_ generation: UInt64) -> Bool {
+        generation == current
+    }
+}
+
 /// Projects the moving visible window into a wider cached data window. Blocks
 /// can then keep their cached fractions while the viewport alone moves.
 enum TimelineCachedViewportProjection {

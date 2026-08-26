@@ -31,7 +31,7 @@
                             </progressView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="LSG-1"/>
-                        <color key="backgroundColor" red="0.780392" green="0.482353" blue="0.439216" alpha="1" colorSpace="calibratedRGB"/>
+                        <color key="backgroundColor" red="0.788235" green="0.431373" blue="0.533333" alpha="1" colorSpace="calibratedRGB"/>
                         <constraints>
                             <constraint firstItem="LSI-1" firstAttribute="centerX" secondItem="LSV-2" secondAttribute="centerX" id="LSC-2"/>
                             <constraint firstItem="LSI-1" firstAttribute="centerY" secondItem="LSV-2" secondAttribute="centerY" constant="-70" id="LSC-3"/>

@@ -84,7 +84,7 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTFail("background legacy migration did not finish")
     }
 
-    func testRoundTripReopenAndUncompressedJSONPayload() async throws {
+    func testRoundTripReopenAndCanonicalPayload() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
         var value = TaptionDataSnapshot.empty
@@ -124,9 +124,10 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         let payload = try XCTUnwrap(
             rows.first(where: { $0.domain == "plan.plans" })?.payload
         )
-        XCTAssertEqual(payload.first, 0x5B)
-        XCTAssertFalse(payload.starts(with: [0x54, 0x50, 0x5A, 0x31]))
-        XCTAssertTrue(String(decoding: payload, as: UTF8.self).contains("분할 저장"))
+        XCTAssertEqual(String(decoding: payload.prefix(8), as: UTF8.self), "TP-CANON")
+        let encoded = try TaptionPlanCanonicalStorage.encodedPayload(from: payload)
+        let plans = try TaptionPlanCanonicalStorage.decode([PlanRecord].self, from: encoded)
+        XCTAssertEqual(plans.first?.title, "분할 저장")
     }
 
     func testSaveOverwritesWithMonotonicRevision() async throws {

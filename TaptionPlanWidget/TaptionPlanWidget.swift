@@ -2332,81 +2332,68 @@ private struct SensorCollectionWaveformView: View {
 
     let state: SensorCollectionActivityAttributes.ContentState
 
-    private enum Trigger: Equatable {
-        case saveToken(Int)
-        case legacySavedAt(Date)
-    }
-
-    private var trigger: Trigger {
-        if let saveToken = state.saveToken {
-            return .saveToken(saveToken)
-        }
-        return .legacySavedAt(state.lastSavedAt ?? state.startedAt)
-    }
-
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+        TimelineView(
+            .animation(
+                minimumInterval: 1.0 / 30.0,
+                paused: reduceMotion
+            )
+        ) { timeline in
             waveform(at: timeline.date)
         }
         .frame(minWidth: 24, maxWidth: .infinity)
         .frame(height: 14)
+        .overlay(alignment: .topTrailing) {
+            if state.isCollecting {
+                TimelineView(.animation(minimumInterval: 1, paused: false)) { timeline in
+                    Circle()
+                        .fill(.red)
+                        .frame(width: 2, height: 2)
+                        .opacity(
+                            Int(timeline.date.timeIntervalSinceReferenceDate.rounded(.down)) % 2 == 0
+                                ? 1
+                                : 0
+                        )
+                }
+                .frame(width: 2, height: 2)
+                .accessibilityHidden(true)
+            }
+        }
         .accessibilityHidden(true)
     }
 
     @ViewBuilder
     private func waveform(at date: Date) -> some View {
-        let progress = SensorCollectionProgressPolicy.progress(
-            at: date,
-            startedAt: state.startedAt,
-            lastSavedAt: state.lastSavedAt,
-            intervalSeconds: state.intervalSeconds
-        )
-        ZStack {
-            if state.phase != .hidden {
-                SensorCollectionFlatlineShape()
-                    .stroke(
-                        Color(red: 0.18, green: 0.72, blue: 0.59).opacity(0.38),
-                        style: StrokeStyle(lineWidth: 1, lineCap: .round)
-                    )
-                if let progress {
-                    SensorCollectionProgressLineShape(progress: progress)
-                        .stroke(
-                            Color(red: 0.18, green: 0.72, blue: 0.59),
-                            style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
-                        )
-                }
-            }
-            if state.phase == .pulse {
-                if reduceMotion {
-                    SensorCollectionECGShape()
-                        .stroke(
-                            Color(red: 0.18, green: 0.72, blue: 0.59),
-                            style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
-                        )
-                } else {
-                    SensorCollectionECGShape()
-                        .stroke(
-                            Color(red: 0.18, green: 0.72, blue: 0.59),
-                            style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
-                        )
-                        .keyframeAnimator(
-                            initialValue: CGFloat.zero,
-                            trigger: trigger
-                        ) { content, amplitude in
-                            content
-                                .scaleEffect(
-                                    y: max(0.01, amplitude),
-                                    anchor: .center
-                                )
-                                .opacity(amplitude)
-                        } keyframes: { _ in
-                            CubicKeyframe(0, duration: 0)
-                            CubicKeyframe(1, duration: 0.18)
-                            CubicKeyframe(0.35, duration: 0.22)
-                            CubicKeyframe(0, duration: 0.45)
-                        }
-                }
-            }
+        if state.phase == .hidden {
+            Color.clear
+        } else if !state.isCollecting
+                    || state.phase != .pulse
+                    || !(state.phaseUntil.map { date < $0 } ?? true) {
+            SensorCollectionFlatlineShape()
+                .stroke(
+                    Color(red: 0.18, green: 0.72, blue: 0.59).opacity(0.38),
+                    style: StrokeStyle(lineWidth: 1, lineCap: .round)
+                )
+        } else {
+            let halfWindow = SensorCollectionProgressPolicy
+                .halfWindowDuration(intervalSeconds: state.intervalSeconds)
+                ?? 0.5
+            let origin = state.lastSavedAt ?? state.startedAt
+            let progress = SensorCollectionWaveformMath.cycleProgress(
+                at: date,
+                origin: origin,
+                duration: halfWindow
+            )
+            SensorCollectionStreamingWaveformShape(
+                phase: reduceMotion ? 0.32 : progress,
+                amplitude: 1.12
+            )
+                .stroke(
+                    state.isExternalSample == true
+                        ? .red
+                        : Color(red: 0.18, green: 0.72, blue: 0.59),
+                    style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
+                )
         }
     }
 }
@@ -2420,49 +2407,38 @@ private struct SensorCollectionFlatlineShape: Shape {
     }
 }
 
-private struct SensorCollectionProgressLineShape: Shape {
-    var progress: Double
+private struct SensorCollectionStreamingWaveformShape: Shape {
+    var phase: Double
+    var amplitude: Double
 
     func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
-        path.addLine(
-            to: CGPoint(
-                x: rect.minX + rect.width * CGFloat(min(max(progress, 0), 1)),
-                y: rect.midY
-            )
-        )
-        return path
-    }
-}
-
-private struct SensorCollectionECGShape: Shape {
-    func path(in rect: CGRect) -> Path {
+        guard rect.width > 0, rect.height > 0 else { return Path() }
+        let sampleCount = max(32, Int((rect.width * 2).rounded(.up)))
         let baseline = rect.midY
-        let width = rect.width
-        let height = rect.height
+        let verticalScale = rect.height * 0.42 * amplitude
         var path = Path()
-        path.move(to: CGPoint(x: 0, y: baseline))
-        path.addLine(to: CGPoint(x: width * 0.25, y: baseline))
-        path.addLine(
-            to: CGPoint(x: width * 0.34, y: baseline - height * 0.16)
-        )
-        path.addLine(
-            to: CGPoint(x: width * 0.40, y: baseline + height * 0.10)
-        )
-        path.addLine(
-            to: CGPoint(x: width * 0.47, y: baseline - height * 0.86)
-        )
-        path.addLine(
-            to: CGPoint(x: width * 0.54, y: baseline + height * 0.42)
-        )
-        path.addLine(
-            to: CGPoint(x: width * 0.62, y: baseline - height * 0.18)
-        )
-        path.addLine(to: CGPoint(x: width * 0.72, y: baseline))
-        path.addLine(to: CGPoint(x: width, y: baseline))
+
+        for index in 0...sampleCount {
+            let position = Double(index) / Double(sampleCount)
+            let x = rect.maxX - rect.width * CGFloat(position)
+            let waveformPhase = SensorCollectionWaveformMath.rightToLeftPhase(
+                position: position,
+                progress: phase
+            )
+            let signal = SensorCollectionWaveformMath.heartbeat(
+                at: waveformPhase
+            )
+            let y = baseline - CGFloat(signal) * verticalScale
+            let point = CGPoint(x: x, y: y)
+            if index == 0 {
+                path.move(to: point)
+            } else {
+                path.addLine(to: point)
+            }
+        }
         return path
     }
+
 }
 
 private func sensorCollectionAccessibilityLabel(

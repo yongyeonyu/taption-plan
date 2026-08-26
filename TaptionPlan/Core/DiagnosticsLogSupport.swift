@@ -377,6 +377,23 @@ enum TaptionPlanDiagnosticsICloudError: LocalizedError {
     }
 }
 
+/// A small, replace-in-place pointer lets the Settings screen and iCloud
+/// Drive users find the newest exported package without changing the
+/// immutable, collision-safe history of `TaptionLogs-*.txt` files.
+struct TaptionDiagnosticsLatestLogManifest: Codable, Equatable, Sendable {
+    static let fileName = "latest.json"
+
+    var fileName: String
+    var savedAt: Date
+    var byteCount: Int
+
+    init(fileName: String, savedAt: Date = .now, byteCount: Int) {
+        self.fileName = fileName
+        self.savedAt = savedAt
+        self.byteCount = max(0, byteCount)
+    }
+}
+
 struct TaptionPlanDiagnosticsICloudExporter {
     typealias Transfer = (URL, URL) throws -> Void
 
@@ -431,12 +448,49 @@ struct TaptionPlanDiagnosticsICloudExporter {
         )
         do {
             try transferItem(staged, destination)
+            try exportLatestManifest(
+                TaptionDiagnosticsLatestLogManifest(
+                    fileName: destination.lastPathComponent,
+                    byteCount: (try? packageURL.resourceValues(
+                        forKeys: [.fileSizeKey]
+                    ).fileSize) ?? 0
+                ),
+                to: destinationDirectory
+            )
             try? fileManager.removeItem(at: stagingDirectory)
             return destination
         } catch {
             try? fileManager.removeItem(at: stagingDirectory)
             throw error
         }
+    }
+
+    private func exportLatestManifest(
+        _ manifest: TaptionDiagnosticsLatestLogManifest,
+        to directory: URL
+    ) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(manifest)
+        let staging = fileManager.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try fileManager.createDirectory(
+            at: staging,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: staging) }
+        let source = staging.appendingPathComponent(
+            TaptionDiagnosticsLatestLogManifest.fileName
+        )
+        try data.write(to: source, options: [.atomic])
+        let destination = directory.appendingPathComponent(
+            TaptionDiagnosticsLatestLogManifest.fileName
+        )
+        if fileManager.fileExists(atPath: destination.path) {
+            try fileManager.removeItem(at: destination)
+        }
+        try transferItem(source, destination)
     }
 
     private func availableDestination(
