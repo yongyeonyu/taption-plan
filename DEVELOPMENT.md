@@ -249,3 +249,20 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - Release archive/export: `1.0 (99)`, IPA SHA-256 `6701314b618ac7c452e60f1ab285b163a07dad8697df771c4bd35921acb44dde`
 - TestFlight 업로드·처리 상태 `VALID` 확인, `TP Taption Plan 내부 테스트` 그룹 연결 및 build 99 노출 확인
 - GPS 주기 설정 저장·수집 주기 동기화, 미세먼지 기반 날씨 색상·사용자 팔레트·백업 최근 날짜·메뉴 축소를 포함한다.
+
+## 2026-08-26 build 100 센서 복원·날씨 캐시·식당 분류 통합
+
+- 위치 백업 경로 투영에 비현실적 GPS 도약·정확도 필터를 적용하고 원본 센서 아카이브는 보존한다.
+- 복원 후 지하철 이동을 재분류·병합하고 확정 이동은 유지한다. 오늘 수면 조회 구간은 전날 18:00부터 당일 12:00까지로 고정했다.
+- 날씨 완성 스냅샷을 로컬 캐시해 시간 사이드바 조절 후에도 표시를 유지한다.
+- 식당 장소를 여러 곳 등록할 수 있고 15분 이상 체류만 식사로 분류한다. 식당 아이콘·색상·편집 UI를 연결했다.
+- Dynamic Island 확장 파형은 전체 폭을 우→좌로 흐르고, compact 좌·우 영역은 연속 위상을 공유한다. 센서 주기 절반 동안 ECG 펄스가 진행되고 우측에만 2px 로깅 점이 점멸한다.
+
+### 검증 및 배포
+
+- 전체 XCTest 성공(실패·스킵 0), iOS Simulator Debug build 성공
+- Release archive/export: `1.0 (100)`, Apple Distribution 서명, IPA SHA-256 `7a38f3a513a3b050c2defaee9253994d89b81f3b9af27162ed4583616a74d1e8`
+- TestFlight 업로드 성공: Delivery UUID `9daf4383-c3d7-499d-b7a3-1e158b8b27c0`
+- App Store Connect 처리 상태 `VALID` / `APP_STORE_ELIGIBLE`
+- `TP Taption Plan 내부 테스트` 그룹에 build 100 연결 및 그룹 builds 관계 노출 확인
+- 실기기 설치·실행·readback은 별도 게이트이며 Paid Apps Agreement·상품 생성·Sandbox 구매/복원은 `IAP73PAID1` 외부 게이트로 유지한다.

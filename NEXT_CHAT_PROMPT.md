@@ -22,23 +22,23 @@ Taption Plan 작업을 이어간다. 작업 디렉터리는 `/Users/u_mo_c/Docum
 - 핀치 줌과 사이드바 핸들의 확장 터치 영역을 유지한다.
 - 재생은 걷기·달리기는 빠르게, 자동차·자전거·지하철·기차·배·비행기는 느리게 적용한다.
 - GPS·센서 수집 간격은 슬라이더로 설정한다.
-- Dynamic Island는 우측에만 GPS 주기의 절반 길이 진행 파형을 표시하고, 센서 저장 때 ECG 1회 펄스 후 평선으로 돌아간다. 1초 주기에서는 시간 진행이 없다.
+- Dynamic Island는 확장 영역 전체 폭을 우→좌로 흐르는 파형으로 표시하고 compact 좌·우 영역도 연속 위상을 공유한다. 센서 저장 때 ECG 1회 펄스 후 평선으로 돌아가며, 우측 상단 2px 점만 로깅 중 1초 주기로 점멸한다.
 - 시간 레일 핸들 왼쪽 compact 날씨 칩은 표시하지 않는다. 시간축 날씨 카드는 수집 시각·비 stale·조건·심볼·온도가 완성된 스냅샷일 때만 표시하고, 포함된 미세먼지 필드가 불완전하면 카드 전체를 숨긴다.
 
 최근 검증 기준:
 
-- 전체 XCTest 695/695, 실패·스킵 0; `TaptionPlanCore` 28/28, `TaptionActivityEngine` 4/4, `TaptionRouteEngine` 11/11, 어댑터 Swift 테스트 10/10
+- 전체 XCTest 성공, 실패·스킵 0
 - iOS Simulator Debug build와 Release archive/export 통과
-- 최신 TestFlight build 99는 IPA 검증·업로드·처리 완료(`VALID`) 후 `TP Taption Plan 내부 테스트` 그룹 연결·그룹 빌드 목록 노출까지 확인했다. Delivery UUID `22454381-4382-4101-93e3-333d1cc0f5f4`.
+- 최신 TestFlight build 100은 IPA 검증·업로드·처리 완료(`VALID`, `APP_STORE_ELIGIBLE`) 후 `TP Taption Plan 내부 테스트` 그룹 연결·그룹 빌드 목록 노출까지 확인했다. Delivery UUID `9daf4383-c3d7-499d-b7a3-1e158b8b27c0`.
 - 실기기 설치·실행·readback은 아직 별도 게이트이며, 마지막 확인된 기기 기록은 `1.0 (95)`이다.
 - `git diff --check` 통과
-- 최신 센서·메뉴·백업·날씨 게이트 수정은 TestFlight build 99에 포함됐다. 실기기 설치·실행·readback은 별도 게이트다.
+- 최신 센서 복원·날씨 캐시·식당 분류·Dynamic Island 수정은 TestFlight build 100에 포함됐다. 실기기 설치·실행·readback은 별도 게이트다.
 
 다음 확인 항목:
 
-1. build 99를 연결된 iPhone에 설치·실행하고 버전/readback 및 실제 터치 화면을 확인한다.
+1. build 100을 연결된 iPhone에 설치·실행하고 버전/readback 및 실제 터치 화면을 확인한다.
 2. 현재 위치 지연, 지도 핀치·드래그, 졸라맨 중앙 고정·흔들림, 사이드바 핸들을 확인한다.
 3. 오늘 수면·지하철 분류와 선로 경로, Dynamic Island 우측 파형·15분·1분·1초 경계를 실기기에서 확인한다.
 4. `IAP73PAID1`은 Paid Apps Agreement·세금/은행·상품 연결·Sandbox 구매/복원 전까지 완료 처리하지 않는다.
-5. 다음 TestFlight 요청은 build 99 이상을 사용하고, 업로드·처리 완료·`TP Taption Plan 내부 테스트` 그룹 연결·노출을 각각 확인한다.
+5. 다음 TestFlight 요청은 build 100 이상을 사용하고, 업로드·처리 완료·`TP Taption Plan 내부 테스트` 그룹 연결·노출을 각각 확인한다.
 6. 새 요청은 10자리 영문·숫자 ID로 `temp.md`에 먼저 기록하고 대표님의 `ㄱㄱ` 뒤 실행한다.
