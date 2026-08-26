@@ -7288,7 +7288,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(accuracy.minimumEmissionInterval, 60)
         XCTAssertEqual(
             AppFeatureSettings.defaults.sensorCollectionProfile,
-            .accuracy
+            .balanced
         )
         let balanced = SensorCollectionConfiguration.configured(
             for: .balanced,
@@ -7314,19 +7314,19 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     func testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes() throws {
-        XCTAssertEqual(GPSLoggingPreferences.standard.intervalSeconds, 1)
+        XCTAssertEqual(GPSLoggingPreferences.standard.intervalSeconds, 300)
         XCTAssertFalse(GPSLoggingPreferences.standard.isBatteryMinimal)
         XCTAssertEqual(
             GPSLoggingPreferences(intervalSeconds: 0).intervalSeconds,
-            1
+            60
         )
         XCTAssertEqual(
             GPSLoggingPreferences(intervalSeconds: 16).intervalSeconds,
-            10
+            60
         )
         XCTAssertEqual(
             GPSLoggingPreferences(intervalSeconds: 30).interval,
-            30
+            60
         )
         let batteryMinimal = GPSLoggingPreferences(
             isBatteryMinimal: true,
@@ -7339,12 +7339,15 @@ final class FeatureEngineTests: XCTestCase {
         restoredRealtime.isBatteryMinimal = true
         XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 900)
         restoredRealtime.isBatteryMinimal = false
-        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 1)
-        XCTAssertTrue(GPSLoggingPreferences(intervalSeconds: 1).isContinuous)
+        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 60)
+        XCTAssertFalse(GPSLoggingPreferences(intervalSeconds: 1).isContinuous)
         XCTAssertEqual(
             GPSLoggingPreferences.supportedIntervalSeconds,
-            [1, 10, 30, 60, 120, 300, 600, 900]
+            [60, 300, 900]
         )
+        var legacyConfiguration = SensorCollectionConfiguration.standard
+        legacyConfiguration.minimumEmissionInterval = 1
+        XCTAssertEqual(legacyConfiguration.normalized.minimumEmissionInterval, 60)
         XCTAssertTrue(
             TrackingSessionPolicy.allowsPersistingLocation(
                 horizontalAccuracy: 800,
@@ -7445,7 +7448,7 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     func testSensorLiveActivityStartsForForegroundSensorSessions() {
-        XCTAssertTrue(
+        XCTAssertFalse(
             SensorCollectionActivityPolicy.canStart(
                 isForeground: true,
                 intervalSeconds: 1,
@@ -7459,10 +7462,17 @@ final class FeatureEngineTests: XCTestCase {
                 activitiesEnabled: true
             )
         )
-        XCTAssertTrue(
+        XCTAssertFalse(
             SensorCollectionActivityPolicy.canStart(
                 isForeground: true,
                 intervalSeconds: 10,
+                activitiesEnabled: true
+            )
+        )
+        XCTAssertTrue(
+            SensorCollectionActivityPolicy.canStart(
+                isForeground: true,
+                intervalSeconds: 60,
                 activitiesEnabled: true
             )
         )
@@ -7785,6 +7795,17 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testSensorCollectionCompactHUDExpiresAfterTenSeconds() {
+        let startedAt = Date(timeIntervalSince1970: 1_000)
+        let until = SensorCollectionActivityPolicy.sensorHUDUntil(
+            startedAt: startedAt
+        )
+
+        XCTAssertEqual(until.timeIntervalSince(startedAt), 10)
+        XCTAssertTrue(startedAt.addingTimeInterval(9.999) < until)
+        XCTAssertFalse(startedAt.addingTimeInterval(10) < until)
+    }
+
     func testSensorCollectionWaveformProgressAdvancesFromRightToLeft() {
         XCTAssertEqual(
             SensorCollectionWaveformMath.rightToLeftEndpoint(
@@ -7946,8 +7967,11 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     func testAutomaticTrackingPromotionAndStopPolicy() {
-        XCTAssertTrue(
+        XCTAssertFalse(
             TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 1)
+        )
+        XCTAssertTrue(
+            TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 60)
         )
         XCTAssertFalse(
             TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 10)

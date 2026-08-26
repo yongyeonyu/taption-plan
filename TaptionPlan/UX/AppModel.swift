@@ -430,6 +430,8 @@ final class AppModel {
     private(set) var playingVoiceAttachmentID: UUID?
     private(set) var sensorAvailability: SensorHardwareAvailability?
     private(set) var latestSensorReading: SensorReading?
+    private(set) var latestHeartRate: Double?
+    private(set) var latestHeartRateUpdatedAt: Date?
     private var latestMapAnchorHydratedDay: Date?
     private(set) var liveRouteState: LiveRouteState = .empty
     private(set) var activeTrackingSession: TrackingSession?
@@ -2351,7 +2353,9 @@ final class AppModel {
             validSampleKinds: latestSensorReading.map {
                 validSensorCollectionKinds(for: $0)
             } ?? [],
-            isExternalSample: latestSensorReading?.sourceDevice == .appleWatch
+            isExternalSample: latestSensorReading?.sourceDevice == .appleWatch,
+            latestHeartRate: latestHeartRate,
+            heartRateUpdatedAt: latestHeartRateUpdatedAt
         )
     }
 
@@ -2496,7 +2500,8 @@ final class AppModel {
     }
 
     func activateRequiredSensorCollection() async {
-        snapshot.settings.sensorCollectionProfile = .accuracy
+        snapshot.settings.sensorCollectionProfile = .balanced
+        snapshot.settings.gpsLoggingPreferences = .standard
         await enableLocationCollection(always: true)
     }
 
@@ -3141,9 +3146,16 @@ final class AppModel {
             snapshot.settings.gpsLoggingPreferences.intervalSeconds =
                 GPSLoggingPreferences.batteryMinimalIntervalSeconds
         } else {
-            snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(
-                for: snapshot.settings.gpsLoggingPreferences.intervalSeconds
-            )
+            let interval = snapshot.settings.gpsLoggingPreferences.intervalSeconds
+            if interval >= GPSLoggingPreferences.batteryMinimalIntervalSeconds {
+                snapshot.settings.sensorCollectionProfile = .balanced
+                snapshot.settings.gpsLoggingPreferences.intervalSeconds =
+                    GPSLoggingPreferences.Preset.balanced.intervalSeconds
+            } else {
+                snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(
+                    for: interval
+                )
+            }
         }
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
@@ -3156,7 +3168,8 @@ final class AppModel {
             return
         }
         snapshot.settings.gpsLoggingPreferences.intervalSeconds = clamped
-        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = false
+        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal =
+            clamped == GPSLoggingPreferences.batteryMinimalIntervalSeconds
         snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(
             for: clamped
         )
@@ -5112,6 +5125,11 @@ final class AppModel {
     private func applyWatchSensorSummary(
         _ summary: TaptionWatchSensorSummary
     ) async {
+        if let heartRate = summary.latestHeartRate,
+           heartRate.isFinite, heartRate > 0 {
+            latestHeartRate = heartRate
+            latestHeartRateUpdatedAt = summary.endedAt
+        }
         if summary.isFinal {
             if activeTrackingSession?.id == summary.sessionID {
                 activeTrackingSession = nil
@@ -7564,7 +7582,8 @@ final class AppModel {
         )
         TrackingSessionRecoveryStore.save(restored)
         if restored.wasAutomaticallyDetected,
-           settings.gpsLoggingPreferences.effectiveIntervalSeconds == 1 {
+           settings.gpsLoggingPreferences.effectiveIntervalSeconds
+                == GPSLoggingPreferences.Preset.realtime.intervalSeconds {
             _ = sensorBackgroundCoordinator.beginAutomaticSession(at: now)
             syncSensorBackgroundState()
         }
@@ -7679,7 +7698,8 @@ final class AppModel {
         if reading.trackingSessionEnded == true {
             sensorBackgroundCoordinator.endSession()
         } else if session?.wasAutomaticallyDetected == true,
-                  settings.gpsLoggingPreferences.effectiveIntervalSeconds == 1 {
+                  settings.gpsLoggingPreferences.effectiveIntervalSeconds
+                    == GPSLoggingPreferences.Preset.realtime.intervalSeconds {
             _ = sensorBackgroundCoordinator.beginAutomaticSession(
                 at: reading.timestamp
             )

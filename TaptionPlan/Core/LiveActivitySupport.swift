@@ -29,6 +29,8 @@ actor SensorCollectionLiveActivityController {
         saveToken: Int? = nil,
         validSampleKinds: [String] = [],
         isExternalSample: Bool = false,
+        latestHeartRate: Double? = nil,
+        heartRateUpdatedAt: Date? = nil,
         now: Date = .now
     ) async throws -> String? {
         await recoverAndRemoveDuplicates(
@@ -118,6 +120,21 @@ actor SensorCollectionLiveActivityController {
         let waveformScanStartedAt = hasNewSample
             ? now
             : (previousState?.waveformScanStartedAt ?? now)
+        let sensorHUDUntil: Date?
+        if hasNewSample {
+            sensorHUDUntil = SensorCollectionActivityPolicy.sensorHUDUntil(
+                startedAt: now
+            )
+        } else if let previousHUDUntil = previousState?.sensorHUDUntil,
+                  now < previousHUDUntil {
+            sensorHUDUntil = previousHUDUntil
+        } else if previousState == nil {
+            sensorHUDUntil = SensorCollectionActivityPolicy.sensorHUDUntil(
+                startedAt: activityStartedAt
+            )
+        } else {
+            sensorHUDUntil = nil
+        }
         let state = SensorCollectionActivityAttributes.ContentState(
             startedAt: activityStartedAt,
             lastSavedAt: lastSavedAt,
@@ -131,7 +148,10 @@ actor SensorCollectionLiveActivityController {
             sensorMeterMasks: sensorMeterMasks,
             sensorStatusRawValues: sensorStatusRawValues,
             waveformScanStartedAt: waveformScanStartedAt,
-            isExternalSample: isExternalSample
+            isExternalSample: isExternalSample,
+            latestHeartRate: latestHeartRate,
+            heartRateUpdatedAt: heartRateUpdatedAt,
+            sensorHUDUntil: sensorHUDUntil
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt
@@ -193,7 +213,10 @@ actor SensorCollectionLiveActivityController {
             sensorMeterMasks: activity.content.state.sensorMeterMasks,
             sensorStatusRawValues: activity.content.state.sensorStatusRawValues,
             waveformScanStartedAt: activity.content.state.waveformScanStartedAt,
-            isExternalSample: false
+            isExternalSample: false,
+            latestHeartRate: activity.content.state.latestHeartRate,
+            heartRateUpdatedAt: activity.content.state.heartRateUpdatedAt,
+            sensorHUDUntil: activity.content.state.sensorHUDUntil
         )
         await activity.end(
             ActivityContent(state: finalState, staleDate: flatlineUntil),

@@ -985,6 +985,7 @@ final class AppleSensorDataService {
     func startCollection(
         configuration: SensorCollectionConfiguration = .standard
     ) {
+        let configuration = configuration.normalized
         // A finished stream leaves a completed task behind. Restart in that
         // case, otherwise recording never resumes after the reading stream
         // ends (for example when location permission was revoked).

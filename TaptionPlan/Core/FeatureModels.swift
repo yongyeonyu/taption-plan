@@ -3456,7 +3456,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         healthEnabled: false,
         locationEnabled: false,
         backgroundPreciseLocationEnabled: false,
-        sensorCollectionProfile: .accuracy,
+        sensorCollectionProfile: .balanced,
         gpsLoggingPreferences: .standard,
         mapCategoryColors: [:],
         mapUserActivityCategories: [],

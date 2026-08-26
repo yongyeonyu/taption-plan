@@ -2273,45 +2273,55 @@ struct SensorCollectionLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                VStack(spacing: 1) {
-                    SensorCollectionWaveformView(
-                        state: context.state,
-                        positionOffset: 0,
-                        positionScale: 0.5,
-                        scanOffset: 0,
-                        scanScale: 0.5,
-                        showsIndicator: false
-                    )
-                    SensorCollectionMeterView(
-                        level: SensorCollectionMeterModel.aggregateLevel(
-                            state: context.state
-                        ),
-                        color: Color(red: 0.18, green: 0.72, blue: 0.59)
-                    )
-                }
+                SensorCollectionCompactSensorIcon(state: context.state)
             } compactTrailing: {
-                VStack(spacing: 1) {
-                    SensorCollectionWaveformView(
-                        state: context.state,
-                        positionOffset: 0.5,
-                        positionScale: 0.5,
-                        scanOffset: 0.5,
-                        scanScale: 0.5,
-                        showsIndicator: true
-                    )
-                    SensorCollectionMeterView(
-                        level: SensorCollectionMeterModel.aggregateLevel(
-                            state: context.state
-                        ),
-                        color: context.state.isExternalSample == true
-                            ? .red
-                            : Color(red: 0.18, green: 0.72, blue: 0.59)
-                    )
-                }
+                SensorCollectionCompactHeartRate(state: context.state)
             } minimal: {
                 EmptyView()
             }
             .keylineTint(Color(red: 0.18, green: 0.72, blue: 0.59))
+        }
+    }
+}
+
+private struct SensorCollectionCompactSensorIcon: View {
+    let state: SensorCollectionActivityAttributes.ContentState
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1, paused: false)) { timeline in
+            if state.isCollecting,
+               state.sensorHUDUntil.map({ timeline.date < $0 }) == true {
+                Image("SensorCollectionAppIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                    .accessibilityLabel(widgetText("센서 아이콘", "Sensor icon"))
+            }
+        }
+    }
+}
+
+private struct SensorCollectionCompactHeartRate: View {
+    let state: SensorCollectionActivityAttributes.ContentState
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1, paused: false)) { timeline in
+            if state.isCollecting,
+               state.sensorHUDUntil.map({ timeline.date < $0 }) == true {
+                if let heartRate = state.latestHeartRate,
+                   heartRate.isFinite, heartRate > 0 {
+                    Text("♥︎ \(Int(heartRate.rounded()))")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.red)
+                        .accessibilityLabel("\(Int(heartRate.rounded())) BPM")
+                } else {
+                    Text(widgetText("♥︎ 대기", "♥︎ Waiting"))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+            }
         }
     }
 }

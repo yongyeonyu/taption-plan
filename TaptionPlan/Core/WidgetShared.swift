@@ -217,6 +217,9 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         /// external device such as Apple Watch. A different app's sensor use
         /// is never inferred.
         var isExternalSample: Bool?
+        var latestHeartRate: Double?
+        var heartRateUpdatedAt: Date?
+        var sensorHUDUntil: Date?
 
         var phase: SensorCollectionActivityPhase {
             guard let phaseRawValue,
@@ -241,7 +244,10 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             sensorMeterMasks: [String: Int]? = nil,
             sensorStatusRawValues: [String: String]? = nil,
             waveformScanStartedAt: Date? = nil,
-            isExternalSample: Bool? = nil
+            isExternalSample: Bool? = nil,
+            latestHeartRate: Double? = nil,
+            heartRateUpdatedAt: Date? = nil,
+            sensorHUDUntil: Date? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -256,6 +262,9 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.sensorStatusRawValues = sensorStatusRawValues
             self.waveformScanStartedAt = waveformScanStartedAt
             self.isExternalSample = isExternalSample
+            self.latestHeartRate = latestHeartRate
+            self.heartRateUpdatedAt = heartRateUpdatedAt
+            self.sensorHUDUntil = sensorHUDUntil
         }
     }
 
@@ -270,6 +279,11 @@ enum SensorCollectionActivityPolicy {
     static let sensorMeterWidth = 10
     static let sensorMeterMask = (1 << sensorMeterWidth) - 1
     static let waveformScanDuration: TimeInterval = 1
+    static let sensorHUDDuration: TimeInterval = 10
+
+    static func sensorHUDUntil(startedAt: Date) -> Date {
+        startedAt.addingTimeInterval(sensorHUDDuration)
+    }
 
     static func uniqueSensorKinds(_ kinds: [String]) -> [String] {
         var seen = Set<String>()
@@ -342,7 +356,11 @@ enum SensorCollectionActivityPolicy {
         intervalSeconds: Int,
         activitiesEnabled: Bool
     ) -> Bool {
-        isForeground && intervalSeconds > 0 && activitiesEnabled
+        isForeground
+            && GPSLoggingPreferences.supportedIntervalSeconds.contains(
+                intervalSeconds
+            )
+            && activitiesEnabled
     }
 
     static func expirationDate(startedAt: Date) -> Date {

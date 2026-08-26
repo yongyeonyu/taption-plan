@@ -3640,7 +3640,13 @@ struct MapHomeView: View {
                         HStack {
                             Text(
                                 gpsLoggingIntervalText(
-                                    GPSLoggingPreferences.supportedIntervalSeconds.first ?? 1
+                                    GPSLoggingPreferences.supportedIntervalSeconds.first ?? 60
+                                )
+                            )
+                            Spacer()
+                            Text(
+                                gpsLoggingIntervalText(
+                                    GPSLoggingPreferences.supportedIntervalSeconds[1]
                                 )
                             )
                             Spacer()
@@ -3672,12 +3678,6 @@ struct MapHomeView: View {
     }
 
     private func gpsLoggingIntervalText(_ seconds: Int) -> String {
-        if seconds < 60 {
-            return language.text(
-                seconds == 1 ? "실시간 · 1초마다" : "\(seconds)초마다 위치 확인",
-                seconds == 1 ? "Live · every second" : "Checks location every \(seconds) sec"
-            )
-        }
         let minutes = seconds / 60
         return language.text(
             "\(minutes)분마다 위치 확인",

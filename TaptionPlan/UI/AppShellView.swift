@@ -771,8 +771,8 @@ private struct RequiredPermissionGateView: View {
                     }
                     Text(
                         text(
-                            "모든 권한이 확인되면 GPS와 센서 기록이 1초 간격으로 자동 시작됩니다.",
-                            "GPS and sensor recording starts automatically every second after all permissions are verified."
+                            "모든 권한이 확인되면 GPS와 센서 기록이 5분 간격으로 자동 시작됩니다.",
+                            "GPS and sensor recording starts automatically every 5 minutes after all permissions are verified."
                         )
                     )
                     .font(.taption(size: 12))

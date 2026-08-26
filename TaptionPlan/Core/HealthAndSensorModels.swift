@@ -295,6 +295,16 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
             minimumEmissionInterval: profile.interval
         )
     }
+
+    var normalized: SensorCollectionConfiguration {
+        var copy = self
+        copy.minimumEmissionInterval = TimeInterval(
+            GPSLoggingPreferences.clampedSeconds(
+                Int(minimumEmissionInterval.rounded())
+            )
+        )
+        return copy
+    }
 }
 
 struct GPSLoggingPreferences: Codable, Hashable, Sendable {
@@ -307,17 +317,17 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
         var intervalSeconds: Int { rawValue }
     }
 
-    static let supportedIntervalSeconds = [1, 10, 30, 60, 120, 300, 600, 900]
+    static let supportedIntervalSeconds = [60, 300, 900]
     static let batteryMinimalIntervalSeconds = 900
 
     var isBatteryMinimal: Bool
     var intervalSeconds: Int
 
-    static let standard = GPSLoggingPreferences(intervalSeconds: 1)
+    static let standard = GPSLoggingPreferences(intervalSeconds: 300)
 
     init(
         isBatteryMinimal: Bool = false,
-        intervalSeconds: Int = 1
+        intervalSeconds: Int = 300
     ) {
         self.isBatteryMinimal = isBatteryMinimal
         self.intervalSeconds = Self.clampedSeconds(intervalSeconds)
@@ -467,7 +477,9 @@ enum TrackingSessionPolicy {
     static func allowsRealtimeAutomaticTracking(
         interval: TimeInterval
     ) -> Bool {
-        interval > 0 && interval <= 1
+        interval == TimeInterval(
+            GPSLoggingPreferences.Preset.realtime.intervalSeconds
+        )
     }
 
     static func allowsPersistingLocation(

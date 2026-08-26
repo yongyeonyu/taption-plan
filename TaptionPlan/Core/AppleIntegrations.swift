@@ -2088,6 +2088,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var deviceMotionAccumulator = DeviceMotionAccumulator()
     private var activeTrackingSession: TrackingSession?
     private var activeTrackingPreferences = GPSLoggingPreferences.standard
+    private var trackingStreamsAreContinuous = false
     private var trackingSequence = 0
     /// nil이 아니면 층 보정용 표본을 모으는 중이다.
     private var altitudeBurstSamples: [AltitudeBurstSample]?
@@ -2171,7 +2172,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     func readings(
         configuration: SensorCollectionConfiguration
     ) -> AsyncStream<SensorReading> {
-        AsyncStream { continuation in
+        let configuration = configuration.normalized
+        return AsyncStream { continuation in
             self.continuation = continuation
             self.configuration = configuration
             continuation.onTermination = { [weak self] _ in
@@ -2218,6 +2220,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         deviceMotionAccumulator.reset()
         activeTrackingSession = nil
         activeTrackingPreferences = .standard
+        trackingStreamsAreContinuous = false
         trackingSequence = 0
         continuation?.finish()
         continuation = nil
@@ -2237,6 +2240,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         )
         activeTrackingSession = session
         activeTrackingPreferences = preferences
+        trackingStreamsAreContinuous = true
         trackingSequence = 0
         lastEmissionAt = nil
         lastPersistedLocationTimestamp = nil
@@ -2258,6 +2262,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     ) -> TrackingSession {
         activeTrackingSession = session
         activeTrackingPreferences = preferences
+        trackingStreamsAreContinuous = true
         trackingSequence = 0
         lastEmissionAt = nil
         lastPersistedLocationTimestamp = nil
@@ -2292,6 +2297,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         session.endedAt = date
         let preferences = activeTrackingPreferences
         activeTrackingSession = nil
+        trackingStreamsAreContinuous = false
         stationaryStopTask?.cancel()
         stationaryStopTask = nil
         if session.wasAutomaticallyDetected {
@@ -2347,7 +2353,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
         if configuration.minimumEmissionInterval <= 1
             || (activeTrackingSession != nil
-                && activeTrackingPreferences.isContinuous) {
+                && trackingStreamsAreContinuous) {
             startHardwareStreams()
             return
         }
@@ -2670,7 +2676,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         if activeTrackingSession?.wasAutomaticallyDetected == true {
             emit(force: true)
         } else if activeTrackingSession?.wasAutomaticallyDetected == false,
-                  activeTrackingPreferences.isContinuous {
+                  trackingStreamsAreContinuous {
             emit(force: true, allowManualTrackingSample: true)
         } else if activeTrackingSession == nil,
                   latestLocation != nil {
@@ -2715,6 +2721,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             kind: .automatic,
             wasAutomaticallyDetected: true
         )
+        trackingStreamsAreContinuous = true
         activeTrackingPreferences = GPSLoggingPreferences(
             intervalSeconds: max(1, Int(configuration.minimumEmissionInterval))
         )
@@ -2838,7 +2845,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         let location = latestLocation
         if activeTrackingSession != nil,
            completedSession == nil,
-           activeTrackingPreferences.isContinuous {
+           trackingStreamsAreContinuous {
             guard let location,
                   lastPersistedLocationTimestamp.map({
                       location.timestamp > $0
@@ -3006,6 +3013,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 kind: kind,
                 wasAutomaticallyDetected: true
             )
+            self.trackingStreamsAreContinuous = true
             self.activeTrackingPreferences = GPSLoggingPreferences(
                 intervalSeconds: max(
                     1,
@@ -3115,7 +3123,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     private var activeEmissionInterval: TimeInterval {
-        activeTrackingSession == nil
+        if activeTrackingSession != nil, trackingStreamsAreContinuous {
+            return TrackingSessionPolicy.automaticEmissionThrottleInterval
+        }
+        return activeTrackingSession == nil
             ? configuration.minimumEmissionInterval
             : activeTrackingPreferences.interval
     }
