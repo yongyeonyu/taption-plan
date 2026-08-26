@@ -112,6 +112,35 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertTrue(service.status.state != .unlocked)
     }
 
+    func testLatestSuccessfulBackupDatePersistsAndUsesArchiveCreatedAt() throws {
+        let suiteName = "SecurityBackupCoreTests.latestBackup.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let credentials = InMemoryPlanCredentialStore()
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let writer = PlanSecurityBackupService(
+            credentialStore: credentials,
+            backupStore: backupStore,
+            settingsDefaults: defaults
+        )
+        try writer.setPIN("1234")
+        _ = try writer.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: date
+        )
+
+        XCTAssertEqual(writer.status.latestSuccessfulBackupDate, date)
+
+        let replacement = PlanSecurityBackupService(
+            credentialStore: credentials,
+            backupStore: backupStore,
+            settingsDefaults: defaults
+        )
+        XCTAssertEqual(replacement.status.latestSuccessfulBackupDate, date)
+    }
+
     func testBiometricGateUnlocksWithoutExposingRawBiometric() async throws {
         let biometric = MockPlanLocalBiometricAuthenticator(result: true)
         let service = makeService(biometric: biometric)

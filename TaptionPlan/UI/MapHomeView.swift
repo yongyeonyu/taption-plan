@@ -1015,7 +1015,12 @@ struct MapHomeView: View {
         static let timeRailTopMargin: CGFloat = 18
         static let topOverlayFallbackHeight: CGFloat = 104
         static let overlayBottomMargin = MapHomeOverlayLayoutMath.sharedBottomMargin
-        static let menuWidth = MapHomeSearchLayoutMath.menuPanelWidth
+        static let menuMinimumWidth: CGFloat = 260
+        static let menuMaximumWidth: CGFloat = 300
+
+        static func menuWidth(for viewportWidth: CGFloat) -> CGFloat {
+            min(max(viewportWidth * 0.72, menuMinimumWidth), menuMaximumWidth)
+        }
     }
 
     init(
@@ -2612,7 +2617,7 @@ struct MapHomeView: View {
                 )
                 sidebarContent
                 .frame(
-                    width: Layout.menuWidth,
+                    width: Layout.menuWidth(for: proxy.size.width),
                     height: max(0, menuHeight - menuTop),
                     alignment: .top
                 )
@@ -2649,7 +2654,7 @@ struct MapHomeView: View {
                         .background(Color.black.opacity(0.06), in: Circle())
                 }
             }
-            .padding(.bottom, 27)
+            .padding(.bottom, 18)
 
             locationMenuItem
             categoryMenuItem
@@ -2668,7 +2673,7 @@ struct MapHomeView: View {
             }
 
             Divider()
-                .padding(.vertical, 12)
+                .padding(.vertical, 9)
 
             HStack(spacing: 7) {
                 Image(systemName: "map.fill")
@@ -2692,7 +2697,7 @@ struct MapHomeView: View {
     }
 
     private var categoryMenuItem: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             Button {
                 isCategoryMenuExpanded.toggle()
             } label: {
@@ -2709,7 +2714,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.primary)
-                .padding(.vertical, 12)
+                .padding(.vertical, 10)
                 .padding(.horizontal, 12)
                 .background(
                     Color.tpReferenceMint.opacity(0.08),
@@ -2842,17 +2847,58 @@ struct MapHomeView: View {
                     .buttonStyle(.plain)
 
                     ForEach(model.settings.mapUserActivityCategories) { category in
-                        HStack(spacing: 9) {
-                            Circle()
-                                .fill(Color(hex: category.hex))
-                                .frame(width: 10, height: 10)
-                            Image(systemName: category.systemImage)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color(hex: category.hex))
-                                .frame(width: 20)
-                            Text(category.title)
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                            Spacer()
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 9) {
+                                Circle()
+                                    .fill(Color(hex: category.hex))
+                                    .frame(width: 10, height: 10)
+                                Image(systemName: category.systemImage)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color(hex: category.hex))
+                                    .frame(width: 20)
+                                Text(category.title)
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                Spacer()
+                                Button {
+                                    if activePaletteCategoryID == category.id.uuidString {
+                                        activePaletteCategoryID = nil
+                                    } else {
+                                        customPaletteColor = Color(hex: category.hex)
+                                        activePaletteCategoryID = category.id.uuidString
+                                    }
+                                } label: {
+                                    Image(systemName: "paintpalette.fill")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(Color(hex: category.hex))
+                                        .frame(width: 28, height: 28)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(language.text("\(category.title) 색상 팔레트", "\(category.title) color palette"))
+                            }
+                            if activePaletteCategoryID == category.id.uuidString {
+                                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
+                                    ForEach(Self.categoryPaletteHexes, id: \.self) { hex in
+                                        Button {
+                                            model.setMapCategoryColor(hex, for: category.id.uuidString)
+                                            activePaletteCategoryID = nil
+                                        } label: {
+                                            Circle().fill(Color(hex: hex)).frame(width: 22, height: 22)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    ColorPicker(language.text("사용자 지정", "Custom"), selection: Binding(
+                                        get: { customPaletteColor },
+                                        set: { color in
+                                            customPaletteColor = color
+                                            if let hex = color.hexRGBString {
+                                                model.setMapCategoryColor(hex, for: category.id.uuidString)
+                                            }
+                                        }
+                                    ), supportsOpacity: false)
+                                    .frame(minHeight: 28)
+                                }
+                                .padding(.leading, 39)
+                            }
                         }
                         .padding(.vertical, 7)
                         .padding(.horizontal, 8)
@@ -2872,7 +2918,7 @@ struct MapHomeView: View {
     }
 
     private var locationMenuItem: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             Button {
                 isLocationMenuExpanded.toggle()
             } label: {
@@ -2889,7 +2935,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.primary)
-                .padding(.vertical, 12)
+                .padding(.vertical, 9)
                 .padding(.horizontal, 12)
                 .background(
                     Color.tpReferenceBlue.opacity(0.08),
@@ -3206,7 +3252,7 @@ struct MapHomeView: View {
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.primary)
-            .padding(.vertical, 12)
+            .padding(.vertical, 9)
             .padding(.horizontal, 12)
             .background(
                 Color.tpReferenceBlue.opacity(0.07),
@@ -3230,12 +3276,12 @@ struct MapHomeView: View {
     }
 
     private var displayMenuItem: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             Button {
                 isDisplayMenuExpanded.toggle()
             } label: {
                 HStack(spacing: 13) {
-                    Image(systemName: "rectangle.3.group")
+                    Image(systemName: "square.3.layers.3d")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(Color.tpReferenceBlue)
                         .frame(width: 24)
@@ -3247,7 +3293,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.primary)
-                .padding(.vertical, 12)
+                .padding(.vertical, 9)
                 .padding(.horizontal, 12)
                 .background(
                     Color.tpReferenceBlue.opacity(0.08),
@@ -3310,7 +3356,7 @@ struct MapHomeView: View {
     }
 
     private var settingsMenuItem: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             Button {
                 isSettingsMenuExpanded.toggle()
             } label: {
@@ -3327,7 +3373,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.primary)
-                .padding(.vertical, 12)
+                .padding(.vertical, 9)
                 .padding(.horizontal, 12)
                 .background(
                     Color.tpReferenceRose.opacity(0.08),
@@ -6692,6 +6738,14 @@ private struct MapHomeSecuritySheet: View {
                     ))
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
+                    if let latestBackupText {
+                        Text(language.text(
+                            "최근 백업: \(latestBackupText)",
+                            "Last backup: \(latestBackupText)"
+                        ))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpReferenceBlue)
+                    }
                     HStack(spacing: 10) {
                         Button(language.text("지금 백업", "Back up now")) { saveBackup() }
                             .buttonStyle(.bordered)
@@ -6877,6 +6931,15 @@ private struct MapHomeSecuritySheet: View {
     private func showBackupFeedback(_ text: String) {
         message = text
         backupAlertMessage = text
+    }
+
+    private var latestBackupText: String? {
+        guard let date = security.latestSuccessfulBackupDate else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = language.locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 

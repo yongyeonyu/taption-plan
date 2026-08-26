@@ -467,7 +467,8 @@ final class AppModel {
         state: .unlocked,
         hasPIN: false,
         failedAttempts: 0,
-        retryAfter: nil
+        retryAfter: nil,
+        latestSuccessfulBackupDate: nil
     )
     /// 기록 ID → 앱 토큰. 스크린 타임 데이터는 민감하므로 저장하지 않고
     /// 새로 고칠 때마다 메모리에만 채운다.
@@ -751,7 +752,8 @@ final class AppModel {
         self.securityBackupService = securityBackupService ?? (try? PlanSecurityBackupService.applicationSupport())
         self.securityStatus = self.securityBackupService?.status ?? PlanSecurityStatus(
             settings: PlanAppLockSettings(), state: .unlocked, hasPIN: false,
-            failedAttempts: 0, retryAfter: nil
+            failedAttempts: 0, retryAfter: nil,
+            latestSuccessfulBackupDate: nil
         )
         self.placeNameResolver = placeNameResolver
         self.transportContextService = transportContextService
@@ -1007,6 +1009,13 @@ final class AppModel {
     }
 
     func setMapCategoryColor(_ hex: String, for categoryID: String) {
+        if let categoryUUID = UUID(uuidString: categoryID),
+           let index = snapshot.settings.mapUserActivityCategories.firstIndex(where: { $0.id == categoryUUID }) {
+            guard snapshot.settings.mapUserActivityCategories[index].hex != hex else { return }
+            snapshot.settings.mapUserActivityCategories[index].hex = hex
+            Task { await persist() }
+            return
+        }
         var values = snapshot.settings.mapCategoryColors
         values[categoryID] = hex
         let normalized = AppFeatureSettings.normalizedMapCategoryColors(values)
@@ -3039,17 +3048,23 @@ final class AppModel {
     }
 
     func setSensorCollectionProfile(
-        _ _: SensorCollectionProfile
+        _ profile: SensorCollectionProfile
     ) {
-        guard snapshot.settings.sensorCollectionProfile != .accuracy else {
+        let intervalSeconds = Int(profile.interval)
+        let batteryMinimal = profile == .batterySaver
+        guard snapshot.settings.sensorCollectionProfile != profile
+                || snapshot.settings.gpsLoggingPreferences.intervalSeconds != intervalSeconds
+                || snapshot.settings.gpsLoggingPreferences.isBatteryMinimal != batteryMinimal else {
             return
         }
-        snapshot.settings.sensorCollectionProfile = .accuracy
+        snapshot.settings.sensorCollectionProfile = profile
+        snapshot.settings.gpsLoggingPreferences.intervalSeconds = intervalSeconds
+        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = batteryMinimal
         if settings.locationEnabled,
            permissionState(for: .location).isGranted,
            let sensorService {
             sensorService.startCollection(configuration: sensorCollectionConfiguration(
-                profile: .accuracy,
+                profile: profile,
                 allowsBackgroundLocation:
                     settings.backgroundPreciseLocationEnabled
             ))
@@ -3064,6 +3079,15 @@ final class AppModel {
             return
         }
         snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = enabled
+        if enabled {
+            snapshot.settings.sensorCollectionProfile = .batterySaver
+            snapshot.settings.gpsLoggingPreferences.intervalSeconds =
+                GPSLoggingPreferences.batteryMinimalIntervalSeconds
+        } else {
+            snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(
+                for: snapshot.settings.gpsLoggingPreferences.intervalSeconds
+            )
+        }
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
     }
@@ -3076,8 +3100,29 @@ final class AppModel {
         }
         snapshot.settings.gpsLoggingPreferences.intervalSeconds = clamped
         snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = false
+        snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(
+            for: clamped
+        )
         refreshActiveGPSLoggingPreferences()
         Task { await persist() }
+    }
+
+    func setGPSLoggingPreset(_ preset: GPSLoggingPreferences.Preset) {
+        let profile: SensorCollectionProfile
+        switch preset {
+        case .batterySaver: profile = .batterySaver
+        case .balanced: profile = .balanced
+        case .realtime: profile = .accuracy
+        }
+        setSensorCollectionProfile(profile)
+    }
+
+    private func sensorCollectionProfile(for intervalSeconds: Int) -> SensorCollectionProfile {
+        switch intervalSeconds {
+        case 900...: .batterySaver
+        case 120...600: .balanced
+        default: .accuracy
+        }
     }
 
     @available(*, deprecated, message: "Use setGPSLoggingIntervalSeconds")

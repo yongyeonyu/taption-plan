@@ -359,6 +359,23 @@ struct PlanSecurityStatus: Equatable, Sendable {
     let hasPIN: Bool
     let failedAttempts: Int
     let retryAfter: Date?
+    let latestSuccessfulBackupDate: Date?
+
+    init(
+        settings: PlanAppLockSettings,
+        state: PlanAppLockState,
+        hasPIN: Bool,
+        failedAttempts: Int,
+        retryAfter: Date?,
+        latestSuccessfulBackupDate: Date? = nil
+    ) {
+        self.settings = settings
+        self.state = state
+        self.hasPIN = hasPIN
+        self.failedAttempts = failedAttempts
+        self.retryAfter = retryAfter
+        self.latestSuccessfulBackupDate = latestSuccessfulBackupDate
+    }
 }
 
 struct PlanCloudBackupPath: Equatable, Sendable {
@@ -1007,11 +1024,14 @@ final class PlanSecurityBackupService {
     private let biometricAuthenticator: PlanLocalBiometricAuthenticator
     private let settingsDefaults: UserDefaults
     private let settingsKey = "TaptionPlan.security.app-lock-settings-v1"
+    private let latestSuccessfulBackupDateKey =
+        "TaptionPlan.security.latest-successful-backup-date-v1"
     private var verifier: PlanPINVerifier?
     private var failedAttempts = 0
     private var blockedUntil: Date?
     private(set) var settings: PlanAppLockSettings
     private(set) var state: PlanAppLockState = .unlocked
+    private(set) var latestSuccessfulBackupDate: Date?
 
     init(
         credentialStore: PlanCredentialStore = KeychainPlanCredentialStore(),
@@ -1034,6 +1054,10 @@ final class PlanSecurityBackupService {
         } else {
             self.settings = PlanAppLockSettings()
         }
+        self.latestSuccessfulBackupDate = settingsDefaults.object(
+            forKey: latestSuccessfulBackupDateKey
+        ) as? Date
+        refreshLatestSuccessfulBackupDate()
     }
 
     static func applicationSupport(fileManager: FileManager = .default) throws -> PlanSecurityBackupService {
@@ -1050,7 +1074,16 @@ final class PlanSecurityBackupService {
     }
 
     var hasPIN: Bool { verifier != nil }
-    var status: PlanSecurityStatus { .init(settings: settings, state: state, hasPIN: hasPIN, failedAttempts: failedAttempts, retryAfter: blockedUntil) }
+    var status: PlanSecurityStatus {
+        .init(
+            settings: settings,
+            state: state,
+            hasPIN: hasPIN,
+            failedAttempts: failedAttempts,
+            retryAfter: blockedUntil,
+            latestSuccessfulBackupDate: latestSuccessfulBackupDate
+        )
+    }
 
     func setPIN(_ pin: String) throws {
         let value = try PlanPINVerifier(pin: pin)
@@ -1185,7 +1218,34 @@ final class PlanSecurityBackupService {
         }
         let archive = PlanMonthlyArchive(monthKey: monthKey, accountIdentifier: accountIdentifier, encryptedPayload: encryptedPayload, wrappedPayloadKey: wrappedPayloadKey, accountWrappedPayloadKey: accountWrappedPayloadKey, createdAt: date)
         try backupStore.save(archive, at: PlanCloudBackupPath(monthKey: archive.monthKey))
+        recordSuccessfulBackup(at: archive.createdAt)
         return archive
+    }
+
+    private func refreshLatestSuccessfulBackupDate() {
+        do {
+            let latest = try backupStore.allArchives().map(\.createdAt).max()
+            latestSuccessfulBackupDate = latest
+            persistLatestSuccessfulBackupDate()
+        } catch {
+            // Keep the persisted date while iCloud is unavailable.
+        }
+    }
+
+    private func recordSuccessfulBackup(at date: Date) {
+        guard latestSuccessfulBackupDate == nil || date > latestSuccessfulBackupDate! else {
+            return
+        }
+        latestSuccessfulBackupDate = date
+        persistLatestSuccessfulBackupDate()
+    }
+
+    private func persistLatestSuccessfulBackupDate() {
+        if let latestSuccessfulBackupDate {
+            settingsDefaults.set(latestSuccessfulBackupDate, forKey: latestSuccessfulBackupDateKey)
+        } else {
+            settingsDefaults.removeObject(forKey: latestSuccessfulBackupDateKey)
+        }
     }
 
     private func payloadPreservingCurrentMonthRoutes(

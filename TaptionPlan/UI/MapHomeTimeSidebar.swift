@@ -11,13 +11,32 @@ private func mapHomeWeatherSymbolColor(
 }
 
 private func mapHomeAirQualityColor(_ weather: WeatherContext) -> Color {
-    guard let grade = weather.airQuality?.overallGrade else { return .tpWeatherDark }
+    guard let grade = weather.airQuality?.overallGrade else {
+        return Color(hex: "#64748B")
+    }
     switch grade {
     case .good: return Color(hex: "#2E9B72")
     case .moderate: return Color(hex: "#C3942E")
     case .bad: return Color(hex: "#DD6B3D")
     case .veryBad: return Color(hex: "#C44767")
     }
+}
+
+private func mapHomeWeatherTextColor(
+    _ weather: WeatherContext,
+    isCurrent: Bool,
+    isSelected: Bool
+) -> Color {
+    if isSelected { return .tpReferenceRose }
+    guard isCurrent, let grade = weather.airQuality?.overallGrade else {
+        return mapHomeAirQualityColor(weather)
+    }
+    return grade == .moderate ? Color(hex: "#111827") : .white
+}
+
+private func mapHomeWeatherCurrentBackground(_ weather: WeatherContext) -> Color? {
+    guard weather.airQuality?.overallGrade != nil else { return nil }
+    return mapHomeAirQualityColor(weather).opacity(0.9)
 }
 
 enum MapHomeWeatherDisplayPolicy {
@@ -1685,19 +1704,27 @@ struct MapHomeWeatherSidebar: View {
                                     mapHomeWeatherSymbolColor(entry.context, component: .secondary)
                                 )
                                 .frame(width: 20)
-                            Text("\(Int(entry.context.temperatureCelsius.rounded()))°C")
+                                Text("\(Int(entry.context.temperatureCelsius.rounded()))°C")
                                 .font(.system(size: 9, weight: isSelected ? .bold : .medium, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundStyle(
-                                    isSelected
-                                        ? Color.tpReferenceRose
-                                        : mapHomeAirQualityColor(entry.context)
+                                    mapHomeWeatherTextColor(
+                                        entry.context,
+                                        isCurrent: isCurrent,
+                                        isSelected: isSelected
+                                    )
                                 )
                         }
                         .padding(.horizontal, 3)
                         .frame(width: itemWidth, height: itemHeight)
                         .background(
-                            MapHomeWeatherBackgroundKind.resolve(
+                            mapHomeWeatherCurrentBackground(entry.context).map {
+                                isCurrent && !isSelected ? $0 :
+                                    MapHomeWeatherBackgroundKind.resolve(
+                                        isSelected: isSelected,
+                                        isCurrent: isCurrent
+                                    ).color
+                            } ?? MapHomeWeatherBackgroundKind.resolve(
                                 isSelected: isSelected,
                                 isCurrent: isCurrent
                             ).color,

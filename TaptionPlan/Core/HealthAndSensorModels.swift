@@ -298,6 +298,15 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
 }
 
 struct GPSLoggingPreferences: Codable, Hashable, Sendable {
+    /// User-facing cadence presets shared by Settings and the hamburger menu.
+    enum Preset: Int, CaseIterable, Hashable, Sendable {
+        case batterySaver = 900
+        case balanced = 300
+        case realtime = 60
+
+        var intervalSeconds: Int { rawValue }
+    }
+
     static let supportedIntervalSeconds = [1, 10, 30, 60, 120, 300, 600, 900]
     static let batteryMinimalIntervalSeconds = 900
 
@@ -320,6 +329,18 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
 
     var effectiveIntervalSeconds: Int {
         isBatteryMinimal ? Self.batteryMinimalIntervalSeconds : intervalSeconds
+    }
+
+    var preset: Preset {
+        get {
+            Preset(rawValue: effectiveIntervalSeconds)
+                ?? (effectiveIntervalSeconds > Preset.balanced.rawValue
+                    ? .batterySaver : .realtime)
+        }
+        set {
+            isBatteryMinimal = newValue == .batterySaver
+            intervalSeconds = newValue.intervalSeconds
+        }
     }
 
     var isContinuous: Bool {
