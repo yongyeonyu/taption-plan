@@ -564,6 +564,7 @@ private struct RoutineTimeRangeSlider: View {
 
     @State private var actualStart: Date
     @State private var actualEnd: Date
+    @State private var lastHandleRenderUptime: TimeInterval = 0
 
     private let minimumDuration: TimeInterval = 5 * 60
 
@@ -713,22 +714,56 @@ private struct RoutineTimeRangeSlider: View {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 let date = date(at: value.location.x, width: width)
-                switch handle {
-                case .start:
-                    actualStart = min(
-                        max(plan.span.start, date),
-                        actualEnd.addingTimeInterval(-minimumDuration)
-                    )
-                case .end:
-                    actualEnd = max(
-                        min(plan.span.end, date),
-                        actualStart.addingTimeInterval(minimumDuration)
-                    )
+                let projected = projectedRange(for: handle, date: date)
+                guard TimelineInteractionFrameGate.shouldRender(
+                    lastUptime: &lastHandleRenderUptime,
+                    nowUptime: ProcessInfo.processInfo.systemUptime
+                ) else { return }
+                if actualStart != projected.start {
+                    actualStart = projected.start
+                }
+                if actualEnd != projected.end {
+                    actualEnd = projected.end
                 }
             }
-            .onEnded { _ in
-                onCommit(actualStart, actualEnd)
+            .onEnded { value in
+                let projected = projectedRange(
+                    for: handle,
+                    date: date(at: value.location.x, width: width)
+                )
+                if actualStart != projected.start {
+                    actualStart = projected.start
+                }
+                if actualEnd != projected.end {
+                    actualEnd = projected.end
+                }
+                onCommit(projected.start, projected.end)
+                lastHandleRenderUptime = 0
             }
+    }
+
+    private func projectedRange(
+        for handle: Handle,
+        date: Date
+    ) -> (start: Date, end: Date) {
+        switch handle {
+        case .start:
+            return (
+                min(
+                    max(plan.span.start, date),
+                    actualEnd.addingTimeInterval(-minimumDuration)
+                ),
+                actualEnd
+            )
+        case .end:
+            return (
+                actualStart,
+                max(
+                    min(plan.span.end, date),
+                    actualStart.addingTimeInterval(minimumDuration)
+                )
+            )
+        }
     }
 
     private func fraction(_ date: Date) -> CGFloat {

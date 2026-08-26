@@ -226,6 +226,7 @@ struct MemoDetailView: View {
     @State private var dragOriginSpan: TimeSpan?
     @State private var dragStartedAt: Date?
     @State private var lastFeedbackDate: Date?
+    @State private var lastDragRenderUptime: TimeInterval = 0
     @FocusState private var composerFocused: Bool
 
     var body: some View {
@@ -370,18 +371,12 @@ struct MemoDetailView: View {
                       let began = dragStartedAt else {
                     return
                 }
-                let elapsed = max(0.016, now.timeIntervalSince(began))
-                let velocity = Double(value.translation.width) / elapsed
-                let delta = Double(value.translation.width / width)
-                    * dayBounds.duration
-                let adjusted = TimeSliderEngine.adjust(
-                    origin,
-                    handle: .body,
-                    delta: delta,
-                    velocityPointsPerSecond: velocity,
-                    isLongPressPrecision: elapsed >= 0.35,
-                    bounds: dayBounds,
-                    minimumDuration: 0
+                let adjusted = adjustedMemoSpan(
+                    translation: value.translation.width,
+                    width: width,
+                    origin: origin,
+                    began: began,
+                    now: now
                 )
                 if let lastFeedbackDate,
                    TimeSliderEngine.crossedTenMinuteTick(
@@ -391,13 +386,50 @@ struct MemoDetailView: View {
                     UISelectionFeedbackGenerator().selectionChanged()
                     self.lastFeedbackDate = adjusted.start
                 }
+                guard TimelineInteractionFrameGate.shouldRender(
+                    lastUptime: &lastDragRenderUptime,
+                    nowUptime: ProcessInfo.processInfo.systemUptime
+                ) else { return }
                 model.moveMemoEntry(to: clamped(adjusted.start))
             }
-            .onEnded { _ in
+            .onEnded { value in
+                if let origin = dragOriginSpan,
+                   let began = dragStartedAt {
+                    let adjusted = adjustedMemoSpan(
+                        translation: value.translation.width,
+                        width: width,
+                        origin: origin,
+                        began: began,
+                        now: .now
+                    )
+                    model.moveMemoEntry(to: clamped(adjusted.start))
+                }
                 dragOriginSpan = nil
                 dragStartedAt = nil
                 lastFeedbackDate = nil
+                lastDragRenderUptime = 0
             }
+    }
+
+    private func adjustedMemoSpan(
+        translation: CGFloat,
+        width: CGFloat,
+        origin: TimeSpan,
+        began: Date,
+        now: Date
+    ) -> TimeSpan {
+        let elapsed = max(0.016, now.timeIntervalSince(began))
+        let velocity = Double(translation) / elapsed
+        let delta = Double(translation / width) * dayBounds.duration
+        return TimeSliderEngine.adjust(
+            origin,
+            handle: .body,
+            delta: delta,
+            velocityPointsPerSecond: velocity,
+            isLongPressPrecision: elapsed >= 0.35,
+            bounds: dayBounds,
+            minimumDuration: 0
+        )
     }
 
     private func clamped(_ date: Date) -> Date {
@@ -1550,6 +1582,8 @@ struct LocationTimelineView: View {
         start: CGFloat,
         length: CGFloat
     )?
+    @State private var lastDragRenderUptime: TimeInterval = 0
+    @State private var lastMagnifyRenderUptime: TimeInterval = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -2156,17 +2190,20 @@ struct LocationTimelineView: View {
                 if dragStart == nil {
                     dragStart = viewportStart
                 }
-                let origin = dragStart ?? viewportStart
-                viewportStart = clampedViewportStart(
-                    origin
-                        - value.translation.width
-                        / max(1, width)
-                        * viewportLength,
-                    length: viewportLength
+                applyViewportDrag(
+                    translation: value.translation.width,
+                    width: width,
+                    force: false
                 )
             }
-            .onEnded { _ in
+            .onEnded { value in
+                applyViewportDrag(
+                    translation: value.translation.width,
+                    width: width,
+                    force: true
+                )
                 dragStart = nil
+                lastDragRenderUptime = 0
             }
     }
 
@@ -2176,21 +2213,69 @@ struct LocationTimelineView: View {
                 if magnifyStart == nil {
                     magnifyStart = (viewportStart, viewportLength)
                 }
-                guard let origin = magnifyStart else { return }
-                let newLength = max(
-                    0.125,
-                    min(1, origin.length / value.magnification)
-                )
-                let center = origin.start + origin.length / 2
-                viewportLength = newLength
-                viewportStart = clampedViewportStart(
-                    center - newLength / 2,
-                    length: newLength
+                applyViewportMagnification(
+                    magnification: value.magnification,
+                    force: false
                 )
             }
-            .onEnded { _ in
+            .onEnded { value in
+                applyViewportMagnification(
+                    magnification: value.magnification,
+                    force: true
+                )
                 magnifyStart = nil
+                lastMagnifyRenderUptime = 0
             }
+    }
+
+    private func applyViewportDrag(
+        translation: CGFloat,
+        width: CGFloat,
+        force: Bool
+    ) {
+        guard let origin = dragStart else { return }
+        if !force {
+            guard TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &lastDragRenderUptime,
+                nowUptime: ProcessInfo.processInfo.systemUptime
+            ) else { return }
+        }
+        let next = clampedViewportStart(
+            origin
+                - translation / max(1, width) * viewportLength,
+            length: viewportLength
+        )
+        if viewportStart != next {
+            viewportStart = next
+        }
+    }
+
+    private func applyViewportMagnification(
+        magnification: CGFloat,
+        force: Bool
+    ) {
+        guard let origin = magnifyStart else { return }
+        if !force {
+            guard TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &lastMagnifyRenderUptime,
+                nowUptime: ProcessInfo.processInfo.systemUptime
+            ) else { return }
+        }
+        let newLength = max(
+            0.125,
+            min(1, origin.length / magnification)
+        )
+        let center = origin.start + origin.length / 2
+        let nextStart = clampedViewportStart(
+            center - newLength / 2,
+            length: newLength
+        )
+        if viewportLength != newLength {
+            viewportLength = newLength
+        }
+        if viewportStart != nextStart {
+            viewportStart = nextStart
+        }
     }
 
     private func clampedViewportStart(

@@ -319,3 +319,16 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - 이번 작업에서 생성한 실기기 빌드 산출물과 오래된 Taption Plan DerivedData·임시 테스트 캐시를 삭제했다.
 - 테스트 결과·릴리스 아카이브·시각 QA 증거와 다른 프로젝트가 공유하는 시뮬레이터 데이터는 보존했다.
 - 현재 Git 워크트리는 clean이며 `main`과 `origin/main`이 일치한다.
+
+## 2026-08-27 HZ240827A1 240Hz 입력 예산 전수 점검
+
+- `TimelineInteractionFrameGate`에 240Hz 입력·60Hz 표시 기준과 zero timestamp 중복 발행 방지를 명시했다.
+- MiniTimeSliceEditor·TimeSlider·메모·실제 기록 핸들·상세 패널·LocationTimeline·MapHome 보조 제스처의 중간 상태 변경을 60Hz로 합치고, 제스처 종료값은 즉시 반영한다.
+- 재생 중 경로 투영과 지도 포커스는 각각 30Hz로 제한하고, 기존 NLE·MapKit·구간 경계·Review 게이트를 유지했다.
+
+### 검증
+
+- `TimeScaleTests` 전체가 `Taption-Compact-iPhone` 시뮬레이터에서 `TEST SUCCEEDED`로 통과했다. 240Hz 입력→60Hz 표시와 30Hz 재생 카메라 계약 테스트를 포함한다.
+- `TaptionPlanCore` `CoreEngineContractsTests` 8/8 통과, synthetic 240Hz handler p95 `0.000042ms`로 입력 예산 4.17ms 이내다.
+- `git diff --check`: 통과
+- 최종 변경의 테스트 빌드 컴파일은 성공했으나, 별도 Debug 링크 재빌드는 호스트 여유 공간 108MiB에서 `errno=28`로 중단됐다. 실기기 Animation Hitches/Instruments와 실제 터치 검증은 별도 런타임 게이트로 남긴다.

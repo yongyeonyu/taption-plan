@@ -3181,6 +3181,7 @@ private struct TimelineDetailPanel: View {
     // of rescanning plans, actuals, places, and calendar events twice.
     @State private var detailDataCache = TimelineDetailDataCache()
     @State private var panelDragStartHeight: CGFloat?
+    @State private var lastPanelResizeRenderUptime: TimeInterval = 0
 
     private var maximumPanelHeight: CGFloat {
         max(detailPanelCollapsedHeight, maxHeight)
@@ -3343,10 +3344,26 @@ private struct TimelineDetailPanel: View {
                         )
                     )
                     guard abs(nextHeight - panelHeight) > 0.5 else { return }
+                    guard TimelineInteractionFrameGate.shouldRender(
+                        lastUptime: &lastPanelResizeRenderUptime,
+                        nowUptime: ProcessInfo.processInfo.systemUptime
+                    ) else { return }
                     panelHeight = nextHeight
                 }
                 .onEnded { value in
+                    let start = panelDragStartHeight ?? panelHeight
+                    let finalHeight = min(
+                        maximumPanelHeight,
+                        max(
+                            detailPanelMinimumHeight,
+                            start - value.translation.height
+                        )
+                    )
+                    if abs(finalHeight - panelHeight) > 0.5 {
+                        panelHeight = finalHeight
+                    }
                     panelDragStartHeight = nil
+                    lastPanelResizeRenderUptime = 0
                     let targetHeight: CGFloat?
                     if value.translation.height < -8,
                        panelHeight < maximumPanelHeight - 0.5 {

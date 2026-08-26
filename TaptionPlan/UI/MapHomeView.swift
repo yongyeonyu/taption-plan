@@ -640,6 +640,8 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
 enum MapHomeDayPlaybackMath {
     static let durationSeconds: TimeInterval = 24
     static let frameIntervalNanoseconds: UInt64 = 16_666_667
+    static let routeProjectionInterval: TimeInterval = 1.0 / 30.0
+    static let mapFocusInterval: TimeInterval = 1.0 / 30.0
     static let stationaryMinutesPerSecond = 60.0
     static let movingMinutesPerSecond = 15.0
 
@@ -1024,6 +1026,7 @@ struct MapHomeView: View {
     @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var cachedWeatherContexts: [WeatherContext]
     @State private var sidebarPinchStepOffset = 0
+    @State private var lastSidebarPinchRenderUptime: TimeInterval = 0
     @State private var activePaletteCategoryID: String?
     @State private var customPaletteColor = Color.tpReferenceMint
     @State private var mapCameraFrameProjection = MapHomeCameraFrameProjection()
@@ -1036,6 +1039,9 @@ struct MapHomeView: View {
     @State private var isDayPlaybackRunning = false
     @State private var isTimelineInteractionActive = false
     @State private var routeDocumentProjectionGate = MapHomeRouteDocumentProjectionGate()
+    @State private var lastPlaybackRouteProjectionUptime: TimeInterval = 0
+    @State private var lastPlaybackMapFocusUptime: TimeInterval = 0
+    @State private var lastTimelineMapFocusUptime: TimeInterval = 0
     @State private var dayPlaybackElapsedSeconds: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
     @State private var mapDayCacheStore: TaptionPlanDayStore?
@@ -1731,9 +1737,27 @@ struct MapHomeView: View {
             .onChange(of: selectedTimelineMinute) { _, minute in
                 if isTimelineInteractionActive || isDayPlaybackRunning {
                     let point = refreshHistoricalPlaybackPoint()
-                    if let point {
-                        focusMap(on: point, using: proxy, followsTracking: true)
+                    guard let point else { return }
+                    let interval = isDayPlaybackRunning
+                        ? MapHomeDayPlaybackMath.mapFocusInterval
+                        : TimelineInteractionFrameGate.minimumInterval
+                    let now = ProcessInfo.processInfo.systemUptime
+                    let shouldFocus: Bool
+                    if isDayPlaybackRunning {
+                        shouldFocus = TimelineInteractionFrameGate.shouldRender(
+                            lastUptime: &lastPlaybackMapFocusUptime,
+                            nowUptime: now,
+                            minimumInterval: interval
+                        )
+                    } else {
+                        shouldFocus = TimelineInteractionFrameGate.shouldRender(
+                            lastUptime: &lastTimelineMapFocusUptime,
+                            nowUptime: now,
+                            minimumInterval: interval
+                        )
                     }
+                    guard shouldFocus else { return }
+                    focusMap(on: point, using: proxy, followsTracking: true)
                 } else {
                     refreshSelectedTimelineMapPosition(
                         minute: minute,
@@ -2288,12 +2312,15 @@ struct MapHomeView: View {
         isTimelineSelectionPinned = true
         isTimelineInteractionActive = true
         isDayPlaybackRunning = true
+        lastPlaybackRouteProjectionUptime = 0
+        lastPlaybackMapFocusUptime = 0
         mapRenderCache.invalidateRouteData()
         routeProjection = nil
         timelineRouteOverlays = []
         prepareRouteProjectionReadings()
         refreshRouteProjection()
         refreshHistoricalPlaybackPoint()
+        lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
         var lastUptime = ProcessInfo.processInfo.systemUptime
         dayPlaybackTask = Task { @MainActor in
             while !Task.isCancelled {
@@ -2324,7 +2351,14 @@ struct MapHomeView: View {
                 if selectedTimelineMinute != minute {
                     selectedTimelineMinute = minute
                 }
-                refreshRouteProjection()
+                if TimelineInteractionFrameGate.shouldRender(
+                    lastUptime: &lastPlaybackRouteProjectionUptime,
+                    nowUptime: uptime,
+                    minimumInterval: MapHomeDayPlaybackMath
+                        .routeProjectionInterval
+                ) {
+                    refreshRouteProjection()
+                }
                 refreshHistoricalPlaybackPoint()
                 guard currentMinute < Double(
                     MapHomeTimeSidebarMath.fullDayMinutes
@@ -2337,6 +2371,8 @@ struct MapHomeView: View {
                         ?? refreshRouteProjection()
                     refreshHistoricalPlaybackPoint()
                     dayPlaybackTask = nil
+                    lastPlaybackRouteProjectionUptime = 0
+                    lastPlaybackMapFocusUptime = 0
                     return
                 }
             }
@@ -2442,6 +2478,9 @@ struct MapHomeView: View {
         dayPlaybackTask = nil
         isDayPlaybackRunning = false
         historicalPlaybackPoint = nil
+        lastPlaybackRouteProjectionUptime = 0
+        lastPlaybackMapFocusUptime = 0
+        lastTimelineMapFocusUptime = 0
         if resetProgress {
             dayPlaybackElapsedSeconds = 0
         }
@@ -2542,11 +2581,22 @@ struct MapHomeView: View {
                                 magnification: scale
                             )
                             guard offset != sidebarPinchStepOffset else { return }
+                            guard TimelineInteractionFrameGate.shouldRender(
+                                lastUptime: &lastSidebarPinchRenderUptime,
+                                nowUptime: ProcessInfo.processInfo.systemUptime
+                            ) else { return }
                             timeSidebarZoomStep += offset - sidebarPinchStepOffset
                             sidebarPinchStepOffset = offset
                         }
-                        .onEnded { _ in
+                        .onEnded { scale in
+                            let offset = MapHomeTimeSidebarPinchMath.stepOffset(
+                                magnification: scale
+                            )
+                            if offset != sidebarPinchStepOffset {
+                                timeSidebarZoomStep += offset - sidebarPinchStepOffset
+                            }
                             sidebarPinchStepOffset = 0
+                            lastSidebarPinchRenderUptime = 0
                         }
                 )
             }
@@ -5553,6 +5603,7 @@ private struct MapHomeSectionEditSheet: View {
     @State private var insertedDetailID: UUID?
     @State private var draggingDetailID: UUID?
     @State private var detailDragTranslation: CGFloat = 0
+    @State private var lastDetailDragRenderUptime: TimeInterval = 0
     @State private var isSaving = false
 
     init(
@@ -6029,8 +6080,16 @@ private struct MapHomeSectionEditSheet: View {
                 guard value.translation.width > 0,
                       abs(value.translation.width) > abs(value.translation.height)
                 else { return }
-                draggingDetailID = detail.id
-                detailDragTranslation = value.translation.width
+                if draggingDetailID != detail.id {
+                    draggingDetailID = detail.id
+                }
+                guard TimelineInteractionFrameGate.shouldRender(
+                    lastUptime: &lastDetailDragRenderUptime,
+                    nowUptime: ProcessInfo.processInfo.systemUptime
+                ) else { return }
+                if detailDragTranslation != value.translation.width {
+                    detailDragTranslation = value.translation.width
+                }
             }
             .onEnded { value in
                 if draggingDetailID == detail.id,
@@ -6042,6 +6101,7 @@ private struct MapHomeSectionEditSheet: View {
                 }
                 draggingDetailID = nil
                 detailDragTranslation = 0
+                lastDetailDragRenderUptime = 0
             }
     }
 

@@ -1253,6 +1253,7 @@ private struct MiniTimeSliceEditor: View {
     @State private var resizeOrigin: TimeSpan?
     @State private var moveOrigin: TimeSpan?
     @State private var isMoving = false
+    @State private var lastGestureRenderUptime: TimeInterval = 0
 
     private let windowDuration: TimeInterval = 6 * 3_600
 
@@ -1394,22 +1395,33 @@ private struct MiniTimeSliceEditor: View {
             .onChanged { value in
                 if resizeOrigin == nil {
                     resizeOrigin = span
+                    lastGestureRenderUptime = 0
                 }
                 guard let origin = resizeOrigin else { return }
-                let delta = Double(value.translation.width / width)
-                    * windowDuration
-                let adjusted = TimeSliderEngine.adjust(
-                    origin,
-                    handle: handle,
-                    delta: delta,
-                    snapInterval: QuickPlanDraftEngine.adjustmentStep,
-                    bounds: windowBounds,
-                    minimumDuration: QuickPlanDraftEngine.adjustmentStep
+                applyGestureProjection(
+                    resizedSpan(
+                        origin: origin,
+                        handle: handle,
+                        translation: value.translation.width,
+                        width: width
+                    ),
+                    force: false
                 )
-                apply(adjusted)
             }
-            .onEnded { _ in
+            .onEnded { value in
+                if let origin = resizeOrigin {
+                    applyGestureProjection(
+                        resizedSpan(
+                            origin: origin,
+                            handle: handle,
+                            translation: value.translation.width,
+                            width: width
+                        ),
+                        force: true
+                    )
+                }
                 resizeOrigin = nil
+                lastGestureRenderUptime = 0
             }
     }
 
@@ -1426,35 +1438,95 @@ private struct MiniTimeSliceEditor: View {
                     }
                 case .second(true, let drag):
                     guard let drag else { return }
-                    if moveOrigin == nil { moveOrigin = span }
+                    if moveOrigin == nil {
+                        moveOrigin = span
+                        lastGestureRenderUptime = 0
+                    }
                     guard let origin = moveOrigin else { return }
-                    let delta = Double(drag.translation.width / width)
-                        * windowDuration
-                    let adjusted = TimeSliderEngine.adjust(
-                        origin,
-                        handle: .body,
-                        delta: delta,
-                        snapInterval: QuickPlanDraftEngine.adjustmentStep,
-                        bounds: windowBounds,
-                        minimumDuration: QuickPlanDraftEngine.adjustmentStep
+                    applyGestureProjection(
+                        movedSpan(
+                            origin: origin,
+                            translation: drag.translation.width,
+                            width: width
+                        ),
+                        force: false
                     )
-                    apply(adjusted)
                 default:
                     break
                 }
             }
-            .onEnded { _ in
+            .onEnded { value in
+                if case .second(true, let drag) = value,
+                   let drag,
+                   let origin = moveOrigin {
+                    applyGestureProjection(
+                        movedSpan(
+                            origin: origin,
+                            translation: drag.translation.width,
+                            width: width
+                        ),
+                        force: true
+                    )
+                }
                 moveOrigin = nil
                 isMoving = false
+                lastGestureRenderUptime = 0
             }
     }
 
+    private func resizedSpan(
+        origin: TimeSpan,
+        handle: TimeSliderHandle,
+        translation: CGFloat,
+        width: CGFloat
+    ) -> TimeSpan {
+        TimeSliderEngine.adjust(
+            origin,
+            handle: handle,
+            delta: Double(translation / max(1, width)) * windowDuration,
+            snapInterval: QuickPlanDraftEngine.adjustmentStep,
+            bounds: windowBounds,
+            minimumDuration: QuickPlanDraftEngine.adjustmentStep
+        )
+    }
+
+    private func movedSpan(
+        origin: TimeSpan,
+        translation: CGFloat,
+        width: CGFloat
+    ) -> TimeSpan {
+        resizedSpan(
+            origin: origin,
+            handle: .body,
+            translation: translation,
+            width: width
+        )
+    }
+
+    private func applyGestureProjection(
+        _ adjusted: TimeSpan,
+        force: Bool
+    ) {
+        if !force {
+            guard TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &lastGestureRenderUptime,
+                nowUptime: ProcessInfo.processInfo.systemUptime
+            ) else { return }
+        }
+        apply(adjusted)
+    }
+
     private func apply(_ adjusted: TimeSpan) {
-        startAt = adjusted.start
-        durationMinutes = max(
+        if startAt != adjusted.start {
+            startAt = adjusted.start
+        }
+        let nextDuration = max(
             5,
             Int((adjusted.duration / 60).rounded())
         )
+        if durationMinutes != nextDuration {
+            durationMinutes = nextDuration
+        }
     }
 }
 
@@ -1607,6 +1679,7 @@ private struct TimeSliderScreen: View {
     @State private var dragStartedAt: Date?
     @State private var previousFeedbackDate: Date?
     @State private var isPrecisionMode = false
+    @State private var lastDragRenderUptime: TimeInterval = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1819,19 +1892,17 @@ private struct TimeSliderScreen: View {
                     return
                 }
                 let elapsed = max(0.016, now.timeIntervalSince(began))
-                let velocity = Double(value.translation.width) / elapsed
                 let precision = elapsed >= 0.35
-                isPrecisionMode = precision
-                let delta = Double(value.translation.width / max(1, width))
-                    * dayBounds.duration
-                let adjusted = TimeSliderEngine.adjust(
-                    origin,
-                    handle: handle,
-                    delta: delta,
-                    velocityPointsPerSecond: velocity,
-                    isLongPressPrecision: precision,
-                    bounds: dayBounds,
-                    minimumDuration: 10 * 60
+                if isPrecisionMode != precision {
+                    isPrecisionMode = precision
+                }
+                let adjusted = adjustedSpan(
+                    origin: origin,
+                    translation: value.translation.width,
+                    width: width,
+                    began: began,
+                    now: now,
+                    handle: handle
                 )
                 if let previousFeedbackDate {
                     let current = handle == .end
@@ -1844,22 +1915,64 @@ private struct TimeSliderScreen: View {
                         self.previousFeedbackDate = current
                     }
                 }
+                guard TimelineInteractionFrameGate.shouldRender(
+                    lastUptime: &lastDragRenderUptime,
+                    nowUptime: ProcessInfo.processInfo.systemUptime
+                ) else { return }
                 apply(adjusted)
             }
-            .onEnded { _ in
+            .onEnded { value in
+                if let origin = dragOriginSpan,
+                   let began = dragStartedAt {
+                    let adjusted = adjustedSpan(
+                        origin: origin,
+                        translation: value.translation.width,
+                        width: width,
+                        began: began,
+                        now: .now,
+                        handle: handle
+                    )
+                    apply(adjusted)
+                }
                 dragOriginSpan = nil
                 dragStartedAt = nil
                 previousFeedbackDate = nil
                 isPrecisionMode = false
+                lastDragRenderUptime = 0
             }
     }
 
+    private func adjustedSpan(
+        origin: TimeSpan,
+        translation: CGFloat,
+        width: CGFloat,
+        began: Date,
+        now: Date,
+        handle: TimeSliderHandle
+    ) -> TimeSpan {
+        let elapsed = max(0.016, now.timeIntervalSince(began))
+        return TimeSliderEngine.adjust(
+            origin,
+            handle: handle,
+            delta: Double(translation / max(1, width)) * dayBounds.duration,
+            velocityPointsPerSecond: Double(translation) / elapsed,
+            isLongPressPrecision: elapsed >= 0.35,
+            bounds: dayBounds,
+            minimumDuration: 10 * 60
+        )
+    }
+
     private func apply(_ adjusted: TimeSpan) {
-        startAt = adjusted.start
-        durationMinutes = max(
+        if startAt != adjusted.start {
+            startAt = adjusted.start
+        }
+        let nextDuration = max(
             1,
             Int((adjusted.duration / 60).rounded())
         )
+        if durationMinutes != nextDuration {
+            durationMinutes = nextDuration
+        }
     }
 
     private func hint(_ title: String, _ caption: String) -> some View {

@@ -4,18 +4,24 @@ import Foundation
 /// present them. Keep the latest sample for the gesture end, but only publish
 /// intermediate state at the display cadence.
 enum TimelineInteractionFrameGate {
+    static let maximumInputRate: Double = 240
+    static let inputInterval = 1 / maximumInputRate
     static let maximumRenderRate: Double = 60
     static let minimumInterval = 1 / maximumRenderRate
 
     static func shouldRender(
         lastUptime: inout TimeInterval,
         nowUptime: TimeInterval,
-        force: Bool = false
+        force: Bool = false,
+        minimumInterval: TimeInterval = Self.minimumInterval
     ) -> Bool {
-        guard force
-            || lastUptime == 0
-            || nowUptime - lastUptime >= minimumInterval
-        else {
+        if lastUptime == 0 {
+            lastUptime = nowUptime == 0
+                ? .leastNonzeroMagnitude
+                : nowUptime
+            return true
+        }
+        guard force || nowUptime - lastUptime >= max(0, minimumInterval) else {
             return false
         }
         lastUptime = nowUptime

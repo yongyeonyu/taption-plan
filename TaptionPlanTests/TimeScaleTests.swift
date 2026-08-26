@@ -244,6 +244,62 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(lastUptime, 10.001)
     }
 
+    func testTimelineInteractionFrameGateSeparates240HzInputFromDisplayRates() {
+        XCTAssertEqual(
+            TimelineInteractionFrameGate.inputInterval,
+            1.0 / 240.0,
+            accuracy: 0.000_000_001
+        )
+        XCTAssertEqual(
+            TimelineInteractionFrameGate.minimumInterval,
+            1.0 / 60.0,
+            accuracy: 0.000_000_001
+        )
+
+        var displayLastUptime = 0.0
+        var displayCount = 0
+        for sample in 0...240 {
+            if TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &displayLastUptime,
+                nowUptime: Double(sample) / 240.0
+            ) {
+                displayCount += 1
+            }
+        }
+        XCTAssertLessThanOrEqual(displayCount, 61)
+
+        var cameraLastUptime = 0.0
+        var cameraCount = 0
+        for sample in 0...240 {
+            if TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &cameraLastUptime,
+                nowUptime: Double(sample) / 240.0,
+                minimumInterval: 1.0 / 30.0
+            ) {
+                cameraCount += 1
+            }
+        }
+        XCTAssertGreaterThan(cameraCount, 25)
+        XCTAssertLessThanOrEqual(cameraCount, 32)
+    }
+
+    func testTimelineInteractionFrameGateDoesNotDoublePublishAtZeroTimestamp() {
+        var lastUptime = 0.0
+
+        XCTAssertTrue(
+            TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &lastUptime,
+                nowUptime: 0
+            )
+        )
+        XCTAssertFalse(
+            TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &lastUptime,
+                nowUptime: TimelineInteractionFrameGate.inputInterval
+            )
+        )
+    }
+
     func testTimelineNLEProjectionCoalesces240HzInputAndFlushesLatestState() {
         let projection = TimelineNLEProjection<Int>()
         projection.begin(with: 0)
@@ -2740,6 +2796,16 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(
             MapHomeDayPlaybackMath.frameIntervalNanoseconds,
             16_666_667
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.routeProjectionInterval,
+            1.0 / 30.0,
+            accuracy: 0.000_000_001
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.mapFocusInterval,
+            1.0 / 30.0,
+            accuracy: 0.000_000_001
         )
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 0), 0)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 1), 60)
