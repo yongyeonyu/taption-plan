@@ -7710,6 +7710,27 @@ final class FeatureEngineTests: XCTestCase {
             ),
             24
         )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.leftToRightEndpoint(
+                progress: 0,
+                width: 24
+            ),
+            0
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.leftToRightEndpoint(
+                progress: 0.5,
+                width: 24
+            ),
+            12
+        )
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.leftToRightEndpoint(
+                progress: 1.5,
+                width: 24
+            ),
+            24
+        )
     }
 
     func testSensorCollectionWaveformCycleProgressWrapsAtHalfInterval() {
@@ -9173,6 +9194,78 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(visible.count, 1)
         XCTAssertEqual(visible.first?.title, "점심 식사")
+    }
+
+    func testRestaurantMealEngineCreatesOneEatingRecordPerRestaurantStay() {
+        let base = makeDate(2026, 7, 30, 12)
+        let firstPoint = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 30,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 5
+        )
+        let secondPoint = GeoPoint(
+            latitude: 37.51,
+            longitude: 127.01,
+            altitude: 30,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 5
+        )
+        let restaurants = [
+            FrequentPlace(
+                kind: .restaurant,
+                name: "첫 식당",
+                point: firstPoint,
+                radiusMeters: 120
+            ),
+            FrequentPlace(
+                kind: .restaurant,
+                name: "둘째 식당",
+                point: secondPoint,
+                radiusMeters: 120
+            ),
+        ]
+        let readings = [
+            SensorReading(timestamp: base, point: firstPoint),
+            SensorReading(
+                timestamp: base.addingTimeInterval(15 * 60),
+                point: firstPoint
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(30 * 60),
+                point: secondPoint
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(45 * 60),
+                point: secondPoint
+            ),
+        ]
+        let records = RestaurantMealActualEngine.records(
+            restaurants: restaurants,
+            readings: readings,
+            inside: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(45 * 60)
+            ),
+            asOf: base.addingTimeInterval(45 * 60)
+        )
+        XCTAssertEqual(records.count, 2)
+        XCTAssertEqual(records.map { $0.categoryID }, ["eating", "eating"])
+        XCTAssertEqual(
+            Set(records.map { $0.title }),
+            ["식사 · 첫 식당", "식사 · 둘째 식당"]
+        )
+        let shortRecords = RestaurantMealActualEngine.records(
+            restaurants: restaurants,
+            readings: readings,
+            inside: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(14 * 60)
+            ),
+            asOf: base.addingTimeInterval(14 * 60)
+        )
+        XCTAssertTrue(shortRecords.isEmpty)
     }
 
     func testWalkingLocationEngineAddsConfirmedGPSLocations() {

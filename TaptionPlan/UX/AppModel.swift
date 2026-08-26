@@ -2927,6 +2927,7 @@ final class AppModel {
             : currentDeviceDataSpan
         await refreshAppUsageData(in: appUsageSpan)
         if settings.locationEnabled
+            || settings.healthEnabled
             || settings.weatherEnabled
             || hasPhotoLocations(in: refreshSpan) {
             if includesCurrentDeviceDay {
@@ -5577,10 +5578,14 @@ final class AppModel {
         } else {
             watchSummaries = []
         }
+        let placeKinds = FrequentPlaceResolutionEngine()
+            .kindsByPlaceKey(settings.frequentPlaces)
+        let contextStays = stays.filter {
+            placeKinds[$0.placeKey] != .restaurant
+        }
         let contextRecords = StationaryContextActualEngine.records(
-            stays: stays,
-            placeKinds: FrequentPlaceResolutionEngine()
-                .kindsByPlaceKey(settings.frequentPlaces),
+            stays: contextStays,
+            placeKinds: placeKinds.filter { $0.value != .restaurant },
             placeAnchors: FrequentPlaceResolutionEngine()
                 .anchorsByPlaceKey(settings.frequentPlaces),
             stationarySpans: stationarySpans,
@@ -5595,7 +5600,10 @@ final class AppModel {
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
         let stableContextRecords = ActivityClassificationLockEngine
             .mergingLockedClassifications(
-                existing: snapshot.actuals.filter { $0.source == .location },
+                existing: snapshot.actuals.filter {
+                    $0.source == .location
+                        && !isAutomaticRestaurantMeal($0)
+                },
                 fresh: contextRecords,
                 inside: span
             )
@@ -5622,6 +5630,37 @@ final class AppModel {
                 coveredBy: stableContextRecords,
                 asOf: span.end
             ) + stableContextRecords
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+    }
+
+    private func isAutomaticRestaurantMeal(_ actual: ActualRecord) -> Bool {
+        guard actual.source == .location else { return false }
+        if actual.modelVersion == RestaurantMealActualEngine.modelVersion {
+            return true
+        }
+        return actual.modelVersion == StationaryContextClassifier.modelVersion
+            && actual.behavior == StationaryContextKind.mealPlace.rawValue
+            && actual.evidence.contains { $0.contains("자주가는 곳: 식당") }
+    }
+
+    private func applyRestaurantMealRecords(
+        readings: [SensorReading],
+        inside span: TimeSpan
+    ) {
+        guard !readings.isEmpty else { return }
+        let fresh = RestaurantMealActualEngine.records(
+            restaurants: settings.frequentPlaces,
+            readings: readings,
+            inside: span
+        )
+        snapshot.actuals.removeAll { actual in
+            guard actual.source == .location,
+                  actual.span(asOf: span.end).intersection(with: span) != nil
+            else { return false }
+            return isAutomaticRestaurantMeal(actual)
+        }
+        guard !fresh.isEmpty else { return }
+        snapshot.actuals.append(contentsOf: fresh)
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 
@@ -5657,6 +5696,15 @@ final class AppModel {
         // and summary data consume only quality-checked route observations.
         let filteredArchivedReadings = PlanBackupRoutePointReducer
             .filteredReadings(archivedReadings)
+        let sleepSpan = SleepAnalysisEngine.overnightSpan(
+            containing: span.start
+        )
+        // The overnight session may begin before midnight. Read that raw
+        // window separately so today's sensor-based result is not clipped to
+        // 00:00, while route/place inference remains day-scoped.
+        let sleepReadings = (try? await sensorService.archivedReadings(
+            in: sleepSpan
+        )) ?? []
         if Calendar.autoupdatingCurrent.isDate(span.start, inSameDayAs: .now),
            let latest = MapCurrentLocationAnchorPolicy.latestValidReading(
             in: filteredArchivedReadings
@@ -5709,6 +5757,31 @@ final class AppModel {
                 "sensor_timeline_refresh_skipped",
                 fields: ["reason": "fingerprint_unchanged"]
             )
+            // A restaurant can be registered after the last sensor pass. The
+            // archived GPS samples are enough to backfill its meal record
+            // without rebuilding the route and place lanes.
+            applyRestaurantMealRecords(
+                readings: filteredArchivedReadings,
+                inside: span
+            )
+            // Sleep inference depends on the current observation cutoff, not
+            // only on new samples. Re-run it on refresh so an earlier sparse
+            // pass can become valid as today's sensor window completes.
+            applyChargingInactivitySleepRecords(
+                readings: sleepReadings,
+                inside: sleepSpan
+            )
+            snapshot.settings.confirmedSleepSpans =
+                TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                    existing: snapshot.settings.confirmedSleepSpans,
+                    corrections: snapshot.settings.activityCorrections,
+                    actuals: snapshot.actuals
+                )
+            snapshot.actuals =
+                TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+                    snapshot.settings.confirmedSleepSpans,
+                    to: snapshot.actuals
+                )
             guard (settings.locationEnabled || settings.weatherEnabled),
                   weatherNeedsRefresh(for: latestReadingWithPoint) else {
                 return
@@ -5798,7 +5871,8 @@ final class AppModel {
            photoLocationReadings.isEmpty,
            healthRouteReadings.isEmpty,
            motionActivities.isEmpty,
-           healthMovementEvidence.isEmpty {
+           healthMovementEvidence.isEmpty,
+           sleepReadings.isEmpty {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "sensor_travel_inference_completed",
                 fields: [
@@ -5973,6 +6047,10 @@ final class AppModel {
         snapshot.travel.sort { $0.span.start < $1.span.start }
         snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
 
+        applyRestaurantMealRecords(
+            readings: readings,
+            inside: span
+        )
         // 이번 갱신에서 만든 이동과 장소를 모두 확정한 다음에 정지 구간
         // 문맥을 붙인다. 예전 이동만 보고 있으면 "대기"를 찾을 수 없었다.
         await applyStationaryContextRecords(
@@ -5990,8 +6068,10 @@ final class AppModel {
             inside: span
         )
         applyChargingInactivitySleepRecords(
-            readings: readings,
-            inside: span
+            // Sleep inference also consumes motion-only samples that have no
+            // GPS point; keep the raw sensor stream as its input.
+            readings: sleepReadings,
+            inside: sleepSpan
         )
         snapshot.settings.confirmedSleepSpans =
             TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
@@ -6036,6 +6116,9 @@ final class AppModel {
                 settings.sensorCollectionProfile.interval * 1.6 + 60
             )
             ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        // A sparse or still-catching-up sensor window is not evidence that a
+        // previously derived sleep result disappeared.
+        guard !records.isEmpty else { return }
         let mergedRecords = ActivityClassificationLockEngine
             .mergingLockedClassifications(
                 existing: existingSleepActuals,

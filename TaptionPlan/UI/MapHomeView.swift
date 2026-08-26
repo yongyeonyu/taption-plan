@@ -3099,7 +3099,7 @@ struct MapHomeView: View {
                     )
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(place.name)
+                    Text(displayedFrequentPlaceName(place))
                         .font(.system(size: 12.5, weight: .semibold, design: .rounded))
                         .lineLimit(1)
                     Text(
@@ -3712,12 +3712,22 @@ struct MapHomeView: View {
                   isValid(point) else { return nil }
             return MapHomePlaceAnnotation(
                 id: place.id,
-                name: place.name,
+                name: displayedFrequentPlaceName(place),
                 floor: place.floor,
                 destination: destination,
                 coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
             )
         }
+    }
+
+    private func displayedFrequentPlaceName(_ place: FrequentPlace) -> String {
+        guard place.kind == .restaurant else { return place.name }
+        let name = place.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty || name == "사용자 지점"
+            || name.caseInsensitiveCompare("User location") == .orderedSame {
+            return "식당"
+        }
+        return name
     }
 
     private var transitAnnotations: [MapHomeTransitAnnotation] {
@@ -7838,7 +7848,16 @@ private struct MapHomeUserLocationActionSheet: View {
     }
 
     private var locationName: String {
-        frequentPlace?.name ?? transitLocation?.name ?? ""
+        if let frequentPlace {
+            let name = frequentPlace.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if frequentPlace.kind == .restaurant,
+               name.isEmpty || name == "사용자 지점"
+                    || name.caseInsensitiveCompare("User location") == .orderedSame {
+                return "식당"
+            }
+            return name
+        }
+        return transitLocation?.name ?? ""
     }
 
     private var locationSubtitle: String {
@@ -8074,9 +8093,10 @@ private struct MapHomeSearchPinLocationSheet: View {
         let latitude = result.coordinate.latitude
         let longitude = result.coordinate.longitude
         if destination == .restaurant {
-            model.addRestaurant(name: result.title)
+            let restaurantName = resolvedRestaurantName
+            model.addRestaurant(name: restaurantName)
             if let place = model.settings.frequentPlaces.last(where: {
-                $0.kind == .restaurant && $0.name == result.title
+                $0.kind == .restaurant && $0.name == restaurantName
             }) {
                 model.setFrequentPlaceLocation(
                     place.id,
@@ -8106,6 +8126,25 @@ private struct MapHomeSearchPinLocationSheet: View {
             }
         }
         onSaved(nil)
+    }
+
+    private var resolvedRestaurantName: String {
+        let title = result.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty,
+              title != "사용자 지점",
+              title.caseInsensitiveCompare("User location") != .orderedSame
+        else {
+            let names = Set(
+                model.settings.frequentPlaces
+                    .filter { $0.kind == .restaurant }
+                    .map(\.name)
+            )
+            if !names.contains("식당") { return "식당" }
+            var suffix = 2
+            while names.contains("식당 \(suffix)") { suffix += 1 }
+            return "식당 \(suffix)"
+        }
+        return title
     }
 
     private func saveTransit(_ kind: UserTransitLocationKind) {

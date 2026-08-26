@@ -2274,6 +2274,8 @@ struct SensorCollectionLiveActivity: Widget {
                     state: context.state,
                     positionOffset: 0.5,
                     positionScale: 0.5,
+                    scanOffset: 0,
+                    scanScale: 0.5,
                     showsIndicator: false
                 )
             } compactTrailing: {
@@ -2281,6 +2283,8 @@ struct SensorCollectionLiveActivity: Widget {
                     state: context.state,
                     positionOffset: 0,
                     positionScale: 0.5,
+                    scanOffset: 0.5,
+                    scanScale: 0.5,
                     showsIndicator: true
                 )
             } minimal: {
@@ -2344,17 +2348,23 @@ private struct SensorCollectionWaveformView: View {
     let state: SensorCollectionActivityAttributes.ContentState
     let positionOffset: Double
     let positionScale: Double
+    let scanOffset: Double
+    let scanScale: Double
     let showsIndicator: Bool
 
     init(
         state: SensorCollectionActivityAttributes.ContentState,
         positionOffset: Double = 0,
         positionScale: Double = 1,
+        scanOffset: Double = 0,
+        scanScale: Double = 1,
         showsIndicator: Bool = true
     ) {
         self.state = state
         self.positionOffset = positionOffset
         self.positionScale = positionScale
+        self.scanOffset = scanOffset
+        self.scanScale = scanScale
         self.showsIndicator = showsIndicator
     }
 
@@ -2369,6 +2379,16 @@ private struct SensorCollectionWaveformView: View {
         }
         .frame(minWidth: 24, maxWidth: .infinity)
         .frame(height: 14)
+        .overlay {
+            TimelineView(
+                .animation(
+                    minimumInterval: 1.0 / 30.0,
+                    paused: reduceMotion
+                )
+            ) { timeline in
+                scanline(at: timeline.date)
+            }
+        }
         .overlay(alignment: .topTrailing) {
             if state.isCollecting && showsIndicator {
                 TimelineView(.animation(minimumInterval: 1, paused: false)) { timeline in
@@ -2392,9 +2412,7 @@ private struct SensorCollectionWaveformView: View {
     private func waveform(at date: Date) -> some View {
         if state.phase == .hidden {
             Color.clear
-        } else if !state.isCollecting
-                    || state.phase != .pulse
-                    || !(state.phaseUntil.map { date < $0 } ?? true) {
+        } else if pulseProgress(at: date) == nil {
             SensorCollectionFlatlineShape()
                 .stroke(
                     Color(red: 0.18, green: 0.72, blue: 0.59).opacity(0.38),
@@ -2423,6 +2441,53 @@ private struct SensorCollectionWaveformView: View {
                     style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
                 )
         }
+    }
+
+    @ViewBuilder
+    private func scanline(at date: Date) -> some View {
+        if let progress = scanProgress(at: date) {
+            GeometryReader { proxy in
+                Rectangle()
+                    .fill(.black)
+                    .frame(width: 2, height: proxy.size.height)
+                    .position(
+                        x: CGFloat(
+                            SensorCollectionWaveformMath.leftToRightEndpoint(
+                                progress: progress,
+                                width: Double(proxy.size.width)
+                            )
+                        ),
+                        y: proxy.size.height / 2
+                    )
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    private func pulseProgress(at date: Date) -> Double? {
+        guard state.isCollecting,
+              state.phase == .pulse,
+              state.phaseUntil.map({ date < $0 }) ?? true else {
+            return nil
+        }
+        let halfWindow = SensorCollectionProgressPolicy
+            .halfWindowDuration(intervalSeconds: state.intervalSeconds)
+            ?? 0.5
+        let origin = state.lastSavedAt ?? state.startedAt
+        return SensorCollectionWaveformMath.cycleProgress(
+            at: date,
+            origin: origin,
+            duration: halfWindow
+        )
+    }
+
+    private func scanProgress(at date: Date) -> Double? {
+        guard let progress = pulseProgress(at: date) else { return nil }
+        let globalProgress = reduceMotion ? 0 : progress
+        let scale = max(scanScale, 0.000_001)
+        let localProgress = (globalProgress - scanOffset) / scale
+        guard localProgress >= 0, localProgress <= 1 else { return nil }
+        return localProgress
     }
 }
 

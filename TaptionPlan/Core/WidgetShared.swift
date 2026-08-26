@@ -139,6 +139,13 @@ enum SensorCollectionWaveformMath {
         return width * (1 - clampedProgress)
     }
 
+    static func leftToRightEndpoint(
+        progress: Double,
+        width: Double
+    ) -> Double {
+        width * min(max(progress, 0), 1)
+    }
+
     static func cycleProgress(
         at date: Date,
         origin: Date,

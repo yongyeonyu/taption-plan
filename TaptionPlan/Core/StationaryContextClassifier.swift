@@ -749,3 +749,125 @@ enum StationaryContextActualEngine {
         ))
     }
 }
+
+/// 등록 식당의 반경 안에서 센서 위치가 연속으로 관측된 구간만 식사로
+/// 투영한다. 장소 체류 감지의 기본 반경(70m)과 등록 식당 반경이 달라도
+/// 식당 기준을 그대로 적용하기 위해 원본 위치 표본을 직접 읽는다.
+enum RestaurantMealActualEngine {
+    static let modelVersion = "registered-restaurant-meal-v1"
+    static let minimumDuration: TimeInterval = 15 * 60
+    static let maximumSampleGap: TimeInterval = 20 * 60
+
+    static func records(
+        restaurants: [FrequentPlace],
+        readings: [SensorReading],
+        inside: TimeSpan,
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        let observed = TimeSpan(start: inside.start, end: min(inside.end, asOf))
+        guard observed.duration > 0 else { return [] }
+        let ordered = readings
+            .filter { observed.contains($0.timestamp) }
+            .sorted { $0.timestamp < $1.timestamp }
+        return restaurants
+            .filter {
+                $0.kind == .restaurant
+                    && $0.isAutomaticRecordingEnabled
+                    && $0.point != nil
+            }
+            .flatMap { restaurant in
+                runs(for: restaurant, in: ordered)
+                    .compactMap { run -> ActualRecord? in
+                        guard let first = run.first,
+                              let last = run.last,
+                              last.timestamp.timeIntervalSince(first.timestamp)
+                                >= minimumDuration else {
+                            return nil
+                        }
+                        let span = TimeSpan(
+                            start: max(first.timestamp, observed.start),
+                            end: min(last.timestamp, observed.end)
+                        )
+                        guard span.duration >= minimumDuration else {
+                            return nil
+                        }
+                        return ActualRecord(
+                            id: stableID(restaurant: restaurant, span: span),
+                            planID: nil,
+                            title: "식사 · \(restaurant.name)",
+                            categoryID: "eating",
+                            startedAt: span.start,
+                            endedAt: span.end,
+                            source: .location,
+                            confidence: .high,
+                            createdAt: span.start,
+                            behavior: "meal",
+                            evidence: [
+                                "등록 식당: \(restaurant.name)",
+                                "반경 내 15분 이상 연속 체류",
+                            ],
+                            modelVersion: modelVersion
+                        )
+                    }
+            }
+            .sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private static func runs(
+        for restaurant: FrequentPlace,
+        in readings: [SensorReading]
+    ) -> [[SensorReading]] {
+        guard let anchor = restaurant.point else { return [] }
+        var result: [[SensorReading]] = []
+        var current: [SensorReading] = []
+        func finish() {
+            if !current.isEmpty { result.append(current) }
+            current.removeAll(keepingCapacity: true)
+        }
+        for reading in readings {
+            guard let point = reading.point else {
+                finish()
+                continue
+            }
+            let isInside = distanceMeters(point, anchor) <= restaurant.radiusMeters
+            guard isInside else {
+                finish()
+                continue
+            }
+            if let previous = current.last,
+               reading.timestamp.timeIntervalSince(previous.timestamp)
+                    > maximumSampleGap {
+                finish()
+            }
+            current.append(reading)
+        }
+        finish()
+        return result
+    }
+
+    private static func stableID(
+        restaurant: FrequentPlace,
+        span: TimeSpan
+    ) -> UUID {
+        let key = "\(modelVersion)|\(restaurant.id.uuidString)|"
+            + "\(Int(span.start.timeIntervalSinceReferenceDate.rounded()))|"
+            + "\(Int(span.end.timeIntervalSinceReferenceDate.rounded()))"
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        var bytes = [UInt8](repeating: 0, count: 16)
+        for byte in key.utf8 {
+            hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
+        }
+        for index in bytes.indices {
+            hash = (hash ^ UInt64(index + 1)) &* 1_099_511_628_211
+            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
+        }
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+}
