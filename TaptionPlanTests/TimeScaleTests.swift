@@ -2383,6 +2383,21 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testUserTrackingStaysLockedWhenPlaybackIsRunning() {
+        XCTAssertTrue(
+            MapHomeUserTrackingPolicy.keepsFollowing(
+                after: .pan,
+                duringPlayback: true
+            )
+        )
+        XCTAssertFalse(
+            MapHomeUserTrackingPolicy.keepsFollowing(
+                after: .pan,
+                duringPlayback: false
+            )
+        )
+    }
+
     func testMapPanObserverAcceptsOneFingerBeganOrChangedOnly() {
         XCTAssertTrue(
             MapHomeUserTrackingPolicy.isSingleFingerPanStart(

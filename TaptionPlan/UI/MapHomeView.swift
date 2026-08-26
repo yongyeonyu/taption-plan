@@ -802,6 +802,13 @@ enum MapHomeUserTrackingPolicy {
         interaction != .pan
     }
 
+    static func keepsFollowing(
+        after interaction: Interaction,
+        duringPlayback: Bool
+    ) -> Bool {
+        duringPlayback || keepsFollowing(after: interaction)
+    }
+
     static func isSingleFingerPanStart(
         state: UIGestureRecognizer.State,
         numberOfTouches: Int
@@ -1709,7 +1716,10 @@ struct MapHomeView: View {
             }
             .onChange(of: selectedTimelineMinute) { _, minute in
                 if isTimelineInteractionActive || isDayPlaybackRunning {
-                    refreshHistoricalPlaybackPoint()
+                    let point = refreshHistoricalPlaybackPoint()
+                    if isDayPlaybackRunning, let point {
+                        focusMap(on: point, using: proxy, followsTracking: true)
+                    }
                 } else {
                     refreshSelectedTimelineMapPosition(
                         minute: minute,
@@ -4845,7 +4855,10 @@ struct MapHomeView: View {
     }
 
     private func handleUserMapPan() {
-        guard MapHomeUserTrackingPolicy.keepsFollowing(after: .pan) == false
+        guard MapHomeUserTrackingPolicy.keepsFollowing(
+            after: .pan,
+            duringPlayback: isDayPlaybackRunning
+        ) == false
         else { return }
         hasCancelledInitialLocationFocus = true
         initialLocationRequestTask?.cancel()
