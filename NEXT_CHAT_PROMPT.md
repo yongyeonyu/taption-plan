@@ -15,7 +15,7 @@ xcrun devicectl list devices
 xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 ```
 
-현재 기준 커밋은 `5bcd766`이며 `main`과 `origin/main`이 일치해야 한다. 최근 변경은 다음과 같다.
+현재 기준 커밋은 문서 갱신 커밋 `2fa6a7c`이며 `main`과 `origin/main`이 일치해야 한다. 기능 변경 기준 커밋은 `5bcd766`이다. 최근 변경은 다음과 같다.
 
 - `Packages/TaptionPlanCore`: 일자 단위 SQLite 저장소와 generation 기반 60Hz NLE 입력 예산
 - `Packages/TaptionActivityEngine`: 센서 근거 활동 taxonomy와 자동 분류 결과 잠금
