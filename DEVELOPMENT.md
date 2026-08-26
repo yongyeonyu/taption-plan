@@ -234,4 +234,12 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - 시간 레일 핸들 왼쪽에 붙던 compact 날씨 케이스를 제거했다.
 - 날씨 카드는 수집 시각·비 stale 상태·조건·심볼·유한 온도가 모두 준비된 스냅샷만 표시한다. 미세먼지 응답이 포함된 경우 PM10·PM2.5·제공자도 유효해야 하며, 부분 응답은 카드 전체를 숨긴다.
 - `TimeScaleTests` 111/111 통과, iOS Simulator Debug build 성공.
-- build 97에는 포함되지 않은 소스 수정이며, 다음 TestFlight 배포 시 build 번호를 올려야 한다.
+- build 97에는 포함되지 않았고 아래 build 98 TestFlight에 포함했다.
+
+## 2026-08-26 build 98 날씨 게이트 TestFlight
+
+- Release archive/export: `1.0 (98)`, `com.taption.plan`, Apple Distribution 서명, IPA 검증 성공 (`15f52d1ef05620b71189c6e1806bf0a5e3642878cb15c5be7325ff4ba595e876`)
+- TestFlight 업로드 성공: Delivery UUID `e5c531e6-6f53-41ab-b6e7-982e73a626c6`
+- App Store Connect 처리 상태: `VALID` / `APP_STORE_ELIGIBLE`
+- `TP Taption Plan 내부 테스트` 그룹 연결 및 그룹 빌드 목록에서 build 98 노출 확인
+- 실기기 설치·실행·readback은 별도 게이트로 남긴다.
