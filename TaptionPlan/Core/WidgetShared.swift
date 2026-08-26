@@ -123,6 +123,14 @@ enum SensorCollectionProgressPolicy {
 }
 
 enum SensorCollectionWaveformMath {
+    static func segmentedPosition(
+        localPosition: Double,
+        offset: Double,
+        scale: Double
+    ) -> Double {
+        offset + min(max(localPosition, 0), 1) * max(scale, 0)
+    }
+
     static func rightToLeftEndpoint(
         progress: Double,
         width: Double
@@ -255,8 +263,14 @@ enum SensorCollectionActivityPolicy {
         return now.timeIntervalSince(lastPublishedAt) >= minimumUpdateInterval
     }
 
-    static func pulseUntil(now: Date) -> Date {
-        now.addingTimeInterval(pulseDuration)
+    static func pulseUntil(
+        now: Date,
+        intervalSeconds: Int? = nil
+    ) -> Date {
+        let duration = SensorCollectionProgressPolicy
+            .halfWindowDuration(intervalSeconds: intervalSeconds)
+            ?? pulseDuration
+        return now.addingTimeInterval(duration)
     }
 
     static func completionFlatlineUntil(now: Date) -> Date {

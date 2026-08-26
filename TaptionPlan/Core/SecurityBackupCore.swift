@@ -488,6 +488,11 @@ struct PlanCloudBackupPayload: Codable, Equatable, Sendable {
 enum PlanBackupRoutePointReducer {
     static let minimumInterval: TimeInterval = 10
     static let maximumCount = 60_000
+    /// A route point is a display projection of the raw archive.  Keep the
+    /// raw `SensorReading` untouched, but do not let a bad fix become a
+    /// backup route anchor.
+    static let maximumRouteSpeedMetersPerSecond: Double = 120
+    static let maximumRouteAccuracyMeters: Double = 150
 
     static func backupSpan(
         containing date: Date,
@@ -502,8 +507,7 @@ enum PlanBackupRoutePointReducer {
     }
 
     static func reduce(_ readings: [SensorReading]) -> [PlanBackupRoutePoint] {
-        let candidates = readings
-            .filter { $0.point != nil }
+        let candidates = filteredReadings(readings)
             .sorted { $0.timestamp < $1.timestamp }
         guard !candidates.isEmpty else { return [] }
 
@@ -523,7 +527,16 @@ enum PlanBackupRoutePointReducer {
                 retained.append(reading)
             }
         }
-        if let last = candidates.last, retained.last?.id != last.id {
+        if let last = candidates.last,
+           retained.last?.id != last.id,
+           let previous = retained.last,
+           let previousPoint = previous.point,
+           let lastPoint = last.point,
+           isPlausible(
+               from: previous,
+               to: last,
+               distance: distanceMeters(previousPoint, lastPoint)
+           ) {
             retained.append(last)
         }
         if retained.count > maximumCount {
@@ -533,6 +546,118 @@ enum PlanBackupRoutePointReducer {
             }
         }
         return retained.compactMap(PlanBackupRoutePoint.init)
+    }
+
+    /// Filters only the route projection.  Sensor readings are an audit
+    /// record and must remain available for later reclassification.
+    static func filteredReadings(_ readings: [SensorReading]) -> [SensorReading] {
+        let candidates = readings
+            .filter { reading in
+                guard let point = reading.point else { return false }
+                return point.latitude.isFinite
+                    && point.longitude.isFinite
+                    && (-90...90).contains(point.latitude)
+                    && (-180...180).contains(point.longitude)
+                    && point.horizontalAccuracy.isFinite
+                    && point.horizontalAccuracy >= 0
+                    && point.horizontalAccuracy <= maximumRouteAccuracyMeters
+                    && reading.locationFixQuality != .approximate
+            }
+            .sorted {
+                if $0.timestamp != $1.timestamp {
+                    return $0.timestamp < $1.timestamp
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+        guard !candidates.isEmpty else { return [] }
+
+        var result: [SensorReading] = []
+        result.reserveCapacity(candidates.count)
+        for index in candidates.indices {
+            let reading = candidates[index]
+            guard let point = reading.point else { continue }
+            let previous = result.last
+            let next = candidates.dropFirst(index + 1).first
+            if let previous,
+               let previousPoint = previous.point,
+               !isPlausible(
+                   from: previous,
+                   to: reading,
+                   distance: distanceMeters(previousPoint, point)
+               ) {
+                if result.count == 1,
+                   let next,
+                   let nextPoint = next.point,
+                   isPlausible(
+                       from: reading,
+                       to: next,
+                       distance: distanceMeters(point, nextPoint)
+                   ),
+                   !isPlausible(
+                       from: previous,
+                       to: next,
+                       distance: distanceMeters(previousPoint, nextPoint)
+                   ) {
+                    // The first sample is the isolated jump. Move the anchor
+                    // forward so a bad restore prefix cannot hide the route.
+                    result.removeLast()
+                    result.append(reading)
+                    continue
+                }
+                // An isolated jump is discarded when the following sample
+                // can continue from the last accepted fix. This handles a
+                // single GPS spike without rewriting either endpoint.
+                if let next,
+                   let nextPoint = next.point,
+                   isPlausible(
+                       from: previous,
+                       to: next,
+                       distance: distanceMeters(previousPoint, nextPoint)
+                   ) {
+                    continue
+                }
+                // A run of impossible samples is not allowed to bridge the
+                // route. Keep the next plausible sample as a new anchor.
+                continue
+            }
+            result.append(reading)
+        }
+        return result
+    }
+
+    private static func isPlausible(
+        from: SensorReading,
+        to: SensorReading,
+        distance: Double
+    ) -> Bool {
+        let elapsed = to.timestamp.timeIntervalSince(from.timestamp)
+        guard elapsed > 0, elapsed.isFinite, distance.isFinite else {
+            return false
+        }
+        let modeLimit: Double = {
+            switch to.motion == .unknown ? from.motion : to.motion {
+            case .walking: 4.5
+            case .running: 9
+            case .cycling: 25
+            case .automotive: 90
+            case .stationary: 1
+            case .unknown: 55
+            }
+        }()
+        let reportedSpeed = [from, to].compactMap { reading -> Double? in
+            guard let speed = reading.speedMetersPerSecond,
+                  speed.isFinite, speed >= 0 else { return nil }
+            let accuracy = reading.speedAccuracyMetersPerSecond ?? 0
+            guard accuracy.isFinite, accuracy >= 0 else { return nil }
+            return speed + 3 * accuracy
+        }.max() ?? 0
+        let maximumSpeed = min(
+            maximumRouteSpeedMetersPerSecond,
+            max(modeLimit, reportedSpeed)
+        )
+        return distance <= maximumSpeed * elapsed
+            + from.point!.horizontalAccuracy
+            + to.point!.horizontalAccuracy
     }
 
     static func merging(
@@ -558,9 +683,7 @@ enum PlanBackupRoutePointReducer {
                 pointsByID[point.id] = point
             }
         }
-        return pointsByID.values.sorted {
-            $0.sensorReading.timestamp < $1.sensorReading.timestamp
-        }
+        return reduce(pointsByID.values.map(\.sensorReading))
     }
 }
 

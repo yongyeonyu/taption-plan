@@ -1511,6 +1511,25 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeWeatherDisplayCacheSurvivesViewportRefreshWithoutNetworkData() {
+        let observedAt = makeDate(2026, 8, 23, 10)
+        let cached = WeatherContext(
+            observedAt: observedAt,
+            fetchedAt: observedAt,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 25
+        )
+
+        let afterViewportChange = MapHomeWeatherDisplayCache.contexts(
+            incoming: [],
+            cached: [cached]
+        )
+
+        XCTAssertEqual(afterViewportChange.map(\.id), [cached.id])
+        XCTAssertEqual(afterViewportChange.first?.temperatureCelsius, 25)
+    }
+
     func testIntegrationRefreshGateSuppressesSameWindowButAllowsNewWindow() {
         var gate = TimelineIntegrationRefreshGate()
 

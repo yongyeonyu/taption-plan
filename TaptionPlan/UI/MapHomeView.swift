@@ -770,6 +770,27 @@ enum MapHomeWeatherTimelineMath {
     }
 }
 
+enum MapHomeWeatherDisplayCache {
+    static func merged(
+        cached: [WeatherContext],
+        incoming: [WeatherContext]
+    ) -> [WeatherContext] {
+        let fresh = incoming.filter(MapHomeWeatherDisplayPolicy.isComplete)
+        guard !fresh.isEmpty else { return cached }
+        return WeatherTimelineEngine.coalesced(
+            cached + fresh
+        )
+    }
+
+    static func contexts(
+        incoming: [WeatherContext],
+        cached: [WeatherContext]
+    ) -> [WeatherContext] {
+        let merged = merged(cached: cached, incoming: incoming)
+        return merged.isEmpty ? incoming : merged
+    }
+}
+
 enum MapHomeUserTrackingPolicy {
     enum Interaction: Equatable {
         case pan
@@ -977,6 +998,7 @@ struct MapHomeView: View {
     @State private var timeSidebarZoomStep = 0
     @State private var weatherVisibleStartMinute = 0
     @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
+    @State private var cachedWeatherContexts: [WeatherContext]
     @State private var sidebarPinchStepOffset = 0
     @State private var activePaletteCategoryID: String?
     @State private var customPaletteColor = Color.tpReferenceMint
@@ -1037,6 +1059,11 @@ struct MapHomeView: View {
                 from: model.snapshot.actuals,
                 travel: model.snapshot.travel,
                 on: model.selectedDate
+            )
+        )
+        _cachedWeatherContexts = State(
+            initialValue: WeatherTimelineEngine.coalesced(
+                model.snapshot.weather.filter(MapHomeWeatherDisplayPolicy.isComplete)
             )
         )
     }
@@ -1402,6 +1429,12 @@ struct MapHomeView: View {
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
+        }
+        .onChange(of: model.snapshot.weather) { _, weather in
+            cachedWeatherContexts = MapHomeWeatherDisplayCache.merged(
+                cached: cachedWeatherContexts,
+                incoming: weather
+            )
         }
         .onChange(of: model.settings.mapDisplayStyle) { _, _ in
             persistMapDayCache()
@@ -2403,7 +2436,10 @@ struct MapHomeView: View {
                     if model.settings.weatherSidebarVisible {
                         MapHomeWeatherSidebar(
                             date: model.selectedDate,
-                            contexts: model.snapshot.weather,
+                            contexts: MapHomeWeatherDisplayCache.contexts(
+                                incoming: model.snapshot.weather,
+                                cached: cachedWeatherContexts
+                            ),
                             selectedMinute: minute,
                             language: language,
                             visibleStartMinute: weatherVisibleStartMinute,
@@ -3035,7 +3071,9 @@ struct MapHomeView: View {
     }
 
     private var userFrequentPlaces: [FrequentPlace] {
-        model.settings.frequentPlaces.filter { $0.kind == .custom }
+        model.settings.frequentPlaces.filter {
+            $0.kind == .custom || $0.kind == .restaurant
+        }
     }
 
     private var userLocationCount: Int {
@@ -3053,9 +3091,12 @@ struct MapHomeView: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: FrequentPlaceKind.custom.systemImage)
+                Image(systemName: place.kind.systemImage)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(MapHomeLocationDestination.user.tint)
+                    .foregroundStyle(
+                        MapHomeLocationDestination(placeKind: place.kind)?.tint
+                            ?? MapHomeLocationDestination.user.tint
+                    )
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(place.name)
@@ -3064,7 +3105,9 @@ struct MapHomeView: View {
                     Text(
                         place.point == nil
                             ? language.text("위치 미지정", "Location not set")
-                            : language.text("사용자 위치", "User location")
+                            : place.kind == .restaurant
+                                ? language.text("등록 식당", "Restaurant")
+                                : language.text("사용자 위치", "User location")
                     )
                         .font(.system(size: 9.5, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -3350,7 +3393,6 @@ struct MapHomeView: View {
                 .tint(Color.tpReferenceBlue)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
-                .padding(.leading, 12)
             }
         }
     }
@@ -7806,15 +7848,24 @@ private struct MapHomeUserLocationActionSheet: View {
                 transitLocation.kind == .subwayStation ? "Subway station" : "Bus stop"
             )
         }
+        if frequentPlace?.kind == .restaurant {
+            return language.text("등록 식당", "Restaurant")
+        }
         return language.text("사용자 위치", "User location")
     }
 
     private var locationIcon: String {
-        transitLocation?.kind.systemImage ?? FrequentPlaceKind.custom.systemImage
+        transitLocation?.kind.systemImage
+            ?? frequentPlace?.kind.systemImage
+            ?? FrequentPlaceKind.custom.systemImage
     }
 
     private var locationTint: Color {
-        transitLocation == nil
+        if let frequentPlace,
+           let destination = MapHomeLocationDestination(placeKind: frequentPlace.kind) {
+            return destination.tint
+        }
+        return transitLocation == nil
             ? MapHomeLocationDestination.user.tint
             : Color.tpReferenceBlue
     }
@@ -8022,8 +8073,21 @@ private struct MapHomeSearchPinLocationSheet: View {
     private func save(_ destination: MapHomeLocationDestination) {
         let latitude = result.coordinate.latitude
         let longitude = result.coordinate.longitude
-        if let kind = destination.placeKind,
-           let place = model.settings.frequentPlaces.first(where: { $0.kind == kind }) {
+        if destination == .restaurant {
+            model.addRestaurant(name: result.title)
+            if let place = model.settings.frequentPlaces.last(where: {
+                $0.kind == .restaurant && $0.name == result.title
+            }) {
+                model.setFrequentPlaceLocation(
+                    place.id,
+                    latitude: latitude,
+                    longitude: longitude
+                )
+            }
+        } else if let kind = destination.placeKind,
+                  let place = model.settings.frequentPlaces.first(where: {
+                      $0.kind == kind
+                  }) {
             model.setFrequentPlaceLocation(
                 place.id,
                 latitude: latitude,

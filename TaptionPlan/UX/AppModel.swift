@@ -944,6 +944,16 @@ final class AppModel {
             value.settings.confirmedSleepSpans,
             to: value.actuals
         )
+        // Travel classifications and subway paths are derived data. Rebuild
+        // them from restored sensor samples while keeping confirmed records
+        // in the restored snapshot authoritative.
+        if !restored.routePoints.isEmpty {
+            value.travel = SubwayTravelSegmentEngine.mergingRestoredTravel(
+                existing: value.travel,
+                readings: restored.routePoints.map(\.sensorReading),
+                userTransitLocations: value.settings.userTransitLocations
+            )
+        }
         value.settings.cloudResetAt = .now
         value.updatedAt = .now
         snapshot = value
@@ -5643,9 +5653,13 @@ final class AppModel {
                 "위치 기록을 읽지 못했습니다. \(error.localizedDescription)"
             return
         }
+        // Raw readings stay in the archive. Location-derived places, travel,
+        // and summary data consume only quality-checked route observations.
+        let filteredArchivedReadings = PlanBackupRoutePointReducer
+            .filteredReadings(archivedReadings)
         if Calendar.autoupdatingCurrent.isDate(span.start, inSameDayAs: .now),
            let latest = MapCurrentLocationAnchorPolicy.latestValidReading(
-            in: archivedReadings
+            in: filteredArchivedReadings
            ) {
             // Seed the live map anchor when the app is reopened before the
             // next Core Location callback arrives. Historical-day refreshes
@@ -5658,6 +5672,7 @@ final class AppModel {
             "sensor_timeline_evidence_loaded",
             fields: [
                 "gps": String(archivedReadings.count),
+                "gps_filtered": String(filteredArchivedReadings.count),
                 "motion": String(motionActivities.count),
             ]
         )
@@ -5684,7 +5699,7 @@ final class AppModel {
                 AppleTransportContextService.enrichmentModelVersion,
             settingsHash: settings.hashValue
         )
-        let latestReadingWithPoint = archivedReadings
+        let latestReadingWithPoint = filteredArchivedReadings
             .filter { $0.point != nil }
             .max { $0.timestamp < $1.timestamp }
         let fingerprintUnchanged =
@@ -5788,6 +5803,7 @@ final class AppModel {
                 "sensor_travel_inference_completed",
                 fields: [
                     "gps_readings": String(archivedReadings.count),
+                    "gps_filtered_readings": String(filteredArchivedReadings.count),
                     "health_route_readings": String(healthRouteReadings.count),
                     "motion_activities": String(motionActivities.count),
                     "places": "0",
@@ -5802,7 +5818,7 @@ final class AppModel {
         var readings = AppleDeviceGroundTruthEngine
             .applyingMotionHistory(
                 to: (
-                    archivedReadings
+                    filteredArchivedReadings
                         + photoLocationReadings
                         + healthRouteReadings
                 ).sorted { $0.timestamp < $1.timestamp },
@@ -6590,8 +6606,11 @@ final class AppModel {
             max(radiusMeters, 30),
             500
         )
+        let minimumDwell = snapshot.settings.frequentPlaces[index].kind == .restaurant
+            ? 15
+            : minimumDwellMinutes
         snapshot.settings.frequentPlaces[index].minimumDwellMinutes = min(
-            max(minimumDwellMinutes, 1),
+            max(minimumDwell, 1),
             240
         )
         snapshot.settings.frequentPlaces[index]
@@ -6624,6 +6643,31 @@ final class AppModel {
         }
         snapshot.settings.frequentPlaces.append(
             FrequentPlace(kind: .custom, name: cleanName)
+        )
+        Task { await persist() }
+    }
+
+    /// 식당은 이름·좌표·반경을 독립적으로 여러 곳 저장할 수 있는 자주가는
+    /// 곳 유형입니다. 체류를 식사로 바꾸는 기준은 위치 분석의 15분 이상
+    /// 체류로 고정하고, 이 목록은 기존 장소 영속화 경로를 함께 사용합니다.
+    func addRestaurant(name: String) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else {
+            userFacingError = "식당 이름을 입력해 주세요."
+            return
+        }
+        guard !snapshot.settings.frequentPlaces.contains(where: {
+            $0.name.localizedCaseInsensitiveCompare(cleanName) == .orderedSame
+        }) else {
+            userFacingError = "같은 이름의 자주가는 곳이 이미 있습니다."
+            return
+        }
+        snapshot.settings.frequentPlaces.append(
+            FrequentPlace(
+                kind: .restaurant,
+                name: cleanName,
+                minimumDwellMinutes: 15
+            )
         )
         Task { await persist() }
     }
@@ -6702,7 +6746,7 @@ final class AppModel {
         if let point = target.point {
             rememberDismissedPlaceSuggestion(at: point)
         }
-        guard target.kind == .custom else {
+        guard target.kind == .custom || target.kind == .restaurant else {
             snapshot.settings.frequentPlaces =
                 snapshot.settings.frequentPlaces.map { place in
                     guard place.id == placeID else { return place }
@@ -6741,7 +6785,7 @@ final class AppModel {
             point: suggestion.point
         )
         let index: Int
-        if kind != .custom,
+        if kind != .custom, kind != .restaurant,
            let empty = snapshot.settings.frequentPlaces.firstIndex(where: {
                $0.kind == kind && $0.point == nil
            }) {
@@ -7853,6 +7897,7 @@ final class AppModel {
                 "stored_environment_refreshed",
                 fields: ["contexts": String(contexts.count)]
             )
+            await persistDeviceLocalSnapshot()
         }
 
         // This refresh runs as part of automatic sensor analysis.  A weather
@@ -7912,6 +7957,7 @@ final class AppModel {
                     "air_quality": String(context.airQuality != nil),
                 ]
             )
+            await persistDeviceLocalSnapshot()
         } catch {
             Self.integrationLogger.info(
                 "Stored weather fallback unavailable: \(error.localizedDescription, privacy: .public)"
@@ -8292,15 +8338,7 @@ final class AppModel {
     }
 
     private var startupHealthSpan: TimeSpan {
-        let calendar = Calendar.autoupdatingCurrent
-        let now = Date.now
-        let today = calendar.startOfDay(for: now)
-        let start = calendar.date(
-            byAdding: .day,
-            value: -1,
-            to: today
-        ) ?? now.addingTimeInterval(-2 * 86_400)
-        return TimeSpan(start: start, end: now)
+        SleepAnalysisEngine.overnightSpan(containing: .now)
     }
 
     private var recentHealthSpan: TimeSpan {

@@ -3,6 +3,27 @@ import Foundation
 struct SleepAnalysisEngine: Sendable {
     var maximumGapBetweenSegments: TimeInterval = 90 * 60
 
+    /// HealthKit's overnight sleep for a calendar day starts the evening
+    /// before and ends at noon of that day.  Keeping the boundary in one
+    /// place makes the query deterministic across midnight and time zones.
+    static func overnightSpan(
+        containing date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> TimeSpan {
+        let dayStart = calendar.startOfDay(for: date)
+        let start = calendar.date(
+            byAdding: .hour,
+            value: -6,
+            to: dayStart
+        ) ?? dayStart.addingTimeInterval(-6 * 3_600)
+        let end = calendar.date(
+            byAdding: .hour,
+            value: 12,
+            to: dayStart
+        ) ?? dayStart.addingTimeInterval(12 * 3_600)
+        return TimeSpan(start: start, end: end)
+    }
+
     func sessions(
         from segments: [SleepSegment],
         inside requestedSpan: TimeSpan? = nil

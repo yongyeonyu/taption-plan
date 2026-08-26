@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var sharedExport: ShareableURL?
     @State private var showsDeleteConfirmation = false
     @State private var customFrequentPlaceName = ""
+    @State private var restaurantName = ""
     @State private var selectedFrequentPlace: FrequentPlace?
     @State private var showsSuggestedPlaceKinds = false
     @State private var showsUserTransitLocations = false
@@ -613,7 +614,7 @@ struct SettingsView: View {
                             )
                         )
                         .foregroundStyle(Color.tpInk)
-                    Text("집 · 학교 · 학원 · 회사 등을 현재 위치로 지정")
+                    Text("집 · 학교 · 학원 · 회사 · 식당을 현재 위치로 지정")
                         .font(.taption(size: SettingsTypography.rowSubtitle))
                         .foregroundStyle(Color.tpSecondary)
                 }
@@ -666,6 +667,34 @@ struct SettingsView: View {
                         .padding(.vertical, 7)
                         .background(
                             Color.tpInk,
+                            in: RoundedRectangle(cornerRadius: 9)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 6) {
+                TextField("식당 추가", text: $restaurantName)
+                    .font(.taption(size: 9, weight: .semibold))
+                    .textInputAutocapitalization(.never)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 7)
+                    .background(
+                        Color.tpBackground,
+                        in: RoundedRectangle(cornerRadius: 9)
+                    )
+
+                Button {
+                    model.addRestaurant(name: restaurantName)
+                    restaurantName = ""
+                } label: {
+                    Label("식당 추가", systemImage: "storefront.fill")
+                        .font(.taption(size: 8.5, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 7)
+                        .background(
+                            Color.tpPlaceDark,
                             in: RoundedRectangle(cornerRadius: 9)
                         )
                 }
@@ -1639,7 +1668,9 @@ private struct FrequentPlaceDetailView: View {
                 forPlaceID: placeID
             )
         )
-        minimumDwellMinutes = place.minimumDwellMinutes
+        minimumDwellMinutes = place.kind == .restaurant
+            ? max(15, place.minimumDwellMinutes)
+            : place.minimumDwellMinutes
         isAutomaticRecordingEnabled = place.isAutomaticRecordingEnabled
     }
 
@@ -1787,11 +1818,15 @@ private struct FrequentPlaceDetailView: View {
                     get: { Double(minimumDwellMinutes) },
                     set: { minimumDwellMinutes = Int($0.rounded()) }
                 ),
-                in: 5...120,
+                in: (place?.kind == .restaurant ? 15 : 5)...120,
                 step: 5
             )
             .tint(Color.tpPlaceDark)
-            Text("이 시간보다 짧은 방문은 일반 장소로 남깁니다.")
+            Text(
+                place?.kind == .restaurant
+                    ? "15분보다 짧은 방문은 식사로 기록하지 않습니다."
+                    : "이 시간보다 짧은 방문은 일반 장소로 남깁니다."
+            )
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
         }
@@ -1964,11 +1999,14 @@ private struct FrequentPlaceDetailView: View {
 
     private func dangerSection(_ place: FrequentPlace) -> some View {
         Group {
-            if place.kind == .custom {
+            if place.kind == .custom || place.kind == .restaurant {
                 Button(role: .destructive) {
                     showsDeleteConfirmation = true
                 } label: {
-                    Label("자주가는 곳 삭제", systemImage: "trash")
+                    Label(
+                        place.kind == .restaurant ? "식당 삭제" : "자주가는 곳 삭제",
+                        systemImage: "trash"
+                    )
                         .font(.taption(size: 10, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)

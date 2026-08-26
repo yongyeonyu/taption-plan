@@ -849,7 +849,7 @@ final class FeatureEngineTests: XCTestCase {
     func testMapHomeLocationHierarchyKeepsConfiguredAndUserDestinationsDistinct() {
         XCTAssertEqual(
             MapHomeLocationDestination.allCases.map(\.rawValue),
-            ["home", "company", "school", "exercise", "hobby", "user"]
+            ["home", "company", "school", "exercise", "hobby", "restaurant", "user"]
         )
         XCTAssertEqual(MapHomeLocationDestination.home.placeKind, .home)
         XCTAssertEqual(MapHomeLocationDestination.company.placeKind, .company)
@@ -7558,6 +7558,16 @@ final class FeatureEngineTests: XCTestCase {
             )
         )
 
+        let intervalPulseUntil = SensorCollectionActivityPolicy.pulseUntil(
+            now: startedAt,
+            intervalSeconds: 60
+        )
+        XCTAssertEqual(
+            intervalPulseUntil.timeIntervalSince(startedAt),
+            30,
+            accuracy: 0.000_001
+        )
+
         let flatline = SensorCollectionActivityAttributes.ContentState(
             startedAt: startedAt,
             lastSavedAt: startedAt,
@@ -7765,6 +7775,31 @@ final class FeatureEngineTests: XCTestCase {
                 progress: 0.25
             ),
             0.85,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testSensorCollectionCompactWaveformSegmentsShareAContinuousPhase() {
+        let trailingEnd = SensorCollectionWaveformMath.segmentedPosition(
+            localPosition: 1,
+            offset: 0,
+            scale: 0.5
+        )
+        let leadingStart = SensorCollectionWaveformMath.segmentedPosition(
+            localPosition: 0,
+            offset: 0.5,
+            scale: 0.5
+        )
+        XCTAssertEqual(trailingEnd, leadingStart, accuracy: 0.000_001)
+        XCTAssertEqual(
+            SensorCollectionWaveformMath.rightToLeftPhase(
+                position: trailingEnd,
+                progress: 0.25
+            ),
+            SensorCollectionWaveformMath.rightToLeftPhase(
+                position: leadingStart,
+                progress: 0.25
+            ),
             accuracy: 0.000_001
         )
     }
@@ -8994,6 +9029,150 @@ final class FeatureEngineTests: XCTestCase {
             PlaceDetectionEngine().detectStays(readings: readings).count,
             1
         )
+    }
+
+    func testRegisteredRestaurantNeeds15MinutesAndMapsToEating() {
+        let base = makeDate(2026, 7, 30, 12)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 30,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 5
+        )
+        let restaurant = FrequentPlace(
+            kind: .restaurant,
+            name: "테스트 식당",
+            point: point,
+            radiusMeters: 100,
+            minimumDwellMinutes: 1
+        )
+        XCTAssertEqual(restaurant.minimumDwellMinutes, 15)
+        let shortReadings = [
+            SensorReading(timestamp: base, point: point),
+            SensorReading(
+                timestamp: base.addingTimeInterval(14 * 60),
+                point: point
+            ),
+        ]
+        XCTAssertTrue(
+            PlaceDetectionEngine().detectStays(readings: shortReadings).isEmpty
+        )
+        let shortStay = PlaceStay(
+            placeKey: "unregistered",
+            displayName: "짧은 체류",
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(14 * 60)
+            ),
+            confidence: .high,
+            point: point
+        )
+        XCTAssertNotEqual(
+            FrequentPlaceResolutionEngine().applying(
+                [restaurant],
+                to: [shortStay],
+                readings: shortReadings
+            ).first?.placeKey,
+            restaurant.stablePlaceKey
+        )
+
+        let longReadings = [
+            SensorReading(timestamp: base, point: point),
+            SensorReading(
+                timestamp: base.addingTimeInterval(15 * 60),
+                point: point
+            ),
+        ]
+        let detected = PlaceDetectionEngine().detectStays(readings: longReadings)
+        let resolved = FrequentPlaceResolutionEngine().applying(
+            [restaurant],
+            to: detected,
+            readings: longReadings
+        )
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(15 * 60))
+        let actuals = StationaryContextActualEngine.records(
+            stays: resolved,
+            placeKinds: [restaurant.stablePlaceKey: .restaurant],
+            placeAnchors: [
+                restaurant.stablePlaceKey: FrequentPlaceAnchor(
+                    point: point,
+                    radiusMeters: restaurant.radiusMeters
+                ),
+            ],
+            readings: longReadings,
+            inside: span
+        )
+        XCTAssertEqual(actuals.count, 1)
+        XCTAssertEqual(actuals.first?.categoryID, "food")
+        XCTAssertEqual(actuals.first?.behavior, "mealPlace")
+        XCTAssertEqual(
+            RecordAnalysisCategoryPolicy.categoryID(for: try XCTUnwrap(actuals.first)),
+            "eating"
+        )
+    }
+
+    func testMultipleRestaurantsPersistAndManualMealWinsDuplicateDisplay() throws {
+        let base = makeDate(2026, 7, 30, 12)
+        let first = FrequentPlace(
+            kind: .restaurant,
+            name: "첫 식당",
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 30,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 5
+            )
+        )
+        let second = FrequentPlace(
+            kind: .restaurant,
+            name: "둘째 식당",
+            point: GeoPoint(
+                latitude: 37.51,
+                longitude: 127.01,
+                altitude: 30,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 5
+            )
+        )
+        var settings = AppFeatureSettings.defaults
+        settings.frequentPlaces += [first, second]
+        let restored = try JSONDecoder().decode(
+            AppFeatureSettings.self,
+            from: JSONEncoder().encode(settings)
+        )
+        XCTAssertEqual(
+            restored.frequentPlaces.filter { $0.kind == .restaurant }.map(\.name),
+            ["첫 식당", "둘째 식당"]
+        )
+
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(30 * 60))
+        let automatic = ActualRecord(
+            planID: nil,
+            title: "식사 장소",
+            categoryID: "eating",
+            startedAt: span.start,
+            endedAt: span.end,
+            source: .location,
+            behavior: "mealPlace"
+        )
+        let manual = ActualRecord(
+            planID: nil,
+            title: "점심 식사",
+            categoryID: "eating",
+            startedAt: span.start,
+            endedAt: span.end,
+            source: .manual,
+            behavior: "meal"
+        )
+        let visible = ReviewCoverageEngine.records(
+            actuals: [automatic, manual],
+            in: [span],
+            asOf: span.end
+        )
+        XCTAssertEqual(visible.count, 1)
+        XCTAssertEqual(visible.first?.title, "점심 식사")
     }
 
     func testWalkingLocationEngineAddsConfirmedGPSLocations() {

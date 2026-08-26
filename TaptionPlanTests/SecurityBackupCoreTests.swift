@@ -629,6 +629,89 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(span.end, now.addingTimeInterval(5 * 60))
     }
 
+    func testBackupRouteReducerDropsAnIsolatedImpossibleGPSJump() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        func reading(_ offset: TimeInterval, _ latitude: Double) -> SensorReading {
+            SensorReading(
+                timestamp: start.addingTimeInterval(offset),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: 126.9,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                ),
+                locationFixQuality: .precise,
+                motion: .walking,
+                motionConfidence: .high
+            )
+        }
+        let first = reading(0, 37.5000)
+        let spike = reading(10, 37.9000)
+        let last = reading(20, 37.5005)
+
+        let reduced = PlanBackupRoutePointReducer.reduce([first, spike, last])
+
+        XCTAssertEqual(reduced.map(\.id), [first.id, last.id])
+        XCTAssertEqual(spike.point?.latitude, 37.9)
+    }
+
+    func testRestoredRoutePointsAreReducedWithoutChangingRawReading() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let reading = SensorReading(
+            timestamp: start,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            locationFixQuality: .precise
+        )
+        let restored = PlanBackupRoutePointReducer.restoring([
+            [PlanBackupRoutePoint(reading)!],
+        ])
+
+        XCTAssertEqual(restored.map(\.sensorReading), [reading])
+        XCTAssertEqual(reading.point?.latitude, 37.5)
+    }
+
+    func testSleepOvernightSpanStartsPreviousEveningAndEndsAtNoon() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 9 * 3_600)!
+        let date = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 8,
+            day: 26,
+            hour: 14
+        ))!
+
+        let span = SleepAnalysisEngine.overnightSpan(
+            containing: date,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            span.start,
+            calendar.date(from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 25,
+                hour: 18
+            ))
+        )
+        XCTAssertEqual(
+            span.end,
+            calendar.date(from: DateComponents(
+                year: 2026,
+                month: 8,
+                day: 26,
+                hour: 12
+            ))
+        )
+    }
+
     func testLegacyBackupCanDrawApproximateRouteFromTravelAndPlaces() {
         let start = Date(timeIntervalSince1970: 1_787_538_400)
         let home = PlaceStay(

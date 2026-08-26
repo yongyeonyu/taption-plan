@@ -6,6 +6,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
     case school
     case exercise
     case hobby
+    case restaurant
     case user
 
     var id: String { rawValue }
@@ -17,6 +18,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .school: .school
         case .exercise: .exercise
         case .hobby: .hobby
+        case .restaurant: .restaurant
         case .user: nil
         }
     }
@@ -28,6 +30,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .school: self = .school
         case .exercise: self = .exercise
         case .hobby: self = .hobby
+        case .restaurant: self = .restaurant
         case .academy: return nil
         case .custom: self = .user
         }
@@ -40,6 +43,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .school: "학교"
         case .exercise: "운동"
         case .hobby: "취미"
+        case .restaurant: "식당"
         case .user: "사용자"
         }
     }
@@ -51,6 +55,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .school: "School"
         case .exercise: "Exercise"
         case .hobby: "Hobby"
+        case .restaurant: "Restaurant"
         case .user: "User"
         }
     }
@@ -62,6 +67,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .school: "graduationcap.fill"
         case .exercise: "figure.run"
         case .hobby: "paintpalette.fill"
+        case .restaurant: "storefront.fill"
         case .user: "mappin.and.ellipse"
         }
     }
@@ -73,6 +79,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .school: Color.tpReferenceMint
         case .exercise: Color.tpReferenceRose
         case .hobby: Color(red: 0.58, green: 0.40, blue: 0.78)
+        case .restaurant: Color.tpReferenceGold
         case .user: Color.tpReferenceRose
         }
     }

@@ -75,7 +75,7 @@ enum RecordAnalysisCategoryNormalizer {
         if value.contains("hobby") || value.contains("취미") {
             return "hobby"
         }
-        if rawValue.contains("meal") || rawValue.contains("eating")
+        if rawValue == "food" || rawValue.contains("meal") || rawValue.contains("eating")
             || rawValue.contains("cooking")
             || value.contains("meal") || value.contains("eating")
             || value.contains("dining") || value.contains("food")
@@ -1980,6 +1980,7 @@ enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
     case company
     case hobby
     case exercise
+    case restaurant
     case custom
 
     var defaultName: String {
@@ -1990,6 +1991,7 @@ enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
         case .company: "회사"
         case .hobby: "취미"
         case .exercise: "운동"
+        case .restaurant: "식당"
         case .custom: "사용자 추가"
         }
     }
@@ -2002,6 +2004,7 @@ enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
         case .company: "building.2.fill"
         case .hobby: "paintpalette.fill"
         case .exercise: "figure.run"
+        case .restaurant: "storefront.fill"
         case .custom: "plus.circle.fill"
         }
     }
@@ -2104,7 +2107,10 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
         self.floorReferencePoints = floorReferencePoints
         self.radiusMeters = radiusMeters
         self.floorHeightMeters = min(max(floorHeightMeters, 2.2), 5.0)
-        self.minimumDwellMinutes = min(max(minimumDwellMinutes, 1), 240)
+        let minimumDwell = kind == .restaurant
+            ? max(15, minimumDwellMinutes)
+            : minimumDwellMinutes
+        self.minimumDwellMinutes = min(max(minimumDwell, 1), 240)
         self.isAutomaticRecordingEnabled = isAutomaticRecordingEnabled
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -2180,16 +2186,14 @@ struct FrequentPlace: Identifiable, Codable, Hashable, Sendable {
             ),
             5.0
         )
-        minimumDwellMinutes = min(
-            max(
-                try values.decodeIfPresent(
-                    Int.self,
-                    forKey: .minimumDwellMinutes
-                ) ?? 10,
-                1
-            ),
-            240
-        )
+        let decodedMinimumDwell = try values.decodeIfPresent(
+            Int.self,
+            forKey: .minimumDwellMinutes
+        ) ?? 10
+        let minimumDwell = decodedKind == .restaurant
+            ? max(15, decodedMinimumDwell)
+            : decodedMinimumDwell
+        minimumDwellMinutes = min(max(minimumDwell, 1), 240)
         isAutomaticRecordingEnabled = try values.decodeIfPresent(
             Bool.self,
             forKey: .isAutomaticRecordingEnabled

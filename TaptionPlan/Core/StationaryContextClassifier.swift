@@ -34,7 +34,7 @@ enum StationaryContextKind: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// CategoryCatalog.builtIn 에 이미 있는 id 만 사용한다. 정지 구간은
+    /// 기록 화면의 공통 분류표에 있는 id 만 사용한다. 정지 구간은
     /// 모두 활동 줄에 남아야 하므로 "movement" 는 쓰지 않는다. 이동 종류로
     /// 두면 MovementDisplayEngine 이 앞뒤 이동과 겹친다고 보고 숨긴다.
     var categoryID: String {
@@ -230,6 +230,8 @@ struct StationaryContextClassifier: Sendable {
             add(.study, 0.62, "자주가는 곳: 학원")
         case .exercise:
             add(.gymFacility, 0.70, "자주가는 곳: 운동")
+        case .restaurant:
+            add(.mealPlace, 1.0, "자주가는 곳: 식당")
         case .home:
             add(.homeRest, 0.45, "자주가는 곳: 집")
         case .hobby:

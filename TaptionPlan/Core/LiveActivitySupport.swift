@@ -88,7 +88,10 @@ actor SensorCollectionLiveActivityController {
         }
         let phaseUntil: Date?
         if hasNewSample {
-            phaseUntil = SensorCollectionActivityPolicy.pulseUntil(now: now)
+            phaseUntil = SensorCollectionActivityPolicy.pulseUntil(
+                now: now,
+                intervalSeconds: intervalSeconds
+            )
         } else if phase == .pulse {
             phaseUntil = previousState?.phaseUntil
         } else {

@@ -1816,8 +1816,11 @@ struct FrequentPlaceResolutionEngine: Sendable {
 
             // 짧은 방문은 일반 장소로 남겨 두고, 설정한 체류 시간 이상일
             // 때만 자주가는 곳으로 확정합니다.
+            let minimumDwellMinutes = match.kind == .restaurant
+                ? 15
+                : match.minimumDwellMinutes
             guard place.span.duration
-                    >= TimeInterval(match.minimumDwellMinutes * 60) else {
+                    >= TimeInterval(minimumDwellMinutes * 60) else {
                 return place
             }
 
@@ -2639,6 +2642,49 @@ enum SubwayTravelSegmentEngine {
                     segment.span.intersection(with: span) != nil
                 }
             }
+    }
+
+    /// Rebuilds subway-derived travel after a cloud restore. Existing user
+    /// confirmations remain authoritative; only overlapping unconfirmed
+    /// candidates are replaced by the route inferred from restored samples.
+    static func mergingRestoredTravel(
+        existing: [TravelSegment],
+        readings: [SensorReading],
+        userTransitLocations: [UserTransitLocation] = []
+    ) -> [TravelSegment] {
+        let detected = segments(
+            from: readings,
+            userTransitLocations: userTransitLocations
+        )
+        guard !detected.isEmpty else {
+            return existing.sorted { $0.span.start < $1.span.start }
+        }
+
+        var result = existing
+        for candidate in detected {
+            let preserved = result.filter { segment in
+                segment.mode == .subway
+                    && segment.isConfirmed
+                    && restoredOverlapEnough(segment.span, candidate.span)
+            }
+            if !preserved.isEmpty { continue }
+
+            result.removeAll { segment in
+                !segment.isConfirmed
+                    && segment.span.intersection(with: candidate.span) != nil
+            }
+            result.append(candidate)
+        }
+        return result.sorted { $0.span.start < $1.span.start }
+    }
+
+    private static func restoredOverlapEnough(
+        _ lhs: TimeSpan,
+        _ rhs: TimeSpan
+    ) -> Bool {
+        let overlap = lhs.intersection(with: rhs)?.duration ?? 0
+        let shorter = max(1, min(lhs.duration, rhs.duration))
+        return overlap / shorter >= 0.5
     }
 
     private static func inferSegments(

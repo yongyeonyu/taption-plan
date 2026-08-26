@@ -2261,17 +2261,28 @@ struct SensorCollectionLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    SensorCollectionSavedAtView(
-                        lastSavedAt: context.state.lastSavedAt
-                    )
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    SensorCollectionWaveformView(state: context.state)
+                    ZStack(alignment: .trailing) {
+                        SensorCollectionWaveformView(state: context.state)
+                            .frame(maxWidth: .infinity)
+                        SensorCollectionSavedAtView(
+                            lastSavedAt: context.state.lastSavedAt
+                        )
+                    }
                 }
             } compactLeading: {
-                EmptyView()
+                SensorCollectionWaveformView(
+                    state: context.state,
+                    positionOffset: 0.5,
+                    positionScale: 0.5,
+                    showsIndicator: false
+                )
             } compactTrailing: {
-                SensorCollectionWaveformView(state: context.state)
+                SensorCollectionWaveformView(
+                    state: context.state,
+                    positionOffset: 0,
+                    positionScale: 0.5,
+                    showsIndicator: true
+                )
             } minimal: {
                 EmptyView()
             }
@@ -2331,6 +2342,21 @@ private struct SensorCollectionWaveformView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let state: SensorCollectionActivityAttributes.ContentState
+    let positionOffset: Double
+    let positionScale: Double
+    let showsIndicator: Bool
+
+    init(
+        state: SensorCollectionActivityAttributes.ContentState,
+        positionOffset: Double = 0,
+        positionScale: Double = 1,
+        showsIndicator: Bool = true
+    ) {
+        self.state = state
+        self.positionOffset = positionOffset
+        self.positionScale = positionScale
+        self.showsIndicator = showsIndicator
+    }
 
     var body: some View {
         TimelineView(
@@ -2344,7 +2370,7 @@ private struct SensorCollectionWaveformView: View {
         .frame(minWidth: 24, maxWidth: .infinity)
         .frame(height: 14)
         .overlay(alignment: .topTrailing) {
-            if state.isCollecting {
+            if state.isCollecting && showsIndicator {
                 TimelineView(.animation(minimumInterval: 1, paused: false)) { timeline in
                     Circle()
                         .fill(.red)
@@ -2386,7 +2412,9 @@ private struct SensorCollectionWaveformView: View {
             )
             SensorCollectionStreamingWaveformShape(
                 phase: reduceMotion ? 0.32 : progress,
-                amplitude: 1.12
+                amplitude: 1.12,
+                positionOffset: positionOffset,
+                positionScale: positionScale
             )
                 .stroke(
                     state.isExternalSample == true
@@ -2410,6 +2438,8 @@ private struct SensorCollectionFlatlineShape: Shape {
 private struct SensorCollectionStreamingWaveformShape: Shape {
     var phase: Double
     var amplitude: Double
+    var positionOffset: Double = 0
+    var positionScale: Double = 1
 
     func path(in rect: CGRect) -> Path {
         guard rect.width > 0, rect.height > 0 else { return Path() }
@@ -2421,8 +2451,13 @@ private struct SensorCollectionStreamingWaveformShape: Shape {
         for index in 0...sampleCount {
             let position = Double(index) / Double(sampleCount)
             let x = rect.maxX - rect.width * CGFloat(position)
+            let globalPosition = SensorCollectionWaveformMath.segmentedPosition(
+                localPosition: position,
+                offset: positionOffset,
+                scale: positionScale
+            )
             let waveformPhase = SensorCollectionWaveformMath.rightToLeftPhase(
-                position: position,
+                position: globalPosition,
                 progress: phase
             )
             let signal = SensorCollectionWaveformMath.heartbeat(

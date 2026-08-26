@@ -146,6 +146,8 @@ enum RecordAnalysisCategoryPolicy {
             switch context.categoryID {
             case "work", "study", "hobby", "exercise":
                 return context.categoryID
+            case "food", "eating":
+                return "eating"
             default:
                 return "activity"
             }
@@ -1932,7 +1934,7 @@ enum DayPhase: String, CaseIterable, Sendable {
         case .school: (.commuteToSchool, .commuteHomeFromSchool)
         case .academy: (.commuteToAcademy, .commuteHomeFromAcademy)
         case .hobby, .exercise: (.activityDeparture, .activityReturn)
-        case .home, .custom: nil
+        case .home, .restaurant, .custom: nil
         }
     }
 
