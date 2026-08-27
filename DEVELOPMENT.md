@@ -332,3 +332,18 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `TaptionPlanCore` `CoreEngineContractsTests` 8/8 통과, synthetic 240Hz handler p95 `0.000042ms`로 입력 예산 4.17ms 이내다.
 - `git diff --check`: 통과
 - 최종 변경의 테스트 빌드 컴파일은 성공했으나, 별도 Debug 링크 재빌드는 호스트 여유 공간 108MiB에서 `errno=28`로 중단됐다. 실기기 Animation Hitches/Instruments와 실제 터치 검증은 별도 런타임 게이트로 남긴다.
+
+## 2026-08-27 build 103 균형형 백그라운드 경로 보정 TestFlight
+
+- 균형형 GPS 프로필의 자동 이동 승격을 실시간·균형형 주기에 맞게 허용하고, 10초 후보 판정이 끝나기 전에 샘플링 스트림이 종료되지 않도록 보정했다. 이로써 백그라운드 경로의 불필요한 공백을 줄인다.
+- 기존 Dynamic Island 앱 아이콘 변경을 함께 포함해 compact·expanded 표시에서 회색 플레이스홀더 대신 앱 아이콘을 사용한다.
+
+### 검증 및 배포
+
+- `FeatureEngineTests.testAutomaticTrackingPromotionAndStopPolicy` 통과, 전체 앱 XCTest `test-without-building` 종료 코드 0, iOS Simulator Debug build 성공
+- Release archive/export: `1.0 (103)`, `com.taption.plan`, Apple Distribution 서명, IPA SHA-256 `1dd71f0b94415a27aa6dd6053aef972a12357b26e4dfccea4132efac3716ab51`
+- TestFlight 업로드 성공: Delivery UUID `a14a666d-08b0-4ec2-b510-7e40aa73feae`
+- App Store Connect 처리 상태 `VALID` / `APP_STORE_ELIGIBLE`, Apple ID `6797370230`
+- `TP Taption Plan 내부 테스트` 그룹에 build 103 연결 및 그룹 builds 관계에서 build 103 노출 확인
+- 기능 커밋 `2d6ae63`, `origin/main` 푸시 확인
+- 실기기 설치·실행·readback은 별도 게이트이며 Paid Apps Agreement·상품 생성·Sandbox 구매/복원은 `IAP73PAID1` 외부 게이트로 유지한다.
