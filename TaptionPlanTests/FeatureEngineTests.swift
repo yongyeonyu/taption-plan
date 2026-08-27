@@ -18406,6 +18406,80 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
+    func testLiveActivityStickmanResolvesEveryMajorCategory() {
+        let expected: [(String, String, TaptionLiveActivityStickmanAction)] = [
+            ("work", "업무", .computer),
+            ("study", "수업", .reading),
+            ("sleep", "수면", .sleeping),
+            ("eating", "식사", .eating),
+            ("movement", "이동", .walking),
+            ("exercise", "운동", .walking),
+            ("hobby", "취미", .resting),
+            ("unconfirmed", "미확인", .resting),
+        ]
+
+        for (categoryID, title, action) in expected {
+            XCTAssertEqual(
+                TaptionLiveActivityStickmanAction.resolve(
+                    categoryID: categoryID,
+                    title: title
+                ),
+                action,
+                "\(categoryID) 대분류의 Dynamic Island 동작이 다릅니다."
+            )
+        }
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAction.resolve(
+                categoryID: "subway",
+                title: "지하철"
+            ),
+            .subway
+        )
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAction.resolve(
+                categoryID: "cycling",
+                title: "자전거"
+            ),
+            .cycling
+        )
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAction.resolve(
+                categoryID: "car",
+                title: "자동차"
+            ),
+            .car
+        )
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAction.resolve(
+                categoryID: "bus",
+                title: "버스"
+            ),
+            .bus
+        )
+    }
+
+    func testLiveActivityStickmanAnimationHonorsReduceMotion() {
+        let date = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let next = date.addingTimeInterval(
+            TaptionLiveActivityStickmanAnimation.frameDuration
+        )
+        XCTAssertNotEqual(
+            TaptionLiveActivityStickmanAnimation.phase(at: date),
+            TaptionLiveActivityStickmanAnimation.phase(at: next)
+        )
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAnimation.phase(
+                at: next,
+                reducesMotion: true
+            ),
+            0
+        )
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAnimation.phaseCount,
+            8
+        )
+    }
+
     func testRegisteredCompanyClassificationCanReplaceUnknownStayLock() {
         let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
         let inside = TimeSpan(start: start, end: start.addingTimeInterval(60 * 60))

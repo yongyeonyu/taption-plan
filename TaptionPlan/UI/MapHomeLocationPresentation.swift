@@ -494,6 +494,7 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let canvas = MapHomeStickmanCanvas(size: size)
+        drawGroundShadow(&context, canvas: canvas, action: action, phase: phase)
         drawMotionMarks(&context, canvas: canvas, action: action, phase: phase)
         switch action {
         case .computer:
@@ -556,6 +557,100 @@ private enum MapHomeStickmanRenderer {
                 height: radius * 2
             )),
             with: .color(color)
+        )
+    }
+
+    private enum Face {
+        case calm
+        case focused
+        case happy
+        case sleepy
+    }
+
+    private static func drawGroundShadow(
+        _ context: inout GraphicsContext,
+        canvas: MapHomeStickmanCanvas,
+        action: MapHomeStickmanAction,
+        phase: Int
+    ) {
+        let breathing = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase)) * 0.8
+        let y: CGFloat = switch action {
+        case .sleeping: 48
+        case .car, .subway, .bus, .cycling: 49
+        default: 51
+        }
+        let width: CGFloat = switch action {
+        case .sleeping: 42
+        case .subway: 55
+        case .car, .bus: 43
+        case .cycling: 35
+        default: 24
+        }
+        context.fill(
+            Path(ellipseIn: canvas.rect(
+                x: 32 - width / 2 + breathing,
+                y: y,
+                width: width,
+                height: 3
+            )),
+            with: .color(.tpInk.opacity(0.10))
+        )
+    }
+
+    private static func drawHead(
+        _ context: inout GraphicsContext,
+        canvas: MapHomeStickmanCanvas,
+        x: CGFloat,
+        y: CGFloat,
+        radius: CGFloat,
+        face: Face = .happy
+    ) {
+        let head = Path(ellipseIn: canvas.rect(
+            x: x - radius,
+            y: y - radius,
+            width: radius * 2,
+            height: radius * 2
+        ))
+        context.fill(head, with: .color(.white.opacity(0.96)))
+        context.stroke(
+            head,
+            with: .color(line),
+            style: StrokeStyle(
+                lineWidth: 1.8 * canvas.scale,
+                lineCap: .round,
+                lineJoin: .round
+            )
+        )
+
+        let eyeY = y - radius * 0.12
+        switch face {
+        case .sleepy:
+            stroke(&context, [canvas.point(x - radius * 0.42, eyeY), canvas.point(x - radius * 0.08, eyeY + 0.4)], color: line, width: 1.1)
+            stroke(&context, [canvas.point(x + radius * 0.08, eyeY + 0.4), canvas.point(x + radius * 0.42, eyeY)], color: line, width: 1.1)
+        default:
+            fillCircle(&context, canvas, x: x - radius * 0.35, y: eyeY, radius: max(0.45, radius * 0.14), color: line)
+            fillCircle(&context, canvas, x: x + radius * 0.35, y: eyeY, radius: max(0.45, radius * 0.14), color: line)
+        }
+
+        var mouth = Path()
+        if face == .focused {
+            mouth.move(to: canvas.point(x - radius * 0.35, y + radius * 0.48))
+            mouth.addLine(to: canvas.point(x + radius * 0.35, y + radius * 0.48))
+        } else {
+            mouth.move(to: canvas.point(x - radius * 0.46, y + radius * 0.34))
+            mouth.addQuadCurve(
+                to: canvas.point(x + radius * 0.46, y + radius * 0.34),
+                control: canvas.point(x, y + radius * 0.82)
+            )
+        }
+        context.stroke(
+            mouth,
+            with: .color(line),
+            style: StrokeStyle(
+                lineWidth: 1.1 * canvas.scale,
+                lineCap: .round,
+                lineJoin: .round
+            )
         )
     }
 
@@ -646,7 +741,7 @@ private enum MapHomeStickmanRenderer {
     ) {
         let swing = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
         let bob = phase.isMultiple(of: 2) ? -1.2 : 0
-        fillCircle(&context, canvas, x: 32, y: 10 + bob, radius: 3.4)
+        drawHead(&context, canvas: canvas, x: 32, y: 10 + bob, radius: 3.4)
         stroke(&context, [canvas.point(32, 13.5 + bob), canvas.point(32, 31 + bob)])
         stroke(&context, [
             canvas.point(32, 19 + bob),
@@ -672,7 +767,7 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let sway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
-        fillCircle(&context, canvas, x: 32 + sway * 0.5, y: 10, radius: 3.4)
+        drawHead(&context, canvas: canvas, x: 32 + sway * 0.5, y: 10, radius: 3.4, face: .calm)
         stroke(&context, [canvas.point(32, 13.5), canvas.point(32, 32)])
         stroke(&context, [canvas.point(32, 19), canvas.point(25, 28)])
         stroke(&context, [canvas.point(32, 19), canvas.point(39, 28)])
@@ -690,7 +785,7 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(43, 29), canvas.point(43, 38)])
         stroke(&context, [canvas.point(39, 38), canvas.point(47, 38)])
         let reach = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 1.5
-        fillCircle(&context, canvas, x: 21, y: 15, radius: 3.3)
+        drawHead(&context, canvas: canvas, x: 21, y: 15, radius: 3.3, face: .focused)
         stroke(&context, [canvas.point(21, 18.5), canvas.point(21, 30)])
         stroke(&context, [canvas.point(21, 22), canvas.point(30, 31)])
         stroke(&context, [canvas.point(21, 22), canvas.point(35 + reach, 34)])
@@ -708,7 +803,7 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(36, 31), canvas.point(43, 28), canvas.point(50, 31)])
         stroke(&context, [canvas.point(43, 28), canvas.point(43, 36)])
         let tilt = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 1.4
-        fillCircle(&context, canvas, x: 21 + tilt, y: 15, radius: 3.3)
+        drawHead(&context, canvas: canvas, x: 21 + tilt, y: 15, radius: 3.3, face: .focused)
         stroke(&context, [canvas.point(21, 18.5), canvas.point(22, 30)])
         stroke(&context, [canvas.point(22, 22), canvas.point(35, 31)])
         stroke(&context, [canvas.point(22, 22), canvas.point(37, 30)])
@@ -736,7 +831,7 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(12, 43), canvas.point(12, 49)])
         stroke(&context, [canvas.point(53, 43), canvas.point(53, 49)])
         outlineRect(&context, canvas, x: 13, y: 27, width: 11, height: 6, radius: 2)
-        fillCircle(&context, canvas, x: 25, y: 27, radius: 3.2)
+        drawHead(&context, canvas: canvas, x: 25, y: 27, radius: 3.2, face: .sleepy)
         stroke(&context, [canvas.point(28, 27), canvas.point(43, 27)])
         stroke(&context, [canvas.point(43, 27), canvas.point(50, 34)])
         let drift = CGFloat(phase % 4) * 0.5
@@ -769,7 +864,7 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(25, 23), canvas.point(25, 31), canvas.point(42, 31), canvas.point(42, 23)])
         fillCircle(&context, canvas, x: 19, y: 45, radius: 4, color: .tpInk)
         fillCircle(&context, canvas, x: 46, y: 45, radius: 4, color: .tpInk)
-        fillCircle(&context, canvas, x: 33, y: 26, radius: 2.4)
+        drawHead(&context, canvas: canvas, x: 33, y: 26, radius: 2.4, face: .focused)
         stroke(&context, [canvas.point(33, 28.5), canvas.point(33, 32)])
         let bounce = phase.isMultiple(of: 2) ? -0.5 : 0.5
         stroke(&context, [canvas.point(33, 30), canvas.point(38, 33 + bounce)])
@@ -791,7 +886,7 @@ private enum MapHomeStickmanRenderer {
         fillCircle(&context, canvas, x: 39, y: 44, radius: 3.2, color: .tpInk)
         fillCircle(&context, canvas, x: 53, y: 44, radius: 3.2, color: .tpInk)
         let sway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 0.8
-        fillCircle(&context, canvas, x: 21 + sway, y: 29, radius: 2.1)
+        drawHead(&context, canvas: canvas, x: 21 + sway, y: 29, radius: 2.1, face: .focused)
         stroke(&context, [canvas.point(21, 31), canvas.point(21, 36)])
         stroke(&context, [canvas.point(21, 33), canvas.point(17, 36)])
         stroke(&context, [canvas.point(21, 33), canvas.point(25, 36)])
@@ -809,7 +904,7 @@ private enum MapHomeStickmanRenderer {
         fillCircle(&context, canvas, x: 19, y: 46, radius: 3.5, color: .tpInk)
         fillCircle(&context, canvas, x: 45, y: 46, radius: 3.5, color: .tpInk)
         let sway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 0.7
-        fillCircle(&context, canvas, x: 29 + sway, y: 29, radius: 2.2)
+        drawHead(&context, canvas: canvas, x: 29 + sway, y: 29, radius: 2.2, face: .focused)
         stroke(&context, [canvas.point(29, 31), canvas.point(29, 37)])
     }
 
@@ -829,7 +924,7 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(17, 38), canvas.point(29, 29), canvas.point(38, 38), canvas.point(17, 38), canvas.point(47, 38)])
         stroke(&context, [canvas.point(29, 29), canvas.point(34, 26)])
         stroke(&context, [canvas.point(34, 26), canvas.point(39, 29)])
-        fillCircle(&context, canvas, x: 30, y: 14, radius: 3.1)
+        drawHead(&context, canvas: canvas, x: 30, y: 14, radius: 3.1, face: .happy)
         stroke(&context, [canvas.point(30, 17.5), canvas.point(29, 27)])
         stroke(&context, [canvas.point(29, 21), canvas.point(37, 27)])
         stroke(&context, [canvas.point(29, 27), canvas.point(24 + swing * 5, 37)])
@@ -854,7 +949,7 @@ private enum MapHomeStickmanRenderer {
             style: StrokeStyle(lineWidth: 1.4, lineCap: .round)
         )
         let reach = phase.isMultiple(of: 2) ? 0 : 4
-        fillCircle(&context, canvas, x: 22, y: 15, radius: 3.3)
+        drawHead(&context, canvas: canvas, x: 22, y: 15, radius: 3.3, face: .happy)
         stroke(&context, [canvas.point(22, 18.5), canvas.point(22, 30)])
         stroke(&context, [canvas.point(22, 22), canvas.point(31 + CGFloat(reach), 25)])
         stroke(&context, [canvas.point(31 + CGFloat(reach), 25), canvas.point(38, 33)])

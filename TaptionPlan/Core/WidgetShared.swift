@@ -94,6 +94,94 @@ struct TaptionActivityAttributes: ActivityAttributes {
     var planID: UUID
 }
 
+enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable, Sendable {
+    case computer
+    case walking
+    case sleeping
+    case car
+    case subway
+    case cycling
+    case reading
+    case eating
+    case bus
+    case resting
+
+    static func resolve(categoryID: String, title: String) -> Self {
+        let value = "\(categoryID) \(title)".lowercased()
+        if value.contains("sleep") || value.contains("수면") || value.contains("잠") {
+            return .sleeping
+        }
+        if value.contains("eating") || value.contains("food")
+            || value.contains("meal") || value.contains("식사") || value.contains("밥") {
+            return .eating
+        }
+        if value.contains("work") || value.contains("업무")
+            || value.contains("회사") || value.contains("컴퓨터") {
+            return .computer
+        }
+        if value.contains("study") || value.contains("school")
+            || value.contains("수업") || value.contains("학교") || value.contains("독서") {
+            return .reading
+        }
+        if value.contains("subway") || value.contains("metro") || value.contains("지하철") {
+            return .subway
+        }
+        if value.contains("bus") || value.contains("버스") {
+            return .bus
+        }
+        if value.contains("car") || value.contains("driving")
+            || value.contains("자동차") || value.contains("차량") {
+            return .car
+        }
+        if value.contains("cycling") || value.contains("bike") || value.contains("자전거") {
+            return .cycling
+        }
+        if value.contains("movement") || value.contains("exercise")
+            || value.contains("걷") || value.contains("walk") || value.contains("활동")
+            || value.contains("이동") || value.contains("운동") {
+            return .walking
+        }
+        return .resting
+    }
+
+    var accessibilityTitle: String {
+        switch self {
+        case .computer: "컴퓨터 사용"
+        case .walking: "걷기"
+        case .sleeping: "수면"
+        case .car: "자동차 탑승"
+        case .subway: "지하철 탑승"
+        case .cycling: "자전거"
+        case .reading: "책 읽기"
+        case .eating: "식사"
+        case .bus: "버스 탑승"
+        case .resting: "머무름"
+        }
+    }
+}
+
+enum TaptionLiveActivityStickmanAnimation {
+    static let frameDuration: TimeInterval = 0.12
+    static let phaseCount = 8
+
+    static func phase(at date: Date, reducesMotion: Bool = false) -> Int {
+        guard !reducesMotion else { return 0 }
+        let elapsed = date.timeIntervalSinceReferenceDate / frameDuration
+        guard elapsed.isFinite, abs(elapsed) < 9e15 else { return 0 }
+        let step = Int64(floor(elapsed))
+        let count = Int64(phaseCount)
+        return Int(((step % count) + count) % count)
+    }
+
+    static func oscillation(for phase: Int) -> Double {
+        sin(2 * .pi * Double(phase) / Double(phaseCount))
+    }
+
+    static func secondaryOscillation(for phase: Int) -> Double {
+        sin(4 * .pi * Double(phase) / Double(phaseCount))
+    }
+}
+
 enum SensorCollectionActivityPhase: String, Codable, Hashable {
     case waiting
     case pulse
