@@ -1573,6 +1573,19 @@ struct MapHomeView: View {
                     )
             }
 
+            ForEach(visibleExpectedRouteOverlays) { overlay in
+                MapPolyline(coordinates: overlay.coordinates)
+                    .stroke(
+                        mapCategoryColor("movement").opacity(0.72),
+                        style: StrokeStyle(
+                            lineWidth: RouteMapLineStyle.lineWidth,
+                            lineCap: .round,
+                            lineJoin: .round,
+                            dash: [6, 4]
+                        )
+                    )
+            }
+
             ForEach(temporaryLocationAnnotations) { location in
                 Annotation(location.stationName, coordinate: location.coordinate) {
                     VStack(spacing: 2) {
@@ -4221,6 +4234,7 @@ struct MapHomeView: View {
         if merged != routeReadings {
             routeReadings = merged
         }
+        scheduleExpectedRouteRefresh()
         guard !isTimelineInteractionActive else {
             routeDocumentProjectionGate.deferRefresh(preparingReadings: true)
             return

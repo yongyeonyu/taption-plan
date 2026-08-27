@@ -347,3 +347,16 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `TP Taption Plan 내부 테스트` 그룹에 build 103 연결 및 그룹 builds 관계에서 build 103 노출 확인
 - 기능 커밋 `2d6ae63`, `origin/main` 푸시 확인
 - 실기기 설치·실행·readback은 별도 게이트이며 Paid Apps Agreement·상품 생성·Sandbox 구매/복원은 `IAP73PAID1` 외부 게이트로 유지한다.
+
+## 2026-08-27 I143RAWLOG 예상경로·센서 raw iCloud 분리 저장
+
+- 오늘 iCloud 백업의 09:28:33~11:00:59 지하철 이동에는 정밀 iPhone GPS 원본이 있었지만, 대중교통 판정 플래그·확정 지하철 경로·역 근거가 없었다. 따라서 예상경로 조건은 충족했는데 `MapHomeView`의 `Map` 콘텐츠에 계산된 `visibleExpectedRouteOverlays`를 삽입하지 않아 표시되지 않았고, 초기 센서 읽기 완료 뒤 재요청도 없어 첫 로드에서 누락될 수 있었다.
+- 예상경로를 점선 `MapPolyline`으로 지도에 렌더링하고, 센서 읽기 병합 후 예상경로 갱신을 다시 요청하도록 수정했다. 확정 지하철 경로와 예상경로의 표시 경계는 유지한다.
+- 기존 월간 계획 백업과 분리해 `iCloud Drive/Taption Plan/Raw Sensors/YYYY-MM.rawsensorbackup`에 저장한다. 저장 대상은 영구 보존된 비HealthKit 센서 읽기·raw envelope이며, AES-GCM·TPZ1/LZFSE·SHA-256 무결성·iCloud 계정 복구 키를 사용한다. HealthKit 원본과 Apple Watch 건강 스냅샷은 저장하지 않는다.
+
+### 검증
+
+- iCloud 백업·진단·센서 DB 읽기 전용 대조: 오늘 route point 152개, 가장 긴 GPS 공백 약 64분 44초, `TaptionLogs` 파일 없음, 지하철 구간은 미확정·대중교통 플래그 없음
+- `RouteTimelineDataTests` 및 `SecurityBackupCoreTests` 대상 XCTest 성공
+- raw 암호화·분리 경로·HealthKit/Watch 건강 스냅샷 제외 회귀 테스트 성공
+- iOS generic Debug build 성공, `git diff --check` 통과

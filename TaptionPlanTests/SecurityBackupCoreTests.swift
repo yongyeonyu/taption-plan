@@ -199,7 +199,75 @@ final class SecurityBackupCoreTests: XCTestCase {
             PlanCloudBackupPath(monthKey: "2025-08").relativePath,
             "iCloud Drive/Taption Plan/2025-08.taptionbackup"
         )
+        XCTAssertEqual(
+            PlanCloudRawSensorBackupPath(monthKey: "2025-08").relativePath,
+            "iCloud Drive/Taption Plan/Raw Sensors/2025-08.rawsensorbackup"
+        )
         XCTAssertEqual(PlanArchiveSchedule.monthsBetween(start, end, calendar: calendar), ["2025-07", "2025-08", "2025-09", "2025-10"])
+    }
+
+    func testRawSensorArchiveIsSeparateEncryptedAndExcludesHealthKit() async throws {
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let recoveryKeys = InMemoryPlanCloudRecoveryKeyProvider()
+        let service = makeService(
+            rawSensorBackupStore: rawStore,
+            cloudRecoveryKeyProvider: recoveryKeys
+        )
+        try service.setPIN("1234")
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let reading = SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            sourceDevice: .iPhone
+        )
+        let motion = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .iPhoneMotion,
+            kind: "motion-activities",
+            payload: ["state": "walking"]
+        )
+        let health = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .healthKit,
+            kind: "sleep-sessions",
+            payload: ["state": "asleep"]
+        )
+        let watchHealth = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .appleWatch,
+            kind: "watch-health-snapshot",
+            payload: ["heartRate": "72"]
+        )
+        let archive = try await service.saveRawSensorArchive(
+            PlanCloudRawSensorPayload(
+                monthKey: "2026-08",
+                sensorReadings: [reading],
+                envelopes: [motion, health, watchHealth],
+                createdAt: date
+            ),
+            date: date
+        )
+
+        XCTAssertEqual(
+            Array(rawStore.archives.keys),
+            ["2026-08"]
+        )
+        XCTAssertNil(
+            archive.encryptedPayload.range(
+                of: Data("motion-activities".utf8)
+            )
+        )
+        let decoded = try archive.decodedPayload(
+            accountKeyData: Data(repeating: 9, count: 32)
+        )
+        XCTAssertEqual(decoded.sensorReadings, [reading])
+        XCTAssertEqual(decoded.envelopes.map(\.id), [motion.id])
     }
 
     func testCloudPrivateRecoveryRestoresEncryptedArchiveOnAnotherDevice() async throws {
@@ -1027,6 +1095,8 @@ final class SecurityBackupCoreTests: XCTestCase {
     private func makeService(
         biometric: PlanLocalBiometricAuthenticator = MockPlanLocalBiometricAuthenticator(),
         backupStore: PlanCloudBackupStore = InMemoryPlanCloudBackupStore(),
+        rawSensorBackupStore: PlanCloudRawSensorBackupStore =
+            InMemoryPlanCloudRawSensorBackupStore(),
         cloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider? = nil,
         file: StaticString = #filePath,
         line: UInt = #line
@@ -1037,6 +1107,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         return PlanSecurityBackupService(
             credentialStore: InMemoryPlanCredentialStore(),
             backupStore: backupStore,
+            rawSensorBackupStore: rawSensorBackupStore,
             cloudRecoveryKeyProvider: cloudRecoveryKeyProvider,
             biometricAuthenticator: biometric,
             settingsDefaults: defaults

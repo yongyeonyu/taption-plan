@@ -921,8 +921,13 @@ final class AppModel {
         guard securityStatus.settings.cloudBackupEnabled else {
             throw PlanSecurityError.pinRequiredForCloudBackup
         }
+        let date = Date.now
         _ = try await securityBackupService.saveMonthlyArchive(
-            await cloudBackupPayload()
+            await cloudBackupPayload(now: date)
+        )
+        try await saveCloudRawSensorBackup(
+            using: securityBackupService,
+            date: date
         )
         securityStatus = securityBackupService.status
     }
@@ -1017,6 +1022,50 @@ final class AppModel {
         return PlanCloudBackupPayload(
             snapshot: snapshot,
             routePoints: PlanBackupRoutePointReducer.reduce(readings)
+        )
+    }
+
+    private func cloudRawSensorPayload(
+        now: Date = .now
+    ) async -> PlanCloudRawSensorPayload {
+        let span = PlanBackupRoutePointReducer.backupSpan(containing: now)
+        if let rawDeviceDataArchive {
+            try? await rawDeviceDataArchive.checkpoint()
+        }
+        let sensorReadings = (try? await sensorService?.archivedReadings(in: span)) ?? []
+        let envelopes: [RawDeviceDataEnvelope]
+        if let rawDeviceDataArchive {
+            envelopes = (try? await rawDeviceDataArchive.envelopes(in: span)) ?? []
+        } else {
+            envelopes = []
+        }
+        return PlanCloudRawSensorPayload(
+            monthKey: PlanArchiveSchedule.monthKey(for: now),
+            sensorReadings: sensorReadings,
+            envelopes: envelopes,
+            createdAt: now
+        )
+    }
+
+    private func saveCloudRawSensorBackup(
+        using securityBackupService: PlanSecurityBackupService,
+        date: Date
+    ) async throws {
+        let payload = await cloudRawSensorPayload(now: date)
+        guard !payload.isEmpty else { return }
+        let archive = try await securityBackupService.saveRawSensorArchive(
+            payload,
+            date: date
+        )
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "icloud_raw_sensor_backup_saved",
+            fields: [
+                "path": PlanCloudRawSensorBackupPath(
+                    monthKey: archive.monthKey
+                ).relativePath,
+                "sensor_readings": String(payload.sensorReadings.count),
+                "envelopes": String(payload.envelopes.count),
+            ]
         )
     }
 
@@ -2139,8 +2188,13 @@ final class AppModel {
         do {
             guard let securityBackupService else { return }
             await refreshMidnightWeatherIfNeeded()
+            let date = Date.now
             _ = try await securityBackupService.saveMonthlyArchive(
-                await cloudBackupPayload()
+                await cloudBackupPayload(now: date)
+            )
+            try await saveCloudRawSensorBackup(
+                using: securityBackupService,
+                date: date
             )
             securityStatus = securityBackupService.status
         } catch {
