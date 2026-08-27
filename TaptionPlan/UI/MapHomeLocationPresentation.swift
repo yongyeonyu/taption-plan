@@ -395,6 +395,8 @@ enum MapHomeStickmanAnimationEngine {
 }
 
 struct MapHomeStickmanMarker: View {
+    static let size = CGSize(width: 49, height: 42)
+
     let action: MapHomeStickmanAction
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -417,7 +419,7 @@ struct MapHomeStickmanMarker: View {
                 )
             }
         }
-        .frame(width: 49, height: 42)
+        .frame(width: Self.size.width, height: Self.size.height)
         .background(.white.opacity(0.96), in: Circle())
         .overlay { Circle().stroke(Color.tpPastelRose.opacity(0.42), lineWidth: 1) }
         .shadow(color: .black.opacity(0.18), radius: 4, y: 2)

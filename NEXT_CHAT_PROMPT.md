@@ -15,14 +15,14 @@ xcrun devicectl list devices
 xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 ```
 
-현재 기준 커밋은 문서 갱신 커밋 `2fa6a7c`이며 `main`과 `origin/main`이 일치해야 한다. 기능 변경 기준 커밋은 `5bcd766`이다. 최근 변경은 다음과 같다.
+현재 `main`에는 `ZIDX27A1B2` 지도 졸라맨 최전면 수정까지 반영되어 있으며, 작업 시작 시 `main`과 `origin/main`의 실제 SHA 일치를 다시 확인한다. 최근 변경은 다음과 같다.
 
 - `Packages/TaptionPlanCore`: 일자 단위 SQLite 저장소와 generation 기반 60Hz NLE 입력 예산
 - `Packages/TaptionActivityEngine`: 센서 근거 활동 taxonomy와 자동 분류 결과 잠금
 - `Packages/TaptionRouteEngine`: GPS 정확도·점프·공백 필터, 2D Kalman, RDP 표시 축약
 - 앱은 로컬 스냅샷·일자 데이터를 먼저 hydrate하고 사이드바·경로·지도 파생값을 캐시한다.
-- 현재·과거 위치는 장소 아이콘보다 앞의 native annotation 졸라맨으로 표시한다. 추적 중 선택 시각 위치를 중앙에 유지하고 지도 이동은 추적을 해제한다.
-- 지하철 확정 선로 경로·수면·이동 분류는 원본 센서를 보존한 채 저장 후 유지한다. 예상·점선 경로 오버레이는 비활성화되어 있다.
+- 현재·과거 위치는 MapKit의 투명 위치 앵커를 따라가는 SwiftUI overlay 졸라맨으로 표시해 모든 지도 annotation보다 앞에 둔다. 추적 중 선택 시각 위치를 중앙에 유지하고 지도 이동은 추적을 해제한다.
+- 지하철 확정 선로 경로·수면·이동 분류는 원본 센서를 보존한 채 저장 후 유지한다. GPS 공백 구간의 예상 경로는 점선으로 표시한다.
 - 재생 시작 시 경로 투영을 비우고 원본 읽기를 다시 준비한다. 재생 중 플레이헤드가 움직일 때 경로와 졸라맨 위치를 갱신하며, 표시 경로는 플레이헤드 시각까지 생성한다.
 - GPS·센서 수집 간격은 슬라이더 설정을 사용한다.
 - Dynamic Island 확장형은 전체 폭 우→좌 파형·센서 저장 ECG 1회 펄스·1초 2px 점멸점을 사용한다. 센서 Live Activity의 확장형 leading과 수집 중 compact leading에는 `SensorCollectionAppIcon`이 표시되고, compact trailing 심박 HUD는 10초 정책을 유지한다.
@@ -30,13 +30,12 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 
 최근 확인된 사실:
 
-- `TaptionPlanWidget` Debug 시뮬레이터 빌드 성공
-- 서명된 iPhone Debug 빌드 `1.0 (102)` 성공
-- iPhone 14 Pro(`C44AF739-127D-572D-AD83-417C7E879045`)에 `com.taption.plan` 설치·실행 성공
-- `git diff --check` 통과, 워크트리 clean
-- TestFlight build 102는 기존 IPA 검증·업로드·처리 완료(`VALID`, `APP_STORE_ELIGIBLE`) 및 `TP Taption Plan 내부 테스트` 노출 확인. Delivery UUID `9bec24ce-e0da-4868-8398-5c75e8b3421b`.
-- 이번 아이콘·재생 수정 커밋은 TestFlight에 새로 업로드하지 않았다. 새 배포 요청이면 archive/export·업로드·처리·그룹 연결·노출을 각각 확인한다.
-- 테스트/릴리스 증거와 공유 시뮬레이터 데이터는 보존했고, 재생성 가능한 오래된 Taption Plan 캐시와 실기기 임시 빌드는 정리했다.
+- 전체 `TaptionPlanTests` 732/732와 Swift Testing 10/10 통과, iOS generic Debug build 성공
+- iPhone 14 Pro(`C44AF739-127D-572D-AD83-417C7E879045`)에 `com.taption.plan` `1.0 (106)` 설치·실행 및 PID readback 성공
+- 시뮬레이터에서 현재 위치와 인천광역시청 핀을 겹쳐 졸라맨이 최전면에 남는 것을 확인했다.
+- `git diff --check` 통과, 관련 변경은 main에 커밋·푸시했고 워크트리 clean을 확인했다.
+- TestFlight build 106은 업로드·처리 완료(`VALID`, `APP_STORE_ELIGIBLE`) 후 `TP Taption Plan 내부 테스트` 그룹 연결·노출까지 확인했다. Delivery UUID `41dc832d-5a98-4a77-8122-aad743df6e28`.
+- 2026-08-27 07:00~07:30 iPhone 앱 raw 센서 표본은 0건이며, 현재 raw 저장소의 최신 표본은 2026-08-25 22:17:35 KST다. HealthKit 원본 종료 시각은 별도 readback 경로가 없어 미확정이다.
 
 다음 채팅에서 우선 확인할 항목:
 

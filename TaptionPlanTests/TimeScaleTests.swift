@@ -484,6 +484,29 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testStickmanViewportProjectionCoalesces240HzAndFlushesLatestPoint() {
+        let projection = MapHomeStickmanViewportProjection()
+        let initial = CGPoint(x: 100, y: 200)
+        let latest = CGPoint(x: 120, y: 240)
+
+        XCTAssertEqual(projection.submit(initial, nowUptime: 1), initial)
+        XCTAssertNil(projection.submit(latest, nowUptime: 1.001))
+        XCTAssertEqual(projection.finish(nowUptime: 1.001), latest)
+
+        let highRateProjection = MapHomeStickmanViewportProjection()
+        var renderedCount = 0
+        for sample in 1...240 {
+            let point = CGPoint(x: sample, y: sample)
+            if highRateProjection.submit(
+                point,
+                nowUptime: 2 + Double(sample) / 240
+            ) != nil {
+                renderedCount += 1
+            }
+        }
+        XCTAssertLessThanOrEqual(renderedCount, 61)
+    }
+
     func testSidebarDragMovementDoesNotDependOn240HzSampleCount() {
         let handleBase = MapHomeTimeSidebarNLEState(
             selectedMinute: 720,
@@ -625,6 +648,8 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testMapSearchLayerCoversMapChromeButStaysBelowMenu() {
+        XCTAssertGreaterThan(MapHomeLayerPriority.stickman, MapHomeLayerPriority.map)
+        XCTAssertGreaterThan(MapHomeLayerPriority.sidebar, MapHomeLayerPriority.stickman)
         XCTAssertGreaterThan(MapHomeLayerPriority.search, MapHomeLayerPriority.sidebar)
         XCTAssertGreaterThan(MapHomeLayerPriority.search, MapHomeLayerPriority.map)
         XCTAssertGreaterThan(MapHomeLayerPriority.menu, MapHomeLayerPriority.search)

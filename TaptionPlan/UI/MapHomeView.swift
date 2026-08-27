@@ -89,11 +89,11 @@ enum MapHomeSearchLayoutMath {
 
 enum MapHomeLayerPriority {
     static let map: Double = 0
+    static let stickman: Double = 1
     static let sidebar: Double = 2
     static let search: Double = 4
     static let menu: Double = 6
     static let header: Double = 8
-    static let stickman: Double = 10_000
 }
 
 enum MapHomeCameraLayoutMath {
@@ -267,6 +267,34 @@ final class MapHomeCameraFrameProjection {
         latestFrame = nil
         renderedFrame = nil
         _ = inputBudget.beginGeneration()
+    }
+}
+
+final class MapHomeStickmanViewportProjection {
+    private var latestPoint: CGPoint?
+    private var renderedPoint: CGPoint?
+    private var inputBudget = TaptionPlanNLEInputBudgetEngine()
+
+    func submit(
+        _ point: CGPoint,
+        nowUptime: TimeInterval,
+        force: Bool = false
+    ) -> CGPoint? {
+        latestPoint = point
+        let decision = inputBudget.submit(at: nowUptime, isFinal: force)
+        guard decision.shouldPublish else { return nil }
+        if let renderedPoint,
+           abs(renderedPoint.x - point.x) <= 0.25,
+           abs(renderedPoint.y - point.y) <= 0.25 {
+            return nil
+        }
+        renderedPoint = point
+        return point
+    }
+
+    func finish(nowUptime: TimeInterval) -> CGPoint? {
+        guard let latestPoint else { return nil }
+        return submit(latestPoint, nowUptime: nowUptime, force: true)
     }
 }
 
@@ -1033,6 +1061,8 @@ struct MapHomeView: View {
     @State private var mapCameraFrameProjection = MapHomeCameraFrameProjection()
     @State private var mapRenderCache = MapHomeMapRenderCache()
     @State private var visibleMapCamera: MapCamera?
+    @State private var stickmanViewportProjection = MapHomeStickmanViewportProjection()
+    @State private var displayedStickmanViewportPoint: CGPoint?
     @State private var mapViewportSize = CGSize.zero
     @State private var headerFrame = CGRect.zero
     @State private var searchFieldFrame = CGRect.zero
@@ -1661,6 +1691,25 @@ struct MapHomeView: View {
                 }
             }
 
+            if let coordinate = displayedLocationCoordinate {
+                Annotation("", coordinate: coordinate, anchor: .center) {
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                        .onGeometryChange(
+                            for: CGPoint.self,
+                            of: { geometry in
+                                let frame = geometry.frame(
+                                    in: .named("mapHomeViewport")
+                                )
+                                return CGPoint(x: frame.midX, y: frame.midY)
+                            },
+                            action: submitDisplayedStickmanViewportPoint
+                        )
+                        .accessibilityHidden(true)
+                        .allowsHitTesting(false)
+                }
+            }
+
             if let selectedSearchPin {
                 Annotation(
                     selectedSearchPin.title,
@@ -1691,18 +1740,6 @@ struct MapHomeView: View {
                 }
             }
 
-            if let coordinate = displayedLocationCoordinate {
-                Annotation("", coordinate: coordinate, anchor: .bottom) {
-                    MapHomeStickmanMarker(action: displayedStickmanAction)
-                        .zIndex(MapHomeLayerPriority.stickman)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(
-                            "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)"
-                        )
-                        .allowsHitTesting(false)
-                }
-            }
-
             }
             .mapStyle(mapStyle)
             .mapControls {
@@ -1719,9 +1756,40 @@ struct MapHomeView: View {
                 ) else { return }
                 applyMapCameraFrame(rendered, using: proxy)
             }
+            .onMapCameraChange(frequency: .onEnd) { context in
+                let frame = MapHomeCameraFrame(
+                    camera: context.camera,
+                    region: context.region
+                )
+                if let rendered = mapCameraFrameProjection.submit(
+                    frame,
+                    nowUptime: ProcessInfo.processInfo.systemUptime,
+                    force: true
+                ) {
+                    applyMapCameraFrame(rendered, using: proxy)
+                }
+                finishDisplayedStickmanViewportProjection()
+            }
             .overlay {
-                MapHomeFairyAtmosphere()
-                    .allowsHitTesting(false)
+                ZStack {
+                    MapHomeFairyAtmosphere()
+
+                    if displayedLocationCoordinate != nil,
+                       let point = displayedStickmanViewportPoint {
+                        MapHomeStickmanMarker(action: displayedStickmanAction)
+                            .position(
+                                x: point.x,
+                                y: point.y - MapHomeStickmanMarker.size.height / 2
+                            )
+                            .zIndex(MapHomeLayerPriority.stickman)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(
+                                "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)"
+                            )
+                    }
+                }
+                .clipped()
+                .allowsHitTesting(false)
             }
             .background {
                 MapHomePanGestureObserver(
@@ -1789,6 +1857,7 @@ struct MapHomeView: View {
                     minute: selectedTimelineMinute,
                     using: proxy
                 )
+                finishDisplayedStickmanViewportProjection()
             }
             .onChange(of: model.latestSensorReading?.id) { _, _ in
                 applyInitialLocationIfAvailable(using: proxy)
@@ -5133,6 +5202,21 @@ struct MapHomeView: View {
            abs(level - sharedZoomLevel) > 0.02 {
             sharedZoomLevel = level
         }
+    }
+
+    private func submitDisplayedStickmanViewportPoint(_ point: CGPoint) {
+        guard let rendered = stickmanViewportProjection.submit(
+            point,
+            nowUptime: ProcessInfo.processInfo.systemUptime
+        ) else { return }
+        displayedStickmanViewportPoint = rendered
+    }
+
+    private func finishDisplayedStickmanViewportProjection() {
+        guard let rendered = stickmanViewportProjection.finish(
+            nowUptime: ProcessInfo.processInfo.systemUptime
+        ) else { return }
+        displayedStickmanViewportPoint = rendered
     }
 
     private func flushMapCameraFrame(using proxy: MapProxy) {
