@@ -369,8 +369,8 @@ enum MapHomeStickmanActionResolver {
 }
 
 enum MapHomeStickmanAnimationEngine {
-    static let frameDuration: TimeInterval = 0.12
-    static let phaseCount = 8
+    static let frameDuration: TimeInterval = 0.08
+    static let phaseCount = 12
 
     static func phase(at date: Date, reducesMotion: Bool = false) -> Int {
         guard !reducesMotion else { return 0 }
@@ -383,6 +383,14 @@ enum MapHomeStickmanAnimationEngine {
 
     static func oscillation(for phase: Int) -> Double {
         sin(2 * .pi * Double(phase) / Double(phaseCount))
+    }
+
+    static func secondaryOscillation(for phase: Int) -> Double {
+        sin(4 * .pi * Double(phase) / Double(phaseCount))
+    }
+
+    static func pulse(for phase: Int) -> Double {
+        (oscillation(for: phase) + 1) / 2
     }
 }
 
@@ -409,7 +417,7 @@ struct MapHomeStickmanMarker: View {
                 )
             }
         }
-        .frame(width: 70, height: 60)
+        .frame(width: 49, height: 42)
         .background(.white.opacity(0.96), in: Circle())
         .overlay { Circle().stroke(Color.tpPastelRose.opacity(0.42), lineWidth: 1) }
         .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
@@ -476,6 +484,7 @@ private struct MapHomeStickmanCanvas {
 
 private enum MapHomeStickmanRenderer {
     private static let accent = Color.tpPastelRose
+    private static let line = Color.tpInk.opacity(0.86)
     private static let fill = Color.tpPastelRose.opacity(0.12)
 
     static func draw(
@@ -485,6 +494,7 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let canvas = MapHomeStickmanCanvas(size: size)
+        drawMotionMarks(&context, canvas: canvas, action: action, phase: phase)
         switch action {
         case .computer:
             drawComputer(&context, canvas: canvas, phase: phase)
@@ -513,7 +523,7 @@ private enum MapHomeStickmanRenderer {
         _ context: inout GraphicsContext,
         _ points: [CGPoint],
         color: Color = accent,
-        width: CGFloat = 1.8
+        width: CGFloat = 2
     ) {
         guard points.count >= 2 else { return }
         var path = Path()
@@ -566,13 +576,67 @@ private enum MapHomeStickmanRenderer {
         context.fill(path, with: .color(fillColor))
         context.stroke(
             path,
-            with: .color(accent),
+            with: .color(line),
             style: StrokeStyle(
-                lineWidth: 1.6 * canvas.scale,
+                lineWidth: 1.8 * canvas.scale,
                 lineCap: .round,
                 lineJoin: .round
             )
         )
+    }
+
+    private static func drawMotionMarks(
+        _ context: inout GraphicsContext,
+        canvas: MapHomeStickmanCanvas,
+        action: MapHomeStickmanAction,
+        phase: Int
+    ) {
+        let fast = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase))
+        let slow = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
+        let markColor = accent.opacity(0.68)
+        switch action {
+        case .walking, .cycling:
+            stroke(
+                &context,
+                [canvas.point(4, 25 + fast * 2), canvas.point(11, 25 + fast * 2)],
+                color: markColor,
+                width: 1.2
+            )
+            stroke(
+                &context,
+                [canvas.point(53, 30 - fast * 2), canvas.point(60, 30 - fast * 2)],
+                color: markColor,
+                width: 1.2
+            )
+        case .computer, .reading, .eating:
+            stroke(
+                &context,
+                [canvas.point(4, 34 + slow * 2), canvas.point(10, 34 + slow * 2)],
+                color: markColor,
+                width: 1.2
+            )
+            stroke(
+                &context,
+                [canvas.point(54, 24 - fast * 2), canvas.point(60, 24 - fast * 2)],
+                color: markColor,
+                width: 1.2
+            )
+        case .car, .bus, .subway:
+            stroke(
+                &context,
+                [canvas.point(3, 49 + slow), canvas.point(11, 49 + slow)],
+                color: markColor,
+                width: 1.2
+            )
+            stroke(
+                &context,
+                [canvas.point(53, 51 - slow), canvas.point(61, 51 - slow)],
+                color: markColor,
+                width: 1.2
+            )
+        case .sleeping, .resting:
+            break
+        }
     }
 
     private static func drawWalking(

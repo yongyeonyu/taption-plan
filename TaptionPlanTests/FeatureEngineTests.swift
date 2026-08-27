@@ -415,6 +415,37 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testMapHomePastelPaletteKeepsCategoriesVisuallySeparated() {
+        let hexes = CanonicalCategoryPalette.orderedIDs.map {
+            MapHomePastelPalette.hex($0)
+        }
+        XCTAssertEqual(Set(hexes).count, hexes.count)
+
+        let rgb = hexes.compactMap { hex -> (Double, Double, Double)? in
+            guard hex.count == 7,
+                  let value = UInt64(hex.dropFirst(), radix: 16) else {
+                return nil
+            }
+            return (
+                Double((value >> 16) & 0xFF) / 255,
+                Double((value >> 8) & 0xFF) / 255,
+                Double(value & 0xFF) / 255
+            )
+        }
+        XCTAssertEqual(rgb.count, hexes.count)
+
+        let minimumDistance = rgb.enumerated().flatMap { index, color in
+            rgb.dropFirst(index + 1).map { other in
+                sqrt(
+                    pow(color.0 - other.0, 2)
+                        + pow(color.1 - other.1, 2)
+                        + pow(color.2 - other.2, 2)
+                )
+            }
+        }.min() ?? 0
+        XCTAssertGreaterThan(minimumDistance, 0.12)
+    }
+
     func testMapHomeSidebarHandleUsesCanonicalMajorCategoryPresentation() {
         let categories = CanonicalCategoryPalette.orderedIDs.map {
             MapHomeSidebarMajorCategory.presentation(for: $0)

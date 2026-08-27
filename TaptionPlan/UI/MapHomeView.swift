@@ -93,6 +93,7 @@ enum MapHomeLayerPriority {
     static let search: Double = 4
     static let menu: Double = 6
     static let header: Double = 8
+    static let stickman: Double = 10_000
 }
 
 enum MapHomeCameraLayoutMath {
@@ -1693,7 +1694,7 @@ struct MapHomeView: View {
             if let coordinate = displayedLocationCoordinate {
                 Annotation("", coordinate: coordinate, anchor: .bottom) {
                     MapHomeStickmanMarker(action: displayedStickmanAction)
-                        .zIndex(100)
+                        .zIndex(MapHomeLayerPriority.stickman)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(
                             "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)"

@@ -1365,26 +1365,6 @@ struct MapHomeTimeSidebar: View {
             categoryColors: categoryColors
         )
         return ZStack(alignment: .topLeading) {
-            MapHomeStickmanGlyph(
-                action: activity?.stickmanAction ?? fallbackActivity.stickmanAction,
-                size: 30
-            )
-                .frame(width: handleSize.width, height: handleSize.height)
-                .background(
-                    Color.white,
-                    in: Circle()
-                )
-                .overlay {
-                    Circle()
-                        .stroke(
-                            (activity?.tint ?? fallbackActivity.tint),
-                            lineWidth: 1
-                        )
-                }
-                .position(x: handleCenterX, y: y)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-
             VStack(spacing: -1) {
                 Text(String(format: "%02d", minute / 60))
                 Text(String(format: "%02d", minute % 60))

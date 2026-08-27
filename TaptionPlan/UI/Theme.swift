@@ -153,15 +153,15 @@ enum CanonicalCategoryPalette {
 
 enum MapHomePastelPalette {
     static let hexes: [String: String] = [
-        "activity": "#8FD9C5",
-        "work": "#A9CFF0",
-        "study": "#A7DDEB",
-        "hobby": "#C2B4E9",
-        "sleep": "#B8B7E8",
-        "movement": "#B7DCC7",
-        "eating": "#F2D58D",
-        "exercise": "#F2A8B8",
-        "unconfirmed": "#CBD5E1",
+        "activity": "#73C9A6",
+        "work": "#7EA7E6",
+        "study": "#6CC9D8",
+        "hobby": "#A78BD2",
+        "sleep": "#7D82C9",
+        "movement": "#E9985F",
+        "eating": "#E4C25D",
+        "exercise": "#E5869D",
+        "unconfirmed": "#AAB5C3",
     ]
 
     static func hex(_ id: String) -> String {
