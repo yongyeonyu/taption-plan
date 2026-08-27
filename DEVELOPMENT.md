@@ -374,3 +374,19 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `MapHomeStickmanTests`, `RouteTimelineDataTests`, 회사 `unknownStay` 잠금 회귀 테스트 성공
 - iOS generic Debug build 성공, `git diff --check` 통과
 - Debug 앱을 iOS Simulator에 설치·실행했으나 지도 진입 전 `14일 무료 체험` 화면에서 멈췄다. 구매·구독 동작은 실행하지 않아 지도·실제 터치 시각 검증은 별도 게이트로 남긴다.
+
+## 2026-08-27 build 104 파스텔 MapHome 활동 UI TestFlight
+
+- 흰색 시간 사이드바·인접 날씨·기존 왼쪽 하단 네 가지 컨트롤을 유지하면서 MapHome 색상과 카드·버튼을 파스텔 조합으로 정리했다.
+- 대분류 활동 핸들을 선화 졸라맨 포즈로 표시하고 회사·학교·수면·식사·걷기·자전거·자동차·지하철 상태별 애니메이션을 재생 시각과 현재 시각에 공통 적용했다.
+- 240Hz 제스처 입력·60Hz 화면 갱신·30Hz 재생 경계를 유지하고 실제·예상 경로와 속도별 색상 표현을 보존했다.
+
+### 검증 및 배포
+
+- `FeatureEngineTests`·`TimeScaleTests` 대상 XCTest 581/581 통과, iOS Simulator Debug build 성공
+- Release archive/export: `1.0 (104)`, `com.taption.plan`, Apple Distribution 서명, IPA SHA-256 `b5d49cd87d056349cdb5aa983cb3f36412711d26d2bbc43e309c8b3fb185e7a6`
+- TestFlight 업로드 성공: Delivery UUID `36e77558-44a9-4389-ac82-d00a245e6078`
+- App Store Connect 처리 상태 `VALID` / `APP_STORE_ELIGIBLE`, beta 상태 `IN_BETA_TESTING`
+- `TP Taption Plan 내부 테스트` 그룹에 build 104 연결 및 그룹 builds 관계에서 build 104 노출 확인
+- main 기능·빌드·서명 수정 커밋 `e579b09`, `f7ed488`, `de21ee4`, `origin/main` 일치 확인
+- 실기기 설치·실행·readback은 iPhone 연결·잠금 해제 후 별도 게이트로 남긴다.
