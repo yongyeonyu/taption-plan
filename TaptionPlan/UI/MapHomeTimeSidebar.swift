@@ -122,6 +122,14 @@ enum MapHomeTimeSidebarStyle {
     static let panelBorder = Color.tpPastelGray.opacity(0.72)
     static let numericColumnBackground = Color.white
     static let trackBackground = Color.tpPastelGray.opacity(0.34)
+    static let handleBackground = Color.white
+    static let deepPinkHex = "#D94772"
+    static let handleForeground = Color(hex: deepPinkHex)
+    static let handleBorder = Color(hex: deepPinkHex)
+    static let handleFontSize: CGFloat = 12
+    static let handleFontWeight: Font.Weight = .semibold
+    static let handleFontDesign: Font.Design = .rounded
+    static let handleCornerRadius: CGFloat = 4
 }
 
 enum MapHomeWeatherBackgroundKind: Equatable {
@@ -179,21 +187,16 @@ enum MapHomeWeatherCollisionMath {
 }
 
 enum MapHomeWeatherRailAlignmentMath {
+    static let itemTrailingInset: CGFloat = 1
+
     static func weatherOriginX(
         weatherRailWidth: CGFloat,
-        timeRailWidth: CGFloat
+        timeRailWidth _: CGFloat
     ) -> CGFloat {
-        let trackX = MapHomeTimeSidebarMath.trackCenterX(
-            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
-            railWidth: timeRailWidth,
-            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
-            activeRailWidth: MapHomeTimeSidebarMath.activeRailWidth
-        )
-        let itemRightX = weatherRailWidth - 1
-        return trackX
-            - MapHomeTimeSidebarMath.activeRailWidth / 2
-            - MapHomeWeatherCollisionMath.clearance
-            - itemRightX
+        return MapHomeTimeSidebarMath.handleLaneWidth
+            - weatherRailWidth
+            + itemTrailingInset
+            - MapHomeTimeSidebarMath.weatherDockGap
     }
 
     static func playheadCenterX(
@@ -1369,15 +1372,28 @@ struct MapHomeTimeSidebar: View {
                 Text(String(format: "%02d", minute / 60))
                 Text(String(format: "%02d", minute % 60))
             }
-            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .font(.system(
+                size: MapHomeTimeSidebarStyle.handleFontSize,
+                weight: MapHomeTimeSidebarStyle.handleFontWeight,
+                design: MapHomeTimeSidebarStyle.handleFontDesign
+            ))
             .monospacedDigit()
-            .foregroundStyle(Color.tpInk)
+            .foregroundStyle(MapHomeTimeSidebarStyle.handleForeground)
             .frame(width: 32, height: 40)
             .background(
-                Color.tpPastelRose,
-                in: RoundedRectangle(cornerRadius: 4, style: .continuous)
+                MapHomeTimeSidebarStyle.handleBackground,
+                in: RoundedRectangle(
+                    cornerRadius: MapHomeTimeSidebarStyle.handleCornerRadius,
+                    style: .continuous
+                )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: MapHomeTimeSidebarStyle.handleCornerRadius,
+                    style: .continuous
+                )
+                .stroke(MapHomeTimeSidebarStyle.handleBorder, lineWidth: 1)
+            }
             .accessibilityHidden(true)
             .zIndex(2)
             .position(
@@ -1872,6 +1888,7 @@ enum MapHomeTimeSidebarMath {
     static let activeRailWidth: CGFloat = 12
     static let handleVisualSize = CGSize(width: 44, height: 44)
     static let handleRailGap: CGFloat = 4
+    static let weatherDockGap: CGFloat = 0
 
     static func totalWidth(railWidth: CGFloat) -> CGFloat {
         handleLaneWidth + railWidth

@@ -94,68 +94,97 @@ struct TaptionActivityAttributes: ActivityAttributes {
     var planID: UUID
 }
 
+enum TaptionLiveActivityStickmanStyle {
+    static let deepPinkHex = "#D94772"
+    static let personStrokeWidth: CGFloat = 1
+}
+
 enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable, Sendable {
+    case activity
     case computer
-    case walking
+    case reading
+    case hobby
     case sleeping
+    case movement
+    case eating
+    case exercise
+    case unconfirmed
+    case walking
+    case running
     case car
     case subway
-    case cycling
-    case reading
-    case eating
+    case privateVehicle
     case bus
-    case resting
+    case ship
+    case airplane
+    case cycling
 
     static func resolve(categoryID: String, title: String) -> Self {
+        let category = categoryID.lowercased().replacingOccurrences(of: " ", with: "")
         let value = "\(categoryID) \(title)".lowercased()
-        if value.contains("sleep") || value.contains("수면") || value.contains("잠") {
-            return .sleeping
+        let has = { (terms: [String]) in terms.contains { value.contains($0) } }
+
+        if category == "unconfirmed" || category == "unknown"
+            || has(["unconfirmed", "unknown", "미확인"]) {
+            return .unconfirmed
         }
-        if value.contains("eating") || value.contains("food")
-            || value.contains("meal") || value.contains("식사") || value.contains("밥") {
-            return .eating
+
+        if has(["movement.running", "달리기", "running"]) { return .running }
+        if has(["movement.walking", "걷기", "walking", "walk"]) { return .walking }
+        if has(["movement.privatevehicle", "자가용", "private vehicle", "privatevehicle"]) { return .privateVehicle }
+        if has(["movement.car", "자동차", "차량", "car", "driving"]) { return .car }
+        if has(["movement.subway", "지하철", "subway", "metro"]) { return .subway }
+        if has(["movement.bus", "버스", "bus"]) { return .bus }
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if has(["movement.ship", "선박", "ship", "ferry"]) || normalizedTitle == "배" { return .ship }
+        if has(["movement.airplane", "비행기", "항공", "airplane", "flight"]) { return .airplane }
+        if has(["movement.cycling", "자전거", "cycling", "bike"]) { return .cycling }
+
+        if has(["업무", "회사", "컴퓨터", "work"]) { return .computer }
+        if has(["수업", "학교", "독서", "study", "school", "reading"]) { return .reading }
+        if has(["취미", "hobby"]) { return .hobby }
+        if has(["수면", "잠", "sleep"]) { return .sleeping }
+        if has(["식사", "밥", "food", "meal", "eating"]) { return .eating }
+        if has(["운동", "exercise"]) { return .exercise }
+
+        switch category {
+        case "activity": return .activity
+        case "computer", "work": return .computer
+        case "reading", "study": return .reading
+        case "hobby": return .hobby
+        case "sleeping", "sleep": return .sleeping
+        case "movement": return .movement
+        case "eating", "food": return .eating
+        case "exercise": return .exercise
+        case "unconfirmed": return .unconfirmed
+        default: break
         }
-        if value.contains("work") || value.contains("업무")
-            || value.contains("회사") || value.contains("컴퓨터") {
-            return .computer
-        }
-        if value.contains("study") || value.contains("school")
-            || value.contains("수업") || value.contains("학교") || value.contains("독서") {
-            return .reading
-        }
-        if value.contains("subway") || value.contains("metro") || value.contains("지하철") {
-            return .subway
-        }
-        if value.contains("bus") || value.contains("버스") {
-            return .bus
-        }
-        if value.contains("car") || value.contains("driving")
-            || value.contains("자동차") || value.contains("차량") {
-            return .car
-        }
-        if value.contains("cycling") || value.contains("bike") || value.contains("자전거") {
-            return .cycling
-        }
-        if value.contains("movement") || value.contains("exercise")
-            || value.contains("걷") || value.contains("walk") || value.contains("활동")
-            || value.contains("이동") || value.contains("운동") {
-            return .walking
-        }
-        return .resting
+
+        if has(["활동", "activity"]) { return .activity }
+        if has(["이동", "movement"]) { return .movement }
+        return .activity
     }
 
     var accessibilityTitle: String {
         switch self {
+        case .activity: "활동"
         case .computer: "컴퓨터 사용"
-        case .walking: "걷기"
+        case .reading: "책 읽기"
+        case .hobby: "취미"
         case .sleeping: "수면"
+        case .movement: "이동"
+        case .eating: "식사"
+        case .exercise: "운동"
+        case .unconfirmed: "미확인"
+        case .walking: "걷기"
+        case .running: "달리기"
         case .car: "자동차 탑승"
         case .subway: "지하철 탑승"
-        case .cycling: "자전거"
-        case .reading: "책 읽기"
-        case .eating: "식사"
+        case .privateVehicle: "자가용"
         case .bus: "버스 탑승"
-        case .resting: "머무름"
+        case .ship: "배"
+        case .airplane: "비행기"
+        case .cycling: "자전거"
         }
     }
 }

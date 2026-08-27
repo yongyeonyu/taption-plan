@@ -694,27 +694,29 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testWeatherTimelineRightEdgeAttachesToActivityRail() {
+    func testWeatherTimelineCapsulesAttachFlushToSidebarPanel() {
         let weatherRailWidth: CGFloat = 58
         let timeRailWidth: CGFloat = 58
         let originX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
             weatherRailWidth: weatherRailWidth,
             timeRailWidth: timeRailWidth
         )
-        let trackX = MapHomeTimeSidebarMath.trackCenterX(
-            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
-            railWidth: timeRailWidth,
-            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
-            activeRailWidth: MapHomeTimeSidebarMath.activeRailWidth
-        )
-        let weatherItemRightX = originX + weatherRailWidth - 1
+        let weatherItemRightX = originX
+            + weatherRailWidth
+            - MapHomeWeatherRailAlignmentMath.itemTrailingInset
 
         XCTAssertEqual(
             weatherItemRightX,
-            trackX
-                - MapHomeTimeSidebarMath.activeRailWidth / 2
-                - MapHomeWeatherCollisionMath.clearance
+            MapHomeTimeSidebarMath.handleLaneWidth
+                - MapHomeTimeSidebarMath.weatherDockGap
         )
+        XCTAssertEqual(MapHomeTimeSidebarMath.weatherDockGap, 0)
+    }
+
+    func testSidebarSelectionHandleUsesApprovedWhiteAndDeepPinkStyle() {
+        XCTAssertEqual(MapHomeTimeSidebarStyle.deepPinkHex, "#D94772")
+        XCTAssertEqual(MapHomeTimeSidebarStyle.handleFontSize, 12)
+        XCTAssertEqual(MapHomeTimeSidebarStyle.handleCornerRadius, 4)
     }
 
     func testWeatherTimelineUsesTheActualHandleForCollision() {

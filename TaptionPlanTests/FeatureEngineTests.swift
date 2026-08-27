@@ -18406,16 +18406,90 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
-    func testLiveActivityStickmanResolvesEveryMajorCategory() {
-        let expected: [(String, String, TaptionLiveActivityStickmanAction)] = [
+    func testMapStickmanResolvesEveryMajorCategoryAndMovementDetail() {
+        let majorCategories: [(String, String, MapHomeStickmanAction)] = [
+            ("activity", "활동", .activity),
             ("work", "업무", .computer),
             ("study", "수업", .reading),
+            ("hobby", "취미", .hobby),
+            ("sleep", "수면", .sleeping),
+            ("movement", "이동", .movement),
+            ("eating", "식사", .eating),
+            ("exercise", "운동", .exercise),
+            ("unconfirmed", "미확인", .unconfirmed),
+        ]
+        let movementDetails: [(String, MapHomeStickmanAction)] = [
+            ("걷기", .walking),
+            ("달리기", .running),
+            ("자동차", .car),
+            ("지하철", .subway),
+            ("자가용", .privateVehicle),
+            ("버스", .bus),
+            ("배", .ship),
+            ("비행기", .airplane),
+            ("자전거", .cycling),
+        ]
+
+        for (categoryID, title, action) in majorCategories {
+            XCTAssertEqual(
+                MapHomeStickmanActionResolver.action(
+                    for: categoryID,
+                    label: title
+                ),
+                action,
+                "\(categoryID) 대분류 동작이 다릅니다."
+            )
+        }
+        for (title, action) in movementDetails {
+            XCTAssertEqual(
+                MapHomeStickmanActionResolver.action(
+                    for: "movement",
+                    label: title
+                ),
+                action,
+                "\(title) 이동 상세 동작이 다릅니다."
+            )
+        }
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 18)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 18)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 18)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                for: "activity",
+                label: "업무"
+            ),
+            .computer
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                for: "custom.user",
+                label: "사용자 카테고리"
+            ),
+            .activity
+        )
+        XCTAssertNotEqual(
+            MapHomeStickmanActionResolver.action(
+                for: "hobby",
+                label: "배드민턴"
+            ),
+            .ship
+        )
+        XCTAssertEqual(MapHomeStickmanStyle.deepPinkHex, "#D94772")
+        XCTAssertEqual(MapHomeStickmanStyle.personStrokeWidth, 1)
+    }
+
+    func testLiveActivityStickmanResolvesEveryMajorCategory() {
+        let expected: [(String, String, TaptionLiveActivityStickmanAction)] = [
+            ("activity", "활동", .activity),
+            ("work", "업무", .computer),
+            ("study", "수업", .reading),
+            ("hobby", "취미", .hobby),
             ("sleep", "수면", .sleeping),
             ("eating", "식사", .eating),
-            ("movement", "이동", .walking),
-            ("exercise", "운동", .walking),
-            ("hobby", "취미", .resting),
-            ("unconfirmed", "미확인", .resting),
+            ("movement", "이동", .movement),
+            ("exercise", "운동", .exercise),
+            ("unconfirmed", "미확인", .unconfirmed),
         ]
 
         for (categoryID, title, action) in expected {
@@ -18430,32 +18504,57 @@ final class MapHomeStickmanTests: XCTestCase {
         }
         XCTAssertEqual(
             TaptionLiveActivityStickmanAction.resolve(
-                categoryID: "subway",
-                title: "지하철"
+                categoryID: "movement",
+                title: "걷기"
             ),
-            .subway
+            .walking
+        )
+        let movementDetails: [(String, TaptionLiveActivityStickmanAction)] = [
+            ("걷기", .walking),
+            ("달리기", .running),
+            ("자동차", .car),
+            ("지하철", .subway),
+            ("자가용", .privateVehicle),
+            ("버스", .bus),
+            ("배", .ship),
+            ("비행기", .airplane),
+            ("자전거", .cycling),
+        ]
+        for (title, action) in movementDetails {
+            XCTAssertEqual(
+                TaptionLiveActivityStickmanAction.resolve(
+                    categoryID: "movement",
+                    title: title
+                ),
+                action,
+                "\(title) Live Activity 이동 상세 동작이 다릅니다."
+            )
+        }
+        XCTAssertEqual(TaptionLiveActivityStickmanAction.allCases.count, 18)
+        XCTAssertEqual(Set(TaptionLiveActivityStickmanAction.allCases).count, 18)
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAction.resolve(
+                categoryID: "activity",
+                title: "업무"
+            ),
+            .computer
         )
         XCTAssertEqual(
             TaptionLiveActivityStickmanAction.resolve(
-                categoryID: "cycling",
-                title: "자전거"
+                categoryID: "custom.user",
+                title: "사용자 카테고리"
             ),
-            .cycling
+            .activity
         )
-        XCTAssertEqual(
+        XCTAssertNotEqual(
             TaptionLiveActivityStickmanAction.resolve(
-                categoryID: "car",
-                title: "자동차"
+                categoryID: "hobby",
+                title: "배드민턴"
             ),
-            .car
+            .ship
         )
-        XCTAssertEqual(
-            TaptionLiveActivityStickmanAction.resolve(
-                categoryID: "bus",
-                title: "버스"
-            ),
-            .bus
-        )
+        XCTAssertEqual(TaptionLiveActivityStickmanStyle.deepPinkHex, "#D94772")
+        XCTAssertEqual(TaptionLiveActivityStickmanStyle.personStrokeWidth, 1)
     }
 
     func testLiveActivityStickmanAnimationHonorsReduceMotion() {

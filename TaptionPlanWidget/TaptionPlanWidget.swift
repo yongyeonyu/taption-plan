@@ -2775,9 +2775,9 @@ private struct TaptionLiveActivityStickmanCanvas {
 }
 
 private enum TaptionLiveActivityStickmanRenderer {
+    private static let person = Color(red: 0.851, green: 0.278, blue: 0.447)
     private static let line = Color.white.opacity(0.94)
-    private static let accent = Color(red: 0.98, green: 0.56, blue: 0.72)
-    private static let detail = Color(red: 0.46, green: 0.82, blue: 0.95)
+    private static let black = Color.black
     private static let softFill = Color.white.opacity(0.10)
 
     static func draw(
@@ -2789,34 +2789,50 @@ private enum TaptionLiveActivityStickmanRenderer {
         let canvas = TaptionLiveActivityStickmanCanvas(size: size)
         drawGroundShadow(&context, canvas: canvas, action: action, phase: phase)
         switch action {
+        case .activity:
+            drawActivity(&context, canvas: canvas, phase: phase)
         case .computer:
             drawComputer(&context, canvas: canvas, phase: phase)
-        case .walking:
-            drawWalking(&context, canvas: canvas, phase: phase)
+        case .reading:
+            drawReading(&context, canvas: canvas, phase: phase)
+        case .hobby:
+            drawHobby(&context, canvas: canvas, phase: phase)
         case .sleeping:
             drawSleeping(&context, canvas: canvas, phase: phase)
+        case .movement:
+            drawMovement(&context, canvas: canvas, phase: phase)
+        case .eating:
+            drawEating(&context, canvas: canvas, phase: phase)
+        case .exercise:
+            drawExercise(&context, canvas: canvas, phase: phase)
+        case .unconfirmed:
+            drawUnconfirmed(&context, canvas: canvas, phase: phase)
+        case .walking:
+            drawWalking(&context, canvas: canvas, phase: phase)
+        case .running:
+            drawRunning(&context, canvas: canvas, phase: phase)
         case .car:
             drawCar(&context, canvas: canvas, phase: phase)
         case .subway:
             drawSubway(&context, canvas: canvas, phase: phase)
-        case .cycling:
-            drawCycling(&context, canvas: canvas, phase: phase)
-        case .reading:
-            drawReading(&context, canvas: canvas, phase: phase)
-        case .eating:
-            drawEating(&context, canvas: canvas, phase: phase)
+        case .privateVehicle:
+            drawPrivateVehicle(&context, canvas: canvas, phase: phase)
         case .bus:
             drawBus(&context, canvas: canvas, phase: phase)
-        case .resting:
-            drawResting(&context, canvas: canvas, phase: phase)
+        case .ship:
+            drawShip(&context, canvas: canvas, phase: phase)
+        case .airplane:
+            drawAirplane(&context, canvas: canvas, phase: phase)
+        case .cycling:
+            drawCycling(&context, canvas: canvas, phase: phase)
         }
     }
 
     private static func stroke(
         _ context: inout GraphicsContext,
         _ points: [CGPoint],
-        color: Color = line,
-        width: CGFloat = 2
+        color: Color = person,
+        width: CGFloat = TaptionLiveActivityStickmanStyle.personStrokeWidth
     ) {
         guard points.count >= 2 else { return }
         var path = Path()
@@ -2833,13 +2849,22 @@ private enum TaptionLiveActivityStickmanRenderer {
         )
     }
 
+    private static func propStroke(
+        _ context: inout GraphicsContext,
+        _ points: [CGPoint],
+        color: Color = line,
+        width: CGFloat = 1.7
+    ) {
+        stroke(&context, points, color: color, width: width)
+    }
+
     private static func fillCircle(
         _ context: inout GraphicsContext,
         _ canvas: TaptionLiveActivityStickmanCanvas,
         x: CGFloat,
         y: CGFloat,
         radius: CGFloat,
-        color: Color = accent
+        color: Color = person
     ) {
         context.fill(
             Path(ellipseIn: canvas.rect(
@@ -2903,7 +2928,7 @@ private enum TaptionLiveActivityStickmanRenderer {
                 width: width,
                 height: 3
             )),
-            with: .color(Color.black.opacity(0.22))
+            with: .color(black.opacity(0.22))
         )
     }
 
@@ -2921,23 +2946,23 @@ private enum TaptionLiveActivityStickmanRenderer {
             width: radius * 2,
             height: radius * 2
         ))
-        context.fill(head, with: .color(Color.black.opacity(0.10)))
+        context.fill(head, with: .color(person))
         context.stroke(
             head,
-            with: .color(line),
+            with: .color(person),
             style: StrokeStyle(
-                lineWidth: 1.8 * canvas.scale,
+                lineWidth: TaptionLiveActivityStickmanStyle.personStrokeWidth * canvas.scale,
                 lineCap: .round,
                 lineJoin: .round
             )
         )
         let eyeY = y - radius * 0.12
         if sleepy {
-            stroke(&context, [canvas.point(x - radius * 0.42, eyeY), canvas.point(x - radius * 0.08, eyeY + 0.4)], width: 1.05)
-            stroke(&context, [canvas.point(x + radius * 0.08, eyeY + 0.4), canvas.point(x + radius * 0.42, eyeY)], width: 1.05)
+            propStroke(&context, [canvas.point(x - radius * 0.42, eyeY), canvas.point(x - radius * 0.08, eyeY + 0.4)], color: black, width: TaptionLiveActivityStickmanStyle.personStrokeWidth)
+            propStroke(&context, [canvas.point(x + radius * 0.08, eyeY + 0.4), canvas.point(x + radius * 0.42, eyeY)], color: black, width: TaptionLiveActivityStickmanStyle.personStrokeWidth)
         } else {
-            fillCircle(&context, canvas, x: x - radius * 0.35, y: eyeY, radius: max(0.42, radius * 0.14), color: line)
-            fillCircle(&context, canvas, x: x + radius * 0.35, y: eyeY, radius: max(0.42, radius * 0.14), color: line)
+            fillCircle(&context, canvas, x: x - radius * 0.35, y: eyeY, radius: max(0.42, radius * 0.14), color: black)
+            fillCircle(&context, canvas, x: x + radius * 0.35, y: eyeY, radius: max(0.42, radius * 0.14), color: black)
         }
         var smile = Path()
         smile.move(to: canvas.point(x - radius * 0.44, y + radius * 0.32))
@@ -2947,8 +2972,8 @@ private enum TaptionLiveActivityStickmanRenderer {
         )
         context.stroke(
             smile,
-            with: .color(line),
-            style: StrokeStyle(lineWidth: 1.05 * canvas.scale, lineCap: .round)
+            with: .color(black),
+            style: StrokeStyle(lineWidth: TaptionLiveActivityStickmanStyle.personStrokeWidth * canvas.scale, lineCap: .round)
         )
     }
 
@@ -2961,16 +2986,16 @@ private enum TaptionLiveActivityStickmanRenderer {
         let fast = CGFloat(TaptionLiveActivityStickmanAnimation.secondaryOscillation(for: phase))
         let slow = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase))
         switch action {
-        case .walking, .cycling:
-            stroke(&context, [canvas.point(4, 25 + fast * 2), canvas.point(11, 25 + fast * 2)], color: detail.opacity(0.9), width: 1.25)
-            stroke(&context, [canvas.point(53, 30 - fast * 2), canvas.point(60, 30 - fast * 2)], color: detail.opacity(0.9), width: 1.25)
-        case .car, .subway, .bus:
-            stroke(&context, [canvas.point(3, 49 + slow), canvas.point(11, 49 + slow)], color: detail.opacity(0.9), width: 1.25)
-            stroke(&context, [canvas.point(53, 51 - slow), canvas.point(61, 51 - slow)], color: detail.opacity(0.9), width: 1.25)
-        case .computer, .reading, .eating, .resting:
-            fillCircle(&context, canvas, x: 7, y: 12 + fast, radius: 1.1, color: detail.opacity(0.8))
-            fillCircle(&context, canvas, x: 56, y: 18 - slow, radius: 0.9, color: accent.opacity(0.8))
-        case .sleeping:
+        case .walking, .running, .cycling:
+            propStroke(&context, [canvas.point(4, 25 + fast * 2), canvas.point(11, 25 + fast * 2)], color: line, width: 1.25)
+            propStroke(&context, [canvas.point(53, 30 - fast * 2), canvas.point(60, 30 - fast * 2)], color: line, width: 1.25)
+        case .car, .subway, .privateVehicle, .bus, .ship, .airplane:
+            propStroke(&context, [canvas.point(3, 49 + slow), canvas.point(11, 49 + slow)], color: line, width: 1.25)
+            propStroke(&context, [canvas.point(53, 51 - slow), canvas.point(61, 51 - slow)], color: line, width: 1.25)
+        case .activity, .computer, .reading, .hobby, .eating, .exercise:
+            fillCircle(&context, canvas, x: 7, y: 12 + fast, radius: 1.1, color: line)
+            fillCircle(&context, canvas, x: 56, y: 18 - slow, radius: 0.9, color: line)
+        case .sleeping, .movement, .unconfirmed:
             break
         }
     }
@@ -2991,19 +3016,108 @@ private enum TaptionLiveActivityStickmanRenderer {
         stroke(&context, [canvas.point(32, 31 + bob), canvas.point(40 - swing * 7, 45)])
     }
 
-    private static func drawResting(
+    private static func drawRunning(
         _ context: inout GraphicsContext,
         canvas: TaptionLiveActivityStickmanCanvas,
         phase: Int
     ) {
-        drawMotionMarks(&context, canvas: canvas, action: .resting, phase: phase)
-        let sway = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 0.5
-        drawHead(&context, canvas: canvas, x: 32 + sway, y: 10, radius: 3.4)
-        stroke(&context, [canvas.point(32, 13.5), canvas.point(32, 32)])
-        stroke(&context, [canvas.point(32, 19), canvas.point(25, 28)])
-        stroke(&context, [canvas.point(32, 19), canvas.point(39, 28)])
-        stroke(&context, [canvas.point(32, 32), canvas.point(27, 45)])
-        stroke(&context, [canvas.point(32, 32), canvas.point(37, 45)])
+        drawMotionMarks(&context, canvas: canvas, action: .running, phase: phase)
+        let stride = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase))
+        let lift = phase.isMultiple(of: 2) ? -2.4 : 0
+        drawHead(&context, canvas: canvas, x: 36, y: 9 + lift, radius: 3.4)
+        stroke(&context, [canvas.point(34, 12.5 + lift), canvas.point(28, 29 + lift)])
+        stroke(&context, [canvas.point(31, 18 + lift), canvas.point(18 - stride * 8, 15 + lift)])
+        stroke(&context, [canvas.point(31, 18 + lift), canvas.point(44 + stride * 7, 25 + lift)])
+        stroke(&context, [canvas.point(28, 29 + lift), canvas.point(15 + stride * 10, 39 + lift)])
+        stroke(&context, [canvas.point(28, 29 + lift), canvas.point(45 - stride * 9, 43 + lift)])
+        propStroke(&context, [canvas.point(4, 22), canvas.point(13, 22)], color: line, width: 1.1)
+        propStroke(&context, [canvas.point(7, 29), canvas.point(16, 29)], color: line, width: 1.1)
+    }
+
+    private static func drawActivity(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        phase: Int
+    ) {
+        drawMotionMarks(&context, canvas: canvas, action: .activity, phase: phase)
+        let busy = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase))
+        let bob = CGFloat(TaptionLiveActivityStickmanAnimation.secondaryOscillation(for: phase)) * 0.7
+        drawHead(&context, canvas: canvas, x: 32 + busy * 0.6, y: 10 + bob, radius: 3.4)
+        stroke(&context, [canvas.point(32, 13.5 + bob), canvas.point(32, 31 + bob)])
+        stroke(&context, [canvas.point(32, 19 + bob), canvas.point(22 - busy * 6, 25)])
+        stroke(&context, [canvas.point(32, 19 + bob), canvas.point(42 + busy * 6, 24)])
+        stroke(&context, [canvas.point(32, 31 + bob), canvas.point(24 + busy * 5, 45)])
+        stroke(&context, [canvas.point(32, 31 + bob), canvas.point(40 - busy * 5, 45)])
+    }
+
+    private static func drawMovement(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        phase: Int
+    ) {
+        let travel = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 4
+        propStroke(&context, [canvas.point(5, 47), canvas.point(59, 47)], color: line, width: 1.2)
+        propStroke(&context, [canvas.point(9 + travel, 43), canvas.point(17 + travel, 43)], color: line, width: 1.2)
+        drawHead(&context, canvas: canvas, x: 25 + travel, y: 11, radius: 3.4)
+        stroke(&context, [canvas.point(25 + travel, 14.5), canvas.point(25 + travel, 31)])
+        stroke(&context, [canvas.point(25 + travel, 20), canvas.point(36 + travel, 25)])
+        stroke(&context, [canvas.point(25 + travel, 20), canvas.point(17 + travel, 27)])
+        stroke(&context, [canvas.point(25 + travel, 31), canvas.point(34 + travel, 44)])
+        stroke(&context, [canvas.point(25 + travel, 31), canvas.point(18 + travel, 44)])
+        propStroke(&context, [canvas.point(48, 14), canvas.point(58, 14)], color: line, width: 1.4)
+        propStroke(&context, [canvas.point(55, 11), canvas.point(58, 14), canvas.point(55, 17)], color: line, width: 1.4)
+    }
+
+    private static func drawExercise(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        phase: Int
+    ) {
+        let spread = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 7
+        let jump = CGFloat(TaptionLiveActivityStickmanAnimation.secondaryOscillation(for: phase)) * 1.4
+        drawHead(&context, canvas: canvas, x: 32, y: 9 + jump, radius: 3.4)
+        stroke(&context, [canvas.point(32, 12.5 + jump), canvas.point(32, 30 + jump)])
+        stroke(&context, [canvas.point(32, 19 + jump), canvas.point(20 - spread, 14)])
+        stroke(&context, [canvas.point(32, 19 + jump), canvas.point(44 + spread, 14)])
+        stroke(&context, [canvas.point(32, 30 + jump), canvas.point(23 - spread * 0.5, 44)])
+        stroke(&context, [canvas.point(32, 30 + jump), canvas.point(41 + spread * 0.5, 44)])
+        propStroke(&context, [canvas.point(7, 47), canvas.point(57, 47)], color: line, width: 1.2)
+    }
+
+    private static func drawUnconfirmed(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        phase: Int
+    ) {
+        let bounce = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 2
+        drawHead(&context, canvas: canvas, x: 32, y: 11 + bounce, radius: 3.4)
+        stroke(&context, [canvas.point(32, 14.5 + bounce), canvas.point(32, 31 + bounce)])
+        stroke(&context, [canvas.point(32, 20 + bounce), canvas.point(23, 27)])
+        stroke(&context, [canvas.point(32, 20 + bounce), canvas.point(41, 27)])
+        stroke(&context, [canvas.point(32, 31 + bounce), canvas.point(26, 45)])
+        stroke(&context, [canvas.point(32, 31 + bounce), canvas.point(38, 45)])
+        drawQuestionMark(&context, canvas: canvas, x: 50, y: 14 - bounce, size: 7)
+    }
+
+    private static func drawQuestionMark(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        x: CGFloat,
+        y: CGFloat,
+        size: CGFloat
+    ) {
+        propStroke(
+            &context,
+            [
+                canvas.point(x - size * 0.35, y - size * 0.15),
+                canvas.point(x, y - size * 0.52),
+                canvas.point(x + size * 0.28, y),
+                canvas.point(x, y + size * 0.35),
+            ],
+            color: line,
+            width: 1.4
+        )
+        fillCircle(&context, canvas, x: x, y: y + size * 0.75, radius: 0.8, color: line)
     }
 
     private static func drawComputer(
@@ -3012,12 +3126,12 @@ private enum TaptionLiveActivityStickmanRenderer {
         phase: Int
     ) {
         drawMotionMarks(&context, canvas: canvas, action: .computer, phase: phase)
-        stroke(&context, [canvas.point(10, 38), canvas.point(53, 38)], width: 2)
-        stroke(&context, [canvas.point(14, 38), canvas.point(14, 49)])
-        stroke(&context, [canvas.point(48, 38), canvas.point(48, 49)])
+        propStroke(&context, [canvas.point(10, 38), canvas.point(53, 38)], width: 2)
+        propStroke(&context, [canvas.point(14, 38), canvas.point(14, 49)])
+        propStroke(&context, [canvas.point(48, 38), canvas.point(48, 49)])
         outlineRect(&context, canvas, x: 36, y: 18, width: 14, height: 11, radius: 1)
-        stroke(&context, [canvas.point(43, 29), canvas.point(43, 38)])
-        stroke(&context, [canvas.point(39, 38), canvas.point(47, 38)])
+        propStroke(&context, [canvas.point(36, 29), canvas.point(33, 36), canvas.point(53, 36), canvas.point(50, 29)])
+        propStroke(&context, [canvas.point(38, 33), canvas.point(48, 33)], width: 1.1)
         let reach = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 1.5
         drawHead(&context, canvas: canvas, x: 21, y: 15, radius: 3.3)
         stroke(&context, [canvas.point(21, 18.5), canvas.point(21, 30)])
@@ -3033,9 +3147,9 @@ private enum TaptionLiveActivityStickmanRenderer {
         phase: Int
     ) {
         drawMotionMarks(&context, canvas: canvas, action: .reading, phase: phase)
-        stroke(&context, [canvas.point(10, 38), canvas.point(53, 38)], width: 2)
-        stroke(&context, [canvas.point(14, 38), canvas.point(14, 49)])
-        stroke(&context, [canvas.point(48, 38), canvas.point(48, 49)])
+        propStroke(&context, [canvas.point(10, 38), canvas.point(53, 38)], width: 2)
+        propStroke(&context, [canvas.point(14, 38), canvas.point(14, 49)])
+        propStroke(&context, [canvas.point(48, 38), canvas.point(48, 49)])
         let tilt = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 1.4
         drawHead(&context, canvas: canvas, x: 21 + tilt, y: 15, radius: 3.3)
         stroke(&context, [canvas.point(21, 18.5), canvas.point(22, 30)])
@@ -3043,8 +3157,39 @@ private enum TaptionLiveActivityStickmanRenderer {
         stroke(&context, [canvas.point(22, 22), canvas.point(37, 30)])
         stroke(&context, [canvas.point(22, 30), canvas.point(29, 38), canvas.point(36, 38)])
         stroke(&context, [canvas.point(22, 30), canvas.point(26, 38)])
-        stroke(&context, [canvas.point(36, 31), canvas.point(43, 28), canvas.point(50, 31)])
-        stroke(&context, [canvas.point(43, 28), canvas.point(43, 36)])
+        let pageLift = CGFloat(TaptionLiveActivityStickmanAnimation.secondaryOscillation(for: phase)) * 0.8
+        propStroke(&context, [canvas.point(36, 31), canvas.point(43, 28 + pageLift), canvas.point(50, 31)], width: 1.5)
+        propStroke(&context, [canvas.point(43, 28 + pageLift), canvas.point(43, 36)], width: 1.5)
+        propStroke(&context, [canvas.point(39, 30), canvas.point(42, 30)], color: line, width: 0.9)
+        propStroke(&context, [canvas.point(44, 30), canvas.point(47, 30)], color: line, width: 0.9)
+    }
+
+    private static func drawHobby(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        phase: Int
+    ) {
+        let beat = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase))
+        drawHead(&context, canvas: canvas, x: 25, y: 12 + beat * 0.6, radius: 3.3)
+        stroke(&context, [canvas.point(25, 15.5 + beat * 0.6), canvas.point(25, 31)])
+        stroke(&context, [canvas.point(25, 21), canvas.point(17, 27)])
+        stroke(&context, [canvas.point(25, 21), canvas.point(34, 26 + beat * 2)])
+        stroke(&context, [canvas.point(25, 31), canvas.point(19, 45)])
+        stroke(&context, [canvas.point(25, 31), canvas.point(32, 45)])
+        drawMusicNote(&context, canvas: canvas, x: 46, y: 19 + beat * 3, size: 5)
+        drawMusicNote(&context, canvas: canvas, x: 55, y: 31 - beat * 2, size: 4)
+    }
+
+    private static func drawMusicNote(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        x: CGFloat,
+        y: CGFloat,
+        size: CGFloat
+    ) {
+        propStroke(&context, [canvas.point(x, y), canvas.point(x, y + size * 5)], color: line, width: 1.4)
+        propStroke(&context, [canvas.point(x, y), canvas.point(x + size * 1.8, y - size * 0.5)], color: line, width: 1.4)
+        fillCircle(&context, canvas, x: x - 0.7, y: y + size * 5, radius: 1.5, color: line)
     }
 
     private static func drawSleeping(
@@ -3053,8 +3198,8 @@ private enum TaptionLiveActivityStickmanRenderer {
         phase: Int
     ) {
         outlineRect(&context, canvas, x: 9, y: 31, width: 48, height: 12, radius: 3)
-        stroke(&context, [canvas.point(12, 43), canvas.point(12, 49)])
-        stroke(&context, [canvas.point(53, 43), canvas.point(53, 49)])
+        propStroke(&context, [canvas.point(12, 43), canvas.point(12, 49)])
+        propStroke(&context, [canvas.point(53, 43), canvas.point(53, 49)])
         outlineRect(&context, canvas, x: 13, y: 27, width: 11, height: 6, radius: 2)
         drawHead(&context, canvas: canvas, x: 25, y: 27, radius: 3.2, sleepy: true)
         stroke(&context, [canvas.point(28, 27), canvas.point(43, 27)])
@@ -3071,7 +3216,7 @@ private enum TaptionLiveActivityStickmanRenderer {
         y: CGFloat,
         size: CGFloat
     ) {
-        stroke(&context, [canvas.point(x, y), canvas.point(x + size, y), canvas.point(x, y + size), canvas.point(x + size, y + size)], color: detail, width: 1.5)
+        propStroke(&context, [canvas.point(x, y), canvas.point(x + size, y), canvas.point(x, y + size), canvas.point(x + size, y + size)], color: line, width: 1.5)
     }
 
     private static func drawCar(
@@ -3081,8 +3226,8 @@ private enum TaptionLiveActivityStickmanRenderer {
     ) {
         drawMotionMarks(&context, canvas: canvas, action: .car, phase: phase)
         outlineRect(&context, canvas, x: 8, y: 31, width: 48, height: 13, radius: 4)
-        stroke(&context, [canvas.point(17, 31), canvas.point(24, 22), canvas.point(44, 22), canvas.point(51, 31)])
-        stroke(&context, [canvas.point(25, 23), canvas.point(25, 31), canvas.point(42, 31), canvas.point(42, 23)])
+        propStroke(&context, [canvas.point(17, 31), canvas.point(24, 22), canvas.point(44, 22), canvas.point(51, 31)])
+        propStroke(&context, [canvas.point(25, 23), canvas.point(25, 31), canvas.point(42, 31), canvas.point(42, 23)])
         fillCircle(&context, canvas, x: 19, y: 45, radius: 4, color: line)
         fillCircle(&context, canvas, x: 46, y: 45, radius: 4, color: line)
         drawHead(&context, canvas: canvas, x: 33, y: 26, radius: 2.4)
@@ -3099,7 +3244,7 @@ private enum TaptionLiveActivityStickmanRenderer {
         drawMotionMarks(&context, canvas: canvas, action: .subway, phase: phase)
         outlineRect(&context, canvas, x: 4, y: 22, width: 28, height: 18, radius: 3)
         outlineRect(&context, canvas, x: 32, y: 22, width: 28, height: 18, radius: 3)
-        stroke(&context, [canvas.point(32, 29), canvas.point(32, 34)], width: 2)
+        propStroke(&context, [canvas.point(32, 29), canvas.point(32, 34)], width: 2)
         for x in [8.0, 17.0, 36.0, 45.0] {
             outlineRect(&context, canvas, x: x, y: 25, width: 7, height: 6, radius: 1, fillColor: Color.white.opacity(0.06))
         }
@@ -3140,12 +3285,12 @@ private enum TaptionLiveActivityStickmanRenderer {
         for x in [17.0, 47.0] {
             context.stroke(
                 Path(ellipseIn: canvas.rect(x: x - 8, y: 30, width: 16, height: 16)),
-                with: .color(accent),
+                with: .color(line),
                 style: StrokeStyle(lineWidth: 1.6, lineCap: .round)
             )
         }
-        stroke(&context, [canvas.point(17, 38), canvas.point(29, 29), canvas.point(38, 38), canvas.point(17, 38), canvas.point(47, 38)])
-        stroke(&context, [canvas.point(29, 29), canvas.point(34, 26), canvas.point(39, 29)])
+        propStroke(&context, [canvas.point(17, 38), canvas.point(29, 29), canvas.point(38, 38), canvas.point(17, 38), canvas.point(47, 38)])
+        propStroke(&context, [canvas.point(29, 29), canvas.point(34, 26), canvas.point(39, 29)])
         drawHead(&context, canvas: canvas, x: 30, y: 14, radius: 3.1)
         stroke(&context, [canvas.point(30, 17.5), canvas.point(29, 27)])
         stroke(&context, [canvas.point(29, 21), canvas.point(37, 27)])
@@ -3159,21 +3304,83 @@ private enum TaptionLiveActivityStickmanRenderer {
         phase: Int
     ) {
         drawMotionMarks(&context, canvas: canvas, action: .eating, phase: phase)
-        stroke(&context, [canvas.point(10, 38), canvas.point(54, 38)], width: 2)
-        stroke(&context, [canvas.point(14, 38), canvas.point(14, 49)])
-        stroke(&context, [canvas.point(50, 38), canvas.point(50, 49)])
+        propStroke(&context, [canvas.point(10, 38), canvas.point(54, 38)], width: 2)
+        propStroke(&context, [canvas.point(14, 38), canvas.point(14, 49)])
+        propStroke(&context, [canvas.point(50, 38), canvas.point(50, 49)])
+        let bowlShift = CGFloat(TaptionLiveActivityStickmanAnimation.secondaryOscillation(for: phase)) * 0.7
         context.stroke(
-            Path(ellipseIn: canvas.rect(x: 39, y: 32, width: 10, height: 4)),
-            with: .color(accent),
+            Path(ellipseIn: canvas.rect(x: 39, y: 32 + bowlShift, width: 10, height: 4)),
+            with: .color(line),
             style: StrokeStyle(lineWidth: 1.4, lineCap: .round)
         )
         let reach = phase.isMultiple(of: 2) ? 0 : 4
+        let utensil = phase.isMultiple(of: 2) ? 0 : 2
+        let spoonX = 43 + CGFloat(utensil)
+        propStroke(&context, [canvas.point(43, 32), canvas.point(spoonX, 24)], color: line, width: 1.2)
+        context.stroke(
+            Path(ellipseIn: canvas.rect(x: spoonX - 1.3, y: 20, width: 2.6, height: 4)),
+            with: .color(line),
+            style: StrokeStyle(lineWidth: 1 * canvas.scale)
+        )
+        let forkX = 48 - CGFloat(utensil)
+        propStroke(&context, [canvas.point(46, 32), canvas.point(forkX, 24)], color: line, width: 1.2)
+        propStroke(&context, [canvas.point(forkX - 1.5, 21), canvas.point(forkX - 1.5, 24)], color: line, width: 0.9)
+        propStroke(&context, [canvas.point(forkX, 21), canvas.point(forkX, 24)], color: line, width: 0.9)
+        propStroke(&context, [canvas.point(forkX + 1.5, 21), canvas.point(forkX + 1.5, 24)], color: line, width: 0.9)
         drawHead(&context, canvas: canvas, x: 22, y: 15, radius: 3.3)
         stroke(&context, [canvas.point(22, 18.5), canvas.point(22, 30)])
         stroke(&context, [canvas.point(22, 22), canvas.point(31 + CGFloat(reach), 25), canvas.point(38, 33)])
         stroke(&context, [canvas.point(22, 22), canvas.point(16, 30)])
         stroke(&context, [canvas.point(22, 30), canvas.point(29, 38)])
         stroke(&context, [canvas.point(22, 30), canvas.point(26, 38)])
+    }
+
+    private static func drawPrivateVehicle(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        phase: Int
+    ) {
+        drawMotionMarks(&context, canvas: canvas, action: .privateVehicle, phase: phase)
+        propStroke(&context, [canvas.point(8, 39), canvas.point(56, 39)], color: line, width: 1.8)
+        propStroke(&context, [canvas.point(17, 39), canvas.point(22, 28), canvas.point(44, 28), canvas.point(50, 39)], color: line, width: 1.8)
+        propStroke(&context, [canvas.point(29, 28), canvas.point(29, 39)], color: line, width: 1.2)
+        context.stroke(Path(ellipseIn: canvas.rect(x: 15, y: 41, width: 8, height: 8)), with: .color(line), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+        context.stroke(Path(ellipseIn: canvas.rect(x: 41, y: 41, width: 8, height: 8)), with: .color(line), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+        let hand = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 1.2
+        drawHead(&context, canvas: canvas, x: 35, y: 33, radius: 2.1)
+        stroke(&context, [canvas.point(35, 35), canvas.point(35, 38)])
+        stroke(&context, [canvas.point(35, 36), canvas.point(39 + hand, 38)])
+    }
+
+    private static func drawShip(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        phase: Int
+    ) {
+        drawMotionMarks(&context, canvas: canvas, action: .ship, phase: phase)
+        propStroke(&context, [canvas.point(9, 37), canvas.point(17, 45), canvas.point(49, 45), canvas.point(57, 37)], color: line, width: 1.8)
+        propStroke(&context, [canvas.point(17, 37), canvas.point(47, 37)], color: line, width: 1.4)
+        propStroke(&context, [canvas.point(28, 37), canvas.point(28, 22), canvas.point(42, 32)], color: line, width: 1.4)
+        let wave = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 2
+        propStroke(&context, [canvas.point(7, 49 + wave), canvas.point(17, 49 - wave), canvas.point(27, 49 + wave)], color: line, width: 1.1)
+        propStroke(&context, [canvas.point(37, 51 - wave), canvas.point(47, 51 + wave), canvas.point(57, 51 - wave)], color: line, width: 1.1)
+        drawHead(&context, canvas: canvas, x: 35, y: 29, radius: 2.1)
+        stroke(&context, [canvas.point(35, 31), canvas.point(35, 36)])
+    }
+
+    private static func drawAirplane(
+        _ context: inout GraphicsContext,
+        canvas: TaptionLiveActivityStickmanCanvas,
+        phase: Int
+    ) {
+        let lift = CGFloat(TaptionLiveActivityStickmanAnimation.oscillation(for: phase)) * 1.6
+        propStroke(&context, [canvas.point(6, 29 + lift), canvas.point(58, 29 + lift)], color: line, width: 1.8)
+        propStroke(&context, [canvas.point(26, 29 + lift), canvas.point(20, 19 + lift), canvas.point(25, 20 + lift)], color: line, width: 1.5)
+        propStroke(&context, [canvas.point(38, 29 + lift), canvas.point(44, 19 + lift), canvas.point(39, 20 + lift)], color: line, width: 1.5)
+        propStroke(&context, [canvas.point(11, 29 + lift), canvas.point(5, 23 + lift)], color: line, width: 1.4)
+        propStroke(&context, [canvas.point(11, 29 + lift), canvas.point(5, 35 + lift)], color: line, width: 1.4)
+        drawHead(&context, canvas: canvas, x: 32, y: 25 + lift, radius: 2.1)
+        stroke(&context, [canvas.point(32, 27), canvas.point(32, 30 + lift)])
     }
 }
 
