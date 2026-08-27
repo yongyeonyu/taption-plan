@@ -2034,6 +2034,7 @@ struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
     var name: String
     var kind: UserTransitLocationKind
     var point: GeoPoint
+    var floor: Int?
     var radiusMeters: Double
     var createdAt: Date
 
@@ -2042,6 +2043,7 @@ struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
         name: String,
         kind: UserTransitLocationKind,
         point: GeoPoint,
+        floor: Int? = nil,
         radiusMeters: Double = 100,
         createdAt: Date = .now
     ) {
@@ -2049,6 +2051,7 @@ struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
         self.name = name
         self.kind = kind
         self.point = point
+        self.floor = floor
         self.radiusMeters = radiusMeters
         self.createdAt = createdAt
     }

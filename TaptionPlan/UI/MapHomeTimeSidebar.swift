@@ -910,6 +910,7 @@ struct MapHomeTimeSidebar: View {
     @State private var pendingRailSegments: [MapHomeTimeRailSegment]?
 
     private let railWidth: CGFloat
+    private let trailingInteractionWidth: CGFloat
     // Keep the numeric rail visibly separated from both the map header and
     // the bottom ad boundary while preserving the same minute-to-pixel scale.
     private let verticalInset: CGFloat = 14
@@ -923,6 +924,13 @@ struct MapHomeTimeSidebar: View {
         MapHomeTimeSidebarMath.totalWidth(railWidth: railWidth)
     }
 
+    private var interactionWidth: CGFloat {
+        MapHomeTimeSidebarMath.interactionWidth(
+            railWidth: railWidth,
+            trailingInteractionWidth: trailingInteractionWidth
+        )
+    }
+
     init(
         date: Date,
         selectedMinute: Binding<Int>,
@@ -933,6 +941,7 @@ struct MapHomeTimeSidebar: View {
         zoomStepToken: Int = 0,
         railWidth: CGFloat = 58,
         maximumSelectableMinute: Int? = nil,
+        trailingInteractionWidth: CGFloat = 0,
         onSelectionChanged: ((Int) -> Void)? = nil,
         onViewportChanged: ((Int, Int) -> Void)? = nil,
         onInteractionChanged: ((Bool) -> Void)? = nil,
@@ -947,6 +956,7 @@ struct MapHomeTimeSidebar: View {
         self.zoomStepToken = zoomStepToken
         self.railWidth = max(58, railWidth)
         self.maximumSelectableMinute = maximumSelectableMinute
+        self.trailingInteractionWidth = max(0, trailingInteractionWidth)
         self.onSelectionChanged = onSelectionChanged
         self.onViewportChanged = onViewportChanged
         self.onInteractionChanged = onInteractionChanged
@@ -987,7 +997,8 @@ struct MapHomeTimeSidebar: View {
             )
 
             ZStack(alignment: .topLeading) {
-                Rectangle()
+                ZStack(alignment: .topLeading) {
+                    Rectangle()
                     .fill(.clear)
                     .frame(width: railWidth, height: railHeight)
                     .contentShape(Rectangle())
@@ -1004,7 +1015,7 @@ struct MapHomeTimeSidebar: View {
                     )
                     .simultaneousGesture(viewportDragGesture(trackHeight: trackHeight))
 
-                Rectangle()
+                    Rectangle()
                     .fill(MapHomeTimeSidebarStyle.numericColumnBackground)
                     // Keep the existing white numeric gutter continuous past
                     // both ends of the coloured rail.
@@ -1017,7 +1028,7 @@ struct MapHomeTimeSidebar: View {
                     )
                     .allowsHitTesting(false)
 
-                ZStack {
+                    ZStack {
                     Rectangle()
                         .fill(Color.tpInk.opacity(0.72))
 
@@ -1069,7 +1080,7 @@ struct MapHomeTimeSidebar: View {
                 )
                 .allowsHitTesting(false)
 
-                if MapHomeTimeSidebarMath.showsTenMinuteRuler(
+                    if MapHomeTimeSidebarMath.showsTenMinuteRuler(
                     durationMinutes: visibleDurationMinutes
                 ) {
                     let showsMinuteTicks = MapHomeTimeSidebarMath.showsMinuteTicks(
@@ -1169,25 +1180,63 @@ struct MapHomeTimeSidebar: View {
                     }
                 }
 
-                selectionHandle(
-                    minute: minute,
-                    y: selectedY,
-                    trackX: trackX,
-                    trackHeight: trackHeight,
-                    railHeight: railHeight,
-                    maxMinute: maxMinute,
-                    visibleWindow: visibleWindow
+                    selectionHandle(
+                        minute: minute,
+                        y: selectedY,
+                        trackX: trackX,
+                        trackHeight: trackHeight,
+                        railHeight: railHeight,
+                        maxMinute: maxMinute,
+                        visibleWindow: visibleWindow
+                    )
+                }
+                .frame(
+                    width: totalWidth,
+                    height: railHeight,
+                    alignment: .topLeading
                 )
 
+                if trailingInteractionWidth > 0 {
+                    Rectangle()
+                        .fill(.clear)
+                        .frame(
+                            width: trailingInteractionWidth,
+                            height: railHeight
+                        )
+                        .contentShape(Rectangle())
+                        .position(
+                            x: totalWidth + trailingInteractionWidth / 2,
+                            y: railHeight / 2
+                        )
+                        .highPriorityGesture(
+                            dragGesture(
+                                trackHeight: trackHeight,
+                                maxMinute: maxMinute,
+                                visibleWindow: visibleWindow
+                            )
+                        )
+                        .simultaneousGesture(
+                            TapGesture(count: 2).onEnded {
+                                onSectionEdit?(minute)
+                            }
+                        )
+                        .accessibilityLabel("시간 선택")
+                        .accessibilityHint("화면 오른쪽 끝까지 끌어 시간을 선택합니다")
+                }
+
             }
-            .frame(width: totalWidth, height: railHeight)
+            .frame(
+                width: interactionWidth,
+                height: railHeight,
+                alignment: .topLeading
+            )
             .coordinateSpace(name: "mapHomeTimeSidebarRail")
             .contentShape(Rectangle())
             .accessibilityElement(children: .contain)
             .accessibilityLabel("시간 선택")
             .accessibilityValue(timeLabel(for: minute))
         }
-        .frame(width: totalWidth)
+        .frame(width: interactionWidth)
         .onDisappear {
             if isHandleDragging || viewportDragStartMinute != nil {
                 onInteractionChanged?(false)
@@ -1814,6 +1863,13 @@ enum MapHomeTimeSidebarMath {
 
     static func totalWidth(railWidth: CGFloat) -> CGFloat {
         handleLaneWidth + railWidth
+    }
+
+    static func interactionWidth(
+        railWidth: CGFloat,
+        trailingInteractionWidth: CGFloat = 0
+    ) -> CGFloat {
+        totalWidth(railWidth: railWidth) + max(0, trailingInteractionWidth)
     }
 
     static func trackCenterX(

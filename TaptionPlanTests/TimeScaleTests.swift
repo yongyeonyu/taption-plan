@@ -1072,6 +1072,23 @@ final class TimeScaleTests: XCTestCase {
 
     }
 
+    func testSidebarHandleInteractionReachesTrailingScreenEdge() {
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.interactionWidth(
+                railWidth: 58,
+                trailingInteractionWidth: 10
+            ),
+            137
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.interactionWidth(
+                railWidth: 58,
+                trailingInteractionWidth: -10
+            ),
+            127
+        )
+    }
+
     func testSectionTimelineDetailFrameKeepsTimeGutterClear() {
         for width: CGFloat in [180, 240, 320] {
             let frame = MapHomeSectionTimelineLayoutMath.detailFrame(leftWidth: width)

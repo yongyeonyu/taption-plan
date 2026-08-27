@@ -6394,9 +6394,9 @@ final class AppModel {
         Task { await persist() }
     }
 
-    /// 좌표만 잡아 준다. 기준 층은 사용자가 고르지 않고 현재 추정값 →
-    /// 기존 기준 → 1층 순으로 정하며, 이후 층은 자동 보정이 이어받는다.
-    func setFrequentPlaceToCurrentLocation(_ placeID: UUID) {
+    /// 층수를 전달하지 않은 기존 호출은 기존 기준을 유지하고, 지도 저장 UI는
+    /// 사용자가 고른 층수를 기준점으로 남긴다.
+    func setFrequentPlaceToCurrentLocation(_ placeID: UUID, floor: Int? = nil) {
         guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
             $0.id == placeID
         }) else {
@@ -6411,12 +6411,17 @@ final class AppModel {
         // 층수는 앱의 추정에서 가져오지 않는다. 추정이 틀린 상태에서 자리를
         // 다시 잡으면 그 틀린 층이 곧 이 건물의 기준으로 굳는다. 층은 아래
         // "이 층으로 보정"에서 사용자가 직접 확인한 값만 받는다.
-        let floor = snapshot.settings.frequentPlaces[index].floor
+        let resolvedFloor = floor
+            ?? snapshot.settings.frequentPlaces[index].floor
             ?? lastManuallyConfirmedFloor(forPlaceID: placeID)
             ?? 1
+        guard FloorCalibrationPrompt.range.contains(resolvedFloor) else {
+            userFacingError = "층수는 \(FloorLabel.korean(FloorCalibrationPrompt.range.lowerBound))부터 \(FloorLabel.korean(FloorCalibrationPrompt.range.upperBound)) 사이로 입력해 주세요."
+            return
+        }
         snapshot.settings.frequentPlaces[index].setLocation(
             from: reading,
-            floor: floor
+            floor: resolvedFloor
         )
         lastAutoFloorCalibrationKey = nil
         snapshot.settings.floorCalibration = nil
@@ -6436,11 +6441,16 @@ final class AppModel {
     func setFrequentPlaceLocation(
         _ placeID: UUID,
         latitude: Double,
-        longitude: Double
+        longitude: Double,
+        floor: Int? = nil
     ) {
         guard let index = snapshot.settings.frequentPlaces.firstIndex(where: {
             $0.id == placeID
         }) else {
+            return
+        }
+        guard floor.map(FloorCalibrationPrompt.range.contains) ?? true else {
+            userFacingError = "층수는 \(FloorLabel.korean(FloorCalibrationPrompt.range.lowerBound))부터 \(FloorLabel.korean(FloorCalibrationPrompt.range.upperBound)) 사이로 입력해 주세요."
             return
         }
         snapshot.settings.frequentPlaces[index].setMapLocation(
@@ -6452,6 +6462,10 @@ final class AppModel {
                 verticalAccuracy: -1
             )
         )
+        if let floor {
+            snapshot.settings.frequentPlaces[index].floor = floor
+            snapshot.settings.frequentPlaces[index].floorCapturedAt = nil
+        }
         lastAutoFloorCalibrationKey = nil
         snapshot.settings.floorCalibration = nil
         snapshot.settings.frequentPlaces =
@@ -6864,7 +6878,8 @@ final class AppModel {
         name: String,
         kind: UserTransitLocationKind,
         latitude: Double,
-        longitude: Double
+        longitude: Double,
+        floor: Int? = nil
     ) -> UUID? {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty else {
@@ -6873,6 +6888,10 @@ final class AppModel {
         }
         guard abs(latitude) <= 90, abs(longitude) <= 180 else {
             userFacingError = "위치 좌표를 확인해 주세요."
+            return nil
+        }
+        guard floor.map(FloorCalibrationPrompt.range.contains) ?? true else {
+            userFacingError = "층수는 \(FloorLabel.korean(FloorCalibrationPrompt.range.lowerBound))부터 \(FloorLabel.korean(FloorCalibrationPrompt.range.upperBound)) 사이로 입력해 주세요."
             return nil
         }
         let location = UserTransitLocation(
@@ -6884,7 +6903,8 @@ final class AppModel {
                 altitude: 0,
                 horizontalAccuracy: 25,
                 verticalAccuracy: -1
-            )
+            ),
+            floor: floor
         )
         snapshot.settings.userTransitLocations.append(location)
         Task { await persist() }
@@ -6905,6 +6925,20 @@ final class AppModel {
             return
         }
         snapshot.settings.userTransitLocations[index].name = cleanName
+        Task { await persist() }
+    }
+
+    func setUserTransitLocationFloor(_ locationID: UUID, floor: Int?) {
+        guard floor.map(FloorCalibrationPrompt.range.contains) ?? true,
+              let index = snapshot.settings.userTransitLocations.firstIndex(
+                  where: { $0.id == locationID }
+              ) else {
+            return
+        }
+        guard snapshot.settings.userTransitLocations[index].floor != floor else {
+            return
+        }
+        snapshot.settings.userTransitLocations[index].floor = floor
         Task { await persist() }
     }
 

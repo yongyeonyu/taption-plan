@@ -70,6 +70,10 @@ struct SleepAnalysisEngine: Sendable {
               let last = asleepSegments.max(by: { $0.span.end < $1.span.end }) else {
             return nil
         }
+        let sessionEnd = segments
+            .filter { $0.stage == .awake && $0.span.end > last.span.end }
+            .map(\.span.end)
+            .max() ?? last.span.end
         let stageDurations = resolvedStageDurations(segments)
         let asleepDuration = stageDurations.reduce(0) {
             $0 + ($1.key.isAsleep ? $1.value : 0)
@@ -78,7 +82,7 @@ struct SleepAnalysisEngine: Sendable {
 
         return SleepSession(
             id: first.id,
-            span: TimeSpan(start: first.span.start, end: last.span.end),
+            span: TimeSpan(start: first.span.start, end: sessionEnd),
             asleepDuration: asleepDuration,
             awakeDuration: stageDurations[.awake, default: 0],
             inBedDuration: unionDuration(

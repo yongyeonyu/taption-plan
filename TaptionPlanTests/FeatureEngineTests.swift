@@ -6717,6 +6717,52 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testFrequentPlaceLocationSaveKeepsUserSelectedFloor() throws {
+        let date = makeDate(2026, 8, 27, 7)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 42,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 6
+        )
+        var place = FrequentPlace(kind: .home, name: "집")
+        place.setLocation(
+            from: SensorReading(timestamp: date, point: point),
+            floor: 12
+        )
+
+        let decoded = try JSONDecoder().decode(
+            FrequentPlace.self,
+            from: JSONEncoder().encode(place)
+        )
+        XCTAssertEqual(decoded.point, point)
+        XCTAssertEqual(decoded.floor, 12)
+        XCTAssertEqual(decoded.floorReferencePoints.last?.floor, 12)
+    }
+
+    func testUserTransitLocationPersistsSelectedFloor() throws {
+        let location = UserTransitLocation(
+            name: "시청역",
+            kind: .subwayStation,
+            point: GeoPoint(
+                latitude: 37.5657,
+                longitude: 126.9769,
+                altitude: 0,
+                horizontalAccuracy: 25,
+                verticalAccuracy: -1
+            ),
+            floor: -2
+        )
+
+        let decoded = try JSONDecoder().decode(
+            UserTransitLocation.self,
+            from: JSONEncoder().encode(location)
+        )
+
+        XCTAssertEqual(decoded.floor, -2)
+    }
+
     func testFrequentPlaceAutomaticRecordingHonorsDwellAndToggle() {
         let base = makeDate(2026, 8, 1, 9)
         let anchor = GeoPoint(
@@ -6855,6 +6901,36 @@ final class FeatureEngineTests: XCTestCase {
             7.25 / 8.5,
             accuracy: 0.0001
         )
+    }
+
+    func testSleepAnalysisIncludesTrailingAwakeAsWakeBoundary() {
+        let base = makeDate(2026, 8, 1, 23)
+        let sessions = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(7 * hour)
+                ),
+                sourceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .awake,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(7 * hour),
+                    end: base.addingTimeInterval(8.5 * hour)
+                ),
+                sourceName: "Apple Watch"
+            )
+        ])
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(
+            sessions[0].span.end,
+            base.addingTimeInterval(8.5 * hour)
+        )
+        XCTAssertEqual(sessions[0].asleepDuration, 7 * hour)
+        XCTAssertEqual(sessions[0].awakeDuration, 1.5 * hour)
     }
 
     func testSleepAnalysisSeparatesNapFromNightSleep() {

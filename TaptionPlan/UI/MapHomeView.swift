@@ -1215,7 +1215,7 @@ struct MapHomeView: View {
             mapPosition = .automatic
             focusMapIfNeeded()
         }
-        .presentationDetents([.height(390)])
+        .presentationDetents([.height(440)])
         .presentationDragIndicator(.visible)
     }
 
@@ -1244,10 +1244,10 @@ struct MapHomeView: View {
                     self.selectedSearchPin = nil
                 }
             )
-            .presentationDetents([.height(470)])
+            .presentationDetents([.height(540)])
             .presentationDragIndicator(.visible)
             .presentationBackgroundInteraction(
-                .enabled(upThrough: .height(470))
+                .enabled(upThrough: .height(540))
             )
         }
     }
@@ -1262,7 +1262,6 @@ struct MapHomeView: View {
                 currentTimeRail
                     .padding(.top, topOverlayHeight + Layout.timeRailTopMargin)
                     .padding(.bottom, Layout.overlayBottomMargin)
-                    .padding(.trailing, Layout.horizontalInset)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .zIndex(MapHomeLayerPriority.sidebar)
             }
@@ -2499,9 +2498,11 @@ struct MapHomeView: View {
             )
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
                 let minute = timelineSelectionMinute(at: timeline.date)
-                let timeSidebarWidth = MapHomeTimeSidebarMath.totalWidth(
-                    railWidth: Layout.timeRailWidth
-                )
+                let timeSidebarInteractionWidth =
+                    MapHomeTimeSidebarMath.interactionWidth(
+                        railWidth: Layout.timeRailWidth,
+                        trailingInteractionWidth: Layout.horizontalInset
+                    )
                 let weatherOriginX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
                     weatherRailWidth: Layout.weatherRailWidth,
                     timeRailWidth: Layout.timeRailWidth
@@ -2545,6 +2546,7 @@ struct MapHomeView: View {
                         maximumSelectableMinute: dayPlaybackElapsedSeconds > 0
                             ? MapHomeTimeSidebarMath.fullDayMinutes
                             : nil,
+                        trailingInteractionWidth: Layout.horizontalInset,
                         onSelectionChanged: { minute in
                             stopDayPlayback(resetProgress: true)
                             isTimelineSelectionPinned = true
@@ -2563,11 +2565,11 @@ struct MapHomeView: View {
                     )
                 }
                 .frame(
-                    width: timeSidebarWidth,
+                    width: timeSidebarInteractionWidth,
                     height: railHeight
                 )
                 .position(
-                    x: proxy.size.width - timeSidebarWidth / 2,
+                    x: proxy.size.width - timeSidebarInteractionWidth / 2,
                     y: max(
                         railHeight / 2,
                         proxy.size.height - railHeight / 2
@@ -2602,8 +2604,9 @@ struct MapHomeView: View {
             }
         }
         .frame(
-            width: MapHomeTimeSidebarMath.totalWidth(
-                railWidth: Layout.timeRailWidth
+            width: MapHomeTimeSidebarMath.interactionWidth(
+                railWidth: Layout.timeRailWidth,
+                trailingInteractionWidth: Layout.horizontalInset
             )
         )
         .frame(maxHeight: .infinity, alignment: .trailing)
@@ -7152,6 +7155,7 @@ private struct MapHomeLocationSheet: View {
     let language: MapHomeLanguage
     let onSaved: () -> Void
     @State private var showsDeleteConfirmation = false
+    @State private var floor = 1
 
     private var place: FrequentPlace? {
         guard let kind = destination.placeKind else { return nil }
@@ -7173,7 +7177,11 @@ private struct MapHomeLocationSheet: View {
                     )
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                     if let place, place.point != nil {
-                        Text(language.text("현재 저장 상태", "Saved") + " · Lv.\(place.floor ?? 1)")
+                        Text(
+                            language.text("현재 저장 상태", "Saved")
+                                + " · "
+                                + FloorLabel.korean(place.floor ?? 1)
+                        )
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     } else {
@@ -7204,9 +7212,20 @@ private struct MapHomeLocationSheet: View {
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
 
+            Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
+                HStack {
+                    Text(language.text("저장할 층수", "Floor to save"))
+                    Spacer()
+                    Text(FloorLabel.korean(floor))
+                        .fontWeight(.bold)
+                        .foregroundStyle(destination.tint)
+                }
+            }
+            .tint(destination.tint)
+
             Button {
                 guard let place else { return }
-                model.setFrequentPlaceToCurrentLocation(place.id)
+                model.setFrequentPlaceToCurrentLocation(place.id, floor: floor)
                 onSaved()
                 dismiss()
             } label: {
@@ -7248,6 +7267,9 @@ private struct MapHomeLocationSheet: View {
         }
         .padding(22)
         .background(Color.tpSurface)
+        .onAppear {
+            floor = place?.floor ?? 1
+        }
         .confirmationDialog(
             language.text(
                 "저장된 위치를 삭제할까요?",
@@ -8154,6 +8176,7 @@ private struct MapHomeSearchPinLocationSheet: View {
     let result: MapHomeSearchResult
     let language: MapHomeLanguage
     let onSaved: (MapHomeUserLocationSelection?) -> Void
+    @State private var floor = 1
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -8168,6 +8191,17 @@ private struct MapHomeSearchPinLocationSheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
+                HStack {
+                    Text(language.text("저장할 층수", "Floor to save"))
+                    Spacer()
+                    Text(FloorLabel.korean(floor))
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.tpReferenceBlue)
+                }
+            }
+            .tint(Color.tpReferenceBlue)
 
             LazyVGrid(
                 columns: [GridItem(.flexible()), GridItem(.flexible())],
@@ -8251,7 +8285,8 @@ private struct MapHomeSearchPinLocationSheet: View {
                 model.setFrequentPlaceLocation(
                     place.id,
                     latitude: latitude,
-                    longitude: longitude
+                    longitude: longitude,
+                    floor: floor
                 )
             }
         } else if let kind = destination.placeKind,
@@ -8261,7 +8296,8 @@ private struct MapHomeSearchPinLocationSheet: View {
             model.setFrequentPlaceLocation(
                 place.id,
                 latitude: latitude,
-                longitude: longitude
+                longitude: longitude,
+                floor: floor
             )
         } else if destination == .user {
             model.addCustomFrequentPlace(name: result.title)
@@ -8271,7 +8307,8 @@ private struct MapHomeSearchPinLocationSheet: View {
                 model.setFrequentPlaceLocation(
                     place.id,
                     latitude: latitude,
-                    longitude: longitude
+                    longitude: longitude,
+                    floor: floor
                 )
             }
         }
@@ -8303,7 +8340,8 @@ private struct MapHomeSearchPinLocationSheet: View {
             name: cleanName.isEmpty ? kind.title : cleanName,
             kind: kind,
             latitude: result.coordinate.latitude,
-            longitude: result.coordinate.longitude
+            longitude: result.coordinate.longitude,
+            floor: floor
         ) else { return }
         onSaved(.transit(createdID))
     }
@@ -8318,6 +8356,7 @@ private struct MapHomeTransitLocationsSheet: View {
 
     @State private var name = ""
     @State private var kind: UserTransitLocationKind = .subwayStation
+    @State private var floor = 1
     @State private var searchText = ""
     @State private var searchResults: [MapHomeSearchResult] = []
     @State private var selectedCoordinate: CLLocationCoordinate2D?
@@ -8563,6 +8602,17 @@ private struct MapHomeTransitLocationsSheet: View {
             }
             .pickerStyle(.segmented)
 
+            Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
+                HStack {
+                    Text(language.text("저장할 층수", "Floor to save"))
+                    Spacer()
+                    Text(FloorLabel.korean(floor))
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.tpReferenceBlue)
+                }
+            }
+            .tint(Color.tpReferenceBlue)
+
             HStack(spacing: 8) {
                 TextField(language.text("이름", "Name"), text: $name)
                     .padding(.horizontal, 12)
@@ -8651,6 +8701,11 @@ private struct MapHomeTransitLocationsSheet: View {
                                 )
                                 .font(.system(size: 11, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
+                                if let floor = location.floor {
+                                    Text(FloorLabel.korean(floor))
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Color.tpReferenceBlue)
+                                }
                             }
                             Spacer()
                             Image(systemName: "location.fill")
@@ -8746,7 +8801,8 @@ private struct MapHomeTransitLocationsSheet: View {
             name: cleanName,
             kind: kind,
             latitude: selectedCoordinate.latitude,
-            longitude: selectedCoordinate.longitude
+            longitude: selectedCoordinate.longitude,
+            floor: floor
         ) else { return }
         selectedPinTitle = cleanName
         selectedLocationID = createdID
@@ -8789,6 +8845,7 @@ private struct MapHomeTransitLocationNameEditor: View {
     let language: MapHomeLanguage
     let onSaved: (String) -> Void
     @State private var name: String
+    @State private var floor: Int
 
     init(
         model: AppModel,
@@ -8801,6 +8858,7 @@ private struct MapHomeTransitLocationNameEditor: View {
         self.language = language
         self.onSaved = onSaved
         _name = State(initialValue: location.name)
+        _floor = State(initialValue: location.floor ?? 1)
     }
 
     var body: some View {
@@ -8812,6 +8870,16 @@ private struct MapHomeTransitLocationNameEditor: View {
                 .padding(.horizontal, 12)
                 .frame(height: 44)
                 .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
+            Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
+                HStack {
+                    Text(language.text("층수", "Floor"))
+                    Spacer()
+                    Text(FloorLabel.korean(floor))
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.tpReferenceBlue)
+                }
+            }
+            .tint(Color.tpReferenceBlue)
             HStack(spacing: 8) {
                 Button(language.text("취소", "Cancel")) { dismiss() }
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
@@ -8822,6 +8890,7 @@ private struct MapHomeTransitLocationNameEditor: View {
                 Button(language.text("저장", "Save")) {
                     let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     model.renameUserTransitLocation(location.id, name: cleanName)
+                    model.setUserTransitLocationFloor(location.id, floor: floor)
                     onSaved(cleanName)
                     dismiss()
                 }
@@ -8836,6 +8905,6 @@ private struct MapHomeTransitLocationNameEditor: View {
         }
         .padding(20)
         .background(Color.tpBackground)
-        .presentationDetents([.height(230)])
+        .presentationDetents([.height(270)])
     }
 }
