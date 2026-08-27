@@ -360,3 +360,17 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `RouteTimelineDataTests` 및 `SecurityBackupCoreTests` 대상 XCTest 성공
 - raw 암호화·분리 경로·HealthKit/Watch 건강 스냅샷 제외 회귀 테스트 성공
 - iOS generic Debug build 성공, `git diff --check` 통과
+
+## 2026-08-27 STICK827C3 졸라맨 지도 재생·경로 미리보기
+
+- 회사는 컴퓨터·책상, 학교는 독서·책상, 수면은 침대·`zzz`, 식사는 식탁, 걷기·자전거·자동차·버스·2량 지하철 탑승을 단순 선화 Canvas 포즈로 표시한다.
+- 현재 시각과 하루 재생 플레이헤드에서 같은 상태 판정기를 사용하고, 재생 중 30Hz fractional 시각으로 포즈·현재 위치를 함께 갱신한다. Reduce Motion에서는 정지 포즈를 사용한다.
+- Taption WBS의 지도 재생 방식을 적용해 확정 지하철 경로는 역 좌표 투영을 사용하고, 일반 경로는 기존 RouteTimeline projection과 MapKit 예상경로를 공유한다. 예상경로는 도로 경로가 준비되기 전에도 시작·끝 직선 fallback을 표시하며, 부분 경로는 정점 개수가 아닌 거리 기준으로 절단한다.
+- 기존 `RouteSpeedGradient` 속도별 색상, 실제·예상 경로 구분, 원본 센서·기록은 변경하지 않았다.
+- 회사 위치가 새로 업무로 확정됐을 때 이전 `unknownStay` 자동분류 잠금이 덮어쓰지 않도록 보정하고, 사용자 수동 분류 잠금은 유지한다.
+
+### 검증
+
+- `MapHomeStickmanTests`, `RouteTimelineDataTests`, 회사 `unknownStay` 잠금 회귀 테스트 성공
+- iOS generic Debug build 성공, `git diff --check` 통과
+- Debug 앱을 iOS Simulator에 설치·실행했으나 지도 진입 전 `14일 무료 체험` 화면에서 멈췄다. 구매·구독 동작은 실행하지 않아 지도·실제 터치 시각 검증은 별도 게이트로 남긴다.

@@ -408,8 +408,9 @@ enum TaptionActivityEngineAdapter {
 
 /// Makes automatic major-category decisions durable without touching the
 /// sensor archive. A refresh may produce a new span or more evidence, but a
-/// stored automatic record keeps its previous category. Explicit activity
-/// corrections are copied first and therefore remain the only override.
+/// stored automatic record keeps its previous category unless a registered
+/// destination resolves an earlier unknown stay. Explicit activity corrections
+/// remain the only user override.
 enum ActivityClassificationLockEngine {
     static func lockingAutomaticClassifications(
         _ actuals: [ActualRecord]
@@ -450,6 +451,12 @@ enum ActivityClassificationLockEngine {
             }) else {
                 return value
             }
+            guard !shouldAdoptFreshDestinationClassification(
+                previous: previous,
+                candidate: candidate
+            ) else {
+                return value
+            }
             value.categoryID = previous.categoryID
             value.title = previous.title
             value.behavior = previous.behavior
@@ -471,6 +478,32 @@ enum ActivityClassificationLockEngine {
             }
             return $0.id.uuidString < $1.id.uuidString
         }
+    }
+
+    private static func shouldAdoptFreshDestinationClassification(
+        previous: ActualRecord,
+        candidate: ActualRecord
+    ) -> Bool {
+        guard previous.source == .location,
+              candidate.source == .location,
+              !previous.manuallyCorrected,
+              (
+                  previous.behavior == StationaryContextKind.unknownStay.rawValue
+                      || (
+                          previous.categoryID == "activity"
+                              && previous.title == "머무름"
+                      )
+              ),
+              let behavior = candidate.behavior.flatMap(
+                  StationaryContextKind.init(rawValue:)
+              ),
+              behavior != .unknownStay,
+              candidate.evidence.contains(where: {
+                  $0.hasPrefix("자주가는 곳:")
+              }) else {
+            return false
+        }
+        return true
     }
 
     static func mergingLockedTravel(

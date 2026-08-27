@@ -18225,6 +18225,194 @@ final class FeatureEngineTests: XCTestCase {
     }
 }
 
+final class MapHomeStickmanTests: XCTestCase {
+    func testDestinationActionsUseCompanySchoolAndRestaurantSemantics() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127.0,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let company = FrequentPlace(
+            kind: .company,
+            name: "회사",
+            point: point
+        )
+        let companyStay = PlaceStay(
+            placeKey: company.stablePlaceKey,
+            displayName: company.name,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(30 * 60)),
+            confidence: .high,
+            point: point,
+            isConfirmed: true
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(10 * 60),
+                actuals: [],
+                travel: [],
+                places: [companyStay],
+                frequentPlaces: [company]
+            ),
+            .computer
+        )
+
+        let school = FrequentPlace(kind: .school, name: "학교", point: point)
+        let schoolStay = PlaceStay(
+            placeKey: school.stablePlaceKey,
+            displayName: school.name,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(30 * 60)),
+            confidence: .high,
+            point: point,
+            isConfirmed: true
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(10 * 60),
+                actuals: [],
+                travel: [],
+                places: [schoolStay],
+                frequentPlaces: [school]
+            ),
+            .reading
+        )
+
+        let restaurant = FrequentPlace(
+            kind: .restaurant,
+            name: "식당",
+            point: point
+        )
+        let restaurantStay = PlaceStay(
+            placeKey: restaurant.stablePlaceKey,
+            displayName: restaurant.name,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(30 * 60)),
+            confidence: .high,
+            point: point,
+            isConfirmed: true
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(10 * 60),
+                actuals: [],
+                travel: [],
+                places: [restaurantStay],
+                frequentPlaces: [restaurant]
+            ),
+            .eating
+        )
+    }
+
+    func testTravelAndActualActionsHaveDeterministicPriority() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(30 * 60))
+        let subway = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 4_000,
+            confidence: .high,
+            evidence: []
+        )
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start,
+            endedAt: span.end,
+            source: .healthKit,
+            behavior: "core"
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(10 * 60),
+                actuals: [sleep],
+                travel: [subway],
+                places: [],
+                frequentPlaces: []
+            ),
+            .subway
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(for: TravelMode.cycling),
+            .cycling
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(for: TravelMode.car),
+            .car
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(for: TravelMode.bus),
+            .bus
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(10 * 60),
+                actuals: [sleep],
+                travel: [],
+                places: [],
+                frequentPlaces: []
+            ),
+            .sleeping
+        )
+    }
+
+    func testAnimationPhaseIsStableAndReduceMotionFreezesIt() {
+        let date = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let next = date.addingTimeInterval(MapHomeStickmanAnimationEngine.frameDuration)
+        XCTAssertNotEqual(
+            MapHomeStickmanAnimationEngine.phase(at: date),
+            MapHomeStickmanAnimationEngine.phase(at: next)
+        )
+        XCTAssertEqual(
+            MapHomeStickmanAnimationEngine.phase(at: next, reducesMotion: true),
+            0
+        )
+        XCTAssertEqual(
+            MapHomeStickmanAnimationEngine.oscillation(for: 0),
+            0,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testRegisteredCompanyClassificationCanReplaceUnknownStayLock() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let inside = TimeSpan(start: start, end: start.addingTimeInterval(60 * 60))
+        let previous = ActualRecord(
+            planID: nil,
+            title: "머무름",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(30 * 60),
+            source: .location,
+            behavior: StationaryContextKind.unknownStay.rawValue,
+            isClassificationLocked: true
+        )
+        let fresh = ActualRecord(
+            planID: nil,
+            title: "근무",
+            categoryID: "work",
+            startedAt: start.addingTimeInterval(60),
+            endedAt: start.addingTimeInterval(31 * 60),
+            source: .location,
+            behavior: StationaryContextKind.work.rawValue,
+            evidence: ["자주가는 곳: 회사", "평일 09–18시"]
+        )
+
+        let result = ActivityClassificationLockEngine.mergingLockedClassifications(
+            existing: [previous],
+            fresh: [fresh],
+            inside: inside
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].categoryID, "work")
+        XCTAssertEqual(result[0].title, "근무")
+        XCTAssertEqual(result[0].behavior, StationaryContextKind.work.rawValue)
+        XCTAssertTrue(result[0].isClassificationLocked)
+    }
+}
+
 private struct RawArchiveWatchFixture: Codable, Hashable {
     var sampleCount: Int
     var mode: String
