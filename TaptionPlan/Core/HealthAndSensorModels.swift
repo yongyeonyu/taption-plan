@@ -474,12 +474,11 @@ enum TrackingSessionPolicy {
     static let activeDistanceFilterMeters: Double = 5
     static let automaticEmissionThrottleInterval: TimeInterval = 1
 
-    static func allowsRealtimeAutomaticTracking(
+    static func allowsAutomaticTracking(
         interval: TimeInterval
     ) -> Bool {
-        interval == TimeInterval(
-            GPSLoggingPreferences.Preset.realtime.intervalSeconds
-        )
+        interval == TimeInterval(GPSLoggingPreferences.Preset.realtime.intervalSeconds)
+            || interval == TimeInterval(GPSLoggingPreferences.Preset.balanced.intervalSeconds)
     }
 
     static func allowsPersistingLocation(

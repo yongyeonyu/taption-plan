@@ -2250,7 +2250,7 @@ struct SensorCollectionLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    SensorCollectionAppIcon()
+                    TaptionPlanAppIcon()
                         .frame(width: 28, height: 28)
                 }
                 DynamicIslandExpandedRegion(.center) {
@@ -2293,7 +2293,7 @@ private struct SensorCollectionCompactSensorIcon: View {
 
     var body: some View {
         if state.isCollecting {
-            SensorCollectionAppIcon()
+            TaptionPlanAppIcon()
                 .frame(width: 18, height: 18)
                 .accessibilityLabel(widgetText("센서 아이콘", "Sensor icon"))
         } else {
@@ -2332,7 +2332,7 @@ private struct SensorCollectionLockScreenView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            SensorCollectionAppIcon()
+            TaptionPlanAppIcon()
                 .frame(width: 38, height: 29)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -2360,7 +2360,7 @@ private struct SensorCollectionLockScreenView: View {
     }
 }
 
-private struct SensorCollectionAppIcon: View {
+private struct TaptionPlanAppIcon: View {
     var body: some View {
         Image("SensorCollectionAppIcon")
             .renderingMode(.original)
@@ -2370,7 +2370,7 @@ private struct SensorCollectionAppIcon: View {
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
             )
             .accessibilityLabel(
-                widgetText("Taption Plan 센서 수집 아이콘", "Taption Plan sensor collection icon")
+                widgetText("Taption Plan 앱 아이콘", "Taption Plan app icon")
             )
     }
 }
@@ -2776,15 +2776,15 @@ struct TaptionPlanLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                WidgetCat(style: "calico")
-                    .frame(width: 18, height: 14)
+                TaptionPlanAppIcon()
+                    .frame(width: 18, height: 18)
             } compactTrailing: {
                 Text(timerInterval: context.state.startedAt...context.state.endsAt)
                     .monospacedDigit()
                     .frame(width: 42)
             } minimal: {
-                WidgetCat(style: "calico")
-                    .frame(width: 18, height: 13)
+                TaptionPlanAppIcon()
+                    .frame(width: 18, height: 18)
             }
             .keylineTint(Color(red: 0.48, green: 0.37, blue: 0.65))
         }

@@ -2422,6 +2422,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         // Motion can promote this window to a tracking session. In that case
         // the streams stay on and the route continues without a duty-cycle
         // gap until the session ends.
+        if let movementCandidateTask {
+            await movementCandidateTask.value
+            guard !Task.isCancelled else { return }
+        }
         guard activeTrackingSession == nil else { return }
         emit(force: true)
         // 층 보정 표본을 모으는 중이면 이 창을 끄지 않는다. 끄면 사용자가
@@ -2701,7 +2705,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     ) {
         guard isCollecting,
               configuration.allowsBackgroundLocation,
-              TrackingSessionPolicy.allowsRealtimeAutomaticTracking(
+              TrackingSessionPolicy.allowsAutomaticTracking(
                 interval: configuration.minimumEmissionInterval
               ),
               !sensorStreamsRunning,
@@ -2986,7 +2990,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         // 차량·자전거 이동도 연속 추적으로 승격한다. 듀티사이클 표본만으로는
         // 경로가 출발·도착을 잇는 직선으로만 남는다.
         guard activeTrackingSession == nil,
-              TrackingSessionPolicy.allowsRealtimeAutomaticTracking(
+              TrackingSessionPolicy.allowsAutomaticTracking(
                 interval: configuration.minimumEmissionInterval
               ),
               motion == .walking

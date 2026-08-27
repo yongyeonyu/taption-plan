@@ -8132,16 +8132,19 @@ final class FeatureEngineTests: XCTestCase {
 
     func testAutomaticTrackingPromotionAndStopPolicy() {
         XCTAssertFalse(
-            TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 1)
+            TrackingSessionPolicy.allowsAutomaticTracking(interval: 1)
         )
         XCTAssertTrue(
-            TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 60)
+            TrackingSessionPolicy.allowsAutomaticTracking(interval: 60)
+        )
+        XCTAssertTrue(
+            TrackingSessionPolicy.allowsAutomaticTracking(interval: 300)
         )
         XCTAssertFalse(
-            TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 10)
+            TrackingSessionPolicy.allowsAutomaticTracking(interval: 10)
         )
         XCTAssertFalse(
-            TrackingSessionPolicy.allowsRealtimeAutomaticTracking(interval: 900)
+            TrackingSessionPolicy.allowsAutomaticTracking(interval: 900)
         )
         XCTAssertFalse(
             TrackingSessionPolicy.shouldAutomaticallyStart(
