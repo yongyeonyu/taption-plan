@@ -42,6 +42,14 @@ extension Color {
     static let tpReferenceBlush = Color(hex: "#FBBEBE")
     static let tpReferenceLeaf = Color(hex: "#8ED97E")
 
+    static let tpPastelRose = Color(hex: "#F28FA9")
+    static let tpPastelMint = Color(hex: "#8FD9C5")
+    static let tpPastelSky = Color(hex: "#A9CFF0")
+    static let tpPastelLavender = Color(hex: "#C2B4E9")
+    static let tpPastelButter = Color(hex: "#F2D58D")
+    static let tpPastelPeach = Color(hex: "#F2B18D")
+    static let tpPastelGray = Color(hex: "#CBD5E1")
+
     static let tpProject = Color(red: 190 / 255, green: 218 / 255, blue: 227 / 255)
     static let tpHobby = Color(red: 196 / 255, green: 233 / 255, blue: 218 / 255)
     static let tpExercise = Color(red: 254 / 255, green: 213 / 255, blue: 207 / 255)
@@ -136,6 +144,28 @@ enum CanonicalCategoryPalette {
 
     static func hex(_ id: String) -> String {
         hexes[id] ?? hexes["activity"] ?? "#29A383"
+    }
+
+    static func color(_ id: String) -> Color {
+        Color(hex: hex(id))
+    }
+}
+
+enum MapHomePastelPalette {
+    static let hexes: [String: String] = [
+        "activity": "#8FD9C5",
+        "work": "#A9CFF0",
+        "study": "#A7DDEB",
+        "hobby": "#C2B4E9",
+        "sleep": "#B8B7E8",
+        "movement": "#B7DCC7",
+        "eating": "#F2D58D",
+        "exercise": "#F2A8B8",
+        "unconfirmed": "#CBD5E1",
+    ]
+
+    static func hex(_ id: String) -> String {
+        hexes[id] ?? hexes["activity"] ?? "#8FD9C5"
     }
 
     static func color(_ id: String) -> Color {

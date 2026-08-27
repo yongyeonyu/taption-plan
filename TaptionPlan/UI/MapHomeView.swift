@@ -1049,9 +1049,9 @@ struct MapHomeView: View {
     @State private var mapDayCacheStore: TaptionPlanDayStore?
 
     private static let categoryPaletteHexes = [
-        "#29A383", "#2563EB", "#00A2C7", "#8B5CF6",
-        "#5B5BD6", "#F76B15", "#DC2626", "#94A3B8",
-        "#E1C453", "#F15C80", "#48B38C", "#2D9BF0",
+        "#8FD9C5", "#A9CFF0", "#A7DDEB", "#C2B4E9",
+        "#B8B7E8", "#F2B18D", "#F2A8B8", "#CBD5E1",
+        "#F2D58D", "#F28FA9", "#B7DCC7", "#B7D5EE",
     ]
 
     private static let mapCacheAlgorithmKey = "route-document-v2"
@@ -1671,7 +1671,7 @@ struct MapHomeView: View {
                     } label: {
                         Image(systemName: "mappin.circle.fill")
                             .font(.system(size: 36, weight: .bold))
-                            .foregroundStyle(Color.tpReferenceRose)
+                            .foregroundStyle(Color.tpPastelRose)
                             .background(Circle().fill(.white))
                     }
                     .buttonStyle(.plain)
@@ -2054,12 +2054,15 @@ struct MapHomeView: View {
         } label: {
             Image(systemName: isDayPlaybackRunning ? "pause.fill" : "play.fill")
                 .font(.system(size: MapHomeSearchLayoutMath.playbackIconSize, weight: .bold))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(Color.tpInk)
                 .frame(
                     width: MapHomeSearchLayoutMath.playbackVisualSize,
                     height: MapHomeSearchLayoutMath.playbackVisualSize
                 )
-                .background(Color.tpInk.opacity(0.46), in: Circle())
+                .background(Color.white.opacity(0.96), in: Circle())
+                .overlay {
+                    Circle().stroke(Color.tpPastelGray.opacity(0.65), lineWidth: 1)
+                }
                 .frame(
                     width: MapHomeSearchLayoutMath.playbackTouchSize,
                     height: MapHomeSearchLayoutMath.playbackTouchSize
@@ -2091,12 +2094,15 @@ struct MapHomeView: View {
         } label: {
             Image(systemName: "map.fill")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.white)
+                .foregroundStyle(Color.tpInk)
                 .frame(
                     width: MapHomeSearchLayoutMath.playbackVisualSize,
                     height: MapHomeSearchLayoutMath.playbackVisualSize
                 )
-                .background(Color.tpInk.opacity(0.46), in: Circle())
+                .background(Color.white.opacity(0.96), in: Circle())
+                .overlay {
+                    Circle().stroke(Color.tpPastelGray.opacity(0.65), lineWidth: 1)
+                }
                 .frame(
                     width: MapHomeSearchLayoutMath.playbackTouchSize,
                     height: MapHomeSearchLayoutMath.playbackTouchSize
@@ -2691,7 +2697,7 @@ struct MapHomeView: View {
                 } label: {
                     Image(systemName: "location.north.line")
                         .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                        .foregroundStyle(Color.tpReferenceRose)
+                        .foregroundStyle(Color.tpPastelRose)
                         .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                         .background(Color.white.opacity(0.94), in: Circle())
                 }
@@ -2896,9 +2902,10 @@ struct MapHomeView: View {
                                 Circle()
                                     .fill(category.tint)
                                     .frame(width: 10, height: 10)
-                                Image(systemName: category.systemImage)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(category.tint)
+                                MapHomeStickmanGlyph(
+                                    action: category.stickmanAction,
+                                    size: 22
+                                )
                                     .frame(width: 20)
                                 Text(category.localizedTitle(language))
                                     .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -3901,7 +3908,7 @@ struct MapHomeView: View {
     private func mapCategoryColor(_ id: String) -> Color {
         Color(
             hex: model.settings.mapCategoryColors[id]
-                ?? CanonicalCategoryPalette.hex(id)
+                ?? MapHomePastelPalette.hex(id)
         )
     }
 
@@ -5770,7 +5777,7 @@ private struct MapHomeSectionEditSheet: View {
             ),
             systemImage: MovementPresentation.symbol(for: selectedMovementMode),
             hex: model.settings.mapCategoryColors["movement"]
-                ?? CanonicalCategoryPalette.hex("movement")
+                ?? MapHomePastelPalette.hex("movement")
         )
     }
 
@@ -6139,7 +6146,10 @@ private struct MapHomeSectionEditSheet: View {
                 categoryColors: model.settings.mapCategoryColors
             )
             HStack(spacing: isCompact ? 2 : 5) {
-                Image(systemName: category.systemImage)
+                MapHomeStickmanGlyph(
+                    action: category.stickmanAction,
+                    size: 22
+                )
                 VStack(alignment: .leading, spacing: 1) {
                     Text(detail.title).lineLimit(1)
                     Text("\(timeLabel(detail.startMinute))–\(timeLabel(detail.endMinute))")
@@ -6293,7 +6303,7 @@ private struct MapHomeSectionEditSheet: View {
             title: selection.segment.title,
             systemImage: selection.activity.systemImage,
             hex: model.settings.mapCategoryColors[selection.segment.categoryID]
-                ?? CanonicalCategoryPalette.hex(selection.segment.categoryID)
+                ?? MapHomePastelPalette.hex(selection.segment.categoryID)
         )
         let unconfirmed = MapHomeSidebarMajorCategory.presentation(
             for: "unconfirmed",
@@ -6348,7 +6358,10 @@ private struct MapHomeSectionEditSheet: View {
                 .fill(piece.category.tint.opacity(0.88))
             if blockHeight >= 34 {
                 VStack(spacing: 2) {
-                    Image(systemName: piece.category.systemImage)
+                    MapHomeStickmanGlyph(
+                        action: piece.category.stickmanAction,
+                        size: 22
+                    )
                     Text(piece.category.localizedTitle(language)).lineLimit(1)
                     if blockHeight >= 54 {
                         Text("\(timeLabel(piece.startMinute))–\(timeLabel(piece.endMinute))")
@@ -7724,8 +7737,8 @@ private struct MapHomeTransitPlacePin: View {
 private struct MapHomeLocationButtonIcon: View {
     let state: MapHomeLocationButtonState
 
-    private let targetColor = Color(red: 0.20, green: 0.48, blue: 0.78)
-    private let dotColor = Color(red: 0.92, green: 0.25, blue: 0.28)
+    private let targetColor = Color.tpPastelSky
+    private let dotColor = Color.tpPastelRose
 
     var body: some View {
         ZStack {
@@ -7756,7 +7769,7 @@ private struct MapHomeHistoricalLocationMarker: View {
                 CGPoint(x: $0 * scaleX, y: $1 * scaleY)
             }
             let lineWidth = min(scaleX, scaleY) * 2.4
-            let color = Color.tpReferenceRose
+            let color = Color.tpPastelRose
 
             context.fill(
                 Path(
@@ -7794,7 +7807,7 @@ private struct MapHomeHistoricalLocationMarker: View {
         .padding(4)
         .background(.white, in: Circle())
         .overlay {
-            Circle().stroke(Color.tpReferenceRose.opacity(0.25), lineWidth: 1)
+            Circle().stroke(Color.tpPastelRose.opacity(0.35), lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.18), radius: 3, y: 2)
         .accessibilityHidden(true)

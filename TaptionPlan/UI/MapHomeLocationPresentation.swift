@@ -75,13 +75,13 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
 
     var tint: Color {
         switch self {
-        case .home: Color.tpReferenceGold
-        case .company: Color.tpReferenceBlue
-        case .school: Color.tpReferenceMint
-        case .exercise: Color.tpReferenceRose
-        case .hobby: Color(red: 0.58, green: 0.40, blue: 0.78)
-        case .restaurant: Color.tpReferenceGold
-        case .user: Color.tpReferenceRose
+        case .home: Color.tpPastelButter
+        case .company: Color.tpPastelSky
+        case .school: Color.tpPastelMint
+        case .exercise: Color.tpPastelRose
+        case .hobby: Color.tpPastelLavender
+        case .restaurant: Color.tpPastelButter
+        case .user: Color.tpPastelRose
         }
     }
 }
@@ -196,6 +196,56 @@ enum MapHomeStickmanActionResolver {
         case .subway, .train: .subway
         case .bus: .bus
         case .airplane, .ship: .resting
+        }
+    }
+
+    static func action(
+        for categoryID: String,
+        label: String
+    ) -> MapHomeStickmanAction {
+        let category = categoryID.lowercased()
+        let value = "\(category) \(label)".lowercased()
+        if value.contains("sleep") || value.contains("수면") || value.contains("잠") {
+            return .sleeping
+        }
+        if value.contains("eating") || value.contains("food")
+            || value.contains("식사") || value.contains("밥") {
+            return .eating
+        }
+        if value.contains("work") || value.contains("업무")
+            || value.contains("회사") || value.contains("컴퓨터") {
+            return .computer
+        }
+        if value.contains("study") || value.contains("학교")
+            || value.contains("수업") || value.contains("독서") {
+            return .reading
+        }
+        if value.contains("subway") || value.contains("metro") || value.contains("지하철") {
+            return .subway
+        }
+        if value.contains("bus") || value.contains("버스") {
+            return .bus
+        }
+        if value.contains("car") || value.contains("driving")
+            || value.contains("자동차") || value.contains("차량") {
+            return .car
+        }
+        if value.contains("cycling") || value.contains("bike") || value.contains("자전거") {
+            return .cycling
+        }
+        if value.contains("movement") || value.contains("걷")
+            || value.contains("walk") || value.contains("활동") {
+            return .walking
+        }
+        switch category {
+        case "exercise": return .walking
+        case "activity": return .walking
+        case "study": return .reading
+        case "work": return .computer
+        case "sleep": return .sleeping
+        case "eating": return .eating
+        case "movement": return .walking
+        default: return .resting
         }
     }
 
@@ -360,9 +410,38 @@ struct MapHomeStickmanMarker: View {
             }
         }
         .frame(width: 70, height: 60)
-        .background(.white.opacity(0.92), in: Circle())
-        .overlay { Circle().stroke(Color.tpReferenceRose.opacity(0.28), lineWidth: 1) }
+        .background(.white.opacity(0.96), in: Circle())
+        .overlay { Circle().stroke(Color.tpPastelRose.opacity(0.42), lineWidth: 1) }
         .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+        .accessibilityHidden(true)
+    }
+}
+
+struct MapHomeStickmanGlyph: View {
+    let action: MapHomeStickmanAction
+    var size: CGFloat = 30
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(
+            .animation(
+                minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
+                paused: reduceMotion
+            )
+        ) { context in
+            Canvas { canvas, canvasSize in
+                MapHomeStickmanRenderer.draw(
+                    context: &canvas,
+                    size: canvasSize,
+                    action: action,
+                    phase: MapHomeStickmanAnimationEngine.phase(
+                        at: context.date,
+                        reducesMotion: reduceMotion
+                    )
+                )
+            }
+        }
+        .frame(width: size, height: size)
         .accessibilityHidden(true)
     }
 }
@@ -396,8 +475,8 @@ private struct MapHomeStickmanCanvas {
 }
 
 private enum MapHomeStickmanRenderer {
-    private static let accent = Color.tpReferenceRose
-    private static let fill = Color.tpReferenceRose.opacity(0.12)
+    private static let accent = Color.tpPastelRose
+    private static let fill = Color.tpPastelRose.opacity(0.12)
 
     static func draw(
         context: inout GraphicsContext,

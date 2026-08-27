@@ -27,7 +27,7 @@ private func mapHomeWeatherTextColor(
     isCurrent: Bool,
     isSelected: Bool
 ) -> Color {
-    if isSelected { return .tpReferenceRose }
+    if isSelected { return .tpPastelRose }
     guard isCurrent, let grade = weather.airQuality?.overallGrade else {
         return mapHomeAirQualityColor(weather)
     }
@@ -118,7 +118,10 @@ enum MapHomeTimeSidebarViewportProjection {
 }
 
 enum MapHomeTimeSidebarStyle {
-    static let numericColumnBackground = Color.white.opacity(0.68)
+    static let panelBackground = Color.white
+    static let panelBorder = Color.tpPastelGray.opacity(0.72)
+    static let numericColumnBackground = Color.white
+    static let trackBackground = Color.tpPastelGray.opacity(0.34)
 }
 
 enum MapHomeWeatherBackgroundKind: Equatable {
@@ -214,6 +217,7 @@ struct MapHomeTimeSidebarActivity {
     let systemImage: String
     let tint: Color
     let accessibilityLabel: String
+    let stickmanAction: MapHomeStickmanAction
 
     static func majorCategory(
         _ categoryID: String,
@@ -227,10 +231,15 @@ struct MapHomeTimeSidebarActivity {
         let icon = categoryID == "movement"
             ? MapHomeMovementIcon.systemImage(for: accessibilityLabel ?? category.title)
             : category.systemImage
+        let title = accessibilityLabel ?? category.title
         return Self(
             systemImage: icon,
             tint: category.tint,
-            accessibilityLabel: accessibilityLabel ?? category.title
+            accessibilityLabel: title,
+            stickmanAction: MapHomeStickmanActionResolver.action(
+                for: categoryID,
+                label: title
+            )
         )
     }
 }
@@ -305,6 +314,10 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
         Color(hex: hex)
     }
 
+    var stickmanAction: MapHomeStickmanAction {
+        MapHomeStickmanActionResolver.action(for: id, label: title)
+    }
+
     func localizedTitle(_ language: MapHomeLanguage) -> String {
         guard language == .english else { return title }
         switch id {
@@ -347,7 +360,7 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
                 title: category.title,
                 systemImage: category.systemImage,
                 hex: categoryColors[category.id]
-                    ?? CanonicalCategoryPalette.hex(category.id)
+                    ?? MapHomePastelPalette.hex(category.id)
             )
         }
     }
@@ -364,7 +377,7 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
                 title: "활동",
                 systemImage: "sparkles",
                 hex: categoryColors["activity"]
-                    ?? CanonicalCategoryPalette.hex("activity")
+                    ?? MapHomePastelPalette.hex("activity")
             )
     }
 }
@@ -998,6 +1011,25 @@ struct MapHomeTimeSidebar: View {
 
             ZStack(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(MapHomeTimeSidebarStyle.panelBackground)
+                        .frame(width: railWidth, height: railHeight)
+                        .position(
+                            x: railOriginX + railWidth / 2,
+                            y: railHeight / 2
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1)
+                                .frame(width: railWidth, height: railHeight)
+                                .position(
+                                    x: railOriginX + railWidth / 2,
+                                    y: railHeight / 2
+                                )
+                        }
+                        .shadow(color: .black.opacity(0.05), radius: 7, y: 2)
+                        .allowsHitTesting(false)
+
                     Rectangle()
                     .fill(.clear)
                     .frame(width: railWidth, height: railHeight)
@@ -1030,7 +1062,7 @@ struct MapHomeTimeSidebar: View {
 
                     ZStack {
                     Rectangle()
-                        .fill(Color.tpInk.opacity(0.72))
+                        .fill(MapHomeTimeSidebarStyle.trackBackground)
 
                     ForEach(visibleSegments) { segment in
                         let start = max(min(segment.startMinute, visibleWindow.upperBound), visibleWindow.lowerBound)
@@ -1113,7 +1145,7 @@ struct MapHomeTimeSidebar: View {
                             ))
                             context.stroke(
                                 path,
-                                with: .color(Color.tpInk.opacity(isTenMinute ? 0.54 : 0.22)),
+                                with: .color(Color.tpSecondary.opacity(isTenMinute ? 0.54 : 0.22)),
                                 lineWidth: 1
                             )
                         }
@@ -1163,7 +1195,7 @@ struct MapHomeTimeSidebar: View {
                         )
                         HStack(spacing: 3) {
                             Capsule()
-                                .fill(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
+                                .fill(Color.tpSecondary.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
                                 .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5)
                             Text(String(format: "%02d", hour))
                                 .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
@@ -1333,19 +1365,19 @@ struct MapHomeTimeSidebar: View {
             categoryColors: categoryColors
         )
         return ZStack(alignment: .topLeading) {
-            Image(systemName: activity?.systemImage ?? fallbackActivity.systemImage)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(activity?.tint ?? fallbackActivity.tint)
+            MapHomeStickmanGlyph(
+                action: activity?.stickmanAction ?? fallbackActivity.stickmanAction,
+                size: 30
+            )
                 .frame(width: handleSize.width, height: handleSize.height)
                 .background(
-                    Color.tpInk.opacity(0.90),
-                    in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    Color.white,
+                    in: Circle()
                 )
                 .overlay {
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    Circle()
                         .stroke(
-                            (activity?.tint ?? fallbackActivity.tint)
-                                .opacity(0.45),
+                            (activity?.tint ?? fallbackActivity.tint),
                             lineWidth: 1
                         )
                 }
@@ -1359,10 +1391,10 @@ struct MapHomeTimeSidebar: View {
             }
             .font(.system(size: 11, weight: .bold, design: .rounded))
             .monospacedDigit()
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.tpInk)
             .frame(width: 32, height: 40)
             .background(
-                Color.tpInk.opacity(0.90),
+                Color.tpPastelRose,
                 in: RoundedRectangle(cornerRadius: 4, style: .continuous)
             )
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
@@ -1406,7 +1438,7 @@ struct MapHomeTimeSidebar: View {
     }
 
     private func categoryColorHex(_ id: String) -> String {
-        categoryColors[id] ?? CanonicalCategoryPalette.hex(id)
+        categoryColors[id] ?? MapHomePastelPalette.hex(id)
     }
 
     private func timeTapGesture(
@@ -1782,7 +1814,7 @@ struct MapHomeWeatherSidebar: View {
                         .overlay {
                             if isSelected {
                                 RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .stroke(Color.tpReferenceRose, lineWidth: 1.5)
+                                    .stroke(Color.tpPastelRose, lineWidth: 1.5)
                             }
                         }
                         .position(x: railWidth / 2 + collisionOffset, y: y)
