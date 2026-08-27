@@ -939,8 +939,8 @@ struct PermissionOnboardingSheet: View {
         PermissionOnboardingStep(
             feature: .health,
             icon: "heart.text.square",
-            title: "건강 · Apple Watch",
-            detail: "걸음·운동·수면을 건강 앱과 Apple Watch에서 읽어옵니다."
+            title: "건강 데이터",
+            detail: "iPhone 건강 앱과 승인된 건강 앱의 걸음·운동·수면을 읽습니다. Apple Watch 기록도 함께 반영합니다."
         ),
         PermissionOnboardingStep(
             feature: .calendar,

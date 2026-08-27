@@ -546,7 +546,10 @@ final class AppleHealthService: @unchecked Sendable {
 
     private func sleepActuals(in span: TimeSpan) async throws -> [ActualRecord] {
         try await sleepSessions(in: span).map { session in
-            ActualRecord(
+            let evidence = Array(
+                Set(["HealthKit 수면 기록"] + session.sourceNames)
+            ).sorted()
+            return ActualRecord(
                 id: session.id,
                 planID: nil,
                 title: "수면",
@@ -554,7 +557,9 @@ final class AppleHealthService: @unchecked Sendable {
                 startedAt: session.span.start,
                 endedAt: session.span.end,
                 source: .healthKit,
-                confidence: .high
+                confidence: .high,
+                evidence: evidence,
+                modelVersion: "healthkit-sleep-v1"
             )
         }
     }
@@ -971,6 +976,7 @@ private extension HKCategoryValueSleepAnalysis {
         case .asleepDeep: .deep
         case .asleepREM: .rem
         case .asleepUnspecified: .asleepUnspecified
+        case .asleep: .asleepUnspecified
         @unknown default: nil
         }
     }

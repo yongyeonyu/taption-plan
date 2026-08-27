@@ -550,7 +550,7 @@ final class AppModel {
             || !permissionState(for: .location).isGranted {
             missing.append("위치·이동")
         }
-        if !settings.healthEnabled { missing.append("건강·Apple Watch") }
+        if !settings.healthEnabled { missing.append("건강 데이터") }
         if settings.selectedCalendarIDs.isEmpty { missing.append("캘린더") }
         return missing.isEmpty ? nil : missing
     }
@@ -1519,14 +1519,14 @@ final class AppModel {
         return enabled == 0 ? "기기 안에 안전하게 저장" : "연동 \(enabled)개 사용 중"
     }
 
-    var appleWatchIntegrationSummary: String {
+    var healthIntegrationSummary: String {
         let deviceRecords = snapshot.actuals.filter {
             $0.source == .healthKit || $0.source == .appleWatch
         }
         let health = settings.healthEnabled
             ? "건강 기록 \(deviceRecords.count)건 · 5분 갱신"
             : "건강 연결 꺼짐"
-        return "\(appleWatchConnectionState.settingsLabel) · \(health)"
+        return "HealthKit · \(health)"
     }
 
     func selectTab(_ tab: RootTab) {
@@ -6178,7 +6178,9 @@ final class AppModel {
             nominalMaximumSampleGap: max(
                 20 * 60,
                 settings.sensorCollectionProfile.interval * 1.6 + 60
-            )
+            ),
+            authoritativeSleepSpans: sleepSessions
+                .compactMap { $0.span.intersection(with: span) }
             ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
         // A sparse or still-catching-up sensor window is not evidence that a
         // previously derived sleep result disappeared.

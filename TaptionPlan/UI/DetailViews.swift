@@ -2108,13 +2108,13 @@ struct LocationTimelineView: View {
 
     private var sensorSignalLabel: String {
         guard let availability = model.sensorAvailability else {
-            return "GPS · 모션 · 기압 · Watch"
+            return "GPS · 모션 · 기압 · HealthKit"
         }
         var values: [String] = []
         if availability.location { values.append("GPS") }
         if availability.motionActivity { values.append("모션") }
         if availability.relativeAltitude { values.append("기압") }
-        if model.settings.healthEnabled { values.append("Watch") }
+        if model.settings.healthEnabled { values.append("HealthKit") }
         return values.isEmpty ? "센서 확인 필요" : values.joined(separator: " · ")
     }
 

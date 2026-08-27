@@ -66,28 +66,45 @@ struct SleepAnalysisEngine: Sendable {
 
     private func makeSession(_ segments: [SleepSegment]) -> SleepSession? {
         let asleepSegments = segments.filter(\.stage.isAsleep)
-        guard let first = asleepSegments.min(by: { $0.span.start < $1.span.start }),
-              let last = asleepSegments.max(by: { $0.span.end < $1.span.end }) else {
+        // iPhone and third-party HealthKit sources may provide only an
+        // `inBed` sample. Preserve that source record instead of requiring an
+        // Apple Watch sleep stage.
+        let sessionSegments = asleepSegments.isEmpty
+            ? segments.filter { $0.stage == .inBed }
+            : asleepSegments
+        guard let first = sessionSegments.min(by: { $0.span.start < $1.span.start }) else {
             return nil
         }
-        let sessionEnd = segments
-            .filter { $0.stage == .awake && $0.span.end > last.span.end }
-            .map(\.span.end)
-            .max() ?? last.span.end
+        let last = sessionSegments.max(by: { $0.span.end < $1.span.end }) ?? first
+        let inBedDuration = unionDuration(
+            segments.filter { $0.stage == .inBed }.map(\.span)
+        )
+        let asleepDuration: TimeInterval
         let stageDurations = resolvedStageDurations(segments)
-        let asleepDuration = stageDurations.reduce(0) {
+        asleepDuration = stageDurations.reduce(0) {
             $0 + ($1.key.isAsleep ? $1.value : 0)
         }
-        guard asleepDuration > 0 else { return nil }
+        guard asleepDuration > 0 || inBedDuration > 0 else { return nil }
+
+        let sessionEnd: Date
+        if asleepSegments.isEmpty {
+            sessionEnd = segments
+                .filter { $0.stage == .inBed }
+                .map(\.span.end)
+                .max() ?? last.span.end
+        } else {
+            sessionEnd = segments
+                .filter { $0.stage == .awake && $0.span.end > last.span.end }
+                .map(\.span.end)
+                .max() ?? last.span.end
+        }
 
         return SleepSession(
             id: first.id,
             span: TimeSpan(start: first.span.start, end: sessionEnd),
             asleepDuration: asleepDuration,
             awakeDuration: stageDurations[.awake, default: 0],
-            inBedDuration: unionDuration(
-                segments.filter { $0.stage == .inBed }.map(\.span)
-            ),
+            inBedDuration: inBedDuration,
             stageDurations: stageDurations,
             sourceNames: unique(
                 segments.map(\.sourceName).filter { !$0.isEmpty }

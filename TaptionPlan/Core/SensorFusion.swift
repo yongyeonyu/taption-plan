@@ -3455,11 +3455,24 @@ enum AppleDeviceGroundTruthEngine {
         }
         let freshIDs = Set(uniqueFresh.map(\.id))
         let linkedWorkouts = uniqueFresh.filter { $0.planID != nil }
+        let hasFreshSleep = uniqueFresh.contains { actual in
+            AutomaticRecordTimelineEngine.isSleep(actual)
+                && actual.span().intersection(with: span) != nil
+        }
         return (
             existing.filter { existingActual in
                 if existingActual.source == .healthKit,
                    existingActual.span().intersection(with: span) != nil {
-                    return false
+                    // HealthKit can transiently return no sleep samples while
+                    // its store is catching up. Do not erase the last known
+                    // canonical sleep unless a fresh sleep result replaced it.
+                    return AutomaticRecordTimelineEngine.isSleep(existingActual)
+                        && !hasFreshSleep
+                }
+                if existingActual.source == .appleWatch,
+                   AutomaticRecordTimelineEngine.isSleep(existingActual),
+                   existingActual.span().intersection(with: span) != nil {
+                    return !hasFreshSleep
                 }
                 if existingActual.source == .appleWatch,
                    freshIDs.contains(existingActual.id) {
@@ -4103,9 +4116,22 @@ enum PhoneSleepFallbackEngine {
         actuals: [ActualRecord],
         inside span: TimeSpan,
         nominalMaximumSampleGap: TimeInterval,
+        authoritativeSleepSpans: [TimeSpan] = [],
         asOf: Date = .now
     ) -> [ActualRecord] {
         let iPhoneReadings = readings.filter { $0.sourceDevice != .appleWatch }
+        let healthKitSleepSpans = ActualIntervalMergeEngine.union(
+            authoritativeSleepSpans
+                + actuals.compactMap { actual in
+                    guard (actual.source == .healthKit
+                        || actual.source == .appleWatch),
+                          AutomaticRecordTimelineEngine.isSleep(actual) else {
+                        return nil
+                    }
+                    return actual.span(asOf: asOf).intersection(with: span)
+                },
+            mergeGap: 0
+        )
         let maximumSampleGap = max(
             nominalMaximumSampleGap,
             maximumBackgroundSampleGap
@@ -4126,13 +4152,24 @@ enum PhoneSleepFallbackEngine {
             maximumSampleGap: maximumSampleGap,
             asOf: asOf
         )
-        guard !screenBased.isEmpty else { return chargingBased }
-        let supplemental = chargingBased.filter { candidate in
-            !screenBased.contains {
-                $0.span(asOf: asOf).intersection(with: candidate.span(asOf: asOf)) != nil
+        let candidates: [ActualRecord]
+        if screenBased.isEmpty {
+            candidates = chargingBased
+        } else {
+            let supplemental = chargingBased.filter { candidate in
+                !screenBased.contains {
+                    $0.span(asOf: asOf)
+                        .intersection(with: candidate.span(asOf: asOf)) != nil
+                }
             }
+            candidates = screenBased + supplemental
         }
-        return (screenBased + supplemental).sorted {
+        return candidates.filter { candidate in
+            let candidateSpan = candidate.span(asOf: asOf)
+            return !healthKitSleepSpans.contains {
+                $0.intersection(with: candidateSpan) != nil
+            }
+        }.sorted {
             if $0.startedAt != $1.startedAt {
                 return $0.startedAt < $1.startedAt
             }

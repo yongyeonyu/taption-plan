@@ -181,8 +181,8 @@ struct SettingsView: View {
                             icon: "heart.text.square",
                             iconBackground: Color(red: 0.93, green: 0.96, blue: 0.91),
                             iconColor: .tpHealthDark,
-                            title: "건강 · Apple Watch",
-                            subtitle: model.appleWatchIntegrationSummary,
+                            title: "건강 데이터",
+                            subtitle: model.healthIntegrationSummary,
                             isOn: Binding(
                                 get: { model.settings.healthEnabled },
                                 set: { enabled in

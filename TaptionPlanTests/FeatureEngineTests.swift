@@ -4133,6 +4133,40 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testPhoneSleepFallbackIgnoresIPhoneHealthKitSession() {
+        let start = makeDate(2026, 8, 24, 0, 0)
+        let readings = [0.0, 2, 4, 7].map { hourOffset in
+            SensorReading(
+                timestamp: start.addingTimeInterval(hourOffset * hour),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .full,
+                screenBrightness: 0.8,
+                screenIsOn: true
+            )
+        }
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(8 * hour)
+        )
+        let healthKitSession = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(7.25 * hour)
+        )
+
+        XCTAssertTrue(
+            PhoneSleepFallbackEngine.records(
+                readings: readings,
+                actuals: [],
+                inside: span,
+                nominalMaximumSampleGap: 20 * 60,
+                authoritativeSleepSpans: [healthKitSession],
+                asOf: span.end
+            ).isEmpty
+        )
+    }
+
     func testAutomotivePersistsWhenCoreMotionAlsoReportsStationary() {
         XCTAssertEqual(
             MotionKindResolver.resolve(
@@ -6933,6 +6967,60 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(sessions[0].awakeDuration, 1.5 * hour)
     }
 
+    func testSleepAnalysisAcceptsIPhoneOnlyInBedRecord() {
+        let base = makeDate(2026, 8, 2, 23)
+        let inBed = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(8 * hour)
+        )
+
+        let sessions = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .inBed,
+                span: inBed,
+                sourceName: "iPhone",
+                sourceBundleIdentifier: "com.apple.Health"
+            )
+        ])
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].span, inBed)
+        XCTAssertEqual(sessions[0].asleepDuration, 0)
+        XCTAssertEqual(sessions[0].inBedDuration, 8 * hour)
+        XCTAssertEqual(sessions[0].sourceNames, ["iPhone"])
+    }
+
+    func testSleepAnalysisUsesIPhoneSleepAndAwakeSamplesWithoutWatch() {
+        let base = makeDate(2026, 8, 3, 23)
+        let sessions = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .asleepUnspecified,
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(7 * hour)
+                ),
+                sourceName: "iPhone"
+            ),
+            SleepSegment(
+                stage: .awake,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(7 * hour),
+                    end: base.addingTimeInterval(7.25 * hour)
+                ),
+                sourceName: "iPhone"
+            )
+        ])
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(
+            sessions[0].span.end,
+            base.addingTimeInterval(7.25 * hour)
+        )
+        XCTAssertEqual(sessions[0].asleepDuration, 7 * hour)
+        XCTAssertEqual(sessions[0].awakeDuration, 0.25 * hour)
+        XCTAssertEqual(sessions[0].sourceNames, ["iPhone"])
+    }
+
     func testSleepAnalysisSeparatesNapFromNightSleep() {
         let base = makeDate(2026, 7, 30, 1, 0)
         let segments = [
@@ -8396,6 +8484,73 @@ final class FeatureEngineTests: XCTestCase {
             result.filter { $0.source == .healthKit },
             [freshHealth]
         )
+    }
+
+    func testHealthKitRefreshKeepsSleepWhenFreshHealthDataHasNoSleep() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(24 * hour)
+        )
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: base.addingTimeInterval(2 * hour),
+            endedAt: base.addingTimeInterval(8 * hour),
+            source: .healthKit
+        )
+        let workout = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(10 * hour),
+            endedAt: base.addingTimeInterval(11 * hour),
+            source: .healthKit
+        )
+
+        let result = AppleDeviceGroundTruthEngine.replacingHealthKitActuals(
+            existing: [sleep],
+            with: [workout],
+            inside: span
+        )
+
+        XCTAssertTrue(result.contains(sleep))
+        XCTAssertTrue(result.contains(workout))
+    }
+
+    func testHealthKitRefreshRemovesLegacyWatchSleepWhenFreshSleepExists() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(24 * hour)
+        )
+        let oldSleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: base.addingTimeInterval(hour),
+            endedAt: base.addingTimeInterval(7 * hour),
+            source: .appleWatch
+        )
+        let freshSleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: base.addingTimeInterval(2 * hour),
+            endedAt: base.addingTimeInterval(8 * hour),
+            source: .healthKit
+        )
+
+        let result = AppleDeviceGroundTruthEngine.replacingHealthKitActuals(
+            existing: [oldSleep],
+            with: [freshSleep],
+            inside: span
+        )
+
+        XCTAssertFalse(result.contains(oldSleep))
+        XCTAssertEqual(result.filter { AutomaticRecordTimelineEngine.isSleep($0) }.count, 1)
+        XCTAssertEqual(result.first?.id, freshSleep.id)
     }
 
     func testLinkedWatchWorkoutSupersedesItsTimerActual() {
