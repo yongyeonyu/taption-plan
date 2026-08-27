@@ -405,4 +405,5 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - TestFlight 업로드 성공: Delivery UUID `41dc832d-5a98-4a77-8122-aad743df6e28`
 - App Store Connect 처리 상태: `VALID` / `APP_STORE_ELIGIBLE`, `is-on-app-store-connect: true`, build 106 `제출 준비 완료` 노출 확인
 - 기능·빌드 커밋 `b67b9bb`, `origin/main` 푸시 확인
-- `TP Taption Plan 내부 테스트` 그룹 연결 및 그룹 builds 노출 확인은 외부 접근 변경 승인 후 남은 게이트다.
+- `TP Taption Plan 내부 테스트` 그룹 연결 완료: 빌드 목록에서 build 106이 그룹에 연결된 것을 확인했다.
+- 그룹 화면(`/testflight/groups/b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)의 빌드 탭에서 `1.0 (106)`, `테스트 중`, `iOS` 노출을 확인했다.
