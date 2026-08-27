@@ -390,3 +390,19 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - `TP Taption Plan 내부 테스트` 그룹에 build 104 연결 및 그룹 builds 관계에서 build 104 노출 확인
 - main 기능·빌드·서명 수정 커밋 `e579b09`, `f7ed488`, `de21ee4`, `origin/main` 일치 확인
 - 실기기 설치·실행·readback은 iPhone 연결·잠금 해제 후 별도 게이트로 남긴다.
+
+## 2026-08-27 build 106 대분류 졸라맨 Dynamic Island 통합
+
+- 첨부 시안은 화면 구성·문구·색상 복제 없이 단순 선화, 얼굴 표정, 준비·이동·동작 원칙만 참고했다.
+- 지도·활동 카드·핸들에 공통 얼굴과 표정, 바닥 그림자, 활동별 분주한 Canvas 동작을 적용했다. 회사·학교·수면·식사·걷기·자전거·자동차·버스·2량 지하철·머무름의 의미와 기존 지도 전면 표시·Reduce Motion·30% 축소를 유지한다.
+- Live Activity 대분류 상태를 위젯 공유 코드에서 10개 졸라맨 동작으로 해석하고, Dynamic Island compact leading·minimal·expanded leading에서 SwiftUI Canvas 애니메이션으로 표시한다. 기존 타이머·파형·종료 동작은 유지한다.
+
+### 검증 및 배포
+
+- `MapHomeStickmanTests` 및 전체 `TaptionPlanTests`: `TEST SUCCEEDED`
+- iOS generic Debug build: `BUILD SUCCEEDED`
+- Release archive/export: `1.0 (106)`, `com.taption.plan`, Apple Distribution 서명, IPA SHA-256 `f5d66d090d3eea06e3628ff775ba1698a7289ca80e47ec629fe5cad0ce25aadc`
+- TestFlight 업로드 성공: Delivery UUID `41dc832d-5a98-4a77-8122-aad743df6e28`
+- App Store Connect 처리 상태: `VALID` / `APP_STORE_ELIGIBLE`, `is-on-app-store-connect: true`, build 106 `제출 준비 완료` 노출 확인
+- 기능·빌드 커밋 `b67b9bb`, `origin/main` 푸시 확인
+- `TP Taption Plan 내부 테스트` 그룹 연결 및 그룹 builds 노출 확인은 외부 접근 변경 승인 후 남은 게이트다.
