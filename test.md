@@ -28,6 +28,16 @@
 - `TP Taption Plan 내부 테스트`: build `1.0 (109)` 연결·`테스트 중`·iOS 노출 readback 성공
 - iOS Simulator: 사용 가능한 기기 없음; 지도 스티커·메모 실제 화면·터치는 별도 미검증
 
+## REL28TRN01 · test.md 전체 실행 후속
+
+- iPhone 14 Pro 서명 Debug `1.0 (109)` 설치·실행 readback: 성공
+- Apple Watch SE 서명 Debug `1.0 (109)` 설치·실행 readback: 성공
+- iPhone 전체 XCTest: 783건 중 781건 통과, 2건 실패
+- 실패 2건: 저장소에 없는 `TaptionPlan/Localizable.xcstrings`, `.cat-visual-check/cat_sheet_x4.png` fixture
+- HealthKit·Watch·지도·스티커 관련 단위/통합 테스트: 전체 실행 범위에서 통과
+- iPhone 미러링: iPhone 잠금 전 연결 시간 초과 상태로 실제 화면·터치 readback 미완료
+- 지도·교통·스티커·Dynamic Island의 실제 화면·터치, HealthKit 권한/원본, Watch 지연 동기화, IAP 외부 계약·Sandbox 구매는 외부/수동 게이트로 남김
+
 ## TRN828Q7A1 · BUG28P9K3X · DEL28Q9M4X
 
 - 대상: iPhone 14 Pro 및 연결 가능한 iPad, 최신 검증 빌드

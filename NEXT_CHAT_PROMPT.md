@@ -20,13 +20,15 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 
 - 구현 커밋 `b707adf`와 최신 인계 문서가 `main`에 push되었고 현재 워크트리는 clean이다. 다음 채팅에서 위 명령으로 최신 HEAD와 원격을 다시 readback한다.
 - 앱은 `com.taption.plan`, 최신 TestFlight 기준 버전 `1.0 (109)`이며 `TP Taption Plan 내부 테스트`에서 `테스트 중`이다.
-- 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`, Release archive/export/upload가 성공했다. 서명 Debug 앱 `1.0 (108)`을 iPad Pro에 설치·launch했고, `MapHomeStickmanTests` 16건도 통과했다.
-- 이번 변경 대상 XCTest인 `MapHomeStickmanTests` 16건은 모두 통과했다. 전체 XCTest의 기존 fixture 실패 2건은 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` 때문이다.
+- 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`, Release archive/export/upload가 성공했다. 서명 Debug 앱 `1.0 (109)`을 iPhone 14 Pro와 Apple Watch SE에, `1.0 (108)`을 iPad Pro에 설치·launch했다. `MapHomeStickmanTests` 16건도 통과했다.
+- 최신 iPhone 전체 XCTest는 783건 중 781건 통과했다. 실패 2건은 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` fixture다.
 - 현재 사용 가능한 iOS Simulator가 없고, iPhone 미러링도 기기가 사용 중이라 잠금 전 연결 시간이 초과되어 지도/HealthKit 실제 touch readback은 `test.md`에 미검증 게이트로 남겼다. iPad는 서명 Debug `1.0 (108)` 설치·launch까지 readback했지만 화면·터치는 별도 미검증이다.
-- iPhone 14 Pro(CoreDevice `C44AF739-127D-572D-AD83-417C7E879045`, UDID `00008120-00092C3E14F0201E`, iOS 26.6.1)의 현재 설치 앱은 `com.taption.plan`, 버전 `1.0 (107)`이며 이번 서명 Debug 앱으로 갱신·launch했다.
+- iPhone 14 Pro(CoreDevice `C44AF739-127D-572D-AD83-417C7E879045`, UDID `00008120-00092C3E14F0201E`, iOS 26.6.1)의 현재 설치 앱은 `com.taption.plan`, 버전 `1.0 (109)`이며 이번 서명 Debug 앱으로 갱신·launch했다.
+- Apple Watch SE(CoreDevice `9229A9F2-B4F1-5A44-ACFA-0E5B00F3B3AF`)의 현재 설치 앱은 `com.taption.plan.watchkitapp`, 버전 `1.0 (109)`이며 이번 서명 Debug 앱으로 갱신·launch했다.
 - build 108은 App Store Connect `제출 준비 완료` 처리 후 `TP Taption Plan 내부 테스트`에 연결했고, 그룹 빌드 화면에서 `1.0 (108) · 테스트 중 · iOS`를 readback했다.
 - build 109는 App Store Connect `제출 준비 완료` 처리 후 `TP Taption Plan 내부 테스트`에 연결했고, 그룹 빌드 화면에서 `1.0 (109) · 테스트 중 · iOS`를 readback했다.
 - 현재 iPad에는 서명 Debug `1.0 (108)`이 설치·launch되어 있다. TestFlight Distribution IPA 직접 설치는 Beta entitlement 제약으로 별도 미완료다.
+- `temp.md`는 현재 비어 있으며, iPhone 미러링 잠금·실제 화면/터치, HealthKit 권한·원본, Watch 지연 동기화, Dynamic Island, IAP 외부 게이트가 `test.md`에 남아 있다.
 - DerivedData·xcresult·저장소의 재생성 캐시는 작업 종료 때 삭제했다.
 
 ## 반영된 구현
