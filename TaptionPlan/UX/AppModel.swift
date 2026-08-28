@@ -4138,6 +4138,31 @@ final class AppModel {
         Task { await persist() }
     }
 
+    @discardableResult
+    func updateMapMemo(
+        _ memoID: UUID,
+        text: String,
+        kind: MemoKind,
+        mapPoint: GeoPoint?,
+        occurredAt: Date
+    ) -> Bool {
+        guard let cleanText = validatedMemoText(text),
+              let index = snapshot.memos.firstIndex(where: { $0.id == memoID }),
+              let updated = ActionMemoEditingEngine.updating(
+                  snapshot.memos[index],
+                  text: cleanText,
+                  kind: kind
+              ) else {
+            return false
+        }
+        var value = updated
+        value.mapPoint = mapPoint
+        value.occurredAt = occurredAt
+        snapshot.memos[index] = value
+        Task { await persist() }
+        return true
+    }
+
     private func validatedMemoText(_ text: String) -> String? {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return nil }
@@ -6436,6 +6461,76 @@ final class AppModel {
     func setMapDisplayProvider(_ provider: MapDisplayProvider) {
         guard snapshot.settings.mapDisplayStyle.provider != provider else { return }
         setMapDisplayStyle(.defaultStyle(for: provider))
+    }
+
+    func setMapMemoDisplayFilter(_ filter: MapMemoDisplayFilter) {
+        guard snapshot.settings.mapMemoDisplayFilter != filter else { return }
+        snapshot.settings.mapMemoDisplayFilter = filter
+        Task { await persist() }
+    }
+
+    @discardableResult
+    func addMapSticker(
+        title: String,
+        placement: MapStickerPlacement,
+        point: GeoPoint?,
+        planID: UUID?,
+        occurredAt: Date
+    ) -> UUID? {
+        let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanTitle.isEmpty else { return nil }
+        guard placement == .schedule || point != nil else { return nil }
+        let sticker = MapSticker(
+            title: cleanTitle,
+            placement: placement,
+            point: point,
+            planID: planID,
+            occurredAt: occurredAt
+        )
+        snapshot.stickers.append(sticker)
+        Task { await persist() }
+        return sticker.id
+    }
+
+    @discardableResult
+    func updateMapSticker(
+        _ stickerID: UUID,
+        title: String,
+        systemImage: String,
+        colorHex: String,
+        placement: MapStickerPlacement,
+        point: GeoPoint?,
+        planID: UUID?,
+        occurredAt: Date
+    ) -> Bool {
+        let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanTitle.isEmpty,
+              placement == .schedule || point != nil,
+              let index = snapshot.stickers.firstIndex(where: { $0.id == stickerID })
+        else { return false }
+        var sticker = snapshot.stickers[index]
+        sticker.title = cleanTitle
+        sticker.systemImage = systemImage
+        sticker.colorHex = colorHex
+        sticker.placement = placement
+        sticker.point = point
+        sticker.planID = planID
+        sticker.occurredAt = occurredAt
+        sticker.updatedAt = .now
+        snapshot.stickers[index] = sticker
+        Task { await persist() }
+        return true
+    }
+
+    func deleteMapSticker(_ stickerID: UUID) {
+        guard snapshot.stickers.contains(where: { $0.id == stickerID }) else {
+            return
+        }
+        snapshot.settings.cloudDeletedRecordKeys.insert(
+            CloudBackupRecordKey.sticker(stickerID)
+        )
+        snapshot.stickers.removeAll { $0.id == stickerID }
+        Task { await persist() }
     }
 
     func confirmTravel(_ travelID: UUID, mode: TravelMode) {
@@ -9043,6 +9138,11 @@ final class AppModel {
             recoveringMissingFrom: value.floorTransitions,
             id: \.id
         ).sorted { $0.span.start < $1.span.start }
+        value.stickers = deviceRecords(
+            local.stickers,
+            recoveringMissingFrom: value.stickers,
+            id: \.id
+        ).sorted { $0.updatedAt < $1.updatedAt }
         value.photos = local.photos
         value.settings.permissions = local.settings.permissions
         value.settings.showsPhotos = local.settings.showsPhotos
@@ -9062,6 +9162,8 @@ final class AppModel {
             local.settings.mapCategoryColors
         value.settings.mapUserActivityCategories =
             local.settings.mapUserActivityCategories
+        value.settings.mapMemoDisplayFilter =
+            local.settings.mapMemoDisplayFilter
         value.settings.watchAccelerationProfile =
             local.settings.watchAccelerationProfile
         value.settings.watchDataSyncProfile =

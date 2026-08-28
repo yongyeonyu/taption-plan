@@ -18577,22 +18577,128 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNotEqual(first.point, refreshed.point)
     }
 
+    func testTransitBoardingDeduplicatesSameStationLocation() {
+        let start = makeDate(2026, 8, 28, 14)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let nearbyPoint = GeoPoint(
+            latitude: 37.5003,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let readings = [
+            transitReading(at: start, point: point),
+            transitReading(at: start.addingTimeInterval(3 * 60), point: point),
+            transitReading(at: start.addingTimeInterval(10 * 60), point: point),
+            transitReading(at: start.addingTimeInterval(13 * 60), point: point),
+        ]
+        let candidates = TransitBoardingCandidateEngine.candidates(
+            readings: readings,
+            registeredLocations: [],
+            nearbyPlaces: [
+                TransitBoardingPlace(
+                    mapKitIdentifier: "train-station-main",
+                    mapKitName: "서울역",
+                    kind: .trainStation,
+                    point: point
+                ),
+                TransitBoardingPlace(
+                    mapKitIdentifier: "train-station-entrance",
+                    mapKitName: "서울역 2번 출구",
+                    kind: .trainStation,
+                    point: nearbyPoint
+                ),
+                TransitBoardingPlace(
+                    mapKitIdentifier: "bus-stop-main",
+                    mapKitName: "서울역 버스정류장",
+                    kind: .busStop,
+                    point: point
+                ),
+            ]
+        )
+
+        XCTAssertEqual(candidates.filter { $0.kind == .trainStation }.count, 1)
+        XCTAssertEqual(candidates.filter { $0.kind == .busStop }.count, 1)
+    }
+
+    func testTransitBoardingUsesAppleWatchRouteReadings() {
+        let start = makeDate(2026, 8, 28, 15)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let station = TransitBoardingPlace(
+            mapKitName: "서울역",
+            kind: .trainStation,
+            point: point
+        )
+        let watchReadings = [
+            transitReading(
+                at: start,
+                point: point,
+                sourceDevice: .appleWatch
+            ),
+            transitReading(
+                at: start.addingTimeInterval(3 * 60),
+                point: point,
+                sourceDevice: .appleWatch
+            ),
+        ]
+
+        let candidates = TransitBoardingCandidateEngine.candidates(
+            readings: watchReadings,
+            registeredLocations: [],
+            nearbyPlaces: [station]
+        )
+
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates.first?.source, .mapKit)
+        XCTAssertEqual(candidates.first?.kind, .trainStation)
+
+    let watchSummaryWithoutRoutePoint = SensorReading(
+        timestamp: start,
+        motion: .stationary,
+        gpsAvailable: false,
+        sourceDevice: .appleWatch
+        )
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: [watchSummaryWithoutRoutePoint],
+                registeredLocations: [],
+                nearbyPlaces: [station]
+            ).isEmpty
+        )
+    }
+
     private func transitReadings(
         at start: Date,
         point: GeoPoint,
         duration: TimeInterval,
-        locationFixQuality: LocationFixQuality? = nil
+        locationFixQuality: LocationFixQuality? = nil,
+        sourceDevice: TrackingDevice? = nil
     ) -> [SensorReading] {
         [
             transitReading(
                 at: start,
                 point: point,
-                locationFixQuality: locationFixQuality
+                locationFixQuality: locationFixQuality,
+                sourceDevice: sourceDevice
             ),
             transitReading(
                 at: start.addingTimeInterval(duration),
                 point: point,
-                locationFixQuality: locationFixQuality
+                locationFixQuality: locationFixQuality,
+                sourceDevice: sourceDevice
             ),
         ]
     }
@@ -18600,13 +18706,15 @@ final class FeatureEngineTests: XCTestCase {
     private func transitReading(
         at date: Date,
         point: GeoPoint,
-        locationFixQuality: LocationFixQuality? = nil
+        locationFixQuality: LocationFixQuality? = nil,
+        sourceDevice: TrackingDevice? = nil
     ) -> SensorReading {
         SensorReading(
             timestamp: date,
             point: point,
             locationFixQuality: locationFixQuality,
-            gpsAvailable: true
+            gpsAvailable: true,
+            sourceDevice: sourceDevice
         )
     }
 
@@ -19193,6 +19301,114 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(result[0].title, "근무")
         XCTAssertEqual(result[0].behavior, StationaryContextKind.work.rawValue)
         XCTAssertTrue(result[0].isClassificationLocked)
+    }
+
+    func testMapMemoFilterShowsAllOrOnlySelectedScheduleAndTarget() {
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let planID = UUID()
+        let planMemo = ActionMemo(
+            planID: planID,
+            mapPoint: point,
+            kind: .idea,
+            text: "일정 메모"
+        )
+        let placeMemo = ActionMemo(
+            targetID: "place.target",
+            mapPoint: point,
+            kind: .decision,
+            text: "장소 메모"
+        )
+        let timelineOnlyMemo = ActionMemo(
+            kind: .nextAction,
+            text: "타임라인 메모"
+        )
+
+        XCTAssertEqual(
+            MapMemoDisplayFilterEngine.visibleMemos(
+                [planMemo, placeMemo, timelineOnlyMemo],
+                filter: .all,
+                selectedPlanIDs: [],
+                selectedTargetIDs: []
+            ),
+            [planMemo, placeMemo]
+        )
+        XCTAssertEqual(
+            MapMemoDisplayFilterEngine.visibleMemos(
+                [planMemo, placeMemo, timelineOnlyMemo],
+                filter: .relevant,
+                selectedPlanIDs: [planID],
+                selectedTargetIDs: []
+            ),
+            [planMemo]
+        )
+        XCTAssertEqual(
+            MapMemoDisplayFilterEngine.visibleMemos(
+                [planMemo, placeMemo, timelineOnlyMemo],
+                filter: .relevant,
+                selectedPlanIDs: [],
+                selectedTargetIDs: ["place.target"]
+            ),
+            [placeMemo]
+        )
+    }
+
+    func testActionMemoWithoutMapPointKeepsBackwardDecodingCompatibility() throws {
+        let memo = ActionMemo(kind: .idea, text: "기존 메모")
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(memo)
+            ) as? [String: Any]
+        )
+        object.removeValue(forKey: "mapPoint")
+        let data = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(ActionMemo.self, from: data)
+
+        XCTAssertEqual(decoded.text, memo.text)
+        XCTAssertNil(decoded.mapPoint)
+    }
+
+    func testCloudMergeKeepsStickersAndHonorsStickerDeletionTombstone() {
+        let localSticker = MapSticker(
+            title: "로컬",
+            placement: .map,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 0,
+                verticalAccuracy: 0
+            ),
+            occurredAt: .now
+        )
+        let remoteSticker = MapSticker(
+            title: "클라우드",
+            placement: .schedule,
+            occurredAt: .now
+        )
+        let deletedSticker = MapSticker(
+            title: "삭제된 스티커",
+            placement: .map,
+            point: localSticker.point,
+            occurredAt: .now
+        )
+        var local = TaptionDataSnapshot.empty
+        local.stickers = [localSticker]
+        local.settings.cloudDeletedRecordKeys = [
+            CloudBackupRecordKey.sticker(deletedSticker.id)
+        ]
+        var remote = TaptionDataSnapshot.empty
+        remote.stickers = [remoteSticker, deletedSticker]
+
+        let merged = CloudSnapshotRecoveryEngine.merge(local: local, remote: remote)
+
+        XCTAssertEqual(Set(merged.stickers.map(\.id)), [localSticker.id, remoteSticker.id])
+        XCTAssertFalse(merged.stickers.contains(where: { $0.id == deletedSticker.id }))
     }
 }
 

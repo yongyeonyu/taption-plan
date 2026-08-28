@@ -1039,6 +1039,8 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     /// Instant on the timeline the memo belongs to, which is not necessarily
     /// when it was typed: a note added to yesterday stays on yesterday.
     var occurredAt: Date
+    /// Optional map position. Existing timeline-only memos keep this nil.
+    var mapPoint: GeoPoint?
     var kind: MemoKind
     var text: String
     var attachments: [MemoAttachment]
@@ -1052,6 +1054,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
         targetID: String? = nil,
         categoryID: String? = nil,
         occurredAt: Date? = nil,
+        mapPoint: GeoPoint? = nil,
         kind: MemoKind,
         text: String,
         attachments: [MemoAttachment] = [],
@@ -1064,6 +1067,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
         self.targetID = targetID
         self.categoryID = categoryID
         self.occurredAt = occurredAt ?? createdAt
+        self.mapPoint = mapPoint
         self.kind = kind
         self.text = text
         self.attachments = attachments
@@ -1073,7 +1077,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, planID, targetID, categoryID, occurredAt, kind, text
+        case id, planID, targetID, categoryID, occurredAt, mapPoint, kind, text
         case attachments, isHighlightedInReview, createdAt, updatedAt
     }
 
@@ -1108,6 +1112,10 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
             Date.self,
             forKey: .occurredAt
         ) ?? decodedCreatedAt
+        mapPoint = try values.decodeIfPresent(
+            GeoPoint.self,
+            forKey: .mapPoint
+        )
     }
 }
 
@@ -3551,6 +3559,53 @@ enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     }
 }
 
+enum MapMemoDisplayFilter: String, Codable, CaseIterable, Hashable, Sendable {
+    case all
+    case relevant
+}
+
+enum MapStickerPlacement: String, Codable, CaseIterable, Hashable, Sendable {
+    case map
+    case schedule
+}
+
+struct MapSticker: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var title: String
+    var systemImage: String
+    var colorHex: String
+    var placement: MapStickerPlacement
+    var point: GeoPoint?
+    var planID: UUID?
+    var occurredAt: Date
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        systemImage: String = "star.fill",
+        colorHex: String = "#F28FA9",
+        placement: MapStickerPlacement,
+        point: GeoPoint? = nil,
+        planID: UUID? = nil,
+        occurredAt: Date,
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.title = title
+        self.systemImage = systemImage
+        self.colorHex = colorHex
+        self.placement = placement
+        self.point = point
+        self.planID = planID
+        self.occurredAt = occurredAt
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
 extension MapDisplayStyle {
     static let appleStyles: [Self] = [
         .standard,
@@ -3642,6 +3697,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var mapCategoryColors: [String: String]
     var mapUserActivityCategories: [MapUserActivityCategory]
     var mapDisplayStyle: MapDisplayStyle
+    var mapMemoDisplayFilter: MapMemoDisplayFilter
     var watchAccelerationProfile: TaptionWatchAccelerationProfile
     var watchDataSyncProfile: TaptionWatchDataSyncProfile
     var floorCalibration: FloorCalibration?
@@ -3687,6 +3743,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         mapCategoryColors: [:],
         mapUserActivityCategories: [],
         mapDisplayStyle: .mapLibreCasual,
+        mapMemoDisplayFilter: .all,
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,
         floorCalibration: nil,
@@ -3727,6 +3784,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         mapCategoryColors: [String: String] = [:],
         mapUserActivityCategories: [MapUserActivityCategory] = [],
         mapDisplayStyle: MapDisplayStyle = .standard,
+        mapMemoDisplayFilter: MapMemoDisplayFilter = .all,
         watchAccelerationProfile: TaptionWatchAccelerationProfile = .off,
         watchDataSyncProfile: TaptionWatchDataSyncProfile = .off,
         floorCalibration: FloorCalibration? = nil,
@@ -3767,6 +3825,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             mapUserActivityCategories
         )
         self.mapDisplayStyle = mapDisplayStyle
+        self.mapMemoDisplayFilter = mapMemoDisplayFilter
         self.watchAccelerationProfile = watchAccelerationProfile
         self.watchDataSyncProfile = watchDataSyncProfile
         self.floorCalibration = floorCalibration
@@ -3811,6 +3870,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case mapCategoryColors
         case mapUserActivityCategories
         case mapDisplayStyle
+        case mapMemoDisplayFilter
         case watchAccelerationProfile
         case watchDataSyncProfile
         case floorCalibration
@@ -3900,6 +3960,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             MapDisplayStyle.self,
             forKey: .mapDisplayStyle
         ) ?? defaults.mapDisplayStyle
+        mapMemoDisplayFilter = try values.decodeIfPresent(
+            MapMemoDisplayFilter.self,
+            forKey: .mapMemoDisplayFilter
+        ) ?? defaults.mapMemoDisplayFilter
         watchAccelerationProfile = try values.decodeIfPresent(
             TaptionWatchAccelerationProfile.self,
             forKey: .watchAccelerationProfile
@@ -4214,6 +4278,7 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
     var actuals: [ActualRecord]
     var recordLinks: [RecordLink]
     var memos: [ActionMemo]
+    var stickers: [MapSticker]
     var categories: [CategoryDefinition]
     var photos: [PhotoMoment]
     var calendarEvents: [CalendarRecord]
@@ -4231,6 +4296,7 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         actuals: [ActualRecord],
         recordLinks: [RecordLink] = [],
         memos: [ActionMemo],
+        stickers: [MapSticker] = [],
         categories: [CategoryDefinition],
         photos: [PhotoMoment],
         calendarEvents: [CalendarRecord],
@@ -4247,6 +4313,7 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         self.actuals = actuals
         self.recordLinks = recordLinks
         self.memos = memos
+        self.stickers = stickers
         self.categories = categories
         self.photos = photos
         self.calendarEvents = calendarEvents
@@ -4285,6 +4352,10 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
             [ActionMemo].self,
             forKey: .memos
         ) ?? defaults.memos
+        stickers = try values.decodeIfPresent(
+            [MapSticker].self,
+            forKey: .stickers
+        ) ?? defaults.stickers
         categories = try values.decodeIfPresent(
             [CategoryDefinition].self,
             forKey: .categories
@@ -4330,6 +4401,7 @@ struct TaptionDataSnapshot: Codable, Hashable, Sendable {
         actuals: [],
         recordLinks: [],
         memos: [],
+        stickers: [],
         categories: [],
         photos: [],
         calendarEvents: [],

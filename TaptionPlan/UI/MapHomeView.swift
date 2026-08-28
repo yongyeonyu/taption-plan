@@ -1065,6 +1065,10 @@ struct MapHomeView: View {
     @State private var isCategoryMenuExpanded = false
     @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
+    @State private var isStickerMenuExpanded = false
+    @State private var isStickerMode = false
+    @State private var selectedMapStickerEditor: MapHomeStickerEditorTarget?
+    @State private var selectedMapTargetID: String?
     @State private var isSettingsMenuExpanded = false
     @State private var isGPSLoggingMenuExpanded = false
     @State private var isDataProtectionPresented = false
@@ -1128,6 +1132,8 @@ struct MapHomeView: View {
     @State private var timeSidebarZoomStep = 0
     @State private var weatherVisibleStartMinute = 0
     @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
+    @State private var timeSidebarVisibleStartMinute = 0
+    @State private var timeSidebarVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var cachedWeatherContexts: [WeatherContext]
     @State private var sidebarPinchStepOffset = 0
     @State private var lastSidebarPinchRenderUptime: TimeInterval = 0
@@ -1444,6 +1450,13 @@ struct MapHomeView: View {
         .sheet(item: $selectedUserLocation) { selection in
             userLocationSheet(for: selection)
         }
+        .sheet(item: $selectedMapStickerEditor) { target in
+            MapHomeStickerEditorSheet(
+                model: model,
+                target: target,
+                language: language
+            )
+        }
         .sheet(item: $selectedTransitBoardingCandidate) { candidate in
             MapHomeTransitBoardingCandidateSheet(
                 model: model,
@@ -1679,6 +1692,114 @@ struct MapHomeView: View {
         model.settings.mapDisplayStyle.mapHomeVectorStyle
     }
 
+    private var mapStickersOnMap: [MapSticker] {
+        model.snapshot.stickers.filter {
+            $0.placement == .map && $0.point.map(isValid) == true
+        }
+    }
+
+    private var scheduleStickersForSelectedDate: [MapSticker] {
+        model.snapshot.stickers.filter {
+            $0.placement == .schedule
+                && Calendar.autoupdatingCurrent.isDate(
+                    $0.occurredAt,
+                    inSameDayAs: model.selectedDate
+                )
+        }
+    }
+
+    private var selectedSchedulePlanIDs: Set<UUID> {
+        let selectedDate = timelineDate(forMinute: Double(effectiveTimelineMinute))
+        return Set(
+            model.snapshot.plans
+                .filter { $0.span.start <= selectedDate && selectedDate < $0.span.end }
+                .map(\.id)
+        )
+    }
+
+    private var selectedMapMemoTargetIDs: Set<String> {
+        var ids = Set<String>()
+        if let selectedMapTargetID {
+            ids.insert(selectedMapTargetID)
+        }
+        for planID in selectedSchedulePlanIDs {
+            ids.insert("plan.\(planID.uuidString)")
+            ids.insert(planID.uuidString)
+        }
+        return ids
+    }
+
+    private var mapMemos: [ActionMemo] {
+        MapMemoDisplayFilterEngine.visibleMemos(
+            model.snapshot.memos,
+            filter: model.settings.mapMemoDisplayFilter,
+            selectedPlanIDs: selectedSchedulePlanIDs,
+            selectedTargetIDs: selectedMapMemoTargetIDs
+        )
+    }
+
+    private var mapMemosOnMap: [ActionMemo] {
+        mapMemos.filter { memo in
+            guard let point = memo.mapPoint else { return false }
+            return isValid(point)
+        }
+    }
+
+    private var mapCenterPoint: GeoPoint? {
+        let candidate = visibleMapCenter
+        if candidate.latitude.isFinite,
+           candidate.longitude.isFinite,
+           (-90...90).contains(candidate.latitude),
+           (-180...180).contains(candidate.longitude),
+           candidate.latitude != 0 || candidate.longitude != 0 {
+            return GeoPoint(
+                latitude: candidate.latitude,
+                longitude: candidate.longitude,
+                altitude: 0,
+                horizontalAccuracy: 0,
+                verticalAccuracy: 0
+            )
+        }
+        guard let currentCoordinate else { return nil }
+        return GeoPoint(
+            latitude: currentCoordinate.latitude,
+            longitude: currentCoordinate.longitude,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+    }
+
+    private func addMapSticker() {
+        guard let point = mapCenterPoint,
+              let id = model.addMapSticker(
+                  title: language.text("새 지도 스티커", "New map sticker"),
+                  placement: .map,
+                  point: point,
+                  planID: nil,
+                  occurredAt: timelineDate(forMinute: Double(effectiveTimelineMinute))
+              ) else { return }
+        isStickerMode = true
+        isStickerMenuExpanded = false
+        isMenuOpen = false
+        selectedMapStickerEditor = .sticker(id)
+    }
+
+    private func addScheduleSticker() {
+        let date = timelineDate(forMinute: Double(effectiveTimelineMinute))
+        guard let id = model.addMapSticker(
+            title: language.text("새 일정 스티커", "New schedule sticker"),
+            placement: .schedule,
+            point: nil,
+            planID: selectedSchedulePlanIDs.first,
+            occurredAt: date
+        ) else { return }
+        isStickerMode = true
+        isStickerMenuExpanded = false
+        isMenuOpen = false
+        selectedMapStickerEditor = .sticker(id)
+    }
+
     private var usesVectorRoadMap: Bool {
         currentVectorStyle != nil
     }
@@ -1873,6 +1994,7 @@ struct MapHomeView: View {
                 Annotation("", coordinate: place.coordinate, anchor: .bottom) {
                     if place.destination == .user {
                         Button {
+                            selectedMapTargetID = "place.\(place.id.uuidString)"
                             selectedUserLocation = .frequentPlace(place.id)
                         } label: {
                             MapHomePlacePin(
@@ -1905,6 +2027,7 @@ struct MapHomeView: View {
             ForEach(transitAnnotations) { place in
                 Annotation("", coordinate: place.coordinate, anchor: .bottom) {
                     Button {
+                        selectedMapTargetID = "transit.\(place.id.uuidString)"
                         selectedUserLocation = .transit(place.id)
                     } label: {
                         MapHomeTransitPlacePin(
@@ -1948,6 +2071,61 @@ struct MapHomeView: View {
                             "Confirm boarding at \(candidate.name) \(candidate.kind.englishTitle)"
                         )
                     )
+                }
+            }
+
+            ForEach(mapStickersOnMap) { sticker in
+                if let point = sticker.point {
+                    Annotation(
+                        sticker.title,
+                        coordinate: CLLocationCoordinate2D(
+                            latitude: point.latitude,
+                            longitude: point.longitude
+                        ),
+                        anchor: .bottom
+                    ) {
+                        Button {
+                            selectedMapStickerEditor = .sticker(sticker.id)
+                        } label: {
+                            MapHomeMapStickerMarker(sticker: sticker)
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(isStickerMode)
+                        .accessibilityLabel(
+                            language.text(
+                                "\(sticker.title) 스티커",
+                                "\(sticker.title) sticker"
+                            )
+                        )
+                    }
+                }
+            }
+
+            ForEach(mapMemosOnMap) { memo in
+                if let point = memo.mapPoint {
+                    Annotation(
+                        memo.text,
+                        coordinate: CLLocationCoordinate2D(
+                            latitude: point.latitude,
+                            longitude: point.longitude
+                        ),
+                        anchor: .bottom
+                    ) {
+                        Button {
+                            selectedMapTargetID = memo.targetID
+                            selectedMapStickerEditor = .memo(memo.id)
+                        } label: {
+                            MapHomeMapMemoMarker(memo: memo)
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(isStickerMode)
+                        .accessibilityLabel(
+                            language.text(
+                                "지도 메모 \(memo.text)",
+                                "Map memo \(memo.text)"
+                            )
+                        )
+                    }
                 }
             }
 
@@ -2221,6 +2399,26 @@ struct MapHomeView: View {
                 )
             )
         }
+        markers += mapStickersOnMap.compactMap { sticker in
+            guard let point = sticker.point else { return nil }
+            return MapHomeVectorMarker(
+                id: vectorMapStickerMarkerID(sticker.id),
+                coordinate: CLLocationCoordinate2D(
+                    latitude: point.latitude,
+                    longitude: point.longitude
+                )
+            )
+        }
+        markers += mapMemosOnMap.compactMap { memo in
+            guard let point = memo.mapPoint else { return nil }
+            return MapHomeVectorMarker(
+                id: vectorMapMemoMarkerID(memo.id),
+                coordinate: CLLocationCoordinate2D(
+                    latitude: point.latitude,
+                    longitude: point.longitude
+                )
+            )
+        }
         if let displayedLocationCoordinate {
             markers.append(
                 MapHomeVectorMarker(
@@ -2299,6 +2497,7 @@ struct MapHomeView: View {
                     MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
                         if place.destination == .user {
                             Button {
+                                selectedMapTargetID = "place.\(place.id.uuidString)"
                                 selectedUserLocation = .frequentPlace(place.id)
                             } label: {
                                 MapHomePlacePin(
@@ -2334,8 +2533,9 @@ struct MapHomeView: View {
                     for: vectorTransitMarkerID(place.id)
                 ) {
                     MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
-                        Button {
-                            selectedUserLocation = .transit(place.id)
+                    Button {
+                        selectedMapTargetID = "transit.\(place.id.uuidString)"
+                        selectedUserLocation = .transit(place.id)
                         } label: {
                             MapHomeTransitPlacePin(name: place.name, kind: place.kind)
                                 .fixedSize()
@@ -2371,6 +2571,53 @@ struct MapHomeView: View {
                             language.text(
                                 "\(candidate.name) \(candidate.kind.title) 탑승 확인",
                                 "Confirm boarding at \(candidate.name) \(candidate.kind.englishTitle)"
+                            )
+                        )
+                    }
+                }
+            }
+
+            ForEach(mapStickersOnMap) { sticker in
+                if let point = vectorPoint(
+                    in: viewport,
+                    for: vectorMapStickerMarkerID(sticker.id)
+                ) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
+                        Button {
+                            selectedMapStickerEditor = .sticker(sticker.id)
+                        } label: {
+                            MapHomeMapStickerMarker(sticker: sticker)
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(isStickerMode)
+                        .accessibilityLabel(
+                            language.text(
+                                "\(sticker.title) 스티커",
+                                "\(sticker.title) sticker"
+                            )
+                        )
+                    }
+                }
+            }
+
+            ForEach(mapMemosOnMap) { memo in
+                if let point = vectorPoint(
+                    in: viewport,
+                    for: vectorMapMemoMarkerID(memo.id)
+                ) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
+                        Button {
+                            selectedMapTargetID = memo.targetID
+                            selectedMapStickerEditor = .memo(memo.id)
+                        } label: {
+                            MapHomeMapMemoMarker(memo: memo)
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(isStickerMode)
+                        .accessibilityLabel(
+                            language.text(
+                                "지도 메모 \(memo.text)",
+                                "Map memo \(memo.text)"
                             )
                         )
                     }
@@ -2446,6 +2693,14 @@ struct MapHomeView: View {
 
     private func vectorTransitMarkerID(_ id: UUID) -> String {
         "transit-\(id.uuidString)"
+    }
+
+    private func vectorMapStickerMarkerID(_ id: UUID) -> String {
+        "map-sticker-\(id.uuidString)"
+    }
+
+    private func vectorMapMemoMarkerID(_ id: UUID) -> String {
+        "map-memo-\(id.uuidString)"
     }
 
     private func vectorBoardingCandidateMarkerID(_ id: String) -> String {
@@ -2804,6 +3059,15 @@ struct MapHomeView: View {
         case .mapLibreContrast: language.text("벡터 고대비", "Vector Contrast")
         case .mapLibrePastel: language.text("벡터 파스텔", "Vector Pastel")
         case .mapLibreCasual: language.text("벡터 캐주얼", "Vector Casual")
+        }
+    }
+
+    private func mapMemoDisplayFilterTitle(_ filter: MapMemoDisplayFilter) -> String {
+        switch filter {
+        case .all:
+            language.text("전부 보기", "Show all")
+        case .relevant:
+            language.text("해당되는 것만 보기", "Show relevant only")
         }
     }
 
@@ -3286,6 +3550,8 @@ struct MapHomeView: View {
                         onViewportChanged: { start, duration in
                             weatherVisibleStartMinute = start
                             weatherVisibleDurationMinutes = duration
+                            timeSidebarVisibleStartMinute = start
+                            timeSidebarVisibleDurationMinutes = duration
                         },
                         onInteractionChanged: { isInteracting in
                             isTimelineInteractionActive = isInteracting
@@ -3294,6 +3560,42 @@ struct MapHomeView: View {
                             openSectionEditor(at: selectedMinute)
                         }
                     )
+
+                    ForEach(scheduleStickersForSelectedDate) { sticker in
+                        let window = MapHomeTimeSidebarMath.visibleWindow(
+                            startMinute: timeSidebarVisibleStartMinute,
+                            durationMinutes: timeSidebarVisibleDurationMinutes,
+                            centerMinute: effectiveTimelineMinute
+                        )
+                        let minute = minuteOfDay(for: sticker.occurredAt)
+                        let trackHeight = max(1, railHeight - 28)
+                        let y = 14 + trackHeight * MapHomeTimeSidebarMath.position(
+                            minute: minute,
+                            window: window
+                        )
+                        Button {
+                            selectedMapStickerEditor = .sticker(sticker.id)
+                        } label: {
+                            Image(systemName: sticker.systemImage)
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color(hex: sticker.colorHex))
+                                .frame(width: 22, height: 22)
+                                .background(Color.white.opacity(0.96), in: Circle())
+                                .overlay(Circle().stroke(Color(hex: sticker.colorHex), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(isStickerMode)
+                        .accessibilityLabel(
+                            language.text(
+                                "\(sticker.title) 일정 스티커",
+                                "\(sticker.title) schedule sticker"
+                            )
+                        )
+                        .position(
+                            x: MapHomeTimeSidebarMath.handleLaneWidth + 8,
+                            y: min(max(y, 14), railHeight - 14)
+                        )
+                    }
                 }
                 .frame(
                     width: timeSidebarInteractionWidth,
@@ -3514,6 +3816,7 @@ struct MapHomeView: View {
             locationMenuItem
             categoryMenuItem
             displayMenuItem
+            stickerMenuItem
             languageMenuItem
             settingsMenuItem
 
@@ -3902,6 +4205,7 @@ struct MapHomeView: View {
 
     private func userFrequentPlaceRow(_ place: FrequentPlace) -> some View {
         Button {
+            selectedMapTargetID = "place.\(place.id.uuidString)"
             if let point = place.point {
                 focusMap(on: point)
                 isMenuOpen = false
@@ -4138,6 +4442,126 @@ struct MapHomeView: View {
         }
     }
 
+    private var stickerMenuItem: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Button {
+                isStickerMenuExpanded.toggle()
+            } label: {
+                HStack(spacing: 13) {
+                    Image(systemName: "seal.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.tpPastelRose)
+                        .frame(width: 24)
+                    Text(language.text("스티커", "Stickers"))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    Spacer()
+                    Image(systemName: isStickerMenuExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(Color.primary)
+                .padding(.vertical, 9)
+                .padding(.horizontal, 12)
+                .background(
+                    Color.tpPastelRose.opacity(0.10),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("스티커 메뉴", "Sticker menu"))
+
+            if isStickerMenuExpanded {
+                Toggle(
+                    isOn: Binding(
+                        get: { isStickerMode },
+                        set: { isStickerMode = $0 }
+                    )
+                ) {
+                    Label(
+                        language.text("스티커 모드", "Sticker mode"),
+                        systemImage: "pencil.and.scribble"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpPastelRose)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
+                Button {
+                    addMapSticker()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.tpReferenceBlue)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(language.text("지도에 추가", "Add to map"))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Text(language.text("현재 지도 중심에 스티커 배치", "Place at the current map center"))
+                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(Color.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                    .background(
+                        Color.tpReferenceBlue.opacity(0.055),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("지도에 스티커 추가", "Add sticker to map"))
+                .padding(.leading, 12)
+
+                Button {
+                    addScheduleSticker()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.tpReferenceMint)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(language.text("일정에 추가", "Add to schedule"))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Text(language.text("선택한 시간에 스티커 배치", "Place at the selected time"))
+                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(Color.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                    .background(
+                        Color.tpReferenceMint.opacity(0.055),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("일정에 스티커 추가", "Add sticker to schedule"))
+                .padding(.leading, 12)
+
+                if isStickerMode {
+                    Text(language.text("지도의 스티커와 메모를 탭해 수정할 수 있어요.", "Tap a map sticker or memo to edit it."))
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                        .padding(.horizontal, 12)
+                }
+            }
+        }
+    }
+
     private var displayMenuItem: some View {
         VStack(alignment: .leading, spacing: 5) {
             Button {
@@ -4195,6 +4619,38 @@ struct MapHomeView: View {
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(
                         model.settings.mapDisplayStyle == style ? .isSelected : []
+                    )
+                }
+
+                Text(language.text("지도 메모", "Map memos"))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 6)
+                    .padding(.horizontal, 12)
+
+                ForEach(MapMemoDisplayFilter.allCases, id: \.self) { filter in
+                    Button {
+                        model.setMapMemoDisplayFilter(filter)
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: filter == .all ? "square.stack.3d.up.fill" : "scope")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 22)
+                            Text(mapMemoDisplayFilterTitle(filter))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Spacer()
+                            if model.settings.mapMemoDisplayFilter == filter {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                        }
+                        .foregroundStyle(Color.primary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(
+                        model.settings.mapMemoDisplayFilter == filter ? .isSelected : []
                     )
                 }
 
@@ -9116,6 +9572,341 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
         }
         .padding(20)
         .background(Color.tpSurface)
+    }
+}
+
+private enum MapHomeStickerEditorTarget: Identifiable {
+    case sticker(UUID)
+    case memo(UUID)
+
+    var id: String {
+        switch self {
+        case .sticker(let id): "sticker-\(id.uuidString)"
+        case .memo(let id): "memo-\(id.uuidString)"
+        }
+    }
+}
+
+private struct MapHomeMapStickerMarker: View {
+    let sticker: MapSticker
+
+    var body: some View {
+        VStack(spacing: 3) {
+            Image(systemName: sticker.systemImage)
+                .font(.system(size: 15, weight: .bold))
+            Text(sticker.title)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .lineLimit(1)
+        }
+        .foregroundStyle(Color.tpInk)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            Color(hex: sticker.colorHex).opacity(0.92),
+            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .stroke(Color.white.opacity(0.9), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+        .fixedSize()
+    }
+}
+
+private struct MapHomeMapMemoMarker: View {
+    let memo: ActionMemo
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "note.text")
+                .font(.system(size: 12, weight: .bold))
+            Text(memo.text)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .frame(maxWidth: 118, alignment: .leading)
+        }
+        .foregroundStyle(Color.tpInk)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            Color.tpPastelButter.opacity(0.94),
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.tpReferenceGold.opacity(0.72), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
+        .fixedSize()
+    }
+}
+
+private struct MapHomeStickerEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let target: MapHomeStickerEditorTarget
+    let language: MapHomeLanguage
+
+    @State private var title = ""
+    @State private var memoText = ""
+    @State private var memoKind: MemoKind = .idea
+    @State private var placement: MapStickerPlacement = .map
+    @State private var systemImage = "star.fill"
+    @State private var colorHex = "#F28FA9"
+    @State private var latitudeText = ""
+    @State private var longitudeText = ""
+    @State private var occurredAt = Date()
+    @State private var isDeleteConfirmationPresented = false
+
+    private let symbols = [
+        "star.fill", "heart.fill", "flag.fill", "pin.fill",
+        "sparkles", "leaf.fill"
+    ]
+    private let colors = [
+        "#F28FA9", "#A9CFF0", "#8FD9C5", "#F2D58D",
+        "#C2B4E9", "#F2B18D"
+    ]
+
+    private var isSticker: Bool {
+        if case .sticker = target { return true }
+        return false
+    }
+
+    private var canSave: Bool {
+        let cleanTitle = (isSticker ? title : memoText)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanTitle.isEmpty else { return false }
+        if isSticker && placement == .schedule { return true }
+        return editedPoint != nil
+    }
+
+    private var editedPoint: GeoPoint? {
+        guard let latitude = Double(latitudeText),
+              let longitude = Double(longitudeText),
+              (-90...90).contains(latitude),
+              (-180...180).contains(longitude) else {
+            return nil
+        }
+        return GeoPoint(
+            latitude: latitude,
+            longitude: longitude,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if isSticker {
+                    stickerFields
+                } else {
+                    memoFields
+                }
+
+                Section {
+                    Button(language.text("삭제", "Delete"), role: .destructive) {
+                        isDeleteConfirmationPresented = true
+                    }
+                }
+            }
+            .navigationTitle(
+                language.text(
+                    isSticker ? "스티커 수정" : "지도 메모 수정",
+                    isSticker ? "Edit sticker" : "Edit map memo"
+                )
+            )
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(language.text("취소", "Cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(language.text("저장", "Save")) { save() }
+                        .disabled(!canSave)
+                }
+            }
+            .confirmationDialog(
+                language.text("이 항목을 삭제할까요?", "Delete this item?"),
+                isPresented: $isDeleteConfirmationPresented,
+                titleVisibility: .visible
+            ) {
+                Button(language.text("삭제", "Delete"), role: .destructive) {
+                    delete()
+                }
+                Button(language.text("취소", "Cancel"), role: .cancel) {}
+            }
+            .onAppear(perform: load)
+        }
+    }
+
+    @ViewBuilder
+    private var stickerFields: some View {
+        Section(language.text("스티커", "Sticker")) {
+            TextField(language.text("이름", "Name"), text: $title)
+            Picker(
+                language.text("추가 위치", "Placement"),
+                selection: $placement
+            ) {
+                Text(language.text("지도", "Map")).tag(MapStickerPlacement.map)
+                Text(language.text("일정", "Schedule")).tag(MapStickerPlacement.schedule)
+            }
+            DatePicker(
+                language.text("시간", "Time"),
+                selection: $occurredAt,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            symbolPicker
+            colorPicker
+            if placement == .map {
+                coordinateFields
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var memoFields: some View {
+        Section(language.text("메모", "Memo")) {
+            TextField(
+                language.text("메모 내용", "Memo text"),
+                text: $memoText,
+                axis: .vertical
+            )
+            Picker(language.text("종류", "Kind"), selection: $memoKind) {
+                ForEach(MemoKind.allCases, id: \.rawValue) { kind in
+                    Text(memoKindTitle(kind)).tag(kind)
+                }
+            }
+            DatePicker(
+                language.text("시간", "Time"),
+                selection: $occurredAt,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            coordinateFields
+        }
+    }
+
+    private var coordinateFields: some View {
+        Group {
+            TextField("Latitude", text: $latitudeText)
+                .keyboardType(.decimalPad)
+            TextField("Longitude", text: $longitudeText)
+                .keyboardType(.decimalPad)
+        }
+    }
+
+    private var symbolPicker: some View {
+        HStack(spacing: 9) {
+            ForEach(symbols, id: \.self) { symbol in
+                Button {
+                    systemImage = symbol
+                } label: {
+                    Image(systemName: symbol)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color(hex: colorHex))
+                        .frame(width: 34, height: 34)
+                        .background(
+                            systemImage == symbol
+                                ? Color(hex: colorHex).opacity(0.18)
+                                : Color.black.opacity(0.05),
+                            in: RoundedRectangle(cornerRadius: 8)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var colorPicker: some View {
+        HStack(spacing: 10) {
+            ForEach(colors, id: \.self) { color in
+                Button {
+                    colorHex = color
+                } label: {
+                    Circle()
+                        .fill(Color(hex: color))
+                        .frame(width: 24, height: 24)
+                        .overlay {
+                            Circle()
+                                .stroke(
+                                    colorHex == color ? Color.tpInk : .white,
+                                    lineWidth: colorHex == color ? 2 : 1
+                                )
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func load() {
+        switch target {
+        case .sticker(let id):
+            guard let sticker = model.snapshot.stickers.first(where: { $0.id == id }) else { return }
+            title = sticker.title
+            placement = sticker.placement
+            systemImage = sticker.systemImage
+            colorHex = sticker.colorHex
+            occurredAt = sticker.occurredAt
+            if let point = sticker.point {
+                latitudeText = String(format: "%.6f", point.latitude)
+                longitudeText = String(format: "%.6f", point.longitude)
+            }
+        case .memo(let id):
+            guard let memo = model.snapshot.memos.first(where: { $0.id == id }) else { return }
+            memoText = memo.text
+            memoKind = memo.kind
+            occurredAt = memo.occurredAt
+            if let point = memo.mapPoint {
+                latitudeText = String(format: "%.6f", point.latitude)
+                longitudeText = String(format: "%.6f", point.longitude)
+            }
+        }
+    }
+
+    private func save() {
+        switch target {
+        case .sticker(let id):
+            let point = placement == .map ? editedPoint : nil
+            guard model.updateMapSticker(
+                id,
+                title: title,
+                systemImage: systemImage,
+                colorHex: colorHex,
+                placement: placement,
+                point: point,
+                planID: model.snapshot.stickers.first(where: { $0.id == id })?.planID,
+                occurredAt: occurredAt
+            ) else { return }
+        case .memo(let id):
+            guard model.updateMapMemo(
+                id,
+                text: memoText,
+                kind: memoKind,
+                mapPoint: editedPoint,
+                occurredAt: occurredAt
+            ) else { return }
+        }
+        dismiss()
+    }
+
+    private func delete() {
+        switch target {
+        case .sticker(let id): model.deleteMapSticker(id)
+        case .memo(let id): model.deleteMemo(id)
+        }
+        dismiss()
+    }
+
+    private func memoKindTitle(_ kind: MemoKind) -> String {
+        switch kind {
+        case .decision: language.text("결정", "Decision")
+        case .idea: language.text("아이디어", "Idea")
+        case .blocker: language.text("장애물", "Blocker")
+        case .nextAction: language.text("다음 행동", "Next action")
+        }
     }
 }
 

@@ -2516,7 +2516,7 @@ enum TransitBoardingCandidateEngine {
             }
         }
 
-        return result.sorted { $0.span.start < $1.span.start }
+        return deduplicatedCandidates(result)
     }
 
     static func candidateKey(
@@ -2548,6 +2548,36 @@ enum TransitBoardingCandidateEngine {
             let nearestGap = max(gapAfter, gapBefore)
             return nearestGap <= maximumSampleGap
         }
+    }
+
+    private static func deduplicatedCandidates(
+        _ candidates: [TransitBoardingCandidate]
+    ) -> [TransitBoardingCandidate] {
+        let prioritized = candidates.sorted { lhs, rhs in
+            if lhs.dwellDuration != rhs.dwellDuration {
+                return lhs.dwellDuration > rhs.dwellDuration
+            }
+            if lhs.source != rhs.source {
+                return lhs.source == .registered
+            }
+            if lhs.span.start != rhs.span.start {
+                return lhs.span.start < rhs.span.start
+            }
+            return lhs.id < rhs.id
+        }
+
+        var unique: [TransitBoardingCandidate] = []
+        for candidate in prioritized {
+            let isDuplicate = unique.contains { existing in
+                existing.kind == candidate.kind
+                    && (existing.placeID == candidate.placeID
+                        || distanceMeters(existing.point, candidate.point) <= 100)
+            }
+            if !isDuplicate {
+                unique.append(candidate)
+            }
+        }
+        return unique.sorted { $0.span.start < $1.span.start }
     }
 
     private static func mergedPlaces(

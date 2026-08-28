@@ -1637,6 +1637,29 @@ enum ActionMemoEditingEngine {
     }
 }
 
+enum MapMemoDisplayFilterEngine {
+    static func visibleMemos(
+        _ memos: [ActionMemo],
+        filter: MapMemoDisplayFilter,
+        selectedPlanIDs: Set<UUID>,
+        selectedTargetIDs: Set<String>
+    ) -> [ActionMemo] {
+        let mapped = memos.filter { $0.mapPoint != nil }
+        guard filter == .relevant else { return mapped }
+
+        return mapped.filter { memo in
+            if let planID = memo.planID, selectedPlanIDs.contains(planID) {
+                return true
+            }
+            if let targetID = memo.targetID,
+               selectedTargetIDs.contains(targetID) {
+                return true
+            }
+            return false
+        }
+    }
+}
+
 /// A memo used to need a host plan, so a note left on a category row created a
 /// one-minute placeholder titled `메모 - <카테고리>`. Those placeholders then
 /// showed up in the 기록 탭 계획 카드 as plans the user never made. This lifts

@@ -589,6 +589,7 @@ enum CloudSyncDecision: Equatable, Sendable {
 enum CloudBackupRecordKey {
     static func plan(_ id: UUID) -> String { "plan:\(id.uuidString)" }
     static func memo(_ id: UUID) -> String { "memo:\(id.uuidString)" }
+    static func sticker(_ id: UUID) -> String { "sticker:\(id.uuidString)" }
     static func link(_ id: UUID) -> String { "link:\(id.uuidString)" }
 }
 
@@ -617,6 +618,9 @@ enum CloudSnapshotRecoveryEngine {
         }
         value.memos = mergeMemos(primary.memos, backup.memos).filter {
             !deleted.contains(CloudBackupRecordKey.memo($0.id))
+        }
+        value.stickers = mergeStickers(primary.stickers, backup.stickers).filter {
+            !deleted.contains(CloudBackupRecordKey.sticker($0.id))
         }
         value.actuals = merged(primary.actuals, backup.actuals, id: \.id)
             .filter { !suppressedActuals.contains($0.id) }
@@ -684,6 +688,15 @@ enum CloudSnapshotRecoveryEngine {
         _ primary: [ActionMemo],
         _ backup: [ActionMemo]
     ) -> [ActionMemo] {
+        merged(primary, backup, id: \.id) { current, candidate in
+            candidate.updatedAt > current.updatedAt ? candidate : current
+        }
+    }
+
+    private static func mergeStickers(
+        _ primary: [MapSticker],
+        _ backup: [MapSticker]
+    ) -> [MapSticker] {
         merged(primary, backup, id: \.id) { current, candidate in
             candidate.updatedAt > current.updatedAt ? candidate : current
         }
