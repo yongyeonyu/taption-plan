@@ -14,6 +14,8 @@
 - iPhone 미러링: 기기가 사용 중이라 잠금 전 연결 시간 초과, 화면·터치 readback 미검증
 - iPad Pro 12.9-inch 서명 Debug build/install/launch: 성공, `com.taption.plan` `1.0 (107)` readback
 - iPad 대상 회귀 XCTest: 교통 후보 6건 + MapLibre viewport 최종 flush 1건, 7건 모두 통과
+- Release build `1.0 (108)` archive/export/upload: 성공, App Store Connect processing `제출 준비 완료`
+- `TP Taption Plan 내부 테스트` 그룹: build `1.0 (108)` 연결·`테스트 중`·iOS 노출 readback 성공
 
 ## TRN828Q7A1 · BUG28P9K3X · DEL28Q9M4X
 

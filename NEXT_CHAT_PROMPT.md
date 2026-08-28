@@ -18,13 +18,13 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 
 ## 2026-08-28 인계 상태
 
-- 이번 실행의 마지막 커밋과 `origin/main` 차이는 위 명령으로 readback한다. 원격 push는 하지 않는다.
-- 앱은 `com.taption.plan`, 최신 TestFlight 기준 버전 `1.0 (107)`이다.
-- 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`이 성공했다. 서명 Debug 앱을 iPhone 14 Pro에 설치·launch했고, 전체 XCTest는 775건 중 773건 통과했다.
+- 이번 실행의 마지막 커밋은 `7e5bb68`이며 `origin/main`에 push했다. 다음 채팅에서 위 명령으로 다시 readback한다.
+- 앱은 `com.taption.plan`, 최신 TestFlight 기준 버전 `1.0 (108)`이며 `TP Taption Plan 내부 테스트`에서 `테스트 중`이다.
+- 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`, Release archive/export/upload가 성공했다. 서명 Debug 앱을 iPad Pro에 설치·launch했고, iPad 대상 회귀 XCTest 7건도 통과했다. 전체 XCTest는 775건 중 773건 통과했다.
 - 이번 변경 대상 XCTest인 `MapHomeStickmanTests` 13건과 근방 후보 삭제 회귀 1건은 모두 통과했다. 추가로 iPad에서 교통 후보 6건과 MapLibre viewport 최종 flush 1건도 통과했다. 전체 실패 2건은 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` fixture 때문이다.
 - 현재 사용 가능한 iOS Simulator가 없고, iPhone 미러링도 기기가 사용 중이라 잠금 전 연결 시간이 초과되어 지도/HealthKit 실제 touch readback은 `test.md`에 미검증 게이트로 남겼다. iPad는 서명 Debug `1.0 (107)` 설치·launch까지 readback했지만 화면·터치는 별도 미검증이다.
 - iPhone 14 Pro(CoreDevice `C44AF739-127D-572D-AD83-417C7E879045`, UDID `00008120-00092C3E14F0201E`, iOS 26.6.1)의 현재 설치 앱은 `com.taption.plan`, 버전 `1.0 (107)`이며 이번 서명 Debug 앱으로 갱신·launch했다.
-- 이번 실행은 새 TestFlight 빌드를 만들지 않았다. 기존 build 107의 `TP Taption Plan 내부 테스트` 연결은 별도 readback 게이트로 유지한다.
+- build 108은 App Store Connect `제출 준비 완료` 처리 후 `TP Taption Plan 내부 테스트`에 연결했고, 그룹 빌드 화면에서 `1.0 (108) · 테스트 중 · iOS`를 readback했다.
 - DerivedData·xcresult·저장소의 재생성 캐시는 작업 종료 때 삭제한다.
 
 ## 반영된 구현
