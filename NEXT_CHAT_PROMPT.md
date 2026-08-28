@@ -18,7 +18,7 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 
 ## 2026-08-28 인계 상태
 
-- 이번 실행의 마지막 커밋은 `b707adf`이며 `origin/main`과 일치하고 워크트리는 clean이다. 다음 채팅에서 위 명령으로 다시 readback한다.
+- 구현 커밋 `b707adf`와 최신 인계 문서가 `main`에 push되었고 현재 워크트리는 clean이다. 다음 채팅에서 위 명령으로 최신 HEAD와 원격을 다시 readback한다.
 - 앱은 `com.taption.plan`, 최신 TestFlight 기준 버전 `1.0 (109)`이며 `TP Taption Plan 내부 테스트`에서 `테스트 중`이다.
 - 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`, Release archive/export/upload가 성공했다. 서명 Debug 앱 `1.0 (108)`을 iPad Pro에 설치·launch했고, `MapHomeStickmanTests` 16건도 통과했다.
 - 이번 변경 대상 XCTest인 `MapHomeStickmanTests` 16건은 모두 통과했다. 전체 XCTest의 기존 fixture 실패 2건은 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` 때문이다.
