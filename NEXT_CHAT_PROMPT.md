@@ -18,13 +18,13 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 
 ## 2026-08-28 인계 상태
 
-- 이 문서가 포함된 최신 커밋까지 `main`과 `origin/main`을 일치시키고 워크트리 clean으로 정리했다. 정확한 SHA는 위 명령으로 읽는다.
-- 앱은 `com.taption.plan`, 버전 `1.0 (106)`이다.
-- 전체 `TaptionPlanTests` 756/756과 Swift Testing 10/10이 통과했다.
-- iPhone 14 Pro(CoreDevice `C44AF739-127D-572D-AD83-417C7E879045`, UDID `00008120-00092C3E14F0201E`, iOS 26.6.1)용 Debug 서명 빌드가 성공했다.
-- 동일 빌드를 iPhone에 설치하고 앱 목록 `1.0 (106)`, launch, 앱 프로세스 readback을 분리 확인했다. HealthKit 표준 권한 집합의 실기기 예외 수정 후 20초 동안 즉시 종료가 재발하지 않았다.
-- 이번 작업은 새 TestFlight 빌드를 만들지 않았다. 이전 기록상 build 106은 `TP Taption Plan 내부 테스트` 그룹에 연결되어 있었으나 App Store Connect에서 다시 확인해야 한다.
-- 검증용 Taption Plan 전용 시뮬레이터와 DerivedData·xcresult·저장소의 재생성 캐시는 작업 종료 때 삭제했다.
+- 이번 실행의 마지막 커밋과 `origin/main` 차이는 위 명령으로 readback한다. 원격 push는 하지 않는다.
+- 앱은 `com.taption.plan`, 최신 TestFlight 기준 버전 `1.0 (107)`이다.
+- 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`이 성공했다. 테스트 번들 컴파일까지 확인했으며 XCTest 실제 실행은 하지 않았다.
+- 현재 사용 가능한 iOS Simulator가 없어 XCTest 실행·지도/HealthKit 실제 touch readback은 `test.md`에 미검증 게이트로 남겼다.
+- iPhone 14 Pro(CoreDevice `C44AF739-127D-572D-AD83-417C7E879045`, UDID `00008120-00092C3E14F0201E`, iOS 26.6.1)의 기존 `1.0 (107)` 설치·launch readback은 유지한다. 이번 generic 무서명 빌드는 새 설치 증거로 사용하지 않는다.
+- 이번 실행은 새 TestFlight 빌드를 만들지 않았다. 기존 build 107의 `TP Taption Plan 내부 테스트` 연결은 별도 readback 게이트로 유지한다.
+- DerivedData·xcresult·저장소의 재생성 캐시는 작업 종료 때 삭제한다.
 
 ## 반영된 구현
 
@@ -45,6 +45,12 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 - 실제/예상/지하철 경로와 플레이헤드 위치·방향·추적/팬/줌 상태를 MapLibre에서도 유지한다.
 - raw 위치의 자정 경계·선택일 구간 조회와 지하철 GPS 공백의 예상 경로 projection을 보강했다. 확정 선로는 정본으로 우선하고 추정 경로는 점선으로 구분한다.
 - 센서 day-store 원본과 월별 raw archive, iCloud에서 제외되는 로컬 원본 정책을 유지한다.
+- 3분 이상 체류한 등록 위치·MapKit 주변 5종 교통 후보에 물음표와 탑승/삭제 메뉴를 제공하고, 삭제 결정은 장소 종류·좌표·체류 구간으로 근방 재생성 후보까지 억제한다.
+
+### 졸라맨 자연스러운 동작
+
+- 18개 행동의 관절을 IK로 연결하고, 보행 접지·스윙·달리기 체공·골반 이동·팔/다리 반대 위상·자전거 페달 위상을 적용했다.
+- 기존 진분홍 단색, 둥근 선, 64×56 좌표계, 소품과 렌더러 인터페이스는 유지한다.
 
 ### 졸라맨·사이드바·위젯
 
@@ -60,5 +66,6 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 3. `SLEEP827B2`: 2026-08-27 07:15 전후 HealthKit 수면 원본 종료 시각과 걸음/화면 사용 근거를 앱 진단 경로에서 대조한다. 확인되지 않은 휴대폰 터치 시각을 수면 원본으로 만들지 않는다.
 4. `NXT27AUG01`: Dynamic Island compact/expanded, 재생·사이드바 실제 터치, 졸라맨 최전면, MapLibre 4개 스타일, 지하철 확정/예상 경로를 iPhone 화면에서 수동 확인한다.
 5. `IAP73PAID1`은 Paid Apps Agreement·세금/은행·상품 연결·Sandbox 구매/복원 전까지 완료 처리하지 않는다.
+6. `STK28NAT9Q`: iPhone에서 18개 졸라맨 동작의 렌더링·전환을 실제 화면으로 확인한다.
 
 새 요청은 영문·숫자 10자리 ID로 `temp.md`에 먼저 기록하고, 대표님의 `ㄱㄱ` 또는 `전체 진행` 승인 뒤 실행한다. 완료된 항목만 큐에서 제거한다.

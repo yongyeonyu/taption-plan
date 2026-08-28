@@ -6489,6 +6489,9 @@ final class AppModel {
     ) {
         let decision = TransitBoardingDecision(
             candidateKey: candidate.id,
+            placeID: candidate.placeID,
+            kind: candidate.kind,
+            point: candidate.point,
             span: candidate.span,
             mode: mode,
             travelSegmentIDs: candidate.travelSegmentIDs

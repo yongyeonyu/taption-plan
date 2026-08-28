@@ -269,346 +269,716 @@ enum TaptionStickmanPoseAction: String, CaseIterable, Sendable {
 }
 
 enum TaptionStickmanPoseEngine {
+    private struct Cycle {
+        let t: Double
+        let s: Double
+        let c: Double
+        let s2: Double
+        let c2: Double
+
+        init(phase: Int, phaseCount: Int) {
+            let value = TaptionStickmanPoseEngine.normalizedPhase(
+                phase,
+                phaseCount: phaseCount
+            )
+            let angle = 2 * Double.pi * value
+            t = value
+            s = sin(angle)
+            c = cos(angle)
+            s2 = sin(angle * 2)
+            c2 = cos(angle * 2)
+        }
+    }
+
+    private struct LimbPair {
+        let joint: TaptionStickmanPoint
+        let end: TaptionStickmanPoint
+    }
+
     static func pose(
         action: TaptionStickmanPoseAction,
         phase: Int,
         phaseCount: Int
     ) -> TaptionStickmanPose {
-        let t = normalizedPhase(phase, phaseCount: phaseCount)
-        let wave = sin(2 * .pi * t)
-        let fast = sin(4 * .pi * t)
-        let leftLift = (cos(2 * .pi * t) + 1) / 2
-        let rightLift = (cos(2 * .pi * t + .pi) + 1) / 2
-
+        let cycle = Cycle(phase: phase, phaseCount: phaseCount)
         switch action {
         case .activity:
-            return make(
-                head: p(32 + wave * 0.5, 10 + fast * 0.5),
-                neck: p(32, 14),
-                leftShoulder: p(29.5, 19),
-                leftElbow: p(23 - wave * 4, 24 + fast),
-                leftHand: p(18 - wave * 5, 20 + fast * 2),
-                rightShoulder: p(34.5, 19),
-                rightElbow: p(41 + wave * 4, 23 - fast),
-                rightHand: p(46 + wave * 5, 18 - fast * 2),
-                leftHip: p(30.5, 31),
-                leftKnee: p(25 + wave * 3, 38 - leftLift * 1.5),
-                leftFoot: p(21 + wave * 5, 45),
-                rightHip: p(33.5, 31),
-                rightKnee: p(39 - wave * 3, 38 - rightLift * 1.5),
-                rightFoot: p(44 - wave * 5, 45)
-            )
+            return activity(cycle)
         case .computer:
-            return make(
-                head: p(16, 14 + fast * 0.25),
-                neck: p(17, 18),
-                leftShoulder: p(17, 21),
-                leftElbow: p(24, 25 + wave),
-                leftHand: p(30, 28 + wave * 0.6),
-                rightShoulder: p(20, 21),
-                rightElbow: p(27, 28 - wave),
-                rightHand: p(33 + wave * 1.2, 32),
-                leftHip: p(19, 31),
-                leftKnee: p(14, 37),
-                leftFoot: p(11, 45),
-                rightHip: p(22, 31),
-                rightKnee: p(24, 37),
-                rightFoot: p(27, 45),
-                face: .focused
-            )
+            return computer(cycle)
         case .reading:
-            return make(
-                head: p(18 + wave * 0.4, 14),
-                neck: p(19, 18),
-                leftShoulder: p(19, 21),
-                leftElbow: p(26, 26 + fast),
-                leftHand: p(33, 30 + fast * 0.5),
-                rightShoulder: p(22, 21),
-                rightElbow: p(30, 25 - fast),
-                rightHand: p(37, 29 - fast * 0.4),
-                leftHip: p(20, 31),
-                leftKnee: p(15, 37),
-                leftFoot: p(13, 45),
-                rightHip: p(23, 31),
-                rightKnee: p(26, 37),
-                rightFoot: p(29, 45),
-                face: .focused
-            )
+            return reading(cycle)
         case .hobby:
-            return make(
-                head: p(27, 12 + wave * 0.5),
-                neck: p(27, 15.5),
-                leftShoulder: p(24.5, 20),
-                leftElbow: p(17, 26 + wave * 2),
-                leftHand: p(13, 21 + wave),
-                rightShoulder: p(29.5, 20),
-                rightElbow: p(39, 18 - wave * 2),
-                rightHand: p(44, 13 - wave),
-                leftHip: p(25.5, 31),
-                leftKnee: p(20, 38 - leftLift),
-                leftFoot: p(16, 45),
-                rightHip: p(28.5, 31),
-                rightKnee: p(35, 37 - rightLift),
-                rightFoot: p(39, 45)
-            )
+            return hobby(cycle)
         case .sleeping:
-            return make(
-                head: p(25, 27 + fast * 0.25),
-                neck: p(29, 27),
-                leftShoulder: p(31, 26.5),
-                leftElbow: p(35, 25 + wave),
-                leftHand: p(39, 27 + wave * 0.5),
-                rightShoulder: p(31, 28),
-                rightElbow: p(35, 30 - wave),
-                rightHand: p(39, 30 - wave * 0.5),
-                leftHip: p(41, 30),
-                leftKnee: p(46, 29 - leftLift),
-                leftFoot: p(51, 33),
-                rightHip: p(42, 32),
-                rightKnee: p(48, 34 - rightLift),
-                rightFoot: p(53, 36),
-                headRadius: 3.2,
-                face: .sleepy
-            )
+            return sleeping(cycle)
         case .movement:
-            return make(
-                head: p(34 + wave * 0.8, 10 + fast * 0.4),
-                neck: p(32, 14),
-                leftShoulder: p(29.5, 19),
-                leftElbow: p(21 - wave * 4, 15 + fast),
-                leftHand: p(15 - wave * 5, 12 + fast * 1.5),
-                rightShoulder: p(34, 19),
-                rightElbow: p(42 + wave * 4, 25 - fast),
-                rightHand: p(48 + wave * 5, 25 - fast * 1.5),
-                leftHip: p(29.5, 30),
-                leftKnee: p(21 + wave * 5, 39 - leftLift),
-                leftFoot: p(17 + wave * 7, 45),
-                rightHip: p(32.5, 31),
-                rightKnee: p(40 - wave * 5, 37 - rightLift),
-                rightFoot: p(46 - wave * 7, 42)
-            )
+            return movement(cycle)
         case .eating:
-            return make(
-                head: p(18, 14 + fast * 0.25),
-                neck: p(18, 18),
-                leftShoulder: p(16, 21),
-                leftElbow: p(25 + wave * 2, 24),
-                leftHand: p(39, 30 + fast * 0.5),
-                rightShoulder: p(20, 21),
-                rightElbow: p(29, 29 - wave * 2),
-                rightHand: p(38, 34 + fast * 0.5),
-                leftHip: p(16, 31),
-                leftKnee: p(11, 38),
-                leftFoot: p(9, 45),
-                rightHip: p(20, 31),
-                rightKnee: p(25, 37),
-                rightFoot: p(29, 45)
-            )
+            return eating(cycle)
         case .exercise:
-            let spread = 1 + wave * 0.7
-            return make(
-                head: p(32, 8.5 - leftLift * 1.4),
-                neck: p(32, 12 - leftLift * 1.4),
-                leftShoulder: p(29.5, 17),
-                leftElbow: p(22 - spread * 2, 11 - leftLift),
-                leftHand: p(16 - spread * 2, 7 - leftLift * 0.5),
-                rightShoulder: p(34.5, 17),
-                rightElbow: p(42 + spread * 2, 11 - leftLift),
-                rightHand: p(48 + spread * 2, 7 - leftLift * 0.5),
-                leftHip: p(30, 28 - leftLift),
-                leftKnee: p(23 - spread * 2, 39 - leftLift),
-                leftFoot: p(17 - spread * 2, 45),
-                rightHip: p(34, 28 - leftLift),
-                rightKnee: p(41 + spread * 2, 39 - rightLift),
-                rightFoot: p(47 + spread * 2, 45)
-            )
+            return exercise(cycle)
         case .unconfirmed:
-            return make(
-                head: p(32 + wave * 0.4, 10 + fast * 0.5),
-                neck: p(32, 14),
-                leftShoulder: p(29.5, 19),
-                leftElbow: p(24 - wave * 2, 26 + fast),
-                leftHand: p(21 - wave * 2, 31 + fast * 0.5),
-                rightShoulder: p(34.5, 19),
-                rightElbow: p(40 + wave * 2, 26 - fast),
-                rightHand: p(43 + wave * 2, 31 - fast * 0.5),
-                leftHip: p(30.5, 31),
-                leftKnee: p(27 + wave * 2, 38 - leftLift),
-                leftFoot: p(24 + wave * 3, 45),
-                rightHip: p(33.5, 31),
-                rightKnee: p(37 - wave * 2, 38 - rightLift),
-                rightFoot: p(40 - wave * 3, 45),
-                face: .focused
-            )
+            return unconfirmed(cycle)
         case .walking:
-            let bob = -0.7 * leftLift + fast * 0.35
-            return make(
-                head: p(32 + wave * 0.25, 10 + bob),
-                neck: p(32, 14 + bob),
-                leftShoulder: p(29.5, 19 + bob),
-                leftElbow: p(24 - wave * 3.5, 25 + bob),
-                leftHand: p(19 - wave * 5, 21 + bob),
-                rightShoulder: p(34.5, 19 + bob),
-                rightElbow: p(40 + wave * 3.5, 25 + bob),
-                rightHand: p(45 + wave * 5, 21 + bob),
-                leftHip: p(30.5, 31 + bob),
-                leftKnee: p(25 + wave * 4, 37 - leftLift * 2),
-                leftFoot: p(21 + wave * 7, 45),
-                rightHip: p(33.5, 31 + bob),
-                rightKnee: p(39 - wave * 4, 37 - rightLift * 2),
-                rightFoot: p(44 - wave * 7, 45)
-            )
+            return walking(cycle)
         case .running:
-            let jump = leftLift
-            return make(
-                head: p(36 + wave * 0.3, 9 - jump * 1.6),
-                neck: p(34, 13 - jump * 1.6),
-                leftShoulder: p(31.5, 18 - jump),
-                leftElbow: p(21 - wave * 5, 14 - jump),
-                leftHand: p(14 - wave * 7, 11 - jump * 0.5),
-                rightShoulder: p(35, 18 - jump),
-                rightElbow: p(43 + wave * 5, 25 - jump),
-                rightHand: p(49 + wave * 7, 24 - jump * 0.5),
-                leftHip: p(29.5, 29 - jump),
-                leftKnee: p(18 + wave * 7, 36 - jump * 2),
-                leftFoot: p(11 + wave * 11, 42 - jump * 2),
-                rightHip: p(32, 30 - jump),
-                rightKnee: p(40 - wave * 7, 38 - rightLift * 2),
-                rightFoot: p(48 - wave * 10, 44 - rightLift)
-            )
+            return running(cycle)
         case .car:
-            return make(
-                head: p(33, 26 + fast * 0.2),
-                neck: p(33, 29),
-                leftShoulder: p(30.5, 31),
-                leftElbow: p(35, 33 + wave),
-                leftHand: p(39, 33 + wave * 0.5),
-                rightShoulder: p(35.5, 31),
-                rightElbow: p(39, 33 - wave),
-                rightHand: p(42, 33 - wave * 0.5),
-                leftHip: p(31, 35),
-                leftKnee: p(35, 38 - leftLift),
-                leftFoot: p(39, 40),
-                rightHip: p(35, 35),
-                rightKnee: p(42, 38 - rightLift),
-                rightFoot: p(46, 40),
-                headRadius: 2.4,
-                face: .focused
-            )
+            return car(cycle)
         case .subway:
-            return make(
-                head: p(21 + wave * 0.6, 29),
-                neck: p(21, 31.5),
-                leftShoulder: p(19.5, 33),
-                leftElbow: p(16, 35 + fast),
-                leftHand: p(14, 33 + fast * 0.5),
-                rightShoulder: p(22.5, 33),
-                rightElbow: p(26, 35 - fast),
-                rightHand: p(28, 33 - fast * 0.5),
-                leftHip: p(19.5, 36),
-                leftKnee: p(17, 38.5 - leftLift * 0.7),
-                leftFoot: p(15, 40),
-                rightHip: p(22.5, 36),
-                rightKnee: p(25, 38.5 - rightLift * 0.7),
-                rightFoot: p(27, 40),
-                headRadius: 2.1,
-                face: .focused
-            )
+            return subway(cycle)
         case .privateVehicle:
-            return make(
-                head: p(34, 28 + fast * 0.2),
-                neck: p(34, 31),
-                leftShoulder: p(31.5, 33),
-                leftElbow: p(35, 35 + wave),
-                leftHand: p(39, 36 + wave * 0.5),
-                rightShoulder: p(36.5, 33),
-                rightElbow: p(40, 35 - wave),
-                rightHand: p(43, 36 - wave * 0.5),
-                leftHip: p(32, 36),
-                leftKnee: p(37, 38.5 - leftLift),
-                leftFoot: p(41, 40),
-                rightHip: p(36, 36),
-                rightKnee: p(43, 38.5 - rightLift),
-                rightFoot: p(47, 40),
-                headRadius: 2.4,
-                face: .focused
-            )
+            return privateVehicle(cycle)
         case .bus:
-            return make(
-                head: p(29 + wave * 0.5, 29),
-                neck: p(29, 31.5),
-                leftShoulder: p(27.5, 33),
-                leftElbow: p(24, 30 - fast),
-                leftHand: p(24, 25 - fast * 0.5),
-                rightShoulder: p(30.5, 33),
-                rightElbow: p(34, 35 + fast),
-                rightHand: p(37, 34 + fast * 0.5),
-                leftHip: p(27.5, 37),
-                leftKnee: p(24, 39.5 - leftLift * 0.7),
-                leftFoot: p(22, 41),
-                rightHip: p(30.5, 37),
-                rightKnee: p(34, 39.5 - rightLift * 0.7),
-                rightFoot: p(36, 41),
-                headRadius: 2.2,
-                face: .focused
-            )
+            return bus(cycle)
         case .ship:
-            return make(
-                head: p(25, 27 + wave * 0.6),
-                neck: p(25, 30),
-                leftShoulder: p(22.5, 32),
-                leftElbow: p(18, 30 + fast),
-                leftHand: p(15, 27 + fast * 0.5),
-                rightShoulder: p(27.5, 32),
-                rightElbow: p(32, 29 - fast),
-                rightHand: p(36, 27 - fast * 0.5),
-                leftHip: p(23, 35),
-                leftKnee: p(21, 38 - leftLift * 0.7),
-                leftFoot: p(19, 40),
-                rightHip: p(27, 35),
-                rightKnee: p(30, 38 - rightLift * 0.7),
-                rightFoot: p(33, 40),
-                headRadius: 2.4,
-                face: .focused
-            )
+            return ship(cycle)
         case .airplane:
-            return make(
-                head: p(31, 30 + wave * 0.5),
-                neck: p(31, 32.5),
-                leftShoulder: p(29.5, 34),
-                leftElbow: p(26, 35 + fast * 0.5),
-                leftHand: p(23, 34 + fast * 0.25),
-                rightShoulder: p(32.5, 34),
-                rightElbow: p(36, 35 - fast * 0.5),
-                rightHand: p(39, 34 - fast * 0.25),
-                leftHip: p(29.5, 36),
-                leftKnee: p(28, 38.5 - leftLift * 0.5),
-                leftFoot: p(26, 40),
-                rightHip: p(32.5, 36),
-                rightKnee: p(35, 38.5 - rightLift * 0.5),
-                rightFoot: p(37, 40),
-                headRadius: 2.2,
-                face: .focused
-            )
+            return airplane(cycle)
         case .cycling:
-            return make(
-                head: p(30 + wave * 0.25, 14 + fast * 0.3),
-                neck: p(30, 17.5),
-                leftShoulder: p(27.5, 21),
-                leftElbow: p(33, 24 + wave),
-                leftHand: p(38, 27 + wave * 0.5),
-                rightShoulder: p(32.5, 21),
-                rightElbow: p(36, 24 - wave),
-                rightHand: p(39, 28 - wave * 0.5),
-                leftHip: p(28, 27),
-                leftKnee: p(24 + wave * 4, 34 - leftLift),
-                leftFoot: p(22 + wave * 6, 38),
-                rightHip: p(31, 27),
-                rightKnee: p(36 - wave * 4, 34 - rightLift),
-                rightFoot: p(39 - wave * 6, 38),
-                headRadius: 3.1
-            )
+            return cycling(cycle)
         }
+    }
+
+    private static func activity(_ cycle: Cycle) -> TaptionStickmanPose {
+        let bodyX = 32 + 0.45 * cycle.s
+        let bodyY = 31 + 0.12 * cycle.c2
+        return articulated(
+            head: p(bodyX + 0.18 * cycle.s, 10 + 0.18 * cycle.s2),
+            neck: p(bodyX, 14.2 + 0.10 * cycle.s2),
+            leftShoulder: p(bodyX - 2.8, 19 + 0.35 * cycle.s),
+            rightShoulder: p(bodyX + 2.8, 19 - 0.35 * cycle.s),
+            leftHand: p(bodyX - 12 - 1.2 * cycle.s2, 28 + 0.35 * cycle.c),
+            rightHand: p(bodyX + 12 - 1.2 * cycle.s2, 28 - 0.35 * cycle.c),
+            leftHip: p(bodyX - 1.7, bodyY + 0.10 * cycle.s),
+            rightHip: p(bodyX + 1.7, bodyY - 0.10 * cycle.s),
+            leftFoot: p(21 + 0.7 * cycle.s, 45),
+            rightFoot: p(43 + 0.7 * cycle.s, 45),
+            upperArmLength: 6.8,
+            forearmLength: 6.8,
+            thighLength: 8.5,
+            shinLength: 9.5
+        )
+    }
+
+    private static func computer(_ cycle: Cycle) -> TaptionStickmanPose {
+        let tap = 0.35 * cycle.s2
+        return articulated(
+            head: p(16 + 0.12 * cycle.s, 14 + 0.12 * cycle.c2),
+            neck: p(17, 18.1),
+            leftShoulder: p(17, 21),
+            rightShoulder: p(20, 21.3),
+            leftHand: p(30, 28 + tap),
+            rightHand: p(33 + 0.35 * tap, 31.5 - tap),
+            leftHip: p(19, 31),
+            rightHip: p(22, 31.3),
+            leftFoot: p(11, 45),
+            rightFoot: p(27, 45),
+            upperArmLength: 7.8,
+            forearmLength: 8.0,
+            thighLength: 8.2,
+            shinLength: 8.5,
+            face: .focused
+        )
+    }
+
+    private static func reading(_ cycle: Cycle) -> TaptionStickmanPose {
+        let pageLift = 0.35 * cycle.s2
+        return articulated(
+            head: p(18.5 + 0.12 * cycle.s, 14.5 + 0.10 * cycle.c),
+            neck: p(19.3, 18.2),
+            leftShoulder: p(19, 21),
+            rightShoulder: p(22, 21.3),
+            leftHand: p(32.5, 29.8 + pageLift),
+            rightHand: p(38.5, 29.2 - pageLift),
+            leftHip: p(20, 31),
+            rightHip: p(23, 31.3),
+            leftFoot: p(13, 45),
+            rightFoot: p(29, 45),
+            upperArmLength: 8.0,
+            forearmLength: 8.5,
+            thighLength: 8.2,
+            shinLength: 8.5,
+            face: .focused
+        )
+    }
+
+    private static func hobby(_ cycle: Cycle) -> TaptionStickmanPose {
+        let strum = 1.1 * cycle.s2
+        return articulated(
+            head: p(27 + 0.35 * cycle.s, 12.2 + 0.25 * cycle.c2),
+            neck: p(27, 15.8),
+            leftShoulder: p(24.5, 20 + 0.20 * cycle.s),
+            rightShoulder: p(29.5, 20 - 0.20 * cycle.s),
+            leftHand: p(14 + 0.8 * strum, 23.5 + 0.5 * cycle.c),
+            rightHand: p(42 + strum, 24.5 - 0.6 * cycle.c),
+            leftHip: p(25.5, 31),
+            rightHip: p(28.5, 31.2),
+            leftFoot: p(16 + 0.4 * cycle.s, 45),
+            rightFoot: p(39 + 0.4 * cycle.s, 45),
+            upperArmLength: 7.5,
+            forearmLength: 7.8,
+            thighLength: 8.5,
+            shinLength: 9.0
+        )
+    }
+
+    private static func sleeping(_ cycle: Cycle) -> TaptionStickmanPose {
+        let breath = 0.12 * cycle.s
+        return articulated(
+            head: p(25, 27 + breath),
+            neck: p(29, 27 + 0.5 * breath),
+            leftShoulder: p(31, 26.6 + 0.15 * cycle.s2),
+            rightShoulder: p(31, 28 + 0.15 * cycle.s2),
+            leftHand: p(39, 27 + 0.25 * cycle.c),
+            rightHand: p(39, 31.2 - 0.25 * cycle.c),
+            leftHip: p(41, 30 + 0.10 * cycle.s),
+            rightHip: p(42, 32 + 0.10 * cycle.s),
+            leftFoot: p(51, 33),
+            rightFoot: p(53, 36),
+            upperArmLength: 5.2,
+            forearmLength: 5.2,
+            thighLength: 6.4,
+            shinLength: 6.4,
+            headRadius: 3.2,
+            face: .sleepy
+        )
+    }
+
+    private static func movement(_ cycle: Cycle) -> TaptionStickmanPose {
+        locomotion(
+            cycle,
+            stride: 10,
+            footLift: 2.8,
+            armScale: 0.95,
+            bodyLean: 0.6
+        )
+    }
+
+    private static func eating(_ cycle: Cycle) -> TaptionStickmanPose {
+        let bite = (1 - cycle.c) / 2
+        let bowlBob = 0.18 * cycle.s2
+        let spoonHand = mix(
+            p(40, 31 + bowlBob),
+            p(23.5, 20),
+            bite
+        )
+        return articulated(
+            head: p(18.5 + 0.10 * cycle.s, 14 + 0.25 * bite),
+            neck: p(19.5, 18.2 + 0.18 * bite),
+            leftShoulder: p(19.5, 21),
+            rightShoulder: p(23, 21.3),
+            leftHand: p(37.5 + 0.3 * cycle.s2, 31.5 + bowlBob),
+            rightHand: spoonHand,
+            leftHip: p(20, 31),
+            rightHip: p(24, 31.3),
+            leftFoot: p(13, 45),
+            rightFoot: p(29, 45),
+            upperArmLength: 9.7,
+            forearmLength: 10.0,
+            thighLength: 8.2,
+            shinLength: 8.8
+        )
+    }
+
+    private static func exercise(_ cycle: Cycle) -> TaptionStickmanPose {
+        let effort = (1 - cycle.c) / 2
+        let shoulderY = 17.8 - 1.2 * effort
+        let hipY = 30.2 - 1.5 * effort
+        return articulated(
+            head: p(32 + 0.25 * cycle.s, 9.5 - 1.5 * effort),
+            neck: p(32, 13.2 - 1.4 * effort),
+            leftShoulder: p(29.5, shoulderY + 0.15 * cycle.s),
+            rightShoulder: p(34.5, shoulderY - 0.15 * cycle.s),
+            leftHand: mix(p(24, 26), p(16, 7), effort),
+            rightHand: mix(p(40, 26), p(48, 7), effort),
+            leftHip: p(30, hipY),
+            rightHip: p(34, hipY + 0.15 * cycle.s),
+            leftFoot: p(24 - 7 * effort, 45),
+            rightFoot: p(40 + 7 * effort, 45),
+            upperArmLength: 8.5,
+            forearmLength: 8.5,
+            thighLength: 9.8,
+            shinLength: 10.2
+        )
+    }
+
+    private static func unconfirmed(_ cycle: Cycle) -> TaptionStickmanPose {
+        let shrug = (1 - cycle.c) / 2
+        let bodyX = 32 + 0.35 * cycle.s
+        return articulated(
+            head: p(bodyX + 0.3 * cycle.s, 10 + 0.20 * cycle.s2),
+            neck: p(bodyX, 14.2),
+            leftShoulder: p(bodyX - 2.8, 19 - 0.8 * shrug),
+            rightShoulder: p(bodyX + 2.8, 19 - 0.8 * shrug),
+            leftHand: p(bodyX - 12 - 0.7 * cycle.s2, 27 - 3 * shrug),
+            rightHand: p(bodyX + 12 - 0.7 * cycle.s2, 27 - 3 * shrug),
+            leftHip: p(bodyX - 1.7, 31),
+            rightHip: p(bodyX + 1.7, 31.1),
+            leftFoot: p(22 + 0.5 * cycle.s, 45),
+            rightFoot: p(42 + 0.5 * cycle.s, 45),
+            upperArmLength: 7.0,
+            forearmLength: 7.0,
+            thighLength: 8.5,
+            shinLength: 9.5,
+            face: .focused
+        )
+    }
+
+    private static func walking(_ cycle: Cycle) -> TaptionStickmanPose {
+        locomotion(
+            cycle,
+            stride: 8,
+            footLift: 2.6,
+            armScale: 0.90,
+            bodyLean: 0.2
+        )
+    }
+
+    private static func locomotion(
+        _ cycle: Cycle,
+        stride: Double,
+        footLift: Double,
+        armScale: Double,
+        bodyLean: Double
+    ) -> TaptionStickmanPose {
+        let leftFoot = walkingFoot(
+            phase: cycle.t,
+            front: 20,
+            back: 20 + stride,
+            floor: 45,
+            lift: footLift
+        )
+        let rightFoot = walkingFoot(
+            phase: wrap(cycle.t + 0.5),
+            front: 44,
+            back: 44 - stride,
+            floor: 45,
+            lift: footLift
+        )
+        let leftAir = max(0, 45 - leftFoot.y)
+        let rightAir = max(0, 45 - rightFoot.y)
+        let bodyLift = max(leftAir, rightAir) * 0.25
+            + 0.10 * (1 - cycle.c2) / 2
+        let bodyX = 32 + bodyLean + 0.45 * cycle.s
+        let leftFootCenter = 20 + stride / 2
+        let rightFootCenter = 44 - stride / 2
+        let torsoRoll = 0.35 * cycle.s
+
+        return articulated(
+            head: p(
+                bodyX + bodyLean * 1.3 + 0.25 * cycle.s,
+                10 - bodyLift * 0.7 + 0.10 * cycle.c2
+            ),
+            neck: p(bodyX + bodyLean * 0.55, 14.2 - bodyLift * 0.55),
+            leftShoulder: p(bodyX - 2.7, 19 + torsoRoll),
+            rightShoulder: p(bodyX + 2.7, 19 - torsoRoll),
+            leftHand: p(
+                bodyX - 11 - (leftFoot.x - leftFootCenter) * armScale,
+                27 + 0.45 * cycle.c
+            ),
+            rightHand: p(
+                bodyX + 11 - (rightFoot.x - rightFootCenter) * armScale,
+                27 - 0.45 * cycle.c
+            ),
+            leftHip: p(bodyX - 1.7, 31 - bodyLift * 0.35 + 0.12 * cycle.s),
+            rightHip: p(bodyX + 1.7, 31 - bodyLift * 0.35 - 0.12 * cycle.s),
+            leftFoot: leftFoot,
+            rightFoot: rightFoot,
+            upperArmLength: 7.2,
+            forearmLength: 7.4,
+            thighLength: 8.8,
+            shinLength: 9.4
+        )
+    }
+
+    private static func running(_ cycle: Cycle) -> TaptionStickmanPose {
+        let leftFoot = runningFoot(
+            phase: cycle.t,
+            front: 18,
+            back: 32,
+            floor: 45,
+            lift: 5
+        )
+        let rightFoot = runningFoot(
+            phase: wrap(cycle.t + 0.5),
+            front: 46,
+            back: 32,
+            floor: 45,
+            lift: 5
+        )
+        let flightHeight = max(45 - leftFoot.y, 45 - rightFoot.y)
+        let bodyLift = flightHeight * 0.35 + 0.12 * (1 - cycle.c2) / 2
+        let bodyX = 33 + 0.65 * cycle.s
+
+        return articulated(
+            head: p(
+                bodyX + 1.3 + 0.25 * cycle.s,
+                9 - bodyLift * 0.55
+            ),
+            neck: p(bodyX + 0.7, 13.3 - bodyLift * 0.45),
+            leftShoulder: p(bodyX - 2.7, 18.3 - bodyLift * 0.15),
+            rightShoulder: p(bodyX + 2.7, 18.1 - bodyLift * 0.15),
+            leftHand: p(
+                bodyX - 12 - (leftFoot.x - 25) * 1.15,
+                16.5 - bodyLift * 0.15 + 0.35 * cycle.c
+            ),
+            rightHand: p(
+                bodyX + 12 - (rightFoot.x - 39) * 1.15,
+                24.5 - bodyLift * 0.15 - 0.35 * cycle.c
+            ),
+            leftHip: p(bodyX - 1.8, 30 - bodyLift * 0.45),
+            rightHip: p(bodyX + 1.8, 30.2 - bodyLift * 0.45),
+            leftFoot: leftFoot,
+            rightFoot: rightFoot,
+            upperArmLength: 8.0,
+            forearmLength: 8.0,
+            thighLength: 9.2,
+            shinLength: 10.0
+        )
+    }
+
+    private static func car(_ cycle: Cycle) -> TaptionStickmanPose {
+        let roadSway = 0.20 * cycle.s
+        let steering = 0.45 * cycle.s2
+        return articulated(
+            head: p(33 + 0.10 * cycle.s, 26 + roadSway),
+            neck: p(33, 29 + roadSway),
+            leftShoulder: p(30.5, 31 + roadSway),
+            rightShoulder: p(35.5, 31 + roadSway),
+            leftHand: p(39 + steering, 33 + roadSway),
+            rightHand: p(42 - steering, 33 + roadSway),
+            leftHip: p(31, 35 + roadSway),
+            rightHip: p(35, 35 + roadSway),
+            leftFoot: p(39, 40),
+            rightFoot: p(46, 40),
+            upperArmLength: 5.5,
+            forearmLength: 5.5,
+            thighLength: 5.2,
+            shinLength: 5.2,
+            headRadius: 2.4,
+            face: .focused
+        )
+    }
+
+    private static func subway(_ cycle: Cycle) -> TaptionStickmanPose {
+        let sway = 0.8 * cycle.s
+        let bounce = 0.18 * cycle.c2
+        return articulated(
+            head: p(21 + sway, 29 + bounce),
+            neck: p(21 + sway, 31.5 + bounce),
+            leftShoulder: p(19.5 + sway, 33 + bounce),
+            rightShoulder: p(22.5 + sway, 33 + bounce),
+            leftHand: p(14 + sway, 25.5 + 0.25 * cycle.c),
+            rightHand: p(28 + sway, 25.5 - 0.25 * cycle.c),
+            leftHip: p(19.5 + sway, 36 + bounce),
+            rightHip: p(22.5 + sway, 36 + bounce),
+            leftFoot: p(15 + sway, 40),
+            rightFoot: p(27 + sway, 40),
+            upperArmLength: 4.8,
+            forearmLength: 5.1,
+            thighLength: 4.2,
+            shinLength: 4.3,
+            headRadius: 2.1,
+            face: .focused
+        )
+    }
+
+    private static func privateVehicle(_ cycle: Cycle) -> TaptionStickmanPose {
+        let roadSway = 0.18 * cycle.s
+        let steering = 0.35 * cycle.s2
+        return articulated(
+            head: p(34 + 0.10 * cycle.s, 28 + roadSway),
+            neck: p(34, 31 + roadSway),
+            leftShoulder: p(31.5, 33 + roadSway),
+            rightShoulder: p(36.5, 33 + roadSway),
+            leftHand: p(39 + steering, 36 + roadSway),
+            rightHand: p(43 - steering, 36 + roadSway),
+            leftHip: p(32, 36 + roadSway),
+            rightHip: p(36, 36 + roadSway),
+            leftFoot: p(41, 40),
+            rightFoot: p(47, 40),
+            upperArmLength: 5.5,
+            forearmLength: 5.5,
+            thighLength: 5.2,
+            shinLength: 5.2,
+            headRadius: 2.4,
+            face: .focused
+        )
+    }
+
+    private static func bus(_ cycle: Cycle) -> TaptionStickmanPose {
+        let sway = 0.75 * cycle.s
+        return articulated(
+            head: p(29 + sway, 29 + 0.16 * cycle.c2),
+            neck: p(29 + sway, 31.5),
+            leftShoulder: p(27.5 + sway, 33),
+            rightShoulder: p(30.5 + sway, 33),
+            leftHand: p(24 + sway, 25 + 0.2 * cycle.c),
+            rightHand: p(37 + sway, 34 - 0.25 * cycle.c),
+            leftHip: p(27.5 + sway, 37),
+            rightHip: p(30.5 + sway, 37),
+            leftFoot: p(22 + sway, 41),
+            rightFoot: p(36 + sway, 41),
+            upperArmLength: 5.0,
+            forearmLength: 5.2,
+            thighLength: 4.4,
+            shinLength: 4.5,
+            headRadius: 2.2,
+            face: .focused
+        )
+    }
+
+    private static func ship(_ cycle: Cycle) -> TaptionStickmanPose {
+        let rock = 0.55 * cycle.s
+        return articulated(
+            head: p(25 + rock, 27 + 0.18 * cycle.c2),
+            neck: p(25 + rock, 30),
+            leftShoulder: p(22.5 + rock, 32 + 0.15 * cycle.c),
+            rightShoulder: p(27.5 + rock, 32 - 0.15 * cycle.c),
+            leftHand: p(15 + rock, 27 + 0.3 * cycle.c),
+            rightHand: p(36 + rock, 27 - 0.3 * cycle.c),
+            leftHip: p(23 + rock, 35),
+            rightHip: p(27 + rock, 35),
+            leftFoot: p(19 + rock, 40),
+            rightFoot: p(33 + rock, 40),
+            upperArmLength: 5.8,
+            forearmLength: 5.8,
+            thighLength: 5.2,
+            shinLength: 5.3,
+            headRadius: 2.4,
+            face: .focused
+        )
+    }
+
+    private static func airplane(_ cycle: Cycle) -> TaptionStickmanPose {
+        let turbulence = 0.22 * cycle.s
+        return articulated(
+            head: p(31 + 0.12 * cycle.s, 30 + turbulence),
+            neck: p(31 + 0.05 * cycle.s, 32.5 + turbulence),
+            leftShoulder: p(29.5, 34 + turbulence),
+            rightShoulder: p(32.5, 34 + turbulence),
+            leftHand: p(27.5 + 0.25 * cycle.c, 36 + turbulence),
+            rightHand: p(36.5 - 0.25 * cycle.c, 36 + turbulence),
+            leftHip: p(29.5, 36 + turbulence),
+            rightHip: p(32.5, 36 + turbulence),
+            leftFoot: p(26, 40 + turbulence),
+            rightFoot: p(37, 40 + turbulence),
+            upperArmLength: 4.8,
+            forearmLength: 4.8,
+            thighLength: 4.8,
+            shinLength: 5.0,
+            headRadius: 2.2,
+            face: .focused
+        )
+    }
+
+    private static func cycling(_ cycle: Cycle) -> TaptionStickmanPose {
+        let pedalAngle = 2 * Double.pi * cycle.t - Double.pi / 2
+        let leftFoot = p(
+            32 + 6.2 * cos(pedalAngle),
+            35 + 4.8 * sin(pedalAngle)
+        )
+        let rightFoot = p(
+            32 + 6.2 * cos(pedalAngle + Double.pi),
+            35 + 4.8 * sin(pedalAngle + Double.pi)
+        )
+        let pelvisBob = 0.14 * cycle.c2
+        return articulated(
+            head: p(30 + 0.25 * cycle.s, 14 + 0.18 * cycle.c2),
+            neck: p(30, 17.6),
+            leftShoulder: p(27.5, 21 + 0.12 * cycle.s),
+            rightShoulder: p(32.5, 21 - 0.12 * cycle.s),
+            leftHand: p(38.5, 27.5 + 0.35 * cycle.s),
+            rightHand: p(40.5, 28 - 0.35 * cycle.s),
+            leftHip: p(28, 27.3 + pelvisBob),
+            rightHip: p(31.5, 27.5 + pelvisBob),
+            leftFoot: leftFoot,
+            rightFoot: rightFoot,
+            upperArmLength: 6.5,
+            forearmLength: 6.5,
+            thighLength: 6.8,
+            shinLength: 7.2,
+            headRadius: 3.1
+        )
+    }
+
+    private static func walkingFoot(
+        phase: Double,
+        front: Double,
+        back: Double,
+        floor: Double,
+        lift: Double
+    ) -> TaptionStickmanPoint {
+        let stanceEnd = 0.58
+        if phase < stanceEnd {
+            let progress = smooth(phase / stanceEnd)
+            return p(lerp(front, back, progress), floor)
+        }
+        let progress = smooth((phase - stanceEnd) / (1 - stanceEnd))
+        return p(
+            lerp(back, front, progress),
+            floor - sin(Double.pi * progress) * lift
+        )
+    }
+
+    private static func runningFoot(
+        phase: Double,
+        front: Double,
+        back: Double,
+        floor: Double,
+        lift: Double
+    ) -> TaptionStickmanPoint {
+        let stanceEnd = 0.22
+        if phase < stanceEnd {
+            let progress = smooth(phase / stanceEnd)
+            return p(lerp(front, back, progress), floor)
+        }
+        let progress = smooth((phase - stanceEnd) / (1 - stanceEnd))
+        return p(
+            lerp(back, front, progress),
+            floor - sin(Double.pi * progress) * lift
+        )
+    }
+
+    private static func articulated(
+        head: TaptionStickmanPoint,
+        neck: TaptionStickmanPoint,
+        leftShoulder: TaptionStickmanPoint,
+        rightShoulder: TaptionStickmanPoint,
+        leftHand: TaptionStickmanPoint,
+        rightHand: TaptionStickmanPoint,
+        leftHip: TaptionStickmanPoint,
+        rightHip: TaptionStickmanPoint,
+        leftFoot: TaptionStickmanPoint,
+        rightFoot: TaptionStickmanPoint,
+        upperArmLength: Double = 7,
+        forearmLength: Double = 7,
+        thighLength: Double = 8.5,
+        shinLength: Double = 9.5,
+        leftArmBend: Double = 1,
+        rightArmBend: Double = -1,
+        leftLegBend: Double = 1,
+        rightLegBend: Double = -1,
+        headRadius: Double = 3.4,
+        face: TaptionStickmanPoseFace = .happy
+    ) -> TaptionStickmanPose {
+        let leftArm = solveLimb(
+            from: leftShoulder,
+            to: leftHand,
+            upperLength: upperArmLength,
+            lowerLength: forearmLength,
+            bendDirection: leftArmBend
+        )
+        let rightArm = solveLimb(
+            from: rightShoulder,
+            to: rightHand,
+            upperLength: upperArmLength,
+            lowerLength: forearmLength,
+            bendDirection: rightArmBend
+        )
+        let leftLeg = solveLimb(
+            from: leftHip,
+            to: leftFoot,
+            upperLength: thighLength,
+            lowerLength: shinLength,
+            bendDirection: leftLegBend
+        )
+        let rightLeg = solveLimb(
+            from: rightHip,
+            to: rightFoot,
+            upperLength: thighLength,
+            lowerLength: shinLength,
+            bendDirection: rightLegBend
+        )
+        return TaptionStickmanPose(
+            head: head,
+            neck: neck,
+            leftShoulder: leftShoulder,
+            leftElbow: leftArm.joint,
+            leftHand: leftArm.end,
+            rightShoulder: rightShoulder,
+            rightElbow: rightArm.joint,
+            rightHand: rightArm.end,
+            leftHip: leftHip,
+            leftKnee: leftLeg.joint,
+            leftFoot: leftLeg.end,
+            rightHip: rightHip,
+            rightKnee: rightLeg.joint,
+            rightFoot: rightLeg.end,
+            headRadius: headRadius,
+            face: face
+        )
+    }
+
+    private static func solveLimb(
+        from start: TaptionStickmanPoint,
+        to target: TaptionStickmanPoint,
+        upperLength: Double,
+        lowerLength: Double,
+        bendDirection: Double
+    ) -> LimbPair {
+        let deltaX = target.x - start.x
+        let deltaY = target.y - start.y
+        let distance = max(hypot(deltaX, deltaY), 0.001)
+        let minimumDistance = abs(upperLength - lowerLength) + 0.001
+        let maximumDistance = max(
+            minimumDistance,
+            upperLength + lowerLength - 0.001
+        )
+        let reachableDistance = min(
+            max(distance, minimumDistance),
+            maximumDistance
+        )
+        let directionX = deltaX / distance
+        let directionY = deltaY / distance
+        let end = p(
+            start.x + directionX * reachableDistance,
+            start.y + directionY * reachableDistance
+        )
+        let baseAngle = atan2(directionY, directionX)
+        let cosine = (upperLength * upperLength
+            + reachableDistance * reachableDistance
+            - lowerLength * lowerLength)
+            / (2 * upperLength * reachableDistance)
+        let bendAngle = acos(min(max(cosine, -1), 1))
+        let jointAngle = baseAngle
+            + (bendDirection >= 0 ? bendAngle : -bendAngle)
+        let joint = p(
+            start.x + cos(jointAngle) * upperLength,
+            start.y + sin(jointAngle) * upperLength
+        )
+        return LimbPair(joint: joint, end: end)
+    }
+
+    private static func mix(
+        _ first: TaptionStickmanPoint,
+        _ second: TaptionStickmanPoint,
+        _ progress: Double
+    ) -> TaptionStickmanPoint {
+        let value = min(max(progress, 0), 1)
+        return p(
+            first.x + (second.x - first.x) * value,
+            first.y + (second.y - first.y) * value
+        )
+    }
+
+    private static func lerp(
+        _ first: Double,
+        _ second: Double,
+        _ progress: Double
+    ) -> Double {
+        first + (second - first) * min(max(progress, 0), 1)
+    }
+
+    private static func smooth(_ progress: Double) -> Double {
+        let value = min(max(progress, 0), 1)
+        return value * value * (3 - 2 * value)
+    }
+
+    private static func wrap(_ value: Double) -> Double {
+        value - floor(value)
     }
 
     static func normalizedPhase(_ phase: Int, phaseCount: Int) -> Double {
@@ -620,46 +990,7 @@ enum TaptionStickmanPoseEngine {
     private static func p(_ x: Double, _ y: Double) -> TaptionStickmanPoint {
         TaptionStickmanPoint(x, y)
     }
-
-    private static func make(
-        head: TaptionStickmanPoint,
-        neck: TaptionStickmanPoint,
-        leftShoulder: TaptionStickmanPoint,
-        leftElbow: TaptionStickmanPoint,
-        leftHand: TaptionStickmanPoint,
-        rightShoulder: TaptionStickmanPoint,
-        rightElbow: TaptionStickmanPoint,
-        rightHand: TaptionStickmanPoint,
-        leftHip: TaptionStickmanPoint,
-        leftKnee: TaptionStickmanPoint,
-        leftFoot: TaptionStickmanPoint,
-        rightHip: TaptionStickmanPoint,
-        rightKnee: TaptionStickmanPoint,
-        rightFoot: TaptionStickmanPoint,
-        headRadius: Double = 3.4,
-        face: TaptionStickmanPoseFace = .happy
-    ) -> TaptionStickmanPose {
-        TaptionStickmanPose(
-            head: head,
-            neck: neck,
-            leftShoulder: leftShoulder,
-            leftElbow: leftElbow,
-            leftHand: leftHand,
-            rightShoulder: rightShoulder,
-            rightElbow: rightElbow,
-            rightHand: rightHand,
-            leftHip: leftHip,
-            leftKnee: leftKnee,
-            leftFoot: leftFoot,
-            rightHip: rightHip,
-            rightKnee: rightKnee,
-            rightFoot: rightFoot,
-            headRadius: headRadius,
-            face: face
-        )
-    }
 }
-
 struct TaptionStickmanTypingFrame: Equatable, Sendable {
     let lineUnits: [Int]
     let activeLine: Int

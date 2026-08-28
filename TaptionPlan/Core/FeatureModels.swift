@@ -2185,6 +2185,11 @@ struct TransitBoardingCandidate: Identifiable, Hashable, Sendable {
 
 struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
     var candidateKey: String
+    /// Stable enough to match the same registered or nearby logical place
+    /// after MapKit changes its display name or coordinate slightly.
+    var placeID: String?
+    var kind: UserTransitLocationKind?
+    var point: GeoPoint?
     var span: TimeSpan
     var mode: TravelMode?
     var travelSegmentIDs: [UUID]
@@ -2194,12 +2199,18 @@ struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
 
     init(
         candidateKey: String,
+        placeID: String? = nil,
+        kind: UserTransitLocationKind? = nil,
+        point: GeoPoint? = nil,
         span: TimeSpan,
         mode: TravelMode?,
         travelSegmentIDs: [UUID] = [],
         updatedAt: Date = .now
     ) {
         self.candidateKey = candidateKey
+        self.placeID = placeID
+        self.kind = kind
+        self.point = point
         self.span = span
         self.mode = mode
         self.travelSegmentIDs = travelSegmentIDs

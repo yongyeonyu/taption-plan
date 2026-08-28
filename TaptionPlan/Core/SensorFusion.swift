@@ -2457,7 +2457,6 @@ enum TransitBoardingCandidateEngine {
             .sorted { $0.timestamp < $1.timestamp }
         guard !orderedReadings.isEmpty else { return [] }
 
-        let decidedKeys = Set(decisions.map(\.candidateKey))
         var result: [TransitBoardingCandidate] = []
         var seenKeys = Set<String>()
 
@@ -2496,25 +2495,24 @@ enum TransitBoardingCandidateEngine {
                 let span = TimeSpan(start: first.timestamp, end: last.timestamp)
                 guard span.duration >= minimumDwell else { continue }
                 let key = candidateKey(for: place, arrivingAt: first.timestamp)
-                guard decidedKeys.contains(key) == false,
-                      seenKeys.insert(key).inserted else { continue }
-                result.append(
-                    TransitBoardingCandidate(
-                        id: key,
-                        placeID: place.id,
-                        locationID: place.userLocationID,
-                        name: place.name,
-                        kind: place.kind,
-                        point: point,
-                        span: span,
-                        dwellDuration: span.duration,
-                        source: place.source,
-                        travelSegmentIDs: relatedTravelIDs(
-                            to: span,
-                            in: travel
-                        )
+                let candidate = TransitBoardingCandidate(
+                    id: key,
+                    placeID: place.id,
+                    locationID: place.userLocationID,
+                    name: place.name,
+                    kind: place.kind,
+                    point: point,
+                    span: span,
+                    dwellDuration: span.duration,
+                    source: place.source,
+                    travelSegmentIDs: relatedTravelIDs(
+                        to: span,
+                        in: travel
                     )
                 )
+                guard !isSuppressed(candidate, by: decisions),
+                      seenKeys.insert(key).inserted else { continue }
+                result.append(candidate)
             }
         }
 
@@ -2527,6 +2525,25 @@ enum TransitBoardingCandidateEngine {
     ) -> String {
         let minute = Int(date.timeIntervalSince1970 / 60)
         return "\(place.id)-\(minute)"
+    }
+
+    private static func isSuppressed(
+        _ candidate: TransitBoardingCandidate,
+        by decisions: [TransitBoardingDecision]
+    ) -> Bool {
+        decisions.contains { decision in
+            if decision.candidateKey == candidate.id {
+                return true
+            }
+            guard decision.mode == nil,
+                  decision.kind == candidate.kind,
+                  let decisionPoint = decision.point,
+                  distanceMeters(decisionPoint, candidate.point) <= 100,
+                  decision.span.intersection(with: candidate.span) != nil else {
+                return false
+            }
+            return true
+        }
     }
 
     private static func mergedPlaces(

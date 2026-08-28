@@ -18406,6 +18406,62 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored.transitBoardingDecisions, [deleted])
     }
 
+    func testTransitBoardingDeletionSuppressesNearbyRegeneratedCandidates() throws {
+        let start = makeDate(2026, 8, 28, 12)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let nearbyPoint = GeoPoint(
+            latitude: 37.5005,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let firstPlace = TransitBoardingPlace(
+            mapKitName: "서울역",
+            kind: .trainStation,
+            point: point
+        )
+        let nearbyPlace = TransitBoardingPlace(
+            mapKitName: "서울역 2번 출구",
+            kind: .trainStation,
+            point: nearbyPoint
+        )
+        let readings = transitReadings(
+            at: start,
+            point: point,
+            duration: 180
+        )
+        let candidates = TransitBoardingCandidateEngine.candidates(
+            readings: readings,
+            registeredLocations: [],
+            nearbyPlaces: [firstPlace, nearbyPlace]
+        )
+        let deleted = try XCTUnwrap(candidates.first)
+        let decision = TransitBoardingDecision(
+            candidateKey: deleted.id,
+            placeID: deleted.placeID,
+            kind: deleted.kind,
+            point: deleted.point,
+            span: deleted.span,
+            mode: nil
+        )
+
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: readings,
+                registeredLocations: [],
+                nearbyPlaces: [firstPlace, nearbyPlace],
+                decisions: [decision]
+            ).isEmpty
+        )
+    }
+
     private func transitReadings(
         at start: Date,
         point: GeoPoint,
@@ -18682,6 +18738,56 @@ final class MapHomeStickmanTests: XCTestCase {
             11.0 / 12.0,
             accuracy: 0.000_001
         )
+    }
+
+    func testStickmanLocomotionUsesContactSwingFlightAndCounterPhase() {
+        let walkContact = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 0,
+            phaseCount: 12
+        )
+        let walkSwing = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 3,
+            phaseCount: 12
+        )
+        let walkOppositeContact = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 6,
+            phaseCount: 12
+        )
+        XCTAssertEqual(walkContact.leftFoot.y, 45, accuracy: 0.000_001)
+        XCTAssertEqual(walkContact.rightFoot.y, 45, accuracy: 0.000_001)
+        XCTAssertEqual(walkSwing.leftFoot.y, 45, accuracy: 0.000_001)
+        XCTAssertLessThan(walkSwing.rightFoot.y, 45)
+        XCTAssertEqual(walkOppositeContact.rightFoot.y, 45, accuracy: 0.000_001)
+        XCTAssertGreaterThan(walkOppositeContact.leftFoot.x, walkContact.leftFoot.x)
+        XCTAssertLessThan(walkOppositeContact.leftHand.x, walkContact.leftHand.x)
+
+        let runningFlight = TaptionStickmanPoseEngine.pose(
+            action: .running,
+            phase: 4,
+            phaseCount: 12
+        )
+        XCTAssertLessThan(runningFlight.leftFoot.y, 45)
+        XCTAssertLessThan(runningFlight.rightFoot.y, 45)
+    }
+
+    func testStickmanCyclingUsesOppositeCrankPositionsWithStablePelvis() {
+        let first = TaptionStickmanPoseEngine.pose(
+            action: .cycling,
+            phase: 0,
+            phaseCount: 12
+        )
+        let opposite = TaptionStickmanPoseEngine.pose(
+            action: .cycling,
+            phase: 6,
+            phaseCount: 12
+        )
+        XCTAssertLessThan(first.leftFoot.y, first.rightFoot.y)
+        XCTAssertGreaterThan(opposite.leftFoot.y, opposite.rightFoot.y)
+        XCTAssertLessThan(abs(first.leftHip.y - opposite.leftHip.y), 0.5)
+        XCTAssertLessThan(abs(first.rightHip.y - opposite.rightHip.y), 0.5)
     }
 
     func testStickmanTypingFramesProgressAndBlinkAtBothCadences() {
