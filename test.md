@@ -35,6 +35,8 @@
 - iPhone 전체 XCTest: 783건 중 781건 통과, 2건 실패
 - iPad Pro 12.9-inch 전체 XCTest: 783건 중 781건 통과, 2건 실패
 - 실패 2건: 저장소에 없는 `TaptionPlan/Localizable.xcstrings`, `.cat-visual-check/cat_sheet_x4.png` fixture
+- 위 두 fixture 테스트를 iPhone·iPad에서 targeted 재실행: 모두 통과
+- 전체 XCTest 재실행 재시도: 현재 로컬 `4FWG8XXYM` iOS Development 인증서·프로파일 부재로 빌드 단계 중단
 - HealthKit·Watch·지도·스티커 관련 단위/통합 테스트: 전체 실행 범위에서 통과
 - iPhone 미러링: iPhone 잠금 전 연결 시간 초과 상태로 실제 화면·터치 readback 미완료
 - 지도·교통·스티커·Dynamic Island의 실제 화면·터치, HealthKit 권한/원본, Watch 지연 동기화, IAP 외부 계약·Sandbox 구매는 외부/수동 게이트로 남김
