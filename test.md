@@ -18,6 +18,16 @@
 - `TP Taption Plan 내부 테스트` 그룹: build `1.0 (108)` 연결·`테스트 중`·iOS 노출 readback 성공
 - iPad TestFlight 직접 설치: Distribution IPA의 Beta entitlement 제약으로 미완료; iPad에는 서명 Debug `1.0 (107)`만 설치·launch됨
 
+## STK828M5Q2 · BCH828STK1
+
+- 신규 기능: 하단 스티커 메뉴 복구, `전부 보기`/`해당되는 것만 보기` 지도 메모 필터, 지도·일정 스티커 추가, 스티커 모드 편집·삭제
+- 신규 회귀 XCTest: `MapHomeStickmanTests` 16건 중 신규 3건 포함 전체 통과
+- iPad Pro 12.9-inch 서명 Debug `1.0 (108)` 설치·실행 readback: 성공
+- Release `1.0 (109)` archive/export/upload: 성공, Delivery UUID `f363e054-23cd-483a-89ba-3d981792f515`
+- App Store Connect processing: `제출 준비 완료`
+- `TP Taption Plan 내부 테스트`: build `1.0 (109)` 연결·`테스트 중`·iOS 노출 readback 성공
+- iOS Simulator: 사용 가능한 기기 없음; 지도 스티커·메모 실제 화면·터치는 별도 미검증
+
 ## TRN828Q7A1 · BUG28P9K3X · DEL28Q9M4X
 
 - 대상: iPhone 14 Pro 및 연결 가능한 iPad, 최신 검증 빌드

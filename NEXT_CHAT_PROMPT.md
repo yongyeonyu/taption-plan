@@ -18,15 +18,16 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 
 ## 2026-08-28 인계 상태
 
-- 이번 실행의 마지막 커밋은 `7e5bb68`이며 `origin/main`에 push했다. 다음 채팅에서 위 명령으로 다시 readback한다.
-- 앱은 `com.taption.plan`, 최신 TestFlight 기준 버전 `1.0 (108)`이며 `TP Taption Plan 내부 테스트`에서 `테스트 중`이다.
-- 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`, Release archive/export/upload가 성공했다. 서명 Debug 앱을 iPad Pro에 설치·launch했고, iPad 대상 회귀 XCTest 7건도 통과했다. 전체 XCTest는 775건 중 773건 통과했다.
-- 이번 변경 대상 XCTest인 `MapHomeStickmanTests` 13건과 근방 후보 삭제 회귀 1건은 모두 통과했다. 추가로 iPad에서 교통 후보 6건과 MapLibre viewport 최종 flush 1건도 통과했다. 전체 실패 2건은 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` fixture 때문이다.
-- 현재 사용 가능한 iOS Simulator가 없고, iPhone 미러링도 기기가 사용 중이라 잠금 전 연결 시간이 초과되어 지도/HealthKit 실제 touch readback은 `test.md`에 미검증 게이트로 남겼다. iPad는 서명 Debug `1.0 (107)` 설치·launch까지 readback했지만 화면·터치는 별도 미검증이다.
+- 이번 실행의 마지막 커밋은 `b707adf`이며 `origin/main`과 일치하고 워크트리는 clean이다. 다음 채팅에서 위 명령으로 다시 readback한다.
+- 앱은 `com.taption.plan`, 최신 TestFlight 기준 버전 `1.0 (109)`이며 `TP Taption Plan 내부 테스트`에서 `테스트 중`이다.
+- 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`, Release archive/export/upload가 성공했다. 서명 Debug 앱 `1.0 (108)`을 iPad Pro에 설치·launch했고, `MapHomeStickmanTests` 16건도 통과했다.
+- 이번 변경 대상 XCTest인 `MapHomeStickmanTests` 16건은 모두 통과했다. 전체 XCTest의 기존 fixture 실패 2건은 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` 때문이다.
+- 현재 사용 가능한 iOS Simulator가 없고, iPhone 미러링도 기기가 사용 중이라 잠금 전 연결 시간이 초과되어 지도/HealthKit 실제 touch readback은 `test.md`에 미검증 게이트로 남겼다. iPad는 서명 Debug `1.0 (108)` 설치·launch까지 readback했지만 화면·터치는 별도 미검증이다.
 - iPhone 14 Pro(CoreDevice `C44AF739-127D-572D-AD83-417C7E879045`, UDID `00008120-00092C3E14F0201E`, iOS 26.6.1)의 현재 설치 앱은 `com.taption.plan`, 버전 `1.0 (107)`이며 이번 서명 Debug 앱으로 갱신·launch했다.
 - build 108은 App Store Connect `제출 준비 완료` 처리 후 `TP Taption Plan 내부 테스트`에 연결했고, 그룹 빌드 화면에서 `1.0 (108) · 테스트 중 · iOS`를 readback했다.
-- iPad TestFlight 설치·화면·터치는 미완료다. CoreDevice 직접 설치는 Distribution IPA의 Beta entitlement 제약으로 거절됐고, 현재 iPad에는 서명 Debug `1.0 (107)`이 설치·launch되어 있다.
-- DerivedData·xcresult·저장소의 재생성 캐시는 작업 종료 때 삭제한다.
+- build 109는 App Store Connect `제출 준비 완료` 처리 후 `TP Taption Plan 내부 테스트`에 연결했고, 그룹 빌드 화면에서 `1.0 (109) · 테스트 중 · iOS`를 readback했다.
+- 현재 iPad에는 서명 Debug `1.0 (108)`이 설치·launch되어 있다. TestFlight Distribution IPA 직접 설치는 Beta entitlement 제약으로 별도 미완료다.
+- DerivedData·xcresult·저장소의 재생성 캐시는 작업 종료 때 삭제했다.
 
 ## 반영된 구현
 
@@ -46,6 +47,7 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 - 벡터 지도는 라벨·상점 POI를 제외하고 건물·도로·물·토지, 노란 경로, 삼각형 플레이어, 기존 위치·장소·대중교통 annotation overlay를 표시한다.
 - 실제/예상/지하철 경로와 플레이헤드 위치·방향·추적/팬/줌 상태를 MapLibre에서도 유지한다.
 - raw 위치의 자정 경계·선택일 구간 조회와 지하철 GPS 공백의 예상 경로 projection을 보강했다. 확정 선로는 정본으로 우선하고 추정 경로는 점선으로 구분한다.
+- `BCH828STK1`/`STK828M5Q2`에서 하단 팝업 스티커 메뉴를 복구하고, 지도 메모를 `전부 보기`/`해당되는 것만 보기`로 필터링한다. 스티커는 지도·일정에 각각 추가할 수 있으며, 스티커 모드에서 지도 스티커와 지도 메모를 탭해 위치·시간·내용을 수정하거나 삭제할 수 있다. 저장 스냅샷·Cloud tombstone·구버전 메모 decode를 보강했다.
 - 센서 day-store 원본과 월별 raw archive, iCloud에서 제외되는 로컬 원본 정책을 유지한다.
 - 3분 이상 체류한 등록 위치·MapKit 주변 5종 교통 후보에 물음표와 탑승/삭제 메뉴를 제공하고, 삭제 결정은 장소 종류·좌표·체류 구간으로 근방 재생성 후보까지 억제한다.
 - `MAP28FIXQ1`에서 MapKit POI 이름·식별자·좌표·도착 분이 바뀌어도 삭제 후보를 억제하고, 100m 이내 인접 후보를 함께 숨기도록 보강했다. MapLibre viewport는 최신값 coalescing, transient overlay, 후보 presentation cache로 부모 전체 재평가를 줄이며 지도 계산은 최대 60Hz, 부모 readback은 15Hz로 제한한다.
