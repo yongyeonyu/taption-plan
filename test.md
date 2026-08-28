@@ -7,7 +7,11 @@
 - generic iOS Debug build: 성공
 - generic iOS `build-for-testing`: 성공
 - iOS Simulator: 사용 가능한 기기 없음
-- XCTest 실제 실행 및 이번 변경의 iPhone 설치·화면·터치: 미검증
+- iPhone 14 Pro 서명 Debug build/install/launch: 성공
+- iPhone XCTest 전체: 775건 중 773건 통과, 2건 실패
+- iPhone XCTest 대상 변경: `MapHomeStickmanTests` 13건 + 근방 후보 삭제 회귀 1건, 14건 모두 통과
+- 전체 XCTest 실패 원인: 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` fixture
+- iPhone 미러링: 기기가 사용 중이라 잠금 전 연결 시간 초과, 화면·터치 readback 미검증
 
 ## TRN828Q7A1 · BUG28P9K3X · DEL28Q9M4X
 
@@ -18,14 +22,14 @@
 - 보존: 등록 교통 위치·원본 GPS·이미 확정된 이동 기록이 삭제되지 않음
 - 재실행: 삭제 결정이 저장 후 재실행에도 유지됨
 - 지도 경로: Apple MapKit과 MapLibre에서 후보 표시·탭·삭제를 각각 확인
-- 상태: 컴파일 완료 · Simulator/실기기 화면·터치 대기
+- 상태: 컴파일·실기기 대상 XCTest 완료 · Simulator/실기기 화면·터치 대기
 
 ## MAP828R5K2
 
 - Apple 지도와 MapLibre 제공자 전환을 실제 터치
 - MapLibre 4개 스타일과 오버레이·경로·플레이어 위치를 확인
 - 지도 검색·줌·팬·사이드바 가림 및 접근성 라벨을 확인
-- 상태: 코드 검증 완료 · 실기기 화면·터치 대기
+- 상태: 코드 검증·실기기 대상 XCTest 완료 · 실기기 화면·터치 대기
 
 ## HLTH28P7Q4 · SLEEP827B2
 
@@ -34,7 +38,7 @@
 - 페어링 Apple Watch 데이터의 지연 도착·백그라운드 observer·재실행 anchor 증분을 확인
 - 2026-08-27 07:15 전후 수면 원본과 걸음·화면 사용 시각을 대조
 - 확인되지 않은 휴대폰 터치 시각을 수면 종료로 추정하지 않음
-- 상태: 코드 검증 완료 · 실기기 HealthKit/Watch readback 대기
+- 상태: 코드 검증·실기기 대상 XCTest 완료 · 실기기 HealthKit/Watch readback 대기
 
 ## NXT27AUG01 · IAP73PAID1
 
