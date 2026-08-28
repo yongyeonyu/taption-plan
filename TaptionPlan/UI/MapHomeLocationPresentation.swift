@@ -780,6 +780,74 @@ private enum MapHomeStickmanRenderer {
         )
     }
 
+    private static func drawPerson(
+        _ context: inout GraphicsContext,
+        canvas: MapHomeStickmanCanvas,
+        action: MapHomeStickmanAction,
+        phase: Int
+    ) {
+        let pose = TaptionStickmanPoseEngine.pose(
+            action: TaptionStickmanPoseAction(rawValue: action.rawValue) ?? .activity,
+            phase: phase,
+            phaseCount: MapHomeStickmanAnimationEngine.phaseCount
+        )
+        func point(_ value: TaptionStickmanPoint) -> CGPoint {
+            canvas.point(CGFloat(value.x), CGFloat(value.y))
+        }
+
+        stroke(&context, [point(pose.leftHip), point(pose.leftKnee), point(pose.leftFoot)])
+        stroke(&context, [point(pose.rightHip), point(pose.rightKnee), point(pose.rightFoot)])
+        stroke(&context, [point(pose.leftShoulder), point(pose.leftElbow), point(pose.leftHand)])
+        stroke(&context, [point(pose.rightShoulder), point(pose.rightElbow), point(pose.rightHand)])
+        stroke(&context, [point(pose.neck), point(pose.head)])
+        stroke(&context, [point(pose.neck), point(pose.leftShoulder)])
+        stroke(&context, [point(pose.neck), point(pose.rightShoulder)])
+        stroke(
+            &context,
+            [
+                point(pose.neck),
+                canvas.point(
+                    CGFloat((pose.leftHip.x + pose.rightHip.x) / 2),
+                    CGFloat((pose.leftHip.y + pose.rightHip.y) / 2)
+                ),
+            ]
+        )
+
+        for joint in [
+            pose.leftShoulder,
+            pose.leftElbow,
+            pose.leftHip,
+            pose.leftKnee,
+            pose.rightShoulder,
+            pose.rightElbow,
+            pose.rightHip,
+            pose.rightKnee,
+        ] {
+            fillCircle(
+                &context,
+                canvas,
+                x: CGFloat(joint.x),
+                y: CGFloat(joint.y),
+                radius: 0.62
+            )
+        }
+
+        let face: Face = switch pose.face {
+        case .calm: .calm
+        case .focused: .focused
+        case .happy: .happy
+        case .sleepy: .sleepy
+        }
+        drawHead(
+            &context,
+            canvas: canvas,
+            x: CGFloat(pose.head.x),
+            y: CGFloat(pose.head.y),
+            radius: CGFloat(pose.headRadius),
+            face: face
+        )
+    }
+
     private static func outlineRect(
         _ context: inout GraphicsContext,
         _ canvas: MapHomeStickmanCanvas,
@@ -865,26 +933,7 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        let swing = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
-        let bob = phase.isMultiple(of: 2) ? -1.2 : 0
-        drawHead(&context, canvas: canvas, x: 32, y: 10 + bob, radius: 3.4)
-        stroke(&context, [canvas.point(32, 13.5 + bob), canvas.point(32, 31 + bob)])
-        stroke(&context, [
-            canvas.point(32, 19 + bob),
-            canvas.point(23 - swing * 7, 25 + bob),
-        ])
-        stroke(&context, [
-            canvas.point(32, 19 + bob),
-            canvas.point(41 + swing * 7, 25 + bob),
-        ])
-        stroke(&context, [
-            canvas.point(32, 31 + bob),
-            canvas.point(24 + swing * 7, 45),
-        ])
-        stroke(&context, [
-            canvas.point(32, 31 + bob),
-            canvas.point(40 - swing * 7, 45),
-        ])
+        drawPerson(&context, canvas: canvas, action: .walking, phase: phase)
     }
 
     private static func drawWalkingScenery(
@@ -978,16 +1027,9 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        let stride = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
-        let lift = phase.isMultiple(of: 2) ? -2.4 : 0
-        drawHead(&context, canvas: canvas, x: 36, y: 9 + lift, radius: 3.4, face: .focused)
-        stroke(&context, [canvas.point(34, 12.5 + lift), canvas.point(28, 29 + lift)])
-        stroke(&context, [canvas.point(31, 18 + lift), canvas.point(18 - stride * 8, 15 + lift)])
-        stroke(&context, [canvas.point(31, 18 + lift), canvas.point(44 + stride * 7, 25 + lift)])
-        stroke(&context, [canvas.point(28, 29 + lift), canvas.point(15 + stride * 10, 39 + lift)])
-        stroke(&context, [canvas.point(28, 29 + lift), canvas.point(45 - stride * 9, 43 + lift)])
         stroke(&context, [canvas.point(4, 22), canvas.point(13, 22)], color: deepPink, width: 1)
         stroke(&context, [canvas.point(7, 29), canvas.point(16, 29)], color: deepPink, width: 1)
+        drawPerson(&context, canvas: canvas, action: .running, phase: phase)
     }
 
     private static func drawActivity(
@@ -995,14 +1037,7 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        let swing = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
-        let bob = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase))
-        drawHead(&context, canvas: canvas, x: 32, y: 10 + bob * 0.5, radius: 3.4)
-        stroke(&context, [canvas.point(32, 13.5 + bob * 0.5), canvas.point(32, 31 + bob)])
-        stroke(&context, [canvas.point(32, 19), canvas.point(23 - swing * 4, 25)])
-        stroke(&context, [canvas.point(32, 19), canvas.point(42 + swing * 4, 23)])
-        stroke(&context, [canvas.point(32, 31 + bob), canvas.point(25 + swing * 3, 45)])
-        stroke(&context, [canvas.point(32, 31 + bob), canvas.point(40 - swing * 3, 45)])
+        drawPerson(&context, canvas: canvas, action: .activity, phase: phase)
     }
 
     private static func drawMovement(
@@ -1010,15 +1045,9 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        let swing = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
-        drawHead(&context, canvas: canvas, x: 32 + swing * 0.8, y: 9, radius: 3.4)
-        stroke(&context, [canvas.point(32, 12.5), canvas.point(29, 29)])
-        stroke(&context, [canvas.point(30, 18), canvas.point(20 - swing * 5, 15)])
-        stroke(&context, [canvas.point(30, 18), canvas.point(43 + swing * 5, 25)])
-        stroke(&context, [canvas.point(29, 29), canvas.point(18 + swing * 7, 43)])
-        stroke(&context, [canvas.point(29, 29), canvas.point(43 - swing * 7, 39)])
         stroke(&context, [canvas.point(9, 12), canvas.point(15, 12)], color: deepPink, width: 1)
         stroke(&context, [canvas.point(49, 17), canvas.point(56, 17)], color: deepPink, width: 1)
+        drawPerson(&context, canvas: canvas, action: .movement, phase: phase)
     }
 
     private static func drawExercise(
@@ -1027,14 +1056,9 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let lift = CGFloat(MapHomeStickmanAnimationEngine.pulse(for: phase)) * 3
-        drawHead(&context, canvas: canvas, x: 32, y: 8 - lift * 0.3, radius: 3.4)
-        stroke(&context, [canvas.point(32, 11.5 - lift * 0.3), canvas.point(32, 28 - lift)])
-        stroke(&context, [canvas.point(32, 17), canvas.point(20, 9 - lift)])
-        stroke(&context, [canvas.point(32, 17), canvas.point(44, 9 - lift)])
-        stroke(&context, [canvas.point(32, 28 - lift), canvas.point(23, 43)])
-        stroke(&context, [canvas.point(32, 28 - lift), canvas.point(41, 43)])
         stroke(&context, [canvas.point(18, 7 - lift), canvas.point(22, 7 - lift)], color: deepPink, width: 1)
         stroke(&context, [canvas.point(42, 7 - lift), canvas.point(46, 7 - lift)], color: deepPink, width: 1)
+        drawPerson(&context, canvas: canvas, action: .exercise, phase: phase)
     }
 
     private static func drawHobby(
@@ -1043,14 +1067,9 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let sway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
-        drawHead(&context, canvas: canvas, x: 27, y: 12, radius: 3.3)
-        stroke(&context, [canvas.point(27, 15.5), canvas.point(29, 30)])
-        stroke(&context, [canvas.point(29, 21), canvas.point(18, 27 + sway * 2)])
-        stroke(&context, [canvas.point(29, 21), canvas.point(39, 24 - sway * 2)])
-        stroke(&context, [canvas.point(29, 30), canvas.point(22, 42)])
-        stroke(&context, [canvas.point(29, 30), canvas.point(37, 42)])
         drawMusicNote(&context, canvas: canvas, x: 45 + sway * 2, y: 17, scale: 1, phase: phase)
         drawMusicNote(&context, canvas: canvas, x: 54 - sway * 2, y: 27, scale: 0.8, phase: phase + 3)
+        drawPerson(&context, canvas: canvas, action: .hobby, phase: phase)
     }
 
     private static func drawUnconfirmed(
@@ -1059,13 +1078,8 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let lift = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 1.5
-        drawHead(&context, canvas: canvas, x: 32, y: 10, radius: 3.4, face: .focused)
-        stroke(&context, [canvas.point(32, 13.5), canvas.point(32, 31)])
-        stroke(&context, [canvas.point(32, 19), canvas.point(24, 27)])
-        stroke(&context, [canvas.point(32, 19), canvas.point(40, 27)])
-        stroke(&context, [canvas.point(32, 31), canvas.point(27, 45)])
-        stroke(&context, [canvas.point(32, 31), canvas.point(37, 45)])
         drawQuestionMark(&context, canvas: canvas, x: 49, y: 13 + lift, phase: phase)
+        drawPerson(&context, canvas: canvas, action: .unconfirmed, phase: phase)
     }
 
     private static func drawComputer(
@@ -1077,13 +1091,7 @@ private enum MapHomeStickmanRenderer {
         drawTypedText(&context, canvas: canvas, phase: phase)
         stroke(&context, [canvas.point(45.5, 32), canvas.point(45.5, 36)], color: propLine)
         stroke(&context, [canvas.point(39, 36), canvas.point(52, 36)], color: propLine, width: 1.2)
-        let reach = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 1.2
-        drawHead(&context, canvas: canvas, x: 16, y: 14, radius: 3.3, face: .focused)
-        stroke(&context, [canvas.point(16, 17.5), canvas.point(18, 31)])
-        stroke(&context, [canvas.point(17, 22), canvas.point(30, 28)])
-        stroke(&context, [canvas.point(17, 22), canvas.point(33 + reach, 33)])
-        stroke(&context, [canvas.point(18, 31), canvas.point(11, 45)])
-        stroke(&context, [canvas.point(18, 31), canvas.point(26, 45)])
+        drawPerson(&context, canvas: canvas, action: .computer, phase: phase)
     }
 
     private static func drawTypedText(
@@ -1151,13 +1159,7 @@ private enum MapHomeStickmanRenderer {
         }
         stroke(&context, [canvas.point(35, 31), canvas.point(40, 29.5)], color: propLine, width: 0.8)
         stroke(&context, [canvas.point(46, 29.5), canvas.point(51, 31)], color: propLine, width: 0.8)
-        let tilt = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 1.4
-        drawHead(&context, canvas: canvas, x: 18 + tilt * 0.4, y: 14, radius: 3.3, face: .focused)
-        stroke(&context, [canvas.point(18, 17.5), canvas.point(20, 31)])
-        stroke(&context, [canvas.point(19, 22), canvas.point(33, 30)])
-        stroke(&context, [canvas.point(19, 22), canvas.point(37, 29)])
-        stroke(&context, [canvas.point(20, 31), canvas.point(13, 45)])
-        stroke(&context, [canvas.point(20, 31), canvas.point(28, 45)])
+        drawPerson(&context, canvas: canvas, action: .reading, phase: phase)
     }
 
     private static func drawSleeping(
@@ -1169,12 +1171,10 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(12, 43), canvas.point(12, 49)], color: propLine)
         stroke(&context, [canvas.point(53, 43), canvas.point(53, 49)], color: propLine)
         outlineRect(&context, canvas, x: 13, y: 27, width: 11, height: 6, radius: 2)
-        drawHead(&context, canvas: canvas, x: 25, y: 27, radius: 3.2, face: .sleepy)
-        stroke(&context, [canvas.point(28, 27), canvas.point(43, 27)], color: propLine)
-        stroke(&context, [canvas.point(43, 27), canvas.point(50, 34)], color: propLine)
         let drift = CGFloat(phase % 4) * 0.5
         drawZ(&context, canvas: canvas, x: 43, y: 19 - drift, size: 4)
         drawZ(&context, canvas: canvas, x: 51, y: 10 - drift * 1.5, size: 5)
+        drawPerson(&context, canvas: canvas, action: .sleeping, phase: phase)
     }
 
     private static func drawZ(
@@ -1238,10 +1238,7 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(25, 23), canvas.point(25, 31), canvas.point(42, 31), canvas.point(42, 23)], color: propLine)
         fillCircle(&context, canvas, x: 19, y: 45, radius: 4, color: propLine)
         fillCircle(&context, canvas, x: 46, y: 45, radius: 4, color: propLine)
-        drawHead(&context, canvas: canvas, x: 33, y: 26, radius: 2.4, face: .focused)
-        stroke(&context, [canvas.point(33, 28.5), canvas.point(33, 32)], color: deepPink)
-        let bounce = phase.isMultiple(of: 2) ? -0.5 : 0.5
-        stroke(&context, [canvas.point(33, 30), canvas.point(38, 33 + bounce)], color: deepPink)
+        drawPerson(&context, canvas: canvas, action: .car, phase: phase)
     }
 
     private static func drawPrivateVehicle(
@@ -1249,16 +1246,13 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        let turn = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
         outlineRect(&context, canvas, x: 8, y: 32, width: 48, height: 11, radius: 3)
         stroke(&context, [canvas.point(17, 32), canvas.point(23, 25), canvas.point(43, 25), canvas.point(51, 32)], color: propLine)
         stroke(&context, [canvas.point(26, 26), canvas.point(26, 32), canvas.point(41, 32), canvas.point(41, 26)], color: propLine)
         fillCircle(&context, canvas, x: 19, y: 44, radius: 3.5, color: propLine)
         fillCircle(&context, canvas, x: 46, y: 44, radius: 3.5, color: propLine)
-        drawHead(&context, canvas: canvas, x: 34, y: 28, radius: 2.4, face: .focused)
-        stroke(&context, [canvas.point(34, 30.5), canvas.point(34, 34)], color: deepPink)
-        stroke(&context, [canvas.point(34, 32), canvas.point(39 + turn, 34)], color: deepPink)
         stroke(&context, [canvas.point(29, 36), canvas.point(39, 36)], color: propLine, width: 1)
+        drawPerson(&context, canvas: canvas, action: .privateVehicle, phase: phase)
     }
 
     private static func drawShip(
@@ -1277,12 +1271,9 @@ private enum MapHomeStickmanRenderer {
         context.stroke(hull, with: .color(propLine), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
         stroke(&context, [canvas.point(29, 35 + sway), canvas.point(29, 21 + sway)], color: propLine)
         stroke(&context, [canvas.point(29, 21 + sway), canvas.point(42, 30 + sway)], color: propLine)
-        drawHead(&context, canvas: canvas, x: 25, y: 27 + sway, radius: 2.4, face: .focused)
-        stroke(&context, [canvas.point(25, 29.5 + sway), canvas.point(25, 35 + sway)], color: deepPink)
-        stroke(&context, [canvas.point(25, 31 + sway), canvas.point(20, 34 + sway)], color: deepPink)
-        stroke(&context, [canvas.point(25, 31 + sway), canvas.point(30, 34 + sway)], color: deepPink)
         stroke(&context, [canvas.point(5, 49), canvas.point(19, 49 + sway)], color: propLine, width: 1)
         stroke(&context, [canvas.point(40, 49 + sway), canvas.point(57, 49)], color: propLine, width: 1)
+        drawPerson(&context, canvas: canvas, action: .ship, phase: phase)
     }
 
     private static func drawAirplane(
@@ -1295,11 +1286,9 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(25, 26 + tilt), canvas.point(19, 19 + tilt), canvas.point(23, 19 + tilt), canvas.point(31, 26 + tilt)], color: propLine)
         stroke(&context, [canvas.point(40, 35 + tilt), canvas.point(44, 42 + tilt), canvas.point(47, 42 + tilt), canvas.point(48, 35 + tilt)], color: propLine)
         stroke(&context, [canvas.point(53, 28 + tilt), canvas.point(60, 31 + tilt), canvas.point(53, 33 + tilt)], color: propLine)
-        drawHead(&context, canvas: canvas, x: 31, y: 30 + tilt, radius: 2.2, face: .focused)
-        stroke(&context, [canvas.point(31, 32.5 + tilt), canvas.point(31, 35 + tilt)], color: deepPink)
-        stroke(&context, [canvas.point(31, 34 + tilt), canvas.point(35, 35 + tilt)], color: deepPink)
         stroke(&context, [canvas.point(5, 20 - tilt), canvas.point(12, 20 - tilt)], color: propLine, width: 1)
         stroke(&context, [canvas.point(8, 43 + tilt), canvas.point(15, 43 + tilt)], color: propLine, width: 1)
+        drawPerson(&context, canvas: canvas, action: .airplane, phase: phase)
     }
 
     private static func drawSubway(
@@ -1317,11 +1306,7 @@ private enum MapHomeStickmanRenderer {
         fillCircle(&context, canvas, x: 25, y: 44, radius: 3.2, color: propLine)
         fillCircle(&context, canvas, x: 39, y: 44, radius: 3.2, color: propLine)
         fillCircle(&context, canvas, x: 53, y: 44, radius: 3.2, color: propLine)
-        let sway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 0.8
-        drawHead(&context, canvas: canvas, x: 21 + sway, y: 29, radius: 2.1, face: .focused)
-        stroke(&context, [canvas.point(21, 31), canvas.point(21, 36)], color: deepPink)
-        stroke(&context, [canvas.point(21, 33), canvas.point(17, 36)], color: deepPink)
-        stroke(&context, [canvas.point(21, 33), canvas.point(25, 36)], color: deepPink)
+        drawPerson(&context, canvas: canvas, action: .subway, phase: phase)
     }
 
     private static func drawBus(
@@ -1335,9 +1320,7 @@ private enum MapHomeStickmanRenderer {
         }
         fillCircle(&context, canvas, x: 19, y: 46, radius: 3.5, color: propLine)
         fillCircle(&context, canvas, x: 45, y: 46, radius: 3.5, color: propLine)
-        let sway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 0.7
-        drawHead(&context, canvas: canvas, x: 29 + sway, y: 29, radius: 2.2, face: .focused)
-        stroke(&context, [canvas.point(29, 31), canvas.point(29, 37)])
+        drawPerson(&context, canvas: canvas, action: .bus, phase: phase)
     }
 
     private static func drawCycling(
@@ -1345,7 +1328,6 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        let swing = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
         for x in [17.0, 47.0] {
             context.stroke(
                 Path(ellipseIn: canvas.rect(x: x - 8, y: 30, width: 16, height: 16)),
@@ -1356,11 +1338,7 @@ private enum MapHomeStickmanRenderer {
         stroke(&context, [canvas.point(17, 38), canvas.point(29, 29), canvas.point(38, 38), canvas.point(17, 38), canvas.point(47, 38)], color: propLine)
         stroke(&context, [canvas.point(29, 29), canvas.point(34, 26)], color: propLine)
         stroke(&context, [canvas.point(34, 26), canvas.point(39, 29)], color: propLine)
-        drawHead(&context, canvas: canvas, x: 30, y: 14, radius: 3.1, face: .happy)
-        stroke(&context, [canvas.point(30, 17.5), canvas.point(29, 27)])
-        stroke(&context, [canvas.point(29, 21), canvas.point(37, 27)])
-        stroke(&context, [canvas.point(29, 27), canvas.point(24 + swing * 5, 37)])
-        stroke(&context, [canvas.point(29, 27), canvas.point(36 - swing * 5, 37)])
+        drawPerson(&context, canvas: canvas, action: .cycling, phase: phase)
     }
 
     private static func drawEating(
@@ -1379,14 +1357,6 @@ private enum MapHomeStickmanRenderer {
             style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
         )
         stroke(&context, [canvas.point(39, 31 + bowlLift), canvas.point(40, 35 + bowlLift), canvas.point(48, 35 + bowlLift), canvas.point(50, 31 + bowlLift)], color: propLine, width: 1)
-        let reach = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 3
-        drawHead(&context, canvas: canvas, x: 18, y: 14, radius: 3.3, face: .happy)
-        stroke(&context, [canvas.point(18, 17.5), canvas.point(18, 31)])
-        stroke(&context, [canvas.point(18, 21), canvas.point(29 + reach, 24)])
-        stroke(&context, [canvas.point(29 + reach, 24), canvas.point(39, 30 + bowlLift)])
-        stroke(&context, [canvas.point(18, 21), canvas.point(38, 34 + bowlLift)])
-        stroke(&context, [canvas.point(18, 31), canvas.point(11, 45)])
-        stroke(&context, [canvas.point(18, 31), canvas.point(26, 45)])
         let forkSway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase + 2)) * 2
         stroke(&context, [canvas.point(53 + forkSway, 24), canvas.point(53 + forkSway, 34)], color: propLine, width: 1)
         stroke(&context, [canvas.point(51.5 + forkSway, 24), canvas.point(51.5 + forkSway, 27)], color: propLine, width: 1)
@@ -1399,5 +1369,6 @@ private enum MapHomeStickmanRenderer {
             with: .color(propLine),
             style: StrokeStyle(lineWidth: 1 * canvas.scale)
         )
+        drawPerson(&context, canvas: canvas, action: .eating, phase: phase)
     }
 }

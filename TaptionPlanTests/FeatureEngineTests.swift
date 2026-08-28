@@ -18414,6 +18414,67 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
+    func testArticulatedStickmanPoseCoversEveryActionAndStaysOnCanvas() {
+        for action in TaptionStickmanPoseAction.allCases {
+            let poses = (0..<12).map {
+                TaptionStickmanPoseEngine.pose(
+                    action: action,
+                    phase: $0,
+                    phaseCount: 12
+                )
+            }
+            for pose in poses {
+                let points = [
+                    pose.head,
+                    pose.neck,
+                    pose.leftShoulder,
+                    pose.leftElbow,
+                    pose.leftHand,
+                    pose.rightShoulder,
+                    pose.rightElbow,
+                    pose.rightHand,
+                    pose.leftHip,
+                    pose.leftKnee,
+                    pose.leftFoot,
+                    pose.rightHip,
+                    pose.rightKnee,
+                    pose.rightFoot,
+                ]
+                XCTAssertTrue(
+                    points.allSatisfy { (0...64).contains($0.x) && (0...56).contains($0.y) },
+                    "\(action.rawValue) 관절이 64×56 좌표 밖으로 나갑니다."
+                )
+                XCTAssertGreaterThan(pose.headRadius, 0)
+                XCTAssertNotEqual(pose.leftElbow, pose.leftHand)
+                XCTAssertNotEqual(pose.rightElbow, pose.rightHand)
+                XCTAssertNotEqual(pose.leftKnee, pose.leftFoot)
+                XCTAssertNotEqual(pose.rightKnee, pose.rightFoot)
+            }
+            XCTAssertNotEqual(poses.first, poses[3], "\(action.rawValue) 관절이 움직이지 않습니다.")
+        }
+    }
+
+    func testArticulatedStickmanPoseNormalizesMapAndLiveCadences() {
+        for action in TaptionStickmanPoseAction.allCases {
+            let mapPose = TaptionStickmanPoseEngine.pose(
+                action: action,
+                phase: 3,
+                phaseCount: 12
+            )
+            let livePose = TaptionStickmanPoseEngine.pose(
+                action: action,
+                phase: 2,
+                phaseCount: 8
+            )
+            XCTAssertEqual(mapPose, livePose, action.rawValue)
+        }
+        XCTAssertEqual(
+            TaptionStickmanPoseEngine.normalizedPhase(-1, phaseCount: 12),
+            11.0 / 12.0,
+            accuracy: 0.000_001
+        )
+    }
+
     func testStickmanTypingFramesProgressAndBlinkAtBothCadences() {
         let mapFrames = (0..<MapHomeStickmanAnimationEngine.phaseCount).map {
             TaptionStickmanTypingAnimation.frame(

@@ -211,6 +211,455 @@ enum TaptionLiveActivityStickmanAnimation {
     }
 }
 
+struct TaptionStickmanPoint: Equatable, Sendable {
+    let x: Double
+    let y: Double
+
+    init(_ x: Double, _ y: Double) {
+        self.x = x
+        self.y = y
+    }
+}
+
+enum TaptionStickmanPoseFace: String, Equatable, Sendable {
+    case calm
+    case focused
+    case happy
+    case sleepy
+}
+
+struct TaptionStickmanPose: Equatable, Sendable {
+    let head: TaptionStickmanPoint
+    let neck: TaptionStickmanPoint
+    let leftShoulder: TaptionStickmanPoint
+    let leftElbow: TaptionStickmanPoint
+    let leftHand: TaptionStickmanPoint
+    let rightShoulder: TaptionStickmanPoint
+    let rightElbow: TaptionStickmanPoint
+    let rightHand: TaptionStickmanPoint
+    let leftHip: TaptionStickmanPoint
+    let leftKnee: TaptionStickmanPoint
+    let leftFoot: TaptionStickmanPoint
+    let rightHip: TaptionStickmanPoint
+    let rightKnee: TaptionStickmanPoint
+    let rightFoot: TaptionStickmanPoint
+    let headRadius: Double
+    let face: TaptionStickmanPoseFace
+}
+
+enum TaptionStickmanPoseAction: String, CaseIterable, Sendable {
+    case activity
+    case computer
+    case reading
+    case hobby
+    case sleeping
+    case movement
+    case eating
+    case exercise
+    case unconfirmed
+    case walking
+    case running
+    case car
+    case subway
+    case privateVehicle
+    case bus
+    case ship
+    case airplane
+    case cycling
+}
+
+enum TaptionStickmanPoseEngine {
+    static func pose(
+        action: TaptionStickmanPoseAction,
+        phase: Int,
+        phaseCount: Int
+    ) -> TaptionStickmanPose {
+        let t = normalizedPhase(phase, phaseCount: phaseCount)
+        let wave = sin(2 * .pi * t)
+        let fast = sin(4 * .pi * t)
+        let leftLift = (cos(2 * .pi * t) + 1) / 2
+        let rightLift = (cos(2 * .pi * t + .pi) + 1) / 2
+
+        switch action {
+        case .activity:
+            return make(
+                head: p(32 + wave * 0.5, 10 + fast * 0.5),
+                neck: p(32, 14),
+                leftShoulder: p(29.5, 19),
+                leftElbow: p(23 - wave * 4, 24 + fast),
+                leftHand: p(18 - wave * 5, 20 + fast * 2),
+                rightShoulder: p(34.5, 19),
+                rightElbow: p(41 + wave * 4, 23 - fast),
+                rightHand: p(46 + wave * 5, 18 - fast * 2),
+                leftHip: p(30.5, 31),
+                leftKnee: p(25 + wave * 3, 38 - leftLift * 1.5),
+                leftFoot: p(21 + wave * 5, 45),
+                rightHip: p(33.5, 31),
+                rightKnee: p(39 - wave * 3, 38 - rightLift * 1.5),
+                rightFoot: p(44 - wave * 5, 45)
+            )
+        case .computer:
+            return make(
+                head: p(16, 14 + fast * 0.25),
+                neck: p(17, 18),
+                leftShoulder: p(17, 21),
+                leftElbow: p(24, 25 + wave),
+                leftHand: p(30, 28 + wave * 0.6),
+                rightShoulder: p(20, 21),
+                rightElbow: p(27, 28 - wave),
+                rightHand: p(33 + wave * 1.2, 32),
+                leftHip: p(19, 31),
+                leftKnee: p(14, 37),
+                leftFoot: p(11, 45),
+                rightHip: p(22, 31),
+                rightKnee: p(24, 37),
+                rightFoot: p(27, 45),
+                face: .focused
+            )
+        case .reading:
+            return make(
+                head: p(18 + wave * 0.4, 14),
+                neck: p(19, 18),
+                leftShoulder: p(19, 21),
+                leftElbow: p(26, 26 + fast),
+                leftHand: p(33, 30 + fast * 0.5),
+                rightShoulder: p(22, 21),
+                rightElbow: p(30, 25 - fast),
+                rightHand: p(37, 29 - fast * 0.4),
+                leftHip: p(20, 31),
+                leftKnee: p(15, 37),
+                leftFoot: p(13, 45),
+                rightHip: p(23, 31),
+                rightKnee: p(26, 37),
+                rightFoot: p(29, 45),
+                face: .focused
+            )
+        case .hobby:
+            return make(
+                head: p(27, 12 + wave * 0.5),
+                neck: p(27, 15.5),
+                leftShoulder: p(24.5, 20),
+                leftElbow: p(17, 26 + wave * 2),
+                leftHand: p(13, 21 + wave),
+                rightShoulder: p(29.5, 20),
+                rightElbow: p(39, 18 - wave * 2),
+                rightHand: p(44, 13 - wave),
+                leftHip: p(25.5, 31),
+                leftKnee: p(20, 38 - leftLift),
+                leftFoot: p(16, 45),
+                rightHip: p(28.5, 31),
+                rightKnee: p(35, 37 - rightLift),
+                rightFoot: p(39, 45)
+            )
+        case .sleeping:
+            return make(
+                head: p(25, 27 + fast * 0.25),
+                neck: p(29, 27),
+                leftShoulder: p(31, 26.5),
+                leftElbow: p(35, 25 + wave),
+                leftHand: p(39, 27 + wave * 0.5),
+                rightShoulder: p(31, 28),
+                rightElbow: p(35, 30 - wave),
+                rightHand: p(39, 30 - wave * 0.5),
+                leftHip: p(41, 30),
+                leftKnee: p(46, 29 - leftLift),
+                leftFoot: p(51, 33),
+                rightHip: p(42, 32),
+                rightKnee: p(48, 34 - rightLift),
+                rightFoot: p(53, 36),
+                headRadius: 3.2,
+                face: .sleepy
+            )
+        case .movement:
+            return make(
+                head: p(34 + wave * 0.8, 10 + fast * 0.4),
+                neck: p(32, 14),
+                leftShoulder: p(29.5, 19),
+                leftElbow: p(21 - wave * 4, 15 + fast),
+                leftHand: p(15 - wave * 5, 12 + fast * 1.5),
+                rightShoulder: p(34, 19),
+                rightElbow: p(42 + wave * 4, 25 - fast),
+                rightHand: p(48 + wave * 5, 25 - fast * 1.5),
+                leftHip: p(29.5, 30),
+                leftKnee: p(21 + wave * 5, 39 - leftLift),
+                leftFoot: p(17 + wave * 7, 45),
+                rightHip: p(32.5, 31),
+                rightKnee: p(40 - wave * 5, 37 - rightLift),
+                rightFoot: p(46 - wave * 7, 42)
+            )
+        case .eating:
+            return make(
+                head: p(18, 14 + fast * 0.25),
+                neck: p(18, 18),
+                leftShoulder: p(16, 21),
+                leftElbow: p(25 + wave * 2, 24),
+                leftHand: p(39, 30 + fast * 0.5),
+                rightShoulder: p(20, 21),
+                rightElbow: p(29, 29 - wave * 2),
+                rightHand: p(38, 34 + fast * 0.5),
+                leftHip: p(16, 31),
+                leftKnee: p(11, 38),
+                leftFoot: p(9, 45),
+                rightHip: p(20, 31),
+                rightKnee: p(25, 37),
+                rightFoot: p(29, 45)
+            )
+        case .exercise:
+            let spread = 1 + wave * 0.7
+            return make(
+                head: p(32, 8.5 - leftLift * 1.4),
+                neck: p(32, 12 - leftLift * 1.4),
+                leftShoulder: p(29.5, 17),
+                leftElbow: p(22 - spread * 2, 11 - leftLift),
+                leftHand: p(16 - spread * 2, 7 - leftLift * 0.5),
+                rightShoulder: p(34.5, 17),
+                rightElbow: p(42 + spread * 2, 11 - leftLift),
+                rightHand: p(48 + spread * 2, 7 - leftLift * 0.5),
+                leftHip: p(30, 28 - leftLift),
+                leftKnee: p(23 - spread * 2, 39 - leftLift),
+                leftFoot: p(17 - spread * 2, 45),
+                rightHip: p(34, 28 - leftLift),
+                rightKnee: p(41 + spread * 2, 39 - rightLift),
+                rightFoot: p(47 + spread * 2, 45)
+            )
+        case .unconfirmed:
+            return make(
+                head: p(32 + wave * 0.4, 10 + fast * 0.5),
+                neck: p(32, 14),
+                leftShoulder: p(29.5, 19),
+                leftElbow: p(24 - wave * 2, 26 + fast),
+                leftHand: p(21 - wave * 2, 31 + fast * 0.5),
+                rightShoulder: p(34.5, 19),
+                rightElbow: p(40 + wave * 2, 26 - fast),
+                rightHand: p(43 + wave * 2, 31 - fast * 0.5),
+                leftHip: p(30.5, 31),
+                leftKnee: p(27 + wave * 2, 38 - leftLift),
+                leftFoot: p(24 + wave * 3, 45),
+                rightHip: p(33.5, 31),
+                rightKnee: p(37 - wave * 2, 38 - rightLift),
+                rightFoot: p(40 - wave * 3, 45),
+                face: .focused
+            )
+        case .walking:
+            let bob = -0.7 * leftLift + fast * 0.35
+            return make(
+                head: p(32 + wave * 0.25, 10 + bob),
+                neck: p(32, 14 + bob),
+                leftShoulder: p(29.5, 19 + bob),
+                leftElbow: p(24 - wave * 3.5, 25 + bob),
+                leftHand: p(19 - wave * 5, 21 + bob),
+                rightShoulder: p(34.5, 19 + bob),
+                rightElbow: p(40 + wave * 3.5, 25 + bob),
+                rightHand: p(45 + wave * 5, 21 + bob),
+                leftHip: p(30.5, 31 + bob),
+                leftKnee: p(25 + wave * 4, 37 - leftLift * 2),
+                leftFoot: p(21 + wave * 7, 45),
+                rightHip: p(33.5, 31 + bob),
+                rightKnee: p(39 - wave * 4, 37 - rightLift * 2),
+                rightFoot: p(44 - wave * 7, 45)
+            )
+        case .running:
+            let jump = leftLift
+            return make(
+                head: p(36 + wave * 0.3, 9 - jump * 1.6),
+                neck: p(34, 13 - jump * 1.6),
+                leftShoulder: p(31.5, 18 - jump),
+                leftElbow: p(21 - wave * 5, 14 - jump),
+                leftHand: p(14 - wave * 7, 11 - jump * 0.5),
+                rightShoulder: p(35, 18 - jump),
+                rightElbow: p(43 + wave * 5, 25 - jump),
+                rightHand: p(49 + wave * 7, 24 - jump * 0.5),
+                leftHip: p(29.5, 29 - jump),
+                leftKnee: p(18 + wave * 7, 36 - jump * 2),
+                leftFoot: p(11 + wave * 11, 42 - jump * 2),
+                rightHip: p(32, 30 - jump),
+                rightKnee: p(40 - wave * 7, 38 - rightLift * 2),
+                rightFoot: p(48 - wave * 10, 44 - rightLift)
+            )
+        case .car:
+            return make(
+                head: p(33, 26 + fast * 0.2),
+                neck: p(33, 29),
+                leftShoulder: p(30.5, 31),
+                leftElbow: p(35, 33 + wave),
+                leftHand: p(39, 33 + wave * 0.5),
+                rightShoulder: p(35.5, 31),
+                rightElbow: p(39, 33 - wave),
+                rightHand: p(42, 33 - wave * 0.5),
+                leftHip: p(31, 35),
+                leftKnee: p(35, 38 - leftLift),
+                leftFoot: p(39, 40),
+                rightHip: p(35, 35),
+                rightKnee: p(42, 38 - rightLift),
+                rightFoot: p(46, 40),
+                headRadius: 2.4,
+                face: .focused
+            )
+        case .subway:
+            return make(
+                head: p(21 + wave * 0.6, 29),
+                neck: p(21, 31.5),
+                leftShoulder: p(19.5, 33),
+                leftElbow: p(16, 35 + fast),
+                leftHand: p(14, 33 + fast * 0.5),
+                rightShoulder: p(22.5, 33),
+                rightElbow: p(26, 35 - fast),
+                rightHand: p(28, 33 - fast * 0.5),
+                leftHip: p(19.5, 36),
+                leftKnee: p(17, 38.5 - leftLift * 0.7),
+                leftFoot: p(15, 40),
+                rightHip: p(22.5, 36),
+                rightKnee: p(25, 38.5 - rightLift * 0.7),
+                rightFoot: p(27, 40),
+                headRadius: 2.1,
+                face: .focused
+            )
+        case .privateVehicle:
+            return make(
+                head: p(34, 28 + fast * 0.2),
+                neck: p(34, 31),
+                leftShoulder: p(31.5, 33),
+                leftElbow: p(35, 35 + wave),
+                leftHand: p(39, 36 + wave * 0.5),
+                rightShoulder: p(36.5, 33),
+                rightElbow: p(40, 35 - wave),
+                rightHand: p(43, 36 - wave * 0.5),
+                leftHip: p(32, 36),
+                leftKnee: p(37, 38.5 - leftLift),
+                leftFoot: p(41, 40),
+                rightHip: p(36, 36),
+                rightKnee: p(43, 38.5 - rightLift),
+                rightFoot: p(47, 40),
+                headRadius: 2.4,
+                face: .focused
+            )
+        case .bus:
+            return make(
+                head: p(29 + wave * 0.5, 29),
+                neck: p(29, 31.5),
+                leftShoulder: p(27.5, 33),
+                leftElbow: p(24, 30 - fast),
+                leftHand: p(24, 25 - fast * 0.5),
+                rightShoulder: p(30.5, 33),
+                rightElbow: p(34, 35 + fast),
+                rightHand: p(37, 34 + fast * 0.5),
+                leftHip: p(27.5, 37),
+                leftKnee: p(24, 39.5 - leftLift * 0.7),
+                leftFoot: p(22, 41),
+                rightHip: p(30.5, 37),
+                rightKnee: p(34, 39.5 - rightLift * 0.7),
+                rightFoot: p(36, 41),
+                headRadius: 2.2,
+                face: .focused
+            )
+        case .ship:
+            return make(
+                head: p(25, 27 + wave * 0.6),
+                neck: p(25, 30),
+                leftShoulder: p(22.5, 32),
+                leftElbow: p(18, 30 + fast),
+                leftHand: p(15, 27 + fast * 0.5),
+                rightShoulder: p(27.5, 32),
+                rightElbow: p(32, 29 - fast),
+                rightHand: p(36, 27 - fast * 0.5),
+                leftHip: p(23, 35),
+                leftKnee: p(21, 38 - leftLift * 0.7),
+                leftFoot: p(19, 40),
+                rightHip: p(27, 35),
+                rightKnee: p(30, 38 - rightLift * 0.7),
+                rightFoot: p(33, 40),
+                headRadius: 2.4,
+                face: .focused
+            )
+        case .airplane:
+            return make(
+                head: p(31, 30 + wave * 0.5),
+                neck: p(31, 32.5),
+                leftShoulder: p(29.5, 34),
+                leftElbow: p(26, 35 + fast * 0.5),
+                leftHand: p(23, 34 + fast * 0.25),
+                rightShoulder: p(32.5, 34),
+                rightElbow: p(36, 35 - fast * 0.5),
+                rightHand: p(39, 34 - fast * 0.25),
+                leftHip: p(29.5, 36),
+                leftKnee: p(28, 38.5 - leftLift * 0.5),
+                leftFoot: p(26, 40),
+                rightHip: p(32.5, 36),
+                rightKnee: p(35, 38.5 - rightLift * 0.5),
+                rightFoot: p(37, 40),
+                headRadius: 2.2,
+                face: .focused
+            )
+        case .cycling:
+            return make(
+                head: p(30 + wave * 0.25, 14 + fast * 0.3),
+                neck: p(30, 17.5),
+                leftShoulder: p(27.5, 21),
+                leftElbow: p(33, 24 + wave),
+                leftHand: p(38, 27 + wave * 0.5),
+                rightShoulder: p(32.5, 21),
+                rightElbow: p(36, 24 - wave),
+                rightHand: p(39, 28 - wave * 0.5),
+                leftHip: p(28, 27),
+                leftKnee: p(24 + wave * 4, 34 - leftLift),
+                leftFoot: p(22 + wave * 6, 38),
+                rightHip: p(31, 27),
+                rightKnee: p(36 - wave * 4, 34 - rightLift),
+                rightFoot: p(39 - wave * 6, 38),
+                headRadius: 3.1
+            )
+        }
+    }
+
+    static func normalizedPhase(_ phase: Int, phaseCount: Int) -> Double {
+        let count = max(phaseCount, 1)
+        let normalized = ((phase % count) + count) % count
+        return Double(normalized) / Double(count)
+    }
+
+    private static func p(_ x: Double, _ y: Double) -> TaptionStickmanPoint {
+        TaptionStickmanPoint(x, y)
+    }
+
+    private static func make(
+        head: TaptionStickmanPoint,
+        neck: TaptionStickmanPoint,
+        leftShoulder: TaptionStickmanPoint,
+        leftElbow: TaptionStickmanPoint,
+        leftHand: TaptionStickmanPoint,
+        rightShoulder: TaptionStickmanPoint,
+        rightElbow: TaptionStickmanPoint,
+        rightHand: TaptionStickmanPoint,
+        leftHip: TaptionStickmanPoint,
+        leftKnee: TaptionStickmanPoint,
+        leftFoot: TaptionStickmanPoint,
+        rightHip: TaptionStickmanPoint,
+        rightKnee: TaptionStickmanPoint,
+        rightFoot: TaptionStickmanPoint,
+        headRadius: Double = 3.4,
+        face: TaptionStickmanPoseFace = .happy
+    ) -> TaptionStickmanPose {
+        TaptionStickmanPose(
+            head: head,
+            neck: neck,
+            leftShoulder: leftShoulder,
+            leftElbow: leftElbow,
+            leftHand: leftHand,
+            rightShoulder: rightShoulder,
+            rightElbow: rightElbow,
+            rightHand: rightHand,
+            leftHip: leftHip,
+            leftKnee: leftKnee,
+            leftFoot: leftFoot,
+            rightHip: rightHip,
+            rightKnee: rightKnee,
+            rightFoot: rightFoot,
+            headRadius: headRadius,
+            face: face
+        )
+    }
+}
+
 struct TaptionStickmanTypingFrame: Equatable, Sendable {
     let lineUnits: [Int]
     let activeLine: Int
