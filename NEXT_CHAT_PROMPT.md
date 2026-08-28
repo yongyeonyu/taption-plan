@@ -25,6 +25,7 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 - 현재 사용 가능한 iOS Simulator가 없고, iPhone 미러링도 기기가 사용 중이라 잠금 전 연결 시간이 초과되어 지도/HealthKit 실제 touch readback은 `test.md`에 미검증 게이트로 남겼다. iPad는 서명 Debug `1.0 (107)` 설치·launch까지 readback했지만 화면·터치는 별도 미검증이다.
 - iPhone 14 Pro(CoreDevice `C44AF739-127D-572D-AD83-417C7E879045`, UDID `00008120-00092C3E14F0201E`, iOS 26.6.1)의 현재 설치 앱은 `com.taption.plan`, 버전 `1.0 (107)`이며 이번 서명 Debug 앱으로 갱신·launch했다.
 - build 108은 App Store Connect `제출 준비 완료` 처리 후 `TP Taption Plan 내부 테스트`에 연결했고, 그룹 빌드 화면에서 `1.0 (108) · 테스트 중 · iOS`를 readback했다.
+- iPad TestFlight 설치·화면·터치는 미완료다. CoreDevice 직접 설치는 Distribution IPA의 Beta entitlement 제약으로 거절됐고, 현재 iPad에는 서명 Debug `1.0 (107)`이 설치·launch되어 있다.
 - DerivedData·xcresult·저장소의 재생성 캐시는 작업 종료 때 삭제한다.
 
 ## 반영된 구현
