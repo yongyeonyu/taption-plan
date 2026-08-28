@@ -18462,6 +18462,121 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testTransitBoardingDeletionSuppressesStablePlaceAfterPOIRefresh() throws {
+        let start = makeDate(2026, 8, 28, 13)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let originalPlace = TransitBoardingPlace(
+            mapKitName: "서울역",
+            kind: .trainStation,
+            point: point
+        )
+        let originalCandidate = try XCTUnwrap(
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(
+                    at: start,
+                    point: point,
+                    duration: 180
+                ),
+                registeredLocations: [],
+                nearbyPlaces: [originalPlace]
+            ).first
+        )
+        let decision = TransitBoardingDecision(
+            candidateKey: originalCandidate.id,
+            placeID: originalCandidate.placeID,
+            kind: originalCandidate.kind,
+            point: originalCandidate.point,
+            span: originalCandidate.span,
+            mode: nil
+        )
+
+        let refreshedPlace = TransitBoardingPlace(
+            mapKitName: "서울역 2번 출구",
+            kind: .trainStation,
+            point: GeoPoint(
+                latitude: point.latitude + 0.0002,
+                longitude: point.longitude,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let refreshedCandidate = try XCTUnwrap(
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(
+                    at: start.addingTimeInterval(4 * 60),
+                    point: point,
+                    duration: 180
+                ),
+                registeredLocations: [],
+                nearbyPlaces: [refreshedPlace]
+            ).first
+        )
+        let nearbyBusPlace = TransitBoardingPlace(
+            mapKitName: "서울역 버스정류장",
+            kind: .busStop,
+            point: GeoPoint(
+                latitude: point.latitude + 0.0003,
+                longitude: point.longitude,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+
+        XCTAssertNotEqual(refreshedCandidate.id, originalCandidate.id)
+        XCTAssertEqual(refreshedCandidate.placeID, originalCandidate.placeID)
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(
+                    at: start.addingTimeInterval(4 * 60),
+                    point: point,
+                    duration: 180
+                ),
+                registeredLocations: [],
+                nearbyPlaces: [refreshedPlace, nearbyBusPlace],
+                decisions: [decision]
+            ).isEmpty
+        )
+    }
+
+    func testTransitBoardingMapKitIdentifierRemainsStableAcrossRefresh() {
+        let first = TransitBoardingPlace(
+            mapKitIdentifier: "map-item-123",
+            mapKitName: "서울역",
+            kind: .trainStation,
+            point: GeoPoint(
+                latitude: 37.5547,
+                longitude: 126.9707,
+                altitude: 0,
+                horizontalAccuracy: 0,
+                verticalAccuracy: 0
+            )
+        )
+        let refreshed = TransitBoardingPlace(
+            mapKitIdentifier: "map-item-123",
+            mapKitName: "서울역 2번 출구",
+            kind: .trainStation,
+            point: GeoPoint(
+                latitude: 37.5549,
+                longitude: 126.9708,
+                altitude: 0,
+                horizontalAccuracy: 0,
+                verticalAccuracy: 0
+            )
+        )
+
+        XCTAssertEqual(first.id, refreshed.id)
+        XCTAssertNotEqual(first.name, refreshed.name)
+        XCTAssertNotEqual(first.point, refreshed.point)
+    }
+
     private func transitReadings(
         at start: Date,
         point: GeoPoint,

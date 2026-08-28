@@ -2536,13 +2536,17 @@ enum TransitBoardingCandidateEngine {
                 return true
             }
             guard decision.mode == nil,
-                  decision.kind == candidate.kind,
                   let decisionPoint = decision.point,
-                  distanceMeters(decisionPoint, candidate.point) <= 100,
-                  decision.span.intersection(with: candidate.span) != nil else {
+                  distanceMeters(decisionPoint, candidate.point) <= 100 else {
                 return false
             }
-            return true
+            if decision.span.intersection(with: candidate.span) != nil {
+                return true
+            }
+            let gapAfter = candidate.span.start.timeIntervalSince(decision.span.end)
+            let gapBefore = decision.span.start.timeIntervalSince(candidate.span.end)
+            let nearestGap = max(gapAfter, gapBefore)
+            return nearestGap <= maximumSampleGap
         }
     }
 

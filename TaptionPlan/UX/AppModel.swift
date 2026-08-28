@@ -484,6 +484,8 @@ final class AppModel {
     @ObservationIgnored private var altitudeSpikeGate = AltitudeSpikeGate()
     @ObservationIgnored private var altitudeGatePlaceID: UUID? = nil
     @ObservationIgnored private var calibrationNoticeTask: Task<Void, Never>?
+    @ObservationIgnored private var transitDecisionPersistTask: Task<Void, Never>?
+    @ObservationIgnored private var transitDecisionPersistRequested = false
 
     var widgetSyncStatus: TaptionWidgetSyncStatus {
         TaptionWidgetSyncStatus.compare(
@@ -6504,7 +6506,20 @@ final class AppModel {
             decisions.removeFirst(decisions.count - 200)
         }
         snapshot.settings.transitBoardingDecisions = decisions
-        Task { await persist() }
+        scheduleTransitDecisionPersistence()
+    }
+
+    private func scheduleTransitDecisionPersistence() {
+        transitDecisionPersistRequested = true
+        guard transitDecisionPersistTask == nil else { return }
+        transitDecisionPersistTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            while self.transitDecisionPersistRequested {
+                self.transitDecisionPersistRequested = false
+                _ = await self.persist()
+            }
+            self.transitDecisionPersistTask = nil
+        }
     }
 
     func forgetTravelConfirmation(_ travelID: UUID) {
@@ -8888,10 +8903,10 @@ final class AppModel {
             if permissionState(for: .cloud).isGranted,
                let cloudSyncService {
                 do {
-                    let localDeviceData = snapshot
                     let uploaded = try await cloudSyncService.upload(
                         cloudPortableSnapshot(value)
                     )
+                    let localDeviceData = snapshot
                     assignCloudMergedSnapshot(mergeDeviceLocalData(
                         cloud: uploaded,
                         local: localDeviceData

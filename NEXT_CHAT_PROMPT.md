@@ -21,8 +21,8 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 - 이번 실행의 마지막 커밋과 `origin/main` 차이는 위 명령으로 readback한다. 원격 push는 하지 않는다.
 - 앱은 `com.taption.plan`, 최신 TestFlight 기준 버전 `1.0 (107)`이다.
 - 이번 변경에서 generic iOS Debug build와 generic iOS `build-for-testing`이 성공했다. 서명 Debug 앱을 iPhone 14 Pro에 설치·launch했고, 전체 XCTest는 775건 중 773건 통과했다.
-- 이번 변경 대상 XCTest인 `MapHomeStickmanTests` 13건과 근방 후보 삭제 회귀 1건은 모두 통과했다. 전체 실패 2건은 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` fixture 때문이다.
-- 현재 사용 가능한 iOS Simulator가 없고, iPhone 미러링도 기기가 사용 중이라 잠금 전 연결 시간이 초과되어 지도/HealthKit 실제 touch readback은 `test.md`에 미검증 게이트로 남겼다.
+- 이번 변경 대상 XCTest인 `MapHomeStickmanTests` 13건과 근방 후보 삭제 회귀 1건은 모두 통과했다. 추가로 iPad에서 교통 후보 6건과 MapLibre viewport 최종 flush 1건도 통과했다. 전체 실패 2건은 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` fixture 때문이다.
+- 현재 사용 가능한 iOS Simulator가 없고, iPhone 미러링도 기기가 사용 중이라 잠금 전 연결 시간이 초과되어 지도/HealthKit 실제 touch readback은 `test.md`에 미검증 게이트로 남겼다. iPad는 서명 Debug `1.0 (107)` 설치·launch까지 readback했지만 화면·터치는 별도 미검증이다.
 - iPhone 14 Pro(CoreDevice `C44AF739-127D-572D-AD83-417C7E879045`, UDID `00008120-00092C3E14F0201E`, iOS 26.6.1)의 현재 설치 앱은 `com.taption.plan`, 버전 `1.0 (107)`이며 이번 서명 Debug 앱으로 갱신·launch했다.
 - 이번 실행은 새 TestFlight 빌드를 만들지 않았다. 기존 build 107의 `TP Taption Plan 내부 테스트` 연결은 별도 readback 게이트로 유지한다.
 - DerivedData·xcresult·저장소의 재생성 캐시는 작업 종료 때 삭제한다.
@@ -47,6 +47,7 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 - raw 위치의 자정 경계·선택일 구간 조회와 지하철 GPS 공백의 예상 경로 projection을 보강했다. 확정 선로는 정본으로 우선하고 추정 경로는 점선으로 구분한다.
 - 센서 day-store 원본과 월별 raw archive, iCloud에서 제외되는 로컬 원본 정책을 유지한다.
 - 3분 이상 체류한 등록 위치·MapKit 주변 5종 교통 후보에 물음표와 탑승/삭제 메뉴를 제공하고, 삭제 결정은 장소 종류·좌표·체류 구간으로 근방 재생성 후보까지 억제한다.
+- `MAP28FIXQ1`에서 MapKit POI 이름·식별자·좌표·도착 분이 바뀌어도 삭제 후보를 억제하고, 100m 이내 인접 후보를 함께 숨기도록 보강했다. MapLibre viewport는 최신값 coalescing, transient overlay, 후보 presentation cache로 부모 전체 재평가를 줄이며 지도 계산은 최대 60Hz, 부모 readback은 15Hz로 제한한다.
 
 ### 졸라맨 자연스러운 동작
 

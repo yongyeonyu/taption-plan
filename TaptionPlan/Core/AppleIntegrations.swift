@@ -3841,6 +3841,7 @@ final class AppleTransitBoardingPOIResolver {
                     return nil
                 }
                 let place = TransitBoardingPlace(
+                    mapKitIdentifier: item.identifier?.rawValue,
                     mapKitName: name,
                     kind: kind,
                     point: GeoPoint(

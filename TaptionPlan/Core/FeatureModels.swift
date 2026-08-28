@@ -2146,17 +2146,22 @@ struct TransitBoardingPlace: Hashable, Sendable {
     }
 
     init(
+        mapKitIdentifier: String? = nil,
         mapKitName name: String,
         kind: UserTransitLocationKind,
         point: GeoPoint
     ) {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let coordinateKey = String(
-            format: "%.4f,%.4f",
-            point.latitude,
-            point.longitude
+        let cleanIdentifier = mapKitIdentifier?.trimmingCharacters(
+            in: .whitespacesAndNewlines
         )
-        id = "mapkit-\(kind.rawValue)-\(cleanName.lowercased())-\(coordinateKey)"
+        if let cleanIdentifier, !cleanIdentifier.isEmpty {
+            id = "mapkit-\(kind.rawValue)-\(cleanIdentifier)"
+        } else {
+            let latitudeKey = Int((point.latitude * 1_000).rounded())
+            let longitudeKey = Int((point.longitude * 1_000).rounded())
+            id = "mapkit-\(kind.rawValue)-\(latitudeKey):\(longitudeKey)"
+        }
         self.name = cleanName
         self.kind = kind
         self.point = point

@@ -400,7 +400,7 @@ struct MapHomeVectorMarker {
     let coordinate: CLLocationCoordinate2D
 }
 
-struct MapHomeVectorViewport {
+struct MapHomeVectorViewport: Equatable {
     let center: CLLocationCoordinate2D
     let span: MKCoordinateSpan
     let cameraDistance: CLLocationDistance
@@ -419,6 +419,17 @@ struct MapHomeVectorViewport {
             heading: heading,
             pitch: pitch
         )
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.center.latitude == rhs.center.latitude
+            && lhs.center.longitude == rhs.center.longitude
+            && lhs.span.latitudeDelta == rhs.span.latitudeDelta
+            && lhs.span.longitudeDelta == rhs.span.longitudeDelta
+            && lhs.cameraDistance == rhs.cameraDistance
+            && lhs.heading == rhs.heading
+            && lhs.pitch == rhs.pitch
+            && lhs.markerPoints == rhs.markerPoints
     }
 }
 
@@ -488,6 +499,9 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private var lastHeading: CLLocationDirection?
         private var lastHeadingCoordinate: CLLocationCoordinate2D?
         private var lastViewportPublishUptime: TimeInterval = 0
+        private var pendingViewport:
+            (viewport: MapHomeVectorViewport, force: Bool)?
+        private var isViewportDeliveryScheduled = false
         private var observedPanGestures: [UIPanGestureRecognizer] = []
         private var longPressGesture: UILongPressGestureRecognizer?
 
@@ -520,6 +534,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             }
             longPressGesture = nil
             self.mapView = nil
+            pendingViewport = nil
         }
 
         func updateContent(in mapView: MLNMapView) {
@@ -834,9 +849,26 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 pitch: camera.pitch,
                 markerPoints: points
             )
-            let callback = parent.onViewportChange
+            if let pendingViewport {
+                self.pendingViewport = (
+                    viewport,
+                    pendingViewport.force || force
+                )
+            } else {
+                pendingViewport = (viewport, force)
+            }
+            guard !isViewportDeliveryScheduled else { return }
+            isViewportDeliveryScheduled = true
             DispatchQueue.main.async {
-                callback(viewport, force)
+                self.isViewportDeliveryScheduled = false
+                guard let pendingViewport = self.pendingViewport else {
+                    return
+                }
+                self.pendingViewport = nil
+                self.parent.onViewportChange(
+                    pendingViewport.viewport,
+                    pendingViewport.force
+                )
             }
         }
 

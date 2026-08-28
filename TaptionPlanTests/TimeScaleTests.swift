@@ -507,6 +507,45 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertLessThanOrEqual(renderedCount, 61)
     }
 
+    @MainActor
+    func testVectorViewportStoreLimitsParentReadbackAndFlushesFinalPoint() {
+        let store = MapHomeVectorViewportStore()
+
+        XCTAssertTrue(
+            store.shouldPublishParentReadback(
+                nowUptime: 1,
+                isFinal: false
+            )
+        )
+        XCTAssertFalse(
+            store.shouldPublishParentReadback(
+                nowUptime: 1.01,
+                isFinal: false
+            )
+        )
+        XCTAssertTrue(
+            store.shouldPublishParentReadback(
+                nowUptime: 1.07,
+                isFinal: false
+            )
+        )
+        XCTAssertTrue(
+            store.shouldPublishParentReadback(
+                nowUptime: 1.071,
+                isFinal: true
+            )
+        )
+
+        let initial = CGPoint(x: 100, y: 200)
+        let latest = CGPoint(x: 120, y: 240)
+        store.updateStickmanPoint(initial, nowUptime: 2)
+        store.updateStickmanPoint(latest, nowUptime: 2.001)
+        XCTAssertEqual(store.stickmanPoint, initial)
+
+        store.finishStickmanPoint(nowUptime: 2.001)
+        XCTAssertEqual(store.stickmanPoint, latest)
+    }
+
     func testSidebarDragMovementDoesNotDependOn240HzSampleCount() {
         let handleBase = MapHomeTimeSidebarNLEState(
             selectedMinute: 720,

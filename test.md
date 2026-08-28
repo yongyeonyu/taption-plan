@@ -12,13 +12,15 @@
 - iPhone XCTest 대상 변경: `MapHomeStickmanTests` 13건 + 근방 후보 삭제 회귀 1건, 14건 모두 통과
 - 전체 XCTest 실패 원인: 저장소에 없는 `TaptionPlan/Localizable.xcstrings`와 `.cat-visual-check/cat_sheet_x4.png` fixture
 - iPhone 미러링: 기기가 사용 중이라 잠금 전 연결 시간 초과, 화면·터치 readback 미검증
+- iPad Pro 12.9-inch 서명 Debug build/install/launch: 성공, `com.taption.plan` `1.0 (107)` readback
+- iPad 대상 회귀 XCTest: 교통 후보 6건 + MapLibre viewport 최종 flush 1건, 7건 모두 통과
 
 ## TRN828Q7A1 · BUG28P9K3X · DEL28Q9M4X
 
 - 대상: iPhone 14 Pro 및 연결 가능한 iPad, 최신 검증 빌드
 - 지도 후보: 3분 미만은 미표시, 3분 이상은 `?` 표시
 - 후보 메뉴: 지하철·버스·기차·비행기·배 탑승 선택과 삭제 버튼을 실제 터치
-- 삭제: 같은 종류·100m 이내·체류 구간 겹침 후보를 한 번에 숨김
+- 삭제: 100m 이내의 같은 체류 구간 또는 5분 이내 인접 체류 후보를 종류·POI ID와 관계없이 한 번에 숨김
 - 보존: 등록 교통 위치·원본 GPS·이미 확정된 이동 기록이 삭제되지 않음
 - 재실행: 삭제 결정이 저장 후 재실행에도 유지됨
 - 지도 경로: Apple MapKit과 MapLibre에서 후보 표시·탭·삭제를 각각 확인

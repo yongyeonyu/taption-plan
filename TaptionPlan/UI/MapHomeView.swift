@@ -298,6 +298,51 @@ final class MapHomeStickmanViewportProjection {
     }
 }
 
+@MainActor
+@Observable
+final class MapHomeVectorViewportStore {
+    private(set) var viewport: MapHomeVectorViewport?
+    private(set) var stickmanPoint: CGPoint?
+    private var stickmanProjection = MapHomeStickmanViewportProjection()
+    private var lastParentReadbackUptime = -Double.infinity
+
+    func update(_ next: MapHomeVectorViewport) {
+        guard viewport != next else { return }
+        viewport = next
+    }
+
+    func updateStickmanPoint(
+        _ point: CGPoint,
+        nowUptime: TimeInterval
+    ) {
+        guard let rendered = stickmanProjection.submit(
+            point,
+            nowUptime: nowUptime
+        ) else { return }
+        if stickmanPoint != rendered {
+            stickmanPoint = rendered
+        }
+    }
+
+    func finishStickmanPoint(nowUptime: TimeInterval) {
+        guard let rendered = stickmanProjection.finish(nowUptime: nowUptime)
+        else { return }
+        if stickmanPoint != rendered {
+            stickmanPoint = rendered
+        }
+    }
+
+    func shouldPublishParentReadback(
+        nowUptime: TimeInterval,
+        isFinal: Bool
+    ) -> Bool {
+        guard isFinal || nowUptime - lastParentReadbackUptime >= 1.0 / 15.0
+        else { return false }
+        lastParentReadbackUptime = nowUptime
+        return true
+    }
+}
+
 private struct MapHomeCachedCoordinate: Codable, Sendable {
     let latitude: Double
     let longitude: Double
@@ -332,6 +377,13 @@ private struct MapHomeCachedTemporaryLocation: Codable, Sendable {
     let latitude: Double
     let longitude: Double
     let reason: String
+}
+
+private struct MapHomeTransitBoardingCandidateCacheKey: Equatable {
+    let snapshotRevision: UInt64
+    let readingsRevision: UInt64
+    let nearbyPlacesRevision: UInt64
+    let cutoff: Date
 }
 
 private struct MapHomeDayCachePayload: Codable, Sendable {
@@ -435,6 +487,8 @@ private final class MapHomeMapRenderCache {
     private(set) var visibleExpectedRouteOverlays: [MapHomeExpectedRouteOverlay]?
     private(set) var visibleExpectedRouteCutoff: Date?
     private(set) var routeBounds: MapHomeRouteCoordinateBounds?
+    private var transitBoardingCandidateCache:
+        (key: MapHomeTransitBoardingCandidateCacheKey, candidates: [TransitBoardingCandidate])?
 
     func invalidateRouteData() {
         subwayRouteOverlays = nil
@@ -443,6 +497,20 @@ private final class MapHomeMapRenderCache {
         visibleExpectedRouteOverlays = nil
         visibleExpectedRouteCutoff = nil
         routeBounds = nil
+        transitBoardingCandidateCache = nil
+    }
+
+    func transitBoardingCandidates(
+        key: MapHomeTransitBoardingCandidateCacheKey,
+        make: () -> [TransitBoardingCandidate]
+    ) -> [TransitBoardingCandidate] {
+        if let cached = transitBoardingCandidateCache,
+           cached.key == key {
+            return cached.candidates
+        }
+        let candidates = make()
+        transitBoardingCandidateCache = (key, candidates)
+        return candidates
     }
 
     func invalidateExpectedRoutes() {
@@ -986,7 +1054,7 @@ struct MapHomeView: View {
 
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var mapCameraRevision = 0
-    @State private var vectorMapViewport: MapHomeVectorViewport?
+    @State private var vectorMapViewportStore = MapHomeVectorViewportStore()
     @Namespace private var mapScope
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
@@ -1028,6 +1096,8 @@ struct MapHomeView: View {
     @State private var mapSearchTask: Task<Void, Never>?
     @State private var transitPOIRefreshTask: Task<Void, Never>?
     @State private var nearbyTransitPlaces: [TransitBoardingPlace] = []
+    @State private var transitBoardingReadingsRevision: UInt64 = 0
+    @State private var nearbyTransitPlacesRevision: UInt64 = 0
     @State private var mapSearchCompleter = MapHomeSearchCompleter()
     @State private var mapSearchRequestID = UUID()
     @FocusState private var isMapSearchFocused: Bool
@@ -1503,6 +1573,7 @@ struct MapHomeView: View {
             guard Calendar.autoupdatingCurrent.isDateInToday(
                 model.selectedDate
             ) else { return }
+            transitBoardingReadingsRevision &+= 1
             scheduleLiveRouteProjectionRefresh()
             scheduleTransitPOIRefresh()
         }
@@ -1543,6 +1614,8 @@ struct MapHomeView: View {
                 expectedRouteOverlays = []
                 historicalPlaybackPoint = nil
                 nearbyTransitPlaces = []
+                transitBoardingReadingsRevision &+= 1
+                nearbyTransitPlacesRevision &+= 1
                 prepareRouteProjectionReadings()
                 refreshRouteProjection()
                 refreshHistoricalPlaybackPoint()
@@ -1580,6 +1653,7 @@ struct MapHomeView: View {
             }
         }
         .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
+            transitBoardingReadingsRevision &+= 1
             scheduleLiveRouteProjectionRefresh()
             scheduleTransitPOIRefresh()
         }
@@ -1641,7 +1715,14 @@ struct MapHomeView: View {
         )
         .id(style.rawValue)
         .overlay {
-            vectorMapAnnotationOverlay(style: style)
+            MapHomeVectorViewportOverlay(store: vectorMapViewportStore) {
+                viewport, stickmanPoint in
+                vectorMapAnnotationOverlay(
+                    style: style,
+                    viewport: viewport,
+                    stickmanPoint: stickmanPoint
+                )
+            }
         }
         .simultaneousGesture(
             SpatialTapGesture().onEnded { _ in
@@ -2169,14 +2250,19 @@ struct MapHomeView: View {
     }
 
     private func vectorMapAnnotationOverlay(
-        style: MapHomeVectorStyle
+        style: MapHomeVectorStyle,
+        viewport: MapHomeVectorViewport?,
+        stickmanPoint: CGPoint?
     ) -> some View {
         ZStack {
             MapHomeFairyAtmosphere()
                 .allowsHitTesting(false)
 
             ForEach(temporaryLocationAnnotations) { location in
-                if let point = vectorPoint(for: vectorTemporaryMarkerID(location.id)) {
+                if let point = vectorPoint(
+                    in: viewport,
+                    for: vectorTemporaryMarkerID(location.id)
+                ) {
                     MapHomeProjectedAnnotation(point: point, anchor: .center) {
                         VStack(spacing: 2) {
                             Image(systemName: "tram.fill")
@@ -2206,7 +2292,10 @@ struct MapHomeView: View {
             }
 
             ForEach(placeAnnotations) { place in
-                if let point = vectorPoint(for: vectorPlaceMarkerID(place.id)) {
+                if let point = vectorPoint(
+                    in: viewport,
+                    for: vectorPlaceMarkerID(place.id)
+                ) {
                     MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
                         if place.destination == .user {
                             Button {
@@ -2240,7 +2329,10 @@ struct MapHomeView: View {
             }
 
             ForEach(transitAnnotations) { place in
-                if let point = vectorPoint(for: vectorTransitMarkerID(place.id)) {
+                if let point = vectorPoint(
+                    in: viewport,
+                    for: vectorTransitMarkerID(place.id)
+                ) {
                     MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
                         Button {
                             selectedUserLocation = .transit(place.id)
@@ -2261,6 +2353,7 @@ struct MapHomeView: View {
 
             ForEach(transitBoardingCandidates) { candidate in
                 if let point = vectorPoint(
+                    in: viewport,
                     for: vectorBoardingCandidateMarkerID(candidate.id)
                 ) {
                     MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
@@ -2285,7 +2378,7 @@ struct MapHomeView: View {
             }
 
             if selectedTimelineMinute != nil,
-               let point = vectorPoint(for: vectorDisplayedMarkerID) {
+               let point = vectorPoint(in: viewport, for: vectorDisplayedMarkerID) {
                 MapHomeVectorPlayerMarker(
                     heading: vectorPlayerHeading,
                     backgroundHex: style.backgroundHex
@@ -2296,7 +2389,7 @@ struct MapHomeView: View {
             }
 
             if displayedLocationCoordinate != nil,
-               let point = displayedStickmanViewportPoint {
+               let point = stickmanPoint {
                 MapHomeStickmanMarker(action: displayedStickmanAction)
                     .position(
                         x: point.x,
@@ -2311,7 +2404,7 @@ struct MapHomeView: View {
             }
 
             if let selectedSearchPin,
-               let point = vectorPoint(for: vectorSearchMarkerID) {
+               let point = vectorPoint(in: viewport, for: vectorSearchMarkerID) {
                 MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
                     Button {
                         isSearchPinMenuPresented = true
@@ -2359,32 +2452,43 @@ struct MapHomeView: View {
         "boarding-candidate-\(id)"
     }
 
-    private func vectorPoint(for id: String) -> CGPoint? {
-        vectorMapViewport?.markerPoints[id]
+    private func vectorPoint(
+        in viewport: MapHomeVectorViewport?,
+        for id: String
+    ) -> CGPoint? {
+        viewport?.markerPoints[id]
     }
 
     private func applyVectorMapViewport(
         _ viewport: MapHomeVectorViewport,
         isFinal: Bool
     ) {
-        vectorMapViewport = viewport
+        let now = ProcessInfo.processInfo.systemUptime
+        vectorMapViewportStore.update(viewport)
         let displayedPoint = viewport.markerPoints[vectorDisplayedMarkerID]
         if let displayedPoint {
-            submitDisplayedStickmanViewportPoint(displayedPoint)
+            vectorMapViewportStore.updateStickmanPoint(
+                displayedPoint,
+                nowUptime: now
+            )
         }
         let frame = MapHomeCameraFrame(
             camera: viewport.camera,
             region: viewport.region
         )
-        if let rendered = mapCameraFrameProjection.submit(
+        _ = mapCameraFrameProjection.submit(
             frame,
-            nowUptime: ProcessInfo.processInfo.systemUptime,
+            nowUptime: now,
             force: isFinal
-        ) {
-            applyMapCameraFrame(rendered, locationPoint: displayedPoint)
+        )
+        if vectorMapViewportStore.shouldPublishParentReadback(
+            nowUptime: now,
+            isFinal: isFinal
+        ), let latestFrame = mapCameraFrameProjection.latestFrame {
+            applyMapCameraFrame(latestFrame, locationPoint: displayedPoint)
         }
         if isFinal {
-            finishDisplayedStickmanViewportProjection()
+            vectorMapViewportStore.finishStickmanPoint(nowUptime: now)
         }
     }
 
@@ -4473,14 +4577,22 @@ struct MapHomeView: View {
     }
 
     private var transitBoardingCandidates: [TransitBoardingCandidate] {
-        TransitBoardingCandidateEngine.candidates(
-            readings: transitBoardingReadings,
-            registeredLocations: model.settings.userTransitLocations,
-            nearbyPlaces: nearbyTransitPlaces,
-            travel: model.snapshot.travel,
-            decisions: model.settings.transitBoardingDecisions,
-            through: routeOverlayCutoff
+        let key = MapHomeTransitBoardingCandidateCacheKey(
+            snapshotRevision: model.snapshotRevision,
+            readingsRevision: transitBoardingReadingsRevision,
+            nearbyPlacesRevision: nearbyTransitPlacesRevision,
+            cutoff: routeOverlayCutoff
         )
+        return mapRenderCache.transitBoardingCandidates(key: key) {
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitBoardingReadings,
+                registeredLocations: model.settings.userTransitLocations,
+                nearbyPlaces: nearbyTransitPlaces,
+                travel: model.snapshot.travel,
+                decisions: model.settings.transitBoardingDecisions,
+                through: routeOverlayCutoff
+            )
+        }
     }
 
     private var currentCoordinate: CLLocationCoordinate2D? {
@@ -4951,6 +5063,7 @@ struct MapHomeView: View {
             : .failed(dayStart)
         if merged != routeReadings {
             routeReadings = merged
+            transitBoardingReadingsRevision &+= 1
         }
         scheduleTransitPOIRefresh()
         scheduleExpectedRouteRefresh()
@@ -4991,7 +5104,10 @@ struct MapHomeView: View {
                       selectedDate,
                       inSameDayAs: model.selectedDate
                   ) else { return }
-            nearbyTransitPlaces = places
+            if nearbyTransitPlaces != places {
+                nearbyTransitPlaces = places
+                nearbyTransitPlacesRevision &+= 1
+            }
         }
     }
 
@@ -5717,7 +5833,8 @@ struct MapHomeView: View {
             duringPlayback: isDayPlaybackRunning
         ) == false
         else { return }
-        if usesVectorRoadMap, let vectorMapViewport {
+        if usesVectorRoadMap,
+           let vectorMapViewport = vectorMapViewportStore.viewport {
             mapPosition = .region(vectorMapViewport.region)
         }
         hasCancelledInitialLocationFocus = true
@@ -5735,7 +5852,8 @@ struct MapHomeView: View {
         if let proxy, let coordinate = displayedLocationCoordinate {
             point = proxy.convert(coordinate, to: .named("mapHomeViewport"))
         } else {
-            point = vectorMapViewport?.markerPoints[vectorDisplayedMarkerID]
+            point = vectorMapViewportStore.viewport?
+                .markerPoints[vectorDisplayedMarkerID]
         }
         return updateUserCenterState(locationPoint: point)
     }
@@ -8428,6 +8546,16 @@ private struct MapHomeTransitBoardingCandidatePin: View {
                 .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
         }
         .accessibilityLabel("\(name), \(kind.title) 탑승 확인")
+    }
+}
+
+private struct MapHomeVectorViewportOverlay<Content: View>: View {
+    let store: MapHomeVectorViewportStore
+    let content: (MapHomeVectorViewport?, CGPoint?) -> Content
+
+    var body: some View {
+        content(store.viewport, store.stickmanPoint)
+            .clipped()
     }
 }
 
