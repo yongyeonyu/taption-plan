@@ -192,6 +192,25 @@ struct SettingsView: View {
                                 }
                             )
                         )
+                        if model.settings.healthEnabled {
+                            settingsRow(
+                                icon: "arrow.triangle.2.circlepath",
+                                iconBackground: Color(
+                                    red: 0.96,
+                                    green: 0.91,
+                                    blue: 0.96
+                                ),
+                                iconColor: Color(hex: "#C0268E"),
+                                title: "HealthKit 전체 동기화",
+                                subtitle: model.healthSyncDetail,
+                                value: model.healthSyncStatus
+                            ) {
+                                Task {
+                                    await model.synchronizeHealthHistory()
+                                }
+                            }
+                            .disabled(model.isHealthHistorySyncRunning)
+                        }
                         watchInstallRow
                         locationIntegrationRow
                         if let session = model.activeTrackingSession {

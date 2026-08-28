@@ -25,7 +25,7 @@ final class SensorDayStoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
         let first = Date(timeIntervalSince1970: 1_000)
-        let archive = SensorReadingArchive(fileURL: fileURL)
+        let archive = try SensorReadingArchive(fileURL: fileURL)
         try await archive.append([
             makeReading(first.addingTimeInterval(60), sequence: 2),
             makeReading(first, sequence: 1)
@@ -36,7 +36,7 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(values.map(\.sequence), [1, 2])
         XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("taption-plan-v2.sqlite").path))
 
-        let reopened = SensorReadingArchive(fileURL: fileURL)
+        let reopened = try SensorReadingArchive(fileURL: fileURL)
         let reopenedValues = try await reopened.readings(in: span)
         XCTAssertEqual(reopenedValues.map(\.id), values.map(\.id))
     }
@@ -58,12 +58,12 @@ final class SensorDayStoreTests: XCTestCase {
 
         let raw = RawDeviceDataMonthlyArchive(rootDirectory: directory.appendingPathComponent("RawData"))
         try raw.append(source: .gps, kind: "sensor-reading", payload: reading, capturedAt: date)
-        let archive = SensorReadingArchive(fileURL: fileURL, rawArchive: raw)
+        let archive = try SensorReadingArchive(fileURL: fileURL, rawArchive: raw)
         let span = TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1))
         let migrated = try await archive.readings(in: span)
         XCTAssertEqual(migrated.map(\.id), [id])
 
-        let second = SensorReadingArchive(fileURL: fileURL, rawArchive: raw)
+        let second = try SensorReadingArchive(fileURL: fileURL, rawArchive: raw)
         let reopened = try await second.routeReadings(in: span)
         XCTAssertEqual(reopened.map(\.id), [id])
     }
@@ -73,7 +73,7 @@ final class SensorDayStoreTests: XCTestCase {
             .appendingPathComponent("sensor-uncompressed-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let archive = SensorReadingArchive(
+        let archive = try SensorReadingArchive(
             fileURL: fileURL,
             rawArchive: RawDeviceDataMonthlyArchive(rootDirectory: directory.appendingPathComponent("RawData")),
             trackingChunkArchive: TrackingSessionChunkArchive(rootDirectory: directory.appendingPathComponent("RawData"))
@@ -151,8 +151,32 @@ final class SensorDayStoreTests: XCTestCase {
                 )
             )
         ])
-        let archive = SensorReadingArchive(fileURL: fileURL)
+        let archive = try SensorReadingArchive(fileURL: fileURL)
         let values = try await archive.readings(in: TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1)))
         XCTAssertEqual(values.map(\.id), [reading.id])
+    }
+
+    func testSensorArchiveInitializationReportsInvalidDatabasePath() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("sensor-invalid-store-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        let databaseDirectory = directory.appendingPathComponent(
+            "database-directory"
+        )
+        try FileManager.default.createDirectory(
+            at: databaseDirectory,
+            withIntermediateDirectories: true
+        )
+
+        XCTAssertThrowsError(
+            try SensorReadingArchive(
+                fileURL: directory.appendingPathComponent("readings.jsonl"),
+                dayStoreURL: databaseDirectory
+            )
+        )
     }
 }

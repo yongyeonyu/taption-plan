@@ -1065,6 +1065,195 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(travel, original)
     }
 
+    func testExpectedSubwayRouteUsesRegisteredEndpointsAndSuppressesDuplicates()
+        throws {
+        let home = FrequentPlace(
+            id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
+            kind: .home,
+            point: GeoPoint(
+                latitude: 37.50,
+                longitude: 126.90,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let company = FrequentPlace(
+            id: UUID(uuidString: "20000000-0000-0000-0000-000000000002")!,
+            kind: .company,
+            point: GeoPoint(
+                latitude: 37.60,
+                longitude: 127.00,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let from = PlaceStay(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000003")!,
+            placeKey: home.stablePlaceKey,
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: nil,
+            isConfirmed: true
+        )
+        let to = PlaceStay(
+            id: UUID(uuidString: "40000000-0000-0000-0000-000000000004")!,
+            placeKey: company.stablePlaceKey,
+            displayName: "회사",
+            span: TimeSpan(start: date(100), end: date(140)),
+            confidence: .high,
+            point: nil,
+            isConfirmed: true
+        )
+        let segmentIDs = [
+            "50000000-0000-0000-0000-000000000005",
+            "60000000-0000-0000-0000-000000000006",
+            "70000000-0000-0000-0000-000000000007",
+            "80000000-0000-0000-0000-000000000008",
+        ].map { UUID(uuidString: $0)! }
+        let travel = segmentIDs.map { id in
+            TravelSegment(
+                id: id,
+                fromPlaceID: from.id,
+                toPlaceID: to.id,
+                mode: .subway,
+                span: TimeSpan(start: date(10), end: date(100)),
+                distanceMeters: 19_000,
+                confidence: .low,
+                evidence: [],
+                isConfirmed: false,
+                subwayRoute: nil,
+                isClassificationLocked: true
+            )
+        }
+        let original = travel
+
+        let requests = ExpectedRouteRequestEngine.requests(
+            travel: travel,
+            places: [from, to],
+            readings: [],
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440),
+            frequentPlaces: [home, company]
+        )
+
+        let request = try XCTUnwrap(requests.first)
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertEqual(request.transport, .transit)
+        XCTAssertEqual(request.start, home.point)
+        XCTAssertEqual(request.end, company.point)
+        XCTAssertEqual(travel, original)
+    }
+
+    func testExpectedRouteRejectsUnconfirmedSegmentWithoutBothRegisteredEndpoints() {
+        let home = FrequentPlace(
+            kind: .home,
+            point: GeoPoint(
+                latitude: 37.50,
+                longitude: 126.90,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let from = PlaceStay(
+            placeKey: home.stablePlaceKey,
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: nil,
+            isConfirmed: true
+        )
+        let to = PlaceStay(
+            placeKey: "missing-company",
+            displayName: "회사",
+            span: TimeSpan(start: date(100), end: date(140)),
+            confidence: .high,
+            point: nil,
+            isConfirmed: true
+        )
+        let travel = TravelSegment(
+            fromPlaceID: from.id,
+            toPlaceID: to.id,
+            mode: .subway,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 19_000,
+            confidence: .low,
+            evidence: [],
+            isConfirmed: false,
+            isClassificationLocked: true
+        )
+
+        XCTAssertTrue(
+            ExpectedRouteRequestEngine.requests(
+                travel: [travel],
+                places: [from, to],
+                readings: [],
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440),
+                frequentPlaces: [home]
+            ).isEmpty
+        )
+    }
+
+    func testRegisteredEndpointFallbackDoesNotInventUnconfirmedRoadRoute() {
+        let home = FrequentPlace(
+            kind: .home,
+            point: GeoPoint(
+                latitude: 37.50,
+                longitude: 126.90,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let company = FrequentPlace(
+            kind: .company,
+            point: GeoPoint(
+                latitude: 37.60,
+                longitude: 127.00,
+                altitude: 0,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 10
+            )
+        )
+        let from = PlaceStay(
+            placeKey: home.stablePlaceKey,
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high
+        )
+        let to = PlaceStay(
+            placeKey: company.stablePlaceKey,
+            displayName: "회사",
+            span: TimeSpan(start: date(100), end: date(140)),
+            confidence: .high
+        )
+        let travel = TravelSegment(
+            fromPlaceID: from.id,
+            toPlaceID: to.id,
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 19_000,
+            confidence: .low,
+            evidence: [],
+            isClassificationLocked: true
+        )
+
+        XCTAssertTrue(
+            ExpectedRouteRequestEngine.requests(
+                travel: [travel],
+                places: [from, to],
+                readings: [],
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440),
+                frequentPlaces: [home, company]
+            ).isEmpty
+        )
+    }
+
     func testExpectedRouteSkipsStoredSubwayAndUsesTransitForTrain() throws {
         let subway = TravelSegment(
             mode: .subway,

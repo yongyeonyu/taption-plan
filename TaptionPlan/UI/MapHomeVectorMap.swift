@@ -1,0 +1,677 @@
+import CoreLocation
+import MapKit
+@preconcurrency import MapLibre
+import SwiftUI
+import UIKit
+
+enum MapHomeVectorStyle: String, CaseIterable, Sendable {
+    case night
+    case light
+    case contrast
+    case pastel
+
+    static let sourceURL = "https://tiles.openfreemap.org/planet"
+    static let routeHex = "#FFD84D"
+
+    var backgroundHex: String {
+        switch self {
+        case .night: "#0A1B2A"
+        case .light: "#F7F6F4"
+        case .contrast: "#030A11"
+        case .pastel: "#FFF7F4"
+        }
+    }
+
+    var waterHex: String {
+        switch self {
+        case .night: "#07131F"
+        case .light: "#DDEFF4"
+        case .contrast: "#0E3546"
+        case .pastel: "#DCEEFF"
+        }
+    }
+
+    var landuseHex: String {
+        switch self {
+        case .night: "#102838"
+        case .light: "#E7EFE4"
+        case .contrast: "#102B38"
+        case .pastel: "#E5F3E4"
+        }
+    }
+
+    var buildingHex: String {
+        switch self {
+        case .night: "#66727D"
+        case .light: "#CBD5E1"
+        case .contrast: "#A9B4BE"
+        case .pastel: "#DCCFEB"
+        }
+    }
+
+    var roadCasingHex: String {
+        switch self {
+        case .night: "#163C47"
+        case .light, .pastel: "#FFFFFF"
+        case .contrast: "#15262D"
+        }
+    }
+
+    var roadHex: String {
+        switch self {
+        case .night: "#35C6B1"
+        case .light: "#73C9A6"
+        case .contrast: "#7FFFE8"
+        case .pastel: "#80CFC2"
+        }
+    }
+
+    private var name: String {
+        switch self {
+        case .night: "Taption Vector Night"
+        case .light: "Taption Vector Light"
+        case .contrast: "Taption Vector Contrast"
+        case .pastel: "Taption Vector Pastel"
+        }
+    }
+
+    var json: String {
+        #"""
+    {
+      "version": 8,
+      "name": "\#(name)",
+      "sources": {
+        "openmaptiles": {
+          "type": "vector",
+          "url": "https://tiles.openfreemap.org/planet",
+          "attribution": "<a href=\"https://openfreemap.org/\">OpenFreeMap</a> <a href=\"https://www.openmaptiles.org/\">© OpenMapTiles</a> Data from <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>"
+        }
+      },
+      "layers": [
+        {
+          "id": "background",
+          "type": "background",
+          "paint": { "background-color": "\#(backgroundHex)" }
+        },
+        {
+          "id": "water",
+          "type": "fill",
+          "source": "openmaptiles",
+          "source-layer": "water",
+          "paint": { "fill-color": "\#(waterHex)" }
+        },
+        {
+          "id": "landuse",
+          "type": "fill",
+          "source": "openmaptiles",
+          "source-layer": "landuse",
+          "paint": {
+            "fill-color": "\#(landuseHex)",
+            "fill-opacity": 0.55
+          }
+        },
+        {
+          "id": "building",
+          "type": "fill",
+          "source": "openmaptiles",
+          "source-layer": "building",
+          "minzoom": 12,
+          "paint": {
+            "fill-color": "\#(buildingHex)",
+            "fill-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0.42, 16, 0.78]
+          }
+        },
+        {
+          "id": "road-casing",
+          "type": "line",
+          "source": "openmaptiles",
+          "source-layer": "transportation",
+          "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "motorway", "trunk", "primary", "secondary", "tertiary", "minor", "service", "path", "track", "raceway"]],
+          "layout": { "line-cap": "round", "line-join": "round" },
+          "paint": {
+            "line-color": "\#(roadCasingHex)",
+            "line-opacity": 0.92,
+            "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 11, 1.8, 16, 6.4, 20, 15]
+          }
+        },
+        {
+          "id": "road",
+          "type": "line",
+          "source": "openmaptiles",
+          "source-layer": "transportation",
+          "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "motorway", "trunk", "primary", "secondary", "tertiary", "minor", "service", "path", "track", "raceway"]],
+          "layout": { "line-cap": "round", "line-join": "round" },
+          "paint": {
+            "line-color": "\#(roadHex)",
+            "line-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.58, 12, 0.82, 17, 0.96],
+            "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.3, 11, 1.0, 16, 3.5, 20, 10]
+          }
+        }
+      ]
+    }
+    """#
+    }
+}
+
+extension MapDisplayStyle {
+    var mapHomeVectorStyle: MapHomeVectorStyle? {
+        switch self {
+        case .mapLibreNight: .night
+        case .mapLibreLight: .light
+        case .mapLibreContrast: .contrast
+        case .mapLibrePastel: .pastel
+        case .standard, .simplified, .hybrid, .imagery: nil
+        }
+    }
+}
+
+enum MapHomeVectorNavigationMath {
+    static func bearing(
+        from start: CLLocationCoordinate2D,
+        to end: CLLocationCoordinate2D
+    ) -> CLLocationDirection {
+        let latitude1 = start.latitude * .pi / 180
+        let latitude2 = end.latitude * .pi / 180
+        let longitudeDelta = (end.longitude - start.longitude) * .pi / 180
+        let y = sin(longitudeDelta) * cos(latitude2)
+        let x = cos(latitude1) * sin(latitude2)
+            - sin(latitude1) * cos(latitude2) * cos(longitudeDelta)
+        let degrees = atan2(y, x) * 180 / .pi
+        let normalized = degrees.truncatingRemainder(dividingBy: 360)
+        return normalized < 0 ? normalized + 360 : normalized
+    }
+}
+
+struct MapHomeVectorRoute {
+    let id: String
+    let coordinates: [CLLocationCoordinate2D]
+    let colorHex: String
+    let opacity: Double
+
+    var signature: String {
+        let first = coordinates.first
+        let last = coordinates.last
+        return [
+            id,
+            String(coordinates.count),
+            String(first?.latitude ?? 0),
+            String(first?.longitude ?? 0),
+            String(last?.latitude ?? 0),
+            String(last?.longitude ?? 0),
+            colorHex,
+            String(opacity),
+        ].joined(separator: "|")
+    }
+}
+
+struct MapHomeVectorMarker {
+    let id: String
+    let coordinate: CLLocationCoordinate2D
+}
+
+struct MapHomeVectorViewport {
+    let center: CLLocationCoordinate2D
+    let span: MKCoordinateSpan
+    let cameraDistance: CLLocationDistance
+    let heading: CLLocationDirection
+    let pitch: CGFloat
+    let markerPoints: [String: CGPoint]
+
+    var region: MKCoordinateRegion {
+        MKCoordinateRegion(center: center, span: span)
+    }
+
+    var camera: MapCamera {
+        MapCamera(
+            centerCoordinate: center,
+            distance: cameraDistance,
+            heading: heading,
+            pitch: pitch
+        )
+    }
+}
+
+struct MapHomeVectorMap: UIViewRepresentable {
+    let style: MapHomeVectorStyle
+    let cameraPosition: MapCameraPosition
+    let cameraRevision: Int
+    let historicalRoutes: [MapHomeVectorRoute]
+    let activeRoute: MapHomeVectorRoute?
+    let expectedRoutes: [MapHomeVectorRoute]
+    let subwayRoutes: [MapHomeVectorRoute]
+    let markers: [MapHomeVectorMarker]
+    let contentInsets: UIEdgeInsets
+    let followsHeading: Bool
+    let headingDegrees: CLLocationDirection
+    let displayedCoordinate: CLLocationCoordinate2D?
+    let onViewportChange: (MapHomeVectorViewport, Bool) -> Void
+    let onSingleFingerPanBegan: () -> Void
+    let onSingleFingerPanEnded: () -> Void
+    let onLongPress: (CLLocationCoordinate2D) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> MLNMapView {
+        let mapView = MLNMapView(frame: .zero, styleJSON: style.json)
+        mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        mapView.delegate = context.coordinator
+        mapView.allowsScrolling = true
+        mapView.allowsZooming = true
+        mapView.allowsRotating = true
+        mapView.allowsTilting = true
+        mapView.showsCompassView = false
+        mapView.showsLogoView = false
+        mapView.showsAttributionButton = true
+        mapView.attributionButtonPosition = .bottomLeft
+        mapView.attributionButtonMargins = CGPoint(x: 12, y: 12)
+        mapView.minimumZoomLevel = 2
+        mapView.maximumZoomLevel = 20
+        mapView.tintColor = UIColor(red: 0.21, green: 0.78, blue: 0.69, alpha: 1)
+        context.coordinator.attach(to: mapView)
+        return mapView
+    }
+
+    func updateUIView(_ mapView: MLNMapView, context: Context) {
+        context.coordinator.parent = self
+        if mapView.contentInset != contentInsets {
+            mapView.contentInset = contentInsets
+        }
+        context.coordinator.updateContent(in: mapView)
+        context.coordinator.applyCameraCommandIfNeeded(to: mapView)
+        context.coordinator.applyHeadingIfNeeded(to: mapView)
+    }
+
+    static func dismantleUIView(_ mapView: MLNMapView, coordinator: Coordinator) {
+        coordinator.detach(from: mapView)
+        mapView.delegate = nil
+    }
+
+    final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate, UIGestureRecognizerDelegate {
+        var parent: MapHomeVectorMap
+        private weak var mapView: MLNMapView?
+        private var styleIsLoaded = false
+        private var lastCameraRevision = Int.min
+        private var lastContentSignature = ""
+        private var lastHeading: CLLocationDirection?
+        private var lastHeadingCoordinate: CLLocationCoordinate2D?
+        private var lastViewportPublishUptime: TimeInterval = 0
+        private var observedPanGestures: [UIPanGestureRecognizer] = []
+        private var longPressGesture: UILongPressGestureRecognizer?
+
+        init(parent: MapHomeVectorMap) {
+            self.parent = parent
+        }
+
+        func attach(to mapView: MLNMapView) {
+            self.mapView = mapView
+            attachPanGestures(in: mapView)
+            let longPress = UILongPressGestureRecognizer(
+                target: self,
+                action: #selector(handleLongPress(_:))
+            )
+            longPress.minimumPressDuration = 0.55
+            longPress.allowableMovement = 12
+            longPress.cancelsTouchesInView = false
+            longPress.delegate = self
+            mapView.addGestureRecognizer(longPress)
+            longPressGesture = longPress
+        }
+
+        func detach(from mapView: MLNMapView) {
+            for gesture in observedPanGestures {
+                gesture.removeTarget(self, action: #selector(handlePan(_:)))
+            }
+            observedPanGestures.removeAll()
+            if let longPressGesture {
+                mapView.removeGestureRecognizer(longPressGesture)
+            }
+            longPressGesture = nil
+            self.mapView = nil
+        }
+
+        func updateContent(in mapView: MLNMapView) {
+            guard styleIsLoaded else { return }
+            let signature = (
+                parent.historicalRoutes.map(\.signature)
+                + [parent.activeRoute?.signature ?? "-"]
+                + parent.expectedRoutes.map(\.signature)
+                + parent.subwayRoutes.map(\.signature)
+            ).joined(separator: "#")
+            guard signature != lastContentSignature else {
+                publishViewport(from: mapView, force: false)
+                return
+            }
+            lastContentSignature = signature
+            setShape(
+                routes: parent.historicalRoutes,
+                sourceID: LayerID.historicalSource,
+                in: mapView
+            )
+            setShape(
+                routes: parent.activeRoute.map { [$0] } ?? [],
+                sourceID: LayerID.activeSource,
+                in: mapView
+            )
+            setShape(
+                routes: parent.expectedRoutes,
+                sourceID: LayerID.expectedSource,
+                in: mapView
+            )
+            setShape(
+                routes: parent.subwayRoutes,
+                sourceID: LayerID.subwaySource,
+                in: mapView
+            )
+            publishViewport(from: mapView, force: false)
+        }
+
+        func applyCameraCommandIfNeeded(to mapView: MLNMapView) {
+            guard cameraRevisionChanged else { return }
+            if let region = parent.cameraPosition.region {
+                let halfLatitude = region.span.latitudeDelta / 2
+                let halfLongitude = region.span.longitudeDelta / 2
+                let bounds = MLNCoordinateBoundsMake(
+                    CLLocationCoordinate2D(
+                        latitude: region.center.latitude - halfLatitude,
+                        longitude: region.center.longitude - halfLongitude
+                    ),
+                    CLLocationCoordinate2D(
+                        latitude: region.center.latitude + halfLatitude,
+                        longitude: region.center.longitude + halfLongitude
+                    )
+                )
+                mapView.setVisibleCoordinateBounds(
+                    bounds,
+                    edgePadding: .zero,
+                    animated: false,
+                    completionHandler: nil
+                )
+            } else if let camera = parent.cameraPosition.camera {
+                mapView.setCamera(
+                    MLNMapCamera(
+                        lookingAtCenter: camera.centerCoordinate,
+                        altitude: camera.distance,
+                        pitch: camera.pitch,
+                        heading: camera.heading
+                    ),
+                    animated: false
+                )
+            } else if let coordinate = parent.displayedCoordinate {
+                mapView.setCenter(coordinate, zoomLevel: 14, animated: false)
+            } else if let coordinate = firstRouteCoordinate {
+                mapView.setCenter(coordinate, zoomLevel: 12, animated: false)
+            } else {
+                mapView.setCenter(
+                    CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780),
+                    zoomLevel: 10,
+                    animated: false
+                )
+            }
+            publishViewport(from: mapView, force: true)
+        }
+
+        func applyHeadingIfNeeded(to mapView: MLNMapView) {
+            guard parent.followsHeading,
+                  let coordinate = parent.displayedCoordinate else {
+                lastHeading = nil
+                lastHeadingCoordinate = nil
+                return
+            }
+            let heading = normalizedHeading(parent.headingDegrees)
+            let coordinateChanged = lastHeadingCoordinate.map {
+                abs($0.latitude - coordinate.latitude) > 0.000_001
+                    || abs($0.longitude - coordinate.longitude) > 0.000_001
+            } ?? true
+            let headingChanged = lastHeading.map {
+                angularDistance($0, heading) >= 0.5
+            } ?? true
+            guard coordinateChanged || headingChanged else { return }
+            lastHeading = heading
+            lastHeadingCoordinate = coordinate
+            let camera = mapView.camera
+            mapView.setCamera(
+                MLNMapCamera(
+                    lookingAtCenter: coordinate,
+                    altitude: camera.altitude,
+                    pitch: camera.pitch,
+                    heading: heading
+                ),
+                animated: false
+            )
+        }
+
+        func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+            styleIsLoaded = true
+            installRouteLayers(in: style)
+            lastContentSignature = ""
+            updateContent(in: mapView)
+            applyCameraCommandIfNeeded(to: mapView)
+            attachPanGestures(in: mapView)
+            publishViewport(from: mapView, force: true)
+        }
+
+        func mapViewRegionIsChanging(_ mapView: MLNMapView) {
+            publishViewport(from: mapView, force: false)
+        }
+
+        func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
+            publishViewport(from: mapView, force: true)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            if gesture.state == .began, gesture.numberOfTouches == 1 {
+                parent.onSingleFingerPanBegan()
+            } else if gesture.state == .ended
+                        || gesture.state == .cancelled
+                        || gesture.state == .failed {
+                parent.onSingleFingerPanEnded()
+            }
+        }
+
+        @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+            guard gesture.state == .began,
+                  let mapView else { return }
+            parent.onLongPress(
+                mapView.convert(
+                    gesture.location(in: mapView),
+                    toCoordinateFrom: mapView
+                )
+            )
+        }
+
+        private var cameraRevisionChanged: Bool {
+            guard lastCameraRevision != parent.cameraRevision else { return false }
+            lastCameraRevision = parent.cameraRevision
+            return true
+        }
+
+        private var firstRouteCoordinate: CLLocationCoordinate2D? {
+            parent.activeRoute?.coordinates.first
+                ?? parent.historicalRoutes.first?.coordinates.first
+                ?? parent.expectedRoutes.first?.coordinates.first
+                ?? parent.subwayRoutes.first?.coordinates.first
+        }
+
+        private func attachPanGestures(in view: UIView) {
+            let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
+                .compactMap { $0 as? UIPanGestureRecognizer }
+            let current = Set(observedPanGestures.map(ObjectIdentifier.init))
+            for gesture in gestures where !current.contains(ObjectIdentifier(gesture)) {
+                gesture.addTarget(self, action: #selector(handlePan(_:)))
+                observedPanGestures.append(gesture)
+            }
+        }
+
+        private func allSubviews(in view: UIView) -> [UIView] {
+            [view] + view.subviews.flatMap(allSubviews)
+        }
+
+        private func installRouteLayers(in style: MLNStyle) {
+            let historical = addSource(LayerID.historicalSource, to: style)
+            let historicalLayer = lineLayer(
+                LayerID.historicalLayer,
+                source: historical,
+                color: NSExpression(format: "CAST(color, 'UIColor')"),
+                width: 3,
+                opacity: NSExpression(forKeyPath: "opacity")
+            )
+            style.addLayer(historicalLayer)
+
+            let subway = addSource(LayerID.subwaySource, to: style)
+            let subwayLayer = lineLayer(
+                LayerID.subwayLayer,
+                source: subway,
+                color: NSExpression(forConstantValue: UIColor(red: 0.20, green: 0.78, blue: 0.70, alpha: 1)),
+                width: 4,
+                opacity: NSExpression(forConstantValue: 0.9)
+            )
+            style.addLayer(subwayLayer)
+
+            let active = addSource(LayerID.activeSource, to: style)
+            let activeCasing = lineLayer(
+                LayerID.activeCasingLayer,
+                source: active,
+                color: NSExpression(forConstantValue: UIColor(red: 0.05, green: 0.12, blue: 0.16, alpha: 0.95)),
+                width: 8,
+                opacity: NSExpression(forConstantValue: 0.9)
+            )
+            style.addLayer(activeCasing)
+            let activeLayer = lineLayer(
+                LayerID.activeLayer,
+                source: active,
+                color: NSExpression(forConstantValue: UIColor(red: 1.0, green: 0.85, blue: 0.30, alpha: 1)),
+                width: 5,
+                opacity: NSExpression(forConstantValue: 1)
+            )
+            style.addLayer(activeLayer)
+
+            let expected = addSource(LayerID.expectedSource, to: style)
+            let expectedLayer = lineLayer(
+                LayerID.expectedLayer,
+                source: expected,
+                color: NSExpression(forConstantValue: UIColor(red: 1.0, green: 0.85, blue: 0.30, alpha: 1)),
+                width: 3,
+                opacity: NSExpression(forConstantValue: 0.76)
+            )
+            expectedLayer.lineDashPattern = NSExpression(forConstantValue: [2, 1.5])
+            style.addLayer(expectedLayer)
+        }
+
+        private func addSource(_ identifier: String, to style: MLNStyle) -> MLNShapeSource {
+            let source = MLNShapeSource(
+                identifier: identifier,
+                features: [],
+                options: [.lineDistanceMetrics: true]
+            )
+            style.addSource(source)
+            return source
+        }
+
+        private func lineLayer(
+            _ identifier: String,
+            source: MLNShapeSource,
+            color: NSExpression,
+            width: Double,
+            opacity: NSExpression
+        ) -> MLNLineStyleLayer {
+            let layer = MLNLineStyleLayer(identifier: identifier, source: source)
+            layer.lineJoin = NSExpression(forConstantValue: "round")
+            layer.lineCap = NSExpression(forConstantValue: "round")
+            layer.lineColor = color
+            layer.lineWidth = NSExpression(forConstantValue: width)
+            layer.lineOpacity = opacity
+            return layer
+        }
+
+        private func setShape(
+            routes: [MapHomeVectorRoute],
+            sourceID: String,
+            in mapView: MLNMapView
+        ) {
+            guard let source = mapView.style?.source(withIdentifier: sourceID)
+                    as? MLNShapeSource else { return }
+            let features: [MLNPolylineFeature] = routes.compactMap { route in
+                guard route.coordinates.count >= 2 else { return nil }
+                var coordinates = route.coordinates
+                let feature = MLNPolylineFeature(
+                    coordinates: &coordinates,
+                    count: UInt(coordinates.count)
+                )
+                feature.identifier = route.id as NSString
+                feature.attributes = [
+                    "color": route.colorHex,
+                    "opacity": route.opacity,
+                ]
+                return feature
+            }
+            source.shape = MLNShapeCollectionFeature(shapes: features)
+        }
+
+        private func publishViewport(from mapView: MLNMapView, force: Bool) {
+            guard mapView.bounds.width > 0, mapView.bounds.height > 0 else { return }
+            let now = ProcessInfo.processInfo.systemUptime
+            guard force || now - lastViewportPublishUptime >= 1.0 / 60.0 else { return }
+            lastViewportPublishUptime = now
+            let bounds = mapView.visibleCoordinateBounds
+            let span = MLNCoordinateBoundsGetCoordinateSpan(bounds)
+            let points = Dictionary(
+                uniqueKeysWithValues: parent.markers.map { marker in
+                    (
+                        marker.id,
+                        mapView.convert(marker.coordinate, toPointTo: mapView)
+                    )
+                }
+            )
+            let camera = mapView.camera
+            let viewport = MapHomeVectorViewport(
+                center: mapView.centerCoordinate,
+                span: MKCoordinateSpan(
+                    latitudeDelta: span.latitudeDelta,
+                    longitudeDelta: span.longitudeDelta
+                ),
+                cameraDistance: max(camera.altitude, 1),
+                heading: camera.heading,
+                pitch: camera.pitch,
+                markerPoints: points
+            )
+            let callback = parent.onViewportChange
+            DispatchQueue.main.async {
+                callback(viewport, force)
+            }
+        }
+
+        private func normalizedHeading(_ value: CLLocationDirection) -> CLLocationDirection {
+            let normalized = value.truncatingRemainder(dividingBy: 360)
+            return normalized < 0 ? normalized + 360 : normalized
+        }
+
+        private func angularDistance(
+            _ lhs: CLLocationDirection,
+            _ rhs: CLLocationDirection
+        ) -> CLLocationDirection {
+            let delta = abs(normalizedHeading(lhs) - normalizedHeading(rhs))
+            return min(delta, 360 - delta)
+        }
+
+        private enum LayerID {
+            static let historicalSource = "tap-historical-route-source"
+            static let historicalLayer = "tap-historical-route"
+            static let activeSource = "tap-active-route-source"
+            static let activeCasingLayer = "tap-active-route-casing"
+            static let activeLayer = "tap-active-route"
+            static let expectedSource = "tap-expected-route-source"
+            static let expectedLayer = "tap-expected-route"
+            static let subwaySource = "tap-subway-route-source"
+            static let subwayLayer = "tap-subway-route"
+        }
+    }
+}

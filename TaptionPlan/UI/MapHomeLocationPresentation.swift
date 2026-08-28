@@ -589,6 +589,10 @@ private enum MapHomeStickmanRenderer {
     private static let propLine = Color.black.opacity(0.9)
     private static let propFill = Color.white.opacity(0.92)
     private static let fill = propFill
+    private static let sceneryLeaf = Color(hex: "#B9DEC5").opacity(0.9)
+    private static let sceneryTrunk = Color(hex: "#A98D7A").opacity(0.72)
+    private static let sceneryCloud = Color(hex: "#D9E8FA").opacity(0.9)
+    private static let sceneryGround = Color(hex: "#B7D8C1").opacity(0.78)
 
     static func draw(
         context: inout GraphicsContext,
@@ -597,6 +601,9 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let canvas = MapHomeStickmanCanvas(size: size)
+        if action == .walking {
+            drawWalkingScenery(&context, canvas: canvas, phase: phase)
+        }
         drawGroundShadow(&context, canvas: canvas, action: action, phase: phase)
         drawMotionMarks(&context, canvas: canvas, action: action, phase: phase)
         switch action {
@@ -880,6 +887,92 @@ private enum MapHomeStickmanRenderer {
         ])
     }
 
+    private static func drawWalkingScenery(
+        _ context: inout GraphicsContext,
+        canvas: MapHomeStickmanCanvas,
+        phase: Int
+    ) {
+        let frame = TaptionStickmanWalkingSceneryAnimation.frame(
+            phase: phase,
+            phaseCount: MapHomeStickmanAnimationEngine.phaseCount
+        )
+        stroke(
+            &context,
+            [canvas.point(0, 48), canvas.point(64, 48)],
+            color: sceneryGround,
+            width: 1
+        )
+        for base in stride(from: -8.0, through: 72.0, by: 8.0) {
+            let x = CGFloat(base - frame.groundOffset)
+            stroke(
+                &context,
+                [canvas.point(x, 48), canvas.point(x + 3, 48)],
+                color: sceneryGround,
+                width: 1.4
+            )
+        }
+        for value in frame.cloudX {
+            let x = CGFloat(value)
+            fillCircle(
+                &context,
+                canvas,
+                x: x,
+                y: 9,
+                radius: 3.2,
+                color: sceneryCloud
+            )
+            fillCircle(
+                &context,
+                canvas,
+                x: x + 4,
+                y: 8,
+                radius: 4,
+                color: sceneryCloud
+            )
+            fillCircle(
+                &context,
+                canvas,
+                x: x + 8,
+                y: 10,
+                radius: 3,
+                color: sceneryCloud
+            )
+        }
+        for value in frame.treeX {
+            let x = CGFloat(value)
+            stroke(
+                &context,
+                [canvas.point(x, 34), canvas.point(x, 48)],
+                color: sceneryTrunk,
+                width: 1.4
+            )
+            fillCircle(
+                &context,
+                canvas,
+                x: x,
+                y: 31,
+                radius: 5,
+                color: sceneryLeaf
+            )
+            fillCircle(
+                &context,
+                canvas,
+                x: x - 3.5,
+                y: 34,
+                radius: 3.5,
+                color: sceneryLeaf
+            )
+            fillCircle(
+                &context,
+                canvas,
+                x: x + 3.5,
+                y: 34,
+                radius: 3.5,
+                color: sceneryLeaf
+            )
+        }
+    }
+
     private static func drawRunning(
         _ context: inout GraphicsContext,
         canvas: MapHomeStickmanCanvas,
@@ -980,18 +1073,54 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        drawDesk(&context, canvas: canvas)
-        outlineRect(&context, canvas, x: 36, y: 18, width: 14, height: 9, radius: 1)
-        stroke(&context, [canvas.point(36, 28), canvas.point(43, 30), canvas.point(51, 28)], color: propLine)
-        stroke(&context, [canvas.point(38, 28.5), canvas.point(48, 28.5)], color: propLine, width: 1)
-        let reach = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 1.5
-        drawHead(&context, canvas: canvas, x: 21, y: 15, radius: 3.3, face: .focused)
-        stroke(&context, [canvas.point(21, 18.5), canvas.point(21, 30)])
-        stroke(&context, [canvas.point(21, 22), canvas.point(30, 31)])
-        stroke(&context, [canvas.point(21, 22), canvas.point(35 + reach, 34)])
-        stroke(&context, [canvas.point(21, 30), canvas.point(29, 38)])
-        stroke(&context, [canvas.point(29, 38), canvas.point(36, 38)])
-        stroke(&context, [canvas.point(21, 30), canvas.point(25, 38)])
+        outlineRect(&context, canvas, x: 31, y: 10, width: 29, height: 22, radius: 2)
+        drawTypedText(&context, canvas: canvas, phase: phase)
+        stroke(&context, [canvas.point(45.5, 32), canvas.point(45.5, 36)], color: propLine)
+        stroke(&context, [canvas.point(39, 36), canvas.point(52, 36)], color: propLine, width: 1.2)
+        let reach = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 1.2
+        drawHead(&context, canvas: canvas, x: 16, y: 14, radius: 3.3, face: .focused)
+        stroke(&context, [canvas.point(16, 17.5), canvas.point(18, 31)])
+        stroke(&context, [canvas.point(17, 22), canvas.point(30, 28)])
+        stroke(&context, [canvas.point(17, 22), canvas.point(33 + reach, 33)])
+        stroke(&context, [canvas.point(18, 31), canvas.point(11, 45)])
+        stroke(&context, [canvas.point(18, 31), canvas.point(26, 45)])
+    }
+
+    private static func drawTypedText(
+        _ context: inout GraphicsContext,
+        canvas: MapHomeStickmanCanvas,
+        phase: Int
+    ) {
+        let typing = TaptionStickmanTypingAnimation.frame(
+            phase: phase,
+            phaseCount: MapHomeStickmanAnimationEngine.phaseCount
+        )
+        let startX: CGFloat = 34
+        let startY: CGFloat = 15
+        let unitStride: CGFloat = 3.6
+        for lineIndex in typing.lineUnits.indices {
+            let y = startY + CGFloat(lineIndex) * 5.5
+            for unit in 0..<typing.lineUnits[lineIndex] {
+                let x = startX + CGFloat(unit) * unitStride
+                stroke(
+                    &context,
+                    [canvas.point(x, y), canvas.point(x + 2.2, y)],
+                    color: propLine,
+                    width: 0.8
+                )
+            }
+        }
+        if typing.cursorVisible {
+            let units = typing.lineUnits[typing.activeLine]
+            let x = startX + CGFloat(units) * unitStride
+            let y = startY + CGFloat(typing.activeLine) * 5.5
+            stroke(
+                &context,
+                [canvas.point(x, y - 1.5), canvas.point(x, y + 1.5)],
+                color: propLine,
+                width: 0.8
+            )
+        }
     }
 
     private static func drawReading(
@@ -999,27 +1128,36 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        drawDesk(&context, canvas: canvas)
-        stroke(&context, [canvas.point(36, 31), canvas.point(43, 28), canvas.point(50, 31)], color: propLine)
-        stroke(&context, [canvas.point(43, 28), canvas.point(43, 36)], color: propLine)
+        let pageLift = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase)) * 0.8
+        var leftPage = Path()
+        leftPage.move(to: canvas.point(32, 28))
+        leftPage.addLine(to: canvas.point(43, 25 + pageLift))
+        leftPage.addLine(to: canvas.point(43, 36))
+        leftPage.addLine(to: canvas.point(32, 39))
+        leftPage.closeSubpath()
+        var rightPage = Path()
+        rightPage.move(to: canvas.point(43, 25 + pageLift))
+        rightPage.addLine(to: canvas.point(55, 28))
+        rightPage.addLine(to: canvas.point(54, 39))
+        rightPage.addLine(to: canvas.point(43, 36))
+        rightPage.closeSubpath()
+        for page in [leftPage, rightPage] {
+            context.fill(page, with: .color(propFill))
+            context.stroke(
+                page,
+                with: .color(propLine),
+                style: StrokeStyle(lineWidth: 1.2 * canvas.scale, lineCap: .round, lineJoin: .round)
+            )
+        }
+        stroke(&context, [canvas.point(35, 31), canvas.point(40, 29.5)], color: propLine, width: 0.8)
+        stroke(&context, [canvas.point(46, 29.5), canvas.point(51, 31)], color: propLine, width: 0.8)
         let tilt = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 1.4
-        drawHead(&context, canvas: canvas, x: 21 + tilt, y: 15, radius: 3.3, face: .focused)
-        stroke(&context, [canvas.point(21, 18.5), canvas.point(22, 30)])
-        stroke(&context, [canvas.point(22, 22), canvas.point(35, 31)])
-        stroke(&context, [canvas.point(22, 22), canvas.point(37, 30)])
-        stroke(&context, [canvas.point(22, 30), canvas.point(29, 38)])
-        stroke(&context, [canvas.point(29, 38), canvas.point(36, 38)])
-        stroke(&context, [canvas.point(22, 30), canvas.point(26, 38)])
-    }
-
-    private static func drawDesk(
-        _ context: inout GraphicsContext,
-        canvas: MapHomeStickmanCanvas
-    ) {
-        stroke(&context, [canvas.point(10, 38), canvas.point(53, 38)], color: propLine, width: 1.2)
-        stroke(&context, [canvas.point(14, 38), canvas.point(14, 49)], color: propLine)
-        stroke(&context, [canvas.point(48, 38), canvas.point(48, 49)], color: propLine)
-        stroke(&context, [canvas.point(19, 35), canvas.point(31, 35)], color: propLine)
+        drawHead(&context, canvas: canvas, x: 18 + tilt * 0.4, y: 14, radius: 3.3, face: .focused)
+        stroke(&context, [canvas.point(18, 17.5), canvas.point(20, 31)])
+        stroke(&context, [canvas.point(19, 22), canvas.point(33, 30)])
+        stroke(&context, [canvas.point(19, 22), canvas.point(37, 29)])
+        stroke(&context, [canvas.point(20, 31), canvas.point(13, 45)])
+        stroke(&context, [canvas.point(20, 31), canvas.point(28, 45)])
     }
 
     private static func drawSleeping(
@@ -1230,37 +1368,34 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        stroke(&context, [canvas.point(10, 38), canvas.point(54, 38)], color: propLine, width: 1.2)
-        stroke(&context, [canvas.point(14, 38), canvas.point(14, 49)], color: propLine)
-        stroke(&context, [canvas.point(50, 38), canvas.point(50, 49)], color: propLine)
         let bowlLift = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase)) * 0.8
         context.fill(
-            Path(ellipseIn: canvas.rect(x: 38, y: 32 + bowlLift, width: 12, height: 4)),
+            Path(ellipseIn: canvas.rect(x: 37, y: 29 + bowlLift, width: 14, height: 4)),
             with: .color(propFill)
         )
         context.stroke(
-            Path(ellipseIn: canvas.rect(x: 38, y: 32 + bowlLift, width: 12, height: 4)),
+            Path(ellipseIn: canvas.rect(x: 37, y: 29 + bowlLift, width: 14, height: 4)),
             with: .color(propLine),
             style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
         )
-        stroke(&context, [canvas.point(40, 34 + bowlLift), canvas.point(41, 37 + bowlLift), canvas.point(47, 37 + bowlLift), canvas.point(49, 34 + bowlLift)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(39, 31 + bowlLift), canvas.point(40, 35 + bowlLift), canvas.point(48, 35 + bowlLift), canvas.point(50, 31 + bowlLift)], color: propLine, width: 1)
         let reach = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase)) * 3
-        drawHead(&context, canvas: canvas, x: 22, y: 15, radius: 3.3, face: .happy)
-        stroke(&context, [canvas.point(22, 18.5), canvas.point(22, 30)])
-        stroke(&context, [canvas.point(22, 22), canvas.point(31 + reach, 25)])
-        stroke(&context, [canvas.point(31 + reach, 25), canvas.point(39, 33 + bowlLift)])
-        stroke(&context, [canvas.point(22, 22), canvas.point(16, 30)])
-        stroke(&context, [canvas.point(22, 30), canvas.point(29, 38)])
-        stroke(&context, [canvas.point(22, 30), canvas.point(26, 38)])
+        drawHead(&context, canvas: canvas, x: 18, y: 14, radius: 3.3, face: .happy)
+        stroke(&context, [canvas.point(18, 17.5), canvas.point(18, 31)])
+        stroke(&context, [canvas.point(18, 21), canvas.point(29 + reach, 24)])
+        stroke(&context, [canvas.point(29 + reach, 24), canvas.point(39, 30 + bowlLift)])
+        stroke(&context, [canvas.point(18, 21), canvas.point(38, 34 + bowlLift)])
+        stroke(&context, [canvas.point(18, 31), canvas.point(11, 45)])
+        stroke(&context, [canvas.point(18, 31), canvas.point(26, 45)])
         let forkSway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase + 2)) * 2
-        stroke(&context, [canvas.point(53 + forkSway, 27), canvas.point(53 + forkSway, 35)], color: propLine, width: 1)
-        stroke(&context, [canvas.point(51.5 + forkSway, 27), canvas.point(51.5 + forkSway, 30)], color: propLine, width: 1)
-        stroke(&context, [canvas.point(53 + forkSway, 27), canvas.point(53 + forkSway, 30)], color: propLine, width: 1)
-        stroke(&context, [canvas.point(54.5 + forkSway, 27), canvas.point(54.5 + forkSway, 30)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(53 + forkSway, 24), canvas.point(53 + forkSway, 34)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(51.5 + forkSway, 24), canvas.point(51.5 + forkSway, 27)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(53 + forkSway, 24), canvas.point(53 + forkSway, 27)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(54.5 + forkSway, 24), canvas.point(54.5 + forkSway, 27)], color: propLine, width: 1)
         let spoonSway = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase + 1)) * 1.5
-        stroke(&context, [canvas.point(58 + spoonSway, 29), canvas.point(58 + spoonSway, 35)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(58 + spoonSway, 26), canvas.point(58 + spoonSway, 34)], color: propLine, width: 1)
         context.stroke(
-            Path(ellipseIn: canvas.rect(x: 56.7 + spoonSway, y: 25, width: 2.6, height: 4)),
+            Path(ellipseIn: canvas.rect(x: 56.7 + spoonSway, y: 22, width: 2.6, height: 4)),
             with: .color(propLine),
             style: StrokeStyle(lineWidth: 1 * canvas.scale)
         )

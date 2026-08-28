@@ -985,6 +985,8 @@ struct MapHomeView: View {
     private let onInitialDataReady: () -> Void
 
     @State private var mapPosition: MapCameraPosition = .automatic
+    @State private var mapCameraRevision = 0
+    @State private var vectorMapViewport: MapHomeVectorViewport?
     @Namespace private var mapScope
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
@@ -1245,7 +1247,7 @@ struct MapHomeView: View {
             destination: destination,
             language: language
         ) {
-            mapPosition = .automatic
+            setMapPosition(.automatic)
             focusMapIfNeeded()
         }
         .presentationDetents([.height(440)])
@@ -1491,6 +1493,7 @@ struct MapHomeView: View {
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
+            scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.snapshot.weather) { _, weather in
             cachedWeatherContexts = MapHomeWeatherDisplayCache.merged(
@@ -1499,6 +1502,7 @@ struct MapHomeView: View {
             )
         }
         .onChange(of: model.settings.mapDisplayStyle) { _, _ in
+            mapCameraRevision &+= 1
             persistMapDayCache()
         }
         .onChange(of: model.selectedDate) { oldDate, newDate in
@@ -1536,7 +1540,7 @@ struct MapHomeView: View {
                currentCoordinate != nil {
                 focusUserLocation()
             } else if dayChanged {
-                mapPosition = .automatic
+                setMapPosition(.automatic)
                 focusMapIfNeeded()
             }
             refreshTimeRailSegments()
@@ -1573,6 +1577,136 @@ struct MapHomeView: View {
 
     @ViewBuilder
     private var map: some View {
+        if let style = currentVectorStyle {
+            vectorMap(style: style)
+        } else {
+            mapKitMap
+        }
+    }
+
+    private var currentVectorStyle: MapHomeVectorStyle? {
+        model.settings.mapDisplayStyle.mapHomeVectorStyle
+    }
+
+    private var usesVectorRoadMap: Bool {
+        currentVectorStyle != nil
+    }
+
+    private var vectorMapContentInsets: UIEdgeInsets {
+        UIEdgeInsets(
+            top: searchFieldFrame.maxY > 0
+                ? searchFieldFrame.maxY
+                : topOverlayHeight,
+            left: 0,
+            bottom: 0,
+            right: isMenuOpen ? 0 : sidebarInteractionWidth
+        )
+    }
+
+    private func vectorMap(style: MapHomeVectorStyle) -> some View {
+        MapHomeVectorMap(
+            style: style,
+            cameraPosition: mapPosition,
+            cameraRevision: mapCameraRevision,
+            historicalRoutes: vectorHistoricalRoutes,
+            activeRoute: vectorActiveRoute,
+            expectedRoutes: vectorExpectedRoutes,
+            subwayRoutes: vectorSubwayRoutes,
+            markers: vectorMapMarkers,
+            contentInsets: vectorMapContentInsets,
+            followsHeading: isHeadingMode,
+            headingDegrees: -compassRotationDegrees,
+            displayedCoordinate: displayedLocationCoordinate,
+            onViewportChange: applyVectorMapViewport,
+            onSingleFingerPanBegan: handleUserMapPan,
+            onSingleFingerPanEnded: finishDisplayedStickmanViewportProjection,
+            onLongPress: presentLocationAddition
+        )
+        .id(style.rawValue)
+        .overlay {
+            vectorMapAnnotationOverlay(style: style)
+        }
+        .simultaneousGesture(
+            SpatialTapGesture().onEnded { _ in
+                dismissMapSearchOverlay()
+            }
+        )
+        .task {
+            applyInitialLocationIfAvailable(using: nil)
+            beginInitialLocationRequest(using: nil)
+        }
+        .onChange(of: mapViewportSize) { _, size in
+            guard size.width > 0, size.height > 0 else { return }
+            applyInitialLocationIfAvailable(using: nil)
+            beginInitialLocationRequest(using: nil)
+        }
+        .onChange(of: selectedTimelineMinute) { _, minute in
+            if isTimelineInteractionActive || isDayPlaybackRunning {
+                let point = refreshHistoricalPlaybackPoint()
+                guard let point else { return }
+                let interval = isDayPlaybackRunning
+                    ? MapHomeDayPlaybackMath.mapFocusInterval
+                    : TimelineInteractionFrameGate.minimumInterval
+                let now = ProcessInfo.processInfo.systemUptime
+                let shouldFocus: Bool
+                if isDayPlaybackRunning {
+                    shouldFocus = TimelineInteractionFrameGate.shouldRender(
+                        lastUptime: &lastPlaybackMapFocusUptime,
+                        nowUptime: now,
+                        minimumInterval: interval
+                    )
+                } else {
+                    shouldFocus = TimelineInteractionFrameGate.shouldRender(
+                        lastUptime: &lastTimelineMapFocusUptime,
+                        nowUptime: now,
+                        minimumInterval: interval
+                    )
+                }
+                guard shouldFocus else { return }
+                focusMap(on: point, using: nil, followsTracking: true)
+            } else {
+                refreshSelectedTimelineMapPosition(minute: minute, using: nil)
+            }
+        }
+        .onChange(of: isTimelineInteractionActive) { _, isInteracting in
+            guard !isInteracting, !isDayPlaybackRunning,
+                  selectedTimelineMinute != nil else { return }
+            refreshSelectedTimelineMapPosition(
+                minute: selectedTimelineMinute,
+                using: nil
+            )
+            finishDisplayedStickmanViewportProjection()
+        }
+        .onChange(of: model.latestSensorReading?.id) { _, _ in
+            applyInitialLocationIfAvailable(using: nil)
+            guard userTrackingMode.keepsCameraLocked else { return }
+            focusDisplayedLocation(using: nil)
+        }
+        .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
+            guard userTrackingMode.keepsCameraLocked else { return }
+            focusDisplayedLocation(using: nil)
+        }
+        .overlay(alignment: .bottomLeading) {
+            if !isMenuOpen {
+                mapControls(proxy: nil)
+                    .padding(.leading, Layout.horizontalInset)
+                    .padding(.bottom, Layout.overlayBottomMargin)
+                    .onGeometryChange(
+                        for: CGRect.self,
+                        of: { geometry in
+                            geometry.frame(in: .named("mapHomeViewport"))
+                        },
+                        action: { frame in
+                            guard mapControlsFrame != frame else { return }
+                            mapControlsFrame = frame
+                        }
+                    )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var mapKitMap: some View {
         MapReader { proxy in
             Map(
                 position: $mapPosition,
@@ -1888,6 +2022,289 @@ struct MapHomeView: View {
         }
     }
 
+    private var vectorHistoricalRoutes: [MapHomeVectorRoute] {
+        timelineRouteOverlays.dropLast().map { overlay in
+            MapHomeVectorRoute(
+                id: overlay.id,
+                coordinates: overlay.coordinates,
+                colorHex: timelineRouteColorHex(overlay),
+                opacity: max(overlay.opacity, RouteMapLineStyle.minimumOpacity)
+            )
+        }
+    }
+
+    private var vectorActiveRoute: MapHomeVectorRoute? {
+        guard let overlay = timelineRouteOverlays.last else { return nil }
+        return MapHomeVectorRoute(
+            id: "active-\(overlay.id)",
+            coordinates: overlay.coordinates,
+            colorHex: MapHomeVectorStyle.routeHex,
+            opacity: 1
+        )
+    }
+
+    private var vectorExpectedRoutes: [MapHomeVectorRoute] {
+        visibleExpectedRouteOverlays.map { overlay in
+            MapHomeVectorRoute(
+                id: "expected-\(overlay.id.uuidString)",
+                coordinates: overlay.coordinates,
+                colorHex: MapHomeVectorStyle.routeHex,
+                opacity: 0.76
+            )
+        }
+    }
+
+    private var vectorSubwayRoutes: [MapHomeVectorRoute] {
+        subwayRouteOverlays.compactMap { overlay in
+            guard !overlay.estimated else { return nil }
+            return MapHomeVectorRoute(
+                id: "subway-\(overlay.id)",
+                coordinates: overlay.coordinates,
+                colorHex: currentVectorStyle?.roadHex
+                    ?? MapHomeVectorStyle.night.roadHex,
+                opacity: 0.9
+            )
+        }
+    }
+
+    private var vectorMapMarkers: [MapHomeVectorMarker] {
+        var markers = temporaryLocationAnnotations.map {
+            MapHomeVectorMarker(
+                id: vectorTemporaryMarkerID($0.id),
+                coordinate: $0.coordinate
+            )
+        }
+        markers += placeAnnotations.map {
+            MapHomeVectorMarker(
+                id: vectorPlaceMarkerID($0.id),
+                coordinate: $0.coordinate
+            )
+        }
+        markers += transitAnnotations.map {
+            MapHomeVectorMarker(
+                id: vectorTransitMarkerID($0.id),
+                coordinate: $0.coordinate
+            )
+        }
+        if let displayedLocationCoordinate {
+            markers.append(
+                MapHomeVectorMarker(
+                    id: vectorDisplayedMarkerID,
+                    coordinate: displayedLocationCoordinate
+                )
+            )
+        }
+        if let selectedSearchPin {
+            markers.append(
+                MapHomeVectorMarker(
+                    id: vectorSearchMarkerID,
+                    coordinate: selectedSearchPin.coordinate
+                )
+            )
+        }
+        return markers
+    }
+
+    private var vectorPlayerHeading: CLLocationDirection {
+        guard let coordinates = vectorActiveRoute?.coordinates,
+              coordinates.count >= 2 else { return 0 }
+        return MapHomeVectorNavigationMath.bearing(
+            from: coordinates[coordinates.count - 2],
+            to: coordinates[coordinates.count - 1]
+        )
+    }
+
+    private func vectorMapAnnotationOverlay(
+        style: MapHomeVectorStyle
+    ) -> some View {
+        ZStack {
+            MapHomeFairyAtmosphere()
+                .allowsHitTesting(false)
+
+            ForEach(temporaryLocationAnnotations) { location in
+                if let point = vectorPoint(for: vectorTemporaryMarkerID(location.id)) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .center) {
+                        VStack(spacing: 2) {
+                            Image(systemName: "tram.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.tpReferenceBlue.opacity(0.72))
+                            Text(language.text("임시 위치", "Temporary"))
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.tpInk.opacity(0.72))
+                        }
+                        .padding(5)
+                        .background(Color.tpSurface.opacity(0.66), in: Capsule())
+                        .overlay {
+                            Capsule().stroke(
+                                Color.tpReferenceBlue.opacity(0.45),
+                                style: StrokeStyle(lineWidth: 1, dash: [3, 2])
+                            )
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(
+                            language.text(
+                                "\(location.stationName) 지하철 임시 위치",
+                                "\(location.stationName) temporary subway location"
+                            )
+                        )
+                    }
+                }
+            }
+
+            ForEach(placeAnnotations) { place in
+                if let point = vectorPoint(for: vectorPlaceMarkerID(place.id)) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
+                        if place.destination == .user {
+                            Button {
+                                selectedUserLocation = .frequentPlace(place.id)
+                            } label: {
+                                MapHomePlacePin(
+                                    name: place.name,
+                                    floor: place.floor,
+                                    destination: place.destination
+                                )
+                                .fixedSize()
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(
+                                language.text(
+                                    place.name + " 사용자 위치 메뉴",
+                                    place.name + " user location menu"
+                                )
+                            )
+                        } else {
+                            MapHomePlacePin(
+                                name: place.name,
+                                floor: place.floor,
+                                destination: place.destination
+                            )
+                            .fixedSize()
+                            .allowsHitTesting(false)
+                        }
+                    }
+                }
+            }
+
+            ForEach(transitAnnotations) { place in
+                if let point = vectorPoint(for: vectorTransitMarkerID(place.id)) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
+                        Button {
+                            selectedUserLocation = .transit(place.id)
+                        } label: {
+                            MapHomeTransitPlacePin(name: place.name, kind: place.kind)
+                                .fixedSize()
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            language.text(
+                                place.name + " 사용자 위치 메뉴",
+                                place.name + " user location menu"
+                            )
+                        )
+                    }
+                }
+            }
+
+            if selectedTimelineMinute != nil,
+               let point = vectorPoint(for: vectorDisplayedMarkerID) {
+                MapHomeVectorPlayerMarker(
+                    heading: vectorPlayerHeading,
+                    backgroundHex: style.backgroundHex
+                )
+                    .position(x: point.x, y: point.y + 11)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+
+            if displayedLocationCoordinate != nil,
+               let point = displayedStickmanViewportPoint {
+                MapHomeStickmanMarker(action: displayedStickmanAction)
+                    .position(
+                        x: point.x,
+                        y: point.y - MapHomeStickmanMarker.size.height / 2
+                    )
+                    .zIndex(MapHomeLayerPriority.stickman)
+                    .allowsHitTesting(false)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(
+                        "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)"
+                    )
+            }
+
+            if let selectedSearchPin,
+               let point = vectorPoint(for: vectorSearchMarkerID) {
+                MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
+                    Button {
+                        isSearchPinMenuPresented = true
+                    } label: {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundStyle(Color.tpPastelRose)
+                            .background(Circle().fill(.white))
+                    }
+                    .buttonStyle(.plain)
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 0.45)
+                            .onEnded { _ in
+                                isSearchPinMenuPresented = true
+                            }
+                    )
+                    .accessibilityLabel(
+                        language.text(
+                            "\(selectedSearchPin.title) 위치 추가",
+                            "Add \(selectedSearchPin.title) location"
+                        )
+                    )
+                }
+            }
+        }
+        .clipped()
+    }
+
+    private var vectorDisplayedMarkerID: String { "displayed-location" }
+    private var vectorSearchMarkerID: String { "search-location" }
+
+    private func vectorTemporaryMarkerID(_ id: UUID) -> String {
+        "temporary-\(id.uuidString)"
+    }
+
+    private func vectorPlaceMarkerID(_ id: UUID) -> String {
+        "place-\(id.uuidString)"
+    }
+
+    private func vectorTransitMarkerID(_ id: UUID) -> String {
+        "transit-\(id.uuidString)"
+    }
+
+    private func vectorPoint(for id: String) -> CGPoint? {
+        vectorMapViewport?.markerPoints[id]
+    }
+
+    private func applyVectorMapViewport(
+        _ viewport: MapHomeVectorViewport,
+        isFinal: Bool
+    ) {
+        vectorMapViewport = viewport
+        let displayedPoint = viewport.markerPoints[vectorDisplayedMarkerID]
+        if let displayedPoint {
+            submitDisplayedStickmanViewportPoint(displayedPoint)
+        }
+        let frame = MapHomeCameraFrame(
+            camera: viewport.camera,
+            region: viewport.region
+        )
+        if let rendered = mapCameraFrameProjection.submit(
+            frame,
+            nowUptime: ProcessInfo.processInfo.systemUptime,
+            force: isFinal
+        ) {
+            applyMapCameraFrame(rendered, locationPoint: displayedPoint)
+        }
+        if isFinal {
+            finishDisplayedStickmanViewportProjection()
+        }
+    }
+
     private func presentLocationAddition(at coordinate: CLLocationCoordinate2D) {
         mapSearchResults = []
         isMapSearchFocused = false
@@ -1901,7 +2318,11 @@ struct MapHomeView: View {
 
     private var mapStyle: MapStyle {
         switch model.settings.mapDisplayStyle {
-        case .standard:
+        case .standard,
+             .mapLibreNight,
+             .mapLibreLight,
+             .mapLibreContrast,
+             .mapLibrePastel:
             .standard(
                 elevation: .flat,
                 emphasis: .muted,
@@ -2190,6 +2611,10 @@ struct MapHomeView: View {
         case .simplified: language.text("간략화", "Simplified")
         case .hybrid: language.text("하이브리드", "Hybrid")
         case .imagery: language.text("위성", "Satellite")
+        case .mapLibreNight: language.text("벡터 야간", "Vector Night")
+        case .mapLibreLight: language.text("벡터 밝은 지도", "Vector Light")
+        case .mapLibreContrast: language.text("벡터 고대비", "Vector Contrast")
+        case .mapLibrePastel: language.text("벡터 파스텔", "Vector Pastel")
         }
     }
 
@@ -2199,6 +2624,10 @@ struct MapHomeView: View {
         case .simplified: "map.fill"
         case .hybrid: "square.3.layers.3d"
         case .imagery: "globe.asia.australia.fill"
+        case .mapLibreNight: "moon.stars.fill"
+        case .mapLibreLight: "sun.max.fill"
+        case .mapLibreContrast: "circle.lefthalf.filled"
+        case .mapLibrePastel: "paintpalette.fill"
         }
     }
 
@@ -2724,7 +3153,7 @@ struct MapHomeView: View {
         .frame(maxHeight: .infinity, alignment: .trailing)
     }
 
-    private func mapControls(proxy: MapProxy) -> some View {
+    private func mapControls(proxy: MapProxy?) -> some View {
         VStack(spacing: Layout.mapControlSpacing) {
             Button {
                 requestAndFollowUserLocation(using: proxy)
@@ -2787,7 +3216,7 @@ struct MapHomeView: View {
     private func mapZoomButton(
         systemImage: String,
         direction: Int,
-        proxy: MapProxy
+        proxy: MapProxy?
     ) -> some View {
         Button {
             adjustMapZoom(direction: direction, proxy: proxy)
@@ -2811,7 +3240,7 @@ struct MapHomeView: View {
         )
     }
 
-    private func adjustMapZoom(direction: Int, proxy: MapProxy) {
+    private func adjustMapZoom(direction: Int, proxy: MapProxy?) {
         guard let camera = visibleMapCamera else { return }
         let distance = MapHomeCameraZoomMath.distance(
             from: camera.distance,
@@ -2827,14 +3256,14 @@ struct MapHomeView: View {
             oldDistance: camera.distance,
             newDistance: distance
         )
-        mapPosition = .camera(
+        setMapPosition(.camera(
             MapCamera(
                 centerCoordinate: center,
                 distance: distance,
                 heading: camera.heading,
                 pitch: camera.pitch
             )
-        )
+        ))
         updateUserCenterState(using: proxy)
     }
 
@@ -3993,13 +4422,20 @@ struct MapHomeView: View {
     private func timelineRouteColor(
         _ overlay: MapHomeTimelineRouteOverlay
     ) -> Color {
+        Color(hex: timelineRouteColorHex(overlay))
+    }
+
+    private func timelineRouteColorHex(
+        _ overlay: MapHomeTimelineRouteOverlay
+    ) -> String {
         guard let hex = RouteSpeedGradient.colorHex(
             speedMetersPerSecond: overlay.speedMetersPerSecond,
             in: timelineRouteSpeeds
         ) else {
-            return mapCategoryColor(overlay.categoryID)
+            return model.settings.mapCategoryColors[overlay.categoryID]
+                ?? MapHomePastelPalette.hex(overlay.categoryID)
         }
-        return Color(hex: hex)
+        return hex
     }
 
     private func refreshTimeRailSegments() {
@@ -4081,7 +4517,8 @@ struct MapHomeView: View {
             places: model.snapshot.places,
             readings: normalizedRouteReadings,
             in: TimeSpan(start: selectedDay, end: dayEnd),
-            through: dayEnd
+            through: dayEnd,
+            frequentPlaces: model.settings.frequentPlaces
         )
         guard !requests.isEmpty else {
             mapRenderCache.invalidateExpectedRoutes()
@@ -4525,9 +4962,9 @@ struct MapHomeView: View {
                 overlays: overlays
             )
         }
-        mapPosition = .region(
+        setMapPosition(.region(
             MapHomeLocationMapMath.region(center: center, span: span)
-        )
+        ))
     }
 
     private func cachedCoordinate(
@@ -4864,6 +5301,11 @@ struct MapHomeView: View {
         focusMapForSharedZoom()
     }
 
+    private func setMapPosition(_ position: MapCameraPosition) {
+        mapPosition = position
+        mapCameraRevision &+= 1
+    }
+
     private func minuteOfDay(for date: Date) -> Int {
         let components = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute, .second], from: date)
         return min(1_439, max(0, (components.hour ?? 0) * 60 + (components.minute ?? 0)))
@@ -4886,7 +5328,7 @@ struct MapHomeView: View {
             + visibleExpectedRouteOverlays.flatMap(\.coordinates)
             + subwayRouteOverlays.flatMap(\.coordinates)
         guard let first = coordinates.first else {
-            mapPosition = .automatic
+            setMapPosition(.automatic)
             return
         }
         guard case .automatic = mapPosition else { return }
@@ -4894,7 +5336,7 @@ struct MapHomeView: View {
         let longitudes = coordinates.map(\.longitude)
         let latitudeDelta = max(0.025, ((latitudes.max() ?? first.latitude) - (latitudes.min() ?? first.latitude)) * 1.8)
         let longitudeDelta = max(0.035, ((longitudes.max() ?? first.longitude) - (longitudes.min() ?? first.longitude)) * 1.8)
-        mapPosition = .region(
+        setMapPosition(.region(
             MKCoordinateRegion(
                 center: CLLocationCoordinate2D(
                     latitude: ((latitudes.max() ?? first.latitude) + (latitudes.min() ?? first.latitude)) / 2,
@@ -4902,7 +5344,7 @@ struct MapHomeView: View {
                 ),
                 span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
             )
-        )
+        ))
     }
 
     private func sharedZoomLevel(for span: MKCoordinateSpan) -> CGFloat? {
@@ -4932,7 +5374,7 @@ struct MapHomeView: View {
             coordinates = [currentCoordinate]
         }
         guard let first = coordinates.first else {
-            mapPosition = .automatic
+            setMapPosition(.automatic)
             return
         }
         let latitudes = coordinates.map(\.latitude)
@@ -4941,7 +5383,7 @@ struct MapHomeView: View {
         let fitLongitude = max(0.035, ((longitudes.max() ?? first.longitude) - (longitudes.min() ?? first.longitude)) * 1.8)
         let zoom = 1 - sharedZoomLevel
         let spanScale = max(0.05, 1 - 0.95 * zoom)
-        mapPosition = .region(
+        setMapPosition(.region(
             MKCoordinateRegion(
                 center: CLLocationCoordinate2D(
                     latitude: ((latitudes.max() ?? first.latitude) + (latitudes.min() ?? first.latitude)) / 2,
@@ -4952,7 +5394,7 @@ struct MapHomeView: View {
                     longitudeDelta: max(0.001, fitLongitude * spanScale)
                 )
             )
-        )
+        ))
     }
 
     private func focusMap(
@@ -4979,27 +5421,27 @@ struct MapHomeView: View {
                ),
                from: .named("mapHomeViewport")
            ) {
-            mapPosition = .camera(
+            setMapPosition(.camera(
                 MapCamera(
                     centerCoordinate: center,
                     distance: camera.distance,
                     heading: camera.heading,
                     pitch: camera.pitch
                 )
-            )
+            ))
         } else if let camera = visibleMapCamera {
-            mapPosition = .camera(
+            setMapPosition(.camera(
                 MapCamera(
                     centerCoordinate: coordinate,
                     distance: camera.distance,
                     heading: camera.heading,
                     pitch: camera.pitch
                 )
-            )
+            ))
         } else {
-            mapPosition = .region(
+            setMapPosition(.region(
                 MKCoordinateRegion(center: coordinate, span: visibleMapSpan)
-            )
+            ))
         }
         if followsTracking {
             setUserTrackingMode(.following)
@@ -5010,7 +5452,7 @@ struct MapHomeView: View {
         }
     }
 
-    private func focusDisplayedLocation(using proxy: MapProxy) {
+    private func focusDisplayedLocation(using proxy: MapProxy?) {
         if selectedTimelineMinute != nil {
             guard let point = historicalPlaybackPoint else { return }
             focusMap(on: point, using: proxy, followsTracking: true)
@@ -5039,34 +5481,34 @@ struct MapHomeView: View {
                 ),
                 from: .named("mapHomeViewport")
            ) {
-            mapPosition = .camera(
+            setMapPosition(.camera(
                 MapCamera(
                     centerCoordinate: center,
                     distance: camera.distance,
                     heading: camera.heading,
                     pitch: camera.pitch
                 )
-            )
+            ))
         } else if let camera = visibleMapCamera {
-            mapPosition = .camera(
+            setMapPosition(.camera(
                 MapCamera(
                     centerCoordinate: coordinate,
                     distance: camera.distance,
                     heading: camera.heading,
                     pitch: camera.pitch
                 )
-            )
+            ))
         } else {
-            mapPosition = .region(
+            setMapPosition(.region(
                 MKCoordinateRegion(
                     center: coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.010)
                 )
-            )
+            ))
         }
     }
 
-    private func requestAndFollowUserLocation(using proxy: MapProxy) {
+    private func requestAndFollowUserLocation(using proxy: MapProxy?) {
         hasCancelledInitialLocationFocus = false
         setUserTrackingMode(.locating)
         if currentCoordinate != nil {
@@ -5094,17 +5536,17 @@ struct MapHomeView: View {
         compassControlState = compassControlState.toggled
         if compassControlState.followsHeading {
             headingMonitor.start()
-            mapPosition = .userLocation(
+            setMapPosition(.userLocation(
                 followsHeading: true,
                 fallback: .automatic
-            )
+            ))
         } else {
             headingMonitor.stop()
             focusUserLocation(using: proxy)
         }
     }
 
-    private func applyInitialLocationIfAvailable(using proxy: MapProxy) {
+    private func applyInitialLocationIfAvailable(using proxy: MapProxy?) {
         guard mapViewportSize.width > 0,
               mapViewportSize.height > 0,
               !hasAppliedInitialLocation,
@@ -5113,7 +5555,7 @@ struct MapHomeView: View {
         hasAppliedInitialLocation = true
     }
 
-    private func beginInitialLocationRequest(using proxy: MapProxy) {
+    private func beginInitialLocationRequest(using proxy: MapProxy?) {
         guard mapViewportSize.width > 0,
               mapViewportSize.height > 0,
               initialLocationRequestTask == nil else { return }
@@ -5144,6 +5586,9 @@ struct MapHomeView: View {
             duringPlayback: isDayPlaybackRunning
         ) == false
         else { return }
+        if usesVectorRoadMap, let vectorMapViewport {
+            mapPosition = .region(vectorMapViewport.region)
+        }
         hasCancelledInitialLocationFocus = true
         initialLocationRequestTask?.cancel()
         initialLocationRequestTask = nil
@@ -5154,17 +5599,24 @@ struct MapHomeView: View {
     }
 
     @discardableResult
-    private func updateUserCenterState(using proxy: MapProxy) -> Bool {
-        let nextValue = displayedLocationCoordinate
-            .flatMap {
-                proxy.convert($0, to: .named("mapHomeViewport"))
-            }
-            .map {
-                MapHomeCameraLayoutMath.isCentered(
-                    locationPoint: $0,
-                    targetPoint: currentLocationTargetPoint
-                )
-            } ?? false
+    private func updateUserCenterState(using proxy: MapProxy?) -> Bool {
+        let point: CGPoint?
+        if let proxy, let coordinate = displayedLocationCoordinate {
+            point = proxy.convert(coordinate, to: .named("mapHomeViewport"))
+        } else {
+            point = vectorMapViewport?.markerPoints[vectorDisplayedMarkerID]
+        }
+        return updateUserCenterState(locationPoint: point)
+    }
+
+    @discardableResult
+    private func updateUserCenterState(locationPoint: CGPoint?) -> Bool {
+        let nextValue = locationPoint.map {
+            MapHomeCameraLayoutMath.isCentered(
+                locationPoint: $0,
+                targetPoint: currentLocationTargetPoint
+            )
+        } ?? false
         if isMapCenteredOnUser != nextValue {
             isMapCenteredOnUser = nextValue
         }
@@ -5186,6 +5638,16 @@ struct MapHomeView: View {
         _ frame: MapHomeCameraFrame,
         using proxy: MapProxy
     ) {
+        let locationPoint = displayedLocationCoordinate.flatMap {
+            proxy.convert($0, to: .named("mapHomeViewport"))
+        }
+        applyMapCameraFrame(frame, locationPoint: locationPoint)
+    }
+
+    private func applyMapCameraFrame(
+        _ frame: MapHomeCameraFrame,
+        locationPoint: CGPoint?
+    ) {
         if visibleMapCamera != frame.camera {
             visibleMapCamera = frame.camera
         }
@@ -5194,7 +5656,7 @@ struct MapHomeView: View {
             visibleMapCenter = frame.center
         }
         updateVisibleMapSpan(frame.span)
-        let isCentered = updateUserCenterState(using: proxy)
+        let isCentered = updateUserCenterState(locationPoint: locationPoint)
         if userTrackingMode == .locating, isCentered {
             setUserTrackingMode(.following)
         }
@@ -7816,6 +8278,68 @@ private struct MapHomeTransitPlacePin: View {
                 .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
         }
         .accessibilityLabel("\(name), \(kind.title)")
+    }
+}
+
+private struct MapHomeProjectedAnnotation<Content: View>: View {
+    let point: CGPoint
+    let anchor: UnitPoint
+    let content: Content
+    @State private var contentSize = CGSize.zero
+
+    init(
+        point: CGPoint,
+        anchor: UnitPoint,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.point = point
+        self.anchor = anchor
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .onGeometryChange(
+                for: CGSize.self,
+                of: { $0.size },
+                action: { size in
+                    guard contentSize != size else { return }
+                    contentSize = size
+                }
+            )
+            .position(
+                x: point.x + (0.5 - anchor.x) * contentSize.width,
+                y: point.y + (0.5 - anchor.y) * contentSize.height
+            )
+    }
+}
+
+private struct MapHomeVectorPlayerMarker: View {
+    let heading: CLLocationDirection
+    let backgroundHex: String
+
+    var body: some View {
+        MapHomeVectorPlayerTriangle()
+            .fill(Color(hex: MapHomeVectorStyle.routeHex))
+            .frame(width: 13, height: 17)
+            .overlay {
+                MapHomeVectorPlayerTriangle()
+                    .stroke(Color(hex: backgroundHex), lineWidth: 1.5)
+            }
+            .shadow(color: .black.opacity(0.32), radius: 2, y: 1)
+            .rotationEffect(.degrees(heading))
+    }
+}
+
+private struct MapHomeVectorPlayerTriangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY * 0.78))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
     }
 }
 

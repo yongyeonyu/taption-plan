@@ -174,15 +174,35 @@ struct ExpectedRouteRequest: Identifiable, Hashable, Sendable {
 enum ExpectedRouteRequestEngine {
     static let minimumRouteDistanceMeters: Double = 20
 
+    private struct DuplicateKey: Hashable {
+        let fromPlaceID: UUID?
+        let toPlaceID: UUID?
+        let mode: String
+        let start: Date
+        let end: Date
+    }
+
+    private struct Endpoint {
+        let point: GeoPoint
+        let usesRegisteredFrequentPlace: Bool
+    }
+
     static func requests(
         travel: [TravelSegment],
         places: [PlaceStay],
         readings: [SensorReading],
         in day: TimeSpan,
-        through cutoff: Date
+        through cutoff: Date,
+        frequentPlaces: [FrequentPlace] = []
     ) -> [ExpectedRouteRequest] {
         let placesByID = places.reduce(into: [UUID: PlaceStay]()) {
             $0[$1.id] = $1
+        }
+        let frequentPointsByKey = frequentPlaces.reduce(
+            into: [String: GeoPoint]()
+        ) { result, place in
+            guard let point = place.point, isValid(point) else { return }
+            result[place.stablePlaceKey] = point
         }
         let orderedReadings = readings
             .filter { reading in
@@ -193,17 +213,13 @@ enum ExpectedRouteRequestEngine {
             }
             .sorted { $0.timestamp < $1.timestamp }
 
-        return travel
+        return deduplicated(travel)
             .sorted { $0.span.start < $1.span.start }
             .compactMap { segment in
                 guard segment.span.intersection(with: day) != nil,
                       segment.span.start < cutoff,
                       let transport = transport(for: segment),
-                      !usesStoredSubwayPath(segment),
-                      TaptionRouteEngineAdapter.allowsDottedRoute(
-                          for: segment,
-                          readings: orderedReadings
-                      ) else { return nil }
+                      !usesStoredSubwayPath(segment) else { return nil }
 
                 let visibleEnd = min(segment.span.end, cutoff)
                 guard segment.span.start < visibleEnd else { return nil }
@@ -219,36 +235,70 @@ enum ExpectedRouteRequestEngine {
                 let start = readingsInSegment
                     .first(where: reliableLocationReading)?
                     .point
-                    ?? confirmedPlacePoint(
+                    .map {
+                        Endpoint(
+                            point: $0,
+                            usesRegisteredFrequentPlace: false
+                        )
+                    }
+                    ?? placeEndpoint(
                         id: segment.fromPlaceID,
                         segment: segment,
-                        placesByID: placesByID
+                        placesByID: placesByID,
+                        frequentPointsByKey: frequentPointsByKey
                     )
-                let end: GeoPoint?
+                let end: Endpoint?
                 if visibleEnd < segment.span.end {
                     end = readingsInSegment
                         .last(where: reliableLocationReading)?
                         .point
+                        .map {
+                            Endpoint(
+                                point: $0,
+                                usesRegisteredFrequentPlace: false
+                            )
+                        }
                 } else {
                     end = readingsInSegment
                         .last(where: reliableLocationReading)?
                         .point
-                        ?? confirmedPlacePoint(
+                        .map {
+                            Endpoint(
+                                point: $0,
+                                usesRegisteredFrequentPlace: false
+                            )
+                        }
+                        ?? placeEndpoint(
                             id: segment.toPlaceID,
                             segment: segment,
-                            placesByID: placesByID
+                            placesByID: placesByID,
+                            frequentPointsByKey: frequentPointsByKey
                         )
                 }
 
                 guard let start, let end,
-                      distanceMeters(start, end) >= minimumRouteDistanceMeters
+                      distanceMeters(start.point, end.point)
+                        >= minimumRouteDistanceMeters
                 else { return nil }
+                let hasRegisteredEndpointFallback =
+                    segment.mode == .subway
+                    && segment.isClassificationLocked
+                    && segment.distanceMeters >= minimumRouteDistanceMeters
+                    && start.usesRegisteredFrequentPlace
+                    && end.usesRegisteredFrequentPlace
+                guard hasRegisteredEndpointFallback
+                        || TaptionRouteEngineAdapter.allowsDottedRoute(
+                            for: segment,
+                            readings: orderedReadings
+                        ) else {
+                    return nil
+                }
                 return ExpectedRouteRequest(
                     segmentID: segment.id,
                     mode: segment.mode,
                     transport: transport,
-                    start: start,
-                    end: end,
+                    start: start.point,
+                    end: end.point,
                     departureDate: visibleSpan.start,
                     arrivalDate: visibleSpan.end
                 )
@@ -257,8 +307,7 @@ enum ExpectedRouteRequestEngine {
 
     private static func usesStoredSubwayPath(_ segment: TravelSegment) -> Bool {
         segment.mode == .subway
-            && segment.isConfirmed
-            && (segment.subwayRoute?.coordinates.count ?? 0) >= 2
+            && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
     }
 
     private static func transport(
@@ -286,16 +335,82 @@ enum ExpectedRouteRequestEngine {
                 || point.horizontalAccuracy <= 150)
     }
 
-    private static func confirmedPlacePoint(
+    private static func placeEndpoint(
         id: UUID?,
         segment: TravelSegment,
-        placesByID: [UUID: PlaceStay]
-    ) -> GeoPoint? {
-        guard segment.isConfirmed,
-              let id,
-              let point = placesByID[id]?.point,
-              isValid(point) else { return nil }
-        return point
+        placesByID: [UUID: PlaceStay],
+        frequentPointsByKey: [String: GeoPoint]
+    ) -> Endpoint? {
+        guard let id, let place = placesByID[id] else { return nil }
+        if segment.isConfirmed,
+           let point = place.point,
+           isValid(point) {
+            return Endpoint(
+                point: point,
+                usesRegisteredFrequentPlace: false
+            )
+        }
+        guard segment.isConfirmed || segment.isClassificationLocked,
+              let point = frequentPointsByKey[place.placeKey] else {
+            return nil
+        }
+        return Endpoint(
+            point: point,
+            usesRegisteredFrequentPlace: true
+        )
+    }
+
+    private static func deduplicated(
+        _ travel: [TravelSegment]
+    ) -> [TravelSegment] {
+        var selected: [DuplicateKey: TravelSegment] = [:]
+        for segment in travel {
+            let key = DuplicateKey(
+                fromPlaceID: segment.fromPlaceID,
+                toPlaceID: segment.toPlaceID,
+                mode: segment.mode.rawValue,
+                start: segment.span.start,
+                end: segment.span.end
+            )
+            guard let current = selected[key] else {
+                selected[key] = segment
+                continue
+            }
+            if isRicher(segment, than: current) {
+                selected[key] = segment
+            }
+        }
+        return Array(selected.values)
+    }
+
+    private static func isRicher(
+        _ candidate: TravelSegment,
+        than current: TravelSegment
+    ) -> Bool {
+        let candidateValues = richnessValues(candidate)
+        let currentValues = richnessValues(current)
+        for index in candidateValues.indices {
+            if candidateValues[index] != currentValues[index] {
+                return candidateValues[index] > currentValues[index]
+            }
+        }
+        return candidate.id.uuidString < current.id.uuidString
+    }
+
+    private static func richnessValues(_ segment: TravelSegment) -> [Int] {
+        let confidence = switch segment.confidence {
+        case .low: 0
+        case .medium: 1
+        case .high: 2
+        }
+        return [
+            segment.isConfirmed ? 1 : 0,
+            segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
+                ? 1
+                : 0,
+            segment.evidence.count,
+            confidence,
+        ]
     }
 
     private static func isValid(_ point: GeoPoint) -> Bool {

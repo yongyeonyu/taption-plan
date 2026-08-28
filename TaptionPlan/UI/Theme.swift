@@ -127,7 +127,7 @@ extension Color {
 enum CanonicalCategoryPalette {
     static let orderedIDs = [
         "activity", "work", "study", "hobby",
-        "sleep", "movement", "eating", "exercise", "unconfirmed",
+        "sleep", "movement", "eating", "exercise", "health", "unconfirmed",
     ]
 
     static let hexes: [String: String] = [
@@ -139,6 +139,7 @@ enum CanonicalCategoryPalette {
         "movement": "#F76B15",
         "eating": "#E1C453",
         "exercise": "#DC2626",
+        "health": "#C0268E",
         "unconfirmed": "#94A3B8",
     ]
 
@@ -161,6 +162,7 @@ enum MapHomePastelPalette {
         "movement": "#E9985F",
         "eating": "#E4C25D",
         "exercise": "#E5869D",
+        "health": "#C66FB5",
         "unconfirmed": "#AAB5C3",
     ]
 

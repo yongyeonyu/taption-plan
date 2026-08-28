@@ -85,6 +85,18 @@
       ]
     },
     {
+      "id": "health",
+      "title": "건강관리",
+      "systemImage": "heart.text.square.fill",
+      "automaticOnly": true,
+      "details": [
+        { "id": "health.wellness", "title": "마음·생활 관리", "behavior": "wellness", "systemImage": "heart.circle.fill", "automaticOnly": true },
+        { "id": "health.vitals", "title": "생체 변화", "behavior": "vitals", "systemImage": "waveform.path.ecg", "automaticOnly": true },
+        { "id": "health.recovery", "title": "회복", "behavior": "recovery", "systemImage": "bed.double.fill", "automaticOnly": true },
+        { "id": "health.medication", "title": "투약", "behavior": "medication", "systemImage": "pills.fill", "automaticOnly": true }
+      ]
+    },
+    {
       "id": "unconfirmed",
       "title": "미확인",
       "systemImage": "questionmark.circle.fill",

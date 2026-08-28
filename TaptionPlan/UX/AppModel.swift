@@ -415,6 +415,7 @@ final class AppModel {
     @ObservationIgnored private var repositoryLoadFailed = false
     private(set) var isRefreshingIntegrations = false
     private(set) var isSensorCollecting = false
+    private(set) var sensorStorageErrorDescription: String?
     private(set) var sensorCollectionSessionState: SensorCollectionSessionState =
         .stopped
     private(set) var sensorCollectionSessionID: UUID?
@@ -447,6 +448,9 @@ final class AppModel {
     private(set) var frequentPlaceSuggestion: FrequentPlaceSuggestion?
     private(set) var sleepSessions: [SleepSession] = []
     private(set) var lastHealthRefreshAt: Date?
+    private(set) var healthSyncOverview = HealthKitSyncOverview(states: [])
+    private(set) var healthSyncProgress: HealthKitSyncProgress?
+    private(set) var isHealthHistorySyncRunning = false
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
     /// 첫 실행 안내를 닫은 기록. 기기 저장소에서 읽어 오고, 바뀔 때만 다시
     /// 넣어 화면이 갱신되게 한다.
@@ -744,10 +748,25 @@ final class AppModel {
         self.calendarService = calendarService ?? AppleCalendarService()
         self.photoService = photoService
         self.healthService = healthService
-        self.sensorService = sensorService
-            ?? (try? AppleSensorDataService.applicationSupport(
-                rawArchive: legacyRawArchive
-            ))
+        if let sensorService {
+            self.sensorService = sensorService
+            self.sensorStorageErrorDescription = nil
+        } else {
+            do {
+                self.sensorService = try AppleSensorDataService.applicationSupport(
+                    rawArchive: legacyRawArchive
+                )
+                self.sensorStorageErrorDescription = nil
+            } catch {
+                self.sensorService = nil
+                self.sensorStorageErrorDescription = error.localizedDescription
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "sensor_archive_initialization_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error)
+                )
+            }
+        }
         self.weatherService = weatherService
         self.airQualityService = airQualityService
         self.cloudSyncService = cloudSyncService
@@ -785,7 +804,17 @@ final class AppModel {
         self.sensorService?.onReadingPersisted = { [weak self] reading in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                self.sensorStorageErrorDescription = nil
                 self.handleLiveSensorReading(reading)
+            }
+        }
+        self.sensorService?.onPersistenceFailed = { [weak self] description in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.sensorStorageErrorDescription = description
+                self.isSensorCollecting = false
+                self.sensorBackgroundCoordinator.endSession()
+                self.syncSensorBackgroundState()
             }
         }
         self.watchConnectivityService.activate(
@@ -1052,7 +1081,19 @@ final class AppModel {
         date: Date
     ) async throws {
         let payload = await cloudRawSensorPayload(now: date)
-        guard !payload.isEmpty else { return }
+        guard !payload.isEmpty else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "icloud_raw_sensor_backup_skipped_empty",
+                level: .notice,
+                fields: [
+                    "month": PlanArchiveSchedule.monthKey(for: date),
+                    "service_latest_persisted_at": sensorService?
+                        .latestPersistedReadingDate()
+                        .map { String($0.timeIntervalSince1970) } ?? "none",
+                ]
+            )
+            return
+        }
         let archive = try await securityBackupService.saveRawSensorArchive(
             payload,
             date: date
@@ -1065,6 +1106,12 @@ final class AppModel {
                 ).relativePath,
                 "sensor_readings": String(payload.sensorReadings.count),
                 "envelopes": String(payload.envelopes.count),
+                "latest_sensor_at": payload.sensorReadings.last.map {
+                    String($0.timestamp.timeIntervalSince1970)
+                } ?? "none",
+                "latest_envelope_at": payload.envelopes.last.map {
+                    String($0.capturedAt.timeIntervalSince1970)
+                } ?? "none",
             ]
         )
     }
@@ -1573,9 +1620,26 @@ final class AppModel {
             $0.source == .healthKit || $0.source == .appleWatch
         }
         let health = settings.healthEnabled
-            ? "건강 기록 \(deviceRecords.count)건 · 5분 갱신"
+            ? "원본 \(healthSyncOverview.totalSampleCount)건 · 일과 \(deviceRecords.count)건"
             : "건강 연결 꺼짐"
         return "HealthKit · \(health)"
+    }
+
+    var healthSyncStatus: String {
+        if let healthSyncProgress {
+            return "\(healthSyncProgress.completedTypes)/\(healthSyncProgress.totalTypes)"
+        }
+        return "\(healthSyncOverview.completedTypeCount)개 유형"
+    }
+
+    var healthSyncDetail: String {
+        if let healthSyncProgress {
+            return "\(healthSyncProgress.typeName) · \(healthSyncProgress.importedSamples)건 가져옴"
+        }
+        if let last = healthSyncOverview.lastSyncedAt {
+            return "전체 이력·증분 원본 · 마지막 \(last.formatted(date: .omitted, time: .shortened))"
+        }
+        return "사용자가 허용한 전체 이력 · 기기 로컬 저장"
     }
 
     func selectTab(_ tab: RootTab) {
@@ -2351,15 +2415,34 @@ final class AppModel {
             // BG refresh tasks may be terminated as soon as this method
             // returns. Wait for the archive consumer to confirm one write,
             // rather than assuming the sampling window completed it.
-            _ = await sensorService.waitForPersistedReading(
+            let didPersist = await sensorService.waitForPersistedReading(
                 after: persistenceToken,
                 timeout: samplingWindow + 2
             )
-            let savedToken = sensorService.persistenceToken()
-            _ = sensorBackgroundCoordinator.markSaved(
-                persistedToken: savedToken
-            )
-            syncSensorBackgroundState()
+            if didPersist {
+                let savedToken = sensorService.persistenceToken()
+                _ = sensorBackgroundCoordinator.markSaved(
+                    persistedToken: savedToken
+                )
+                syncSensorBackgroundState()
+            } else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "sensor_background_sample_not_persisted",
+                    level: .notice,
+                    fields: [
+                        "stream_live": String(
+                            sensorService.isCollectionLive()
+                        ),
+                        "archive_error": sensorService
+                            .lastPersistenceErrorDescription ?? "none",
+                    ]
+                )
+                if !sensorService.isCollectionLive() {
+                    isSensorCollecting = false
+                    sensorBackgroundCoordinator.endSession()
+                    syncSensorBackgroundState()
+                }
+            }
         }
         await refreshEnabledData(includesCurrentDeviceDay: true)
         await saveCloudBackupOnBackground()
@@ -2713,6 +2796,7 @@ final class AppModel {
             snapshot.settings.healthEnabled = granted
             snapshot.settings.permissions[.health] = granted ? .authorized : .denied
             if granted {
+                await synchronizeHealthHistory(showErrors: true)
                 await refreshHealthData()
                 await configureHealthBackgroundDeliveryIfNeeded(
                     showErrors: true
@@ -2738,10 +2822,54 @@ final class AppModel {
         foregroundHealthRefreshTask = nil
         await healthService.disableBackgroundDelivery()
         isHealthBackgroundDeliveryConfigured = false
-        snapshot.actuals.removeAll { $0.source == .healthKit }
+        snapshot.actuals.removeAll {
+            $0.source == .healthKit || $0.source == .appleWatch
+        }
         sleepSessions = []
         lastHealthRefreshAt = nil
+        healthSyncOverview = HealthKitSyncOverview(states: [])
+        healthSyncProgress = nil
         await persist()
+    }
+
+    func synchronizeHealthHistory(showErrors: Bool = true) async {
+        guard settings.healthEnabled, !isHealthHistorySyncRunning else {
+            return
+        }
+        isHealthHistorySyncRunning = true
+        defer {
+            isHealthHistorySyncRunning = false
+            healthSyncProgress = nil
+        }
+        do {
+            healthSyncOverview = try await healthService
+                .synchronizeFullHistory { [weak self] progress in
+                    await MainActor.run {
+                        self?.healthSyncProgress = progress
+                    }
+                }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "health_history_sync_completed",
+                fields: [
+                    "types": String(healthSyncOverview.completedTypeCount),
+                    "samples": String(healthSyncOverview.totalSampleCount),
+                    "deletions": String(healthSyncOverview.totalDeletedCount),
+                ]
+            )
+        } catch {
+            Self.integrationLogger.error(
+                "HealthKit history sync failed: \(error.localizedDescription, privacy: .public)"
+            )
+            if showErrors {
+                userFacingError =
+                    "건강 전체 이력을 가져오지 못했습니다. \(error.localizedDescription)"
+            }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "health_history_sync_failed",
+                level: .error,
+                fields: TaptionDiagnosticError.fields(for: error)
+            )
+        }
     }
 
     func requestNotifications() async {
@@ -2780,7 +2908,9 @@ final class AppModel {
     func enableLocationCollection(always: Bool = true) async {
         guard let sensorService else {
             snapshot.settings.permissions[.location] = .unavailable
-            userFacingError = "이 기기에서는 위치·동작 센서를 사용할 수 없습니다."
+            userFacingError = sensorStorageErrorDescription == nil
+                ? "이 기기에서는 위치·동작 센서를 사용할 수 없습니다."
+                : "센서 저장소를 열지 못해 위치 기록을 시작할 수 없습니다. 진단 로그를 확인해주세요."
             return
         }
 
@@ -2845,8 +2975,12 @@ final class AppModel {
         guard let sensorService else {
             snapshot.settings.permissions[.location] = .unavailable
             userFacingError = AppLanguagePreference.text(
-                korean: "이 기기에서는 현재 위치를 확인할 수 없습니다.",
-                english: "Current location is unavailable on this device."
+                korean: sensorStorageErrorDescription == nil
+                    ? "이 기기에서는 현재 위치를 확인할 수 없습니다."
+                    : "센서 저장소를 열지 못해 현재 위치를 기록할 수 없습니다.",
+                english: sensorStorageErrorDescription == nil
+                    ? "Current location is unavailable on this device."
+                    : "The sensor archive could not be opened."
             )
             return false
         }
@@ -3680,6 +3814,16 @@ final class AppModel {
             "memos": String(snapshot.memos.count),
             "watch_connection": appleWatchConnectionState.rawValue,
             "sensor_collecting": String(isSensorCollecting),
+            "sensor_service_available": String(sensorService != nil),
+            "sensor_stream_live": String(
+                sensorService?.isCollectionLive() == true
+            ),
+            "sensor_archive_error": sensorStorageErrorDescription
+                ?? sensorService?.lastPersistenceErrorDescription
+                ?? "none",
+            "sensor_latest_persisted_at": sensorService?
+                .latestPersistedReadingDate()
+                .map { String($0.timeIntervalSince1970) } ?? "none",
             "location_enabled": String(settings.locationEnabled),
             "health_enabled": String(settings.healthEnabled),
             "cloud_status": cloudStatusText,
@@ -7234,7 +7378,9 @@ final class AppModel {
         } else {
             snapshot.settings.permissions[.location] = .unavailable
             snapshot.settings.permissions[.motion] = .unavailable
-            snapshot.settings.locationEnabled = false
+            if sensorStorageErrorDescription == nil {
+                snapshot.settings.locationEnabled = false
+            }
             snapshot.settings.backgroundPreciseLocationEnabled = false
         }
         let notificationState = await notificationScheduler.authorizationState()
@@ -7323,9 +7469,34 @@ final class AppModel {
         )
 
         do {
+            do {
+                healthSyncOverview = try await healthService
+                    .synchronizeChanges()
+            } catch {
+                Self.integrationLogger.error(
+                    "HealthKit incremental raw sync failed: \(error.localizedDescription, privacy: .public)"
+                )
+            }
             async let actualValues = healthService.actuals(in: span)
             async let sessions = healthService.sleepSessions(in: span)
-            let (freshActuals, freshSessions) = try await (actualValues, sessions)
+            async let importedValues = healthService.importedActuals(in: span)
+            let directActuals = try await actualValues
+            let freshSessions = try await sessions
+            let importedActuals = (try? await importedValues) ?? []
+            var actualsByID = importedActuals.reduce(
+                into: [UUID: ActualRecord]()
+            ) { result, actual in
+                result[actual.id] = actual
+            }
+            for actual in directActuals {
+                actualsByID[actual.id] = actual
+            }
+            let freshActuals = actualsByID.values.sorted {
+                if $0.startedAt != $1.startedAt {
+                    return $0.startedAt < $1.startedAt
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
             let visibleFreshActuals = ActualRecordSuppressionEngine
                 .visibleRecords(
                     from: freshActuals,
@@ -7579,7 +7750,7 @@ final class AppModel {
             try await healthService.enableBackgroundDelivery()
             isHealthBackgroundDeliveryConfigured = true
             Self.integrationLogger.notice(
-                "HealthKit background delivery enabled for routes, activity, sleep and vitals"
+                "HealthKit background delivery enabled for available sample types"
             )
         } catch {
             Self.integrationLogger.error(

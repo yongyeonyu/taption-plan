@@ -292,7 +292,7 @@ final class FeatureEngineTests: XCTestCase {
             .map(\.title)
         XCTAssertEqual(
             phaseTitles,
-            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "미확인"]
+            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "건강관리", "미확인"]
         )
 
         let detailTitles = Set(
@@ -407,11 +407,11 @@ final class FeatureEngineTests: XCTestCase {
         let categories = MapHomeSidebarMajorCategory.all
 
         XCTAssertEqual(categories.map(\.id), CanonicalCategoryPalette.orderedIDs)
-        XCTAssertEqual(Set(categories.map(\.hex)).count, 9)
-        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 9)
+        XCTAssertEqual(Set(categories.map(\.hex)).count, 10)
+        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 10)
         XCTAssertEqual(
             categories.map(\.title),
-            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "미확인"]
+            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "건강관리", "미확인"]
         )
     }
 
@@ -552,9 +552,17 @@ final class FeatureEngineTests: XCTestCase {
             ),
             ActualRecord(
                 planID: nil,
+                title: "건강관리",
+                categoryID: "health",
+                startedAt: day.addingTimeInterval(22 * hour),
+                endedAt: day.addingTimeInterval(23 * hour),
+                source: .healthKit
+            ),
+            ActualRecord(
+                planID: nil,
                 title: "미확인",
                 categoryID: "activity",
-                startedAt: day.addingTimeInterval(22 * hour),
+                startedAt: day.addingTimeInterval(23 * hour),
                 endedAt: day.addingTimeInterval(24 * hour),
                 source: .motion,
                 behavior: "unconfirmed-activity"
@@ -7081,7 +7089,7 @@ final class FeatureEngineTests: XCTestCase {
         let fileURL = directory.appendingPathComponent("readings.jsonl")
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        let archive = SensorReadingArchive(
+        let archive = try SensorReadingArchive(
             fileURL: fileURL,
             retentionInterval: 86_400
         )
@@ -7111,7 +7119,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         try await archive.compact(now: now)
 
-        let reopened = SensorReadingArchive(
+        let reopened = try SensorReadingArchive(
             fileURL: fileURL,
             retentionInterval: 86_400
         )
@@ -7135,7 +7143,7 @@ final class FeatureEngineTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-route-source-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let archive = SensorReadingArchive(
+        let archive = try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("readings.jsonl")
         )
         let start = makeDate(2026, 8, 24, 9)
@@ -7253,7 +7261,7 @@ final class FeatureEngineTests: XCTestCase {
         let trackingArchive = TrackingSessionChunkArchive(
             rootDirectory: directory.appendingPathComponent("raw")
         )
-        let archive = SensorReadingArchive(
+        let archive = try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("readings.jsonl"),
             retentionInterval: 86_400,
             rawArchive: rawArchive,
@@ -17751,7 +17759,7 @@ final class FeatureEngineTests: XCTestCase {
         let model = AppModel(
             repository: InMemoryPlanRepository(snapshot: snapshot),
             sensorService: AppleSensorDataService(
-                archive: SensorReadingArchive(
+                archive: try SensorReadingArchive(
                     fileURL: directory
                         .appendingPathComponent("sensor-readings.jsonl")
                 )
@@ -18403,6 +18411,86 @@ final class MapHomeStickmanTests: XCTestCase {
             MapHomeStickmanAnimationEngine.oscillation(for: 0),
             0,
             accuracy: 0.000_001
+        )
+    }
+
+    func testStickmanTypingFramesProgressAndBlinkAtBothCadences() {
+        let mapFrames = (0..<MapHomeStickmanAnimationEngine.phaseCount).map {
+            TaptionStickmanTypingAnimation.frame(
+                phase: $0,
+                phaseCount: MapHomeStickmanAnimationEngine.phaseCount
+            )
+        }
+        let liveFrames = (0..<TaptionLiveActivityStickmanAnimation.phaseCount).map {
+            TaptionStickmanTypingAnimation.frame(
+                phase: $0,
+                phaseCount: TaptionLiveActivityStickmanAnimation.phaseCount
+            )
+        }
+
+        for frames in [mapFrames, liveFrames] {
+            XCTAssertEqual(frames.first?.lineUnits, [1, 0, 0])
+            XCTAssertEqual(frames.last?.lineUnits, [5, 4, 3])
+            let totals = frames.map { $0.lineUnits.reduce(0, +) }
+            XCTAssertTrue(
+                zip(totals, totals.dropFirst()).allSatisfy { pair in
+                    pair.0 <= pair.1
+                }
+            )
+            XCTAssertTrue(frames.contains { $0.cursorVisible })
+            XCTAssertTrue(frames.contains { !$0.cursorVisible })
+        }
+        XCTAssertEqual(
+            TaptionStickmanTypingAnimation.frame(
+                phase: -1,
+                phaseCount: MapHomeStickmanAnimationEngine.phaseCount
+            ),
+            mapFrames.last
+        )
+    }
+
+    func testWalkingSceneryFramesWrapAndMatchMapAndLiveCadences() {
+        let mapFrames = (0..<MapHomeStickmanAnimationEngine.phaseCount).map {
+            TaptionStickmanWalkingSceneryAnimation.frame(
+                phase: $0,
+                phaseCount: MapHomeStickmanAnimationEngine.phaseCount
+            )
+        }
+        let liveFrames = (0..<TaptionLiveActivityStickmanAnimation.phaseCount)
+            .map {
+                TaptionStickmanWalkingSceneryAnimation.frame(
+                    phase: $0,
+                    phaseCount: TaptionLiveActivityStickmanAnimation.phaseCount
+                )
+            }
+
+        for frame in mapFrames + liveFrames {
+            XCTAssertEqual(frame.treeX.count, 2)
+            XCTAssertEqual(frame.cloudX.count, 2)
+            XCTAssertTrue(frame.treeX.allSatisfy { (-12..<76).contains($0) })
+            XCTAssertTrue(frame.cloudX.allSatisfy { (-12..<76).contains($0) })
+            XCTAssertTrue((0..<8).contains(frame.groundOffset))
+        }
+        XCTAssertGreaterThan(
+            abs(mapFrames[1].treeX[0] - mapFrames[0].treeX[0]),
+            abs(mapFrames[1].cloudX[0] - mapFrames[0].cloudX[0])
+        )
+        let cloudStep = abs(
+            mapFrames[1].cloudX[0] - mapFrames[0].cloudX[0]
+        )
+        for (last, first) in zip(
+            mapFrames.last!.cloudX.sorted(),
+            mapFrames.first!.cloudX.sorted()
+        ) {
+            XCTAssertEqual(abs(last - first), cloudStep, accuracy: 0.0001)
+        }
+        XCTAssertEqual(mapFrames[3], liveFrames[2])
+        XCTAssertEqual(
+            TaptionStickmanWalkingSceneryAnimation.frame(
+                phase: -1,
+                phaseCount: MapHomeStickmanAnimationEngine.phaseCount
+            ),
+            mapFrames.last
         )
     }
 

@@ -125,6 +125,13 @@
 		A4000000000000000000000B /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A4000000000000000000000C /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
+		A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000001 /* MapHomeVectorMap.swift */; };
+		A50000000000000000000002 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = X50000000000000000000002 /* MapLibre */; };
+		A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000001 /* HealthKitTypeCatalog.swift */; };
+		A60000000000000000000002 /* HealthKitImportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000002 /* HealthKitImportStore.swift */; };
+		A60000000000000000000003 /* HealthKitImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000003 /* HealthKitImportCoordinator.swift */; };
+		A60000000000000000000004 /* HealthKitBehaviorProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000004 /* HealthKitBehaviorProjection.swift */; };
+		A60000000000000000000005 /* HealthKitIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000005 /* HealthKitIntegrationTests.swift */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		/* End PBXBuildFile section */
@@ -300,6 +307,12 @@
 		F40000000000000000000005 /* SQLitePlanRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLitePlanRepositoryTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000006 /* SensorDayStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDayStoreTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
+		F50000000000000000000001 /* MapHomeVectorMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorMap.swift; sourceTree = "<group>"; };
+		F60000000000000000000001 /* HealthKitTypeCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTypeCatalog.swift; sourceTree = "<group>"; };
+		F60000000000000000000002 /* HealthKitImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportStore.swift; sourceTree = "<group>"; };
+		F60000000000000000000003 /* HealthKitImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportCoordinator.swift; sourceTree = "<group>"; };
+		F60000000000000000000004 /* HealthKitBehaviorProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitBehaviorProjection.swift; sourceTree = "<group>"; };
+		F60000000000000000000005 /* HealthKitIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitIntegrationTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007F /* MapHomeCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarSheet.swift; sourceTree = "<group>"; };
 		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
@@ -315,6 +328,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A50000000000000000000002 /* MapLibre in Frameworks */,
 				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
 				A40000000000000000000001 /* TaptionActivityEngine in Frameworks */,
 				A40000000000000000000002 /* TaptionRouteEngine in Frameworks */,
@@ -415,6 +429,7 @@
 				F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */,
 				F40000000000000000000005 /* SQLitePlanRepositoryTests.swift */,
 				F40000000000000000000006 /* SensorDayStoreTests.swift */,
+				F60000000000000000000005 /* HealthKitIntegrationTests.swift */,
 			);
 			path = TaptionPlanTests;
 			sourceTree = "<group>";
@@ -423,6 +438,7 @@
 			isa = PBXGroup;
 			children = (
 				F1000000000000000000007D /* MapHomeView.swift */,
+				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
@@ -468,6 +484,10 @@
 				F10000000000000000000013 /* SensorFusion.swift */,
 				F10000000000000000000071 /* StationaryContextClassifier.swift */,
 				F10000000000000000000014 /* AppleIntegrations.swift */,
+				F60000000000000000000001 /* HealthKitTypeCatalog.swift */,
+				F60000000000000000000002 /* HealthKitImportStore.swift */,
+				F60000000000000000000003 /* HealthKitImportCoordinator.swift */,
+				F60000000000000000000004 /* HealthKitBehaviorProjection.swift */,
 				F10000000000000000000015 /* LiveActivitySupport.swift */,
 				F1000000000000000000001B /* HealthAndSensorModels.swift */,
 				F1000000000000000000001C /* SleepAnalysisEngine.swift */,
@@ -569,6 +589,7 @@
 				X30000000000000000000002 /* TaptionPlanCore */,
 				X40000000000000000000002 /* TaptionActivityEngine */,
 				X40000000000000000000004 /* TaptionRouteEngine */,
+				X50000000000000000000002 /* MapLibre */,
 			);
 			productName = TaptionPlan;
 			productReference = C10000000000000000000001 /* TaptionPlan.app */;
@@ -729,6 +750,7 @@
 				X30000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanCore" */,
 				X40000000000000000000001 /* XCLocalSwiftPackageReference "TaptionActivityEngine" */,
 				X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */,
+				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 			);
 			mainGroup = 810000000000000000000001;
 			productRefGroup = 810000000000000000000002 /* Products */;
@@ -810,6 +832,7 @@
 				A10000000000000000000005 /* AppShellView.swift in Sources */,
 				A10000000000000000000006 /* ScheduleView.swift in Sources */,
 				A1000000000000000000007D /* MapHomeView.swift in Sources */,
+				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
 				A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
@@ -825,6 +848,10 @@
 				A10000000000000000000013 /* SensorFusion.swift in Sources */,
 				A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */,
 				A10000000000000000000014 /* AppleIntegrations.swift in Sources */,
+				A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */,
+				A60000000000000000000002 /* HealthKitImportStore.swift in Sources */,
+				A60000000000000000000003 /* HealthKitImportCoordinator.swift in Sources */,
+				A60000000000000000000004 /* HealthKitBehaviorProjection.swift in Sources */,
 				A10000000000000000000015 /* LiveActivitySupport.swift in Sources */,
 				A10000000000000000000018 /* NavigationModels.swift in Sources */,
 				A10000000000000000000019 /* CatPresentation.swift in Sources */,
@@ -878,6 +905,7 @@
 				A40000000000000000000006 /* TaptionRouteEngineAdapterTests.swift in Sources */,
 				A40000000000000000000007 /* SQLitePlanRepositoryTests.swift in Sources */,
 				A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */,
+				A60000000000000000000005 /* HealthKitIntegrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1360,6 +1388,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.29.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		X30000000000000000000002 /* TaptionPlanCore */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1375,6 +1414,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */;
 			productName = TaptionRouteEngine;
+		};
+		X50000000000000000000002 /* MapLibre */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
+			productName = MapLibre;
 		};
 /* End XCSwiftPackageProductDependency section */
 

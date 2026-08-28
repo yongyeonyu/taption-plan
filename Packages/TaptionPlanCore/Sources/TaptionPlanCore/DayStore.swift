@@ -191,25 +191,7 @@ public actor TaptionPlanDayStore {
     public func saveSnapshots(_ snapshots: [Snapshot]) throws {
         try withTransaction {
             for snapshot in snapshots {
-                try validate(domain: snapshot.domain)
-                try execute(
-                    """
-                    INSERT INTO snapshots(domain, day_key, revision, updated_at, payload)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON CONFLICT(domain, day_key) DO UPDATE SET
-                        revision = excluded.revision,
-                        updated_at = excluded.updated_at,
-                        payload = excluded.payload
-                    WHERE excluded.revision >= snapshots.revision;
-                    """,
-                    binds: { statement in
-                        try self.bind(snapshot.domain, to: statement, at: 1)
-                        try self.bind(self.dayKey(snapshot.day), to: statement, at: 2)
-                        try self.bind(snapshot.revision, to: statement, at: 3)
-                        try self.bind(snapshot.updatedAt.timeIntervalSince1970, to: statement, at: 4)
-                        try self.bind(snapshot.payload, to: statement, at: 5)
-                    }
-                )
+                try saveSnapshotRow(snapshot)
             }
         }
     }
@@ -303,6 +285,47 @@ public actor TaptionPlanDayStore {
                         try self.bind(event.payload, to: statement, at: 6)
                     }
                 )
+            }
+        }
+    }
+
+    public func upsertEvents(_ events: [Event]) throws {
+        try withTransaction {
+            for event in events {
+                try upsertEventRow(event)
+            }
+        }
+    }
+
+    public func deleteEvents(ids: [String], domain: String) throws {
+        guard !ids.isEmpty else { return }
+        try validate(domain: domain)
+        try withTransaction {
+            for id in Set(ids) {
+                try deleteEventRow(id: id, domain: domain)
+            }
+        }
+    }
+
+    public func applyEventDelta(
+        upserting events: [Event],
+        deletingIDs: [String],
+        domain: String,
+        snapshots: [Snapshot] = []
+    ) throws {
+        try validate(domain: domain)
+        guard events.allSatisfy({ $0.domain == domain }) else {
+            throw TaptionPlanDayStoreError.invalidDomain
+        }
+        try withTransaction {
+            for event in events {
+                try upsertEventRow(event)
+            }
+            for id in Set(deletingIDs) {
+                try deleteEventRow(id: id, domain: domain)
+            }
+            for snapshot in snapshots {
+                try saveSnapshotRow(snapshot)
             }
         }
     }
@@ -456,6 +479,63 @@ public actor TaptionPlanDayStore {
         defer { sqlite3_finalize(statement) }
         try binds?(statement)
         guard try step(statement) == SQLITE_DONE else { throw lastError() }
+    }
+
+    private func saveSnapshotRow(_ snapshot: Snapshot) throws {
+        try validate(domain: snapshot.domain)
+        try execute(
+            """
+            INSERT INTO snapshots(domain, day_key, revision, updated_at, payload)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(domain, day_key) DO UPDATE SET
+                revision = excluded.revision,
+                updated_at = excluded.updated_at,
+                payload = excluded.payload
+            WHERE excluded.revision >= snapshots.revision;
+            """,
+            binds: { statement in
+                try self.bind(snapshot.domain, to: statement, at: 1)
+                try self.bind(self.dayKey(snapshot.day), to: statement, at: 2)
+                try self.bind(snapshot.revision, to: statement, at: 3)
+                try self.bind(snapshot.updatedAt.timeIntervalSince1970, to: statement, at: 4)
+                try self.bind(snapshot.payload, to: statement, at: 5)
+            }
+        )
+    }
+
+    private func upsertEventRow(_ event: Event) throws {
+        try validate(domain: event.domain)
+        try execute(
+            """
+            INSERT INTO events(day_key, timestamp, sequence, id, domain, payload)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                day_key = excluded.day_key,
+                timestamp = excluded.timestamp,
+                sequence = excluded.sequence,
+                domain = excluded.domain,
+                payload = excluded.payload
+            WHERE events.domain = excluded.domain;
+            """,
+            binds: { statement in
+                try self.bind(self.dayKey(event.day), to: statement, at: 1)
+                try self.bind(event.timestamp.timeIntervalSince1970, to: statement, at: 2)
+                try self.bind(event.sequence, to: statement, at: 3)
+                try self.bind(event.id, to: statement, at: 4)
+                try self.bind(event.domain, to: statement, at: 5)
+                try self.bind(event.payload, to: statement, at: 6)
+            }
+        )
+    }
+
+    private func deleteEventRow(id: String, domain: String) throws {
+        try execute(
+            "DELETE FROM events WHERE id = ? AND domain = ?;",
+            binds: { statement in
+                try self.bind(id, to: statement, at: 1)
+                try self.bind(domain, to: statement, at: 2)
+            }
+        )
     }
 
     private func prepare(_ sql: String) throws -> OpaquePointer {

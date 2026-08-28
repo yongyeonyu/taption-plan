@@ -211,6 +211,86 @@ enum TaptionLiveActivityStickmanAnimation {
     }
 }
 
+struct TaptionStickmanTypingFrame: Equatable, Sendable {
+    let lineUnits: [Int]
+    let activeLine: Int
+    let cursorVisible: Bool
+}
+
+enum TaptionStickmanTypingAnimation {
+    static let lineCapacities = [5, 4, 3]
+
+    static func frame(phase: Int, phaseCount: Int) -> TaptionStickmanTypingFrame {
+        let count = max(phaseCount, 1)
+        let normalized = ((phase % count) + count) % count
+        let totalUnits = lineCapacities.reduce(0, +)
+        let typedUnits: Int
+        if count == 1 {
+            typedUnits = 1
+        } else {
+            typedUnits = min(
+                totalUnits,
+                1 + normalized * (totalUnits - 1) / (count - 1)
+            )
+        }
+
+        var remaining = typedUnits
+        let lineUnits = lineCapacities.map { capacity in
+            let units = min(remaining, capacity)
+            remaining -= units
+            return units
+        }
+        let activeLine = lineUnits.indices.first {
+            lineUnits[$0] < lineCapacities[$0]
+        } ?? lineUnits.index(before: lineUnits.endIndex)
+
+        return TaptionStickmanTypingFrame(
+            lineUnits: lineUnits,
+            activeLine: activeLine,
+            cursorVisible: normalized.isMultiple(of: 2)
+        )
+    }
+}
+
+struct TaptionStickmanWalkingSceneryFrame: Equatable, Sendable {
+    let treeX: [Double]
+    let cloudX: [Double]
+    let groundOffset: Double
+}
+
+enum TaptionStickmanWalkingSceneryAnimation {
+    private static let lowerBound = -12.0
+    private static let upperBound = 76.0
+
+    static func frame(
+        phase: Int,
+        phaseCount: Int
+    ) -> TaptionStickmanWalkingSceneryFrame {
+        let count = max(phaseCount, 1)
+        let normalized = ((phase % count) + count) % count
+        let progress = Double(normalized) / Double(count)
+        return TaptionStickmanWalkingSceneryFrame(
+            treeX: [10.0, 54.0].map {
+                wrapped($0 - progress * 88)
+            },
+            cloudX: [18.0, 62.0].map {
+                wrapped($0 - progress * 44)
+            },
+            groundOffset: (progress * 16).truncatingRemainder(
+                dividingBy: 8
+            )
+        )
+    }
+
+    private static func wrapped(_ value: Double) -> Double {
+        let width = upperBound - lowerBound
+        let offset = (value - lowerBound).truncatingRemainder(
+            dividingBy: width
+        )
+        return lowerBound + (offset >= 0 ? offset : offset + width)
+    }
+}
+
 enum SensorCollectionActivityPhase: String, Codable, Hashable {
     case waiting
     case pulse

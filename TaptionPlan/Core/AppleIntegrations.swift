@@ -251,6 +251,7 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
 
 enum HealthRefreshPolicy {
     static let foregroundInterval: TimeInterval = 5 * 60
+    static let broadRawSyncInterval: TimeInterval = 15 * 60
     static let periodicLookback: TimeInterval = 2 * 86_400
     static let backgroundFrequency: HKUpdateFrequency = .immediate
 }
@@ -343,15 +344,23 @@ final class AppleHealthService: @unchecked Sendable {
 
     private let store: HKHealthStore
     private let sleepEngine: SleepAnalysisEngine
+    private let importCoordinator: HealthKitImportCoordinator
     private let observerLock = NSLock()
     private var observerQueries: [HKObserverQuery] = []
+    private var pendingObservedTypeIdentifiers = Set<String>()
+    private var lastBroadSynchronizationAt: Date?
 
     init(
         store: HKHealthStore = HKHealthStore(),
-        sleepEngine: SleepAnalysisEngine = SleepAnalysisEngine()
+        sleepEngine: SleepAnalysisEngine = SleepAnalysisEngine(),
+        importStore: HealthKitImportStore? = try? HealthKitImportStore()
     ) {
         self.store = store
         self.sleepEngine = sleepEngine
+        self.importCoordinator = HealthKitImportCoordinator(
+            healthStore: store,
+            importStore: importStore
+        )
     }
 
     func permissionState() -> PermissionState {
@@ -361,7 +370,7 @@ final class AppleHealthService: @unchecked Sendable {
     func requestReadAccess() async throws -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
         let readTypes = Set(readTypes())
-        return try await withCheckedThrowingContinuation { continuation in
+        let completed: Bool = try await withCheckedThrowingContinuation { continuation in
             store.requestAuthorization(toShare: [], read: readTypes) { success, error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -370,6 +379,10 @@ final class AppleHealthService: @unchecked Sendable {
                 }
             }
         }
+        if completed {
+            _ = try? await requestVisionPrescriptionReadAccess()
+        }
+        return completed
     }
 
     func startWatchWorkout(kind: TrackingKind) async throws -> Bool {
@@ -397,13 +410,15 @@ final class AppleHealthService: @unchecked Sendable {
             return
         }
         let queries = observedSampleTypes().map { sampleType in
-            HKObserverQuery(
+            let typeIdentifier = sampleType.identifier
+            return HKObserverQuery(
                 sampleType: sampleType,
                 predicate: nil
-            ) { _, completion, error in
+            ) { [weak self] _, completion, error in
                 let completion = HealthObserverCompletion(completion)
                 Task {
                     if error == nil {
+                        self?.markObservedChange(typeIdentifier)
                         await onUpdate()
                     }
                     completion()
@@ -417,11 +432,21 @@ final class AppleHealthService: @unchecked Sendable {
     }
 
     func enableBackgroundDelivery() async throws {
+        var successCount = 0
+        var firstError: Error?
         for sampleType in observedSampleTypes() {
-            try await setBackgroundDelivery(
-                enabled: true,
-                for: sampleType
-            )
+            do {
+                try await setBackgroundDelivery(
+                    enabled: true,
+                    for: sampleType
+                )
+                successCount += 1
+            } catch {
+                firstError = firstError ?? error
+            }
+        }
+        if successCount == 0, let firstError {
+            throw firstError
         }
     }
 
@@ -465,6 +490,58 @@ final class AppleHealthService: @unchecked Sendable {
         async let sleeps = sleepActuals(in: span)
         async let mindful = mindfulSessionActuals(in: span)
         return try await workouts + sleeps + mindful
+    }
+
+    func synchronizeFullHistory(
+        progress: HealthKitImportCoordinator.ProgressHandler? = nil
+    ) async throws -> HealthKitSyncOverview {
+        let overview = try await importCoordinator.synchronizeFullHistory(
+            progress: progress
+        )
+        setLastBroadSynchronizationAt(.now)
+        return overview
+    }
+
+    func synchronizeChanges() async throws -> HealthKitSyncOverview {
+        let firstScope = nextChangeSyncScope()
+        var overview: HealthKitSyncOverview
+        switch firstScope {
+        case let .types(identifiers):
+            overview = try await importCoordinator.synchronizeChanges(
+                typeIdentifiers: identifiers
+            )
+        case .broad:
+            do {
+                overview = try await importCoordinator.synchronizeChanges()
+            } catch {
+                setLastBroadSynchronizationAt(nil)
+                throw error
+            }
+        case .cached:
+            overview = try await importCoordinator.overview()
+        }
+        while let identifiers = takePendingObservedTypeIdentifiers() {
+            overview = try await importCoordinator.synchronizeChanges(
+                typeIdentifiers: identifiers
+            )
+        }
+        return overview
+    }
+
+    func importedActuals(in span: TimeSpan) async throws -> [ActualRecord] {
+        let baselineSpan = TimeSpan(
+            start: span.start.addingTimeInterval(-28 * 86_400),
+            end: span.end
+        )
+        let records = try await importCoordinator.records(in: baselineSpan)
+        return HealthKitBehaviorProjectionEngine.actuals(
+            from: records,
+            in: span
+        )
+    }
+
+    func importOverview() async throws -> HealthKitSyncOverview {
+        try await importCoordinator.overview()
     }
 
     func sleepSegments(in span: TimeSpan) async throws -> [SleepSegment] {
@@ -896,33 +973,82 @@ final class AppleHealthService: @unchecked Sendable {
     }
 
     private func readTypes() -> [HKObjectType] {
-        [
-            HKObjectType.workoutType(),
-            // 다른 앱과 Apple Watch가 저장한 운동 GPS 궤적. 우리 앱이 표본을
-            // 남기지 못한 구간의 경로를 사후에 채우는 데 사용한다.
-            HKSeriesType.workoutRoute(),
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
-            HKObjectType.categoryType(forIdentifier: .mindfulSession),
-            HKObjectType.quantityType(forIdentifier: .stepCount),
-            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
-            HKObjectType.quantityType(forIdentifier: .flightsClimbed),
-            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
-            HKObjectType.quantityType(forIdentifier: .heartRate)
-        ].compactMap { $0 }
+        HealthKitTypeCatalog.standardAuthorizationObjectTypes().filter { type in
+            guard let descriptor = HealthKitTypeCatalog.descriptor(
+                for: type.identifier
+            ) else {
+                return false
+            }
+            return !descriptor.isClinical || store.supportsHealthRecords()
+        }
+    }
+
+    private func requestVisionPrescriptionReadAccess() async throws -> Bool {
+        let type = HKObjectType.visionPrescriptionType()
+        return try await withCheckedThrowingContinuation { continuation in
+            store.requestPerObjectReadAuthorization(
+                for: type,
+                predicate: nil
+            ) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: success)
+                }
+            }
+        }
     }
 
     private func observedSampleTypes() -> [HKSampleType] {
-        [
-            HKObjectType.workoutType(),
-            HKSeriesType.workoutRoute(),
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis),
-            HKObjectType.categoryType(forIdentifier: .mindfulSession),
-            HKObjectType.quantityType(forIdentifier: .stepCount),
-            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning),
-            HKObjectType.quantityType(forIdentifier: .flightsClimbed),
-            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
-            HKObjectType.quantityType(forIdentifier: .heartRate),
-        ].compactMap { $0 }
+        HealthKitTypeCatalog.observableDescriptors.filter { descriptor in
+            descriptor.backgroundEligible
+                && (!descriptor.isClinical
+                    || store.supportsHealthRecords())
+        }.compactMap(HealthKitTypeCatalog.observableSampleType(for:))
+    }
+
+    private enum ChangeSyncScope {
+        case types(Set<String>)
+        case broad
+        case cached
+    }
+
+    private func markObservedChange(_ typeIdentifier: String) {
+        observerLock.lock()
+        pendingObservedTypeIdentifiers.insert(typeIdentifier)
+        observerLock.unlock()
+    }
+
+    private func setLastBroadSynchronizationAt(_ date: Date?) {
+        observerLock.lock()
+        lastBroadSynchronizationAt = date
+        observerLock.unlock()
+    }
+
+    private func nextChangeSyncScope(now: Date = .now) -> ChangeSyncScope {
+        observerLock.lock()
+        defer { observerLock.unlock() }
+        if !pendingObservedTypeIdentifiers.isEmpty {
+            let identifiers = pendingObservedTypeIdentifiers
+            pendingObservedTypeIdentifiers.removeAll()
+            return .types(identifiers)
+        }
+        if let lastBroadSynchronizationAt,
+           now.timeIntervalSince(lastBroadSynchronizationAt)
+                < HealthRefreshPolicy.broadRawSyncInterval {
+            return .cached
+        }
+        lastBroadSynchronizationAt = now
+        return .broad
+    }
+
+    private func takePendingObservedTypeIdentifiers() -> Set<String>? {
+        observerLock.lock()
+        defer { observerLock.unlock() }
+        guard !pendingObservedTypeIdentifiers.isEmpty else { return nil }
+        let identifiers = pendingObservedTypeIdentifiers
+        pendingObservedTypeIdentifiers.removeAll()
+        return identifiers
     }
 
     private func setBackgroundDelivery(

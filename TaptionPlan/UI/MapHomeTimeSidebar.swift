@@ -332,6 +332,7 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
         case "movement": return "Movement"
         case "eating": return "Eating"
         case "exercise": return "Exercise"
+        case "health": return "Health"
         case "unconfirmed": return "Unconfirmed"
         default: return title
         }

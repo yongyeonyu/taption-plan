@@ -3368,6 +3368,10 @@ enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case simplified
     case hybrid
     case imagery
+    case mapLibreNight
+    case mapLibreLight
+    case mapLibreContrast
+    case mapLibrePastel
 
     init(from decoder: Decoder) throws {
         let value = try decoder.singleValueContainer().decode(String.self)

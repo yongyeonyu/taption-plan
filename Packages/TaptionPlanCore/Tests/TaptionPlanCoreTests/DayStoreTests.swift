@@ -74,6 +74,100 @@ final class DayStoreTests: XCTestCase {
         XCTAssertEqual(result.map(\.id), ["existing"])
     }
 
+    func testEventsCanBeUpsertedAndDeletedWithinTheirDomain() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let firstDay = TaptionPlanDayKey(year: 2026, month: 8, day: 25)
+        let secondDay = TaptionPlanDayKey(year: 2026, month: 8, day: 26)
+        let store = try TaptionPlanDayStore(url: url)
+        try await store.appendEvents([
+            .init(
+                day: firstDay,
+                timestamp: .init(timeIntervalSince1970: 10),
+                sequence: 0,
+                id: "healthkit:sample",
+                domain: "healthkit-sample",
+                payload: Data([1])
+            )
+        ])
+
+        try await store.upsertEvents([
+            .init(
+                day: secondDay,
+                timestamp: .init(timeIntervalSince1970: 20),
+                sequence: 1,
+                id: "healthkit:sample",
+                domain: "healthkit-sample",
+                payload: Data([2])
+            )
+        ])
+        let firstDayEvents = try await store.events(
+            from: firstDay,
+            through: firstDay,
+            domain: "healthkit-sample"
+        )
+        let secondDayEvents = try await store.events(
+            from: secondDay,
+            through: secondDay,
+            domain: "healthkit-sample"
+        )
+        XCTAssertTrue(firstDayEvents.isEmpty)
+        XCTAssertEqual(secondDayEvents.first?.payload, Data([2]))
+
+        try await store.deleteEvents(
+            ids: ["healthkit:sample"],
+            domain: "healthkit-sample"
+        )
+        let remaining = try await store.events(
+            from: secondDay,
+            through: secondDay,
+            domain: "healthkit-sample"
+        )
+        XCTAssertTrue(remaining.isEmpty)
+    }
+
+    func testEventDeltaAndCursorSnapshotCommitTogether() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let day = TaptionPlanDayKey(year: 2026, month: 8, day: 27)
+        let store = try TaptionPlanDayStore(url: url)
+        let cursor = TaptionPlanDayStore.Snapshot(
+            domain: "healthkit-sync-state",
+            day: day,
+            revision: 1,
+            updatedAt: .now,
+            payload: Data("anchor-1".utf8)
+        )
+
+        try await store.applyEventDelta(
+            upserting: [
+                .init(
+                    day: day,
+                    timestamp: .now,
+                    sequence: 0,
+                    id: "healthkit:atomic",
+                    domain: "healthkit-sample",
+                    payload: Data([7])
+                )
+            ],
+            deletingIDs: [],
+            domain: "healthkit-sample",
+            snapshots: [cursor]
+        )
+
+        let events = try await store.events(
+            from: day,
+            through: day,
+            domain: "healthkit-sample"
+        )
+        let savedCursor = try await store.snapshot(
+            domain: "healthkit-sync-state",
+            day: day
+        )
+        XCTAssertEqual(events.map(\.id), ["healthkit:atomic"])
+        XCTAssertEqual(savedCursor?.payload, Data("anchor-1".utf8))
+    }
+
     func testMetadataAndOneTimeMigrationMarker() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

@@ -742,7 +742,7 @@ actor SensorReadingArchive {
         rawArchive: RawDeviceDataMonthlyArchive? = nil,
         trackingChunkArchive: TrackingSessionChunkArchive? = nil,
         dayStoreURL: URL? = nil
-    ) {
+    ) throws {
         self.fileURL = fileURL
         self.retentionInterval = max(86_400, retentionInterval)
         self.rawArchive = rawArchive
@@ -750,11 +750,11 @@ actor SensorReadingArchive {
         let storeURL = dayStoreURL ?? fileURL
             .deletingLastPathComponent()
             .appendingPathComponent("taption-plan-v2.sqlite")
-        try? FileManager.default.createDirectory(
+        try FileManager.default.createDirectory(
             at: storeURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        self.dayStore = try? TaptionPlanDayStore(url: storeURL)
+        self.dayStore = try TaptionPlanDayStore(url: storeURL)
         self.legacyDecoder = JSONDecoder()
         legacyDecoder.dateDecodingStrategy = .secondsSince1970
     }
@@ -780,7 +780,7 @@ actor SensorReadingArchive {
             "taption-data-v2.sqlite",
             isDirectory: false
         )
-        return SensorReadingArchive(
+        return try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
             rawArchive: rawArchive
                 ?? (try? RawDeviceDataMonthlyArchive.applicationSupport()),
@@ -926,9 +926,11 @@ final class AppleSensorDataService {
     private var collectionGeneration = 0
     private var isCollectionStreamLive = false
     private var persistedReadingCount = 0
+    private var lastPersistedReadingAt: Date?
 
     private(set) var lastPersistenceErrorDescription: String?
     var onReadingPersisted: ((SensorReading) -> Void)?
+    var onPersistenceFailed: ((String) -> Void)?
 
     init(
         collector: AppleSensorCollector? = nil,
@@ -995,11 +997,22 @@ final class AppleSensorDataService {
             return
         }
         stopCollection()
-        lastPersistenceErrorDescription = nil
         activeConfiguration = configuration
         collectionGeneration += 1
         let generation = collectionGeneration
         isCollectionStreamLive = true
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sensor_collection_started",
+            fields: [
+                "generation": String(generation),
+                "minimum_interval": String(
+                    configuration.minimumEmissionInterval
+                ),
+                "background_location": String(
+                    configuration.allowsBackgroundLocation
+                ),
+            ]
+        )
         let stream = collector.readings(configuration: configuration)
         collectionTask = Task { [weak self] in
             for await reading in stream {
@@ -1007,18 +1020,43 @@ final class AppleSensorDataService {
                 do {
                     try await self.archive.append(reading)
                     self.persistedReadingCount += 1
+                    self.lastPersistedReadingAt = reading.timestamp
+                    self.lastPersistenceErrorDescription = nil
                     self.onReadingPersisted?(reading)
                 } catch {
-                    self.lastPersistenceErrorDescription = error.localizedDescription
+                    let description = error.localizedDescription
+                    if self.lastPersistenceErrorDescription != description {
+                        TaptionPlanDiagnosticsLogger.shared.record(
+                            "sensor_archive_append_failed",
+                            level: .error,
+                            fields: TaptionDiagnosticError.fields(for: error)
+                        )
+                    }
+                    self.lastPersistenceErrorDescription = description
+                    self.onPersistenceFailed?(description)
                     Self.logger.error(
                         "Sensor archive append failed: \(error.localizedDescription, privacy: .public)"
                     )
+                    self.stopCollection()
+                    return
                 }
             }
             guard let self, self.collectionGeneration == generation else {
                 return
             }
             self.isCollectionStreamLive = false
+            self.collectionTask = nil
+            self.activeConfiguration = nil
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_collection_stream_ended",
+                level: .notice,
+                fields: [
+                    "generation": String(generation),
+                    "last_persisted_at": self.lastPersistedReadingAt.map {
+                        String($0.timeIntervalSince1970)
+                    } ?? "none",
+                ]
+            )
         }
     }
 
@@ -1029,6 +1067,14 @@ final class AppleSensorDataService {
         persistedReadingCount
     }
 
+    func latestPersistedReadingDate() -> Date? {
+        lastPersistedReadingAt
+    }
+
+    func isCollectionLive() -> Bool {
+        isCollectionStreamLive
+    }
+
     func waitForPersistedReading(
         after token: Int,
         timeout: TimeInterval
@@ -1037,6 +1083,9 @@ final class AppleSensorDataService {
         while !Task.isCancelled, Date.now < deadline {
             if persistedReadingCount > token {
                 return true
+            }
+            if !isCollectionStreamLive {
+                return false
             }
             try? await Task.sleep(for: .milliseconds(100))
         }

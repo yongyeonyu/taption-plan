@@ -2635,7 +2635,16 @@ final class TimeScaleTests: XCTestCase {
     func testMapDisplayStyleIncludesSimplifiedAndUnknownValuesFallback() throws {
         XCTAssertEqual(
             MapDisplayStyle.allCases,
-            [.standard, .simplified, .hybrid, .imagery]
+            [
+                .standard,
+                .simplified,
+                .hybrid,
+                .imagery,
+                .mapLibreNight,
+                .mapLibreLight,
+                .mapLibreContrast,
+                .mapLibrePastel,
+            ]
         )
         for style in MapDisplayStyle.allCases {
             XCTAssertEqual(
@@ -3166,5 +3175,144 @@ final class TimeScaleTests: XCTestCase {
         )
 
         XCTAssertTrue(gate.allSatisfied)
+    }
+
+    func testMapHomeVectorStylesKeepOnlyStyledRoadMapLayers() throws {
+        XCTAssertEqual(
+            MapHomeVectorStyle.allCases,
+            [.night, .light, .contrast, .pastel]
+        )
+
+        let allowedLayerIDs = [
+            "background",
+            "water",
+            "landuse",
+            "building",
+            "road-casing",
+            "road",
+        ]
+
+        for style in MapHomeVectorStyle.allCases {
+            let data = try XCTUnwrap(style.json.data(using: .utf8))
+            let object = try XCTUnwrap(
+                JSONSerialization.jsonObject(with: data) as? [String: Any]
+            )
+            let sources = try XCTUnwrap(object["sources"] as? [String: Any])
+            let source = try XCTUnwrap(sources["openmaptiles"] as? [String: Any])
+            let layers = try XCTUnwrap(object["layers"] as? [[String: Any]])
+            let layerIDs = layers.compactMap { $0["id"] as? String }
+
+            XCTAssertEqual(object["version"] as? Int, 8, style.rawValue)
+            XCTAssertEqual(
+                source["url"] as? String,
+                MapHomeVectorStyle.sourceURL,
+                style.rawValue
+            )
+            XCTAssertFalse(
+                (source["attribution"] as? String)?.isEmpty ?? true,
+                style.rawValue
+            )
+            XCTAssertEqual(layerIDs, allowedLayerIDs, style.rawValue)
+            XCTAssertFalse(
+                layers.contains { $0["type"] as? String == "symbol" },
+                style.rawValue
+            )
+
+            let background = try XCTUnwrap(
+                layers.first { $0["id"] as? String == "background" }?["paint"]
+                    as? [String: Any]
+            )
+            let building = try XCTUnwrap(
+                layers.first { $0["id"] as? String == "building" }?["paint"]
+                    as? [String: Any]
+            )
+            let road = try XCTUnwrap(
+                layers.first { $0["id"] as? String == "road" }?["paint"]
+                    as? [String: Any]
+            )
+
+            XCTAssertEqual(
+                background["background-color"] as? String,
+                style.backgroundHex,
+                style.rawValue
+            )
+            XCTAssertEqual(
+                building["fill-color"] as? String,
+                style.buildingHex,
+                style.rawValue
+            )
+            XCTAssertEqual(
+                road["line-color"] as? String,
+                style.roadHex,
+                style.rawValue
+            )
+        }
+
+        XCTAssertEqual(MapHomeVectorStyle.routeHex, "#FFD84D")
+    }
+
+    func testMapDisplayStylesMapToTheirVectorStyleOrNilForMapKit() {
+        XCTAssertEqual(
+            MapDisplayStyle.mapLibreNight.mapHomeVectorStyle,
+            .night
+        )
+        XCTAssertEqual(
+            MapDisplayStyle.mapLibreLight.mapHomeVectorStyle,
+            .light
+        )
+        XCTAssertEqual(
+            MapDisplayStyle.mapLibreContrast.mapHomeVectorStyle,
+            .contrast
+        )
+        XCTAssertEqual(
+            MapDisplayStyle.mapLibrePastel.mapHomeVectorStyle,
+            .pastel
+        )
+
+        for style in [
+            MapDisplayStyle.standard,
+            .simplified,
+            .hybrid,
+            .imagery,
+        ] {
+            XCTAssertNil(style.mapHomeVectorStyle)
+        }
+    }
+
+    func testMapHomeVectorBearingUsesCardinalDirections() {
+        let origin = CLLocationCoordinate2D(latitude: 0, longitude: 0)
+
+        XCTAssertEqual(
+            MapHomeVectorNavigationMath.bearing(
+                from: origin,
+                to: CLLocationCoordinate2D(latitude: 1, longitude: 0)
+            ),
+            0,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            MapHomeVectorNavigationMath.bearing(
+                from: origin,
+                to: CLLocationCoordinate2D(latitude: 0, longitude: 1)
+            ),
+            90,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            MapHomeVectorNavigationMath.bearing(
+                from: origin,
+                to: CLLocationCoordinate2D(latitude: -1, longitude: 0)
+            ),
+            180,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(
+            MapHomeVectorNavigationMath.bearing(
+                from: origin,
+                to: CLLocationCoordinate2D(latitude: 0, longitude: -1)
+            ),
+            270,
+            accuracy: 0.001
+        )
     }
 }
