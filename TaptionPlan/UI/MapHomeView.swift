@@ -1023,8 +1023,11 @@ struct MapHomeView: View {
     @State private var selectedSearchPin: MapHomeSearchResult?
     @State private var isSearchPinMenuPresented = false
     @State private var selectedUserLocation: MapHomeUserLocationSelection?
+    @State private var selectedTransitBoardingCandidate: TransitBoardingCandidate?
     @State private var pendingUserLocationSelection: MapHomeUserLocationSelection?
     @State private var mapSearchTask: Task<Void, Never>?
+    @State private var transitPOIRefreshTask: Task<Void, Never>?
+    @State private var nearbyTransitPlaces: [TransitBoardingPlace] = []
     @State private var mapSearchCompleter = MapHomeSearchCompleter()
     @State private var mapSearchRequestID = UUID()
     @FocusState private var isMapSearchFocused: Bool
@@ -1371,6 +1374,15 @@ struct MapHomeView: View {
         .sheet(item: $selectedUserLocation) { selection in
             userLocationSheet(for: selection)
         }
+        .sheet(item: $selectedTransitBoardingCandidate) { candidate in
+            MapHomeTransitBoardingCandidateSheet(
+                model: model,
+                candidate: candidate,
+                language: language
+            )
+            .presentationDetents([.height(270)])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(
             isPresented: $isSearchPinMenuPresented,
             onDismiss: {
@@ -1444,6 +1456,8 @@ struct MapHomeView: View {
             expectedRouteRefreshTask = nil
             liveRouteProjectionRefreshTask?.cancel()
             liveRouteProjectionRefreshTask = nil
+            transitPOIRefreshTask?.cancel()
+            transitPOIRefreshTask = nil
             mapSearchCompleter.clear()
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
@@ -1490,6 +1504,7 @@ struct MapHomeView: View {
                 model.selectedDate
             ) else { return }
             scheduleLiveRouteProjectionRefresh()
+            scheduleTransitPOIRefresh()
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
@@ -1527,6 +1542,7 @@ struct MapHomeView: View {
                 cachedTemporaryLocations = []
                 expectedRouteOverlays = []
                 historicalPlaybackPoint = nil
+                nearbyTransitPlaces = []
                 prepareRouteProjectionReadings()
                 refreshRouteProjection()
                 refreshHistoricalPlaybackPoint()
@@ -1565,6 +1581,7 @@ struct MapHomeView: View {
         }
         .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
             scheduleLiveRouteProjectionRefresh()
+            scheduleTransitPOIRefresh()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
@@ -1820,6 +1837,34 @@ struct MapHomeView: View {
                         language.text(
                             place.name + " 사용자 위치 메뉴",
                             place.name + " user location menu"
+                        )
+                    )
+                }
+            }
+
+            ForEach(transitBoardingCandidates) { candidate in
+                Annotation(
+                    "",
+                    coordinate: CLLocationCoordinate2D(
+                        latitude: candidate.point.latitude,
+                        longitude: candidate.point.longitude
+                    ),
+                    anchor: .bottom
+                ) {
+                    Button {
+                        selectedTransitBoardingCandidate = candidate
+                    } label: {
+                        MapHomeTransitBoardingCandidatePin(
+                            name: candidate.name,
+                            kind: candidate.kind
+                        )
+                        .fixedSize()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(
+                        language.text(
+                            "\(candidate.name) \(candidate.kind.title) 탑승 확인",
+                            "Confirm boarding at \(candidate.name) \(candidate.kind.englishTitle)"
                         )
                     )
                 }
@@ -2086,6 +2131,15 @@ struct MapHomeView: View {
                 coordinate: $0.coordinate
             )
         }
+        markers += transitBoardingCandidates.map {
+            MapHomeVectorMarker(
+                id: vectorBoardingCandidateMarkerID($0.id),
+                coordinate: CLLocationCoordinate2D(
+                    latitude: $0.point.latitude,
+                    longitude: $0.point.longitude
+                )
+            )
+        }
         if let displayedLocationCoordinate {
             markers.append(
                 MapHomeVectorMarker(
@@ -2205,6 +2259,31 @@ struct MapHomeView: View {
                 }
             }
 
+            ForEach(transitBoardingCandidates) { candidate in
+                if let point = vectorPoint(
+                    for: vectorBoardingCandidateMarkerID(candidate.id)
+                ) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
+                        Button {
+                            selectedTransitBoardingCandidate = candidate
+                        } label: {
+                            MapHomeTransitBoardingCandidatePin(
+                                name: candidate.name,
+                                kind: candidate.kind
+                            )
+                            .fixedSize()
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            language.text(
+                                "\(candidate.name) \(candidate.kind.title) 탑승 확인",
+                                "Confirm boarding at \(candidate.name) \(candidate.kind.englishTitle)"
+                            )
+                        )
+                    }
+                }
+            }
+
             if selectedTimelineMinute != nil,
                let point = vectorPoint(for: vectorDisplayedMarkerID) {
                 MapHomeVectorPlayerMarker(
@@ -2276,6 +2355,10 @@ struct MapHomeView: View {
         "transit-\(id.uuidString)"
     }
 
+    private func vectorBoardingCandidateMarkerID(_ id: String) -> String {
+        "boarding-candidate-\(id)"
+    }
+
     private func vectorPoint(for id: String) -> CGPoint? {
         vectorMapViewport?.markerPoints[id]
     }
@@ -2322,7 +2405,8 @@ struct MapHomeView: View {
              .mapLibreNight,
              .mapLibreLight,
              .mapLibreContrast,
-             .mapLibrePastel:
+             .mapLibrePastel,
+             .mapLibreCasual:
             .standard(
                 elevation: .flat,
                 emphasis: .muted,
@@ -2601,7 +2685,7 @@ struct MapHomeView: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel(
-            language.text("지도 스타일 변경", "Change map style")
+            language.text("지도 제공자·스타일 변경", "Change map provider and style")
         )
     }
 
@@ -2615,6 +2699,7 @@ struct MapHomeView: View {
         case .mapLibreLight: language.text("벡터 밝은 지도", "Vector Light")
         case .mapLibreContrast: language.text("벡터 고대비", "Vector Contrast")
         case .mapLibrePastel: language.text("벡터 파스텔", "Vector Pastel")
+        case .mapLibreCasual: language.text("벡터 캐주얼", "Vector Casual")
         }
     }
 
@@ -2628,6 +2713,7 @@ struct MapHomeView: View {
         case .mapLibreLight: "sun.max.fill"
         case .mapLibreContrast: "circle.lefthalf.filled"
         case .mapLibrePastel: "paintpalette.fill"
+        case .mapLibreCasual: "sparkles"
         }
     }
 
@@ -3768,7 +3854,7 @@ struct MapHomeView: View {
                     Text(location.name)
                         .font(.system(size: 12.5, weight: .semibold, design: .rounded))
                         .lineLimit(1)
-                    Text(language.text(location.kind.title, location.kind == .subwayStation ? "Subway station" : "Bus stop"))
+                    Text(language.text(location.kind.title, location.kind.englishTitle))
                         .font(.system(size: 9.5, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
@@ -4375,6 +4461,28 @@ struct MapHomeView: View {
         }
     }
 
+    private var transitBoardingReadings: [SensorReading] {
+        var seen = Set<UUID>()
+        return (
+            routeReadings
+                + model.liveRouteState.readings
+                + (model.latestSensorReading.map { [$0] } ?? [])
+        )
+        .filter { seen.insert($0.id).inserted }
+        .sorted { $0.timestamp < $1.timestamp }
+    }
+
+    private var transitBoardingCandidates: [TransitBoardingCandidate] {
+        TransitBoardingCandidateEngine.candidates(
+            readings: transitBoardingReadings,
+            registeredLocations: model.settings.userTransitLocations,
+            nearbyPlaces: nearbyTransitPlaces,
+            travel: model.snapshot.travel,
+            decisions: model.settings.transitBoardingDecisions,
+            through: routeOverlayCutoff
+        )
+    }
+
     private var currentCoordinate: CLLocationCoordinate2D? {
         let readings = [model.latestSensorReading, model.liveRouteState.readings.last]
             .compactMap { $0 }
@@ -4844,6 +4952,7 @@ struct MapHomeView: View {
         if merged != routeReadings {
             routeReadings = merged
         }
+        scheduleTransitPOIRefresh()
         scheduleExpectedRouteRefresh()
         guard !isTimelineInteractionActive else {
             routeDocumentProjectionGate.deferRefresh(preparingReadings: true)
@@ -4861,6 +4970,28 @@ struct MapHomeView: View {
             }
         } else {
             focusMapIfNeeded()
+        }
+    }
+
+    private func scheduleTransitPOIRefresh() {
+        guard model.isBootstrapped else { return }
+        let selectedDate = model.selectedDate
+        transitPOIRefreshTask?.cancel()
+        transitPOIRefreshTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 300_000_000)
+            } catch {
+                return
+            }
+            let places = await AppleTransitBoardingPOIResolver.shared.resolving(
+                readings: transitBoardingReadings
+            )
+            guard !Task.isCancelled,
+                  Calendar.autoupdatingCurrent.isDate(
+                      selectedDate,
+                      inSameDayAs: model.selectedDate
+                  ) else { return }
+            nearbyTransitPlaces = places
         }
     }
 
@@ -8281,6 +8412,25 @@ private struct MapHomeTransitPlacePin: View {
     }
 }
 
+private struct MapHomeTransitBoardingCandidatePin: View {
+    let name: String
+    let kind: UserTransitLocationKind
+
+    var body: some View {
+        VStack(spacing: 4) {
+            MapHomeMarkerLabel(title: name, color: Color.tpReferenceGold)
+            Text("?")
+                .font(.system(size: 16, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(Color.tpReferenceGold, in: Circle())
+                .overlay { Circle().stroke(.white, lineWidth: 1.5) }
+                .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+        }
+        .accessibilityLabel("\(name), \(kind.title) 탑승 확인")
+    }
+}
+
 private struct MapHomeProjectedAnnotation<Content: View>: View {
     let point: CGPoint
     let anchor: UnitPoint
@@ -8764,6 +8914,83 @@ private struct MapHomeSearchResult: Identifiable {
     let coordinate: CLLocationCoordinate2D
 }
 
+private struct MapHomeTransitBoardingCandidateSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Bindable var model: AppModel
+    let candidate: TransitBoardingCandidate
+    let language: MapHomeLanguage
+
+    private var dwellText: String {
+        let minutes = max(3, Int((candidate.dwellDuration / 60).rounded(.down)))
+        return language.text("\(minutes)분 체류 후보", "Stayed \(minutes) minutes")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Image(systemName: candidate.kind.systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.tpReferenceGold)
+                    .frame(width: 38, height: 38)
+                    .background(
+                        Color.tpReferenceGold.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    )
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(candidate.name)
+                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                    Text(
+                        language.text(
+                            "\(candidate.kind.title) · \(dwellText)",
+                            "\(candidate.kind.englishTitle) · \(dwellText)"
+                        )
+                    )
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            Button {
+                model.confirmTransitBoarding(candidate)
+                dismiss()
+            } label: {
+                Label(
+                    language.text(
+                        "\(MovementPresentation.title(for: candidate.mode)) 탑승",
+                        "Board \(MovementPresentation.englishTitle(for: candidate.mode))"
+                    ),
+                    systemImage: candidate.mode == .subway
+                        ? "tram.fill"
+                        : candidate.mode == .bus
+                            ? "bus.fill"
+                            : MovementPresentation.symbol(for: candidate.mode)
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.tpReferenceBlue)
+
+            Button(role: .destructive) {
+                model.deleteTransitBoardingCandidate(candidate)
+                dismiss()
+            } label: {
+                Label(
+                    language.text("이 후보 삭제", "Delete this candidate"),
+                    systemImage: "trash"
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.bordered)
+
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .background(Color.tpSurface)
+    }
+}
+
 private enum MapHomeUserLocationSelection: Identifiable, Hashable {
     case frequentPlace(UUID)
     case transit(UUID)
@@ -8813,7 +9040,7 @@ private struct MapHomeUserLocationActionSheet: View {
         if let transitLocation {
             return language.text(
                 transitLocation.kind.title,
-                transitLocation.kind == .subwayStation ? "Subway station" : "Bus stop"
+                transitLocation.kind.englishTitle
             )
         }
         if frequentPlace?.kind == .restaurant {
@@ -9028,7 +9255,7 @@ private struct MapHomeSearchPinLocationSheet: View {
                             Text(
                                 language.text(
                                     kind.title,
-                                    kind == .subwayStation ? "Subway station" : "Bus stop"
+                                    kind.englishTitle
                                 )
                             )
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -9233,8 +9460,8 @@ private struct MapHomeTransitLocationsSheet: View {
                     .foregroundStyle(Color.tpInk)
                 Text(
                     language.text(
-                        "지하철역과 버스정류장을 지도에서 관리합니다.",
-                        "Manage subway stations and bus stops on the map."
+                        "지하철역·버스정류장·기차역·공항·항구를 지도에서 관리합니다.",
+                        "Manage subway stations, bus stops, train stations, airports, and harbors on the map."
                     )
                 )
                 .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -9260,7 +9487,7 @@ private struct MapHomeTransitLocationsSheet: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(Color.tpReferenceBlue)
                     TextField(
-                        language.text("역·정류장 검색", "Search station or stop"),
+                        language.text("역·정류장·공항·항구 검색", "Search transit location"),
                         text: $searchText
                     )
                     .focused($isTransitSearchFocused)
@@ -9371,7 +9598,7 @@ private struct MapHomeTransitLocationsSheet: View {
                     Text(
                         language.text(
                             value.title,
-                            value == .subwayStation ? "Subway station" : "Bus stop"
+                            value.englishTitle
                         )
                     )
                     .tag(value)
@@ -9432,8 +9659,8 @@ private struct MapHomeTransitLocationsSheet: View {
             if model.settings.userTransitLocations.isEmpty {
                 Text(
                     language.text(
-                        "등록된 지하철역이나 버스정류장이 없습니다.",
-                        "No subway stations or bus stops are saved."
+                        "등록된 교통 위치가 없습니다.",
+                        "No transit locations are saved."
                     )
                 )
                 .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -9471,9 +9698,7 @@ private struct MapHomeTransitLocationsSheet: View {
                                 Text(
                                     language.text(
                                         location.kind.title,
-                                        location.kind == .subwayStation
-                                            ? "Subway station"
-                                            : "Bus stop"
+                                        location.kind.englishTitle
                                     )
                                 )
                                 .font(.system(size: 11, weight: .medium, design: .rounded))

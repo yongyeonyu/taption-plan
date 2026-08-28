@@ -18230,6 +18230,215 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(manifest.byteCount, "diagnostics".utf8.count)
     }
 
+    func testTransitBoardingSupportsFivePlaceKindsAndRequiresThreeMinutes() {
+        let start = makeDate(2026, 8, 28, 9)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let expected: [(UserTransitLocationKind, TravelMode)] = [
+            (.subwayStation, .subway),
+            (.busStop, .bus),
+            (.trainStation, .train),
+            (.airport, .airplane),
+            (.harbor, .ship),
+        ]
+
+        for (kind, mode) in expected {
+            let location = UserTransitLocation(
+                name: kind.title,
+                kind: kind,
+                point: point
+            )
+            let candidates = TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(at: start, point: point, duration: 180),
+                registeredLocations: [location]
+            )
+
+            XCTAssertEqual(candidates.count, 1, kind.rawValue)
+            XCTAssertEqual(candidates.first?.mode, mode, kind.rawValue)
+            XCTAssertEqual(candidates.first?.source, .registered, kind.rawValue)
+        }
+
+        let shortStay = UserTransitLocation(
+            name: "짧은 체류",
+            kind: .subwayStation,
+            point: point
+        )
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(at: start, point: point, duration: 179),
+                registeredLocations: [shortStay]
+            ).isEmpty
+        )
+    }
+
+    func testTransitBoardingUsesMapKitPlaceAndRejectsApproximateOrInterruptedStay() {
+        let start = makeDate(2026, 8, 28, 10)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let place = TransitBoardingPlace(
+            mapKitName: "서울역",
+            kind: .trainStation,
+            point: point
+        )
+
+        let mapKitCandidate = TransitBoardingCandidateEngine.candidates(
+            readings: transitReadings(at: start, point: point, duration: 180),
+            registeredLocations: [],
+            nearbyPlaces: [place]
+        )
+        XCTAssertEqual(mapKitCandidate.first?.source, .mapKit)
+        XCTAssertEqual(mapKitCandidate.first?.name, "서울역")
+
+        let approximate = transitReadings(
+            at: start,
+            point: point,
+            duration: 180,
+            locationFixQuality: .approximate
+        )
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: approximate,
+                registeredLocations: [],
+                nearbyPlaces: [place]
+            ).isEmpty
+        )
+
+        let outside = GeoPoint(
+            latitude: 37.52,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let interrupted = [
+            transitReading(at: start, point: point),
+            transitReading(at: start.addingTimeInterval(60), point: outside),
+            transitReading(at: start.addingTimeInterval(180), point: point),
+        ]
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: interrupted,
+                registeredLocations: [],
+                nearbyPlaces: [place]
+            ).isEmpty
+        )
+    }
+
+    func testTransitBoardingDecisionDeletesCandidateAndConfirmsTravel() throws {
+        let start = makeDate(2026, 8, 28, 11)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let location = UserTransitLocation(
+            name: "서울역",
+            kind: .trainStation,
+            point: point
+        )
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start.addingTimeInterval(180),
+                end: start.addingTimeInterval(20 * 60)
+            ),
+            distanceMeters: 1_000,
+            confidence: .low,
+            evidence: ["자동 추정"]
+        )
+        let candidate = try XCTUnwrap(
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(at: start, point: point, duration: 180),
+                registeredLocations: [location],
+                travel: [segment]
+            ).first
+        )
+
+        let deleted = TransitBoardingDecision(
+            candidateKey: candidate.id,
+            span: candidate.span,
+            mode: nil,
+            travelSegmentIDs: candidate.travelSegmentIDs,
+            updatedAt: start.addingTimeInterval(30 * 60)
+        )
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(at: start, point: point, duration: 180),
+                registeredLocations: [location],
+                travel: [segment],
+                decisions: [deleted]
+            ).isEmpty
+        )
+
+        let boarding = TransitBoardingDecision(
+            candidateKey: candidate.id,
+            span: candidate.span,
+            mode: .train,
+            travelSegmentIDs: candidate.travelSegmentIDs,
+            updatedAt: start.addingTimeInterval(30 * 60)
+        )
+        let applied = try XCTUnwrap(
+            TransitBoardingDecisionEngine.applying([boarding], to: [segment]).first
+        )
+        XCTAssertEqual(applied.mode, .train)
+        XCTAssertEqual(applied.confidence, .high)
+        XCTAssertTrue(applied.isConfirmed)
+        XCTAssertTrue(applied.evidence.contains("사용자 확인 · 기차 탑승"))
+
+        var settings = AppFeatureSettings.defaults
+        settings.transitBoardingDecisions = [deleted]
+        let restored = try JSONDecoder().decode(
+            AppFeatureSettings.self,
+            from: JSONEncoder().encode(settings)
+        )
+        XCTAssertEqual(restored.transitBoardingDecisions, [deleted])
+    }
+
+    private func transitReadings(
+        at start: Date,
+        point: GeoPoint,
+        duration: TimeInterval,
+        locationFixQuality: LocationFixQuality? = nil
+    ) -> [SensorReading] {
+        [
+            transitReading(
+                at: start,
+                point: point,
+                locationFixQuality: locationFixQuality
+            ),
+            transitReading(
+                at: start.addingTimeInterval(duration),
+                point: point,
+                locationFixQuality: locationFixQuality
+            ),
+        ]
+    }
+
+    private func transitReading(
+        at date: Date,
+        point: GeoPoint,
+        locationFixQuality: LocationFixQuality? = nil
+    ) -> SensorReading {
+        SensorReading(
+            timestamp: date,
+            point: point,
+            locationFixQuality: locationFixQuality,
+            gpsAvailable: true
+        )
+    }
+
     private func phaseOption(
         _ categoryID: String,
         title: String

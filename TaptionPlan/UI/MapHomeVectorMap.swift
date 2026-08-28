@@ -9,8 +9,10 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     case light
     case contrast
     case pastel
+    case casual
 
     static let sourceURL = "https://tiles.openfreemap.org/planet"
+    static let glyphsURL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf"
     static let routeHex = "#FFD84D"
 
     var backgroundHex: String {
@@ -19,6 +21,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .light: "#F7F6F4"
         case .contrast: "#030A11"
         case .pastel: "#FFF7F4"
+        case .casual: "#FFF8EC"
         }
     }
 
@@ -28,6 +31,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .light: "#DDEFF4"
         case .contrast: "#0E3546"
         case .pastel: "#DCEEFF"
+        case .casual: "#BFE8F0"
         }
     }
 
@@ -37,6 +41,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .light: "#E7EFE4"
         case .contrast: "#102B38"
         case .pastel: "#E5F3E4"
+        case .casual: "#DDF2D2"
         }
     }
 
@@ -46,6 +51,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .light: "#CBD5E1"
         case .contrast: "#A9B4BE"
         case .pastel: "#DCCFEB"
+        case .casual: "#F1D0B4"
         }
     }
 
@@ -54,6 +60,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .night: "#163C47"
         case .light, .pastel: "#FFFFFF"
         case .contrast: "#15262D"
+        case .casual: "#FFFDF7"
         }
     }
 
@@ -63,6 +70,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .light: "#73C9A6"
         case .contrast: "#7FFFE8"
         case .pastel: "#80CFC2"
+        case .casual: "#F2A37F"
         }
     }
 
@@ -72,7 +80,186 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .light: "Taption Vector Light"
         case .contrast: "Taption Vector Contrast"
         case .pastel: "Taption Vector Pastel"
+        case .casual: "Taption Vector Casual"
         }
+    }
+
+    private var casualLandLayersJSON: String {
+        guard self == .casual else { return "" }
+        return #"""
+        ,
+        {
+          "id": "casual-landcover",
+          "type": "fill",
+          "source": "openmaptiles",
+          "source-layer": "landcover",
+          "filter": ["in", "class", "wood", "grass", "scrub"],
+          "paint": {
+            "fill-color": "#CDECCF",
+            "fill-opacity": 0.72
+          }
+        },
+        {
+          "id": "casual-park",
+          "type": "fill",
+          "source": "openmaptiles",
+          "source-layer": "park",
+          "paint": {
+            "fill-color": "#B8E5B1",
+            "fill-opacity": 0.84
+          }
+        }
+        """#
+    }
+
+    private var casualBuildingLayersJSON: String {
+        guard self == .casual else { return "" }
+        return #"""
+        ,
+        {
+          "id": "casual-building-outline",
+          "type": "line",
+          "source": "openmaptiles",
+          "source-layer": "building",
+          "minzoom": 13,
+          "layout": { "line-cap": "round", "line-join": "round" },
+          "paint": {
+            "line-color": "#E5B48D",
+            "line-opacity": 0.46,
+            "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.35, 17, 1.2]
+          }
+        }
+        """#
+    }
+
+    private var casualOverlayLayersJSON: String {
+        guard self == .casual else { return "" }
+        return #"""
+        ,
+        {
+          "id": "casual-waterway",
+          "type": "line",
+          "source": "openmaptiles",
+          "source-layer": "waterway",
+          "minzoom": 8,
+          "layout": { "line-cap": "round", "line-join": "round" },
+          "paint": {
+            "line-color": "#86CFE2",
+            "line-opacity": 0.78,
+            "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 2.8]
+          }
+        },
+        {
+          "id": "casual-place-marker",
+          "type": "circle",
+          "source": "openmaptiles",
+          "source-layer": "place",
+          "minzoom": 5,
+          "filter": ["in", "class", "city", "town", "village"],
+          "paint": {
+            "circle-color": "#F28FA9",
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 2.4, 10, 3.8, 14, 5.5],
+            "circle-stroke-color": "#FFF8EC",
+            "circle-stroke-width": 1.5
+          }
+        },
+        {
+          "id": "casual-poi-marker",
+          "type": "circle",
+          "source": "openmaptiles",
+          "source-layer": "poi",
+          "minzoom": 13,
+          "filter": ["in", "class", "cafe", "restaurant", "bakery", "shop", "supermarket"],
+          "paint": {
+            "circle-color": "#B965C8",
+            "circle-opacity": 0.68,
+            "circle-radius": 3.2,
+            "circle-stroke-color": "#FFF8EC",
+            "circle-stroke-width": 1
+          }
+        },
+        {
+          "id": "casual-place-label",
+          "type": "symbol",
+          "source": "openmaptiles",
+          "source-layer": "place",
+          "minzoom": 5,
+          "filter": ["in", "class", "city", "town", "village", "suburb", "neighbourhood"],
+          "layout": {
+            "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10, 10, 13, 14, 17],
+            "text-max-width": 8,
+            "text-padding": 4,
+            "text-allow-overlap": false,
+            "text-ignore-placement": false
+          },
+          "paint": {
+            "text-color": "#6B5B53",
+            "text-halo-color": "#FFF8EC",
+            "text-halo-width": 2.2,
+            "text-halo-blur": 0.15
+          }
+        },
+        {
+          "id": "casual-road-label",
+          "type": "symbol",
+          "source": "openmaptiles",
+          "source-layer": "transportation_name",
+          "minzoom": 12,
+          "layout": {
+            "symbol-placement": "line",
+            "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": ["interpolate", ["linear"], ["zoom"], 12, 9, 16, 12],
+            "text-padding": 3,
+            "text-max-angle": 30,
+            "text-keep-upright": true
+          },
+          "paint": {
+            "text-color": "#8A6C5C",
+            "text-halo-color": "#FFF8EC",
+            "text-halo-width": 1.8,
+            "text-halo-blur": 0.1
+          }
+        },
+        {
+          "id": "casual-water-label",
+          "type": "symbol",
+          "source": "openmaptiles",
+          "source-layer": "water_name",
+          "minzoom": 10,
+          "layout": {
+            "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 14],
+            "text-padding": 4
+          },
+          "paint": {
+            "text-color": "#5B93A2",
+            "text-halo-color": "#BFE8F0",
+            "text-halo-width": 1.8
+          }
+        },
+        {
+          "id": "casual-park-label",
+          "type": "symbol",
+          "source": "openmaptiles",
+          "source-layer": "park",
+          "minzoom": 12,
+          "layout": {
+            "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": ["interpolate", ["linear"], ["zoom"], 12, 9, 15, 12],
+            "text-padding": 4
+          },
+          "paint": {
+            "text-color": "#5A8F65",
+            "text-halo-color": "#B8E5B1",
+            "text-halo-width": 1.6
+          }
+        }
+        """#
     }
 
     var json: String {
@@ -87,6 +274,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
           "attribution": "<a href=\"https://openfreemap.org/\">OpenFreeMap</a> <a href=\"https://www.openmaptiles.org/\">© OpenMapTiles</a> Data from <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>"
         }
       },
+      "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
       "layers": [
         {
           "id": "background",
@@ -109,7 +297,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "fill-color": "\#(landuseHex)",
             "fill-opacity": 0.55
           }
-        },
+        }\#(casualLandLayersJSON)
+        ,
         {
           "id": "building",
           "type": "fill",
@@ -120,7 +309,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "fill-color": "\#(buildingHex)",
             "fill-opacity": ["interpolate", ["linear"], ["zoom"], 12, 0.42, 16, 0.78]
           }
-        },
+        }\#(casualBuildingLayersJSON)
+        ,
         {
           "id": "road-casing",
           "type": "line",
@@ -146,7 +336,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             "line-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.58, 12, 0.82, 17, 0.96],
             "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.3, 11, 1.0, 16, 3.5, 20, 10]
           }
-        }
+        }\#(casualOverlayLayersJSON)
       ]
     }
     """#
@@ -160,6 +350,7 @@ extension MapDisplayStyle {
         case .mapLibreLight: .light
         case .mapLibreContrast: .contrast
         case .mapLibrePastel: .pastel
+        case .mapLibreCasual: .casual
         case .standard, .simplified, .hybrid, .imagery: nil
         }
     }

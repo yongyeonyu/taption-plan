@@ -2606,7 +2606,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertTrue(following.showsTrackingDot)
     }
 
-    func testMapDisplayStylePersistsAndMissingValueUsesStandard() throws {
+    func testMapDisplayStylePersistsAndMissingValueUsesDefault() throws {
         var settings = AppFeatureSettings.defaults
         settings.mapDisplayStyle = .hybrid
         XCTAssertEqual(
@@ -2628,7 +2628,7 @@ final class TimeScaleTests: XCTestCase {
                 AppFeatureSettings.self,
                 from: JSONSerialization.data(withJSONObject: object)
             ).mapDisplayStyle,
-            .standard
+            .mapLibreCasual
         )
     }
 
@@ -2644,6 +2644,7 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreLight,
                 .mapLibreContrast,
                 .mapLibrePastel,
+                .mapLibreCasual,
             ]
         )
         for style in MapDisplayStyle.allCases {
@@ -3180,10 +3181,10 @@ final class TimeScaleTests: XCTestCase {
     func testMapHomeVectorStylesKeepOnlyStyledRoadMapLayers() throws {
         XCTAssertEqual(
             MapHomeVectorStyle.allCases,
-            [.night, .light, .contrast, .pastel]
+            [.night, .light, .contrast, .pastel, .casual]
         )
 
-        let allowedLayerIDs = [
+        let baseLayerIDs = [
             "background",
             "water",
             "landuse",
@@ -3201,6 +3202,26 @@ final class TimeScaleTests: XCTestCase {
             let source = try XCTUnwrap(sources["openmaptiles"] as? [String: Any])
             let layers = try XCTUnwrap(object["layers"] as? [[String: Any]])
             let layerIDs = layers.compactMap { $0["id"] as? String }
+            let expectedLayerIDs = style == .casual
+                ? [
+                    "background",
+                    "water",
+                    "landuse",
+                    "casual-landcover",
+                    "casual-park",
+                    "building",
+                    "casual-building-outline",
+                    "road-casing",
+                    "road",
+                    "casual-waterway",
+                    "casual-place-marker",
+                    "casual-poi-marker",
+                    "casual-place-label",
+                    "casual-road-label",
+                    "casual-water-label",
+                    "casual-park-label",
+                ]
+                : baseLayerIDs
 
             XCTAssertEqual(object["version"] as? Int, 8, style.rawValue)
             XCTAssertEqual(
@@ -3212,9 +3233,15 @@ final class TimeScaleTests: XCTestCase {
                 (source["attribution"] as? String)?.isEmpty ?? true,
                 style.rawValue
             )
-            XCTAssertEqual(layerIDs, allowedLayerIDs, style.rawValue)
-            XCTAssertFalse(
+            XCTAssertEqual(
+                object["glyphs"] as? String,
+                MapHomeVectorStyle.glyphsURL,
+                style.rawValue
+            )
+            XCTAssertEqual(layerIDs, expectedLayerIDs, style.rawValue)
+            XCTAssertEqual(
                 layers.contains { $0["type"] as? String == "symbol" },
+                style == .casual,
                 style.rawValue
             )
 
@@ -3268,6 +3295,10 @@ final class TimeScaleTests: XCTestCase {
             MapDisplayStyle.mapLibrePastel.mapHomeVectorStyle,
             .pastel
         )
+        XCTAssertEqual(
+            MapDisplayStyle.mapLibreCasual.mapHomeVectorStyle,
+            .casual
+        )
 
         for style in [
             MapDisplayStyle.standard,
@@ -3277,6 +3308,33 @@ final class TimeScaleTests: XCTestCase {
         ] {
             XCTAssertNil(style.mapHomeVectorStyle)
         }
+    }
+
+    func testMapDisplayProvidersKeepAppleAndOpenFreeMapStylesSeparate() {
+        XCTAssertEqual(
+            MapDisplayStyle.appleStyles,
+            [.standard, .simplified, .hybrid, .imagery]
+        )
+        XCTAssertEqual(
+            MapDisplayStyle.openFreeMapStyles,
+            [
+                .mapLibreCasual,
+                .mapLibrePastel,
+                .mapLibreLight,
+                .mapLibreNight,
+                .mapLibreContrast,
+            ]
+        )
+        XCTAssertEqual(MapDisplayStyle.standard.provider, .apple)
+        XCTAssertEqual(MapDisplayStyle.mapLibreCasual.provider, .openFreeMap)
+        XCTAssertEqual(
+            MapDisplayStyle.defaultStyle(for: .openFreeMap),
+            .mapLibreCasual
+        )
+        XCTAssertEqual(
+            MapDisplayStyle.defaultStyle(for: .apple),
+            .standard
+        )
     }
 
     func testMapHomeVectorBearingUsesCardinalDirections() {

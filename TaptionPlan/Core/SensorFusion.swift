@@ -2425,6 +2425,221 @@ struct PlaceDetectionEngine: Sendable {
     }
 }
 
+enum TransitBoardingCandidateEngine {
+    static let minimumDwell: TimeInterval = 3 * 60
+    static let maximumSampleGap: TimeInterval = 5 * 60
+
+    static func candidates(
+        readings: [SensorReading],
+        registeredLocations: [UserTransitLocation],
+        nearbyPlaces: [TransitBoardingPlace] = [],
+        travel: [TravelSegment] = [],
+        decisions: [TransitBoardingDecision] = [],
+        through: Date? = nil,
+        minimumDwell: TimeInterval = Self.minimumDwell,
+        maximumSampleGap: TimeInterval = Self.maximumSampleGap
+    ) -> [TransitBoardingCandidate] {
+        guard minimumDwell >= 0,
+              maximumSampleGap > 0 else { return [] }
+
+        let places = mergedPlaces(
+            registeredLocations: registeredLocations,
+            nearbyPlaces: nearbyPlaces
+        )
+        guard !places.isEmpty else { return [] }
+
+        let orderedReadings = uniqueReadings(readings)
+            .filter { reading in
+                guard let through else { return true }
+                return reading.timestamp <= through
+            }
+            .filter(isUsableReading)
+            .sorted { $0.timestamp < $1.timestamp }
+        guard !orderedReadings.isEmpty else { return [] }
+
+        let decidedKeys = Set(decisions.map(\.candidateKey))
+        var result: [TransitBoardingCandidate] = []
+        var seenKeys = Set<String>()
+
+        for place in places {
+            var groups: [[SensorReading]] = []
+            var current: [SensorReading] = []
+            for reading in orderedReadings {
+                guard let point = reading.point,
+                      distanceMeters(point, place.point) <= place.radiusMeters else {
+                    if !current.isEmpty {
+                        groups.append(current)
+                        current = []
+                    }
+                    continue
+                }
+                guard let last = current.last else {
+                    current = [reading]
+                    continue
+                }
+                let gap = reading.timestamp.timeIntervalSince(last.timestamp)
+                if gap > maximumSampleGap {
+                    groups.append(current)
+                    current = [reading]
+                } else {
+                    current.append(reading)
+                }
+            }
+            if !current.isEmpty { groups.append(current) }
+
+            for group in groups {
+                guard let first = group.first,
+                      let last = group.last,
+                      let point = representativePoint(in: group) else {
+                    continue
+                }
+                let span = TimeSpan(start: first.timestamp, end: last.timestamp)
+                guard span.duration >= minimumDwell else { continue }
+                let key = candidateKey(for: place, arrivingAt: first.timestamp)
+                guard decidedKeys.contains(key) == false,
+                      seenKeys.insert(key).inserted else { continue }
+                result.append(
+                    TransitBoardingCandidate(
+                        id: key,
+                        placeID: place.id,
+                        locationID: place.userLocationID,
+                        name: place.name,
+                        kind: place.kind,
+                        point: point,
+                        span: span,
+                        dwellDuration: span.duration,
+                        source: place.source,
+                        travelSegmentIDs: relatedTravelIDs(
+                            to: span,
+                            in: travel
+                        )
+                    )
+                )
+            }
+        }
+
+        return result.sorted { $0.span.start < $1.span.start }
+    }
+
+    static func candidateKey(
+        for place: TransitBoardingPlace,
+        arrivingAt date: Date
+    ) -> String {
+        let minute = Int(date.timeIntervalSince1970 / 60)
+        return "\(place.id)-\(minute)"
+    }
+
+    private static func mergedPlaces(
+        registeredLocations: [UserTransitLocation],
+        nearbyPlaces: [TransitBoardingPlace]
+    ) -> [TransitBoardingPlace] {
+        let registered = registeredLocations.map(TransitBoardingPlace.init(registered:))
+        let mapKitPlaces = nearbyPlaces.filter { place in
+            !registered.contains { saved in
+                saved.kind == place.kind
+                    && distanceMeters(saved.point, place.point)
+                        <= max(saved.radiusMeters, 100)
+            }
+        }
+        return registered + mapKitPlaces
+    }
+
+    private static func uniqueReadings(
+        _ readings: [SensorReading]
+    ) -> [SensorReading] {
+        var seen = Set<UUID>()
+        return readings.filter { seen.insert($0.id).inserted }
+    }
+
+    private static func isUsableReading(_ reading: SensorReading) -> Bool {
+        guard reading.gpsAvailable,
+              reading.locationFixQuality != .approximate,
+              let point = reading.point,
+              point.latitude.isFinite,
+              point.longitude.isFinite,
+              (-90...90).contains(point.latitude),
+              (-180...180).contains(point.longitude) else {
+            return false
+        }
+        return point.horizontalAccuracy <= 0 || point.horizontalAccuracy <= 200
+    }
+
+    private static func representativePoint(
+        in readings: [SensorReading]
+    ) -> GeoPoint? {
+        let points = readings.compactMap(\.point)
+        guard !points.isEmpty else { return nil }
+        let count = Double(points.count)
+        return GeoPoint(
+            latitude: points.map(\.latitude).reduce(0, +) / count,
+            longitude: points.map(\.longitude).reduce(0, +) / count,
+            altitude: points.map(\.altitude).reduce(0, +) / count,
+            horizontalAccuracy: points.map(\.horizontalAccuracy).reduce(0, +) / count,
+            verticalAccuracy: points.map(\.verticalAccuracy).reduce(0, +) / count
+        )
+    }
+
+    private static func relatedTravelIDs(
+        to span: TimeSpan,
+        in travel: [TravelSegment]
+    ) -> [UUID] {
+        let after = travel
+            .filter { segment in
+                let gap = segment.span.start.timeIntervalSince(span.end)
+                return gap >= -2 * 60 && gap <= 30 * 60
+            }
+            .sorted { $0.span.start < $1.span.start }
+        if !after.isEmpty { return after.map(\.id) }
+
+        let expanded = TimeSpan(
+            start: span.start.addingTimeInterval(-2 * 60),
+            end: span.end.addingTimeInterval(30 * 60)
+        )
+        return travel
+            .filter { $0.span.intersection(with: expanded) != nil }
+            .sorted { $0.span.start < $1.span.start }
+            .map(\.id)
+    }
+}
+
+enum TransitBoardingDecisionEngine {
+    static func applying(
+        _ decisions: [TransitBoardingDecision],
+        to segments: [TravelSegment]
+    ) -> [TravelSegment] {
+        let active = decisions.filter { $0.mode != nil }
+        guard !active.isEmpty else { return segments }
+
+        return segments.map { segment in
+            guard let decision = active
+                .filter({ matches(segment, decision: $0) })
+                .max(by: { $0.updatedAt < $1.updatedAt }),
+                  let mode = decision.mode else {
+                return segment
+            }
+            var value = segment
+            value.mode = mode
+            value.confidence = .high
+            value.isConfirmed = true
+            value.evidence.removeAll { $0.hasPrefix("사용자 확인") }
+            value.evidence.append(
+                "사용자 확인 · \(MovementPresentation.title(for: mode)) 탑승"
+            )
+            return value
+        }
+    }
+
+    private static func matches(
+        _ segment: TravelSegment,
+        decision: TransitBoardingDecision
+    ) -> Bool {
+        if decision.travelSegmentIDs.contains(segment.id) { return true }
+        let gapAfter = segment.span.start.timeIntervalSince(decision.span.end)
+        if (-2 * 60...30 * 60).contains(gapAfter) { return true }
+        return segment.span.intersection(with: decision.span) != nil
+    }
+}
+
 extension PlaceStay {
     var isWalkingLocation: Bool {
         placeKey.hasPrefix("walking:")

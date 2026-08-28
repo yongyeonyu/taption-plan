@@ -520,6 +520,21 @@ enum MovementPresentation {
         }
     }
 
+    static func englishTitle(for mode: TravelMode) -> String {
+        switch mode {
+        case .walking: "Walking"
+        case .running: "Running"
+        case .cycling: "Cycling"
+        case .bus: "Bus"
+        case .subway: "Subway"
+        case .taxi: "Taxi"
+        case .car: "Car"
+        case .train: "Train"
+        case .airplane: "Airplane"
+        case .ship: "Ship"
+        }
+    }
+
     static func title(for actual: ActualRecord) -> String {
         if let behavior = actual.behavior.flatMap(WatchBehaviorKind.init(rawValue:)),
            behavior.isMovement {
@@ -2013,11 +2028,27 @@ enum FrequentPlaceKind: String, Codable, CaseIterable, Sendable {
 enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable {
     case subwayStation
     case busStop
+    case trainStation
+    case airport
+    case harbor
 
     var title: String {
         switch self {
         case .subwayStation: "지하철역"
         case .busStop: "버스정류장"
+        case .trainStation: "기차역"
+        case .airport: "공항"
+        case .harbor: "항구"
+        }
+    }
+
+    var englishTitle: String {
+        switch self {
+        case .subwayStation: "Subway station"
+        case .busStop: "Bus stop"
+        case .trainStation: "Train station"
+        case .airport: "Airport"
+        case .harbor: "Harbor"
         }
     }
 
@@ -2025,6 +2056,39 @@ enum UserTransitLocationKind: String, Codable, CaseIterable, Hashable, Sendable 
         switch self {
         case .subwayStation: "tram.fill"
         case .busStop: "bus.fill"
+        case .trainStation: "train.side.front.car"
+        case .airport: "airplane"
+        case .harbor: "ferry.fill"
+        }
+    }
+
+    var boardingMode: TravelMode {
+        switch self {
+        case .subwayStation: .subway
+        case .busStop: .bus
+        case .trainStation: .train
+        case .airport: .airplane
+        case .harbor: .ship
+        }
+    }
+
+    var mapKitQueries: [String] {
+        switch self {
+        case .subwayStation: ["지하철역", "subway station"]
+        case .busStop: ["버스정류장", "bus stop"]
+        case .trainStation: ["기차역", "train station"]
+        case .airport: ["공항", "airport"]
+        case .harbor: ["항구", "여객터미널", "harbor"]
+        }
+    }
+
+    var mapKitSearchRadiusMeters: Double {
+        switch self {
+        case .subwayStation: 450
+        case .busStop: 140
+        case .trainStation: 500
+        case .airport: 1_200
+        case .harbor: 600
         }
     }
 }
@@ -2054,6 +2118,92 @@ struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
         self.floor = floor
         self.radiusMeters = radiusMeters
         self.createdAt = createdAt
+    }
+}
+
+enum TransitBoardingPlaceSource: String, Codable, Hashable, Sendable {
+    case registered
+    case mapKit
+}
+
+struct TransitBoardingPlace: Hashable, Sendable {
+    let id: String
+    let name: String
+    let kind: UserTransitLocationKind
+    let point: GeoPoint
+    let radiusMeters: Double
+    let source: TransitBoardingPlaceSource
+    let userLocationID: UUID?
+
+    init(registered location: UserTransitLocation) {
+        id = "registered-\(location.id.uuidString)"
+        name = location.name
+        kind = location.kind
+        point = location.point
+        radiusMeters = max(1, location.radiusMeters)
+        source = .registered
+        userLocationID = location.id
+    }
+
+    init(
+        mapKitName name: String,
+        kind: UserTransitLocationKind,
+        point: GeoPoint
+    ) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let coordinateKey = String(
+            format: "%.4f,%.4f",
+            point.latitude,
+            point.longitude
+        )
+        id = "mapkit-\(kind.rawValue)-\(cleanName.lowercased())-\(coordinateKey)"
+        self.name = cleanName
+        self.kind = kind
+        self.point = point
+        radiusMeters = kind.mapKitSearchRadiusMeters
+        source = .mapKit
+        userLocationID = nil
+    }
+}
+
+struct TransitBoardingCandidate: Identifiable, Hashable, Sendable {
+    let id: String
+    let placeID: String
+    let locationID: UUID?
+    let name: String
+    let kind: UserTransitLocationKind
+    let point: GeoPoint
+    let span: TimeSpan
+    let dwellDuration: TimeInterval
+    let source: TransitBoardingPlaceSource
+    let travelSegmentIDs: [UUID]
+
+    var mode: TravelMode {
+        kind.boardingMode
+    }
+}
+
+struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
+    var candidateKey: String
+    var span: TimeSpan
+    var mode: TravelMode?
+    var travelSegmentIDs: [UUID]
+    var updatedAt: Date
+
+    var id: String { candidateKey }
+
+    init(
+        candidateKey: String,
+        span: TimeSpan,
+        mode: TravelMode?,
+        travelSegmentIDs: [UUID] = [],
+        updatedAt: Date = .now
+    ) {
+        self.candidateKey = candidateKey
+        self.span = span
+        self.mode = mode
+        self.travelSegmentIDs = travelSegmentIDs
+        self.updatedAt = updatedAt
     }
 }
 
@@ -3363,6 +3513,11 @@ struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
     var hex: String
 }
 
+enum MapDisplayProvider: CaseIterable, Hashable, Sendable {
+    case apple
+    case openFreeMap
+}
+
 enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case standard
     case simplified
@@ -3372,10 +3527,55 @@ enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case mapLibreLight
     case mapLibreContrast
     case mapLibrePastel
+    case mapLibreCasual
 
     init(from decoder: Decoder) throws {
         let value = try decoder.singleValueContainer().decode(String.self)
         self = Self(rawValue: value) ?? .standard
+    }
+}
+
+extension MapDisplayStyle {
+    static let appleStyles: [Self] = [
+        .standard,
+        .simplified,
+        .hybrid,
+        .imagery,
+    ]
+
+    static let openFreeMapStyles: [Self] = [
+        .mapLibreCasual,
+        .mapLibrePastel,
+        .mapLibreLight,
+        .mapLibreNight,
+        .mapLibreContrast,
+    ]
+
+    var provider: MapDisplayProvider {
+        switch self {
+        case .standard, .simplified, .hybrid, .imagery:
+            .apple
+        case .mapLibreNight,
+             .mapLibreLight,
+             .mapLibreContrast,
+             .mapLibrePastel,
+             .mapLibreCasual:
+            .openFreeMap
+        }
+    }
+
+    static func styles(for provider: MapDisplayProvider) -> [Self] {
+        switch provider {
+        case .apple: appleStyles
+        case .openFreeMap: openFreeMapStyles
+        }
+    }
+
+    static func defaultStyle(for provider: MapDisplayProvider) -> Self {
+        switch provider {
+        case .apple: .standard
+        case .openFreeMap: .mapLibreCasual
+        }
     }
 }
 
@@ -3432,6 +3632,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var floorCalibrationHistory: [FloorCalibrationEvent]
     var frequentPlaces: [FrequentPlace]
     var userTransitLocations: [UserTransitLocation]
+    /// 지도상의 3분 이상 교통 장소 후보에 대한 사용자 확인·삭제 기록.
+    /// 원본 센서와 지도 POI는 저장하지 않고 이 결정만 기기에 남긴다.
+    var transitBoardingDecisions: [TransitBoardingDecision]
     /// 기기 위치 기록에서만 나오는 값이라 iCloud로 내보내지 않는다.
     var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
     var movementCorrections: [TravelModeCorrection]
@@ -3467,13 +3670,14 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         gpsLoggingPreferences: .standard,
         mapCategoryColors: [:],
         mapUserActivityCategories: [],
-        mapDisplayStyle: .standard,
+        mapDisplayStyle: .mapLibreCasual,
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,
         floorCalibration: nil,
         floorCalibrationHistory: [],
         frequentPlaces: FrequentPlace.defaults,
         userTransitLocations: [],
+        transitBoardingDecisions: [],
         dismissedPlaceSuggestions: [],
         movementCorrections: [],
         suppressedActualIDs: [],
@@ -3513,6 +3717,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         floorCalibrationHistory: [FloorCalibrationEvent] = [],
         frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
         userTransitLocations: [UserTransitLocation] = [],
+        transitBoardingDecisions: [TransitBoardingDecision] = [],
         dismissedPlaceSuggestions: [DismissedPlaceSuggestion] = [],
         movementCorrections: [TravelModeCorrection] = [],
         suppressedActualIDs: Set<UUID> = [],
@@ -3556,6 +3761,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             value.radiusMeters = 100
             return value
         }
+        self.transitBoardingDecisions = transitBoardingDecisions
         self.dismissedPlaceSuggestions = dismissedPlaceSuggestions
         self.movementCorrections = movementCorrections
         self.suppressedActualIDs = suppressedActualIDs
@@ -3595,6 +3801,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case floorCalibrationHistory
         case frequentPlaces
         case userTransitLocations
+        case transitBoardingDecisions
         case dismissedPlaceSuggestions
         case movementCorrections
         case suppressedActualIDs
@@ -3703,6 +3910,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             [UserTransitLocation].self,
             forKey: .userTransitLocations
         ) ?? defaults.userTransitLocations
+        transitBoardingDecisions = try values.decodeIfPresent(
+            [TransitBoardingDecision].self,
+            forKey: .transitBoardingDecisions
+        ) ?? defaults.transitBoardingDecisions
         dismissedPlaceSuggestions = try values.decodeIfPresent(
             [DismissedPlaceSuggestion].self,
             forKey: .dismissedPlaceSuggestions

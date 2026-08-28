@@ -970,6 +970,8 @@ final class AppModel {
         let localPermissions = snapshot.settings.permissions
         var value = restored.snapshot
         value.settings.permissions = localPermissions
+        value.settings.transitBoardingDecisions =
+            snapshot.settings.transitBoardingDecisions
         value.settings.confirmedSleepSpans =
             TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
                 existing: value.settings.confirmedSleepSpans,
@@ -6231,17 +6233,21 @@ final class AppModel {
             preservedSubwaySegments: previousSubwaySegments,
             userTransitLocations: settings.userTransitLocations
         )
+        let correctedTravel = AppleDeviceGroundTruthEngine.resolvingOverlaps(
+            AppleDeviceGroundTruthEngine.enforcingMotionFamily(
+                MovementCorrectionEngine.applying(
+                    snapshot.settings.movementCorrections,
+                    to: inferredTravel,
+                    places: basePlaces
+                ),
+                activities: motionActivities,
+                readings: readings
+            )
+        )
         let generatedTravel = AppleDeviceGroundTruthEngine.coalescingTravel(
-            AppleDeviceGroundTruthEngine.resolvingOverlaps(
-                AppleDeviceGroundTruthEngine.enforcingMotionFamily(
-                    MovementCorrectionEngine.applying(
-                        snapshot.settings.movementCorrections,
-                        to: inferredTravel,
-                        places: basePlaces
-                    ),
-                    activities: motionActivities,
-                    readings: readings
-                )
+            TransitBoardingDecisionEngine.applying(
+                snapshot.settings.transitBoardingDecisions,
+                to: correctedTravel
             ),
             stays: basePlaces,
             maximumGap: max(
@@ -6425,6 +6431,11 @@ final class AppModel {
         Task { await persist() }
     }
 
+    func setMapDisplayProvider(_ provider: MapDisplayProvider) {
+        guard snapshot.settings.mapDisplayStyle.provider != provider else { return }
+        setMapDisplayStyle(.defaultStyle(for: provider))
+    }
+
     func confirmTravel(_ travelID: UUID, mode: TravelMode) {
         confirmTravel([travelID], mode: mode)
     }
@@ -6455,6 +6466,41 @@ final class AppModel {
         }
         guard didChange else { return }
         snapshot.settings.movementCorrections = corrections
+        Task { await persist() }
+    }
+
+    func confirmTransitBoarding(_ candidate: TransitBoardingCandidate) {
+        confirmTravel(candidate.travelSegmentIDs, mode: candidate.mode)
+        upsertingTransitBoardingDecision(
+            for: candidate,
+            mode: candidate.mode
+        )
+    }
+
+    func deleteTransitBoardingCandidate(
+        _ candidate: TransitBoardingCandidate
+    ) {
+        upsertingTransitBoardingDecision(for: candidate, mode: nil)
+    }
+
+    private func upsertingTransitBoardingDecision(
+        for candidate: TransitBoardingCandidate,
+        mode: TravelMode?
+    ) {
+        let decision = TransitBoardingDecision(
+            candidateKey: candidate.id,
+            span: candidate.span,
+            mode: mode,
+            travelSegmentIDs: candidate.travelSegmentIDs
+        )
+        var decisions = snapshot.settings.transitBoardingDecisions
+        decisions.removeAll { $0.candidateKey == decision.candidateKey }
+        decisions.append(decision)
+        if decisions.count > 200 {
+            decisions.sort { $0.updatedAt < $1.updatedAt }
+            decisions.removeFirst(decisions.count - 200)
+        }
+        snapshot.settings.transitBoardingDecisions = decisions
         Task { await persist() }
     }
 
@@ -8933,6 +8979,7 @@ final class AppModel {
         }
         value.settings.floorCalibration = nil
         value.settings.floorCalibrationHistory = []
+        value.settings.transitBoardingDecisions = []
         value.settings.movementCorrections = []
         value.settings.activityCorrections = [:]
         // 거절한 자리는 이 기기의 위치 기록에서만 나온 좌표다. 자주가는 곳
@@ -9008,6 +9055,8 @@ final class AppModel {
         value.settings.floorCalibration = nil
         value.settings.floorCalibrationHistory =
             local.settings.floorCalibrationHistory
+        value.settings.transitBoardingDecisions =
+            local.settings.transitBoardingDecisions
         value.settings.movementCorrections =
             local.settings.movementCorrections
         value.settings.activityCorrections =

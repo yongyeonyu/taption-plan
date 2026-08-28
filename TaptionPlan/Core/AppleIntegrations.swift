@@ -3475,7 +3475,7 @@ struct AppleTransportContext: Hashable, Sendable {
 final class AppleTransportContextService {
     /// Bump when persisted raw sensor readings need a fresh transport
     /// enrichment pass even if their archive fingerprint is unchanged.
-    static let enrichmentModelVersion = 3
+    static let enrichmentModelVersion = 4
 
     private struct CacheEntry {
         let context: AppleTransportContext
@@ -3591,9 +3591,15 @@ final class AppleTransportContextService {
             value.matchesPublicTransitRoute = true
         case .busStop:
             value.matchesPublicTransitRoute = true
+        case .trainStation:
+            break
+        case .airport:
+            value.nearAirport = true
+        case .harbor:
+            value.nearPort = true
         }
         var evidence = value.behaviorEvidence ?? []
-        let marker = "사용자 등록 (location.kind.title): (location.name)"
+        let marker = "사용자 등록 (\(location.kind.title)): \(location.name)"
         if !evidence.contains(marker) { evidence.append(marker) }
         value.behaviorEvidence = evidence
         return value
@@ -3746,6 +3752,141 @@ final class AppleTransportContextService {
     private func cacheKey(_ point: GeoPoint) -> String {
         "\(Int((point.latitude * 1_000).rounded())):"
             + "\(Int((point.longitude * 1_000).rounded()))"
+    }
+}
+
+@MainActor
+final class AppleTransitBoardingPOIResolver {
+    static let shared = AppleTransitBoardingPOIResolver()
+
+    private struct CacheEntry {
+        let place: TransitBoardingPlace?
+        let storedAt: Date
+    }
+
+    private var cache: [String: CacheEntry] = [:]
+
+    func resolving(
+        readings: [SensorReading]
+    ) async -> [TransitBoardingPlace] {
+        let points = sampledPoints(from: readings)
+        guard !points.isEmpty else { return [] }
+
+        var places: [TransitBoardingPlace] = []
+        for point in points {
+            for kind in UserTransitLocationKind.allCases {
+                for query in kind.mapKitQueries {
+                    let place = await nearbyPlace(
+                        query: query,
+                        kind: kind,
+                        point: point
+                    )
+                    if let place {
+                        places.append(place)
+                        break
+                    }
+                }
+            }
+        }
+
+        var unique: [String: TransitBoardingPlace] = [:]
+        for place in places {
+            unique[place.id] = place
+        }
+        return unique.values.sorted {
+            if $0.kind == $1.kind { return $0.name < $1.name }
+            return $0.kind.rawValue < $1.kind.rawValue
+        }
+    }
+
+    private func nearbyPlace(
+        query: String,
+        kind: UserTransitLocationKind,
+        point: GeoPoint
+    ) async -> TransitBoardingPlace? {
+        let key = "\(kind.rawValue):\(query):"
+            + "\(Int((point.latitude * 1_000).rounded())):"
+            + "\(Int((point.longitude * 1_000).rounded()))"
+        if let cached = cache[key],
+           Date.now.timeIntervalSince(cached.storedAt) < 6 * 60 * 60 {
+            return cached.place
+        }
+
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: point.latitude,
+                longitude: point.longitude
+            ),
+            latitudinalMeters: max(300, kind.mapKitSearchRadiusMeters * 2),
+            longitudinalMeters: max(300, kind.mapKitSearchRadiusMeters * 2)
+        )
+        let response = try? await MKLocalSearch(request: request).start()
+        let origin = CLLocation(latitude: point.latitude, longitude: point.longitude)
+        let place = response?.mapItems
+            .compactMap { item -> (Double, TransitBoardingPlace)? in
+                let coordinate = item.placemark.coordinate
+                guard CLLocationCoordinate2DIsValid(coordinate),
+                      let name = item.name ?? item.placemark.name,
+                      !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                else { return nil }
+                let distance = origin.distance(
+                    from: CLLocation(
+                        latitude: coordinate.latitude,
+                        longitude: coordinate.longitude
+                    )
+                )
+                guard distance <= kind.mapKitSearchRadiusMeters else {
+                    return nil
+                }
+                let place = TransitBoardingPlace(
+                    mapKitName: name,
+                    kind: kind,
+                    point: GeoPoint(
+                        latitude: coordinate.latitude,
+                        longitude: coordinate.longitude,
+                        altitude: 0,
+                        horizontalAccuracy: 0,
+                        verticalAccuracy: 0
+                    )
+                )
+                return (distance, place)
+            }
+            .min(by: { $0.0 < $1.0 })?.1
+        cache[key] = CacheEntry(place: place, storedAt: .now)
+        if cache.count > 512 {
+            cache.removeAll(keepingCapacity: true)
+        }
+        return place
+    }
+
+    private func sampledPoints(from readings: [SensorReading]) -> [GeoPoint] {
+        let valid = readings
+            .filter { $0.gpsAvailable && $0.locationFixQuality != .approximate }
+            .compactMap(\.point)
+            .filter {
+                $0.latitude.isFinite && $0.longitude.isFinite
+                    && (-90...90).contains($0.latitude)
+                    && (-180...180).contains($0.longitude)
+            }
+            .sorted { lhs, rhs in
+                lhs.latitude == rhs.latitude
+                    ? lhs.longitude < rhs.longitude
+                    : lhs.latitude < rhs.latitude
+            }
+        guard !valid.isEmpty else { return [] }
+
+        var unique: [GeoPoint] = []
+        var keys = Set<String>()
+        for point in valid {
+            let key = "\(Int((point.latitude * 1_000).rounded())):\(Int((point.longitude * 1_000).rounded()))"
+            if keys.insert(key).inserted { unique.append(point) }
+        }
+        guard unique.count > 4 else { return unique }
+        return (0..<4).map { index in
+            unique[index * (unique.count - 1) / 3]
+        }
     }
 }
 
