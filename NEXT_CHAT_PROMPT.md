@@ -18,11 +18,11 @@ xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 
 ## 2026-08-29 REL29TF7Q2 인계 상태
 
-- 이번 배포 대상은 `1.0 (111)`이다. App Store Connect에는 build 110이 이미 `VALID`로 존재하므로 111로 올렸다.
+- 이번 배포는 `1.0 (111)`이며 기능·빌드 커밋 `834a146`을 `origin/main`에 푸시했다. 직전 build 110이 이미 존재해 111로 올렸다.
 - OpenFreeMap/MapLibre 구현 소스는 보존하지만 런타임과 설정 메뉴에서는 비활성화하고 Apple 지도 표준 스타일을 사용한다.
 - 대중교통 후보는 실제 동력 이동이 끝난 뒤 분류 또는 경로가 불확실할 때만 표시한다. 확정 이동과 완전한 GPS 경로에는 후보·점선 예상 경로를 만들지 않는다.
 - 오늘 날짜 재생은 현재 시각에서 멈추고 재시작 시 자정부터 재생한다. Apple Watch 상태는 수신 시각 대신 payload별 실제 측정 시각을 보존하며 지연·미래·역순 수신을 최근 상태로 오인하지 않는다.
-- 전체 `TaptionPlanTests` 797/797와 generic iOS Debug build가 통과했다. main 원격 SHA·TestFlight 처리·내부 그룹 노출은 아래의 최신 검증 명령과 App Store Connect에서 다시 readback한다. 실기기 설치·HealthKit/Watch 실제 수신은 별도 게이트다.
+- 전체 `TaptionPlanTests` 797/797와 generic iOS Debug build, Release archive/export, App Store Connect 사전 검증을 통과했다. Delivery UUID `b70dc4c7-06e1-4bc8-85a9-13377ff1dcfa`는 `VALID`/`IN_BETA_TESTING`이며 `TP Taption Plan 내부 테스트`의 빌드 화면에 `1.0 (111) · 테스트 중 · iOS`, 테스터 화면에 1명과 `설치됨 1.0 (111)`이 노출된다. 실기기 설치·HealthKit/Watch 실제 수신은 별도 게이트다.
 
 ## 2026-08-28 인계 상태
 

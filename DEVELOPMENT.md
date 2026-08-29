@@ -436,5 +436,8 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 ### 검증 및 배포
 
 - 전체 `TaptionPlanTests` 797/797 통과, 실패·스킵 0; generic iOS Debug build와 `git diff --check` 통과.
-- Release archive/export 후 App Store Connect 처리 완료, `TP Taption Plan 내부 테스트` 그룹 연결과 그룹·테스터 화면 노출을 각각 확인한다.
+- 기능·빌드 커밋 `834a146`을 `origin/main`에 푸시하고 원격 SHA 일치를 확인했다.
+- Release archive/export: `1.0 (111)`, `com.taption.plan`, Apple Distribution 서명, Store 프로비저닝, IPA SHA-256 `9699c711070d01b684454541be3043097379e1a032209f1104e95fba36349ea2`; App Store Connect 사전 검증 통과.
+- TestFlight 업로드 성공: Delivery UUID `b70dc4c7-06e1-4bc8-85a9-13377ff1dcfa`; 처리 상태 `VALID`, 내부 상태 `IN_BETA_TESTING`.
+- `TP Taption Plan 내부 테스트` 그룹에 build 111을 연결했다. 그룹 빌드 화면에서 `1.0 (111) · 테스트 중 · iOS`, 테스터 화면에서 내부 테스터 1명과 `설치됨 1.0 (111)` 노출을 확인했다.
 - 실기기 설치·실행·HealthKit/Watch 실제 수신은 이번 TestFlight 업로드와 별도 게이트다.
