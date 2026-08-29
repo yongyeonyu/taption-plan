@@ -1089,6 +1089,7 @@ struct MapHomeView: View {
     @State private var currentLocationRequestTask: Task<Void, Never>?
     @State private var initialLocationRequestTask: Task<Void, Never>?
     @State private var hasAppliedInitialLocation = false
+    @State private var hasAppliedInitialMapFocus = false
     @State private var hasCancelledInitialLocationFocus = false
     @State private var mapSearchText = ""
     @State private var mapSearchResults: [MapHomeSearchResult] = []
@@ -1253,7 +1254,7 @@ struct MapHomeView: View {
                 ? mapViewportSize.width
                 : UIScreen.main.bounds.width,
             horizontalInset: Layout.horizontalInset,
-            trailingControlCount: 2
+            trailingControlCount: 1
         )
     }
 
@@ -1387,10 +1388,7 @@ struct MapHomeView: View {
                 HStack(alignment: .top, spacing: 0) {
                     mapSearchBar
                     Spacer(minLength: 0)
-                    HStack(spacing: MapHomeSearchLayoutMath.itemSpacing) {
-                        mapStyleButton
-                        dayPlaybackButton
-                    }
+                    dayPlaybackButton
                     .padding(.leading, MapHomeSearchLayoutMath.itemSpacing)
                 }
             }
@@ -1562,6 +1560,7 @@ struct MapHomeView: View {
             focusMapIfNeeded()
             refreshTimeRailSegments()
             await loadMapDayCache(for: date)
+            applyInitialMapFocusIfNeeded()
             guard !Task.isCancelled,
                   Calendar.autoupdatingCurrent.isDate(
                       date,
@@ -1572,6 +1571,7 @@ struct MapHomeView: View {
             scheduleExpectedRouteRefresh()
             persistMapDayCache()
             await refreshRouteReadings(for: date)
+            applyInitialMapFocusIfNeeded()
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(nanoseconds: 60_000_000_000)
@@ -1580,6 +1580,7 @@ struct MapHomeView: View {
                 }
                 refreshTimeRailSegments()
                 await refreshRouteReadings(for: date)
+                applyInitialMapFocusIfNeeded()
             }
         }
         .onChange(of: model.latestSensorReading?.point) { _, _ in
@@ -3011,41 +3012,18 @@ struct MapHomeView: View {
         )
     }
 
-    private var mapStyleButton: some View {
-        Menu {
-            ForEach(MapDisplayStyle.allCases, id: \.self) { style in
-                Button {
-                    model.setMapDisplayStyle(style)
-                } label: {
-                    Label(
-                        mapStyleTitle(style),
-                        systemImage: model.settings.mapDisplayStyle == style
-                            ? "checkmark"
-                            : mapStyleSystemImage(style)
-                    )
-                }
-            }
-        } label: {
-            Image(systemName: "map.fill")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.tpInk)
-                .frame(
-                    width: MapHomeSearchLayoutMath.playbackVisualSize,
-                    height: MapHomeSearchLayoutMath.playbackVisualSize
-                )
-                .background(Color.white.opacity(0.96), in: Circle())
-                .overlay {
-                    Circle().stroke(Color.tpPastelGray.opacity(0.65), lineWidth: 1)
-                }
-                .frame(
-                    width: MapHomeSearchLayoutMath.playbackTouchSize,
-                    height: MapHomeSearchLayoutMath.playbackTouchSize
-                )
-                .contentShape(Rectangle())
+    private func mapProviderTitle(_ provider: MapDisplayProvider) -> String {
+        switch provider {
+        case .apple: language.text("Apple 지도", "Apple Maps")
+        case .openFreeMap: "OpenFreeMap"
         }
-        .accessibilityLabel(
-            language.text("지도 제공자·스타일 변경", "Change map provider and style")
-        )
+    }
+
+    private func mapProviderSystemImage(_ provider: MapDisplayProvider) -> String {
+        switch provider {
+        case .apple: "map.fill"
+        case .openFreeMap: "globe.americas.fill"
+        }
     }
 
     private func mapStyleTitle(_ style: MapDisplayStyle) -> String {
@@ -4586,13 +4564,45 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
+                Text(language.text("지도 제공자", "Map provider"))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 6)
+                    .padding(.horizontal, 12)
+
+                ForEach(MapDisplayProvider.allCases, id: \.self) { provider in
+                    Button {
+                        model.setMapDisplayProvider(provider)
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: mapProviderSystemImage(provider))
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 22)
+                            Text(mapProviderTitle(provider))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Spacer()
+                            if model.settings.mapDisplayStyle.provider == provider {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                        }
+                        .foregroundStyle(Color.primary)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(
+                        model.settings.mapDisplayStyle.provider == provider ? .isSelected : []
+                    )
+                }
+
                 Text(language.text("지도 스타일", "Map style"))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.top, 6)
                     .padding(.horizontal, 12)
 
-                ForEach(MapDisplayStyle.allCases, id: \.self) { style in
+                ForEach(MapDisplayStyle.styles(for: model.settings.mapDisplayStyle.provider), id: \.self) { style in
                     Button {
                         model.setMapDisplayStyle(style)
                     } label: {
@@ -6046,6 +6056,30 @@ struct MapHomeView: View {
         ))
     }
 
+    private var initialMapFocusCoordinate: CLLocationCoordinate2D? {
+        let coordinates = timelineRouteOverlays.flatMap(\.coordinates)
+            + visibleExpectedRouteOverlays.flatMap(\.coordinates)
+            + subwayRouteOverlays.flatMap(\.coordinates)
+        return coordinates.first
+    }
+
+    private func applyInitialMapFocusIfNeeded() {
+        guard !hasAppliedInitialMapFocus,
+              let coordinate = initialMapFocusCoordinate else { return }
+        hasAppliedInitialMapFocus = true
+        hasCancelledInitialLocationFocus = true
+        initialLocationRequestTask?.cancel()
+        initialLocationRequestTask = nil
+        setMapPosition(.camera(
+            MapCamera(
+                centerCoordinate: coordinate,
+                distance: 1_000,
+                heading: visibleMapCamera?.heading ?? 0,
+                pitch: 0
+            )
+        ))
+    }
+
     private func sharedZoomLevel(for span: MKCoordinateSpan) -> CGFloat? {
         guard let bounds = mapRenderCache.bounds(
             timeline: timelineRouteOverlays,
@@ -6249,6 +6283,7 @@ struct MapHomeView: View {
         guard mapViewportSize.width > 0,
               mapViewportSize.height > 0,
               !hasAppliedInitialLocation,
+              !hasAppliedInitialMapFocus,
               currentCoordinate != nil else { return }
         focusUserLocation(using: proxy)
         hasAppliedInitialLocation = true
@@ -6257,6 +6292,7 @@ struct MapHomeView: View {
     private func beginInitialLocationRequest(using proxy: MapProxy?) {
         guard mapViewportSize.width > 0,
               mapViewportSize.height > 0,
+              !hasAppliedInitialMapFocus,
               initialLocationRequestTask == nil else { return }
         initialLocationRequestTask = Task { @MainActor in
             defer { initialLocationRequestTask = nil }
@@ -6266,6 +6302,7 @@ struct MapHomeView: View {
             guard !Task.isCancelled,
                   isAvailable,
                   !hasCancelledInitialLocationFocus,
+                  !hasAppliedInitialMapFocus,
                   userTrackingMode == .idle else {
                 return
             }
