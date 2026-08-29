@@ -10,19 +10,27 @@ git status --short --branch
 git log -5 --oneline --decorate
 git rev-parse HEAD origin/main
 git diff --check
-sed -n '1,360p' DEVELOPMENT.md
+sed -n '1,520p' DEVELOPMENT.md
 test -f temp.md && sed -n '1,240p' temp.md || true
 xcrun devicectl list devices
 xcrun devicectl device info apps --device C44AF739-127D-572D-AD83-417C7E879045
 ```
 
-## 2026-08-29 REL29TF7Q2 인계 상태
+## 2026-08-29 DOC9M4K7P2 최신 인계 상태
 
-- 이번 배포는 `1.0 (111)`이며 기능·빌드 커밋 `834a146`을 `origin/main`에 푸시했다. 직전 build 110이 이미 존재해 111로 올렸다.
-- OpenFreeMap/MapLibre 구현 소스는 보존하지만 런타임과 설정 메뉴에서는 비활성화하고 Apple 지도 표준 스타일을 사용한다.
-- 대중교통 후보는 실제 동력 이동이 끝난 뒤 분류 또는 경로가 불확실할 때만 표시한다. 확정 이동과 완전한 GPS 경로에는 후보·점선 예상 경로를 만들지 않는다.
-- 오늘 날짜 재생은 현재 시각에서 멈추고 재시작 시 자정부터 재생한다. Apple Watch 상태는 수신 시각 대신 payload별 실제 측정 시각을 보존하며 지연·미래·역순 수신을 최근 상태로 오인하지 않는다.
-- 전체 `TaptionPlanTests` 797/797와 generic iOS Debug build, Release archive/export, App Store Connect 사전 검증을 통과했다. Delivery UUID `b70dc4c7-06e1-4bc8-85a9-13377ff1dcfa`는 `VALID`/`IN_BETA_TESTING`이며 `TP Taption Plan 내부 테스트`의 빌드 화면에 `1.0 (111) · 테스트 중 · iOS`, 테스터 화면에 1명과 `설치됨 1.0 (111)`이 노출된다. 실기기 설치·HealthKit/Watch 실제 수신은 별도 게이트다.
+- STK9V6Q2M4 구현과 개발문서 변경은 기능·개발문서 커밋 `eb66bf3a166f0ff67f834f1c5c049a1bcd38b2b9`로 `origin/main`에 푸시했다. 이 인계 파일을 추가한 커밋까지 포함한 최신 SHA는 아래 시작 명령으로 다시 확인한다.
+- 지도 Canvas 졸라맨은 18개 행동의 관절·시점·소품을 재설계했다. 활동은 정면→왼쪽 옆→오른쪽 옆, 걷기·달리기·일반 이동·버스·선박·자전거는 옆면, 업무는 오른쪽 사선 뒤, 학교·식사·운동은 왼쪽 사선 앞, 취미·미확인은 정면, 수면은 옆면, 차량은 정면이다.
+- 업무 모니터 텍스트·키보드 입력, 학교 책장 넘김, 취미 마이크·노래 입 모양, 수면 침대·베개·이불·호흡·Z, 차량 운전대, 선박 난간·물결, 비행기 큰 창·탑승자, 2량 지하철 큰 창·정면 승객·손잡이, 버스 손잡이, 자전거 페달을 포함한다.
+- `자가용` 데이터는 지도 렌더링에서 `.car`로 통합했으며 Live Activity의 별도 `privateVehicle` 계약은 유지한다. 예상경로·재생 위치 투영과 12프레임/Reduce Motion 계약도 유지한다.
+- 최신 소스 기준 generic iOS Debug build, iOS Simulator `build-for-testing`, `git diff --check`가 통과했다. 사용 가능한 iOS Simulator 기기는 없고, 최종 렌더 세부 패치 후 iPhone 14 Pro 재실행은 잠금 상태로 `deviceprep`에서 차단됐다.
+- iPhone 14 Pro `MapHomeStickmanTests` 20/20과 앱 실행은 최종 렌더 세부 패치 전 통과 기록이다. 최종 소스의 실제 화면·터치·18개 동작 시각 확인은 아직 닫지 않는다. 이번 변경에는 archive/upload/TestFlight 실행 기록이 없다.
+- 다음 채팅은 먼저 기기 잠금을 해제한 뒤 최신 Debug 앱을 설치·실행하고, 지도 현재/과거 위치·예상경로·재생에서 18개 동작과 경로 이동을 실제 터치·화면으로 확인한다. 그 뒤 로그와 관련 XCTest를 다시 기록한다.
+
+### 새 채팅에서 지킬 범위
+
+- `AGENTS.md`와 `DEVELOPMENT.md`를 먼저 읽고, `temp.md`에 새 요청을 영문·숫자 10자리 ID로 기록한다. 대표님이 `ㄱㄱ` 또는 `전체 진행`이라고 하기 전에는 구현하지 않는다.
+- 현재 요청 범위 밖의 UI/UX·지도 제공자·서명·배포 설정은 임의로 바꾸지 않는다. 실기기 설치·실행·화면 터치·HealthKit/Watch·archive/upload·TestFlight 내부 그룹 readback을 서로 다른 게이트로 기록한다.
+- 워크트리가 dirty이면 기존 변경을 먼저 보존하고, 새 파일·DerivedData·테스트 결과를 정리할 때는 저장소 증거와 다른 프로젝트 공유 산출물을 삭제하지 않는다.
 
 ## 2026-08-28 인계 상태
 
