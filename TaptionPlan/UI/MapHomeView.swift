@@ -18,6 +18,10 @@ enum MapHomeCompassControlState: Equatable, Sendable {
         self == .compass
     }
 
+    var mapCameraHeading: CLLocationDirection? {
+        followsHeading ? nil : 0
+    }
+
     var toggled: Self {
         self == .directionArrow ? .compass : .directionArrow
     }
@@ -480,6 +484,43 @@ private struct MapHomeRouteCoordinateBounds {
     }
 }
 
+enum MapHomeRouteFitMath {
+    static func region(
+        for coordinates: [CLLocationCoordinate2D],
+        minimumLatitudeDelta: CLLocationDegrees = 0.025,
+        minimumLongitudeDelta: CLLocationDegrees = 0.035,
+        padding: CLLocationDegrees = 1.8
+    ) -> MKCoordinateRegion? {
+        let valid = coordinates.filter {
+            $0.latitude.isFinite
+                && $0.longitude.isFinite
+                && (-90...90).contains($0.latitude)
+                && (-180...180).contains($0.longitude)
+        }
+        guard !valid.isEmpty else { return nil }
+        let latitudes = valid.map(\.latitude)
+        let longitudes = valid.map(\.longitude)
+        let latitudeDelta = max(
+            minimumLatitudeDelta,
+            (latitudes.max()! - latitudes.min()!) * padding
+        )
+        let longitudeDelta = max(
+            minimumLongitudeDelta,
+            (longitudes.max()! - longitudes.min()!) * padding
+        )
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude: (latitudes.max()! + latitudes.min()!) / 2,
+                longitude: (longitudes.max()! + longitudes.min()!) / 2
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta: latitudeDelta,
+                longitudeDelta: longitudeDelta
+            )
+        )
+    }
+}
+
 private final class MapHomeMapRenderCache {
     private(set) var subwayRouteOverlays: [MapHomeSubwayRouteOverlay]?
     private(set) var subwayRouteDay: Date?
@@ -649,6 +690,7 @@ enum MapHomeLocationMapMath {
 final class MapHomeHeadingMonitor: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private(set) var rotationDegrees: Double?
+    private(set) var headingDegrees: CLLocationDirection?
 
     override init() {
         super.init()
@@ -678,6 +720,8 @@ final class MapHomeHeadingMonitor: NSObject, @preconcurrency CLLocationManagerDe
             trueHeading: newHeading.trueHeading,
             magneticHeading: newHeading.magneticHeading
         )
+        guard heading.isFinite else { return }
+        headingDegrees = heading
         let next = MapHomeCompassControlState.continuousIconRotationDegrees(
             previousRotationDegrees: rotationDegrees,
             headingDegrees: heading
@@ -1018,6 +1062,19 @@ enum MapHomeLocationButtonState: Equatable {
     var showsTrackingDot: Bool { self == .following }
 }
 
+enum MapHomeCurrentGPSPolicy {
+    static func isConfirmed(in readings: [SensorReading]) -> Bool {
+        let iPhoneReadings = readings.filter {
+            $0.sourceDevice != .appleWatch
+                && $0.gpsAvailable
+                && $0.locationFixQuality != .approximate
+        }
+        return MapCurrentLocationAnchorPolicy.latestValidReading(
+            in: iPhoneReadings
+        ) != nil
+    }
+}
+
 enum MapHomeRouteReadingsPolicy {
     static func dayKey(
         for date: Date,
@@ -1200,6 +1257,8 @@ struct MapHomeView: View {
     @State private var mapCameraFrameProjection = MapHomeCameraFrameProjection()
     @State private var mapRenderCache = MapHomeMapRenderCache()
     @State private var visibleMapCamera: MapCamera?
+    @State private var shouldFitRoutesAfterDateChange = false
+    @State private var hasUserAdjustedMap = false
     @State private var stickmanViewportProjection = MapHomeStickmanViewportProjection()
     @State private var displayedStickmanViewportPoint: CGPoint?
     @State private var mapViewportSize = CGSize.zero
@@ -1672,6 +1731,7 @@ struct MapHomeView: View {
             weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
 
             if dayChanged {
+                hasUserAdjustedMap = false
                 routeReadings = []
                 routeReadingsLoadState = .loading(
                     MapHomeRouteReadingsPolicy.dayKey(for: newDate)
@@ -1696,12 +1756,14 @@ struct MapHomeView: View {
                 refreshHistoricalPlaybackPoint()
             }
 
-            if calendar.isDateInToday(newDate),
-               currentCoordinate != nil {
-                focusUserLocation()
-            } else if dayChanged {
+            let shouldFitRoutes = shouldFitRoutesAfterDateChange
+            shouldFitRoutesAfterDateChange = false
+            if shouldFitRoutes || dayChanged {
                 setMapPosition(.automatic)
                 focusMapIfNeeded()
+            } else if calendar.isDateInToday(newDate),
+                      currentCoordinate != nil {
+                focusUserLocation()
             }
             refreshTimeRailSegments()
         }
@@ -2262,6 +2324,9 @@ struct MapHomeView: View {
                 guard size.width > 0, size.height > 0 else { return }
                 applyInitialLocationIfAvailable(using: proxy)
                 beginInitialLocationRequest(using: proxy)
+            }
+            .onChange(of: headingMonitor.headingDegrees) { _, _ in
+                applyMapHeading(using: proxy)
             }
             .onChange(of: selectedTimelineMinute) { _, minute in
                 if isTimelineInteractionActive || isDayPlaybackRunning {
@@ -3603,7 +3668,8 @@ struct MapHomeView: View {
                         hasLocation: displayedLocationCoordinate != nil,
                         trackingMode: userTrackingMode,
                         isCentered: isMapCenteredOnUser
-                    )
+                    ),
+                    showsGPSDot: hasConfirmedCurrentGPS
                 )
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                     .background(Color.white.opacity(0.94), in: Circle())
@@ -5200,6 +5266,13 @@ struct MapHomeView: View {
         return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
     }
 
+    private var hasConfirmedCurrentGPS: Bool {
+        MapHomeCurrentGPSPolicy.isConfirmed(
+            in: [model.latestSensorReading, model.liveRouteState.readings.last]
+                .compactMap { $0 }
+        )
+    }
+
     private func currentActivity(at minute: Int) -> MapHomeTimeSidebarActivity {
         let segment = MapHomeTimeRailSegmentEngine.segment(
             at: minute,
@@ -5331,6 +5404,9 @@ struct MapHomeView: View {
         guard !requests.isEmpty else {
             mapRenderCache.invalidateExpectedRoutes()
             expectedRouteOverlays = []
+            if !hasUserAdjustedMap {
+                focusMapOnAllRoutes()
+            }
             persistMapDayCache()
             return
         }
@@ -5379,6 +5455,9 @@ struct MapHomeView: View {
         mapRenderCache.invalidateExpectedRoutes()
         expectedRouteOverlays = overlays
         applyInitialMapFocusIfNeeded()
+        if !hasUserAdjustedMap {
+            focusMapOnAllRoutes()
+        }
         persistMapDayCache()
     }
 
@@ -6129,12 +6208,14 @@ struct MapHomeView: View {
     }
 
     private func jumpToTodayAndCurrentMapPosition() {
+        shouldFitRoutesAfterDateChange = true
+        hasUserAdjustedMap = false
         model.selectedDate = Date()
         selectedTimelineMinute = nil
         isTimelineSelectionPinned = false
         sharedZoomLevel = 1
         zoomResetToken += 1
-        focusMapForSharedZoom()
+        focusMapOnAllRoutes()
     }
 
     private func setMapPosition(_ position: MapCameraPosition) {
@@ -6160,51 +6241,29 @@ struct MapHomeView: View {
     }
 
     private func focusMapIfNeeded() {
-        let coordinates = timelineRouteOverlays.flatMap(\.coordinates)
-            + visibleExpectedRouteOverlays.flatMap(\.coordinates)
-            + subwayRouteOverlays.flatMap(\.coordinates)
-        guard let first = coordinates.first else {
-            setMapPosition(.automatic)
-            return
-        }
+        guard let region = mapRouteFitRegion else { return }
         guard case .automatic = mapPosition else { return }
-        let latitudes = coordinates.map(\.latitude)
-        let longitudes = coordinates.map(\.longitude)
-        let latitudeDelta = max(0.025, ((latitudes.max() ?? first.latitude) - (latitudes.min() ?? first.latitude)) * 1.8)
-        let longitudeDelta = max(0.035, ((longitudes.max() ?? first.longitude) - (longitudes.min() ?? first.longitude)) * 1.8)
-        setMapPosition(.region(
-            MKCoordinateRegion(
-                center: CLLocationCoordinate2D(
-                    latitude: ((latitudes.max() ?? first.latitude) + (latitudes.min() ?? first.latitude)) / 2,
-                    longitude: ((longitudes.max() ?? first.longitude) + (longitudes.min() ?? first.longitude)) / 2
-                ),
-                span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
-            )
-        ))
+        setMapPosition(.region(region))
     }
 
-    private var initialMapFocusCoordinate: CLLocationCoordinate2D? {
-        let coordinates = timelineRouteOverlays.flatMap(\.coordinates)
+    private var mapRouteFitRegion: MKCoordinateRegion? {
+        var coordinates = timelineRouteOverlays.flatMap(\.coordinates)
             + visibleExpectedRouteOverlays.flatMap(\.coordinates)
             + subwayRouteOverlays.flatMap(\.coordinates)
-        return coordinates.first
+        if coordinates.isEmpty, let currentCoordinate {
+            coordinates = [currentCoordinate]
+        }
+        return MapHomeRouteFitMath.region(for: coordinates)
     }
 
     private func applyInitialMapFocusIfNeeded() {
         guard !hasAppliedInitialMapFocus,
-              let coordinate = initialMapFocusCoordinate else { return }
+              let region = mapRouteFitRegion else { return }
         hasAppliedInitialMapFocus = true
         hasCancelledInitialLocationFocus = true
         initialLocationRequestTask?.cancel()
         initialLocationRequestTask = nil
-        setMapPosition(.camera(
-            MapCamera(
-                centerCoordinate: coordinate,
-                distance: 1_000,
-                heading: visibleMapCamera?.heading ?? 0,
-                pitch: 0
-            )
-        ))
+        setMapPosition(.region(region))
     }
 
     private func sharedZoomLevel(for span: MKCoordinateSpan) -> CGFloat? {
@@ -6226,35 +6285,12 @@ struct MapHomeView: View {
         return min(max((scale - 0.05) / 0.95, 0), 1)
     }
 
-    private func focusMapForSharedZoom() {
-        var coordinates = timelineRouteOverlays.flatMap(\.coordinates)
-            + visibleExpectedRouteOverlays.flatMap(\.coordinates)
-            + subwayRouteOverlays.flatMap(\.coordinates)
-        if coordinates.isEmpty, let currentCoordinate {
-            coordinates = [currentCoordinate]
-        }
-        guard let first = coordinates.first else {
+    private func focusMapOnAllRoutes() {
+        guard let region = mapRouteFitRegion else {
             setMapPosition(.automatic)
             return
         }
-        let latitudes = coordinates.map(\.latitude)
-        let longitudes = coordinates.map(\.longitude)
-        let fitLatitude = max(0.025, ((latitudes.max() ?? first.latitude) - (latitudes.min() ?? first.latitude)) * 1.8)
-        let fitLongitude = max(0.035, ((longitudes.max() ?? first.longitude) - (longitudes.min() ?? first.longitude)) * 1.8)
-        let zoom = 1 - sharedZoomLevel
-        let spanScale = max(0.05, 1 - 0.95 * zoom)
-        setMapPosition(.region(
-            MKCoordinateRegion(
-                center: CLLocationCoordinate2D(
-                    latitude: ((latitudes.max() ?? first.latitude) + (latitudes.min() ?? first.latitude)) / 2,
-                    longitude: ((longitudes.max() ?? first.longitude) + (longitudes.min() ?? first.longitude)) / 2
-                ),
-                span: MKCoordinateSpan(
-                    latitudeDelta: max(0.001, fitLatitude * spanScale),
-                    longitudeDelta: max(0.001, fitLongitude * spanScale)
-                )
-            )
-        ))
+        setMapPosition(.region(region))
     }
 
     private func focusMap(
@@ -6321,7 +6357,10 @@ struct MapHomeView: View {
         }
     }
 
-    private func focusUserLocation(using proxy: MapProxy? = nil) {
+    private func focusUserLocation(
+        using proxy: MapProxy? = nil,
+        heading: CLLocationDirection? = nil
+    ) {
         guard let coordinate = currentCoordinate else {
             isMapCenteredOnUser = false
             return
@@ -6345,7 +6384,7 @@ struct MapHomeView: View {
                 MapCamera(
                     centerCoordinate: center,
                     distance: camera.distance,
-                    heading: camera.heading,
+                    heading: heading ?? camera.heading,
                     pitch: camera.pitch
                 )
             ))
@@ -6354,7 +6393,7 @@ struct MapHomeView: View {
                 MapCamera(
                     centerCoordinate: coordinate,
                     distance: camera.distance,
-                    heading: camera.heading,
+                    heading: heading ?? camera.heading,
                     pitch: camera.pitch
                 )
             ))
@@ -6396,13 +6435,33 @@ struct MapHomeView: View {
         compassControlState = compassControlState.toggled
         if compassControlState.followsHeading {
             headingMonitor.start()
-            setMapPosition(.userLocation(
-                followsHeading: true,
-                fallback: .automatic
-            ))
+            applyMapHeading(using: proxy)
         } else {
             headingMonitor.stop()
-            focusUserLocation(using: proxy)
+            focusUserLocation(
+                using: proxy,
+                heading: compassControlState.mapCameraHeading
+            )
+        }
+    }
+
+    private func applyMapHeading(using proxy: MapProxy?) {
+        guard isHeadingMode else { return }
+        let heading = headingMonitor.headingDegrees
+            ?? visibleMapCamera?.heading
+            ?? 0
+        if currentCoordinate != nil {
+            focusUserLocation(using: proxy, heading: heading)
+            setUserTrackingMode(.following)
+        } else if let camera = visibleMapCamera {
+            setMapPosition(.camera(
+                MapCamera(
+                    centerCoordinate: camera.centerCoordinate,
+                    distance: camera.distance,
+                    heading: heading,
+                    pitch: camera.pitch
+                )
+            ))
         }
     }
 
@@ -6449,6 +6508,7 @@ struct MapHomeView: View {
             duringPlayback: isDayPlaybackRunning
         ) == false
         else { return }
+        hasUserAdjustedMap = true
         if usesVectorRoadMap,
            let vectorMapViewport = vectorMapViewportStore.viewport {
             mapPosition = .region(vectorMapViewport.region)
@@ -9239,6 +9299,7 @@ private struct MapHomeVectorPlayerTriangle: Shape {
 
 private struct MapHomeLocationButtonIcon: View {
     let state: MapHomeLocationButtonState
+    let showsGPSDot: Bool
 
     private let targetColor = Color.tpPastelSky
     private let dotColor = Color.tpPastelRose
@@ -9249,7 +9310,7 @@ private struct MapHomeLocationButtonIcon: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(targetColor)
 
-            if state.showsTrackingDot {
+            if showsGPSDot {
                 Circle()
                     .fill(dotColor)
                     .frame(width: 7, height: 7)

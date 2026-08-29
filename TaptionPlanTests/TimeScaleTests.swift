@@ -1417,6 +1417,8 @@ final class TimeScaleTests: XCTestCase {
         let fixedDirection = compass.toggled
         XCTAssertEqual(fixedDirection, .directionArrow)
         XCTAssertFalse(fixedDirection.followsHeading)
+        XCTAssertEqual(fixedDirection.mapCameraHeading, 0)
+        XCTAssertNil(compass.mapCameraHeading)
     }
 
     func testMapHomeCompassIconCounterRotatesToKeepNorthUp() {
@@ -1455,6 +1457,46 @@ final class TimeScaleTests: XCTestCase {
                 magneticHeading: 120
             ),
             120
+        )
+    }
+
+    func testMapHomeRouteFitIncludesAllDisplayedCoordinates() throws {
+        let region = try XCTUnwrap(
+            MapHomeRouteFitMath.region(for: [
+                CLLocationCoordinate2D(latitude: 37.0, longitude: 126.0),
+                CLLocationCoordinate2D(latitude: 37.4, longitude: 126.8),
+            ])
+        )
+
+        XCTAssertEqual(region.center.latitude, 37.2, accuracy: 0.000_001)
+        XCTAssertEqual(region.center.longitude, 126.4, accuracy: 0.000_001)
+        XCTAssertEqual(region.span.latitudeDelta, 0.72, accuracy: 0.000_001)
+        XCTAssertEqual(region.span.longitudeDelta, 1.44, accuracy: 0.000_001)
+    }
+
+    func testMapHomeCurrentGPSDotRequiresAnIPhoneGPSReading() {
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127.0,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let iPhoneGPS = SensorReading(
+            timestamp: .now,
+            point: point,
+            gpsAvailable: true,
+            sourceDevice: .iPhone
+        )
+        var watchGPS = iPhoneGPS
+        watchGPS.sourceDevice = .appleWatch
+        var unavailableGPS = iPhoneGPS
+        unavailableGPS.gpsAvailable = false
+
+        XCTAssertTrue(MapHomeCurrentGPSPolicy.isConfirmed(in: [iPhoneGPS]))
+        XCTAssertFalse(MapHomeCurrentGPSPolicy.isConfirmed(in: [watchGPS]))
+        XCTAssertFalse(
+            MapHomeCurrentGPSPolicy.isConfirmed(in: [unavailableGPS])
         )
     }
 
