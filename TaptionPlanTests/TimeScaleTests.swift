@@ -2576,6 +2576,32 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testPlaybackBlocksAutomaticMapFitAndInitialZoomReset() {
+        XCTAssertFalse(
+            MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+                isPlaybackRunning: true,
+                hasUserAdjustedMap: false
+            )
+        )
+        XCTAssertFalse(
+            MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+                isPlaybackRunning: true,
+                hasUserAdjustedMap: true
+            )
+        )
+        XCTAssertTrue(
+            MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+                isPlaybackRunning: false,
+                hasUserAdjustedMap: false
+            )
+        )
+        XCTAssertFalse(
+            MapHomePlaybackCameraPolicy.allowsInitialFocus(
+                isPlaybackRunning: true
+            )
+        )
+    }
+
     func testMapPanObserverAcceptsOneFingerBeganOrChangedOnly() {
         XCTAssertTrue(
             MapHomeUserTrackingPolicy.isSingleFingerPanStart(

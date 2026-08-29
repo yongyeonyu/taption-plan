@@ -1043,6 +1043,19 @@ enum MapHomeUserTrackingPolicy {
     }
 }
 
+enum MapHomePlaybackCameraPolicy {
+    static func allowsAutomaticFit(
+        isPlaybackRunning: Bool,
+        hasUserAdjustedMap: Bool
+    ) -> Bool {
+        !isPlaybackRunning && !hasUserAdjustedMap
+    }
+
+    static func allowsInitialFocus(isPlaybackRunning: Bool) -> Bool {
+        !isPlaybackRunning
+    }
+}
+
 enum MapHomeUserTrackingMode: String, Equatable {
     case idle
     case locating
@@ -5267,7 +5280,10 @@ struct MapHomeView: View {
         guard !requests.isEmpty else {
             mapRenderCache.invalidateExpectedRoutes()
             expectedRouteOverlays = []
-            if !hasUserAdjustedMap {
+            if MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+                isPlaybackRunning: isDayPlaybackRunning,
+                hasUserAdjustedMap: hasUserAdjustedMap
+            ) {
                 focusMapOnAllRoutes()
             }
             persistMapDayCache()
@@ -5318,7 +5334,10 @@ struct MapHomeView: View {
         mapRenderCache.invalidateExpectedRoutes()
         expectedRouteOverlays = overlays
         applyInitialMapFocusIfNeeded()
-        if !hasUserAdjustedMap {
+        if MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+            isPlaybackRunning: isDayPlaybackRunning,
+            hasUserAdjustedMap: hasUserAdjustedMap
+        ) {
             focusMapOnAllRoutes()
         }
         persistMapDayCache()
@@ -5689,8 +5708,13 @@ struct MapHomeView: View {
             latitudeDelta: payload.latitudeDelta,
             longitudeDelta: payload.longitudeDelta
         )
-        visibleMapCenter = center
-        visibleMapSpan = span
+        let shouldApplyCachedCamera = MapHomePlaybackCameraPolicy.allowsInitialFocus(
+            isPlaybackRunning: isDayPlaybackRunning
+        )
+        if shouldApplyCachedCamera {
+            visibleMapCenter = center
+            visibleMapSpan = span
+        }
         timelineRouteOverlays = payload.timeline.compactMap { overlay in
             let coordinates = overlay.coordinates.compactMap { coordinate -> CLLocationCoordinate2D? in
                 guard coordinate.latitude.isFinite,
@@ -5758,9 +5782,11 @@ struct MapHomeView: View {
                 overlays: overlays
             )
         }
-        setMapPosition(.region(
-            MapHomeLocationMapMath.region(center: center, span: span)
-        ))
+        if shouldApplyCachedCamera {
+            setMapPosition(.region(
+                MapHomeLocationMapMath.region(center: center, span: span)
+            ))
+        }
     }
 
     private func cachedCoordinate(
@@ -6129,6 +6155,9 @@ struct MapHomeView: View {
     }
 
     private func focusMapIfNeeded() {
+        guard MapHomePlaybackCameraPolicy.allowsInitialFocus(
+            isPlaybackRunning: isDayPlaybackRunning
+        ) else { return }
         guard let region = mapRouteFitRegion else { return }
         guard case .automatic = mapPosition else { return }
         setMapPosition(.region(region))
@@ -6145,7 +6174,10 @@ struct MapHomeView: View {
     }
 
     private func applyInitialMapFocusIfNeeded() {
-        guard !hasAppliedInitialMapFocus,
+        guard MapHomePlaybackCameraPolicy.allowsInitialFocus(
+            isPlaybackRunning: isDayPlaybackRunning
+        ),
+              !hasAppliedInitialMapFocus,
               let region = mapRouteFitRegion else { return }
         hasAppliedInitialMapFocus = true
         hasCancelledInitialLocationFocus = true
@@ -6174,6 +6206,9 @@ struct MapHomeView: View {
     }
 
     private func focusMapOnAllRoutes() {
+        guard MapHomePlaybackCameraPolicy.allowsInitialFocus(
+            isPlaybackRunning: isDayPlaybackRunning
+        ) else { return }
         guard let region = mapRouteFitRegion else {
             setMapPosition(.automatic)
             return
@@ -6357,7 +6392,10 @@ struct MapHomeView: View {
     }
 
     private func applyInitialLocationIfAvailable(using proxy: MapProxy?) {
-        guard mapViewportSize.width > 0,
+        guard MapHomePlaybackCameraPolicy.allowsInitialFocus(
+            isPlaybackRunning: isDayPlaybackRunning
+        ),
+              mapViewportSize.width > 0,
               mapViewportSize.height > 0,
               !hasAppliedInitialLocation,
               !hasAppliedInitialMapFocus,
@@ -6367,7 +6405,10 @@ struct MapHomeView: View {
     }
 
     private func beginInitialLocationRequest(using proxy: MapProxy?) {
-        guard mapViewportSize.width > 0,
+        guard MapHomePlaybackCameraPolicy.allowsInitialFocus(
+            isPlaybackRunning: isDayPlaybackRunning
+        ),
+              mapViewportSize.width > 0,
               mapViewportSize.height > 0,
               !hasAppliedInitialMapFocus,
               initialLocationRequestTask == nil else { return }
@@ -6380,6 +6421,9 @@ struct MapHomeView: View {
                   isAvailable,
                   !hasCancelledInitialLocationFocus,
                   !hasAppliedInitialMapFocus,
+                  MapHomePlaybackCameraPolicy.allowsInitialFocus(
+                      isPlaybackRunning: isDayPlaybackRunning
+                  ),
                   userTrackingMode == .idle else {
                 return
             }

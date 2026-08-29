@@ -2,6 +2,13 @@
 
 구현·빌드·업로드·설치·실행·실제 화면 터치는 서로 다른 게이트로 기록한다. 설치·실행만으로 UI 동작을 완료 처리하지 않는다.
 
+## 2026-08-30 ZOOM830Q01 재생 중 지도 줌 고정
+
+- 재생 중 비동기 예상 경로·캐시·초기 위치 처리의 자동 region/viewport 재적용을 차단하고, 재생 위치 중심 추적은 유지
+- `TimeScaleTests` targeted 통과: `/tmp/taption-plan-zoom830q01-tests/Logs/Test/Test-TaptionPlan-2026.08.30_01-30-07-+0900.xcresult`
+- Debug simulator build 통과
+- 현재 수정본 iPhone 설치·재생 화면·터치 readback은 새 서명 빌드의 Xcode 계정/프로파일 부재 및 iPhone 미러링 잠금 대기로 보류
+
 ## 2026-08-29 NCP829R001 최신 인계 실행
 
 - 저장소: `main`/`origin/main` `c06f12e`, `git diff --check` 통과
