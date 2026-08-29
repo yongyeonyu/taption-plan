@@ -155,37 +155,6 @@ enum MapHomeWeatherBackgroundKind: Equatable {
     }
 }
 
-enum MapHomeWeatherCollisionMath {
-    static let clearance: CGFloat = 4
-
-    static func alignedWeatherFrame(
-        centerX: CGFloat,
-        playheadFrame: CGRect
-    ) -> CGRect {
-        let size = CGSize(width: 32, height: 22)
-        return CGRect(
-            x: centerX - size.width / 2,
-            y: playheadFrame.midY - size.height / 2,
-            width: size.width,
-            height: size.height
-        )
-    }
-
-    static func horizontalOffset(
-        weatherFrame: CGRect,
-        playheadFrame: CGRect
-    ) -> CGFloat {
-        let intersection = weatherFrame.intersection(playheadFrame)
-        guard !intersection.isNull,
-              intersection.width > 0,
-              intersection.height > 0 else { return 0 }
-        return min(
-            0,
-            playheadFrame.minX - clearance - weatherFrame.maxX
-        )
-    }
-}
-
 enum MapHomeWeatherRailAlignmentMath {
     static let itemTrailingInset: CGFloat = 1
 
@@ -199,20 +168,14 @@ enum MapHomeWeatherRailAlignmentMath {
             - MapHomeTimeSidebarMath.weatherDockGap
     }
 
-    static func playheadCenterX(
-        weatherOriginX: CGFloat,
-        timeRailWidth: CGFloat
-    ) -> CGFloat {
-        let trackX = MapHomeTimeSidebarMath.trackCenterX(
-            railOriginX: MapHomeTimeSidebarMath.handleLaneWidth,
-            railWidth: timeRailWidth,
-            numericColumnWidth: MapHomeTimeSidebarMath.rulerNumericColumnWidth,
-            activeRailWidth: MapHomeTimeSidebarMath.activeRailWidth
-        )
-        return MapHomeTimeSidebarMath.handleCenterX(
-            trackX: trackX,
-            activeRailWidth: MapHomeTimeSidebarMath.activeRailWidth
-        ) - weatherOriginX
+}
+
+enum MapHomeTimeSidebarHandleSide {
+    case leading
+    case trailing
+
+    var allowsDrag: Bool {
+        self == .trailing
     }
 }
 
@@ -1348,16 +1311,21 @@ struct MapHomeTimeSidebar: View {
             trackX: trackX,
             activeRailWidth: activeRailWidth
         )
-        let interactionFrame = MapHomeTimeSidebarMath.selectionHandleInteractionFrame(
+        let leadingInteractionFrame = MapHomeTimeSidebarMath.selectionHandleTouchFrame(
+            side: .leading,
             leadingCenterX: handleCenterX,
             trailingCenterX: timeBlockCenterX,
             leadingHitWidth: doubleTapHitSize.width,
             trailingHitWidth: MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
             totalWidth: totalWidth
         )
-        let dragInteractionFrame = interactionFrame.insetBy(
-            dx: -MapHomeTimeSidebarMath.handleDragHitExpansion,
-            dy: 0
+        let trailingInteractionFrame = MapHomeTimeSidebarMath.selectionHandleTouchFrame(
+            side: .trailing,
+            leadingCenterX: handleCenterX,
+            trailingCenterX: timeBlockCenterX,
+            leadingHitWidth: doubleTapHitSize.width,
+            trailingHitWidth: MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
+            totalWidth: totalWidth
         )
         let hitCenterY = MapHomeTimeSidebarMath.handleHitCenterY(
             handleCenterY: y,
@@ -1404,15 +1372,33 @@ struct MapHomeTimeSidebar: View {
 
             Rectangle()
                 .fill(.clear)
-                // One gesture surface covers both visible handles. This
-                // avoids competing recognizers in their expanded hit areas
-                // while keeping the final state coalesced by the NLE gate.
                 .frame(
-                    width: dragInteractionFrame.width,
+                    width: leadingInteractionFrame.width,
                     height: MapHomeTimeSidebarMath.handleDragHitHeight
                 )
                 .contentShape(Rectangle())
-                .position(x: dragInteractionFrame.midX, y: hitCenterY)
+                .position(x: leadingInteractionFrame.midX, y: hitCenterY)
+                .onTapGesture {
+                    publish(minute)
+                }
+                .simultaneousGesture(
+                    TapGesture(count: 2).onEnded {
+                        onSectionEdit?(minute)
+                    }
+                )
+                .accessibilityLabel(
+                    activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
+                )
+                .accessibilityHint("탭하면 이 시간으로 이동합니다")
+
+            Rectangle()
+                .fill(.clear)
+                .frame(
+                    width: trailingInteractionFrame.width,
+                    height: MapHomeTimeSidebarMath.handleDragHitHeight
+                )
+                .contentShape(Rectangle())
+                .position(x: trailingInteractionFrame.midX, y: hitCenterY)
                 .highPriorityGesture(
                     dragGesture(
                         trackHeight: trackHeight,
@@ -1428,7 +1414,7 @@ struct MapHomeTimeSidebar: View {
                 .accessibilityLabel(
                     activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
                 )
-                .accessibilityHint("두 번 탭하면 섹션 편집을 엽니다")
+                .accessibilityHint("드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다")
         }
         .frame(width: totalWidth, height: railHeight)
         .zIndex(3)
@@ -1697,7 +1683,6 @@ struct MapHomeWeatherSidebar: View {
     let language: MapHomeLanguage
     let visibleStartMinute: Int
     let visibleDurationMinutes: Int
-    let playheadCenterX: CGFloat
 
     private let railWidth: CGFloat = 58
     private let verticalInset: CGFloat = 14
@@ -1737,28 +1722,6 @@ struct MapHomeWeatherSidebar: View {
                     if startMinute < endMinute {
                         let itemWidth = railWidth - 2
                         let itemHeight = max(22, min(30, height + 8))
-                        let playheadY = verticalInset + trackHeight
-                            * MapHomeTimeSidebarMath.position(
-                                minute: selectedMinute,
-                                window: window
-                            )
-                        let playheadFrame = CGRect(
-                            x: playheadCenterX
-                                - MapHomeTimeSidebarMath.handleVisualSize.width / 2,
-                            y: playheadY - 22,
-                            width: MapHomeTimeSidebarMath.handleVisualSize.width,
-                            height: MapHomeTimeSidebarMath.handleVisualSize.height
-                        )
-                        let weatherFrame = CGRect(
-                            x: railWidth / 2 - itemWidth / 2,
-                            y: y - itemHeight / 2,
-                            width: itemWidth,
-                            height: itemHeight
-                        )
-                        let collisionOffset = MapHomeWeatherCollisionMath.horizontalOffset(
-                            weatherFrame: weatherFrame,
-                            playheadFrame: playheadFrame
-                        )
                         let clampedSelectedMinute = min(max(selectedMinute, 0), 1_439)
                         let isSelected = clampedSelectedMinute >= entry.startMinute
                             && clampedSelectedMinute < entry.endMinute
@@ -1814,7 +1777,7 @@ struct MapHomeWeatherSidebar: View {
                                     .stroke(Color.tpPastelRose, lineWidth: 1.5)
                             }
                         }
-                        .position(x: railWidth / 2 + collisionOffset, y: y)
+                        .position(x: railWidth / 2, y: y)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(
                             language.text(
@@ -1878,13 +1841,12 @@ enum MapHomeTimeSidebarMath {
     static let rulerMinuteColumnWidth: CGFloat = 16
     static let rulerColumnSpacing: CGFloat = 2
     static let minimumRulerLabelSpacing: CGFloat = 12
-    static let selectionTimeBlockWidth: CGFloat = 32
+    static let selectionTimeBlockWidth: CGFloat = 44
     static let handleDoubleTapHitScale: CGFloat = 1.5
     static let selectionTimeBlockHitWidth: CGFloat =
         selectionTimeBlockWidth * handleDoubleTapHitScale
     static let handleDragMinimumDistance: CGFloat = 1
     static let handleDragHitHeight: CGFloat = 88
-    static let handleDragHitExpansion: CGFloat = 12
     static let handleLaneWidth: CGFloat = 69
     static let activeRailWidth: CGFloat = 12
     static let handleVisualSize = CGSize(width: 44, height: 44)
@@ -1936,21 +1898,25 @@ enum MapHomeTimeSidebarMath {
         )
     }
 
-    static func selectionHandleInteractionFrame(
+    static func selectionHandleTouchFrame(
+        side: MapHomeTimeSidebarHandleSide,
         leadingCenterX: CGFloat,
         trailingCenterX: CGFloat,
         leadingHitWidth: CGFloat,
         trailingHitWidth: CGFloat,
         totalWidth: CGFloat
     ) -> CGRect {
-        let minimumX = min(
-            leadingCenterX - leadingHitWidth / 2,
-            trailingCenterX - trailingHitWidth / 2
-        )
-        let maximumX = max(
-            leadingCenterX + leadingHitWidth / 2,
-            trailingCenterX + trailingHitWidth / 2
-        )
+        let splitX = (leadingCenterX + trailingCenterX) / 2
+        let minimumX: CGFloat
+        let maximumX: CGFloat
+        switch side {
+        case .leading:
+            minimumX = leadingCenterX - leadingHitWidth / 2
+            maximumX = min(splitX, leadingCenterX + leadingHitWidth / 2)
+        case .trailing:
+            minimumX = max(splitX, trailingCenterX - trailingHitWidth / 2)
+            maximumX = trailingCenterX + trailingHitWidth / 2
+        }
         let clampedMinimumX = min(max(minimumX, 0), max(totalWidth, 1))
         let clampedMaximumX = min(max(maximumX, clampedMinimumX), max(totalWidth, 1))
         return CGRect(

@@ -4,6 +4,30 @@ import XCTest
 @testable import TaptionPlan
 
 final class HealthKitIntegrationTests: XCTestCase {
+    func testHealthAuthorizationEnablesImplicitWatchSync() {
+        XCTAssertEqual(
+            TaptionWatchDataSyncProfile.profileAfterHealthAuthorization(
+                current: .off,
+                userDidSetProfile: false
+            ),
+            .balanced
+        )
+        XCTAssertEqual(
+            TaptionWatchDataSyncProfile.profileAfterHealthAuthorization(
+                current: .off,
+                userDidSetProfile: true
+            ),
+            .off
+        )
+        XCTAssertEqual(
+            TaptionWatchDataSyncProfile.profileAfterHealthAuthorization(
+                current: .accuracy,
+                userDidSetProfile: false
+            ),
+            .accuracy
+        )
+    }
+
     func testCatalogCoversEveryPublicHealthKitFamily() {
         let identifiers = HealthKitTypeCatalog.all.map(\.identifier)
 

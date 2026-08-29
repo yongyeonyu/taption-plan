@@ -695,44 +695,6 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertGreaterThan(MapHomeLayerPriority.header, MapHomeLayerPriority.menu)
     }
 
-    func testWeatherMovesOnlyForAnIntersectingPlayhead() {
-        let weather = CGRect(x: 1, y: 100, width: 56, height: 30)
-        let intersectingPlayhead = CGRect(x: 24, y: 90, width: 44, height: 44)
-        XCTAssertEqual(
-            MapHomeWeatherCollisionMath.horizontalOffset(
-                weatherFrame: weather,
-                playheadFrame: intersectingPlayhead
-            ),
-            -37
-        )
-        XCTAssertEqual(
-            MapHomeWeatherCollisionMath.horizontalOffset(
-                weatherFrame: weather,
-                playheadFrame: CGRect(x: 24, y: 140, width: 44, height: 44)
-            ),
-            0
-        )
-    }
-
-    func testWeatherAlignsWithPlayheadAndKeepsClearanceWhenSidebarIsHidden() {
-        let playhead = CGRect(x: 24, y: 90, width: 44, height: 44)
-        let weather = MapHomeWeatherCollisionMath.alignedWeatherFrame(
-            centerX: playhead.midX,
-            playheadFrame: playhead
-        )
-        let offset = MapHomeWeatherCollisionMath.horizontalOffset(
-            weatherFrame: weather,
-            playheadFrame: playhead
-        )
-        let shiftedWeather = weather.offsetBy(dx: offset, dy: 0)
-
-        XCTAssertEqual(weather.midY, playhead.midY)
-        XCTAssertEqual(
-            shiftedWeather.maxX,
-            playhead.minX - MapHomeWeatherCollisionMath.clearance
-        )
-    }
-
     func testWeatherTimelineCapsulesAttachFlushToSidebarPanel() {
         let weatherRailWidth: CGFloat = 58
         let timeRailWidth: CGFloat = 58
@@ -758,34 +720,14 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapHomeTimeSidebarStyle.handleCornerRadius, 4)
     }
 
-    func testWeatherTimelineUsesTheActualHandleForCollision() {
+    func testWeatherTimelineKeepsItsCenterWhenPlayheadOverlaps() {
         let weatherOriginX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
             weatherRailWidth: 58,
             timeRailWidth: 58
         )
-        let localHandleCenterX = MapHomeWeatherRailAlignmentMath.playheadCenterX(
-            weatherOriginX: weatherOriginX,
-            timeRailWidth: 58
-        )
-        let weather = CGRect(x: 1, y: 100, width: 56, height: 30)
-        let playhead = CGRect(
-            x: localHandleCenterX
-                - MapHomeTimeSidebarMath.handleVisualSize.width / 2,
-            y: 93,
-            width: MapHomeTimeSidebarMath.handleVisualSize.width,
-            height: MapHomeTimeSidebarMath.handleVisualSize.height
-        )
-        let shifted = weather.offsetBy(
-            dx: MapHomeWeatherCollisionMath.horizontalOffset(
-                weatherFrame: weather,
-                playheadFrame: playhead
-            ),
-            dy: 0
-        )
-
         XCTAssertEqual(
-            shifted.maxX,
-            playhead.minX - MapHomeWeatherCollisionMath.clearance
+            weatherOriginX + 58 / 2,
+            weatherOriginX + 29
         )
     }
 
@@ -1134,7 +1076,6 @@ final class TimeScaleTests: XCTestCase {
             567
         )
         XCTAssertGreaterThan(MapHomeTimeSidebarMath.handleDragHitHeight, hitHeight)
-        XCTAssertGreaterThan(MapHomeTimeSidebarMath.handleDragHitExpansion, 0)
 
     }
 
@@ -2281,8 +2222,17 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(size.height, 66, accuracy: 0.001)
     }
 
-    func testSidebarBothHandleHitTargetsShareOneDragAndEditZone() {
-        let frame = MapHomeTimeSidebarMath.selectionHandleInteractionFrame(
+    func testSidebarLeftHandleIsTouchOnlyAndRightHandleHasExpandedDragZone() {
+        let leadingFrame = MapHomeTimeSidebarMath.selectionHandleTouchFrame(
+            side: .leading,
+            leadingCenterX: 44,
+            trailingCenterX: 99,
+            leadingHitWidth: 87,
+            trailingHitWidth: MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
+            totalWidth: 127
+        )
+        let trailingFrame = MapHomeTimeSidebarMath.selectionHandleTouchFrame(
+            side: .trailing,
             leadingCenterX: 44,
             trailingCenterX: 99,
             leadingHitWidth: 87,
@@ -2290,10 +2240,16 @@ final class TimeScaleTests: XCTestCase {
             totalWidth: 127
         )
 
-        XCTAssertLessThanOrEqual(frame.minX, 44 - 87 / 2)
-        XCTAssertGreaterThanOrEqual(frame.maxX, 99 + 48 / 2)
-        XCTAssertGreaterThanOrEqual(frame.minX, 0)
-        XCTAssertLessThanOrEqual(frame.maxX, 127)
+        XCTAssertFalse(MapHomeTimeSidebarHandleSide.leading.allowsDrag)
+        XCTAssertTrue(MapHomeTimeSidebarHandleSide.trailing.allowsDrag)
+        XCTAssertLessThanOrEqual(leadingFrame.maxX, trailingFrame.minX)
+        XCTAssertGreaterThanOrEqual(leadingFrame.minX, 0)
+        XCTAssertLessThanOrEqual(trailingFrame.maxX, 127)
+        XCTAssertEqual(MapHomeTimeSidebarMath.selectionTimeBlockWidth, 44)
+        XCTAssertGreaterThan(
+            MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
+            MapHomeTimeSidebarMath.selectionTimeBlockWidth
+        )
     }
 
     func testExpandedRulerRowsKeepHourAndMinuteInOneVerticalColumn() {

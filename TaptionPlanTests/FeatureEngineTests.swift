@@ -18406,6 +18406,59 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored.transitBoardingDecisions, [deleted])
     }
 
+    @MainActor
+    func testDeletingTransitBoardingCandidatePersistsBeforeReload() async throws {
+        let start = makeDate(2026, 8, 28, 11)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let location = UserTransitLocation(
+            name: "서울역",
+            kind: .trainStation,
+            point: point
+        )
+        let candidate = try XCTUnwrap(
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(at: start, point: point, duration: 180),
+                registeredLocations: [location]
+            ).first
+        )
+        let repository = InMemoryPlanRepository()
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil
+        )
+        await model.bootstrap()
+
+        await model.deleteTransitBoardingCandidate(candidate)
+
+        let reloaded = AppModel(
+            repository: repository,
+            cloudSyncService: nil
+        )
+        await reloaded.bootstrap()
+
+        XCTAssertEqual(
+            reloaded.snapshot.settings.transitBoardingDecisions.count,
+            1
+        )
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: transitReadings(
+                    at: start,
+                    point: point,
+                    duration: 180
+                ),
+                registeredLocations: [location],
+                decisions: reloaded.snapshot.settings.transitBoardingDecisions
+            ).isEmpty
+        )
+    }
+
     func testTransitBoardingDeletionSuppressesNearbyRegeneratedCandidates() throws {
         let start = makeDate(2026, 8, 28, 12)
         let point = GeoPoint(
@@ -19011,6 +19064,45 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertGreaterThan(opposite.leftFoot.y, opposite.rightFoot.y)
         XCTAssertLessThan(abs(first.leftHip.y - opposite.leftHip.y), 0.5)
         XCTAssertLessThan(abs(first.rightHip.y - opposite.rightHip.y), 0.5)
+    }
+
+    func testStickmanWalkTransfersWeightAndOpposesArmSwing() {
+        let leftSupport = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 3,
+            phaseCount: 12
+        )
+        let rightSupport = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 9,
+            phaseCount: 12
+        )
+        let leftSupportCenter =
+            (leftSupport.leftHip.x + leftSupport.rightHip.x) / 2
+        let rightSupportCenter =
+            (rightSupport.leftHip.x + rightSupport.rightHip.x) / 2
+
+        XCTAssertLessThan(leftSupportCenter, rightSupportCenter)
+        XCTAssertLessThan(
+            leftSupport.leftHip.y,
+            leftSupport.rightHip.y
+        )
+        XCTAssertGreaterThan(
+            leftSupport.rightHip.y,
+            rightSupport.rightHip.y
+        )
+
+        let first = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 0,
+            phaseCount: 12
+        )
+        let opposite = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 6,
+            phaseCount: 12
+        )
+        XCTAssertGreaterThan(first.leftHand.x, opposite.leftHand.x)
     }
 
     func testStickmanTypingFramesProgressAndBlinkAtBothCadences() {

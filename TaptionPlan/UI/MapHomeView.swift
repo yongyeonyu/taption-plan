@@ -3513,11 +3513,7 @@ struct MapHomeView: View {
                             selectedMinute: minute,
                             language: language,
                             visibleStartMinute: weatherVisibleStartMinute,
-                            visibleDurationMinutes: weatherVisibleDurationMinutes,
-                            playheadCenterX: MapHomeWeatherRailAlignmentMath.playheadCenterX(
-                                weatherOriginX: weatherOriginX,
-                                timeRailWidth: Layout.timeRailWidth
-                            )
+                            visibleDurationMinutes: weatherVisibleDurationMinutes
                         )
                         .offset(x: weatherOriginX)
                     }
@@ -9557,8 +9553,10 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
             .tint(Color.tpReferenceBlue)
 
             Button(role: .destructive) {
-                model.deleteTransitBoardingCandidate(candidate)
-                dismiss()
+                Task { @MainActor in
+                    await model.deleteTransitBoardingCandidate(candidate)
+                    dismiss()
+                }
             } label: {
                 Label(
                     language.text("이 후보 삭제", "Delete this candidate"),

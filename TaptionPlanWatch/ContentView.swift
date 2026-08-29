@@ -46,6 +46,7 @@ struct WatchContentView: View {
                 WatchLaunchDiagnostics.mark("first-view-task")
                 connectivity.prepare()
                 WatchLaunchDiagnostics.mark("connectivity-prepared")
+                await workout.prepareHealthDataAccess()
                 workout.beginCaptureAfterFirstRender()
                 WatchLaunchDiagnostics.mark("launch-complete")
             }

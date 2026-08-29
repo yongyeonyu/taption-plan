@@ -295,6 +295,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         WatchLaunchDiagnostics.mark("manual data sync end")
     }
 
+    func prepareHealthDataAccess() async {
+        guard HKHealthStore.isHealthDataAvailable(),
+              !didRequestHealthReadAuthorization else { return }
+        do {
+            try await requestHealthReadAuthorization()
+            didRequestHealthReadAuthorization = true
+            WatchLaunchDiagnostics.mark("health read authorization ready")
+        } catch {
+            WatchLaunchDiagnostics.mark("health read authorization unavailable")
+        }
+    }
+
     func start(
         kind: TaptionWatchWorkoutKind,
         linkedPlan: TaptionWatchPlanItem?,
@@ -526,8 +538,8 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private func emitHealthSnapshot() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         if !didRequestHealthReadAuthorization {
-            try? await requestHealthReadAuthorization()
-            didRequestHealthReadAuthorization = true
+            await prepareHealthDataAccess()
+            guard didRequestHealthReadAuthorization else { return }
         }
         let calendar = Calendar.current
         let now = Date.now

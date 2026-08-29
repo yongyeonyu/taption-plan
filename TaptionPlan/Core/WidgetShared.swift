@@ -449,10 +449,10 @@ enum TaptionStickmanPoseEngine {
     private static func movement(_ cycle: Cycle) -> TaptionStickmanPose {
         locomotion(
             cycle,
-            stride: 10,
-            footLift: 2.8,
-            armScale: 0.95,
-            bodyLean: 0.6
+            stride: 9,
+            footLift: 2.3,
+            armScale: 1,
+            bodyLean: 0.55
         )
     }
 
@@ -529,10 +529,10 @@ enum TaptionStickmanPoseEngine {
     private static func walking(_ cycle: Cycle) -> TaptionStickmanPose {
         locomotion(
             cycle,
-            stride: 8,
-            footLift: 2.6,
-            armScale: 0.90,
-            bodyLean: 0.2
+            stride: 8.5,
+            footLift: 2.2,
+            armScale: 0.92,
+            bodyLean: 0.25
         )
     }
 
@@ -559,31 +559,47 @@ enum TaptionStickmanPoseEngine {
         )
         let leftAir = max(0, 45 - leftFoot.y)
         let rightAir = max(0, 45 - rightFoot.y)
-        let bodyLift = max(leftAir, rightAir) * 0.25
-            + 0.10 * (1 - cycle.c2) / 2
-        let bodyX = 32 + bodyLean + 0.45 * cycle.s
-        let leftFootCenter = 20 + stride / 2
-        let rightFootCenter = 44 - stride / 2
-        let torsoRoll = 0.35 * cycle.s
+        let singleSupport = (1 - cycle.c2) / 2
+        let bodyLift = 0.72 * singleSupport + max(leftAir, rightAir) * 0.08
+        let weightShift = -0.55 * cycle.s
+        let bodyX = 32 + bodyLean + weightShift
+        let torsoRoll = -0.24 * cycle.s
+        let pelvisRoll = 0.26 * cycle.s
+        let torsoTwist = 0.18 * cycle.s
+        let armAngle = 2 * Double.pi * wrap(cycle.t - 0.045)
+        let armCos = cos(armAngle)
+        let armSin = sin(armAngle)
 
         return articulated(
             head: p(
-                bodyX + bodyLean * 1.3 + 0.25 * cycle.s,
-                10 - bodyLift * 0.7 + 0.10 * cycle.c2
+                bodyX + bodyLean * 0.55 + 0.12 * cycle.s,
+                10.1 - bodyLift * 0.72 + 0.08 * cycle.s2
             ),
-            neck: p(bodyX + bodyLean * 0.55, 14.2 - bodyLift * 0.55),
-            leftShoulder: p(bodyX - 2.7, 19 + torsoRoll),
-            rightShoulder: p(bodyX + 2.7, 19 - torsoRoll),
+            neck: p(bodyX + bodyLean * 0.3, 14.2 - bodyLift * 0.55),
+            leftShoulder: p(
+                bodyX - 2.7 - torsoTwist,
+                19 - bodyLift * 0.35 + torsoRoll
+            ),
+            rightShoulder: p(
+                bodyX + 2.7 + torsoTwist,
+                19 - bodyLift * 0.35 - torsoRoll
+            ),
             leftHand: p(
-                bodyX - 11 - (leftFoot.x - leftFootCenter) * armScale,
-                27 + 0.45 * cycle.c
+                bodyX - 9.6 + 3.2 * armCos * armScale,
+                27 + 0.55 * armSin
             ),
             rightHand: p(
-                bodyX + 11 - (rightFoot.x - rightFootCenter) * armScale,
-                27 - 0.45 * cycle.c
+                bodyX + 9.6 - 3.2 * armCos * armScale,
+                27 - 0.55 * armSin
             ),
-            leftHip: p(bodyX - 1.7, 31 - bodyLift * 0.35 + 0.12 * cycle.s),
-            rightHip: p(bodyX + 1.7, 31 - bodyLift * 0.35 - 0.12 * cycle.s),
+            leftHip: p(
+                bodyX - 1.7 - torsoTwist * 0.5,
+                31 - bodyLift * 0.35 - pelvisRoll
+            ),
+            rightHip: p(
+                bodyX + 1.7 + torsoTwist * 0.5,
+                31 - bodyLift * 0.35 + pelvisRoll
+            ),
             leftFoot: leftFoot,
             rightFoot: rightFoot,
             upperArmLength: 7.2,
@@ -599,37 +615,56 @@ enum TaptionStickmanPoseEngine {
             front: 18,
             back: 32,
             floor: 45,
-            lift: 5
+            lift: 6
         )
         let rightFoot = runningFoot(
             phase: wrap(cycle.t + 0.5),
             front: 46,
             back: 32,
             floor: 45,
-            lift: 5
+            lift: 6
         )
         let flightHeight = max(45 - leftFoot.y, 45 - rightFoot.y)
-        let bodyLift = flightHeight * 0.35 + 0.12 * (1 - cycle.c2) / 2
-        let bodyX = 33 + 0.65 * cycle.s
+        let flight = min(45 - leftFoot.y, 45 - rightFoot.y)
+        let bodyLift = max(0, flight) * 0.75 + flightHeight * 0.16
+        let bodyX = 33.5 + 0.72 * cycle.s
+        let shoulderRoll = -0.34 * cycle.s
+        let pelvisRoll = 0.32 * cycle.s
+        let torsoTwist = 0.28 * cycle.s
+        let armAngle = 2 * Double.pi * wrap(cycle.t - 0.06)
+        let armCos = cos(armAngle)
+        let armSin = sin(armAngle)
 
         return articulated(
             head: p(
-                bodyX + 1.3 + 0.25 * cycle.s,
-                9 - bodyLift * 0.55
+                bodyX + 1.05,
+                9.4 - bodyLift * 0.52
             ),
-            neck: p(bodyX + 0.7, 13.3 - bodyLift * 0.45),
-            leftShoulder: p(bodyX - 2.7, 18.3 - bodyLift * 0.15),
-            rightShoulder: p(bodyX + 2.7, 18.1 - bodyLift * 0.15),
+            neck: p(bodyX + 0.62, 13.7 - bodyLift * 0.42),
+            leftShoulder: p(
+                bodyX - 2.7 - torsoTwist,
+                18.4 - bodyLift * 0.22 + shoulderRoll
+            ),
+            rightShoulder: p(
+                bodyX + 2.7 + torsoTwist,
+                18.2 - bodyLift * 0.22 - shoulderRoll
+            ),
             leftHand: p(
-                bodyX - 12 - (leftFoot.x - 25) * 1.15,
-                16.5 - bodyLift * 0.15 + 0.35 * cycle.c
+                bodyX - 8.4 + 4.2 * armCos,
+                23.8 - bodyLift * 0.12 + 1.3 * armSin
             ),
             rightHand: p(
-                bodyX + 12 - (rightFoot.x - 39) * 1.15,
-                24.5 - bodyLift * 0.15 - 0.35 * cycle.c
+                bodyX + 8.4 - 4.2 * armCos,
+                23.8 - bodyLift * 0.12 - 1.3 * armSin
             ),
-            leftHip: p(bodyX - 1.8, 30 - bodyLift * 0.45),
-            rightHip: p(bodyX + 1.8, 30.2 - bodyLift * 0.45),
+            leftHip: p(
+                bodyX - 1.8 - torsoTwist * 0.5,
+                30 - bodyLift * 0.45 - pelvisRoll
+            ),
+            rightHip: p(
+                bodyX + 1.8 + torsoTwist * 0.5,
+                30.2 - bodyLift * 0.45 + pelvisRoll
+            ),
             leftFoot: leftFoot,
             rightFoot: rightFoot,
             upperArmLength: 8.0,
@@ -817,9 +852,10 @@ enum TaptionStickmanPoseEngine {
             return p(lerp(front, back, progress), floor)
         }
         let progress = smooth((phase - stanceEnd) / (1 - stanceEnd))
+        let liftProgress = pow(sin(Double.pi * progress), 1.25)
         return p(
             lerp(back, front, progress),
-            floor - sin(Double.pi * progress) * lift
+            floor - liftProgress * lift
         )
     }
 
@@ -836,9 +872,10 @@ enum TaptionStickmanPoseEngine {
             return p(lerp(front, back, progress), floor)
         }
         let progress = smooth((phase - stanceEnd) / (1 - stanceEnd))
+        let liftProgress = pow(sin(Double.pi * progress), 1.2)
         return p(
             lerp(back, front, progress),
-            floor - sin(Double.pi * progress) * lift
+            floor - liftProgress * lift
         )
     }
 

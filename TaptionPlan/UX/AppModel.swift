@@ -643,6 +643,8 @@ final class AppModel {
         "taption.permission-onboarding.v1"
     private static let healthAuthorizationRequestedKey =
         "taption.health-authorization-requested.v1"
+    private static let watchDataSyncProfileConfiguredKey =
+        "taption.watch-data-sync-profile-configured.v1"
     private static let permissionFlagsMigrationKey =
         "taption.permission-flags-sync.v2"
     private static let diagnosticsLatestFileKey =
@@ -2791,6 +2793,13 @@ final class AppModel {
     func requestHealth() async {
         guard !isRefreshingIntegrations else { return }
         isRefreshingIntegrations = true
+        let watchDataSyncProfile =
+            TaptionWatchDataSyncProfile.profileAfterHealthAuthorization(
+                current: snapshot.settings.watchDataSyncProfile,
+                userDidSetProfile: UserDefaults.standard.bool(
+                    forKey: Self.watchDataSyncProfileConfiguredKey
+                )
+            )
         do {
             let granted = try await healthService.requestReadAccess()
             UserDefaults.standard.set(
@@ -2800,12 +2809,15 @@ final class AppModel {
             snapshot.settings.healthEnabled = granted
             snapshot.settings.permissions[.health] = granted ? .authorized : .denied
             if granted {
+                snapshot.settings.watchDataSyncProfile = watchDataSyncProfile
                 await synchronizeHealthHistory(showErrors: true)
                 await refreshHealthData()
                 await configureHealthBackgroundDeliveryIfNeeded(
                     showErrors: true
                 )
                 startForegroundHealthRefreshIfNeeded()
+                publishWatchPayload()
+                requestWatchDataSync()
             }
             await persist()
         } catch {
@@ -3487,6 +3499,10 @@ final class AppModel {
     func setWatchDataSyncProfile(
         _ profile: TaptionWatchDataSyncProfile
     ) {
+        UserDefaults.standard.set(
+            true,
+            forKey: Self.watchDataSyncProfileConfiguredKey
+        )
         guard snapshot.settings.watchDataSyncProfile != profile else {
             return
         }
@@ -5760,6 +5776,9 @@ final class AppModel {
             payload: snapshot,
             capturedAt: snapshot.capturedAt
         )
+        if settings.healthEnabled {
+            await refreshHealthData(showErrors: false)
+        }
         await persistDeviceLocalSnapshot()
     }
 
@@ -6576,8 +6595,9 @@ final class AppModel {
 
     func deleteTransitBoardingCandidate(
         _ candidate: TransitBoardingCandidate
-    ) {
+    ) async {
         upsertingTransitBoardingDecision(for: candidate, mode: nil)
+        await transitDecisionPersistTask?.value
     }
 
     private func upsertingTransitBoardingDecision(

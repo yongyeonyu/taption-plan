@@ -1718,6 +1718,14 @@ enum TaptionWatchDataSyncProfile: Int, Codable, CaseIterable, Hashable, Sendable
             ? "\(intervalMinutes)분마다 건강·활동 데이터 가져오기"
             : "Import health and activity data every \(intervalMinutes) min"
     }
+
+    static func profileAfterHealthAuthorization(
+        current: Self,
+        userDidSetProfile: Bool
+    ) -> Self {
+        guard current == .off, !userDidSetProfile else { return current }
+        return .balanced
+    }
 }
 
 struct TaptionWatchAccelerationSettings: Codable, Hashable, Sendable {
