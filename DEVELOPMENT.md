@@ -441,3 +441,20 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - TestFlight 업로드 성공: Delivery UUID `b70dc4c7-06e1-4bc8-85a9-13377ff1dcfa`; 처리 상태 `VALID`, 내부 상태 `IN_BETA_TESTING`.
 - `TP Taption Plan 내부 테스트` 그룹에 build 111을 연결했다. 그룹 빌드 화면에서 `1.0 (111) · 테스트 중 · iOS`, 테스터 화면에서 내부 테스터 1명과 `설치됨 1.0 (111)` 노출을 확인했다.
 - 실기기 설치·실행·HealthKit/Watch 실제 수신은 이번 TestFlight 업로드와 별도 게이트다.
+
+## 2026-08-29 STK9V6Q2M4 졸라맨 18개 동작 재설계
+
+- `MapHomeStickmanRenderer`의 졸라맨을 기존 Canvas 계약(64×56 좌표계, 진분홍 선화, 12프레임, Reduce Motion)을 유지한 채 관절·얼굴·소품이 함께 보이는 형태로 다시 구성했다.
+- 시점은 걷기·달리기·일반 이동·버스·선박·자전거를 옆면, 업무를 오른쪽 사선 뒤, 학교·식사·운동을 왼쪽 사선 앞, 취미·미확인을 정면, 수면을 옆면, 차량을 정면으로 고정한다. 활동은 정면→왼쪽 옆→오른쪽 옆 순으로 12프레임을 순환한다.
+- 업무는 모니터의 타이핑 텍스트와 키보드 입력을, 학교는 책·페이지 넘김을, 취미는 마이크·음표·노래하는 입 모양을, 수면은 침대·베개·이불·호흡·Z를, 미확인은 고개 갸웃과 물음표를 표시한다.
+- 차량은 운전대와 정면 운전 자세로 통합하고 `자가용` 데이터도 `.car` 렌더링으로 통합했다. 선박은 난간과 물결 흔들림, 비행기는 큰 창과 탑승자, 2량 지하철은 큰 창·앞쪽 정면 승객·손잡이, 버스는 손잡이를 추가했다.
+- 자전거는 옆면 페달 회전, 걷기·달리기는 보폭·접지 기반 동작을 유지하며, 모든 이동 동작은 기존 경로·재생 위치 투영과 함께 사용한다.
+- 분류 회귀 기대값은 `TaptionPlanTests/FeatureEngineTests.swift`에서 `자가용 → .car`로 갱신했다. Live Activity의 별도 `privateVehicle` 계약은 변경하지 않았다.
+
+### 검증 및 게이트
+
+- 최신 소스 기준 generic iOS Debug build와 iOS Simulator `build-for-testing` 성공, `git diff --check` 통과
+- iPhone 14 Pro `MapHomeStickmanTests` 20/20과 앱 실행은 최종 렌더 세부 패치 전 서명 Debug 상태에서 통과했다.
+- 최종 렌더 세부 패치 후 동일 테스트 재시도는 iPhone 잠금 상태의 `deviceprep` 차단으로 중단됐다. 따라서 최종 소스의 실기기 화면·터치·동작 시각 검증은 미완료다.
+- 현재 환경에는 사용 가능한 iOS Simulator 기기가 없어 Simulator 화면 검증을 완료할 수 없다. TestFlight archive/upload와 내부 그룹 readback은 이번 변경의 별도 미실행 게이트다.
+- 새 채팅 인계 프롬프트는 `NEXT_CHAT_PROMPT.md`에 최종 푸시 SHA와 남은 실기기 게이트를 기록한다.

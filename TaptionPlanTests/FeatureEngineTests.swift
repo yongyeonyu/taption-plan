@@ -19373,7 +19373,7 @@ final class MapHomeStickmanTests: XCTestCase {
             ("달리기", .running),
             ("자동차", .car),
             ("지하철", .subway),
-            ("자가용", .privateVehicle),
+            ("자가용", .car),
             ("버스", .bus),
             ("배", .ship),
             ("비행기", .airplane),
