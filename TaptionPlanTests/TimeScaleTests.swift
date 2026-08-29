@@ -3039,7 +3039,7 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapHomeDayPlaybackUsesQuarterSpeedOnlyInsideMovement() {
+    func testMapHomeDayPlaybackUsesSixthSpeedInsideMovement() {
         let ranges = [
             MapHomePlaybackMovementRange(startMinute: 60, endMinute: 120)
         ]
@@ -3059,12 +3059,12 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            75,
+            70,
             accuracy: 0.000_001
         )
     }
 
-    func testMapHomeDayPlaybackKeepsWalkingFastAndVehiclesSlow() {
+    func testMapHomeDayPlaybackUsesSixthSpeedForWalkingAndVehicles() {
         XCTAssertEqual(
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 60,
@@ -3073,7 +3073,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .walking),
                 ]
             ),
-            120,
+            70,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -3084,7 +3084,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .car),
                 ]
             ),
-            75,
+            70,
             accuracy: 0.000_001
         )
     }
@@ -3100,7 +3100,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            67.5,
+            65,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -3109,8 +3109,59 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            140,
+            120,
             accuracy: 0.000_001
+        )
+    }
+
+    func testMapHomeExpectedRoutePlaybackInterpolatesByDistanceAndTime() throws {
+        let start = makeDate(2026, 8, 26, 9)
+        let end = makeDate(2026, 8, 26, 10)
+        let coordinates = [
+            CLLocationCoordinate2D(latitude: 37.5, longitude: 127.0),
+            CLLocationCoordinate2D(latitude: 37.5, longitude: 127.01),
+        ]
+
+        let beginning = try XCTUnwrap(MapHomeExpectedRoutePlaybackMath.coordinate(
+            at: start,
+            departureDate: start,
+            arrivalDate: end,
+            coordinates: coordinates
+        ))
+        XCTAssertEqual(beginning.latitude, 37.5, accuracy: 0.000_001)
+        XCTAssertEqual(beginning.longitude, 127.0, accuracy: 0.000_001)
+
+        let midpoint = try XCTUnwrap(MapHomeExpectedRoutePlaybackMath.coordinate(
+            at: start.addingTimeInterval(30 * 60),
+            departureDate: start,
+            arrivalDate: end,
+            coordinates: coordinates
+        ))
+        XCTAssertEqual(midpoint.latitude, 37.5, accuracy: 0.000_001)
+        XCTAssertEqual(midpoint.longitude, 127.005, accuracy: 0.000_001)
+
+        let arrival = try XCTUnwrap(MapHomeExpectedRoutePlaybackMath.coordinate(
+            at: end,
+            departureDate: start,
+            arrivalDate: end,
+            coordinates: coordinates
+        ))
+        XCTAssertEqual(arrival.longitude, 127.01, accuracy: 0.000_001)
+        XCTAssertNil(
+            MapHomeExpectedRoutePlaybackMath.coordinate(
+                at: start.addingTimeInterval(-1),
+                departureDate: start,
+                arrivalDate: end,
+                coordinates: coordinates
+            )
+        )
+        XCTAssertNil(
+            MapHomeExpectedRoutePlaybackMath.coordinate(
+                at: end.addingTimeInterval(1),
+                departureDate: start,
+                arrivalDate: end,
+                coordinates: coordinates
+            )
         )
     }
 

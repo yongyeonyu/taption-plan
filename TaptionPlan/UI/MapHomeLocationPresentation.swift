@@ -488,6 +488,9 @@ enum MapHomeStickmanAnimationEngine {
 
 enum MapHomeStickmanStyle {
     static let deepPinkHex = "#D94772"
+    static let outlineHex = "#24324A"
+    static let bodyFillHex = "#F5A3BA"
+    static let skinFillHex = "#FFF4E8"
     static let personStrokeWidth: CGFloat = 1
 }
 
@@ -583,6 +586,9 @@ private struct MapHomeStickmanCanvas {
 
 private enum MapHomeStickmanRenderer {
     private static let deepPink = Color(hex: MapHomeStickmanStyle.deepPinkHex)
+    private static let outline = Color(hex: MapHomeStickmanStyle.outlineHex)
+    private static let bodyFill = Color(hex: MapHomeStickmanStyle.bodyFillHex)
+    private static let skinFill = Color(hex: MapHomeStickmanStyle.skinFillHex)
     private static let accent = deepPink
     private static let line = deepPink
     private static let faceLine = Color.black.opacity(0.9)
@@ -737,12 +743,12 @@ private enum MapHomeStickmanRenderer {
             width: radius * 2,
             height: radius * 2
         ))
-        context.fill(head, with: .color(deepPink))
+        context.fill(head, with: .color(skinFill))
         context.stroke(
             head,
-            with: .color(deepPink),
+            with: .color(outline),
             style: StrokeStyle(
-                lineWidth: MapHomeStickmanStyle.personStrokeWidth * canvas.scale,
+                lineWidth: 1.4 * canvas.scale,
                 lineCap: .round,
                 lineJoin: .round
             )
@@ -795,13 +801,39 @@ private enum MapHomeStickmanRenderer {
             canvas.point(CGFloat(value.x), CGFloat(value.y))
         }
 
-        stroke(&context, [point(pose.leftHip), point(pose.leftKnee), point(pose.leftFoot)])
-        stroke(&context, [point(pose.rightHip), point(pose.rightKnee), point(pose.rightFoot)])
-        stroke(&context, [point(pose.leftShoulder), point(pose.leftElbow), point(pose.leftHand)])
-        stroke(&context, [point(pose.rightShoulder), point(pose.rightElbow), point(pose.rightHand)])
-        stroke(&context, [point(pose.neck), point(pose.head)])
-        stroke(&context, [point(pose.neck), point(pose.leftShoulder)])
-        stroke(&context, [point(pose.neck), point(pose.rightShoulder)])
+        func limb(_ points: [CGPoint]) {
+            stroke(&context, points, color: outline, width: 2.8)
+            stroke(&context, points, color: deepPink, width: 1.15)
+        }
+
+        limb([point(pose.leftHip), point(pose.leftKnee), point(pose.leftFoot)])
+        limb([point(pose.rightHip), point(pose.rightKnee), point(pose.rightFoot)])
+        limb([point(pose.leftShoulder), point(pose.leftElbow), point(pose.leftHand)])
+        limb([point(pose.rightShoulder), point(pose.rightElbow), point(pose.rightHand)])
+        limb([point(pose.neck), point(pose.head)])
+
+        let centerX = CGFloat((pose.leftShoulder.x + pose.rightShoulder.x) / 2)
+        let shoulderY = CGFloat(min(pose.leftShoulder.y, pose.rightShoulder.y))
+        let hipY = CGFloat(max(pose.leftHip.y, pose.rightHip.y))
+        let bodyWidth = max(
+            8,
+            abs(CGFloat(pose.leftShoulder.x - pose.rightShoulder.x)) + 3.5
+        )
+        let body = Path(
+            roundedRect: canvas.rect(
+                x: centerX - bodyWidth / 2,
+                y: shoulderY + 1,
+                width: bodyWidth,
+                height: max(8, hipY - shoulderY + 3)
+            ),
+            cornerRadius: 3 * canvas.scale
+        )
+        context.fill(body, with: .color(bodyFill))
+        context.stroke(
+            body,
+            with: .color(outline),
+            style: StrokeStyle(lineWidth: 1.2 * canvas.scale, lineCap: .round, lineJoin: .round)
+        )
         stroke(
             &context,
             [
@@ -810,7 +842,9 @@ private enum MapHomeStickmanRenderer {
                     CGFloat((pose.leftHip.x + pose.rightHip.x) / 2),
                     CGFloat((pose.leftHip.y + pose.rightHip.y) / 2)
                 ),
-            ]
+            ],
+            color: outline,
+            width: 1.1
         )
 
         for joint in [
@@ -828,8 +862,37 @@ private enum MapHomeStickmanRenderer {
                 canvas,
                 x: CGFloat(joint.x),
                 y: CGFloat(joint.y),
-                radius: 0.62
+                radius: 0.72,
+                color: outline
             )
+        }
+
+        for hand in [pose.leftHand, pose.rightHand] {
+            let handPath = Path(ellipseIn: canvas.rect(
+                x: CGFloat(hand.x) - 1.3,
+                y: CGFloat(hand.y) - 1.3,
+                width: 2.6,
+                height: 2.6
+            ))
+            context.fill(handPath, with: .color(skinFill))
+            context.stroke(
+                handPath,
+                with: .color(outline),
+                style: StrokeStyle(lineWidth: 0.8 * canvas.scale, lineCap: .round, lineJoin: .round)
+            )
+        }
+
+        for (foot, hip) in [(pose.leftFoot, pose.leftHip), (pose.rightFoot, pose.rightHip)] {
+            let direction: CGFloat = foot.x >= hip.x ? 1 : -1
+            let shoe = [
+                point(foot),
+                canvas.point(
+                    CGFloat(foot.x) + direction * 3.5,
+                    CGFloat(foot.y)
+                ),
+            ]
+            stroke(&context, shoe, color: outline, width: 2.8)
+            stroke(&context, shoe, color: bodyFill, width: 1.2)
         }
 
         let face: Face = switch pose.face {

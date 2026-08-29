@@ -784,7 +784,8 @@ enum MapHomeDayPlaybackMath {
     static let routeProjectionInterval: TimeInterval = 1.0 / 30.0
     static let mapFocusInterval: TimeInterval = 1.0 / 30.0
     static let stationaryMinutesPerSecond = 60.0
-    static let movingMinutesPerSecond = 15.0
+    static let movementPlaybackMultiplier = 1.0 / 6.0
+    static let movingMinutesPerSecond = stationaryMinutesPerSecond * movementPlaybackMultiplier
 
     static func playbackEndMinute(
         for selectedDate: Date,
@@ -895,9 +896,7 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
     var minutesPerSecond: Double {
         switch mode {
         case .walking, .running, nil:
-            return mode == .walking || mode == .running
-                ? MapHomeDayPlaybackMath.stationaryMinutesPerSecond
-                : MapHomeDayPlaybackMath.movingMinutesPerSecond
+            return MapHomeDayPlaybackMath.movingMinutesPerSecond
         case .cycling, .bus, .subway, .taxi, .car, .train, .airplane, .ship:
             return MapHomeDayPlaybackMath.movingMinutesPerSecond
         }
@@ -1974,9 +1973,11 @@ struct MapHomeView: View {
                 }
                 guard shouldFocus else { return }
                 let point = isDayPlaybackRunning
-                    ? historicalPlaybackPoint
+                    ? displayedPlaybackFocusPoint
+                        ?? historicalPlaybackPoint
                         ?? refreshHistoricalPlaybackPoint()
-                    : refreshHistoricalPlaybackPoint()
+                    : displayedPlaybackFocusPoint
+                        ?? refreshHistoricalPlaybackPoint()
                 guard let point else { return }
                 focusMap(on: point, using: nil, followsTracking: true)
             } else {
@@ -2350,9 +2351,11 @@ struct MapHomeView: View {
                     }
                     guard shouldFocus else { return }
                     let point = isDayPlaybackRunning
-                        ? historicalPlaybackPoint
+                        ? displayedPlaybackFocusPoint
+                            ?? historicalPlaybackPoint
                             ?? refreshHistoricalPlaybackPoint()
-                        : refreshHistoricalPlaybackPoint()
+                        : displayedPlaybackFocusPoint
+                            ?? refreshHistoricalPlaybackPoint()
                     guard let point else { return }
                     focusMap(on: point, using: proxy, followsTracking: true)
                 } else {
@@ -5578,8 +5581,40 @@ struct MapHomeView: View {
         )
     }
 
+    private var activeExpectedRoute: MapHomeExpectedRouteOverlay? {
+        let date = displayedLocationDate
+        return expectedRouteOverlays
+            .filter {
+                $0.coordinates.count >= 2
+                    && $0.departureDate <= date
+                    && date <= $0.arrivalDate
+            }
+            .min { $0.departureDate < $1.departureDate }
+    }
+
+    private var expectedRoutePlaybackCoordinate: CLLocationCoordinate2D? {
+        activeExpectedRoute?.coordinate(at: displayedLocationDate)
+    }
+
+    private var displayedPlaybackFocusPoint: GeoPoint? {
+        guard let coordinate = expectedRoutePlaybackCoordinate
+            ?? historicalPlaybackCoordinate else { return nil }
+        guard CLLocationCoordinate2DIsValid(coordinate) else { return nil }
+        return GeoPoint(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            altitude: 0,
+            horizontalAccuracy: -1,
+            verticalAccuracy: -1
+        )
+    }
+
     private var displayedLocationCoordinate: CLLocationCoordinate2D? {
-        historicalPlaybackCoordinate ?? currentCoordinate
+        if let expectedRoutePlaybackCoordinate,
+           selectedTimelineMinute != nil || currentCoordinate == nil {
+            return expectedRoutePlaybackCoordinate
+        }
+        return historicalPlaybackCoordinate ?? currentCoordinate
     }
 
     private var displayedPlaybackMinute: Double? {
@@ -5600,7 +5635,10 @@ struct MapHomeView: View {
     }
 
     private var displayedStickmanAction: MapHomeStickmanAction {
-        MapHomeStickmanActionResolver.action(
+        if let activeExpectedRoute {
+            return MapHomeStickmanActionResolver.action(for: activeExpectedRoute.mode)
+        }
+        return MapHomeStickmanActionResolver.action(
             at: displayedLocationDate,
             actuals: model.snapshot.actuals,
             travel: model.snapshot.travel,
@@ -5613,7 +5651,10 @@ struct MapHomeView: View {
     }
 
     private var displayedLocationAccessibilityLabel: String {
-        historicalPlaybackCoordinate == nil
+        if expectedRoutePlaybackCoordinate != nil {
+            return language.text("예상 경로 위치", "Expected route location")
+        }
+        return historicalPlaybackCoordinate == nil
             ? language.text("현재 위치", "Current location")
             : historicalPlaybackAccessibilityLabel
     }
@@ -6350,7 +6391,10 @@ struct MapHomeView: View {
 
     private func focusDisplayedLocation(using proxy: MapProxy?) {
         if selectedTimelineMinute != nil {
-            guard let point = historicalPlaybackPoint else { return }
+            guard let point = displayedPlaybackFocusPoint
+                ?? historicalPlaybackPoint
+                ?? refreshHistoricalPlaybackPoint()
+            else { return }
             focusMap(on: point, using: proxy, followsTracking: true)
         } else {
             focusUserLocation(using: proxy)
@@ -8889,12 +8933,64 @@ private struct MapHomeLocationSheet: View {
     }
 }
 
+enum MapHomeExpectedRoutePlaybackMath {
+    static func coordinate(
+        at date: Date,
+        departureDate: Date,
+        arrivalDate: Date,
+        coordinates: [CLLocationCoordinate2D]
+    ) -> CLLocationCoordinate2D? {
+        guard coordinates.count >= 2,
+              departureDate <= date,
+              date <= arrivalDate,
+              arrivalDate > departureDate else { return nil }
+
+        let lengths = zip(coordinates, coordinates.dropFirst()).map {
+            CLLocation(latitude: $0.0.latitude, longitude: $0.0.longitude)
+                .distance(from: CLLocation(latitude: $0.1.latitude, longitude: $0.1.longitude))
+        }
+        let total = lengths.reduce(0, +)
+        guard total > 0 else { return coordinates.first }
+
+        let fraction = min(
+            max(date.timeIntervalSince(departureDate) / arrivalDate.timeIntervalSince(departureDate), 0),
+            1
+        )
+        let target = total * fraction
+        var traversed = 0.0
+        for (index, length) in lengths.enumerated() {
+            guard length > 0 else { continue }
+            let next = coordinates[index + 1]
+            if traversed + length >= target {
+                let ratio = min(max((target - traversed) / length, 0), 1)
+                return CLLocationCoordinate2D(
+                    latitude: coordinates[index].latitude
+                        + (next.latitude - coordinates[index].latitude) * ratio,
+                    longitude: coordinates[index].longitude
+                        + (next.longitude - coordinates[index].longitude) * ratio
+                )
+            }
+            traversed += length
+        }
+        return coordinates.last
+    }
+}
+
 private struct MapHomeExpectedRouteOverlay: Identifiable {
     let id: UUID
     let mode: TravelMode
     let departureDate: Date
     let arrivalDate: Date
     let coordinates: [CLLocationCoordinate2D]
+
+    func coordinate(at date: Date) -> CLLocationCoordinate2D? {
+        MapHomeExpectedRoutePlaybackMath.coordinate(
+            at: date,
+            departureDate: departureDate,
+            arrivalDate: arrivalDate,
+            coordinates: coordinates
+        )
+    }
 
     func visible(through cutoff: Date) -> Self? {
         guard cutoff > departureDate, coordinates.count >= 2 else { return nil }
