@@ -2711,6 +2711,42 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertTrue(following.showsTrackingDot)
     }
 
+    @MainActor
+    func testAppleCurrentLocationCenterCommandPreservesCameraScaleAndAngles() {
+        let mapView = MKMapView(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        mapView.setCamera(
+            MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(
+                    latitude: 37.55,
+                    longitude: 126.99
+                ),
+                fromDistance: 2_500,
+                pitch: 35,
+                heading: 73
+            ),
+            animated: false
+        )
+        mapView.layoutIfNeeded()
+        let altitude = mapView.camera.altitude
+        let heading = mapView.camera.heading
+        let pitch = mapView.camera.pitch
+        let span = mapView.region.span
+        let target = CLLocationCoordinate2D(
+            latitude: 37.55,
+            longitude: 127.01
+        )
+
+        MapHomeAppleCameraCommand.center(target, on: mapView)
+
+        XCTAssertEqual(mapView.centerCoordinate.latitude, target.latitude, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.centerCoordinate.longitude, target.longitude, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.camera.altitude, altitude, accuracy: 0.01)
+        XCTAssertEqual(mapView.camera.heading, heading, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.camera.pitch, pitch, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.region.span.latitudeDelta, span.latitudeDelta, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.region.span.longitudeDelta, span.longitudeDelta, accuracy: 0.000_001)
+    }
+
     func testMapDisplayStyleNormalizesPersistedAndMissingValuesToWBSApple() throws {
         var settings = AppFeatureSettings.defaults
         settings.mapDisplayStyle = .hybrid

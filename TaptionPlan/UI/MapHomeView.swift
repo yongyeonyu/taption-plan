@@ -1192,6 +1192,7 @@ struct MapHomeView: View {
 
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var mapCameraRevision = 0
+    @State private var appleCenterCommand: MapHomeAppleCenterCommand?
     @State private var vectorMapViewportStore = MapHomeVectorViewportStore()
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
@@ -2061,6 +2062,7 @@ struct MapHomeView: View {
             style: model.settings.mapDisplayStyle,
             cameraPosition: mapPosition,
             cameraRevision: mapCameraRevision,
+            centerCommand: appleCenterCommand,
             routes: appleMapRoutes,
             annotations: appleMapAnnotations,
             playback: appleMapPlayback,
@@ -6529,16 +6531,22 @@ struct MapHomeView: View {
             else { return }
             focusMap(on: point, using: proxy, followsTracking: true)
         } else {
-            focusUserLocation(using: proxy)
+            focusUserLocation(using: proxy, preservesCamera: true)
         }
     }
 
     private func focusUserLocation(
         using proxy: MapProxy? = nil,
-        heading: CLLocationDirection? = nil
+        heading: CLLocationDirection? = nil,
+        preservesCamera: Bool = false
     ) {
         guard let coordinate = currentCoordinate else {
             isMapCenteredOnUser = false
+            return
+        }
+
+        if preservesCamera, !usesVectorRoadMap, heading == nil {
+            requestAppleMapCenter(coordinate)
             return
         }
 
@@ -6574,20 +6582,32 @@ struct MapHomeView: View {
                 )
             ))
         } else {
+            let span = preservesCamera
+                ? visibleMapSpan
+                : MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.010)
             setMapPosition(.region(
                 MKCoordinateRegion(
                     center: coordinate,
-                    span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.010)
+                    span: span
                 )
             ))
         }
+    }
+
+    private func requestAppleMapCenter(
+        _ coordinate: CLLocationCoordinate2D
+    ) {
+        appleCenterCommand = MapHomeAppleCenterCommand(
+            revision: (appleCenterCommand?.revision ?? 0) &+ 1,
+            coordinate: coordinate
+        )
     }
 
     private func requestAndFollowUserLocation(using proxy: MapProxy?) {
         hasCancelledInitialLocationFocus = false
         setUserTrackingMode(.locating)
         if currentCoordinate != nil {
-            focusUserLocation(using: proxy)
+            focusUserLocation(using: proxy, preservesCamera: true)
         }
         currentLocationRequestTask?.cancel()
         currentLocationRequestTask = Task { @MainActor in
@@ -6603,7 +6623,7 @@ struct MapHomeView: View {
                 }
                 return
             }
-            focusUserLocation(using: proxy)
+            focusUserLocation(using: proxy, preservesCamera: true)
         }
     }
 
@@ -6703,6 +6723,7 @@ struct MapHomeView: View {
         initialLocationRequestTask = nil
         currentLocationRequestTask?.cancel()
         currentLocationRequestTask = nil
+        appleCenterCommand = nil
         setUserTrackingMode(.idle)
         isMapCenteredOnUser = false
     }
@@ -11492,6 +11513,21 @@ private struct MapHomeApplePlayback {
     let stickmanAnimationPhase: Int?
 }
 
+struct MapHomeAppleCenterCommand {
+    let revision: Int
+    let coordinate: CLLocationCoordinate2D
+}
+
+enum MapHomeAppleCameraCommand {
+    @MainActor
+    static func center(
+        _ coordinate: CLLocationCoordinate2D,
+        on mapView: MKMapView
+    ) {
+        mapView.setCenter(coordinate, animated: false)
+    }
+}
+
 enum MapHomeApplePlaybackMath {
     private static let directionStep: CLLocationDirection = 45
     private static let lookAheadProgress = 0.01
@@ -11815,6 +11851,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let style: MapDisplayStyle
     let cameraPosition: MapCameraPosition
     let cameraRevision: Int
+    let centerCommand: MapHomeAppleCenterCommand?
     let routes: [MapHomeAppleRoute]
     let annotations: [MapHomeAppleAnnotation]
     let playback: MapHomeApplePlayback?
@@ -11855,6 +11892,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         context.coordinator.applyMapStyle(to: mapView)
         context.coordinator.updateContent(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
+        context.coordinator.applyCenterCommandIfNeeded(to: mapView)
     }
 
     static func dismantleUIView(_ mapView: MKMapView, coordinator: Coordinator) {
@@ -11866,6 +11904,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         var parent: MapHomeAppleMap
         private weak var mapView: MKMapView?
         private var lastCameraRevision = Int.min
+        private var lastCenterCommandRevision = 0
         private var lastRoutesSignature = ""
         private var routeStyles: [ObjectIdentifier: MapHomeAppleRouteStyle] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
@@ -11974,6 +12013,14 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             } else if let coordinate = parent.routes.first?.coordinates.first {
                 mapView.setCenter(coordinate, animated: false)
             }
+            publishCameraFrame(from: mapView, isFinal: true)
+        }
+
+        func applyCenterCommandIfNeeded(to mapView: MKMapView) {
+            guard let command = parent.centerCommand,
+                  command.revision != lastCenterCommandRevision else { return }
+            lastCenterCommandRevision = command.revision
+            MapHomeAppleCameraCommand.center(command.coordinate, on: mapView)
             publishCameraFrame(from: mapView, isFinal: true)
         }
 
