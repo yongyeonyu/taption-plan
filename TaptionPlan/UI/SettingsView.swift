@@ -128,9 +128,8 @@ struct SettingsView: View {
 
                     settingsSection(
                         "지도",
-                        summary: mapProviderTitle(model.settings.mapDisplayStyle.provider)
+                        summary: mapStyleTitle(model.settings.mapDisplayStyle.runtimeStyle)
                     ) {
-                        mapProviderRow
                         mapStyleRow
                     }
 
@@ -1333,40 +1332,10 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
-    private var mapProviderRow: some View {
-        let provider = model.settings.mapDisplayStyle.provider
-        return Menu {
-            ForEach(MapDisplayProvider.allCases, id: \.self) { option in
-                Button {
-                    model.setMapDisplayProvider(option)
-                } label: {
-                    if option == provider {
-                        Label(mapProviderTitle(option), systemImage: "checkmark")
-                    } else {
-                        Text(mapProviderTitle(option))
-                    }
-                }
-            }
-        } label: {
-            settingsRowLabel(
-                icon: "map.fill",
-                iconBackground: Color.tpSurfaceBlue,
-                iconColor: Color.tpReferenceBlue,
-                title: "지도 제공자",
-                subtitle: "Apple 지도 또는 OpenFreeMap 벡터 지도",
-                value: mapProviderTitle(provider),
-                valueIsOn: false
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("지도 제공자 선택")
-    }
-
     private var mapStyleRow: some View {
-        let provider = model.settings.mapDisplayStyle.provider
-        let selection = model.settings.mapDisplayStyle
+        let selection = model.settings.mapDisplayStyle.runtimeStyle
         return Menu {
-            ForEach(MapDisplayStyle.styles(for: provider), id: \.self) { style in
+            ForEach(MapDisplayStyle.appleStyles, id: \.self) { style in
                 Button {
                     model.setMapDisplayStyle(style)
                 } label: {
@@ -1383,22 +1352,13 @@ struct SettingsView: View {
                 iconBackground: Color.tpSurfaceCream,
                 iconColor: Color.tpReferenceRose,
                 title: "지도 스타일",
-                subtitle: provider == .openFreeMap
-                    ? "색감과 정보 밀도를 바꿉니다"
-                    : "Apple 지도 표시 방식을 바꿉니다",
+                subtitle: "Apple 지도 표시 방식을 바꿉니다",
                 value: mapStyleTitle(selection),
                 valueIsOn: false
             )
         }
         .buttonStyle(.plain)
         .accessibilityLabel("지도 스타일 선택")
-    }
-
-    private func mapProviderTitle(_ provider: MapDisplayProvider) -> String {
-        switch provider {
-        case .apple: "Apple 지도"
-        case .openFreeMap: "OpenFreeMap"
-        }
     }
 
     private func mapStyleTitle(_ style: MapDisplayStyle) -> String {

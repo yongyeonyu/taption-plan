@@ -438,3 +438,65 @@ final class AppleWatchOnboardingTests: XCTestCase {
         XCTAssertFalse(AppleWatchOnboarding.watchlessLimitations.isEmpty)
     }
 }
+
+final class AppleWatchDataReceiptStoreTests: XCTestCase {
+    private func store() -> (AppleWatchDataReceiptStore, UserDefaults) {
+        let name = "AppleWatchDataReceiptStoreTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defaults.removePersistentDomain(forName: name)
+        return (AppleWatchDataReceiptStore(defaults: defaults), defaults)
+    }
+
+    func testRecentKindsUseEachPayloadMeasurementDateAndSurviveReload() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let (store, defaults) = store()
+        store.record(
+            [.motion, .heartRate],
+            measuredAt: now.addingTimeInterval(-14 * 60),
+            receivedAt: now
+        )
+        store.record(
+            [.route],
+            measuredAt: now.addingTimeInterval(-16 * 60),
+            receivedAt: now
+        )
+
+        let reloaded = AppleWatchDataReceiptStore(defaults: defaults).load()
+        XCTAssertEqual(reloaded.recentKinds(at: now), [.motion, .heartRate])
+        XCTAssertEqual(
+            reloaded.latestDataAt,
+            now.addingTimeInterval(-14 * 60)
+        )
+    }
+
+    func testDelayedPayloadDoesNotBecomeRecentAtReceiptTime() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let (store, _) = store()
+        let receipt = store.record(
+            [.health],
+            measuredAt: now.addingTimeInterval(-3_600),
+            receivedAt: now
+        )
+
+        XCTAssertTrue(receipt.recentKinds(at: now).isEmpty)
+        XCTAssertEqual(receipt.latestDataAt, now.addingTimeInterval(-3_600))
+    }
+
+    func testFutureAndOutOfOrderPayloadsCannotMoveDataTimeForwardOrBackward() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let (store, _) = store()
+        store.record(
+            [.activity],
+            measuredAt: now.addingTimeInterval(3_600),
+            receivedAt: now
+        )
+        let receipt = store.record(
+            [.activity],
+            measuredAt: now.addingTimeInterval(-3_600),
+            receivedAt: now
+        )
+
+        XCTAssertEqual(receipt.latestDataAt, now)
+        XCTAssertEqual(receipt.recentKinds(at: now), [.activity])
+    }
+}

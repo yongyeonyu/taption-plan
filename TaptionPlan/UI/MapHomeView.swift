@@ -768,7 +768,7 @@ enum MapHomeDayPlaybackMath {
             Double(MapHomeTimeSidebarMath.fullDayMinutes),
             max(0, Double(selectedMinute ?? 0))
         )
-        guard isToday, selected >= endMinute else {
+        guard isToday, selected >= endMinute.rounded(.down) else {
             return min(selected, endMinute)
         }
         return 0
@@ -786,12 +786,12 @@ enum MapHomeDayPlaybackMath {
     static func advancedMinute(
         from currentMinute: Double,
         elapsedSeconds: TimeInterval,
-        movingRanges: [MapHomePlaybackMovementRange]
+        normalizedMovingRanges: [MapHomePlaybackMovementRange]
     ) -> Double {
         guard elapsedSeconds.isFinite, elapsedSeconds > 0 else {
             return min(1_440, max(0, currentMinute))
         }
-        let ranges = MapHomePlaybackMovementRange.normalized(movingRanges)
+        let ranges = normalizedMovingRanges
         var minute = min(1_440, max(0, currentMinute))
         var remaining = elapsedSeconds
         while remaining > 0, minute < 1_440 {
@@ -1747,7 +1747,7 @@ struct MapHomeView: View {
     }
 
     private var currentVectorStyle: MapHomeVectorStyle? {
-        model.settings.mapDisplayStyle.mapHomeVectorStyle
+        model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle
     }
 
     private var mapStickersOnMap: [MapSticker] {
@@ -1892,8 +1892,6 @@ struct MapHomeView: View {
         }
         .onChange(of: selectedTimelineMinute) { _, minute in
             if isTimelineInteractionActive || isDayPlaybackRunning {
-                let point = refreshHistoricalPlaybackPoint()
-                guard let point else { return }
                 let interval = isDayPlaybackRunning
                     ? MapHomeDayPlaybackMath.mapFocusInterval
                     : TimelineInteractionFrameGate.minimumInterval
@@ -1913,6 +1911,11 @@ struct MapHomeView: View {
                     )
                 }
                 guard shouldFocus else { return }
+                let point = isDayPlaybackRunning
+                    ? historicalPlaybackPoint
+                        ?? refreshHistoricalPlaybackPoint()
+                    : refreshHistoricalPlaybackPoint()
+                guard let point else { return }
                 focusMap(on: point, using: nil, followsTracking: true)
             } else {
                 refreshSelectedTimelineMapPosition(minute: minute, using: nil)
@@ -2262,8 +2265,6 @@ struct MapHomeView: View {
             }
             .onChange(of: selectedTimelineMinute) { _, minute in
                 if isTimelineInteractionActive || isDayPlaybackRunning {
-                    let point = refreshHistoricalPlaybackPoint()
-                    guard let point else { return }
                     let interval = isDayPlaybackRunning
                         ? MapHomeDayPlaybackMath.mapFocusInterval
                         : TimelineInteractionFrameGate.minimumInterval
@@ -2283,6 +2284,11 @@ struct MapHomeView: View {
                         )
                     }
                     guard shouldFocus else { return }
+                    let point = isDayPlaybackRunning
+                        ? historicalPlaybackPoint
+                            ?? refreshHistoricalPlaybackPoint()
+                        : refreshHistoricalPlaybackPoint()
+                    guard let point else { return }
                     focusMap(on: point, using: proxy, followsTracking: true)
                 } else {
                     refreshSelectedTimelineMapPosition(
@@ -2980,20 +2986,6 @@ struct MapHomeView: View {
         )
     }
 
-    private func mapProviderTitle(_ provider: MapDisplayProvider) -> String {
-        switch provider {
-        case .apple: language.text("Apple 지도", "Apple Maps")
-        case .openFreeMap: "OpenFreeMap"
-        }
-    }
-
-    private func mapProviderSystemImage(_ provider: MapDisplayProvider) -> String {
-        switch provider {
-        case .apple: "map.fill"
-        case .openFreeMap: "globe.americas.fill"
-        }
-    }
-
     private func mapStyleTitle(_ style: MapDisplayStyle) -> String {
         switch style {
         case .standard: language.text("표준", "Standard")
@@ -3272,7 +3264,7 @@ struct MapHomeView: View {
                     MapHomeDayPlaybackMath.advancedMinute(
                         from: playbackMinute,
                         elapsedSeconds: elapsed,
-                        movingRanges: movingRanges
+                        normalizedMovingRanges: movingRanges
                     ),
                     playbackEndMinute
                 )
@@ -3290,6 +3282,7 @@ struct MapHomeView: View {
                     minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
                 ) {
                     dayPlaybackCurrentMinute = playbackMinute
+                    refreshHistoricalPlaybackPoint()
                 }
                 if TimelineInteractionFrameGate.shouldRender(
                     lastUptime: &lastPlaybackRouteProjectionUptime,
@@ -3299,7 +3292,6 @@ struct MapHomeView: View {
                 ) {
                     refreshRouteProjection()
                 }
-                refreshHistoricalPlaybackPoint()
                 guard playbackMinute < playbackEndMinute else {
                     selectedTimelineMinute = playbackEndMinute
                         >= Double(MapHomeTimeSidebarMath.fullDayMinutes)
@@ -4547,45 +4539,13 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
-                Text(language.text("지도 제공자", "Map provider"))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 6)
-                    .padding(.horizontal, 12)
-
-                ForEach(MapDisplayProvider.allCases, id: \.self) { provider in
-                    Button {
-                        model.setMapDisplayProvider(provider)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: mapProviderSystemImage(provider))
-                                .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 22)
-                            Text(mapProviderTitle(provider))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Spacer()
-                            if model.settings.mapDisplayStyle.provider == provider {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .bold))
-                            }
-                        }
-                        .foregroundStyle(Color.primary)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(
-                        model.settings.mapDisplayStyle.provider == provider ? .isSelected : []
-                    )
-                }
-
                 Text(language.text("지도 스타일", "Map style"))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.top, 6)
                     .padding(.horizontal, 12)
 
-                ForEach(MapDisplayStyle.styles(for: model.settings.mapDisplayStyle.provider), id: \.self) { style in
+                ForEach(MapDisplayStyle.appleStyles, id: \.self) { style in
                     Button {
                         model.setMapDisplayStyle(style)
                     } label: {
@@ -4596,7 +4556,7 @@ struct MapHomeView: View {
                             Text(mapStyleTitle(style))
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                             Spacer()
-                            if model.settings.mapDisplayStyle == style {
+                            if model.settings.mapDisplayStyle.runtimeStyle == style {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 12, weight: .bold))
                             }
@@ -4607,7 +4567,7 @@ struct MapHomeView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(
-                        model.settings.mapDisplayStyle == style ? .isSelected : []
+                        model.settings.mapDisplayStyle.runtimeStyle == style ? .isSelected : []
                     )
                 }
 
@@ -4824,8 +4784,8 @@ struct MapHomeView: View {
                     if let receivedAt = model.appleWatchLastDataReceivedAt {
                         Text(
                             language.text(
-                                "마지막 수신 \(receivedAt.formatted(date: .omitted, time: .shortened))",
-                                "Last received \(receivedAt.formatted(date: .omitted, time: .shortened))"
+                                "최근 데이터 시각 \(receivedAt.formatted(date: .omitted, time: .shortened))",
+                                "Latest data \(receivedAt.formatted(date: .omitted, time: .shortened))"
                             )
                         )
                         .font(.system(size: 10.5, weight: .medium, design: .rounded))

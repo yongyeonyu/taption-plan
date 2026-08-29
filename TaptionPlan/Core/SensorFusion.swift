@@ -2448,13 +2448,14 @@ enum TransitBoardingCandidateEngine {
         )
         guard !places.isEmpty else { return [] }
 
-        let orderedReadings = uniqueReadings(readings)
+        let availableReadings = uniqueReadings(readings)
             .filter { reading in
                 guard let through else { return true }
                 return reading.timestamp <= through
             }
-            .filter(isUsableReading)
             .sorted { $0.timestamp < $1.timestamp }
+        let orderedReadings = availableReadings
+            .filter(isUsableReading)
         guard !orderedReadings.isEmpty else { return [] }
 
         var result: [TransitBoardingCandidate] = []
@@ -2494,6 +2495,15 @@ enum TransitBoardingCandidateEngine {
                 }
                 let span = TimeSpan(start: first.timestamp, end: last.timestamp)
                 guard span.duration >= minimumDwell else { continue }
+                let relatedTravel = relatedTravelSegments(to: span, in: travel)
+                    .filter {
+                        qualifiesForBoardingReview(
+                            $0,
+                            readings: availableReadings,
+                            through: through
+                        )
+                    }
+                guard !relatedTravel.isEmpty else { continue }
                 let key = candidateKey(for: place, arrivingAt: first.timestamp)
                 let candidate = TransitBoardingCandidate(
                     id: key,
@@ -2505,10 +2515,7 @@ enum TransitBoardingCandidateEngine {
                     span: span,
                     dwellDuration: span.duration,
                     source: place.source,
-                    travelSegmentIDs: relatedTravelIDs(
-                        to: span,
-                        in: travel
-                    )
+                    travelSegmentIDs: relatedTravel.map(\.id)
                 )
                 guard !isSuppressed(candidate, by: decisions),
                       seenKeys.insert(key).inserted else { continue }
@@ -2630,17 +2637,17 @@ enum TransitBoardingCandidateEngine {
         )
     }
 
-    private static func relatedTravelIDs(
+    private static func relatedTravelSegments(
         to span: TimeSpan,
         in travel: [TravelSegment]
-    ) -> [UUID] {
+    ) -> [TravelSegment] {
         let after = travel
             .filter { segment in
                 let gap = segment.span.start.timeIntervalSince(span.end)
                 return gap >= -2 * 60 && gap <= 30 * 60
             }
             .sorted { $0.span.start < $1.span.start }
-        if !after.isEmpty { return after.map(\.id) }
+        if !after.isEmpty { return after }
 
         let expanded = TimeSpan(
             start: span.start.addingTimeInterval(-2 * 60),
@@ -2649,7 +2656,60 @@ enum TransitBoardingCandidateEngine {
         return travel
             .filter { $0.span.intersection(with: expanded) != nil }
             .sorted { $0.span.start < $1.span.start }
-            .map(\.id)
+    }
+
+    private static func qualifiesForBoardingReview(
+        _ segment: TravelSegment,
+        readings: [SensorReading],
+        through: Date?
+    ) -> Bool {
+        guard !segment.isConfirmed,
+              through.map({ segment.span.end <= $0 }) ?? true,
+              segment.span.duration > 0,
+              isPoweredTravel(segment.mode),
+              hasMovementEvidence(segment, readings: readings) else {
+            return false
+        }
+        let routeComplete = TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
+            for: segment,
+            readings: readings
+        )
+        if segment.confidence == .high && routeComplete {
+            return false
+        }
+        return segment.confidence != .high
+            || !segment.isClassificationLocked
+            || !routeComplete
+    }
+
+    private static func isPoweredTravel(_ mode: TravelMode) -> Bool {
+        switch mode {
+        case .bus, .subway, .taxi, .car, .train, .airplane, .ship:
+            true
+        case .walking, .running, .cycling:
+            false
+        }
+    }
+
+    private static func hasMovementEvidence(
+        _ segment: TravelSegment,
+        readings: [SensorReading]
+    ) -> Bool {
+        if segment.distanceMeters >= 100 { return true }
+        let segmentReadings = readings.filter {
+            $0.timestamp >= segment.span.start
+                && $0.timestamp <= segment.span.end
+        }
+        if segmentReadings.contains(where: {
+            $0.motion.isMovement || ($0.speedMetersPerSecond ?? 0) >= 1
+        }) {
+            return true
+        }
+        let points = segmentReadings.compactMap(\.point)
+        let observedDistance = zip(points, points.dropFirst()).reduce(0.0) {
+            $0 + distanceMeters($1.0, $1.1)
+        }
+        return observedDistance >= 100
     }
 }
 

@@ -219,6 +219,7 @@ enum ExpectedRouteRequestEngine {
                 guard segment.span.intersection(with: day) != nil,
                       segment.span.start < cutoff,
                       let transport = transport(for: segment),
+                      !segment.isConfirmed,
                       !usesStoredSubwayPath(segment) else { return nil }
 
                 let visibleEnd = min(segment.span.end, cutoff)
@@ -289,7 +290,7 @@ enum ExpectedRouteRequestEngine {
                 guard hasRegisteredEndpointFallback
                         || TaptionRouteEngineAdapter.allowsDottedRoute(
                             for: segment,
-                            readings: orderedReadings
+                            readings: readingsInSegment
                         ) else {
                     return nil
                 }

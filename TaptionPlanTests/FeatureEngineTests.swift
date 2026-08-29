@@ -18255,7 +18255,8 @@ final class FeatureEngineTests: XCTestCase {
             )
             let candidates = TransitBoardingCandidateEngine.candidates(
                 readings: transitReadings(at: start, point: point, duration: 180),
-                registeredLocations: [location]
+                registeredLocations: [location],
+                travel: [uncertainTransitTravel(at: start)]
             )
 
             XCTAssertEqual(candidates.count, 1, kind.rawValue)
@@ -18271,7 +18272,8 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(
             TransitBoardingCandidateEngine.candidates(
                 readings: transitReadings(at: start, point: point, duration: 179),
-                registeredLocations: [shortStay]
+                registeredLocations: [shortStay],
+                travel: [uncertainTransitTravel(at: start)]
             ).isEmpty
         )
     }
@@ -18294,7 +18296,8 @@ final class FeatureEngineTests: XCTestCase {
         let mapKitCandidate = TransitBoardingCandidateEngine.candidates(
             readings: transitReadings(at: start, point: point, duration: 180),
             registeredLocations: [],
-            nearbyPlaces: [place]
+            nearbyPlaces: [place],
+            travel: [uncertainTransitTravel(at: start)]
         )
         XCTAssertEqual(mapKitCandidate.first?.source, .mapKit)
         XCTAssertEqual(mapKitCandidate.first?.name, "서울역")
@@ -18309,7 +18312,8 @@ final class FeatureEngineTests: XCTestCase {
             TransitBoardingCandidateEngine.candidates(
                 readings: approximate,
                 registeredLocations: [],
-                nearbyPlaces: [place]
+                nearbyPlaces: [place],
+                travel: [uncertainTransitTravel(at: start)]
             ).isEmpty
         )
 
@@ -18329,7 +18333,115 @@ final class FeatureEngineTests: XCTestCase {
             TransitBoardingCandidateEngine.candidates(
                 readings: interrupted,
                 registeredLocations: [],
-                nearbyPlaces: [place]
+                nearbyPlaces: [place],
+                travel: [uncertainTransitTravel(at: start)]
+            ).isEmpty
+        )
+    }
+
+    func testTransitBoardingRequiresPoweredMovementAndUncertainOrIncompleteRoute() {
+        let start = makeDate(2026, 8, 28, 10, 30)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let station = TransitBoardingPlace(
+            mapKitName: "서울역",
+            kind: .trainStation,
+            point: point
+        )
+        let dwell = transitReadings(at: start, point: point, duration: 180)
+        let span = TimeSpan(
+            start: start.addingTimeInterval(3 * 60),
+            end: start.addingTimeInterval(12 * 60)
+        )
+        let walking = TravelSegment(
+            mode: .walking,
+            span: span,
+            distanceMeters: 1_000,
+            confidence: .low,
+            evidence: ["도보"]
+        )
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: dwell,
+                registeredLocations: [],
+                nearbyPlaces: [station],
+                travel: [walking]
+            ).isEmpty
+        )
+
+        let uncertain = uncertainTransitTravel(at: start)
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: dwell,
+                registeredLocations: [],
+                nearbyPlaces: [station],
+                travel: [uncertain],
+                through: start.addingTimeInterval(10 * 60)
+            ).isEmpty
+        )
+        XCTAssertEqual(
+            TransitBoardingCandidateEngine.candidates(
+                readings: dwell,
+                registeredLocations: [],
+                nearbyPlaces: [station],
+                travel: [uncertain],
+                through: uncertain.span.end
+            ).count,
+            1
+        )
+
+        let highConfidence = TravelSegment(
+            mode: .train,
+            span: span,
+            distanceMeters: 3_000,
+            confidence: .high,
+            evidence: ["철도 경로 일치"],
+            isClassificationLocked: true
+        )
+        let routeReadings = dwell + [6, 9, 12].map { minute in
+            transitReading(
+                at: start.addingTimeInterval(Double(minute) * 60),
+                point: GeoPoint(
+                    latitude: 37.5 + Double(minute) / 1_000,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 10
+                )
+            )
+        }
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: routeReadings,
+                registeredLocations: [],
+                nearbyPlaces: [station],
+                travel: [highConfidence]
+            ).isEmpty
+        )
+        XCTAssertEqual(
+            TransitBoardingCandidateEngine.candidates(
+                readings: dwell,
+                registeredLocations: [],
+                nearbyPlaces: [station],
+                travel: [highConfidence]
+            ).count,
+            1
+        )
+
+        var confirmed = highConfidence
+        confirmed.confidence = .low
+        confirmed.isConfirmed = true
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: dwell,
+                registeredLocations: [],
+                nearbyPlaces: [station],
+                travel: [confirmed]
             ).isEmpty
         )
     }
@@ -18421,10 +18533,12 @@ final class FeatureEngineTests: XCTestCase {
             kind: .trainStation,
             point: point
         )
+        let travel = [uncertainTransitTravel(at: start)]
         let candidate = try XCTUnwrap(
             TransitBoardingCandidateEngine.candidates(
                 readings: transitReadings(at: start, point: point, duration: 180),
-                registeredLocations: [location]
+                registeredLocations: [location],
+                travel: travel
             ).first
         )
         let repository = InMemoryPlanRepository()
@@ -18454,6 +18568,7 @@ final class FeatureEngineTests: XCTestCase {
                     duration: 180
                 ),
                 registeredLocations: [location],
+                travel: travel,
                 decisions: reloaded.snapshot.settings.transitBoardingDecisions
             ).isEmpty
         )
@@ -18490,10 +18605,12 @@ final class FeatureEngineTests: XCTestCase {
             point: point,
             duration: 180
         )
+        let travel = [uncertainTransitTravel(at: start)]
         let candidates = TransitBoardingCandidateEngine.candidates(
             readings: readings,
             registeredLocations: [],
-            nearbyPlaces: [firstPlace, nearbyPlace]
+            nearbyPlaces: [firstPlace, nearbyPlace],
+            travel: travel
         )
         let deleted = try XCTUnwrap(candidates.first)
         let decision = TransitBoardingDecision(
@@ -18510,6 +18627,7 @@ final class FeatureEngineTests: XCTestCase {
                 readings: readings,
                 registeredLocations: [],
                 nearbyPlaces: [firstPlace, nearbyPlace],
+                travel: travel,
                 decisions: [decision]
             ).isEmpty
         )
@@ -18529,6 +18647,7 @@ final class FeatureEngineTests: XCTestCase {
             kind: .trainStation,
             point: point
         )
+        let originalTravel = [uncertainTransitTravel(at: start)]
         let originalCandidate = try XCTUnwrap(
             TransitBoardingCandidateEngine.candidates(
                 readings: transitReadings(
@@ -18537,7 +18656,8 @@ final class FeatureEngineTests: XCTestCase {
                     duration: 180
                 ),
                 registeredLocations: [],
-                nearbyPlaces: [originalPlace]
+                nearbyPlaces: [originalPlace],
+                travel: originalTravel
             ).first
         )
         let decision = TransitBoardingDecision(
@@ -18568,7 +18688,12 @@ final class FeatureEngineTests: XCTestCase {
                     duration: 180
                 ),
                 registeredLocations: [],
-                nearbyPlaces: [refreshedPlace]
+                nearbyPlaces: [refreshedPlace],
+                travel: [
+                    uncertainTransitTravel(
+                        at: start.addingTimeInterval(4 * 60)
+                    )
+                ]
             ).first
         )
         let nearbyBusPlace = TransitBoardingPlace(
@@ -18594,6 +18719,11 @@ final class FeatureEngineTests: XCTestCase {
                 ),
                 registeredLocations: [],
                 nearbyPlaces: [refreshedPlace, nearbyBusPlace],
+                travel: [
+                    uncertainTransitTravel(
+                        at: start.addingTimeInterval(4 * 60)
+                    )
+                ],
                 decisions: [decision]
             ).isEmpty
         )
@@ -18674,7 +18804,8 @@ final class FeatureEngineTests: XCTestCase {
                     kind: .busStop,
                     point: point
                 ),
-            ]
+            ],
+            travel: [uncertainTransitTravel(at: start)]
         )
 
         XCTAssertEqual(candidates.filter { $0.kind == .trainStation }.count, 1)
@@ -18708,10 +18839,19 @@ final class FeatureEngineTests: XCTestCase {
             ),
         ]
 
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: watchReadings,
+                registeredLocations: [],
+                nearbyPlaces: [station]
+            ).isEmpty
+        )
+
         let candidates = TransitBoardingCandidateEngine.candidates(
             readings: watchReadings,
             registeredLocations: [],
-            nearbyPlaces: [station]
+            nearbyPlaces: [station],
+            travel: [uncertainTransitTravel(at: start)]
         )
 
         XCTAssertEqual(candidates.count, 1)
@@ -18754,6 +18894,19 @@ final class FeatureEngineTests: XCTestCase {
                 sourceDevice: sourceDevice
             ),
         ]
+    }
+
+    private func uncertainTransitTravel(at start: Date) -> TravelSegment {
+        TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start.addingTimeInterval(3 * 60),
+                end: start.addingTimeInterval(20 * 60)
+            ),
+            distanceMeters: 1_000,
+            confidence: .low,
+            evidence: ["자동 추정"]
+        )
     }
 
     private func transitReading(

@@ -128,6 +128,10 @@ enum TaptionRouteEngineAdapter {
         for segment: TravelSegment,
         readings: [SensorReading]
     ) -> Bool {
+        guard !segment.isConfirmed,
+              !hasCompleteRecordedRoute(for: segment, readings: readings) else {
+            return false
+        }
         let segmentReadings = readings.filter {
             $0.timestamp >= segment.span.start && $0.timestamp <= segment.span.end
         }
@@ -136,10 +140,9 @@ enum TaptionRouteEngineAdapter {
             ? segment.distanceMeters
             : distance(of: segmentReadings)
         let observedDistance = Self.distance(of: segmentReadings)
-        let hasMotion = segment.isConfirmed
-            || segmentReadings.contains { $0.motion.isMovement }
+        let hasMotion = segmentReadings.contains { $0.motion.isMovement }
             || observedDistance > 20
-        let hasContinuity = segment.isConfirmed || !segment.evidence.isEmpty
+        let hasContinuity = !segment.evidence.isEmpty
         return RouteEvidenceGate.allowsDottedRoute(
             MissingRouteEvidence(
                 motionDetected: hasMotion,
@@ -149,6 +152,41 @@ enum TaptionRouteEngineAdapter {
                 observedDistanceMeters: distance
             )
         )
+    }
+
+    static func hasCompleteRecordedRoute(
+        for segment: TravelSegment,
+        readings: [SensorReading]
+    ) -> Bool {
+        let maximumGap: TimeInterval = 5 * 60
+        let route = readings
+            .filter { reading in
+                guard reading.timestamp >= segment.span.start,
+                      reading.timestamp <= segment.span.end,
+                      reading.gpsAvailable,
+                      reading.locationFixQuality != .approximate,
+                      let point = reading.point else {
+                    return false
+                }
+                return point.latitude.isFinite
+                    && point.longitude.isFinite
+                    && (-90...90).contains(point.latitude)
+                    && (-180...180).contains(point.longitude)
+                    && (point.horizontalAccuracy <= 0
+                        || point.horizontalAccuracy <= 150)
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+        guard let first = route.first,
+              let last = route.last,
+              route.count >= 2,
+              distance(of: route) > 20,
+              first.timestamp.timeIntervalSince(segment.span.start) <= maximumGap,
+              segment.span.end.timeIntervalSince(last.timestamp) <= maximumGap else {
+            return false
+        }
+        return zip(route, route.dropFirst()).allSatisfy {
+            $1.timestamp.timeIntervalSince($0.timestamp) <= maximumGap
+        }
     }
 
     private static func routeMode(for reading: SensorReading) -> RouteTravelMode {

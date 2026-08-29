@@ -846,7 +846,7 @@ enum TaptionStickmanPoseEngine {
         floor: Double,
         lift: Double
     ) -> TaptionStickmanPoint {
-        let stanceEnd = 0.58
+        let stanceEnd = 7.0 / 12.0
         if phase < stanceEnd {
             let progress = smooth(phase / stanceEnd)
             let planted = lerp(front, back, 0.08 * progress)

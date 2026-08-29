@@ -59,4 +59,45 @@ struct TaptionRouteEngineAdapterTests {
         )
         #expect(!TaptionRouteEngineAdapter.allowsDottedRoute(for: segment, readings: values))
     }
+
+    @Test func confirmedOrCompletelyRecordedRouteDoesNotCreateDottedRoute() {
+        let values = [
+            reading(0, latitude: 37),
+            reading(60, latitude: 37.001)
+        ]
+        let confirmed = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(60)),
+            distanceMeters: 100,
+            confidence: .high,
+            evidence: ["automotive"],
+            isConfirmed: true
+        )
+        let recorded = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(60)),
+            distanceMeters: 100,
+            confidence: .medium,
+            evidence: ["automotive"]
+        )
+
+        #expect(!TaptionRouteEngineAdapter.allowsDottedRoute(for: confirmed, readings: []))
+        #expect(!TaptionRouteEngineAdapter.allowsDottedRoute(for: recorded, readings: values))
+    }
+
+    @Test func uncertainRouteWithRecordingGapCanCreateDottedRoute() {
+        let values = [
+            reading(0, latitude: 37),
+            reading(60, latitude: 37.001)
+        ]
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(20 * 60)),
+            distanceMeters: 1_000,
+            confidence: .medium,
+            evidence: ["automotive"]
+        )
+
+        #expect(TaptionRouteEngineAdapter.allowsDottedRoute(for: segment, readings: values))
+    }
 }

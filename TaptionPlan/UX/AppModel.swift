@@ -462,6 +462,8 @@ final class AppModel {
         AppleWatchOnboardingStore().hasSeenWatchAppInstalled
     @ObservationIgnored
     private let watchOnboardingStore = AppleWatchOnboardingStore()
+    @ObservationIgnored
+    private let appleWatchDataReceiptStore: AppleWatchDataReceiptStore
     private(set) var appUsageAuthorizationState: ScreenTimeAuthorizationState = .unavailable
     private(set) var lastAppUsageRefreshAt: Date?
     private(set) var appUsageRecordCount = 0
@@ -703,6 +705,8 @@ final class AppModel {
             AirPodsActivityService(),
         screenTimeUsageService: ScreenTimeUsageService? = nil,
         securityBackupService: PlanSecurityBackupService? = nil,
+        appleWatchDataReceiptStore: AppleWatchDataReceiptStore =
+            AppleWatchDataReceiptStore(),
         registersHealthBackgroundHandler: Bool = true
     ) {
         let repositorySource: String
@@ -789,6 +793,7 @@ final class AppModel {
         self.liveActivityController = liveActivityController
         self.notificationScheduler = notificationScheduler
         self.watchConnectivityService = watchConnectivityService
+        self.appleWatchDataReceiptStore = appleWatchDataReceiptStore
         self.airPodsActivityService = airPodsActivityService
         self.screenTimeUsageService =
             screenTimeUsageService ?? ScreenTimeUsageService()
@@ -797,6 +802,9 @@ final class AppModel {
         self.watchSensorArchive = try?
             AppleWatchSensorActivityArchive.applicationSupport()
         self.rawDeviceDataArchive = rawArchive
+        let watchReceipt = appleWatchDataReceiptStore.load()
+        self.appleWatchLastDataReceivedAt = watchReceipt.latestDataAt
+        self.appleWatchReceivedDataKinds = watchReceipt.recentKinds()
         Self.integrationLogger.notice(
             "Repository selected: \(repositorySource, privacy: .public)"
         )
@@ -5369,13 +5377,23 @@ final class AppModel {
 
     private func noteAppleWatchDataReceived(
         _ kinds: Set<AppleWatchDataKind>,
-        at date: Date = .now
+        measuredAt: Date,
+        receivedAt: Date = .now
     ) {
         guard !kinds.isEmpty else { return }
-        if appleWatchLastDataReceivedAt.map({ $0 < date }) != false {
-            appleWatchLastDataReceivedAt = date
+        let receipt = appleWatchDataReceiptStore.record(
+            kinds,
+            measuredAt: measuredAt,
+            receivedAt: receivedAt
+        )
+        let latestDataAt = receipt.latestDataAt
+        if appleWatchLastDataReceivedAt != latestDataAt {
+            appleWatchLastDataReceivedAt = latestDataAt
         }
-        appleWatchReceivedDataKinds.formUnion(kinds)
+        let recentKinds = receipt.recentKinds(at: receivedAt)
+        if appleWatchReceivedDataKinds != recentKinds {
+            appleWatchReceivedDataKinds = recentKinds
+        }
     }
 
     private func applyWatchSensorSummary(
@@ -5390,7 +5408,10 @@ final class AppModel {
         if !(summary.routePoints ?? []).isEmpty {
             dataKinds.insert(.route)
         }
-        noteAppleWatchDataReceived(dataKinds)
+        noteAppleWatchDataReceived(
+            dataKinds,
+            measuredAt: summary.endedAt
+        )
         if let heartRate = summary.latestHeartRate,
            heartRate.isFinite, heartRate > 0 {
             latestHeartRate = heartRate
@@ -5803,7 +5824,10 @@ final class AppModel {
         if snapshot.workoutCount > 0 {
             dataKinds.insert(.activity)
         }
-        noteAppleWatchDataReceived(dataKinds)
+        noteAppleWatchDataReceived(
+            dataKinds,
+            measuredAt: snapshot.capturedAt
+        )
         archiveRawDeviceData(
             source: .appleWatch,
             kind: "watch-health-snapshot",
@@ -6506,14 +6530,14 @@ final class AppModel {
     }
 
     func setMapDisplayStyle(_ style: MapDisplayStyle) {
-        guard snapshot.settings.mapDisplayStyle != style else { return }
-        snapshot.settings.mapDisplayStyle = style
+        let runtimeStyle = style.runtimeStyle
+        guard snapshot.settings.mapDisplayStyle != runtimeStyle else { return }
+        snapshot.settings.mapDisplayStyle = runtimeStyle
         Task { await persist() }
     }
 
     func setMapDisplayProvider(_ provider: MapDisplayProvider) {
-        guard snapshot.settings.mapDisplayStyle.provider != provider else { return }
-        setMapDisplayStyle(.defaultStyle(for: provider))
+        setMapDisplayStyle(.defaultStyle(for: provider).runtimeStyle)
     }
 
     func setMapMemoDisplayFilter(_ filter: MapMemoDisplayFilter) {

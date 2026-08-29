@@ -122,6 +122,68 @@ enum AppleWatchDataKind: String, CaseIterable, Hashable, Sendable {
     case health
 }
 
+struct AppleWatchDataReceipt: Equatable, Sendable {
+    let measuredAtByKind: [AppleWatchDataKind: Date]
+
+    var latestDataAt: Date? {
+        measuredAtByKind.values.max()
+    }
+
+    func recentKinds(
+        at now: Date = .now,
+        window: TimeInterval = AppleWatchConnectionPolicy.recentContactWindow
+    ) -> Set<AppleWatchDataKind> {
+        Set(measuredAtByKind.compactMap { kind, date in
+            let age = now.timeIntervalSince(date)
+            return age >= 0 && age <= window ? kind : nil
+        })
+    }
+}
+
+struct AppleWatchDataReceiptStore {
+    private static let keyPrefix = "TaptionPlan.watchDataMeasuredAt.v1."
+    private let defaults: UserDefaults
+
+    init(
+        defaults: UserDefaults = UserDefaults(
+            suiteName: "group.com.taption.plan"
+        ) ?? .standard
+    ) {
+        self.defaults = defaults
+    }
+
+    func load() -> AppleWatchDataReceipt {
+        AppleWatchDataReceipt(
+            measuredAtByKind: Dictionary(
+                uniqueKeysWithValues: AppleWatchDataKind.allCases.compactMap { kind in
+                    guard let date = defaults.object(
+                        forKey: Self.keyPrefix + kind.rawValue
+                    ) as? Date else { return nil }
+                    return (kind, date)
+                }
+            )
+        )
+    }
+
+    @discardableResult
+    func record(
+        _ kinds: Set<AppleWatchDataKind>,
+        measuredAt: Date,
+        receivedAt: Date = .now
+    ) -> AppleWatchDataReceipt {
+        let safeDate = min(measuredAt, receivedAt)
+        for kind in kinds {
+            let key = Self.keyPrefix + kind.rawValue
+            if let previous = defaults.object(forKey: key) as? Date,
+               previous >= safeDate {
+                continue
+            }
+            defaults.set(safeDate, forKey: key)
+        }
+        return load()
+    }
+}
+
 enum AppleWatchConnectionPolicy {
     static let recentContactWindow: TimeInterval = 15 * 60
 
@@ -307,7 +369,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private let commandDefaultsKey = "TaptionPlan.appliedWatchCommandIDs"
     private let confirmationDefaultsKey =
         "TaptionPlan.appliedWatchConfirmationIDs"
-    private let lastContactDefaultsKey = "TaptionPlan.lastWatchContactAt.v1"
+    private let lastContactDefaultsKey = "TaptionPlan.lastWatchDataAt.v2"
     private let lock = NSLock()
     private var latestPayloadData: Data?
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
@@ -533,7 +595,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
 
     @discardableResult
     private func receiveEnvelope(_ envelope: [String: Any]) -> Bool {
-        var didReceiveWatchData = false
+        var latestWatchDataAt: Date?
         var accepted = receiveCommand(from: envelope)
         if envelope[TaptionWatchEnvelope.refreshRequestKey] as? Bool == true {
             publishLatestPayload()
@@ -574,7 +636,10 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 // Live and reliable delivery can contain the same summary.
                 // Persistence is idempotent, so forwarding both avoids loss.
                 sensorSummaryHandler?(summary)
-                didReceiveWatchData = true
+                latestWatchDataAt = max(
+                    latestWatchDataAt ?? summary.endedAt,
+                    summary.endedAt
+                )
                 accepted = true
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
@@ -597,7 +662,10 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 "watch_health_snapshot_received"
             )
             healthSnapshotHandler?(snapshot)
-            didReceiveWatchData = true
+            latestWatchDataAt = max(
+                latestWatchDataAt ?? snapshot.capturedAt,
+                snapshot.capturedAt
+            )
             accepted = true
         }
         if let data = envelope[
@@ -624,8 +692,8 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             locationTrackingGuidanceHandler?()
             accepted = true
         }
-        if didReceiveWatchData {
-            recordWatchContact()
+        if let latestWatchDataAt {
+            recordWatchContact(measuredAt: latestWatchDataAt)
         }
         return accepted
     }
@@ -711,9 +779,14 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         )
     }
 
-    private func recordWatchContact() {
-        let now = Date.now
-        commandDefaults.set(now, forKey: lastContactDefaultsKey)
+    private func recordWatchContact(measuredAt: Date) {
+        let measuredDataAt = min(measuredAt, Date.now)
+        let dataAt = max(
+            commandDefaults.object(forKey: lastContactDefaultsKey) as? Date
+                ?? measuredDataAt,
+            measuredDataAt
+        )
+        commandDefaults.set(dataAt, forKey: lastContactDefaultsKey)
         let session = WCSession.default
         let state = connectionState(for: session)
         statusHandler?(state)
@@ -723,6 +796,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 "state": state.rawValue,
                 "installed_flag": String(session.isWatchAppInstalled),
                 "reachable": String(session.isReachable),
+                "data_at": String(dataAt.timeIntervalSince1970),
             ]
         )
     }

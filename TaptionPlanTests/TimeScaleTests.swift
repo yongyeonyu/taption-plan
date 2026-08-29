@@ -2664,7 +2664,16 @@ final class TimeScaleTests: XCTestCase {
                 AppFeatureSettings.self,
                 from: JSONSerialization.data(withJSONObject: object)
             ).mapDisplayStyle,
-            .mapLibreCasual
+            .standard
+        )
+
+        settings.mapDisplayStyle = .mapLibreCasual
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                AppFeatureSettings.self,
+                from: JSONEncoder().encode(settings)
+            ).mapDisplayStyle,
+            .standard
         )
     }
 
@@ -2934,6 +2943,14 @@ final class TimeScaleTests: XCTestCase {
     func testMapHomeDayPlaybackRestartsTodayFromMidnightAtCurrentTime() {
         XCTAssertEqual(
             MapHomeDayPlaybackMath.playbackStartMinute(
+                selectedMinute: 384,
+                endMinute: 384.5,
+                isToday: true
+            ),
+            0
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.playbackStartMinute(
                 selectedMinute: 385,
                 endMinute: 384.5,
                 isToday: true
@@ -2989,7 +3006,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 0,
                 elapsedSeconds: 1,
-                movingRanges: ranges
+                normalizedMovingRanges: ranges
             ),
             60,
             accuracy: 0.000_001
@@ -2998,7 +3015,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 60,
                 elapsedSeconds: 1,
-                movingRanges: ranges
+                normalizedMovingRanges: ranges
             ),
             75,
             accuracy: 0.000_001
@@ -3010,7 +3027,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 60,
                 elapsedSeconds: 1,
-                movingRanges: [
+                normalizedMovingRanges: [
                     .init(startMinute: 60, endMinute: 120, mode: .walking),
                 ]
             ),
@@ -3021,7 +3038,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 60,
                 elapsedSeconds: 1,
-                movingRanges: [
+                normalizedMovingRanges: [
                     .init(startMinute: 60, endMinute: 120, mode: .car),
                 ]
             ),
@@ -3039,7 +3056,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 30,
                 elapsedSeconds: 1,
-                movingRanges: ranges
+                normalizedMovingRanges: ranges
             ),
             67.5,
             accuracy: 0.000_001
@@ -3048,7 +3065,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 110,
                 elapsedSeconds: 1,
-                movingRanges: ranges
+                normalizedMovingRanges: ranges
             ),
             140,
             accuracy: 0.000_001
@@ -3424,6 +3441,8 @@ final class TimeScaleTests: XCTestCase {
             MapDisplayStyle.defaultStyle(for: .apple),
             .standard
         )
+        XCTAssertEqual(MapDisplayStyle.standard.runtimeStyle, .standard)
+        XCTAssertEqual(MapDisplayStyle.mapLibreCasual.runtimeStyle, .standard)
     }
 
     func testMapHomeVectorBearingUsesCardinalDirections() {

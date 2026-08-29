@@ -3651,6 +3651,10 @@ extension MapDisplayStyle {
         case .openFreeMap: .mapLibreCasual
         }
     }
+
+    var runtimeStyle: Self {
+        provider == .apple ? self : .standard
+    }
 }
 
 enum MapUserActivityIconCatalog {
@@ -3745,7 +3749,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         gpsLoggingPreferences: .standard,
         mapCategoryColors: [:],
         mapUserActivityCategories: [],
-        mapDisplayStyle: .mapLibreCasual,
+        mapDisplayStyle: .standard,
         mapMemoDisplayFilter: .all,
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,
@@ -3827,7 +3831,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.mapUserActivityCategories = Self.normalizedMapUserActivityCategories(
             mapUserActivityCategories
         )
-        self.mapDisplayStyle = mapDisplayStyle
+        self.mapDisplayStyle = mapDisplayStyle.runtimeStyle
         self.mapMemoDisplayFilter = mapMemoDisplayFilter
         self.watchAccelerationProfile = watchAccelerationProfile
         self.watchDataSyncProfile = watchDataSyncProfile
@@ -3959,10 +3963,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                 forKey: .mapUserActivityCategories
             ) ?? defaults.mapUserActivityCategories
         )
-        mapDisplayStyle = try values.decodeIfPresent(
+        mapDisplayStyle = (try values.decodeIfPresent(
             MapDisplayStyle.self,
             forKey: .mapDisplayStyle
-        ) ?? defaults.mapDisplayStyle
+        ) ?? defaults.mapDisplayStyle).runtimeStyle
         mapMemoDisplayFilter = try values.decodeIfPresent(
             MapMemoDisplayFilter.self,
             forKey: .mapMemoDisplayFilter

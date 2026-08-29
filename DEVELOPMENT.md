@@ -423,3 +423,18 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 
 - 연결된 iPhone 앱 컨테이너의 `sensor-readings-v1.jsonl` 15,826건을 읽기 전용으로 확인했다. 최신 원본은 2026-08-25 22:17:35 KST이며 2026-08-27 07:00~07:30 KST 표본은 0건이다.
 - 따라서 앱 센서 원본만으로는 07:15 전후 수면 종료를 재구성할 수 없다. HealthKit 수면 원본은 별도 보관 정책상 앱 raw/iCloud 센서 백업에 포함되지 않고 현재 앱에는 원본 readback 화면이 없어, HealthKit의 실제 종료 시각은 이번 점검에서 확정하지 않았다.
+
+## 2026-08-29 REL29TF7Q2 이동 후보·경로·Watch 동기화 릴리스
+
+- OpenFreeMap/MapLibre 소스와 공개 경계는 보존하되 현재 런타임과 설정 메뉴는 Apple 지도 표준 스타일로 고정한다.
+- 지하철역·기차역·버스 정류장·공항·항구 후보는 실제 동력 이동이 끝났고 분류 또는 기록 경로가 불확실한 경우에만 만든다. 확정됐거나 GPS 경로가 완전한 이동은 후보와 점선 예상 경로를 만들지 않는다.
+- 오늘 날짜 재생은 현재 시각에서 멈추며 다시 재생하면 자정부터 시작한다. 재생 tick마다 전체 경로를 정규화하지 않고 화면 갱신 예산 안에서 기존 투영을 재사용한다.
+- Apple Watch 수신 자료는 iPhone 수신 시각이 아니라 각 payload의 실제 측정 시각을 종류별로 보존한다. 지연·미래·역순 payload가 최근 수신 상태를 거짓으로 갱신하지 않으며 재실행 뒤에도 마지막 측정 시각을 복원한다.
+- 12프레임 보행에서 지지 발의 접지 종료를 정확히 7/12 위상에 맞춰 경계 직전의 미세한 발 들림을 없앤다.
+- TestFlight 배포 대상은 `1.0 (111)`이다. 직전 build 110은 App Store Connect에 이미 등록돼 있어 재사용하지 않는다.
+
+### 검증 및 배포
+
+- 전체 `TaptionPlanTests` 797/797 통과, 실패·스킵 0; generic iOS Debug build와 `git diff --check` 통과.
+- Release archive/export 후 App Store Connect 처리 완료, `TP Taption Plan 내부 테스트` 그룹 연결과 그룹·테스터 화면 노출을 각각 확인한다.
+- 실기기 설치·실행·HealthKit/Watch 실제 수신은 이번 TestFlight 업로드와 별도 게이트다.

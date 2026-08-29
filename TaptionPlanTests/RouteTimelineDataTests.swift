@@ -1010,7 +1010,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertTrue(timestamps.contains(readings[120].timestamp))
     }
 
-    func testExpectedRoadRouteUsesSavedPlaceEndpointsWithoutMutatingTravel() throws {
+    func testConfirmedRoadRouteDoesNotCreateDottedOverlayOrMutateTravel() {
         let from = PlaceStay(
             placeKey: "home",
             displayName: "집",
@@ -1049,19 +1049,15 @@ final class RouteTimelineDataTests: XCTestCase {
         )
         let original = travel
 
-        let request = try XCTUnwrap(
+        XCTAssertTrue(
             ExpectedRouteRequestEngine.requests(
                 travel: [travel],
                 places: [from, to],
                 readings: [],
                 in: TimeSpan(start: date(0), end: date(1_440)),
                 through: date(1_440)
-            ).first
+            ).isEmpty
         )
-
-        XCTAssertEqual(request.transport, .automobile)
-        XCTAssertEqual(request.start, from.point)
-        XCTAssertEqual(request.end, to.point)
         XCTAssertEqual(travel, original)
     }
 
