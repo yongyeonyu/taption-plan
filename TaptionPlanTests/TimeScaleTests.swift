@@ -370,6 +370,7 @@ final class TimeScaleTests: XCTestCase {
             projection.finish(with: final, nowUptime: 1.001),
             final
         )
+        XCTAssertNil(projection.finish(with: final, nowUptime: 1.002))
     }
 
     func testMapHomeSidebarRailSnapshotIndexesOnlyVisibleIntervals() {
@@ -2305,7 +2306,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(size.height, 66, accuracy: 0.001)
     }
 
-    func testSidebarLeftHandleIsTouchOnlyAndRightHandleHasExpandedDragZone() {
+    func testSidebarHandleSidesBothDragAndKeepNonOverlappingHitZones() {
         let leadingFrame = MapHomeTimeSidebarMath.selectionHandleTouchFrame(
             side: .leading,
             leadingCenterX: 44,
@@ -2323,7 +2324,7 @@ final class TimeScaleTests: XCTestCase {
             totalWidth: 127
         )
 
-        XCTAssertFalse(MapHomeTimeSidebarHandleSide.leading.allowsDrag)
+        XCTAssertTrue(MapHomeTimeSidebarHandleSide.leading.allowsDrag)
         XCTAssertTrue(MapHomeTimeSidebarHandleSide.trailing.allowsDrag)
         XCTAssertLessThanOrEqual(leadingFrame.maxX, trailingFrame.minX)
         XCTAssertGreaterThanOrEqual(leadingFrame.minX, 0)
@@ -2710,15 +2711,16 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertTrue(following.showsTrackingDot)
     }
 
-    func testMapDisplayStylePersistsAndMissingValueUsesDefault() throws {
+    func testMapDisplayStyleNormalizesPersistedAndMissingValuesToWBSApple() throws {
         var settings = AppFeatureSettings.defaults
         settings.mapDisplayStyle = .hybrid
+        XCTAssertEqual(settings.mapDisplayStyle, .standard)
         XCTAssertEqual(
             try JSONDecoder().decode(
                 AppFeatureSettings.self,
                 from: JSONEncoder().encode(settings)
             ).mapDisplayStyle,
-            .hybrid
+            .standard
         )
 
         var object = try XCTUnwrap(
@@ -2736,12 +2738,13 @@ final class TimeScaleTests: XCTestCase {
         )
 
         settings.mapDisplayStyle = .mapLibreCasual
+        XCTAssertEqual(settings.mapDisplayStyle, .standard)
         XCTAssertEqual(
             try JSONDecoder().decode(
                 AppFeatureSettings.self,
                 from: JSONEncoder().encode(settings)
             ).mapDisplayStyle,
-            .mapLibreCasual
+            .standard
         )
     }
 
@@ -2966,7 +2969,7 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(
             MapHomeDayPlaybackMath.routeProjectionInterval,
-            1.0 / 30.0,
+            0.25,
             accuracy: 0.000_000_001
         )
         XCTAssertEqual(
@@ -3535,7 +3538,7 @@ final class TimeScaleTests: XCTestCase {
         }
     }
 
-    func testMapDisplayProvidersKeepAppleAndOpenFreeMapStylesSeparate() {
+    func testLegacyMapStylesRemainDecodableButRuntimeIsWBSApple() {
         XCTAssertEqual(
             MapDisplayStyle.appleStyles,
             [.standard, .simplified, .hybrid, .imagery]
@@ -3554,14 +3557,16 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapDisplayStyle.mapLibreCasual.provider, .openFreeMap)
         XCTAssertEqual(
             MapDisplayStyle.defaultStyle(for: .openFreeMap),
-            .mapLibreCasual
+            .standard
         )
         XCTAssertEqual(
             MapDisplayStyle.defaultStyle(for: .apple),
             .standard
         )
         XCTAssertEqual(MapDisplayStyle.standard.runtimeStyle, .standard)
-        XCTAssertEqual(MapDisplayStyle.mapLibreCasual.runtimeStyle, .mapLibreCasual)
+        for style in MapDisplayStyle.allCases {
+            XCTAssertEqual(style.runtimeStyle, .standard)
+        }
     }
 
     func testMapHomeVectorBearingUsesCardinalDirections() {

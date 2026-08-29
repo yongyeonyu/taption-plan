@@ -118,6 +118,525 @@ struct RouteTimelineProjection: Hashable, Sendable {
     let coordinateAtCutoff: GeoPoint?
 }
 
+enum MapHomeWBSRoutePhase: String, Hashable, Sendable {
+    case actual
+    case forecast
+}
+
+enum MapHomeWBSPlaybackActivity: Hashable, Sendable {
+    case movement
+    case stay
+}
+
+enum MapHomeWBSPlaybackDirection: Int, CaseIterable, Hashable, Sendable {
+    case north = 0
+    case northEast
+    case east
+    case southEast
+    case south
+    case southWest
+    case west
+    case northWest
+}
+
+struct MapHomeWBSResolvedRoute: Hashable, Sendable {
+    let legID: String
+    let coordinates: [GeoPoint]
+}
+
+struct MapHomeWBSPlaybackLeg: Hashable, Sendable {
+    let id: String
+    let startDate: Date
+    let endDate: Date
+    let coordinates: [GeoPoint]
+    let cumulativeDistances: [Double]
+    let routePhase: MapHomeWBSRoutePhase
+    let activity: MapHomeWBSPlaybackActivity
+    let mode: TravelMode?
+    let categoryID: String?
+    let sourcePlaceID: UUID?
+    let targetPlaceID: UUID?
+
+    init(
+        id: String,
+        startDate: Date,
+        endDate: Date,
+        coordinates: [GeoPoint],
+        routePhase: MapHomeWBSRoutePhase,
+        activity: MapHomeWBSPlaybackActivity,
+        mode: TravelMode? = nil,
+        categoryID: String? = nil,
+        sourcePlaceID: UUID? = nil,
+        targetPlaceID: UUID? = nil
+    ) {
+        self.id = id
+        self.startDate = startDate
+        self.endDate = max(startDate.addingTimeInterval(0.001), endDate)
+        self.coordinates = coordinates
+        self.cumulativeDistances = Self.distances(for: coordinates)
+        self.routePhase = routePhase
+        self.activity = activity
+        self.mode = mode
+        self.categoryID = categoryID
+        self.sourcePlaceID = sourcePlaceID
+        self.targetPlaceID = targetPlaceID
+    }
+
+    private static func distances(for coordinates: [GeoPoint]) -> [Double] {
+        guard !coordinates.isEmpty else { return [] }
+        var result = [Double](repeating: 0, count: coordinates.count)
+        for index in 1..<coordinates.count {
+            result[index] = result[index - 1]
+                + MapHomeWBSPlaybackProjection.distanceMeters(
+                    coordinates[index - 1],
+                    coordinates[index]
+                )
+        }
+        return result
+    }
+}
+
+struct MapHomeWBSPlaybackFrame: Hashable, Sendable {
+    let date: Date
+    let coordinate: GeoPoint
+    let cameraCoordinate: GeoPoint
+    let direction: MapHomeWBSPlaybackDirection
+    let routePhase: MapHomeWBSRoutePhase
+    let activity: MapHomeWBSPlaybackActivity
+    let legID: String
+    let progress: Double
+    let mode: TravelMode?
+    let categoryID: String?
+
+    var routePhaseIndex: Int {
+        Int((progress * 16).rounded(.down)) % 16
+    }
+
+    var stickmanFrameIndex: Int {
+        min(23, max(0, Int((progress * 24).rounded(.down))))
+    }
+}
+
+/// WBS와 같은 불변 일 단위 leg 투영이다. 센서·장소·이동 원본은 만들 때 한 번만
+/// 정규화하고 재생 중에는 날짜로 frame만 조회한다.
+struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
+    static let maximumActualGap: TimeInterval = 15 * 60
+    static let stayRadiusMeters: Double = 30
+    static let lookAheadProgress = 0.01
+
+    let selectedDate: Date
+    let legs: [MapHomeWBSPlaybackLeg]
+
+    static func make(
+        selectedDate: Date,
+        places: [PlaceStay],
+        travel: [TravelSegment],
+        readings: [SensorReading],
+        resolvedRoutes: [MapHomeWBSResolvedRoute] = [],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Self {
+        let dayStart = calendar.startOfDay(for: selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let day = TimeSpan(start: dayStart, end: dayEnd)
+        let routesByLegID = Dictionary(
+            resolvedRoutes.map { ($0.legID, validCoordinates($0.coordinates)) },
+            uniquingKeysWith: { _, latest in latest }
+        )
+        let locations = resolvedLocations(
+            places: places,
+            in: day,
+            calendar: calendar
+        )
+        let locationsByID = Dictionary(
+            uniqueKeysWithValues: locations.map { ($0.place.id, $0) }
+        )
+
+        var legs = locations.map { location in
+            MapHomeWBSPlaybackLeg(
+                id: "stay-\(location.place.id.uuidString)",
+                startDate: max(dayStart, location.place.span.start),
+                endDate: min(dayEnd, location.place.span.end),
+                coordinates: [location.coordinate],
+                routePhase: .forecast,
+                activity: .stay,
+                categoryID: nil,
+                sourcePlaceID: location.place.id
+            )
+        }
+
+        var explicitPairs = Set<String>()
+        let orderedTravel = travel.sorted {
+            if $0.span.start != $1.span.start { return $0.span.start < $1.span.start }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        for segment in orderedTravel {
+            guard let overlap = segment.span.intersection(with: day),
+                  overlap.duration > 0 else { continue }
+            let source = segment.fromPlaceID.flatMap { locationsByID[$0] }
+                ?? locations.last { $0.place.span.end <= segment.span.start }
+            let target = segment.toPlaceID.flatMap { locationsByID[$0] }
+                ?? locations.first { $0.place.span.start >= segment.span.end }
+            let legID = "movement-\(segment.id.uuidString)"
+            let resolved = routesByLegID[legID] ?? []
+            let fallback = [source?.coordinate, target?.coordinate].compactMap { $0 }
+            let coordinates = resolved.count >= 2
+                ? resolved
+                : fallback
+            guard coordinates.count >= 2,
+                  distanceMeters(coordinates[0], coordinates[coordinates.count - 1]) > 0.1
+            else { continue }
+            if let sourceID = source?.place.id, let targetID = target?.place.id {
+                explicitPairs.insert(pairKey(sourceID, targetID))
+            }
+            legs.append(
+                MapHomeWBSPlaybackLeg(
+                    id: legID,
+                    startDate: overlap.start,
+                    endDate: overlap.end,
+                    coordinates: coordinates,
+                    routePhase: .forecast,
+                    activity: .movement,
+                    mode: segment.mode,
+                    categoryID: "movement",
+                    sourcePlaceID: source?.place.id,
+                    targetPlaceID: target?.place.id
+                )
+            )
+        }
+
+        for (source, target) in zip(locations, locations.dropFirst()) {
+            guard calendar.isDate(source.place.span.start, inSameDayAs: target.place.span.start),
+                  source.place.span.end < target.place.span.start else { continue }
+            let key = pairKey(source.place.id, target.place.id)
+            guard !explicitPairs.contains(key),
+                  distanceMeters(source.coordinate, target.coordinate) > 0.1 else { continue }
+            let legID = "movement-gap-\(source.place.id.uuidString)-\(target.place.id.uuidString)"
+            let resolved = routesByLegID[legID] ?? []
+            legs.append(
+                MapHomeWBSPlaybackLeg(
+                    id: legID,
+                    startDate: source.place.span.end,
+                    endDate: target.place.span.start,
+                    coordinates: resolved.count >= 2
+                        ? resolved
+                        : [source.coordinate, target.coordinate],
+                    routePhase: .forecast,
+                    activity: .movement,
+                    categoryID: "movement",
+                    sourcePlaceID: source.place.id,
+                    targetPlaceID: target.place.id
+                )
+            )
+        }
+
+        let trace = readings
+            .compactMap { reading -> (SensorReading, GeoPoint)? in
+                guard reading.timestamp >= dayStart,
+                      reading.timestamp < dayEnd,
+                      let point = reading.point,
+                      isValid(point) else { return nil }
+                return (reading, point)
+            }
+            .sorted {
+                if $0.0.timestamp != $1.0.timestamp {
+                    return $0.0.timestamp < $1.0.timestamp
+                }
+                return $0.0.id.uuidString < $1.0.id.uuidString
+            }
+        for (source, target) in zip(trace, trace.dropFirst()) {
+            let duration = target.0.timestamp.timeIntervalSince(source.0.timestamp)
+            guard duration > 0,
+                  duration <= maximumActualGap,
+                  source.0.trackingSessionEnded != true,
+                  calendar.isDate(source.0.timestamp, inSameDayAs: target.0.timestamp),
+                  distanceMeters(source.1, target.1) > 0.1 else { continue }
+            legs.append(
+                MapHomeWBSPlaybackLeg(
+                    id: "actual-\(source.0.id.uuidString)-\(target.0.id.uuidString)",
+                    startDate: source.0.timestamp,
+                    endDate: target.0.timestamp,
+                    coordinates: [source.1, target.1],
+                    routePhase: .actual,
+                    activity: .movement,
+                    mode: movementMode(source.0, target.0),
+                    categoryID: "movement"
+                )
+            )
+        }
+
+        legs.sort {
+            if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
+            let left = priority($0)
+            let right = priority($1)
+            if left != right { return left > right }
+            return $0.id < $1.id
+        }
+        return Self(selectedDate: dayStart, legs: legs)
+    }
+
+    func frame(at date: Date) -> MapHomeWBSPlaybackFrame? {
+        guard !legs.isEmpty else { return nil }
+        let active = legs.filter { date >= $0.startDate && date < $0.endDate }
+        let leg = active.max { lhs, rhs in
+            if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
+            let left = Self.priority(lhs)
+            let right = Self.priority(rhs)
+            if left != right { return left < right }
+            return lhs.id < rhs.id
+        } ?? (date < legs[0].startDate
+            ? legs[0]
+            : legs.last(where: { $0.startDate <= date }))
+        guard let leg else { return nil }
+        let duration = max(0.001, leg.endDate.timeIntervalSince(leg.startDate))
+        let progress = min(1, max(0, date.timeIntervalSince(leg.startDate) / duration))
+        let center = leg.coordinates.first ?? Self.zeroPoint
+        let coordinate: GeoPoint
+        let next: GeoPoint
+        let cameraCoordinate: GeoPoint
+        switch leg.activity {
+        case .movement:
+            coordinate = Self.interpolate(leg, progress: progress)
+            next = Self.interpolate(
+                leg,
+                progress: min(1, progress + Self.lookAheadProgress)
+            )
+            cameraCoordinate = coordinate
+        case .stay:
+            coordinate = Self.orbitCoordinate(around: center, progress: progress)
+            next = Self.orbitCoordinate(
+                around: center,
+                progress: min(1, progress + Self.lookAheadProgress)
+            )
+            cameraCoordinate = center
+        }
+        let direction: MapHomeWBSPlaybackDirection
+        if Self.sameLocation(coordinate, next) {
+            let previous: GeoPoint
+            switch leg.activity {
+            case .movement:
+                previous = Self.interpolate(
+                    leg,
+                    progress: max(0, progress - Self.lookAheadProgress)
+                )
+            case .stay:
+                previous = Self.orbitCoordinate(
+                    around: center,
+                    progress: max(0, progress - Self.lookAheadProgress)
+                )
+            }
+            direction = Self.direction(from: previous, to: coordinate)
+        } else {
+            direction = Self.direction(from: coordinate, to: next)
+        }
+        return MapHomeWBSPlaybackFrame(
+            date: date,
+            coordinate: coordinate,
+            cameraCoordinate: cameraCoordinate,
+            direction: direction,
+            routePhase: leg.routePhase,
+            activity: leg.activity,
+            legID: leg.id,
+            progress: progress,
+            mode: leg.mode,
+            categoryID: leg.categoryID
+        )
+    }
+
+    static func interpolate(
+        _ leg: MapHomeWBSPlaybackLeg,
+        progress: Double
+    ) -> GeoPoint {
+        guard let first = leg.coordinates.first else { return zeroPoint }
+        guard leg.coordinates.count > 1,
+              let total = leg.cumulativeDistances.last,
+              total > 0 else { return first }
+        let wanted = total * min(1, max(0, progress))
+        var lower = 1
+        var upper = leg.cumulativeDistances.count
+        while lower < upper {
+            let middle = lower + (upper - lower) / 2
+            if leg.cumulativeDistances[middle] < wanted {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        let high = min(max(1, lower), leg.coordinates.count - 1)
+        let low = high - 1
+        let span = leg.cumulativeDistances[high] - leg.cumulativeDistances[low]
+        let local = span > 0
+            ? (wanted - leg.cumulativeDistances[low]) / span
+            : 0
+        return blend(leg.coordinates[low], leg.coordinates[high], ratio: local)
+    }
+
+    static func direction(
+        from start: GeoPoint,
+        to end: GeoPoint
+    ) -> MapHomeWBSPlaybackDirection {
+        let radians = atan2(
+            (end.longitude - start.longitude)
+                * cos((start.latitude + end.latitude) * .pi / 360),
+            end.latitude - start.latitude
+        )
+        let degrees = radians * 180 / .pi
+        let normalized = degrees >= 0 ? degrees : degrees + 360
+        let slot = Int(floor((normalized + 22.5) / 45)) % 8
+        return MapHomeWBSPlaybackDirection(rawValue: slot) ?? .north
+    }
+
+    static func orbitCoordinate(
+        around center: GeoPoint,
+        progress: Double,
+        radiusMeters: Double = stayRadiusMeters
+    ) -> GeoPoint {
+        let angle = min(1, max(0, progress)) * 2 * .pi
+        let metersPerDegreeLatitude = 111_111.0
+        let latitude = center.latitude
+            + sin(angle) * radiusMeters / metersPerDegreeLatitude
+        let metersPerDegreeLongitude = metersPerDegreeLatitude
+            * max(0.2, cos(center.latitude * .pi / 180))
+        let longitude = center.longitude
+            + cos(angle) * radiusMeters / metersPerDegreeLongitude
+        return GeoPoint(
+            latitude: latitude,
+            longitude: longitude,
+            altitude: center.altitude,
+            horizontalAccuracy: center.horizontalAccuracy,
+            verticalAccuracy: center.verticalAccuracy
+        )
+    }
+
+    static func distanceMeters(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Double {
+        let earthRadius = 6_371_000.0
+        let firstLatitude = lhs.latitude * .pi / 180
+        let secondLatitude = rhs.latitude * .pi / 180
+        let latitudeDelta = (rhs.latitude - lhs.latitude) * .pi / 180
+        let longitudeDelta = (rhs.longitude - lhs.longitude) * .pi / 180
+        let value = sin(latitudeDelta / 2) * sin(latitudeDelta / 2)
+            + cos(firstLatitude) * cos(secondLatitude)
+            * sin(longitudeDelta / 2) * sin(longitudeDelta / 2)
+        return earthRadius * 2 * atan2(sqrt(value), sqrt(max(0, 1 - value)))
+    }
+
+    private struct ResolvedLocation {
+        let place: PlaceStay
+        let coordinate: GeoPoint
+    }
+
+    private static func resolvedLocations(
+        places: [PlaceStay],
+        in day: TimeSpan,
+        calendar: Calendar
+    ) -> [ResolvedLocation] {
+        let ordered = places
+            .filter { $0.span.intersection(with: day) != nil }
+            .sorted {
+                if $0.span.start != $1.span.start { return $0.span.start < $1.span.start }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+        let direct = Dictionary(
+            uniqueKeysWithValues: ordered.compactMap { place -> (UUID, GeoPoint)? in
+                guard let point = place.point, isValid(point) else { return nil }
+                return (place.id, point)
+            }
+        )
+        return ordered.enumerated().compactMap { index, place in
+            if let point = direct[place.id] {
+                return ResolvedLocation(place: place, coordinate: point)
+            }
+            let previous = ordered[..<index].reversed().compactMap { direct[$0.id] }.first
+            let next = ordered.dropFirst(index + 1).compactMap { direct[$0.id] }.first
+            guard let point = representativeCoordinate(previous: previous, next: next)
+            else { return nil }
+            return ResolvedLocation(place: place, coordinate: point)
+        }
+    }
+
+    private static func representativeCoordinate(
+        previous: GeoPoint?,
+        next: GeoPoint?
+    ) -> GeoPoint? {
+        switch (previous, next) {
+        case let (previous?, next?): return blend(previous, next, ratio: 0.5)
+        case let (previous?, nil): return previous
+        case let (nil, next?): return next
+        case (nil, nil): return nil
+        }
+    }
+
+    private static func validCoordinates(_ values: [GeoPoint]) -> [GeoPoint] {
+        values.filter(isValid)
+    }
+
+    private static func movementMode(
+        _ first: SensorReading,
+        _ second: SensorReading
+    ) -> TravelMode? {
+        let values = [second, first]
+        if values.contains(where: {
+            $0.matchesRailRoute || ($0.subwayWiFiObservationStreak ?? 0) > 0
+        }) { return .subway }
+        if values.contains(where: \.matchesPublicTransitRoute) { return .bus }
+        if values.contains(where: \.onWater) { return .ship }
+        for reading in values {
+            switch reading.motion {
+            case .walking: return .walking
+            case .running: return .running
+            case .cycling: return .cycling
+            case .automotive: return .car
+            case .stationary, .unknown: continue
+            }
+        }
+        return nil
+    }
+
+    private static func pairKey(_ source: UUID, _ target: UUID) -> String {
+        "\(source.uuidString.lowercased())->\(target.uuidString.lowercased())"
+    }
+
+    private static func priority(_ leg: MapHomeWBSPlaybackLeg) -> Int {
+        if leg.routePhase == .actual { return 3 }
+        return leg.activity == .movement ? 2 : 1
+    }
+
+    private static func isValid(_ point: GeoPoint) -> Bool {
+        point.latitude.isFinite
+            && point.longitude.isFinite
+            && (-90...90).contains(point.latitude)
+            && (-180...180).contains(point.longitude)
+    }
+
+    private static func blend(
+        _ start: GeoPoint,
+        _ end: GeoPoint,
+        ratio: Double
+    ) -> GeoPoint {
+        let value = min(1, max(0, ratio))
+        return GeoPoint(
+            latitude: start.latitude + (end.latitude - start.latitude) * value,
+            longitude: start.longitude + (end.longitude - start.longitude) * value,
+            altitude: start.altitude + (end.altitude - start.altitude) * value,
+            horizontalAccuracy: max(start.horizontalAccuracy, end.horizontalAccuracy),
+            verticalAccuracy: max(start.verticalAccuracy, end.verticalAccuracy)
+        )
+    }
+
+    private static func sameLocation(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Bool {
+        abs(lhs.latitude - rhs.latitude) < 0.000_000_1
+            && abs(lhs.longitude - rhs.longitude) < 0.000_000_1
+    }
+
+    private static let zeroPoint = GeoPoint(
+        latitude: 0,
+        longitude: 0,
+        altitude: 0,
+        horizontalAccuracy: -1,
+        verticalAccuracy: -1
+    )
+}
+
 /// Projects an immutable route snapshot into the current visible window.
 /// This is intentionally display-only: archived readings and segments remain
 /// untouched while a viewport is panned or zoomed.

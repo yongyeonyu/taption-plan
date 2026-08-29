@@ -1,6 +1,7 @@
 import ActivityKit
 import Foundation
 import OSLog
+import SwiftUI
 
 enum TaptionWidgetKind {
     static let schedule = "TaptionScheduleWidget"
@@ -95,8 +96,19 @@ struct TaptionActivityAttributes: ActivityAttributes {
 }
 
 enum TaptionLiveActivityStickmanStyle {
-    static let deepPinkHex = "#D94772"
-    static let personStrokeWidth: CGFloat = 1
+    static let inkHex = "#916446"
+    static let headFillHex = "#B7B1A8"
+    static let personStrokeWidth: CGFloat = 1.55
+    static let ink = Color(
+        red: 145.0 / 255.0,
+        green: 100.0 / 255.0,
+        blue: 70.0 / 255.0
+    )
+    static let headFill = Color(
+        red: 183.0 / 255.0,
+        green: 177.0 / 255.0,
+        blue: 168.0 / 255.0
+    )
 }
 
 enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable, Sendable {
@@ -190,16 +202,25 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
 }
 
 enum TaptionLiveActivityStickmanAnimation {
-    static let frameDuration: TimeInterval = 0.12
-    static let phaseCount = 8
+    static let frameCount = 24
+    static let frameDuration: TimeInterval = 1.0 / 12.0
+    static let phaseCount = frameCount
+
+    static func frameIndex(
+        at time: TimeInterval,
+        isAnimating: Bool
+    ) -> Int {
+        guard isAnimating, time.isFinite else { return 0 }
+        let tick = Int64(floor(time / frameDuration))
+        let count = Int64(frameCount)
+        return Int(((tick % count) + count) % count)
+    }
 
     static func phase(at date: Date, reducesMotion: Bool = false) -> Int {
-        guard !reducesMotion else { return 0 }
-        let elapsed = date.timeIntervalSinceReferenceDate / frameDuration
-        guard elapsed.isFinite, abs(elapsed) < 9e15 else { return 0 }
-        let step = Int64(floor(elapsed))
-        let count = Int64(phaseCount)
-        return Int(((step % count) + count) % count)
+        frameIndex(
+            at: date.timeIntervalSinceReferenceDate,
+            isAnimating: !reducesMotion
+        )
     }
 
     static func oscillation(for phase: Int) -> Double {
@@ -269,6 +290,8 @@ enum TaptionStickmanPoseAction: String, CaseIterable, Sendable {
 }
 
 enum TaptionStickmanPoseEngine {
+    static let wbsHeadRadius = 8.6
+
     private struct Cycle {
         let t: Double
         let s: Double
@@ -301,44 +324,69 @@ enum TaptionStickmanPoseEngine {
         phaseCount: Int
     ) -> TaptionStickmanPose {
         let cycle = Cycle(phase: phase, phaseCount: phaseCount)
+        let pose: TaptionStickmanPose
         switch action {
         case .activity:
-            return activity(cycle)
+            pose = activity(cycle)
         case .computer:
-            return computer(cycle)
+            pose = computer(cycle)
         case .reading:
-            return reading(cycle)
+            pose = reading(cycle)
         case .hobby:
-            return hobby(cycle)
+            pose = hobby(cycle)
         case .sleeping:
-            return sleeping(cycle)
+            pose = sleeping(cycle)
         case .movement:
-            return movement(cycle)
+            pose = movement(cycle)
         case .eating:
-            return eating(cycle)
+            pose = eating(cycle)
         case .exercise:
-            return exercise(cycle)
+            pose = exercise(cycle)
         case .unconfirmed:
-            return unconfirmed(cycle)
+            pose = unconfirmed(cycle)
         case .walking:
-            return walking(cycle)
+            pose = walking(cycle)
         case .running:
-            return running(cycle)
+            pose = running(cycle)
         case .car:
-            return car(cycle)
+            pose = car(cycle)
         case .subway:
-            return subway(cycle)
+            pose = subway(cycle)
         case .privateVehicle:
-            return privateVehicle(cycle)
+            pose = privateVehicle(cycle)
         case .bus:
-            return bus(cycle)
+            pose = bus(cycle)
         case .ship:
-            return ship(cycle)
+            pose = ship(cycle)
         case .airplane:
-            return airplane(cycle)
+            pose = airplane(cycle)
         case .cycling:
-            return cycling(cycle)
+            pose = cycling(cycle)
         }
+        return wbsProportioned(pose)
+    }
+
+    private static func wbsProportioned(
+        _ pose: TaptionStickmanPose
+    ) -> TaptionStickmanPose {
+        TaptionStickmanPose(
+            head: pose.head,
+            neck: pose.neck,
+            leftShoulder: pose.leftShoulder,
+            leftElbow: pose.leftElbow,
+            leftHand: pose.leftHand,
+            rightShoulder: pose.rightShoulder,
+            rightElbow: pose.rightElbow,
+            rightHand: pose.rightHand,
+            leftHip: pose.leftHip,
+            leftKnee: pose.leftKnee,
+            leftFoot: pose.leftFoot,
+            rightHip: pose.rightHip,
+            rightKnee: pose.rightKnee,
+            rightFoot: pose.rightFoot,
+            headRadius: max(pose.headRadius, wbsHeadRadius),
+            face: pose.face
+        )
     }
 
     private static func activity(_ cycle: Cycle) -> TaptionStickmanPose {

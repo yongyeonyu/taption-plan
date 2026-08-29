@@ -3963,7 +3963,13 @@ private struct TimelineDetailPanel: View {
                         }
                     }
                 })
-                .mapStyle(.standard)
+                .mapStyle(.standard(
+                    elevation: .flat,
+                    emphasis: .muted,
+                    pointsOfInterest: .excludingAll,
+                    showsTraffic: false
+                ))
+                .environment(\.colorScheme, .light)
                 .mapControls {
                     MapCompass()
                     MapScaleView()

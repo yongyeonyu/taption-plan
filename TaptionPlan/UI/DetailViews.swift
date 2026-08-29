@@ -1337,7 +1337,13 @@ struct InferenceDetailView: View {
                             .tint(group.mode.routeColor)
                     }
                 })
-                .mapStyle(.standard)
+                .mapStyle(.standard(
+                    elevation: .flat,
+                    emphasis: .muted,
+                    pointsOfInterest: .excludingAll,
+                    showsTraffic: false
+                ))
+                .environment(\.colorScheme, .light)
                 .frame(height: 165)
                 .background {
                     GeometryReader { geometry in

@@ -461,22 +461,23 @@ enum MapHomeStickmanActionResolver {
 }
 
 enum MapHomeStickmanAnimationEngine {
-    static let frameDuration: TimeInterval = 0.08
-    static let phaseCount = 12
+    static let frameDuration = TaptionLiveActivityStickmanAnimation.frameDuration
+    static let phaseCount = TaptionLiveActivityStickmanAnimation.frameCount
 
     static func phase(at date: Date, reducesMotion: Bool = false) -> Int {
-        guard !reducesMotion else { return 0 }
-        let elapsed = date.timeIntervalSinceReferenceDate / frameDuration
-        guard elapsed.isFinite, abs(elapsed) < 9e15 else { return 0 }
-        let step = Int64(floor(elapsed))
-        let count = Int64(phaseCount)
-        return Int(((step % count) + count) % count)
+        TaptionLiveActivityStickmanAnimation.frameIndex(
+            at: date.timeIntervalSinceReferenceDate,
+            isAnimating: !reducesMotion
+        )
     }
 
     static func phase(for progress: Double) -> Int {
         guard progress.isFinite else { return 0 }
         let normalized = min(max(progress, 0), 1)
-        return Int((normalized * Double(phaseCount)).rounded(.down)) % phaseCount
+        return min(
+            phaseCount - 1,
+            Int((normalized * Double(phaseCount)).rounded(.down))
+        )
     }
 
     static func oscillation(for phase: Int) -> Double {
@@ -493,25 +494,35 @@ enum MapHomeStickmanAnimationEngine {
 }
 
 enum MapHomeStickmanStyle {
-    static let deepPinkHex = "#D94772"
-    static let outlineHex = "#24324A"
-    static let bodyFillHex = "#F5A3BA"
-    static let skinFillHex = "#FFF4E8"
-    static let personStrokeWidth: CGFloat = 1
+    static let inkHex = TaptionLiveActivityStickmanStyle.inkHex
+    static let headFillHex = TaptionLiveActivityStickmanStyle.headFillHex
+    static let personStrokeWidth = TaptionLiveActivityStickmanStyle.personStrokeWidth
+}
+
+enum MapHomeStickmanRoutePhase {
+    case actual
+    case forecast
+
+    var color: Color {
+        Color(hex: self == .actual ? "#458B88" : "#C65D4D")
+    }
 }
 
 struct MapHomeStickmanMarker: View {
-    static let size = CGSize(width: 49, height: 42)
+    static let size = CGSize(width: 36, height: 36)
 
     let action: MapHomeStickmanAction
     var animationPhase: Int? = nil
+    var routePhase: MapHomeStickmanRoutePhase = .actual
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
+        let isStatic = reduceMotion || isLuminanceReduced
         TimelineView(
             .animation(
                 minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
-                paused: reduceMotion
+                paused: isStatic || animationPhase != nil
             )
         ) { context in
             Canvas { canvas, size in
@@ -519,7 +530,7 @@ struct MapHomeStickmanMarker: View {
                     context: &canvas,
                     size: size,
                     action: action,
-                    phase: reduceMotion
+                    phase: isStatic
                         ? 0
                         : animationPhase
                             ?? MapHomeStickmanAnimationEngine.phase(
@@ -530,9 +541,9 @@ struct MapHomeStickmanMarker: View {
             }
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        .background(.white.opacity(0.96), in: Circle())
-        .overlay { Circle().stroke(Color.tpPastelRose.opacity(0.42), lineWidth: 1) }
-        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+        .background(Color(hex: "#FCF9F4").opacity(0.96), in: Circle())
+        .overlay { Circle().stroke(routePhase.color.opacity(0.90), lineWidth: 1.25) }
+        .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
         .accessibilityHidden(true)
     }
 }
@@ -541,12 +552,14 @@ struct MapHomeStickmanGlyph: View {
     let action: MapHomeStickmanAction
     var size: CGFloat = 30
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
+        let isStatic = reduceMotion || isLuminanceReduced
         TimelineView(
             .animation(
                 minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
-                paused: reduceMotion
+                paused: isStatic
             )
         ) { context in
             Canvas { canvas, canvasSize in
@@ -556,7 +569,7 @@ struct MapHomeStickmanGlyph: View {
                     action: action,
                     phase: MapHomeStickmanAnimationEngine.phase(
                         at: context.date,
-                        reducesMotion: reduceMotion
+                        reducesMotion: isStatic
                     )
                 )
             }
@@ -595,15 +608,17 @@ private struct MapHomeStickmanCanvas {
 }
 
 private enum MapHomeStickmanRenderer {
-    private static let deepPink = Color(hex: MapHomeStickmanStyle.deepPinkHex)
-    private static let outline = Color(hex: MapHomeStickmanStyle.outlineHex)
-    private static let bodyFill = Color(hex: MapHomeStickmanStyle.bodyFillHex)
-    private static let skinFill = Color(hex: MapHomeStickmanStyle.skinFillHex)
-    private static let accent = deepPink
-    private static let line = deepPink
-    private static let faceLine = Color.black.opacity(0.9)
-    private static let propLine = Color.black.opacity(0.9)
-    private static let propFill = Color.white.opacity(0.92)
+    private static let ink = Color(hex: MapHomeStickmanStyle.inkHex)
+    private static let headFill = Color(hex: MapHomeStickmanStyle.headFillHex)
+    private static let deepPink = ink
+    private static let outline = ink
+    private static let bodyFill = ink
+    private static let skinFill = headFill
+    private static let accent = ink
+    private static let line = ink
+    private static let faceLine = ink
+    private static let propLine = ink
+    private static let propFill = Color(hex: "#FCF9F4").opacity(0.94)
     private static let fill = propFill
     private static let sceneryLeaf = Color(hex: "#B9DEC5").opacity(0.9)
     private static let sceneryTrunk = Color(hex: "#A98D7A").opacity(0.72)
@@ -872,9 +887,14 @@ private enum MapHomeStickmanRenderer {
         }
 
         func limb(_ points: [CGPoint], prominent: Bool = true) {
-            let opacity: Double = prominent ? 1 : 0.38
-            stroke(&context, points, color: outline.opacity(opacity), width: prominent ? 2.8 : 1.8)
-            stroke(&context, points, color: deepPink.opacity(opacity), width: prominent ? 1.15 : 0.72)
+            stroke(
+                &context,
+                points,
+                color: ink.opacity(prominent ? 1 : 0.72),
+                width: prominent
+                    ? MapHomeStickmanStyle.personStrokeWidth
+                    : MapHomeStickmanStyle.personStrokeWidth * 0.82
+            )
         }
 
         let leftNear = viewpoint == .sideLeft || viewpoint == .diagonalLeft
@@ -884,29 +904,8 @@ private enum MapHomeStickmanRenderer {
         limb([point(pose.leftShoulder), point(pose.leftElbow), point(pose.leftHand)], prominent: viewpoint == .front || leftNear)
         limb([point(pose.rightShoulder), point(pose.rightElbow), point(pose.rightHand)], prominent: viewpoint == .front || rightNear)
         limb([point(pose.neck), point(pose.head)])
-
-        let centerX = CGFloat((pose.leftShoulder.x + pose.rightShoulder.x) / 2)
-        let shoulderY = CGFloat(min(pose.leftShoulder.y, pose.rightShoulder.y))
-        let hipY = CGFloat(max(pose.leftHip.y, pose.rightHip.y))
-        let bodyWidth = max(
-            8,
-            abs(CGFloat(pose.leftShoulder.x - pose.rightShoulder.x)) + 3.5
-        )
-        let body = Path(
-            roundedRect: canvas.rect(
-                x: centerX - bodyWidth / 2,
-                y: shoulderY + 1,
-                width: bodyWidth,
-                height: max(8, hipY - shoulderY + 3)
-            ),
-            cornerRadius: 3 * canvas.scale
-        )
-        context.fill(body, with: .color(bodyFill))
-        context.stroke(
-            body,
-            with: .color(outline),
-            style: StrokeStyle(lineWidth: 1.2 * canvas.scale, lineCap: .round, lineJoin: .round)
-        )
+        limb([point(pose.neck), point(pose.leftShoulder)])
+        limb([point(pose.neck), point(pose.rightShoulder)])
         stroke(
             &context,
             [
@@ -916,8 +915,8 @@ private enum MapHomeStickmanRenderer {
                     CGFloat((pose.leftHip.y + pose.rightHip.y) / 2)
                 ),
             ],
-            color: outline,
-            width: 1.1
+            color: ink,
+            width: MapHomeStickmanStyle.personStrokeWidth
         )
 
         for joint in [
@@ -935,37 +934,28 @@ private enum MapHomeStickmanRenderer {
                 canvas,
                 x: CGFloat(joint.x),
                 y: CGFloat(joint.y),
-                radius: 0.72,
-                color: outline
+                radius: 0.82,
+                color: ink
             )
         }
 
-        for hand in [pose.leftHand, pose.rightHand] {
-            let handPath = Path(ellipseIn: canvas.rect(
-                x: CGFloat(hand.x) - 1.3,
-                y: CGFloat(hand.y) - 1.3,
-                width: 2.6,
-                height: 2.6
+        for joint in [pose.leftHand, pose.rightHand, pose.leftFoot, pose.rightFoot] {
+            let jointPath = Path(ellipseIn: canvas.rect(
+                x: CGFloat(joint.x) - 1.2,
+                y: CGFloat(joint.y) - 1.2,
+                width: 2.4,
+                height: 2.4
             ))
-            context.fill(handPath, with: .color(skinFill))
+            context.fill(jointPath, with: .color(headFill))
             context.stroke(
-                handPath,
-                with: .color(outline),
-                style: StrokeStyle(lineWidth: 0.8 * canvas.scale, lineCap: .round, lineJoin: .round)
+                jointPath,
+                with: .color(ink),
+                style: StrokeStyle(
+                    lineWidth: 1.0 * canvas.scale,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
             )
-        }
-
-        for (foot, hip) in [(pose.leftFoot, pose.leftHip), (pose.rightFoot, pose.rightHip)] {
-            let direction: CGFloat = foot.x >= hip.x ? 1 : -1
-            let shoe = [
-                point(foot),
-                canvas.point(
-                    CGFloat(foot.x) + direction * 3.5,
-                    CGFloat(foot.y)
-                ),
-            ]
-            stroke(&context, shoe, color: outline, width: 2.8)
-            stroke(&context, shoe, color: bodyFill, width: 1.2)
         }
 
         let face: Face = switch pose.face {

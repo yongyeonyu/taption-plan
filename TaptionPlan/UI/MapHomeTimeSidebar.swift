@@ -175,7 +175,7 @@ enum MapHomeTimeSidebarHandleSide {
     case trailing
 
     var allowsDrag: Bool {
-        self == .trailing
+        true
     }
 }
 
@@ -873,7 +873,6 @@ struct MapHomeTimeSidebar: View {
     let zoomResetToken: Int
     let zoomStepToken: Int
     let maximumSelectableMinute: Int?
-    var onSelectionChanged: ((Int) -> Void)?
     var onViewportChanged: ((Int, Int) -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
     var onSectionEdit: ((Int) -> Void)?
@@ -922,7 +921,6 @@ struct MapHomeTimeSidebar: View {
         railWidth: CGFloat = 58,
         maximumSelectableMinute: Int? = nil,
         trailingInteractionWidth: CGFloat = 0,
-        onSelectionChanged: ((Int) -> Void)? = nil,
         onViewportChanged: ((Int, Int) -> Void)? = nil,
         onInteractionChanged: ((Bool) -> Void)? = nil,
         onSectionEdit: ((Int) -> Void)? = nil
@@ -937,7 +935,6 @@ struct MapHomeTimeSidebar: View {
         self.railWidth = max(58, railWidth)
         self.maximumSelectableMinute = maximumSelectableMinute
         self.trailingInteractionWidth = max(0, trailingInteractionWidth)
-        self.onSelectionChanged = onSelectionChanged
         self.onViewportChanged = onViewportChanged
         self.onInteractionChanged = onInteractionChanged
         self.onSectionEdit = onSectionEdit
@@ -1378,6 +1375,13 @@ struct MapHomeTimeSidebar: View {
                 )
                 .contentShape(Rectangle())
                 .position(x: leadingInteractionFrame.midX, y: hitCenterY)
+                .highPriorityGesture(
+                    dragGesture(
+                        trackHeight: trackHeight,
+                        maxMinute: maxMinute,
+                        visibleWindow: visibleWindow
+                    )
+                )
                 .onTapGesture {
                     publish(minute)
                 }
@@ -1389,7 +1393,7 @@ struct MapHomeTimeSidebar: View {
                 .accessibilityLabel(
                     activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
                 )
-                .accessibilityHint("탭하면 이 시간으로 이동합니다")
+                .accessibilityHint("드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다")
 
             Rectangle()
                 .fill(.clear)
@@ -1406,6 +1410,9 @@ struct MapHomeTimeSidebar: View {
                         visibleWindow: visibleWindow
                     )
                 )
+                .onTapGesture {
+                    publish(minute)
+                }
                 .simultaneousGesture(
                     TapGesture(count: 2).onEnded {
                         onSectionEdit?(minute)
@@ -1618,7 +1625,6 @@ struct MapHomeTimeSidebar: View {
         }
         if selectionChanged {
             selectedMinute = state.selectedMinute
-            onSelectionChanged?(state.selectedMinute)
         }
     }
 

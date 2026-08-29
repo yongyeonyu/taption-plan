@@ -6530,14 +6530,14 @@ final class AppModel {
     }
 
     func setMapDisplayStyle(_ style: MapDisplayStyle) {
-        let runtimeStyle = style.runtimeStyle
-        guard snapshot.settings.mapDisplayStyle != runtimeStyle else { return }
-        snapshot.settings.mapDisplayStyle = runtimeStyle
+        let persistedStyle = style.runtimeStyle
+        guard snapshot.settings.mapDisplayStyle != persistedStyle else { return }
+        snapshot.settings.mapDisplayStyle = persistedStyle
         Task { await persist() }
     }
 
     func setMapDisplayProvider(_ provider: MapDisplayProvider) {
-        setMapDisplayStyle(.defaultStyle(for: provider).runtimeStyle)
+        setMapDisplayStyle(.standard)
     }
 
     func setMapMemoDisplayFilter(_ filter: MapMemoDisplayFilter) {

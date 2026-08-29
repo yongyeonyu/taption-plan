@@ -18958,6 +18958,7 @@ final class FeatureEngineTests: XCTestCase {
     }
 }
 
+@MainActor
 final class MapHomeStickmanTests: XCTestCase {
     func testDestinationActionsUseCompanySchoolAndRestaurantSemantics() {
         let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
@@ -19106,6 +19107,15 @@ final class MapHomeStickmanTests: XCTestCase {
             0,
             accuracy: 0.000_001
         )
+        XCTAssertEqual(MapHomeStickmanAnimationEngine.phaseCount, 24)
+        XCTAssertEqual(
+            MapHomeStickmanAnimationEngine.frameDuration,
+            1.0 / 12.0,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(MapHomeStickmanAnimationEngine.phase(for: 0), 0)
+        XCTAssertEqual(MapHomeStickmanAnimationEngine.phase(for: 0.5), 12)
+        XCTAssertEqual(MapHomeStickmanAnimationEngine.phase(for: 1), 23)
     }
 
     func testArticulatedStickmanPoseCoversEveryActionAndStaysOnCanvas() {
@@ -19346,7 +19356,7 @@ final class MapHomeStickmanTests: XCTestCase {
         ) {
             XCTAssertEqual(abs(last - first), cloudStep, accuracy: 0.0001)
         }
-        XCTAssertEqual(mapFrames[3], liveFrames[2])
+        XCTAssertEqual(mapFrames, liveFrames)
         XCTAssertEqual(
             TaptionStickmanWalkingSceneryAnimation.frame(
                 phase: -1,
@@ -19425,8 +19435,12 @@ final class MapHomeStickmanTests: XCTestCase {
             ),
             .ship
         )
-        XCTAssertEqual(MapHomeStickmanStyle.deepPinkHex, "#D94772")
-        XCTAssertEqual(MapHomeStickmanStyle.personStrokeWidth, 1)
+        XCTAssertEqual(MapHomeStickmanStyle.inkHex, "#916446")
+        XCTAssertEqual(MapHomeStickmanStyle.headFillHex, "#B7B1A8")
+        XCTAssertEqual(MapHomeStickmanStyle.personStrokeWidth, 1.55)
+        XCTAssertEqual(TaptionStickmanPoseEngine.wbsHeadRadius, 8.6)
+        XCTAssertEqual(MapHomeStickmanMarker.size.width, 36)
+        XCTAssertEqual(MapHomeStickmanMarker.size.height, 36)
     }
 
     func testLiveActivityStickmanResolvesEveryMajorCategory() {
@@ -19503,8 +19517,9 @@ final class MapHomeStickmanTests: XCTestCase {
             ),
             .ship
         )
-        XCTAssertEqual(TaptionLiveActivityStickmanStyle.deepPinkHex, "#D94772")
-        XCTAssertEqual(TaptionLiveActivityStickmanStyle.personStrokeWidth, 1)
+        XCTAssertEqual(TaptionLiveActivityStickmanStyle.inkHex, "#916446")
+        XCTAssertEqual(TaptionLiveActivityStickmanStyle.headFillHex, "#B7B1A8")
+        XCTAssertEqual(TaptionLiveActivityStickmanStyle.personStrokeWidth, 1.55)
     }
 
     func testLiveActivityStickmanAnimationHonorsReduceMotion() {
@@ -19523,10 +19538,50 @@ final class MapHomeStickmanTests: XCTestCase {
             ),
             0
         )
+        XCTAssertEqual(TaptionLiveActivityStickmanAnimation.frameCount, 24)
         XCTAssertEqual(
-            TaptionLiveActivityStickmanAnimation.phaseCount,
-            8
+            TaptionLiveActivityStickmanAnimation.frameDuration,
+            1.0 / 12.0,
+            accuracy: 0.0001
         )
+        XCTAssertEqual(TaptionLiveActivityStickmanAnimation.phaseCount, 24)
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAnimation.frameIndex(
+                at: 24 * (1.0 / 12.0),
+                isAnimating: true
+            ),
+            0
+        )
+    }
+
+    func testLiveActivityStickmanKeepsAllRawActionsAndUsesDeterministicSharedPoses() {
+        let expectedRawValues = [
+            "activity", "computer", "reading", "hobby", "sleeping",
+            "movement", "eating", "exercise", "unconfirmed", "walking",
+            "running", "car", "subway", "privateVehicle", "bus", "ship",
+            "airplane", "cycling",
+        ]
+        XCTAssertEqual(
+            TaptionLiveActivityStickmanAction.allCases.map(\.rawValue),
+            expectedRawValues
+        )
+
+        for action in TaptionLiveActivityStickmanAction.allCases {
+            let pose = TaptionStickmanPoseEngine.pose(
+                action: TaptionStickmanPoseAction(rawValue: action.rawValue)!,
+                phase: 7,
+                phaseCount: TaptionLiveActivityStickmanAnimation.frameCount
+            )
+            XCTAssertEqual(
+                pose,
+                TaptionStickmanPoseEngine.pose(
+                    action: TaptionStickmanPoseAction(rawValue: action.rawValue)!,
+                    phase: 7,
+                    phaseCount: TaptionLiveActivityStickmanAnimation.frameCount
+                )
+            )
+            XCTAssertGreaterThan(pose.headRadius, 0)
+        }
     }
 
     func testRegisteredCompanyClassificationCanReplaceUnknownStayLock() {

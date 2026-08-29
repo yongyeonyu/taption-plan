@@ -618,6 +618,7 @@ private final class MapHomeMapRenderCache {
     func bounds(
         timeline: [MapHomeTimelineRouteOverlay],
         expected: [MapHomeExpectedRouteOverlay],
+        generated: [MapHomeWBSGeneratedRouteOverlay],
         subway: [MapHomeSubwayRouteOverlay],
         current: CLLocationCoordinate2D?
     ) -> MapHomeRouteCoordinateBounds? {
@@ -625,6 +626,7 @@ private final class MapHomeMapRenderCache {
         var bounds = MapHomeRouteCoordinateBounds()
         timeline.forEach { bounds.include($0.coordinates) }
         expected.forEach { bounds.include($0.coordinates) }
+        generated.forEach { bounds.include($0.coordinates) }
         subway.forEach { bounds.include($0.coordinates) }
         if bounds.isEmpty, let current {
             bounds.include([current])
@@ -792,7 +794,7 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
 enum MapHomeDayPlaybackMath {
     static let durationSeconds: TimeInterval = 24
     static let frameIntervalNanoseconds: UInt64 = 16_666_667
-    static let routeProjectionInterval: TimeInterval = 1.0 / 30.0
+    static let routeProjectionInterval: TimeInterval = 0.25
     static let mapFocusInterval: TimeInterval = 1.0 / 30.0
     static let stationaryMinutesPerSecond = 60.0
     static let movementPlaybackMultiplier = 1.0 / 6.0
@@ -1247,6 +1249,8 @@ struct MapHomeView: View {
         .wholeDayUnconfirmed,
     ]
     @State private var routeProjection: RouteTimelineProjection?
+    @State private var wbsPlaybackProjection: MapHomeWBSPlaybackProjection?
+    @State private var hasDeferredWBSPlaybackRefresh = false
     @State private var routeReadings: [SensorReading] = []
     @State private var routeReadingsLoadState: MapHomeRouteReadingsLoadState = .idle
     @State private var hasReportedInitialDataReady = false
@@ -1257,6 +1261,8 @@ struct MapHomeView: View {
     @State private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] = []
     @State private var cachedTemporaryLocations: [SubwayStationCatalog.TemporaryLocation] = []
     @State private var expectedRouteOverlays: [MapHomeExpectedRouteOverlay] = []
+    @State private var wbsGeneratedRouteOverlays: [MapHomeWBSGeneratedRouteOverlay] = []
+    @State private var pendingForecastRouteState: MapHomeForecastRouteState?
     @State private var expectedRouteCache: [ExpectedRouteRequest: [CLLocationCoordinate2D]] = [:]
     @State private var expectedRouteRefreshTask: Task<Void, Never>?
     @State private var liveRouteProjectionRefreshTask: Task<Void, Never>?
@@ -1762,9 +1768,13 @@ struct MapHomeView: View {
                 historicalPlaybackReadings = []
                 displayRouteReadings = []
                 routeProjection = nil
+                wbsPlaybackProjection = nil
+                hasDeferredWBSPlaybackRefresh = false
                 timelineRouteOverlays = []
                 cachedTemporaryLocations = []
                 expectedRouteOverlays = []
+                wbsGeneratedRouteOverlays = []
+                pendingForecastRouteState = nil
                 historicalPlaybackPoint = nil
                 nearbyTransitPlaces = []
                 transitBoardingReadingsRevision &+= 1
@@ -1799,6 +1809,7 @@ struct MapHomeView: View {
             scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.snapshot.places) { _, _ in
+            requestWBSPlaybackProjectionRefresh()
             scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.backupRestoreRevision) { _, _ in
@@ -2053,7 +2064,9 @@ struct MapHomeView: View {
             routes: appleMapRoutes,
             annotations: appleMapAnnotations,
             playback: appleMapPlayback,
-            centersPlayback: isDayPlaybackRunning || userTrackingMode.keepsCameraLocked,
+            centersPlayback: selectedTimelineMinute != nil
+                || isTimelineInteractionActive
+                || userTrackingMode.keepsCameraLocked,
             contentInsets: vectorMapContentInsets,
             onCameraFrame: { frame, locationPoint, isFinal in
                 let now = ProcessInfo.processInfo.systemUptime
@@ -2095,46 +2108,9 @@ struct MapHomeView: View {
         .onChange(of: headingMonitor.headingDegrees) { _, _ in
             applyMapHeading(using: nil)
         }
-        .onChange(of: selectedTimelineMinute) { _, minute in
-            if isTimelineInteractionActive || isDayPlaybackRunning {
-                let interval = isDayPlaybackRunning
-                    ? MapHomeDayPlaybackMath.mapFocusInterval
-                    : TimelineInteractionFrameGate.minimumInterval
-                let now = ProcessInfo.processInfo.systemUptime
-                let shouldFocus: Bool
-                if isDayPlaybackRunning {
-                    shouldFocus = TimelineInteractionFrameGate.shouldRender(
-                        lastUptime: &lastPlaybackMapFocusUptime,
-                        nowUptime: now,
-                        minimumInterval: interval
-                    )
-                } else {
-                    shouldFocus = TimelineInteractionFrameGate.shouldRender(
-                        lastUptime: &lastTimelineMapFocusUptime,
-                        nowUptime: now,
-                        minimumInterval: interval
-                    )
-                }
-                guard shouldFocus else { return }
-                let point = isDayPlaybackRunning
-                    ? displayedPlaybackFocusPoint
-                        ?? historicalPlaybackPoint
-                        ?? refreshHistoricalPlaybackPoint()
-                    : displayedPlaybackFocusPoint
-                        ?? refreshHistoricalPlaybackPoint()
-                guard let point else { return }
-                focusMap(on: point, using: nil, followsTracking: true)
-            } else {
-                refreshSelectedTimelineMapPosition(minute: minute, using: nil)
-            }
-        }
         .onChange(of: isTimelineInteractionActive) { _, isInteracting in
-            guard !isInteracting, !isDayPlaybackRunning,
-                  selectedTimelineMinute != nil else { return }
-            refreshSelectedTimelineMapPosition(
-                minute: selectedTimelineMinute,
-                using: nil
-            )
+            guard !isInteracting else { return }
+            flushDeferredWBSPlaybackProjection()
             finishDisplayedStickmanViewportProjection()
         }
         .onChange(of: model.latestSensorReading?.id) { _, _ in
@@ -2208,6 +2184,16 @@ struct MapHomeView: View {
                 opacity: MapHomeWBSTripStyle.forecastRouteOpacity,
                 phase: .forecast,
                 transport: MapHomeAppleRouteTransport(mode: overlay.mode)
+            )
+        }
+        routes += visibleWBSGeneratedRouteOverlays.map { overlay in
+            MapHomeAppleRoute(
+                id: "wbs-\(overlay.id)",
+                coordinates: overlay.coordinates,
+                colorHex: MapHomeWBSTripStyle.forecastRouteHex,
+                opacity: MapHomeWBSTripStyle.forecastRouteOpacity,
+                phase: .forecast,
+                transport: overlay.mode.map { MapHomeAppleRouteTransport(mode: $0) }
             )
         }
         return routes.filter { $0.coordinates.count >= 2 }
@@ -2284,8 +2270,17 @@ struct MapHomeView: View {
         guard let coordinate = displayedLocationCoordinate else { return nil }
         let heading: CLLocationDirection
         let phase: MapHomeAppleRoutePhase
-        let animationProgress: Double?
-        if let route = activeExpectedRoute {
+        let animationPhase: Int?
+        let cameraCoordinate: CLLocationCoordinate2D
+        if let frame = wbsPlaybackFrame {
+            heading = CLLocationDirection(frame.direction.rawValue * 45)
+            phase = frame.routePhase == .actual ? .actual : .forecast
+            animationPhase = frame.stickmanFrameIndex
+            cameraCoordinate = CLLocationCoordinate2D(
+                latitude: frame.cameraCoordinate.latitude,
+                longitude: frame.cameraCoordinate.longitude
+            )
+        } else if let route = activeExpectedRoute {
             heading = MapHomeApplePlaybackMath.heading(
                 at: displayedLocationDate,
                 departureDate: route.departureDate,
@@ -2293,11 +2288,12 @@ struct MapHomeView: View {
                 coordinates: route.coordinates
             )
             phase = .forecast
-            animationProgress = MapHomeExpectedRoutePlaybackMath.progress(
+            animationPhase = MapHomeExpectedRoutePlaybackMath.progress(
                 at: displayedLocationDate,
                 departureDate: route.departureDate,
                 arrivalDate: route.arrivalDate
-            )
+            ).map(MapHomeStickmanAnimationEngine.phase(for:))
+            cameraCoordinate = coordinate
         } else {
             heading = MapHomeApplePlaybackMath.stableHeading(
                 MapHomeApplePlaybackMath.heading(
@@ -2308,22 +2304,24 @@ struct MapHomeView: View {
                     ?? 0
             )
             phase = .actual
-            animationProgress = routeProjection.flatMap {
+            animationPhase = routeProjection.flatMap {
                 MapHomeRouteTimelinePlaybackMath.progress(
                     at: displayedLocationDate,
                     in: $0.segments
                 )
-            }
+            }.map(MapHomeStickmanAnimationEngine.phase(for:))
+            cameraCoordinate = coordinate
         }
         return MapHomeApplePlayback(
             coordinate: coordinate,
+            cameraCoordinate: cameraCoordinate,
             headingDegrees: heading,
             action: displayedStickmanAction,
             accessibilityLabel: "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)",
             phase: phase,
             stickmanAnimationPhase: selectedTimelineMinute == nil
                 ? nil
-                : animationProgress.map(MapHomeStickmanAnimationEngine.phase(for:))
+                : animationPhase
         )
     }
 
@@ -2359,7 +2357,7 @@ struct MapHomeView: View {
     }
 
     private var vectorExpectedRoutes: [MapHomeVectorRoute] {
-        visibleExpectedRouteOverlays.map { overlay in
+        let expected = visibleExpectedRouteOverlays.map { overlay in
             MapHomeVectorRoute(
                 id: "expected-\(overlay.id.uuidString)",
                 coordinates: overlay.coordinates,
@@ -2367,6 +2365,15 @@ struct MapHomeView: View {
                 opacity: MapHomeWBSTripStyle.forecastRouteOpacity
             )
         }
+        let generated = visibleWBSGeneratedRouteOverlays.map { overlay in
+            MapHomeVectorRoute(
+                id: "wbs-\(overlay.id)",
+                coordinates: overlay.coordinates,
+                colorHex: MapHomeWBSTripStyle.forecastRouteHex,
+                opacity: MapHomeWBSTripStyle.forecastRouteOpacity
+            )
+        }
+        return expected + generated
     }
 
     private var vectorSubwayRoutes: [MapHomeVectorRoute] {
@@ -2607,7 +2614,10 @@ struct MapHomeView: View {
                let point = stickmanPoint {
                 MapHomeStickmanMarker(
                     action: displayedStickmanAction,
-                    animationPhase: appleMapPlayback?.stickmanAnimationPhase
+                    animationPhase: appleMapPlayback?.stickmanAnimationPhase,
+                    routePhase: appleMapPlayback?.phase == .forecast
+                        ? .forecast
+                        : .actual
                 )
                     .position(
                         x: point.x,
@@ -3208,6 +3218,8 @@ struct MapHomeView: View {
         routeProjection = nil
         timelineRouteOverlays = []
         prepareRouteProjectionReadings()
+        hasDeferredWBSPlaybackRefresh = false
+        refreshWBSPlaybackProjection()
         refreshRouteProjection()
         refreshHistoricalPlaybackPoint()
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
@@ -3250,7 +3262,9 @@ struct MapHomeView: View {
                     minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
                 ) {
                     dayPlaybackCurrentMinute = playbackMinute
-                    refreshHistoricalPlaybackPoint()
+                    if wbsPlaybackProjection?.legs.isEmpty != false {
+                        refreshHistoricalPlaybackPoint()
+                    }
                 }
                 if TimelineInteractionFrameGate.shouldRender(
                     lastUptime: &lastPlaybackRouteProjectionUptime,
@@ -3274,6 +3288,7 @@ struct MapHomeView: View {
                     dayPlaybackCurrentMinute = nil
                     _ = flushDeferredRouteProjection()
                         ?? refreshRouteProjection()
+                    flushDeferredWBSPlaybackProjection()
                     refreshHistoricalPlaybackPoint()
                     dayPlaybackTask = nil
                     lastPlaybackRouteProjectionUptime = 0
@@ -3402,6 +3417,7 @@ struct MapHomeView: View {
             isTimelineInteractionActive = false
             _ = flushDeferredRouteProjection()
                 ?? refreshRouteProjection()
+            flushDeferredWBSPlaybackProjection()
             refreshHistoricalPlaybackPoint()
         }
     }
@@ -3458,11 +3474,6 @@ struct MapHomeView: View {
                             ? MapHomeTimeSidebarMath.fullDayMinutes
                             : nil,
                         trailingInteractionWidth: Layout.horizontalInset,
-                        onSelectionChanged: { minute in
-                            stopDayPlayback(resetProgress: true)
-                            isTimelineSelectionPinned = true
-                            selectedTimelineMinute = minute
-                        },
                         onViewportChanged: { start, duration in
                             weatherVisibleStartMinute = start
                             weatherVisibleDurationMinutes = duration
@@ -3470,7 +3481,13 @@ struct MapHomeView: View {
                             timeSidebarVisibleDurationMinutes = duration
                         },
                         onInteractionChanged: { isInteracting in
+                            if isInteracting, isDayPlaybackRunning {
+                                stopDayPlayback(resetProgress: true)
+                            }
                             isTimelineInteractionActive = isInteracting
+                            if !isInteracting {
+                                flushDeferredWBSPlaybackProjection()
+                            }
                         },
                         onSectionEdit: { selectedMinute in
                             openSectionEditor(at: selectedMinute)
@@ -4514,31 +4531,23 @@ struct MapHomeView: View {
                     .padding(.top, 6)
                     .padding(.horizontal, 12)
 
-                ForEach(MapDisplayStyle.appleStyles, id: \.self) { style in
-                    Button {
-                        model.setMapDisplayStyle(style)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: mapStyleSystemImage(style))
-                                .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 22)
-                            Text(mapStyleTitle(style))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Spacer()
-                            if model.settings.mapDisplayStyle.runtimeStyle == style {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .bold))
-                            }
-                        }
-                        .foregroundStyle(Color.primary)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(
-                        model.settings.mapDisplayStyle.runtimeStyle == style ? .isSelected : []
-                    )
+                HStack(spacing: 10) {
+                    Image(systemName: "map.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(width: 22)
+                    Text(language.text("WBS 지도 · Apple", "WBS map · Apple"))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    Spacer()
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
                 }
+                .foregroundStyle(Color.primary)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(
+                    language.text("지도 스타일 WBS 지도 Apple 고정", "Map style fixed to WBS Apple")
+                )
 
                 Toggle(
                     isOn: Binding(
@@ -5256,6 +5265,13 @@ struct MapHomeView: View {
         }
     }
 
+    private var visibleWBSGeneratedRouteOverlays: [MapHomeWBSGeneratedRouteOverlay] {
+        let cutoff = routeOverlayCutoff
+        return wbsGeneratedRouteOverlays.compactMap {
+            $0.visible(through: cutoff)
+        }
+    }
+
     private func scheduleExpectedRouteRefresh() {
         expectedRouteRefreshTask?.cancel()
         expectedRouteRefreshTask = Task { @MainActor in
@@ -5277,24 +5293,44 @@ struct MapHomeView: View {
             through: dayEnd,
             frequentPlaces: model.settings.frequentPlaces
         )
-        guard !requests.isEmpty else {
-            mapRenderCache.invalidateExpectedRoutes()
-            expectedRouteOverlays = []
-            if MapHomePlaybackCameraPolicy.allowsAutomaticFit(
-                isPlaybackRunning: isDayPlaybackRunning,
-                hasUserAdjustedMap: hasUserAdjustedMap
-            ) {
-                focusMapOnAllRoutes()
-            }
-            persistMapDayCache()
-            return
-        }
         if expectedRouteCache.count > 128 {
             expectedRouteCache.removeAll(keepingCapacity: true)
         }
 
-        var overlays: [MapHomeExpectedRouteOverlay] = []
-        for request in requests.prefix(24) {
+        let limitedRequests = Array(requests.prefix(24))
+        let fallbackExpected = limitedRequests.map {
+            expectedRouteOverlay(for: $0, coordinates: [
+                CLLocationCoordinate2D(
+                    latitude: $0.start.latitude,
+                    longitude: $0.start.longitude
+                ),
+                CLLocationCoordinate2D(
+                    latitude: $0.end.latitude,
+                    longitude: $0.end.longitude
+                ),
+            ])
+        }
+        let fallbackProjection = makeWBSPlaybackProjection(
+            expected: fallbackExpected,
+            generated: []
+        )
+        let excludedLegIDs = Set(
+            fallbackExpected.map { "movement-\($0.id.uuidString)" }
+                + storedWBSResolvedRoutes.map(\.legID)
+        )
+        let fallbackGenerated = generatedWBSRouteOverlays(
+            from: fallbackProjection,
+            excluding: excludedLegIDs
+        )
+        _ = applyForecastRouteState(
+            MapHomeForecastRouteState(
+                expected: fallbackExpected,
+                generated: fallbackGenerated
+            )
+        )
+
+        var resolvedExpected: [MapHomeExpectedRouteOverlay] = []
+        for request in limitedRequests {
             guard !Task.isCancelled else { return }
             let coordinates: [CLLocationCoordinate2D]
             if let cached = expectedRouteCache[request], cached.count >= 2 {
@@ -5317,22 +5353,55 @@ struct MapHomeView: View {
                     ]
                 }
             }
-            guard coordinates.count >= 2 else { continue }
-            overlays.append(
-                MapHomeExpectedRouteOverlay(
-                    id: request.segmentID,
-                    mode: request.mode,
-                    departureDate: request.departureDate,
-                    arrivalDate: request.arrivalDate,
-                    coordinates: coordinates
-                )
+            resolvedExpected.append(
+                expectedRouteOverlay(for: request, coordinates: coordinates)
             )
         }
         guard !Task.isCancelled,
               calendar.isDate(selectedDay, inSameDayAs: model.selectedDate)
         else { return }
-        mapRenderCache.invalidateExpectedRoutes()
-        expectedRouteOverlays = overlays
+
+        let resolvedProjection = makeWBSPlaybackProjection(
+            expected: resolvedExpected,
+            generated: []
+        )
+        var resolvedGenerated = generatedWBSRouteOverlays(
+            from: resolvedProjection,
+            excluding: Set(
+                resolvedExpected.map { "movement-\($0.id.uuidString)" }
+                    + storedWBSResolvedRoutes.map(\.legID)
+            )
+        )
+        for index in resolvedGenerated.indices {
+            guard !Task.isCancelled else { return }
+            guard let transport = wbsRouteTransport(for: resolvedGenerated[index].mode),
+                  let start = resolvedGenerated[index].coordinates.first,
+                  let end = resolvedGenerated[index].coordinates.last else { continue }
+            if let coordinates = await MapHomeAppleRouteResolver.shared.resolve(
+                start: start,
+                end: end,
+                transport: transport,
+                departureDate: resolvedGenerated[index].departureDate
+            ), coordinates.count >= 2 {
+                resolvedGenerated[index] = MapHomeWBSGeneratedRouteOverlay(
+                    id: resolvedGenerated[index].id,
+                    mode: resolvedGenerated[index].mode,
+                    departureDate: resolvedGenerated[index].departureDate,
+                    arrivalDate: resolvedGenerated[index].arrivalDate,
+                    coordinates: coordinates
+                )
+            }
+        }
+        guard !Task.isCancelled,
+              calendar.isDate(selectedDay, inSameDayAs: model.selectedDate)
+        else { return }
+        let didApply = applyForecastRouteState(
+            MapHomeForecastRouteState(
+                expected: resolvedExpected,
+                generated: resolvedGenerated
+            )
+        )
+        guard didApply else { return }
         applyInitialMapFocusIfNeeded()
         if MapHomePlaybackCameraPolicy.allowsAutomaticFit(
             isPlaybackRunning: isDayPlaybackRunning,
@@ -5341,6 +5410,72 @@ struct MapHomeView: View {
             focusMapOnAllRoutes()
         }
         persistMapDayCache()
+    }
+
+    private func expectedRouteOverlay(
+        for request: ExpectedRouteRequest,
+        coordinates: [CLLocationCoordinate2D]
+    ) -> MapHomeExpectedRouteOverlay {
+        MapHomeExpectedRouteOverlay(
+            id: request.segmentID,
+            mode: request.mode,
+            departureDate: request.departureDate,
+            arrivalDate: request.arrivalDate,
+            coordinates: coordinates
+        )
+    }
+
+    private func generatedWBSRouteOverlays(
+        from projection: MapHomeWBSPlaybackProjection,
+        excluding excludedLegIDs: Set<String>
+    ) -> [MapHomeWBSGeneratedRouteOverlay] {
+        projection.legs.compactMap { leg in
+            guard leg.routePhase == .forecast,
+                  leg.activity == .movement,
+                  !excludedLegIDs.contains(leg.id),
+                  leg.coordinates.count >= 2 else { return nil }
+            return MapHomeWBSGeneratedRouteOverlay(
+                id: leg.id,
+                mode: leg.mode,
+                departureDate: leg.startDate,
+                arrivalDate: leg.endDate,
+                coordinates: leg.coordinates.map {
+                    CLLocationCoordinate2D(
+                        latitude: $0.latitude,
+                        longitude: $0.longitude
+                    )
+                }
+            )
+        }
+    }
+
+    private func wbsRouteTransport(
+        for mode: TravelMode?
+    ) -> ExpectedRouteTransport? {
+        guard let mode else { return .automobile }
+        switch mode {
+        case .car, .taxi, .bus: return .automobile
+        case .subway, .train: return .transit
+        case .walking, .running, .cycling: return .walking
+        case .airplane, .ship: return nil
+        }
+    }
+
+    @discardableResult
+    private func applyForecastRouteState(
+        _ state: MapHomeForecastRouteState
+    ) -> Bool {
+        guard !isTimelineInteractionActive || isDayPlaybackRunning else {
+            pendingForecastRouteState = state
+            hasDeferredWBSPlaybackRefresh = true
+            return false
+        }
+        pendingForecastRouteState = nil
+        mapRenderCache.invalidateExpectedRoutes()
+        expectedRouteOverlays = state.expected
+        wbsGeneratedRouteOverlays = state.generated
+        refreshWBSPlaybackProjection()
+        return true
     }
 
     private func mapKitRouteCoordinates(
@@ -5429,7 +5564,19 @@ struct MapHomeView: View {
         }
     }
 
+    private var wbsPlaybackFrame: MapHomeWBSPlaybackFrame? {
+        guard selectedTimelineMinute != nil else { return nil }
+        return wbsPlaybackProjection?.frame(at: displayedLocationDate)
+    }
+
     private var historicalPlaybackCoordinate: CLLocationCoordinate2D? {
+        if let point = wbsPlaybackFrame?.coordinate {
+            let coordinate = CLLocationCoordinate2D(
+                latitude: point.latitude,
+                longitude: point.longitude
+            )
+            return CLLocationCoordinate2DIsValid(coordinate) ? coordinate : nil
+        }
         guard selectedTimelineMinute != nil,
               let point = historicalPlaybackPoint
                 ?? routeProjection?.coordinateAtCutoff,
@@ -5456,6 +5603,9 @@ struct MapHomeView: View {
     }
 
     private var displayedPlaybackFocusPoint: GeoPoint? {
+        if let point = wbsPlaybackFrame?.cameraCoordinate {
+            return point
+        }
         guard let coordinate = expectedRoutePlaybackCoordinate
             ?? historicalPlaybackCoordinate else { return nil }
         guard CLLocationCoordinate2DIsValid(coordinate) else { return nil }
@@ -5469,6 +5619,10 @@ struct MapHomeView: View {
     }
 
     private var displayedLocationCoordinate: CLLocationCoordinate2D? {
+        if let coordinate = historicalPlaybackCoordinate,
+           selectedTimelineMinute != nil {
+            return coordinate
+        }
         if let expectedRoutePlaybackCoordinate,
            selectedTimelineMinute != nil || currentCoordinate == nil {
             return expectedRoutePlaybackCoordinate
@@ -5494,6 +5648,9 @@ struct MapHomeView: View {
     }
 
     private var displayedStickmanAction: MapHomeStickmanAction {
+        if let mode = wbsPlaybackFrame?.mode {
+            return MapHomeStickmanActionResolver.action(for: mode)
+        }
         if let activeExpectedRoute {
             return MapHomeStickmanActionResolver.action(for: activeExpectedRoute.mode)
         }
@@ -5510,7 +5667,8 @@ struct MapHomeView: View {
     }
 
     private var displayedLocationAccessibilityLabel: String {
-        if expectedRoutePlaybackCoordinate != nil {
+        if wbsPlaybackFrame?.routePhase == .forecast
+            || expectedRoutePlaybackCoordinate != nil {
             return language.text("예상 경로 위치", "Expected route location")
         }
         return historicalPlaybackCoordinate == nil
@@ -5763,6 +5921,7 @@ struct MapHomeView: View {
             )
         }
         mapRenderCache.invalidateExpectedRoutes()
+        requestWBSPlaybackProjectionRefresh()
         if let subwayMinute = payload.subwayMinute {
             let overlays: [MapHomeSubwayRouteOverlay] =
                 (payload.subway ?? []).compactMap { overlay in
@@ -5959,6 +6118,7 @@ struct MapHomeView: View {
             prepareRouteProjectionReadings()
         }
         let projection = refreshRouteProjection()
+        flushDeferredWBSPlaybackProjection()
         refreshHistoricalPlaybackPoint()
         return projection
     }
@@ -6015,10 +6175,98 @@ struct MapHomeView: View {
         displayRouteReadings = RouteTimelineDataEngine.displayReadings(
             from: normalizedRouteReadings
         )
+        requestWBSPlaybackProjectionRefresh()
+    }
+
+    private func requestWBSPlaybackProjectionRefresh() {
+        guard !isTimelineInteractionActive || isDayPlaybackRunning else {
+            hasDeferredWBSPlaybackRefresh = true
+            return
+        }
+        refreshWBSPlaybackProjection()
+    }
+
+    private func flushDeferredWBSPlaybackProjection() {
+        if let pendingForecastRouteState {
+            self.pendingForecastRouteState = nil
+            hasDeferredWBSPlaybackRefresh = false
+            _ = applyForecastRouteState(pendingForecastRouteState)
+            return
+        }
+        guard hasDeferredWBSPlaybackRefresh else { return }
+        hasDeferredWBSPlaybackRefresh = false
+        refreshWBSPlaybackProjection()
+    }
+
+    private func refreshWBSPlaybackProjection() {
+        let next = makeWBSPlaybackProjection(
+            expected: expectedRouteOverlays,
+            generated: wbsGeneratedRouteOverlays
+        )
+        if wbsPlaybackProjection != next {
+            wbsPlaybackProjection = next
+        }
+    }
+
+    private func makeWBSPlaybackProjection(
+        expected: [MapHomeExpectedRouteOverlay],
+        generated: [MapHomeWBSGeneratedRouteOverlay]
+    ) -> MapHomeWBSPlaybackProjection {
+        let expectedRoutes = expected.map { overlay in
+            MapHomeWBSResolvedRoute(
+                legID: "movement-\(overlay.id.uuidString)",
+                coordinates: overlay.coordinates.map(wbsGeoPoint)
+            )
+        }
+        let generatedRoutes = generated.map { overlay in
+            MapHomeWBSResolvedRoute(
+                legID: overlay.id,
+                coordinates: overlay.coordinates.map(wbsGeoPoint)
+            )
+        }
+        return MapHomeWBSPlaybackProjection.make(
+            selectedDate: model.selectedDate,
+            places: model.snapshot.places,
+            travel: model.snapshot.travel,
+            readings: historicalPlaybackReadings,
+            resolvedRoutes: expectedRoutes + generatedRoutes + storedWBSResolvedRoutes
+        )
+    }
+
+    private var storedWBSResolvedRoutes: [MapHomeWBSResolvedRoute] {
+        model.snapshot.travel.compactMap { segment in
+            guard segment.mode == .subway,
+                  let route = segment.subwayRoute,
+                  SubwayStationCatalog.isValid(route),
+                  route.coordinates.count >= 2 else { return nil }
+            return MapHomeWBSResolvedRoute(
+                legID: "movement-\(segment.id.uuidString)",
+                coordinates: route.coordinates
+            )
+        }
+    }
+
+    private func wbsGeoPoint(
+        _ coordinate: CLLocationCoordinate2D
+    ) -> GeoPoint {
+        GeoPoint(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            altitude: 0,
+            horizontalAccuracy: -1,
+            verticalAccuracy: -1
+        )
     }
 
     @discardableResult
     private func refreshHistoricalPlaybackPoint() -> GeoPoint? {
+        if let point = wbsPlaybackProjection?.frame(at: routeTimelineDate)?.coordinate,
+           selectedTimelineMinute != nil {
+            if historicalPlaybackPoint != point {
+                historicalPlaybackPoint = point
+            }
+            return point
+        }
         guard selectedTimelineMinute != nil,
               routeReadingsLoadState.isLoaded(for: model.selectedDate) else {
             historicalPlaybackPoint = nil
@@ -6166,6 +6414,7 @@ struct MapHomeView: View {
     private var mapRouteFitRegion: MKCoordinateRegion? {
         var coordinates = timelineRouteOverlays.flatMap(\.coordinates)
             + visibleExpectedRouteOverlays.flatMap(\.coordinates)
+            + visibleWBSGeneratedRouteOverlays.flatMap(\.coordinates)
             + subwayRouteOverlays.flatMap(\.coordinates)
         if coordinates.isEmpty, let currentCoordinate {
             coordinates = [currentCoordinate]
@@ -6190,6 +6439,7 @@ struct MapHomeView: View {
         guard let bounds = mapRenderCache.bounds(
             timeline: timelineRouteOverlays,
             expected: visibleExpectedRouteOverlays,
+            generated: visibleWBSGeneratedRouteOverlays,
             subway: subwayRouteOverlays,
             current: currentCoordinate
         ) else { return nil }
@@ -9002,7 +9252,7 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
         )
     }
 
-    private static func prefixByDistance(
+    fileprivate static func prefixByDistance(
         _ coordinates: [CLLocationCoordinate2D],
         fraction: Double
     ) -> [CLLocationCoordinate2D] {
@@ -9047,6 +9297,40 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
         }
         return Array(coordinates.suffix(2))
     }
+}
+
+private struct MapHomeWBSGeneratedRouteOverlay: Identifiable {
+    let id: String
+    let mode: TravelMode?
+    let departureDate: Date
+    let arrivalDate: Date
+    let coordinates: [CLLocationCoordinate2D]
+
+    func visible(through cutoff: Date) -> Self? {
+        guard cutoff > departureDate, coordinates.count >= 2 else { return nil }
+        guard cutoff < arrivalDate else { return self }
+        let duration = arrivalDate.timeIntervalSince(departureDate)
+        guard duration > 0 else { return self }
+        let fraction = min(
+            max(cutoff.timeIntervalSince(departureDate) / duration, 0),
+            1
+        )
+        return Self(
+            id: id,
+            mode: mode,
+            departureDate: departureDate,
+            arrivalDate: arrivalDate,
+            coordinates: MapHomeExpectedRouteOverlay.prefixByDistance(
+                coordinates,
+                fraction: fraction
+            )
+        )
+    }
+}
+
+private struct MapHomeForecastRouteState {
+    let expected: [MapHomeExpectedRouteOverlay]
+    let generated: [MapHomeWBSGeneratedRouteOverlay]
 }
 
 struct MapHomeSubwayRouteOverlay: Identifiable {
@@ -10763,7 +11047,13 @@ private struct MapHomeTransitLocationsSheet: View {
                         )
                     }
                 }
-                .mapStyle(.standard(elevation: .realistic))
+                .mapStyle(.standard(
+                    elevation: .flat,
+                    emphasis: .muted,
+                    pointsOfInterest: .excludingAll,
+                    showsTraffic: false
+                ))
+                .environment(\.colorScheme, .light)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -11194,6 +11484,7 @@ private struct MapHomeAppleAnnotation {
 
 private struct MapHomeApplePlayback {
     let coordinate: CLLocationCoordinate2D
+    let cameraCoordinate: CLLocationCoordinate2D
     let headingDegrees: CLLocationDirection
     let action: MapHomeStickmanAction
     let accessibilityLabel: String
@@ -11678,7 +11969,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     ),
                     animated: false
                 )
-            } else if let coordinate = parent.playback?.coordinate {
+            } else if let coordinate = parent.playback?.cameraCoordinate {
                 mapView.setCenter(coordinate, animated: false)
             } else if let coordinate = parent.routes.first?.coordinates.first {
                 mapView.setCenter(coordinate, animated: false)
@@ -11877,8 +12168,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 configureWalker(view, annotation: walker)
             }
             if parent.centersPlayback,
-               shouldCenterPlayback(at: playback.coordinate) {
-                mapView.setCenter(playback.coordinate, animated: false)
+               shouldCenterPlayback(at: playback.cameraCoordinate) {
+                mapView.setCenter(playback.cameraCoordinate, animated: false)
             }
         }
 
@@ -11900,7 +12191,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 rootView: AnyView(
                     MapHomeStickmanMarker(
                         action: annotation.action,
-                        animationPhase: annotation.stickmanAnimationPhase
+                        animationPhase: annotation.stickmanAnimationPhase,
+                        routePhase: annotation.phase == .forecast
+                            ? .forecast
+                            : .actual
                     )
                 ),
                 size: MapHomeStickmanMarker.size,

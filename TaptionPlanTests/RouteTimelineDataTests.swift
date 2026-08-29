@@ -1460,6 +1460,267 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(point?.longitude ?? 0, 127.0005, accuracy: 0.00002)
     }
 
+    func testWBSPlaybackUsesExplicitMovementAndResolvedRoadDistance() throws {
+        let home = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let office = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            span: TimeSpan(start: date(100), end: date(180)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127.001,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .bus,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 100,
+            confidence: .high,
+            evidence: ["버스"]
+        )
+        let legID = "movement-\(travel.id.uuidString)"
+        let roadCoordinates = [
+            home.point!,
+            GeoPoint(
+                latitude: 37,
+                longitude: 127.0001,
+                altitude: 0,
+                horizontalAccuracy: -1,
+                verticalAccuracy: -1
+            ),
+            office.point!,
+        ]
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [home, office],
+            travel: [travel],
+            readings: [],
+            resolvedRoutes: [
+                MapHomeWBSResolvedRoute(
+                    legID: legID,
+                    coordinates: roadCoordinates
+                )
+            ],
+            calendar: calendar
+        )
+
+        let movement = projection.legs.filter { $0.activity == .movement }
+        XCTAssertEqual(movement.map(\.id), [legID])
+        let frame = try XCTUnwrap(projection.frame(at: date(55)))
+        XCTAssertEqual(frame.legID, legID)
+        XCTAssertEqual(frame.mode, .bus)
+        XCTAssertEqual(frame.coordinate.longitude, 127.0005, accuracy: 0.00002)
+        XCTAssertEqual(frame.direction, .east)
+        XCTAssertEqual(frame.stickmanFrameIndex, 12)
+        let lineCoordinate = try XCTUnwrap(
+            MapHomeExpectedRoutePlaybackMath.coordinate(
+                at: date(55),
+                departureDate: date(10),
+                arrivalDate: date(100),
+                coordinates: roadCoordinates.map {
+                    CLLocationCoordinate2D(
+                        latitude: $0.latitude,
+                        longitude: $0.longitude
+                    )
+                }
+            )
+        )
+        XCTAssertEqual(
+            frame.coordinate.latitude,
+            lineCoordinate.latitude,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            frame.coordinate.longitude,
+            lineCoordinate.longitude,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testWBSPlaybackCreatesGapMovementAndKeepsStayCameraAtCenter() throws {
+        let firstPoint = GeoPoint(
+            latitude: 37,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let secondPoint = GeoPoint(
+            latitude: 37.001,
+            longitude: 127.001,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let first = PlaceStay(
+            placeKey: "first",
+            displayName: "첫 장소",
+            span: TimeSpan(start: date(0), end: date(20)),
+            confidence: .high,
+            point: firstPoint
+        )
+        let second = PlaceStay(
+            placeKey: "second",
+            displayName: "둘째 장소",
+            span: TimeSpan(start: date(80), end: date(120)),
+            confidence: .high,
+            point: secondPoint
+        )
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [first, second],
+            travel: [],
+            readings: [],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            projection.legs.filter { $0.activity == .movement }.count,
+            1
+        )
+        let stay = try XCTUnwrap(projection.frame(at: date(10)))
+        XCTAssertEqual(stay.activity, .stay)
+        XCTAssertEqual(stay.cameraCoordinate, firstPoint)
+        XCTAssertEqual(
+            MapHomeWBSPlaybackProjection.distanceMeters(
+                stay.coordinate,
+                stay.cameraCoordinate
+            ),
+            30,
+            accuracy: 0.5
+        )
+        let movement = try XCTUnwrap(projection.frame(at: date(50)))
+        XCTAssertEqual(movement.activity, .movement)
+        XCTAssertTrue(movement.legID.hasPrefix("movement-gap-"))
+    }
+
+    func testWBSPlaybackActualTraceWinsAndBreaksAfterFifteenMinutes() throws {
+        let place = PlaceStay(
+            placeKey: "place",
+            displayName: "장소",
+            span: TimeSpan(start: date(0), end: date(120)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [place],
+            travel: [],
+            readings: [
+                reading(20, latitude: 37),
+                reading(30, latitude: 37.001),
+                reading(50, latitude: 37.002),
+            ],
+            calendar: calendar
+        )
+
+        let actual = projection.legs.filter { $0.routePhase == .actual }
+        XCTAssertEqual(actual.count, 1)
+        let frame = try XCTUnwrap(projection.frame(at: date(25)))
+        XCTAssertEqual(frame.routePhase, .actual)
+        XCTAssertEqual(frame.activity, .movement)
+        XCTAssertTrue(frame.legID.hasPrefix("actual-"))
+    }
+
+    func testThursdayWBSPlaybackMovesMonotonicallyWithoutViewRotation() throws {
+        let thursday = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 27))
+        )
+        let dayStart = calendar.startOfDay(for: thursday)
+        let start = GeoPoint(
+            latitude: 37,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let end = GeoPoint(
+            latitude: 37,
+            longitude: 127.01,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let from = PlaceStay(
+            placeKey: "thu-from",
+            displayName: "출발",
+            span: TimeSpan(
+                start: dayStart,
+                end: dayStart.addingTimeInterval(10 * 60)
+            ),
+            confidence: .high,
+            point: start
+        )
+        let to = PlaceStay(
+            placeKey: "thu-to",
+            displayName: "도착",
+            span: TimeSpan(
+                start: dayStart.addingTimeInterval(70 * 60),
+                end: dayStart.addingTimeInterval(100 * 60)
+            ),
+            confidence: .high,
+            point: end
+        )
+        let travel = TravelSegment(
+            fromPlaceID: from.id,
+            toPlaceID: to.id,
+            mode: .walking,
+            span: TimeSpan(
+                start: dayStart.addingTimeInterval(10 * 60),
+                end: dayStart.addingTimeInterval(70 * 60)
+            ),
+            distanceMeters: 900,
+            confidence: .high,
+            evidence: ["걷기"]
+        )
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: thursday,
+            places: [from, to],
+            travel: [travel],
+            readings: [],
+            calendar: calendar
+        )
+        let first = try XCTUnwrap(
+            projection.frame(at: dayStart.addingTimeInterval(10 * 60))
+        )
+        let middle = try XCTUnwrap(
+            projection.frame(at: dayStart.addingTimeInterval(40 * 60))
+        )
+        let last = try XCTUnwrap(
+            projection.frame(at: dayStart.addingTimeInterval(70 * 60 - 0.001))
+        )
+
+        XCTAssertLessThan(first.coordinate.longitude, middle.coordinate.longitude)
+        XCTAssertLessThan(middle.coordinate.longitude, last.coordinate.longitude)
+        XCTAssertEqual(first.direction, .east)
+        XCTAssertEqual(middle.direction, .east)
+        XCTAssertEqual(last.direction, .east)
+    }
+
     func testMapHomeWBSTripStyleMatchesWBSRouteTokens() {
         XCTAssertEqual(MapHomeWBSTripStyle.paperHex, "#FCF9F4")
         XCTAssertEqual(MapHomeWBSTripStyle.actualRouteHex, "#458B88")

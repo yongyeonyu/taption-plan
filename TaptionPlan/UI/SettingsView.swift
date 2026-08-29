@@ -128,7 +128,7 @@ struct SettingsView: View {
 
                     settingsSection(
                         "지도",
-                        summary: mapStyleTitle(model.settings.mapDisplayStyle.runtimeStyle)
+                        summary: "WBS · Apple"
                     ) {
                         mapStyleRow
                     }
@@ -1333,46 +1333,17 @@ struct SettingsView: View {
     }
 
     private var mapStyleRow: some View {
-        let selection = model.settings.mapDisplayStyle.runtimeStyle
-        return Menu {
-            ForEach(MapDisplayStyle.appleStyles, id: \.self) { style in
-                Button {
-                    model.setMapDisplayStyle(style)
-                } label: {
-                    if style == selection {
-                        Label(mapStyleTitle(style), systemImage: "checkmark")
-                    } else {
-                        Text(mapStyleTitle(style))
-                    }
-                }
-            }
-        } label: {
-            settingsRowLabel(
-                icon: "paintpalette.fill",
-                iconBackground: Color.tpSurfaceCream,
-                iconColor: Color.tpReferenceRose,
-                title: "지도 스타일",
-                subtitle: "Apple 지도 표시 방식을 바꿉니다",
-                value: mapStyleTitle(selection),
-                valueIsOn: false
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("지도 스타일 선택")
-    }
-
-    private func mapStyleTitle(_ style: MapDisplayStyle) -> String {
-        switch style {
-        case .standard: "표준"
-        case .simplified: "간략화"
-        case .hybrid: "하이브리드"
-        case .imagery: "위성"
-        case .mapLibreNight: "벡터 야간"
-        case .mapLibreLight: "벡터 밝은 지도"
-        case .mapLibreContrast: "벡터 고대비"
-        case .mapLibrePastel: "벡터 파스텔"
-        case .mapLibreCasual: "벡터 캐주얼"
-        }
+        settingsRowLabel(
+            icon: "map.fill",
+            iconBackground: Color.tpSurfaceCream,
+            iconColor: Color.tpReferenceRose,
+            title: "지도 스타일",
+            subtitle: "WBS 지도 · Apple 지도만 사용",
+            value: "WBS · Apple",
+            valueIsOn: false
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("지도 스타일, WBS 지도, Apple만 사용")
     }
 
     private func settingsToggleRow(
@@ -2131,7 +2102,13 @@ private struct FrequentPlaceMapPicker: View {
                             .tint(Color.tpPlaceDark)
                     }
                 }
-                .mapStyle(.standard(elevation: .realistic))
+                .mapStyle(.standard(
+                    elevation: .flat,
+                    emphasis: .muted,
+                    pointsOfInterest: .excludingAll,
+                    showsTraffic: false
+                ))
+                .environment(\.colorScheme, .light)
                 .onTapGesture { point in
                     selectedCoordinate = proxy.convert(point, from: .local)
                 }

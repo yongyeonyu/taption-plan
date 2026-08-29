@@ -975,6 +975,36 @@ private struct WidgetWalkingCat: View {
     }
 }
 
+private struct TaptionSharedStickmanView: View {
+    let action: TaptionLiveActivityStickmanAction
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+
+    var body: some View {
+        let isStatic = reduceMotion || isLuminanceReduced
+        TimelineView(
+            .animation(
+                minimumInterval: TaptionLiveActivityStickmanAnimation.frameDuration,
+                paused: isStatic
+            )
+        ) { timeline in
+            Canvas { context, size in
+                TaptionLiveActivityStickmanRenderer.draw(
+                    context: &context,
+                    size: size,
+                    action: action,
+                    phase: TaptionLiveActivityStickmanAnimation.frameIndex(
+                        at: timeline.date.timeIntervalSinceReferenceDate,
+                        isAnimating: !isStatic
+                    )
+                )
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(action.accessibilityTitle)
+    }
+}
+
 private struct WidgetCat: View {
     let style: String
     var isRunning: Bool = true
@@ -2722,29 +2752,9 @@ private func widgetText(_ korean: String, _ english: String) -> String {
 
 private struct TaptionLiveActivityStickman: View {
     let action: TaptionLiveActivityStickmanAction
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(
-            .animation(
-                minimumInterval: TaptionLiveActivityStickmanAnimation.frameDuration,
-                paused: reduceMotion
-            )
-        ) { timeline in
-            Canvas { context, size in
-                TaptionLiveActivityStickmanRenderer.draw(
-                    context: &context,
-                    size: size,
-                    action: action,
-                    phase: TaptionLiveActivityStickmanAnimation.phase(
-                        at: timeline.date,
-                        reducesMotion: reduceMotion
-                    )
-                )
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(action.accessibilityTitle)
+        TaptionSharedStickmanView(action: action)
     }
 }
 
@@ -2775,10 +2785,10 @@ private struct TaptionLiveActivityStickmanCanvas {
 }
 
 private enum TaptionLiveActivityStickmanRenderer {
-    private static let person = Color(red: 0.851, green: 0.278, blue: 0.447)
-    private static let line = Color.white.opacity(0.94)
-    private static let black = Color.black
-    private static let softFill = Color.white.opacity(0.10)
+    private static let person = TaptionLiveActivityStickmanStyle.ink
+    private static let line = TaptionLiveActivityStickmanStyle.ink
+    private static let black = TaptionLiveActivityStickmanStyle.ink
+    private static let softFill = TaptionLiveActivityStickmanStyle.ink.opacity(0.10)
     private static let sceneryLeaf = Color(
         red: 0.72,
         green: 0.87,
@@ -2951,7 +2961,7 @@ private enum TaptionLiveActivityStickmanRenderer {
                 width: width,
                 height: 3
             )),
-            with: .color(black.opacity(0.22))
+            with: .color(person.opacity(0.22))
         )
     }
 
@@ -2969,7 +2979,7 @@ private enum TaptionLiveActivityStickmanRenderer {
             width: radius * 2,
             height: radius * 2
         ))
-        context.fill(head, with: .color(person))
+        context.fill(head, with: .color(TaptionLiveActivityStickmanStyle.headFill))
         context.stroke(
             head,
             with: .color(person),
@@ -3609,6 +3619,9 @@ private struct TaptionLiveActivityLockScreenView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
+                TaptionLiveActivityStickman(action: resolvedAction)
+                    .frame(width: 38, height: 38)
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(context.state.majorCategoryTitle)
                         .font(.system(size: 10, weight: .semibold))
@@ -3666,6 +3679,13 @@ private struct TaptionLiveActivityLockScreenView: View {
                 string:
                     "taptionplan://plan/\(context.attributes.planID.uuidString)"
             )
+        )
+    }
+
+    private var resolvedAction: TaptionLiveActivityStickmanAction {
+        TaptionLiveActivityStickmanAction.resolve(
+            categoryID: context.state.majorCategoryID,
+            title: context.state.majorCategoryTitle
         )
     }
 

@@ -3648,13 +3648,11 @@ extension MapDisplayStyle {
     static func defaultStyle(for provider: MapDisplayProvider) -> Self {
         switch provider {
         case .apple: .standard
-        case .openFreeMap: .mapLibreCasual
+        case .openFreeMap: .standard
         }
     }
 
-    var runtimeStyle: Self {
-        self
-    }
+    var runtimeStyle: Self { .standard }
 }
 
 enum MapUserActivityIconCatalog {
@@ -3703,7 +3701,13 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     /// categories. Missing values intentionally keep the shared defaults.
     var mapCategoryColors: [String: String]
     var mapUserActivityCategories: [MapUserActivityCategory]
-    var mapDisplayStyle: MapDisplayStyle
+    var mapDisplayStyle: MapDisplayStyle {
+        didSet {
+            if mapDisplayStyle != .standard {
+                mapDisplayStyle = .standard
+            }
+        }
+    }
     var mapMemoDisplayFilter: MapMemoDisplayFilter
     var watchAccelerationProfile: TaptionWatchAccelerationProfile
     var watchDataSyncProfile: TaptionWatchDataSyncProfile
