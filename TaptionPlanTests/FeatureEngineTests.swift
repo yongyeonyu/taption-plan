@@ -8244,7 +8244,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testAppleDeviceMotionHistoryOverridesAppSensorEstimate() {
+    func testAppleDeviceMotionHistoryProjectsWithoutMutatingSource() {
         let base = makeDate(2026, 7, 30, 9, 0)
         let readings = [
             SensorReading(
@@ -8268,6 +8268,7 @@ final class FeatureEngineTests: XCTestCase {
                 confidence: .high
             ),
         ]
+        let sourceReadings = readings
 
         let result = AppleDeviceGroundTruthEngine.applyingMotionHistory(
             to: readings,
@@ -8277,6 +8278,46 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result[0].motion, .running)
         XCTAssertEqual(result[0].motionConfidence, .high)
         XCTAssertEqual(result[1].motion, .walking)
+        XCTAssertEqual(readings, sourceReadings)
+    }
+
+    func testPlanDayDataSnapshotLoadsOneNormalizedDayWithoutMutatingSource() {
+        let base = makeDate(2026, 7, 30, 0, 0)
+        let id = UUID()
+        let source = TaptionDataSnapshot.empty
+        let sensorResult = SensorReadingsLoadResult(
+            readings: [
+                SensorReading(
+                    id: id,
+                    timestamp: base.addingTimeInterval(10 * 60),
+                    motion: .walking
+                ),
+                SensorReading(
+                    id: id,
+                    timestamp: base.addingTimeInterval(10 * 60),
+                    motion: .running
+                ),
+                SensorReading(
+                    timestamp: base.addingTimeInterval(24 * 60 * 60),
+                    motion: .cycling
+                ),
+            ],
+            isComplete: true
+        )
+
+        let projected = PlanDayDataSnapshot.make(
+            date: base,
+            sourceRevision: 7,
+            source: source,
+            sensorResult: sensorResult
+        )
+
+        XCTAssertEqual(projected.day, Calendar.autoupdatingCurrent.startOfDay(for: base))
+        XCTAssertEqual(projected.sourceRevision, 7)
+        XCTAssertTrue(projected.isComplete)
+        XCTAssertEqual(projected.readings.count, 1)
+        XCTAssertEqual(projected.readings.first?.motion, .running)
+        XCTAssertEqual(source, TaptionDataSnapshot.empty)
     }
 
     func testAppleDeviceMotionFillsMovementMissingFromGPS() {

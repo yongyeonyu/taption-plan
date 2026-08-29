@@ -2,6 +2,43 @@
 
 Taption Plan 작업을 이어간다. 작업 디렉터리는 `/Users/u_mo_c/Documents/taption plan`이다.
 
+## 2026-08-30 WBSI830Q08 · DATA830Q09 최신 인계
+
+이번 실행의 목표는 Taption WBS의 데이터 관리·불러오기 경계까지 Plan에 적용하는 것이다.
+
+- WBS 저장소 `/Users/u_mo_c/Documents/Taption WBS`의 현재 dirty 작업본은 읽기 전용 기준으로만 사용한다. WBS 소스와 WBS `temp.md`는 수정하지 않는다.
+- Plan의 SQLite 정본, `RawDeviceDataDayArchive` 원본 envelope, `SensorReadingArchive`를 유지하고, iPhone·Apple Watch raw record와 provenance를 덮어쓰지 않는다.
+- WBS의 `정본 로드 → 정상화된 일 단위 파생본 → 화면 캐시` 경계를 Plan의 `PlanDayDataSnapshot`으로 적용한다. snapshot은 source revision·updatedAt을 고정하고 actual/place/travel/reading을 해당 날짜로만 투영한다.
+- 중복 센서 ID는 결정적으로 하나로 정리하고 시간순으로 읽는다. 날짜 경계와 15분 초과 GPS 공백은 재생 projection에서 분리한다. 빈 로드는 기존 당일 경로를 지우지 않는다.
+- 지도는 Apple `mutedStandard`·flat·muted·light·POI 제외·교통량 숨김·paper `#FCF9F4`로 실행한다. 기존 MapDisplayStyle raw value와 MapLibre 코드는 호환성을 위해 읽되 기본 실행 경로에 노출하지 않는다.
+- 지도 현재 위치·나침반·재생·스크럽은 중심/방위만 갱신하고 zoom/span/distance/pitch를 보존한다. 실제 경로·이동·체류 순서와 누적거리 보간, 1% look-ahead 8방향, 목적지 30m 체류를 유지한다.
+- 졸라맨은 18개 Codable action, WBS 2등신 비율·갈색 `#916446` 선·회색 `#B7B1A8` 머리·24프레임/12fps를 사용하며 heading은 계산만 하고 몸·얼굴·머리는 회전하지 않는다.
+- 좌우 핸들은 같은 동작을 사용하고 오른쪽 터치 높이는 88pt의 1.5배인 132pt다. 입력은 240Hz까지 받되 화면 반영은 최대 60Hz로 합치고 종료값은 즉시 반영한다.
+
+현재 자동 검증 증거:
+
+- 전체 `TaptionPlanTests`: 815건 통과. 결과: `/Users/u_mo_c/Library/Developer/Xcode/DerivedData/TaptionPlan-gvqtjbpzkfvutrdlxdzhdyhsyane/Logs/Test/Test-TaptionPlan-2026.08.30_04-43-27-+0900.xcresult`
+- `swift test --package-path Packages/TaptionRouteEngine`: 11건 통과
+- `swift test --package-path Packages/TaptionActivityEngine`: 4건 통과
+- `swift test --package-path Packages/TaptionPlanCore`: 30건 통과
+- `git diff --check`: 통과
+- iOS Simulator `MAP30CNT01 Test`에서 자동 테스트를 실행했다. 실기기 화면·터치·Dynamic Island·Watch 지연 동기화는 설치 후 별도 게이트로 확인해야 한다.
+
+다음 실행 순서:
+
+1. 이 문서와 `AGENTS.md`, `DEVELOPMENT.md`, `temp.md`, `test.md`를 읽고 Plan/WBS dirty 상태와 SHA를 다시 확인한다.
+2. 최신 Debug `1.0 (115)`를 iPhone 14 Pro에 설치하고 `com.taption.plan` 버전·실행을 readback한다.
+3. PIN 해제 후 목요일 경로 재생, 실제/예상 경로 색상, 졸라맨 경로 추종·비회전, 현재 위치·나침반·재생 중 지도 비율 고정, 좌우 핸들 1.5배 터치를 실제 화면에서 확인한다.
+4. Apple Watch 원본 데이터·provenance 불변 및 동기화, Widget/Live Activity/Dynamic Island를 별도 readback한다.
+5. 증거를 `test.md`에 기록하고, 물리 게이트가 모두 닫힌 항목만 `temp.md`에서 삭제한다.
+6. 승인된 Plan 파일만 `main`에 `fix: port WBS map playback and speed up sidebar`로 커밋·푸시하고 로컬/원격 SHA와 clean worktree를 확인한다.
+
+중단 조건:
+
+- WBS dirty 파일의 소유권이 불명확하거나 WBS를 수정해야 하면 즉시 중단하고 보고한다.
+- 원본 iPhone·Watch record 또는 provenance를 수정해야 하는 설계가 나오면 파생 projection으로 전환하고 중단한다.
+- 실기기 잠금·권한·서명·계정 게이트가 막히면 추정으로 완료하지 말고 명령·오류·미완료 범위를 `test.md`에 남긴다.
+
 먼저 `AGENTS.md`를 끝까지 읽고 현재 상태를 직접 확인한다. 아래 기록의 SHA·기기·권한·TestFlight 상태는 시점 정보이므로 최신 사실로 가정하지 않는다.
 
 ```sh

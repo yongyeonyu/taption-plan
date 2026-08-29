@@ -3366,6 +3366,9 @@ enum MovementCorrectionEngine {
 /// Taption's own in-app estimates. Plans and user-entered records are retained;
 /// only records from the same Apple source are replaced.
 enum AppleDeviceGroundTruthEngine {
+    /// Projects Apple's device history onto a new array. The archived iPhone
+    /// and Watch readings remain the immutable ground truth and are never
+    /// rewritten by this reconciliation step.
     static func applyingMotionHistory(
         to readings: [SensorReading],
         activities: [MotionActivityRecord]

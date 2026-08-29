@@ -1324,10 +1324,15 @@ struct MapHomeTimeSidebar: View {
             trailingHitWidth: MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
             totalWidth: totalWidth
         )
-        let hitCenterY = MapHomeTimeSidebarMath.handleHitCenterY(
+        let leadingHitCenterY = MapHomeTimeSidebarMath.handleHitCenterY(
             handleCenterY: y,
             railHeight: railHeight,
             hitHeight: MapHomeTimeSidebarMath.handleDragHitHeight
+        )
+        let trailingHitCenterY = MapHomeTimeSidebarMath.handleHitCenterY(
+            handleCenterY: y,
+            railHeight: railHeight,
+            hitHeight: MapHomeTimeSidebarMath.trailingHandleDragHitHeight
         )
         let fallbackActivity = MapHomeTimeSidebarActivity.majorCategory(
             "unconfirmed",
@@ -1374,7 +1379,7 @@ struct MapHomeTimeSidebar: View {
                     height: MapHomeTimeSidebarMath.handleDragHitHeight
                 )
                 .contentShape(Rectangle())
-                .position(x: leadingInteractionFrame.midX, y: hitCenterY)
+                .position(x: leadingInteractionFrame.midX, y: leadingHitCenterY)
                 .highPriorityGesture(
                     dragGesture(
                         trackHeight: trackHeight,
@@ -1399,10 +1404,10 @@ struct MapHomeTimeSidebar: View {
                 .fill(.clear)
                 .frame(
                     width: trailingInteractionFrame.width,
-                    height: MapHomeTimeSidebarMath.handleDragHitHeight
+                    height: MapHomeTimeSidebarMath.trailingHandleDragHitHeight
                 )
                 .contentShape(Rectangle())
-                .position(x: trailingInteractionFrame.midX, y: hitCenterY)
+                .position(x: trailingInteractionFrame.midX, y: trailingHitCenterY)
                 .highPriorityGesture(
                     dragGesture(
                         trackHeight: trackHeight,
@@ -1853,6 +1858,7 @@ enum MapHomeTimeSidebarMath {
         selectionTimeBlockWidth * handleDoubleTapHitScale
     static let handleDragMinimumDistance: CGFloat = 1
     static let handleDragHitHeight: CGFloat = 88
+    static let trailingHandleDragHitHeight: CGFloat = handleDragHitHeight * 1.5
     static let handleLaneWidth: CGFloat = 69
     static let activeRailWidth: CGFloat = 12
     static let handleVisualSize = CGSize(width: 44, height: 44)

@@ -1077,7 +1077,22 @@ final class TimeScaleTests: XCTestCase {
             567
         )
         XCTAssertGreaterThan(MapHomeTimeSidebarMath.handleDragHitHeight, hitHeight)
-
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.handleHitCenterY(
+                handleCenterY: 14,
+                railHeight: railHeight,
+                hitHeight: MapHomeTimeSidebarMath.trailingHandleDragHitHeight
+            ),
+            66
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarMath.handleHitCenterY(
+                handleCenterY: 590,
+                railHeight: railHeight,
+                hitHeight: MapHomeTimeSidebarMath.trailingHandleDragHitHeight
+            ),
+            534
+        )
     }
 
     func testSidebarHandleInteractionReachesTrailingScreenEdge() {
@@ -2306,6 +2321,25 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(size.height, 66, accuracy: 0.001)
     }
 
+    func testRightSidebarHandleTouchAreaIsExactlyFiftyPercentLarger() {
+        let trailingFrame = MapHomeTimeSidebarMath.selectionHandleTouchFrame(
+            side: .trailing,
+            leadingCenterX: 44,
+            trailingCenterX: 99,
+            leadingHitWidth: 87,
+            trailingHitWidth: MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
+            totalWidth: 127
+        )
+        let originalArea = trailingFrame.width
+            * MapHomeTimeSidebarMath.handleDragHitHeight
+        let expandedArea = trailingFrame.width
+            * MapHomeTimeSidebarMath.trailingHandleDragHitHeight
+
+        XCTAssertEqual(MapHomeTimeSidebarMath.trailingHandleDragHitHeight, 132)
+        XCTAssertEqual(expandedArea, originalArea * 1.5, accuracy: 0.001)
+        XCTAssertEqual(MapHomeTimeSidebarMath.handleVisualSize, CGSize(width: 44, height: 44))
+    }
+
     func testSidebarHandleSidesBothDragAndKeepNonOverlappingHitZones() {
         let leadingFrame = MapHomeTimeSidebarMath.selectionHandleTouchFrame(
             side: .leading,
@@ -2745,6 +2779,54 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(mapView.camera.pitch, pitch, accuracy: 0.000_001)
         XCTAssertEqual(mapView.region.span.latitudeDelta, span.latitudeDelta, accuracy: 0.000_001)
         XCTAssertEqual(mapView.region.span.longitudeDelta, span.longitudeDelta, accuracy: 0.000_001)
+    }
+
+    @MainActor
+    func testAppleCompassHeadingCommandPreservesCameraScaleAndPitch() {
+        let mapView = MKMapView(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        mapView.setCamera(
+            MKMapCamera(
+                lookingAtCenter: CLLocationCoordinate2D(
+                    latitude: 37.55,
+                    longitude: 126.99
+                ),
+                fromDistance: 2_500,
+                pitch: 35,
+                heading: 73
+            ),
+            animated: false
+        )
+        mapView.layoutIfNeeded()
+        let distance = mapView.camera.centerCoordinateDistance
+        let pitch = mapView.camera.pitch
+        let target = CLLocationCoordinate2D(
+            latitude: 37.55,
+            longitude: 127.01
+        )
+
+        MapHomeAppleCameraCommand.heading(
+            0,
+            centeredAt: target,
+            on: mapView
+        )
+
+        XCTAssertEqual(mapView.centerCoordinate.latitude, target.latitude, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.centerCoordinate.longitude, target.longitude, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.camera.heading, 0, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.camera.centerCoordinateDistance, distance, accuracy: 0.01)
+        XCTAssertEqual(mapView.camera.pitch, pitch, accuracy: 0.000_001)
+
+        MapHomeAppleCameraCommand.heading(
+            135,
+            centeredAt: nil,
+            on: mapView
+        )
+
+        XCTAssertEqual(mapView.centerCoordinate.latitude, target.latitude, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.centerCoordinate.longitude, target.longitude, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.camera.heading, 135, accuracy: 0.000_001)
+        XCTAssertEqual(mapView.camera.centerCoordinateDistance, distance, accuracy: 0.01)
+        XCTAssertEqual(mapView.camera.pitch, pitch, accuracy: 0.000_001)
     }
 
     func testMapDisplayStyleNormalizesPersistedAndMissingValuesToWBSApple() throws {

@@ -2,6 +2,22 @@
 
 구현·빌드·업로드·설치·실행·실제 화면 터치는 서로 다른 게이트로 기록한다. 설치·실행만으로 UI 동작을 완료 처리하지 않는다.
 
+## 2026-08-30 WBSI830Q08 · DATA830Q09 데이터 로드·지도·사이드바 통합
+
+- WBS 기준 대조: `ScheduleStore`/`WorkspacePersistence`의 정규화된 단일 원본 로드와 파생 presentation 경계를 읽기 전용으로 확인했다. WBS 저장소와 WBS `temp.md`는 수정하지 않았다.
+- Plan 데이터 경계: `PlanDayDataSnapshot`이 Plan snapshot revision·updatedAt을 고정하고, SQLite 정본의 iPhone/Watch raw archive를 변경하지 않은 채 선택일 actual/place/travel/sensor 배열을 파생한다. 중복 센서는 ID 기준 결정적으로 정리하고 날짜 범위를 제한한다.
+- 앱 전체 XCTest: `TaptionPlanTests` 815/815 통과. 결과: `/Users/u_mo_c/Library/Developer/Xcode/DerivedData/TaptionPlan-gvqtjbpzkfvutrdlxdzhdyhsyane/Logs/Test/Test-TaptionPlan-2026.08.30_04-43-27-+0900.xcresult`
+- Package 테스트: `TaptionRouteEngine` 11/11, `TaptionActivityEngine` 4/4, `TaptionPlanCore` 30/30 통과.
+- 자동 계약: 오른쪽 핸들 터치 높이 132pt(기존 88pt 대비 면적 1.5배), 240Hz 입력/60Hz 출력, 날짜·15분 GPS 경계, 누적거리 재생, 목요일 단조 이동·비회전, 현재 위치·나침반 camera scale 보존 테스트 통과.
+- 지도 실행 경로: Apple muted standard/flat/light/POI 제외/교통량 숨김/paper `#FCF9F4`로 고정하고, 기존 MapLibre 코드는 호환성 경로로 유지했다.
+- 원본 불변: Apple iPhone/Watch 기록은 복사본 기반 분류·지도 projection만 수행하며 저장 원본과 provenance를 덮어쓰지 않는다.
+- `git diff --check`: 통과.
+- iPhone 14 Pro Debug build: `/private/tmp/taption-plan-wbsi830q08-device/Build/Products/Debug-iphoneos/TaptionPlan.app` 생성 성공. 앱·Widget·Watch bundle 모두 `1.0 (115)`로 artifact readback했다.
+- iPhone 14 Pro 설치: `xcrun devicectl device install app` 성공. `com.taption.plan / 1.0 / 115` 설치 readback 성공.
+- iPhone 14 Pro 실행: `xcrun devicectl device process launch` 성공. `com.taption.plan` launch readback 성공.
+- 실기기 화면·터치: iPhone 미러링이 `연결이 중단됨`으로 종료됐다. 미러링 화면은 “Mac 근처·전원·최근 잠금 해제·Bluetooth/Wi-Fi 확인”을 표시했으며, 목요일 재생·졸라맨 추종/비회전·지도 비율·양쪽 핸들 실제 터치 readback은 미완료다.
+- Apple Watch: CoreDevice 상태 `unavailable`로 원본 데이터·동기화·실제 Watch 화면 readback 미완료. Dynamic Island도 실기기 화면 연결 실패로 미완료다.
+
 ## 2026-08-30 ZOOM830Q01 재생 중 지도 줌 고정
 
 - 재생 중 비동기 예상 경로·캐시·초기 위치 처리의 자동 region/viewport 재적용을 차단하고, 재생 위치 중심 추적은 유지

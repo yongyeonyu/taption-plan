@@ -402,6 +402,7 @@ private struct MapHomeTransitBoardingCandidateCacheKey: Equatable {
 }
 
 private struct MapHomeDayCachePayload: Codable, Sendable {
+    let sourceUpdatedAt: Date?
     let centerLatitude: Double
     let centerLongitude: Double
     let latitudeDelta: Double
@@ -413,14 +414,16 @@ private struct MapHomeDayCachePayload: Codable, Sendable {
     let temporaryLocations: [MapHomeCachedTemporaryLocation]?
 
     private enum CodingKeys: String, CodingKey {
+        case sourceUpdatedAt
         case centerLatitude, centerLongitude, latitudeDelta, longitudeDelta
         case timeline, expected, subway, subwayMinute, temporaryLocations
     }
 
-    init(centerLatitude: Double, centerLongitude: Double, latitudeDelta: Double, longitudeDelta: Double,
+    init(sourceUpdatedAt: Date? = nil, centerLatitude: Double, centerLongitude: Double, latitudeDelta: Double, longitudeDelta: Double,
          timeline: [MapHomeCachedRouteOverlay], expected: [MapHomeCachedExpectedRouteOverlay]?,
          subway: [MapHomeCachedSubwayRouteOverlay]?, subwayMinute: Int?,
          temporaryLocations: [MapHomeCachedTemporaryLocation]? = nil) {
+        self.sourceUpdatedAt = sourceUpdatedAt
         self.centerLatitude = centerLatitude
         self.centerLongitude = centerLongitude
         self.latitudeDelta = latitudeDelta
@@ -434,6 +437,7 @@ private struct MapHomeDayCachePayload: Codable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        sourceUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .sourceUpdatedAt)
         centerLatitude = try container.decode(Double.self, forKey: .centerLatitude)
         centerLongitude = try container.decode(Double.self, forKey: .centerLongitude)
         latitudeDelta = try container.decode(Double.self, forKey: .latitudeDelta)
@@ -1192,7 +1196,7 @@ struct MapHomeView: View {
 
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var mapCameraRevision = 0
-    @State private var appleCenterCommand: MapHomeAppleCenterCommand?
+    @State private var appleViewportCommand: MapHomeAppleViewportCommand?
     @State private var vectorMapViewportStore = MapHomeVectorViewportStore()
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
@@ -1251,6 +1255,7 @@ struct MapHomeView: View {
     ]
     @State private var routeProjection: RouteTimelineProjection?
     @State private var wbsPlaybackProjection: MapHomeWBSPlaybackProjection?
+    @State private var dayDataSnapshot: PlanDayDataSnapshot?
     @State private var hasDeferredWBSPlaybackRefresh = false
     @State private var routeReadings: [SensorReading] = []
     @State private var routeReadingsLoadState: MapHomeRouteReadingsLoadState = .idle
@@ -1761,6 +1766,7 @@ struct MapHomeView: View {
 
             if dayChanged {
                 hasUserAdjustedMap = false
+                dayDataSnapshot = nil
                 routeReadings = []
                 routeReadingsLoadState = .loading(
                     MapHomeRouteReadingsPolicy.dayKey(for: newDate)
@@ -1801,15 +1807,18 @@ struct MapHomeView: View {
             refreshTimeRailSegments()
         }
         .onChange(of: model.snapshot.actuals) { _, _ in
+            dayDataSnapshot = nil
             refreshTimeRailSegments()
             requestRouteProjectionRefresh()
         }
         .onChange(of: model.snapshot.travel) { _, _ in
+            dayDataSnapshot = nil
             refreshTimeRailSegments()
             requestRouteProjectionRefresh(preparingReadings: true)
             scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.snapshot.places) { _, _ in
+            dayDataSnapshot = nil
             requestWBSPlaybackProjectionRefresh()
             scheduleExpectedRouteRefresh()
         }
@@ -1835,15 +1844,10 @@ struct MapHomeView: View {
 
     @ViewBuilder
     private var map: some View {
-        if let style = currentVectorStyle {
-            vectorMap(style: style)
-        } else {
-            mapKitMap
-        }
-    }
-
-    private var currentVectorStyle: MapHomeVectorStyle? {
-        model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle
+        // WBS runtime is Apple MapKit. Keep the vector renderer available for
+        // decoding old settings and future compatibility, but never expose it
+        // as the Plan map execution path.
+        mapKitMap
     }
 
     private var mapStickersOnMap: [MapSticker] {
@@ -1928,7 +1932,7 @@ struct MapHomeView: View {
     }
 
     private var usesVectorRoadMap: Bool {
-        currentVectorStyle != nil
+        false
     }
 
     private var vectorMapContentInsets: UIEdgeInsets {
@@ -2062,7 +2066,7 @@ struct MapHomeView: View {
             style: model.settings.mapDisplayStyle,
             cameraPosition: mapPosition,
             cameraRevision: mapCameraRevision,
-            centerCommand: appleCenterCommand,
+            viewportCommand: appleViewportCommand,
             routes: appleMapRoutes,
             annotations: appleMapAnnotations,
             playback: appleMapPlayback,
@@ -3304,6 +3308,7 @@ struct MapHomeView: View {
 
     private var dayPlaybackMovementRanges: [MapHomePlaybackMovementRange] {
         let calendar = Calendar.autoupdatingCurrent
+        let dayData = currentDayDataSnapshot
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
             ?? dayStart.addingTimeInterval(24 * 60 * 60)
@@ -3312,7 +3317,7 @@ struct MapHomeView: View {
             dayStart: dayStart,
             dayEnd: dayEnd
         )
-        let travelRanges = model.snapshot.travel.compactMap {
+        let travelRanges = (dayData?.travel ?? model.snapshot.travel).compactMap {
             segment -> MapHomePlaybackMovementRange? in
             guard segment.distanceMeters > 0
                     || segment.mode == .subway
@@ -5145,6 +5150,7 @@ struct MapHomeView: View {
     }
 
     private var transitBoardingCandidates: [TransitBoardingCandidate] {
+        let dayData = currentDayDataSnapshot
         let key = MapHomeTransitBoardingCandidateCacheKey(
             snapshotRevision: model.snapshotRevision,
             readingsRevision: transitBoardingReadingsRevision,
@@ -5156,7 +5162,7 @@ struct MapHomeView: View {
                 readings: transitBoardingReadings,
                 registeredLocations: model.settings.userTransitLocations,
                 nearbyPlaces: nearbyTransitPlaces,
-                travel: model.snapshot.travel,
+                travel: dayData?.travel ?? model.snapshot.travel,
                 decisions: model.settings.transitBoardingDecisions,
                 through: routeOverlayCutoff
             )
@@ -5207,13 +5213,40 @@ struct MapHomeView: View {
     }
 
     private func refreshTimeRailSegments() {
+        let dayData = currentDayDataSnapshot
         let next = MapHomeTimeRailSegmentEngine.segments(
-            from: model.snapshot.actuals,
-            travel: model.snapshot.travel,
+            from: dayData?.actuals ?? model.snapshot.actuals,
+            travel: dayData?.travel ?? model.snapshot.travel,
             on: model.selectedDate
         )
         guard next != timeRailSegments else { return }
         timeRailSegments = next
+    }
+
+    private var currentDayDataSnapshot: PlanDayDataSnapshot? {
+        guard let dayDataSnapshot,
+              dayDataSnapshot.sourceRevision == model.snapshotRevision,
+              Calendar.autoupdatingCurrent.isDate(
+                  dayDataSnapshot.day,
+                  inSameDayAs: model.selectedDate
+              ) else { return nil }
+        return dayDataSnapshot
+    }
+
+    private var currentDayReadings: [SensorReading] {
+        guard let dayData = currentDayDataSnapshot else {
+            return historicalPlaybackReadings
+        }
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: model.selectedDate)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(24 * 60 * 60)
+        return MapHomeRouteReadingsPolicy.merging(
+            existing: dayData.readings,
+            loaded: model.liveRouteState.readings
+                + (model.latestSensorReading.map { [$0] } ?? []),
+            in: TimeSpan(start: start, end: end)
+        )
     }
 
     private func refreshSelectedTimelineMapPosition(
@@ -5288,8 +5321,8 @@ struct MapHomeView: View {
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: selectedDay)
             ?? selectedDay.addingTimeInterval(24 * 60 * 60)
         let requests = ExpectedRouteRequestEngine.requests(
-            travel: model.snapshot.travel,
-            places: model.snapshot.places,
+            travel: currentDayDataSnapshot?.travel ?? model.snapshot.travel,
+            places: currentDayDataSnapshot?.places ?? model.snapshot.places,
             readings: normalizedRouteReadings,
             in: TimeSpan(start: selectedDay, end: dayEnd),
             through: dayEnd,
@@ -5498,6 +5531,7 @@ struct MapHomeView: View {
     }
 
     private var subwayRouteOverlays: [MapHomeSubwayRouteOverlay] {
+        let dayData = currentDayDataSnapshot
         let calendar = Calendar.autoupdatingCurrent
         guard let dayStart = calendar.startOfDay(for: model.selectedDate) as Date?,
               let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
@@ -5514,7 +5548,7 @@ struct MapHomeView: View {
             minute: cutoffMinute
         ) {
             MapHomeSubwayRouteOverlayEngine.overlays(
-                travel: model.snapshot.travel,
+                travel: dayData?.travel ?? model.snapshot.travel,
                 readings: routeReadings
                     + model.liveRouteState.readings
                     + (model.latestSensorReading.map { [$0] } ?? []),
@@ -5658,9 +5692,9 @@ struct MapHomeView: View {
         }
         return MapHomeStickmanActionResolver.action(
             at: displayedLocationDate,
-            actuals: model.snapshot.actuals,
-            travel: model.snapshot.travel,
-            places: model.snapshot.places,
+            actuals: currentDayDataSnapshot?.actuals ?? model.snapshot.actuals,
+            travel: currentDayDataSnapshot?.travel ?? model.snapshot.travel,
+            places: currentDayDataSnapshot?.places ?? model.snapshot.places,
             frequentPlaces: model.settings.frequentPlaces,
             readings: routeReadings
                 + model.liveRouteState.readings
@@ -5753,6 +5787,7 @@ struct MapHomeView: View {
 
     private func sectionDetails(at minute: Int) -> [MapHomeSectionDetail] {
         let calendar = Calendar.autoupdatingCurrent
+        let dayData = currentDayDataSnapshot
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart),
               let segment = MapHomeTimeRailSegmentEngine.segment(
@@ -5761,8 +5796,8 @@ struct MapHomeView: View {
               )
         else { return [] }
         return MapHomeSectionDetailEngine.details(
-            actuals: model.snapshot.actuals,
-            travel: model.snapshot.travel,
+            actuals: dayData?.actuals ?? model.snapshot.actuals,
+            travel: dayData?.travel ?? model.snapshot.travel,
             segment: segment,
             dayStart: dayStart,
             dayEnd: dayEnd,
@@ -5775,18 +5810,18 @@ struct MapHomeView: View {
         let dayStart = calendar.startOfDay(for: date)
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
         else { return }
-        let result = await model.sensorReadingsLoadResult(
-            in: TimeSpan(start: dayStart, end: dayEnd)
-        )
+        let dayData = await model.planDayDataSnapshot(for: date)
         guard !Task.isCancelled,
-              calendar.isDate(date, inSameDayAs: model.selectedDate)
+              calendar.isDate(date, inSameDayAs: model.selectedDate),
+              dayData.sourceRevision == model.snapshotRevision
         else { return }
+        dayDataSnapshot = dayData
         let merged = MapHomeRouteReadingsPolicy.merging(
             existing: routeReadings,
-            loaded: result.readings,
+            loaded: dayData.readings,
             in: TimeSpan(start: dayStart, end: dayEnd)
         )
-        routeReadingsLoadState = result.isComplete
+        routeReadingsLoadState = dayData.isComplete
             ? .loaded(dayStart)
             : .failed(dayStart)
         if merged != routeReadings {
@@ -5803,7 +5838,7 @@ struct MapHomeView: View {
         let projection = refreshRouteProjection()
         if selectedTimelineMinute != nil {
             if let point = refreshHistoricalPlaybackPoint()
-                ?? (result.isComplete ? projection?.coordinateAtCutoff : nil) {
+                ?? (dayData.isComplete ? projection?.coordinateAtCutoff : nil) {
                 focusMap(
                     on: point,
                     followsTracking: true
@@ -5845,7 +5880,7 @@ struct MapHomeView: View {
         }
         guard let mapDayCacheStore else { return }
         let key = TaptionPlanDayKey(date: date)
-        let styleKey = model.settings.mapDisplayStyle.rawValue
+        let styleKey = model.settings.mapDisplayStyle.runtimeStyle.rawValue
         guard let payload = try? await mapDayCacheStore.codableMapDayDocument(
             MapHomeDayCachePayload.self,
             day: key,
@@ -5853,6 +5888,10 @@ struct MapHomeView: View {
             styleKey: styleKey
         ), Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
         else { return }
+        guard payload.sourceUpdatedAt == nil
+                || payload.sourceUpdatedAt == model.snapshot.updatedAt else {
+            return
+        }
 
         guard payload.centerLatitude.isFinite,
               payload.centerLongitude.isFinite,
@@ -5987,6 +6026,7 @@ struct MapHomeView: View {
         ).minute ?? effectiveTimelineMinute
         let cachedSubwayRoutes = subwayRouteOverlays
         let payload = MapHomeDayCachePayload(
+            sourceUpdatedAt: model.snapshot.updatedAt,
             centerLatitude: visibleMapCenter.latitude,
             centerLongitude: visibleMapCenter.longitude,
             latitudeDelta: visibleMapSpan.latitudeDelta,
@@ -6042,7 +6082,7 @@ struct MapHomeView: View {
             }
         )
         let day = TaptionPlanDayKey(date: model.selectedDate)
-        let styleKey = model.settings.mapDisplayStyle.rawValue
+        let styleKey = model.settings.mapDisplayStyle.runtimeStyle.rawValue
         Task {
             try? await mapDayCacheStore.saveCodableMapDayDocument(
                 payload,
@@ -6129,6 +6169,7 @@ struct MapHomeView: View {
     private func refreshRouteProjection() -> RouteTimelineProjection? {
         mapRenderCache.invalidateRouteData()
         let calendar = Calendar.autoupdatingCurrent
+        let dayData = currentDayDataSnapshot
         let timelineDate = routeTimelineDate
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
@@ -6142,8 +6183,8 @@ struct MapHomeView: View {
             selectedDate: model.selectedDate,
             through: projectionDate,
             selectedSpan: isDayPlaybackRunning ? nil : timelineSelectionSpan,
-            actuals: model.snapshot.actuals,
-            travel: model.snapshot.travel,
+            actuals: dayData?.actuals ?? model.snapshot.actuals,
+            travel: dayData?.travel ?? model.snapshot.travel,
             readings: displayRouteReadings,
             readingsAreNormalized: true,
             filtersSparseRouteConnections: true,
@@ -6214,6 +6255,7 @@ struct MapHomeView: View {
         expected: [MapHomeExpectedRouteOverlay],
         generated: [MapHomeWBSGeneratedRouteOverlay]
     ) -> MapHomeWBSPlaybackProjection {
+        let dayData = currentDayDataSnapshot
         let expectedRoutes = expected.map { overlay in
             MapHomeWBSResolvedRoute(
                 legID: "movement-\(overlay.id.uuidString)",
@@ -6228,15 +6270,15 @@ struct MapHomeView: View {
         }
         return MapHomeWBSPlaybackProjection.make(
             selectedDate: model.selectedDate,
-            places: model.snapshot.places,
-            travel: model.snapshot.travel,
-            readings: historicalPlaybackReadings,
+            places: dayData?.places ?? model.snapshot.places,
+            travel: dayData?.travel ?? model.snapshot.travel,
+            readings: currentDayReadings,
             resolvedRoutes: expectedRoutes + generatedRoutes + storedWBSResolvedRoutes
         )
     }
 
     private var storedWBSResolvedRoutes: [MapHomeWBSResolvedRoute] {
-        model.snapshot.travel.compactMap { segment in
+        (currentDayDataSnapshot?.travel ?? model.snapshot.travel).compactMap { segment in
             guard segment.mode == .subway,
                   let route = segment.subwayRoute,
                   SubwayStationCatalog.isValid(route),
@@ -6275,7 +6317,7 @@ struct MapHomeView: View {
             return nil
         }
         let date = routeTimelineDate
-        let confirmedSubwayPoint = model.snapshot.travel
+        let confirmedSubwayPoint = (currentDayDataSnapshot?.travel ?? model.snapshot.travel)
             .filter { segment in
                 guard segment.mode == .subway,
                       segment.isConfirmed,
@@ -6545,8 +6587,12 @@ struct MapHomeView: View {
             return
         }
 
-        if preservesCamera, !usesVectorRoadMap, heading == nil {
-            requestAppleMapCenter(coordinate)
+        if preservesCamera, !usesVectorRoadMap {
+            if let heading {
+                requestAppleMapHeading(heading, centeredAt: coordinate)
+            } else {
+                requestAppleMapCenter(coordinate)
+            }
             return
         }
 
@@ -6597,9 +6643,21 @@ struct MapHomeView: View {
     private func requestAppleMapCenter(
         _ coordinate: CLLocationCoordinate2D
     ) {
-        appleCenterCommand = MapHomeAppleCenterCommand(
-            revision: (appleCenterCommand?.revision ?? 0) &+ 1,
-            coordinate: coordinate
+        appleViewportCommand = MapHomeAppleViewportCommand(
+            revision: (appleViewportCommand?.revision ?? 0) &+ 1,
+            centerCoordinate: coordinate,
+            heading: nil
+        )
+    }
+
+    private func requestAppleMapHeading(
+        _ heading: CLLocationDirection,
+        centeredAt coordinate: CLLocationCoordinate2D?
+    ) {
+        appleViewportCommand = MapHomeAppleViewportCommand(
+            revision: (appleViewportCommand?.revision ?? 0) &+ 1,
+            centerCoordinate: coordinate,
+            heading: heading
         )
     }
 
@@ -6636,7 +6694,8 @@ struct MapHomeView: View {
             headingMonitor.stop()
             focusUserLocation(
                 using: proxy,
-                heading: compassControlState.mapCameraHeading
+                heading: compassControlState.mapCameraHeading,
+                preservesCamera: true
             )
         }
     }
@@ -6647,8 +6706,14 @@ struct MapHomeView: View {
             ?? visibleMapCamera?.heading
             ?? 0
         if currentCoordinate != nil {
-            focusUserLocation(using: proxy, heading: heading)
+            focusUserLocation(
+                using: proxy,
+                heading: heading,
+                preservesCamera: true
+            )
             setUserTrackingMode(.following)
+        } else if !usesVectorRoadMap {
+            requestAppleMapHeading(heading, centeredAt: nil)
         } else if let camera = visibleMapCamera {
             setMapPosition(.camera(
                 MapCamera(
@@ -6723,7 +6788,7 @@ struct MapHomeView: View {
         initialLocationRequestTask = nil
         currentLocationRequestTask?.cancel()
         currentLocationRequestTask = nil
-        appleCenterCommand = nil
+        appleViewportCommand = nil
         setUserTrackingMode(.idle)
         isMapCenteredOnUser = false
     }
@@ -11513,9 +11578,10 @@ private struct MapHomeApplePlayback {
     let stickmanAnimationPhase: Int?
 }
 
-struct MapHomeAppleCenterCommand {
+struct MapHomeAppleViewportCommand {
     let revision: Int
-    let coordinate: CLLocationCoordinate2D
+    let centerCoordinate: CLLocationCoordinate2D?
+    let heading: CLLocationDirection?
 }
 
 enum MapHomeAppleCameraCommand {
@@ -11525,6 +11591,24 @@ enum MapHomeAppleCameraCommand {
         on mapView: MKMapView
     ) {
         mapView.setCenter(coordinate, animated: false)
+    }
+
+    @MainActor
+    static func heading(
+        _ heading: CLLocationDirection,
+        centeredAt coordinate: CLLocationCoordinate2D?,
+        on mapView: MKMapView
+    ) {
+        let camera = mapView.camera.copy() as! MKMapCamera
+        let distance = camera.centerCoordinateDistance
+        let pitch = camera.pitch
+        if let coordinate {
+            camera.centerCoordinate = coordinate
+        }
+        camera.heading = heading
+        camera.centerCoordinateDistance = distance
+        camera.pitch = pitch
+        mapView.setCamera(camera, animated: false)
     }
 }
 
@@ -11851,7 +11935,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let style: MapDisplayStyle
     let cameraPosition: MapCameraPosition
     let cameraRevision: Int
-    let centerCommand: MapHomeAppleCenterCommand?
+    let viewportCommand: MapHomeAppleViewportCommand?
     let routes: [MapHomeAppleRoute]
     let annotations: [MapHomeAppleAnnotation]
     let playback: MapHomeApplePlayback?
@@ -11892,7 +11976,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         context.coordinator.applyMapStyle(to: mapView)
         context.coordinator.updateContent(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
-        context.coordinator.applyCenterCommandIfNeeded(to: mapView)
+        context.coordinator.applyViewportCommandIfNeeded(to: mapView)
     }
 
     static func dismantleUIView(_ mapView: MKMapView, coordinator: Coordinator) {
@@ -11904,7 +11988,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         var parent: MapHomeAppleMap
         private weak var mapView: MKMapView?
         private var lastCameraRevision = Int.min
-        private var lastCenterCommandRevision = 0
+        private var lastViewportCommandRevision = 0
         private var lastRoutesSignature = ""
         private var routeStyles: [ObjectIdentifier: MapHomeAppleRouteStyle] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
@@ -11953,35 +12037,18 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func applyMapStyle(to mapView: MKMapView) {
-            switch parent.style {
-            case .hybrid:
-                mapView.mapType = .hybrid
-                let configuration = MKHybridMapConfiguration(elevationStyle: .realistic)
-                configuration.pointOfInterestFilter = .excludingAll
-                configuration.showsTraffic = false
-                mapView.preferredConfiguration = configuration
-            case .imagery:
-                mapView.mapType = .satellite
-                mapView.preferredConfiguration = MKImageryMapConfiguration(
-                    elevationStyle: .realistic
-                )
-            case .standard, .simplified:
-                mapView.mapType = .mutedStandard
-                mapView.overrideUserInterfaceStyle = .light
-                mapView.clipsToBounds = true
-                mapView.layer.masksToBounds = true
-                mapView.backgroundColor = UIColor(hex: MapHomeWBSTripStyle.paperHex)
-                let configuration = MKStandardMapConfiguration(
-                    elevationStyle: .flat,
-                    emphasisStyle: .muted
-                )
-                configuration.pointOfInterestFilter = .excludingAll
-                configuration.showsTraffic = false
-                mapView.preferredConfiguration = configuration
-            case .mapLibreNight, .mapLibreLight, .mapLibreContrast,
-                 .mapLibrePastel, .mapLibreCasual:
-                break
-            }
+            mapView.mapType = .mutedStandard
+            mapView.overrideUserInterfaceStyle = .light
+            mapView.clipsToBounds = true
+            mapView.layer.masksToBounds = true
+            mapView.backgroundColor = UIColor(hex: MapHomeWBSTripStyle.paperHex)
+            let configuration = MKStandardMapConfiguration(
+                elevationStyle: .flat,
+                emphasisStyle: .muted
+            )
+            configuration.pointOfInterestFilter = .excludingAll
+            configuration.showsTraffic = false
+            mapView.preferredConfiguration = configuration
             mapView.pointOfInterestFilter = .excludingAll
             mapView.showsTraffic = false
         }
@@ -12016,11 +12083,19 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             publishCameraFrame(from: mapView, isFinal: true)
         }
 
-        func applyCenterCommandIfNeeded(to mapView: MKMapView) {
-            guard let command = parent.centerCommand,
-                  command.revision != lastCenterCommandRevision else { return }
-            lastCenterCommandRevision = command.revision
-            MapHomeAppleCameraCommand.center(command.coordinate, on: mapView)
+        func applyViewportCommandIfNeeded(to mapView: MKMapView) {
+            guard let command = parent.viewportCommand,
+                  command.revision != lastViewportCommandRevision else { return }
+            lastViewportCommandRevision = command.revision
+            if let heading = command.heading {
+                MapHomeAppleCameraCommand.heading(
+                    heading,
+                    centeredAt: command.centerCoordinate,
+                    on: mapView
+                )
+            } else if let coordinate = command.centerCoordinate {
+                MapHomeAppleCameraCommand.center(coordinate, on: mapView)
+            }
             publishCameraFrame(from: mapView, isFinal: true)
         }
 

@@ -11,6 +11,93 @@ struct SensorReadingsLoadResult: Equatable, Sendable {
     let isComplete: Bool
 }
 
+/// The WBS store loads one normalized immutable workspace and derives the
+/// visible presentation from that snapshot. Plan follows the same boundary
+/// for a map day: persisted iPhone/Watch data is read once, then day-scoped
+/// arrays are derived without changing the source snapshot or raw readings.
+struct PlanDayDataSnapshot: Equatable, Sendable {
+    let day: Date
+    let sourceRevision: UInt64
+    let sourceUpdatedAt: Date
+    let actuals: [ActualRecord]
+    let places: [PlaceStay]
+    let travel: [TravelSegment]
+    let readings: [SensorReading]
+    let isComplete: Bool
+
+    init(
+        day: Date,
+        sourceRevision: UInt64,
+        sourceUpdatedAt: Date,
+        actuals: [ActualRecord],
+        places: [PlaceStay],
+        travel: [TravelSegment],
+        readings: [SensorReading],
+        isComplete: Bool
+    ) {
+        self.day = day
+        self.sourceRevision = sourceRevision
+        self.sourceUpdatedAt = sourceUpdatedAt
+        self.actuals = actuals
+        self.places = places
+        self.travel = travel
+        self.readings = Self.uniqueReadings(readings)
+        self.isComplete = isComplete
+    }
+
+    static func make(
+        date: Date,
+        sourceRevision: UInt64,
+        source: TaptionDataSnapshot,
+        sensorResult: SensorReadingsLoadResult,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Self {
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let day = TimeSpan(start: dayStart, end: dayEnd)
+        return Self(
+            day: dayStart,
+            sourceRevision: sourceRevision,
+            sourceUpdatedAt: source.updatedAt,
+            actuals: source.actuals.filter {
+                TimeSpan(
+                    start: $0.startedAt,
+                    end: max($0.startedAt, $0.endedAt ?? dayEnd)
+                ).intersection(with: day) != nil
+            },
+            places: source.places.filter {
+                $0.span.intersection(with: day) != nil
+            },
+            travel: source.travel.filter {
+                $0.span.intersection(with: day) != nil
+            },
+            readings: sensorResult.readings.filter {
+                $0.timestamp >= dayStart && $0.timestamp < dayEnd
+            },
+            isComplete: sensorResult.isComplete
+        )
+    }
+
+    private static func uniqueReadings(
+        _ readings: [SensorReading]
+    ) -> [SensorReading] {
+        var byID: [UUID: SensorReading] = [:]
+        for reading in readings {
+            byID[reading.id] = reading
+        }
+        return byID.values.sorted {
+            if $0.timestamp != $1.timestamp {
+                return $0.timestamp < $1.timestamp
+            }
+            if $0.sequence != $1.sequence {
+                return ($0.sequence ?? .max) < ($1.sequence ?? .max)
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+}
+
 enum MapCurrentLocationAnchorPolicy {
     static let maximumAge: TimeInterval = 6 * 60 * 60
 
@@ -6779,6 +6866,31 @@ final class AppModel {
             )).sorted { $0.timestamp < $1.timestamp },
             isComplete: isComplete
         )
+    }
+
+    /// Loads the WBS-style day snapshot: one source snapshot plus one bounded
+    /// sensor read. Every consumer receives derived arrays from that captured
+    /// value, so an async load cannot mix two revisions or rewrite raw data.
+    func planDayDataSnapshot(for date: Date) async -> PlanDayDataSnapshot {
+        let source = snapshot
+        let sourceRevision = snapshotRevision
+        let result = await sensorReadingsLoadResult(
+            in: daySpan(containing: date)
+        )
+        return PlanDayDataSnapshot.make(
+            date: date,
+            sourceRevision: sourceRevision,
+            source: source,
+            sensorResult: result
+        )
+    }
+
+    private func daySpan(containing date: Date) -> TimeSpan {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(24 * 60 * 60)
+        return TimeSpan(start: start, end: end)
     }
 
     func sensorReadings(in span: TimeSpan) async -> [SensorReading] {
