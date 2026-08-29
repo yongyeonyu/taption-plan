@@ -1337,10 +1337,7 @@ struct MapHomeTimeSidebar: View {
             categoryColors: categoryColors
         )
         return ZStack(alignment: .topLeading) {
-            VStack(spacing: -1) {
-                Text(String(format: "%02d", minute / 60))
-                Text(String(format: "%02d", minute % 60))
-            }
+            Text(timeLabel(for: minute))
             .font(.system(
                 size: MapHomeTimeSidebarStyle.handleFontSize,
                 weight: MapHomeTimeSidebarStyle.handleFontWeight,
@@ -1348,7 +1345,10 @@ struct MapHomeTimeSidebar: View {
             ))
             .monospacedDigit()
             .foregroundStyle(MapHomeTimeSidebarStyle.handleForeground)
-            .frame(width: 32, height: 40)
+            .frame(
+                width: MapHomeTimeSidebarMath.selectionTimeBlockWidth,
+                height: 40
+            )
             .background(
                 MapHomeTimeSidebarStyle.handleBackground,
                 in: RoundedRectangle(
@@ -1841,7 +1841,7 @@ enum MapHomeTimeSidebarMath {
     static let rulerMinuteColumnWidth: CGFloat = 16
     static let rulerColumnSpacing: CGFloat = 2
     static let minimumRulerLabelSpacing: CGFloat = 12
-    static let selectionTimeBlockWidth: CGFloat = 44
+    static let selectionTimeBlockWidth: CGFloat = 56
     static let handleDoubleTapHitScale: CGFloat = 1.5
     static let selectionTimeBlockHitWidth: CGFloat =
         selectionTimeBlockWidth * handleDoubleTapHitScale

@@ -2245,7 +2245,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertLessThanOrEqual(leadingFrame.maxX, trailingFrame.minX)
         XCTAssertGreaterThanOrEqual(leadingFrame.minX, 0)
         XCTAssertLessThanOrEqual(trailingFrame.maxX, 127)
-        XCTAssertEqual(MapHomeTimeSidebarMath.selectionTimeBlockWidth, 44)
+        XCTAssertEqual(MapHomeTimeSidebarMath.selectionTimeBlockWidth, 56)
         XCTAssertGreaterThan(
             MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
             MapHomeTimeSidebarMath.selectionTimeBlockWidth
