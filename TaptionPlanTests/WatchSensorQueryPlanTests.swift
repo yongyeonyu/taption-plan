@@ -356,6 +356,39 @@ final class AppleWatchOnboardingTests: XCTestCase {
         XCTAssertTrue(reopened.hasSeenWatchAppInstalled)
     }
 
+    func testPairedWatchNeedsDataWithinFifteenMinutes() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let recent = now.addingTimeInterval(-14 * 60)
+        let stale = now.addingTimeInterval(-16 * 60)
+
+        XCTAssertEqual(
+            AppleWatchConnectionPolicy.state(
+                isSupported: true,
+                isPaired: true,
+                isWatchAppInstalled: true,
+                isReachable: false,
+                lastContactAt: recent,
+                now: now
+            ),
+            .background
+        )
+        XCTAssertEqual(
+            AppleWatchConnectionPolicy.state(
+                isSupported: true,
+                isPaired: true,
+                isWatchAppInstalled: true,
+                isReachable: false,
+                lastContactAt: stale,
+                now: now
+            ),
+            .noRecentData
+        )
+        XCTAssertEqual(
+            AppleWatchConnectionPolicy.recentContactWindow,
+            15 * 60
+        )
+    }
+
     /// 설정 줄은 사라지지 않고 문구만 바뀐다. 설치되지 않았을 때만 찾아가는
     /// 길을 덧붙이고, 이미 설치된 사람에게 설치를 권하지 않는다.
     func testCompanionRowHasOneWordingPerState() {

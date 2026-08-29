@@ -742,6 +742,38 @@ enum MapHomeDayPlaybackMath {
     static let stationaryMinutesPerSecond = 60.0
     static let movingMinutesPerSecond = 15.0
 
+    static func playbackEndMinute(
+        for selectedDate: Date,
+        now: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Double {
+        guard calendar.isDate(selectedDate, inSameDayAs: now) else {
+            return Double(MapHomeTimeSidebarMath.fullDayMinutes)
+        }
+        let components = calendar.dateComponents([.hour, .minute, .second], from: now)
+        let minute = Double((components.hour ?? 0) * 60 + (components.minute ?? 0))
+            + Double(components.second ?? 0) / 60
+        return min(
+            Double(MapHomeTimeSidebarMath.fullDayMinutes),
+            max(0, minute)
+        )
+    }
+
+    static func playbackStartMinute(
+        selectedMinute: Int?,
+        endMinute: Double,
+        isToday: Bool
+    ) -> Double {
+        let selected = min(
+            Double(MapHomeTimeSidebarMath.fullDayMinutes),
+            max(0, Double(selectedMinute ?? 0))
+        )
+        guard isToday, selected >= endMinute else {
+            return min(selected, endMinute)
+        }
+        return 0
+    }
+
     static func minute(elapsedSeconds: TimeInterval) -> Int {
         guard elapsedSeconds.isFinite else { return 0 }
         let progress = min(max(elapsedSeconds / durationSeconds, 0), 1)
@@ -852,6 +884,16 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
 }
 
 enum MapHomeWeatherTimelineMath {
+    private struct DisplaySignature: Equatable {
+        let symbolName: String
+        let temperature: Int
+
+        init(_ context: WeatherContext) {
+            symbolName = context.symbolName
+            temperature = Int(context.temperatureCelsius.rounded())
+        }
+    }
+
     static func context(
         at date: Date,
         contexts: [WeatherContext]
@@ -870,18 +912,32 @@ enum MapHomeWeatherTimelineMath {
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? date
         let ordered = WeatherTimelineEngine.coalesced(contexts)
             .sorted { $0.observedAt < $1.observedAt }
+        var displayRuns: [(context: WeatherContext, start: Date)] = []
 
-        return ordered.enumerated().compactMap { index, context in
-            let nextObservedAt = index + 1 < ordered.count
-                ? ordered[index + 1].observedAt
+        for context in ordered {
+            guard let lastIndex = displayRuns.indices.last else {
+                displayRuns.append((context: context, start: context.observedAt))
+                continue
+            }
+            if DisplaySignature(displayRuns[lastIndex].context)
+                == DisplaySignature(context) {
+                displayRuns[lastIndex].context = context
+            } else {
+                displayRuns.append((context: context, start: context.observedAt))
+            }
+        }
+
+        return displayRuns.enumerated().compactMap { index, run in
+            let nextObservedAt = index + 1 < displayRuns.count
+                ? displayRuns[index + 1].start
                 : dayEnd
-            let start = max(context.observedAt, dayStart)
+            let start = max(run.start, dayStart)
             let end = min(
-                max(nextObservedAt, context.observedAt.addingTimeInterval(1)),
+                max(nextObservedAt, run.start.addingTimeInterval(1)),
                 dayEnd
             )
             guard start < end, start < dayEnd, end > dayStart else { return nil }
-            return (context: context, span: TimeSpan(start: start, end: end))
+            return (context: run.context, span: TimeSpan(start: start, end: end))
         }
     }
 }
@@ -1069,6 +1125,7 @@ struct MapHomeView: View {
     @State private var isStickerMode = false
     @State private var selectedMapStickerEditor: MapHomeStickerEditorTarget?
     @State private var selectedMapTargetID: String?
+    @State private var isAppleWatchMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
     @State private var isGPSLoggingMenuExpanded = false
     @State private var isDataProtectionPresented = false
@@ -1694,9 +1751,10 @@ struct MapHomeView: View {
     }
 
     private var mapStickersOnMap: [MapSticker] {
-        model.snapshot.stickers.filter {
-            $0.placement == .map && $0.point.map(isValid) == true
-        }
+        MapStickerDisplayFilterEngine.visibleMapStickers(
+            model.snapshot.stickers,
+            on: model.selectedDate
+        ).filter { $0.point.map(isValid) == true }
     }
 
     private var scheduleStickersForSelectedDate: [MapSticker] {
@@ -1716,34 +1774,6 @@ struct MapHomeView: View {
                 .filter { $0.span.start <= selectedDate && selectedDate < $0.span.end }
                 .map(\.id)
         )
-    }
-
-    private var selectedMapMemoTargetIDs: Set<String> {
-        var ids = Set<String>()
-        if let selectedMapTargetID {
-            ids.insert(selectedMapTargetID)
-        }
-        for planID in selectedSchedulePlanIDs {
-            ids.insert("plan.\(planID.uuidString)")
-            ids.insert(planID.uuidString)
-        }
-        return ids
-    }
-
-    private var mapMemos: [ActionMemo] {
-        MapMemoDisplayFilterEngine.visibleMemos(
-            model.snapshot.memos,
-            filter: model.settings.mapMemoDisplayFilter,
-            selectedPlanIDs: selectedSchedulePlanIDs,
-            selectedTargetIDs: selectedMapMemoTargetIDs
-        )
-    }
-
-    private var mapMemosOnMap: [ActionMemo] {
-        mapMemos.filter { memo in
-            guard let point = memo.mapPoint else { return false }
-            return isValid(point)
-        }
     }
 
     private var mapCenterPoint: GeoPoint? {
@@ -1774,7 +1804,7 @@ struct MapHomeView: View {
     private func addMapSticker() {
         guard let point = mapCenterPoint,
               let id = model.addMapSticker(
-                  title: language.text("새 지도 스티커", "New map sticker"),
+                  title: language.text("새 지도 메모", "New map memo"),
                   placement: .map,
                   point: point,
                   planID: nil,
@@ -1789,7 +1819,7 @@ struct MapHomeView: View {
     private func addScheduleSticker() {
         let date = timelineDate(forMinute: Double(effectiveTimelineMinute))
         guard let id = model.addMapSticker(
-            title: language.text("새 일정 스티커", "New schedule sticker"),
+            title: language.text("새 일정 메모", "New schedule memo"),
             placement: .schedule,
             point: nil,
             planID: selectedSchedulePlanIDs.first,
@@ -2094,36 +2124,8 @@ struct MapHomeView: View {
                         .allowsHitTesting(isStickerMode)
                         .accessibilityLabel(
                             language.text(
-                                "\(sticker.title) 스티커",
-                                "\(sticker.title) sticker"
-                            )
-                        )
-                    }
-                }
-            }
-
-            ForEach(mapMemosOnMap) { memo in
-                if let point = memo.mapPoint {
-                    Annotation(
-                        memo.text,
-                        coordinate: CLLocationCoordinate2D(
-                            latitude: point.latitude,
-                            longitude: point.longitude
-                        ),
-                        anchor: .bottom
-                    ) {
-                        Button {
-                            selectedMapTargetID = memo.targetID
-                            selectedMapStickerEditor = .memo(memo.id)
-                        } label: {
-                            MapHomeMapMemoMarker(memo: memo)
-                        }
-                        .buttonStyle(.plain)
-                        .allowsHitTesting(isStickerMode)
-                        .accessibilityLabel(
-                            language.text(
-                                "지도 메모 \(memo.text)",
-                                "Map memo \(memo.text)"
+                                "\(sticker.title) 메모 스티커",
+                                "\(sticker.title) memo sticker"
                             )
                         )
                     }
@@ -2410,16 +2412,6 @@ struct MapHomeView: View {
                 )
             )
         }
-        markers += mapMemosOnMap.compactMap { memo in
-            guard let point = memo.mapPoint else { return nil }
-            return MapHomeVectorMarker(
-                id: vectorMapMemoMarkerID(memo.id),
-                coordinate: CLLocationCoordinate2D(
-                    latitude: point.latitude,
-                    longitude: point.longitude
-                )
-            )
-        }
         if let displayedLocationCoordinate {
             markers.append(
                 MapHomeVectorMarker(
@@ -2593,32 +2585,8 @@ struct MapHomeView: View {
                         .allowsHitTesting(isStickerMode)
                         .accessibilityLabel(
                             language.text(
-                                "\(sticker.title) 스티커",
-                                "\(sticker.title) sticker"
-                            )
-                        )
-                    }
-                }
-            }
-
-            ForEach(mapMemosOnMap) { memo in
-                if let point = vectorPoint(
-                    in: viewport,
-                    for: vectorMapMemoMarkerID(memo.id)
-                ) {
-                    MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
-                        Button {
-                            selectedMapTargetID = memo.targetID
-                            selectedMapStickerEditor = .memo(memo.id)
-                        } label: {
-                            MapHomeMapMemoMarker(memo: memo)
-                        }
-                        .buttonStyle(.plain)
-                        .allowsHitTesting(isStickerMode)
-                        .accessibilityLabel(
-                            language.text(
-                                "지도 메모 \(memo.text)",
-                                "Map memo \(memo.text)"
+                                "\(sticker.title) 메모 스티커",
+                                "\(sticker.title) memo sticker"
                             )
                         )
                     }
@@ -3040,15 +3008,6 @@ struct MapHomeView: View {
         }
     }
 
-    private func mapMemoDisplayFilterTitle(_ filter: MapMemoDisplayFilter) -> String {
-        switch filter {
-        case .all:
-            language.text("전부 보기", "Show all")
-        case .relevant:
-            language.text("해당되는 것만 보기", "Show relevant only")
-        }
-    }
-
     private func mapStyleSystemImage(_ style: MapDisplayStyle) -> String {
         switch style {
         case .standard: "map"
@@ -3257,7 +3216,23 @@ struct MapHomeView: View {
             dayPlaybackElapsedSeconds = 0
             selectedTimelineMinute = 0
         }
-        var currentMinute = Double(selectedTimelineMinute ?? 0)
+        let currentDate = Date.now
+        let playbackEndMinute = MapHomeDayPlaybackMath.playbackEndMinute(
+            for: model.selectedDate,
+            now: currentDate
+        )
+        let currentMinute = MapHomeDayPlaybackMath.playbackStartMinute(
+            selectedMinute: selectedTimelineMinute,
+            endMinute: playbackEndMinute,
+            isToday: Calendar.autoupdatingCurrent.isDate(
+                model.selectedDate,
+                inSameDayAs: currentDate
+            )
+        )
+        var playbackMinute = currentMinute
+        if currentMinute == 0 {
+            dayPlaybackElapsedSeconds = 0
+        }
         dayPlaybackCurrentMinute = currentMinute
         let movingRanges = dayPlaybackMovementRanges
         if currentMinute == 0 {
@@ -3293,15 +3268,18 @@ struct MapHomeView: View {
                     0.1
                 )
                 lastUptime = uptime
-                currentMinute = MapHomeDayPlaybackMath.advancedMinute(
-                    from: currentMinute,
-                    elapsedSeconds: elapsed,
-                    movingRanges: movingRanges
+                playbackMinute = min(
+                    MapHomeDayPlaybackMath.advancedMinute(
+                        from: playbackMinute,
+                        elapsedSeconds: elapsed,
+                        movingRanges: movingRanges
+                    ),
+                    playbackEndMinute
                 )
                 dayPlaybackElapsedSeconds += elapsed
                 let minute = min(
                     MapHomeTimeSidebarMath.fullDayMinutes,
-                    max(0, Int(currentMinute.rounded(.down)))
+                    max(0, Int(playbackMinute.rounded(.down)))
                 )
                 if selectedTimelineMinute != minute {
                     selectedTimelineMinute = minute
@@ -3311,7 +3289,7 @@ struct MapHomeView: View {
                     nowUptime: uptime,
                     minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
                 ) {
-                    dayPlaybackCurrentMinute = currentMinute
+                    dayPlaybackCurrentMinute = playbackMinute
                 }
                 if TimelineInteractionFrameGate.shouldRender(
                     lastUptime: &lastPlaybackRouteProjectionUptime,
@@ -3322,10 +3300,14 @@ struct MapHomeView: View {
                     refreshRouteProjection()
                 }
                 refreshHistoricalPlaybackPoint()
-                guard currentMinute < Double(
-                    MapHomeTimeSidebarMath.fullDayMinutes
-                ) else {
-                    selectedTimelineMinute = MapHomeTimeSidebarMath.fullDayMinutes
+                guard playbackMinute < playbackEndMinute else {
+                    selectedTimelineMinute = playbackEndMinute
+                        >= Double(MapHomeTimeSidebarMath.fullDayMinutes)
+                        ? MapHomeTimeSidebarMath.fullDayMinutes
+                        : min(
+                            MapHomeTimeSidebarMath.fullDayMinutes - 1,
+                            max(0, Int(playbackEndMinute.rounded(.down)))
+                        )
                     isDayPlaybackRunning = false
                     isTimelineInteractionActive = false
                     historicalPlaybackPoint = nil
@@ -3561,8 +3543,8 @@ struct MapHomeView: View {
                         .allowsHitTesting(isStickerMode)
                         .accessibilityLabel(
                             language.text(
-                                "\(sticker.title) 일정 스티커",
-                                "\(sticker.title) schedule sticker"
+                                "\(sticker.title) 일정 메모",
+                                "\(sticker.title) schedule memo"
                             )
                         )
                         .position(
@@ -3792,6 +3774,7 @@ struct MapHomeView: View {
             displayMenuItem
             stickerMenuItem
             languageMenuItem
+            appleWatchMenuItem
             settingsMenuItem
 
             Spacer(minLength: 28)
@@ -4426,7 +4409,7 @@ struct MapHomeView: View {
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(Color.tpPastelRose)
                         .frame(width: 24)
-                    Text(language.text("스티커", "Stickers"))
+                    Text(language.text("메모", "Memos"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                     Spacer()
                     Image(systemName: isStickerMenuExpanded ? "chevron.up" : "chevron.down")
@@ -4442,7 +4425,7 @@ struct MapHomeView: View {
                 )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(language.text("스티커 메뉴", "Sticker menu"))
+            .accessibilityLabel(language.text("메모 메뉴", "Memo menu"))
 
             if isStickerMenuExpanded {
                 Toggle(
@@ -4452,8 +4435,8 @@ struct MapHomeView: View {
                     )
                 ) {
                     Label(
-                        language.text("스티커 모드", "Sticker mode"),
-                        systemImage: "pencil.and.scribble"
+                        language.text("메모 모드", "Memo mode"),
+                        systemImage: "note.text"
                     )
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
@@ -4470,9 +4453,9 @@ struct MapHomeView: View {
                             .foregroundStyle(Color.tpReferenceBlue)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(language.text("지도에 추가", "Add to map"))
+                            Text(language.text("지도에 메모 추가", "Add memo to map"))
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Text(language.text("현재 지도 중심에 스티커 배치", "Place at the current map center"))
+                            Text(language.text("현재 지도 중심에 메모 스티커 배치", "Place a memo sticker at the current map center"))
                                 .font(.system(size: 10.5, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
@@ -4490,7 +4473,7 @@ struct MapHomeView: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(language.text("지도에 스티커 추가", "Add sticker to map"))
+                .accessibilityLabel(language.text("지도에 메모 추가", "Add memo to map"))
                 .padding(.leading, 12)
 
                 Button {
@@ -4502,9 +4485,9 @@ struct MapHomeView: View {
                             .foregroundStyle(Color.tpReferenceMint)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(language.text("일정에 추가", "Add to schedule"))
+                            Text(language.text("일정에 메모 추가", "Add memo to schedule"))
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Text(language.text("선택한 시간에 스티커 배치", "Place at the selected time"))
+                            Text(language.text("선택한 시간에 메모 스티커 배치", "Place a memo sticker at the selected time"))
                                 .font(.system(size: 10.5, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
@@ -4522,11 +4505,11 @@ struct MapHomeView: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(language.text("일정에 스티커 추가", "Add sticker to schedule"))
+                .accessibilityLabel(language.text("일정에 메모 추가", "Add memo to schedule"))
                 .padding(.leading, 12)
 
                 if isStickerMode {
-                    Text(language.text("지도의 스티커와 메모를 탭해 수정할 수 있어요.", "Tap a map sticker or memo to edit it."))
+                    Text(language.text("지도의 메모 스티커를 탭해 수정할 수 있어요.", "Tap a memo sticker on the map to edit it."))
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .padding(.top, 4)
@@ -4625,38 +4608,6 @@ struct MapHomeView: View {
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(
                         model.settings.mapDisplayStyle == style ? .isSelected : []
-                    )
-                }
-
-                Text(language.text("지도 메모", "Map memos"))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 6)
-                    .padding(.horizontal, 12)
-
-                ForEach(MapMemoDisplayFilter.allCases, id: \.self) { filter in
-                    Button {
-                        model.setMapMemoDisplayFilter(filter)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: filter == .all ? "square.stack.3d.up.fill" : "scope")
-                                .font(.system(size: 15, weight: .semibold))
-                                .frame(width: 22)
-                            Text(mapMemoDisplayFilterTitle(filter))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Spacer()
-                            if model.settings.mapMemoDisplayFilter == filter {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .bold))
-                            }
-                        }
-                        .foregroundStyle(Color.primary)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(
-                        model.settings.mapMemoDisplayFilter == filter ? .isSelected : []
                     )
                 }
 
@@ -4780,6 +4731,221 @@ struct MapHomeView: View {
                 gpsLoggingMenuItem
                     .padding(.leading, 12)
             }
+        }
+    }
+
+    private var appleWatchMenuItem: some View {
+        let state = model.appleWatchConnectionState
+        let tint = Color.tpMovementDark
+        return VStack(alignment: .leading, spacing: 5) {
+            Button {
+                model.refreshAppleWatchConnectionState()
+                isAppleWatchMenuExpanded.toggle()
+            } label: {
+                HStack(spacing: 13) {
+                    Image(systemName: "applewatch")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(tint)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(language.text("Apple Watch 데이터", "Apple Watch data"))
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        Text(appleWatchMenuSubtitle)
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(appleWatchMenuValue(for: state))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(tint)
+                    Image(
+                        systemName: isAppleWatchMenuExpanded
+                            ? "chevron.up"
+                            : "chevron.down"
+                    )
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(Color.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(
+                    tint.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: 12)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(
+                language.text(
+                    "Apple Watch 데이터 상태",
+                    "Apple Watch data status"
+                )
+            )
+            .accessibilityValue(appleWatchMenuSubtitle)
+
+            if isAppleWatchMenuExpanded {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(appleWatchMenuDescription(for: state))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if !hasRecentAppleWatchData
+                        || model.appleWatchReceivedDataKinds.isEmpty {
+                        Text(
+                            language.text(
+                                "최근 수신된 데이터 항목 없음",
+                                "No data types received recently"
+                            )
+                        )
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(language.text("최근 수신 항목", "Recently received"))
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(tint)
+                            ForEach(
+                                model.appleWatchReceivedDataKinds.sorted {
+                                    $0.rawValue < $1.rawValue
+                                },
+                                id: \.self
+                            ) { kind in
+                                Label(
+                                    appleWatchDataKindTitle(kind),
+                                    systemImage: "checkmark.circle.fill"
+                                )
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.primary)
+                            }
+                        }
+                    }
+
+                    if let receivedAt = model.appleWatchLastDataReceivedAt {
+                        Text(
+                            language.text(
+                                "마지막 수신 \(receivedAt.formatted(date: .omitted, time: .shortened))",
+                                "Last received \(receivedAt.formatted(date: .omitted, time: .shortened))"
+                            )
+                        )
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    }
+
+                    HStack(spacing: 8) {
+                        Text(
+                            language.text(
+                                "가져오기: \(model.settings.watchDataSyncProfile.localizedSubtitle(AppLanguagePreference.resolve(rawValue: languageRawValue)))",
+                                "Import: \(model.settings.watchDataSyncProfile.localizedSubtitle(AppLanguagePreference.resolve(rawValue: languageRawValue)))"
+                            )
+                        )
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        Spacer(minLength: 0)
+                        Button(language.text("지금 가져오기", "Import now")) {
+                            model.requestWatchDataSync()
+                            model.refreshAppleWatchConnectionState()
+                        }
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(tint)
+                    }
+                }
+                .padding(.vertical, 9)
+                .padding(.horizontal, 12)
+                .background(
+                    tint.opacity(0.045),
+                    in: RoundedRectangle(cornerRadius: 10)
+                )
+                .padding(.leading, 12)
+            }
+        }
+    }
+
+    private var appleWatchMenuSubtitle: String {
+        switch model.appleWatchConnectionState {
+        case .unsupported:
+            language.text("이 기기에서 사용할 수 없음", "Unavailable on this device")
+        case .notPaired:
+            language.text("Apple Watch 미페어링", "Apple Watch not paired")
+        case .appNotInstalled:
+            language.text("워치 앱 설치 필요", "Watch app needs installation")
+        case .noRecentData:
+            language.text("최근 15분 내 데이터 없음", "No data in the last 15 min")
+        case .background:
+            language.text("최근 데이터 · 백그라운드 수신", "Recent data · background")
+        case .reachable:
+            language.text("최근 데이터 · 실시간 수신", "Recent data · live")
+        }
+    }
+
+    private var hasRecentAppleWatchData: Bool {
+        guard let receivedAt = model.appleWatchLastDataReceivedAt else {
+            return false
+        }
+        let age = Date.now.timeIntervalSince(receivedAt)
+        return age >= 0
+            && age <= AppleWatchConnectionPolicy.recentContactWindow
+    }
+
+    private func appleWatchMenuValue(
+        for state: AppleWatchConnectionState
+    ) -> String {
+        switch state {
+        case .unsupported: language.text("사용 불가", "Unavailable")
+        case .notPaired: language.text("미페어링", "Not paired")
+        case .appNotInstalled: language.text("설치 필요", "Install")
+        case .noRecentData: language.text("수신 대기", "Waiting")
+        case .background: language.text("연결됨", "Connected")
+        case .reachable: language.text("실시간", "Live")
+        }
+    }
+
+    private func appleWatchMenuDescription(
+        for state: AppleWatchConnectionState
+    ) -> String {
+        switch state {
+        case .unsupported:
+            language.text(
+                "이 기기에서는 Apple Watch 데이터를 사용할 수 없습니다.",
+                "Apple Watch data is unavailable on this device."
+            )
+        case .notPaired:
+            language.text(
+                "Apple Watch를 연결하면 손목 움직임·심박수·운동 정보를 더 수집합니다.",
+                "Pairing Apple Watch adds wrist motion, heart-rate, and workout data."
+            )
+        case .appNotInstalled:
+            language.text(
+                "연결된 Apple Watch에 앱을 설치하면 손목 센서 데이터를 더 수집합니다.",
+                "Install the app on the paired Apple Watch to collect more wrist-sensor data."
+            )
+        case .noRecentData:
+            language.text(
+                "최근 15분 내 실제 센서·건강 데이터가 없어 수신을 기다리는 중입니다.",
+                "No sensor or health data arrived in the last 15 minutes."
+            )
+        case .background, .reachable:
+            language.text(
+                "Apple Watch가 있어 iPhone만으로 얻기 어려운 손목 센서 정보를 더 수집합니다.",
+                "Apple Watch adds wrist-sensor data that iPhone cannot collect alone."
+            )
+        }
+    }
+
+    private func appleWatchDataKindTitle(
+        _ kind: AppleWatchDataKind
+    ) -> String {
+        switch kind {
+        case .motion:
+            language.text("손목 움직임·가속도", "Wrist motion and acceleration")
+        case .heartRate:
+            language.text("심박수", "Heart rate")
+        case .route:
+            language.text("워치 이동 경로", "Watch route")
+        case .activity:
+            language.text("운동·행동", "Workout and behavior")
+        case .health:
+            language.text("활동·수면 건강 데이터", "Activity and sleep health data")
         }
     }
 
@@ -9750,8 +9916,8 @@ private struct MapHomeStickerEditorSheet: View {
             }
             .navigationTitle(
                 language.text(
-                    isSticker ? "스티커 수정" : "지도 메모 수정",
-                    isSticker ? "Edit sticker" : "Edit map memo"
+                    isSticker ? "메모 스티커 수정" : "지도 메모 수정",
+                    isSticker ? "Edit memo sticker" : "Edit map memo"
                 )
             )
             .navigationBarTitleDisplayMode(.inline)
@@ -9780,8 +9946,13 @@ private struct MapHomeStickerEditorSheet: View {
 
     @ViewBuilder
     private var stickerFields: some View {
-        Section(language.text("스티커", "Sticker")) {
-            TextField(language.text("이름", "Name"), text: $title)
+        Section(language.text("메모 스티커", "Memo sticker")) {
+            TextField(language.text("제목", "Title"), text: $title)
+            TextField(
+                language.text("메모 내용", "Memo text"),
+                text: $memoText,
+                axis: .vertical
+            )
             Picker(
                 language.text("추가 위치", "Placement"),
                 selection: $placement
@@ -9882,6 +10053,7 @@ private struct MapHomeStickerEditorSheet: View {
         case .sticker(let id):
             guard let sticker = model.snapshot.stickers.first(where: { $0.id == id }) else { return }
             title = sticker.title
+            memoText = sticker.memo ?? ""
             placement = sticker.placement
             systemImage = sticker.systemImage
             colorHex = sticker.colorHex
@@ -9909,6 +10081,7 @@ private struct MapHomeStickerEditorSheet: View {
             guard model.updateMapSticker(
                 id,
                 title: title,
+                memo: memoText,
                 systemImage: systemImage,
                 colorHex: colorHex,
                 placement: placement,

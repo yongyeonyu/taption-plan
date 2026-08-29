@@ -3572,6 +3572,7 @@ enum MapStickerPlacement: String, Codable, CaseIterable, Hashable, Sendable {
 struct MapSticker: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var title: String
+    var memo: String?
     var systemImage: String
     var colorHex: String
     var placement: MapStickerPlacement
@@ -3584,6 +3585,7 @@ struct MapSticker: Identifiable, Codable, Hashable, Sendable {
     init(
         id: UUID = UUID(),
         title: String,
+        memo: String? = nil,
         systemImage: String = "star.fill",
         colorHex: String = "#F28FA9",
         placement: MapStickerPlacement,
@@ -3595,6 +3597,7 @@ struct MapSticker: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.title = title
+        self.memo = memo
         self.systemImage = systemImage
         self.colorHex = colorHex
         self.placement = placement

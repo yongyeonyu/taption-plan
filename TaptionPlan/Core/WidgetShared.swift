@@ -585,12 +585,12 @@ enum TaptionStickmanPoseEngine {
                 19 - bodyLift * 0.35 - torsoRoll
             ),
             leftHand: p(
-                bodyX - 9.6 + 3.2 * armCos * armScale,
-                27 + 0.55 * armSin
+                bodyX - 9.6 + 4.6 * armCos * armScale,
+                27 + 1.0 * armSin
             ),
             rightHand: p(
-                bodyX + 9.6 - 3.2 * armCos * armScale,
-                27 - 0.55 * armSin
+                bodyX + 9.6 - 4.6 * armCos * armScale,
+                27 - 1.0 * armSin
             ),
             leftHip: p(
                 bodyX - 1.7 - torsoTwist * 0.5,
@@ -650,12 +650,12 @@ enum TaptionStickmanPoseEngine {
                 18.2 - bodyLift * 0.22 - shoulderRoll
             ),
             leftHand: p(
-                bodyX - 8.4 + 4.2 * armCos,
-                23.8 - bodyLift * 0.12 + 1.3 * armSin
+                bodyX - 8.4 + 5.4 * armCos,
+                23.8 - bodyLift * 0.12 + 1.8 * armSin
             ),
             rightHand: p(
-                bodyX + 8.4 - 4.2 * armCos,
-                23.8 - bodyLift * 0.12 - 1.3 * armSin
+                bodyX + 8.4 - 5.4 * armCos,
+                23.8 - bodyLift * 0.12 - 1.8 * armSin
             ),
             leftHip: p(
                 bodyX - 1.8 - torsoTwist * 0.5,
@@ -849,12 +849,28 @@ enum TaptionStickmanPoseEngine {
         let stanceEnd = 0.58
         if phase < stanceEnd {
             let progress = smooth(phase / stanceEnd)
-            return p(lerp(front, back, progress), floor)
+            let planted = lerp(front, back, 0.08 * progress)
+            return p(planted, floor)
         }
         let progress = smooth((phase - stanceEnd) / (1 - stanceEnd))
         let liftProgress = pow(sin(Double.pi * progress), 1.25)
+        let backwardEnd = 0.30
+        let x: Double
+        if progress < backwardEnd {
+            x = lerp(
+                lerp(front, back, 0.08),
+                back,
+                smooth(progress / backwardEnd)
+            )
+        } else {
+            x = lerp(
+                back,
+                front,
+                smooth((progress - backwardEnd) / (1 - backwardEnd))
+            )
+        }
         return p(
-            lerp(back, front, progress),
+            x,
             floor - liftProgress * lift
         )
     }
@@ -869,12 +885,28 @@ enum TaptionStickmanPoseEngine {
         let stanceEnd = 0.22
         if phase < stanceEnd {
             let progress = smooth(phase / stanceEnd)
-            return p(lerp(front, back, progress), floor)
+            let planted = lerp(front, back, 0.05 * progress)
+            return p(planted, floor)
         }
         let progress = smooth((phase - stanceEnd) / (1 - stanceEnd))
         let liftProgress = pow(sin(Double.pi * progress), 1.2)
+        let backwardEnd = 0.24
+        let x: Double
+        if progress < backwardEnd {
+            x = lerp(
+                lerp(front, back, 0.05),
+                back,
+                smooth(progress / backwardEnd)
+            )
+        } else {
+            x = lerp(
+                back,
+                front,
+                smooth((progress - backwardEnd) / (1 - backwardEnd))
+            )
+        }
         return p(
-            lerp(back, front, progress),
+            x,
             floor - liftProgress * lift
         )
     }

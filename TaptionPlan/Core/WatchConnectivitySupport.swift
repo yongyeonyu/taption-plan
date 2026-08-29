@@ -98,6 +98,7 @@ enum AppleWatchConnectionState: String, Sendable {
     case unsupported
     case notPaired
     case appNotInstalled
+    case noRecentData
     case background
     case reachable
 
@@ -106,14 +107,23 @@ enum AppleWatchConnectionState: String, Sendable {
         case .unsupported: "이 iPhone에서 사용 불가"
         case .notPaired: "Apple Watch 미페어링"
         case .appNotInstalled: "워치 앱 설치 필요"
+        case .noRecentData: "연결됨 · 최근 데이터 없음"
         case .background: "연결됨 · 백그라운드 동기화"
         case .reachable: "연결됨 · 실시간"
         }
     }
 }
 
+enum AppleWatchDataKind: String, CaseIterable, Hashable, Sendable {
+    case motion
+    case heartRate
+    case route
+    case activity
+    case health
+}
+
 enum AppleWatchConnectionPolicy {
-    static let recentContactWindow: TimeInterval = 30 * 60
+    static let recentContactWindow: TimeInterval = 15 * 60
 
     static func state(
         isSupported: Bool,
@@ -124,6 +134,7 @@ enum AppleWatchConnectionPolicy {
         now: Date = .now
     ) -> AppleWatchConnectionState {
         guard isSupported else { return .unsupported }
+        guard isPaired else { return .notPaired }
         let hasRecentContact = lastContactAt.map {
             now.timeIntervalSince($0) >= 0
                 && now.timeIntervalSince($0) <= recentContactWindow
@@ -131,9 +142,8 @@ enum AppleWatchConnectionPolicy {
         if hasRecentContact {
             return isReachable ? .reachable : .background
         }
-        guard isPaired else { return .notPaired }
         guard isWatchAppInstalled else { return .appNotInstalled }
-        return isReachable ? .reachable : .background
+        return .noRecentData
     }
 }
 
@@ -167,7 +177,7 @@ enum AppleWatchOnboarding {
         // 권하지 않는다.
         case .appNotInstalled:
             candidate = hasSeenWatchAppInstalled ? nil : .installInvitation
-        case .background, .reachable:
+        case .noRecentData, .background, .reachable:
             candidate = nil
         }
         guard let candidate, !dismissed.contains(candidate) else { return nil }
@@ -212,6 +222,12 @@ enum AppleWatchOnboarding {
                 subtitle: "연결된 Apple Watch에 아직 설치되지 않았습니다",
                 value: "설치 필요",
                 detail: installInstruction
+            )
+        case .noRecentData:
+            AppleWatchCompanionRow(
+                subtitle: "워치 앱은 설치됐지만 최근 데이터가 없습니다",
+                value: "수신 대기",
+                detail: "최근 15분 내 센서·건강 데이터 수신 시 연결됨으로 표시합니다."
             )
         case .background, .reachable:
             AppleWatchCompanionRow(
@@ -359,7 +375,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         let session = WCSession.default
         let state = connectionState(for: session)
         guard session.activationState == .activated,
-              state == .background || state == .reachable else {
+              state == .noRecentData
+                || state == .background
+                || state == .reachable else {
             return
         }
         try session.updateApplicationContext(message)
@@ -515,9 +533,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
 
     @discardableResult
     private func receiveEnvelope(_ envelope: [String: Any]) -> Bool {
-        if !envelope.isEmpty {
-            recordWatchContact()
-        }
+        var didReceiveWatchData = false
         var accepted = receiveCommand(from: envelope)
         if envelope[TaptionWatchEnvelope.refreshRequestKey] as? Bool == true {
             publishLatestPayload()
@@ -558,6 +574,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 // Live and reliable delivery can contain the same summary.
                 // Persistence is idempotent, so forwarding both avoids loss.
                 sensorSummaryHandler?(summary)
+                didReceiveWatchData = true
                 accepted = true
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
@@ -580,6 +597,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 "watch_health_snapshot_received"
             )
             healthSnapshotHandler?(snapshot)
+            didReceiveWatchData = true
             accepted = true
         }
         if let data = envelope[
@@ -606,6 +624,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             locationTrackingGuidanceHandler?()
             accepted = true
         }
+        if didReceiveWatchData {
+            recordWatchContact()
+        }
         return accepted
     }
 
@@ -616,7 +637,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         let session = WCSession.default
         let state = connectionState(for: session)
         guard session.activationState == .activated,
-              state == .background || state == .reachable else {
+              state == .noRecentData
+                || state == .background
+                || state == .reachable else {
             return
         }
         let message: [String: Any] = [TaptionWatchEnvelope.payloadKey: data]
@@ -703,4 +726,5 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             ]
         )
     }
+
 }

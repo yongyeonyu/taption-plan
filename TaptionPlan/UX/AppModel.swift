@@ -452,6 +452,8 @@ final class AppModel {
     private(set) var healthSyncProgress: HealthKitSyncProgress?
     private(set) var isHealthHistorySyncRunning = false
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
+    private(set) var appleWatchLastDataReceivedAt: Date?
+    private(set) var appleWatchReceivedDataKinds: Set<AppleWatchDataKind> = []
     /// 첫 실행 안내를 닫은 기록. 기기 저장소에서 읽어 오고, 바뀔 때만 다시
     /// 넣어 화면이 갱신되게 한다.
     private(set) var dismissedAppleWatchPrompts: Set<AppleWatchOnboardingPrompt> =
@@ -5365,9 +5367,30 @@ final class AppModel {
         }
     }
 
+    private func noteAppleWatchDataReceived(
+        _ kinds: Set<AppleWatchDataKind>,
+        at date: Date = .now
+    ) {
+        guard !kinds.isEmpty else { return }
+        if appleWatchLastDataReceivedAt.map({ $0 < date }) != false {
+            appleWatchLastDataReceivedAt = date
+        }
+        appleWatchReceivedDataKinds.formUnion(kinds)
+    }
+
     private func applyWatchSensorSummary(
         _ summary: TaptionWatchSensorSummary
     ) async {
+        var dataKinds: Set<AppleWatchDataKind> = [.motion, .activity]
+        if summary.latestHeartRate != nil
+            || summary.averageHeartRate != nil
+            || summary.maximumHeartRate != nil {
+            dataKinds.insert(.heartRate)
+        }
+        if !(summary.routePoints ?? []).isEmpty {
+            dataKinds.insert(.route)
+        }
+        noteAppleWatchDataReceived(dataKinds)
         if let heartRate = summary.latestHeartRate,
            heartRate.isFinite, heartRate > 0 {
             latestHeartRate = heartRate
@@ -5770,6 +5793,17 @@ final class AppModel {
     private func applyWatchHealthSnapshot(
         _ snapshot: TaptionWatchHealthSnapshot
     ) async {
+        var dataKinds: Set<AppleWatchDataKind> = []
+        if snapshot.activeEnergyKilocalories != nil
+            || snapshot.exerciseMinutes != nil
+            || snapshot.standHours != nil
+            || snapshot.sleepMinutes != nil {
+            dataKinds.insert(.health)
+        }
+        if snapshot.workoutCount > 0 {
+            dataKinds.insert(.activity)
+        }
+        noteAppleWatchDataReceived(dataKinds)
         archiveRawDeviceData(
             source: .appleWatch,
             kind: "watch-health-snapshot",
@@ -6491,6 +6525,7 @@ final class AppModel {
     @discardableResult
     func addMapSticker(
         title: String,
+        memo: String? = nil,
         placement: MapStickerPlacement,
         point: GeoPoint?,
         planID: UUID?,
@@ -6501,6 +6536,7 @@ final class AppModel {
         guard placement == .schedule || point != nil else { return nil }
         let sticker = MapSticker(
             title: cleanTitle,
+            memo: cleanOptionalMapStickerMemo(memo),
             placement: placement,
             point: point,
             planID: planID,
@@ -6515,6 +6551,7 @@ final class AppModel {
     func updateMapSticker(
         _ stickerID: UUID,
         title: String,
+        memo: String? = nil,
         systemImage: String,
         colorHex: String,
         placement: MapStickerPlacement,
@@ -6529,6 +6566,7 @@ final class AppModel {
         else { return false }
         var sticker = snapshot.stickers[index]
         sticker.title = cleanTitle
+        sticker.memo = cleanOptionalMapStickerMemo(memo)
         sticker.systemImage = systemImage
         sticker.colorHex = colorHex
         sticker.placement = placement
@@ -6539,6 +6577,12 @@ final class AppModel {
         snapshot.stickers[index] = sticker
         Task { await persist() }
         return true
+    }
+
+    private func cleanOptionalMapStickerMemo(_ text: String?) -> String? {
+        guard let text else { return nil }
+        let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleanText.isEmpty ? nil : cleanText
     }
 
     func deleteMapSticker(_ stickerID: UUID) {

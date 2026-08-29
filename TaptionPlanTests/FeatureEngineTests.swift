@@ -19049,6 +19049,24 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertLessThan(runningFlight.rightFoot.y, 45)
     }
 
+    func testStickmanLocomotionKeepsContactFeetPlanted() {
+        let first = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 0,
+            phaseCount: 12
+        )
+        let next = TaptionStickmanPoseEngine.pose(
+            action: .walking,
+            phase: 1,
+            phaseCount: 12
+        )
+
+        XCTAssertLessThan(abs(next.leftFoot.x - first.leftFoot.x), 1.0)
+        XCTAssertLessThan(abs(next.rightFoot.x - first.rightFoot.x), 1.0)
+        XCTAssertEqual(next.leftFoot.y, 45, accuracy: 0.000_001)
+        XCTAssertEqual(next.rightFoot.y, 45, accuracy: 0.000_001)
+    }
+
     func testStickmanCyclingUsesOppositeCrankPositionsWithStablePelvis() {
         let first = TaptionStickmanPoseEngine.pose(
             action: .cycling,
@@ -19463,6 +19481,77 @@ final class MapHomeStickmanTests: XCTestCase {
 
         XCTAssertEqual(decoded.text, memo.text)
         XCTAssertNil(decoded.mapPoint)
+    }
+
+    func testMapStickersAreLimitedToSelectedDayAndMapPlacement() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+        let selectedDay = calendar.date(
+            from: DateComponents(year: 2026, month: 8, day: 29, hour: 9)
+        )!
+        let sameDay = MapSticker(
+            title: "오늘",
+            memo: "오늘 메모",
+            placement: .map,
+            point: point,
+            occurredAt: selectedDay
+        )
+        let otherDay = MapSticker(
+            title: "다음 날",
+            placement: .map,
+            point: point,
+            occurredAt: calendar.date(
+                from: DateComponents(year: 2026, month: 8, day: 30, hour: 9)
+            )!
+        )
+        let schedule = MapSticker(
+            title: "일정",
+            placement: .schedule,
+            occurredAt: selectedDay
+        )
+
+        let visible = MapStickerDisplayFilterEngine.visibleMapStickers(
+            [sameDay, otherDay, schedule],
+            on: selectedDay,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(visible.map(\.id), [sameDay.id])
+        XCTAssertEqual(visible.first?.memo, "오늘 메모")
+    }
+
+    func testMapStickerMemoDecodesWhenMissingFromOlderArchive() throws {
+        let sticker = MapSticker(
+            title: "메모 스티커",
+            memo: "현장 메모",
+            placement: .map,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 0,
+                verticalAccuracy: 0
+            ),
+            occurredAt: .now
+        )
+        let encoded = try JSONEncoder().encode(sticker)
+        let decoded = try JSONDecoder().decode(MapSticker.self, from: encoded)
+        XCTAssertEqual(decoded.memo, sticker.memo)
+
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object.removeValue(forKey: "memo")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+        let legacy = try JSONDecoder().decode(MapSticker.self, from: legacyData)
+        XCTAssertNil(legacy.memo)
     }
 
     func testCloudMergeKeepsStickersAndHonorsStickerDeletionTombstone() {

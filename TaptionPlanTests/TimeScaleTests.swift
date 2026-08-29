@@ -1591,6 +1591,47 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeWeatherOnlyShowsDisplayedWeatherChanges() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 23))
+        )
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 10, to: day))
+        let secondDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 11, to: day))
+        let thirdDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 12, to: day))
+        let first = WeatherContext(
+            observedAt: firstDate,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20
+        )
+        let second = WeatherContext(
+            observedAt: secondDate,
+            condition: "Clear",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20
+        )
+        let third = WeatherContext(
+            observedAt: thirdDate,
+            condition: "흐림",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 20
+        )
+
+        let spans = MapHomeWeatherTimelineMath.persistentSpans(
+            for: day,
+            contexts: [first, second, third],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(spans.count, 2)
+        XCTAssertEqual(spans[0].context.id, second.id)
+        XCTAssertEqual(spans[0].span.start, firstDate)
+        XCTAssertEqual(spans[0].span.end, thirdDate)
+        XCTAssertEqual(spans[1].context.id, third.id)
+    }
+
     func testMapHomeWeatherDisplayCacheSurvivesViewportRefreshWithoutNetworkData() {
         let observedAt = makeDate(2026, 8, 23, 10)
         let cached = WeatherContext(
@@ -2862,6 +2903,59 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 23.999), 1_439)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 24), 1_440)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 30), 1_440)
+    }
+
+    func testMapHomeDayPlaybackStopsAtNowOnlyForToday() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let today = calendar.startOfDay(for: .now)
+        let now = calendar.date(byAdding: .second, value: 6 * 60 * 60 + 24 * 60 + 30, to: today)!
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.playbackEndMinute(
+                for: today,
+                now: now,
+                calendar: calendar
+            ),
+            384.5,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.playbackEndMinute(
+                for: yesterday,
+                now: now,
+                calendar: calendar
+            ),
+            1_440
+        )
+    }
+
+    func testMapHomeDayPlaybackRestartsTodayFromMidnightAtCurrentTime() {
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.playbackStartMinute(
+                selectedMinute: 385,
+                endMinute: 384.5,
+                isToday: true
+            ),
+            0
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.playbackStartMinute(
+                selectedMinute: 120,
+                endMinute: 384.5,
+                isToday: true
+            ),
+            120
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.playbackStartMinute(
+                selectedMinute: 1_440,
+                endMinute: 1_440,
+                isToday: false
+            ),
+            1_440
+        )
     }
 
     func testMapHomePlaybackRouteFollowsPlayheadWhilePlaying() {

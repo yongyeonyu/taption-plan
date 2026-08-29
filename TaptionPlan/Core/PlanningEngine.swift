@@ -1660,6 +1660,20 @@ enum MapMemoDisplayFilterEngine {
     }
 }
 
+enum MapStickerDisplayFilterEngine {
+    static func visibleMapStickers(
+        _ stickers: [MapSticker],
+        on date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [MapSticker] {
+        stickers.filter {
+            $0.placement == .map
+                && $0.point != nil
+                && calendar.isDate($0.occurredAt, inSameDayAs: date)
+        }
+    }
+}
+
 /// A memo used to need a host plan, so a note left on a category row created a
 /// one-minute placeholder titled `메모 - <카테고리>`. Those placeholders then
 /// showed up in the 기록 탭 계획 카드 as plans the user never made. This lifts
