@@ -5252,6 +5252,7 @@ struct MapHomeView: View {
         else { return }
         mapRenderCache.invalidateExpectedRoutes()
         expectedRouteOverlays = overlays
+        applyInitialMapFocusIfNeeded()
         persistMapDayCache()
     }
 
