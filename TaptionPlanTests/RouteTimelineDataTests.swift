@@ -1,3 +1,4 @@
+import CoreLocation
 import XCTest
 @testable import TaptionPlan
 
@@ -1395,5 +1396,75 @@ final class RouteTimelineDataTests: XCTestCase {
                 in: speeds
             )
         )
+    }
+
+    func testAppleRouteFallbackKeepsPreferredTransportFirst() {
+        XCTAssertEqual(
+            MapHomeAppleRouteFallbackPolicy.transports(for: .automobile),
+            [.automobile, .walking]
+        )
+        XCTAssertEqual(
+            MapHomeAppleRouteFallbackPolicy.transports(for: .transit),
+            [.transit, .automobile, .walking]
+        )
+        XCTAssertEqual(
+            MapHomeAppleRouteFallbackPolicy.transports(for: .walking),
+            [.walking, .automobile]
+        )
+    }
+
+    func testApplePlaybackHeadingUsesLookAheadAtRouteBend() {
+        let heading = MapHomeApplePlaybackMath.heading(
+            at: date(5),
+            departureDate: date(0),
+            arrivalDate: date(10),
+            coordinates: [
+                CLLocationCoordinate2D(latitude: 37, longitude: 127),
+                CLLocationCoordinate2D(latitude: 37, longitude: 127.01),
+                CLLocationCoordinate2D(latitude: 37.008, longitude: 127.01),
+            ]
+        )
+
+        XCTAssertEqual(heading, 0, accuracy: 0.5)
+    }
+
+    func testApplePlaybackHeadingIsQuantizedForStableAnnotationRotation() {
+        XCTAssertEqual(MapHomeApplePlaybackMath.stableHeading(359), 0)
+        XCTAssertEqual(MapHomeApplePlaybackMath.stableHeading(1), 0)
+        XCTAssertEqual(MapHomeApplePlaybackMath.stableHeading(89), 90)
+    }
+
+    func testMapHomeTimelinePlaybackUsesRouteDistanceForRatio() {
+        let segment = RouteTimelineSegment(
+            id: "route",
+            start: date(0),
+            end: date(100),
+            category: .movement,
+            colorHex: RouteTimelineCategory.movement.colorHex,
+            opacity: 1,
+            coordinates: [
+                GeoPoint(latitude: 37, longitude: 127, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0),
+                GeoPoint(latitude: 37, longitude: 127.0001, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0),
+                GeoPoint(latitude: 37, longitude: 127.001, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0),
+            ],
+            speedMetersPerSecond: 1,
+            confirmedSubwayTravelID: nil
+        )
+
+        let point = MapHomeRouteTimelinePlaybackMath.coordinate(
+            at: date(50),
+            in: [segment]
+        )
+
+        XCTAssertNotNil(point)
+        XCTAssertEqual(point?.longitude ?? 0, 127.0005, accuracy: 0.00002)
+    }
+
+    func testMapHomeWBSTripStyleMatchesWBSRouteTokens() {
+        XCTAssertEqual(MapHomeWBSTripStyle.paperHex, "#FCF9F4")
+        XCTAssertEqual(MapHomeWBSTripStyle.actualRouteHex, "#458B88")
+        XCTAssertEqual(MapHomeWBSTripStyle.forecastRouteHex, "#C65D4D")
+        XCTAssertEqual(MapHomeWBSTripStyle.actualRouteLineWidth, 2.2)
+        XCTAssertEqual(MapHomeWBSTripStyle.forecastRouteLineWidth, 1.8)
     }
 }

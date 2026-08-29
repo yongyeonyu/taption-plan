@@ -2,6 +2,53 @@
 
 구현·빌드·업로드·설치·실행·실제 화면 터치는 서로 다른 게이트로 기록한다. 설치·실행만으로 UI 동작을 완료 처리하지 않는다.
 
+## 2026-08-29 NCP829R001 최신 인계 실행
+
+- 저장소: `main`/`origin/main` `c06f12e`, `git diff --check` 통과
+- 서명 Debug `1.0 (114)` 빌드·iPhone 14 Pro 설치·앱 `com.taption.plan` readback 성공
+- iPhone `MapHomeStickmanTests`: 20/20 통과 (`/tmp/taption-plan-NCP829R001-device-tests-team.xcresult`)
+- 실제 화면·터치: 지도 홈, 재생 시작/중지와 시간·경로 갱신, 과거 날짜 이동 후 복귀, 시간 레일 이동, 팬 후 현재 위치 재중앙화, 확대·축소, 나침반 회전/북쪽 복귀, 사이드바 열기/닫기, 표시 설정 확장, 수면 포즈(약 10:59) 확인
+- Dynamic Island 상단 터치는 Taption Plan 화면이 아닌 다른 여행 앱 Live Activity를 열었으므로 Plan 기능 증거로 사용하지 않음
+- 미완료: 최종 소스의 18개 동작 전체 화면 매트릭스, Plan Dynamic Island compact/expanded, HealthKit/Watch 지연 동기화·원본 readback, IAP 외부 게이트
+- 현재 앱은 PIN 화면으로 재잠금되어 다음 수동 검증은 대표님이 PIN을 직접 입력한 뒤 이어야 함
+
+## 2026-08-29 IPDL829A01 iPhone 다운로드
+
+- `main` `c06f12e`에서 서명 Debug `1.0 (114)` 빌드 성공
+- iPhone 14 Pro 설치 성공: `com.taption.plan`
+- 설치 readback: `Taption Plan / com.taption.plan / 1.0 / 114`
+- 실행 readback 성공: PID `6709`
+- 실제 화면·터치는 기존 `NCP829R001` 별도 게이트로 유지
+
+## 2026-08-29 WBSM829Q01 WBS Apple 지도·경로 이식
+
+- `MapHomeView.swift`: Apple 경로 화면을 네이티브 `MKMapView`·`MKPolyline`·`MKAnnotation` 브리지로 전환하고 OpenFreeMap/MapLibre 선택은 유지
+- `MKDirections` endpoint 캐시, 자동차·대중교통·도보 우선순위 fallback, 실패 시 기존 endpoint 직선 경로 보존
+- 실측 센서 경로와 예상 경로를 분리하고, 예상 경로 walker는 거리 기반 polyline·시간축 보간과 진행 방향을 사용
+- `RouteTimelineDataTests`, `TimeScaleTests` 실행 통과
+- 서명 Debug `1.0 (114)` 빌드·iPhone 14 Pro 설치 성공, `com.taption.plan` 실행 PID `7123` readback
+- iPhone 미러링은 `iPhone 사용 중`으로 연결되지 않아 Apple 지도 화면·터치 readback은 보류
+
+## 2026-08-30 WALK830Q01 이동 경로 졸라맨 추적·방향 안정화
+
+- 경로 재생 좌표와 동일한 거리 기반 시간축 보간에 look-ahead heading을 적용하고, Apple/벡터 지도에 공통 사용
+- Apple `MKAnnotation` 좌표 직접 KVO 갱신, annotation transform 애니메이션 제거, heading을 8방향으로 안정화
+- 벡터 지도 졸라맨에도 재생 경로 heading 적용
+- `RouteTimelineDataTests`, `TimeScaleTests` 통과
+- 서명 Debug `1.0 (114)` 빌드·iPhone 14 Pro 설치·`com.taption.plan` 실행 readback 성공
+- 실제 화면: 수정 빌드 Plan 지도 홈 연결 확인 후 PIN 화면 재잠금 확인
+- 실제 터치·재생: PIN은 대표님이 직접 입력해야 하므로 경로 재생·졸라맨 이동·방향 readback 보류
+
+## 2026-08-30 STYLE830Q2 WBS 지도·경로·졸라맨 스타일 동기화
+
+- WBS 토큰을 Plan 공통 스타일로 연결: paper `#FCF9F4`, 실제 경로 teal `#458B88` 2.2pt/0.96, 예상 경로 terracotta `#C65D4D` 1.8pt/0.78 dashed `[4, 3]`
+- Apple 지도 standard/simplified를 WBS muted standard·flat·light 구성으로 맞추고, MapLibre runtime style 변환을 제거해 저장된 벡터 스타일이 실제 렌더러에 전달되도록 수정
+- 실제/예상 경로 모두 거리 기반 시간축 좌표를 사용하고, 재생 졸라맨은 경로 progress phase를 공유하며 marker 전체 회전을 제거
+- `RouteTimelineDataTests`, `TimeScaleTests`: targeted rerun 통과 (`/tmp/taption-plan-style830q2-tests/Logs/Test/Test-TaptionPlan-2026.08.30_01-08-07-+0900.xcresult`)
+- 서명 Debug `1.0 (114)` build 성공: `/private/tmp/taption-plan-style830q2-device/Build/Products/Debug-iphoneos/TaptionPlan.app`
+- iPhone 14 Pro `com.taption.plan` 설치·실행·Version `1.0 (114)` readback 성공
+- 실제 화면·터치: iPhone 미러링이 `iPhone 사용 중` 상태라 잠금 후 연결이 필요하여 목요일 경로 재생·스타일·졸라맨 이동 readback 보류
+
 ## 2026-08-28 실행 기록
 
 - generic iOS Debug build: 성공

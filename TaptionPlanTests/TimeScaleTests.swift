@@ -2715,7 +2715,7 @@ final class TimeScaleTests: XCTestCase {
                 AppFeatureSettings.self,
                 from: JSONEncoder().encode(settings)
             ).mapDisplayStyle,
-            .standard
+            .mapLibreCasual
         )
     }
 
@@ -3474,7 +3474,7 @@ final class TimeScaleTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(MapHomeVectorStyle.routeHex, "#FFD84D")
+        XCTAssertEqual(MapHomeVectorStyle.routeHex, MapHomeWBSTripStyle.actualRouteHex)
     }
 
     func testMapDisplayStylesMapToTheirVectorStyleOrNilForMapKit() {
@@ -3535,7 +3535,7 @@ final class TimeScaleTests: XCTestCase {
             .standard
         )
         XCTAssertEqual(MapDisplayStyle.standard.runtimeStyle, .standard)
-        XCTAssertEqual(MapDisplayStyle.mapLibreCasual.runtimeStyle, .standard)
+        XCTAssertEqual(MapDisplayStyle.mapLibreCasual.runtimeStyle, .mapLibreCasual)
     }
 
     func testMapHomeVectorBearingUsesCardinalDirections() {

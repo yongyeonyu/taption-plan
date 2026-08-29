@@ -473,6 +473,12 @@ enum MapHomeStickmanAnimationEngine {
         return Int(((step % count) + count) % count)
     }
 
+    static func phase(for progress: Double) -> Int {
+        guard progress.isFinite else { return 0 }
+        let normalized = min(max(progress, 0), 1)
+        return Int((normalized * Double(phaseCount)).rounded(.down)) % phaseCount
+    }
+
     static func oscillation(for phase: Int) -> Double {
         sin(2 * .pi * Double(phase) / Double(phaseCount))
     }
@@ -498,6 +504,7 @@ struct MapHomeStickmanMarker: View {
     static let size = CGSize(width: 49, height: 42)
 
     let action: MapHomeStickmanAction
+    var animationPhase: Int? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -512,10 +519,13 @@ struct MapHomeStickmanMarker: View {
                     context: &canvas,
                     size: size,
                     action: action,
-                    phase: MapHomeStickmanAnimationEngine.phase(
-                        at: context.date,
-                        reducesMotion: reduceMotion
-                    )
+                    phase: reduceMotion
+                        ? 0
+                        : animationPhase
+                            ?? MapHomeStickmanAnimationEngine.phase(
+                                at: context.date,
+                                reducesMotion: false
+                            )
                 )
             }
         }

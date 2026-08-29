@@ -13,7 +13,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     static let sourceURL = "https://tiles.openfreemap.org/planet"
     static let glyphsURL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf"
-    static let routeHex = "#FFD84D"
+    static let routeHex = MapHomeWBSTripStyle.actualRouteHex
 
     var backgroundHex: String {
         switch self {
@@ -727,7 +727,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 LayerID.historicalLayer,
                 source: historical,
                 color: NSExpression(format: "CAST(color, 'UIColor')"),
-                width: 3,
+                width: MapHomeWBSTripStyle.actualRouteLineWidth,
                 opacity: NSExpression(forKeyPath: "opacity")
             )
             style.addLayer(historicalLayer)
@@ -736,27 +736,19 @@ struct MapHomeVectorMap: UIViewRepresentable {
             let subwayLayer = lineLayer(
                 LayerID.subwayLayer,
                 source: subway,
-                color: NSExpression(forConstantValue: UIColor(red: 0.20, green: 0.78, blue: 0.70, alpha: 1)),
-                width: 4,
-                opacity: NSExpression(forConstantValue: 0.9)
+                color: NSExpression(forConstantValue: UIColor(red: 69 / 255, green: 139 / 255, blue: 136 / 255, alpha: 1)),
+                width: MapHomeWBSTripStyle.actualRouteLineWidth,
+                opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.actualRouteOpacity)
             )
             style.addLayer(subwayLayer)
 
             let active = addSource(LayerID.activeSource, to: style)
-            let activeCasing = lineLayer(
-                LayerID.activeCasingLayer,
-                source: active,
-                color: NSExpression(forConstantValue: UIColor(red: 0.05, green: 0.12, blue: 0.16, alpha: 0.95)),
-                width: 8,
-                opacity: NSExpression(forConstantValue: 0.9)
-            )
-            style.addLayer(activeCasing)
             let activeLayer = lineLayer(
                 LayerID.activeLayer,
                 source: active,
-                color: NSExpression(forConstantValue: UIColor(red: 1.0, green: 0.85, blue: 0.30, alpha: 1)),
-                width: 5,
-                opacity: NSExpression(forConstantValue: 1)
+                color: NSExpression(forConstantValue: UIColor(red: 69 / 255, green: 139 / 255, blue: 136 / 255, alpha: 1)),
+                width: MapHomeWBSTripStyle.actualRouteLineWidth,
+                opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.actualRouteOpacity)
             )
             style.addLayer(activeLayer)
 
@@ -764,11 +756,11 @@ struct MapHomeVectorMap: UIViewRepresentable {
             let expectedLayer = lineLayer(
                 LayerID.expectedLayer,
                 source: expected,
-                color: NSExpression(forConstantValue: UIColor(red: 1.0, green: 0.85, blue: 0.30, alpha: 1)),
-                width: 3,
-                opacity: NSExpression(forConstantValue: 0.76)
+                color: NSExpression(forConstantValue: UIColor(red: 198 / 255, green: 93 / 255, blue: 77 / 255, alpha: 1)),
+                width: MapHomeWBSTripStyle.forecastRouteLineWidth,
+                opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.forecastRouteOpacity)
             )
-            expectedLayer.lineDashPattern = NSExpression(forConstantValue: [2, 1.5])
+            expectedLayer.lineDashPattern = NSExpression(forConstantValue: MapHomeWBSTripStyle.routeDash)
             style.addLayer(expectedLayer)
         }
 

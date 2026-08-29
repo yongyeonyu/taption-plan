@@ -3653,7 +3653,7 @@ extension MapDisplayStyle {
     }
 
     var runtimeStyle: Self {
-        provider == .apple ? self : .standard
+        self
     }
 }
 
