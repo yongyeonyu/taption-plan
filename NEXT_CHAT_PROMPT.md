@@ -1,16 +1,19 @@
 # Taption Plan 다음 채팅 인계 프롬프트
 
-## 2026-08-31 REL83054A01 · 커밋·푸시·iPhone·TestFlight 인계
+## 2026-08-31 REL83054A01 · 전달 완료 및 다음 채팅 인계
 
-다음 채팅은 `/Users/u_mo_c/Documents/taption plan`에서 Taption Plan 작업을 이어간다.
+다음 채팅은 `/Users/u_mo_c/Documents/taption plan`에서 Taption Plan 작업을 이어간다. 아래 완료 증거를 기준으로 중복 실행하지 않는다.
 
-현재 목표:
+완료 증거:
 
-- 현재 승인된 Plan 변경을 `main`에 `fix: port WBS map playback and speed up sidebar`로 커밋하고 `origin/main`에 푸시한다.
-- 앱·Widget·Watch·Watch Widget build `1.0 (119)`를 검증하고, Release archive/export·TestFlight 업로드·`TP Taption Plan 내부 테스트` 연결·그룹 노출을 readback한다.
-- 같은 Release 산출물을 iPhone 14 Pro에 설치·실행하고 `com.taption.plan / 1.0 / 119`를 readback한다.
-- iPhone·Apple Watch 원본 센서 record와 provenance, Taption WBS 저장소와 dirty 작업본은 수정하지 않는다.
-- 사용자가 삭제한 `temp.md`와 `test.md`는 복구하거나 재생성하지 않는다. 검증 증거와 미완료 실기기 게이트는 이 문서에 기록한다.
+- `main` 커밋·푸시 완료: `cd70e1bac554d5a70cd6f6d8061799b9849aba4e`; local `HEAD`와 `origin/main` 일치; worktree clean.
+- 앱·Widget·Watch·Watch Widget `1.0 (119)` 확인.
+- Release archive: `/private/tmp/taption-rel83054a01.xcarchive`; export: `/private/tmp/taption-rel83054a01-export/TaptionPlan.ipa`.
+- IPA SHA-256: `46567f352e3f369394471a9df9aa22089497b6d63c0f1cf9fbdca6cf77022378`; `codesign --verify --deep --strict` 통과.
+- TestFlight upload 성공: Delivery UUID `02b51851-6c12-402d-b3d4-cbc561b9e7c9`; build `119`, `VALID`, `APP_STORE_ELIGIBLE`.
+- `TP Taption Plan 내부 테스트` 그룹 연결·build `119` 노출 readback 완료; 테스터 1명 `INSTALLED` readback.
+- iPhone 14 Pro(`00008120-00092C3E14F0201E`)에 설치·실행 완료; `com.taption.plan / 1.0 / 119` readback.
+- WBS 저장소와 iPhone·Apple Watch 원본 sensor record/provenance는 수정하지 않았다. 사용자가 삭제한 `temp.md`, `test.md`도 복구하지 않았다.
 
 현재 자동 검증:
 
@@ -21,21 +24,27 @@
 - iOS Simulator 전체 XCTest: 835/835, `/private/tmp/taption-rel83054a-sim.xcresult`
 - `git diff --check`: 통과
 
-남은 물리·외부 게이트:
+다음 채팅에서 남은 게이트:
 
 - iPhone 지도·날씨·목요일 경로·졸라맨·지도 비율·좌우 핸들·롱프레스·Dynamic Island 실제 화면/터치
 - Apple Watch 설치·수신·오늘 활동/수면 provenance·iPhone projection·동기화
 - iPhone cold/warm 날짜 로딩 p95와 실제 signpost 집계
-- TestFlight 처리 완료, 내부 테스트 그룹 build/tester 화면 노출, iPhone 설치·실행·버전 readback
+- iPhone 14 Pro에서 지도·날씨·목요일 경로·졸라맨·지도 비율·좌우 핸들·롱프레스·Dynamic Island 실제 화면/터치
+- Apple Watch 설치·수신·오늘 활동/수면 provenance·iPhone projection·동기화 실제 readback
+- iPhone cold/warm 날짜 로딩 p95와 실제 signpost 집계
 
 실행 규칙:
 
 - 먼저 `AGENTS.md`와 이 문서를 읽고 현재 `HEAD`, `origin/main`, dirty 상태, 기기 상태를 직접 확인한다.
 - source/provenance를 덮어쓰지 않고 불변 파생 projection으로만 수정한다. WBS dirty 파일은 읽기 전용이다.
 - 실기기·권한·계정·App Store Connect가 막히면 추정으로 완료하지 말고 명령·오류·미완료 게이트를 이 문서에 기록한다.
-- TestFlight는 업로드 성공만으로 완료하지 말고 processing `VALID`, 내부 그룹 연결, 그룹 내 build·tester 노출을 모두 확인한다.
+- TestFlight는 이미 processing `VALID`, 내부 그룹 연결, 그룹 내 build·tester 노출까지 확인했다. 새 업로드 전에는 build number를 올린다.
 
-완료 보고에는 커밋 SHA, 원격 SHA, archive/IPA 경로와 SHA-256, TestFlight Delivery UUID·processing/group readback, iPhone 설치·실행·버전 readback, 남은 물리 게이트를 포함한다.
+다음 실행 규칙:
+
+- 먼저 `AGENTS.md`와 이 문서를 읽고 현재 `HEAD`, `origin/main`, dirty 상태, 기기 상태를 직접 확인한다.
+- 실제 화면·터치·Watch 동기화 증거가 없으면 완료로 추정하지 않는다. `temp.md`와 `test.md`는 사용자가 삭제했으므로 복구하지 않는다.
+- source/provenance를 덮어쓰지 않고 불변 파생 projection으로만 수정하며 WBS dirty 파일은 읽기 전용이다.
 
 ## 2026-08-30 WACT83023A · Watch 설치 상태·오늘 활동/수면·오른쪽 핸들
 
