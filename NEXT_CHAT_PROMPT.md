@@ -6,7 +6,7 @@
 
 완료 증거:
 
-- `main` 커밋·푸시 완료: `cd70e1bac554d5a70cd6f6d8061799b9849aba4e`; local `HEAD`와 `origin/main` 일치; worktree clean.
+- 구현 커밋·푸시 완료: `cd70e1bac554d5a70cd6f6d8061799b9849aba4e`; 인계 문서 커밋 후 최신 `HEAD`·`origin/main`: `129df8bd1d43f90a437b2c6efa4b8c99a1dd62f7`; worktree clean.
 - 앱·Widget·Watch·Watch Widget `1.0 (119)` 확인.
 - Release archive: `/private/tmp/taption-rel83054a01.xcarchive`; export: `/private/tmp/taption-rel83054a01-export/TaptionPlan.ipa`.
 - IPA SHA-256: `46567f352e3f369394471a9df9aa22089497b6d63c0f1cf9fbdca6cf77022378`; `codesign --verify --deep --strict` 통과.
