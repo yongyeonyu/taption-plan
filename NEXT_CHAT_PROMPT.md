@@ -14,6 +14,7 @@
 - `temp.md` 잔여 항목의 자동 검증을 재실행했다. Package `36/36`, Plan 전체 XCTest exit 0, `git diff --check` 통과.
 - 앱·Widget·Watch·Watch Widget을 `1.0 (118)`로 통일했고 Release archive/export 성공: `/private/tmp/taption-plan-tmal83024a-v118.xcarchive`, `/tmp/taption-plan-tmal83024a-v118-export/TaptionPlan.ipa`.
 - IPA SHA-256은 `8d2042df30abdab09b58661fc8bf9bea54e9c4d286500870e1e030f0265648d6`; archive 앱 codesign verify 및 embedded Watch/Widget readback 통과.
+- TestFlight 업로드 성공: Delivery UUID `37749dc1-33c0-42b8-864b-7733173fde22`; build 118 `VALID / APP_STORE_ELIGIBLE`. `TP Taption Plan 내부 테스트` 그룹 연결과 그룹 빌드·테스터 1명 노출을 readback했다.
 - 연결된 iPhone/Apple Watch가 없어 설치·실행·실제 터치, Watch 동기화·오늘 activity/sleep provenance, Dynamic Island는 미완료로 유지했다. 증거 없는 항목은 `temp.md`에서 삭제하지 않는다.
 - 다음 단계는 Plan 변경을 `main`에 커밋·푸시한 뒤 IPA를 TestFlight에 업로드하고 `TP Taption Plan 내부 테스트` 그룹의 build 118 연결·노출을 readback하는 것이다.
 

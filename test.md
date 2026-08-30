@@ -263,4 +263,5 @@
 - Release archive/export 성공: `/private/tmp/taption-plan-tmal83024a-v118.xcarchive`, `/tmp/taption-plan-tmal83024a-v118-export/TaptionPlan.ipa`.
 - IPA SHA-256: `8d2042df30abdab09b58661fc8bf9bea54e9c4d286500870e1e030f0265648d6`.
 - Archive readback: `com.taption.plan`, `1.0 (118)`, embedded `TaptionPlanWatch.app`·`TaptionPlanWidget.appex` 및 Watch Widget 포함. Archive 앱 codesign verify 통과.
+- TestFlight: Delivery UUID `37749dc1-33c0-42b8-864b-7733173fde22`; build 118 `VALID / APP_STORE_ELIGIBLE`. `TP Taption Plan 내부 테스트` 그룹 연결 및 그룹 빌드 목록·테스터 1명 노출 readback 완료.
 - 실기기 게이트: 연결된 iPhone/Apple Watch가 없어 설치·실행·실제 터치·Watch 동기화/오늘 activity/sleep·Dynamic Island readback은 미완료다.
