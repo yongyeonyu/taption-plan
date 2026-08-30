@@ -9,7 +9,7 @@
 - Release archive/export: `/private/tmp/taption-plan-relsync2a-v117.xcarchive`, `/private/tmp/taption-plan-relsync2a-v117-export/TaptionPlan.ipa`; IPA `com.taption.plan / 1.0 / 117`, `unzip -t`·`codesign --verify --deep --strict` 통과, SHA-256 `3a1eea30bd7bc7fcdfde2bd7bc8135da4f472be416987fc56ffb548acc745e65`.
 - TestFlight: 업로드 성공. Delivery UUID `40d3c4ec-d471-4d0e-bc06-6bd4117610d5`; build `117`, processing `VALID`, audience `APP_STORE_ELIGIBLE`, App Store Connect 등록 확인.
 - 내부 테스트 readback: `TP Taption Plan 내부 테스트` 그룹 `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`가 internal group으로 확인됐고, 그룹 builds 목록에 build `117`이 `VALID`로 노출됐다. 그룹 테스터 화면 1명, state `INSTALLED` 노출을 확인했다.
-- 커밋·원격: `1edd1007f556775bed29429521e0a7c5eb7eef29`가 local `HEAD`와 `origin/main`에 동일하고 Plan worktree clean이다. WBS checkout의 기존 dirty 변경은 건드리지 않았다.
+- 커밋·원격: 구현 커밋 `1edd1007f556775bed29429521e0a7c5eb7eef29` 후 증거 문서 커밋을 추가했으며, 최종 SHA는 문서 커밋 후 readback한다. Plan worktree와 WBS checkout의 기존 dirty 변경은 보존한다.
 - 실기기 게이트: 이번 요청은 TestFlight 빌드업 범위이며 iPhone 14 Pro·Apple Watch 설치·실제 화면·터치는 수행하지 않았다. 등록된 실기기는 `unavailable` 상태이므로 해당 게이트는 미완료로 유지한다.
 
 ## 2026-08-30 WSYNC83022 · Apple Watch 동기화 점검
