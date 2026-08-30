@@ -71,6 +71,10 @@ struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
 }
 
 final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
+    private enum ArchiveError: Swift.Error {
+        case invalidEnvelope
+        case conflictingEnvelope
+    }
     private static let logger = Logger(
         subsystem: "com.taption.plan",
         category: "RawDeviceDataArchive"
@@ -186,58 +190,108 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         }
     }
 
-    func envelopes(inMonthContaining date: Date) throws
-        -> [RawDeviceDataEnvelope] {
+    func envelopes(
+        inMonthContaining date: Date,
+        strict: Bool = false
+    ) throws -> [RawDeviceDataEnvelope] {
         lock.lock()
         defer { lock.unlock() }
         let monthKey = monthKey(for: date)
-        if let cached = cachedEnvelopes(for: monthKey) {
+        if !strict, let cached = cachedEnvelopes(for: monthKey) {
             return cached
         }
-        let directory = try monthDirectory(for: monthKey)
+        let directory: URL
+        if strict {
+            directory = rootDirectory.appendingPathComponent(
+                monthKey,
+                isDirectory: true
+            )
+            guard FileManager.default.fileExists(atPath: directory.path) else {
+                return []
+            }
+        } else {
+            directory = try monthDirectory(for: monthKey)
+        }
         var payloads: [Data] = []
         let legacyURL = legacyCompressedFileURL(
             in: directory,
             monthKey: monthKey
         )
-        if FileManager.default.fileExists(atPath: legacyURL.path),
-           let payload = try? existingPayload(at: legacyURL) {
-            payloads.append(payload)
+        if FileManager.default.fileExists(atPath: legacyURL.path) {
+            do {
+                payloads.append(try existingPayload(at: legacyURL))
+            } catch {
+                if strict { throw error }
+            }
         }
         let journalURL = journalFileURL(in: directory)
-        if let payload = try? Data(contentsOf: journalURL) {
-            payloads.append(payload)
+        if FileManager.default.fileExists(atPath: journalURL.path) {
+            do {
+                payloads.append(try Data(contentsOf: journalURL))
+            } catch {
+                if strict { throw error }
+            }
         }
         let chunks = directory.appendingPathComponent(
             "chunks",
             isDirectory: true
         )
-        if let files = try? FileManager.default.contentsOfDirectory(
-            at: chunks,
-            includingPropertiesForKeys: nil
-        ) {
+        if FileManager.default.fileExists(atPath: chunks.path) {
+            let files: [URL]
+            do {
+                files = try FileManager.default.contentsOfDirectory(
+                    at: chunks,
+                    includingPropertiesForKeys: nil
+                )
+            } catch {
+                if strict { throw error }
+                return []
+            }
             for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-                guard let data = try? Data(contentsOf: file) else { continue }
-                if file.pathExtension == "zlib",
-                   let payload = try? decompress(data) {
-                    payloads.append(payload)
-                } else if file.lastPathComponent.hasSuffix(".jsonl.pending") {
-                    payloads.append(data)
+                do {
+                    let data = try Data(contentsOf: file)
+                    if file.pathExtension == "zlib" {
+                        payloads.append(try decompress(data))
+                    } else if file.lastPathComponent.hasSuffix(".jsonl.pending") {
+                        payloads.append(data)
+                    }
+                } catch {
+                    if strict { throw error }
                 }
             }
         }
-        var seen = Set<UUID>()
-        let envelopes = payloads
-            .flatMap { payload in
-                payload.split(separator: 0x0A).compactMap {
-                    try? decoder.decode(
-                        RawDeviceDataEnvelope.self,
-                        from: Data($0)
+        var decoded: [RawDeviceDataEnvelope] = []
+        for payload in payloads {
+            for line in payload.split(separator: 0x0A) {
+                do {
+                    decoded.append(
+                        try decoder.decode(
+                            RawDeviceDataEnvelope.self,
+                            from: Data(line)
+                        )
                     )
+                } catch {
+                    if strict { throw ArchiveError.invalidEnvelope }
                 }
             }
-            .filter { seen.insert($0.id).inserted }
-            .sorted { $0.capturedAt < $1.capturedAt }
+        }
+        var byID: [UUID: RawDeviceDataEnvelope] = [:]
+        for envelope in decoded {
+            if let existing = byID[envelope.id] {
+                if strict, existing != envelope {
+                    throw ArchiveError.conflictingEnvelope
+                }
+            } else {
+                byID[envelope.id] = envelope
+            }
+        }
+        let envelopes = byID.values
+            .sorted {
+                if $0.capturedAt != $1.capturedAt {
+                    return $0.capturedAt < $1.capturedAt
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
         cache(envelopes, for: monthKey)
         return envelopes
     }
@@ -301,6 +355,42 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
             }
         }
         return result.sorted { $0.timestamp < $1.timestamp }
+    }
+
+    func allEnvelopes() throws -> [RawDeviceDataEnvelope] {
+        guard FileManager.default.fileExists(atPath: rootDirectory.path) else {
+            return []
+        }
+        let directories = try FileManager.default.contentsOfDirectory(
+            at: rootDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey]
+        ).sorted { $0.lastPathComponent < $1.lastPathComponent }
+        var byID: [UUID: RawDeviceDataEnvelope] = [:]
+        for directory in directories
+        where directory.lastPathComponent.range(
+            of: #"^\d{4}-\d{2}$"#,
+            options: .regularExpression
+        ) != nil {
+            let parts = directory.lastPathComponent.split(separator: "-")
+            guard parts.count == 2,
+                  let year = Int(parts[0]),
+                  let month = Int(parts[1]),
+                  let date = calendar.date(
+                    from: DateComponents(year: year, month: month, day: 1)
+                  ) else { continue }
+            for envelope in try envelopes(inMonthContaining: date, strict: true) {
+                if let existing = byID[envelope.id], existing != envelope {
+                    throw ArchiveError.conflictingEnvelope
+                }
+                byID[envelope.id] = envelope
+            }
+        }
+        return byID.values.sorted {
+            if $0.capturedAt != $1.capturedAt {
+                return $0.capturedAt < $1.capturedAt
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
     }
 
     private func monthDirectory(for monthKey: String) throws -> URL {
@@ -664,6 +754,9 @@ enum TrackingSessionRecoveryStore {
 
 actor RawDeviceDataDayArchive {
     private static let domain = "raw-device-data"
+    private enum Error: Swift.Error {
+        case invalidEnvelope
+    }
     private let store: TaptionPlanDayStore
 
     init(databaseURL: URL) throws {
@@ -714,6 +807,20 @@ actor RawDeviceDataDayArchive {
         }
     }
 
+    func allEnvelopes() async throws -> [RawDeviceDataEnvelope] {
+        try await store.allEvents(domain: Self.domain).map { event in
+            guard let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
+                from: event.payload
+            ), let value = try? TaptionPlanCanonicalStorage.decode(
+                RawDeviceDataEnvelope.self,
+                from: encoded
+            ) else {
+                throw Error.invalidEnvelope
+            }
+            return value
+        }
+    }
+
     func checkpoint() async throws {
         try await store.checkpoint()
     }
@@ -726,6 +833,7 @@ actor SensorReadingArchive {
     )
     private enum Error: Swift.Error {
         case dayStoreUnavailable
+        case invalidReading
     }
 
     private static let migrationKey = "sensor-reading-v1-to-day-store-v2"
@@ -831,6 +939,23 @@ actor SensorReadingArchive {
     func routeReadings(in span: TimeSpan) async throws -> [SensorReading] {
         try await ensureMigrated()
         return try await loadEvents(in: span).sorted(by: readingOrder)
+    }
+
+    func allReadings() async throws -> [SensorReading] {
+        try await ensureMigrated()
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        return try await dayStore.allEvents(domain: "sensor-reading").map { event in
+            guard let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
+                from: event.payload
+            ), let reading = try? TaptionPlanCanonicalStorage.decode(
+                SensorReading.self,
+                from: encoded
+            ) else {
+                throw Error.invalidReading
+            }
+            return reading
+        }
+            .sorted(by: readingOrder)
     }
 
     func compact(now: Date = .now) async throws {
@@ -1155,6 +1280,10 @@ final class AppleSensorDataService {
         in span: TimeSpan
     ) async throws -> [SensorReading] {
         try await archive.routeReadings(in: span)
+    }
+
+    func allArchivedRouteReadings() async throws -> [SensorReading] {
+        try await archive.allReadings()
     }
 
     func archivedReadings(

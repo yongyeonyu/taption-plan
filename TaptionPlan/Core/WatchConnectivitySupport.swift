@@ -83,6 +83,13 @@ actor AppleWatchSensorActivityArchive {
         }
     }
 
+    func allSummaries() throws -> [TaptionWatchSensorSummary] {
+        try load().sorted {
+            if $0.startedAt == $1.startedAt { return $0.sequence < $1.sequence }
+            return $0.startedAt < $1.startedAt
+        }
+    }
+
     private func load() throws -> [TaptionWatchSensorSummary] {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return []

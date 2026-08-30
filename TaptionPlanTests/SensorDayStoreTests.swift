@@ -179,4 +179,149 @@ final class SensorDayStoreTests: XCTestCase {
             )
         )
     }
+
+    @MainActor
+    func testPlanDayDatabaseKeepsMaterializedRowsInactiveUntilMigrationCompletes() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-database-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let day = Date(timeIntervalSince1970: 2_000_000_000)
+        let snapshot = PlanDayDataSnapshot(
+            day: day,
+            sourceRevision: 7,
+            sourceUpdatedAt: day,
+            actuals: [],
+            places: [],
+            travel: [],
+            readings: [],
+            isComplete: true
+        )
+
+        try await database.save(snapshot)
+        let beforeMigration = try await database.load(
+            day: day,
+            sourceRevision: 7
+        )
+        XCTAssertNil(beforeMigration)
+
+        let report = try await database.migrateLegacyIfNeeded(
+            source: .empty,
+            sourceRevision: 7,
+            readings: [],
+            watchSummaries: [],
+            rawEnvelopes: []
+        )
+        XCTAssertEqual(report?.dayCount, 0)
+        let restored = try await database.load(day: day, sourceRevision: 7)
+        XCTAssertEqual(restored, snapshot)
+    }
+
+    @MainActor
+    func testWatchSummaryRecordAndLegacyMigrationShareIdempotentProvenance() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-watch-race-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let startedAt = Date(timeIntervalSince1970: 2_200_000_000)
+        let summary = TaptionWatchSensorSummary(
+            sessionID: UUID(),
+            sequence: 1,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: startedAt,
+            endedAt: startedAt.addingTimeInterval(30),
+            isFinal: true,
+            accelerometerSampleCount: 0,
+            accelerometerAverageG: nil,
+            peakAccelerationG: nil,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: nil,
+            distanceMeters: nil,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: nil,
+            averageHeartRate: nil,
+            maximumHeartRate: nil,
+            activeEnergyKilocalories: nil
+        )
+        let day = TaptionPlanDayKey(date: summary.endedAt)
+
+        try await database.recordWatchSummary(summary)
+        try await database.recordWatchSummary(summary)
+
+        let watchStore = try TaptionPlanV3Store(
+            url: directory.appendingPathComponent("taption-plan-watch-v3.sqlite"),
+            device: .appleWatch
+        )
+        let iPhoneStore = try TaptionPlanV3Store(
+            url: directory.appendingPathComponent("taption-plan-iphone-v3.sqlite"),
+            device: .iPhone
+        )
+        let watchDigest = try await watchStore.rawDigest(for: day)
+        let iPhoneDigest = try await iPhoneStore.rawDigest(for: day)
+        let watchEvents = try await watchStore.rawEvents(for: day)
+        XCTAssertEqual(watchDigest.eventCount, 1)
+        XCTAssertEqual(iPhoneDigest.eventCount, 1)
+        XCTAssertEqual(
+            watchEvents.first?.provenance,
+            ["source-device:appleWatch", "transport:WatchConnectivity"]
+        )
+
+        let report = try await database.migrateLegacyIfNeeded(
+            source: .empty,
+            sourceRevision: 1,
+            readings: [],
+            watchSummaries: [summary],
+            rawEnvelopes: []
+        )
+        XCTAssertEqual(report?.watchEventCount, 1)
+        XCTAssertEqual(report?.iPhoneEventCount, 1)
+        let migratedWatchDigest = try await watchStore.rawDigest(for: day)
+        let migratedIPhoneDigest = try await iPhoneStore.rawDigest(for: day)
+        XCTAssertEqual(migratedWatchDigest.eventCount, 1)
+        XCTAssertEqual(migratedIPhoneDigest.eventCount, 1)
+    }
+
+    @MainActor
+    func testPlanDayLoadCoordinatorUsesBoundedCacheAndEvictsOnPressure() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-coordinator-(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let coordinator = PlanDayLoadCoordinator(database: database, cacheCapacity: 1)
+        let first = Date(timeIntervalSince1970: 2_100_000_000)
+        let second = first.addingTimeInterval(86_400)
+
+        _ = await coordinator.load(
+            day: first,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                SensorReadingsLoadResult(readings: [], isComplete: true)
+            }
+        )
+        _ = await coordinator.load(
+            day: second,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                SensorReadingsLoadResult(readings: [], isComplete: true)
+            }
+        )
+        XCTAssertEqual(coordinator.cachedDayCount, 1)
+
+        coordinator.handleMemoryPressure()
+        XCTAssertEqual(coordinator.cachedDayCount, 0)
+    }
 }

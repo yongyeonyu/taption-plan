@@ -21,6 +21,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private var pendingHealthSnapshots: [TaptionWatchHealthSnapshot] = []
     private var widgetReloadFollowupTask: Task<Void, Never>?
     private var handledWorkoutRequestIDs = Set<UUID>()
+    private let dayDatabase: WatchDayDatabase?
     var onWorkoutRequest: ((TaptionWatchWorkoutRequest) -> Void)?
     var onPayloadChange: ((TaptionWatchPayload) -> Void)?
     var onDataSyncRequest: (() -> Void)?
@@ -36,6 +37,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     override init() {
+        dayDatabase = WatchDayDatabase()
         super.init()
     }
 
@@ -119,6 +121,24 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         WatchLaunchDiagnostics.mark(
             "sensor send requested sequence=\(summary.sequence) samples=\(summary.accelerometerSampleCount)"
         )
+        if let dayDatabase {
+            Task { @MainActor [weak self, dayDatabase] in
+                do {
+                    try await dayDatabase.append(summary)
+                    self?.sendSensorSummaryTransport(summary)
+                } catch {
+                    self?.cachePending(summary)
+                    WatchLaunchDiagnostics.mark("sensor store failed before send")
+                }
+            }
+            return
+        }
+        sendSensorSummaryTransport(summary)
+    }
+
+    private func sendSensorSummaryTransport(
+        _ summary: TaptionWatchSensorSummary
+    ) {
         guard WCSession.isSupported() else {
             cachePending(summary)
             WatchLaunchDiagnostics.mark("sensor send queued unsupported")
@@ -451,15 +471,38 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
         let pending = pendingSensorSummaries
         pendingSensorSummaries = []
+        if let dayDatabase {
+            Task { @MainActor [weak self, dayDatabase, pending] in
+                guard let self else { return }
+                do {
+                    try await dayDatabase.appendBatch(pending)
+                } catch {
+                    pending.forEach { self.cachePending($0) }
+                    WatchLaunchDiagnostics.mark("sensor batch store failed before send")
+                    return
+                }
+                self.transferPendingSensorSummaries(pending, through: session)
+                self.persistPendingSensorSummaries()
+            }
+            persistPendingSensorSummaries()
+            return
+        }
+        transferPendingSensorSummaries(pending, through: session)
+        persistPendingSensorSummaries()
+        WatchLaunchDiagnostics.mark(
+            "sensor queue drained sent=\(pending.count - pendingSensorSummaries.count) remaining=\(pendingSensorSummaries.count)"
+        )
+    }
+
+    private func transferPendingSensorSummaries(
+        _ pending: [TaptionWatchSensorSummary],
+        through session: WCSession
+    ) {
         for summary in pending {
             if !transfer(summary, through: session) {
                 pendingSensorSummaries.append(summary)
             }
         }
-        persistPendingSensorSummaries()
-        WatchLaunchDiagnostics.mark(
-            "sensor queue drained sent=\(pending.count - pendingSensorSummaries.count) remaining=\(pendingSensorSummaries.count)"
-        )
     }
 
     private func cachePending(_ snapshot: TaptionWatchHealthSnapshot) {

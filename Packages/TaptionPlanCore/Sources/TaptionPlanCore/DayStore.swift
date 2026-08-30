@@ -374,6 +374,27 @@ public actor TaptionPlanDayStore {
         return result
     }
 
+    public func allEvents(domain: String? = nil) throws -> [Event] {
+        if let domain { try validate(domain: domain) }
+        let statement: OpaquePointer
+        if domain == nil {
+            statement = try prepare(
+                "SELECT day_key, timestamp, sequence, id, domain, payload FROM events ORDER BY day_key, timestamp, sequence, id;"
+            )
+        } else {
+            statement = try prepare(
+                "SELECT day_key, timestamp, sequence, id, domain, payload FROM events WHERE domain = ? ORDER BY day_key, timestamp, sequence, id;"
+            )
+        }
+        defer { sqlite3_finalize(statement) }
+        if let domain { try bind(domain, to: statement, at: 1) }
+        var result: [Event] = []
+        while try step(statement) == SQLITE_ROW {
+            result.append(try readEvent(statement))
+        }
+        return result
+    }
+
     public func setMetadata(_ value: String, forKey key: String) throws {
         try validate(key: key, error: .invalidMetadataKey)
         try execute(

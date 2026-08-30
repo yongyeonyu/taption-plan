@@ -2,6 +2,30 @@
 
 구현·빌드·업로드·설치·실행·실제 화면 터치는 서로 다른 게이트로 기록한다. 설치·실행만으로 UI 동작을 완료 처리하지 않는다.
 
+## 2026-08-30 REVUP83021 · 다방면 코드리뷰 및 릴리스 준비
+
+- 리뷰 수정: legacy JSON/v2 원본의 strict read가 손상·누락·동일 ID 충돌을 조용히 버리지 않고 fail-closed하도록 보강했다. SQLite v3 materialized raw count overflow도 거부한다.
+- 리뷰 수정: Watch raw 저장 실패 시 WatchConnectivity 전송을 진행하지 않고 재큐하며, Watch 수신·legacy migration provenance를 동일하게 맞춰 저장 중 migration 경합에서 payload conflict가 나지 않게 했다.
+- 리뷰 수정: 날짜 coordinator의 in-flight 요청에 토큰을 붙여 취소된 이전 작업이 새 작업을 제거·캐시하지 못하게 했고, 월 prefetch 취소가 현재 load까지 전달되게 했다. DB/day query·decode·projection signpost는 예외 시에도 종료된다. legacy archive가 준비되지 않으면 migration을 시작하지 않는다.
+- `swift test --package-path Packages/TaptionPlanCore`: 36/36 통과.
+- Plan focused XCTest(`SensorDayStoreTests`, `TimeScaleTests`, `SQLitePlanRepositoryTests`): 149/149 통과. 결과 bundle: `/private/tmp/taption-plan-revup83021-focused-3.xcresult`
+- Plan 전체 XCTest: 824/824 통과, 실패·스킵 0. 결과 bundle: `/private/tmp/taption-plan-revup83021-full.xcresult`
+- Debug 통합 빌드: `xcodebuild -quiet -project TaptionPlan.xcodeproj -scheme TaptionPlan -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build` exit 0.
+- Debug 산출물 readback: iOS `com.taption.plan / 1.0 / 116`, Watch `com.taption.plan.watchkitapp / 1.0 / 116`, Watch Widget `com.taption.plan.watchkitapp.widget / 1.0 / 116`.
+- `git diff --check`: 통과. WBS checkout `/Users/u_mo_c/Documents/Taption WBS`는 기존 dirty `temp.md`만 보존했고 수정하지 않았다.
+- 아직 확인하지 않은 외부 게이트: iPhone 14 Pro 실기기 touch/실행, Apple Watch 원본·동기화, 목요일 재생·지도 비율·WBS 스타일·Dynamic Island, cold/warm p95와 실제 signpost 집계, TestFlight 처리·내부 그룹 노출.
+
+## 2026-08-30 DBRUN83019 · DBIMP83020 날짜 로딩 DB 최적화
+
+- SQLite v3 자동 검증: `swift test --package-path Packages/TaptionPlanCore` 36/36 통과. 날짜·디바이스·timestamp/sequence/id 인덱스와 `EXPLAIN QUERY PLAN`, append-only 중복/충돌, provenance digest, materialized 교체, v2 읽기 전용 거부·sidecar 미생성 테스트를 포함한다.
+- Plan focused XCTest: `SensorDayStoreTests`, `TimeScaleTests`, `SQLitePlanRepositoryTests` 148/148 통과. 결과 bundle: `/private/tmp/taption-plan-dbimp83020-focused-3.xcresult`
+- Debug 통합 빌드: `xcodebuild -quiet -project TaptionPlan.xcodeproj -scheme TaptionPlan -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build` exit 0. 산출물은 `/Users/u_mo_c/Library/Developer/Xcode/DerivedData/TaptionPlan-gvqtjbpzkfvutrdlxdzhdyhsyane/Build/Products/Debug-iphonesimulator/TaptionPlan.app`, `Debug-watchsimulator/TaptionPlanWatch.app`, `Debug-watchsimulator/TaptionPlanWatchWidget.appex`에 생성됐다.
+- 산출물 readback: iOS `com.taption.plan / 1.0 / 115`, Watch `com.taption.plan.watchkitapp / 1.0 / 115`, Watch Widget `com.taption.plan.watchkitapp.widget / 1.0 / 115`.
+- 저장 경계: iPhone·Watch SQLite v3를 분리하고 raw/provenance는 append-only로 유지한다. 구 JSON/v2 SQLite는 읽기 전용 재구축 입력으로만 사용하며, migration 성공 전 materialized row를 활성화하지 않고 재검증 실패 시 fail-closed한다. 구 DB와 임시 백업은 삭제하지 않았다.
+- 로드 경계: `PlanDayLoadCoordinator`가 `day_key + source_revision + projection_version`으로 snapshot을 공유하고 동일 날짜 coalescing, 최신 요청 취소, 월 프리패치, bounded LRU/메모리 압력 축출을 수행한다. 로딩 중 기존 화면은 유지하고 상태를 표시한다.
+- `git diff --check`: 통과. WBS checkout `/Users/u_mo_c/Documents/Taption WBS`의 기존 dirty `temp.md`와 소스 변경은 건드리지 않았다.
+- 미측정: iPhone 14 Pro cold p95 `≤500ms`, warm p95 `≤50ms` 수치와 실제 `os_signpost` 집계. 실기기에서 v3 migration/readback, Watch raw/provenance·동기화, 목요일 재생·졸라맨, 지도 비율, 핸들·롱프레스, WBS 스타일·Dynamic Island는 확인하지 않아 미완료로 유지한다.
+
 ## 2026-08-30 BTCH830Q16 · temp.md 전체 실행 자동 검증
 
 - `SENS830Q14`: `ActivitySensorEvidenceFusion`이 겹치는 Watch+iPhone evidence를 하나의 결합 projection으로 만들고 Watch 행동·confidence를 우선한다. `ActivityClassificationProjection`은 version 1과 기존 9개 major ID만 허용하며 invalid major를 `activity`로 파생 정규화하고 locked override를 보존한다. Plan adapter는 이동 알고리즘 결과가 없는 Watch 이동수단 hint를 major/detail로 확정하지 않는다.

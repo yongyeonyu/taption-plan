@@ -1,5 +1,53 @@
 # Taption Plan 다음 채팅 인계 프롬프트
 
+## 2026-08-30 REVUP83021 · 코드리뷰 및 TestFlight 전달 인계
+
+이번 실행은 DB·날짜 로딩·Watch 저장 경계를 다방면 리뷰하고, 원본 iPhone·Apple Watch record/provenance와 WBS checkout을 건드리지 않은 채 최소 수정한 뒤 TestFlight build 116을 전달하는 것이다.
+
+- strict legacy read, 동일 raw ID 충돌, materialized raw count overflow는 fail-closed로 처리한다.
+- Watch raw 저장이 성공한 뒤에만 전송하고 실패하면 재큐한다. 수신·migration provenance는 `source-device:appleWatch + transport:WatchConnectivity`로 일치시킨다.
+- 날짜 load coordinator는 요청 token, 최신 요청 취소, 월 prefetch 취소 전달, bounded LRU를 사용하며 DB query/decode/projection signpost는 예외에도 종료한다.
+- 앱·Widget·Watch·Watch Widget build number는 `1.0 (116)`으로 맞췄다. TestFlight 재업로드에는 기존 115와 다른 116이 필요하다.
+
+자동 검증 증거:
+
+- `swift test --package-path Packages/TaptionPlanCore`: 36/36 통과.
+- Plan 전체 XCTest: 824/824 통과, 실패·스킵 0. 결과: `/private/tmp/taption-plan-revup83021-full.xcresult`
+- 관련 focused XCTest: 149/149 통과. 결과: `/private/tmp/taption-plan-revup83021-focused-3.xcresult`
+- iOS·Watch·Watch Widget Debug 통합 빌드 exit 0, 세 산출물 모두 `1.0 (116)` readback.
+- `git diff --check` 통과. WBS `/Users/u_mo_c/Documents/Taption WBS`는 기존 dirty `temp.md`를 보존했다.
+
+남은 전달 순서:
+
+1. Plan 승인 파일만 `main`에 커밋·`origin/main` 푸시하고 SHA와 clean worktree를 확인한다.
+2. clean SHA에서 Release archive/export, IPA 서명·bundle/version readback을 확인한다.
+3. IPA를 App Store Connect에 업로드하고 Delivery UUID, processing `VALID`/`APP_STORE_ELIGIBLE`를 확인한다.
+4. `TP Taption Plan 내부 테스트`에 build 116을 연결하고 그룹 builds 및 테스터 화면 노출을 readback한다.
+5. 실기기 touch/실행과 설치는 별도 게이트로만 기록한다. 증거가 없으면 완료 처리하지 않는다.
+
+중단 조건: WBS dirty 파일 또는 iPhone·Watch 원본 수정이 필요하면 중단한다. 서명·App Store Connect 인증·처리·내부 그룹 노출이 막히면 오류와 미완료 게이트를 `test.md`에 기록한다.
+
+## 2026-08-30 DBRUN83019 · DBIMP83020 날짜 로딩 DB 최적화 최신 인계
+
+이번 실행의 목표는 날짜 변경 지연을 줄이면서 iPhone·Apple Watch 원본과 provenance를 보존하는 SQLite v3 저장·로드 경계를 Plan에 적용하는 것이다.
+
+- iPhone과 Watch에 각각 `taption-plan-iphone-v3.sqlite`, `taption-plan-watch-v3.sqlite`를 만들고 raw event를 append-only로 보존한다. `day_materialized`는 날짜별 파생 bundle만 저장한다.
+- 날짜·디바이스·시간 복합 인덱스, prepared statement, WAL, bounded LRU를 적용했고, `EXPLAIN QUERY PLAN`에서 날짜 인덱스 검색을 검증했다.
+- 기존 JSON/v2 SQLite는 읽기 전용 입력으로 백그라운드 재구축한다. 날짜별 count·범위·digest/provenance 검증, 불일치 1회 재생성, 2차 실패 fail-closed marker를 구현했다. 전체 검증과 새 앱 readback 전에는 구 DB·백업을 삭제하지 않는다.
+- `PlanDayLoadCoordinator`가 공통 날짜 소비 경계로 동작한다: `day_key + source_revision + projection_version` snapshot, 동일 날짜 coalescing, 최신 요청 취소, 월 프리패치, bounded LRU/메모리 압력 축출, 기존 화면 유지+로딩 상태.
+- Watch raw를 Watch DB에 먼저 저장하고 iPhone에는 source/provenance 포함 idempotent batch merge한다. 단일 날짜 센서 소비는 coordinator를 통과한다.
+
+자동 검증 증거:
+
+- `swift test --package-path Packages/TaptionPlanCore`: 36/36 통과.
+- Plan focused XCTest(`SensorDayStoreTests`, `TimeScaleTests`, `SQLitePlanRepositoryTests`): 148/148 통과. 결과: `/private/tmp/taption-plan-dbimp83020-focused-3.xcresult`
+- iOS·Watch·Watch Widget Debug simulator build: exit 0. 산출물: `/Users/u_mo_c/Library/Developer/Xcode/DerivedData/TaptionPlan-gvqtjbpzkfvutrdlxdzhdyhsyane/Build/Products/`
+- `git diff --check`: 통과. WBS 저장소 `/Users/u_mo_c/Documents/Taption WBS`는 수정하지 않았다.
+
+다음 실행자는 cold/warm 날짜 전환 p95와 실제 signpost를 iPhone 14 Pro에서 측정하고, v3 migration/readback, Watch provenance·동기화, 목요일 재생·졸라맨·지도 비율·좌우 핸들·롱프레스·WBS 스타일·Dynamic Island를 실제 화면/터치로 확인한다. 증거가 없는 항목은 `temp.md`에서 삭제하지 않는다. 구 DB 삭제, 커밋·푸시, TestFlight, iPhone 설치는 이 계획 범위 밖이다.
+
+중단 조건: WBS dirty 작업본을 수정해야 하거나 원본 iPhone·Watch record/provenance 덮어쓰기가 필요하면 중단한다. 실기기·권한·계정 게이트가 막히면 명령·오류·미완료 범위를 `test.md`에 기록하고 추정으로 완료 처리하지 않는다.
+
 ## 2026-08-30 BTCH830Q16 · temp.md 전체 실행 최신 상태
 
 - `SENS830Q14`를 구현했다. Watch+iPhone가 겹치는 시각에는 Watch 행동을 우선한 결합 evidence를 사용하고, Watch가 없으면 iPhone evidence만 사용한다. 이동수단 상세는 Plan 이동 알고리즘 결과가 있을 때만 projection한다.

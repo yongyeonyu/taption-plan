@@ -1,5 +1,6 @@
 @preconcurrency import ActivityKit
 import SwiftUI
+import UIKit
 
 struct AppShellView: View {
     private static let legacyUIEnabled = false
@@ -82,6 +83,13 @@ struct AppShellView: View {
             )
         ) { notification in
             handlePlanNotification(notification)
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: UIApplication.didReceiveMemoryWarningNotification
+            )
+        ) { _ in
+            model.handleMemoryPressure()
         }
         .onChange(of: scenePhase) { _, phase in
             handleScenePhaseChange(phase)

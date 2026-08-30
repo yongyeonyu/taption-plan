@@ -18,6 +18,7 @@ struct SensorReadingsLoadResult: Equatable, Sendable {
 struct PlanDayDataSnapshot: Equatable, Sendable {
     let day: Date
     let sourceRevision: UInt64
+    let projectionVersion: UInt64
     let sourceUpdatedAt: Date
     let actuals: [ActualRecord]
     let places: [PlaceStay]
@@ -29,6 +30,7 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
         day: Date,
         sourceRevision: UInt64,
         sourceUpdatedAt: Date,
+        projectionVersion: UInt64 = TaptionPlanV3Store.projectionVersion,
         actuals: [ActualRecord],
         places: [PlaceStay],
         travel: [TravelSegment],
@@ -37,6 +39,7 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
     ) {
         self.day = day
         self.sourceRevision = sourceRevision
+        self.projectionVersion = projectionVersion
         self.sourceUpdatedAt = sourceUpdatedAt
         self.actuals = actuals
         self.places = places
@@ -677,6 +680,9 @@ final class AppModel {
         AppleWatchSensorActivityArchive?
     @ObservationIgnored private let rawDeviceDataArchive:
         RawDeviceDataDayArchive?
+    @ObservationIgnored private let dayDatabase: PlanDayDatabase?
+    @ObservationIgnored private let dayLoadCoordinator: PlanDayLoadCoordinator?
+    @ObservationIgnored private var dayDatabaseMigrationTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapPreparationTask: Task<Void, Never>?
     @ObservationIgnored private var foregroundPreparationTask:
@@ -889,6 +895,11 @@ final class AppModel {
         self.watchSensorArchive = try?
             AppleWatchSensorActivityArchive.applicationSupport()
         self.rawDeviceDataArchive = rawArchive
+        let dayDatabase = try? PlanDayDatabase.applicationSupport()
+        self.dayDatabase = dayDatabase
+        self.dayLoadCoordinator = dayDatabase.map {
+            PlanDayLoadCoordinator(database: $0)
+        }
         let watchReceipt = appleWatchDataReceiptStore.load()
         self.appleWatchLastDataReceivedAt = watchReceipt.latestDataAt
         self.appleWatchReceivedDataKinds = watchReceipt.recentKinds()
@@ -906,6 +917,7 @@ final class AppModel {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.sensorStorageErrorDescription = nil
+                self.dayLoadCoordinator?.invalidate(day: reading.timestamp)
                 self.handleLiveSensorReading(reading)
             }
         }
@@ -2181,7 +2193,62 @@ final class AppModel {
             ).scheduleEquivalent
             selectedCatCoat = CatCoat(catStyle: loaded.settings.catStyle)
             await applyPendingWidgetCommands(repositoryAlreadyLoaded: true)
+            scheduleDayDatabaseMigration()
             bootstrapPreparationTask = nil
+        }
+    }
+
+    private func scheduleDayDatabaseMigration() {
+        guard dayDatabaseMigrationTask == nil,
+              let dayDatabase,
+              let sensorService else { return }
+        let source = snapshot
+        let sourceRevision = snapshotRevision
+        let legacyRawDeviceArchive = self.rawDeviceDataArchive
+        let legacyWatchSensorArchive = self.watchSensorArchive
+        dayDatabaseMigrationTask = Task { @MainActor [weak self, dayDatabase, sensorService, legacyRawDeviceArchive, legacyWatchSensorArchive, source, sourceRevision] in
+            defer { self?.dayDatabaseMigrationTask = nil }
+            do {
+                guard let legacyRawDeviceArchive,
+                      let legacyWatchSensorArchive else {
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "day_database_migration_blocked",
+                        level: .error,
+                        fields: ["reason": "legacy_archive_unavailable"]
+                    )
+                    return
+                }
+                let readings = try await sensorService.allArchivedRouteReadings()
+                let watchSummaries = try await legacyWatchSensorArchive.allSummaries()
+                let rawEnvelopes = try await legacyRawDeviceArchive.allEnvelopes()
+                guard !Task.isCancelled,
+                      self?.snapshotRevision == sourceRevision else { return }
+                if let report = try await dayDatabase.migrateLegacyIfNeeded(
+                    source: source,
+                    sourceRevision: sourceRevision,
+                    readings: readings,
+                    watchSummaries: watchSummaries,
+                    rawEnvelopes: rawEnvelopes
+                ) {
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "day_database_migration_completed",
+                        fields: [
+                            "days": String(report.dayCount),
+                            "iphone_events": String(report.iPhoneEventCount),
+                            "watch_events": String(report.watchEventCount),
+                            "exact_digest_days": String(report.exactDigestDayCount),
+                        ]
+                    )
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "day_database_migration_failed",
+                    level: .error,
+                    fields: ["error": String(describing: type(of: error))]
+                )
+            }
         }
     }
 
@@ -2211,6 +2278,10 @@ final class AppModel {
             setExternalPrivacyLocked(false)
         }
         scheduleForegroundPreparation()
+    }
+
+    func handleMemoryPressure() {
+        dayLoadCoordinator?.handleMemoryPressure()
     }
 
     private func scheduleForegroundPreparation() {
@@ -5551,6 +5622,10 @@ final class AppModel {
                     + error.localizedDescription
             }
         }
+        if let dayDatabase {
+            try? await dayDatabase.recordWatchSummary(summary)
+        }
+        dayLoadCoordinator?.invalidate(day: summary.endedAt)
         let atHome = isWatchSummaryAtHome(summary)
         let resolution = WatchActivityPersonalizationEngine.resolve(
             summary,
@@ -6874,6 +6949,41 @@ final class AppModel {
     func planDayDataSnapshot(for date: Date) async -> PlanDayDataSnapshot {
         let source = snapshot
         let sourceRevision = snapshotRevision
+        if let dayLoadCoordinator {
+            let snapshot = await dayLoadCoordinator.load(
+                day: date,
+                source: source,
+                sourceRevision: sourceRevision,
+                sensorLoader: { [weak self] day in
+                    guard let self else {
+                        return SensorReadingsLoadResult(
+                            readings: [],
+                            isComplete: false
+                        )
+                    }
+                    return await self.sensorReadingsLoadResult(
+                        in: self.daySpan(containing: day)
+                    )
+                }
+            )
+            dayLoadCoordinator.prefetchMonth(
+                containing: date,
+                source: source,
+                sourceRevision: sourceRevision,
+                sensorLoader: { [weak self] day in
+                    guard let self else {
+                        return SensorReadingsLoadResult(
+                            readings: [],
+                            isComplete: false
+                        )
+                    }
+                    return await self.sensorReadingsLoadResult(
+                        in: self.daySpan(containing: day)
+                    )
+                }
+            )
+            return snapshot
+        }
         let result = await sensorReadingsLoadResult(
             in: daySpan(containing: date)
         )
@@ -6894,7 +7004,15 @@ final class AppModel {
     }
 
     func sensorReadings(in span: TimeSpan) async -> [SensorReading] {
-        await sensorReadingsLoadResult(in: span).readings
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: span.start)
+        if dayLoadCoordinator != nil,
+           let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart),
+           span.start == dayStart,
+           span.end == dayEnd {
+            return await planDayDataSnapshot(for: dayStart).readings
+        }
+        return await sensorReadingsLoadResult(in: span).readings
     }
 
     private func photoBackfillReadings(

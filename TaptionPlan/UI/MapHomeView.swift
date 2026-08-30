@@ -1,6 +1,7 @@
 import CoreLocation
 import MapKit
 import Observation
+import OSLog
 import SwiftUI
 import UIKit
 import TaptionPlanCore
@@ -106,6 +107,7 @@ enum MapHomeLayerPriority {
     static let map: Double = 0
     static let stickman: Double = 1
     static let sidebar: Double = 2
+    static let loading: Double = 3
     static let search: Double = 4
     static let menu: Double = 6
     static let header: Double = 8
@@ -1196,6 +1198,10 @@ struct MapHomeRouteReadingsTaskKey: Hashable {
 
 @MainActor
 struct MapHomeView: View {
+    private static let dayViewSignpostLog = OSLog(
+        subsystem: "com.taption.plan",
+        category: .pointsOfInterest
+    )
     @Environment(\.scenePhase) private var scenePhase
     @Bindable private var model: AppModel
     @Bindable private var proAccess: TaptionProAccessController
@@ -1540,6 +1546,22 @@ struct MapHomeView: View {
                     .zIndex(MapHomeLayerPriority.sidebar)
             }
 
+            if isDayDataLoading {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(language.text("날짜 데이터 불러오는 중", "Loading day data"))
+                }
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.tpSurface.opacity(0.92), in: Capsule())
+                .padding(.top, topOverlayHeight + 8)
+                .allowsHitTesting(false)
+                .zIndex(MapHomeLayerPriority.loading)
+            }
+
             VStack(spacing: 0) {
                 Color.clear
                     .frame(height: Layout.headerVisibleHeight + 8)
@@ -1807,29 +1829,11 @@ struct MapHomeView: View {
 
             if dayChanged {
                 hasUserAdjustedMap = false
-                dayDataSnapshot = nil
-                routeReadings = []
                 routeReadingsLoadState = .loading(
                     MapHomeRouteReadingsPolicy.dayKey(for: newDate)
                 )
-                normalizedRouteReadings = []
-                historicalPlaybackReadings = []
-                displayRouteReadings = []
-                routeProjection = nil
-                wbsPlaybackProjection = nil
-                hasDeferredWBSPlaybackRefresh = false
-                timelineRouteOverlays = []
-                cachedTemporaryLocations = []
-                expectedRouteOverlays = []
-                wbsGeneratedRouteOverlays = []
-                pendingForecastRouteState = nil
-                historicalPlaybackPoint = nil
-                nearbyTransitPlaces = []
                 transitBoardingReadingsRevision &+= 1
                 nearbyTransitPlacesRevision &+= 1
-                prepareRouteProjectionReadings()
-                refreshRouteProjection()
-                refreshHistoricalPlaybackPoint()
             } else {
                 prepareRouteProjectionReadings()
                 refreshRouteProjection()
@@ -5280,11 +5284,22 @@ struct MapHomeView: View {
     private var currentDayDataSnapshot: PlanDayDataSnapshot? {
         guard let dayDataSnapshot,
               dayDataSnapshot.sourceRevision == model.snapshotRevision,
+              dayDataSnapshot.projectionVersion == TaptionPlanV3Store.projectionVersion,
               Calendar.autoupdatingCurrent.isDate(
                   dayDataSnapshot.day,
                   inSameDayAs: model.selectedDate
               ) else { return nil }
         return dayDataSnapshot
+    }
+
+    private var isDayDataLoading: Bool {
+        guard case let .loading(day) = routeReadingsLoadState else {
+            return false
+        }
+        return Calendar.autoupdatingCurrent.isDate(
+            day,
+            inSameDayAs: model.selectedDate
+        )
     }
 
     private var currentDayReadings: [SensorReading] {
@@ -5870,6 +5885,21 @@ struct MapHomeView: View {
     }
 
     private func refreshRouteReadings(for date: Date) async {
+        let viewSignpostID = OSSignpostID(log: Self.dayViewSignpostLog)
+        os_signpost(
+            .begin,
+            log: Self.dayViewSignpostLog,
+            name: "day_view",
+            signpostID: viewSignpostID
+        )
+        defer {
+            os_signpost(
+                .end,
+                log: Self.dayViewSignpostLog,
+                name: "day_view",
+                signpostID: viewSignpostID
+            )
+        }
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: date)
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)

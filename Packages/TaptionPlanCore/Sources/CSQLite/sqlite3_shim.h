@@ -19,10 +19,12 @@ int sqlite3_wal_checkpoint_v2(sqlite3 *, const char *, int, int *, int *);
 int sqlite3_bind_text(sqlite3_stmt *, int, const char *, int, sqlite3_destructor_type);
 int sqlite3_bind_int64(sqlite3_stmt *, int, long long);
 int sqlite3_bind_double(sqlite3_stmt *, int, double);
+int sqlite3_bind_null(sqlite3_stmt *, int);
 int sqlite3_bind_blob(sqlite3_stmt *, int, const void *, int, sqlite3_destructor_type);
 const unsigned char *sqlite3_column_text(sqlite3_stmt *, int);
 long long sqlite3_column_int64(sqlite3_stmt *, int);
 double sqlite3_column_double(sqlite3_stmt *, int);
+int sqlite3_column_type(sqlite3_stmt *, int);
 const void *sqlite3_column_blob(sqlite3_stmt *, int);
 int sqlite3_column_bytes(sqlite3_stmt *, int);
 
@@ -54,9 +56,11 @@ int sqlite3_column_bytes(sqlite3_stmt *, int);
 #define SQLITE_NOTADB 26
 #define SQLITE_ROW 100
 #define SQLITE_DONE 101
+#define SQLITE_OPEN_READONLY 0x00000001
 #define SQLITE_OPEN_READWRITE 0x00000002
 #define SQLITE_OPEN_CREATE 0x00000004
 #define SQLITE_OPEN_FULLMUTEX 0x00010000
 #define SQLITE_CHECKPOINT_PASSIVE 0
+#define SQLITE_NULL 5
 
 #endif
