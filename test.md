@@ -2,6 +2,16 @@
 
 구현·빌드·업로드·설치·실행·실제 화면 터치는 서로 다른 게이트로 기록한다. 설치·실행만으로 UI 동작을 완료 처리하지 않는다.
 
+## 2026-08-30 RELWSYNC2A · Apple Watch 동기화 수정 릴리스
+
+- 변경: Watch의 수동 동기화가 로컬 센서·HealthKit drain과 대기 큐 전송을 수행하고, iPhone의 Watch v3 병합 실패는 `watch_day_database_merge_failed` 진단 이벤트로 남긴다. 원본 데이터·provenance는 변경하지 않았다.
+- 자동 검증: `swift test --package-path Packages/TaptionPlanCore` 36/36 통과. 직렬 Plan 전체 XCTest 824/824 통과, 결과 bundle `/private/tmp/taption-plan-relsync2a-ios-serial.xcresult`. iOS·Watch Debug build exit 0, `git diff --check` 통과. 병렬 실행에서만 공유 시뮬레이터 상태로 `testActivitySectionSaveOverridesTravelAndSupportsImmediateReedit`가 3회 실패했고, 동일 테스트 직렬 실행 및 직렬 전체 실행은 통과했다.
+- Release archive/export: `/private/tmp/taption-plan-relsync2a-v117.xcarchive`, `/private/tmp/taption-plan-relsync2a-v117-export/TaptionPlan.ipa`; IPA `com.taption.plan / 1.0 / 117`, `unzip -t`·`codesign --verify --deep --strict` 통과, SHA-256 `3a1eea30bd7bc7fcdfde2bd7bc8135da4f472be416987fc56ffb548acc745e65`.
+- TestFlight: 업로드 성공. Delivery UUID `40d3c4ec-d471-4d0e-bc06-6bd4117610d5`; build `117`, processing `VALID`, audience `APP_STORE_ELIGIBLE`, App Store Connect 등록 확인.
+- 내부 테스트 readback: `TP Taption Plan 내부 테스트` 그룹 `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`가 internal group으로 확인됐고, 그룹 builds 목록에 build `117`이 `VALID`로 노출됐다. 그룹 테스터 화면 1명, state `INSTALLED` 노출을 확인했다.
+- 커밋·원격: `1edd1007f556775bed29429521e0a7c5eb7eef29`가 local `HEAD`와 `origin/main`에 동일하고 Plan worktree clean이다. WBS checkout의 기존 dirty 변경은 건드리지 않았다.
+- 실기기 게이트: 이번 요청은 TestFlight 빌드업 범위이며 iPhone 14 Pro·Apple Watch 설치·실제 화면·터치는 수행하지 않았다. 등록된 실기기는 `unavailable` 상태이므로 해당 게이트는 미완료로 유지한다.
+
 ## 2026-08-30 WSYNC83022 · Apple Watch 동기화 점검
 
 - 원인: Watch 화면의 `지금 가져오기`가 Watch 센서/HealthKit drain을 호출하지 않고 iPhone 설정 payload 재전송(`refreshRequest`)만 수행했다. 또한 iPhone v3 Watch 병합 오류가 `try?`로 조용히 버려져 원인 확인이 어려웠다.

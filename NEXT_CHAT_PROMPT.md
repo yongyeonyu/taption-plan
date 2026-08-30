@@ -1,5 +1,14 @@
 # Taption Plan 다음 채팅 인계 프롬프트
 
+## 2026-08-30 RELWSYNC2A · Apple Watch 동기화 수정 릴리스 완료
+
+- Watch 수동 동기화가 로컬 센서·HealthKit drain과 대기 큐 전송을 수행하도록 수정했고, iPhone v3 병합 실패는 진단 이벤트로 기록한다. 원본 iPhone·Apple Watch record와 provenance는 보존했다.
+- `swift test --package-path Packages/TaptionPlanCore` 36/36, 직렬 Plan 전체 XCTest 824/824, iOS·Watch Debug build, `git diff --check`가 통과했다. 병렬 XCTest의 공유 시뮬레이터 간섭 실패는 직렬 재실행에서 통과했다.
+- Release archive/export: `/private/tmp/taption-plan-relsync2a-v117.xcarchive`, `/private/tmp/taption-plan-relsync2a-v117-export/TaptionPlan.ipa`; `com.taption.plan / 1.0 / 117`, IPA SHA-256 `3a1eea30bd7bc7fcdfde2bd7bc8135da4f472be416987fc56ffb548acc745e65`, 서명 검증 통과.
+- TestFlight Delivery UUID `40d3c4ec-d471-4d0e-bc06-6bd4117610d5`; build 117 `VALID / APP_STORE_ELIGIBLE`. `TP Taption Plan 내부 테스트` 그룹에 연결했고 그룹 builds 목록과 테스터 화면(1명, `INSTALLED`)에 노출됨을 readback했다.
+- 커밋 `1edd1007f556775bed29429521e0a7c5eb7eef29`가 `origin/main`과 일치하고 Plan worktree는 clean이다. WBS checkout의 기존 dirty 파일은 보존했다.
+- iPhone 14 Pro·Apple Watch 설치/실제 화면/터치는 이번 요청 범위 밖이며 실기기 `unavailable`로 미검증 상태다.
+
 ## 2026-08-30 REVUP83021 · 코드리뷰 및 TestFlight 전달 인계
 
 이번 실행은 DB·날짜 로딩·Watch 저장 경계를 다방면 리뷰하고, 원본 iPhone·Apple Watch record/provenance와 WBS checkout을 건드리지 않은 채 최소 수정한 뒤 TestFlight build 116을 전달하는 것이다.
