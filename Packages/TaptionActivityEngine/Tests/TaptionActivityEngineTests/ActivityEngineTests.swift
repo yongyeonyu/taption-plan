@@ -41,4 +41,57 @@ final class ActivityEngineTests: XCTestCase {
         XCTAssertEqual(incremental.segments, full.segments)
         XCTAssertEqual(incremental.evidence, full.evidence)
     }
+
+    func testWatchAndPhoneEvidenceFuseWithWatchBehaviorPriority() {
+        let phoneID = UUID(uuidString: "00000000-0000-0000-0000-000000000011")!
+        let watchID = UUID(uuidString: "00000000-0000-0000-0000-000000000012")!
+        let phone = ActivitySensorEvidence(
+            id: phoneID,
+            timestamp: base,
+            motion: .walking,
+            speedMetersPerSecond: 1.4,
+            horizontalAccuracyMeters: 5,
+            behaviorHint: "walking",
+            confidence: 0.61,
+            source: .iPhone
+        )
+        let watch = ActivitySensorEvidence(
+            id: watchID,
+            timestamp: base.addingTimeInterval(1),
+            motion: .stationary,
+            behaviorHint: "sleep",
+            confidence: 0.92,
+            source: .appleWatch
+        )
+
+        let fused = ActivitySensorEvidenceFusion.fuse([phone, watch])
+
+        XCTAssertEqual(fused.count, 1)
+        XCTAssertEqual(fused.first?.source, .combined)
+        XCTAssertEqual(fused.first?.motion, .stationary)
+        XCTAssertEqual(fused.first?.behaviorHint, "sleep")
+        XCTAssertEqual(fused.first?.speedMetersPerSecond, 1.4)
+        XCTAssertTrue(fused.first?.evidence.contains("Apple Watch + iPhone 조합") == true)
+    }
+
+    func testProjectionPreservesLockedOverrideAndCanonicalMajorIDs() {
+        let evidence = ActivitySensorEvidence(timestamp: base, motion: .stationary)
+        let override = ActivityClassificationOverride(
+            span: ActivityTimeSpan(start: base, end: base.addingTimeInterval(10)),
+            majorCategoryID: "legacy-category",
+            title: "사용자 분류",
+            isLocked: true
+        )
+
+        let projection = ActivityClassificationProjection(
+            evidence: [evidence],
+            overrides: [override]
+        )
+        let canonicalIDs = Set(ActivityTaxonomy.default.majors.map(\.id))
+
+        XCTAssertEqual(projection.version, ActivityClassificationProjection.currentVersion)
+        XCTAssertEqual(projection.state.overrides.first?.majorCategoryID, "activity")
+        XCTAssertTrue(projection.state.overrides.first?.isLocked == true)
+        XCTAssertTrue(projection.majorCategoryIDs.allSatisfy { canonicalIDs.contains($0) })
+    }
 }

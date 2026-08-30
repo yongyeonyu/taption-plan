@@ -2,6 +2,51 @@
 
 구현·빌드·업로드·설치·실행·실제 화면 터치는 서로 다른 게이트로 기록한다. 설치·실행만으로 UI 동작을 완료 처리하지 않는다.
 
+## 2026-08-30 BTCH830Q16 · temp.md 전체 실행 자동 검증
+
+- `SENS830Q14`: `ActivitySensorEvidenceFusion`이 겹치는 Watch+iPhone evidence를 하나의 결합 projection으로 만들고 Watch 행동·confidence를 우선한다. `ActivityClassificationProjection`은 version 1과 기존 9개 major ID만 허용하며 invalid major를 `activity`로 파생 정규화하고 locked override를 보존한다. Plan adapter는 이동 알고리즘 결과가 없는 Watch 이동수단 hint를 major/detail로 확정하지 않는다.
+- `WBSI830Q08`: `RoutePlaybackProjection`이 누적거리 보간, 1% look-ahead 8방향, `floor(progress × 24)` frame index, 동일 route/marker coordinate를 제공하고 잘못된 좌표를 파생 projection에서 제외한다.
+- `swift test --package-path Packages/TaptionActivityEngine`: 6건 통과.
+- `swift test --package-path Packages/TaptionRouteEngine`: 14건 통과.
+- `swift test --package-path Packages/TaptionPlanCore`: 30건 통과.
+- `xcodebuild test ... -only-testing:TaptionPlanTests/TaptionActivityEngineAdapterTests`: 10건 통과. 결과 bundle: `/private/tmp/taption-plan-btch830q16-uit30-tests/Logs/Test/Test-TaptionPlan-2026.08.30_12-20-02-+0900.xcresult`
+- 잠금 분류 보강 후 동일 adapter XCTest 재실행: 10건 통과. 결과 bundle: `/private/tmp/taption-plan-btch830q16-final-tests3/Logs/Test/Test-TaptionPlan-2026.08.30_12-31-47-+0900.xcresult`
+- 관련 지도·재생·사이드바·졸라맨·분류 회귀 XCTest: 최종 소스에서 688건 통과. 결과 bundle: `/private/tmp/taption-plan-btch830q16-regression-final.xcresult`
+- 현재 소스 Debug 빌드: iOS `/private/tmp/taption-plan-btch830q16-ios-build2/Build/Products/Debug-iphoneos/TaptionPlan.app`, Watch `/private/tmp/taption-plan-btch830q16-watch-build2/Build/Products/Debug-watchos/TaptionPlanWatch.app`, Watch Widget `/private/tmp/taption-plan-btch830q16-watch-build2/Build/Products/Debug-watchos/TaptionPlanWatchWidget.appex`; 모두 `1.0 (115)` readback.
+- `git diff --check`: 통과. WBS checkout 상태는 기존 `TaptionTripUITests/TaptionTripUITests.swift`, `temp.md` dirty를 그대로 보존했다.
+- 원본 보호: iPhone·Apple Watch SensorReading과 provenance 저장 모델은 수정하지 않고 복사 기반 evidence/projection만 추가했다. WBS checkout도 수정하지 않았다.
+- 실기기 게이트: iPhone 14 Pro·Apple Watch의 provenance/실제 화면, 목요일 경로 재생·졸라맨·지도 비율·좌우 핸들·Dynamic Island는 이번 실행에서 확인하지 못해 미완료로 유지한다.
+
+## 2026-08-30 MAPM830Q15 · 지도 롱프레스 추가 메뉴
+
+- 변경: Apple MapKit 및 호환 벡터 지도 롱프레스에서 `위치 추가`와 `스티커 메모 추가` 선택 메뉴를 표시한다. 위치는 기존 위치 추가 sheet로, 스티커 메모는 롱프레스한 좌표로 기존 편집 sheet에 연결한다.
+- 메모 모드: 햄버거 메뉴의 `메모 모드` 토글을 제거하고 지도 스티커 선택·편집을 항상 활성화했다. 기존 메모 데이터와 저장 형식은 변경하지 않았다.
+- 자동 검증: `TimeScaleTests.testMapLongPressOffersLocationAndStickerMemoActions` 및 `TimeScaleTests` 전체 통과. `git diff --check` 통과.
+- 실기기 게이트: iPhone에서 실제 롱프레스·메뉴 선택·위치 저장·스티커 좌표 저장 화면은 이번 실행에서 확인하지 못해 미완료로 남긴다.
+
+## 2026-08-30 SLPW830Q13 · Apple Watch 확정 수면 우선·졸라맨 행동
+
+- 변경: `SleepSession`의 Apple Watch provenance와 실제 수면 시간으로 불변 파생 확정 상태를 만들고, HealthKit에서 파생된 수면 ActualRecord source도 `.appleWatch`로 보존했다. 지도 졸라맨은 확정 수면을 이동 경로·센서·재생 모드보다 먼저 `.sleeping`으로 표시하며, 명시적 수동 수정은 유지한다.
+- 원본 보호: iPhone·Apple Watch raw record, HealthKit source metadata, provenance payload는 수정하지 않았다.
+- 자동 검증: `MapHomeStickmanTests` 전체 통과, `FeatureEngineTests` 전체 통과, `TimeScaleTests` 전체 통과. Apple Watch 수면이 지하철 경로보다 우선하고 `.sleeping`으로 매핑되는 테스트와 iPhone-only sleep 비우선 테스트를 포함한다.
+- 패키지 검증: `swift test --package-path Packages/TaptionPlanCore` 성공.
+- 빌드 검증: TaptionPlan Debug simulator build 성공, TaptionPlanWatch Debug generic watchOS build 성공.
+- 실기기 게이트: 연결된 Apple Watch의 수면 provenance readback과 해당 시각의 실제 졸라맨 화면 확인은 이번 실행에서 수행하지 못해 미완료로 남긴다.
+
+## 2026-08-30 IPHN830Q12 · 수정본 iPhone 재설치
+
+- 현재 워크트리 기준 개발 서명 Debug build 성공: `/private/tmp/taption-plan-iphn830q12-device/Build/Products/Debug-iphoneos/TaptionPlan.app`
+- iPhone 14 Pro 설치·실행 성공: `com.taption.plan`
+- 앱 목록 readback: `Taption Plan / 1.0 / 115`
+
+## 2026-08-30 DRAG830Q11 · 오른쪽 사이드바 즉시 드래그
+
+- 원인: Plan 핸들의 `minimumDistance = 1`과 일반 탭 제스처 조합이 첫 드래그 샘플을 지연시킬 수 있었다. WBS `ConnectorView`의 핸들은 `DragGesture(minimumDistance: 0)`을 고우선순위로 사용하고 탭을 동시 처리한다.
+- 수정: Plan 좌우 선택 핸들의 드래그 임계값을 `0`으로 변경하고 단일 탭을 `simultaneousGesture`로 변경했다. 오른쪽 터치 높이 `132pt`, 시각 크기 `44pt`, 비중첩 hit zone은 유지했다.
+- iPhone 14 Pro `TimeScaleTests`: 전체 선택 테스트 통과. `testMapHomeTimeSidebarHandleStartsOnTouchLikeWBS`, 오른쪽 1.5배 영역, 양쪽 비중첩 영역 포함.
+- iPhone 14 Pro 설치·실행 readback: `Taption Plan / com.taption.plan / 1.0 / 115` 성공.
+- 실제 화면·손가락 드래그: iPhone 미러링이 `iPhone을 찾을 수 없음`을 표시해 미완료. 코드·자동 테스트·설치 성공을 실제 터치 완료로 승격하지 않는다.
+
 ## 2026-08-30 RELD830Q10 · main/TestFlight/iPhone 전달
 
 - Plan 저장소 `main`은 커밋·원격 푸시 후 clean 상태이며 WBS 저장소의 dirty 변경은 건드리지 않았다.

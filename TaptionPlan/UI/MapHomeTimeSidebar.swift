@@ -1387,9 +1387,11 @@ struct MapHomeTimeSidebar: View {
                         visibleWindow: visibleWindow
                     )
                 )
-                .onTapGesture {
-                    publish(minute)
-                }
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        publish(minute)
+                    }
+                )
                 .simultaneousGesture(
                     TapGesture(count: 2).onEnded {
                         onSectionEdit?(minute)
@@ -1415,9 +1417,11 @@ struct MapHomeTimeSidebar: View {
                         visibleWindow: visibleWindow
                     )
                 )
-                .onTapGesture {
-                    publish(minute)
-                }
+                .simultaneousGesture(
+                    TapGesture().onEnded {
+                        publish(minute)
+                    }
+                )
                 .simultaneousGesture(
                     TapGesture(count: 2).onEnded {
                         onSectionEdit?(minute)
@@ -1856,7 +1860,7 @@ enum MapHomeTimeSidebarMath {
     static let handleDoubleTapHitScale: CGFloat = 1.5
     static let selectionTimeBlockHitWidth: CGFloat =
         selectionTimeBlockWidth * handleDoubleTapHitScale
-    static let handleDragMinimumDistance: CGFloat = 1
+    static let handleDragMinimumDistance: CGFloat = 0
     static let handleDragHitHeight: CGFloat = 88
     static let trailingHandleDragHitHeight: CGFloat = handleDragHitHeight * 1.5
     static let handleLaneWidth: CGFloat = 69

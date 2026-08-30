@@ -1,5 +1,13 @@
 # Taption Plan 다음 채팅 인계 프롬프트
 
+## 2026-08-30 BTCH830Q16 · temp.md 전체 실행 최신 상태
+
+- `SENS830Q14`를 구현했다. Watch+iPhone가 겹치는 시각에는 Watch 행동을 우선한 결합 evidence를 사용하고, Watch가 없으면 iPhone evidence만 사용한다. 이동수단 상세는 Plan 이동 알고리즘 결과가 있을 때만 projection한다.
+- `ActivityClassificationProjection` version 1에 기존 9개 major ID와 manual/locked override 보존 경계를 추가했다. raw iPhone·Apple Watch reading과 provenance는 변경하지 않았다.
+- `RoutePlaybackProjection`에 누적거리 재생, 1% look-ahead 8방향, 24프레임 결정 index, route/marker 동일 좌표 projection을 추가했다.
+- 자동 검증: ActivityEngine 6건, RouteEngine 14건, PlanCore 30건, 잠금 분류 보강 후 `TaptionActivityEngineAdapterTests` 10건, 관련 지도·재생·사이드바·졸라맨·분류 회귀 688건 통과. 최종 회귀 결과 bundle: `/private/tmp/taption-plan-btch830q16-regression-final.xcresult`. 최종 소스 Debug 빌드는 iOS `/private/tmp/taption-plan-btch830q16-ios-build2/Build/Products/Debug-iphoneos/TaptionPlan.app`, Watch `/private/tmp/taption-plan-btch830q16-watch-build2/Build/Products/Debug-watchos/TaptionPlanWatch.app`, Widget `/private/tmp/taption-plan-btch830q16-watch-build2/Build/Products/Debug-watchos/TaptionPlanWatchWidget.appex`에서 `1.0 (115)`를 readback했다.
+- 실기기 iPhone/Apple Watch provenance·화면, 목요일 경로 재생·졸라맨·지도 비율·좌우 핸들·Dynamic Island는 미완료로 유지한다. 추정으로 완료 처리하지 않는다.
+
 Taption Plan 작업을 이어간다. 작업 디렉터리는 `/Users/u_mo_c/Documents/taption plan`이다.
 
 ## 2026-08-30 RELD830Q10 · 전달 게이트 최신 기록

@@ -95,6 +95,20 @@ struct SleepSession: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+extension SleepSession {
+    /// Apple Watch sleep is a derived provenance check. The HealthKit sample
+    /// and its source metadata remain untouched.
+    var isAppleWatchConfirmed: Bool {
+        guard asleepDuration > 0 else { return false }
+        let provenance = sourceNames + segments.flatMap {
+            [$0.sourceName, $0.sourceBundleIdentifier, $0.deviceName ?? ""]
+        }
+        return provenance.contains {
+            $0.localizedCaseInsensitiveContains("watch")
+        }
+    }
+}
+
 // MARK: - Motion and pedometer
 
 struct SensorVector3: Codable, Hashable, Sendable {

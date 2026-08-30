@@ -9,14 +9,16 @@ struct TaptionActivityEngineAdapterTests {
     private func reading(
         _ seconds: TimeInterval,
         motion: MotionKind = .walking,
-        behavior: String? = nil
+        behavior: String? = nil,
+        sourceDevice: TrackingDevice? = nil
     ) -> SensorReading {
         SensorReading(
             timestamp: base.addingTimeInterval(seconds),
             motion: motion,
             behavior: behavior,
             behaviorConfidenceScore: behavior == nil ? nil : 0.9,
-            behaviorEvidence: behavior == nil ? nil : ["Watch"]
+            behaviorEvidence: behavior == nil ? nil : ["Watch"],
+            sourceDevice: sourceDevice
         )
     }
 
@@ -28,6 +30,60 @@ struct TaptionActivityEngineAdapterTests {
         #expect(result.segments.first?.detailID == "movement.walking")
         #expect(result.segments.first?.majorCategoryID == "movement")
         #expect(result.majorCategoryIDs == ["movement"])
+    }
+
+    @Test func watchAndIPhoneEvidenceIsCombinedBeforeMajorProjection() {
+        let result = TaptionActivityEngineAdapter.classify(
+            readings: [
+                reading(0, motion: .walking, behavior: "walking", sourceDevice: .iPhone),
+                reading(1, motion: .stationary, behavior: "sleep", sourceDevice: .appleWatch)
+            ]
+        )
+
+        #expect(result.state.evidence.count == 1)
+        #expect(result.state.evidence.first?.source == .combined)
+        #expect(result.segments.first?.majorCategoryID == "sleep")
+    }
+
+    @Test func movementMethodRequiresTravelAlgorithmResult() {
+        let watchTransitHint = [
+            reading(0, motion: .stationary, behavior: "subway", sourceDevice: .appleWatch)
+        ]
+        let withoutTravel = TaptionActivityEngineAdapter.classify(readings: watchTransitHint)
+        #expect(withoutTravel.segments.first?.majorCategoryID == "activity")
+
+        let travel = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(60)),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["이동 알고리즘"]
+        )
+        let withTravel = TaptionActivityEngineAdapter.classify(
+            readings: watchTransitHint,
+            travel: [travel]
+        )
+        #expect(withTravel.segments.first?.detailID == "movement.subway")
+    }
+
+    @Test func lockedAutomaticMajorCategorySurvivesSensorRefresh() {
+        let locked = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "work",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(60),
+            source: .motion,
+            behavior: "work",
+            isClassificationLocked: true
+        )
+        let result = TaptionActivityEngineAdapter.classify(
+            readings: [reading(0, motion: .walking)],
+            actuals: [locked]
+        )
+
+        #expect(result.segments.first?.majorCategoryID == "work")
+        #expect(result.state.overrides.first?.isLocked == true)
     }
 
     @Test func confirmedSleepSurvivesChangedActualUUIDAndSplitsAutomaticActivity() {

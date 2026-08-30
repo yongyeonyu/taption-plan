@@ -19132,6 +19132,101 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
+    func testAppleWatchConfirmedSleepOverridesTravelAndUsesSleepAction() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let twoHours = 2 * 60 * 60.0
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(twoHours))
+        let session = SleepSession(
+            id: UUID(),
+            span: span,
+            asleepDuration: twoHours,
+            awakeDuration: 0,
+            inBedDuration: twoHours,
+            stageDurations: [.core: twoHours],
+            sourceNames: ["HealthKit"],
+            segments: [
+                SleepSegment(
+                    stage: .core,
+                    span: span,
+                    sourceName: "HealthKit",
+                    deviceName: "Apple Watch"
+                )
+            ]
+        )
+        let subway = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 4_000,
+            confidence: .high,
+            evidence: []
+        )
+
+        XCTAssertTrue(session.isAppleWatchConfirmed)
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(30 * 60),
+                actuals: [],
+                travel: [subway],
+                places: [],
+                frequentPlaces: [],
+                sleepSessions: [session]
+            ),
+            .sleeping
+        )
+
+        let healthKitSleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: span.start,
+            endedAt: span.end,
+            source: .healthKit
+        )
+        let normalized = SleepActualReconciliationEngine.applying(
+            [healthKitSleep],
+            sessions: [session],
+            inside: span,
+            asOf: span.end
+        )
+        XCTAssertEqual(normalized.first?.source, .appleWatch)
+    }
+
+    func testIPhoneOnlySleepDoesNotClaimAppleWatchPriority() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let twoHours = 2 * 60 * 60.0
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(twoHours))
+        let session = SleepSession(
+            id: UUID(),
+            span: span,
+            asleepDuration: twoHours,
+            awakeDuration: 0,
+            inBedDuration: twoHours,
+            stageDurations: [.asleepUnspecified: twoHours],
+            sourceNames: ["iPhone"],
+            segments: []
+        )
+        let walking = TravelSegment(
+            mode: .walking,
+            span: span,
+            distanceMeters: 500,
+            confidence: .high,
+            evidence: []
+        )
+
+        XCTAssertFalse(session.isAppleWatchConfirmed)
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(30 * 60),
+                actuals: [],
+                travel: [walking],
+                places: [],
+                frequentPlaces: [],
+                sleepSessions: [session]
+            ),
+            .walking
+        )
+    }
+
     func testAnimationPhaseIsStableAndReduceMotionFreezesIt() {
         let date = Date(timeIntervalSinceReferenceDate: 800_000_000)
         let next = date.addingTimeInterval(MapHomeStickmanAnimationEngine.frameDuration)

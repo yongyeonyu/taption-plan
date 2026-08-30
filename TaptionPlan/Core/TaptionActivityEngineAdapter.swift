@@ -23,11 +23,12 @@ enum TaptionActivityEngineAdapter {
         actuals: [ActualRecord] = []
     ) -> TaptionActivityClassificationResult {
         let overrides = activityOverrides(corrections: corrections, actuals: actuals)
-        let state = engine.classifyState(
-            evidence(from: readings, travel: travel),
+        let projection = ActivityClassificationProjection(
+            engine: engine,
+            evidence: evidence(from: readings, travel: travel),
             overrides: overrides
         )
-        return TaptionActivityClassificationResult(state: state)
+        return TaptionActivityClassificationResult(state: projection.state)
     }
 
     static func evidence(
@@ -49,10 +50,14 @@ enum TaptionActivityEngineAdapter {
                 screenBrightness: reading.screenBrightness,
                 categoryHint: travelSegment == nil ? nil : "movement",
                 detailHint: detailHint,
-                behaviorHint: reading.behavior,
+                behaviorHint: behaviorHint(
+                    for: reading.behavior,
+                    hasMovementAlgorithmResult: travelSegment != nil
+                ),
                 confidence: reading.behaviorConfidenceScore,
                 evidence: reading.behaviorEvidence ?? [],
-                sequence: reading.sequence
+                sequence: reading.sequence,
+                source: reading.sourceDevice == .appleWatch ? .appleWatch : .iPhone
             )
         }
     }
@@ -69,20 +74,27 @@ enum TaptionActivityEngineAdapter {
         corrections: [UUID: ActivityCorrection],
         actuals: [ActualRecord]
     ) -> [ActivityClassificationOverride] {
-        actuals.compactMap { actual in
-            guard let correction = correction(for: actual, corrections: corrections) else { return nil }
-            let start = correction.startedAt ?? actual.startedAt
+        actuals.compactMap { actual -> ActivityClassificationOverride? in
+            let correction = correction(for: actual, corrections: corrections)
+            guard correction != nil || actual.isClassificationLocked || actual.manuallyCorrected else {
+                return nil
+            }
+            let start = correction?.startedAt ?? actual.startedAt
             let fallbackEnd = actual.endedAt ?? start.addingTimeInterval(1)
-            let end = max(start, correction.endedAt ?? fallbackEnd)
-            let detailID = detailID(for: correction)
+            let end = max(start, correction?.endedAt ?? fallbackEnd)
+            let categoryID = correction?.categoryID ?? actual.categoryID
+            let resolvedDetailID = correction.map { self.detailID(for: $0) }
+                ?? engine.taxonomy.detail(majorID: categoryID, behavior: actual.behavior ?? "")?.id
+                ?? engine.taxonomy.major(for: categoryID)?.details.first?.id
             return ActivityClassificationOverride(
                 id: actual.id,
                 span: ActivityTimeSpan(start: start, end: end),
-                majorCategoryID: correction.categoryID,
-                detailID: detailID,
-                title: correction.title,
-                behavior: correction.behavior,
-                updatedAt: actual.createdAt
+                majorCategoryID: categoryID,
+                detailID: resolvedDetailID,
+                title: correction?.title ?? actual.title,
+                behavior: correction?.behavior ?? actual.behavior,
+                updatedAt: actual.createdAt,
+                isLocked: actual.isClassificationLocked || actual.manuallyCorrected
             )
         }
     }
@@ -336,6 +348,24 @@ enum TaptionActivityEngineAdapter {
         case .automotive: return .automotive
         case .unknown: return .unknown
         }
+    }
+
+    private static func behaviorHint(
+        for value: String?,
+        hasMovementAlgorithmResult: Bool
+    ) -> String? {
+        guard let value else { return nil }
+        let normalized = value.localizedLowercase
+        let movementBehaviors = [
+            "walking", "running", "cycling", "automotive", "subway",
+            "publictransit", "stairsup", "stairsdown", "elevator",
+            "걷기", "걷", "달리기", "자전거", "자동차", "지하철",
+            "대중교통", "계단", "엘리베이터"
+        ]
+        if movementBehaviors.contains(where: { normalized.contains($0) }) {
+            return hasMovementAlgorithmResult ? value : nil
+        }
+        return value
     }
 
     private static func stableRecordID(

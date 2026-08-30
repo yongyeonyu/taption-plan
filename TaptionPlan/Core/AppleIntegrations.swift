@@ -633,7 +633,7 @@ final class AppleHealthService: @unchecked Sendable {
                 categoryID: "sleep",
                 startedAt: session.span.start,
                 endedAt: session.span.end,
-                source: .healthKit,
+                source: session.isAppleWatchConfirmed ? .appleWatch : .healthKit,
                 confidence: .high,
                 evidence: evidence,
                 modelVersion: "healthkit-sleep-v1"

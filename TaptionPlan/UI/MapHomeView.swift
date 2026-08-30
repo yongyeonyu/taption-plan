@@ -162,6 +162,13 @@ enum MapHomeLongPressRoutingMath {
     }
 }
 
+enum MapHomeLongPressAction: String, CaseIterable, Identifiable {
+    case location
+    case sticker
+
+    var id: Self { self }
+}
+
 enum MapHomeCameraZoomMath {
     static let minimumDistance: CLLocationDistance = 80
     static let maximumDistance: CLLocationDistance = 30_000_000
@@ -1208,7 +1215,7 @@ struct MapHomeView: View {
     @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
     @State private var isStickerMenuExpanded = false
-    @State private var isStickerMode = false
+    private let isStickerMode = true
     @State private var selectedMapStickerEditor: MapHomeStickerEditorTarget?
     @State private var selectedMapTargetID: String?
     @State private var isAppleWatchMenuExpanded = false
@@ -1238,6 +1245,8 @@ struct MapHomeView: View {
     @State private var mapSearchResults: [MapHomeSearchResult] = []
     @State private var selectedSearchPin: MapHomeSearchResult?
     @State private var isSearchPinMenuPresented = false
+    @State private var isLongPressMenuPresented = false
+    @State private var pendingLongPressCoordinate: CLLocationCoordinate2D?
     @State private var selectedUserLocation: MapHomeUserLocationSelection?
     @State private var selectedTransitBoardingCandidate: TransitBoardingCandidate?
     @State private var pendingUserLocationSelection: MapHomeUserLocationSelection?
@@ -1627,6 +1636,38 @@ struct MapHomeView: View {
         ) {
             searchPinSheet
         }
+        .confirmationDialog(
+            language.text("지도에 추가", "Add to map"),
+            isPresented: $isLongPressMenuPresented,
+            titleVisibility: .visible
+        ) {
+            Button {
+                routeLongPress(.location)
+            } label: {
+                Label(
+                    language.text("위치 추가", "Add location"),
+                    systemImage: "mappin.and.ellipse"
+                )
+            }
+            Button {
+                routeLongPress(.sticker)
+            } label: {
+                Label(
+                    language.text("스티커 메모 추가", "Add sticker memo"),
+                    systemImage: "note.text.badge.plus"
+                )
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {
+                pendingLongPressCoordinate = nil
+            }
+        } message: {
+            Text(
+                language.text(
+                    "길게 누른 위치에 추가할 항목을 선택하세요.",
+                    "Choose what to add at the long-pressed location."
+                )
+            )
+        }
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
                 .presentationDetents([.medium, .large])
@@ -1902,15 +1943,30 @@ struct MapHomeView: View {
     }
 
     private func addMapSticker() {
-        guard let point = mapCenterPoint,
-              let id = model.addMapSticker(
-                  title: language.text("새 지도 메모", "New map memo"),
-                  placement: .map,
-                  point: point,
-                  planID: nil,
-                  occurredAt: timelineDate(forMinute: Double(effectiveTimelineMinute))
-              ) else { return }
-        isStickerMode = true
+        guard let point = mapCenterPoint else { return }
+        addMapSticker(
+            at: CLLocationCoordinate2D(
+                latitude: point.latitude,
+                longitude: point.longitude
+            )
+        )
+    }
+
+    private func addMapSticker(at coordinate: CLLocationCoordinate2D) {
+        let point = GeoPoint(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        guard let id = model.addMapSticker(
+            title: language.text("새 지도 메모", "New map memo"),
+            placement: .map,
+            point: point,
+            planID: nil,
+            occurredAt: timelineDate(forMinute: Double(effectiveTimelineMinute))
+        ) else { return }
         isStickerMenuExpanded = false
         isMenuOpen = false
         selectedMapStickerEditor = .sticker(id)
@@ -1925,7 +1981,6 @@ struct MapHomeView: View {
             planID: selectedSchedulePlanIDs.first,
             occurredAt: date
         ) else { return }
-        isStickerMode = true
         isStickerMenuExpanded = false
         isMenuOpen = false
         selectedMapStickerEditor = .sticker(id)
@@ -1963,7 +2018,7 @@ struct MapHomeView: View {
             onViewportChange: applyVectorMapViewport,
             onSingleFingerPanBegan: handleUserMapPan,
             onSingleFingerPanEnded: finishDisplayedStickmanViewportProjection,
-            onLongPress: presentLocationAddition
+            onLongPress: presentMapLongPressMenu
         )
         .id(style.rawValue)
         .overlay {
@@ -2092,9 +2147,7 @@ struct MapHomeView: View {
             },
             onSingleFingerPanBegan: handleUserMapPan,
             onSingleFingerPanEnded: finishDisplayedStickmanViewportProjection,
-            onLongPress: { coordinate in
-                presentLocationAddition(at: coordinate)
-            },
+            onLongPress: presentMapLongPressMenu,
             onAnnotationSelected: handleAppleMapAnnotation
         )
         .simultaneousGesture(
@@ -2345,7 +2398,6 @@ struct MapHomeView: View {
         case .boarding(let candidate):
             selectedTransitBoardingCandidate = candidate
         case .sticker(let sticker):
-            guard isStickerMode else { return }
             selectedMapStickerEditor = .sticker(sticker.id)
         case .search:
             isSearchPinMenuPresented = true
@@ -2734,6 +2786,13 @@ struct MapHomeView: View {
         }
     }
 
+    private func presentMapLongPressMenu(at coordinate: CLLocationCoordinate2D) {
+        mapSearchResults = []
+        isMapSearchFocused = false
+        pendingLongPressCoordinate = coordinate
+        isLongPressMenuPresented = true
+    }
+
     private func presentLocationAddition(at coordinate: CLLocationCoordinate2D) {
         mapSearchResults = []
         isMapSearchFocused = false
@@ -2743,6 +2802,17 @@ struct MapHomeView: View {
             coordinate: coordinate
         )
         isSearchPinMenuPresented = true
+    }
+
+    private func routeLongPress(_ action: MapHomeLongPressAction) {
+        guard let coordinate = pendingLongPressCoordinate else { return }
+        pendingLongPressCoordinate = nil
+        switch action {
+        case .location:
+            presentLocationAddition(at: coordinate)
+        case .sticker:
+            addMapSticker(at: coordinate)
+        }
     }
 
     private var header: some View {
@@ -4413,22 +4483,6 @@ struct MapHomeView: View {
             .accessibilityLabel(language.text("메모 메뉴", "Memo menu"))
 
             if isStickerMenuExpanded {
-                Toggle(
-                    isOn: Binding(
-                        get: { isStickerMode },
-                        set: { isStickerMode = $0 }
-                    )
-                ) {
-                    Label(
-                        language.text("메모 모드", "Memo mode"),
-                        systemImage: "note.text"
-                    )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                }
-                .tint(Color.tpPastelRose)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-
                 Button {
                     addMapSticker()
                 } label: {
@@ -5684,6 +5738,15 @@ struct MapHomeView: View {
     }
 
     private var displayedStickmanAction: MapHomeStickmanAction {
+        let actuals = currentDayDataSnapshot?.actuals ?? model.snapshot.actuals
+        let sleepSessions = model.sleepSessions
+        if MapHomeStickmanActionResolver.hasAppleWatchConfirmedSleep(
+            at: displayedLocationDate,
+            actuals: actuals,
+            sleepSessions: sleepSessions
+        ) {
+            return .sleeping
+        }
         if let mode = wbsPlaybackFrame?.mode {
             return MapHomeStickmanActionResolver.action(for: mode)
         }
@@ -5692,13 +5755,14 @@ struct MapHomeView: View {
         }
         return MapHomeStickmanActionResolver.action(
             at: displayedLocationDate,
-            actuals: currentDayDataSnapshot?.actuals ?? model.snapshot.actuals,
+            actuals: actuals,
             travel: currentDayDataSnapshot?.travel ?? model.snapshot.travel,
             places: currentDayDataSnapshot?.places ?? model.snapshot.places,
             frequentPlaces: model.settings.frequentPlaces,
             readings: routeReadings
                 + model.liveRouteState.readings
-                + (model.latestSensorReading.map { [$0] } ?? [])
+                + (model.latestSensorReading.map { [$0] } ?? []),
+            sleepSessions: sleepSessions
         )
     }
 

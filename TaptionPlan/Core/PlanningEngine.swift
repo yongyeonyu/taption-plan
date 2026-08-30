@@ -880,6 +880,12 @@ enum SleepActualReconciliationEngine {
                 var normalized = actual
                 normalized.title = "수면"
                 normalized.categoryID = "sleep"
+                if sessions.contains(where: {
+                    $0.isAppleWatchConfirmed
+                        && $0.span.intersection(with: actualSpan) != nil
+                }) {
+                    normalized.source = .appleWatch
+                }
                 normalized.behavior = WatchBehaviorKind.sleep.rawValue
                 normalized.evidence = Array(
                     Set(actual.evidence + ["HealthKit 수면 기록"])
@@ -932,9 +938,9 @@ enum SleepActualReconciliationEngine {
                     categoryID: "sleep",
                     startedAt: visible.start,
                     endedAt: end,
-                    source: session.sourceNames.contains {
-                        $0.localizedCaseInsensitiveContains("watch")
-                    } ? .appleWatch : .healthKit,
+                    source: session.isAppleWatchConfirmed
+                        ? .appleWatch
+                        : .healthKit,
                     confidence: .high,
                     createdAt: visible.start,
                     behavior: WatchBehaviorKind.sleep.rawValue,

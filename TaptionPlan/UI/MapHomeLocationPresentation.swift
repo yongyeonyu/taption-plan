@@ -163,8 +163,27 @@ enum MapHomeStickmanActionResolver {
         travel: [TravelSegment],
         places: [PlaceStay],
         frequentPlaces: [FrequentPlace],
-        readings: [SensorReading] = []
+        readings: [SensorReading] = [],
+        sleepSessions: [SleepSession] = []
     ) -> MapHomeStickmanAction {
+        let activeActuals = actuals.compactMap { actual -> (ActualRecord, MapHomeStickmanAction)? in
+            guard active(actual, at: date),
+                  let action = action(for: actual) else { return nil }
+            return (actual, action)
+        }
+        let hasExplicitOverride = actuals.contains {
+            active($0, at: date)
+                && ($0.manuallyCorrected || $0.source == .manual)
+        }
+        if !hasExplicitOverride,
+           hasAppleWatchConfirmedSleep(
+               at: date,
+               actuals: actuals,
+               sleepSessions: sleepSessions
+           ) {
+            return .sleeping
+        }
+
         if let segment = travel
             .filter({ $0.span.contains(date) })
             .max(by: { $0.span.start < $1.span.start }) {
@@ -184,11 +203,6 @@ enum MapHomeStickmanActionResolver {
             return action(for: nearbyMovement.motion)
         }
 
-        let activeActuals = actuals.compactMap { actual -> (ActualRecord, MapHomeStickmanAction)? in
-            guard active(actual, at: date),
-                  let action = action(for: actual) else { return nil }
-            return (actual, action)
-        }
         if let candidate = activeActuals.max(by: higherPriority) {
             return candidate.1
         }
@@ -202,6 +216,29 @@ enum MapHomeStickmanActionResolver {
             }
         }
         return .activity
+    }
+
+    static func hasAppleWatchConfirmedSleep(
+        at date: Date,
+        actuals: [ActualRecord],
+        sleepSessions: [SleepSession]
+    ) -> Bool {
+        guard !actuals.contains(where: {
+            active($0, at: date)
+                && ($0.manuallyCorrected || $0.source == .manual)
+        }) else {
+            return false
+        }
+        if actuals.contains(where: {
+            active($0, at: date)
+                && $0.source == .appleWatch
+                && action(for: $0) == .sleeping
+        }) {
+            return true
+        }
+        return sleepSessions.contains {
+            $0.isAppleWatchConfirmed && $0.span.contains(date)
+        }
     }
 
     static func action(for mode: TravelMode) -> MapHomeStickmanAction {

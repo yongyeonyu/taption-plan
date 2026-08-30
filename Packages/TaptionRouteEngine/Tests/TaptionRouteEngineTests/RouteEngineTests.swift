@@ -80,4 +80,46 @@ struct RouteEngineTests {
         #expect(RoutePlaybackPolicy.rate(currentSpeedMetersPerSecond: 8, movementDetected: true) == 2)
         #expect(RoutePlaybackPolicy.duration(distanceMeters: 100, currentSpeedMetersPerSecond: 8, movementDetected: true) == 50)
     }
+
+    @Test func cumulativeDistancePlaybackUsesSameCoordinateForMarkerAndRoute() {
+        let projection = RoutePlaybackProjection(coordinates: [
+            .init(latitude: 37, longitude: 126),
+            .init(latitude: 37, longitude: 126.01),
+            .init(latitude: 37.01, longitude: 126.01)
+        ])
+        let firstLeg = projection.sample(progress: 0.25)
+        let secondLeg = projection.sample(progress: 0.75)
+
+        #expect(firstLeg?.coordinate.latitude == 37)
+        #expect(firstLeg?.coordinate.longitude ?? 0 > 126)
+        #expect(secondLeg?.coordinate.longitude == 126.01)
+        #expect(secondLeg?.coordinate.latitude ?? 0 > 37)
+        #expect(firstLeg?.distanceMeters ?? 0 < secondLeg?.distanceMeters ?? 0)
+    }
+
+    @Test func lookAheadQuantizesToEightDirectionsAndFrameIndexIsDeterministic() {
+        let projection = RoutePlaybackProjection(coordinates: [
+            .init(latitude: 37, longitude: 126),
+            .init(latitude: 37.01, longitude: 126)
+        ])
+        let first = projection.sample(progress: 0.5)
+        let same = projection.sample(progress: 0.5)
+        let end = projection.sample(progress: 1)
+
+        #expect(first?.direction == .north)
+        #expect(first == same)
+        #expect(first?.frameIndex == 12)
+        #expect(end?.frameIndex == 23)
+    }
+
+    @Test func invalidCoordinatesAreExcludedFromImmutableProjection() {
+        let projection = RoutePlaybackProjection(coordinates: [
+            .init(latitude: .nan, longitude: 126),
+            .init(latitude: 37, longitude: 126)
+        ])
+
+        #expect(projection.coordinates.count == 1)
+        #expect(projection.totalDistanceMeters == 0)
+        #expect(projection.sample(progress: 0.5)?.coordinate.latitude == 37)
+    }
 }

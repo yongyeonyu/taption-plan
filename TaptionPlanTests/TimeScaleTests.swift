@@ -801,6 +801,13 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapLongPressOffersLocationAndStickerMemoActions() {
+        XCTAssertEqual(
+            MapHomeLongPressAction.allCases.map(\.rawValue),
+            ["location", "sticker"]
+        )
+    }
+
     func testMapZoomReachesBothDistanceLimitsAndPreservesAnchor() {
         var distance: CLLocationDistance = 12_000
         for _ in 0..<100 {
@@ -2389,10 +2396,10 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertNil(rows[6].minuteComponent)
     }
 
-    func testMapHomeTimeSidebarHandleStartsWithinOnePoint() {
+    func testMapHomeTimeSidebarHandleStartsOnTouchLikeWBS() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.handleDragMinimumDistance,
-            1,
+            0,
             accuracy: 0.001
         )
     }

@@ -31,6 +31,12 @@ public enum ActivityMotion: String, Codable, CaseIterable, Hashable, Sendable {
     case unknown
 }
 
+public enum ActivitySensorSource: String, Codable, CaseIterable, Hashable, Sendable {
+    case iPhone
+    case appleWatch
+    case combined
+}
+
 public struct ActivityTimeSpan: Codable, Hashable, Sendable {
     public let start: Date
     public let end: Date
@@ -71,6 +77,14 @@ public struct ActivitySensorEvidence: Codable, Hashable, Sendable {
     public let confidence: Double?
     public let evidence: [String]
     public let sequence: Int?
+    public let source: ActivitySensorSource
+
+    private enum CodingKeys: String, CodingKey {
+        case id, timestamp, motion, speedMetersPerSecond
+        case horizontalAccuracyMeters, isPreciseLocation, stepCount
+        case screenIsOn, screenBrightness, categoryHint, detailHint
+        case behaviorHint, confidence, evidence, sequence, source
+    }
 
     public init(
         id: UUID = UUID(),
@@ -87,7 +101,8 @@ public struct ActivitySensorEvidence: Codable, Hashable, Sendable {
         behaviorHint: String? = nil,
         confidence: Double? = nil,
         evidence: [String] = [],
-        sequence: Int? = nil
+        sequence: Int? = nil,
+        source: ActivitySensorSource = .iPhone
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -104,6 +119,47 @@ public struct ActivitySensorEvidence: Codable, Hashable, Sendable {
         self.confidence = confidence
         self.evidence = evidence
         self.sequence = sequence
+        self.source = source
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        timestamp = try values.decode(Date.self, forKey: .timestamp)
+        motion = try values.decodeIfPresent(ActivityMotion.self, forKey: .motion) ?? .unknown
+        speedMetersPerSecond = try values.decodeIfPresent(Double.self, forKey: .speedMetersPerSecond)
+        horizontalAccuracyMeters = try values.decodeIfPresent(Double.self, forKey: .horizontalAccuracyMeters)
+        isPreciseLocation = try values.decodeIfPresent(Bool.self, forKey: .isPreciseLocation) ?? true
+        stepCount = try values.decodeIfPresent(Int.self, forKey: .stepCount)
+        screenIsOn = try values.decodeIfPresent(Bool.self, forKey: .screenIsOn)
+        screenBrightness = try values.decodeIfPresent(Double.self, forKey: .screenBrightness)
+        categoryHint = try values.decodeIfPresent(String.self, forKey: .categoryHint)
+        detailHint = try values.decodeIfPresent(String.self, forKey: .detailHint)
+        behaviorHint = try values.decodeIfPresent(String.self, forKey: .behaviorHint)
+        confidence = try values.decodeIfPresent(Double.self, forKey: .confidence)
+        evidence = try values.decodeIfPresent([String].self, forKey: .evidence) ?? []
+        sequence = try values.decodeIfPresent(Int.self, forKey: .sequence)
+        source = try values.decodeIfPresent(ActivitySensorSource.self, forKey: .source) ?? .iPhone
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(timestamp, forKey: .timestamp)
+        try values.encode(motion, forKey: .motion)
+        try values.encodeIfPresent(speedMetersPerSecond, forKey: .speedMetersPerSecond)
+        try values.encodeIfPresent(horizontalAccuracyMeters, forKey: .horizontalAccuracyMeters)
+        try values.encode(isPreciseLocation, forKey: .isPreciseLocation)
+        try values.encodeIfPresent(stepCount, forKey: .stepCount)
+        try values.encodeIfPresent(screenIsOn, forKey: .screenIsOn)
+        try values.encodeIfPresent(screenBrightness, forKey: .screenBrightness)
+        try values.encodeIfPresent(categoryHint, forKey: .categoryHint)
+        try values.encodeIfPresent(detailHint, forKey: .detailHint)
+        try values.encodeIfPresent(behaviorHint, forKey: .behaviorHint)
+        try values.encodeIfPresent(confidence, forKey: .confidence)
+        try values.encode(evidence, forKey: .evidence)
+        try values.encodeIfPresent(sequence, forKey: .sequence)
+        try values.encode(source, forKey: .source)
     }
 }
 
@@ -115,6 +171,11 @@ public struct ActivityClassificationOverride: Codable, Hashable, Sendable {
     public let title: String?
     public let behavior: String?
     public let updatedAt: Date
+    public let isLocked: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case id, span, majorCategoryID, detailID, title, behavior, updatedAt, isLocked
+    }
 
     public init(
         id: UUID = UUID(),
@@ -123,7 +184,8 @@ public struct ActivityClassificationOverride: Codable, Hashable, Sendable {
         detailID: String? = nil,
         title: String? = nil,
         behavior: String? = nil,
-        updatedAt: Date = .now
+        updatedAt: Date = .now,
+        isLocked: Bool = false
     ) {
         self.id = id
         self.span = span
@@ -132,6 +194,31 @@ public struct ActivityClassificationOverride: Codable, Hashable, Sendable {
         self.title = title
         self.behavior = behavior
         self.updatedAt = updatedAt
+        self.isLocked = isLocked
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        span = try values.decode(ActivityTimeSpan.self, forKey: .span)
+        majorCategoryID = try values.decode(String.self, forKey: .majorCategoryID)
+        detailID = try values.decodeIfPresent(String.self, forKey: .detailID)
+        title = try values.decodeIfPresent(String.self, forKey: .title)
+        behavior = try values.decodeIfPresent(String.self, forKey: .behavior)
+        updatedAt = try values.decodeIfPresent(Date.self, forKey: .updatedAt) ?? span.start
+        isLocked = try values.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(span, forKey: .span)
+        try values.encode(majorCategoryID, forKey: .majorCategoryID)
+        try values.encodeIfPresent(detailID, forKey: .detailID)
+        try values.encodeIfPresent(title, forKey: .title)
+        try values.encodeIfPresent(behavior, forKey: .behavior)
+        try values.encode(updatedAt, forKey: .updatedAt)
+        try values.encode(isLocked, forKey: .isLocked)
     }
 
     public var isSleep: Bool {
