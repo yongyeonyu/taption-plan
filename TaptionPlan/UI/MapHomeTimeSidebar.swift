@@ -796,9 +796,19 @@ final class MapHomeTimeSidebarHandleDrag {
         trackHeight: CGFloat,
         verticalInset: CGFloat,
         maxMinute: Int,
+        interactionMaxMinute: Int = MapHomeTimeSidebarMath.fullDayMinutes,
         nowUptime: TimeInterval
     ) -> MapHomeTimeSidebarNLEState? {
         guard let baseState, trackHeight > 0 else { return nil }
+
+        let selectionMaxMinute = min(
+            max(maxMinute, 0),
+            MapHomeTimeSidebarMath.fullDayMinutes
+        )
+        let inputMaxMinute = min(
+            max(interactionMaxMinute, selectionMaxMinute),
+            MapHomeTimeSidebarMath.fullDayMinutes
+        )
 
         let duration = min(
             max(baseState.visibleDurationMinutes, 60),
@@ -842,12 +852,18 @@ final class MapHomeTimeSidebarHandleDrag {
             (accumulatedEdgePoints / trackHeight * CGFloat(duration)).rounded()
         )
         let localY = min(max(rawHandleY, 0), trackHeight)
-        let localMinute = baseState.visibleStartMinute + Int(
-            (localY / trackHeight * CGFloat(duration)).rounded()
+        let localMinute = min(
+            inputMaxMinute,
+            baseState.visibleStartMinute + Int(
+                (localY / trackHeight * CGFloat(duration)).rounded()
+            )
         )
 
         return MapHomeTimeSidebarNLEState(
-            selectedMinute: min(max(localMinute + edgeMinutes, 0), maxMinute),
+            selectedMinute: min(
+                max(localMinute + edgeMinutes, 0),
+                selectionMaxMinute
+            ),
             visibleStartMinute: min(
                 max(baseState.visibleStartMinute + edgeMinutes, 0),
                 maximumStart
@@ -995,21 +1011,21 @@ struct MapHomeTimeSidebar: View {
                         .allowsHitTesting(false)
 
                     Rectangle()
-                    .fill(.clear)
-                    .frame(width: railWidth, height: railHeight)
-                    .contentShape(Rectangle())
-                    .position(
-                        x: railOriginX + railWidth / 2,
-                        y: railHeight / 2
-                    )
-                    .gesture(
-                        timeTapGesture(
-                            trackHeight: trackHeight,
-                            maxMinute: maxMinute,
-                            visibleWindow: visibleWindow
+                        .fill(.clear)
+                        .frame(width: railWidth, height: railHeight)
+                        .contentShape(Rectangle())
+                        .position(
+                            x: railOriginX + railWidth / 2,
+                            y: railHeight / 2
                         )
-                    )
-                    .simultaneousGesture(viewportDragGesture(trackHeight: trackHeight))
+                        .gesture(
+                            timeTapGesture(
+                                trackHeight: trackHeight,
+                                maxMinute: maxMinute,
+                                visibleWindow: visibleWindow
+                            )
+                        )
+                        .simultaneousGesture(viewportDragGesture(trackHeight: trackHeight))
 
                     Rectangle()
                     .fill(MapHomeTimeSidebarStyle.numericColumnBackground)
@@ -1194,7 +1210,7 @@ struct MapHomeTimeSidebar: View {
 
                 if trailingInteractionWidth > 0 {
                     Rectangle()
-                        .fill(.clear)
+                        .fill(Color.white.opacity(0.001))
                         .frame(
                             width: trailingInteractionWidth,
                             height: railHeight
@@ -1211,6 +1227,7 @@ struct MapHomeTimeSidebar: View {
                                 visibleWindow: visibleWindow
                             )
                         )
+                        .zIndex(3)
                         .simultaneousGesture(
                             TapGesture(count: 2).onEnded {
                                 onSectionEdit?(minute)
@@ -1373,7 +1390,7 @@ struct MapHomeTimeSidebar: View {
             )
 
             Rectangle()
-                .fill(.clear)
+                .fill(Color.white.opacity(0.001))
                 .frame(
                     width: leadingInteractionFrame.width,
                     height: MapHomeTimeSidebarMath.handleDragHitHeight
@@ -1387,6 +1404,7 @@ struct MapHomeTimeSidebar: View {
                         visibleWindow: visibleWindow
                     )
                 )
+                .zIndex(3)
                 .simultaneousGesture(
                     TapGesture().onEnded {
                         publish(minute)
@@ -1403,7 +1421,7 @@ struct MapHomeTimeSidebar: View {
                 .accessibilityHint("드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다")
 
             Rectangle()
-                .fill(.clear)
+                .fill(Color.white.opacity(0.001))
                 .frame(
                     width: trailingInteractionFrame.width,
                     height: MapHomeTimeSidebarMath.trailingHandleDragHitHeight
@@ -1417,6 +1435,7 @@ struct MapHomeTimeSidebar: View {
                         visibleWindow: visibleWindow
                     )
                 )
+                .zIndex(3)
                 .simultaneousGesture(
                     TapGesture().onEnded {
                         publish(minute)

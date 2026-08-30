@@ -19191,6 +19191,40 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(normalized.first?.source, .appleWatch)
     }
 
+    func testAppleWatchActivityOverridesInferredIPhoneMovement() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(30 * 60)
+        )
+        let watchActivity = ActualRecord(
+            planID: nil,
+            title: "운동",
+            categoryID: "activity",
+            startedAt: span.start,
+            endedAt: span.end,
+            source: .appleWatch,
+            behavior: WatchBehaviorKind.exercise.rawValue
+        )
+        let inferredCar = SensorReading(
+            timestamp: start.addingTimeInterval(10 * 60),
+            motion: .automotive,
+            motionConfidence: .high
+        )
+
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(10 * 60),
+                actuals: [watchActivity],
+                travel: [],
+                places: [],
+                frequentPlaces: [],
+                readings: [inferredCar]
+            ),
+            .exercise
+        )
+    }
+
     func testIPhoneOnlySleepDoesNotClaimAppleWatchPriority() {
         let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
         let twoHours = 2 * 60 * 60.0

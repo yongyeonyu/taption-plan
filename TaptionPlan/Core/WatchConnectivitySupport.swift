@@ -433,7 +433,10 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             statusHandler?(.unsupported)
             return
         }
-        statusHandler?(connectionState(for: .default))
+        let session = WCSession.default
+        session.delegate = self
+        session.activate()
+        statusHandler?(connectionState(for: session))
     }
 
     func update(payload: TaptionWatchPayload) throws {
@@ -546,6 +549,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         statusHandler?(connectionState(for: session))
         if activationState == .activated {
             publishLatestPayload()
+            requestWatchDataSync()
         }
     }
 
@@ -562,12 +566,14 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         statusHandler?(connectionState(for: session))
         if session.isReachable {
             publishLatestPayload()
+            requestWatchDataSync()
         }
     }
 
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
         statusHandler?(connectionState(for: session))
         publishLatestPayload()
+        requestWatchDataSync()
     }
 
     nonisolated func session(
@@ -775,7 +781,15 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private func connectionState(
         for session: WCSession
     ) -> AppleWatchConnectionState {
-        AppleWatchConnectionPolicy.state(
+        guard WCSession.isSupported() else { return .unsupported }
+        guard session.isPaired else { return .notPaired }
+        guard session.activationState == .activated else {
+            // isWatchAppInstalled is not reliable until WCSession finishes
+            // activation. Do not expose that transient false value as an
+            // installation failure.
+            return .noRecentData
+        }
+        return AppleWatchConnectionPolicy.state(
             isSupported: WCSession.isSupported(),
             isPaired: session.isPaired,
             isWatchAppInstalled: session.isWatchAppInstalled,

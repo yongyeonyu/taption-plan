@@ -2295,6 +2295,43 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(state.visibleStartMinute, 540)
     }
 
+    func testMapHomeTimeSidebarHandleAcceptsFutureTouchButClampsSelectionToNow() throws {
+        let drag = MapHomeTimeSidebarHandleDrag()
+        drag.begin(
+            with: MapHomeTimeSidebarNLEState(
+                selectedMinute: 570,
+                visibleStartMinute: 540,
+                visibleDurationMinutes: 60
+            ),
+            nowUptime: 10
+        )
+
+        let future = try XCTUnwrap(
+            drag.projectedState(
+                locationY: 301,
+                trackHeight: 300,
+                verticalInset: 0,
+                maxMinute: 600,
+                interactionMaxMinute: MapHomeTimeSidebarMath.fullDayMinutes,
+                nowUptime: 10
+            )
+        )
+        XCTAssertEqual(future.selectedMinute, 600)
+        XCTAssertEqual(future.visibleStartMinute, 540)
+
+        let valid = try XCTUnwrap(
+            drag.projectedState(
+                locationY: 100,
+                trackHeight: 300,
+                verticalInset: 0,
+                maxMinute: 600,
+                interactionMaxMinute: MapHomeTimeSidebarMath.fullDayMinutes,
+                nowUptime: 10
+            )
+        )
+        XCTAssertEqual(valid.selectedMinute, 560)
+    }
+
     func testMapHomeTimeSidebarHandleMapsAbsoluteTouchOneToOne() throws {
         let drag = MapHomeTimeSidebarHandleDrag()
         drag.begin(

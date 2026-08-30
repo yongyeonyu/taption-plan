@@ -1,5 +1,22 @@
 # Taption Plan 다음 채팅 인계 프롬프트
 
+## 2026-08-30 WACT83023A · Watch 설치 상태·오늘 활동/수면·오른쪽 핸들
+
+- `WCSession` 활성화 전의 일시적 설치 false를 화면에 노출하지 않고, 활성화 완료·reachable·Watch 상태 변경 시 데이터 동기화를 재요청하도록 수정했다. iOS Debug 산출물의 `com.taption.plan.watchkitapp` 임베드, companion bundle 연결, iOS·Watch `1.0 (117)`을 readback했다.
+- Watch 확정 activity를 iPhone 추정 movement보다 우선하고 명시 이동 경로는 이동 알고리즘 결과를 계속 우선한다. Watch activity/sleep 수신 시 시작일·종료일 day snapshot을 무효화해 같은 날짜 키로 활동·수면·졸라맨을 재투영한다. 원본 센서 record와 provenance는 수정하지 않았으며, 실제 수면 구간을 aggregate 값으로 추정하지 않는다.
+- 오른쪽 핸들은 미래 영역 입력을 허용하되 선택값은 현재 시각 상한으로 clamp한다. WBS 방식의 `opacity(0.001)` hit-test 레이어와 z-index로 즉시 드래그·탭·더블탭을 유지했다.
+- 검증: `swift test --package-path Packages/TaptionPlanCore` 36/36, 집중 XCTest `MapHomeStickmanTests` 25건 및 `TimeScaleTests` 전체, iOS·Watch Debug simulator build, `git diff --check` 통과. XCTest 결과: `/tmp/taption-plan-wact83023a-tests/Logs/Test/Test-TaptionPlan-2026.08.30_16-40-46-+0900.xcresult`.
+- 실기기 미완료: 연결된 iPhone/Apple Watch가 없어 Watch 앱 설치·오늘 activity/sleep 동기화 및 HealthKit readback, 오른쪽 핸들 직접 터치를 확인하지 못했다. 추정으로 완료 처리하지 말고 `temp.md`의 `WACT83023A`를 유지한다.
+- 다음 실행자는 실기기 연결 후 Watch 설치 상태·오늘 activity/sleep provenance·졸라맨 매칭과 오른쪽 핸들 터치를 확인하고, 증거 확보 시에만 큐 항목을 삭제한다. 이번 실행에서는 커밋·푸시·TestFlight 업로드를 수행하지 않았다.
+
+## 2026-08-30 TMAL83024A · temp.md 전체 실행 및 Release 118
+
+- `temp.md` 잔여 항목의 자동 검증을 재실행했다. Package `36/36`, Plan 전체 XCTest exit 0, `git diff --check` 통과.
+- 앱·Widget·Watch·Watch Widget을 `1.0 (118)`로 통일했고 Release archive/export 성공: `/private/tmp/taption-plan-tmal83024a-v118.xcarchive`, `/tmp/taption-plan-tmal83024a-v118-export/TaptionPlan.ipa`.
+- IPA SHA-256은 `8d2042df30abdab09b58661fc8bf9bea54e9c4d286500870e1e030f0265648d6`; archive 앱 codesign verify 및 embedded Watch/Widget readback 통과.
+- 연결된 iPhone/Apple Watch가 없어 설치·실행·실제 터치, Watch 동기화·오늘 activity/sleep provenance, Dynamic Island는 미완료로 유지했다. 증거 없는 항목은 `temp.md`에서 삭제하지 않는다.
+- 다음 단계는 Plan 변경을 `main`에 커밋·푸시한 뒤 IPA를 TestFlight에 업로드하고 `TP Taption Plan 내부 테스트` 그룹의 build 118 연결·노출을 readback하는 것이다.
+
 ## 2026-08-30 RELWSYNC2A · Apple Watch 동기화 수정 릴리스 완료
 
 - Watch 수동 동기화가 로컬 센서·HealthKit drain과 대기 큐 전송을 수행하도록 수정했고, iPhone v3 병합 실패는 진단 이벤트로 기록한다. 원본 iPhone·Apple Watch record와 provenance는 보존했다.

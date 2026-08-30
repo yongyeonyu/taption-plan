@@ -190,6 +190,15 @@ enum MapHomeStickmanActionResolver {
             return action(for: segment.mode)
         }
 
+        // Watch records are the confirmed side of the sensor fusion. Let
+        // them win over an inferred iPhone reading while keeping an already
+        // resolved travel segment above both sources for transport playback.
+        if let candidate = activeActuals
+            .filter({ $0.0.source == .appleWatch })
+            .max(by: higherPriority) {
+            return candidate.1
+        }
+
         let nearbyMovement = readings
             .filter {
                 $0.motion.isMovement

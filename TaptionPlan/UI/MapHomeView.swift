@@ -3551,9 +3551,7 @@ struct MapHomeView: View {
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: timeSidebarZoomStep,
                         railWidth: Layout.timeRailWidth,
-                        maximumSelectableMinute: dayPlaybackElapsedSeconds > 0
-                            ? MapHomeTimeSidebarMath.fullDayMinutes
-                            : nil,
+                        maximumSelectableMinute: nil,
                         trailingInteractionWidth: Layout.horizontalInset,
                         onViewportChanged: { start, duration in
                             weatherVisibleStartMinute = start
@@ -5774,7 +5772,7 @@ struct MapHomeView: View {
             travel: currentDayDataSnapshot?.travel ?? model.snapshot.travel,
             places: currentDayDataSnapshot?.places ?? model.snapshot.places,
             frequentPlaces: model.settings.frequentPlaces,
-            readings: routeReadings
+            readings: (currentDayDataSnapshot?.readings ?? routeReadings)
                 + model.liveRouteState.readings
                 + (model.latestSensorReading.map { [$0] } ?? []),
             sleepSessions: sleepSessions

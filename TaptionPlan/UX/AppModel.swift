@@ -5635,7 +5635,13 @@ final class AppModel {
                 )
             }
         }
-        dayLoadCoordinator?.invalidate(day: summary.endedAt)
+        dayLoadCoordinator?.invalidate(day: summary.startedAt)
+        if !Calendar.autoupdatingCurrent.isDate(
+            summary.startedAt,
+            inSameDayAs: summary.endedAt
+        ) {
+            dayLoadCoordinator?.invalidate(day: summary.endedAt)
+        }
         let atHome = isWatchSummaryAtHome(summary)
         let resolution = WatchActivityPersonalizationEngine.resolve(
             summary,
@@ -5950,6 +5956,13 @@ final class AppModel {
                 )
             )
             snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+            dayLoadCoordinator?.invalidate(day: confirmation.observedStartedAt)
+            if !Calendar.autoupdatingCurrent.isDate(
+                confirmation.observedStartedAt,
+                inSameDayAs: confirmation.observedEndedAt
+            ) {
+                dayLoadCoordinator?.invalidate(day: confirmation.observedEndedAt)
+            }
         }
         if confirmation.suggestionID == nil
             || pendingWatchActivitySuggestion?.id == confirmation.suggestionID {

@@ -246,3 +246,21 @@
 - `NEXT_CHAT_PROMPT.md`의 커밋·빌드·기기·TestFlight 상태를 최신 readback으로 갱신
 - Paid Apps Agreement·세금/은행·상품 연결·Sandbox 구매/복원 전까지 IAP 게이트 미완료
 - 상태: 인계 문서 갱신 완료 · 실기기 화면·터치 및 IAP 외부 게이트 대기
+
+## WACT83023A · Watch 설치 상태·오늘 활동/수면·오른쪽 핸들 (2026-08-30)
+
+- 원인/수정: `WCSession` 활성화 전의 일시적 `isWatchAppInstalled == false`를 설치 실패로 표시하지 않고, 활성화 완료·reachable·Watch 상태 변경 때 동기화를 재요청한다. Watch 확정 activity는 iPhone 추정 movement보다 우선하며, 수신된 날짜의 시작일·종료일 snapshot을 무효화해 오늘 활동/수면 projection과 졸라맨을 재생성한다.
+- 원인/수정: 오른쪽 핸들의 입력 상한과 선택 상한을 분리해 미래 영역 터치는 허용하고 선택값은 현재 시각에서 고정한다. WBS 방식의 미세 불투명 hit-test 레이어와 z-index를 적용해 첫 드래그 입력을 보장했다.
+- Package: `swift test --package-path Packages/TaptionPlanCore` — 36/36 통과.
+- 집중 XCTest: `MapHomeStickmanTests` 25건 및 `TimeScaleTests` 전체 통과, exit 0. 결과 bundle: `/tmp/taption-plan-wact83023a-tests/Logs/Test/Test-TaptionPlan-2026.08.30_16-40-46-+0900.xcresult`
+- Debug build: iOS `TaptionPlan` 및 `TaptionPlanWatch` watchOS simulator build exit 0. iOS 산출물에 `Watch/TaptionPlanWatch.app`가 임베드되고, iOS `com.taption.plan`, Watch `com.taption.plan.watchkitapp`, companion `com.taption.plan`, 버전 `1.0 (117)`을 readback했다.
+- `git diff --check`: 통과. WBS 저장소와 WBS `temp.md`는 수정하지 않았다.
+- 실기기 게이트: `xcrun simctl list devices available`에 iOS simulator만 있고 연결된 iPhone/Apple Watch가 없어 Watch 설치·오늘 HealthKit activity/sleep·동기화, 오른쪽 핸들 실제 터치는 미검증이다. 증거 확보 전까지 미완료로 유지한다.
+
+## TMAL83024A · temp.md 전체 실행 및 Release 118 (2026-08-30)
+
+- Package `36/36`, Plan 전체 XCTest exit 0, `git diff --check` 통과.
+- Release archive/export 성공: `/private/tmp/taption-plan-tmal83024a-v118.xcarchive`, `/tmp/taption-plan-tmal83024a-v118-export/TaptionPlan.ipa`.
+- IPA SHA-256: `8d2042df30abdab09b58661fc8bf9bea54e9c4d286500870e1e030f0265648d6`.
+- Archive readback: `com.taption.plan`, `1.0 (118)`, embedded `TaptionPlanWatch.app`·`TaptionPlanWidget.appex` 및 Watch Widget 포함. Archive 앱 codesign verify 통과.
+- 실기기 게이트: 연결된 iPhone/Apple Watch가 없어 설치·실행·실제 터치·Watch 동기화/오늘 activity/sleep·Dynamic Island readback은 미완료다.
