@@ -24,7 +24,7 @@
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <progressView opaque="NO" contentMode="scaleToFill" progress="0.35" translatesAutoresizingMaskIntoConstraints="NO" id="LSP-1">
+                            <progressView opaque="NO" contentMode="scaleToFill" progress="0.0" translatesAutoresizingMaskIntoConstraints="NO" id="LSP-1">
                                 <rect key="frame" x="91.5" y="518.0" width="210" height="4"/>
                                 <color key="progressTintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <color key="trackTintColor" white="1" alpha="0.25" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>

@@ -1,5 +1,42 @@
 # Taption Plan 다음 채팅 인계 프롬프트
 
+## 2026-08-31 REL83054A01 · 커밋·푸시·iPhone·TestFlight 인계
+
+다음 채팅은 `/Users/u_mo_c/Documents/taption plan`에서 Taption Plan 작업을 이어간다.
+
+현재 목표:
+
+- 현재 승인된 Plan 변경을 `main`에 `fix: port WBS map playback and speed up sidebar`로 커밋하고 `origin/main`에 푸시한다.
+- 앱·Widget·Watch·Watch Widget build `1.0 (119)`를 검증하고, Release archive/export·TestFlight 업로드·`TP Taption Plan 내부 테스트` 연결·그룹 노출을 readback한다.
+- 같은 Release 산출물을 iPhone 14 Pro에 설치·실행하고 `com.taption.plan / 1.0 / 119`를 readback한다.
+- iPhone·Apple Watch 원본 센서 record와 provenance, Taption WBS 저장소와 dirty 작업본은 수정하지 않는다.
+- 사용자가 삭제한 `temp.md`와 `test.md`는 복구하거나 재생성하지 않는다. 검증 증거와 미완료 실기기 게이트는 이 문서에 기록한다.
+
+현재 자동 검증:
+
+- `swift test --package-path Packages/TaptionActivityEngine`: 6/6
+- `swift test --package-path Packages/TaptionPlanCore`: 36/36
+- `swift test --package-path Packages/TaptionRouteEngine`: 14/14
+- `swift build --package-path Packages/TaptionPlanEngine`: 통과
+- iOS Simulator 전체 XCTest: 835/835, `/private/tmp/taption-rel83054a-sim.xcresult`
+- `git diff --check`: 통과
+
+남은 물리·외부 게이트:
+
+- iPhone 지도·날씨·목요일 경로·졸라맨·지도 비율·좌우 핸들·롱프레스·Dynamic Island 실제 화면/터치
+- Apple Watch 설치·수신·오늘 활동/수면 provenance·iPhone projection·동기화
+- iPhone cold/warm 날짜 로딩 p95와 실제 signpost 집계
+- TestFlight 처리 완료, 내부 테스트 그룹 build/tester 화면 노출, iPhone 설치·실행·버전 readback
+
+실행 규칙:
+
+- 먼저 `AGENTS.md`와 이 문서를 읽고 현재 `HEAD`, `origin/main`, dirty 상태, 기기 상태를 직접 확인한다.
+- source/provenance를 덮어쓰지 않고 불변 파생 projection으로만 수정한다. WBS dirty 파일은 읽기 전용이다.
+- 실기기·권한·계정·App Store Connect가 막히면 추정으로 완료하지 말고 명령·오류·미완료 게이트를 이 문서에 기록한다.
+- TestFlight는 업로드 성공만으로 완료하지 말고 processing `VALID`, 내부 그룹 연결, 그룹 내 build·tester 노출을 모두 확인한다.
+
+완료 보고에는 커밋 SHA, 원격 SHA, archive/IPA 경로와 SHA-256, TestFlight Delivery UUID·processing/group readback, iPhone 설치·실행·버전 readback, 남은 물리 게이트를 포함한다.
+
 ## 2026-08-30 WACT83023A · Watch 설치 상태·오늘 활동/수면·오른쪽 핸들
 
 - `WCSession` 활성화 전의 일시적 설치 false를 화면에 노출하지 않고, 활성화 완료·reachable·Watch 상태 변경 시 데이터 동기화를 재요청하도록 수정했다. iOS Debug 산출물의 `com.taption.plan.watchkitapp` 임베드, companion bundle 연결, iOS·Watch `1.0 (117)`을 readback했다.

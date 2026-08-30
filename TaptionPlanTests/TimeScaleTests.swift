@@ -696,6 +696,13 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertGreaterThan(MapHomeLayerPriority.header, MapHomeLayerPriority.menu)
     }
 
+    func testAppleMapStickmanLayerStaysAbovePlaceAnnotations() {
+        XCTAssertGreaterThan(
+            MapHomeAppleAnnotationLayerPriority.stickman,
+            MapHomeAppleAnnotationLayerPriority.place
+        )
+    }
+
     func testWeatherTimelineCapsulesAttachFlushToSidebarPanel() {
         let weatherRailWidth: CGFloat = 58
         let timeRailWidth: CGFloat = 58

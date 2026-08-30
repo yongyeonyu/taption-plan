@@ -38,6 +38,54 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testInitialLaunchProgressAdvancesMonotonicallyToTarget() {
+        var progress = 0.0
+        let targets = [0.36, 0.78, 0.98, 1.0]
+
+        for target in targets {
+            var iterations = 0
+            while progress < target {
+                let next = AppShellInitialLaunchProgressMath.next(
+                    current: progress,
+                    target: target
+                )
+                XCTAssertGreaterThan(next, progress)
+                XCTAssertLessThanOrEqual(next, target)
+                progress = next
+                iterations += 1
+                XCTAssertLessThan(iterations, 500)
+            }
+            XCTAssertEqual(progress, target, accuracy: 0.000_001)
+        }
+        XCTAssertEqual(
+            AppShellInitialLaunchProgressMath.next(
+                current: 0.9,
+                target: 0.4
+            ),
+            0.9,
+            accuracy: 0.000_001
+        )
+    }
+
+    func testInitialLaunchProgressClampsInvalidValues() {
+        XCTAssertEqual(
+            AppShellInitialLaunchProgressMath.next(
+                current: -1,
+                target: 0
+            ),
+            0,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            AppShellInitialLaunchProgressMath.next(
+                current: 1,
+                target: 2
+            ),
+            1,
+            accuracy: 0.000_001
+        )
+    }
+
     func testRouteReadingsTaskRestartsAfterBootstrapAndOnlyForNewDays() {
         let day = makeDate(2026, 8, 25, 8)
         let sameDay = makeDate(2026, 8, 25, 20)
@@ -11638,6 +11686,125 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(decoded.fetchedAt, fetchedAt)
         XCTAssertEqual(decoded.isStale, true)
+    }
+
+    func testWeatherProjectionReplacesCurrentHourOnlyAtSameLocation() {
+        let start = makeDate(2026, 8, 1, 10)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127.0,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let otherPoint = GeoPoint(
+            latitude: 37.6,
+            longitude: 127.1,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let oldCurrent = WeatherContext(
+            observedAt: start.addingTimeInterval(5 * 60),
+            fetchedAt: start,
+            condition: "예보",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 18,
+            point: point
+        )
+        let oldForecast = WeatherContext(
+            observedAt: start.addingTimeInterval(60 * 60),
+            fetchedAt: start,
+            condition: "이전 예보",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 19,
+            point: point
+        )
+        let otherLocation = WeatherContext(
+            observedAt: start.addingTimeInterval(5 * 60),
+            fetchedAt: start,
+            condition: "다른 위치",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 18,
+            point: otherPoint
+        )
+        let current = WeatherContext(
+            observedAt: start.addingTimeInterval(20 * 60),
+            fetchedAt: start.addingTimeInterval(30 * 60),
+            condition: "현재",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 21,
+            point: point
+        )
+        let forecastForCurrentHour = WeatherContext(
+            observedAt: start.addingTimeInterval(30 * 60),
+            fetchedAt: start.addingTimeInterval(30 * 60),
+            condition: "잘못된 현재 예보",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 99,
+            point: point
+        )
+        let forecast = WeatherContext(
+            observedAt: start.addingTimeInterval(60 * 60),
+            fetchedAt: start.addingTimeInterval(30 * 60),
+            condition: "새 예보",
+            symbolName: "cloud.sun.fill",
+            temperatureCelsius: 22,
+            point: point
+        )
+
+        let result = WeatherTimelineEngine.replacing(
+            [oldCurrent, oldForecast, otherLocation],
+            current: current,
+            forecast: [forecastForCurrentHour, forecast],
+            forecastRange: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(2 * 60 * 60)
+            ),
+            calendar: utcCalendar
+        )
+
+        XCTAssertTrue(result.contains { $0.id == current.id })
+        XCTAssertTrue(result.contains { $0.id == otherLocation.id })
+        XCTAssertTrue(result.contains { $0.id == forecast.id })
+        XCTAssertFalse(result.contains { $0.id == oldCurrent.id })
+        XCTAssertFalse(result.contains { $0.id == oldForecast.id })
+        XCTAssertFalse(result.contains { $0.id == forecastForCurrentHour.id })
+        XCTAssertFalse(result.contains { $0.temperatureCelsius == 99 })
+    }
+
+    func testWeatherTimelineDoesNotMergeDifferentLocations() {
+        let start = makeDate(2026, 8, 1, 10)
+        let first = WeatherContext(
+            observedAt: start,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 26,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127.0,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let second = WeatherContext(
+            observedAt: start.addingTimeInterval(60 * 60),
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 26,
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127.1,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+
+        let merged = WeatherTimelineEngine.coalesced([first, second])
+
+        XCTAssertEqual(merged.count, 2)
     }
 
     func testWeatherTimelineMergesEqualValuesAndSplitsOnChange() {

@@ -445,6 +445,8 @@ final class AppModel {
         category: "AutomaticRecords"
     )
     private static let mapLocationReadingTimeout: TimeInterval = 3
+    private static let weatherPreviewRefreshInterval: TimeInterval = 30 * 60
+    private static let weatherPreviewMaximumDays = 16
 
     var selectedTab: RootTab = .schedule
     var selectedScale: TimeScale = .day
@@ -500,6 +502,7 @@ final class AppModel {
     private(set) var backupRestoreRevision: UInt64 = 0
     @ObservationIgnored private var timestampOnlySnapshotAssignment = false
     private(set) var isBootstrapped = false
+    private(set) var initialDerivedDataPreloadProgress = 0.0
     /// 저장소를 읽지 못한 상태에서 빈 스냅샷을 저장하면 기존 기록을
     /// 덮어쓸 수 있다. 복구 가능한 저장본을 다시 읽기 전까지 저장을 막는다.
     @ObservationIgnored private var repositoryLoadFailed = false
@@ -705,6 +708,8 @@ final class AppModel {
     @ObservationIgnored private var lastLiveEnvironmentPoint: GeoPoint?
     @ObservationIgnored private var lastLiveEnvironmentAt: Date?
     @ObservationIgnored private var lastLiveEnvironmentFailureAt: Date?
+    @ObservationIgnored private var lastFutureWeatherRefreshAt: Date?
+    @ObservationIgnored private var lastFutureWeatherPoint: GeoPoint?
     @ObservationIgnored private var lastTrackingSessionRecoveryPersistAt: Date?
     @ObservationIgnored private var lastDeviceSnapshotPersistAt: Date?
     @ObservationIgnored private var lastReviewArchiveRefreshAt: Date?
@@ -2157,6 +2162,7 @@ final class AppModel {
                 // projection as later date changes. Raw records remain lazy.
                 source = Self.preparedLoadedSnapshot(source)
                 snapshot = source
+                await preloadInitialDerivedData()
                 if source.settings.confirmedSleepSpans
                     != originalConfirmedSleepSpans
                     || source.actuals != originalActuals
@@ -2288,6 +2294,49 @@ final class AppModel {
 
     private func waitForBootstrapPreparation() async {
         await bootstrapPreparationTask?.value
+    }
+
+    private func preloadInitialDerivedData() async {
+        initialDerivedDataPreloadProgress = 0
+        guard let dayLoadCoordinator else {
+            initialDerivedDataPreloadProgress = 1
+            return
+        }
+        let source = snapshot
+        let sourceRevision = snapshotRevision
+        let startedAt = ProcessInfo.processInfo.systemUptime
+        await dayLoadCoordinator.preloadMonth(
+            containing: selectedDate,
+            source: source,
+            sourceRevision: sourceRevision,
+            sensorLoader: { [weak self] day in
+                guard let self else {
+                    return SensorReadingsLoadResult(
+                        readings: [],
+                        isComplete: false
+                    )
+                }
+                return await self.sensorReadingsLoadResult(
+                    in: self.daySpan(containing: day)
+                )
+            },
+            progress: { [weak self] progress in
+                self?.initialDerivedDataPreloadProgress = progress
+            }
+        )
+        initialDerivedDataPreloadProgress = 1
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "initial_derived_data_preloaded",
+            fields: [
+                "days": String(dayLoadCoordinator.cachedDayCount),
+                "duration_ms": String(
+                    Int(
+                        (ProcessInfo.processInfo.systemUptime - startedAt)
+                            * 1_000
+                    )
+                ),
+            ]
+        )
     }
 
     func sceneBecameActive() async {
@@ -3457,6 +3506,7 @@ final class AppModel {
         if let photoTask, let photoSpan {
             replacePhotos(await photoTask.value, in: photoSpan)
         }
+        await refreshFutureWeatherPreviewIfNeeded()
         logAutomaticRecordSummary()
         // Calendar, HealthKit, Watch, location and motion records are device
         // ground truth. Save them locally before any potentially slow cloud
@@ -8718,6 +8768,104 @@ final class AppModel {
         }
     }
 
+    private func weatherPreviewRange(from date: Date) -> TimeSpan {
+        let start = WeatherTimelineEngine.hourBucket(for: date)
+        let calendar = Calendar.autoupdatingCurrent
+        let end = calendar.date(
+            byAdding: .day,
+            value: Self.weatherPreviewMaximumDays,
+            to: start
+        ) ?? start.addingTimeInterval(
+            TimeInterval(Self.weatherPreviewMaximumDays) * 24 * 60 * 60
+        )
+        return TimeSpan(start: start, end: end)
+    }
+
+    private func refreshFutureWeatherPreviewIfNeeded() async {
+        guard settings.locationEnabled || settings.weatherEnabled,
+              liveWeatherRefreshTask == nil else {
+            return
+        }
+        let point = latestSensorReading?.point
+            ?? snapshot.weather
+                .max { $0.observedAt < $1.observedAt }?.point
+        guard let point else { return }
+
+        let now = Date.now
+        let movedToNewLocation = lastFutureWeatherPoint.map {
+            distanceMeters($0, point) >= 1_000
+        } ?? true
+        let refreshDue = lastFutureWeatherRefreshAt.map {
+            now.timeIntervalSince($0) >= Self.weatherPreviewRefreshInterval
+        } ?? true
+        guard movedToNewLocation || refreshDue else { return }
+
+        let range = weatherPreviewRange(from: now)
+        do {
+            let fetched = try await weatherService.hourlyContexts(
+                latitude: point.latitude,
+                longitude: point.longitude,
+                from: range.start,
+                through: range.end
+            )
+            let futureStart = max(now, range.start)
+            var contexts = fetched.filter {
+                $0.observedAt >= futureStart && $0.observedAt < range.end
+            }
+            lastFutureWeatherRefreshAt = now
+            lastFutureWeatherPoint = point
+            guard !contexts.isEmpty else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "weather_preview_empty",
+                    level: .notice,
+                    fields: [
+                        "from": String(range.start.timeIntervalSince1970),
+                        "through": String(range.end.timeIntervalSince1970),
+                    ]
+                )
+                return
+            }
+            for index in contexts.indices {
+                contexts[index].point = point
+                contexts[index].placeName = "현재 위치"
+                archiveRawDeviceData(
+                    source: .gps,
+                    kind: "weather-forecast-hourly",
+                    payload: contexts[index],
+                    capturedAt: contexts[index].observedAt
+                )
+            }
+            snapshot.weather = WeatherTimelineEngine.replacing(
+                snapshot.weather,
+                forecast: contexts,
+                forecastRange: range
+            )
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "weather_preview_refreshed",
+                fields: [
+                    "contexts": String(contexts.count),
+                    "from": String(range.start.timeIntervalSince1970),
+                    "through": String(range.end.timeIntervalSince1970),
+                ]
+            )
+            await persistDeviceLocalSnapshot()
+        } catch is CancellationError {
+            return
+        } catch {
+            lastFutureWeatherRefreshAt = now
+            lastFutureWeatherPoint = point
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "weather_preview_failed",
+                level: .error,
+                fields: [
+                    "error": String(describing: type(of: error)),
+                    "from": String(range.start.timeIntervalSince1970),
+                    "through": String(range.end.timeIntervalSince1970),
+                ]
+            )
+        }
+    }
+
     private func refreshCurrentEnvironmentIfNeeded(
         point: GeoPoint,
         at date: Date
@@ -8740,6 +8888,10 @@ final class AppModel {
         let retryAllowed = lastLiveEnvironmentFailureAt.map {
             date.timeIntervalSince($0) >= 60
         } ?? true
+        let now = Date.now
+        let futureRefreshDue = lastFutureWeatherRefreshAt.map {
+            now.timeIntervalSince($0) >= Self.weatherPreviewRefreshInterval
+        } ?? true
         guard movedFarEnough || agedEnough,
               retryAllowed,
               liveWeatherRefreshTask == nil else { return }
@@ -8759,40 +8911,69 @@ final class AppModel {
                     longitude: point.longitude,
                     at: date
                 )
-                let calendar = Calendar.autoupdatingCurrent
-                let dayEnd = calendar.date(
-                    byAdding: .day,
-                    value: 1,
-                    to: calendar.startOfDay(for: date)
-                ) ?? date
-                let futureContexts = (try? await self.weatherService.hourlyContexts(
-                    latitude: point.latitude,
-                    longitude: point.longitude,
-                    from: date,
-                    through: dayEnd
-                )) ?? []
-                var contexts = [context] + futureContexts
-                for index in contexts.indices {
-                    contexts[index].point = point
-                    contexts[index].placeName = "현재 위치"
+
+                var futureContexts: [WeatherContext] = []
+                var futureRange: TimeSpan?
+                if futureRefreshDue {
+                    let range = self.weatherPreviewRange(from: now)
+                    let futureStart = max(now, range.start)
+                    do {
+                        let fetched = try await self.weatherService
+                            .hourlyContexts(
+                                latitude: point.latitude,
+                                longitude: point.longitude,
+                                from: range.start,
+                                through: range.end
+                            )
+                        futureContexts = fetched.filter {
+                            $0.observedAt >= futureStart
+                                && $0.observedAt < range.end
+                            }
+                        if !futureContexts.isEmpty {
+                            futureRange = range
+                        }
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch {
+                        TaptionPlanDiagnosticsLogger.shared.record(
+                            "weather_preview_failed",
+                            level: .error,
+                            fields: [
+                                "error": String(describing: type(of: error)),
+                                "from": String(range.start.timeIntervalSince1970),
+                                "through": String(range.end.timeIntervalSince1970),
+                            ]
+                        )
+                    }
+                    self.lastFutureWeatherRefreshAt = now
+                    self.lastFutureWeatherPoint = point
+                }
+
+                self.archiveRawDeviceData(
+                    source: .gps,
+                    kind: "weather-context",
+                    payload: context,
+                    capturedAt: context.observedAt
+                )
+                for index in futureContexts.indices {
+                    futureContexts[index].point = point
+                    futureContexts[index].placeName = "현재 위치"
                     self.archiveRawDeviceData(
                         source: .gps,
-                        kind: "weather-context",
-                        payload: contexts[index],
-                        capturedAt: contexts[index].observedAt
+                        kind: "weather-forecast-hourly",
+                        payload: futureContexts[index],
+                        capturedAt: futureContexts[index].observedAt
                     )
                 }
                 self.lastLiveEnvironmentPoint = point
                 self.lastLiveEnvironmentAt = date
                 self.lastLiveEnvironmentFailureAt = nil
-                self.snapshot.weather.removeAll {
-                    $0.placeID == nil
-                        && WeatherTimelineEngine.span(for: $0).intersection(
-                            with: TimeSpan(start: date, end: dayEnd)
-                        ) != nil
-                }
-                self.snapshot.weather.append(contentsOf: contexts)
-                self.coalesceWeatherSnapshot()
+                self.snapshot.weather = WeatherTimelineEngine.replacing(
+                    self.snapshot.weather,
+                    current: context,
+                    forecast: futureContexts,
+                    forecastRange: futureRange
+                )
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "live_environment_refreshed",
                     fields: [
@@ -8801,6 +8982,8 @@ final class AppModel {
                     ]
                 )
                 await self.persistDeviceLocalSnapshot()
+            } catch is CancellationError {
+                return
             } catch {
                 self.lastLiveEnvironmentFailureAt = date
                 Self.integrationLogger.info(
@@ -8895,7 +9078,10 @@ final class AppModel {
         let latest = snapshot.weather
             .filter { context in
                 guard let contextPoint = context.point,
-                      context.placeID == nil else { return false }
+                      context.placeID == nil,
+                      context.observedAt <= reading.timestamp else {
+                    return false
+                }
                 return distanceMeters(contextPoint, point) < 1_000
             }
             .max { $0.observedAt < $1.observedAt }
@@ -8955,13 +9141,12 @@ final class AppModel {
         }
 
         if !contexts.isEmpty {
-            snapshot.weather.removeAll {
-                $0.placeID != nil
-                    && $0.observedAt >= span.start
-                    && $0.observedAt <= span.end
+            for context in contexts {
+                snapshot.weather = WeatherTimelineEngine.replacing(
+                    snapshot.weather,
+                    current: context
+                )
             }
-            snapshot.weather.append(contentsOf: contexts)
-            coalesceWeatherSnapshot()
             TaptionPlanDiagnosticsLogger.shared.record(
                 "stored_environment_refreshed",
                 fields: ["contexts": String(contexts.count)]
@@ -9014,12 +9199,10 @@ final class AppModel {
                 payload: context,
                 capturedAt: observedAt
             )
-            snapshot.weather.removeAll {
-                $0.placeID == placeID
-                    && WeatherTimelineEngine.span(for: $0).contains(observedAt)
-            }
-            snapshot.weather.append(context)
-            coalesceWeatherSnapshot()
+            snapshot.weather = WeatherTimelineEngine.replacing(
+                snapshot.weather,
+                current: context
+            )
             TaptionPlanDiagnosticsLogger.shared.record(
                 "stored_environment_fallback_refreshed",
                 fields: [
@@ -9062,13 +9245,11 @@ final class AppModel {
                 )
             }
             guard !contexts.isEmpty else { return }
-            snapshot.weather.removeAll {
-                $0.placeID == nil
-                    && $0.observedAt >= start
-                    && $0.observedAt < end
-            }
-            snapshot.weather.append(contentsOf: contexts)
-            coalesceWeatherSnapshot()
+            snapshot.weather = WeatherTimelineEngine.replacing(
+                snapshot.weather,
+                forecast: contexts,
+                forecastRange: TimeSpan(start: start, end: end)
+            )
             await persistDeviceLocalSnapshot()
             TaptionPlanDiagnosticsLogger.shared.record(
                 "midnight_weather_forecast_refreshed",

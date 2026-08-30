@@ -1303,6 +1303,7 @@ actor AppleWeatherContextService {
         let point = CLLocation(latitude: latitude, longitude: longitude)
         let now = Date.now
         var contexts: [WeatherContext] = []
+        var loadedForecast = false
 
         if start < now {
             let historicalEnd = min(end, now)
@@ -1334,10 +1335,25 @@ actor AppleWeatherContextService {
                             endDate: end
                         )
                     )
-                    contexts.append(contentsOf: forecast.map(Self.weatherContext))
+                    let values = forecast.map(Self.weatherContext)
+                    contexts.append(contentsOf: values)
+                    loadedForecast = values.contains {
+                        $0.observedAt >= forecastStart
+                    }
                 } catch {
                     // Fall through to the existing provider fallback below.
                 }
+            }
+        }
+
+        if end > now, !loadedForecast {
+            if let fallback = try? await fallbackService.hourlyContexts(
+                latitude: latitude,
+                longitude: longitude,
+                from: max(start, now),
+                through: end
+            ) {
+                contexts.append(contentsOf: fallback)
             }
         }
 
@@ -1545,7 +1561,7 @@ actor OpenMeteoWeatherContextService {
                 name: "timezone",
                 value: TimeZone.autoupdatingCurrent.identifier
             ),
-            URLQueryItem(name: "forecast_days", value: "2"),
+            URLQueryItem(name: "forecast_days", value: "16"),
         ]
         guard let url = components?.url else {
             throw OpenMeteoWeatherError.invalidRequest

@@ -113,6 +113,11 @@ enum MapHomeLayerPriority {
     static let header: Double = 8
 }
 
+enum MapHomeAppleAnnotationLayerPriority {
+    static let place: CGFloat = 0
+    static let stickman: CGFloat = 100
+}
+
 enum MapHomeCameraLayoutMath {
     static let centeredTolerance: CGFloat = 18
 
@@ -12417,6 +12422,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             UIView.performWithoutAnimation {
                 view.transform = .identity
             }
+            view.displayPriority = .required
+            view.collisionMode = .none
+            view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.stickman
+            view.superview?.bringSubviewToFront(view)
             view.isEnabled = false
             view.isAccessibilityElement = true
             view.accessibilityTraits = .image
@@ -12435,6 +12444,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 centerOffset: descriptor.centerOffset
             )
             view.transform = .identity
+            view.displayPriority = .defaultHigh
+            view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
             view.isEnabled = annotation.isInteractive
             view.isAccessibilityElement = true
             view.accessibilityTraits = annotation.isInteractive ? .button : .image

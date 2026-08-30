@@ -324,4 +324,43 @@ final class SensorDayStoreTests: XCTestCase {
         coordinator.handleMemoryPressure()
         XCTAssertEqual(coordinator.cachedDayCount, 0)
     }
+
+    @MainActor
+    func testPlanDayLoadCoordinatorPreloadsEveryDayInMonth() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-preload-(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let coordinator = PlanDayLoadCoordinator(
+            database: database,
+            cacheCapacity: 42
+        )
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let calendar = Calendar.autoupdatingCurrent
+        let monthStart = calendar.date(
+            from: calendar.dateComponents([.year, .month], from: date)
+        )!
+        let expected = calendar.range(
+            of: .day,
+            in: .month,
+            for: monthStart
+        )!.count
+        var progressValues: [Double] = []
+
+        await coordinator.preloadMonth(
+            containing: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                SensorReadingsLoadResult(readings: [], isComplete: true)
+            },
+            progress: { progressValues.append($0) }
+        )
+
+        XCTAssertEqual(coordinator.cachedDayCount, expected)
+        XCTAssertEqual(progressValues.count, expected + 1)
+        XCTAssertEqual(progressValues.first, 0.0)
+        XCTAssertEqual(progressValues.last, 1.0)
+        XCTAssertEqual(progressValues, progressValues.sorted())
+    }
 }

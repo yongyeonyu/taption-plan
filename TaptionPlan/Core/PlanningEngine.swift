@@ -2644,6 +2644,88 @@ enum WeatherTimelineEngine {
         let condition: String
         let temperature: Int
         let airGrade: AirQualityGrade?
+        let location: LocationSignature
+    }
+
+    private struct LocationSignature: Equatable {
+        let placeID: UUID?
+        let latitude: Int?
+        let longitude: Int?
+
+        init(_ context: WeatherContext) {
+            placeID = context.placeID
+            guard context.placeID == nil, let point = context.point else {
+                latitude = nil
+                longitude = nil
+                return
+            }
+            latitude = Int((point.latitude * 1_000).rounded())
+            longitude = Int((point.longitude * 1_000).rounded())
+        }
+    }
+
+    /// Returns the local-clock hour used as the stable replacement key for a
+    /// weather observation and its forecast.
+    static func hourBucket(
+        for date: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Date {
+        calendar.dateInterval(of: .hour, for: date)?.start ?? date
+    }
+
+    /// Replaces only the same location/time projection. Raw weather samples
+    /// remain append-only in the device archive; this value is the persisted
+    /// display projection.
+    static func replacing(
+        _ existing: [WeatherContext],
+        current: WeatherContext? = nil,
+        forecast: [WeatherContext] = [],
+        forecastRange: TimeSpan? = nil,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [WeatherContext] {
+        let currentBucket = current.map {
+            hourBucket(for: $0.observedAt, calendar: calendar)
+        }
+        var incomingForecast = deduplicated(
+            forecast,
+            calendar: calendar
+        )
+        if let current, let currentBucket {
+            incomingForecast.removeAll {
+                matches($0, current)
+                    && hourBucket(for: $0.observedAt, calendar: calendar)
+                        == currentBucket
+            }
+        }
+
+        let kept = existing.filter { value in
+            if let current, let currentBucket,
+               matches(value, current),
+               hourBucket(for: value.observedAt, calendar: calendar)
+                    == currentBucket {
+                return false
+            }
+            guard let forecastRange, !incomingForecast.isEmpty,
+                  value.observedAt >= forecastRange.start,
+                  value.observedAt < forecastRange.end else {
+                return true
+            }
+            return !incomingForecast.contains {
+                matches(value, $0)
+                    && hourBucket(for: value.observedAt, calendar: calendar)
+                        == hourBucket(
+                            for: $0.observedAt,
+                            calendar: calendar
+                        )
+            }
+        }
+
+        var result = kept
+        if let current {
+            result.append(current)
+        }
+        result.append(contentsOf: incomingForecast)
+        return coalesced(result)
     }
 
     static func span(
@@ -2715,8 +2797,49 @@ enum WeatherTimelineEngine {
             // Merge by what the timeline shows.  Raw PM values, provider and
             // fallback state belong to the detail view and must not split a
             // visually identical weather run.
-            airGrade: context.airQuality?.overallGrade
+            airGrade: context.airQuality?.overallGrade,
+            location: LocationSignature(context)
         )
+    }
+
+    private static func deduplicated(
+        _ contexts: [WeatherContext],
+        calendar: Calendar
+    ) -> [WeatherContext] {
+        var result: [WeatherContext] = []
+        for context in contexts.sorted(by: { $0.observedAt < $1.observedAt }) {
+            let bucket = hourBucket(for: context.observedAt, calendar: calendar)
+            if let index = result.lastIndex(where: {
+                matches($0, context)
+                    && hourBucket(for: $0.observedAt, calendar: calendar)
+                        == bucket
+            }) {
+                let previous = result[index]
+                let previousFetchedAt = previous.fetchedAt ?? .distantPast
+                let fetchedAt = context.fetchedAt ?? .distantPast
+                if fetchedAt >= previousFetchedAt {
+                    result[index] = context
+                }
+            } else {
+                result.append(context)
+            }
+        }
+        return result
+    }
+
+    private static func matches(
+        _ lhs: WeatherContext,
+        _ rhs: WeatherContext
+    ) -> Bool {
+        guard lhs.placeID == rhs.placeID else { return false }
+        switch (lhs.point, rhs.point) {
+        case let (lhsPoint?, rhsPoint?):
+            return distanceMeters(lhsPoint, rhsPoint) <= 100
+        case (nil, nil):
+            return true
+        default:
+            return false
+        }
     }
 }
 

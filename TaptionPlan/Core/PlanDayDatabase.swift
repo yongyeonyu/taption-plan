@@ -796,9 +796,29 @@ final class PlanDayLoadCoordinator {
         containing date: Date,
         source: TaptionDataSnapshot,
         sourceRevision: UInt64,
-        sensorLoader: @escaping (Date) async -> SensorReadingsLoadResult
+        sensorLoader: @escaping (Date) async -> SensorReadingsLoadResult,
+        progress: ((Double) -> Void)? = nil
     ) {
         prefetchTask?.cancel()
+        prefetchTask = Task { @MainActor [weak self, source] in
+            guard let self else { return }
+            await self.preloadMonth(
+                containing: date,
+                source: source,
+                sourceRevision: sourceRevision,
+                sensorLoader: sensorLoader,
+                progress: progress
+            )
+        }
+    }
+
+    func preloadMonth(
+        containing date: Date,
+        source: TaptionDataSnapshot,
+        sourceRevision: UInt64,
+        sensorLoader: @escaping (Date) async -> SensorReadingsLoadResult,
+        progress: ((Double) -> Void)? = nil
+    ) async {
         let calendar = Calendar.autoupdatingCurrent
         let monthStart = calendar.date(
             from: calendar.dateComponents([.year, .month], from: date)
@@ -807,27 +827,27 @@ final class PlanDayLoadCoordinator {
         let days = (0..<count).compactMap {
             calendar.date(byAdding: .day, value: $0, to: monthStart)
         }
-        prefetchTask = Task { @MainActor [weak self, source] in
-            guard let self else { return }
-            let selected = calendar.startOfDay(for: date)
-            for day in days where !calendar.isDate(day, inSameDayAs: selected) {
-                guard !Task.isCancelled else { return }
-                let key = CacheKey(
-                    day: TaptionPlanDayKey(date: day),
-                    sourceRevision: sourceRevision,
-                    projectionVersion: TaptionPlanV3Store.projectionVersion
-                )
-                if self.cache[key] != nil || self.inFlight[key] != nil { continue }
-                _ = await self.load(
+        progress?(0)
+        for (index, day) in days.enumerated() {
+            guard !Task.isCancelled else { return }
+            let key = CacheKey(
+                day: TaptionPlanDayKey(date: day),
+                sourceRevision: sourceRevision,
+                projectionVersion: TaptionPlanV3Store.projectionVersion
+            )
+            if cache[key] == nil {
+                _ = await load(
                     day: day,
                     source: source,
                     sourceRevision: sourceRevision,
                     sensorLoader: sensorLoader
                 )
-                guard !Task.isCancelled else { return }
             }
+            progress?(Double(index + 1) / Double(max(1, days.count)))
+            guard !Task.isCancelled else { return }
         }
     }
+
 
     func invalidate(day: Date) {
         let dayKey = TaptionPlanDayKey(date: day)

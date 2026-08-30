@@ -20,6 +20,10 @@ struct AppShellView: View {
     @State private var hasCompletedInitialMapShellPreparation = false
     @State private var hasRenderedInitialDestination = false
     @State private var isInitialLaunchOverlayVisible = true
+    @State private var initialLaunchProgressValue = 0.0
+    @State private var initialLaunchProgressTarget = 0.0
+    @State private var initialLaunchProgressTask: Task<Void, Never>?
+    @State private var initialLaunchCompletionTask: Task<Void, Never>?
     @State private var lockGeneration = 0
     @State private var automaticBiometricAttemptedGeneration: Int?
     @State private var isBiometricAuthenticationInFlight = false
@@ -44,28 +48,13 @@ struct AppShellView: View {
                 DraftBottomNavigationBar(model: model)
             }
         }
-        .sheet(
-            isPresented: Binding(
-                get: { Self.legacyUIEnabled && model.isAddPlanPresented },
-                set: { model.isAddPlanPresented = $0 }
-            )
-        ) {
+        .sheet(isPresented: addPlanSheetBinding) {
             AddPlanSheet(model: model)
         }
-        .sheet(
-            item: Binding(
-                get: { Self.legacyUIEnabled ? model.selectedAction : nil },
-                set: { model.selectedAction = $0 }
-            )
-        ) { item in
+        .sheet(item: quickActionSheetBinding) { item in
             QuickActionSheet(model: model, item: item)
         }
-        .sheet(
-            item: Binding(
-                get: { Self.legacyUIEnabled ? model.planEditorRequest : nil },
-                set: { model.planEditorRequest = $0 }
-            )
-        ) { request in
+        .sheet(item: planEditorSheetBinding) { request in
             PlanEditorSheet(model: model, planID: request.id)
         }
         .font(.taption(size: 17))
@@ -109,7 +98,12 @@ struct AppShellView: View {
             }
         }
         .onChange(of: model.isBootstrapped) { _, _ in
+            advanceInitialLaunchProgress(to: 0.86)
             dismissInitialLaunchOverlayIfReady()
+        }
+        .onChange(of: model.initialDerivedDataPreloadProgress) { _, progress in
+            let progress = min(max(progress, 0), 1)
+            advanceInitialLaunchProgress(to: 0.20 + progress * 0.64)
         }
         .onChange(of: isSecurityStateReady) { _, _ in
             dismissInitialLaunchOverlayIfReady()
@@ -189,6 +183,27 @@ struct AppShellView: View {
         )
     }
 
+    private var addPlanSheetBinding: Binding<Bool> {
+        Binding(
+            get: { Self.legacyUIEnabled && model.isAddPlanPresented },
+            set: { model.isAddPlanPresented = $0 }
+        )
+    }
+
+    private var quickActionSheetBinding: Binding<QuickActionItem?> {
+        Binding(
+            get: { Self.legacyUIEnabled ? model.selectedAction : nil },
+            set: { model.selectedAction = $0 }
+        )
+    }
+
+    private var planEditorSheetBinding: Binding<PlanEditorRequest?> {
+        Binding(
+            get: { Self.legacyUIEnabled ? model.planEditorRequest : nil },
+            set: { model.planEditorRequest = $0 }
+        )
+    }
+
     private var shouldHideAppSnapshot: Bool {
         guard scenePhase != .active else { return false }
         let settings = model.securityStatus.settings
@@ -245,26 +260,63 @@ struct AppShellView: View {
     }
 
     private var initialLaunchProgress: Double {
-        let checkpoints = [
-            hasCompletedInitialProRefresh,
-            isSecurityStateReady,
-            hasRenderedInitialDestination,
-            hasCompletedInitialMapShellPreparation || !proAccess.grantsAccess,
-            model.isBootstrapped || !proAccess.grantsAccess
-        ]
-        return Double(checkpoints.filter { $0 }.count) / Double(checkpoints.count)
+        initialLaunchProgressValue
+    }
+
+    private func advanceInitialLaunchProgress(to target: Double) {
+        let target = min(max(target, 0), 1)
+        guard target > initialLaunchProgressTarget else { return }
+        initialLaunchProgressTarget = target
+        startInitialLaunchProgressTicker()
+    }
+
+    private func startInitialLaunchProgressTicker() {
+        guard initialLaunchProgressTask == nil else { return }
+        initialLaunchProgressTask = Task { @MainActor in
+            defer { initialLaunchProgressTask = nil }
+            while !Task.isCancelled {
+                let next = AppShellInitialLaunchProgressMath.next(
+                    current: initialLaunchProgressValue,
+                    target: initialLaunchProgressTarget
+                )
+                if next != initialLaunchProgressValue {
+                    withAnimation(.linear(duration: 0.12)) {
+                        initialLaunchProgressValue = next
+                    }
+                }
+                if !isInitialLaunchOverlayVisible,
+                   initialLaunchProgressValue >= 1 {
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(33))
+            }
+        }
     }
 
     private func markInitialDestinationRendered() {
         guard !hasRenderedInitialDestination else { return }
         hasRenderedInitialDestination = true
+        advanceInitialLaunchProgress(to: 0.36)
         dismissInitialLaunchOverlayIfReady()
     }
 
     private func dismissInitialLaunchOverlayIfReady() {
         guard isInitialLaunchOverlayVisible, initialLaunchReady else { return }
-        withAnimation(.easeOut(duration: 0.18)) {
-            isInitialLaunchOverlayVisible = false
+        advanceInitialLaunchProgress(to: 1)
+        guard initialLaunchCompletionTask == nil else { return }
+        initialLaunchCompletionTask = Task { @MainActor in
+            while !Task.isCancelled, initialLaunchProgressValue < 1 {
+                try? await Task.sleep(for: .milliseconds(33))
+            }
+            guard !Task.isCancelled, initialLaunchReady else {
+                initialLaunchCompletionTask = nil
+                return
+            }
+            withAnimation(.easeOut(duration: 0.18)) {
+                initialLaunchProgressValue = 1
+                isInitialLaunchOverlayVisible = false
+            }
+            initialLaunchCompletionTask = nil
         }
     }
 
@@ -418,13 +470,19 @@ struct AppShellView: View {
     }
 
     private func performInitialLaunchPreparation() async {
+        startInitialLaunchProgressTicker()
+        advanceInitialLaunchProgress(to: 0.04)
         await proAccess.refreshAccess()
         hasCompletedInitialProRefresh = true
+        advanceInitialLaunchProgress(to: 0.18)
         scheduleDeferredStoreKitProductLoad()
         if proAccess.grantsAccess {
+            advanceInitialLaunchProgress(to: 0.20)
             await model.sceneBecameActive()
+            advanceInitialLaunchProgress(to: 0.86)
             scheduleDeferredSensorActivation()
         } else {
+            advanceInitialLaunchProgress(to: 0.80)
             await model.suspendForCommerceLock()
         }
         if model.isAppLocked {
@@ -440,7 +498,10 @@ struct AppShellView: View {
             await model.openDeepLink(url)
         }
         await reconcileSensorLiveActivity()
+        advanceInitialLaunchProgress(to: 0.96)
         isSecurityStateReady = true
+        advanceInitialLaunchProgress(to: 0.98)
+        dismissInitialLaunchOverlayIfReady()
     }
 
     private func scheduleDeferredStoreKitProductLoad() {
@@ -559,6 +620,7 @@ struct AppShellView: View {
                 proAccess: proAccess,
                 onInitialDataReady: {
                     hasCompletedInitialMapShellPreparation = true
+                    advanceInitialLaunchProgress(to: 0.98)
                     dismissInitialLaunchOverlayIfReady()
                 }
             )
@@ -577,6 +639,20 @@ struct AppShellView: View {
         case .settings:
             SettingsView(model: model)
         }
+    }
+}
+
+enum AppShellInitialLaunchProgressMath {
+    static func next(
+        current: Double,
+        target: Double,
+        minimumStep: Double = 0.004
+    ) -> Double {
+        let current = min(max(current, 0), 1)
+        let target = min(max(target, current), 1)
+        guard target > current else { return current }
+        let step = max(minimumStep, (target - current) * 0.18)
+        return min(target, current + step)
     }
 }
 

@@ -1,5 +1,24 @@
 # Taption Plan 개발 문서
 
+## 2026-08-30 DOCS83047A · 문서 범위 정리
+
+- 사용자 선택 3에 따라 현재 구현 범위와 직접 연결되지 않은 `ACTION_ITEMS.md`와 구현 전 아이디어 문서 `GAME_plan.md`를 삭제했다.
+- 현재 유지 문서는 Taption Plan의 구현·기획·검증·인계에 직접 쓰이는 자료로 한정한다. 원본 센서·Watch 데이터와 WBS 저장소는 수정하지 않았다.
+
+## 2026-08-30 MDCL83048A · 전체 Markdown 범위 점검
+
+- 저장소의 `.md` 파일 전체를 확인한 결과, 남은 `AGENTS.md`, `DEVELOPMENT.md`, `NEXT_CHAT_PROMPT.md`, `README.md`, `SENSOR_FUSION_SOURCES.md`, `STICKMAN_ANIMATION_GUIDE.md`, `design-qa.md`, `plan.md`, `temp.md`, `test.md`는 모두 Taption Plan의 개발 규칙·구현·기획·검증·인계에 직접 연결된다.
+- 프로젝트와 무관한 `.md` 파일은 추가로 확인되지 않아 삭제하지 않았다. 삭제된 문서는 `DOCS83047A` 기록을 따른다.
+
+## 2026-08-30 DOCS83044A · 문서 기준 및 최신 검증
+
+- 개발 문서는 Taption Plan의 구현·기획·검증·인계에 직접 쓰이는 자료만 유지한다. `AGENTS.md`, `README.md`, `DEVELOPMENT.md`, `NEXT_CHAT_PROMPT.md`, `plan.md`, `SENSOR_FUSION_SOURCES.md`, `STICKMAN_ANIMATION_GUIDE.md`, `design-qa.md`, `temp.md`, `test.md`는 현재 기능 또는 개발 운영을 설명하므로 보존한다. `README.md`가 참조하는 `ui-draft-iphone.html`도 보존한다.
+- 프로젝트와 무관하거나 현재 개발 범위를 벗어난 문서는 `DOCS83047A`에서 삭제했다. 판단이 불명확한 자료는 삭제하지 않는다.
+- 자동 검증은 `TaptionActivityEngine` 6/6, `TaptionPlanCore` 36/36, `TaptionRouteEngine` 14/14 통과이며 `TaptionPlanEngine`은 소스 빌드와 테스트 target 없음 확인을 완료했다. `git diff --check`도 통과했다.
+- iPhone 14 Pro Debug build·설치·실행·readback은 `com.taption.plan` `1.0 (118)`로 통과했다. Watch Debug build와 `com.taption.plan.watchkitapp` `1.0 (118)` 설치·실행 readback도 통과했다.
+- 전체 XCTest의 직전 동일 checkout 실행은 XCTest 820건과 Swift Testing 15건, 실패 0건이다. 이번 재시도는 Swift frontend 컴파일 정체로 exit 75 중단되어 새 성공 증거로 대체하지 않는다.
+- 실기기 화면·터치, 날씨 범위/갱신, 목요일 경로·졸라맨, Dynamic Island, Watch raw/provenance 동기화, DB cold/warm p95는 `temp.md` 11개 잔여 게이트와 `test.md`에 미완료로 유지한다. 원본 센서·Watch 데이터와 WBS 저장소는 수정하지 않는다.
+
 ## 2026-08-19 Map Home·보안·경로 갱신
 
 - 확대된 시간 레일은 플레이헤드를 화면의 고정 위치에 두고 시간 축·세그먼트·경로 축만 스크롤한다. 플레이헤드 아래의 시간이 바뀌면 해당 시각의 저장 위치를 다시 조회해 지도 위치를 갱신한다.
