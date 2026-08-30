@@ -6,7 +6,7 @@
 - `swift test --package-path Packages/TaptionPlanCore` 36/36, 직렬 Plan 전체 XCTest 824/824, iOS·Watch Debug build, `git diff --check`가 통과했다. 병렬 XCTest의 공유 시뮬레이터 간섭 실패는 직렬 재실행에서 통과했다.
 - Release archive/export: `/private/tmp/taption-plan-relsync2a-v117.xcarchive`, `/private/tmp/taption-plan-relsync2a-v117-export/TaptionPlan.ipa`; `com.taption.plan / 1.0 / 117`, IPA SHA-256 `3a1eea30bd7bc7fcdfde2bd7bc8135da4f472be416987fc56ffb548acc745e65`, 서명 검증 통과.
 - TestFlight Delivery UUID `40d3c4ec-d471-4d0e-bc06-6bd4117610d5`; build 117 `VALID / APP_STORE_ELIGIBLE`. `TP Taption Plan 내부 테스트` 그룹에 연결했고 그룹 builds 목록과 테스터 화면(1명, `INSTALLED`)에 노출됨을 readback했다.
-- 구현 커밋은 `1edd1007f556775bed29429521e0a7c5eb7eef29`이며, 이 인계 문서 커밋 이후 local `HEAD`와 `origin/main` SHA를 다시 readback한다. WBS checkout의 기존 dirty 파일은 보존했다.
+- 구현 커밋은 `1edd1007f556775bed29429521e0a7c5eb7eef29`이며, 증거 문서 커밋 후 local `HEAD`와 `origin/main` SHA 일치 및 clean을 readback했다. WBS checkout의 기존 dirty 파일은 보존했다.
 - iPhone 14 Pro·Apple Watch 설치/실제 화면/터치는 이번 요청 범위 밖이며 실기기 `unavailable`로 미검증 상태다.
 
 ## 2026-08-30 REVUP83021 · 코드리뷰 및 TestFlight 전달 인계
