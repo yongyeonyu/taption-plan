@@ -2,6 +2,15 @@
 
 Taption Plan 작업을 이어간다. 작업 디렉터리는 `/Users/u_mo_c/Documents/taption plan`이다.
 
+## 2026-08-30 RELD830Q10 · 전달 게이트 최신 기록
+
+- Plan `main` 커밋·원격 푸시 후 clean을 확인하고 WBS 저장소의 dirty 변경은 보존했다.
+- Release archive/export가 `/private/tmp/taption-plan-reld830q10-auto.xcarchive` 및 `/private/tmp/taption-plan-reld830q10-export/TaptionPlan.ipa`에서 성공했다.
+- TestFlight upload Delivery UUID: `f29953e9-7f46-40da-a5a3-e62b1c543d4f`
+- App Store Connect build `1.0 (115)`는 `VALID / APP_STORE_ELIGIBLE`이며 `TP Taption Plan 내부 테스트` 그룹에 연결되고 그룹 목록에 노출됐다.
+- IPA는 `com.taption.plan`, Apple Distribution, beta entitlement, `1.0 (115)`로 readback됐다.
+- iPhone 14 Pro에 동일 소스의 개발 서명 Debug 앱 `/private/tmp/taption-plan-reld830q10-device/Build/Products/Debug-iphoneos/TaptionPlan.app`을 설치·실행했다. `com.taption.plan / 1.0 / 115` 앱 목록 readback 성공. TestFlight 그룹 노출과 iPhone 직접 설치·실제 화면·터치는 독립 게이트로 기록한다.
+
 ## 2026-08-30 WBSI830Q08 · DATA830Q09 최신 인계
 
 이번 실행의 목표는 Taption WBS의 데이터 관리·불러오기 경계까지 Plan에 적용하는 것이다.

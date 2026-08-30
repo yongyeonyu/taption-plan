@@ -2,6 +2,17 @@
 
 구현·빌드·업로드·설치·실행·실제 화면 터치는 서로 다른 게이트로 기록한다. 설치·실행만으로 UI 동작을 완료 처리하지 않는다.
 
+## 2026-08-30 RELD830Q10 · main/TestFlight/iPhone 전달
+
+- Plan 저장소 `main`은 커밋·원격 푸시 후 clean 상태이며 WBS 저장소의 dirty 변경은 건드리지 않았다.
+- Release archive/export 성공: `/private/tmp/taption-plan-reld830q10-auto.xcarchive`, `/private/tmp/taption-plan-reld830q10-export/TaptionPlan.ipa`
+- TestFlight upload 성공: Delivery UUID `f29953e9-7f46-40da-a5a3-e62b1c543d4f`
+- App Store Connect processing readback: build `1.0 (115)`, `VALID`, `APP_STORE_ELIGIBLE`, App Store Connect 등록 확인
+- `TP Taption Plan 내부 테스트` 그룹에 build 115 연결 성공, 그룹 빌드 목록에서 동일 build UUID·버전·처리 상태 노출 readback 성공
+- IPA 서명 readback: Apple Distribution, beta entitlement 활성, bundle `com.taption.plan`, version `1.0 (115)`
+- iPhone 14 Pro 개발 서명 Debug build 성공: `/private/tmp/taption-plan-reld830q10-device/Build/Products/Debug-iphoneos/TaptionPlan.app`
+- iPhone 14 Pro 설치·실행 성공: `com.taption.plan`; 앱 목록 readback `Taption Plan / 1.0 / 115`. TestFlight 업로드/그룹 노출은 설치·실제 화면·터치와 별도 게이트다.
+
 ## 2026-08-30 WBSI830Q08 · DATA830Q09 데이터 로드·지도·사이드바 통합
 
 - WBS 기준 대조: `ScheduleStore`/`WorkspacePersistence`의 정규화된 단일 원본 로드와 파생 presentation 경계를 읽기 전용으로 확인했다. WBS 저장소와 WBS `temp.md`는 수정하지 않았다.
