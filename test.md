@@ -2,6 +2,13 @@
 
 구현·빌드·업로드·설치·실행·실제 화면 터치는 서로 다른 게이트로 기록한다. 설치·실행만으로 UI 동작을 완료 처리하지 않는다.
 
+## 2026-08-30 WSYNC83022 · Apple Watch 동기화 점검
+
+- 원인: Watch 화면의 `지금 가져오기`가 Watch 센서/HealthKit drain을 호출하지 않고 iPhone 설정 payload 재전송(`refreshRequest`)만 수행했다. 또한 iPhone v3 Watch 병합 오류가 `try?`로 조용히 버려져 원인 확인이 어려웠다.
+- 수정: 수동 동기화가 Watch의 `syncNow()`를 실행하고, 대기 중인 센서·건강 큐를 즉시 재전송하도록 연결했다. iPhone의 Watch v3 병합 실패는 `watch_day_database_merge_failed` 진단 이벤트로 남긴다. Watch 원본 데이터와 provenance는 변경하지 않았다.
+- 자동 검증: `TaptionPlanWatch` Debug watchOS Simulator build exit 0, Plan 전체 XCTest 824/824 통과, `git diff --check` 통과.
+- 실기기 게이트: `xcrun devicectl list devices`에서 등록된 iPhone 14 Pro·Apple Watch SE·iPad가 모두 `unavailable`이라 실제 Watch 동기화·수신 날짜·원본 readback은 확인하지 못했다. 추정으로 완료 처리하지 않는다.
+
 ## 2026-08-30 REVUP83021 · 다방면 코드리뷰 및 릴리스 준비
 
 - 리뷰 수정: legacy JSON/v2 원본의 strict read가 손상·누락·동일 ID 충돌을 조용히 버리지 않고 fail-closed하도록 보강했다. SQLite v3 materialized raw count overflow도 거부한다.

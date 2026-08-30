@@ -94,9 +94,16 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     func requestSync() {
+        WatchLaunchDiagnostics.mark("manual data sync requested")
+        // The button is a data-sync action, not only a payload refresh. Drain
+        // the Watch's local recorder/HealthKit first; the iPhone request below
+        // only refreshes the settings payload.
+        onDataSyncRequest?()
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
         guard session.activationState == .activated else { return }
+        flushPendingSensorSummaries(using: session)
+        flushPendingHealthSnapshots(using: session)
         let request: [String: Any] = [
             TaptionWatchEnvelope.refreshRequestKey: true,
         ]

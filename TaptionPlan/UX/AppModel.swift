@@ -5623,7 +5623,17 @@ final class AppModel {
             }
         }
         if let dayDatabase {
-            try? await dayDatabase.recordWatchSummary(summary)
+            do {
+                try await dayDatabase.recordWatchSummary(summary)
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_day_database_merge_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error).merging([
+                        "sequence": String(summary.sequence),
+                    ]) { _, new in new }
+                )
+            }
         }
         dayLoadCoordinator?.invalidate(day: summary.endedAt)
         let atHome = isWatchSummaryAtHome(summary)
