@@ -504,6 +504,33 @@ final class SecurityBackupCoreTests: XCTestCase {
         )
     }
 
+    func testSameMonthBackupPreservesExistingAppLogWhenLatestPayloadIsEmpty() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let service = makeService(backupStore: backupStore)
+        try service.setPIN("1234")
+        let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
+        let latestDate = firstDate.addingTimeInterval(3_600)
+
+        _ = try service.saveMonthlyArchive(
+            PlanCloudBackupPayload(
+                snapshot: .empty,
+                appLog: "first-operation\n"
+            ),
+            accountIdentifier: "account-a",
+            date: firstDate
+        )
+        _ = try service.saveMonthlyArchive(
+            PlanCloudBackupPayload(snapshot: .empty),
+            accountIdentifier: "account-a",
+            date: latestDate
+        )
+
+        let restored = try service.loadLatestBackup(
+            accountIdentifier: "account-a"
+        )
+        XCTAssertEqual(restored.appLog, "first-operation\n")
+    }
+
     func testBackupRestoreCombinesRoutesAcrossMonthlyArchives() throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: backupStore)

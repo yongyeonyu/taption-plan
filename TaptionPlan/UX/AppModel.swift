@@ -1059,19 +1059,44 @@ final class AppModel {
     }
 
     func saveCloudBackupNow() async throws {
-        guard let securityBackupService else { throw PlanSecurityError.accountUnavailable }
-        guard securityStatus.settings.cloudBackupEnabled else {
-            throw PlanSecurityError.pinRequiredForCloudBackup
+        let logger = TaptionPlanDiagnosticsLogger.shared
+        let operation = logger.beginOperation("icloud_backup_manual")
+        var appLogBytes = 0
+        do {
+            guard let securityBackupService else {
+                throw PlanSecurityError.accountUnavailable
+            }
+            guard securityStatus.settings.cloudBackupEnabled else {
+                throw PlanSecurityError.pinRequiredForCloudBackup
+            }
+            let date = Date.now
+            let payload = await cloudBackupPayload(now: date)
+            appLogBytes = payload.appLog?.utf8.count ?? 0
+            let archive = try await securityBackupService.saveMonthlyArchive(
+                payload
+            )
+            try await saveCloudRawSensorBackup(
+                using: securityBackupService,
+                date: date
+            )
+            securityStatus = securityBackupService.status
+            logger.finishOperation(
+                operation,
+                outcome: "success",
+                fields: [
+                    "month": archive.monthKey,
+                    "app_log_bytes": String(appLogBytes),
+                ]
+            )
+        } catch {
+            logger.finishOperation(
+                operation,
+                outcome: "failure",
+                fields: ["app_log_bytes": String(appLogBytes)],
+                error: error
+            )
+            throw error
         }
-        let date = Date.now
-        _ = try await securityBackupService.saveMonthlyArchive(
-            await cloudBackupPayload(now: date)
-        )
-        try await saveCloudRawSensorBackup(
-            using: securityBackupService,
-            date: date
-        )
-        securityStatus = securityBackupService.status
     }
 
     func applyCloudBackup(
@@ -1156,8 +1181,15 @@ final class AppModel {
     }
 
     private func cloudBackupPayload(now: Date = .now) async -> PlanCloudBackupPayload {
+        let backupLog = TaptionPlanDiagnosticsLogger.shared.combinedLog(
+            maximumBytes: TaptionPlanDiagnosticsLogPolicy.maximumBackupBytes
+        )
+        let appLog = backupLog.isEmpty ? nil : backupLog
         guard let sensorService else {
-            return PlanCloudBackupPayload(snapshot: snapshot)
+            return PlanCloudBackupPayload(
+                snapshot: snapshot,
+                appLog: appLog
+            )
         }
         let span = PlanBackupRoutePointReducer.backupSpan(containing: now)
         let readings = (try? await sensorService.archivedRouteReadings(
@@ -1165,7 +1197,8 @@ final class AppModel {
         )) ?? []
         return PlanCloudBackupPayload(
             snapshot: snapshot,
-            routePoints: PlanBackupRoutePointReducer.reduce(readings)
+            routePoints: PlanBackupRoutePointReducer.reduce(readings),
+            appLog: appLog
         )
     }
 
@@ -2120,9 +2153,9 @@ final class AppModel {
                     source.settings.confirmedSleepSpans,
                     to: source.actuals
                 )
-                // Publish the local snapshot first. Normalizing historical
-                // records and loading device integrations can be expensive;
-                // neither should hold the first timeline frame hostage.
+                // The first visible frame must use the same immutable derived
+                // projection as later date changes. Raw records remain lazy.
+                source = Self.preparedLoadedSnapshot(source)
                 snapshot = source
                 if source.settings.confirmedSleepSpans
                     != originalConfirmedSleepSpans
@@ -2148,7 +2181,8 @@ final class AppModel {
                         "places": String(source.places.count),
                     ]
                 )
-                scheduleBootstrapPreparation()
+                await applyPendingWidgetCommands(repositoryAlreadyLoaded: true)
+                scheduleDayDatabaseMigration()
             } catch {
                 repositoryLoadFailed = true
                 var fallback = TaptionDataSnapshot.empty
@@ -2423,23 +2457,61 @@ final class AppModel {
     }
 
     private func saveCloudBackup(reason: String) async {
+        let logger = TaptionPlanDiagnosticsLogger.shared
+        let operation = logger.beginOperation(
+            "icloud_backup_automatic",
+            fields: ["reason": reason]
+        )
+        var appLogBytes = 0
         do {
-            guard let securityBackupService else { return }
+            guard let securityBackupService else {
+                logger.finishOperation(
+                    operation,
+                    outcome: "skipped",
+                    fields: [
+                        "reason": reason,
+                        "skip_reason": "service_unavailable",
+                    ]
+                )
+                return
+            }
             await refreshMidnightWeatherIfNeeded()
             let date = Date.now
-            _ = try await securityBackupService.saveMonthlyArchive(
-                await cloudBackupPayload(now: date)
+            let payload = await cloudBackupPayload(now: date)
+            appLogBytes = payload.appLog?.utf8.count ?? 0
+            let archive = try await securityBackupService.saveMonthlyArchive(
+                payload
             )
             try await saveCloudRawSensorBackup(
                 using: securityBackupService,
                 date: date
             )
             securityStatus = securityBackupService.status
+            logger.finishOperation(
+                operation,
+                outcome: "success",
+                fields: [
+                    "reason": reason,
+                    "month": archive.monthKey,
+                    "app_log_bytes": String(appLogBytes),
+                ]
+            )
         } catch {
-            TaptionPlanDiagnosticsLogger.shared.record(
+            logger.finishOperation(
+                operation,
+                outcome: "failure",
+                fields: [
+                    "reason": reason,
+                    "app_log_bytes": String(appLogBytes),
+                ],
+                error: error
+            )
+            var errorFields = TaptionDiagnosticError.compactFields(for: error)
+            errorFields["reason"] = reason
+            logger.record(
                 "icloud_backup_\(reason)",
                 level: .error,
-                fields: ["error": error.localizedDescription]
+                fields: errorFields
             )
         }
     }
@@ -2575,6 +2647,27 @@ final class AppModel {
     func performBackgroundRefresh(
         wakeReason: SensorWakeReason = .bgAppRefresh
     ) async -> Bool {
+        let logger = TaptionPlanDiagnosticsLogger.shared
+        let operation = logger.beginOperation(
+            "background_refresh",
+            fields: ["wake_reason": wakeReason.rawValue]
+        )
+        defer {
+            let outcome: String
+            if Task.isCancelled {
+                outcome = "cancelled"
+            } else {
+                outcome = userFacingError == nil ? "success" : "failure"
+            }
+            logger.finishOperation(
+                operation,
+                outcome: outcome,
+                fields: [
+                    "wake_reason": wakeReason.rawValue,
+                    "sensor_collecting": String(isSensorCollecting),
+                ]
+            )
+        }
         Self.integrationLogger.notice("Background model refresh started")
         receiveSensorWake(wakeReason)
         await bootstrap()
@@ -3935,18 +4028,26 @@ final class AppModel {
         isExportingDiagnostics = true
         diagnosticsExportStatus = "전송 중"
         defer { isExportingDiagnostics = false }
-        TaptionPlanDiagnosticsLogger.shared.record(
-            "diagnostics_export_requested"
+        let logger = TaptionPlanDiagnosticsLogger.shared
+        let operation = logger.beginOperation(
+            "diagnostics_export",
+            fields: ["destination": "icloud_drive"]
         )
+        var iphoneLogBytes = 0
+        var watchLogBytes = 0
         do {
+            logger.record("diagnostics_export_requested")
             let watchLog = await watchConnectivityService
                 .requestDiagnosticsLog()
                 ?? WatchLaunchReportStore.read()?.report
             let builder = try TaptionPlanDiagnosticsLogPackageBuilder
                 .applicationSupport()
+            let iphoneLog = logger.combinedLog()
+            iphoneLogBytes = iphoneLog.utf8.count
+            watchLogBytes = watchLog?.utf8.count ?? 0
             let package = try builder.makePackage(
                 summary: diagnosticsSummary,
-                iphoneLog: TaptionPlanDiagnosticsLogger.shared.combinedLog(),
+                iphoneLog: iphoneLog,
                 watchLog: watchLog
             )
             let destination = try await Task.detached(priority: .utility) {
@@ -3964,19 +4065,37 @@ final class AppModel {
                 Date.now,
                 forKey: Self.diagnosticsLatestSavedAtKey
             )
-            TaptionPlanDiagnosticsLogger.shared.record(
+            logger.record(
                 "diagnostics_export_completed",
                 fields: [
                     "file": destination.lastPathComponent,
                     "latest_pointer": TaptionDiagnosticsLatestLogManifest.fileName,
                 ]
             )
+            logger.finishOperation(
+                operation,
+                outcome: "success",
+                fields: [
+                    "file": destination.lastPathComponent,
+                    "iphone_log_bytes": String(iphoneLogBytes),
+                    "watch_log_bytes": String(watchLogBytes),
+                ]
+            )
         } catch {
             diagnosticsExportStatus = "실패"
-            TaptionPlanDiagnosticsLogger.shared.record(
+            logger.finishOperation(
+                operation,
+                outcome: "failure",
+                fields: [
+                    "iphone_log_bytes": String(iphoneLogBytes),
+                    "watch_log_bytes": String(watchLogBytes),
+                ],
+                error: error
+            )
+            logger.record(
                 "diagnostics_export_failed",
                 level: .error,
-                fields: ["error": String(describing: type(of: error))]
+                fields: TaptionDiagnosticError.compactFields(for: error)
             )
             userFacingError = error.localizedDescription
         }

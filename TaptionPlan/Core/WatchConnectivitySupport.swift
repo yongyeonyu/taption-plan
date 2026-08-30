@@ -458,7 +458,19 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             fields: ["reachable": String(session.isReachable)]
         )
         if session.isReachable {
-            session.sendMessage(message, replyHandler: nil, errorHandler: nil)
+            session.sendMessage(
+                message,
+                replyHandler: nil,
+                errorHandler: { error in
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "watch_payload_message_failed",
+                        level: .error,
+                        fields: TaptionDiagnosticError.compactFields(
+                            for: error
+                        )
+                    )
+                }
+            )
         }
     }
 
@@ -483,17 +495,60 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     }
 
     func requestWatchDataSync() {
-        guard WCSession.isSupported() else { return }
+        let logger = TaptionPlanDiagnosticsLogger.shared
+        guard WCSession.isSupported() else {
+            logger.record(
+                "watch_data_sync_skipped",
+                level: .notice,
+                fields: ["reason": "unsupported"]
+            )
+            return
+        }
         let envelope: [String: Any] = [
             TaptionWatchEnvelope.dataSyncRequestKey: true,
         ]
         let session = WCSession.default
-        guard session.activationState == .activated, session.isPaired else {
+        guard session.activationState == .activated else {
+            logger.record(
+                "watch_data_sync_skipped",
+                level: .notice,
+                fields: ["reason": "inactive"]
+            )
+            return
+        }
+        guard session.isPaired else {
+            logger.record(
+                "watch_data_sync_skipped",
+                level: .notice,
+                fields: ["reason": "not_paired"]
+            )
             return
         }
         session.transferUserInfo(envelope)
-        if session.isReachable {
-            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
+        let reachable = session.isReachable
+        logger.record(
+            "watch_data_sync_requested",
+            fields: [
+                "reliable_transport": "transferUserInfo",
+                "reachable": String(reachable),
+                "live_transport": reachable ? "sendMessage" : "none",
+                "watch_app_installed": String(session.isWatchAppInstalled),
+            ]
+        )
+        if reachable {
+            session.sendMessage(
+                envelope,
+                replyHandler: nil,
+                errorHandler: { error in
+                    logger.record(
+                        "watch_data_sync_message_failed",
+                        level: .error,
+                        fields: TaptionDiagnosticError.compactFields(
+                            for: error
+                        )
+                    )
+                }
+            )
         }
     }
 

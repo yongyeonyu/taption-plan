@@ -19593,6 +19593,13 @@ final class MapHomeStickmanTests: XCTestCase {
         )
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(
+                for: "activity",
+                label: "미확인 동작"
+            ),
+            .activity
+        )
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
                 for: "custom.user",
                 label: "사용자 카테고리"
             ),

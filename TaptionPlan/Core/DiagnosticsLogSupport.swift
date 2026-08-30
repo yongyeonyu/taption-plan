@@ -29,6 +29,47 @@ enum TaptionDiagnosticError {
         }
         return fields
     }
+
+    static func compactFields(for error: Error) -> [String: String] {
+        let value = error as NSError
+        var fields = [
+            "error_type": String(reflecting: type(of: error)),
+            "error_domain": value.domain,
+            "error_code": String(value.code),
+            "error_description": value.localizedDescription,
+        ]
+        if let underlying = value.userInfo[NSUnderlyingErrorKey] as? NSError {
+            fields["underlying_domain"] = underlying.domain
+            fields["underlying_code"] = String(underlying.code)
+        }
+        return fields
+    }
+}
+
+struct TaptionDiagnosticsOperation: Equatable, Sendable {
+    let id: UUID
+    let name: String
+    let startedAtUptime: TimeInterval
+}
+
+enum TaptionPlanDiagnosticsLogPolicy {
+    static let maximumBackupBytes = 512_000
+
+    static func bounded(
+        _ log: String,
+        maximumBytes: Int = maximumBackupBytes
+    ) -> String {
+        let limit = max(1, maximumBytes)
+        let data = Data(log.utf8)
+        guard data.count > limit else { return log }
+
+        let suffix = data.suffix(limit)
+        guard let newline = suffix.firstIndex(of: 0x0A) else {
+            return ""
+        }
+        let start = suffix.index(after: newline)
+        return String(decoding: suffix[start...], as: UTF8.self)
+    }
 }
 
 /// Safe, compact movement metadata for support packages. Coordinates and raw
@@ -152,7 +193,55 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
         }
     }
 
-    func combinedLog() -> String {
+    func beginOperation(
+        _ name: String,
+        fields: [String: String] = [:]
+    ) -> TaptionDiagnosticsOperation {
+        let operation = TaptionDiagnosticsOperation(
+            id: UUID(),
+            name: name,
+            startedAtUptime: ProcessInfo.processInfo.systemUptime
+        )
+        var values = fields
+        values["operation"] = name
+        values["operation_id"] = operation.id.uuidString
+        record("operation_started", fields: values)
+        return operation
+    }
+
+    func finishOperation(
+        _ operation: TaptionDiagnosticsOperation,
+        outcome: String,
+        fields: [String: String] = [:],
+        error: Error? = nil
+    ) {
+        var values = fields
+        values["operation"] = operation.name
+        values["operation_id"] = operation.id.uuidString
+        values["outcome"] = outcome
+        values["duration_ms"] = String(
+            Int(
+                max(
+                    0,
+                    ProcessInfo.processInfo.systemUptime
+                        - operation.startedAtUptime
+                ) * 1_000
+            )
+        )
+        if let error {
+            for (key, value) in TaptionDiagnosticError.compactFields(for: error)
+                where values[key] == nil {
+                values[key] = value
+            }
+        }
+        record(
+            "operation_finished",
+            level: outcome == "failure" ? .error : .info,
+            fields: values
+        )
+    }
+
+    func combinedLog(maximumBytes: Int? = nil) -> String {
         lock.lock()
         defer { lock.unlock() }
         var urls = [previousURL, currentURL]
@@ -167,10 +256,15 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
                 fallbackDirectoryURL.appendingPathComponent("iphone.jsonl")
             )
         }
-        return urls
+        let combined = urls
             .compactMap { try? String(contentsOf: $0, encoding: .utf8) }
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
+        guard let maximumBytes else { return combined }
+        return TaptionPlanDiagnosticsLogPolicy.bounded(
+            combined,
+            maximumBytes: maximumBytes
+        )
     }
 
     private var currentURL: URL {

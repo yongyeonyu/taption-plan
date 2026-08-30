@@ -269,7 +269,25 @@ enum MapHomeStickmanActionResolver {
     ) -> MapHomeStickmanAction {
         let category = categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
+        // The finalized major category wins only when the detail is unknown.
+        // Confirmed details such as Watch exercise activity still refine the
+        // representative action.
         let value = "\(category) \(label)".lowercased()
+        if categoryRoot != "unconfirmed", categoryRoot != "unknown",
+           value.contains("unconfirmed") || value.contains("unknown")
+            || value.contains("미확인") {
+            switch categoryRoot {
+            case "activity": return .activity
+            case "work": return .computer
+            case "study": return .reading
+            case "hobby": return .hobby
+            case "sleep": return .sleeping
+            case "eating", "food": return .eating
+            case "exercise": return .exercise
+            case "movement": return .movement
+            default: break
+            }
+        }
         let detailMappings: [(String, MapHomeStickmanAction)] = [
             ("movement.walking", .walking),
             ("movement.running", .running),

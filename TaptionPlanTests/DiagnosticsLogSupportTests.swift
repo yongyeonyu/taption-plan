@@ -80,4 +80,47 @@ final class DiagnosticsLogSupportTests: XCTestCase {
 
         XCTAssertEqual(logger.lastWriteStatus, .failed)
     }
+
+    func testOperationWritesCorrelationAndDurationFields() throws {
+        let logger = TaptionPlanDiagnosticsLogger(
+            directoryURL: rootURL.appendingPathComponent("primary"),
+            fallbackDirectoryURL: nil
+        )
+
+        let operation = logger.beginOperation(
+            "automatic_backup",
+            fields: ["reason": "foreground"]
+        )
+        logger.finishOperation(
+            operation,
+            outcome: "success",
+            fields: ["app_log_bytes": "42"]
+        )
+
+        let log = try String(
+            contentsOf: rootURL
+                .appendingPathComponent("primary/iphone.jsonl"),
+            encoding: .utf8
+        )
+        XCTAssertTrue(log.contains("operation_started"))
+        XCTAssertTrue(log.contains("operation_finished"))
+        XCTAssertTrue(log.contains(operation.id.uuidString))
+        XCTAssertTrue(log.contains("\"duration_ms\":"))
+        XCTAssertTrue(log.contains("\"outcome\":\"success\""))
+    }
+
+    func testBoundedLogKeepsCompleteNewestLinesWithinLimit() {
+        let log = (0..<20).map { "line_\($0)\n" }.joined()
+
+        let bounded = TaptionPlanDiagnosticsLogPolicy.bounded(
+            log,
+            maximumBytes: 40
+        )
+
+        XCTAssertLessThanOrEqual(Data(bounded.utf8).count, 40)
+        XCTAssertFalse(bounded.contains("line_0"))
+        XCTAssertTrue(bounded.split(separator: "\n").allSatisfy {
+            $0.hasPrefix("line_")
+        })
+    }
 }

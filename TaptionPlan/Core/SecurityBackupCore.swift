@@ -409,15 +409,18 @@ struct PlanCloudBackupPayload: Codable, Equatable, Sendable {
     let snapshot: TaptionDataSnapshot
     let routePoints: [PlanBackupRoutePoint]
     let portableContent: TaptionPlanStorageEnvelopeV2?
+    let appLog: String?
 
     init(
         snapshot: TaptionDataSnapshot,
-        routePoints: [PlanBackupRoutePoint] = []
+        routePoints: [PlanBackupRoutePoint] = [],
+        appLog: String? = nil
     ) {
         version = Self.currentVersion
         self.snapshot = snapshot
         self.routePoints = routePoints
         portableContent = try? Self.makePortableContent(from: snapshot)
+        self.appLog = appLog
     }
 
     private static func makePortableContent(
@@ -1814,7 +1817,8 @@ final class PlanSecurityBackupService {
             routePoints: PlanBackupRoutePointReducer.merging(
                 existing: existing.routePoints,
                 incoming: incoming.routePoints
-            )
+            ),
+            appLog: incoming.appLog ?? existing.appLog
         )
     }
 
@@ -1907,7 +1911,8 @@ final class PlanSecurityBackupService {
                     snapshot: payload.snapshot,
                     routePoints: payload.routePoints.filter {
                         currentMonth.contains($0.sensorReading.timestamp)
-                    }
+                    },
+                    appLog: payload.appLog
                 ),
                 accountIdentifier: accountIdentifier,
                 accountKey: accountKey,
@@ -1984,7 +1989,8 @@ final class PlanSecurityBackupService {
         }
         return PlanCloudBackupPayload(
             snapshot: latestPayload.snapshot,
-            routePoints: PlanBackupRoutePointReducer.restoring(routeArchives)
+            routePoints: PlanBackupRoutePointReducer.restoring(routeArchives),
+            appLog: latestPayload.appLog
         )
     }
 

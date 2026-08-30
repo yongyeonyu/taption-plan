@@ -265,3 +265,9 @@
 - Archive readback: `com.taption.plan`, `1.0 (118)`, embedded `TaptionPlanWatch.app`·`TaptionPlanWidget.appex` 및 Watch Widget 포함. Archive 앱 codesign verify 통과.
 - TestFlight: Delivery UUID `37749dc1-33c0-42b8-864b-7733173fde22`; build 118 `VALID / APP_STORE_ELIGIBLE`. `TP Taption Plan 내부 테스트` 그룹 연결 및 그룹 빌드 목록·테스터 1명 노출 readback 완료.
 - 실기기 게이트: 연결된 iPhone/Apple Watch가 없어 설치·실행·실제 터치·Watch 동기화/오늘 activity/sleep·Dynamic Island readback은 미완료다.
+- 2026-08-30 TEMP83028A 자동 게이트:
+  - TaptionPlanCore Package 테스트 36/36 통과.
+  - `FeatureEngineTests` 전체 targeted XCTest 통과. 초기 projection 게이트와 대분류-졸라맨 회귀 포함.
+  - 위치별 WeatherKit 기간형 hourly query 컴파일 및 테스트 빌드 통과. 과거·현재·미래 범위가 하나의 위치 좌표를 사용하도록 구현.
+  - `git diff --check` 통과.
+  - 실기기 Apple Watch provenance·날씨 권한·목요일 재생·지도/사이드바 실제 터치는 자동검증 우선 정책에 따라 미완료 유지.

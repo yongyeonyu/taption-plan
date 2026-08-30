@@ -1301,6 +1301,50 @@ actor AppleWeatherContextService {
         through end: Date
     ) async throws -> [WeatherContext] {
         let point = CLLocation(latitude: latitude, longitude: longitude)
+        let now = Date.now
+        var contexts: [WeatherContext] = []
+
+        if start < now {
+            let historicalEnd = min(end, now)
+            if start < historicalEnd {
+                do {
+                    let historical = try await service.weather(
+                        for: point,
+                        including: .hourly(
+                            startDate: start,
+                            endDate: historicalEnd
+                        )
+                    )
+                    contexts.append(contentsOf: historical.map(Self.weatherContext))
+                } catch {
+                    // Preserve stored observations when historical WeatherKit
+                    // data is unavailable for this location.
+                }
+            }
+        }
+
+        if end > now {
+            let forecastStart = max(start, now)
+            if forecastStart < end {
+                do {
+                    let forecast = try await service.weather(
+                        for: point,
+                        including: .hourly(
+                            startDate: forecastStart,
+                            endDate: end
+                        )
+                    )
+                    contexts.append(contentsOf: forecast.map(Self.weatherContext))
+                } catch {
+                    // Fall through to the existing provider fallback below.
+                }
+            }
+        }
+
+        if !contexts.isEmpty {
+            return contexts
+        }
+
         do {
             let hourly = try await service.weather(
                 for: point,
@@ -1312,18 +1356,7 @@ actor AppleWeatherContextService {
             guard !values.isEmpty else {
                 throw WeatherContextServiceError.temporarilyUnavailable
             }
-            return values.map { value in
-                WeatherContext(
-                    observedAt: value.date,
-                    fetchedAt: .now,
-                    isStale: false,
-                    condition: String(describing: value.condition),
-                    symbolName: value.symbolName,
-                    temperatureCelsius: value.temperature.converted(to: .celsius).value,
-                    precipitationChance: value.precipitationChance,
-                    isContextOnly: true
-                )
-            }
+            return values.map(Self.weatherContext)
         } catch {
             return try await fallbackService.hourlyContexts(
                 latitude: latitude,
@@ -1332,6 +1365,21 @@ actor AppleWeatherContextService {
                 through: end
             )
         }
+    }
+
+    private static func weatherContext(
+        _ value: WeatherKit.HourWeather
+    ) -> WeatherContext {
+        WeatherContext(
+            observedAt: value.date,
+            fetchedAt: .now,
+            isStale: false,
+            condition: String(describing: value.condition),
+            symbolName: value.symbolName,
+            temperatureCelsius: value.temperature.converted(to: .celsius).value,
+            precipitationChance: value.precipitationChance,
+            isContextOnly: true
+        )
     }
 
     private func appleContext(
