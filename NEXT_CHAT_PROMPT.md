@@ -17,13 +17,16 @@
 - iOS·Watch·Watch Widget Debug 통합 빌드 exit 0, 세 산출물 모두 `1.0 (116)` readback.
 - `git diff --check` 통과. WBS `/Users/u_mo_c/Documents/Taption WBS`는 기존 dirty `temp.md`를 보존했다.
 
-남은 전달 순서:
+최종 전달 증거:
 
-1. Plan 승인 파일만 `main`에 커밋·`origin/main` 푸시하고 SHA와 clean worktree를 확인한다.
-2. clean SHA에서 Release archive/export, IPA 서명·bundle/version readback을 확인한다.
-3. IPA를 App Store Connect에 업로드하고 Delivery UUID, processing `VALID`/`APP_STORE_ELIGIBLE`를 확인한다.
-4. `TP Taption Plan 내부 테스트`에 build 116을 연결하고 그룹 builds 및 테스터 화면 노출을 readback한다.
-5. 실기기 touch/실행과 설치는 별도 게이트로만 기록한다. 증거가 없으면 완료 처리하지 않는다.
+- Release archive/export: `/private/tmp/taption-plan-revup83021.xcarchive`, `/private/tmp/taption-plan-revup83021-export/TaptionPlan.ipa`; `com.taption.plan / 1.0 / 116`, Apple Distribution 서명, `codesign --verify --deep --strict` 통과, IPA SHA-256 `071417e1e551baee7d87f693fe18d840391137670e147fdcab979c38e398aa01`.
+- TestFlight: Delivery UUID `d73bcf5e-ecda-41a9-984b-aa7e6d3f1ccf`; build `116`, processing `VALID`, audience `APP_STORE_ELIGIBLE`, App Store Connect 존재 확인.
+- 내부 테스트: `TP Taption Plan 내부 테스트` 그룹에 build `116` 연결 및 builds 노출 readback 완료. 그룹 테스터 1명은 `INSTALLED` 상태로 확인했다.
+- 커밋·원격: `b3e4d5a3654001fc969a28e71dc90fece025b337`가 local `HEAD`와 `origin/main`에 동일하고 Plan worktree clean.
+
+남은 물리·성능 게이트:
+
+- iPhone 14 Pro 설치·실행·실제 touch, Apple Watch 원본·동기화, 목요일 재생·지도 비율·WBS 스타일·Dynamic Island, cold/warm p95와 실제 signpost 집계는 실기기 증거가 없어 미완료로 유지한다. TestFlight 처리와 내부 그룹 노출은 위 readback으로 완료했다.
 
 중단 조건: WBS dirty 파일 또는 iPhone·Watch 원본 수정이 필요하면 중단한다. 서명·App Store Connect 인증·처리·내부 그룹 노출이 막히면 오류와 미완료 게이트를 `test.md`에 기록한다.
 

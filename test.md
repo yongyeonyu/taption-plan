@@ -12,8 +12,12 @@
 - Plan 전체 XCTest: 824/824 통과, 실패·스킵 0. 결과 bundle: `/private/tmp/taption-plan-revup83021-full.xcresult`
 - Debug 통합 빌드: `xcodebuild -quiet -project TaptionPlan.xcodeproj -scheme TaptionPlan -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build` exit 0.
 - Debug 산출물 readback: iOS `com.taption.plan / 1.0 / 116`, Watch `com.taption.plan.watchkitapp / 1.0 / 116`, Watch Widget `com.taption.plan.watchkitapp.widget / 1.0 / 116`.
+- Release archive/export: `/private/tmp/taption-plan-revup83021.xcarchive`, `/private/tmp/taption-plan-revup83021-export/TaptionPlan.ipa`; bundle `com.taption.plan / 1.0 / 116`, export 서명 Apple Distribution, `codesign --verify --deep --strict` 통과, IPA SHA-256 `071417e1e551baee7d87f693fe18d840391137670e147fdcab979c38e398aa01`.
+- TestFlight 업로드: 성공. Delivery UUID `d73bcf5e-ecda-41a9-984b-aa7e6d3f1ccf`; `altool --build-status` 및 App Store Connect API readback에서 build `116`, processing `VALID`, audience `APP_STORE_ELIGIBLE`, `IS-ON-APP-STORE-CONNECT: true`.
+- 내부 테스트 readback: `TP Taption Plan 내부 테스트` 그룹 `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`의 builds 관계와 builds 화면에 build `116` 노출 확인. 그룹 테스터 1명, state `INSTALLED` 확인.
+- 커밋·원격: `b3e4d5a3654001fc969a28e71dc90fece025b337`가 local `HEAD`와 `origin/main`에 동일하고 Plan worktree clean.
 - `git diff --check`: 통과. WBS checkout `/Users/u_mo_c/Documents/Taption WBS`는 기존 dirty `temp.md`만 보존했고 수정하지 않았다.
-- 아직 확인하지 않은 외부 게이트: iPhone 14 Pro 실기기 touch/실행, Apple Watch 원본·동기화, 목요일 재생·지도 비율·WBS 스타일·Dynamic Island, cold/warm p95와 실제 signpost 집계, TestFlight 처리·내부 그룹 노출.
+- 아직 확인하지 않은 외부 게이트: iPhone 14 Pro 실기기 touch/실행, Apple Watch 원본·동기화, 목요일 재생·지도 비율·WBS 스타일·Dynamic Island, cold/warm p95와 실제 signpost 집계. TestFlight 처리와 내부 그룹 노출은 위 API/readback으로 완료했다.
 
 ## 2026-08-30 DBRUN83019 · DBIMP83020 날짜 로딩 DB 최적화
 
