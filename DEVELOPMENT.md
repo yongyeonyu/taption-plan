@@ -487,3 +487,11 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - SQLite는 schema 생성을 단일 transaction으로 묶고 raw event batch에 prepared statement를 재사용한다. canonical payload는 최대 크기와 선언된 원본 바이트 수를 검증하며, materialized day는 iPhone·Watch 원본 digest와 일치할 때만 사용한다. startup에는 `PRAGMA optimize`를 적용한다.
 - 백업 복원은 staged snapshot을 정본 저장소에 먼저 저장하고 성공 뒤에만 메모리 상태를 publish한다. snapshot과 raw route는 부분 성공 상태를 명시하며, 실패 시 기존 메모리 snapshot을 유지한다. 월별 센서 chunk는 재실행 뒤 기존 번호 다음부터 이어 쓴다.
 - 지도·타임라인 UI와 원본 센서·확정 기록은 변경하지 않는다. 각 변경은 package 단위 테스트, 앱 회귀 테스트, Debug build, Release archive 순으로 검증한 뒤 TestFlight 내부 그룹과 테스터 화면까지 readback한다.
+
+### 검증 및 배포
+
+- `TaptionPlanCore` 40건, `TaptionActivityEngine` 8건, `TaptionRouteEngine` 16건, `TaptionPlanEngine` 1건 등 package 65건과 앱 XCTest 848건·Swift Testing 18건이 모두 통과했다.
+- generic iOS Debug·Release 빌드와 Release archive/export가 통과했다. 앱·Widget·Watch·Watch Widget은 모두 `1.0 (121)`이며 Apple Distribution 서명, Production iCloud, TestFlight entitlement와 deep codesign을 확인했다.
+- 배포 소스 커밋 `53e18940bbf13459927d23053ad783f0b8431294`를 `origin/main`에 먼저 푸시했다. IPA SHA-256은 `3957d7f3800314fc9af6f201a3a4ad3ef20548120f6917072337ef187dffa667`이다.
+- TestFlight Delivery UUID `d1cf40bf-7b56-42ef-a7cb-12d82067734c`는 처리 `COMPLETE`, 오류·처리 경고 0, App Store Connect에서 `제출 준비 완료`로 readback했다. MapLibre 외부 framework dSYM 미포함은 심볼 업로드 경고로 별도 기록하며 앱 업로드는 수락됐다.
+- `TP Taption Plan 내부 테스트`에 build 121을 연결했다. 그룹 상세는 `내부 그룹 · 1명의 테스터 · 82개의 빌드`, 빌드 탭은 `1.0 (121) · 테스트 중 · iOS`, 테스터 탭은 내부 테스터 1명을 표시한다. 현재 설치 표시는 `1.0 (120)`이므로 build 121 설치·실행·실제 터치와 Apple Watch 현장 수신은 별도 게이트다.
