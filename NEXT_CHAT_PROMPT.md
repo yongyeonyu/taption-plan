@@ -2,7 +2,7 @@
 
 ## 2026-08-31 WEAT831001 / WATCH83101 · 유료 출시 보완 최신 상태
 
-현재 작업 디렉터리는 `/Users/u_mo_c/Documents/taption plan`이며 `main`/`origin/main` 기준 SHA는 `646f655d5d9c`이다. 이번 보완은 아직 커밋·푸시하지 않았고, 기존 작업과 함께 dirty 상태다.
+현재 작업 디렉터리는 `/Users/u_mo_c/Documents/taption plan`이며 build 120 소스 커밋은 `256ac7d32933359c986027a1d2f22915790df1bd`이다. 해당 커밋은 `main`/`origin/main`에 push했고, build 120 TestFlight 업로드·처리·내부 그룹 연결까지 완료했다.
 
 반영된 보완:
 
@@ -47,13 +47,15 @@
 - 수신 요청 대기 표시 포함 최신 dirty 소스 iOS Release generic build: `/tmp/TaptionPlan-release-20260831-watch-feedback/Build/Products/Release-iphoneos/TaptionPlan.app` 성공; embedded Watch app·Widget 포함.
 - 수신 요청 대기 표시 포함 최신 dirty 소스 watchOS Release generic build: `/tmp/TaptionPlan-watch-release-20260831-watch-feedback/Build/Products/Release-watchos/TaptionPlanWatch.app` 성공.
 - 이번 route/Watch 보정 후 `RouteTimelineDataTests`와 `WatchSensorQueryPlanTests` 단독 실행은 각각 exit 0이고, watchOS Debug generic build도 exit 0이다. 기존 전체 XCTest 852건 결과와 별도로 현재 변경 파일 기준 focused 회귀 증거로 기록한다.
+- build 120 Release archive/export는 `/private/tmp/taption-rel8310001.xcarchive` 및 `/tmp/taption-rel8310001-export/TaptionPlan.ipa`에서 성공했고, IPA SHA-256은 `65003366d03503c02afd87d8fc17a301ce75e08ea5cb9ba0a5986c605d562d39`, deep codesign 검증도 통과했다.
+- build 120은 Delivery UUID `d0c6d36b-5978-40c0-9027-bb3169d0cae6`로 업로드되어 `VALID`·`APP_STORE_ELIGIBLE`·App Store Connect 등록을 확인했다. `TP Taption Plan 내부 테스트` 그룹 상세에서 `1.0 (120) · 테스트 중`을 확인했고, 테스터 화면은 1명 노출 상태이며 설치 표시는 아직 기존 `1.0 (119)`이다.
 
 남은 게이트:
 
 - 결제 모델: 무료 다운로드 + 14일 체험 + Pro 1회 영구 구매안으로 진행하기로 결정했다. Chrome 로그인은 확인했지만 `유료 앱 계약`이 `신규`이고 `com.taption.plan.pro` 상품이 없어 계약 활성화·상품 생성·판매 가능 상태·sandbox 구매/복원은 외부 게이트로 남아 있다 (`temp.md`의 `PAID831001`).
 - iPhone 미러링 재연결을 위해 잠금 상태로 전환한 뒤 실제 화면·터치·지도 메모 저장 readback. 현재 지도 화면 진입만 확인했고 터치 시 연결이 종료됐다.
 - Apple Watch 현장 설치·실제 수신·동기화. 메뉴의 수신 시각 구현과 receipt 단위 테스트는 완료했지만, 현재 Watch는 `unavailable`이라 실제 콜백 readback은 미완료다.
-- 이번 dirty 소스의 archive/upload 후 `TP Taption Plan 내부 테스트` 그룹 연결·빌드/테스터 노출 readback.
+- build 120의 iPhone 14 Pro 설치·실제 화면/터치·Watch 수신 readback.
 - App Store Connect는 09:55:39 KST Chrome에서 `axony99@gmail.com` 로그인과 `Taption Plan` 접근을 확인했다. 기존 TestFlight build 119는 `제출 준비 완료`, `TP Taption Plan 내부 테스트` 그룹에 노출되고 그룹 상세는 1명의 테스터·80개 빌드, 테스터 `axony99@gmail.com`의 `설치됨 1.0 (119)`로 readback했다. 다만 비즈니스의 `유료 앱 계약`은 `신규`이고, 앱 내 구입 목록은 비어 있어 `com.taption.plan.pro`가 아직 App Store Connect에 생성되지 않았다.
 
 ## 2026-08-31 REL83054A01 · 전달 완료 및 다음 채팅 인계
