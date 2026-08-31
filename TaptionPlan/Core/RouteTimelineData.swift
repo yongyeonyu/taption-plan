@@ -712,21 +712,56 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             if $0.endDate != $1.endDate { return $0.endDate > $1.endDate }
             return $0.id < $1.id
         }
-        var selected: [(leg: MapHomeWBSPlaybackLeg, span: TimeSpan)] = []
+        var selected: [(leg: MapHomeWBSPlaybackLeg, coverage: TimeSpan)] = []
         for movement in ordered {
             let span = TimeSpan(start: movement.startDate, end: movement.endDate)
-            guard let index = selected.firstIndex(where: {
-                $0.span.intersection(with: span) != nil
-                    && sameMovementEndpoints($0.leg, movement)
-            }) else {
+            let conflictingIndices = selected.indices.filter { index in
+                selected[index].coverage.intersection(with: span) != nil
+                    && sameMovementEndpoints(selected[index].leg, movement)
+            }
+            guard !conflictingIndices.isEmpty else {
                 selected.append((movement, span))
                 continue
             }
-            if prefersForecastMovement(movement, over: selected[index].leg) {
-                selected[index] = (movement, span)
+
+            var winner = movement
+            var coverage = span
+            for index in conflictingIndices where prefersForecastMovement(
+                selected[index].leg,
+                over: winner
+            ) {
+                winner = selected[index].leg
             }
+            for index in conflictingIndices {
+                coverage = TimeSpan(
+                    start: min(coverage.start, selected[index].coverage.start),
+                    end: max(coverage.end, selected[index].coverage.end)
+                )
+            }
+            for index in conflictingIndices.reversed() {
+                selected.remove(at: index)
+            }
+            selected.append((winner, coverage))
         }
-        return selected.map(\.leg)
+        return selected.map { item in
+            let leg = item.leg
+            guard leg.startDate != item.coverage.start
+                    || leg.endDate != item.coverage.end else {
+                return leg
+            }
+            return MapHomeWBSPlaybackLeg(
+                id: leg.id,
+                startDate: item.coverage.start,
+                endDate: item.coverage.end,
+                coordinates: leg.coordinates,
+                routePhase: leg.routePhase,
+                activity: leg.activity,
+                mode: leg.mode,
+                categoryID: leg.categoryID,
+                sourcePlaceID: leg.sourcePlaceID,
+                targetPlaceID: leg.targetPlaceID
+            )
+        }
     }
 
     private static func sameMovementEndpoints(
@@ -1088,28 +1123,64 @@ enum ExpectedRouteRequestEngine {
     private static func deduplicatedRequests(
         _ candidates: [RequestCandidate]
     ) -> [RequestCandidate] {
-        var selected: [RequestCandidate] = []
+        var selected: [(candidate: RequestCandidate, coverage: TimeSpan)] = []
         for candidate in candidates {
             let candidateSpan = TimeSpan(
                 start: candidate.request.departureDate,
                 end: candidate.request.arrivalDate
             )
-            guard let index = selected.firstIndex(where: { current in
-                let currentSpan = TimeSpan(
-                    start: current.request.departureDate,
-                    end: current.request.arrivalDate
-                )
-                return currentSpan.intersection(with: candidateSpan) != nil
-                    && sameRequestEndpoints(current.request, candidate.request)
-            }) else {
-                selected.append(candidate)
+            let conflictingIndices = selected.indices.filter { index in
+                let current = selected[index]
+                return current.coverage.intersection(with: candidateSpan) != nil
+                    && sameRequestEndpoints(
+                        current.candidate.request,
+                        candidate.request
+                    )
+            }
+            guard !conflictingIndices.isEmpty else {
+                selected.append((candidate, candidateSpan))
                 continue
             }
-            if isRicher(candidate.segment, than: selected[index].segment) {
-                selected[index] = candidate
+
+            var winner = candidate
+            var coverage = candidateSpan
+            for index in conflictingIndices where isRicher(
+                selected[index].candidate.segment,
+                than: winner.segment
+            ) {
+                winner = selected[index].candidate
             }
+            for index in conflictingIndices {
+                coverage = TimeSpan(
+                    start: min(coverage.start, selected[index].coverage.start),
+                    end: max(coverage.end, selected[index].coverage.end)
+                )
+            }
+            for index in conflictingIndices.reversed() {
+                selected.remove(at: index)
+            }
+            selected.append((winner, coverage))
         }
-        return selected
+        return selected.map { item in
+            let candidate = item.candidate
+            let request = candidate.request
+            guard request.departureDate != item.coverage.start
+                    || request.arrivalDate != item.coverage.end else {
+                return candidate
+            }
+            return RequestCandidate(
+                segment: candidate.segment,
+                request: ExpectedRouteRequest(
+                    segmentID: request.segmentID,
+                    mode: request.mode,
+                    transport: request.transport,
+                    start: request.start,
+                    end: request.end,
+                    departureDate: item.coverage.start,
+                    arrivalDate: item.coverage.end
+                )
+            )
+        }
     }
 
     private static func sameRequestEndpoints(

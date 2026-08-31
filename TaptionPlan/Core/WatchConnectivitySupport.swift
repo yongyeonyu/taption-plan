@@ -343,6 +343,29 @@ struct AppleWatchCompanionRow: Sendable, Equatable {
     let detail: String?
 }
 
+enum AppleWatchDataSyncRequestStatus: Sendable, Equatable {
+    case pending
+    case backgroundQueued
+    case noResponse
+    case rejected
+}
+
+enum AppleWatchDataSyncReceiptPolicy {
+    static func satisfiesPendingRequest(
+        requestedAt: Date,
+        expectedRequestID: String?,
+        receivedRequestID: String?,
+        measuredAt: Date,
+        receivedAt: Date
+    ) -> Bool {
+        guard receivedAt >= requestedAt else { return false }
+        if let receivedRequestID {
+            return receivedRequestID == expectedRequestID
+        }
+        return measuredAt >= requestedAt
+    }
+}
+
 /// 안내를 닫은 기록. 워치를 가진 기기가 어느 것인지는 계정이 아니라 기기의
 /// 성질이라서 iCloud 스냅샷이 아니라 기기 저장소에 남긴다. 덕분에
 /// `cloudPortableSnapshot` / `mergeDeviceLocalData`의 손으로 적은 목록에
@@ -410,15 +433,16 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private var latestPayloadData: Data?
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
     private var sensorSummaryHandler:
-        (@Sendable (TaptionWatchSensorSummary, Date) -> Void)?
+        (@Sendable (TaptionWatchSensorSummary, Date, String?) -> Void)?
     private var healthSnapshotHandler:
-        (@Sendable (TaptionWatchHealthSnapshot, Date) -> Void)?
+        (@Sendable (TaptionWatchHealthSnapshot, Date, String?) -> Void)?
     /// 워치가 보낸 "맞아요 / 아니에요" 응답. AppModel이 별도로 연결한다.
     private var activityConfirmationHandler:
         (@Sendable (TaptionWatchActivityConfirmation) -> Void)?
     private var locationTrackingHandler: (@Sendable (Bool) -> Void)?
     private var locationTrackingGuidanceHandler: (@Sendable () -> Void)?
     private var statusHandler: (@Sendable (AppleWatchConnectionState) -> Void)?
+    private var dataSyncLiveFailureHandler: (@Sendable (String) -> Void)?
 
     override init() {
         commandDefaults = UserDefaults(
@@ -431,18 +455,21 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             onCommand: @escaping @Sendable (TaptionWatchCommand) -> Void,
             onSensorSummary: @escaping @Sendable (
                 TaptionWatchSensorSummary,
-                Date
+                Date,
+                String?
             ) -> Void,
             onHealthSnapshot: @escaping @Sendable (
                 TaptionWatchHealthSnapshot,
-                Date
-            ) -> Void = { _, _ in },
+                Date,
+                String?
+            ) -> Void = { _, _, _ in },
         onActivityConfirmation: @escaping @Sendable (
             TaptionWatchActivityConfirmation
         ) -> Void = { _ in },
         onLocationTracking: @escaping @Sendable (Bool) -> Void = { _ in },
         onLocationTrackingGuidance: @escaping @Sendable () -> Void = {},
-        onStatusChange: @escaping @Sendable (AppleWatchConnectionState) -> Void
+        onStatusChange: @escaping @Sendable (AppleWatchConnectionState) -> Void,
+        onDataSyncLiveFailure: @escaping @Sendable (String) -> Void
     ) {
         commandHandler = onCommand
         sensorSummaryHandler = onSensorSummary
@@ -451,6 +478,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         locationTrackingHandler = onLocationTracking
         locationTrackingGuidanceHandler = onLocationTrackingGuidance
         statusHandler = onStatusChange
+        dataSyncLiveFailureHandler = onDataSyncLiveFailure
         guard WCSession.isSupported() else {
             onStatusChange(.unsupported)
             return
@@ -610,6 +638,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                             "request_id": requestID,
                         ]) { _, new in new }
                     )
+                    self.dataSyncLiveFailureHandler?(requestID)
                 }
             )
         }
@@ -794,7 +823,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 )
                 // Live and reliable delivery can contain the same summary.
                 // Persistence is idempotent, so forwarding both avoids loss.
-                sensorSummaryHandler?(summary, receivedAt)
+                sensorSummaryHandler?(summary, receivedAt, requestID)
                 latestWatchDataAt = max(
                     latestWatchDataAt ?? summary.endedAt,
                     summary.endedAt
@@ -830,7 +859,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                     "watch_health_snapshot_received",
                     fields: fields
                 )
-                healthSnapshotHandler?(snapshot, receivedAt)
+                healthSnapshotHandler?(snapshot, receivedAt, requestID)
                 latestWatchDataAt = max(
                     latestWatchDataAt ?? snapshot.capturedAt,
                     snapshot.capturedAt

@@ -1,6 +1,7 @@
 import XCTest
 import UIKit
 import CoreLocation
+import StoreKit
 import SwiftUI // TEMP-CAT-SHEET
 @testable import TaptionPlan
 
@@ -3698,9 +3699,11 @@ final class FeatureEngineTests: XCTestCase {
             )
         }
 
+        let inference = TravelModeClassifier().classify(readings: readings)
         XCTAssertNotEqual(
-            TravelModeClassifier().classify(readings: readings).mode,
-            .subway
+            inference.mode,
+            .subway,
+            "실제 근거: \(inference.evidence)"
         )
     }
 
@@ -5630,6 +5633,68 @@ final class FeatureEngineTests: XCTestCase {
         ]
 
         XCTAssertNil(SubwayStationCatalog.coordinateTrajectory(from: readings))
+        XCTAssertTrue(SubwayTravelSegmentEngine.segments(from: readings).isEmpty)
+    }
+
+    func testSingleRailMatchDoesNotPromoteTwoStationCarToSubway() {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "가정역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(5 * 60),
+                point: nil,
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                gpsAvailable: false
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(10 * 60),
+                point: nil,
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                gpsAvailable: false
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(15 * 60),
+                point: GeoPoint(
+                    latitude: 37.5667,
+                    longitude: 126.8273,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "마곡나루역"
+            ),
+        ]
+
+        XCTAssertNotNil(
+            SubwayStationCatalog.sparseEndpointTrajectory(from: readings)
+        )
+        XCTAssertNotEqual(
+            TravelModeClassifier().classify(readings: readings).mode,
+            .subway
+        )
         XCTAssertTrue(SubwayTravelSegmentEngine.segments(from: readings).isEmpty)
     }
 
@@ -11281,6 +11346,29 @@ final class FeatureEngineTests: XCTestCase {
                 revocationDate: .now
             )
         )
+    }
+
+    func testProEntitlementRequiresNonConsumableProductType() {
+        XCTAssertTrue(
+            TaptionCommercePolicy.grantsProAccess(
+                productID: TaptionCommercePolicy.proProductID,
+                productType: .nonConsumable,
+                revocationDate: nil
+            )
+        )
+        for unsupportedType in [
+            Product.ProductType.consumable,
+            .autoRenewable,
+            .nonRenewable,
+        ] {
+            XCTAssertFalse(
+                TaptionCommercePolicy.grantsProAccess(
+                    productID: TaptionCommercePolicy.proProductID,
+                    productType: unsupportedType,
+                    revocationDate: nil
+                )
+            )
+        }
     }
 
     func testSettingsMigrationDefaultsNotificationToggleToOff() throws {
@@ -18875,6 +18963,110 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testTransitBoardingUsesStaticSubwayCatalogWithoutRegisteredOrMapKitPlace()
+        throws {
+        let start = makeDate(2026, 8, 31, 9)
+        let origin = try XCTUnwrap(
+            SubwayStationCatalog.stations.first {
+                $0.stationName == "가정" && $0.coordinate != nil
+            }?.coordinate
+        )
+        let station = try XCTUnwrap(
+            SubwayStationCatalog.stations.first {
+                $0.stationName == "검암" && $0.coordinate != nil
+            }
+        )
+        let point = try XCTUnwrap(station.coordinate)
+        let destination = try XCTUnwrap(
+            SubwayStationCatalog.stations.first {
+                $0.stationName == "마곡나루" && $0.coordinate != nil
+            }?.coordinate
+        )
+        let readings = [
+            transitReading(
+                at: start.addingTimeInterval(2 * 60),
+                point: origin
+            ),
+        ] + transitReadings(
+            at: start.addingTimeInterval(5 * 60),
+            point: point,
+            duration: 3 * 60
+        ) + [
+            transitReading(
+                at: start.addingTimeInterval(18 * 60),
+                point: destination
+            ),
+        ]
+
+        let candidates = TransitBoardingCandidateEngine.candidates(
+            readings: readings,
+            registeredLocations: [],
+            travel: [uncertainTransitTravel(at: start)]
+        )
+
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates.first?.name, "검암")
+        XCTAssertEqual(candidates.first?.kind, .subwayStation)
+        XCTAssertEqual(candidates.first?.source, .catalog)
+        XCTAssertEqual(candidates.first?.mode, .subway)
+    }
+
+    func testStaticSubwayCatalogRejectsTwoStationCarFallbackWithoutRailEvidence()
+        throws {
+        let start = makeDate(2026, 8, 31, 9)
+        let station = try XCTUnwrap(
+            SubwayStationCatalog.stations.first {
+                $0.stationName == "검암" && $0.coordinate != nil
+            }?.coordinate
+        )
+        let destination = try XCTUnwrap(
+            SubwayStationCatalog.stations.first {
+                $0.stationName == "마곡나루" && $0.coordinate != nil
+            }?.coordinate
+        )
+        var readings = transitReadings(
+            at: start,
+            point: station,
+            duration: 3 * 60
+        )
+        readings[0].matchesRailRoute = true
+        readings += [
+            transitReading(
+                at: start.addingTimeInterval(15 * 60),
+                point: destination
+            ),
+        ]
+
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: readings,
+                registeredLocations: [],
+                travel: [uncertainTransitTravel(at: start)]
+            ).isEmpty
+        )
+    }
+
+    func testStaticSubwayCatalogDoesNotPromptForSingleRoadStop() throws {
+        let start = makeDate(2026, 8, 31, 9)
+        let station = try XCTUnwrap(
+            SubwayStationCatalog.stations.first {
+                $0.stationName == "검암" && $0.coordinate != nil
+            }?.coordinate
+        )
+
+        let candidates = TransitBoardingCandidateEngine.candidates(
+            readings: transitReadings(
+                at: start,
+                point: station,
+                duration: 3 * 60
+            ),
+            registeredLocations: [],
+            travel: [uncertainTransitTravel(at: start)]
+        )
+
+        XCTAssertTrue(candidates.isEmpty)
+    }
+
     func testTransitBoardingRequiresPoweredMovementAndUncertainOrIncompleteRoute() {
         let start = makeDate(2026, 8, 28, 10, 30)
         let point = GeoPoint(
@@ -19686,7 +19878,42 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(normalized.first?.source, .appleWatch)
     }
 
-    func testAppleWatchActivityOverridesInferredIPhoneMovement() {
+    func testLegacyWatchSleepBehaviorStillOverridesTravel() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_050_000)
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(2 * 60 * 60)
+        )
+        let legacyWatchSleep = ActualRecord(
+            planID: nil,
+            title: "활동",
+            categoryID: "activity",
+            startedAt: span.start,
+            endedAt: span.end,
+            source: .appleWatch,
+            behavior: WatchBehaviorKind.sleep.rawValue
+        )
+        let subway = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 4_000,
+            confidence: .high,
+            evidence: []
+        )
+
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(30 * 60),
+                actuals: [legacyWatchSleep],
+                travel: [subway],
+                places: [],
+                frequentPlaces: []
+            ),
+            .sleeping
+        )
+    }
+
+    func testAppleWatchMajorActivityOverridesInferredIPhoneMovement() {
         let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
         let span = TimeSpan(
             start: start,
@@ -19716,7 +19943,31 @@ final class MapHomeStickmanTests: XCTestCase {
                 frequentPlaces: [],
                 readings: [inferredCar]
             ),
-            .exercise
+            .activity
+        )
+    }
+
+    func testMajorCategoryControlsStickmanInsteadOfDetailedActivity() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_100_000)
+        let detailActivity = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(30 * 60),
+            source: .timer,
+            behavior: "computer"
+        )
+
+        XCTAssertEqual(
+            MapHomeStickmanActionResolver.action(
+                at: start.addingTimeInterval(10 * 60),
+                actuals: [detailActivity],
+                travel: [],
+                places: [],
+                frequentPlaces: []
+            ),
+            .activity
         )
     }
 
@@ -20031,7 +20282,7 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
-    func testMapStickmanResolvesEveryMajorCategoryAndMovementDetail() {
+    func testMapStickmanResolvesMajorCategoryBeforeActivityDetail() {
         let majorCategories: [(String, String, MapHomeStickmanAction)] = [
             ("activity", "활동", .activity),
             ("work", "업무", .computer),
@@ -20043,16 +20294,9 @@ final class MapHomeStickmanTests: XCTestCase {
             ("exercise", "운동", .exercise),
             ("unconfirmed", "미확인", .unconfirmed),
         ]
-        let movementDetails: [(String, MapHomeStickmanAction)] = [
-            ("걷기", .walking),
-            ("달리기", .running),
-            ("자동차", .car),
-            ("지하철", .subway),
-            ("자가용", .car),
-            ("버스", .bus),
-            ("배", .ship),
-            ("비행기", .airplane),
-            ("자전거", .cycling),
+        let movementDetails = [
+            "걷기", "달리기", "자동차", "지하철", "자가용",
+            "버스", "배", "비행기", "자전거",
         ]
 
         for (categoryID, title, action) in majorCategories {
@@ -20065,14 +20309,14 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(categoryID) 대분류 동작이 다릅니다."
             )
         }
-        for (title, action) in movementDetails {
+        for title in movementDetails {
             XCTAssertEqual(
                 MapHomeStickmanActionResolver.action(
                     for: "movement",
                     label: title
                 ),
-                action,
-                "\(title) 이동 상세 동작이 다릅니다."
+                .movement,
+                "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
         XCTAssertEqual(MapHomeStickmanAction.allCases.count, 18)
@@ -20084,7 +20328,7 @@ final class MapHomeStickmanTests: XCTestCase {
                 for: "activity",
                 label: "업무"
             ),
-            .computer
+            .activity
         )
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(
@@ -20143,27 +20387,20 @@ final class MapHomeStickmanTests: XCTestCase {
                 categoryID: "movement",
                 title: "걷기"
             ),
-            .walking
+            .movement
         )
-        let movementDetails: [(String, TaptionLiveActivityStickmanAction)] = [
-            ("걷기", .walking),
-            ("달리기", .running),
-            ("자동차", .car),
-            ("지하철", .subway),
-            ("자가용", .privateVehicle),
-            ("버스", .bus),
-            ("배", .ship),
-            ("비행기", .airplane),
-            ("자전거", .cycling),
+        let movementDetails = [
+            "걷기", "달리기", "자동차", "지하철", "자가용",
+            "버스", "배", "비행기", "자전거",
         ]
-        for (title, action) in movementDetails {
+        for title in movementDetails {
             XCTAssertEqual(
                 TaptionLiveActivityStickmanAction.resolve(
                     categoryID: "movement",
                     title: title
                 ),
-                action,
-                "\(title) Live Activity 이동 상세 동작이 다릅니다."
+                .movement,
+                "\(title) 상세가 Live Activity 이동 대분류를 덮었습니다."
             )
         }
         XCTAssertEqual(TaptionLiveActivityStickmanAction.allCases.count, 18)
@@ -20173,7 +20410,7 @@ final class MapHomeStickmanTests: XCTestCase {
                 categoryID: "activity",
                 title: "업무"
             ),
-            .computer
+            .activity
         )
         XCTAssertEqual(
             TaptionLiveActivityStickmanAction.resolve(

@@ -114,6 +114,29 @@ enum SubwayStationCatalog {
 
     static let stations: [Station] = decodeStations()
 
+    private struct StationSpatialCell: Hashable {
+        let latitude: Int
+        let longitude: Int
+    }
+
+    private static let stationSpatialCellDegrees = 0.01
+    private static let stationSpatialIndex: [StationSpatialCell: [Int]] = {
+        stations.indices.reduce(into: [:]) { result, index in
+            guard let coordinate = stations[index].coordinate else {
+                return
+            }
+            let cell = StationSpatialCell(
+                latitude: Int(floor(
+                    coordinate.latitude / stationSpatialCellDegrees
+                )),
+                longitude: Int(floor(
+                    coordinate.longitude / stationSpatialCellDegrees
+                ))
+            )
+            result[cell, default: []].append(index)
+        }
+    }()
+
     private static let stationIndices: [String: [Int]] = {
         Dictionary(grouping: stations.indices) {
             normalized(stations[$0].stationName)
@@ -461,7 +484,7 @@ enum SubwayStationCatalog {
         let railRatio = ordered.isEmpty
             ? 0
             : Double(railMatchCount) / Double(ordered.count)
-        let hasRailEvidence = railRatio >= 0.25
+        let hasRailEvidence = railMatchCount >= 2 && railRatio >= 0.25
             || SubwayWiFiSSID.hasContinuousEvidence(
                 ordered.map(\.connectedWiFiSSID)
             )
@@ -780,13 +803,47 @@ enum SubwayStationCatalog {
         to point: GeoPoint,
         maximumDistanceMeters: Double = 450
     ) -> Station? {
+        guard point.latitude.isFinite,
+              point.longitude.isFinite,
+              maximumDistanceMeters.isFinite,
+              maximumDistanceMeters >= 0 else {
+            return nil
+        }
+        let latitudeRadius = maximumDistanceMeters / 111_000
+        let longitudeMetersPerDegree = max(
+            1,
+            111_000 * cos(point.latitude * .pi / 180)
+        )
+        let longitudeRadius = maximumDistanceMeters
+            / longitudeMetersPerDegree
+        let minimumLatitudeCell = Int(floor(
+            (point.latitude - latitudeRadius) / stationSpatialCellDegrees
+        ))
+        let maximumLatitudeCell = Int(floor(
+            (point.latitude + latitudeRadius) / stationSpatialCellDegrees
+        ))
+        let minimumLongitudeCell = Int(floor(
+            (point.longitude - longitudeRadius) / stationSpatialCellDegrees
+        ))
+        let maximumLongitudeCell = Int(floor(
+            (point.longitude + longitudeRadius) / stationSpatialCellDegrees
+        ))
         var best: (station: Station, distance: Double)?
-        for station in stations {
-            guard let coordinate = station.coordinate else { continue }
-            let distance = distanceMeters(point, coordinate)
-            guard distance <= maximumDistanceMeters else { continue }
-            if best.map({ distance < $0.distance }) ?? true {
-                best = (station, distance)
+        for latitudeCell in minimumLatitudeCell...maximumLatitudeCell {
+            for longitudeCell in minimumLongitudeCell...maximumLongitudeCell {
+                let cell = StationSpatialCell(
+                    latitude: latitudeCell,
+                    longitude: longitudeCell
+                )
+                for index in stationSpatialIndex[cell] ?? [] {
+                    let station = stations[index]
+                    guard let coordinate = station.coordinate else { continue }
+                    let distance = distanceMeters(point, coordinate)
+                    guard distance <= maximumDistanceMeters else { continue }
+                    if best.map({ distance < $0.distance }) ?? true {
+                        best = (station, distance)
+                    }
+                }
             }
         }
         return best?.station

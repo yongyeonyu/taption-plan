@@ -549,6 +549,9 @@ final class AppModel {
     private(set) var appleWatchLastDataReceivedAt: Date?
     private(set) var appleWatchReceivedDataKinds: Set<AppleWatchDataKind> = []
     private(set) var appleWatchDataSyncRequestedAt: Date?
+    private(set) var appleWatchDataSyncRequestStatus:
+        AppleWatchDataSyncRequestStatus?
+    @ObservationIgnored private var appleWatchDataSyncRequestID: String?
     /// 첫 실행 안내를 닫은 기록. 기기 저장소에서 읽어 오고, 바뀔 때만 다시
     /// 넣어 화면이 갱신되게 한다.
     private(set) var dismissedAppleWatchPrompts: Set<AppleWatchOnboardingPrompt> =
@@ -945,19 +948,21 @@ final class AppModel {
                     await self?.applyWatchCommand(command)
                 }
             },
-            onSensorSummary: { [weak self] summary, receivedAt in
+            onSensorSummary: { [weak self] summary, receivedAt, requestID in
                 Task { @MainActor [weak self] in
                     await self?.applyWatchSensorSummary(
                         summary,
-                        receivedAt: receivedAt
+                        receivedAt: receivedAt,
+                        requestID: requestID
                     )
                 }
             },
-            onHealthSnapshot: { [weak self] snapshot, receivedAt in
+            onHealthSnapshot: { [weak self] snapshot, receivedAt, requestID in
                 Task { @MainActor [weak self] in
                     await self?.applyWatchHealthSnapshot(
                         snapshot,
-                        receivedAt: receivedAt
+                        receivedAt: receivedAt,
+                        requestID: requestID
                     )
                 }
             },
@@ -979,6 +984,13 @@ final class AppModel {
             onStatusChange: { [weak self] state in
                 Task { @MainActor [weak self] in
                     self?.applyAppleWatchConnectionState(state)
+                }
+            },
+            onDataSyncLiveFailure: { [weak self] requestID in
+                Task { @MainActor [weak self] in
+                    self?.applyAppleWatchDataSyncLiveFailure(
+                        requestID: requestID
+                    )
                 }
             }
         )
@@ -3930,6 +3942,24 @@ final class AppModel {
             requestID: requestID
         )
         appleWatchDataSyncRequestedAt = requested ? requestedAt : nil
+        appleWatchDataSyncRequestID = requested ? requestID : nil
+        appleWatchDataSyncRequestStatus = requested ? .pending : .rejected
+        if requested {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(15))
+                guard let self,
+                      self.appleWatchDataSyncRequestID == requestID,
+                      self.appleWatchDataSyncRequestStatus == .pending else {
+                    return
+                }
+                self.appleWatchDataSyncRequestStatus = .noResponse
+                logger.record(
+                    "watch_data_sync_response_timeout",
+                    level: .notice,
+                    fields: ["request_id": requestID]
+                )
+            }
+        }
         logger.record(
             "watch_data_sync_button_result",
             fields: [
@@ -3939,6 +3969,17 @@ final class AppModel {
                     appleWatchDataSyncRequestedAt != nil
                 ),
             ]
+        )
+    }
+
+    private func applyAppleWatchDataSyncLiveFailure(requestID: String) {
+        guard appleWatchDataSyncRequestID == requestID,
+              appleWatchDataSyncRequestedAt != nil else { return }
+        appleWatchDataSyncRequestStatus = .backgroundQueued
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_data_sync_live_failure_applied",
+            level: .notice,
+            fields: ["request_id": requestID]
         )
     }
 
@@ -5916,7 +5957,8 @@ final class AppModel {
     private func noteAppleWatchDataReceived(
         _ kinds: Set<AppleWatchDataKind>,
         measuredAt: Date,
-        receivedAt: Date = .now
+        receivedAt: Date = .now,
+        requestID: String? = nil
     ) {
         guard !kinds.isEmpty else { return }
         let hadPendingRequest = appleWatchDataSyncRequestedAt != nil
@@ -5931,8 +5973,16 @@ final class AppModel {
         }
         let clearedPendingRequest: Bool
         if let requestedAt = appleWatchDataSyncRequestedAt,
-           receivedAt >= requestedAt {
+           AppleWatchDataSyncReceiptPolicy.satisfiesPendingRequest(
+               requestedAt: requestedAt,
+               expectedRequestID: appleWatchDataSyncRequestID,
+               receivedRequestID: requestID,
+               measuredAt: measuredAt,
+               receivedAt: receivedAt
+           ) {
             appleWatchDataSyncRequestedAt = nil
+            appleWatchDataSyncRequestID = nil
+            appleWatchDataSyncRequestStatus = nil
             clearedPendingRequest = true
         } else {
             clearedPendingRequest = false
@@ -5952,6 +6002,7 @@ final class AppModel {
                 } ?? "none",
                 "pending_before": String(hadPendingRequest),
                 "pending_cleared": String(clearedPendingRequest),
+                "request_id": requestID ?? "none",
                 "pending_after": String(
                     appleWatchDataSyncRequestedAt != nil
                 ),
@@ -5963,7 +6014,8 @@ final class AppModel {
 
     private func applyWatchSensorSummary(
         _ summary: TaptionWatchSensorSummary,
-        receivedAt: Date
+        receivedAt: Date,
+        requestID: String?
     ) async {
         var dataKinds: Set<AppleWatchDataKind> = [.motion, .activity]
         if summary.latestHeartRate != nil
@@ -5989,7 +6041,8 @@ final class AppModel {
         noteAppleWatchDataReceived(
             dataKinds,
             measuredAt: summary.endedAt,
-            receivedAt: receivedAt
+            receivedAt: receivedAt,
+            requestID: requestID
         )
         if let heartRate = summary.latestHeartRate,
            heartRate.isFinite, heartRate > 0 {
@@ -6434,7 +6487,8 @@ final class AppModel {
 
     private func applyWatchHealthSnapshot(
         _ snapshot: TaptionWatchHealthSnapshot,
-        receivedAt: Date
+        receivedAt: Date,
+        requestID: String?
     ) async {
         var dataKinds: Set<AppleWatchDataKind> = [.health]
         if snapshot.workoutCount > 0 {
@@ -6452,7 +6506,8 @@ final class AppModel {
         noteAppleWatchDataReceived(
             dataKinds,
             measuredAt: snapshot.capturedAt,
-            receivedAt: receivedAt
+            receivedAt: receivedAt,
+            requestID: requestID
         )
         archiveRawDeviceData(
             source: .appleWatch,

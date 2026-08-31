@@ -134,6 +134,19 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
 
     static func resolve(categoryID: String, title: String) -> Self {
         let category = categoryID.lowercased().replacingOccurrences(of: " ", with: "")
+        let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
+        switch categoryRoot {
+        case "activity": return .activity
+        case "computer", "work": return .computer
+        case "reading", "study": return .reading
+        case "hobby": return .hobby
+        case "sleeping", "sleep": return .sleeping
+        case "movement": return .movement
+        case "eating", "food": return .eating
+        case "exercise": return .exercise
+        case "unconfirmed", "unknown": return .unconfirmed
+        default: break
+        }
         let value = "\(categoryID) \(title)".lowercased()
         let has = { (terms: [String]) in terms.contains { value.contains($0) } }
 
@@ -159,19 +172,6 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
         if has(["수면", "잠", "sleep"]) { return .sleeping }
         if has(["식사", "밥", "food", "meal", "eating"]) { return .eating }
         if has(["운동", "exercise"]) { return .exercise }
-
-        switch category {
-        case "activity": return .activity
-        case "computer", "work": return .computer
-        case "reading", "study": return .reading
-        case "hobby": return .hobby
-        case "sleeping", "sleep": return .sleeping
-        case "movement": return .movement
-        case "eating", "food": return .eating
-        case "exercise": return .exercise
-        case "unconfirmed": return .unconfirmed
-        default: break
-        }
 
         if has(["활동", "activity"]) { return .activity }
         if has(["이동", "movement"]) { return .movement }

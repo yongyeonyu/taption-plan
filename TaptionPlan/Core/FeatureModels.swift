@@ -2150,6 +2150,7 @@ struct UserTransitLocation: Identifiable, Codable, Hashable, Sendable {
 
 enum TransitBoardingPlaceSource: String, Codable, Hashable, Sendable {
     case registered
+    case catalog
     case mapKit
 }
 
@@ -2194,6 +2195,18 @@ struct TransitBoardingPlace: Hashable, Sendable {
         self.point = point
         radiusMeters = kind.mapKitSearchRadiusMeters
         source = .mapKit
+        userLocationID = nil
+    }
+
+    init(catalogSubwayName name: String, point: GeoPoint) {
+        let latitudeKey = Int((point.latitude * 10_000).rounded())
+        let longitudeKey = Int((point.longitude * 10_000).rounded())
+        id = "catalog-subway-\(latitudeKey):\(longitudeKey)"
+        self.name = name
+        kind = .subwayStation
+        self.point = point
+        radiusMeters = 250
+        source = .catalog
         userLocationID = nil
     }
 }

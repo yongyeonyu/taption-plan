@@ -1171,12 +1171,14 @@ struct SettingsView: View {
             .foregroundStyle(Color.tpSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if let requestedAt = model.appleWatchDataSyncRequestedAt {
-                Text(
-                    "수신 요청됨 · \(requestedAt.formatted(date: .abbreviated, time: .shortened))"
-                )
+            if let status = model.appleWatchDataSyncRequestStatus {
+                Text(watchDataSyncStatusText(status))
                 .font(.taption(size: SettingsTypography.footnote))
-                .foregroundStyle(Color.tpMovementDark)
+                .foregroundStyle(
+                    status == .pending
+                        ? Color.tpMovementDark
+                        : Color.tpSecondary
+                )
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
@@ -1193,6 +1195,24 @@ struct SettingsView: View {
             Rectangle()
                 .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
                 .frame(height: 0.5)
+        }
+    }
+
+    private func watchDataSyncStatusText(
+        _ status: AppleWatchDataSyncRequestStatus
+    ) -> String {
+        let requestedAt = model.appleWatchDataSyncRequestedAt.map {
+            " · \($0.formatted(date: .abbreviated, time: .shortened))"
+        } ?? ""
+        switch status {
+        case .pending:
+            return "수신 요청됨\(requestedAt)"
+        case .backgroundQueued:
+            return "즉시 전송 실패 · 백그라운드 수신 대기\(requestedAt)"
+        case .noResponse:
+            return "Watch 응답 없음 · 연결 상태 확인\(requestedAt)"
+        case .rejected:
+            return "가져오기 요청 실패 · Watch 연결·설치 상태 확인"
         }
     }
 

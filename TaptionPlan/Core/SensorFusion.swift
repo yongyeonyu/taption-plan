@@ -325,7 +325,9 @@ struct TravelModeClassifier: Sendable {
         }
 
         let stationRatio = ratio(ordered, where: \.nearbyStation)
+        let railMatchCount = ordered.filter(\.matchesRailRoute).count
         let railRatio = ratio(ordered, where: \.matchesRailRoute)
+        let repeatedRailMatch = railMatchCount >= 2 && railRatio >= 0.25
         let transitRatio = ratio(ordered, where: \.matchesPublicTransitRoute)
         let stopRatio = ratio(ordered, where: \.frequentStops)
         let taxiHintRatio = ratio(ordered, where: \.rideHailingHint)
@@ -358,7 +360,7 @@ struct TravelModeClassifier: Sendable {
         // 지하 구간에서는 출발·도착역 두 개만 GPS에 남을 수 있다. 이 보조
         // 궤적은 철도 지도 신호가 충분한 경우에만 허용해 도로 주행을 막는다.
         let coordinateTrajectory = strictCoordinateTrajectory
-            ?? (railRatio >= 0.25
+            ?? (repeatedRailMatch
                 ? SubwayStationCatalog.sparseEndpointTrajectory(from: ordered)
                 : nil)
         let signaledSubwayRoute = signaledRailStations.count >= 2
@@ -392,11 +394,11 @@ struct TravelModeClassifier: Sendable {
             ? coordinateTrajectory?.observedStationNames ?? signaledRailStations
             : (signaledRailStations.isEmpty ? userStationNames : signaledRailStations))
         let coordinateRailContext = usesCoordinateRoute
-        let railContext = stationRatio >= 0.2
-            || railRatio >= 0.25
+        let confirmedRailContext = repeatedRailMatch
             || coordinateRailContext
             || stationStateConfirmation
             || userStationRouteConfirmation
+        let railContext = stationRatio >= 0.2 || confirmedRailContext
         let subwayWiFiStreak = ordered.compactMap {
             $0.subwayWiFiObservationStreak
         }.max() ?? 0
@@ -430,7 +432,7 @@ struct TravelModeClassifier: Sendable {
             && (
                 Set(railStations).count >= 3
                 || coordinateTrajectory?.isSparseEndpointTrajectory == true
-                    && railRatio >= 0.25
+                    && repeatedRailMatch
             )
         let undergroundSignal = gpsLossRatio >= 0.35
             || altitudeDelta <= -2
@@ -453,7 +455,7 @@ struct TravelModeClassifier: Sendable {
             }
         ).count
         let userStationIndependentSignals = [
-            railRatio >= 0.25,
+            repeatedRailMatch,
             gpsLossRatio >= 0.35 || altitudeDelta <= -2,
             observedLowStepsSignal,
             watchVibration,
@@ -466,9 +468,16 @@ struct TravelModeClassifier: Sendable {
             && watchAcceleration.standardDeviationG < 0.012
             && watchAcceleration.meanJerkGPerSecond < 0.04
         let coordinateTrajectorySignal = routeTrajectoryConfirmation
+        let trustedStationSequence = repeatedRailMatch
+            || coordinateRailContext
+            || stationStateConfirmation
+            || userStationRouteConfirmation
+            || stationStopConfirmation
+            || subwayWiFiSignal
         let stationToStationSubway = railStations.count >= 2
             && resolvedSubwayRoute != nil
             && railContext
+            && trustedStationSequence
             && (
                 stationStateConfirmation
                 ||
@@ -485,7 +494,7 @@ struct TravelModeClassifier: Sendable {
             add(.subway, 0.16, "역 접근")
             add(.train, 0.1, "역 접근")
         }
-        if railRatio >= 0.5 {
+        if repeatedRailMatch, railRatio >= 0.5 {
             add(.subway, 0.2, "철도 경로 일치")
             add(.train, 0.28, "철도 경로 일치")
         }
@@ -493,7 +502,7 @@ struct TravelModeClassifier: Sendable {
             add(.subway, 0.42, "역 좌표 궤적 일치")
             add(.train, 0.12, "철도역 순차 통과")
         }
-        if gpsLossRatio >= 0.45 && railContext {
+        if gpsLossRatio >= 0.45 && confirmedRailContext {
             add(.subway, 0.18, "GPS 약화")
         }
         if altitudeDelta <= -2 && railContext {
@@ -514,6 +523,7 @@ struct TravelModeClassifier: Sendable {
             )
         }
         if stationRatio >= 0.25,
+           repeatedRailMatch,
            railRatio >= 0.5,
            gpsLossRatio >= 0.45,
            altitudeDelta <= -2 {
@@ -620,8 +630,9 @@ struct TravelModeClassifier: Sendable {
         if let resolvedSubwayRoute,
            SubwayStationCatalog.isValid(resolvedSubwayRoute),
            railContext,
+           trustedStationSequence,
            railStations.count >= 2,
-           (railRatio >= 0.25 || stationAltitudeDrop || undergroundDescent) {
+           (repeatedRailMatch || stationAltitudeDrop || undergroundDescent) {
             var evidence = [
                 "지하철 노선 후보 확정",
                 "노선 " + resolvedSubwayRoute.lineNames.joined(separator: " → "),
@@ -2442,12 +2453,6 @@ enum TransitBoardingCandidateEngine {
         guard minimumDwell >= 0,
               maximumSampleGap > 0 else { return [] }
 
-        let places = mergedPlaces(
-            registeredLocations: registeredLocations,
-            nearbyPlaces: nearbyPlaces
-        )
-        guard !places.isEmpty else { return [] }
-
         let availableReadings = uniqueReadings(readings)
             .filter { reading in
                 guard let through else { return true }
@@ -2457,6 +2462,12 @@ enum TransitBoardingCandidateEngine {
         let orderedReadings = availableReadings
             .filter(isUsableReading)
         guard !orderedReadings.isEmpty else { return [] }
+        let places = mergedPlaces(
+            registeredLocations: registeredLocations,
+            nearbyPlaces: nearbyPlaces,
+            readings: orderedReadings
+        )
+        guard !places.isEmpty else { return [] }
 
         var result: [TransitBoardingCandidate] = []
         var seenKeys = Set<String>()
@@ -2504,6 +2515,15 @@ enum TransitBoardingCandidateEngine {
                         )
                     }
                 guard !relatedTravel.isEmpty else { continue }
+                guard place.source != .catalog
+                        || hasCatalogRailContext(
+                            for: place,
+                            dwell: span,
+                            travel: relatedTravel,
+                            readings: availableReadings
+                        ) else {
+                    continue
+                }
                 let key = candidateKey(for: place, arrivingAt: first.timestamp)
                 let candidate = TransitBoardingCandidate(
                     id: key,
@@ -2565,7 +2585,7 @@ enum TransitBoardingCandidateEngine {
                 return lhs.dwellDuration > rhs.dwellDuration
             }
             if lhs.source != rhs.source {
-                return lhs.source == .registered
+                return sourcePriority(lhs.source) < sourcePriority(rhs.source)
             }
             if lhs.span.start != rhs.span.start {
                 return lhs.span.start < rhs.span.start
@@ -2589,7 +2609,8 @@ enum TransitBoardingCandidateEngine {
 
     private static func mergedPlaces(
         registeredLocations: [UserTransitLocation],
-        nearbyPlaces: [TransitBoardingPlace]
+        nearbyPlaces: [TransitBoardingPlace],
+        readings: [SensorReading]
     ) -> [TransitBoardingPlace] {
         let registered = registeredLocations.map(TransitBoardingPlace.init(registered:))
         let mapKitPlaces = nearbyPlaces.filter { place in
@@ -2599,7 +2620,113 @@ enum TransitBoardingCandidateEngine {
                         <= max(saved.radiusMeters, 100)
             }
         }
-        return registered + mapKitPlaces
+        let preferredPlaces = registered + mapKitPlaces
+        let catalogPlaces = catalogPlaces(near: readings).filter { place in
+            !preferredPlaces.contains { preferred in
+                preferred.kind == place.kind
+                    && distanceMeters(preferred.point, place.point)
+                        <= max(preferred.radiusMeters, place.radiusMeters)
+            }
+        }
+        return preferredPlaces + catalogPlaces
+    }
+
+    private static func catalogPlaces(
+        near readings: [SensorReading]
+    ) -> [TransitBoardingPlace] {
+        var seen = Set<String>()
+        var lastProbeAt: Date?
+        return readings.compactMap { reading in
+            guard lastProbeAt.map({
+                reading.timestamp.timeIntervalSince($0) >= 30
+            }) ?? true else {
+                return nil
+            }
+            lastProbeAt = reading.timestamp
+            guard let point = reading.point,
+                  let station = SubwayStationCatalog.nearest(
+                    to: point,
+                    maximumDistanceMeters: 250
+                  ),
+                  let stationPoint = station.coordinate else {
+                return nil
+            }
+            let place = TransitBoardingPlace(
+                catalogSubwayName: station.stationName,
+                point: stationPoint
+            )
+            guard seen.insert(place.id).inserted else { return nil }
+            return place
+        }
+    }
+
+    private static func hasCatalogRailContext(
+        for place: TransitBoardingPlace,
+        dwell: TimeSpan,
+        travel: [TravelSegment],
+        readings: [SensorReading]
+    ) -> Bool {
+        if travel.contains(where: { $0.mode == .subway || $0.mode == .train }) {
+            return true
+        }
+        guard let firstTravel = travel.min(by: {
+            $0.span.start < $1.span.start
+        }),
+        let lastTravel = travel.max(by: {
+            $0.span.end < $1.span.end
+        }) else {
+            return false
+        }
+        let context = TimeSpan(
+            start: min(
+                dwell.start,
+                firstTravel.span.start.addingTimeInterval(-2 * 60)
+            ),
+            end: max(
+                dwell.end,
+                lastTravel.span.end.addingTimeInterval(5 * 60)
+            )
+        )
+        let contextReadings = readings.filter {
+            $0.timestamp >= context.start && $0.timestamp <= context.end
+        }
+        let railMatchCount = contextReadings.filter(\.matchesRailRoute).count
+        let railRatio = contextReadings.isEmpty
+            ? 0
+            : Double(railMatchCount) / Double(contextReadings.count)
+        if railMatchCount >= 2 && railRatio >= 0.25 {
+            return true
+        }
+        if SubwayWiFiSSID.hasContinuousEvidence(
+            contextReadings.map(\.connectedWiFiSSID)
+        ) {
+            return true
+        }
+        let trajectory = SubwayStationCatalog.coordinateTrajectory(
+            from: contextReadings
+        )
+        guard let trajectory else { return false }
+        let placeKey = normalizedStationName(place.name)
+        return trajectory.observedStationNames.contains {
+            normalizedStationName($0) == placeKey
+        }
+    }
+
+    private static func normalizedStationName(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "역", with: "")
+            .lowercased()
+    }
+
+    private static func sourcePriority(
+        _ source: TransitBoardingPlaceSource
+    ) -> Int {
+        switch source {
+        case .registered: 0
+        case .catalog: 1
+        case .mapKit: 2
+        }
     }
 
     private static func uniqueReadings(
@@ -3025,9 +3152,10 @@ enum SubwayTravelSegmentEngine {
             let strictTrajectory = SubwayStationCatalog.coordinateTrajectory(
                 from: group
             )
+            let railMatchCount = group.filter(\.matchesRailRoute).count
             let hasRailConfirmation = !group.isEmpty
-                && Double(group.filter(\.matchesRailRoute).count)
-                    / Double(group.count) >= 0.25
+                && railMatchCount >= 2
+                && Double(railMatchCount) / Double(group.count) >= 0.25
             let trajectory = strictTrajectory
                 ?? (hasRailConfirmation
                     ? SubwayStationCatalog.sparseEndpointTrajectory(from: group)

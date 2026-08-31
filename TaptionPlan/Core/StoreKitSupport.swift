@@ -9,11 +9,20 @@ enum TaptionCommercePolicy {
     static let proProductID = "com.taption.plan.pro"
     static let trialDuration: TimeInterval = 14 * 24 * 60 * 60
 
+    static func isSupportedProProductType(
+        _ productType: Product.ProductType
+    ) -> Bool {
+        productType == .nonConsumable
+    }
+
     static func grantsProAccess(
         productID: String,
+        productType: Product.ProductType = .nonConsumable,
         revocationDate: Date?
     ) -> Bool {
-        productID == proProductID && revocationDate == nil
+        productID == proProductID
+            && isSupportedProProductType(productType)
+            && revocationDate == nil
     }
 }
 
@@ -334,7 +343,10 @@ actor StoreKitPurchaseService {
             proProduct = try await Product.products(
                 for: [TaptionCommercePolicy.proProductID]
             ).first { product in
-                product.type == .nonConsumable
+                product.id == TaptionCommercePolicy.proProductID
+                    && TaptionCommercePolicy.isSupportedProProductType(
+                        product.type
+                    )
             }
         }
         guard let proProduct else { return nil }
@@ -353,6 +365,7 @@ actor StoreKitPurchaseService {
             }
             if TaptionCommercePolicy.grantsProAccess(
                 productID: transaction.productID,
+                productType: transaction.productType,
                 revocationDate: transaction.revocationDate
             ) {
                 return true
@@ -374,6 +387,7 @@ actor StoreKitPurchaseService {
             guard case .verified(let transaction) = verification,
                   TaptionCommercePolicy.grantsProAccess(
                     productID: transaction.productID,
+                    productType: transaction.productType,
                     revocationDate: transaction.revocationDate
                   ) else {
                 throw StorePurchaseError.unverifiedTransaction
@@ -413,14 +427,15 @@ final class TaptionProAccessController {
 
     init(
         purchaseService: StoreKitPurchaseService = StoreKitPurchaseService(),
-        trialPersistence: TaptionProTrialPersistence =
-            TaptionProTrialPersistence(),
+        trialPersistence: TaptionProTrialPersistence? = nil,
         now: Date = .now
     ) {
         self.purchaseService = purchaseService
-        self.trialPersistence = trialPersistence
+        let resolvedTrialPersistence =
+            trialPersistence ?? TaptionProTrialPersistence()
+        self.trialPersistence = resolvedTrialPersistence
         state = TaptionProTrialPolicy.state(
-            record: trialPersistence.record(observedAt: now),
+            record: resolvedTrialPersistence.record(observedAt: now),
             now: now
         )
     }
@@ -542,7 +557,10 @@ final class TaptionProAccessController {
             for await result in Transaction.updates {
                 guard !Task.isCancelled else { return }
                 if case .verified(let transaction) = result,
-                   transaction.productID == TaptionCommercePolicy.proProductID {
+                   transaction.productID == TaptionCommercePolicy.proProductID,
+                   TaptionCommercePolicy.isSupportedProProductType(
+                       transaction.productType
+                   ) {
                     await transaction.finish()
                 }
                 await self?.refresh()

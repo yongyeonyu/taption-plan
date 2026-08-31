@@ -75,6 +75,47 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
+    func testTransitBoardingRefreshPolicyLimitsLiveUpdatesAndBucketsCutoff() {
+        let start = date(60)
+
+        XCTAssertTrue(
+            MapHomeTransitBoardingRefreshPolicy.shouldRefresh(
+                lastRefresh: nil,
+                at: start
+            )
+        )
+        XCTAssertFalse(
+            MapHomeTransitBoardingRefreshPolicy.shouldRefresh(
+                lastRefresh: start,
+                at: start.addingTimeInterval(29)
+            )
+        )
+        XCTAssertTrue(
+            MapHomeTransitBoardingRefreshPolicy.shouldRefresh(
+                lastRefresh: start,
+                at: start.addingTimeInterval(30)
+            )
+        )
+        XCTAssertTrue(
+            MapHomeTransitBoardingRefreshPolicy.shouldRefresh(
+                lastRefresh: start,
+                at: start.addingTimeInterval(-1)
+            )
+        )
+        XCTAssertEqual(
+            MapHomeTransitBoardingRefreshPolicy.cutoffBucket(
+                start.addingTimeInterval(29)
+            ),
+            MapHomeTransitBoardingRefreshPolicy.cutoffBucket(start)
+        )
+        XCTAssertNotEqual(
+            MapHomeTransitBoardingRefreshPolicy.cutoffBucket(
+                start.addingTimeInterval(30)
+            ),
+            MapHomeTransitBoardingRefreshPolicy.cutoffBucket(start)
+        )
+    }
+
     func testPastDayFullCutoffKeepsRouteVisible() throws {
         let dayEnd = calendar.date(
             byAdding: .day,
@@ -1062,7 +1103,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(travel, original)
     }
 
-    func testExpectedSubwayRouteUsesRegisteredEndpointsAndSuppressesOverlappingDuplicates()
+    func testExpectedSubwayRouteUsesRegisteredEndpointsAndCollapsesBridgedDuplicates()
         throws {
         let home = FrequentPlace(
             id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
@@ -1108,8 +1149,8 @@ final class RouteTimelineDataTests: XCTestCase {
             "50000000-0000-0000-0000-000000000005",
             "60000000-0000-0000-0000-000000000006",
             "70000000-0000-0000-0000-000000000007",
-            "80000000-0000-0000-0000-000000000008",
         ].map { UUID(uuidString: $0)! }
+        let spans = [(10, 20), (30, 40), (19, 31)]
         let travel = segmentIDs.enumerated().map { index, id in
             TravelSegment(
                 id: id,
@@ -1117,12 +1158,12 @@ final class RouteTimelineDataTests: XCTestCase {
                 toPlaceID: to.id,
                 mode: .subway,
                 span: TimeSpan(
-                    start: date(10 + index * 10),
-                    end: date(100 + index * 10)
+                    start: date(spans[index].0),
+                    end: date(spans[index].1)
                 ),
                 distanceMeters: 19_000,
-                confidence: .low,
-                evidence: [],
+                confidence: index == 0 ? .medium : .low,
+                evidence: index == 0 ? ["자동 추정"] : [],
                 isConfirmed: false,
                 subwayRoute: nil,
                 isClassificationLocked: true
@@ -1144,6 +1185,8 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(request.transport, .transit)
         XCTAssertEqual(request.start, home.point)
         XCTAssertEqual(request.end, company.point)
+        XCTAssertEqual(request.departureDate, date(10))
+        XCTAssertEqual(request.arrivalDate, date(40))
         XCTAssertEqual(travel, original)
     }
 
@@ -1565,6 +1608,100 @@ final class RouteTimelineDataTests: XCTestCase {
             lineCoordinate.longitude,
             accuracy: 0.000_001
         )
+    }
+
+    func testWBSPlaybackCollapsesTransitivelyOverlappingForecastMovements()
+        throws {
+        let home = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let office = PlaceStay(
+            placeKey: "office",
+            displayName: "회사",
+            span: TimeSpan(start: date(40), end: date(60)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127.01,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let first = TravelSegment(
+            id: UUID(uuidString: "91000000-0000-0000-0000-000000000001")!,
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(20)),
+            distanceMeters: 1_000,
+            confidence: .medium,
+            evidence: ["자동 추정"]
+        )
+        let second = TravelSegment(
+            id: UUID(uuidString: "92000000-0000-0000-0000-000000000002")!,
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .car,
+            span: TimeSpan(start: date(30), end: date(40)),
+            distanceMeters: 1_000,
+            confidence: .low,
+            evidence: []
+        )
+        let bridge = TravelSegment(
+            id: UUID(uuidString: "93000000-0000-0000-0000-000000000003")!,
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .car,
+            span: TimeSpan(start: date(19), end: date(31)),
+            distanceMeters: 1_000,
+            confidence: .low,
+            evidence: []
+        )
+        let firstLegID = "movement-\(first.id.uuidString)"
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [home, office],
+            travel: [first, second, bridge],
+            readings: [],
+            resolvedRoutes: [
+                MapHomeWBSResolvedRoute(
+                    legID: firstLegID,
+                    coordinates: [
+                        home.point!,
+                        GeoPoint(
+                            latitude: 37.001,
+                            longitude: 127.005,
+                            altitude: 0,
+                            horizontalAccuracy: -1,
+                            verticalAccuracy: -1
+                        ),
+                        office.point!,
+                    ]
+                ),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            projection.legs.filter { $0.activity == .movement }.map(\.id),
+            [firstLegID]
+        )
+        let movement = try XCTUnwrap(
+            projection.legs.first { $0.activity == .movement }
+        )
+        XCTAssertEqual(movement.startDate, date(10))
+        XCTAssertEqual(movement.endDate, date(40))
     }
 
     func testWBSPlaybackCreatesEvidenceBackedSubwayGapAndKeepsStayCameraAtCenter() throws {

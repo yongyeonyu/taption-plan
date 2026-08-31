@@ -415,6 +415,24 @@ private struct MapHomeTransitBoardingCandidateCacheKey: Equatable {
     let cutoff: Date
 }
 
+enum MapHomeTransitBoardingRefreshPolicy {
+    static let interval: TimeInterval = 30
+
+    static func shouldRefresh(lastRefresh: Date?, at date: Date) -> Bool {
+        guard let lastRefresh else { return true }
+        return date < lastRefresh
+            || date.timeIntervalSince(lastRefresh) >= interval
+    }
+
+    static func cutoffBucket(_ date: Date) -> Date {
+        Date(
+            timeIntervalSinceReferenceDate: floor(
+                date.timeIntervalSinceReferenceDate / interval
+            ) * interval
+        )
+    }
+}
+
 private struct MapHomeDayCachePayload: Codable, Sendable {
     let sourceUpdatedAt: Date?
     let centerLatitude: Double
@@ -1268,6 +1286,7 @@ struct MapHomeView: View {
     @State private var transitPOIRefreshTask: Task<Void, Never>?
     @State private var nearbyTransitPlaces: [TransitBoardingPlace] = []
     @State private var transitBoardingReadingsRevision: UInt64 = 0
+    @State private var lastTransitBoardingLiveRefreshAt: Date?
     @State private var nearbyTransitPlacesRevision: UInt64 = 0
     @State private var mapSearchCompleter = MapHomeSearchCompleter()
     @State private var mapSearchRequestID = UUID()
@@ -1808,7 +1827,9 @@ struct MapHomeView: View {
             guard Calendar.autoupdatingCurrent.isDateInToday(
                 model.selectedDate
             ) else { return }
-            transitBoardingReadingsRevision &+= 1
+            refreshTransitBoardingCandidatesIfNeeded(
+                at: model.latestSensorReading?.timestamp ?? .now
+            )
             scheduleLiveRouteProjectionRefresh()
             scheduleTransitPOIRefresh()
         }
@@ -1840,6 +1861,7 @@ struct MapHomeView: View {
                 routeReadingsLoadState = .loading(
                     MapHomeRouteReadingsPolicy.dayKey(for: newDate)
                 )
+                lastTransitBoardingLiveRefreshAt = nil
                 transitBoardingReadingsRevision &+= 1
                 nearbyTransitPlacesRevision &+= 1
             } else {
@@ -1882,7 +1904,9 @@ struct MapHomeView: View {
             }
         }
         .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
-            transitBoardingReadingsRevision &+= 1
+            refreshTransitBoardingCandidatesIfNeeded(
+                at: model.liveRouteState.readings.last?.timestamp ?? .now
+            )
             scheduleLiveRouteProjectionRefresh()
             scheduleTransitPOIRefresh()
         }
@@ -5523,7 +5547,6 @@ struct MapHomeView: View {
 
     private var transitBoardingCandidates: [TransitBoardingCandidate] {
         let dayData = currentDayDataSnapshot
-        let readings = transitBoardingReadings
         let registeredLocations = model.settings.userTransitLocations
         let nearbyPlaces = nearbyTransitPlaces
         let travel = dayData?.travel ?? model.snapshot.travel
@@ -5533,9 +5556,10 @@ struct MapHomeView: View {
             snapshotRevision: model.snapshotRevision,
             readingsRevision: transitBoardingReadingsRevision,
             nearbyPlacesRevision: nearbyTransitPlacesRevision,
-            cutoff: cutoff
+            cutoff: MapHomeTransitBoardingRefreshPolicy.cutoffBucket(cutoff)
         )
         return mapRenderCache.transitBoardingCandidates(key: key) {
+            let readings = transitBoardingReadings
             let candidates = TransitBoardingCandidateEngine.candidates(
                 readings: readings,
                 registeredLocations: registeredLocations,
@@ -5565,6 +5589,15 @@ struct MapHomeView: View {
             )
             return candidates
         }
+    }
+
+    private func refreshTransitBoardingCandidatesIfNeeded(at date: Date) {
+        guard MapHomeTransitBoardingRefreshPolicy.shouldRefresh(
+            lastRefresh: lastTransitBoardingLiveRefreshAt,
+            at: date
+        ) else { return }
+        lastTransitBoardingLiveRefreshAt = date
+        transitBoardingReadingsRevision &+= 1
     }
 
     private func transitBoardingDiagnostics(

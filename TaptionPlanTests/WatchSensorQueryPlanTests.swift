@@ -512,4 +512,46 @@ final class AppleWatchDataReceiptStoreTests: XCTestCase {
         XCTAssertEqual(receipt.latestDataAt, now)
         XCTAssertEqual(receipt.recentKinds(at: now), [.activity])
     }
+
+    func testSyncReceiptRequiresMatchingRequestOrFreshLegacyMeasurement() {
+        let requestedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let receivedAt = requestedAt.addingTimeInterval(5)
+
+        XCTAssertFalse(
+            AppleWatchDataSyncReceiptPolicy.satisfiesPendingRequest(
+                requestedAt: requestedAt,
+                expectedRequestID: "current",
+                receivedRequestID: "older",
+                measuredAt: requestedAt.addingTimeInterval(-60),
+                receivedAt: receivedAt
+            )
+        )
+        XCTAssertFalse(
+            AppleWatchDataSyncReceiptPolicy.satisfiesPendingRequest(
+                requestedAt: requestedAt,
+                expectedRequestID: "current",
+                receivedRequestID: nil,
+                measuredAt: requestedAt.addingTimeInterval(-1),
+                receivedAt: receivedAt
+            )
+        )
+        XCTAssertTrue(
+            AppleWatchDataSyncReceiptPolicy.satisfiesPendingRequest(
+                requestedAt: requestedAt,
+                expectedRequestID: "current",
+                receivedRequestID: "current",
+                measuredAt: requestedAt.addingTimeInterval(-60),
+                receivedAt: receivedAt
+            )
+        )
+        XCTAssertTrue(
+            AppleWatchDataSyncReceiptPolicy.satisfiesPendingRequest(
+                requestedAt: requestedAt,
+                expectedRequestID: "current",
+                receivedRequestID: nil,
+                measuredAt: requestedAt,
+                receivedAt: receivedAt
+            )
+        )
+    }
 }

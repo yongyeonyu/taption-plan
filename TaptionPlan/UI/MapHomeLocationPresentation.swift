@@ -240,14 +240,33 @@ enum MapHomeStickmanActionResolver {
         }
         if actuals.contains(where: {
             active($0, at: date)
-                && $0.source == .appleWatch
-                && action(for: $0) == .sleeping
+                && isAppleWatchConfirmedSleep($0)
         }) {
             return true
         }
         return sleepSessions.contains {
             $0.isAppleWatchConfirmed && $0.span.contains(date)
         }
+    }
+
+    private static func isAppleWatchConfirmedSleep(
+        _ actual: ActualRecord
+    ) -> Bool {
+        guard actual.source == .appleWatch else { return false }
+        let categoryRoot = actual.categoryID.lowercased()
+            .split(separator: ".", maxSplits: 1)
+            .first
+            .map(String.init)
+        if categoryRoot == "sleep" || categoryRoot == "sleeping" {
+            return true
+        }
+        if actual.behavior?.lowercased() == WatchBehaviorKind.sleep.rawValue {
+            return true
+        }
+        let title = actual.title.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        ).lowercased()
+        return title == "수면" || title == "sleep"
     }
 
     static func action(for mode: TravelMode) -> MapHomeStickmanAction {
@@ -269,25 +288,10 @@ enum MapHomeStickmanActionResolver {
     ) -> MapHomeStickmanAction {
         let category = categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
-        // The finalized major category wins only when the detail is unknown.
-        // Confirmed details such as Watch exercise activity still refine the
-        // representative action.
-        let value = "\(category) \(label)".lowercased()
-        if categoryRoot != "unconfirmed", categoryRoot != "unknown",
-           value.contains("unconfirmed") || value.contains("unknown")
-            || value.contains("미확인") {
-            switch categoryRoot {
-            case "activity": return .activity
-            case "work": return .computer
-            case "study": return .reading
-            case "hobby": return .hobby
-            case "sleep": return .sleeping
-            case "eating", "food": return .eating
-            case "exercise": return .exercise
-            case "movement": return .movement
-            default: break
-            }
+        if let action = majorCategoryAction(for: categoryRoot) {
+            return action
         }
+        let value = "\(category) \(label)".lowercased()
         let detailMappings: [(String, MapHomeStickmanAction)] = [
             ("movement.walking", .walking),
             ("movement.running", .running),
@@ -350,22 +354,25 @@ enum MapHomeStickmanActionResolver {
         }
         if value.contains("exercise") || value.contains("운동") { return .exercise }
         if value.contains("hobby") || value.contains("취미") { return .hobby }
-        switch categoryRoot {
-        case "activity": return .activity
-        case "work": return .computer
-        case "study": return .reading
-        case "hobby": return .hobby
-        case "sleep": return .sleeping
-        case "movement":
-            if value.contains("걷") || value.contains("walk") || value.contains("walking") { return .walking }
-            return .movement
-        case "eating", "food": return .eating
-        case "exercise": return .exercise
-        case "unconfirmed", "unknown": return .unconfirmed
-        default: break
-        }
         if value.contains("movement") || value.contains("이동") { return .movement }
         return .activity
+    }
+
+    private static func majorCategoryAction(
+        for categoryRoot: String
+    ) -> MapHomeStickmanAction? {
+        switch categoryRoot {
+        case "activity": .activity
+        case "work", "computer": .computer
+        case "study", "reading": .reading
+        case "hobby": .hobby
+        case "sleep", "sleeping": .sleeping
+        case "movement": .movement
+        case "eating", "food": .eating
+        case "exercise": .exercise
+        case "unconfirmed", "unknown": .unconfirmed
+        default: nil
+        }
     }
 
     static func action(for motion: MotionKind) -> MapHomeStickmanAction {
@@ -386,12 +393,15 @@ enum MapHomeStickmanActionResolver {
 
     private static func action(for actual: ActualRecord) -> MapHomeStickmanAction? {
         let category = actual.categoryID.lowercased()
+        let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
+        if let action = majorCategoryAction(for: categoryRoot) {
+            return action
+        }
         let text = ([actual.title, actual.behavior] + actual.evidence)
             .compactMap { $0 }
             .joined(separator: " ")
             .lowercased()
 
-        let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
         if category.contains("movement.privatevehicle") || contains(text, ["privatevehicle", "자가용"]) {
             return .car
         }
@@ -404,10 +414,6 @@ enum MapHomeStickmanActionResolver {
         if category.contains("movement.airplane") || contains(text, ["항공", "비행기", "airplane"]) {
             return .airplane
         }
-        if ["activity", "work", "study", "hobby", "sleep", "movement", "eating", "exercise", "unconfirmed", "unknown"].contains(categoryRoot) {
-            return action(for: category, label: text)
-        }
-
         if categoryRoot == "sleep" || contains(text, ["수면", "잠", "sleep"]) {
             return .sleeping
         }
@@ -439,14 +445,7 @@ enum MapHomeStickmanActionResolver {
         if contains(text, ["걷", "walking", "walk"]) {
             return .walking
         }
-        switch category {
-        case "activity": return .activity
-        case "hobby": return .hobby
-        case "movement": return .movement
-        case "exercise": return .exercise
-        case "unconfirmed", "unknown": return .unconfirmed
-        default: return nil
-        }
+        return nil
     }
 
     private static func action(
