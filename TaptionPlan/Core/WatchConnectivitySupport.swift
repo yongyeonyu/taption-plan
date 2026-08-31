@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 import WatchConnectivity
 
 actor AppleWatchSensorActivityArchive {
@@ -157,7 +158,7 @@ struct AppleWatchDataReceiptStore {
 
     init(
         defaults: UserDefaults = UserDefaults(
-            suiteName: "group.com.taption.plan"
+            suiteName: TaptionPlanSharedContainer.appGroupIdentifier
         ) ?? .standard
     ) {
         self.defaults = defaults
@@ -420,7 +421,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private var statusHandler: (@Sendable (AppleWatchConnectionState) -> Void)?
 
     override init() {
-        commandDefaults = UserDefaults(suiteName: "group.com.taption.plan") ?? .standard
+        commandDefaults = UserDefaults(
+            suiteName: TaptionPlanSharedContainer.appGroupIdentifier
+        ) ?? .standard
         super.init()
     }
 

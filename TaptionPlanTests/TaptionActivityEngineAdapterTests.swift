@@ -66,6 +66,76 @@ struct TaptionActivityEngineAdapterTests {
         #expect(withTravel.segments.first?.detailID == "movement.subway")
     }
 
+    @Test func missingLocationQualityIsNotAutomaticallyPrecise() {
+        let value = SensorReading(
+            timestamp: base,
+            point: nil,
+            locationFixQuality: nil,
+            gpsAvailable: false
+        )
+
+        let evidence = TaptionActivityEngineAdapter.evidence(from: [value])
+
+        #expect(evidence.first?.isPreciseLocation == false)
+    }
+
+    @Test func qualityProjectionRejectsScalarSpikeWithoutMutatingRawReadings() {
+        let readings = (0..<7).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(TimeInterval(index)),
+                point: GeoPoint(
+                    latitude: 37 + Double(index) * 0.00001,
+                    longitude: 126,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                ),
+                locationFixQuality: .precise,
+                speedMetersPerSecond: index == 3 ? 90 : 1,
+                gpsAvailable: true
+            )
+        }
+        let original = readings
+
+        let projection = TaptionActivityEngineAdapter.qualityProjection(from: readings)
+
+        #expect(readings == original)
+        #expect(projection.readings[3].speedMetersPerSecond == nil)
+        #expect(projection.rejectionCounts["speed.isolatedOutlier"] == 1)
+        #expect(!projection.routeReadings.isEmpty)
+    }
+
+    @Test func inferredGapRecordsStayOutsideConfirmedSleep() {
+        let sleep = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(60),
+            source: .manual,
+            behavior: "core",
+            manuallyCorrected: true
+        )
+        let reading = SensorReading(
+            timestamp: base.addingTimeInterval(120),
+            motion: .walking,
+            gpsAvailable: false
+        )
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(10 * 60))
+
+        let inferred = TaptionActivityEngineAdapter.inferredGapActuals(
+            readings: [reading],
+            travel: [],
+            actuals: [sleep],
+            inside: span,
+            createdAt: base
+        )
+
+        #expect(!inferred.isEmpty)
+        #expect(inferred.allSatisfy { $0.startedAt >= sleep.endedAt! })
+        #expect(inferred.allSatisfy { $0.modelVersion == TaptionActivityEngineAdapter.inferredGapModelVersion })
+    }
+
     @Test func lockedAutomaticMajorCategorySurvivesSensorRefresh() {
         let locked = ActualRecord(
             planID: nil,

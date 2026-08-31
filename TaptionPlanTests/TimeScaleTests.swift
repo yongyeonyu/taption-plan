@@ -3237,6 +3237,31 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomePlaybackCutoffIgnoresStaleProjectionCutoff() {
+        let dayEnd = makeDate(2026, 8, 26).addingTimeInterval(24 * 60 * 60)
+        let playhead = makeDate(2026, 8, 26, 9).addingTimeInterval(2 * 60)
+        let staleProjectionCutoff = makeDate(2026, 8, 26, 9)
+
+        XCTAssertEqual(
+            MapHomeRouteOverlayCutoffPolicy.cutoff(
+                selectedDayEnd: dayEnd,
+                timelineDate: playhead,
+                isPlaybackRunning: true,
+                interactiveProjectionCutoff: staleProjectionCutoff
+            ),
+            playhead
+        )
+        XCTAssertEqual(
+            MapHomeRouteOverlayCutoffPolicy.cutoff(
+                selectedDayEnd: dayEnd,
+                timelineDate: playhead,
+                isPlaybackRunning: false,
+                interactiveProjectionCutoff: staleProjectionCutoff
+            ),
+            staleProjectionCutoff
+        )
+    }
+
     func testMapHomeDayPlaybackUsesSixthSpeedInsideMovement() {
         let ranges = [
             MapHomePlaybackMovementRange(startMinute: 60, endMinute: 120)

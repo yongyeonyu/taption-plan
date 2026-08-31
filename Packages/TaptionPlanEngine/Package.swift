@@ -15,6 +15,10 @@ let package = Package(
             .product(name: "TaptionPlanCore", package: "TaptionPlanCore"),
             .product(name: "TaptionActivityEngine", package: "TaptionActivityEngine"),
             .product(name: "TaptionRouteEngine", package: "TaptionRouteEngine")
-        ])
+        ]),
+        .testTarget(
+            name: "TaptionPlanEngineTests",
+            dependencies: ["TaptionPlanEngine"]
+        )
     ]
 )

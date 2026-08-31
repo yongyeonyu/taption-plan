@@ -94,4 +94,55 @@ final class ActivityEngineTests: XCTestCase {
         XCTAssertTrue(projection.state.overrides.first?.isLocked == true)
         XCTAssertTrue(projection.majorCategoryIDs.allSatisfy { canonicalIDs.contains($0) })
     }
+
+    func testGapInferenceUsesEvidenceButDoesNotFillUnsupportedGap() {
+        let engine = ActivityGapInferenceEngine()
+        let gap = ActivityTimeSpan(start: base, end: base.addingTimeInterval(10 * 60))
+        let walking = ActivitySensorEvidence(
+            timestamp: base.addingTimeInterval(60),
+            motion: .walking,
+            speedMetersPerSecond: 1.4,
+            isPreciseLocation: true
+        )
+
+        let inferred = engine.infer(.init(span: gap, evidence: [walking]))
+        XCTAssertEqual(inferred.first?.majorCategoryID, "movement")
+        XCTAssertEqual(inferred.first?.behavior, "walking")
+        XCTAssertTrue(inferred.allSatisfy { $0.span.start >= gap.start && $0.span.end <= gap.end })
+
+        let unsupported = engine.infer(.init(
+            span: gap,
+            evidence: [],
+            precedingAnchor: .init(
+                majorCategoryID: "sleep",
+                detailID: "sleep.core",
+                behavior: "core"
+            ),
+            followingAnchor: .init(
+                majorCategoryID: "movement",
+                detailID: "movement.walking",
+                behavior: "walking"
+            )
+        ))
+        XCTAssertTrue(unsupported.isEmpty)
+    }
+
+    func testGapInferenceBridgesMatchingShortGroundTruthAnchorsOnly() {
+        let anchor = ActivityGapAnchor(
+            majorCategoryID: "sleep",
+            detailID: "sleep.core",
+            behavior: "core"
+        )
+        let span = ActivityTimeSpan(start: base, end: base.addingTimeInterval(5 * 60))
+        let result = ActivityGapInferenceEngine().infer(.init(
+            span: span,
+            evidence: [],
+            precedingAnchor: anchor,
+            followingAnchor: anchor
+        ))
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.majorCategoryID, "sleep")
+        XCTAssertEqual(result.first?.span, span)
+    }
 }

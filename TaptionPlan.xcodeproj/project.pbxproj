@@ -137,6 +137,7 @@
 		A60000000000000000000003 /* HealthKitImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000003 /* HealthKitImportCoordinator.swift */; };
 		A60000000000000000000004 /* HealthKitBehaviorProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000004 /* HealthKitBehaviorProjection.swift */; };
 		A60000000000000000000005 /* HealthKitIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000005 /* HealthKitIntegrationTests.swift */; };
+		A70000000000000000000001 /* TaptionPlanEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X70000000000000000000002 /* TaptionPlanEngine */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		/* End PBXBuildFile section */
@@ -337,8 +338,7 @@
 			files = (
 				A50000000000000000000002 /* MapLibre in Frameworks */,
 				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
-				A40000000000000000000001 /* TaptionActivityEngine in Frameworks */,
-				A40000000000000000000002 /* TaptionRouteEngine in Frameworks */,
+				A70000000000000000000001 /* TaptionPlanEngine in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -598,8 +598,7 @@
 			name = TaptionPlan;
 			packageProductDependencies = (
 				X30000000000000000000002 /* TaptionPlanCore */,
-				X40000000000000000000002 /* TaptionActivityEngine */,
-				X40000000000000000000004 /* TaptionRouteEngine */,
+				X70000000000000000000002 /* TaptionPlanEngine */,
 				X50000000000000000000002 /* MapLibre */,
 			);
 			productName = TaptionPlan;
@@ -767,6 +766,7 @@
 				X30000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanCore" */,
 				X40000000000000000000001 /* XCLocalSwiftPackageReference "TaptionActivityEngine" */,
 				X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */,
+				X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */,
 				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 			);
 			mainGroup = 810000000000000000000001;
@@ -1124,7 +1124,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlanDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 120;
+			CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1152,7 +1152,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlan/Info.plist;
@@ -1220,7 +1220,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 120;
+			CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1247,7 +1247,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1274,7 +1274,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatchDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 120;
+			CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1308,7 +1308,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 120;
+			CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatch/Info.plist;
@@ -1341,7 +1341,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 120;
+			CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;
@@ -1369,7 +1369,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;
@@ -1406,6 +1406,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TaptionRouteEngine;
 		};
+		X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TaptionPlanEngine;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1434,6 +1438,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */;
 			productName = TaptionRouteEngine;
+		};
+		X70000000000000000000002 /* TaptionPlanEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */;
+			productName = TaptionPlanEngine;
 		};
 		X50000000000000000000002 /* MapLibre */ = {
 			isa = XCSwiftPackageProductDependency;

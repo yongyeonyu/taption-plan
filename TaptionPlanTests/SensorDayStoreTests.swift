@@ -87,6 +87,55 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertTrue(files.contains { $0.lastPathComponent == "taption-plan-v2.sqlite" })
     }
 
+    func testTrackingChunkArchiveContinuesIndexAfterReopen() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tracking-chunk-reopen-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let sessionID = UUID()
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let first = TrackingSessionChunkArchive(rootDirectory: directory)
+        try first.append(SensorReading(
+            timestamp: start,
+            motion: .walking,
+            trackingSessionID: sessionID,
+            sequence: 1,
+            trackingSessionEnded: true
+        ))
+        let month = Calendar.autoupdatingCurrent.dateComponents(
+            [.year, .month],
+            from: start
+        )
+        let monthKey = String(
+            format: "%04d-%02d",
+            month.year ?? 1970,
+            month.month ?? 1
+        )
+        let sessionDirectory = directory
+            .appendingPathComponent(monthKey)
+            .appendingPathComponent(sessionID.uuidString)
+        let firstURL = sessionDirectory.appendingPathComponent("000001.jsonl.zlib")
+        let firstPayload = try Data(contentsOf: firstURL)
+
+        let reopened = TrackingSessionChunkArchive(rootDirectory: directory)
+        try reopened.append(SensorReading(
+            timestamp: start.addingTimeInterval(10),
+            motion: .walking,
+            trackingSessionID: sessionID,
+            sequence: 2,
+            trackingSessionEnded: true
+        ))
+
+        XCTAssertEqual(try Data(contentsOf: firstURL), firstPayload)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: sessionDirectory
+                .appendingPathComponent("000002.jsonl.zlib").path
+        ))
+        XCTAssertEqual(
+            try reopened.allPersistedReadings().map(\.sequence),
+            [1, 2]
+        )
+    }
+
     func testRawDeviceEnvelopeUsesCanonicalDayDatabase() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("raw-day-store-\(UUID().uuidString)")
@@ -101,6 +150,7 @@ final class SensorDayStoreTests: XCTestCase {
         )
         let archive = try RawDeviceDataDayArchive(databaseURL: databaseURL)
 
+        try await archive.append([envelope, envelope])
         try await archive.append(envelope)
         try await archive.checkpoint()
         let restored = try await archive.envelopes(
@@ -215,6 +265,66 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(report?.dayCount, 0)
         let restored = try await database.load(day: day, sourceRevision: 7)
         XCTAssertEqual(restored, snapshot)
+    }
+
+    @MainActor
+    func testPlanDayDatabaseInvalidatesMaterializationWhenRawDigestChanges() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-stale-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        _ = try await database.migrateLegacyIfNeeded(
+            source: .empty,
+            sourceRevision: 1,
+            readings: [],
+            watchSummaries: [],
+            rawEnvelopes: []
+        )
+        let day = Date(timeIntervalSince1970: 2_000_000_000)
+        let dayKey = TaptionPlanDayKey(date: day)
+        let snapshot = PlanDayDataSnapshot(
+            day: day,
+            sourceRevision: 1,
+            sourceUpdatedAt: day,
+            actuals: [],
+            places: [],
+            travel: [],
+            readings: [],
+            isComplete: true
+        )
+        try await database.save(snapshot)
+        let beforeChange = try await database.load(
+            day: day,
+            sourceRevision: 1
+        )
+        XCTAssertEqual(beforeChange, snapshot)
+
+        let store = try TaptionPlanV3Store(
+            url: directory.appendingPathComponent(
+                "taption-plan-iphone-v3.sqlite"
+            ),
+            device: .iPhone
+        )
+        try await store.appendRawEvents([
+            TaptionPlanRawEvent(
+                device: .iPhone,
+                day: dayKey,
+                timestamp: day.addingTimeInterval(1),
+                sequence: 1,
+                id: UUID().uuidString,
+                domain: "test-raw-change",
+                provenance: ["test"],
+                payload: Data([0x01])
+            ),
+        ])
+
+        let afterChange = try await database.load(
+            day: day,
+            sourceRevision: 1
+        )
+        let staleRow = try await store.materializedDay(for: dayKey)
+        XCTAssertNil(afterChange)
+        XCTAssertNil(staleRow)
     }
 
     @MainActor

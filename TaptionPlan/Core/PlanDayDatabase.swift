@@ -33,7 +33,6 @@ private enum PlanDayDatabaseMigrationError: Error {
 /// untouched until an externally verified migration authorizes cleanup.
 actor PlanDayDatabase {
     private static let legacyMigrationMarker = "legacy-v2-to-v3"
-    private static let legacyMigrationFailedMarker = "legacy-v2-to-v3-failed"
     private static let watchSummaryProvenance = [
         "source-device:appleWatch",
         "transport:WatchConnectivity",
@@ -69,7 +68,7 @@ actor PlanDayDatabase {
         fileManager: FileManager = .default
     ) throws -> PlanDayDatabase {
         if let group = fileManager.containerURL(
-            forSecurityApplicationGroupIdentifier: TaptionWidgetSharedStore.appGroupIdentifier
+            forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
         ) {
             return try PlanDayDatabase(directory: group)
         }
@@ -88,8 +87,7 @@ actor PlanDayDatabase {
         day: Date,
         sourceRevision: UInt64
     ) async throws -> PlanDayDataSnapshot? {
-        guard try await iPhoneStore.migrationCompleted(Self.legacyMigrationMarker),
-              !(try await iPhoneStore.migrationCompleted(Self.legacyMigrationFailedMarker)) else {
+        guard try await iPhoneStore.migrationCompleted(Self.legacyMigrationMarker) else {
             return nil
         }
         let dayKey = TaptionPlanDayKey(date: day)
@@ -112,6 +110,16 @@ actor PlanDayDatabase {
         guard let row,
               row.sourceRevision == sourceRevision,
               row.projectionVersion == TaptionPlanV3Store.projectionVersion else {
+            return nil
+        }
+        let iPhoneDigest = try await iPhoneStore.rawDigest(for: dayKey)
+        let watchDigest = try await watchStore.rawDigest(for: dayKey)
+        guard materializationMatches(
+            row,
+            iPhoneDigest: iPhoneDigest,
+            watchDigest: watchDigest
+        ) else {
+            try await iPhoneStore.removeMaterializedDay(for: dayKey)
             return nil
         }
         let decodeID = OSSignpostID(log: Self.signpostLog)
@@ -164,10 +172,7 @@ actor PlanDayDatabase {
         let migrationCompleted = try await iPhoneStore.migrationCompleted(
             Self.legacyMigrationMarker
         )
-        let migrationFailed = try await iPhoneStore.migrationCompleted(
-            Self.legacyMigrationFailedMarker
-        )
-        guard !migrationCompleted && !migrationFailed else { return nil }
+        guard !migrationCompleted else { return nil }
 
         let calendar = Calendar.autoupdatingCurrent
         let days = migrationDays(
@@ -263,9 +268,6 @@ actor PlanDayDatabase {
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
-                _ = try? await iPhoneStore.markMigrationCompleted(
-                    Self.legacyMigrationFailedMarker
-                )
                 throw error
             }
         }
@@ -322,21 +324,25 @@ actor PlanDayDatabase {
         let watchDigest = try await watchStore.rawDigest(
             for: dayKey
         )
-        let combinedDigest = TaptionPlanCanonicalStorage.checksum(
-            Data("\(iPhoneDigest.sha256):\(watchDigest.sha256)".utf8)
+        let combinedDigest = Self.combinedDigest(
+            iPhone: iPhoneDigest,
+            watch: watchDigest
         )
-        let iPhoneEvents = try await iPhoneStore.rawEvents(for: dayKey)
-        let watchEvents = try await watchStore.rawEvents(for: dayKey)
-        let allEvents = iPhoneEvents + watchEvents
-        let firstTimestamp = allEvents.map(\.timestamp).min()
-        let lastTimestamp = allEvents.map(\.timestamp).max()
+        let firstTimestamp = [
+            iPhoneDigest.firstTimestamp,
+            watchDigest.firstTimestamp,
+        ].compactMap { $0 }.min()
+        let lastTimestamp = [
+            iPhoneDigest.lastTimestamp,
+            watchDigest.lastTimestamp,
+        ].compactMap { $0 }.max()
         let row = TaptionPlanMaterializedDay(
             device: .iPhone,
             day: TaptionPlanDayKey(date: snapshot.day),
             sourceRevision: snapshot.sourceRevision,
             projectionVersion: TaptionPlanV3Store.projectionVersion,
             rawDigest: combinedDigest,
-            rawEventCount: allEvents.count,
+            rawEventCount: iPhoneDigest.eventCount + watchDigest.eventCount,
             firstTimestamp: firstTimestamp,
             lastTimestamp: lastTimestamp,
             payload: materializedPayload
@@ -421,6 +427,38 @@ actor PlanDayDatabase {
                 lastTimestamp: digest.lastTimestamp,
                 payload: TaptionPlanCanonicalStorage.envelope(for: payload)
             )
+        )
+    }
+
+    private func materializationMatches(
+        _ row: TaptionPlanMaterializedDay,
+        iPhoneDigest: TaptionPlanDayDigest,
+        watchDigest: TaptionPlanDayDigest
+    ) -> Bool {
+        let firstTimestamp = [
+            iPhoneDigest.firstTimestamp,
+            watchDigest.firstTimestamp,
+        ].compactMap { $0 }.min()
+        let lastTimestamp = [
+            iPhoneDigest.lastTimestamp,
+            watchDigest.lastTimestamp,
+        ].compactMap { $0 }.max()
+        return row.rawDigest == Self.combinedDigest(
+            iPhone: iPhoneDigest,
+            watch: watchDigest
+        )
+            && row.rawEventCount
+                == iPhoneDigest.eventCount + watchDigest.eventCount
+            && row.firstTimestamp == firstTimestamp
+            && row.lastTimestamp == lastTimestamp
+    }
+
+    private static func combinedDigest(
+        iPhone: TaptionPlanDayDigest,
+        watch: TaptionPlanDayDigest
+    ) -> String {
+        TaptionPlanCanonicalStorage.checksum(
+            Data("\(iPhone.sha256):\(watch.sha256)".utf8)
         )
     }
 

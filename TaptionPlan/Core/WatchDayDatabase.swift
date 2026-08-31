@@ -9,7 +9,6 @@ private struct WatchMaterializedDayPayload: Codable, Sendable {
 /// The Watch keeps its own append-only v3 store.  WatchConnectivity is only a
 /// transport; a summary is persisted here before it is sent to the iPhone.
 actor WatchDayDatabase {
-    private static let appGroupIdentifier = "group.com.taption.plan"
     private static let fileName = "taption-plan-watch-v3.sqlite"
 
     private let store: TaptionPlanV3Store
@@ -95,7 +94,7 @@ actor WatchDayDatabase {
     private static func directory() -> URL? {
         let fileManager = FileManager.default
         if let group = fileManager.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupIdentifier
+            forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
         ) {
             return group
         }

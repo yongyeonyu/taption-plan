@@ -19,7 +19,7 @@ enum TaptionLocalDatabaseLocation {
     ) throws -> URL {
         if let directory = fileManager.containerURL(
             forSecurityApplicationGroupIdentifier:
-                TaptionWidgetSharedStore.appGroupIdentifier
+                TaptionPlanSharedContainer.appGroupIdentifier
         ) {
             return directory.appendingPathComponent(fileName)
         }
@@ -274,7 +274,7 @@ actor FilePlanRepository: PlanDataRepository {
     }
 
     static func appGroup(
-        identifier: String = TaptionWidgetSharedStore.appGroupIdentifier,
+        identifier: String = TaptionPlanSharedContainer.appGroupIdentifier,
         fileManager: FileManager = .default
     ) throws -> FilePlanRepository {
         guard let directory = fileManager.containerURL(
@@ -417,7 +417,7 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     static func appGroup(
-        identifier: String = TaptionWidgetSharedStore.appGroupIdentifier,
+        identifier: String = TaptionPlanSharedContainer.appGroupIdentifier,
         fileManager: FileManager = .default
     ) throws -> SQLitePlanRepository {
         guard let directory = fileManager.containerURL(

@@ -477,3 +477,13 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - 최종 렌더 세부 패치 후 동일 테스트 재시도는 iPhone 잠금 상태의 `deviceprep` 차단으로 중단됐다. 따라서 최종 소스의 실기기 화면·터치·동작 시각 검증은 미완료다.
 - 현재 환경에는 사용 가능한 iOS Simulator 기기가 없어 Simulator 화면 검증을 완료할 수 없다. TestFlight archive/upload와 내부 그룹 readback은 이번 변경의 별도 미실행 게이트다.
 - 새 채팅 인계 프롬프트는 `NEXT_CHAT_PROMPT.md`에 최종 푸시 SHA와 남은 실기기 게이트를 기록한다.
+
+## 2026-08-31 ARC831A001 엔진·센서·저장소 통합 계획
+
+- `TaptionPlanCore`는 Foundation 기반 공유 계약, 정본 payload, SQLite day-store와 원본을 변경하지 않는 범용 센서 품질 판정을 소유한다. 앱·Widget·Watch가 공유하는 App Group 식별자도 Core 계약으로 단일화한다.
+- `TaptionActivityEngine`은 확정된 수면·운동·수동·잠금 기록을 hard anchor로 보존하고, 센서 근거가 있는 미확인 구간만 시간 연속성 기반으로 추론한다. 근거가 없거나 충돌하면 미확인으로 남긴다.
+- `TaptionRouteEngine`은 GPS 정확도·물리 속도·Kalman innovation gate·정지 드리프트 억제를 하나의 원본 보존형 경로 필터로 통합한다. 경로 공백은 시간·거리·양 끝점·이동수단 근거를 모두 만족할 때만 파생 예상 경로로 연결한다.
+- `TaptionPlanEngine`은 세 leaf package의 umbrella 공개 경계로 앱에서 실제 사용한다. MapKit·HealthKit·ActivityKit·CloudKit·SwiftUI 어댑터는 앱 target에 남기고, Widget·Watch target의 대규모 소스 재배치는 이번 안정화 범위에서 제외한다.
+- SQLite는 schema 생성을 단일 transaction으로 묶고 raw event batch에 prepared statement를 재사용한다. canonical payload는 최대 크기와 선언된 원본 바이트 수를 검증하며, materialized day는 iPhone·Watch 원본 digest와 일치할 때만 사용한다. startup에는 `PRAGMA optimize`를 적용한다.
+- 백업 복원은 staged snapshot을 정본 저장소에 먼저 저장하고 성공 뒤에만 메모리 상태를 publish한다. snapshot과 raw route는 부분 성공 상태를 명시하며, 실패 시 기존 메모리 snapshot을 유지한다. 월별 센서 chunk는 재실행 뒤 기존 번호 다음부터 이어 쓴다.
+- 지도·타임라인 UI와 원본 센서·확정 기록은 변경하지 않는다. 각 변경은 package 단위 테스트, 앱 회귀 테스트, Debug build, Release archive 순으로 검증한 뒤 TestFlight 내부 그룹과 테스터 화면까지 readback한다.

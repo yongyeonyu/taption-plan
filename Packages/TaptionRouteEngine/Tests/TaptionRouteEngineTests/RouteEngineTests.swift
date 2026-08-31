@@ -29,9 +29,13 @@ struct RouteEngineTests {
         #expect(walk.count == 1 && run.count == 1 && car.count == 1)
     }
 
-    @Test func oneSecondFiveHundredMeterJumpStartsSegment() {
-        let result = RouteLoggerRouteFilter().filter([sample(0, 37), sample(1, 37.005, mode: .walking)])
-        #expect(result.segments.count == 2)
+    @Test func oneSecondFiveHundredMeterJumpIsRejectedWithoutMutatingRawInput() {
+        let values = [sample(0, 37), sample(1, 37.005, mode: .walking)]
+        let result = RouteLoggerRouteFilter().filterWithReport(values)
+        #expect(result.log.segments.count == 1)
+        #expect(result.log.segments.first?.pathSamples.map(\.id) == [values[0].id])
+        #expect(result.decisions.contains { $0.id == values[1].id && $0.reason == .impossibleSpeed })
+        #expect(values[1].coordinate.latitude == 37.005)
     }
 
     @Test func accuracyBoundaryKeepsApproximateOutOfPath() {
@@ -121,5 +125,51 @@ struct RouteEngineTests {
         #expect(projection.coordinates.count == 1)
         #expect(projection.totalDistanceMeters == 0)
         #expect(projection.sample(progress: 0.5)?.coordinate.latitude == 37)
+    }
+
+    @Test func approximateSamplesAreOnlyLowConfidenceRunBoundaries() {
+        let values = (0..<3).map { index in
+            RouteSample(
+                timestamp: base.addingTimeInterval(TimeInterval(index)),
+                coordinate: .init(latitude: 37 + Double(index) * 0.0001, longitude: 126),
+                horizontalAccuracyMeters: 500,
+                isApproximate: true
+            )
+        }
+        let result = RouteLoggerRouteFilter().filterWithReport(values)
+        #expect(result.log.segments.first?.pathSamples.isEmpty == true)
+        #expect(result.log.segments.first?.boundarySamples.map(\.id) == [values[0].id, values[2].id])
+        #expect(result.decisions.contains { $0.id == values[1].id && $0.reason == .lowConfidenceSuppressed })
+    }
+
+    @Test func gapInferenceUsesSubwayEvidenceAndRejectsUnboundedGap() {
+        let start = RouteCoordinate(latitude: 37.52, longitude: 126.67)
+        let end = RouteCoordinate(latitude: 37.56, longitude: 126.83)
+        let subwaySample = RouteSample(
+            timestamp: base.addingTimeInterval(600),
+            coordinate: start,
+            horizontalAccuracyMeters: 20,
+            mode: .subway
+        )
+        let engine = RouteGapInferenceEngine()
+        let inferred = engine.infer(.init(
+            start: base,
+            end: base.addingTimeInterval(1_800),
+            startCoordinate: start,
+            endCoordinate: end,
+            samples: [subwaySample]
+        ))
+        #expect(inferred.mode == .subway)
+        #expect(inferred.provenance == "filtered-sensor-mode")
+
+        let rejected = engine.infer(.init(
+            start: base,
+            end: base.addingTimeInterval(5 * 60 * 60),
+            startCoordinate: start,
+            endCoordinate: end,
+            precedingMode: .automotive,
+            followingMode: .automotive
+        ))
+        #expect(!rejected.allowsConnection)
     }
 }

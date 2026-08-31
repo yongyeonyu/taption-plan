@@ -190,7 +190,7 @@ public struct HealthKitSyncOverview: Codable, Hashable, Sendable {
 
 public actor HealthKitImportStore {
     public static let eventDomain = "healthkit-sample"
-    public static let applicationGroupIdentifier = "group.com.taption.plan"
+    public static let applicationGroupIdentifier = TaptionPlanSharedContainer.appGroupIdentifier
     public static let databaseFileName = "healthkit-local-v1.sqlite"
 
     private static let stateDomainPrefix = "healthkit.sync-state."

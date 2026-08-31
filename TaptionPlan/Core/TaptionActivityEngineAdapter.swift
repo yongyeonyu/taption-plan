@@ -1,5 +1,5 @@
 import Foundation
-import TaptionActivityEngine
+import TaptionPlanEngine
 
 struct TaptionActivityClassificationResult: Sendable {
     let state: ActivityClassificationState
@@ -12,9 +12,66 @@ struct TaptionActivityClassificationResult: Sendable {
     }
 }
 
+struct TaptionSensorQualityProjection: Sendable {
+    let readings: [SensorReading]
+    let routeReadings: [SensorReading]
+    let rejectionCounts: [String: Int]
+}
+
 enum TaptionActivityEngineAdapter {
     static let engine = ActivityClassificationEngine()
     static let confirmedSleepModelVersion = "manual-confirmed-sleep-v1"
+    static let inferredGapModelVersion = "activity-gap-viterbi-v1"
+
+    static func qualityProjection(
+        from readings: [SensorReading]
+    ) -> TaptionSensorQualityProjection {
+        var projected = readings.sorted {
+            if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        var rejectionCounts: [String: Int] = [:]
+
+        func apply(
+            _ keyPath: WritableKeyPath<SensorReading, Double?>,
+            label: String,
+            range: ClosedRange<Double>,
+            minimumDeviation: Double
+        ) {
+            let filter = TaptionRobustScalarFilter(configuration: .init(
+                physicalRange: range,
+                minimumAbsoluteDeviation: minimumDeviation
+            ))
+            let decisions = filter.decisions(for: projected.map { $0[keyPath: keyPath] })
+            for decision in decisions where decision.reason != nil {
+                projected[decision.index][keyPath: keyPath] = nil
+                let reason = decision.reason?.rawValue ?? "unknown"
+                rejectionCounts["\(label).\(reason)", default: 0] += 1
+            }
+        }
+
+        apply(\.speedMetersPerSecond, label: "speed", range: 0...120, minimumDeviation: 0.25)
+        apply(\.speedAccuracyMetersPerSecond, label: "speedAccuracy", range: 0...60, minimumDeviation: 0.25)
+        apply(\.courseDegrees, label: "course", range: 0...360, minimumDeviation: 1)
+        apply(\.courseAccuracyDegrees, label: "courseAccuracy", range: 0...180, minimumDeviation: 1)
+        apply(\.relativeAltitudeMeters, label: "relativeAltitude", range: -12_000...12_000, minimumDeviation: 0.5)
+        apply(\.pressureKilopascals, label: "pressure", range: 30...120, minimumDeviation: 0.05)
+        apply(\.currentPaceSecondsPerMeter, label: "currentPace", range: 0.05...3_600, minimumDeviation: 0.05)
+        apply(\.currentCadenceStepsPerSecond, label: "cadence", range: 0...5, minimumDeviation: 0.05)
+        apply(\.averageActivePaceSecondsPerMeter, label: "activePace", range: 0.05...3_600, minimumDeviation: 0.05)
+        apply(\.watchAccelerationStandardDeviationG, label: "accelerationStd", range: 0...20, minimumDeviation: 0.02)
+        apply(\.watchAccelerationMeanJerkGPerSecond, label: "accelerationJerk", range: 0...100, minimumDeviation: 0.05)
+        apply(\.behaviorConfidenceScore, label: "behaviorConfidence", range: 0...1, minimumDeviation: 0.02)
+
+        return TaptionSensorQualityProjection(
+            readings: projected,
+            routeReadings: TaptionRouteEngineAdapter.filteredReadings(
+                from: projected,
+                includeLowConfidenceBoundaries: false
+            ),
+            rejectionCounts: rejectionCounts
+        )
+    }
 
     static func classify(
         readings: [SensorReading],
@@ -38,13 +95,18 @@ enum TaptionActivityEngineAdapter {
         readings.map { reading in
             let travelSegment = travel.first { $0.span.contains(reading.timestamp) }
             let detailHint = travelSegment.map(detailID(for:))
+            let accuracy = reading.point?.horizontalAccuracy
+            let hasValidatedPreciseFix = reading.gpsAvailable
+                && accuracy.map { $0.isFinite && (0...150).contains($0) } == true
+                && reading.locationFixQuality != .approximate
             return ActivitySensorEvidence(
                 id: reading.id,
                 timestamp: reading.timestamp,
                 motion: motion(for: reading.motion),
                 speedMetersPerSecond: reading.speedMetersPerSecond,
-                horizontalAccuracyMeters: reading.point?.horizontalAccuracy,
-                isPreciseLocation: reading.locationFixQuality != .approximate,
+                horizontalAccuracyMeters: accuracy,
+                isPreciseLocation: reading.locationFixQuality == .precise
+                    || hasValidatedPreciseFix,
                 stepCount: reading.stepCount,
                 screenIsOn: reading.screenIsOn,
                 screenBrightness: reading.screenBrightness,
@@ -59,6 +121,61 @@ enum TaptionActivityEngineAdapter {
                 sequence: reading.sequence,
                 source: reading.sourceDevice == .appleWatch ? .appleWatch : .iPhone
             )
+        }
+    }
+
+    static func inferredGapActuals(
+        readings: [SensorReading],
+        travel: [TravelSegment],
+        actuals: [ActualRecord],
+        inside span: TimeSpan,
+        createdAt: Date = .now
+    ) -> [ActualRecord] {
+        let protected = actuals.filter { $0.modelVersion != inferredGapModelVersion }
+        let gaps = ReviewCoverageEngine.unconfirmedRecords(
+            actuals: protected,
+            in: [span],
+            asOf: span.end
+        )
+        guard !gaps.isEmpty else { return [] }
+        let allEvidence = evidence(from: readings, travel: travel)
+        let gapEngine = ActivityGapInferenceEngine()
+        return gaps.flatMap { gap -> [ActualRecord] in
+            let gapSpan = TimeSpan(
+                start: gap.startedAt,
+                end: gap.endedAt ?? gap.startedAt
+            )
+            guard gapSpan.duration > 0 else { return [] }
+            let preceding = protected
+                .filter { ($0.endedAt ?? $0.startedAt) <= gapSpan.start }
+                .max { ($0.endedAt ?? $0.startedAt) < ($1.endedAt ?? $1.startedAt) }
+            let following = protected
+                .filter { $0.startedAt >= gapSpan.end }
+                .min { $0.startedAt < $1.startedAt }
+            let inferred = gapEngine.infer(.init(
+                span: .init(start: gapSpan.start, end: gapSpan.end),
+                evidence: allEvidence,
+                precedingAnchor: preceding.map(activityGapAnchor),
+                followingAnchor: following.map(activityGapAnchor)
+            ))
+            return inferred.map { segment in
+                ActualRecord(
+                    id: segment.id,
+                    planID: nil,
+                    title: engine.taxonomy.detail(for: segment.detailID)?.title
+                        ?? engine.taxonomy.major(for: segment.majorCategoryID)?.title
+                        ?? "활동",
+                    categoryID: segment.majorCategoryID,
+                    startedAt: segment.span.start,
+                    endedAt: segment.span.end,
+                    source: .motion,
+                    confidence: ConfidenceLevel(score: segment.confidence),
+                    createdAt: createdAt,
+                    behavior: segment.behavior,
+                    evidence: segment.provenance,
+                    modelVersion: inferredGapModelVersion
+                )
+            }
         }
     }
 
@@ -337,6 +454,24 @@ enum TaptionActivityEngineAdapter {
         case .ship: return "movement.ship"
         case .airplane: return "movement.airplane"
         }
+    }
+
+    private static func activityGapAnchor(
+        _ actual: ActualRecord
+    ) -> ActivityGapAnchor {
+        let behavior = actual.behavior
+            ?? engine.taxonomy.major(for: actual.categoryID)?.details.first?.behavior
+            ?? actual.categoryID
+        let detail = engine.taxonomy.detail(
+            majorID: actual.categoryID,
+            behavior: behavior
+        )?.id ?? engine.taxonomy.major(for: actual.categoryID)?.details.first?.id
+            ?? "\(actual.categoryID).automatic"
+        return ActivityGapAnchor(
+            majorCategoryID: actual.categoryID,
+            detailID: detail,
+            behavior: behavior
+        )
     }
 
     private static func motion(for value: MotionKind) -> ActivityMotion {

@@ -557,11 +557,19 @@ final class TrackingSessionChunkArchive: @unchecked Sendable {
         guard let sessionID = reading.trackingSessionID else { return }
         lock.lock()
         defer { lock.unlock() }
-        var chunk = pending[sessionID] ?? PendingChunk(
-            startedAt: reading.timestamp,
-            index: 1,
-            readings: []
-        )
+        var chunk: PendingChunk
+        if let current = pending[sessionID] {
+            chunk = current
+        } else {
+            chunk = PendingChunk(
+                startedAt: reading.timestamp,
+                index: try nextChunkIndex(
+                    sessionID: sessionID,
+                    timestamp: reading.timestamp
+                ),
+                readings: []
+            )
+        }
         if reading.timestamp.timeIntervalSince(chunk.startedAt) >= 30,
            !chunk.readings.isEmpty {
             try write(chunk, sessionID: sessionID)
@@ -718,6 +726,33 @@ final class TrackingSessionChunkArchive: @unchecked Sendable {
         )
     }
 
+    private func nextChunkIndex(
+        sessionID: UUID,
+        timestamp: Date
+    ) throws -> Int {
+        let components = calendar.dateComponents([.year, .month], from: timestamp)
+        let month = String(
+            format: "%04d-%02d",
+            components.year ?? 1970,
+            components.month ?? 1
+        )
+        let directory = rootDirectory
+            .appendingPathComponent(month, isDirectory: true)
+            .appendingPathComponent(sessionID.uuidString, isDirectory: true)
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        )) ?? []
+        let highest = files.compactMap { file -> Int? in
+            guard file.lastPathComponent.hasSuffix(".jsonl.zlib") else {
+                return nil
+            }
+            return Int(file.lastPathComponent.split(separator: ".").first ?? "")
+        }.max() ?? 0
+        guard highest < Int.max else { throw CocoaError(.fileWriteOutOfSpace) }
+        return highest + 1
+    }
+
     private func readingOrder(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
         if lhs.sequence != rhs.sequence {
             return (lhs.sequence ?? .max) < (rhs.sequence ?? .max)
@@ -731,10 +766,9 @@ final class TrackingSessionChunkArchive: @unchecked Sendable {
 /// in the compressed archive; this store only contains the session envelope.
 enum TrackingSessionRecoveryStore {
     private static let key = "active-tracking-session-v1"
-    private static let appGroup = "group.com.taption.plan"
 
     private static var defaults: UserDefaults {
-        UserDefaults(suiteName: appGroup) ?? .standard
+        UserDefaults(suiteName: TaptionPlanSharedContainer.appGroupIdentifier) ?? .standard
     }
 
     static func read() -> TrackingSession? {
@@ -775,18 +809,33 @@ actor RawDeviceDataDayArchive {
     }
 
     func append(_ envelope: RawDeviceDataEnvelope) async throws {
-        try await store.appendEvents([
-            .init(
-                day: TaptionPlanDayKey(date: envelope.capturedAt),
-                timestamp: envelope.capturedAt,
-                sequence: 0,
-                id: envelope.id.uuidString,
-                domain: Self.domain,
-                payload: TaptionPlanCanonicalStorage.envelope(
-                    for: try TaptionPlanCanonicalStorage.encode(envelope)
+        try await append([envelope])
+    }
+
+    func append(_ envelopes: [RawDeviceDataEnvelope]) async throws {
+        guard !envelopes.isEmpty else { return }
+        var seen = Set<UUID>()
+        let events = try envelopes
+            .sorted {
+                if $0.capturedAt != $1.capturedAt {
+                    return $0.capturedAt < $1.capturedAt
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+            .filter { seen.insert($0.id).inserted }
+            .map { envelope in
+                TaptionPlanDayStore.Event(
+                    day: TaptionPlanDayKey(date: envelope.capturedAt),
+                    timestamp: envelope.capturedAt,
+                    sequence: 0,
+                    id: envelope.id.uuidString,
+                    domain: Self.domain,
+                    payload: TaptionPlanCanonicalStorage.envelope(
+                        for: try TaptionPlanCanonicalStorage.encode(envelope)
+                    )
                 )
-            )
-        ])
+            }
+        try await store.upsertEvents(events)
     }
 
     func envelopes(in span: TimeSpan) async throws
@@ -882,7 +931,7 @@ actor SensorReadingArchive {
             isDirectory: true
         )
         let storeRoot = fileManager.containerURL(
-            forSecurityApplicationGroupIdentifier: "group.com.taption.plan"
+            forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
         ) ?? root.appendingPathComponent("TaptionPlan", isDirectory: true)
         let storeURL = storeRoot.appendingPathComponent(
             "taption-data-v2.sqlite",
@@ -1320,11 +1369,14 @@ final class AppleSensorDataService {
             ).map(\.id)
         )
         var seen = Set<UUID>()
-        for reading in readings
+        let fresh = readings
             .sorted(by: { $0.timestamp < $1.timestamp })
-            where !existingIDs.contains(reading.id)
-                && seen.insert(reading.id).inserted {
-            try await archive.append(reading)
+            .filter { reading in
+                !existingIDs.contains(reading.id)
+                    && seen.insert(reading.id).inserted
+            }
+        try await archive.append(fresh)
+        for reading in fresh {
             onReadingPersisted?(reading)
         }
     }

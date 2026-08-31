@@ -13,6 +13,62 @@ final class StorageContractsTests: XCTestCase {
         XCTAssertThrowsError(try TaptionPlanCanonicalStorage.decode(TaptionPlanStorageEnvelopeV2.self, from: corrupted))
     }
 
+    func testCanonicalPayloadRejectsOversizedOrMismatchedDeclaredSize() throws {
+        let oversized = TaptionPlanEncodedPayload(
+            data: Data([1]),
+            checksum: String(repeating: "0", count: 64),
+            uncompressedSize: TaptionPlanCanonicalStorage.maximumUncompressedSize + 1,
+            isCompressed: true
+        )
+        XCTAssertThrowsError(
+            try TaptionPlanCanonicalStorage.decode(Data.self, from: oversized)
+        ) { error in
+            XCTAssertEqual(error as? TaptionPlanCanonicalStorageError, .invalidPayload)
+        }
+
+        let valid = try TaptionPlanCanonicalStorage.encode(["a", "b"], compress: false)
+        let mismatched = TaptionPlanEncodedPayload(
+            data: valid.data,
+            checksum: valid.checksum,
+            uncompressedSize: valid.uncompressedSize + 1,
+            isCompressed: false
+        )
+        XCTAssertThrowsError(
+            try TaptionPlanCanonicalStorage.decode([String].self, from: mismatched)
+        ) { error in
+            XCTAssertEqual(error as? TaptionPlanCanonicalStorageError, .invalidPayload)
+        }
+    }
+
+    func testRobustScalarFilterRejectsPhysicalAndIsolatedOutliersWithoutChangingInput() {
+        let input: [Double?] = [1, 1.1, 0.9, 90, 1, 1.05, .nan, -1]
+        let originalCount = input.count
+        let filter = TaptionRobustScalarFilter(configuration: .init(
+            physicalRange: 0...70,
+            minimumAbsoluteDeviation: 0.05
+        ))
+
+        let decisions = filter.decisions(for: input)
+
+        XCTAssertEqual(input.count, originalCount)
+        XCTAssertEqual(decisions[3].reason, .abovePhysicalMaximum)
+        XCTAssertEqual(decisions[6].reason, .nonFinite)
+        XCTAssertEqual(decisions[7].reason, .belowPhysicalMinimum)
+        XCTAssertEqual(decisions[0].acceptedValue, 1)
+    }
+
+    func testRobustScalarFilterRejectsSpikeButKeepsCoherentTransition() {
+        let filter = TaptionRobustScalarFilter(configuration: .init(
+            windowRadius: 3,
+            minimumAbsoluteDeviation: 0.01
+        ))
+        let spike = filter.decisions(for: [0, 0, 0, 10, 0, 0, 0].map(Optional.some))
+        XCTAssertEqual(spike[3].reason, .isolatedOutlier)
+
+        let transition = filter.filteredValues([0, 0, 0, 10, 10, 10, 10].map(Optional.some))
+        XCTAssertEqual(transition.compactMap { $0 }.count, 7)
+    }
+
     func testBoundedCacheEvictsLRUAndRespondsToPressure() async throws {
         let cache = TaptionPlanDayLRUCache<String, Int>(capacity: 2)
         await cache.insert(1, for: "a")

@@ -1,11 +1,12 @@
 import Foundation
+import TaptionPlanCore
 
 enum TaptionWatchWidgetKind {
     static let status = "TaptionWatchStatusWidget"
 }
 
 enum TaptionWatchWidgetStore {
-    static let appGroupIdentifier = "group.com.taption.plan"
+    static let appGroupIdentifier = TaptionPlanSharedContainer.appGroupIdentifier
     private static let payloadKey = "TaptionPlan.watchWidgetPayload"
 
     static func read() -> TaptionWatchPayload? {

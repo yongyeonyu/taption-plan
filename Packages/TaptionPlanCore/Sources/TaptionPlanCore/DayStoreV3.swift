@@ -165,40 +165,55 @@ public actor TaptionPlanV3Store {
         guard events.allSatisfy({ !$0.domain.isEmpty && !$0.id.isEmpty }) else {
             throw TaptionPlanV3StoreError.invalidIdentifier
         }
+        let insert = try prepare(
+            """
+            INSERT OR IGNORE INTO raw_events(
+                device, day_key, timestamp, sequence, id, domain,
+                provenance, payload
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            """
+        )
+        let conflictLookup = try prepare(
+            """
+            SELECT device, day_key, timestamp, sequence, id, domain,
+                   provenance, payload
+            FROM raw_events
+            WHERE device = ? AND domain = ? AND id = ?;
+            """
+        )
+        defer {
+            sqlite3_finalize(insert)
+            sqlite3_finalize(conflictLookup)
+        }
         try withTransaction {
             for event in events {
-                if let existing = try rawEvent(
-                    device: event.device,
-                    domain: event.domain,
-                    id: event.id
-                ) {
-                    guard existing == event else {
-                        throw TaptionPlanV3StoreError.payloadConflict(
-                            device: event.device,
-                            domain: event.domain,
-                            id: event.id
-                        )
-                    }
-                    continue
+                try reset(insert)
+                try bind(event.device.rawValue, to: insert, at: 1)
+                try bind(Self.dayKey(event.day), to: insert, at: 2)
+                try bind(event.timestamp.timeIntervalSince1970, to: insert, at: 3)
+                try bind(event.sequence, to: insert, at: 4)
+                try bind(event.id, to: insert, at: 5)
+                try bind(event.domain, to: insert, at: 6)
+                try bind(try encodeProvenance(event.provenance), to: insert, at: 7)
+                try bind(event.payload, to: insert, at: 8)
+                guard try step(insert) == SQLITE_DONE else { throw lastError() }
+                guard sqlite3_changes(database) == 0 else { continue }
+
+                try reset(conflictLookup)
+                try bind(event.device.rawValue, to: conflictLookup, at: 1)
+                try bind(event.domain, to: conflictLookup, at: 2)
+                try bind(event.id, to: conflictLookup, at: 3)
+                guard try step(conflictLookup) == SQLITE_ROW else {
+                    throw lastError()
                 }
-                try execute(
-                    """
-                    INSERT INTO raw_events(
-                        device, day_key, timestamp, sequence, id, domain,
-                        provenance, payload
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-                    """,
-                    binds: { statement in
-                        try self.bind(event.device.rawValue, to: statement, at: 1)
-                        try self.bind(Self.dayKey(event.day), to: statement, at: 2)
-                        try self.bind(event.timestamp.timeIntervalSince1970, to: statement, at: 3)
-                        try self.bind(event.sequence, to: statement, at: 4)
-                        try self.bind(event.id, to: statement, at: 5)
-                        try self.bind(event.domain, to: statement, at: 6)
-                        try self.bind(try self.encodeProvenance(event.provenance), to: statement, at: 7)
-                        try self.bind(event.payload, to: statement, at: 8)
-                    }
-                )
+                let existing = try readRawEvent(conflictLookup)
+                guard existing == event else {
+                    throw TaptionPlanV3StoreError.payloadConflict(
+                        device: event.device,
+                        domain: event.domain,
+                        id: event.id
+                    )
+                }
             }
         }
     }
@@ -422,6 +437,11 @@ public actor TaptionPlanV3Store {
                 message: String(cString: sqlite3_errmsg(database))
             )
         }
+        try optimize()
+    }
+
+    public func optimize() throws {
+        try execute("PRAGMA optimize;")
     }
 
     public func markMigrationCompleted(_ key: String, at date: Date = .now) throws -> Bool {
@@ -465,15 +485,18 @@ public actor TaptionPlanV3Store {
                 );
                 """
             )
+            try sqliteExecute(database, "PRAGMA optimize;")
             return
         }
 
         guard try sqliteUserTableCount(database) == 0 else {
             throw TaptionPlanV3StoreError.unsupportedSchema(0)
         }
-        try sqliteExecute(
-            database,
-            """
+        try sqliteExecute(database, "BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            try sqliteExecute(
+                database,
+                """
             CREATE TABLE schema_meta(
                 key TEXT NOT NULL PRIMARY KEY,
                 value TEXT NOT NULL
@@ -512,16 +535,13 @@ public actor TaptionPlanV3Store {
                 completed_at REAL NOT NULL
             );
             """
-        )
-        try sqliteExecute(
-            database,
-            """
-            CREATE TABLE IF NOT EXISTS migration_markers(
-                key TEXT NOT NULL PRIMARY KEY,
-                completed_at REAL NOT NULL
-            );
-            """
-        )
+            )
+            try sqliteExecute(database, "COMMIT;")
+        } catch {
+            try? sqliteExecute(database, "ROLLBACK;")
+            throw error
+        }
+        try sqliteExecute(database, "PRAGMA optimize;")
     }
 
     private nonisolated static func validateExistingDatabase(at url: URL) throws {
@@ -760,6 +780,13 @@ public actor TaptionPlanV3Store {
         let result = sqlite3_step(statement)
         guard result == SQLITE_ROW || result == SQLITE_DONE else { throw lastError() }
         return result
+    }
+
+    private func reset(_ statement: OpaquePointer) throws {
+        guard sqlite3_reset(statement) == SQLITE_OK,
+              sqlite3_clear_bindings(statement) == SQLITE_OK else {
+            throw lastError()
+        }
     }
 
     private func bind(_ value: String, to statement: OpaquePointer, at index: Int32) throws {

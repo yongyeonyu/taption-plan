@@ -805,6 +805,7 @@ final class AppModel {
             AirPodsActivityService(),
         screenTimeUsageService: ScreenTimeUsageService? = nil,
         securityBackupService: PlanSecurityBackupService? = nil,
+        rawDeviceDataArchive: RawDeviceDataDayArchive? = nil,
         appleWatchDataReceiptStore: AppleWatchDataReceiptStore =
             AppleWatchDataReceiptStore(),
         registersHealthBackgroundHandler: Bool = true
@@ -854,7 +855,8 @@ final class AppModel {
         self.biometricDataProtectionStatus = protectionStore?.status ?? .unavailable
         let legacyRawArchive = try?
             RawDeviceDataMonthlyArchive.applicationSupport()
-        let rawArchive = try? RawDeviceDataDayArchive.applicationSupport()
+        let rawArchive = rawDeviceDataArchive
+            ?? (try? RawDeviceDataDayArchive.applicationSupport())
         self.calendarService = calendarService ?? AppleCalendarService()
         self.photoService = photoService
         self.healthService = healthService
@@ -1064,9 +1066,9 @@ final class AppModel {
         return recovered
     }
 
-    func loadCloudBackup() async throws -> PlanCloudBackupPayload {
+    func loadCloudBackup() async throws -> PlanCloudBackupRestorePackage {
         guard let securityBackupService else { throw PlanSecurityError.archiveNotFound }
-        let recovered = try await securityBackupService.loadLatestBackup()
+        let recovered = try await securityBackupService.loadLatestBackupPackage()
         securityStatus = securityBackupService.status
         return recovered
     }
@@ -1085,11 +1087,9 @@ final class AppModel {
             let date = Date.now
             let payload = await cloudBackupPayload(now: date)
             appLogBytes = payload.appLog?.utf8.count ?? 0
-            let archive = try await securityBackupService.saveMonthlyArchive(
-                payload
-            )
-            try await saveCloudRawSensorBackup(
+            let generation = try await saveCloudBackupGeneration(
                 using: securityBackupService,
+                payload: payload,
                 date: date
             )
             securityStatus = securityBackupService.status
@@ -1097,7 +1097,7 @@ final class AppModel {
                 operation,
                 outcome: "success",
                 fields: [
-                    "month": archive.monthKey,
+                    "month": generation.snapshot.monthKey,
                     "app_log_bytes": String(appLogBytes),
                 ]
             )
@@ -1115,11 +1115,49 @@ final class AppModel {
     func applyCloudBackup(
         _ restored: PlanCloudBackupPayload
     ) async throws -> PlanCloudBackupRestoreResult {
+        try await applyCloudBackup(
+            PlanCloudBackupRestorePackage(backup: restored)
+        )
+    }
+
+    func applyCloudBackup(
+        _ restored: PlanCloudBackupRestorePackage
+    ) async throws -> PlanCloudBackupRestoreResult {
         guard !repositoryLoadFailed else {
             throw RepositoryError.invalidSnapshot
         }
+        let backup = restored.backup
+        let rawSensorPayload: PlanCloudRawSensorPayload?
+        var result = PlanCloudBackupRestoreResult.complete
+        switch restored.rawSensorState {
+        case .unavailable:
+            rawSensorPayload = nil
+        case .available(let payload):
+            rawSensorPayload = payload
+        case .invalidArchive:
+            rawSensorPayload = nil
+            result = .snapshotOnly
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "icloud_backup_restore_raw_archive_invalid",
+                level: .error
+            )
+        }
+        var readingsByID: [UUID: SensorReading] = [:]
+        for reading in backup.routePoints.map(\.sensorReading)
+            + (rawSensorPayload?.sensorReadings ?? []) {
+            readingsByID[reading.id] = reading
+        }
+        let restoredReadings = readingsByID.values.sorted {
+            if $0.timestamp != $1.timestamp {
+                return $0.timestamp < $1.timestamp
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        let restoredRouteReadings = restoredReadings.filter {
+            $0.point != nil
+        }
         let localPermissions = snapshot.settings.permissions
-        var value = restored.snapshot
+        var value = backup.snapshot
         value.settings.permissions = localPermissions
         value.settings.transitBoardingDecisions =
             snapshot.settings.transitBoardingDecisions
@@ -1136,33 +1174,49 @@ final class AppModel {
         // Travel classifications and subway paths are derived data. Rebuild
         // them from restored sensor samples while keeping confirmed records
         // in the restored snapshot authoritative.
-        if !restored.routePoints.isEmpty {
+        if !restoredRouteReadings.isEmpty {
             value.travel = SubwayTravelSegmentEngine.mergingRestoredTravel(
                 existing: value.travel,
-                readings: restored.routePoints.map(\.sensorReading),
+                readings: restoredRouteReadings,
                 userTransitLocations: value.settings.userTransitLocations
             )
         }
         value.settings.cloudResetAt = .now
         value.updatedAt = .now
+        try await repository.save(value)
         snapshot = value
-        try await repository.save(snapshot)
 
-        var result = PlanCloudBackupRestoreResult.complete
-        if !restored.routePoints.isEmpty, let sensorService {
+        if !restoredReadings.isEmpty, let sensorService {
             do {
                 try await sensorService.recordExternalReadings(
-                    restored.routePoints.map(\.sensorReading)
+                    restoredReadings
                 )
             } catch {
                 result = .snapshotOnly
                 TaptionPlanDiagnosticsLogger.shared.record(
-                    "icloud_backup_restore_route_merge_failed",
+                    "icloud_backup_restore_sensor_merge_failed",
                     level: .error,
                     fields: ["error": String(describing: type(of: error))]
                 )
             }
-        } else if !restored.routePoints.isEmpty {
+        } else if !restoredReadings.isEmpty {
+            result = .snapshotOnly
+        }
+        if let rawSensorPayload, !rawSensorPayload.envelopes.isEmpty,
+           let rawDeviceDataArchive {
+            do {
+                try await rawDeviceDataArchive.append(
+                    rawSensorPayload.envelopes
+                )
+            } catch {
+                result = .snapshotOnly
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "icloud_backup_restore_raw_envelope_merge_failed",
+                    level: .error,
+                    fields: ["error": String(describing: type(of: error))]
+                )
+            }
+        } else if rawSensorPayload?.envelopes.isEmpty == false {
             result = .snapshotOnly
         }
         liveMergeCacheKey = nil
@@ -1175,11 +1229,15 @@ final class AppModel {
                 let uploaded = try await cloudSyncService.upload(
                     cloudPortableSnapshot(snapshot)
                 )
-                assignCloudMergedSnapshot(mergeDeviceLocalData(
-                    cloud: uploaded,
-                    local: snapshot
-                ))
-                try await repository.save(snapshot)
+                let committed = preparedCloudMergedSnapshot(
+                    mergeDeviceLocalData(
+                        cloud: uploaded,
+                        local: snapshot
+                    ),
+                    preservingUpdatedAt: snapshot.updatedAt
+                )
+                try await repository.save(committed)
+                assignCommittedCloudSnapshot(committed)
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "icloud_backup_restore_cloud_upload_deferred",
@@ -1237,12 +1295,20 @@ final class AppModel {
         )
     }
 
-    private func saveCloudRawSensorBackup(
+    private func saveCloudBackupGeneration(
         using securityBackupService: PlanSecurityBackupService,
+        payload: PlanCloudBackupPayload,
         date: Date
-    ) async throws {
-        let payload = await cloudRawSensorPayload(now: date)
-        guard !payload.isEmpty else {
+    ) async throws -> PlanCloudBackupGeneration {
+        let rawSensorPayload = await cloudRawSensorPayload(now: date)
+        let generation = try await securityBackupService.saveMonthlyGeneration(
+            payload,
+            rawSensorPayload: rawSensorPayload.isEmpty
+                ? nil
+                : rawSensorPayload,
+            date: date
+        )
+        guard let archive = generation.rawSensors else {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "icloud_raw_sensor_backup_skipped_empty",
                 level: .notice,
@@ -1253,28 +1319,25 @@ final class AppModel {
                         .map { String($0.timeIntervalSince1970) } ?? "none",
                 ]
             )
-            return
+            return generation
         }
-        let archive = try await securityBackupService.saveRawSensorArchive(
-            payload,
-            date: date
-        )
         TaptionPlanDiagnosticsLogger.shared.record(
             "icloud_raw_sensor_backup_saved",
             fields: [
                 "path": PlanCloudRawSensorBackupPath(
                     monthKey: archive.monthKey
                 ).relativePath,
-                "sensor_readings": String(payload.sensorReadings.count),
-                "envelopes": String(payload.envelopes.count),
-                "latest_sensor_at": payload.sensorReadings.last.map {
+                "sensor_readings": String(rawSensorPayload.sensorReadings.count),
+                "envelopes": String(rawSensorPayload.envelopes.count),
+                "latest_sensor_at": rawSensorPayload.sensorReadings.last.map {
                     String($0.timestamp.timeIntervalSince1970)
                 } ?? "none",
-                "latest_envelope_at": payload.envelopes.last.map {
+                "latest_envelope_at": rawSensorPayload.envelopes.last.map {
                     String($0.capturedAt.timeIntervalSince1970)
                 } ?? "none",
             ]
         )
+        return generation
     }
 
     func setMapCategoryColor(_ hex: String, for categoryID: String) {
@@ -2536,11 +2599,9 @@ final class AppModel {
             let date = Date.now
             let payload = await cloudBackupPayload(now: date)
             appLogBytes = payload.appLog?.utf8.count ?? 0
-            let archive = try await securityBackupService.saveMonthlyArchive(
-                payload
-            )
-            try await saveCloudRawSensorBackup(
+            let generation = try await saveCloudBackupGeneration(
                 using: securityBackupService,
+                payload: payload,
                 date: date
             )
             securityStatus = securityBackupService.status
@@ -2549,7 +2610,7 @@ final class AppModel {
                 outcome: "success",
                 fields: [
                     "reason": reason,
-                    "month": archive.monthKey,
+                    "month": generation.snapshot.monthKey,
                     "app_log_bytes": String(appLogBytes),
                 ]
             )
@@ -3569,12 +3630,29 @@ final class AppModel {
             let (cloudValue, _) = try await cloudSyncService.synchronize(
                 local: cloudPortableSnapshot(snapshot)
             )
-            assignCloudMergedSnapshot(mergeDeviceLocalData(
-                cloud: cloudValue,
-                local: localDeviceData
-            ))
-            await refreshReviewArchives(force: true)
-            try await repository.save(snapshot)
+            let asOf = Date.now
+            var committed = preparedCloudMergedSnapshot(
+                mergeDeviceLocalData(
+                    cloud: cloudValue,
+                    local: localDeviceData
+                ),
+                preservingUpdatedAt: localDeviceData.updatedAt
+            )
+            var reportSource = committed
+            reportSource.memos.removeAll {
+                pendingMapMemoIDs.contains($0.id)
+            }
+            committed.yearlyReports = await reviewArchives(
+                for: reportSource,
+                asOf: asOf
+            )
+            var persisted = committed
+            persisted.memos.removeAll {
+                pendingMapMemoIDs.contains($0.id)
+            }
+            try await repository.save(persisted)
+            assignCommittedCloudSnapshot(committed)
+            lastReviewArchiveRefreshAt = asOf
             publishWidgetPayload()
         } catch {
             if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
@@ -6615,10 +6693,12 @@ final class AppModel {
                 "위치 기록을 읽지 못했습니다. \(error.localizedDescription)"
             return
         }
-        // Raw readings stay in the archive. Location-derived places, travel,
-        // and summary data consume only quality-checked route observations.
-        let filteredArchivedReadings = PlanBackupRoutePointReducer
-            .filteredReadings(archivedReadings)
+        // Raw readings stay in the archive. Every downstream algorithm uses
+        // a copy whose scalar and route outliers are excluded with provenance.
+        let sensorQuality = TaptionActivityEngineAdapter.qualityProjection(
+            from: archivedReadings
+        )
+        let filteredArchivedReadings = sensorQuality.routeReadings
         let sleepSpan = SleepAnalysisEngine.overnightSpan(
             containing: span.start
         )
@@ -6645,6 +6725,9 @@ final class AppModel {
                 "gps": String(archivedReadings.count),
                 "gps_filtered": String(filteredArchivedReadings.count),
                 "motion": String(motionActivities.count),
+                "quality_rejections": String(
+                    sensorQuality.rejectionCounts.values.reduce(0, +)
+                ),
             ]
         )
         let pedometer =
@@ -6705,6 +6788,11 @@ final class AppModel {
                     snapshot.settings.confirmedSleepSpans,
                     to: snapshot.actuals
                 )
+            applyInferredGapRecords(
+                readings: sensorQuality.readings,
+                travel: snapshot.travel,
+                inside: span
+            )
             guard (settings.locationEnabled || settings.weatherEnabled),
                   weatherNeedsRefresh(for: latestReadingWithPoint) else {
                 return
@@ -6790,6 +6878,11 @@ final class AppModel {
         } else {
             healthRouteReadings = []
         }
+        let filteredHealthRouteReadings = TaptionRouteEngineAdapter
+            .filteredReadings(
+                from: healthRouteReadings,
+                includeLowConfidenceBoundaries: false
+            )
         if archivedReadings.isEmpty,
            photoLocationReadings.isEmpty,
            healthRouteReadings.isEmpty,
@@ -6817,7 +6910,7 @@ final class AppModel {
                 to: (
                     filteredArchivedReadings
                         + photoLocationReadings
-                        + healthRouteReadings
+                        + filteredHealthRouteReadings
                 ).sorted { $0.timestamp < $1.timestamp },
                 activities: motionActivities
             )
@@ -6923,11 +7016,8 @@ final class AppModel {
         // A photo location is only a fallback anchor. It must not erase a
         // previously recorded route when the sensor archive is temporarily
         // unavailable. HealthKit workout routes are valid primary evidence.
-        let hasPrimaryLocationEvidence = archivedReadings.contains {
-            $0.point != nil
-        } || healthRouteReadings.contains {
-            $0.point != nil
-        }
+        let hasPrimaryLocationEvidence = !filteredArchivedReadings.isEmpty
+            || !filteredHealthRouteReadings.isEmpty
         var travelDiagnostics =
             TaptionPlanDiagnosticsTravelSummary.fields(for: travel)
         travelDiagnostics["gps_readings"] = String(archivedReadings.count)
@@ -7010,6 +7100,11 @@ final class AppModel {
             snapshot.settings.confirmedSleepSpans,
             to: snapshot.actuals
         )
+        applyInferredGapRecords(
+            readings: sensorQuality.readings,
+            travel: snapshot.travel,
+            inside: span
+        )
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(
@@ -7018,6 +7113,48 @@ final class AppModel {
                 fallbackReading: latestReadingWithPoint
             )
         }
+    }
+
+    private func applyInferredGapRecords(
+        readings: [SensorReading],
+        travel: [TravelSegment],
+        inside span: TimeSpan
+    ) {
+        let existing = snapshot.actuals.filter {
+            $0.modelVersion == TaptionActivityEngineAdapter.inferredGapModelVersion
+                && $0.span(asOf: span.end).intersection(with: span) != nil
+        }
+        let fresh = TaptionActivityEngineAdapter.inferredGapActuals(
+            readings: readings,
+            travel: travel,
+            actuals: snapshot.actuals,
+            inside: span
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        // Sparse refreshes are not evidence that an earlier inference vanished.
+        guard !fresh.isEmpty else { return }
+        let merged = ActivityClassificationLockEngine
+            .mergingLockedClassifications(
+                existing: existing,
+                fresh: fresh,
+                inside: span
+            )
+        snapshot.actuals.removeAll {
+            $0.modelVersion == TaptionActivityEngineAdapter.inferredGapModelVersion
+                && $0.span(asOf: span.end).intersection(with: span) != nil
+        }
+        snapshot.actuals.append(contentsOf: merged)
+        snapshot.actuals.sort {
+            if $0.startedAt != $1.startedAt { return $0.startedAt < $1.startedAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sensor_activity_gap_inference_completed",
+            fields: [
+                "fresh": String(fresh.count),
+                "persisted": String(merged.count),
+                "model": TaptionActivityEngineAdapter.inferredGapModelVersion,
+            ]
+        )
     }
 
     private func applyChargingInactivitySleepRecords(
@@ -9864,8 +10001,8 @@ final class AppModel {
             value.updatedAt = .now
             var visibleValue = value
             visibleValue.memos = snapshot.memos
-            assignTimestampOnlySnapshot(visibleValue)
             try await repository.save(value)
+            assignTimestampOnlySnapshot(visibleValue)
             if pendingMapMemoIDs.isEmpty,
                permissionState(for: .cloud).isGranted,
                let cloudSyncService {
@@ -9877,19 +10014,25 @@ final class AppModel {
                     let pendingMemos = localDeviceData.memos.filter {
                         pendingMapMemoIDs.contains($0.id)
                     }
-                    assignCloudMergedSnapshot(mergeDeviceLocalData(
-                        cloud: uploaded,
-                        local: localDeviceData
-                    ))
+                    var committed = preparedCloudMergedSnapshot(
+                        mergeDeviceLocalData(
+                            cloud: uploaded,
+                            local: localDeviceData
+                        ),
+                        preservingUpdatedAt: localDeviceData.updatedAt
+                    )
                     if !pendingMemos.isEmpty {
-                        var restored = snapshot
-                        let existingIDs = Set(restored.memos.map(\.id))
-                        restored.memos.append(contentsOf: pendingMemos.filter {
+                        let existingIDs = Set(committed.memos.map(\.id))
+                        committed.memos.append(contentsOf: pendingMemos.filter {
                             !existingIDs.contains($0.id)
                         })
-                        snapshot = restored
                     }
-                    try await repository.save(snapshotForPersistence())
+                    var persisted = committed
+                    persisted.memos.removeAll {
+                        pendingMapMemoIDs.contains($0.id)
+                    }
+                    try await repository.save(persisted)
+                    assignCommittedCloudSnapshot(committed)
                 } catch {
                     if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
                         || error is RepositoryError
@@ -10124,7 +10267,10 @@ final class AppModel {
         return local + cloud.filter { seen.insert($0[keyPath: id]).inserted }
     }
 
-    private func assignCloudMergedSnapshot(_ value: TaptionDataSnapshot) {
+    private func preparedCloudMergedSnapshot(
+        _ value: TaptionDataSnapshot,
+        preservingUpdatedAt updatedAt: Date
+    ) -> TaptionDataSnapshot {
         var content = value
         content.settings.confirmedSleepSpans =
             TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
@@ -10136,13 +10282,27 @@ final class AppModel {
             content.settings.confirmedSleepSpans,
             to: content.actuals
         )
+        content.updatedAt = updatedAt
+        return content
+    }
+
+    private func assignCommittedCloudSnapshot(
+        _ content: TaptionDataSnapshot
+    ) {
         guard content != snapshot else { return }
-        content.updatedAt = snapshot.updatedAt
-        if content == snapshot {
-            assignTimestampOnlySnapshot(content)
-        } else {
-            snapshot = content
-        }
+        snapshot = content
+    }
+
+    private func reviewArchives(
+        for snapshot: TaptionDataSnapshot,
+        asOf: Date
+    ) async -> [YearlyReviewArchive] {
+        await Task.detached(priority: .utility) {
+            ReviewReportArchiveEngine.refreshed(
+                snapshot: snapshot,
+                asOf: asOf
+            )
+        }.value
     }
 
     private func refreshReviewArchives(

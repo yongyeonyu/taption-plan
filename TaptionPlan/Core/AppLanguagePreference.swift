@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 
 enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendable {
     case automatic
@@ -17,7 +18,7 @@ enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendabl
         }
     }
 
-    static let appGroupIdentifier = "group.com.taption.plan"
+    static let appGroupIdentifier = TaptionPlanSharedContainer.appGroupIdentifier
     static let sharedDefaultsKey = "taption.app.language.preference"
     static let legacyDefaultsKey = "taption.mapHome.language"
 

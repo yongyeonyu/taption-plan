@@ -1,5 +1,5 @@
 import Foundation
-import TaptionRouteEngine
+import TaptionPlanEngine
 
 struct TaptionRouteDisplaySnapshot: Sendable {
     let log: RouteLog
@@ -47,12 +47,28 @@ enum TaptionRouteEngineAdapter {
         RouteLoggerRouteFilter().filter(samples(from: readings))
     }
 
-    static func filteredReadings(from readings: [SensorReading]) -> [SensorReading] {
+    static func filteredReadings(
+        from readings: [SensorReading],
+        includeLowConfidenceBoundaries: Bool = true
+    ) -> [SensorReading] {
         let originals = Dictionary(grouping: readings, by: \.id)
             .compactMapValues { $0.first }
-        return displayRoute(from: readings).segments
-            .flatMap(\.pathSamples)
-            .compactMap { sample in
+        let segments = displayRoute(from: readings).segments
+        var result: [SensorReading] = []
+        for index in segments.indices {
+            let segment = segments[index]
+            let samples = (
+                segment.pathSamples
+                    + (includeLowConfidenceBoundaries
+                        ? segment.boundarySamples
+                        : [])
+            ).sorted {
+                if $0.timestamp != $1.timestamp {
+                    return $0.timestamp < $1.timestamp
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+            var derived = samples.compactMap { sample -> SensorReading? in
                 guard var reading = originals[sample.id] else { return nil }
                 reading.point = GeoPoint(
                     latitude: sample.coordinate.latitude,
@@ -62,6 +78,21 @@ enum TaptionRouteEngineAdapter {
                     verticalAccuracy: reading.point?.verticalAccuracy ?? -1
                 )
                 return reading
+            }
+            if index < segments.index(before: segments.endIndex),
+               !derived.isEmpty {
+                derived[derived.count - 1].trackingSessionEnded = true
+            }
+            result.append(contentsOf: derived)
+        }
+        var seen = Set<UUID>()
+        return result
+            .filter { seen.insert($0.id).inserted }
+            .sorted {
+                if $0.timestamp != $1.timestamp {
+                    return $0.timestamp < $1.timestamp
+                }
+                return $0.id.uuidString < $1.id.uuidString
             }
     }
 
@@ -79,6 +110,7 @@ enum TaptionRouteEngineAdapter {
                 sequence: reading.sequence.map(Int64.init),
                 mode: mode,
                 isApproximate: reading.locationFixQuality == .approximate
+                    || !reading.gpsAvailable
             )
         }
     }

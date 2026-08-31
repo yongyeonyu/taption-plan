@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 
 enum TaptionDiagnosticsLevel: String {
     case info
@@ -340,7 +341,7 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
             isDirectory: true
         )
         guard let appGroupRoot = fileManager.containerURL(
-            forSecurityApplicationGroupIdentifier: "group.com.taption.plan"
+            forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
         ) else {
             return (
                 primary: applicationSupportDirectory

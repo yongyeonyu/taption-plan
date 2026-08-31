@@ -2,6 +2,7 @@ import ActivityKit
 import Foundation
 import OSLog
 import SwiftUI
+import TaptionPlanCore
 
 enum TaptionWidgetKind {
     static let schedule = "TaptionScheduleWidget"
@@ -2539,7 +2540,7 @@ enum TaptionWidgetSyncStatus: Equatable, Sendable {
 }
 
 enum TaptionWidgetSharedStore {
-    static let appGroupIdentifier = "group.com.taption.plan"
+    static let appGroupIdentifier = TaptionPlanSharedContainer.appGroupIdentifier
 
     private static let logger = Logger(
         subsystem: "com.taption.plan",

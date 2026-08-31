@@ -24,12 +24,16 @@ public enum TaptionPlanCanonicalStorageError: Error, Equatable, Sendable {
 
 /// The sole persistence codec: binary Codable, optionally LZFSE compressed, with SHA-256 integrity.
 public enum TaptionPlanCanonicalStorage {
+    public static let maximumUncompressedSize = 64 * 1_024 * 1_024
     private static let envelopeMagic = Data("TP-CANON".utf8)
 
     public static func encode<Value: Encodable>(_ value: Value, compress: Bool = true) throws -> TaptionPlanEncodedPayload {
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
         let raw = try encoder.encode(value)
+        guard raw.count <= maximumUncompressedSize else {
+            throw TaptionPlanCanonicalStorageError.invalidPayload
+        }
         let payload: (Data, Bool)
         if compress, let compressed = lzfse(raw), compressed.count < raw.count {
             payload = (compressed, true)
@@ -63,7 +67,7 @@ public enum TaptionPlanCanonicalStorage {
         let sizeEnd = sizeStart + 8
         let size = envelope[sizeStart..<sizeEnd]
             .reduce(UInt64(0)) { ($0 << 8) | UInt64($1) }
-        guard size <= UInt64(Int.max) else {
+        guard size <= UInt64(maximumUncompressedSize) else {
             throw TaptionPlanCanonicalStorageError.invalidPayload
         }
         let checksumStart = sizeEnd
@@ -76,8 +80,12 @@ public enum TaptionPlanCanonicalStorage {
               checksum.allSatisfy({ $0.isHexDigit }) else {
             throw TaptionPlanCanonicalStorageError.invalidPayload
         }
+        let data = Data(envelope.dropFirst(checksumEnd))
+        guard compressionFlag == 1 || data.count == Int(size) else {
+            throw TaptionPlanCanonicalStorageError.invalidPayload
+        }
         return TaptionPlanEncodedPayload(
-            data: Data(envelope.dropFirst(checksumEnd)),
+            data: data,
             checksum: checksum,
             uncompressedSize: Int(size),
             isCompressed: compressionFlag == 1
@@ -85,6 +93,10 @@ public enum TaptionPlanCanonicalStorage {
     }
 
     public static func decode<Value: Decodable>(_ type: Value.Type, from encoded: TaptionPlanEncodedPayload) throws -> Value {
+        guard (0...maximumUncompressedSize).contains(encoded.uncompressedSize),
+              encoded.isCompressed || encoded.data.count == encoded.uncompressedSize else {
+            throw TaptionPlanCanonicalStorageError.invalidPayload
+        }
         let raw = encoded.isCompressed ? try unlzfse(encoded.data, size: encoded.uncompressedSize) : encoded.data
         guard checksum(raw) == encoded.checksum else { throw TaptionPlanCanonicalStorageError.checksumMismatch }
         do { return try PropertyListDecoder().decode(type, from: raw) }

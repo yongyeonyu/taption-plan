@@ -14898,6 +14898,101 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testCloudRestorePublishesNothingWhenLocalCommitFails() async {
+        let model = AppModel(
+            repository: RejectingSavePlanRepository(),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        let original = model.snapshot
+        var restored = TaptionDataSnapshot.empty
+        restored.plans = [
+            PlanRecord(
+                title: "복원 대상",
+                span: TimeSpan(
+                    start: Date(timeIntervalSince1970: 1_787_538_400),
+                    end: Date(timeIntervalSince1970: 1_787_542_000)
+                ),
+                categoryID: "activity"
+            ),
+        ]
+
+        do {
+            _ = try await model.applyCloudBackup(
+                PlanCloudBackupPayload(snapshot: restored)
+            )
+            XCTFail("A failed local commit must fail the restore")
+        } catch {
+            XCTAssertEqual(error as? RepositoryError, .invalidSnapshot)
+        }
+        XCTAssertEqual(model.snapshot, original)
+    }
+
+    @MainActor
+    func testCloudRestoreRehydratesRawSensorsAndIsIdempotent() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cloud-restore-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("restore.sqlite")
+        let sensorArchive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("legacy.jsonl"),
+            dayStoreURL: databaseURL
+        )
+        let sensorService = AppleSensorDataService(archive: sensorArchive)
+        let rawArchive = try RawDeviceDataDayArchive(databaseURL: databaseURL)
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            rawDeviceDataArchive: rawArchive,
+            registersHealthBackgroundHandler: false
+        )
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let reading = SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            sourceDevice: .iPhone
+        )
+        let envelope = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .iPhoneMotion,
+            kind: "motion-activities",
+            payload: ["state": "walking"]
+        )
+        let restored = PlanCloudBackupRestorePackage(
+            backup: PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorState: .available(
+                PlanCloudRawSensorPayload(
+                    monthKey: "2026-08",
+                    sensorReadings: [reading],
+                    envelopes: [envelope],
+                    createdAt: date
+                )
+            )
+        )
+
+        let firstResult = try await model.applyCloudBackup(restored)
+        let secondResult = try await model.applyCloudBackup(restored)
+        XCTAssertEqual(firstResult, .complete)
+        XCTAssertEqual(secondResult, .complete)
+        let span = TimeSpan(
+            start: date.addingTimeInterval(-1),
+            end: date.addingTimeInterval(1)
+        )
+        let sensorIDs = try await sensorService.archivedReadings(in: span)
+            .map(\.id)
+        let envelopeIDs = try await rawArchive.envelopes(in: span).map(\.id)
+        XCTAssertEqual(sensorIDs, [reading.id])
+        XCTAssertEqual(envelopeIDs, [envelope.id])
+    }
+
+    @MainActor
     func testDeletingPlanDetachesLinkedMapMemoAndPersistsIt() async throws {
         let base = makeDate(2026, 8, 4, 10)
         let plan = PlanRecord(
@@ -20766,6 +20861,16 @@ final class MapHomeStickmanTests: XCTestCase {
 private struct RawArchiveWatchFixture: Codable, Hashable {
     var sampleCount: Int
     var mode: String
+}
+
+private actor RejectingSavePlanRepository: PlanDataRepository {
+    func load() async throws -> TaptionDataSnapshot {
+        .empty
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        throw RepositoryError.invalidSnapshot
+    }
 }
 
 private final class AirQualityURLProtocolStub: URLProtocol, @unchecked Sendable {

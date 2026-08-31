@@ -141,6 +141,60 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(replacement.status.latestSuccessfulBackupDate, date)
     }
 
+    func testMonthlyGenerationRecordsSuccessOnlyAfterRawArchiveCompletes() async throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let rawStore = FailOncePlanCloudRawSensorBackupStore()
+        let service = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore,
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
+        )
+        try service.setPIN("1234")
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let reading = SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            sourceDevice: .iPhone
+        )
+        let rawPayload = PlanCloudRawSensorPayload(
+            monthKey: "2026-08",
+            sensorReadings: [reading],
+            envelopes: [],
+            createdAt: date
+        )
+
+        do {
+            _ = try await service.saveMonthlyGeneration(
+                PlanCloudBackupPayload(snapshot: .empty),
+                rawSensorPayload: rawPayload,
+                date: date
+            )
+            XCTFail("Injected raw archive failure must fail the generation")
+        } catch {
+            XCTAssertEqual(error as? BackupStoreTestError, .injected)
+        }
+        XCTAssertEqual(Array(backupStore.archives.keys), ["2026-08"])
+        XCTAssertTrue(rawStore.archives.isEmpty)
+        XCTAssertNil(service.status.latestSuccessfulBackupDate)
+
+        let generation = try await service.saveMonthlyGeneration(
+            PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: rawPayload,
+            date: date
+        )
+
+        XCTAssertEqual(generation.snapshot.monthKey, "2026-08")
+        XCTAssertEqual(generation.rawSensors?.monthKey, "2026-08")
+        XCTAssertEqual(Array(rawStore.archives.keys), ["2026-08"])
+        XCTAssertEqual(service.status.latestSuccessfulBackupDate, date)
+    }
+
     func testBiometricGateUnlocksWithoutExposingRawBiometric() async throws {
         let biometric = MockPlanLocalBiometricAuthenticator(result: true)
         let service = makeService(biometric: biometric)
@@ -268,6 +322,114 @@ final class SecurityBackupCoreTests: XCTestCase {
         )
         XCTAssertEqual(decoded.sensorReadings, [reading])
         XCTAssertEqual(decoded.envelopes.map(\.id), [motion.id])
+    }
+
+    func testBackupPackageCombinesRawSensorArchivesAcrossMonths() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore
+        )
+        try service.setPIN("1234")
+        let july = Date(timeIntervalSince1970: 1_775_000_000)
+        let august = Date(timeIntervalSince1970: 1_777_700_000)
+        let julyReading = SensorReading(
+            timestamp: july,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            )
+        )
+        let augustReading = SensorReading(
+            timestamp: august,
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            )
+        )
+        let envelope = try RawDeviceDataEnvelope(
+            capturedAt: july,
+            source: .iPhoneMotion,
+            kind: "motion-activities",
+            payload: ["state": "walking"]
+        )
+        _ = try service.saveRawSensorArchive(
+            PlanCloudRawSensorPayload(
+                monthKey: "2026-04",
+                sensorReadings: [julyReading],
+                envelopes: [envelope],
+                createdAt: july
+            ),
+            accountIdentifier: "account-a",
+            date: july
+        )
+        _ = try service.saveRawSensorArchive(
+            PlanCloudRawSensorPayload(
+                monthKey: "2026-05",
+                sensorReadings: [julyReading, augustReading],
+                createdAt: august
+            ),
+            accountIdentifier: "account-a",
+            date: august
+        )
+        _ = try service.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: august
+        )
+
+        let restored = try service.loadLatestBackupPackage(
+            accountIdentifier: "account-a"
+        )
+        guard case .available(let rawSensors) = restored.rawSensorState else {
+            return XCTFail("Raw sensor archives must be restorable")
+        }
+        XCTAssertEqual(
+            rawSensors.sensorReadings.map(\.id),
+            [julyReading.id, augustReading.id]
+        )
+        XCTAssertEqual(rawSensors.envelopes.map(\.id), [envelope.id])
+    }
+
+    func testBackupPackageReportsCorruptedRawArchiveSeparately() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore
+        )
+        try service.setPIN("1234")
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        _ = try service.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: date
+        )
+        let corrupted = PlanRawSensorMonthlyArchive(
+            monthKey: "2026-08",
+            accountIdentifier: "account-a",
+            encryptedPayload: Data([0x01]),
+            wrappedPayloadKey: Data([0x02]),
+            accountWrappedPayloadKey: Data(),
+            createdAt: date
+        )
+        try rawStore.save(
+            corrupted,
+            at: PlanCloudRawSensorBackupPath(monthKey: "2026-08")
+        )
+
+        let restored = try service.loadLatestBackupPackage(
+            accountIdentifier: "account-a"
+        )
+        assertEmptySnapshot(restored.backup.snapshot)
+        XCTAssertEqual(restored.rawSensorState, .invalidArchive)
     }
 
     func testCloudPrivateRecoveryRestoresEncryptedArchiveOnAnotherDevice() async throws {
@@ -1149,5 +1311,34 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertTrue(snapshot.memos.isEmpty)
         XCTAssertTrue(snapshot.travel.isEmpty)
         XCTAssertEqual(snapshot.settings.mapCategoryColors, [:])
+    }
+}
+
+private enum BackupStoreTestError: Error, Equatable {
+    case injected
+}
+
+private final class FailOncePlanCloudRawSensorBackupStore:
+    PlanCloudRawSensorBackupStore {
+    private var failsNextSave = true
+    private(set) var archives: [String: PlanRawSensorMonthlyArchive] = [:]
+
+    func save(
+        _ archive: PlanRawSensorMonthlyArchive,
+        at path: PlanCloudRawSensorBackupPath
+    ) throws {
+        if failsNextSave {
+            failsNextSave = false
+            throw BackupStoreTestError.injected
+        }
+        archives[path.monthKey] = archive
+    }
+
+    func latest() throws -> PlanRawSensorMonthlyArchive? {
+        archives.values.max { $0.monthKey < $1.monthKey }
+    }
+
+    func allArchives() throws -> [PlanRawSensorMonthlyArchive] {
+        Array(archives.values)
     }
 }

@@ -901,11 +901,13 @@ enum MapHomeRouteOverlayCutoffPolicy {
     static func cutoff(
         selectedDayEnd: Date,
         timelineDate: Date,
-        isPlaybackRunning: Bool
+        isPlaybackRunning: Bool,
+        interactiveProjectionCutoff: Date? = nil
     ) -> Date {
-        // Playback grows the displayed route up to the current playhead.  The
-        // day end remains the hard upper bound for a malformed/future date.
-        min(selectedDayEnd, timelineDate)
+        let candidate = isPlaybackRunning
+            ? timelineDate
+            : interactiveProjectionCutoff ?? timelineDate
+        return min(selectedDayEnd, candidate)
     }
 }
 
@@ -2281,7 +2283,14 @@ struct MapHomeView: View {
             )
         }
 
-        routes += visibleExpectedRouteOverlays.map { overlay in
+        routes += appleMapForecastRoutes
+        return routes.filter { $0.coordinates.count >= 2 }
+    }
+
+    private var appleMapForecastRoutes: [MapHomeAppleRoute] {
+        let expected = visibleExpectedRouteOverlays
+        let generated = visibleWBSGeneratedRouteOverlays
+        let fallback = expected.map { overlay in
             MapHomeAppleRoute(
                 id: "expected-\(overlay.id.uuidString)",
                 coordinates: overlay.coordinates,
@@ -2290,8 +2299,7 @@ struct MapHomeView: View {
                 phase: .forecast,
                 transport: MapHomeAppleRouteTransport(mode: overlay.mode)
             )
-        }
-        routes += visibleWBSGeneratedRouteOverlays.map { overlay in
+        } + generated.map { overlay in
             MapHomeAppleRoute(
                 id: "wbs-\(overlay.id)",
                 coordinates: overlay.coordinates,
@@ -2301,7 +2309,60 @@ struct MapHomeView: View {
                 transport: overlay.mode.map { MapHomeAppleRouteTransport(mode: $0) }
             )
         }
-        return routes.filter { $0.coordinates.count >= 2 }
+        guard let projection = wbsPlaybackProjection else { return fallback }
+        let expectedLegIDs = Set(expected.map { "movement-\($0.id.uuidString)" })
+        let generatedLegIDs = Set(generated.map(\.id))
+        let dottedLegIDs = expectedLegIDs.union(generatedLegIDs)
+        let cutoff = routeOverlayCutoff
+        let projected = projection.legs.compactMap { leg -> MapHomeAppleRoute? in
+            guard dottedLegIDs.contains(leg.id),
+                  leg.routePhase == .forecast,
+                  leg.activity == .movement,
+                  let coordinates = visibleForecastCoordinates(
+                    for: leg,
+                    through: cutoff
+                  ) else { return nil }
+            let id: String
+            if expectedLegIDs.contains(leg.id) {
+                id = "expected-\(String(leg.id.dropFirst("movement-".count)))"
+            } else {
+                id = "wbs-\(leg.id)"
+            }
+            return MapHomeAppleRoute(
+                id: id,
+                coordinates: coordinates,
+                colorHex: MapHomeWBSTripStyle.forecastRouteHex,
+                opacity: MapHomeWBSTripStyle.forecastRouteOpacity,
+                phase: .forecast,
+                transport: leg.mode.map { MapHomeAppleRouteTransport(mode: $0) }
+            )
+        }
+        guard Set(projected.map(\.id)) == Set(fallback.map(\.id)) else {
+            return fallback
+        }
+        return projected
+    }
+
+    private func visibleForecastCoordinates(
+        for leg: MapHomeWBSPlaybackLeg,
+        through cutoff: Date
+    ) -> [CLLocationCoordinate2D]? {
+        guard cutoff > leg.startDate,
+              leg.coordinates.count >= 2 else { return nil }
+        let coordinates = leg.coordinates.map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+        }
+        guard cutoff < leg.endDate else { return coordinates }
+        let duration = leg.endDate.timeIntervalSince(leg.startDate)
+        guard duration > 0 else { return coordinates }
+        let fraction = min(
+            max(cutoff.timeIntervalSince(leg.startDate) / duration, 0),
+            1
+        )
+        return MapHomeExpectedRouteOverlay.prefixByDistance(
+            coordinates,
+            fraction: fraction
+        )
     }
 
     private var appleMapAnnotations: [MapHomeAppleAnnotation] {
@@ -6087,7 +6148,7 @@ struct MapHomeView: View {
     private func wbsRouteTransport(
         for mode: TravelMode?
     ) -> ExpectedRouteTransport? {
-        guard let mode else { return .automobile }
+        guard let mode else { return nil }
         switch mode {
         case .car, .taxi, .bus: return .automobile
         case .subway, .train: return .transit
@@ -6216,7 +6277,18 @@ struct MapHomeView: View {
 
     private var wbsPlaybackFrame: MapHomeWBSPlaybackFrame? {
         guard selectedTimelineMinute != nil else { return nil }
-        return wbsPlaybackProjection?.frame(at: displayedLocationDate)
+        return wbsPlaybackProjection?.frame(
+            at: displayedLocationDate,
+            preferredForecastLegIDs: visibleForecastPlaybackLegIDs
+        )
+    }
+
+    private var visibleForecastPlaybackLegIDs: Set<String> {
+        Set(
+            visibleExpectedRouteOverlays.map {
+                "movement-\($0.id.uuidString)"
+            } + visibleWBSGeneratedRouteOverlays.map(\.id)
+        )
     }
 
     private var historicalPlaybackCoordinate: CLLocationCoordinate2D? {
@@ -6792,9 +6864,6 @@ struct MapHomeView: View {
     }
 
     private var routeOverlayCutoff: Date {
-        if isTimelineInteractionActive, let routeProjection {
-            return routeProjection.cutoff
-        }
         let timelineDate = routeTimelineDate
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: model.selectedDate)
@@ -6803,7 +6872,11 @@ struct MapHomeView: View {
         return MapHomeRouteOverlayCutoffPolicy.cutoff(
             selectedDayEnd: dayEnd,
             timelineDate: timelineDate,
-            isPlaybackRunning: isDayPlaybackRunning
+            isPlaybackRunning: isDayPlaybackRunning,
+            interactiveProjectionCutoff: isTimelineInteractionActive
+                && !isDayPlaybackRunning
+                ? routeProjection?.cutoff
+                : nil
         )
     }
 
@@ -7013,8 +7086,10 @@ struct MapHomeView: View {
 
     @discardableResult
     private func refreshHistoricalPlaybackPoint() -> GeoPoint? {
-        if let point = wbsPlaybackProjection?.frame(at: routeTimelineDate)?.coordinate,
+        if let frame = wbsPlaybackFrame,
            selectedTimelineMinute != nil {
+            recordPlaybackRouteAlignment(frame)
+            let point = frame.coordinate
             if historicalPlaybackPoint != point {
                 historicalPlaybackPoint = point
             }
@@ -7059,6 +7134,32 @@ struct MapHomeView: View {
             historicalPlaybackPoint = point
         }
         return point
+    }
+
+    private func recordPlaybackRouteAlignment(
+        _ frame: MapHomeWBSPlaybackFrame
+    ) {
+        let dottedLegIDs = visibleForecastPlaybackLegIDs
+        let cutoffDelta = routeOverlayCutoff.timeIntervalSince(
+            displayedLocationDate
+        )
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "expected_route_playback_alignment",
+            fields: [
+                "frame_leg_id": frame.legID,
+                "frame_phase": frame.routePhase.rawValue,
+                "frame_activity": frame.activity == .movement
+                    ? "movement"
+                    : "stay",
+                "frame_progress": String(frame.progress),
+                "forecast_overlay_count": String(dottedLegIDs.count),
+                "frame_matches_forecast_overlay": String(
+                    dottedLegIDs.contains(frame.legID)
+                ),
+                "cutoff_delta_seconds": String(cutoffDelta),
+                "is_playback_running": String(isDayPlaybackRunning),
+            ]
+        )
     }
 
     private func clampedTimelineDate(
@@ -9418,7 +9519,7 @@ private struct MapHomeSecuritySheet: View {
     @State private var confirmation = ""
     @State private var message: String?
     @State private var backupAlertMessage: String?
-    @State private var pendingRestore: PlanCloudBackupPayload?
+    @State private var pendingRestore: PlanCloudBackupRestorePackage?
     @State private var isRestoreConfirmationPresented = false
     @State private var isApplyingRestore = false
 
@@ -9680,8 +9781,8 @@ private struct MapHomeSecuritySheet: View {
                 case .snapshotOnly:
                     showBackupFeedback(
                         language.text(
-                            "저장 위치는 복구했지만 이동경로 저장에 실패했습니다.",
-                            "Saved locations were restored, but the route could not be saved."
+                            "일정은 복구했지만 일부 원본 센서·이동경로를 저장하지 못했습니다.",
+                            "The schedule was restored, but some raw sensor or route data could not be saved."
                         )
                     )
                 }
@@ -12597,9 +12698,12 @@ private actor MapHomeAppleRouteResolver {
         let endLatitude: Int
         let endLongitude: Int
         let transport: ExpectedRouteTransport
+        let departureBucket: Int?
     }
 
+    private let cacheCapacity = 128
     private var cache: [CacheKey: [CLLocationCoordinate2D]] = [:]
+    private var cacheRecency: [CacheKey] = []
 
     func resolve(
         start: CLLocationCoordinate2D,
@@ -12612,9 +12716,13 @@ private actor MapHomeAppleRouteResolver {
             startLongitude: Int((start.longitude * 100_000).rounded()),
             endLatitude: Int((end.latitude * 100_000).rounded()),
             endLongitude: Int((end.longitude * 100_000).rounded()),
-            transport: transport
+            transport: transport,
+            departureBucket: transport == .transit
+                ? Int(departureDate.timeIntervalSince1970 / (15 * 60))
+                : nil
         )
         if let cached = cache[key] {
+            touch(key)
             return cached
         }
         for candidate in MapHomeAppleRouteFallbackPolicy.transports(for: transport) {
@@ -12625,11 +12733,29 @@ private actor MapHomeAppleRouteResolver {
                 transport: candidate,
                 departureDate: departureDate
             ) {
-                cache[key] = coordinates
+                insert(coordinates, for: key)
                 return coordinates
             }
         }
         return nil
+    }
+
+    private func insert(
+        _ coordinates: [CLLocationCoordinate2D],
+        for key: CacheKey
+    ) {
+        cache[key] = coordinates
+        touch(key)
+        while cacheRecency.count > cacheCapacity,
+              let oldest = cacheRecency.first {
+            cacheRecency.removeFirst()
+            cache.removeValue(forKey: oldest)
+        }
+    }
+
+    private func touch(_ key: CacheKey) {
+        cacheRecency.removeAll { $0 == key }
+        cacheRecency.append(key)
     }
 
     private func calculate(

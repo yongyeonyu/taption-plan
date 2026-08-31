@@ -55,6 +55,28 @@ final class DayStoreV3Tests: XCTestCase {
         XCTAssertEqual(finalEvents, [original])
     }
 
+    func testRawBatchReusesStatementsAndOptimizePreservesEvents() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanV3Store(url: url, device: .iPhone)
+        let day = TaptionPlanDayKey(year: 2026, month: 8, day: 31)
+        let events = (0..<1_000).map { index in
+            event(
+                day: day,
+                id: "gps-\(index)",
+                timestamp: TimeInterval(index)
+            )
+        }
+
+        try await store.appendRawEvents(events + events)
+        try await store.optimize()
+
+        let loaded = try await store.rawEvents(for: day)
+        XCTAssertEqual(loaded.count, events.count)
+        XCTAssertEqual(loaded.first?.id, "gps-0")
+        XCTAssertEqual(loaded.last?.id, "gps-999")
+    }
+
     func testDigestIsStableBySortOrderAndIncludesProvenance() async throws {
         let firstURL = temporaryURL()
         let secondURL = temporaryURL()
