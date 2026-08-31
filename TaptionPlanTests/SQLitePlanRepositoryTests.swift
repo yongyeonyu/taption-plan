@@ -51,6 +51,38 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         )
     }
 
+    func testFutureWeatherForecastSurvivesSQLiteRoundTrip() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+
+        let observedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let forecast = WeatherContext(
+            observedAt: observedAt,
+            fetchedAt: observedAt.addingTimeInterval(-60),
+            isForecast: true,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 27,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        var value = TaptionDataSnapshot.empty
+        value.weather = [forecast]
+
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        try await repository.save(value)
+        let reopened = try SQLitePlanRepository(databaseURL: url)
+        let restored = try await reopened.load()
+
+        XCTAssertEqual(restored.weather, [forecast])
+        XCTAssertEqual(restored.weather.first?.isForecast, true)
+    }
+
     func testLegacyMigrationReturnsBeforePrimaryWriteFinishes() async throws {
         var existing = TaptionDataSnapshot.empty
         existing.updatedAt = Date(timeIntervalSince1970: 1_725_000_000)

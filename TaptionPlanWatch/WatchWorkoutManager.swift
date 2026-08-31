@@ -152,6 +152,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private(set) var linkedPlan: TaptionWatchPlanItem?
     private(set) var workoutKind: TaptionWatchWorkoutKind?
     var onSensorSummary: ((TaptionWatchSensorSummary) -> Void)?
+    var onAmbientSensorSummary: ((TaptionWatchSensorSummary) async -> Void)?
 
     private var sensorSessionID: UUID?
     private var sensorSequence = 0
@@ -287,17 +288,35 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         restartHealthSync()
     }
 
-    func syncNow() async {
-        WatchLaunchDiagnostics.mark("manual data sync begin")
-        refreshAmbientRecording()
+    func syncNow(requestID: String? = nil) async {
+        let id = requestID ?? "none"
+        WatchLaunchDiagnostics.mark(
+            "manual data sync begin id=\(id) profile=\(dataSyncProfile.rawValue) scene_ready=\(isSceneReadyForCapture)"
+        )
+        refreshAmbientRecording(allowBeforeSceneReady: true)
         await ambientDrainTask?.value
+        WatchLaunchDiagnostics.mark(
+            "manual data sync ambient complete id=\(id)"
+        )
         await emitHealthSnapshot()
-        WatchLaunchDiagnostics.mark("manual data sync end")
+        WatchLaunchDiagnostics.mark(
+            "manual data sync end id=\(id)"
+        )
     }
 
     func prepareHealthDataAccess() async {
-        guard HKHealthStore.isHealthDataAvailable(),
-              !didRequestHealthReadAuthorization else { return }
+        guard HKHealthStore.isHealthDataAvailable() else {
+            WatchLaunchDiagnostics.mark(
+                "health authorization skipped reason=health_unavailable"
+            )
+            return
+        }
+        guard !didRequestHealthReadAuthorization else {
+            WatchLaunchDiagnostics.mark(
+                "health authorization already requested"
+            )
+            return
+        }
         do {
             try await requestHealthReadAuthorization()
             didRequestHealthReadAuthorization = true
@@ -410,8 +429,18 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     /// 앱이 실행되는 모든 경로에서 호출한다. 기록 자체는 모션 데몬이 계속
     /// 이어가므로 앱이 할 일은 (1) 기록을 다시 걸고 (2) 지난 실행 이후
     /// 쌓인 표본을 비우는 것뿐이다.
-    private func refreshAmbientRecording() {
-        guard isSceneReadyForCapture, ambientDrainTask == nil else {
+    private func refreshAmbientRecording(allowBeforeSceneReady: Bool = false) {
+        guard isSceneReadyForCapture || allowBeforeSceneReady else {
+            WatchLaunchDiagnostics.mark(
+                "ambient refresh skipped reason=scene_not_ready"
+            )
+            publishMeasurement()
+            return
+        }
+        guard ambientDrainTask == nil else {
+            WatchLaunchDiagnostics.mark(
+                "ambient refresh skipped reason=drain_in_progress"
+            )
             publishMeasurement()
             return
         }
@@ -432,7 +461,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                 WatchLaunchDiagnostics.mark(
                     "ambient drain summaries=\(result.summaries.count) samples=\(result.archiveSamples.count)"
                 )
-                self.applyAmbientDrain(result)
+                await self.applyAmbientDrain(result)
             } else {
                 self.recorderStatus = await recorder.status()
                 WatchLaunchDiagnostics.mark("ambient recording disabled")
@@ -442,7 +471,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    private func applyAmbientDrain(_ result: WatchAmbientDrainResult) {
+    private func applyAmbientDrain(_ result: WatchAmbientDrainResult) async {
         if !result.archiveSamples.isEmpty {
             let base = ambientArchiveSequence
             let samples = result.archiveSamples.enumerated().map {
@@ -466,7 +495,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             if abs(now.timeIntervalSince(summary.endedAt)) <= 3 * 60 {
                 summary.waterLockEnabled = waterLockEnabled
             }
-            onSensorSummary?(summary)
+            if let onAmbientSensorSummary {
+                await onAmbientSensorSummary(summary)
+            } else {
+                onSensorSummary?(summary)
+            }
         }
         if let latest = result.summaries.last, let behavior = latest.behavior {
             latestObservation = WatchActivityObservation(
@@ -536,10 +569,21 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func emitHealthSnapshot() async {
-        guard HKHealthStore.isHealthDataAvailable() else { return }
+        WatchLaunchDiagnostics.mark("health snapshot begin")
+        guard HKHealthStore.isHealthDataAvailable() else {
+            WatchLaunchDiagnostics.mark(
+                "health snapshot skipped reason=health_unavailable"
+            )
+            return
+        }
         if !didRequestHealthReadAuthorization {
             await prepareHealthDataAccess()
-            guard didRequestHealthReadAuthorization else { return }
+            guard didRequestHealthReadAuthorization else {
+                WatchLaunchDiagnostics.mark(
+                    "health snapshot skipped reason=authorization_unavailable"
+                )
+                return
+            }
         }
         let calendar = Calendar.current
         let now = Date.now
@@ -572,7 +616,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             workoutCount: await workouts,
             source: "Apple Watch HealthKit"
         )
+        WatchLaunchDiagnostics.mark(
+            "health snapshot ready workouts=\(snapshot.workoutCount)"
+        )
         onHealthSnapshot?(snapshot)
+        WatchLaunchDiagnostics.mark("health snapshot handed off")
     }
 
     private func requestHealthReadAuthorization() async throws {

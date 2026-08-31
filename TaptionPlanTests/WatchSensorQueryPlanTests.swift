@@ -447,29 +447,29 @@ final class AppleWatchDataReceiptStoreTests: XCTestCase {
         return (AppleWatchDataReceiptStore(defaults: defaults), defaults)
     }
 
-    func testRecentKindsUseEachPayloadMeasurementDateAndSurviveReload() {
+    func testRecentKindsUseEachPayloadReceiptDateAndSurviveReload() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let (store, defaults) = store()
         store.record(
             [.motion, .heartRate],
             measuredAt: now.addingTimeInterval(-14 * 60),
-            receivedAt: now
+            receivedAt: now.addingTimeInterval(-2 * 60)
         )
         store.record(
             [.route],
             measuredAt: now.addingTimeInterval(-16 * 60),
-            receivedAt: now
+            receivedAt: now.addingTimeInterval(-20 * 60)
         )
 
         let reloaded = AppleWatchDataReceiptStore(defaults: defaults).load()
         XCTAssertEqual(reloaded.recentKinds(at: now), [.motion, .heartRate])
         XCTAssertEqual(
             reloaded.latestDataAt,
-            now.addingTimeInterval(-14 * 60)
+            now.addingTimeInterval(-2 * 60)
         )
     }
 
-    func testDelayedPayloadDoesNotBecomeRecentAtReceiptTime() {
+    func testDelayedPayloadIsRecentWhenItWasJustReceived() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let (store, _) = store()
         let receipt = store.record(
@@ -478,8 +478,21 @@ final class AppleWatchDataReceiptStoreTests: XCTestCase {
             receivedAt: now
         )
 
-        XCTAssertTrue(receipt.recentKinds(at: now).isEmpty)
-        XCTAssertEqual(receipt.latestDataAt, now.addingTimeInterval(-3_600))
+        XCTAssertEqual(receipt.recentKinds(at: now), [.health])
+        XCTAssertEqual(receipt.latestDataAt, now)
+    }
+
+    func testEmptyHealthResponseStillRecordsItsReceiptTime() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let (store, _) = store()
+        let receipt = store.record(
+            [.health],
+            measuredAt: now,
+            receivedAt: now
+        )
+
+        XCTAssertEqual(receipt.recentKinds(at: now), [.health])
+        XCTAssertEqual(receipt.latestDataAt, now)
     }
 
     func testFutureAndOutOfOrderPayloadsCannotMoveDataTimeForwardOrBackward() {

@@ -171,7 +171,7 @@ enum MapHomeLongPressRoutingMath {
 
 enum MapHomeLongPressAction: String, CaseIterable, Identifiable {
     case location
-    case sticker
+    case memo
 
     var id: Self { self }
 }
@@ -1258,6 +1258,7 @@ struct MapHomeView: View {
     @State private var isSearchPinMenuPresented = false
     @State private var isLongPressMenuPresented = false
     @State private var pendingLongPressCoordinate: CLLocationCoordinate2D?
+    @State private var requestingPermission: RequiredPermission?
     @State private var selectedUserLocation: MapHomeUserLocationSelection?
     @State private var selectedTransitBoardingCandidate: TransitBoardingCandidate?
     @State private var pendingUserLocationSelection: MapHomeUserLocationSelection?
@@ -1677,10 +1678,10 @@ struct MapHomeView: View {
                 )
             }
             Button {
-                routeLongPress(.sticker)
+                routeLongPress(.memo)
             } label: {
                 Label(
-                    language.text("스티커 메모 추가", "Add sticker memo"),
+                    language.text("지도 메모 추가", "Add map memo"),
                     systemImage: "note.text.badge.plus"
                 )
             }
@@ -1907,6 +1908,36 @@ struct MapHomeView: View {
         ).filter { $0.point.map(isValid) == true }
     }
 
+    private var mapMemosOnMap: [ActionMemo] {
+        MapMemoDisplayFilterEngine.visibleMemos(
+            model.snapshot.memos,
+            on: model.selectedDate,
+            filter: model.settings.mapMemoDisplayFilter,
+            selectedPlanIDs: mapMemoRelevantPlanIDs,
+            selectedTargetIDs: [],
+            through: isDayPlaybackRunning ? routeTimelineDate : nil
+        )
+        .filter { $0.mapPoint.map(isValid) == true }
+        .sorted {
+            if $0.occurredAt != $1.occurredAt {
+                return $0.occurredAt < $1.occurredAt
+            }
+            return $0.createdAt < $1.createdAt
+        }
+    }
+
+    private var mapMemoRelevantPlanIDs: Set<UUID> {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: model.selectedDate)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(86_400)
+        return Set(
+            model.snapshot.plans
+                .filter { $0.span.start < end && $0.span.end > start }
+                .map(\.id)
+        )
+    }
+
     private var scheduleStickersForSelectedDate: [MapSticker] {
         model.snapshot.stickers.filter {
             $0.placement == .schedule
@@ -1951,9 +1982,9 @@ struct MapHomeView: View {
         )
     }
 
-    private func addMapSticker() {
+    private func addMapMemo() {
         guard let point = mapCenterPoint else { return }
-        addMapSticker(
+        addMapMemo(
             at: CLLocationCoordinate2D(
                 latitude: point.latitude,
                 longitude: point.longitude
@@ -1961,7 +1992,7 @@ struct MapHomeView: View {
         )
     }
 
-    private func addMapSticker(at coordinate: CLLocationCoordinate2D) {
+    private func addMapMemo(at coordinate: CLLocationCoordinate2D) {
         let point = GeoPoint(
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
@@ -1969,16 +2000,22 @@ struct MapHomeView: View {
             horizontalAccuracy: 0,
             verticalAccuracy: 0
         )
-        guard let id = model.addMapSticker(
-            title: language.text("새 지도 메모", "New map memo"),
-            placement: .map,
-            point: point,
-            planID: nil,
-            occurredAt: timelineDate(forMinute: Double(effectiveTimelineMinute))
+        let occurredAt = timelineDate(
+            forMinute: Double(effectiveTimelineMinute)
+        )
+        let planID = MapMemoLinkEngine
+            .plan(containing: occurredAt, in: model.snapshot.plans)?.id
+        guard let id = model.addMapMemo(
+            text: language.text("새 지도 메모", "New map memo"),
+            kind: .idea,
+            mapPoint: point,
+            planID: planID,
+            occurredAt: occurredAt,
+            shouldPersist: false
         ) else { return }
         isStickerMenuExpanded = false
         isMenuOpen = false
-        selectedMapStickerEditor = .sticker(id)
+        selectedMapStickerEditor = .newMemo(id)
     }
 
     private func addScheduleSticker() {
@@ -2321,6 +2358,18 @@ struct MapHomeView: View {
                 isInteractive: isStickerMode
             )
         }
+        annotations += mapMemosOnMap.compactMap { memo in
+            guard let point = memo.mapPoint else { return nil }
+            return MapHomeAppleAnnotation(
+                id: "memo-\(memo.id.uuidString)",
+                coordinate: CLLocationCoordinate2D(
+                    latitude: point.latitude,
+                    longitude: point.longitude
+                ),
+                kind: .memo(memo),
+                isInteractive: true
+            )
+        }
         if let selectedSearchPin {
             annotations.append(
                 MapHomeAppleAnnotation(
@@ -2408,6 +2457,8 @@ struct MapHomeView: View {
             selectedTransitBoardingCandidate = candidate
         case .sticker(let sticker):
             selectedMapStickerEditor = .sticker(sticker.id)
+        case .memo(let memo):
+            selectedMapStickerEditor = .memo(memo.id)
         case .search:
             isSearchPinMenuPresented = true
         }
@@ -2487,6 +2538,16 @@ struct MapHomeView: View {
             guard let point = sticker.point else { return nil }
             return MapHomeVectorMarker(
                 id: vectorMapStickerMarkerID(sticker.id),
+                coordinate: CLLocationCoordinate2D(
+                    latitude: point.latitude,
+                    longitude: point.longitude
+                )
+            )
+        }
+        markers += mapMemosOnMap.compactMap { memo in
+            guard let point = memo.mapPoint else { return nil }
+            return MapHomeVectorMarker(
+                id: vectorMapMemoMarkerID(memo.id),
                 coordinate: CLLocationCoordinate2D(
                     latitude: point.latitude,
                     longitude: point.longitude
@@ -2666,6 +2727,28 @@ struct MapHomeView: View {
                 }
             }
 
+            ForEach(mapMemosOnMap) { memo in
+                if let projected = vectorPoint(
+                    in: viewport,
+                    for: vectorMapMemoMarkerID(memo.id)
+                ) {
+                    MapHomeProjectedAnnotation(point: projected, anchor: .bottom) {
+                        Button {
+                            selectedMapStickerEditor = .memo(memo.id)
+                        } label: {
+                            MapHomeMapMemoMarker(memo: memo)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            language.text(
+                                "\(memo.text) 지도 메모, \(memo.occurredAt.formatted(date: .omitted, time: .shortened))",
+                                "\(memo.text) map memo, \(memo.occurredAt.formatted(date: .omitted, time: .shortened))"
+                            )
+                        )
+                    }
+                }
+            }
+
             if selectedTimelineMinute != nil,
                let point = vectorPoint(in: viewport, for: vectorDisplayedMarkerID) {
                 MapHomeVectorPlayerMarker(
@@ -2819,8 +2902,8 @@ struct MapHomeView: View {
         switch action {
         case .location:
             presentLocationAddition(at: coordinate)
-        case .sticker:
-            addMapSticker(at: coordinate)
+        case .memo:
+            addMapMemo(at: coordinate)
         }
     }
 
@@ -3831,6 +3914,11 @@ struct MapHomeView: View {
             }
             .padding(.bottom, 18)
 
+            if !sensorCollectionPermissionGate.sensorCollectionReady {
+                sensorPermissionCard
+                    .padding(.bottom, 10)
+            }
+
             locationMenuItem
             categoryMenuItem
             displayMenuItem
@@ -4491,7 +4579,7 @@ struct MapHomeView: View {
 
             if isStickerMenuExpanded {
                 Button {
-                    addMapSticker()
+                    addMapMemo()
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "mappin.and.ellipse")
@@ -4501,7 +4589,7 @@ struct MapHomeView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(language.text("지도에 메모 추가", "Add memo to map"))
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Text(language.text("현재 지도 중심에 메모 스티커 배치", "Place a memo sticker at the current map center"))
+                            Text(language.text("현재 지도 중심에 시간 연동 메모 배치", "Place a time-linked memo at the current map center"))
                                 .font(.system(size: 10.5, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
@@ -4555,7 +4643,7 @@ struct MapHomeView: View {
                 .padding(.leading, 12)
 
                 if isStickerMode {
-                    Text(language.text("지도의 메모 스티커를 탭해 수정할 수 있어요.", "Tap a memo sticker on the map to edit it."))
+                    Text(language.text("지도의 메모를 탭해 수정할 수 있어요.", "Tap a map memo to edit it."))
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .padding(.top, 4)
@@ -4632,7 +4720,43 @@ struct MapHomeView: View {
                 .tint(Color.tpReferenceBlue)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
+
+                Picker(
+                    selection: Binding(
+                        get: { model.settings.mapMemoDisplayFilter },
+                        set: { model.setMapMemoDisplayFilter($0) }
+                    )
+                ) {
+                    ForEach(MapMemoDisplayFilter.allCases, id: \.self) { filter in
+                        Text(mapMemoDisplayFilterTitle(filter))
+                            .tag(filter)
+                    }
+                } label: {
+                    Label(
+                        language.text("지도 메모", "Map memos"),
+                        systemImage: "mappin.and.ellipse"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .pickerStyle(.menu)
+                .tint(Color.tpReferenceBlue)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .accessibilityLabel(
+                    language.text("지도 메모 표시 방식", "Map memo display mode")
+                )
             }
+        }
+    }
+
+    private func mapMemoDisplayFilterTitle(
+        _ filter: MapMemoDisplayFilter
+    ) -> String {
+        switch filter {
+        case .all:
+            language.text("모든 지도 메모", "All map memos")
+        case .relevant:
+            language.text("일정 관련 메모", "Schedule-related memos")
         }
     }
 
@@ -4827,15 +4951,29 @@ struct MapHomeView: View {
                         }
                     }
 
-                    if let receivedAt = model.appleWatchLastDataReceivedAt {
+                    Text(
+                        model.appleWatchLastDataReceivedAt.map { receivedAt in
+                            language.text(
+                                "최근 수신 시각 · \(receivedAt.formatted(date: .abbreviated, time: .shortened))",
+                                "Latest received · \(receivedAt.formatted(date: .abbreviated, time: .shortened))"
+                            )
+                        } ?? language.text(
+                            "최근 수신 시각 없음",
+                            "No data received yet"
+                        )
+                    )
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+
+                    if let requestedAt = model.appleWatchDataSyncRequestedAt {
                         Text(
                             language.text(
-                                "최근 데이터 시각 \(receivedAt.formatted(date: .omitted, time: .shortened))",
-                                "Latest data \(receivedAt.formatted(date: .omitted, time: .shortened))"
+                                "수신 요청됨 · \(requestedAt.formatted(date: .abbreviated, time: .shortened))",
+                                "Sync requested · \(requestedAt.formatted(date: .abbreviated, time: .shortened))"
                             )
                         )
                         .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(tint)
                     }
 
                     HStack(spacing: 8) {
@@ -4849,7 +4987,7 @@ struct MapHomeView: View {
                         .foregroundStyle(.secondary)
                         Spacer(minLength: 0)
                         Button(language.text("지금 가져오기", "Import now")) {
-                            model.requestWatchDataSync()
+                            model.requestWatchDataSync(source: "map_watch_card")
                             model.refreshAppleWatchConnectionState()
                         }
                         .font(.system(size: 11, weight: .bold, design: .rounded))
@@ -4981,6 +5119,115 @@ struct MapHomeView: View {
             )
         case .purchased:
             language.text("Pro 구매 완료", "Pro purchased")
+        }
+    }
+
+    private var sensorCollectionPermissionGate: RequiredPermissionGate {
+        model.requiredPermissionGate(liveActivitiesEnabled: false)
+    }
+
+    private var sensorPermissionCard: some View {
+        let missing = sensorCollectionPermissionGate.sensorCollectionMissing
+        return VStack(alignment: .leading, spacing: 8) {
+            Label(
+                language.text("자동 기록 권한", "Automatic recording permissions"),
+                systemImage: "sensor.fill"
+            )
+            .font(.system(size: 14, weight: .semibold, design: .rounded))
+            .foregroundStyle(Color.tpReferenceRose)
+
+            Text(
+                language.text(
+                    "수동 기록과 지도 메모는 지금 사용할 수 있습니다. 자동 기록을 켜려면 필요한 권한만 허용하세요.",
+                    "Manual records and map memos are available now. Allow only the permissions needed for automatic recording."
+                )
+            )
+            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(missing, id: \.rawValue) { permission in
+                Button {
+                    guard requestingPermission == nil else { return }
+                    requestingPermission = permission
+                    Task { @MainActor in
+                        await model.requestRequiredPermission(permission)
+                        requestingPermission = nil
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: sensorPermissionIcon(permission))
+                            .frame(width: 20)
+                        Text(sensorPermissionTitle(permission))
+                        Spacer(minLength: 4)
+                        if requestingPermission == permission {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Text(sensorPermissionActionTitle(permission))
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                        }
+                    }
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.primary)
+                    .padding(.horizontal, 9)
+                    .frame(minHeight: 36)
+                    .background(
+                        Color.white.opacity(0.78),
+                        in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(
+                    requestingPermission != nil
+                        || model.isRefreshingIntegrations
+                )
+                .accessibilityLabel(
+                    language.text(
+                        "\(sensorPermissionTitle(permission)) 권한 요청",
+                        "Request \(sensorPermissionTitle(permission)) permission"
+                    )
+                )
+            }
+        }
+        .padding(12)
+        .background(
+            Color.tpReferenceRose.opacity(0.09),
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    private func sensorPermissionIcon(_ permission: RequiredPermission) -> String {
+        switch permission {
+        case .locationAlways, .locationPrecise:
+            "location.fill"
+        case .motion:
+            "figure.walk.motion"
+        case .healthKitRequestCompleted, .calendar, .notifications, .liveActivities:
+            "checkmark"
+        }
+    }
+
+    private func sensorPermissionTitle(_ permission: RequiredPermission) -> String {
+        switch permission {
+        case .locationAlways:
+            language.text("위치 항상 허용", "Always Location")
+        case .locationPrecise:
+            language.text("정확한 위치", "Precise Location")
+        case .motion:
+            language.text("동작 및 피트니스", "Motion & Fitness")
+        case .healthKitRequestCompleted, .calendar, .notifications, .liveActivities:
+            ""
+        }
+    }
+
+    private func sensorPermissionActionTitle(_ permission: RequiredPermission) -> String {
+        switch permission {
+        case .locationPrecise:
+            language.text("설정 열기", "Open Settings")
+        default:
+            language.text("허용하기", "Allow")
         }
     }
 
@@ -5121,7 +5368,10 @@ struct MapHomeView: View {
     }
 
     private var sensorCollectionStatusText: String {
-        switch model.sensorCollectionSessionState {
+        guard sensorCollectionPermissionGate.sensorCollectionReady else {
+            return language.text("권한 필요", "Permission needed")
+        }
+        return switch model.sensorCollectionSessionState {
         case .waiting:
             language.text("대기", "Waiting")
         case .collecting:
@@ -5212,22 +5462,124 @@ struct MapHomeView: View {
 
     private var transitBoardingCandidates: [TransitBoardingCandidate] {
         let dayData = currentDayDataSnapshot
+        let readings = transitBoardingReadings
+        let registeredLocations = model.settings.userTransitLocations
+        let nearbyPlaces = nearbyTransitPlaces
+        let travel = dayData?.travel ?? model.snapshot.travel
+        let decisions = model.settings.transitBoardingDecisions
+        let cutoff = routeOverlayCutoff
         let key = MapHomeTransitBoardingCandidateCacheKey(
             snapshotRevision: model.snapshotRevision,
             readingsRevision: transitBoardingReadingsRevision,
             nearbyPlacesRevision: nearbyTransitPlacesRevision,
-            cutoff: routeOverlayCutoff
+            cutoff: cutoff
         )
         return mapRenderCache.transitBoardingCandidates(key: key) {
-            TransitBoardingCandidateEngine.candidates(
-                readings: transitBoardingReadings,
-                registeredLocations: model.settings.userTransitLocations,
-                nearbyPlaces: nearbyTransitPlaces,
-                travel: dayData?.travel ?? model.snapshot.travel,
-                decisions: model.settings.transitBoardingDecisions,
-                through: routeOverlayCutoff
+            let candidates = TransitBoardingCandidateEngine.candidates(
+                readings: readings,
+                registeredLocations: registeredLocations,
+                nearbyPlaces: nearbyPlaces,
+                travel: travel,
+                decisions: decisions,
+                through: cutoff
             )
+            var fields = transitBoardingDiagnostics(
+                readings: readings,
+                registeredLocations: registeredLocations,
+                nearbyPlaces: nearbyPlaces,
+                travel: travel,
+                through: cutoff
+            )
+            fields["candidate_count"] = String(candidates.count)
+            fields["candidate_names"] = Array(
+                Set(candidates.map(\.name))
+            ).sorted().joined(separator: ";")
+            fields["candidate_travel_segment_count"] = String(
+                Set(candidates.flatMap(\.travelSegmentIDs)).count
+            )
+            fields["decision_count"] = String(decisions.count)
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "transit_boarding_candidates_evaluated",
+                fields: fields
+            )
+            return candidates
         }
+    }
+
+    private func transitBoardingDiagnostics(
+        readings: [SensorReading],
+        registeredLocations: [UserTransitLocation],
+        nearbyPlaces: [TransitBoardingPlace],
+        travel: [TravelSegment],
+        through cutoff: Date
+    ) -> [String: String] {
+        let withPoint = readings.filter { $0.point != nil }
+        let gpsAvailable = readings.filter(\.gpsAvailable)
+        let precise = readings.filter {
+            $0.locationFixQuality != .approximate
+        }
+        let usable = readings.filter { reading in
+            guard reading.gpsAvailable,
+                  reading.locationFixQuality != .approximate,
+                  let point = reading.point,
+                  point.latitude.isFinite,
+                  point.longitude.isFinite,
+                  (-90...90).contains(point.latitude),
+                  (-180...180).contains(point.longitude) else {
+                return false
+            }
+            return point.horizontalAccuracy <= 0
+                || point.horizontalAccuracy <= 200
+        }
+        let poweredModes: Set<TravelMode> = [
+            .bus, .subway, .taxi, .car, .train, .airplane, .ship,
+        ]
+        let poweredTravel = travel.filter {
+            poweredModes.contains($0.mode)
+        }
+        let stationNames = Array(Set(
+            (registeredLocations.map(\.name)
+                + nearbyPlaces.map(\.name)
+                + readings.compactMap(\.nearbyStationName))
+                .map {
+                    $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+                .filter { !$0.isEmpty }
+        )).sorted().joined(separator: ";")
+        return [
+            "cutoff": String(cutoff.timeIntervalSince1970),
+            "readings": String(readings.count),
+            "readings_with_point": String(withPoint.count),
+            "readings_gps_available": String(gpsAvailable.count),
+            "readings_precise": String(precise.count),
+            "readings_usable": String(usable.count),
+            "registered_transit_places": String(registeredLocations.count),
+            "nearby_transit_places": String(nearbyPlaces.count),
+            "transit_place_names": stationNames,
+            "travel_segments": String(travel.count),
+            "travel_powered_segments": String(poweredTravel.count),
+            "travel_unconfirmed_powered_segments": String(
+                poweredTravel.filter { !$0.isConfirmed }.count
+            ),
+            "travel_mode_counts": transitModeCounts(travel.map(\.mode)),
+            "reading_station_name_count": String(
+                Set(readings.compactMap(\.nearbyStationName)).count
+            ),
+            "reading_rail_match_count": String(
+                readings.filter(\.matchesRailRoute).count
+            ),
+            "reading_transit_match_count": String(
+                readings.filter(\.matchesPublicTransitRoute).count
+            ),
+        ]
+    }
+
+    private func transitModeCounts(_ modes: [TravelMode]) -> String {
+        let counts = Dictionary(grouping: modes, by: { $0 })
+        return TravelMode.allCases.compactMap { mode in
+            guard let count = counts[mode]?.count else { return nil }
+            return "\(mode.rawValue)=\(count)"
+        }.joined(separator: ",")
     }
 
     private var currentCoordinate: CLLocationCoordinate2D? {
@@ -5392,13 +5744,26 @@ struct MapHomeView: View {
         let selectedDay = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: selectedDay)
             ?? selectedDay.addingTimeInterval(24 * 60 * 60)
+        let travel = currentDayDataSnapshot?.travel ?? model.snapshot.travel
+        let places = currentDayDataSnapshot?.places ?? model.snapshot.places
         let requests = ExpectedRouteRequestEngine.requests(
-            travel: currentDayDataSnapshot?.travel ?? model.snapshot.travel,
-            places: currentDayDataSnapshot?.places ?? model.snapshot.places,
+            travel: travel,
+            places: places,
             readings: normalizedRouteReadings,
             in: TimeSpan(start: selectedDay, end: dayEnd),
             through: dayEnd,
             frequentPlaces: model.settings.frequentPlaces
+        )
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "expected_route_requests_built",
+            fields: expectedRouteRequestDiagnostics(
+                requests: requests,
+                travel: travel,
+                places: places,
+                readings: normalizedRouteReadings,
+                dayStart: selectedDay,
+                dayEnd: dayEnd
+            )
         )
         if expectedRouteCache.count > 128 {
             expectedRouteCache.removeAll(keepingCapacity: true)
@@ -5428,6 +5793,13 @@ struct MapHomeView: View {
         let fallbackGenerated = generatedWBSRouteOverlays(
             from: fallbackProjection,
             excluding: excludedLegIDs
+        )
+        recordExpectedRouteProjectionDiagnostics(
+            phase: "fallback",
+            projection: fallbackProjection,
+            expected: fallbackExpected,
+            generated: fallbackGenerated,
+            excludedLegIDs: excludedLegIDs
         )
         _ = applyForecastRouteState(
             MapHomeForecastRouteState(
@@ -5479,6 +5851,18 @@ struct MapHomeView: View {
                     + storedWBSResolvedRoutes.map(\.legID)
             )
         )
+        let resolvedExcludedLegIDs = Set(
+            resolvedExpected.map { "movement-\($0.id.uuidString)" }
+                + storedWBSResolvedRoutes.map(\.legID)
+        )
+        recordExpectedRouteProjectionDiagnostics(
+            phase: "resolved_before_network_routes",
+            projection: resolvedProjection,
+            expected: resolvedExpected,
+            generated: resolvedGenerated,
+            excludedLegIDs: resolvedExcludedLegIDs
+        )
+        var networkResolvedCount = 0
         for index in resolvedGenerated.indices {
             guard !Task.isCancelled else { return }
             guard let transport = wbsRouteTransport(for: resolvedGenerated[index].mode),
@@ -5497,8 +5881,26 @@ struct MapHomeView: View {
                     arrivalDate: resolvedGenerated[index].arrivalDate,
                     coordinates: coordinates
                 )
+                networkResolvedCount += 1
             }
         }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "expected_route_network_resolution",
+            fields: [
+                "generated_requested": String(resolvedGenerated.count),
+                "generated_network_resolved": String(networkResolvedCount),
+                "generated_network_fallback": String(
+                    resolvedGenerated.count - networkResolvedCount
+                ),
+            ]
+        )
+        recordExpectedRouteProjectionDiagnostics(
+            phase: "resolved_after_network_routes",
+            projection: resolvedProjection,
+            expected: resolvedExpected,
+            generated: resolvedGenerated,
+            excludedLegIDs: resolvedExcludedLegIDs
+        )
         guard !Task.isCancelled,
               calendar.isDate(selectedDay, inSameDayAs: model.selectedDate)
         else { return }
@@ -5556,6 +5958,132 @@ struct MapHomeView: View {
         }
     }
 
+    private func expectedRouteRequestDiagnostics(
+        requests: [ExpectedRouteRequest],
+        travel: [TravelSegment],
+        places: [PlaceStay],
+        readings: [SensorReading],
+        dayStart: Date,
+        dayEnd: Date
+    ) -> [String: String] {
+        let requestModes = Dictionary(grouping: requests, by: \.mode)
+        let requestSegmentIDs = Set(requests.map(\.segmentID))
+        let unconfirmedTravel = travel.filter { !$0.isConfirmed }
+        return [
+            "day_start": String(dayStart.timeIntervalSince1970),
+            "day_end": String(dayEnd.timeIntervalSince1970),
+            "travel_segments": String(travel.count),
+            "unconfirmed_travel_segments": String(unconfirmedTravel.count),
+            "places": String(places.count),
+            "readings": String(readings.count),
+            "readings_with_point": String(
+                readings.filter { $0.point != nil }.count
+            ),
+            "request_count": String(requests.count),
+            "request_unique_segment_count": String(requestSegmentIDs.count),
+            "request_duplicate_segment_count": String(
+                max(0, requests.count - requestSegmentIDs.count)
+            ),
+            "request_mode_counts": TravelMode.allCases.compactMap { mode in
+                guard let count = requestModes[mode]?.count else { return nil }
+                return "\(mode.rawValue)=\(count)"
+            }.joined(separator: ","),
+            "route_cache_count": String(expectedRouteCache.count),
+        ]
+    }
+
+    private func recordExpectedRouteProjectionDiagnostics(
+        phase: String,
+        projection: MapHomeWBSPlaybackProjection,
+        expected: [MapHomeExpectedRouteOverlay],
+        generated: [MapHomeWBSGeneratedRouteOverlay],
+        excludedLegIDs: Set<String>
+    ) {
+        let forecastMovements = projection.legs.filter {
+            $0.routePhase == .forecast && $0.activity == .movement
+        }
+        let forecastGapMovements = forecastMovements.filter {
+            $0.id.hasPrefix("movement-gap-")
+        }
+        let forecastTravelMovements = forecastMovements.filter {
+            !$0.id.hasPrefix("movement-gap-")
+                && $0.id.hasPrefix("movement-")
+        }
+        let actualMovements = projection.legs.filter {
+            $0.routePhase == .actual && $0.activity == .movement
+        }
+        var intervalOverlapPairs = 0
+        var sameEndpointPairs = 0
+        if forecastMovements.count > 1 {
+            for index in 0..<(forecastMovements.count - 1) {
+                for otherIndex in (index + 1)..<forecastMovements.count {
+                    let lhs = forecastMovements[index]
+                    let rhs = forecastMovements[otherIndex]
+                    let lhsSpan = TimeSpan(
+                        start: lhs.startDate,
+                        end: lhs.endDate
+                    )
+                    if lhsSpan.intersection(with: TimeSpan(
+                        start: rhs.startDate,
+                        end: rhs.endDate
+                    )) != nil {
+                        intervalOverlapPairs += 1
+                    }
+                    guard let lhsStart = lhs.coordinates.first,
+                          let lhsEnd = lhs.coordinates.last,
+                          let rhsStart = rhs.coordinates.first,
+                          let rhsEnd = rhs.coordinates.last else {
+                        continue
+                    }
+                    let sameDirection = distanceMeters(lhsStart, rhsStart) <= 100
+                        && distanceMeters(lhsEnd, rhsEnd) <= 100
+                    let reverseDirection = distanceMeters(lhsStart, rhsEnd) <= 100
+                        && distanceMeters(lhsEnd, rhsStart) <= 100
+                    if sameDirection || reverseDirection {
+                        sameEndpointPairs += 1
+                    }
+                }
+            }
+        }
+        let generatedModes = Dictionary(
+            grouping: generated.compactMap(\.mode),
+            by: { $0 }
+        )
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "expected_route_projection_built",
+            fields: [
+                "phase": phase,
+                "expected_overlay_count": String(expected.count),
+                "generated_overlay_count": String(generated.count),
+                "projection_leg_count": String(projection.legs.count),
+                "projection_forecast_movement_count": String(
+                    forecastMovements.count
+                ),
+                "projection_forecast_travel_movement_count": String(
+                    forecastTravelMovements.count
+                ),
+                "projection_forecast_gap_count": String(
+                    forecastGapMovements.count
+                ),
+                "projection_actual_movement_count": String(
+                    actualMovements.count
+                ),
+                "forecast_interval_overlap_pairs": String(
+                    intervalOverlapPairs
+                ),
+                "forecast_same_endpoint_pairs": String(sameEndpointPairs),
+                "excluded_leg_count": String(excludedLegIDs.count),
+                "generated_mode_counts": TravelMode.allCases.compactMap {
+                    mode in
+                    guard let count = generatedModes[mode]?.count else {
+                        return nil
+                    }
+                    return "\(mode.rawValue)=\(count)"
+                }.joined(separator: ","),
+            ]
+        )
+    }
+
     private func wbsRouteTransport(
         for mode: TravelMode?
     ) -> ExpectedRouteTransport? {
@@ -5575,6 +6103,13 @@ struct MapHomeView: View {
         guard !isTimelineInteractionActive || isDayPlaybackRunning else {
             pendingForecastRouteState = state
             hasDeferredWBSPlaybackRefresh = true
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "expected_route_state_deferred",
+                fields: [
+                    "expected_overlay_count": String(state.expected.count),
+                    "generated_overlay_count": String(state.generated.count),
+                ]
+            )
             return false
         }
         pendingForecastRouteState = nil
@@ -5582,6 +6117,13 @@ struct MapHomeView: View {
         expectedRouteOverlays = state.expected
         wbsGeneratedRouteOverlays = state.generated
         refreshWBSPlaybackProjection()
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "expected_route_state_applied",
+            fields: [
+                "expected_overlay_count": String(state.expected.count),
+                "generated_overlay_count": String(state.generated.count),
+            ]
+        )
         return true
     }
 
@@ -5912,6 +6454,26 @@ struct MapHomeView: View {
               calendar.isDate(date, inSameDayAs: model.selectedDate),
               dayData.sourceRevision == model.snapshotRevision
         else { return }
+        var snapshotFields = TaptionPlanDiagnosticsTravelSummary.fields(
+            for: dayData.travel
+        )
+        snapshotFields["day_start"] = String(dayStart.timeIntervalSince1970)
+        snapshotFields["source_revision"] = String(dayData.sourceRevision)
+        snapshotFields["projection_version"] = String(dayData.projectionVersion)
+        snapshotFields["source_updated_at"] = String(
+            dayData.sourceUpdatedAt.timeIntervalSince1970
+        )
+        snapshotFields["is_complete"] = String(dayData.isComplete)
+        snapshotFields["readings"] = String(dayData.readings.count)
+        snapshotFields["readings_with_point"] = String(
+            dayData.readings.filter { $0.point != nil }.count
+        )
+        snapshotFields["places"] = String(dayData.places.count)
+        snapshotFields["travel"] = String(dayData.travel.count)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "map_day_snapshot_loaded",
+            fields: snapshotFields
+        )
         dayDataSnapshot = dayData
         let merged = MapHomeRouteReadingsPolicy.merging(
             existing: routeReadings,
@@ -5987,6 +6549,17 @@ struct MapHomeView: View {
         else { return }
         guard payload.sourceUpdatedAt == nil
                 || payload.sourceUpdatedAt == model.snapshot.updatedAt else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "map_day_cache_rejected",
+                fields: [
+                    "reason": "source_updated_at_mismatch",
+                    "day_start": String(
+                        Calendar.autoupdatingCurrent.startOfDay(
+                            for: date
+                        ).timeIntervalSince1970
+                    ),
+                ]
+            )
             return
         }
 
@@ -6070,7 +6643,7 @@ struct MapHomeView: View {
                 return MapHomeSubwayRouteOverlay(
                     id: overlay.id,
                     coordinates: coordinates,
-                    estimated: overlay.estimated
+                estimated: overlay.estimated
                 )
             }
             mapRenderCache.restoreSubwayRoutes(
@@ -6079,6 +6652,23 @@ struct MapHomeView: View {
                 overlays: overlays
             )
         }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "map_day_cache_restored",
+            fields: [
+                "day_start": String(
+                    Calendar.autoupdatingCurrent.startOfDay(
+                        for: date
+                    ).timeIntervalSince1970
+                ),
+                "timeline_overlay_count": String(timelineRouteOverlays.count),
+                "expected_overlay_count": String(expectedRouteOverlays.count),
+                "temporary_location_count": String(cachedTemporaryLocations.count),
+                "subway_overlay_count": String((payload.subway ?? []).count),
+                "source_updated_at": payload.sourceUpdatedAt.map {
+                    String($0.timeIntervalSince1970)
+                } ?? "none",
+            ]
+        )
         if shouldApplyCachedCamera {
             setMapPosition(.region(
                 MapHomeLocationMapMath.region(center: center, span: span)
@@ -6314,6 +6904,28 @@ struct MapHomeView: View {
             .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
         displayRouteReadings = RouteTimelineDataEngine.displayReadings(
             from: normalizedRouteReadings
+        )
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "map_route_readings_prepared",
+            fields: [
+                "day_start": String(dayStart.timeIntervalSince1970),
+                "source_readings": String(sourceReadings.count),
+                "filtered_readings": String(filteredRouteReadings.count),
+                "normalized_readings": String(normalizedRouteReadings.count),
+                "display_readings": String(displayRouteReadings.count),
+                "watch_source_readings": String(
+                    sourceReadings.filter { $0.sourceDevice == .appleWatch }.count
+                ),
+                "readings_with_point": String(
+                    normalizedRouteReadings.filter { $0.point != nil }.count
+                ),
+                "readings_rail_match": String(
+                    normalizedRouteReadings.filter(\.matchesRailRoute).count
+                ),
+                "readings_station_name": String(
+                    Set(normalizedRouteReadings.compactMap(\.nearbyStationName)).count
+                ),
+            ]
         )
         requestWBSPlaybackProjectionRefresh()
     }
@@ -10318,11 +10930,13 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
 private enum MapHomeStickerEditorTarget: Identifiable {
     case sticker(UUID)
     case memo(UUID)
+    case newMemo(UUID)
 
     var id: String {
         switch self {
         case .sticker(let id): "sticker-\(id.uuidString)"
         case .memo(let id): "memo-\(id.uuidString)"
+        case .newMemo(let id): "new-memo-\(id.uuidString)"
         }
     }
 }
@@ -10358,9 +10972,13 @@ private struct MapHomeMapMemoMarker: View {
     let memo: ActionMemo
 
     var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "note.text")
-                .font(.system(size: 12, weight: .bold))
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Image(systemName: "note.text")
+                    .font(.system(size: 12, weight: .bold))
+                Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+            }
             Text(memo.text)
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .lineLimit(1)
@@ -10398,6 +11016,7 @@ private struct MapHomeStickerEditorSheet: View {
     @State private var longitudeText = ""
     @State private var occurredAt = Date()
     @State private var isDeleteConfirmationPresented = false
+    @State private var didSave = false
 
     private let symbols = [
         "star.fill", "heart.fill", "flag.fill", "pin.fill",
@@ -10410,6 +11029,11 @@ private struct MapHomeStickerEditorSheet: View {
 
     private var isSticker: Bool {
         if case .sticker = target { return true }
+        return false
+    }
+
+    private var isNewMemo: Bool {
+        if case .newMemo = target { return true }
         return false
     }
 
@@ -10454,14 +11078,18 @@ private struct MapHomeStickerEditorSheet: View {
             }
             .navigationTitle(
                 language.text(
-                    isSticker ? "메모 스티커 수정" : "지도 메모 수정",
-                    isSticker ? "Edit memo sticker" : "Edit map memo"
+                    isSticker
+                        ? "메모 스티커 수정"
+                        : (isNewMemo ? "지도 메모 추가" : "지도 메모 수정"),
+                    isSticker
+                        ? "Edit memo sticker"
+                        : (isNewMemo ? "Add map memo" : "Edit map memo")
                 )
             )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(language.text("취소", "Cancel")) { dismiss() }
+                    Button(language.text("취소", "Cancel")) { cancel() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(language.text("저장", "Save")) { save() }
@@ -10479,6 +11107,11 @@ private struct MapHomeStickerEditorSheet: View {
                 Button(language.text("취소", "Cancel"), role: .cancel) {}
             }
             .onAppear(perform: load)
+            .onDisappear {
+                if isNewMemo, !didSave {
+                    deleteNewMemoIfNeeded()
+                }
+            }
         }
     }
 
@@ -10535,9 +11168,9 @@ private struct MapHomeStickerEditorSheet: View {
 
     private var coordinateFields: some View {
         Group {
-            TextField("Latitude", text: $latitudeText)
+            TextField(language.text("위도", "Latitude"), text: $latitudeText)
                 .keyboardType(.decimalPad)
-            TextField("Longitude", text: $longitudeText)
+            TextField(language.text("경도", "Longitude"), text: $longitudeText)
                 .keyboardType(.decimalPad)
         }
     }
@@ -10600,7 +11233,7 @@ private struct MapHomeStickerEditorSheet: View {
                 latitudeText = String(format: "%.6f", point.latitude)
                 longitudeText = String(format: "%.6f", point.longitude)
             }
-        case .memo(let id):
+        case .memo(let id), .newMemo(let id):
             guard let memo = model.snapshot.memos.first(where: { $0.id == id }) else { return }
             memoText = memo.text
             memoKind = memo.kind
@@ -10627,7 +11260,7 @@ private struct MapHomeStickerEditorSheet: View {
                 planID: model.snapshot.stickers.first(where: { $0.id == id })?.planID,
                 occurredAt: occurredAt
             ) else { return }
-        case .memo(let id):
+        case .memo(let id), .newMemo(let id):
             guard model.updateMapMemo(
                 id,
                 text: memoText,
@@ -10635,14 +11268,28 @@ private struct MapHomeStickerEditorSheet: View {
                 mapPoint: editedPoint,
                 occurredAt: occurredAt
             ) else { return }
+            didSave = true
         }
         dismiss()
     }
 
+    private func cancel() {
+        didSave = true
+        deleteNewMemoIfNeeded()
+        dismiss()
+    }
+
+    private func deleteNewMemoIfNeeded() {
+        guard case .newMemo(let id) = target else { return }
+        model.discardMapMemoDraft(id)
+    }
+
     private func delete() {
+        didSave = true
         switch target {
         case .sticker(let id): model.deleteMapSticker(id)
         case .memo(let id): model.deleteMemo(id)
+        case .newMemo(let id): model.discardMapMemoDraft(id)
         }
         dismiss()
     }
@@ -11636,6 +12283,7 @@ private enum MapHomeAppleAnnotationKind {
     case transit(MapHomeTransitAnnotation)
     case boarding(TransitBoardingCandidate)
     case sticker(MapSticker)
+    case memo(ActionMemo)
     case search(MapHomeSearchResult)
 
     var accessibilityLabel: String {
@@ -11652,6 +12300,8 @@ private enum MapHomeAppleAnnotationKind {
             "\(candidate.name) \(candidate.kind.title) 탑승 확인"
         case .sticker(let sticker):
             "\(sticker.title) 메모 스티커"
+        case .memo(let memo):
+            "\(memo.text) 지도 메모, \(memo.occurredAt.formatted(date: .omitted, time: .shortened))"
         case .search(let result):
             "\(result.title) 위치 추가"
         }
@@ -12520,6 +13170,12 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     rootView: AnyView(MapHomeMapStickerMarker(sticker: sticker)),
                     size: CGSize(width: 150, height: 52),
                     centerOffset: CGPoint(x: 0, y: -26)
+                )
+            case .memo(let memo):
+                return MapHomeAppleHostedDescriptor(
+                    rootView: AnyView(MapHomeMapMemoMarker(memo: memo)),
+                    size: CGSize(width: 150, height: 60),
+                    centerOffset: CGPoint(x: 0, y: -30)
                 )
             case .search:
                 return MapHomeAppleHostedDescriptor(

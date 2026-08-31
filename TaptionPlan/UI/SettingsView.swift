@@ -1162,6 +1162,24 @@ struct SettingsView: View {
                 .foregroundStyle(Color.tpMovementDark)
             }
 
+            Text(
+                model.appleWatchLastDataReceivedAt.map { receivedAt in
+                    "최근 수신 시각 · \(receivedAt.formatted(date: .abbreviated, time: .shortened))"
+                } ?? "최근 수신 시각 없음"
+            )
+            .font(.taption(size: SettingsTypography.footnote))
+            .foregroundStyle(Color.tpSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let requestedAt = model.appleWatchDataSyncRequestedAt {
+                Text(
+                    "수신 요청됨 · \(requestedAt.formatted(date: .abbreviated, time: .shortened))"
+                )
+                .font(.taption(size: SettingsTypography.footnote))
+                .foregroundStyle(Color.tpMovementDark)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             HStack {
                 watchProfileLabel("끔", alignment: .leading)
                 watchProfileLabel("15분", alignment: .center)

@@ -808,10 +808,10 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapLongPressOffersLocationAndStickerMemoActions() {
+    func testMapLongPressOffersLocationAndMapMemoActions() {
         XCTAssertEqual(
             MapHomeLongPressAction.allCases.map(\.rawValue),
-            ["location", "sticker"]
+            ["location", "memo"]
         )
     }
 
@@ -3550,6 +3550,40 @@ final class TimeScaleTests: XCTestCase {
                 .notifications,
                 .liveActivities,
             ]
+        )
+    }
+
+    func testRequiredPermissionGateLetsManualFeaturesWorkWithoutIntegrations() {
+        let gate = RequiredPermissionGate.evaluate(
+            RequiredPermissionSnapshot(
+                permissions: [
+                    .location: .authorized,
+                    .motion: .authorized,
+                ],
+                locationAlwaysAuthorized: true,
+                locationPrecise: true
+            )
+        )
+
+        XCTAssertTrue(gate.sensorCollectionReady)
+        XCTAssertFalse(gate.allSatisfied)
+        XCTAssertEqual(
+            gate.missing,
+            [.healthKitRequestCompleted, .calendar, .notifications, .liveActivities]
+        )
+    }
+
+    func testRequiredPermissionGateSeparatesSensorRequirements() {
+        let gate = RequiredPermissionGate.evaluate(
+            RequiredPermissionSnapshot(
+                permissions: [.location: .authorized]
+            )
+        )
+
+        XCTAssertFalse(gate.sensorCollectionReady)
+        XCTAssertEqual(
+            gate.sensorCollectionMissing,
+            [.locationAlways, .locationPrecise, .motion]
         )
     }
 

@@ -84,7 +84,11 @@ private enum TaptionProKeychainError: Error {
 }
 
 private struct TaptionProKeychain {
-    private let service = "com.taption.plan.pro-trial"
+    private let service: String
+
+    init(service: String = "com.taption.plan.pro-trial") {
+        self.service = service
+    }
 
     func date(for account: String) throws -> Date? {
         let query: [String: Any] = [
@@ -144,21 +148,29 @@ final class TaptionProTrialPersistence {
     private static let startedAtKey = "TaptionPlan.proTrial.startedAt"
     private static let lastObservedAtKey =
         "TaptionPlan.proTrial.lastObservedAt"
+    private static let localStartedAtKey =
+        "TaptionPlan.proTrial.local.startedAt"
+    private static let localLastObservedAtKey =
+        "TaptionPlan.proTrial.local.lastObservedAt"
 
-    private let keychain: TaptionProKeychain
-    private let cloudStore: NSUbiquitousKeyValueStore
+    private let keychain: TaptionProKeychain?
+    private let cloudStore: NSUbiquitousKeyValueStore?
+    private let localStore: UserDefaults
 
     init(
-        cloudStore: NSUbiquitousKeyValueStore = .default
+        cloudStore: NSUbiquitousKeyValueStore? = NSUbiquitousKeyValueStore.default,
+        localStore: UserDefaults = .standard,
+        keychainService: String? = "com.taption.plan.pro-trial"
     ) {
-        self.keychain = TaptionProKeychain()
+        self.keychain = keychainService.map(TaptionProKeychain.init(service:))
         self.cloudStore = cloudStore
+        self.localStore = localStore
     }
 
     func record(observedAt now: Date) -> TaptionProTrialRecord? {
-        _ = cloudStore.synchronize()
+        _ = cloudStore?.synchronize()
         let merged = TaptionProTrialPolicy.merged(
-            [keychainRecord(), cloudRecord()].compactMap { $0 }
+            [keychainRecord(), cloudRecord(), localRecord()].compactMap { $0 }
         )
         guard var merged else { return nil }
         merged.lastObservedAt = max(merged.lastObservedAt, now)
@@ -179,7 +191,8 @@ final class TaptionProTrialPersistence {
     }
 
     private func keychainRecord() -> TaptionProTrialRecord? {
-        guard let startedAt = try? keychain.date(
+        guard let keychain,
+              let startedAt = try? keychain.date(
             for: Self.startedAtKey
         ) else {
             return nil
@@ -206,29 +219,63 @@ final class TaptionProTrialPersistence {
         )
     }
 
+    private func localRecord() -> TaptionProTrialRecord? {
+        guard localStore.object(forKey: Self.localStartedAtKey) != nil else {
+            return nil
+        }
+        let startedAt = localStore.double(forKey: Self.localStartedAtKey)
+        let lastObservedAt = localStore.double(
+            forKey: Self.localLastObservedAtKey
+        )
+        guard startedAt.isFinite, lastObservedAt.isFinite else {
+            return nil
+        }
+        let started = Date(timeIntervalSince1970: startedAt)
+        return TaptionProTrialRecord(
+            startedAt: started,
+            lastObservedAt: max(
+                Date(timeIntervalSince1970: lastObservedAt),
+                started
+            )
+        )
+    }
+
     private func cloudDate(for key: String) -> Date? {
-        guard cloudStore.object(forKey: key) != nil else { return nil }
+        guard let cloudStore,
+              cloudStore.object(forKey: key) != nil else { return nil }
         let interval = cloudStore.double(forKey: key)
         guard interval.isFinite else { return nil }
         return Date(timeIntervalSince1970: interval)
     }
 
     private func persist(_ record: TaptionProTrialRecord) {
-        cloudStore.set(
+        if let cloudStore {
+            cloudStore.set(
+                record.startedAt.timeIntervalSince1970,
+                forKey: Self.startedAtKey
+            )
+            cloudStore.set(
+                record.lastObservedAt.timeIntervalSince1970,
+                forKey: Self.lastObservedAtKey
+            )
+        }
+        if let keychain {
+            try? keychain.setDate(
+                record.startedAt,
+                for: Self.startedAtKey
+            )
+            try? keychain.setDate(
+                record.lastObservedAt,
+                for: Self.lastObservedAtKey
+            )
+        }
+        localStore.set(
             record.startedAt.timeIntervalSince1970,
-            forKey: Self.startedAtKey
+            forKey: Self.localStartedAtKey
         )
-        cloudStore.set(
+        localStore.set(
             record.lastObservedAt.timeIntervalSince1970,
-            forKey: Self.lastObservedAtKey
-        )
-        try? keychain.setDate(
-            record.startedAt,
-            for: Self.startedAtKey
-        )
-        try? keychain.setDate(
-            record.lastObservedAt,
-            for: Self.lastObservedAtKey
+            forKey: Self.localLastObservedAtKey
         )
     }
 }
@@ -286,7 +333,9 @@ actor StoreKitPurchaseService {
         if proProduct == nil {
             proProduct = try await Product.products(
                 for: [TaptionCommercePolicy.proProductID]
-            ).first
+            ).first { product in
+                product.type == .nonConsumable
+            }
         }
         guard let proProduct else { return nil }
         return StoreProductPresentation(

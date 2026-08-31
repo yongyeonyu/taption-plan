@@ -650,9 +650,23 @@ struct RequiredPermissionSnapshot: Equatable, Sendable {
 }
 
 struct RequiredPermissionGate: Equatable, Sendable {
+    static let sensorCollectionRequirements: [RequiredPermission] = [
+        .locationAlways,
+        .locationPrecise,
+        .motion,
+    ]
+
     let missing: [RequiredPermission]
 
     var allSatisfied: Bool { missing.isEmpty }
+
+    var sensorCollectionMissing: [RequiredPermission] {
+        missing.filter(Self.sensorCollectionRequirements.contains)
+    }
+
+    var sensorCollectionReady: Bool {
+        sensorCollectionMissing.isEmpty
+    }
 
     init(snapshot: RequiredPermissionSnapshot) {
         missing = RequiredPermission.allCases.filter {
@@ -1383,6 +1397,9 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var fetchedAt: Date?
     /// True when this is the last known value after a failed refresh.
     var isStale: Bool?
+    /// True when the provider supplied a forecast rather than an observed
+    /// current value. Legacy snapshots omit this field and remain readable.
+    var isForecast: Bool?
     var condition: String
     var symbolName: String
     var temperatureCelsius: Double
@@ -1399,6 +1416,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         validUntil: Date? = nil,
         fetchedAt: Date? = nil,
         isStale: Bool? = false,
+        isForecast: Bool? = false,
         condition: String,
         symbolName: String,
         temperatureCelsius: Double,
@@ -1414,6 +1432,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         self.validUntil = validUntil
         self.fetchedAt = fetchedAt
         self.isStale = isStale
+        self.isForecast = isForecast
         self.condition = condition
         self.symbolName = symbolName
         self.temperatureCelsius = temperatureCelsius

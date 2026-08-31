@@ -1316,7 +1316,9 @@ actor AppleWeatherContextService {
                             endDate: historicalEnd
                         )
                     )
-                    contexts.append(contentsOf: historical.map(Self.weatherContext))
+                    contexts.append(contentsOf: historical.map {
+                        Self.weatherContext($0, isForecast: false)
+                    })
                 } catch {
                     // Preserve stored observations when historical WeatherKit
                     // data is unavailable for this location.
@@ -1335,7 +1337,12 @@ actor AppleWeatherContextService {
                             endDate: end
                         )
                     )
-                    let values = forecast.map(Self.weatherContext)
+                    let values = forecast.map {
+                        Self.weatherContext(
+                            $0,
+                            isForecast: $0.date >= forecastStart
+                        )
+                    }
                     contexts.append(contentsOf: values)
                     loadedForecast = values.contains {
                         $0.observedAt >= forecastStart
@@ -1372,7 +1379,9 @@ actor AppleWeatherContextService {
             guard !values.isEmpty else {
                 throw WeatherContextServiceError.temporarilyUnavailable
             }
-            return values.map(Self.weatherContext)
+            return values.map {
+                Self.weatherContext($0, isForecast: $0.date >= Date.now)
+            }
         } catch {
             return try await fallbackService.hourlyContexts(
                 latitude: latitude,
@@ -1384,12 +1393,14 @@ actor AppleWeatherContextService {
     }
 
     private static func weatherContext(
-        _ value: WeatherKit.HourWeather
+        _ value: WeatherKit.HourWeather,
+        isForecast: Bool? = nil
     ) -> WeatherContext {
         WeatherContext(
             observedAt: value.date,
             fetchedAt: .now,
             isStale: false,
+            isForecast: isForecast,
             condition: String(describing: value.condition),
             symbolName: value.symbolName,
             temperatureCelsius: value.temperature.converted(to: .celsius).value,
@@ -1599,6 +1610,7 @@ actor OpenMeteoWeatherContextService {
                     observedAt: observedAt,
                     fetchedAt: fetchedAt,
                     isStale: false,
+                    isForecast: observedAt >= fetchedAt,
                     condition: presentation.condition,
                     symbolName: presentation.symbolName,
                     temperatureCelsius: value.1.0,

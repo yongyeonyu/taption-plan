@@ -1664,6 +1664,46 @@ enum MapMemoDisplayFilterEngine {
             return false
         }
     }
+
+    static func visibleMemos(
+        _ memos: [ActionMemo],
+        on date: Date,
+        filter: MapMemoDisplayFilter,
+        selectedPlanIDs: Set<UUID>,
+        selectedTargetIDs: Set<String>,
+        calendar: Calendar = .autoupdatingCurrent,
+        through: Date? = nil
+    ) -> [ActionMemo] {
+        visibleMemos(
+            memos,
+            filter: filter,
+            selectedPlanIDs: selectedPlanIDs,
+            selectedTargetIDs: selectedTargetIDs
+        ).filter {
+            guard calendar.isDate($0.occurredAt, inSameDayAs: date) else {
+                return false
+            }
+            guard let through else { return true }
+            return $0.occurredAt <= through
+        }
+    }
+}
+
+enum MapMemoLinkEngine {
+    static func plan(
+        containing date: Date,
+        in plans: [PlanRecord]
+    ) -> PlanRecord? {
+        plans
+            .filter { $0.span.start <= date && date < $0.span.end }
+            .sorted {
+                if $0.span.duration != $1.span.duration {
+                    return $0.span.duration < $1.span.duration
+                }
+                return $0.createdAt < $1.createdAt
+            }
+            .first
+    }
 }
 
 enum MapStickerDisplayFilterEngine {

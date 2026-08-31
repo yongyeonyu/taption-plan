@@ -1859,6 +1859,7 @@ enum TaptionWatchEnvelope {
     static let activityConfirmationKey = "taption.watch.activity-confirmation"
     static let refreshRequestKey = "taption.watch.refresh-request"
     static let dataSyncRequestKey = "taption.watch.data-sync-request"
+    static let dataSyncRequestIDKey = "taption.watch.data-sync-request-id"
     static let locationTrackingKey = "taption.watch.location-tracking"
     static let locationTrackingGuidanceKey =
         "taption.watch.location-tracking-guidance"

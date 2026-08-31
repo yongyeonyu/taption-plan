@@ -11193,6 +11193,37 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testProTrialPersistenceRestoresLocalRecordAcrossInstances() throws {
+        let suiteName = "TaptionPlanTests.proTrial.\(UUID().uuidString)"
+        let localStore = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        localStore.removePersistentDomain(forName: suiteName)
+        defer { localStore.removePersistentDomain(forName: suiteName) }
+
+        let start = makeDate(2026, 8, 23, 12)
+        let first = TaptionProTrialPersistence(
+            cloudStore: nil,
+            localStore: localStore,
+            keychainService: nil
+        )
+        XCTAssertEqual(first.startTrial(at: start).startedAt, start)
+
+        let second = TaptionProTrialPersistence(
+            cloudStore: nil,
+            localStore: localStore,
+            keychainService: nil
+        )
+        let restored = try XCTUnwrap(
+            second.record(observedAt: start.addingTimeInterval(86_400))
+        )
+
+        XCTAssertEqual(restored.startedAt, start)
+        XCTAssertEqual(
+            restored.lastObservedAt,
+            start.addingTimeInterval(86_400)
+        )
+    }
+
     func testProTrialMergeKeepsEarliestStartAndLatestObservedDate() {
         let start = makeDate(2026, 8, 23, 12)
         let merged = TaptionProTrialPolicy.merged([
@@ -11543,6 +11574,57 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(recovered.plans, [cloudPlan])
     }
 
+    func testCloudRecoveryDetachesMemoWhenLinkedPlanWasDeleted() {
+        let base = makeDate(2026, 8, 9, 10)
+        let plan = PlanRecord(
+            title: "삭제된 계획",
+            span: TimeSpan(start: base, end: base.addingTimeInterval(hour)),
+            categoryID: "work"
+        )
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127.0,
+            altitude: 12,
+            horizontalAccuracy: 4,
+            verticalAccuracy: 6
+        )
+        let memo = ActionMemo(
+            planID: plan.id,
+            targetID: "plan.\(plan.id.uuidString)",
+            categoryID: plan.categoryID,
+            occurredAt: base.addingTimeInterval(20 * 60),
+            mapPoint: point,
+            kind: .idea,
+            text: "계획에서 독립한 메모",
+            createdAt: base,
+            updatedAt: base
+        )
+        var local = TaptionDataSnapshot.empty
+        local.updatedAt = base.addingTimeInterval(hour)
+        local.settings.cloudDeletedRecordKeys = [
+            CloudBackupRecordKey.plan(plan.id)
+        ]
+        var remote = TaptionDataSnapshot.empty
+        remote.updatedAt = base
+        remote.plans = [plan]
+        remote.memos = [memo]
+
+        let recovered = CloudSnapshotRecoveryEngine.merge(
+            local: local,
+            remote: remote
+        )
+
+        let detached = recovered.memos.first
+        XCTAssertTrue(recovered.plans.isEmpty)
+        XCTAssertEqual(detached?.id, memo.id)
+        XCTAssertNil(detached?.planID)
+        XCTAssertNil(detached?.targetID)
+        XCTAssertEqual(detached?.categoryID, memo.categoryID)
+        XCTAssertEqual(detached?.occurredAt, memo.occurredAt)
+        XCTAssertEqual(detached?.mapPoint, memo.mapPoint)
+        XCTAssertEqual(detached?.text, memo.text)
+    }
+
     func testCloudRecoveryDoesNotResurrectDeletedRecords() {
         let base = makeDate(2026, 8, 9, 11)
         let plan = PlanRecord(
@@ -11676,6 +11758,7 @@ final class FeatureEngineTests: XCTestCase {
             observedAt: fetchedAt,
             fetchedAt: fetchedAt,
             isStale: true,
+            isForecast: true,
             condition: "맑음",
             symbolName: "sun.max.fill",
             temperatureCelsius: 28
@@ -11686,6 +11769,68 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(decoded.fetchedAt, fetchedAt)
         XCTAssertEqual(decoded.isStale, true)
+        XCTAssertEqual(decoded.isForecast, true)
+    }
+
+    func testOpenMeteoHourlyContextsMarkFutureValuesAsForecasts() async throws {
+        let calendar = Calendar.autoupdatingCurrent
+        let currentHour = try XCTUnwrap(
+            calendar.dateInterval(of: .hour, for: .now)?.start
+        )
+        let from = try XCTUnwrap(
+            calendar.date(byAdding: .hour, value: 1, to: currentHour)
+        )
+        let through = try XCTUnwrap(
+            calendar.date(byAdding: .hour, value: 3, to: from)
+        )
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.autoupdatingCurrent
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        let first = formatter.string(from: from)
+        let second = formatter.string(from: from.addingTimeInterval(3_600))
+
+        WeatherURLProtocolStub.requestCount = 0
+        WeatherURLProtocolStub.handler = { request in
+            let items = URLComponents(
+                url: try XCTUnwrap(request.url),
+                resolvingAgainstBaseURL: false
+            )?.queryItems ?? []
+            XCTAssertEqual(
+                items.first(where: { $0.name == "forecast_days" })?.value,
+                "16"
+            )
+            let json = """
+            {
+              "current": {"temperature_2m": 20, "weather_code": 0, "precipitation_probability": 10, "is_day": 1},
+              "hourly": {
+                "time": ["\(first)", "\(second)"],
+                "temperature_2m": [20, 21],
+                "weather_code": [0, 1],
+                "precipitation_probability": [10, 20],
+                "is_day": [1, 1]
+              }
+            }
+            """
+            return (200, Data(json.utf8))
+        }
+        defer { WeatherURLProtocolStub.handler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [WeatherURLProtocolStub.self]
+        let service = OpenMeteoWeatherContextService(
+            session: URLSession(configuration: configuration)
+        )
+
+        let contexts = try await service.hourlyContexts(
+            latitude: 37.5,
+            longitude: 127,
+            from: from,
+            through: through
+        )
+
+        XCTAssertEqual(contexts.count, 2)
+        XCTAssertTrue(contexts.allSatisfy { $0.isForecast == true })
+        XCTAssertEqual(WeatherURLProtocolStub.requestCount, 1)
     }
 
     func testWeatherProjectionReplacesCurrentHourOnlyAtSameLocation() {
@@ -14750,6 +14895,94 @@ final class FeatureEngineTests: XCTestCase {
         let saved = model.memos(forCategoryID: "activity", on: day)
         XCTAssertEqual(saved.map(\.text), ["무릎 상태 확인"])
         XCTAssertNil(saved.first?.planID)
+    }
+
+    @MainActor
+    func testDeletingPlanDetachesLinkedMapMemoAndPersistsIt() async throws {
+        let base = makeDate(2026, 8, 4, 10)
+        let plan = PlanRecord(
+            title: "현장 방문",
+            span: TimeSpan(start: base, end: base.addingTimeInterval(hour)),
+            categoryID: "work"
+        )
+        let memo = ActionMemo(
+            planID: plan.id,
+            targetID: "plan.\(plan.id.uuidString)",
+            categoryID: plan.categoryID,
+            occurredAt: base.addingTimeInterval(20 * 60),
+            mapPoint: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 12,
+                horizontalAccuracy: 4,
+                verticalAccuracy: 6
+            ),
+            kind: .idea,
+            text: "입구가 동쪽",
+            createdAt: base,
+            updatedAt: base
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.plans = [plan]
+        stored.memos = [memo]
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        await model.deletePlan(plan.id)
+
+        XCTAssertTrue(model.snapshot.plans.isEmpty)
+        let detached = try XCTUnwrap(model.snapshot.memos.first)
+        XCTAssertEqual(detached.id, memo.id)
+        XCTAssertNil(detached.planID)
+        XCTAssertNil(detached.targetID)
+        XCTAssertEqual(detached.categoryID, memo.categoryID)
+        XCTAssertEqual(detached.occurredAt, memo.occurredAt)
+        XCTAssertEqual(detached.mapPoint, memo.mapPoint)
+        XCTAssertEqual(detached.text, memo.text)
+
+        let persisted = try await repository.load()
+        XCTAssertEqual(persisted.plans, [])
+        XCTAssertEqual(persisted.memos, [detached])
+    }
+
+    @MainActor
+    func testDeletingPendingMapMemoDoesNotCreateCloudTombstone() async throws {
+        let repository = InMemoryPlanRepository()
+        let model = AppModel(repository: repository, cloudSyncService: nil)
+        let memoID = try XCTUnwrap(model.addMapMemo(
+            text: "작성 중인 메모",
+            kind: .idea,
+            mapPoint: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 0,
+                verticalAccuracy: 0
+            ),
+            occurredAt: makeDate(2026, 8, 4, 10),
+            shouldPersist: false
+        ))
+
+        model.deleteMemo(memoID)
+
+        XCTAssertFalse(model.snapshot.memos.contains { $0.id == memoID })
+        XCTAssertFalse(
+            model.settings.cloudDeletedRecordKeys.contains(
+                CloudBackupRecordKey.memo(memoID)
+            )
+        )
+        let persisted = try await repository.load()
+        XCTAssertFalse(persisted.memos.contains { $0.id == memoID })
+        XCTAssertFalse(
+            persisted.settings.cloudDeletedRecordKeys.contains(
+                CloudBackupRecordKey.memo(memoID)
+            )
+        )
     }
 
     @MainActor
@@ -20020,6 +20253,391 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
+    func testMapMemoFilterLimitsVisibleMemosToSelectedDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        let selectedDay = calendar.date(
+            from: DateComponents(year: 2026, month: 8, day: 29, hour: 9)
+        )!
+        let sameDay = ActionMemo(
+            occurredAt: selectedDay,
+            mapPoint: point,
+            kind: .idea,
+            text: "오늘 지도 메모"
+        )
+        let otherDay = ActionMemo(
+            occurredAt: calendar.date(
+                from: DateComponents(year: 2026, month: 8, day: 30, hour: 9)
+            )!,
+            mapPoint: point,
+            kind: .idea,
+            text: "다음 날 지도 메모"
+        )
+
+        let visible = MapMemoDisplayFilterEngine.visibleMemos(
+            [sameDay, otherDay],
+            on: selectedDay,
+            filter: .all,
+            selectedPlanIDs: [],
+            selectedTargetIDs: [],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(visible.map(\.id), [sameDay.id])
+    }
+
+    func testMapMemoFilterHonorsPlaybackCutoffButKeepsPlayheadMemo() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        let playhead = calendar.date(
+            from: DateComponents(year: 2026, month: 8, day: 29, hour: 10)
+        )!
+        let before = ActionMemo(
+            occurredAt: playhead.addingTimeInterval(-60),
+            mapPoint: point,
+            kind: .idea,
+            text: "재생 전 메모"
+        )
+        let atPlayhead = ActionMemo(
+            occurredAt: playhead,
+            mapPoint: point,
+            kind: .decision,
+            text: "현재 시각 메모"
+        )
+        let after = ActionMemo(
+            occurredAt: playhead.addingTimeInterval(60),
+            mapPoint: point,
+            kind: .nextAction,
+            text: "아직 오지 않은 메모"
+        )
+
+        let visible = MapMemoDisplayFilterEngine.visibleMemos(
+            [before, atPlayhead, after],
+            on: playhead,
+            filter: .all,
+            selectedPlanIDs: [],
+            selectedTargetIDs: [],
+            calendar: calendar,
+            through: playhead
+        )
+
+        XCTAssertEqual(visible.map(\.text), [before.text, atPlayhead.text])
+    }
+
+    @MainActor
+    func testAddingMapMemoKeepsLocationTimeAndTimelineLink() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let planStart = calendar.date(
+            from: DateComponents(year: 2026, month: 8, day: 29, hour: 9)
+        )!
+        let planEnd = calendar.date(
+            from: DateComponents(year: 2026, month: 8, day: 29, hour: 10)
+        )!
+        let plan = PlanRecord(
+            title: "현장 방문",
+            span: TimeSpan(
+                start: planStart,
+                end: planEnd
+            ),
+            categoryID: "work"
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.plans = [plan]
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil
+        )
+        await model.bootstrap()
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        let occurredAt = calendar.date(
+            from: DateComponents(year: 2026, month: 8, day: 29, hour: 9, minute: 30)
+        )!
+
+        let id = try XCTUnwrap(
+            model.addMapMemo(
+                text: "입구가 동쪽",
+                kind: .idea,
+                mapPoint: point,
+                planID: plan.id,
+                occurredAt: occurredAt
+            )
+        )
+        let memo = try XCTUnwrap(model.snapshot.memos.first { $0.id == id })
+
+        XCTAssertEqual(memo.mapPoint, point)
+        XCTAssertEqual(memo.occurredAt, occurredAt)
+        XCTAssertEqual(memo.planID, plan.id)
+        XCTAssertEqual(memo.categoryID, plan.categoryID)
+        XCTAssertEqual(model.timelineMemos(in: plan.span).map(\.id), [id])
+
+        let deadline = Date.now.addingTimeInterval(2)
+        var persisted = try await repository.load()
+        while persisted.memos.map(\.id) != [id], Date.now < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+            persisted = try await repository.load()
+        }
+        XCTAssertEqual(persisted.memos.map(\.id), [id])
+    }
+
+    @MainActor
+    func testAddingMapMemoAtPlanEndDoesNotLinkEndedPlan() async throws {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let plan = PlanRecord(
+            title: "끝난 계획",
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(3_600)
+            ),
+            categoryID: "work"
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.plans = [plan]
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let id = try XCTUnwrap(
+            model.addMapMemo(
+                text: "계획 종료 뒤 메모",
+                kind: .idea,
+                mapPoint: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 0,
+                    verticalAccuracy: 0
+                ),
+                occurredAt: plan.span.end,
+                shouldPersist: false
+            )
+        )
+        let memo = try XCTUnwrap(
+            model.snapshot.memos.first { $0.id == id }
+        )
+
+        XCTAssertNil(memo.planID)
+        XCTAssertEqual(memo.categoryID, MemoTimelineEngine.categoryID)
+        model.discardMapMemoDraft(id)
+    }
+
+    @MainActor
+    func testEditingMapMemoReevaluatesPlanLinkAtNewTime() async throws {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let firstPlan = PlanRecord(
+            title: "첫 계획",
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(3_600)
+            ),
+            categoryID: "work"
+        )
+        let secondStart = start.addingTimeInterval(7_200)
+        let secondPlan = PlanRecord(
+            title: "두 번째 계획",
+            span: TimeSpan(
+                start: secondStart,
+                end: secondStart.addingTimeInterval(3_600)
+            ),
+            categoryID: "exercise"
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.plans = [firstPlan, secondPlan]
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        let memoID = try XCTUnwrap(
+            model.addMapMemo(
+                text: "시간 이동 메모",
+                kind: .idea,
+                mapPoint: point,
+                planID: firstPlan.id,
+                occurredAt: start.addingTimeInterval(1_800),
+                shouldPersist: false
+            )
+        )
+
+        XCTAssertTrue(
+            model.updateMapMemo(
+                memoID,
+                text: "두 번째 계획으로 이동",
+                kind: .decision,
+                mapPoint: point,
+                occurredAt: secondStart.addingTimeInterval(1_800)
+            )
+        )
+        XCTAssertEqual(
+            model.snapshot.memos.first { $0.id == memoID }?.planID,
+            secondPlan.id
+        )
+        XCTAssertEqual(
+            model.snapshot.memos.first { $0.id == memoID }?.categoryID,
+            secondPlan.categoryID
+        )
+
+        XCTAssertTrue(
+            model.updateMapMemo(
+                memoID,
+                text: "계획 종료 뒤 독립 메모",
+                kind: .idea,
+                mapPoint: point,
+                occurredAt: secondPlan.span.end
+            )
+        )
+        XCTAssertNil(model.snapshot.memos.first { $0.id == memoID }?.planID)
+        XCTAssertEqual(
+            model.snapshot.memos.first { $0.id == memoID }?.categoryID,
+            MemoTimelineEngine.categoryID
+        )
+        model.discardMapMemoDraft(memoID)
+    }
+
+    func testMapMemoSaveRejectsInvalidGeometryAndDanglingPlanLink() async throws {
+        let repository = InMemoryPlanRepository()
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil
+        )
+        await model.bootstrap()
+
+        let invalidPoint = GeoPoint(
+            latitude: .nan,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        XCTAssertNil(
+            model.addMapMemo(
+                text: "잘못된 좌표",
+                kind: .idea,
+                mapPoint: invalidPoint,
+                occurredAt: .now
+            )
+        )
+        XCTAssertTrue(model.snapshot.memos.isEmpty)
+
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        let id = try XCTUnwrap(
+            model.addMapMemo(
+                text: "계획 연결 확인",
+                kind: .idea,
+                mapPoint: point,
+                planID: UUID(),
+                occurredAt: .now
+            )
+        )
+        XCTAssertNil(model.snapshot.memos.first { $0.id == id }?.planID)
+    }
+
+    func testMapMemoDraftIsNotPersistedWhenDiscarded() async throws {
+        let repository = InMemoryPlanRepository()
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil
+        )
+        await model.bootstrap()
+
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        let draftID = try XCTUnwrap(
+            model.addMapMemo(
+                text: "임시 지도 메모",
+                kind: .idea,
+                mapPoint: point,
+                occurredAt: .now,
+                shouldPersist: false
+            )
+        )
+
+        XCTAssertNotNil(model.snapshot.memos.first { $0.id == draftID })
+        model.discardMapMemoDraft(draftID)
+
+        XCTAssertNil(model.snapshot.memos.first { $0.id == draftID })
+        let stored = try await repository.load()
+        XCTAssertTrue(stored.memos.isEmpty)
+    }
+
+    @MainActor
+    func testMapMemoDraftStaysOutOfConcurrentPersistence() async throws {
+        let repository = InMemoryPlanRepository()
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let draftID = try XCTUnwrap(
+            model.addMapMemo(
+                text: "저장 전 지도 메모",
+                kind: .idea,
+                mapPoint: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 0,
+                    verticalAccuracy: 0
+                ),
+                occurredAt: Date(timeIntervalSinceReferenceDate: 800_000_000),
+                shouldPersist: false
+            )
+        )
+
+        await model.setNotificationsEnabled(false)
+
+        XCTAssertNotNil(model.snapshot.memos.first { $0.id == draftID })
+        let stored = try await repository.load()
+        XCTAssertTrue(stored.memos.isEmpty)
+        model.discardMapMemoDraft(draftID)
+    }
+
     func testActionMemoWithoutMapPointKeepsBackwardDecodingCompatibility() throws {
         let memo = ActionMemo(kind: .idea, text: "기존 메모")
         var object = try XCTUnwrap(
@@ -20181,6 +20799,51 @@ private final class AirQualityURLProtocolStub: URLProtocol, @unchecked Sendable 
                 headerFields: ["Content-Type": "application/json"]
             )!
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: data)
+            client?.urlProtocolDidFinishLoading(self)
+        } catch {
+            client?.urlProtocol(self, didFailWithError: error)
+        }
+    }
+
+    override func stopLoading() {}
+}
+
+private final class WeatherURLProtocolStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler:
+        ((URLRequest) throws -> (Int, Data))?
+    nonisolated(unsafe) static var requestCount = 0
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canonicalRequest(
+        for request: URLRequest
+    ) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        Self.requestCount += 1
+        guard let handler = Self.handler else {
+            client?.urlProtocol(
+                self,
+                didFailWithError: URLError(.badServerResponse)
+            )
+            return
+        }
+        do {
+            let (status, data) = try handler(request)
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: status,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            client?.urlProtocol(
+                self,
+                didReceive: response,
+                cacheStoragePolicy: .notAllowed
+            )
             client?.urlProtocol(self, didLoad: data)
             client?.urlProtocolDidFinishLoading(self)
         } catch {

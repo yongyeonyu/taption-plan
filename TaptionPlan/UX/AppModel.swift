@@ -506,6 +506,7 @@ final class AppModel {
     /// 저장소를 읽지 못한 상태에서 빈 스냅샷을 저장하면 기존 기록을
     /// 덮어쓸 수 있다. 복구 가능한 저장본을 다시 읽기 전까지 저장을 막는다.
     @ObservationIgnored private var repositoryLoadFailed = false
+    @ObservationIgnored private var pendingMapMemoIDs = Set<UUID>()
     private(set) var isRefreshingIntegrations = false
     private(set) var isSensorCollecting = false
     private(set) var sensorStorageErrorDescription: String?
@@ -547,6 +548,7 @@ final class AppModel {
     private(set) var appleWatchConnectionState: AppleWatchConnectionState = .unsupported
     private(set) var appleWatchLastDataReceivedAt: Date?
     private(set) var appleWatchReceivedDataKinds: Set<AppleWatchDataKind> = []
+    private(set) var appleWatchDataSyncRequestedAt: Date?
     /// 첫 실행 안내를 닫은 기록. 기기 저장소에서 읽어 오고, 바뀔 때만 다시
     /// 넣어 화면이 갱신되게 한다.
     private(set) var dismissedAppleWatchPrompts: Set<AppleWatchOnboardingPrompt> =
@@ -941,14 +943,20 @@ final class AppModel {
                     await self?.applyWatchCommand(command)
                 }
             },
-            onSensorSummary: { [weak self] summary in
+            onSensorSummary: { [weak self] summary, receivedAt in
                 Task { @MainActor [weak self] in
-                    await self?.applyWatchSensorSummary(summary)
+                    await self?.applyWatchSensorSummary(
+                        summary,
+                        receivedAt: receivedAt
+                    )
                 }
             },
-            onHealthSnapshot: { [weak self] snapshot in
+            onHealthSnapshot: { [weak self] snapshot, receivedAt in
                 Task { @MainActor [weak self] in
-                    await self?.applyWatchHealthSnapshot(snapshot)
+                    await self?.applyWatchHealthSnapshot(
+                        snapshot,
+                        receivedAt: receivedAt
+                    )
                 }
             },
             onActivityConfirmation: { [weak self] confirmation in
@@ -3127,7 +3135,7 @@ final class AppModel {
                 )
                 startForegroundHealthRefreshIfNeeded()
                 publishWatchPayload()
-                requestWatchDataSync()
+                requestWatchDataSync(source: "health_authorization")
             }
             await persist()
         } catch {
@@ -3822,8 +3830,38 @@ final class AppModel {
         Task { await persist() }
     }
 
-    func requestWatchDataSync() {
-        watchConnectivityService.requestWatchDataSync()
+    func requestWatchDataSync(source: String = "settings_button") {
+        let requestedAt = Date.now
+        let requestID = UUID().uuidString
+        let logger = TaptionPlanDiagnosticsLogger.shared
+        logger.record(
+            "watch_data_sync_button_tapped",
+            fields: [
+                "request_id": requestID,
+                "source": source,
+                "connection_state": appleWatchConnectionState.rawValue,
+                "data_sync_profile": String(
+                    snapshot.settings.watchDataSyncProfile.rawValue
+                ),
+                "pending_before": String(
+                    appleWatchDataSyncRequestedAt != nil
+                ),
+            ]
+        )
+        let requested = watchConnectivityService.requestWatchDataSync(
+            requestID: requestID
+        )
+        appleWatchDataSyncRequestedAt = requested ? requestedAt : nil
+        logger.record(
+            "watch_data_sync_button_result",
+            fields: [
+                "request_id": requestID,
+                "accepted": String(requested),
+                "pending_after": String(
+                    appleWatchDataSyncRequestedAt != nil
+                ),
+            ]
+        )
     }
 
     func refreshAppleWatchConnectionState() {
@@ -4459,8 +4497,75 @@ final class AppModel {
         return memo.id
     }
 
+    @discardableResult
+    func addMapMemo(
+        text: String,
+        kind: MemoKind,
+        mapPoint: GeoPoint,
+        planID: UUID? = nil,
+        targetID: String? = nil,
+        occurredAt: Date,
+        shouldPersist: Bool = true
+    ) -> UUID? {
+        guard let cleanText = validatedMemoText(text),
+              occurredAt.timeIntervalSince1970.isFinite,
+              mapPoint.latitude.isFinite,
+              mapPoint.longitude.isFinite,
+              mapPoint.altitude.isFinite,
+              mapPoint.horizontalAccuracy.isFinite,
+              mapPoint.verticalAccuracy.isFinite,
+              (-90...90).contains(mapPoint.latitude),
+              (-180...180).contains(mapPoint.longitude) else {
+            return nil
+        }
+        let requestedPlan = planID.flatMap { planID in
+            snapshot.plans.first(where: { $0.id == planID })
+        }
+        let linkedPlan = requestedPlan.flatMap { plan in
+            plan.span.start <= occurredAt && occurredAt < plan.span.end
+                ? plan
+                : nil
+        } ?? MapMemoLinkEngine.plan(
+            containing: occurredAt,
+            in: snapshot.plans
+        )
+        let memo = ActionMemo(
+            planID: linkedPlan?.id,
+            targetID: targetID,
+            categoryID: linkedPlan?.categoryID ?? MemoTimelineEngine.categoryID,
+            occurredAt: occurredAt,
+            mapPoint: mapPoint,
+            kind: kind,
+            text: cleanText
+        )
+        snapshot.memos.append(memo)
+        if shouldPersist {
+            invalidateReviewArchives(dates: [occurredAt])
+            Task { await persist() }
+        } else {
+            pendingMapMemoIDs.insert(memo.id)
+        }
+        return memo.id
+    }
+
+    func discardMapMemoDraft(_ memoID: UUID) {
+        guard snapshot.memos.contains(where: { memo in
+            memo.id == memoID && memo.mapPoint != nil
+        }) else {
+            return
+        }
+        pendingMapMemoIDs.remove(memoID)
+        snapshot.memos.removeAll { $0.id == memoID }
+        memoEntry?.memoIDs.removeAll { $0 == memoID }
+    }
+
     func deleteMemo(_ memoID: UUID) {
         guard let memo = snapshot.memos.first(where: { $0.id == memoID }) else {
+            return
+        }
+        if pendingMapMemoIDs.remove(memoID) != nil {
+            snapshot.memos.removeAll { $0.id == memoID }
+            memoEntry?.memoIDs.removeAll { $0 == memoID }
             return
         }
         invalidateReviewArchives(dates: [memo.occurredAt])
@@ -4500,6 +4605,16 @@ final class AppModel {
         occurredAt: Date
     ) -> Bool {
         guard let cleanText = validatedMemoText(text),
+              occurredAt.timeIntervalSince1970.isFinite,
+              mapPoint.map({ point in
+                  point.latitude.isFinite
+                      && point.longitude.isFinite
+                      && point.altitude.isFinite
+                      && point.horizontalAccuracy.isFinite
+                      && point.verticalAccuracy.isFinite
+                      && (-90...90).contains(point.latitude)
+                      && (-180...180).contains(point.longitude)
+              }) ?? true,
               let index = snapshot.memos.firstIndex(where: { $0.id == memoID }),
               let updated = ActionMemoEditingEngine.updating(
                   snapshot.memos[index],
@@ -4508,10 +4623,23 @@ final class AppModel {
               ) else {
             return false
         }
+        let previousDate = snapshot.memos[index].occurredAt
+        let existingMemo = snapshot.memos[index]
         var value = updated
+        let linkedPlan = MapMemoLinkEngine.plan(
+            containing: occurredAt,
+            in: snapshot.plans
+        )
+        value.planID = linkedPlan?.id
+        value.categoryID = linkedPlan?.categoryID
+            ?? (existingMemo.planID == nil
+                ? (existingMemo.categoryID ?? MemoTimelineEngine.categoryID)
+                : MemoTimelineEngine.categoryID)
         value.mapPoint = mapPoint
         value.occurredAt = occurredAt
         snapshot.memos[index] = value
+        pendingMapMemoIDs.remove(memoID)
+        invalidateReviewArchives(dates: [previousDate, occurredAt])
         Task { await persist() }
         return true
     }
@@ -5175,16 +5303,21 @@ final class AppModel {
         snapshot.settings.cloudDeletedRecordKeys.formUnion(
             deletedIDs.map(CloudBackupRecordKey.plan)
         )
-        snapshot.settings.cloudDeletedRecordKeys.formUnion(
-            snapshot.memos.compactMap { memo in
-                memo.planID.map(deletedIDs.contains) == true
-                    ? CloudBackupRecordKey.memo(memo.id)
-                    : nil
-            }
-        )
         snapshot.plans.removeAll { deletedIDs.contains($0.id) }
-        snapshot.memos.removeAll {
-            $0.planID.map(deletedIDs.contains) == true
+        snapshot.memos = snapshot.memos.map { memo in
+            var detached = memo
+            if let planID = memo.planID, deletedIDs.contains(planID) {
+                detached.planID = nil
+            }
+            if let targetID = memo.targetID,
+               targetID.hasPrefix("plan."),
+               let targetPlanID = UUID(
+                   uuidString: String(targetID.dropFirst("plan.".count))
+               ),
+               deletedIDs.contains(targetPlanID) {
+                detached.targetID = nil
+            }
+            return detached
         }
         snapshot.actuals = snapshot.actuals.map { actual in
             guard actual.planID.map(deletedIDs.contains) == true
@@ -5708,6 +5841,7 @@ final class AppModel {
         receivedAt: Date = .now
     ) {
         guard !kinds.isEmpty else { return }
+        let hadPendingRequest = appleWatchDataSyncRequestedAt != nil
         let receipt = appleWatchDataReceiptStore.record(
             kinds,
             measuredAt: measuredAt,
@@ -5717,14 +5851,41 @@ final class AppModel {
         if appleWatchLastDataReceivedAt != latestDataAt {
             appleWatchLastDataReceivedAt = latestDataAt
         }
+        let clearedPendingRequest: Bool
+        if let requestedAt = appleWatchDataSyncRequestedAt,
+           receivedAt >= requestedAt {
+            appleWatchDataSyncRequestedAt = nil
+            clearedPendingRequest = true
+        } else {
+            clearedPendingRequest = false
+        }
         let recentKinds = receipt.recentKinds(at: receivedAt)
         if appleWatchReceivedDataKinds != recentKinds {
             appleWatchReceivedDataKinds = recentKinds
         }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_receipt_recorded",
+            fields: [
+                "kinds": kinds.map(\.rawValue).sorted().joined(separator: ","),
+                "measured_at": String(measuredAt.timeIntervalSince1970),
+                "received_at": String(receivedAt.timeIntervalSince1970),
+                "latest_received_at": receipt.latestDataAt.map {
+                    String($0.timeIntervalSince1970)
+                } ?? "none",
+                "pending_before": String(hadPendingRequest),
+                "pending_cleared": String(clearedPendingRequest),
+                "pending_after": String(
+                    appleWatchDataSyncRequestedAt != nil
+                ),
+                "recent_kinds": recentKinds.map(\.rawValue)
+                    .sorted().joined(separator: ","),
+            ]
+        )
     }
 
     private func applyWatchSensorSummary(
-        _ summary: TaptionWatchSensorSummary
+        _ summary: TaptionWatchSensorSummary,
+        receivedAt: Date
     ) async {
         var dataKinds: Set<AppleWatchDataKind> = [.motion, .activity]
         if summary.latestHeartRate != nil
@@ -5735,9 +5896,22 @@ final class AppModel {
         if !(summary.routePoints ?? []).isEmpty {
             dataKinds.insert(.route)
         }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_sensor_summary_apply_started",
+            fields: [
+                "sequence": String(summary.sequence),
+                "samples": String(summary.accelerometerSampleCount),
+                "final": String(summary.isFinal),
+                "ambient": String(summary.isAmbient == true),
+                "has_route": String(!(summary.routePoints ?? []).isEmpty),
+                "data_kinds": dataKinds.map(\.rawValue)
+                    .sorted().joined(separator: ","),
+            ]
+        )
         noteAppleWatchDataReceived(
             dataKinds,
-            measuredAt: summary.endedAt
+            measuredAt: summary.endedAt,
+            receivedAt: receivedAt
         )
         if let heartRate = summary.latestHeartRate,
            heartRate.isFinite, heartRate > 0 {
@@ -5785,7 +5959,18 @@ final class AppModel {
         if let watchSensorArchive {
             do {
                 try await watchSensorArchive.record(summary)
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_sensor_archive_recorded",
+                    fields: ["sequence": String(summary.sequence)]
+                )
             } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_sensor_archive_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error).merging([
+                        "sequence": String(summary.sequence),
+                    ]) { _, new in new }
+                )
                 userFacingError =
                     "Apple Watch 센서 기록을 저장하지 못했습니다. "
                     + error.localizedDescription
@@ -5794,6 +5979,10 @@ final class AppModel {
         if let dayDatabase {
             do {
                 try await dayDatabase.recordWatchSummary(summary)
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_day_database_merge_succeeded",
+                    fields: ["sequence": String(summary.sequence)]
+                )
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "watch_day_database_merge_failed",
@@ -6166,21 +6355,26 @@ final class AppModel {
     }
 
     private func applyWatchHealthSnapshot(
-        _ snapshot: TaptionWatchHealthSnapshot
+        _ snapshot: TaptionWatchHealthSnapshot,
+        receivedAt: Date
     ) async {
-        var dataKinds: Set<AppleWatchDataKind> = []
-        if snapshot.activeEnergyKilocalories != nil
-            || snapshot.exerciseMinutes != nil
-            || snapshot.standHours != nil
-            || snapshot.sleepMinutes != nil {
-            dataKinds.insert(.health)
-        }
+        var dataKinds: Set<AppleWatchDataKind> = [.health]
         if snapshot.workoutCount > 0 {
             dataKinds.insert(.activity)
         }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_health_snapshot_apply_started",
+            fields: [
+                "workout_count": String(snapshot.workoutCount),
+                "data_kinds": dataKinds.map(\.rawValue)
+                    .sorted().joined(separator: ","),
+                "health_enabled": String(settings.healthEnabled),
+            ]
+        )
         noteAppleWatchDataReceived(
             dataKinds,
-            measuredAt: snapshot.capturedAt
+            measuredAt: snapshot.capturedAt,
+            receivedAt: receivedAt
         )
         archiveRawDeviceData(
             source: .appleWatch,
@@ -6192,6 +6386,13 @@ final class AppModel {
             await refreshHealthData(showErrors: false)
         }
         await persistDeviceLocalSnapshot()
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_health_snapshot_applied",
+            fields: [
+                "workout_count": String(snapshot.workoutCount),
+                "health_refresh_requested": String(settings.healthEnabled),
+            ]
+        )
     }
 
     private func isWatchSummaryAtHome(
@@ -8791,7 +8992,18 @@ final class AppModel {
                 .max { $0.observedAt < $1.observedAt }?.point
         guard let point else { return }
 
-        let now = Date.now
+        await refreshFutureWeatherIfNeeded(at: point)
+    }
+
+    private func refreshFutureWeatherIfNeeded(
+        at point: GeoPoint,
+        now: Date = .now
+    ) async {
+        guard settings.locationEnabled || settings.weatherEnabled,
+              liveWeatherRefreshTask == nil else {
+            return
+        }
+
         let movedToNewLocation = lastFutureWeatherPoint.map {
             distanceMeters($0, point) >= 1_000
         } ?? true
@@ -8826,6 +9038,7 @@ final class AppModel {
                 return
             }
             for index in contexts.indices {
+                contexts[index].isForecast = true
                 contexts[index].point = point
                 contexts[index].placeName = "현재 위치"
                 archiveRawDeviceData(
@@ -8892,6 +9105,11 @@ final class AppModel {
         let futureRefreshDue = lastFutureWeatherRefreshAt.map {
             now.timeIntervalSince($0) >= Self.weatherPreviewRefreshInterval
         } ?? true
+        let futureMovedToNewLocation = lastFutureWeatherPoint.map {
+            distanceMeters($0, point) >= 1_000
+        } ?? true
+        let shouldRefreshFutureWeather =
+            futureMovedToNewLocation || futureRefreshDue
         guard movedFarEnough || agedEnough,
               retryAllowed,
               liveWeatherRefreshTask == nil else { return }
@@ -8914,7 +9132,7 @@ final class AppModel {
 
                 var futureContexts: [WeatherContext] = []
                 var futureRange: TimeSpan?
-                if futureRefreshDue {
+                if shouldRefreshFutureWeather {
                     let range = self.weatherPreviewRange(from: now)
                     let futureStart = max(now, range.start)
                     do {
@@ -8956,6 +9174,7 @@ final class AppModel {
                     capturedAt: context.observedAt
                 )
                 for index in futureContexts.indices {
+                    futureContexts[index].isForecast = true
                     futureContexts[index].point = point
                     futureContexts[index].placeName = "현재 위치"
                     self.archiveRawDeviceData(
@@ -9152,6 +9371,10 @@ final class AppModel {
                 fields: ["contexts": String(contexts.count)]
             )
             await persistDeviceLocalSnapshot()
+            if let point = fallbackReading?.point
+                ?? latestSensorReading?.point {
+                await refreshFutureWeatherIfNeeded(at: point)
+            }
         }
 
         // This refresh runs as part of automatic sensor analysis.  A weather
@@ -9210,6 +9433,9 @@ final class AppModel {
                 ]
             )
             await persistDeviceLocalSnapshot()
+            if placeID == nil {
+                await refreshFutureWeatherIfNeeded(at: point)
+            }
         } catch {
             Self.integrationLogger.info(
                 "Stored weather fallback unavailable: \(error.localizedDescription, privacy: .public)"
@@ -9235,6 +9461,8 @@ final class AppModel {
                 through: end
             )
             for index in contexts.indices {
+                contexts[index].isForecast =
+                    contexts[index].observedAt >= Date.now
                 contexts[index].point = point
                 contexts[index].placeName = "현재 위치"
                 archiveRawDeviceData(
@@ -9632,22 +9860,36 @@ final class AppModel {
             lockAutomaticClassificationsForPersistence()
             applyStoredActivityCorrections()
             await refreshReviewArchives(force: true)
-            var value = snapshot
+            var value = snapshotForPersistence()
             value.updatedAt = .now
-            assignTimestampOnlySnapshot(value)
+            var visibleValue = value
+            visibleValue.memos = snapshot.memos
+            assignTimestampOnlySnapshot(visibleValue)
             try await repository.save(value)
-            if permissionState(for: .cloud).isGranted,
+            if pendingMapMemoIDs.isEmpty,
+               permissionState(for: .cloud).isGranted,
                let cloudSyncService {
                 do {
                     let uploaded = try await cloudSyncService.upload(
                         cloudPortableSnapshot(value)
                     )
                     let localDeviceData = snapshot
+                    let pendingMemos = localDeviceData.memos.filter {
+                        pendingMapMemoIDs.contains($0.id)
+                    }
                     assignCloudMergedSnapshot(mergeDeviceLocalData(
                         cloud: uploaded,
                         local: localDeviceData
                     ))
-                    try await repository.save(snapshot)
+                    if !pendingMemos.isEmpty {
+                        var restored = snapshot
+                        let existingIDs = Set(restored.memos.map(\.id))
+                        restored.memos.append(contentsOf: pendingMemos.filter {
+                            !existingIDs.contains($0.id)
+                        })
+                        snapshot = restored
+                    }
+                    try await repository.save(snapshotForPersistence())
                 } catch {
                     if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
                         || error is RepositoryError
@@ -9915,7 +10157,7 @@ final class AppModel {
            asOf.timeIntervalSince(lastReviewArchiveRefreshAt) < interval {
             return
         }
-        let source = snapshot
+        let source = snapshotForPersistence()
         let revision = timelineRevision
         let reports = await Task.detached(priority: .utility) {
             ReviewReportArchiveEngine.refreshed(
@@ -9982,9 +10224,11 @@ final class AppModel {
             lockAutomaticClassificationsForPersistence()
             applyStoredActivityCorrections()
             await refreshReviewArchives(force: false)
-            var value = snapshot
+            var value = snapshotForPersistence()
             value.updatedAt = .now
-            assignTimestampOnlySnapshot(value)
+            var visibleValue = value
+            visibleValue.memos = snapshot.memos
+            assignTimestampOnlySnapshot(visibleValue)
             try await repository.save(value)
             publishWidgetPayload()
         } catch {
@@ -10001,6 +10245,12 @@ final class AppModel {
             value.isClassificationLocked = true
             return value
         }
+    }
+
+    private func snapshotForPersistence() -> TaptionDataSnapshot {
+        var value = snapshot
+        value.memos.removeAll { pendingMapMemoIDs.contains($0.id) }
+        return value
     }
 
     private func scheduleTrailingDeviceLocalPersist() {

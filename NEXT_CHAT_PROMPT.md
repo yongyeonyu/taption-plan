@@ -1,5 +1,61 @@
 # Taption Plan 다음 채팅 인계 프롬프트
 
+## 2026-08-31 WEAT831001 / WATCH83101 · 유료 출시 보완 최신 상태
+
+현재 작업 디렉터리는 `/Users/u_mo_c/Documents/taption plan`이며 `main`/`origin/main` 기준 SHA는 `646f655d5d9c`이다. 이번 보완은 아직 커밋·푸시하지 않았고, 기존 작업과 함께 dirty 상태다.
+
+반영된 보완:
+
+- 지도 메모를 `ActionMemo`의 원본 시간·좌표·계획 연결로 생성하고, 선택 날짜·표시 필터에 맞춰 지도에 표시하며, 추가·편집 화면에서 시간·좌표를 readback한다.
+- 새 지도 메모 편집을 취소하거나 닫으면 draft를 정본과 Cloud tombstone에 남기지 않고, 저장할 때만 유지한다.
+- 지도 메모 초안을 일반 삭제 경로에서 제거해 저장 기록과 Cloud tombstone이 남지 않도록 했다.
+- 지도 메모를 계획 종료 시각에 만들 때 종료된 계획에 연결하지 않도록 시간 구간을 시작 포함·종료 미만으로 판정한다.
+- 지도 메모 편집 중 센서·알림 저장이 발생해도 미저장 draft는 저장소에서 제외하고 화면 상태만 유지한다.
+- 저장된 지도 메모의 시간을 편집하면 새 계획 구간에 재연결하고, 계획 밖이면 독립 메모로 분리한다.
+- 표시 메뉴에서 모든 지도 메모와 일정 관련 메모 필터를 사용자가 선택하고 저장할 수 있다.
+- 일간 지도 재생 중에는 playhead 시각까지의 지도 메모만 표시하고, playhead와 같은 시각의 메모는 포함한다. 정적 지도는 선택 날짜 전체를 표시한다.
+- Cloud에서 연결된 계획이 삭제돼도 지도 메모의 원문·좌표·발생 시각·카테고리는 보존하고 고아 계획 연결만 해제한다.
+- 로컬에서 계획 또는 하위 계획을 삭제해도 연결된 지도 메모를 삭제하지 않고 계획 연결만 해제해 독립 기록으로 보존한다.
+- 센서 권한이 없어도 수동 기록과 지도 메모는 사용 가능하게 두고, 자동 기록에 필요한 위치 항상 허용·정확한 위치·동작 권한만 별도 안내한다.
+- 14일 체험 기록은 키체인·iCloud와 함께 로컬 `UserDefaults` fallback에 저장해 종료·재실행 뒤에도 복귀한다.
+- 미래 날씨를 기존 관측값과 구분하는 `WeatherContext.isForecast`를 추가하고, WeatherKit/Open-Meteo의 미래 hourly context를 최대 16일 범위로 SQLite 정본에 저장·복원한다.
+- Watch 측정 시각과 iPhone 실제 수신 시각을 분리해 영속 receipt로 기록하고, Watch 데이터 메뉴와 설정 메뉴에 `최근 수신 시각` 또는 `최근 수신 시각 없음`을 항상 표시한다. 기존 receipt는 legacy 측정 시각을 초기 수신 시각으로 읽는다.
+- WatchConnectivity envelope 도착 시각을 sensor/health callback에 그대로 전달해 AppModel 처리 지연이 메뉴의 수신 시각을 바꾸지 않도록 했다.
+- 값이 비어 있는 health snapshot도 유효한 `health` receipt로 기록해 `지금 가져오기`가 빈 응답을 받았을 때도 최신 수신 시각이 갱신되도록 했다.
+- `지금 가져오기` 요청이 실제 전송된 경우 메뉴·설정에 요청 시각을 표시하고, Watch envelope을 받으면 요청 표시를 지우고 최신 수신 시각으로 전환한다. 연결 불가·Watch 미설치 상태에서는 대기 표시를 만들지 않는다.
+- App Store 상품을 아직 불러오지 못한 상태에서는 실제 스토어 가격을 추정해 표시하지 않고, 가격이 확인된 경우에만 현지화된 금액을 보여 주도록 했다. 체험 재사용 안내도 실제 기기·iCloud 기록 범위에 맞췄다.
+- Pro 상품은 `com.taption.plan.pro` ID뿐 아니라 StoreKit `nonConsumable` 타입까지 일치할 때만 구매 대상으로 사용한다.
+- 지하철 후보·예상경로·Watch 진단을 추가했다. iCloud 조회 범위는 2026-08-31 00:00~12:28 KST, Watch 재현 위치는 `설정 > Apple Watch 데이터`, 당시 iPhone·Watch 연결 및 Watch 잠금 해제 상태는 사용자 확인이며 지도 메뉴는 제외한다.
+- `transit_boarding_candidates_evaluated`와 `expected_route_requests_built`/`expected_route_projection_built`/`expected_route_network_resolution`/`expected_route_state_applied` 로그로 역 후보 누락, 자동차 fallback, forecast gap·중복·겹침을 구분한다. Watch는 요청 ID로 버튼 탭부터 envelope 수신·decode·receipt 반영까지 연결한다.
+- 메뉴 iCloud 백업은 별도 `TaptionLogs` export와 다르다. `Taption Plan/2026-08.taptionbackup` 및 `Raw Sensors/2026-08.rawsensorbackup`가 2026-08-31 12:47에 갱신됐고, 월간 payload를 읽기 전용으로 복호화해 내부 readback까지 완료했다. 백업 내부에는 8/31 새 예상경로 투영 로그가 없어, 새 진단 빌드의 화면 재현과 로그 readback이 다음 단계다.
+- 위 월간 백업을 읽기 전용으로 복호화한 결과 00:00~12:28 KST 여행 구간 7개 중 09:31~10:06 KST 지하철 1개(`인천2호선·공항철도`)가 저장되어 있었다. Raw sensor 684건과 envelope 706건은 모두 iPhone source였고 Watch source·역/철도 플래그·역 이름은 0건이었다. 백업 내부 8/31 Watch 요청은 `reachable=false`였으며 새 예상경로 진단 이벤트는 없어, Watch 전달 문제와 점선 중복 문제를 새 빌드로 분리 재현해야 한다.
+
+검증:
+
+- `TaptionPlanTests` 전체 852건 성공. 지도 메모 핵심·종료 시각 경계·시간 재연결·재생 playhead cutoff·무결성·draft 저장 경쟁·초안 삭제 tombstone 방지·로컬/Cloud 계획 삭제 보존·체험 fallback·미래 예보·Watch receipt를 포함하고, 가격 표시 정확성 UI 변경도 컴파일한 상태로 직렬 재실행 성공.
+- 최신 전체 XCTest 결과: `/tmp/TaptionPlan-full-2026-08-31-watch-feedback-final.xcresult` (`852 passed / 0 failed / 0 skipped`).
+- 결제 상품 타입 보강 기준 XCTest: `/tmp/TaptionPlan-full-2026-08-31-paid-type.xcresult` (`852 passed / 0 failed / 0 skipped`).
+- iOS Simulator `MAP30CNT01 Test`에서 체험 시작 후 종료·재실행 지도 복귀, 권한 안내, `지도 메모 추가` 화면의 날짜·시간·위도·경도, 취소 복귀를 확인했다.
+- iPhone 14 Pro 최신 product-type 보강 소스 서명 Debug `1.0 (119)` 빌드·설치와 `Taption Plan com.taption.plan 1.0 119` readback, launch exit 0을 확인했다. iPhone 미러링으로 실제 지도 화면은 확인했지만, 터치 시 iPhone 사용 중으로 미러링이 종료되어 직접 터치·저장 readback은 아직 없다.
+- 유선 iPad Pro 최신 소스 서명 Debug `1.0 (119)` 설치(`databaseSequenceNumber: 6160`)와 `Taption Plan com.taption.plan 1.0 119` readback, launch exit 0을 확인했다. CoreDevice에서 화면 캡처·직접 터치 경로는 확보하지 못해 실제 터치 증거는 미완료다.
+- 최신 iphoneos Debug 빌드: `/tmp/TaptionPlan-device-build-20260831-paid-type/Build/Products/Debug-iphoneos/TaptionPlan.app`, `** BUILD SUCCEEDED **`; iPhone 14 Pro 설치·readback·launch exit 0 확인.
+- 수신 요청 대기 표시를 포함한 최신 iphoneos Debug 빌드: `/tmp/TaptionPlan-device-build-20260831-watch-feedback/Build/Products/Debug-iphoneos/TaptionPlan.app`, `** BUILD SUCCEEDED **`; 재설치 중 CoreDevice 연결 timeout으로 이 변경분의 설치 readback은 미완료.
+- 09:35:56 iPhone 미러링 `다시 시도` 후에도 “iPhone을 찾을 수 없음”으로 종료됐고, CoreDevice 재확인에서 iPhone·Apple Watch 모두 `unavailable`이었다.
+- Apple Watch 최신 Watch 앱 설치를 시도했으나 `available (paired)`가 일시 표시된 직후 CoreDevice가 기기 식별자를 찾지 못했고, 09:10:58~09:11:54 재확인도 계속 `unavailable`이었다. Watch 설치·수신·동기화는 미완료다.
+- 최신 dirty 소스 iOS Release generic build: `/tmp/TaptionPlan-release-20260831-paid-type/Build/Products/Release-iphoneos/TaptionPlan.app` 성공; embedded Watch app·Widget 포함.
+- 최신 dirty 소스 watchOS Release generic build: `/tmp/TaptionPlan-watch-release-20260831-paid-type/Build/Products/Release-watchos/TaptionPlanWatch.app` 성공.
+- 수신 요청 대기 표시 포함 최신 dirty 소스 iOS Release generic build: `/tmp/TaptionPlan-release-20260831-watch-feedback/Build/Products/Release-iphoneos/TaptionPlan.app` 성공; embedded Watch app·Widget 포함.
+- 수신 요청 대기 표시 포함 최신 dirty 소스 watchOS Release generic build: `/tmp/TaptionPlan-watch-release-20260831-watch-feedback/Build/Products/Release-watchos/TaptionPlanWatch.app` 성공.
+- 이번 route/Watch 보정 후 `RouteTimelineDataTests`와 `WatchSensorQueryPlanTests` 단독 실행은 각각 exit 0이고, watchOS Debug generic build도 exit 0이다. 기존 전체 XCTest 852건 결과와 별도로 현재 변경 파일 기준 focused 회귀 증거로 기록한다.
+
+남은 게이트:
+
+- 결제 모델: 무료 다운로드 + 14일 체험 + Pro 1회 영구 구매안으로 진행하기로 결정했다. Chrome 로그인은 확인했지만 `유료 앱 계약`이 `신규`이고 `com.taption.plan.pro` 상품이 없어 계약 활성화·상품 생성·판매 가능 상태·sandbox 구매/복원은 외부 게이트로 남아 있다 (`temp.md`의 `PAID831001`).
+- iPhone 미러링 재연결을 위해 잠금 상태로 전환한 뒤 실제 화면·터치·지도 메모 저장 readback. 현재 지도 화면 진입만 확인했고 터치 시 연결이 종료됐다.
+- Apple Watch 현장 설치·실제 수신·동기화. 메뉴의 수신 시각 구현과 receipt 단위 테스트는 완료했지만, 현재 Watch는 `unavailable`이라 실제 콜백 readback은 미완료다.
+- 이번 dirty 소스의 archive/upload 후 `TP Taption Plan 내부 테스트` 그룹 연결·빌드/테스터 노출 readback.
+- App Store Connect는 09:55:39 KST Chrome에서 `axony99@gmail.com` 로그인과 `Taption Plan` 접근을 확인했다. 기존 TestFlight build 119는 `제출 준비 완료`, `TP Taption Plan 내부 테스트` 그룹에 노출되고 그룹 상세는 1명의 테스터·80개 빌드, 테스터 `axony99@gmail.com`의 `설치됨 1.0 (119)`로 readback했다. 다만 비즈니스의 `유료 앱 계약`은 `신규`이고, 앱 내 구입 목록은 비어 있어 `com.taption.plan.pro`가 아직 App Store Connect에 생성되지 않았다.
+
 ## 2026-08-31 REL83054A01 · 전달 완료 및 다음 채팅 인계
 
 다음 채팅은 `/Users/u_mo_c/Documents/taption plan`에서 Taption Plan 작업을 이어간다. 아래 완료 증거를 기준으로 중복 실행하지 않는다.

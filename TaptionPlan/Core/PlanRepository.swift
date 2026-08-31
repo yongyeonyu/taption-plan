@@ -619,6 +619,23 @@ enum CloudSnapshotRecoveryEngine {
         value.memos = mergeMemos(primary.memos, backup.memos).filter {
             !deleted.contains(CloudBackupRecordKey.memo($0.id))
         }
+        let availablePlanIDs = Set(value.plans.map(\.id))
+        value.memos = value.memos.map { memo in
+            var value = memo
+            if let planID = memo.planID,
+               !availablePlanIDs.contains(planID) {
+                value.planID = nil
+            }
+            if let targetID = memo.targetID,
+               targetID.hasPrefix("plan."),
+               let targetPlanID = UUID(
+                   uuidString: String(targetID.dropFirst("plan.".count))
+               ),
+               !availablePlanIDs.contains(targetPlanID) {
+                value.targetID = nil
+            }
+            return value
+        }
         value.stickers = mergeStickers(primary.stickers, backup.stickers).filter {
             !deleted.contains(CloudBackupRecordKey.sticker($0.id))
         }

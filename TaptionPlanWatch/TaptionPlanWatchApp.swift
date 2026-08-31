@@ -16,6 +16,9 @@ struct TaptionPlanWatchApp: App {
         workout.onSensorSummary = { [weak connectivity] summary in
             connectivity?.sendSensorSummary(summary)
         }
+        workout.onAmbientSensorSummary = { [weak connectivity] summary in
+            await connectivity?.sendSensorSummaryAndWait(summary)
+        }
         workout.onHealthSnapshot = { [weak connectivity] snapshot in
             connectivity?.sendHealthSnapshot(snapshot)
         }
@@ -25,10 +28,14 @@ struct TaptionPlanWatchApp: App {
                 dataSyncProfile: payload.dataSyncProfile
             )
         }
-        connectivity.onDataSyncRequest = { [weak workout] in
+        connectivity.onDataSyncRequest = { [weak connectivity, weak workout] requestID in
             Task { @MainActor in
-                guard let workout else { return }
-                await workout.syncNow()
+                guard let workout else {
+                    connectivity?.finishDataSyncRequest(requestID)
+                    return
+                }
+                await workout.syncNow(requestID: requestID)
+                connectivity?.finishDataSyncRequest(requestID)
             }
         }
         connectivity.onWorkoutRequest = {
@@ -52,6 +59,7 @@ struct TaptionPlanWatchApp: App {
                 }
             }
         }
+        connectivity.activateConnectivity()
         _connectivity = StateObject(wrappedValue: connectivity)
         _workout = StateObject(wrappedValue: workout)
         WatchLaunchDiagnostics.mark("app-init-end")

@@ -1062,7 +1062,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(travel, original)
     }
 
-    func testExpectedSubwayRouteUsesRegisteredEndpointsAndSuppressesDuplicates()
+    func testExpectedSubwayRouteUsesRegisteredEndpointsAndSuppressesOverlappingDuplicates()
         throws {
         let home = FrequentPlace(
             id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
@@ -1110,13 +1110,16 @@ final class RouteTimelineDataTests: XCTestCase {
             "70000000-0000-0000-0000-000000000007",
             "80000000-0000-0000-0000-000000000008",
         ].map { UUID(uuidString: $0)! }
-        let travel = segmentIDs.map { id in
+        let travel = segmentIDs.enumerated().map { index, id in
             TravelSegment(
                 id: id,
                 fromPlaceID: from.id,
                 toPlaceID: to.id,
                 mode: .subway,
-                span: TimeSpan(start: date(10), end: date(100)),
+                span: TimeSpan(
+                    start: date(10 + index * 10),
+                    end: date(100 + index * 10)
+                ),
                 distanceMeters: 19_000,
                 confidence: .low,
                 evidence: [],
@@ -1496,6 +1499,15 @@ final class RouteTimelineDataTests: XCTestCase {
             confidence: .high,
             evidence: ["버스"]
         )
+        let overlappingDuplicate = TravelSegment(
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .bus,
+            span: TimeSpan(start: date(20), end: date(90)),
+            distanceMeters: 100,
+            confidence: .medium,
+            evidence: []
+        )
         let legID = "movement-\(travel.id.uuidString)"
         let roadCoordinates = [
             home.point!,
@@ -1511,7 +1523,7 @@ final class RouteTimelineDataTests: XCTestCase {
         let projection = MapHomeWBSPlaybackProjection.make(
             selectedDate: date(0),
             places: [home, office],
-            travel: [travel],
+            travel: [travel, overlappingDuplicate],
             readings: [],
             resolvedRoutes: [
                 MapHomeWBSResolvedRoute(
@@ -1610,6 +1622,71 @@ final class RouteTimelineDataTests: XCTestCase {
         let movement = try XCTUnwrap(projection.frame(at: date(50)))
         XCTAssertEqual(movement.activity, .movement)
         XCTAssertTrue(movement.legID.hasPrefix("movement-gap-"))
+    }
+
+    func testWBSPlaybackDoesNotAddGapsCoveredByExplicitMovement() {
+        let first = PlaceStay(
+            placeKey: "first",
+            displayName: "첫 장소",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let middle = PlaceStay(
+            placeKey: "middle",
+            displayName: "중간 장소",
+            span: TimeSpan(start: date(20), end: date(30)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.005,
+                longitude: 127.005,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let last = PlaceStay(
+            placeKey: "last",
+            displayName: "마지막 장소",
+            span: TimeSpan(start: date(40), end: date(50)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.01,
+                longitude: 127.01,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: first.id,
+            toPlaceID: last.id,
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(40)),
+            distanceMeters: 1_500,
+            confidence: .high,
+            evidence: ["자동차"]
+        )
+
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [first, middle, last],
+            travel: [travel],
+            readings: [],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            projection.legs.filter { $0.routePhase == .forecast && $0.activity == .movement }
+                .map(\.id),
+            ["movement-\(travel.id.uuidString)"]
+        )
     }
 
     func testWBSPlaybackActualTraceWinsAndBreaksAfterFifteenMinutes() throws {

@@ -57,6 +57,14 @@ struct AppShellView: View {
         .sheet(item: planEditorSheetBinding) { request in
             PlanEditorSheet(model: model, planID: request.id)
         }
+        .sheet(isPresented: $model.isPermissionOnboardingPresented) {
+            PermissionOnboardingSheet(
+                model: model,
+                initialFeature: model.permissionOnboardingStartFeature
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .font(.taption(size: 17))
         .tint(.tpInk)
         .preferredColorScheme(.light)
@@ -120,8 +128,8 @@ struct AppShellView: View {
         .onChange(of: model.settings.gpsLoggingPreferences) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
-        .onChange(of: requiredPermissionGate.allSatisfied) { _, satisfied in
-            guard satisfied else { return }
+        .onChange(of: requiredPermissionGate.sensorCollectionReady) { _, ready in
+            guard ready else { return }
             Task {
                 await activateRequiredSensorsIfReady()
                 await reconcileSensorLiveActivity()
@@ -133,7 +141,6 @@ struct AppShellView: View {
         ZStack {
             appLifecycleContent
                 .accessibilityHidden(shouldHidePrimaryContent)
-            requiredPermissionOverlay
             securityOverlay
             initialLaunchOverlay
         }
@@ -215,7 +222,6 @@ struct AppShellView: View {
             || !isSecurityStateReady
             || model.isAppLocked
             || !proAccess.grantsAccess
-            || showsRequiredPermissionOverlay
             || shouldHideAppSnapshot
     }
 
@@ -224,27 +230,6 @@ struct AppShellView: View {
             liveActivitiesEnabled:
                 ActivityAuthorizationInfo().areActivitiesEnabled
         )
-    }
-
-    private var showsRequiredPermissionOverlay: Bool {
-        proAccess.grantsAccess
-            && scenePhase == .active
-            && isSecurityStateReady
-            && model.isBootstrapped
-            && !model.isAppLocked
-            && !requiredPermissionGate.allSatisfied
-    }
-
-    @ViewBuilder
-    private var requiredPermissionOverlay: some View {
-        if showsRequiredPermissionOverlay {
-            RequiredPermissionGateView(
-                model: model,
-                gate: requiredPermissionGate,
-                languageRawValue: languageRawValue
-            )
-            .zIndex(8)
-        }
     }
 
     private var initialLaunchReady: Bool {
@@ -533,7 +518,7 @@ struct AppShellView: View {
     }
 
     private func activateRequiredSensorsIfReady() async {
-        guard requiredPermissionGate.allSatisfied else { return }
+        guard requiredPermissionGate.sensorCollectionReady else { return }
         await model.activateRequiredSensorCollection()
     }
 
@@ -1418,9 +1403,14 @@ struct TaptionProAccessView: View {
                     Task { await controller.purchase() }
                 } label: {
                     VStack(spacing: 3) {
-                        Text("\(purchasePrice)로 Pro 영구 구매")
+                        Text(purchaseTitle)
                             .font(.system(size: 16, weight: .bold))
-                        Text("한 번 결제 · 자동 갱신 없음")
+                        Text(
+                            text(
+                                "한 번 결제 · 자동 갱신 없음",
+                                "One-time purchase · No auto-renewal"
+                            )
+                        )
                             .font(.system(size: 11, weight: .medium))
                     }
                     .frame(maxWidth: .infinity)
@@ -1449,8 +1439,14 @@ struct TaptionProAccessView: View {
         }
     }
 
-    private var purchasePrice: String {
-        controller.product?.displayPrice ?? "US $0.99"
+    private var purchaseTitle: String {
+        if let displayPrice = controller.product?.displayPrice {
+            return text(
+                "\(displayPrice)로 Pro 영구 구매",
+                "Buy Pro permanently for \(displayPrice)"
+            )
+        }
+        return text("Pro 영구 구매", "Buy Pro permanently")
     }
 
     @ViewBuilder
@@ -1460,8 +1456,8 @@ struct TaptionProAccessView: View {
             Text(text("14일 무료 체험이 시작되었습니다.", "Your 14-day free trial has started."))
         case .trialAlreadyUsed:
             Text(text(
-                "이 Apple 계정 또는 기기에서는 14일 무료 체험을 이미 사용했습니다.",
-                "The 14-day free trial has already been used with this Apple Account or device."
+                "이 기기 또는 iCloud에 저장된 기록에서 14일 무료 체험을 이미 사용했습니다.",
+                "The 14-day free trial has already been used on this device or in its synced iCloud record."
             ))
         case .purchaseCompleted:
             Text(text("Pro 영구 구매가 완료되었습니다.", "Your permanent Pro purchase is complete."))

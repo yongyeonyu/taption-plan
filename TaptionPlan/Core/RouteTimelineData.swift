@@ -266,6 +266,8 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         }
 
         var explicitPairs = Set<String>()
+        var explicitMovementSpans: [TimeSpan] = []
+        var forecastMovements: [MapHomeWBSPlaybackLeg] = []
         let orderedTravel = travel.sorted {
             if $0.span.start != $1.span.start { return $0.span.start < $1.span.start }
             return $0.id.uuidString < $1.id.uuidString
@@ -289,20 +291,20 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             if let sourceID = source?.place.id, let targetID = target?.place.id {
                 explicitPairs.insert(pairKey(sourceID, targetID))
             }
-            legs.append(
-                MapHomeWBSPlaybackLeg(
-                    id: legID,
-                    startDate: overlap.start,
-                    endDate: overlap.end,
-                    coordinates: coordinates,
-                    routePhase: .forecast,
-                    activity: .movement,
-                    mode: segment.mode,
-                    categoryID: "movement",
-                    sourcePlaceID: source?.place.id,
-                    targetPlaceID: target?.place.id
-                )
+            let leg = MapHomeWBSPlaybackLeg(
+                id: legID,
+                startDate: overlap.start,
+                endDate: overlap.end,
+                coordinates: coordinates,
+                routePhase: .forecast,
+                activity: .movement,
+                mode: segment.mode,
+                categoryID: "movement",
+                sourcePlaceID: source?.place.id,
+                targetPlaceID: target?.place.id
             )
+            forecastMovements.append(leg)
+            explicitMovementSpans.append(overlap)
         }
 
         for (source, target) in zip(locations, locations.dropFirst()) {
@@ -311,13 +313,20 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             let key = pairKey(source.place.id, target.place.id)
             guard !explicitPairs.contains(key),
                   distanceMeters(source.coordinate, target.coordinate) > 0.1 else { continue }
+            let gap = TimeSpan(
+                start: source.place.span.end,
+                end: target.place.span.start
+            )
+            guard !explicitMovementSpans.contains(where: {
+                $0.intersection(with: gap) != nil
+            }) else { continue }
             let legID = "movement-gap-\(source.place.id.uuidString)-\(target.place.id.uuidString)"
             let resolved = routesByLegID[legID] ?? []
-            legs.append(
+            forecastMovements.append(
                 MapHomeWBSPlaybackLeg(
                     id: legID,
-                    startDate: source.place.span.end,
-                    endDate: target.place.span.start,
+                    startDate: gap.start,
+                    endDate: gap.end,
                     coordinates: resolved.count >= 2
                         ? resolved
                         : [source.coordinate, target.coordinate],
@@ -329,6 +338,8 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 )
             )
         }
+
+        legs.append(contentsOf: deduplicatedForecastMovements(forecastMovements))
 
         let trace = readings
             .compactMap { reading -> (SensorReading, GeoPoint)? in
@@ -596,6 +607,71 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         "\(source.uuidString.lowercased())->\(target.uuidString.lowercased())"
     }
 
+    private static func deduplicatedForecastMovements(
+        _ movements: [MapHomeWBSPlaybackLeg]
+    ) -> [MapHomeWBSPlaybackLeg] {
+        let ordered = movements.sorted {
+            if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
+            if $0.endDate != $1.endDate { return $0.endDate > $1.endDate }
+            return $0.id < $1.id
+        }
+        var selected: [(leg: MapHomeWBSPlaybackLeg, span: TimeSpan)] = []
+        for movement in ordered {
+            let span = TimeSpan(start: movement.startDate, end: movement.endDate)
+            guard let index = selected.firstIndex(where: {
+                $0.span.intersection(with: span) != nil
+                    && sameMovementEndpoints($0.leg, movement)
+            }) else {
+                selected.append((movement, span))
+                continue
+            }
+            if prefersForecastMovement(movement, over: selected[index].leg) {
+                selected[index] = (movement, span)
+            }
+        }
+        return selected.map(\.leg)
+    }
+
+    private static func sameMovementEndpoints(
+        _ lhs: MapHomeWBSPlaybackLeg,
+        _ rhs: MapHomeWBSPlaybackLeg
+    ) -> Bool {
+        if let lhsSource = lhs.sourcePlaceID,
+           let lhsTarget = lhs.targetPlaceID,
+           let rhsSource = rhs.sourcePlaceID,
+           let rhsTarget = rhs.targetPlaceID {
+            return (lhsSource == rhsSource && lhsTarget == rhsTarget)
+                || (lhsSource == rhsTarget && lhsTarget == rhsSource)
+        }
+        guard let lhsStart = lhs.coordinates.first,
+              let lhsEnd = lhs.coordinates.last,
+              let rhsStart = rhs.coordinates.first,
+              let rhsEnd = rhs.coordinates.last else { return false }
+        let sameDirection = distanceMeters(lhsStart, rhsStart) <= 100
+            && distanceMeters(lhsEnd, rhsEnd) <= 100
+        let reverseDirection = distanceMeters(lhsStart, rhsEnd) <= 100
+            && distanceMeters(lhsEnd, rhsStart) <= 100
+        return sameDirection || reverseDirection
+    }
+
+    private static func prefersForecastMovement(
+        _ candidate: MapHomeWBSPlaybackLeg,
+        over current: MapHomeWBSPlaybackLeg
+    ) -> Bool {
+        let candidateIsGap = candidate.id.hasPrefix("movement-gap-")
+        let currentIsGap = current.id.hasPrefix("movement-gap-")
+        if candidateIsGap != currentIsGap { return !candidateIsGap }
+        if candidate.coordinates.count != current.coordinates.count {
+            return candidate.coordinates.count > current.coordinates.count
+        }
+        let candidateDuration = candidate.endDate.timeIntervalSince(candidate.startDate)
+        let currentDuration = current.endDate.timeIntervalSince(current.startDate)
+        if candidateDuration != currentDuration {
+            return candidateDuration > currentDuration
+        }
+        return candidate.id < current.id
+    }
+
     private static func priority(_ leg: MapHomeWBSPlaybackLeg) -> Int {
         if leg.routePhase == .actual { return 3 }
         return leg.activity == .movement ? 2 : 1
@@ -693,6 +769,11 @@ struct ExpectedRouteRequest: Identifiable, Hashable, Sendable {
 enum ExpectedRouteRequestEngine {
     static let minimumRouteDistanceMeters: Double = 20
 
+    private struct RequestCandidate {
+        let segment: TravelSegment
+        let request: ExpectedRouteRequest
+    }
+
     private struct DuplicateKey: Hashable {
         let fromPlaceID: UUID?
         let toPlaceID: UUID?
@@ -732,7 +813,7 @@ enum ExpectedRouteRequestEngine {
             }
             .sorted { $0.timestamp < $1.timestamp }
 
-        return deduplicated(travel)
+        let candidates: [RequestCandidate] = deduplicated(travel)
             .sorted { $0.span.start < $1.span.start }
             .compactMap { segment in
                 guard segment.span.intersection(with: day) != nil,
@@ -813,16 +894,20 @@ enum ExpectedRouteRequestEngine {
                         ) else {
                     return nil
                 }
-                return ExpectedRouteRequest(
-                    segmentID: segment.id,
-                    mode: segment.mode,
-                    transport: transport,
-                    start: start.point,
-                    end: end.point,
-                    departureDate: visibleSpan.start,
-                    arrivalDate: visibleSpan.end
+                return RequestCandidate(
+                    segment: segment,
+                    request: ExpectedRouteRequest(
+                        segmentID: segment.id,
+                        mode: segment.mode,
+                        transport: transport,
+                        start: start.point,
+                        end: end.point,
+                        departureDate: visibleSpan.start,
+                        arrivalDate: visibleSpan.end
+                    )
                 )
             }
+        return deduplicatedRequests(candidates).map(\.request)
     }
 
     private static func usesStoredSubwayPath(_ segment: TravelSegment) -> Bool {
@@ -901,6 +986,44 @@ enum ExpectedRouteRequestEngine {
             }
         }
         return Array(selected.values)
+    }
+
+    private static func deduplicatedRequests(
+        _ candidates: [RequestCandidate]
+    ) -> [RequestCandidate] {
+        var selected: [RequestCandidate] = []
+        for candidate in candidates {
+            let candidateSpan = TimeSpan(
+                start: candidate.request.departureDate,
+                end: candidate.request.arrivalDate
+            )
+            guard let index = selected.firstIndex(where: { current in
+                let currentSpan = TimeSpan(
+                    start: current.request.departureDate,
+                    end: current.request.arrivalDate
+                )
+                return currentSpan.intersection(with: candidateSpan) != nil
+                    && sameRequestEndpoints(current.request, candidate.request)
+            }) else {
+                selected.append(candidate)
+                continue
+            }
+            if isRicher(candidate.segment, than: selected[index].segment) {
+                selected[index] = candidate
+            }
+        }
+        return selected
+    }
+
+    private static func sameRequestEndpoints(
+        _ lhs: ExpectedRouteRequest,
+        _ rhs: ExpectedRouteRequest
+    ) -> Bool {
+        let sameDirection = distanceMeters(lhs.start, rhs.start) <= 100
+            && distanceMeters(lhs.end, rhs.end) <= 100
+        let reverseDirection = distanceMeters(lhs.start, rhs.end) <= 100
+            && distanceMeters(lhs.end, rhs.start) <= 100
+        return sameDirection || reverseDirection
     }
 
     private static func isRicher(
