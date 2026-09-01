@@ -11962,7 +11962,7 @@ final class FeatureEngineTests: XCTestCase {
             )?.queryItems ?? []
             XCTAssertEqual(
                 items.first(where: { $0.name == "forecast_days" })?.value,
-                "10"
+                "7"
             )
             let json = """
             {

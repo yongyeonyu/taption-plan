@@ -1563,7 +1563,7 @@ actor OpenMeteoWeatherContextService {
                 name: "timezone",
                 value: TimeZone.autoupdatingCurrent.identifier
             ),
-            URLQueryItem(name: "forecast_days", value: "10"),
+            URLQueryItem(name: "forecast_days", value: "7"),
         ]
         guard let url = components?.url else {
             throw OpenMeteoWeatherError.invalidRequest
