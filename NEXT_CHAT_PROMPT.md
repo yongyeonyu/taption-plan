@@ -23,6 +23,7 @@ xcrun devicectl list devices
 - 앱·iOS Widget·Watch 앱·Watch Widget: 모두 `1.0 (125)`.
 - Release archive: `/tmp/taption-plan-TFB901A009-125.xcarchive`.
 - Export IPA: `/tmp/taption-plan-TFB901A009-export/TaptionPlan.ipa`.
+- 실기기 설치용 Debug 앱: `/tmp/taption-plan-REL901A001-device-derived/Build/Products/Debug-iphoneos/TaptionPlan.app`.
 - IPA SHA-256: `aea26601881a6728ae0c16ab1f63dc500d225699bfb2bdf7902a71e3581ae086`.
 - Delivery/build UUID: `6d55cdfb-7b7a-4be8-8657-481eb6ea5db6`.
 - App Store Connect Apple ID: `6797370230`.
@@ -36,7 +37,9 @@ xcrun devicectl list devices
 - `1.0 (125)` archive/export 성공, IPA의 앱·Widget·Watch 앱·Watch Widget 모두 `1.0 (125)`, Apple Distribution 서명 및 deep/strict codesign 검증 완료.
 - altool 업로드 성공, App Store Connect API에서 build `125` `VALID`·`APP_STORE_ELIGIBLE` 확인.
 - `TP Taption Plan 내부 테스트`에 build `125` 연결 완료; 그룹 빌드 86개와 내부 테스터 1명(`axony99@gmail.com`) readback 완료.
-- 설치 직전 iPhone·iPad에는 이전 빌드 `1.0 (124)`가 설치되어 있으며, 위 IPA의 `1.0 (125)` 설치·launch/readback은 이 요청에서 진행한다.
+- TestFlight용 Beta 프로파일은 `devicectl` 직접 설치가 거부되어, 현재 `main`에서 개발용 서명 Debug 앱을 별도로 빌드해 설치했다. TestFlight 업로드 상태에는 영향이 없다.
+- iPhone 14 Pro에 Debug `1.0 (125)` 설치·launch/readback 완료, 앱 프로세스 PID `19615` 확인.
+- iPad Pro 12.9-inch (6th generation)에 Debug `1.0 (125)` 설치·launch/readback 완료, 앱 프로세스 PID `10757` 확인.
 - 집중 지하철 회귀 6/6 통과: `/private/tmp/taption-rel901a001-rail-evidence-v4.xcresult`.
 - 최종 전체 XCTest 876/876, 실패·skip 0: `/private/tmp/taption-rel901a001-final-full-v3.xcresult`.
 - 두 역 차량 이동에서 `matchesRailRoute` 1회만 발생한 경우 지하철로 승격되던 경로를 차단했다. 두 역 sparse 복원은 철도 일치 최소 2회·25%를 요구하며, 세 역 이상 좌표 궤적과 Watch 진동·지하 신호 판정은 유지한다.
@@ -73,10 +76,9 @@ xcrun devicectl list devices
 
 ## 다음 우선순위
 
-1. 위 IPA를 iPhone 14 Pro와 iPad Pro에 설치하고 `1.0 (125)` 버전·프로세스를 각각 readback한다.
-2. iPhone 실제 화면에서 2026-08-31 오전 경로를 열고 검암 체류 후보, 가정→검암→마곡나루 지하철 예상경로, 점선과 졸라맨 재생선 정합을 직접 터치 검증한다.
-3. Watch에서 `지금 가져오기`를 누르고 iPhone 설정의 `수신 대기`가 실제 envelope 뒤 `최근 수신`으로 바뀌는지 로그와 함께 확인한다.
-4. Paid Apps Agreement 활성화 후 `com.taption.plan.pro`를 생성하고 sandbox 구매·복원을 별도로 검증한다.
+1. iPhone 실제 화면에서 2026-08-31 오전 경로를 열고 검암 체류 후보, 가정→검암→마곡나루 지하철 예상경로, 점선과 졸라맨 재생선 정합을 직접 터치 검증한다.
+2. Watch에서 `지금 가져오기`를 누르고 iPhone 설정의 `수신 대기`가 실제 envelope 뒤 `최근 수신`으로 바뀌는지 로그와 함께 확인한다.
+3. Paid Apps Agreement 활성화 후 `com.taption.plan.pro`를 생성하고 sandbox 구매·복원을 별도로 검증한다.
 
 ## 실기기 공유 규칙
 
