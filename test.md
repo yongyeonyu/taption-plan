@@ -109,3 +109,13 @@
 - 2026-09-01 재생에서 버튼이 일시정지 상태로 전환되고 선택 시간이 11:54 → 12:34 → 15:30으로 진행되며 지도 경로·졸라맨 표시가 stale 경로로 점프하지 않는 것을 확인했다. 정지 후 2026-09-02로 복귀했다.
 - 2026-09-02 재생에서 선택 시간이 01:20 → 01:49로 진행되고 재생 중 경로가 비정상적으로 이전 날짜/마지막 leg를 재사용하지 않는 것을 확인했다.
 - 지도 단일 손가락 이동, 확대/축소 컨트롤, 현재 위치 복원을 실제 터치로 확인했다. Mirroring 자동 입력 API에는 다중 손가락 pinch 입력이 없어 pinch 자체의 물리 latency는 직접 측정하지 못했으며, 해당 MagnificationGesture 입력 예산은 소스 회귀 테스트로 검증했다.
+
+## 2026-09-02 REL902A001 TestFlight build-up
+
+- 배포 소스는 `6b302ea2f9bca3f818c829514af1ee147b83be47`이며 `main`·`origin/main`이 일치한 상태에서 build number를 126으로 올렸다.
+- Debug generic iOS build 성공: `1.0 (126)`, `/private/tmp/REL902A001-debug-derived/Build/Products/Debug-iphoneos/TaptionPlan.app`.
+- Release archive/export 성공: `/private/tmp/REL902A001-release/TaptionPlan-1.0-126.xcarchive`, `/private/tmp/REL902A001-release/Export/TaptionPlan.ipa`. IPA SHA-256은 `5db4f2dbb11f7fa3ac64aca515dc6fd3474c35ecc6e19ddcff1373f56664ed25`이다.
+- IPA의 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (126)`, Apple Distribution 서명, `beta-reports-active=true`, `get-task-allow=false`, deep/strict codesign을 확인했다. `altool --validate-app`도 오류 없이 통과했다.
+- TestFlight 업로드 성공: Delivery UUID `8e66a688-a922-4f76-b761-4da7b3faadb1`; App Store Connect API readback에서 build `126`이 `VALID`, `APP_STORE_ELIGIBLE`, `expired=false`로 확인됐다.
+- `TP Taption Plan 내부 테스트`(internal group, ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)에 build `126` 연결 성공. 그룹 빌드 API에서 `87개`와 build `126` `VALID`, 내부 테스터 API에서 `1명`(`axony99@gmail.com`)을 readback했다.
+- App Store Connect 그룹 빌드 화면·테스터 화면은 연결된 Chrome과 in-app Browser가 로그인 화면으로 열려 계정 자격 증명을 입력하지 않았으므로 미완료 게이트로 남긴다.
