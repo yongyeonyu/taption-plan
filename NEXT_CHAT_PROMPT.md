@@ -18,7 +18,8 @@ xcrun devicectl list devices
 - 요청 ID: `REL901A001`
 - 배포 소스 SHA: `9214a831184569a4acec2bde7dcc619808e0ec96`
 - 소스 커밋: `[PAR32SEQ01] Tune weather and sidebar display density`
-- 배포 당시 `main`, `origin/main`, 원격 `refs/heads/main`이 위 SHA로 일치했고 tracked worktree가 clean이었다.
+- 배포 당시 `main`, `origin/main`, 원격 `refs/heads/main`이 위 SHA로 일치했고 tracked worktree가 clean이었다. 이후 handoff 문서 커밋만 추가했다.
+- 현재 `main` 커밋: `12f87ea` (`[REL901A001] Update build 125 handoff prompt`); 앱 바이너리의 소스 기준은 위 `9214a83`이다.
 - 앱·iOS Widget·Watch 앱·Watch Widget: 모두 `1.0 (125)`.
 - Release archive: `/tmp/taption-plan-TFB901A009-125.xcarchive`.
 - Export IPA: `/tmp/taption-plan-TFB901A009-export/TaptionPlan.ipa`.
@@ -31,7 +32,7 @@ xcrun devicectl list devices
 
 ## 완료 증거
 
-- 현재 `main`은 `9214a83`이며 tracked worktree는 clean이다.
+- 현재 `main`은 `12f87ea`이며 tracked worktree는 clean이다.
 - `1.0 (125)` archive/export 성공, IPA의 앱·Widget·Watch 앱·Watch Widget 모두 `1.0 (125)`, Apple Distribution 서명 및 deep/strict codesign 검증 완료.
 - altool 업로드 성공, App Store Connect API에서 build `125` `VALID`·`APP_STORE_ELIGIBLE` 확인.
 - `TP Taption Plan 내부 테스트`에 build `125` 연결 완료; 그룹 빌드 86개와 내부 테스터 1명(`axony99@gmail.com`) readback 완료.
