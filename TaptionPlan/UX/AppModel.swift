@@ -492,7 +492,7 @@ final class AppModel {
     )
     private static let mapLocationReadingTimeout: TimeInterval = 3
     private static let weatherPreviewRefreshInterval: TimeInterval = 30 * 60
-    private static let weatherPreviewMaximumDays = 10
+    private static let weatherPreviewMaximumDays = 7
 
     var selectedTab: RootTab = .schedule
     var selectedScale: TimeScale = .day
@@ -6722,13 +6722,9 @@ final class AppModel {
         kind: String
     ) async {
         guard let rawDeviceDataArchive else { return }
-        let changedContexts = WeatherTimelineEngine.changedRawContexts(
-            contexts,
-            relativeTo: snapshot.weather
-        )
-        guard !changedContexts.isEmpty else { return }
+        guard !contexts.isEmpty else { return }
         do {
-            let envelopes = try changedContexts.map { context in
+            let envelopes = try contexts.map { context in
                 try RawDeviceDataEnvelope(
                     capturedAt: context.observedAt,
                     source: .gps,
