@@ -393,6 +393,73 @@ struct WatchMotionSample: Hashable, Sendable {
     }
 }
 
+/// Watch가 보관·전송하는 저전력 가속도 원본 표본. 요약의 파생값과
+/// 분리해 두어, 날짜를 다시 열 때 현재 규칙으로 행동을 재생성할 수 있다.
+struct TaptionWatchAccelerationSample: Codable, Hashable, Sendable {
+    var id: UUID
+    var capturedAt: Date
+    var acceleration: TaptionWatchSensorVector3
+    var sessionID: UUID?
+    var sequence: Int
+    var isAmbient: Bool
+
+    init(
+        id: UUID = UUID(),
+        capturedAt: Date,
+        acceleration: TaptionWatchSensorVector3,
+        sessionID: UUID? = nil,
+        sequence: Int,
+        isAmbient: Bool
+    ) {
+        self.id = id
+        self.capturedAt = capturedAt
+        self.acceleration = acceleration
+        self.sessionID = sessionID
+        self.sequence = sequence
+        self.isAmbient = isAmbient
+    }
+}
+
+/// 하나의 Watch 요약 구간에 대응하는 재전송 가능한 raw 청크.
+struct TaptionWatchAccelerationChunk: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var sessionID: UUID?
+    var sequence: Int
+    var startedAt: Date
+    var endedAt: Date
+    var isFinal: Bool
+    var isAmbient: Bool
+    var schemaVersion: Int
+    var samples: [TaptionWatchAccelerationSample]
+
+    init(
+        id: UUID = UUID(),
+        sessionID: UUID?,
+        sequence: Int,
+        startedAt: Date,
+        endedAt: Date,
+        isAmbient: Bool = false,
+        schemaVersion: Int = 1,
+        samples: [TaptionWatchAccelerationSample],
+        isFinal: Bool = false
+    ) {
+        self.id = id
+        self.sessionID = sessionID
+        self.sequence = sequence
+        self.startedAt = startedAt
+        self.endedAt = max(startedAt, endedAt)
+        self.isFinal = isFinal
+        self.isAmbient = isAmbient
+        self.schemaVersion = schemaVersion
+        self.samples = samples.sorted { lhs, rhs in
+            if lhs.capturedAt != rhs.capturedAt {
+                return lhs.capturedAt < rhs.capturedAt
+            }
+            return lhs.sequence < rhs.sequence
+        }
+    }
+}
+
 struct WatchBehaviorWindowFeatures: Codable, Hashable, Sendable {
     var startedAt: Date
     var endedAt: Date
@@ -858,6 +925,216 @@ enum WatchBehaviorClassifier {
             confidenceScore: min(1, max(0, score)),
             evidence: evidence,
             modelVersion: rulesVersion
+        )
+    }
+}
+
+/// Replays Watch raw windows on the device that owns the day projection. The
+/// Watch's original guess remains the fallback for legacy summary-only data;
+/// a raw chunk is required before a new fine-grained result is published.
+enum WatchActivityRawReplayEngine {
+    static let modelVersion = "watch-raw-replay-v1"
+
+    static func replaying(
+        summaries: [TaptionWatchSensorSummary],
+        chunks: [TaptionWatchAccelerationChunk]
+    ) -> [TaptionWatchSensorSummary] {
+        summaries.map { summary in
+            let matchingChunks = matchingChunks(for: summary, in: chunks)
+            guard !matchingChunks.isEmpty else {
+                return summary
+            }
+            return replaying(summary: summary, chunks: matchingChunks)
+        }
+    }
+
+    static func replaying(
+        summary: TaptionWatchSensorSummary,
+        chunk: TaptionWatchAccelerationChunk
+    ) -> TaptionWatchSensorSummary {
+        replaying(summary: summary, chunks: [chunk])
+    }
+
+    private static func replaying(
+        summary: TaptionWatchSensorSummary,
+        chunks: [TaptionWatchAccelerationChunk]
+    ) -> TaptionWatchSensorSummary {
+        let samples = Dictionary(
+            chunks
+                .flatMap(\.samples)
+                .map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+            .values
+            .filter {
+                $0.capturedAt >= summary.startedAt
+                    && $0.capturedAt <= summary.endedAt
+            }
+            .map {
+                WatchMotionSample(
+                    capturedAt: $0.capturedAt,
+                    acceleration: $0.acceleration,
+                    rotationRate: nil,
+                    gravity: nil
+                )
+            }
+            .sorted { $0.capturedAt < $1.capturedAt }
+        guard let first = samples.first, let last = samples.last else {
+            return summary
+        }
+        let rawDuration = last.capturedAt.timeIntervalSince(first.capturedAt)
+        guard samples.count >= 8, rawDuration >= 1.5 else {
+            var preserved = summary
+            preserved.behaviorEvidence = Array(Set(
+                (summary.behaviorEvidence ?? [])
+                    + [
+                        "Apple Watch raw 보관됨",
+                        "raw 표본 \(samples.count)개 (재생성 부족)",
+                    ]
+            )).sorted()
+            return preserved
+        }
+
+        let fallback = WatchBehaviorClassifier.classify(
+            input(for: summary, duration: rawDuration)
+        )
+        let segments = segments(from: samples, summary: summary)
+        let inference = WatchBehaviorClassifier.aggregate(
+            segments,
+            fallback: fallback
+        )
+        var replayed = summary
+        replayed.behavior = inference.kind
+        replayed.behaviorConfidenceScore = inference.confidenceScore
+        replayed.behaviorEvidence = Array(Set(
+            (summary.behaviorEvidence ?? [])
+                + inference.evidence
+                + ["Apple Watch raw 재생성", "raw 표본 \(samples.count)개"]
+        )).sorted()
+        replayed.behaviorModelVersion = Self.modelVersion
+        replayed.behaviorSegments = segments.isEmpty
+            ? summary.behaviorSegments
+            : segments
+        return replayed
+    }
+
+    static func hasRawEvidence(
+        for summary: TaptionWatchSensorSummary,
+        in chunks: [TaptionWatchAccelerationChunk]
+    ) -> Bool {
+        !matchingChunks(for: summary, in: chunks).isEmpty
+    }
+
+    private static func matchingChunks(
+        for summary: TaptionWatchSensorSummary,
+        in chunks: [TaptionWatchAccelerationChunk]
+    ) -> [TaptionWatchAccelerationChunk] {
+        chunks
+            .filter { !$0.samples.isEmpty }
+            .filter {
+                let overlapStart = max($0.startedAt, summary.startedAt)
+                let overlapEnd = min($0.endedAt, summary.endedAt)
+                let isSessionMatch = $0.sessionID == summary.sessionID
+                let isLegacyAmbientMatch = summary.isAmbient == true
+                    && $0.sessionID == nil
+                return overlapEnd > overlapStart
+                    && (isSessionMatch || isLegacyAmbientMatch)
+            }
+            .sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private static func input(
+        for summary: TaptionWatchSensorSummary,
+        duration: TimeInterval
+    ) -> WatchBehaviorInput {
+        WatchBehaviorInput(
+            workoutKind: nil,
+            duration: max(1, duration),
+            accelerometerSampleCount: summary.accelerometerSampleCount,
+            accelerometerStandardDeviationG:
+                summary.accelerometerStandardDeviationG,
+            accelerometerMeanJerkGPerSecond:
+                summary.accelerometerMeanJerkGPerSecond,
+            peakAccelerationG: summary.peakAccelerationG,
+            peakRotationRateRadiansPerSecond:
+                summary.peakRotationRateRadiansPerSecond,
+            steps: summary.stepCount,
+            distanceMeters: summary.distanceMeters,
+            floorsAscended: summary.floorsAscended,
+            floorsDescended: summary.floorsDescended,
+            averageHeartRate: summary.averageHeartRate,
+            gpsAvailable: !(summary.routePoints ?? []).isEmpty,
+            gpsLossRatio: (summary.routePoints ?? []).isEmpty ? 1 : 0,
+            altitudeDeltaMeters: summary.relativeAltitudeMeters
+        )
+    }
+
+    private static func segments(
+        from samples: [WatchMotionSample],
+        summary: TaptionWatchSensorSummary
+    ) -> [WatchBehaviorSegment] {
+        guard let first = samples.first, let last = samples.last else {
+            return []
+        }
+        var result: [WatchBehaviorSegment] = []
+        var windowEnd = first.capturedAt.addingTimeInterval(
+            WatchBehaviorWindowAnalyzer.windowDuration
+        )
+        while windowEnd <= last.capturedAt {
+            let windowStart = windowEnd.addingTimeInterval(
+                -WatchBehaviorWindowAnalyzer.windowDuration
+            )
+            let window = samples.filter {
+                $0.capturedAt >= windowStart && $0.capturedAt <= windowEnd
+            }
+            if let features = WatchBehaviorWindowAnalyzer.features(from: window) {
+                let inference = WatchBehaviorClassifier.classifyWindow(
+                    features,
+                    context: input(for: summary, duration: features.duration)
+                )
+                append(
+                    inference,
+                    startedAt: features.startedAt,
+                    endedAt: features.endedAt,
+                    to: &result
+                )
+            }
+            windowEnd = windowEnd.addingTimeInterval(
+                WatchBehaviorWindowAnalyzer.strideDuration
+            )
+        }
+        return result
+    }
+
+    private static func append(
+        _ inference: WatchBehaviorInference,
+        startedAt: Date,
+        endedAt: Date,
+        to segments: inout [WatchBehaviorSegment]
+    ) {
+        if let index = segments.indices.last,
+           segments[index].behavior == inference.kind,
+           startedAt.timeIntervalSince(segments[index].endedAt)
+                <= WatchBehaviorWindowAnalyzer.strideDuration * 1.5 {
+            segments[index].endedAt = max(segments[index].endedAt, endedAt)
+            segments[index].confidenceScore = max(
+                segments[index].confidenceScore,
+                inference.confidenceScore
+            )
+            segments[index].evidence = Array(Set(
+                segments[index].evidence + inference.evidence
+            )).sorted()
+            return
+        }
+        segments.append(
+            WatchBehaviorSegment(
+                startedAt: startedAt,
+                endedAt: endedAt,
+                behavior: inference.kind,
+                confidenceScore: inference.confidenceScore,
+                evidence: inference.evidence,
+                modelVersion: Self.modelVersion
+            )
         )
     }
 }
@@ -1779,6 +2056,10 @@ struct TaptionWatchSensorVector3: Codable, Hashable, Sendable {
     var x: Double
     var y: Double
     var z: Double
+
+    var magnitude: Double {
+        sqrt(x * x + y * y + z * z)
+    }
 }
 
 struct TaptionWatchLocationPoint: Codable, Hashable, Sendable {
@@ -1854,6 +2135,7 @@ enum TaptionWatchEnvelope {
     static let payloadKey = "taption.watch.payload"
     static let commandKey = "taption.watch.command"
     static let sensorSummaryKey = "taption.watch.sensor-summary"
+    static let accelerationChunkKey = "taption.watch.acceleration-chunk"
     static let healthSnapshotKey = "taption.watch.health-snapshot"
     static let workoutRequestKey = "taption.watch.workout-request"
     static let activityConfirmationKey = "taption.watch.activity-confirmation"

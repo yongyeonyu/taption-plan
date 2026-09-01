@@ -15,12 +15,16 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private let cachedPayloadKey = "TaptionPlan.cachedWatchPayload"
     private let pendingSensorSummariesKey =
         "TaptionPlan.pendingWatchSensorSummaries"
+    private let pendingAccelerationChunksKey =
+        "TaptionPlan.pendingWatchAccelerationChunks"
     private let pendingHealthSnapshotsKey =
         "TaptionPlan.pendingWatchHealthSnapshots"
     private var pendingSensorSummaries: [TaptionWatchSensorSummary] = []
+    private var pendingAccelerationChunks: [TaptionWatchAccelerationChunk] = []
     private var pendingHealthSnapshots: [TaptionWatchHealthSnapshot] = []
     private var widgetReloadFollowupTask: Task<Void, Never>?
     private var handledWorkoutRequestIDs = Set<UUID>()
+    private var handledDataSyncRequestIDs = Set<String>()
     private var activeDataSyncRequestID: String?
     private let dayDatabase: WatchDayDatabase?
     var onWorkoutRequest: ((TaptionWatchWorkoutRequest) -> Void)?
@@ -55,6 +59,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         WatchLaunchDiagnostics.mark("prepare")
         restoreCachedPayload()
         restorePendingSensorSummaries()
+        restorePendingAccelerationChunks()
         restorePendingHealthSnapshots()
         activateConnectivity()
         handleActivatedSessionIfReady()
@@ -71,6 +76,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         sendPendingLaunchReport()
         sendDiagnosticsLog()
         flushPendingSensorSummaries(using: .default)
+        flushPendingAccelerationChunks(using: .default)
         flushPendingHealthSnapshots(using: .default)
         requestSync()
     }
@@ -120,9 +126,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     func requestSync() {
         let requestID = UUID().uuidString
         beginDataSyncRequest(requestID: requestID, source: "watch_button")
-        // The button is a data-sync action, not only a payload refresh. Drain
-        // the Watch's local recorder/HealthKit first; the iPhone request below
-        // only refreshes the settings payload.
+        // The button must drain the Watch's local recorder before asking the
+        // iPhone to refresh. Previously it only sent refreshRequest, so an
+        // already-recorded Watch window never reached the iPhone.
         guard WCSession.isSupported() else {
             WatchLaunchDiagnostics.mark(
                 "data sync transport skipped id=\(requestID) reason=unsupported"
@@ -137,6 +143,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             return
         }
         flushPendingSensorSummaries(using: session)
+        flushPendingAccelerationChunks(using: session)
         flushPendingHealthSnapshots(using: session)
         let request: [String: Any] = [
             TaptionWatchEnvelope.refreshRequestKey: true,
@@ -179,10 +186,19 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         source: String
     ) {
         let resolvedID = requestID ?? UUID().uuidString
+        if handledDataSyncRequestIDs.count >= 100 {
+            handledDataSyncRequestIDs.removeAll(keepingCapacity: true)
+        }
+        guard handledDataSyncRequestIDs.insert(resolvedID).inserted else {
+            WatchLaunchDiagnostics.mark(
+                "data sync duplicate ignored id=\(resolvedID) source=\(source)"
+            )
+            return
+        }
         activeDataSyncRequestID = resolvedID
         let profile = payload?.dataSyncProfile?.rawValue.description ?? "none"
         WatchLaunchDiagnostics.mark(
-            "data sync requested id=\(resolvedID) source=\(source) profile=\(profile) pending_sensor=\(pendingSensorSummaries.count) pending_health=\(pendingHealthSnapshots.count)"
+            "data sync requested id=\(resolvedID) source=\(source) profile=\(profile) pending_sensor=\(pendingSensorSummaries.count) pending_acceleration=\(pendingAccelerationChunks.count) pending_health=\(pendingHealthSnapshots.count)"
         )
         onDataSyncRequest?(resolvedID)
     }
@@ -210,6 +226,27 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         sendSensorSummaryTransport(summary)
     }
 
+    func sendAccelerationChunkAndWait(
+        _ chunk: TaptionWatchAccelerationChunk
+    ) async {
+        WatchLaunchDiagnostics.mark(
+            "acceleration send requested chunk=\(chunk.id.uuidString) samples=\(chunk.samples.count)"
+        )
+        if let dayDatabase {
+            do {
+                try await dayDatabase.append(chunk)
+                sendAccelerationChunkTransport(chunk)
+            } catch {
+                cachePending(chunk)
+                WatchLaunchDiagnostics.mark(
+                    "acceleration store failed before send chunk=\(chunk.id.uuidString)"
+                )
+            }
+            return
+        }
+        sendAccelerationChunkTransport(chunk)
+    }
+
     private func sendSensorSummaryTransport(
         _ summary: TaptionWatchSensorSummary
     ) {
@@ -230,6 +267,55 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
         if !transfer(summary, through: session) {
             cachePending(summary)
+        }
+    }
+
+    private func sendAccelerationChunkTransport(
+        _ chunk: TaptionWatchAccelerationChunk
+    ) {
+        guard WCSession.isSupported() else {
+            cachePending(chunk)
+            WatchLaunchDiagnostics.mark(
+                "acceleration send queued unsupported chunk=\(chunk.id.uuidString)"
+            )
+            return
+        }
+        let session = WCSession.default
+        guard session.activationState == .activated else {
+            cachePending(chunk)
+            WatchLaunchDiagnostics.mark(
+                "acceleration send queued inactive chunk=\(chunk.id.uuidString) state=\(session.activationState.rawValue)"
+            )
+            return
+        }
+        guard let data = try? encoder.encode(chunk) else {
+            cachePending(chunk)
+            WatchLaunchDiagnostics.mark(
+                "acceleration encode failed chunk=\(chunk.id.uuidString)"
+            )
+            return
+        }
+        var envelope: [String: Any] = [
+            TaptionWatchEnvelope.accelerationChunkKey: data,
+        ]
+        if let activeDataSyncRequestID {
+            envelope[TaptionWatchEnvelope.dataSyncRequestIDKey] =
+                activeDataSyncRequestID
+        }
+        session.transferUserInfo(envelope)
+        WatchLaunchDiagnostics.mark(
+            "acceleration reliable transfer scheduled chunk=\(chunk.id.uuidString) samples=\(chunk.samples.count) reachable=\(session.isReachable)"
+        )
+        if session.isReachable {
+            session.sendMessage(
+                envelope,
+                replyHandler: nil,
+                errorHandler: { error in
+                    WatchLaunchDiagnostics.mark(
+                        "acceleration live transfer failed chunk=\(chunk.id.uuidString) error=\(error.localizedDescription)"
+                    )
+                }
+            )
         }
     }
 
@@ -339,6 +425,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             if isReachable, self?.didPrepare == true {
                 self?.sendDiagnosticsLog()
                 self?.flushPendingSensorSummaries(using: .default)
+                self?.flushPendingAccelerationChunks(using: .default)
                 self?.flushPendingHealthSnapshots(using: .default)
                 self?.requestSync()
             }
@@ -621,6 +708,36 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         )
     }
 
+    private func cachePending(_ chunk: TaptionWatchAccelerationChunk) {
+        pendingAccelerationChunks.removeAll { $0.id == chunk.id }
+        pendingAccelerationChunks.append(chunk)
+        pendingAccelerationChunks.sort { $0.endedAt < $1.endedAt }
+        if pendingAccelerationChunks.count > 120 {
+            pendingAccelerationChunks.removeFirst(
+                pendingAccelerationChunks.count - 120
+            )
+        }
+        persistPendingAccelerationChunks()
+        WatchLaunchDiagnostics.mark(
+            "acceleration queue count=\(pendingAccelerationChunks.count)"
+        )
+    }
+
+    private func flushPendingAccelerationChunks(using session: WCSession) {
+        guard session.activationState == .activated,
+              !pendingAccelerationChunks.isEmpty else { return }
+        let pending = pendingAccelerationChunks
+        pendingAccelerationChunks = []
+        persistPendingAccelerationChunks()
+        for chunk in pending {
+            sendAccelerationChunkTransport(chunk)
+        }
+        persistPendingAccelerationChunks()
+        WatchLaunchDiagnostics.mark(
+            "acceleration queue drained sent=\(pending.count) remaining=\(pendingAccelerationChunks.count)"
+        )
+    }
+
     private func transferPendingSensorSummaries(
         _ pending: [TaptionWatchSensorSummary],
         through session: WCSession
@@ -675,6 +792,32 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             from: data
         ) else { return }
         pendingHealthSnapshots = values
+    }
+
+    private func restorePendingAccelerationChunks() {
+        guard let data = UserDefaults.standard.data(
+            forKey: pendingAccelerationChunksKey
+        ), let values = try? decoder.decode(
+            [TaptionWatchAccelerationChunk].self,
+            from: data
+        ) else { return }
+        pendingAccelerationChunks = values
+        WatchLaunchDiagnostics.mark(
+            "acceleration queue restored count=\(values.count)"
+        )
+    }
+
+    private func persistPendingAccelerationChunks() {
+        if pendingAccelerationChunks.isEmpty {
+            UserDefaults.standard.removeObject(
+                forKey: pendingAccelerationChunksKey
+            )
+            return
+        }
+        guard let data = try? encoder.encode(pendingAccelerationChunks) else {
+            return
+        }
+        UserDefaults.standard.set(data, forKey: pendingAccelerationChunksKey)
     }
 
     private func persistPendingHealthSnapshots() {

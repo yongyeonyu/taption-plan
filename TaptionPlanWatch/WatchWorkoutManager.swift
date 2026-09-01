@@ -5,13 +5,7 @@ import HealthKit
 import WatchKit
 import WidgetKit
 
-private struct WatchAccelerationArchiveSample: Codable, Sendable {
-    var sessionID: UUID?
-    var sequence: Int
-    var capturedAt: Date
-    var acceleration: TaptionWatchSensorVector3
-    var isAmbient: Bool
-}
+private typealias WatchAccelerationArchiveSample = TaptionWatchAccelerationSample
 
 private actor WatchAccelerationArchive {
     private let directoryURL: URL
@@ -153,6 +147,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     private(set) var workoutKind: TaptionWatchWorkoutKind?
     var onSensorSummary: ((TaptionWatchSensorSummary) -> Void)?
     var onAmbientSensorSummary: ((TaptionWatchSensorSummary) async -> Void)?
+    var onAccelerationChunk: ((TaptionWatchAccelerationChunk) async -> Void)?
 
     private var sensorSessionID: UUID?
     private var sensorSequence = 0
@@ -473,18 +468,20 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func applyAmbientDrain(_ result: WatchAmbientDrainResult) async {
         if !result.archiveSamples.isEmpty {
-            let base = ambientArchiveSequence
-            let samples = result.archiveSamples.enumerated().map {
+            let archive = accelerationArchive
+            let samples = result.archiveSamples.enumerated().map { index, value in
                 WatchAccelerationArchiveSample(
-                    sessionID: nil,
-                    sequence: base + $0.offset + 1,
-                    capturedAt: $0.element.capturedAt,
-                    acceleration: $0.element.acceleration,
+                    id: value.id,
+                    capturedAt: value.capturedAt,
+                    acceleration: value.acceleration,
+                    sessionID: value.sessionID,
+                    sequence: value.sequence == 0
+                        ? ambientArchiveSequence + index + 1
+                        : value.sequence,
                     isAmbient: true
                 )
             }
-            ambientArchiveSequence += result.archiveSamples.count
-            let archive = accelerationArchive
+            ambientArchiveSequence += samples.count
             Task { try? await archive.append(samples) }
         }
         let waterLockEnabled = WKInterfaceDevice.current().isWaterLockEnabled
@@ -494,6 +491,35 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             // 방금 끝난 창에만 현재 상태를 결합해 과거 샤워를 오인하지 않는다.
             if abs(now.timeIntervalSince(summary.endedAt)) <= 3 * 60 {
                 summary.waterLockEnabled = waterLockEnabled
+            }
+            let samples = result.archiveSamples
+                .filter {
+                    $0.capturedAt >= summary.startedAt
+                        && $0.capturedAt <= summary.endedAt
+                }
+                .enumerated()
+                .map { index, value in
+                    WatchAccelerationArchiveSample(
+                        id: value.id,
+                        capturedAt: value.capturedAt,
+                        acceleration: value.acceleration,
+                        sessionID: summary.sessionID,
+                        sequence: value.sequence == 0 ? index + 1 : value.sequence,
+                        isAmbient: true
+                    )
+                }
+            if let first = samples.first, let last = samples.last,
+               let onAccelerationChunk {
+                await onAccelerationChunk(
+                    TaptionWatchAccelerationChunk(
+                        sessionID: summary.sessionID,
+                        sequence: summary.sequence,
+                        startedAt: first.capturedAt,
+                        endedAt: last.capturedAt,
+                        isAmbient: true,
+                        samples: samples
+                    )
+                )
             }
             if let onAmbientSensorSummary {
                 await onAmbientSensorSummary(summary)
@@ -976,10 +1002,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             accelerationArchiveSequence += 1
             pendingAccelerationSamples.append(
                 WatchAccelerationArchiveSample(
-                    sessionID: sensorSessionID,
-                    sequence: accelerationArchiveSequence,
+                    id: UUID(),
                     capturedAt: capturedAt,
                     acceleration: value,
+                    sessionID: sensorSessionID,
+                    sequence: accelerationArchiveSequence,
                     isAmbient: false
                 )
             )
@@ -1159,7 +1186,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
             )
         }
         publishMeasurement()
-        flushAccelerationArchive()
+        flushAccelerationArchive(summary: summary)
         pendingRoutePoints.removeAll(keepingCapacity: true)
         pendingBehaviorSegments.removeAll(keepingCapacity: true)
     }
@@ -1170,7 +1197,11 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
     ) -> TaptionWatchSensorSummary? {
         guard sensorSessionID != nil else { return nil }
         let summary = makeSensorSummary(at: endedAt, isFinal: isFinal)
-        flushAccelerationArchive()
+        if let summary {
+            flushAccelerationArchive(summary: summary)
+        } else {
+            flushAccelerationArchive(summary: nil)
+        }
         sensorSummaryTask?.cancel()
         sensorSummaryTask = nil
         stopSensorHardware()
@@ -1190,13 +1221,28 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         locationManager.stopUpdatingLocation()
     }
 
-    private func flushAccelerationArchive() {
+    private func flushAccelerationArchive(summary: TaptionWatchSensorSummary?) {
         guard !pendingAccelerationSamples.isEmpty else { return }
         let samples = pendingAccelerationSamples
         pendingAccelerationSamples.removeAll(keepingCapacity: true)
         let archive = accelerationArchive
         Task {
             try? await archive.append(samples)
+        }
+        guard let first = samples.first, let last = samples.last else { return }
+        let chunk = TaptionWatchAccelerationChunk(
+            id: first.id,
+            sessionID: summary?.sessionID ?? first.sessionID,
+            sequence: summary?.sequence ?? last.sequence,
+            startedAt: first.capturedAt,
+            endedAt: last.capturedAt,
+            samples: samples,
+            isFinal: summary?.isFinal ?? false
+        )
+        Task { @MainActor [weak self] in
+            guard let self, let onAccelerationChunk = self.onAccelerationChunk
+            else { return }
+            await onAccelerationChunk(chunk)
         }
     }
 
@@ -1403,10 +1449,6 @@ private extension TaptionWatchWorkoutKind {
 
 private extension TaptionWatchSensorVector3 {
     static let zero = TaptionWatchSensorVector3(x: 0, y: 0, z: 0)
-
-    var magnitude: Double {
-        sqrt(x * x + y * y + z * z)
-    }
 
     mutating func add(_ other: TaptionWatchSensorVector3) {
         x += other.x

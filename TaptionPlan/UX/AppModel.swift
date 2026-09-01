@@ -9,6 +9,52 @@ import TaptionPlanCore
 struct SensorReadingsLoadResult: Equatable, Sendable {
     let readings: [SensorReading]
     let isComplete: Bool
+    let watchSummaries: [TaptionWatchSensorSummary]
+    let watchAccelerationChunks: [TaptionWatchAccelerationChunk]
+
+    init(
+        readings: [SensorReading],
+        isComplete: Bool,
+        watchSummaries: [TaptionWatchSensorSummary] = [],
+        watchAccelerationChunks: [TaptionWatchAccelerationChunk] = []
+    ) {
+        self.readings = readings
+        self.isComplete = isComplete
+        self.watchSummaries = watchSummaries
+        self.watchAccelerationChunks = watchAccelerationChunks
+    }
+
+    var watchAccelerationSamples: [TaptionWatchAccelerationSample] {
+        Dictionary(
+            watchAccelerationChunks
+                .flatMap(\.samples)
+                .map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        ).values.sorted {
+            if $0.capturedAt == $1.capturedAt {
+                return $0.sequence < $1.sequence
+            }
+            return $0.capturedAt < $1.capturedAt
+        }
+    }
+}
+
+private struct WatchSensorTimelineData: Sendable {
+    let summaries: [TaptionWatchSensorSummary]
+    let accelerationChunks: [TaptionWatchAccelerationChunk]
+
+    var accelerationSamples: [TaptionWatchAccelerationSample] {
+        let samples = accelerationChunks.flatMap(\.samples)
+        return Dictionary(
+            samples.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        ).values.sorted {
+            if $0.capturedAt == $1.capturedAt {
+                return $0.sequence < $1.sequence
+            }
+            return $0.capturedAt < $1.capturedAt
+        }
+    }
 }
 
 /// The WBS store loads one normalized immutable workspace and derives the
@@ -777,6 +823,10 @@ final class AppModel {
         let latestMotionEnd: Date?
         let pedometerEnd: Date?
         let latestHealthEvidenceEnd: Date?
+        let watchSummaryCount: Int
+        let latestWatchSummaryEnd: Date?
+        let watchAccelerationSampleCount: Int
+        let latestWatchAccelerationSampleAt: Date?
         let transportEnrichmentModelVersion: Int
         let settingsHash: Int
     }
@@ -952,6 +1002,15 @@ final class AppModel {
                 Task { @MainActor [weak self] in
                     await self?.applyWatchSensorSummary(
                         summary,
+                        receivedAt: receivedAt,
+                        requestID: requestID
+                    )
+                }
+            },
+            onAccelerationChunk: { [weak self] chunk, receivedAt, requestID in
+                Task { @MainActor [weak self] in
+                    await self?.applyWatchAccelerationChunk(
+                        chunk,
                         receivedAt: receivedAt,
                         requestID: requestID
                     )
@@ -6012,6 +6071,82 @@ final class AppModel {
         )
     }
 
+    private func applyWatchAccelerationChunk(
+        _ chunk: TaptionWatchAccelerationChunk,
+        receivedAt: Date,
+        requestID: String?
+    ) async {
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_acceleration_chunk_apply_started",
+            fields: [
+                "chunk": chunk.id.uuidString,
+                "samples": String(chunk.samples.count),
+                "start": String(chunk.startedAt.timeIntervalSince1970),
+                "end": String(chunk.endedAt.timeIntervalSince1970),
+                "received_at": String(receivedAt.timeIntervalSince1970),
+                "request_id": requestID ?? "none",
+            ]
+        )
+        noteAppleWatchDataReceived(
+            [.motion],
+            measuredAt: chunk.endedAt,
+            receivedAt: receivedAt,
+            requestID: requestID
+        )
+        if let watchSensorArchive {
+            do {
+                try await watchSensorArchive.record(chunk)
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_archive_recorded",
+                    fields: [
+                        "chunk": chunk.id.uuidString,
+                        "samples": String(chunk.samples.count),
+                    ]
+                )
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_archive_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error).merging([
+                        "chunk": chunk.id.uuidString,
+                    ]) { _, new in new }
+                )
+            }
+        }
+        if let dayDatabase {
+            do {
+                try await dayDatabase.recordWatchAccelerationChunk(chunk)
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_day_database_recorded",
+                    fields: ["chunk": chunk.id.uuidString]
+                )
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_day_database_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error).merging([
+                        "chunk": chunk.id.uuidString,
+                    ]) { _, new in new }
+                )
+            }
+        }
+        dayLoadCoordinator?.invalidate(day: chunk.startedAt)
+        if !Calendar.autoupdatingCurrent.isDate(
+            chunk.startedAt,
+            inSameDayAs: chunk.endedAt
+        ) {
+            dayLoadCoordinator?.invalidate(day: chunk.endedAt)
+        }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_acceleration_chunk_applied",
+            fields: [
+                "chunk": chunk.id.uuidString,
+                "samples": String(chunk.samples.count),
+            ]
+        )
+        scheduleSensorAnalysis(containing: chunk.startedAt, immediately: true)
+    }
+
     private func applyWatchSensorSummary(
         _ summary: TaptionWatchSensorSummary,
         receivedAt: Date,
@@ -6624,24 +6759,26 @@ final class AppModel {
         stationarySpans: [TimeSpan],
         travel: [TravelSegment],
         readings: [SensorReading],
+        watchSummaries: [TaptionWatchSensorSummary],
+        watchAccelerationSamples: [TaptionWatchAccelerationSample],
         evidence: TimeSpan?,
         inside span: TimeSpan
     ) async {
-        let watchSummaries: [TaptionWatchSensorSummary]
-        if let watchSensorArchive {
-            watchSummaries =
-                (try? await watchSensorArchive.summaries(in: span)) ?? []
-        } else {
-            watchSummaries = []
-        }
         let placeKinds = FrequentPlaceResolutionEngine()
             .kindsByPlaceKey(settings.frequentPlaces)
-        let contextStays = stays.filter {
-            placeKinds[$0.placeKey] != .restaurant
+        let restaurantMealSpans = snapshot.actuals.compactMap { actual -> TimeSpan? in
+            guard isAutomaticRestaurantMeal(actual) else { return nil }
+            return actual.span(asOf: span.end).intersection(with: span)
+        }
+        let contextStays = stays.filter { stay in
+            guard placeKinds[stay.placeKey] == .restaurant else { return true }
+            return !restaurantMealSpans.contains {
+                $0.intersection(with: stay.span) != nil
+            }
         }
         let contextRecords = StationaryContextActualEngine.records(
             stays: contextStays,
-            placeKinds: placeKinds.filter { $0.value != .restaurant },
+            placeKinds: placeKinds,
             placeAnchors: FrequentPlaceResolutionEngine()
                 .anchorsByPlaceKey(settings.frequentPlaces),
             stationarySpans: stationarySpans,
@@ -6652,6 +6789,7 @@ final class AppModel {
                 $0.span.intersection(with: span) != nil
             },
             watchSummaries: watchSummaries,
+            watchAccelerationSamples: watchAccelerationSamples,
             inside: span
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
         let stableContextRecords = ActivityClassificationLockEngine
@@ -6670,8 +6808,9 @@ final class AppModel {
             + [evidence].compactMap { $0?.intersection(with: span) }
         snapshot.actuals.removeAll { actual in
             guard actual.source == .location,
-                  actual.modelVersion
-                    == StationaryContextClassifier.modelVersion else {
+                  (actual.modelVersion == StationaryContextClassifier.modelVersion
+                    || actual.modelVersion == "stationary-context-v1"),
+                  !isAutomaticRestaurantMeal(actual) else {
                 return false
             }
             let stored = actual.span(asOf: span.end)
@@ -6694,19 +6833,24 @@ final class AppModel {
         if actual.modelVersion == RestaurantMealActualEngine.modelVersion {
             return true
         }
-        return actual.modelVersion == StationaryContextClassifier.modelVersion
+        return (actual.modelVersion == StationaryContextClassifier.modelVersion
+            || actual.modelVersion == "stationary-context-v1")
             && actual.behavior == StationaryContextKind.mealPlace.rawValue
             && actual.evidence.contains { $0.contains("자주가는 곳: 식당") }
     }
 
     private func applyRestaurantMealRecords(
         readings: [SensorReading],
+        watchSummaries: [TaptionWatchSensorSummary],
+        watchAccelerationSamples: [TaptionWatchAccelerationSample],
         inside span: TimeSpan
     ) {
         guard !readings.isEmpty else { return }
         let fresh = RestaurantMealActualEngine.records(
             restaurants: settings.frequentPlaces,
             readings: readings,
+            watchSummaries: watchSummaries,
+            watchAccelerationSamples: watchAccelerationSamples,
             inside: span
         )
         snapshot.actuals.removeAll { actual in
@@ -6734,6 +6878,10 @@ final class AppModel {
                 "span_end": String(span.end.timeIntervalSinceReferenceDate),
             ]
         )
+        let watchData = await watchSensorTimelineData(in: span)
+        let watchSummaries = watchData.summaries
+        let watchAccelerationSamples = watchData.accelerationSamples
+        applyReplayedWatchSummaries(watchSummaries)
         do {
             archivedReadings = try await sensorService.archivedReadings(
                 in: span
@@ -6804,6 +6952,11 @@ final class AppModel {
             latestHealthEvidenceEnd: healthKitMovementEvidence
                 .map(\.span.end)
                 .max(),
+            watchSummaryCount: watchSummaries.count,
+            latestWatchSummaryEnd: watchSummaries.map(\.endedAt).max(),
+            watchAccelerationSampleCount: watchAccelerationSamples.count,
+            latestWatchAccelerationSampleAt: watchAccelerationSamples
+                .map(\.capturedAt).max(),
             transportEnrichmentModelVersion:
                 AppleTransportContextService.enrichmentModelVersion,
             settingsHash: settings.hashValue
@@ -6823,6 +6976,24 @@ final class AppModel {
             // without rebuilding the route and place lanes.
             applyRestaurantMealRecords(
                 readings: filteredArchivedReadings,
+                watchSummaries: watchSummaries,
+                watchAccelerationSamples: watchAccelerationSamples,
+                inside: span
+            )
+            await applyStationaryContextRecords(
+                stays: snapshot.places,
+                stationarySpans: motionActivities
+                    .filter { $0.motion == .stationary }
+                    .map(\.span),
+                travel: snapshot.travel,
+                readings: sensorQuality.readings,
+                watchSummaries: watchSummaries,
+                watchAccelerationSamples: watchAccelerationSamples,
+                evidence: Self.sensorEvidenceSpan(
+                    readings: archivedReadings,
+                    activities: motionActivities,
+                    inside: span
+                ),
                 inside: span
             )
             // Sleep inference depends on the current observation cutoff, not
@@ -6943,7 +7114,9 @@ final class AppModel {
            healthRouteReadings.isEmpty,
            motionActivities.isEmpty,
            healthMovementEvidence.isEmpty,
-           sleepReadings.isEmpty {
+           sleepReadings.isEmpty,
+           watchSummaries.isEmpty,
+           watchAccelerationSamples.isEmpty {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "sensor_travel_inference_completed",
                 fields: [
@@ -7121,17 +7294,27 @@ final class AppModel {
 
         applyRestaurantMealRecords(
             readings: readings,
+            watchSummaries: watchSummaries,
+            watchAccelerationSamples: watchAccelerationSamples,
             inside: span
         )
         // 이번 갱신에서 만든 이동과 장소를 모두 확정한 다음에 정지 구간
         // 문맥을 붙인다. 예전 이동만 보고 있으면 "대기"를 찾을 수 없었다.
+        let contextStays = hasPrimaryLocationEvidence
+            ? places
+            : snapshot.places
+        let contextTravel = hasPrimaryLocationEvidence
+            ? travel
+            : snapshot.travel
         await applyStationaryContextRecords(
-            stays: places,
+            stays: contextStays,
             stationarySpans: motionActivities
                 .filter { $0.motion == .stationary }
                 .map(\.span),
-            travel: travel,
+            travel: contextTravel,
             readings: readings,
+            watchSummaries: watchSummaries,
+            watchAccelerationSamples: watchAccelerationSamples,
             evidence: Self.sensorEvidenceSpan(
                 readings: archivedReadings,
                 activities: motionActivities,
@@ -7168,6 +7351,26 @@ final class AppModel {
                 fallbackReading: latestReadingWithPoint
             )
         }
+    }
+
+    private func applyReplayedWatchSummaries(
+        _ summaries: [TaptionWatchSensorSummary]
+    ) {
+        for summary in summaries {
+            let linkedPlan = summary.linkedPlanID.flatMap { planID in
+                snapshot.plans.first { $0.id == planID }
+            }
+            snapshot.actuals = AppleWatchSensorActivityEngine.upserting(
+                summary,
+                into: snapshot.actuals,
+                linkedPlan: linkedPlan,
+                atHome: isWatchSummaryAtHome(summary)
+            )
+        }
+        snapshot.actuals = ActualRecordSuppressionEngine.visibleRecords(
+            from: snapshot.actuals,
+            suppressedIDs: snapshot.settings.suppressedActualIDs
+        )
     }
 
     private func applyInferredGapRecords(
@@ -7491,9 +7694,76 @@ final class AppModel {
         }
     }
 
+    private func watchSensorTimelineData(
+        in span: TimeSpan
+    ) async -> WatchSensorTimelineData {
+        var summaries = [String: TaptionWatchSensorSummary]()
+        var chunks = [UUID: TaptionWatchAccelerationChunk]()
+
+        if let watchSensorArchive {
+            for summary in (try? await watchSensorArchive.summaries(in: span))
+                ?? [] {
+                summaries["\(summary.sessionID.uuidString):\(summary.sequence)"] =
+                    summary
+            }
+            for chunk in (try? await watchSensorArchive.accelerationChunks(in: span))
+                ?? [] {
+                chunks[chunk.id] = chunk
+            }
+        }
+        if let dayDatabase {
+            for summary in (try? await dayDatabase.watchSummaries(in: span))
+                ?? [] {
+                summaries["\(summary.sessionID.uuidString):\(summary.sequence)"] =
+                    summary
+            }
+            for chunk in (try? await dayDatabase.watchAccelerationChunks(in: span))
+                ?? [] {
+                chunks[chunk.id] = chunk
+            }
+        }
+
+        let orderedSummaries = summaries.values.sorted {
+            if $0.startedAt != $1.startedAt {
+                return $0.startedAt < $1.startedAt
+            }
+            return $0.sequence < $1.sequence
+        }
+        let orderedChunks = chunks.values.sorted {
+            if $0.startedAt != $1.startedAt {
+                return $0.startedAt < $1.startedAt
+            }
+            return $0.sequence < $1.sequence
+        }
+        let replayed = WatchActivityRawReplayEngine.replaying(
+            summaries: orderedSummaries,
+            chunks: orderedChunks
+        )
+        let replayedCount = replayed.filter {
+            $0.behaviorModelVersion
+                == WatchActivityRawReplayEngine.modelVersion
+        }.count
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "watch_day_raw_loaded",
+            fields: [
+                "span_start": String(span.start.timeIntervalSince1970),
+                "span_end": String(span.end.timeIntervalSince1970),
+                "summaries": String(replayed.count),
+                "chunks": String(orderedChunks.count),
+                "samples": String(orderedChunks.reduce(0) { $0 + $1.samples.count }),
+                "replayed": String(replayedCount),
+            ]
+        )
+        return WatchSensorTimelineData(
+            summaries: replayed,
+            accelerationChunks: orderedChunks
+        )
+    }
+
     func sensorReadingsLoadResult(
         in span: TimeSpan
     ) async -> SensorReadingsLoadResult {
+        let watchData = await watchSensorTimelineData(in: span)
         let archived: [SensorReading]
         let isComplete: Bool
         if let sensorService {
@@ -7524,7 +7794,9 @@ final class AppModel {
                 in: span,
                 existingReadings: archived
             )).sorted { $0.timestamp < $1.timestamp },
-            isComplete: isComplete
+            isComplete: isComplete,
+            watchSummaries: watchData.summaries,
+            watchAccelerationChunks: watchData.accelerationChunks
         )
     }
 
@@ -7532,9 +7804,12 @@ final class AppModel {
     /// sensor read. Every consumer receives derived arrays from that captured
     /// value, so an async load cannot mix two revisions or rewrite raw data.
     func planDayDataSnapshot(for date: Date) async -> PlanDayDataSnapshot {
+        await refreshSensorTimeline(containing: date)
         let source = snapshot
         let sourceRevision = snapshotRevision
         if let dayLoadCoordinator {
+            // 날짜를 다시 열 때는 이미 캐시된 day row를 먼저 반환하지 않고,
+            // 위에서 읽은 raw Watch/iPhone 신호로 새 projection을 만든다.
             let snapshot = await dayLoadCoordinator.load(
                 day: date,
                 source: source,
@@ -7549,7 +7824,8 @@ final class AppModel {
                     return await self.sensorReadingsLoadResult(
                         in: self.daySpan(containing: day)
                     )
-                }
+                },
+                forceReload: true
             )
             dayLoadCoordinator.prefetchMonth(
                 containing: date,

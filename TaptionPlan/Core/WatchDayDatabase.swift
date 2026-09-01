@@ -28,6 +28,28 @@ actor WatchDayDatabase {
         try await appendBatch([summary])
     }
 
+    func append(_ chunk: TaptionWatchAccelerationChunk) async throws {
+        let payload = try TaptionPlanCanonicalStorage.encode(chunk)
+        let event = TaptionPlanRawEvent(
+            device: .appleWatch,
+            day: TaptionPlanDayKey(date: chunk.endedAt),
+            timestamp: chunk.endedAt,
+            sequence: UInt64(max(0, chunk.sequence)),
+            id: chunk.id.uuidString,
+            domain: "watch-acceleration",
+            provenance: [
+                "source-device:appleWatch",
+                "source:WatchAcceleration",
+                "storage:watch-v3",
+                "raw:accelerometer-v1",
+                "sample-count:\(chunk.samples.count)",
+            ],
+            payload: TaptionPlanCanonicalStorage.envelope(for: payload)
+        )
+        try await store.appendRawEvents([event])
+        try await materialize(day: event.day)
+    }
+
     func appendBatch(_ summaries: [TaptionWatchSensorSummary]) async throws {
         guard !summaries.isEmpty else { return }
         let events = try summaries.map { summary -> TaptionPlanRawEvent in

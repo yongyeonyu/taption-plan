@@ -19,6 +19,9 @@ struct TaptionPlanWatchApp: App {
         workout.onAmbientSensorSummary = { [weak connectivity] summary in
             await connectivity?.sendSensorSummaryAndWait(summary)
         }
+        workout.onAccelerationChunk = { [weak connectivity] chunk in
+            await connectivity?.sendAccelerationChunkAndWait(chunk)
+        }
         workout.onHealthSnapshot = { [weak connectivity] snapshot in
             connectivity?.sendHealthSnapshot(snapshot)
         }

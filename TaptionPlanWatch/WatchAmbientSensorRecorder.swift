@@ -8,6 +8,9 @@ extension CMSensorDataList: @retroactive Sequence {
 }
 
 struct WatchAmbientArchiveSample: Sendable {
+    var id: UUID
+    var sessionID: UUID
+    var sequence: Int
     var capturedAt: Date
     var acceleration: TaptionWatchSensorVector3
 }
@@ -315,6 +318,9 @@ private struct WatchAmbientBehaviorPipeline {
             lastArchivedAt = capturedAt
             result.archiveSamples.append(
                 WatchAmbientArchiveSample(
+                    id: UUID(),
+                    sessionID: sessionID,
+                    sequence: sequence + 1,
                     capturedAt: capturedAt,
                     acceleration: vector
                 )

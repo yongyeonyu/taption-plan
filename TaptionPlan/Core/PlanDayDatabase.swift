@@ -391,6 +391,174 @@ actor PlanDayDatabase {
         try await iPhoneStore.removeMaterializedDay(for: day)
     }
 
+    func watchAccelerationSamples(
+        for day: Date
+    ) async throws -> [TaptionWatchAccelerationSample] {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: day)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(86_400)
+        return try await watchAccelerationSamples(
+            in: TimeSpan(start: start, end: end)
+        )
+    }
+
+    func watchSummaries(
+        in span: TimeSpan
+    ) async throws -> [TaptionWatchSensorSummary] {
+        let days = dayKeys(includingNeighborsOf: span)
+        var values: [TaptionWatchSensorSummary] = []
+        for day in days {
+            let events = try await iPhoneStore.rawEvents(
+                for: day,
+                domain: "watch-sensor-summary"
+            )
+            values.append(contentsOf: try events.compactMap { event in
+                let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
+                    from: event.payload
+                )
+                let summary = try TaptionPlanCanonicalStorage.decode(
+                    TaptionWatchSensorSummary.self,
+                    from: encoded
+                )
+                return TimeSpan(
+                    start: summary.startedAt,
+                    end: summary.endedAt
+                ).intersection(with: span) == nil ? nil : summary
+            })
+        }
+        var seen = Set<String>()
+        return values
+            .filter {
+                seen.insert("\($0.sessionID.uuidString):\($0.sequence)").inserted
+            }
+            .sorted {
+                if $0.startedAt != $1.startedAt {
+                    return $0.startedAt < $1.startedAt
+                }
+                return $0.sequence < $1.sequence
+            }
+    }
+
+    func recordWatchAccelerationChunk(
+        _ chunk: TaptionWatchAccelerationChunk
+    ) async throws {
+        let payload = TaptionPlanCanonicalStorage.envelope(
+            for: try TaptionPlanCanonicalStorage.encode(chunk)
+        )
+        let day = TaptionPlanDayKey(date: chunk.endedAt)
+        let id = chunk.id.uuidString
+        let sequence = UInt64(max(0, chunk.sequence))
+        let provenance = [
+            "source-device:appleWatch",
+            "source:WatchAcceleration",
+            "raw:accelerometer-v1",
+        ]
+        let watchEvent = TaptionPlanRawEvent(
+            device: .appleWatch,
+            day: day,
+            timestamp: chunk.endedAt,
+            sequence: sequence,
+            id: id,
+            domain: "watch-acceleration",
+            provenance: provenance,
+            payload: payload
+        )
+        let mergedEvent = TaptionPlanRawEvent(
+            device: .iPhone,
+            day: day,
+            timestamp: chunk.endedAt,
+            sequence: sequence,
+            id: id,
+            domain: "watch-acceleration",
+            provenance: provenance + ["merge:iPhone"],
+            payload: payload
+        )
+        try await watchStore.appendRawEvents([watchEvent])
+        try await iPhoneStore.appendRawEvents([mergedEvent])
+        try await materializeWatchDay(for: day)
+        try await iPhoneStore.removeMaterializedDay(for: day)
+    }
+
+    func watchAccelerationChunks(
+        in span: TimeSpan
+    ) async throws -> [TaptionWatchAccelerationChunk] {
+        let days = dayKeys(includingNeighborsOf: span)
+        var chunks: [TaptionWatchAccelerationChunk] = []
+        for day in days {
+            let events = try await iPhoneStore.rawEvents(
+                for: day,
+                domain: "watch-acceleration"
+            )
+            chunks.append(contentsOf: try events.compactMap { event in
+                let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
+                    from: event.payload
+                )
+                let chunk = try TaptionPlanCanonicalStorage.decode(
+                    TaptionWatchAccelerationChunk.self,
+                    from: encoded
+                )
+                return chunk.samples.contains {
+                    span.contains($0.capturedAt)
+                } ? chunk : nil
+            })
+        }
+        var seen = Set<UUID>()
+        return chunks
+            .filter { seen.insert($0.id).inserted }
+            .sorted {
+                if $0.startedAt != $1.startedAt {
+                    return $0.startedAt < $1.startedAt
+                }
+                return $0.sequence < $1.sequence
+            }
+    }
+
+    func watchAccelerationSamples(
+        in span: TimeSpan
+    ) async throws -> [TaptionWatchAccelerationSample] {
+        let samples = try await watchAccelerationChunks(in: span)
+            .flatMap(\.samples)
+            .filter { span.contains($0.capturedAt) }
+        return Dictionary(
+            samples.map {
+                ($0.id.uuidString, $0)
+            }, uniquingKeysWith: { first, _ in first }
+        ).values.sorted {
+            if $0.capturedAt == $1.capturedAt {
+                return $0.sequence < $1.sequence
+            }
+            return $0.capturedAt < $1.capturedAt
+        }
+    }
+
+    private func dayKeys(intersecting span: TimeSpan) -> [TaptionPlanDayKey] {
+        let calendar = Calendar.autoupdatingCurrent
+        let first = calendar.startOfDay(for: span.start)
+        let last = calendar.startOfDay(for: max(span.start, span.end))
+        var result: [TaptionPlanDayKey] = []
+        var day = first
+        while day <= last {
+            result.append(TaptionPlanDayKey(date: day))
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day),
+                  next > day else { break }
+            day = next
+        }
+        return result
+    }
+
+    private func dayKeys(
+        includingNeighborsOf span: TimeSpan
+    ) -> [TaptionPlanDayKey] {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: span.start)
+        let end = calendar.startOfDay(for: max(span.start, span.end))
+        let first = calendar.date(byAdding: .day, value: -1, to: start)
+            ?? start
+        let last = calendar.date(byAdding: .day, value: 1, to: end) ?? end
+        return dayKeys(intersecting: TimeSpan(start: first, end: last))
+    }
+
     func invalidate(day: Date) async throws {
         try await iPhoneStore.removeMaterializedDay(
             for: TaptionPlanDayKey(date: day)
@@ -637,7 +805,7 @@ actor PlanDayDatabase {
                     day: day,
                     timestamp: actual.startedAt,
                     sequence: index,
-                    id: projectionID(actual.id, day: day),
+                    id: try projectionID(actual.id, day: day, value: actual),
                     domain: "plan-actual",
                     provenance: ["source:\(actual.source.rawValue)", "projection:day"]
                 )
@@ -651,7 +819,7 @@ actor PlanDayDatabase {
                     day: day,
                     timestamp: place.span.start,
                     sequence: index,
-                    id: projectionID(place.id, day: day),
+                    id: try projectionID(place.id, day: day, value: place),
                     domain: "plan-place",
                     provenance: ["source:place-resolution", "projection:day"]
                 )
@@ -665,7 +833,7 @@ actor PlanDayDatabase {
                     day: day,
                     timestamp: travel.span.start,
                     sequence: index,
-                    id: projectionID(travel.id, day: day),
+                    id: try projectionID(travel.id, day: day, value: travel),
                     domain: "plan-travel",
                     provenance: ["source:\(travel.mode.rawValue)", "projection:day"]
                 )
@@ -685,7 +853,7 @@ actor PlanDayDatabase {
                 day: TaptionPlanDayKey(date: reading.timestamp),
                 timestamp: reading.timestamp,
                 sequence: reading.sequence ?? index,
-                id: reading.id.uuidString,
+                id: try projectionID(reading.id, day: day, value: reading),
                 domain: "sensor-reading",
                 provenance: provenance
             )
@@ -698,7 +866,7 @@ actor PlanDayDatabase {
                         day: TaptionPlanDayKey(date: reading.timestamp),
                         timestamp: reading.timestamp,
                         sequence: reading.sequence ?? index,
-                        id: reading.id.uuidString,
+                        id: try projectionID(reading.id, day: day, value: reading),
                         domain: "sensor-reading",
                         provenance: provenance
                     )
@@ -732,8 +900,21 @@ actor PlanDayDatabase {
         )
     }
 
-    private func projectionID(_ id: UUID, day: TaptionPlanDayKey) -> String {
-        "\(id.uuidString):\(String(format: "%04d-%02d-%02d", day.year, day.month, day.day))"
+    private func projectionID<Value: Encodable>(
+        _ id: UUID,
+        day: TaptionPlanDayKey,
+        value: Value
+    ) throws -> String {
+        let encoded = try TaptionPlanCanonicalStorage.encode(value)
+        let dayKey = String(
+            format: "%04d-%02d-%02d",
+            day.year,
+            day.month,
+            day.day
+        )
+        // A new projection generation must not collide with an older immutable
+        // projection event when the same source ID receives a new classification.
+        return "\(id.uuidString):\(dayKey):\(encoded.checksum)"
     }
 }
 
@@ -760,6 +941,7 @@ final class PlanDayLoadCoordinator {
 
     private var inFlight: [CacheKey: InFlightRequest] = [:]
     private var prefetchTask: Task<Void, Never>?
+    private var forceReloadDays: Set<TaptionPlanDayKey> = []
 
     init(
         database: PlanDayDatabase,
@@ -780,7 +962,8 @@ final class PlanDayLoadCoordinator {
         day: Date,
         source: TaptionDataSnapshot,
         sourceRevision: UInt64,
-        sensorLoader: @escaping (Date) async -> SensorReadingsLoadResult
+        sensorLoader: @escaping (Date) async -> SensorReadingsLoadResult,
+        forceReload requestedForceReload: Bool = false
     ) async -> PlanDayDataSnapshot {
         let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: day)
         let key = CacheKey(
@@ -788,18 +971,29 @@ final class PlanDayLoadCoordinator {
             sourceRevision: sourceRevision,
             projectionVersion: TaptionPlanV3Store.projectionVersion
         )
+        let pendingForceReload = forceReloadDays.remove(key.day) != nil
+        let forceReload = requestedForceReload || pendingForceReload
         if let cached = cache[key] {
-            touch(key)
-            return cached
+            if !forceReload {
+                touch(key)
+                return cached
+            }
+            cache.removeValue(forKey: key)
+            recency.removeAll { $0 == key }
         }
         cancelRequests(except: key)
         if let existing = inFlight[key] {
-            return await existing.task.value
+            if !forceReload {
+                return await existing.task.value
+            }
+            existing.task.cancel()
+            inFlight.removeValue(forKey: key)
         }
 
         let database = self.database
-        let task = Task { @MainActor [source, database] in
-            if let cached = try? await database.load(
+        let task = Task { @MainActor [source, database, forceReload] in
+            if !forceReload,
+               let cached = try? await database.load(
                 day: dayStart,
                 sourceRevision: sourceRevision
             ) {
@@ -814,6 +1008,12 @@ final class PlanDayLoadCoordinator {
             )
             guard !Task.isCancelled else { return projected }
             try? await database.save(projected)
+            if let readBack = try? await database.load(
+                day: dayStart,
+                sourceRevision: sourceRevision
+            ) {
+                return readBack
+            }
             return projected
         }
         let request = InFlightRequest(id: UUID(), task: task)
@@ -889,6 +1089,7 @@ final class PlanDayLoadCoordinator {
 
     func invalidate(day: Date) {
         let dayKey = TaptionPlanDayKey(date: day)
+        forceReloadDays.insert(dayKey)
         let keys = Set(cache.keys.filter { $0.day == dayKey })
             .union(inFlight.keys.filter { $0.day == dayKey })
         for key in keys {
@@ -897,9 +1098,9 @@ final class PlanDayLoadCoordinator {
             inFlight[key]?.task.cancel()
             inFlight.removeValue(forKey: key)
         }
-        Task {
-            try? await database.invalidate(day: day)
-        }
+        // The next load bypasses the materialized row and replaces it only
+        // after the fresh projection is ready. Avoid an asynchronous delete
+        // racing that save/readback pair.
     }
 
     func handleMemoryPressure() {

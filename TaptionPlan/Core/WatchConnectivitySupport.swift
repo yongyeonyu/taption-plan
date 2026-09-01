@@ -4,6 +4,7 @@ import WatchConnectivity
 
 actor AppleWatchSensorActivityArchive {
     private let fileURL: URL
+    private let accelerationFileURL: URL
     private let retentionInterval: TimeInterval
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -13,6 +14,8 @@ actor AppleWatchSensorActivityArchive {
         retentionInterval: TimeInterval = 31 * 86_400
     ) {
         self.fileURL = fileURL
+        self.accelerationFileURL = fileURL.deletingLastPathComponent()
+            .appendingPathComponent("watch-acceleration-chunks-v1.json")
         self.retentionInterval = max(86_400, retentionInterval)
         encoder = JSONEncoder()
         decoder = JSONDecoder()
@@ -91,6 +94,64 @@ actor AppleWatchSensorActivityArchive {
         }
     }
 
+    func record(
+        _ chunk: TaptionWatchAccelerationChunk,
+        now: Date = .now
+    ) throws {
+        var values = try loadAccelerationChunks()
+        values.removeAll { $0.id == chunk.id }
+        values.append(chunk)
+        let cutoff = now.addingTimeInterval(-retentionInterval)
+        values.removeAll { $0.endedAt < cutoff }
+        values.sort { $0.endedAt < $1.endedAt }
+        if values.count > 10_000 {
+            values.removeFirst(values.count - 10_000)
+        }
+        try FileManager.default.createDirectory(
+            at: accelerationFileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try encoder.encode(values).write(
+            to: accelerationFileURL,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
+        )
+    }
+
+    func accelerationChunks(in span: TimeSpan) throws
+        -> [TaptionWatchAccelerationChunk] {
+        try loadAccelerationChunks()
+            .filter {
+                TimeSpan(start: $0.startedAt, end: $0.endedAt)
+                    .intersection(with: span) != nil
+            }
+            .sorted {
+                if $0.startedAt != $1.startedAt {
+                    return $0.startedAt < $1.startedAt
+                }
+                return $0.sequence < $1.sequence
+            }
+    }
+
+    func accelerationSamples(in span: TimeSpan) throws
+        -> [TaptionWatchAccelerationSample] {
+        try accelerationChunks(in: span)
+            .flatMap(\.samples)
+            .filter { span.contains($0.capturedAt) }
+            .reduce(into: [UUID: TaptionWatchAccelerationSample]()) {
+                $0[$1.id] = $1
+            }
+            .values
+            .sorted {
+                if $0.capturedAt == $1.capturedAt {
+                    return $0.sequence < $1.sequence
+                }
+                return $0.capturedAt < $1.capturedAt
+            }
+    }
+
     private func load() throws -> [TaptionWatchSensorSummary] {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return []
@@ -98,6 +159,17 @@ actor AppleWatchSensorActivityArchive {
         return try decoder.decode(
             [TaptionWatchSensorSummary].self,
             from: Data(contentsOf: fileURL)
+        )
+    }
+
+    private func loadAccelerationChunks() throws
+        -> [TaptionWatchAccelerationChunk] {
+        guard FileManager.default.fileExists(
+            atPath: accelerationFileURL.path
+        ) else { return [] }
+        return try decoder.decode(
+            [TaptionWatchAccelerationChunk].self,
+            from: Data(contentsOf: accelerationFileURL)
         )
     }
 }
@@ -434,6 +506,8 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
     private var sensorSummaryHandler:
         (@Sendable (TaptionWatchSensorSummary, Date, String?) -> Void)?
+    private var accelerationChunkHandler:
+        (@Sendable (TaptionWatchAccelerationChunk, Date, String?) -> Void)?
     private var healthSnapshotHandler:
         (@Sendable (TaptionWatchHealthSnapshot, Date, String?) -> Void)?
     /// 워치가 보낸 "맞아요 / 아니에요" 응답. AppModel이 별도로 연결한다.
@@ -458,6 +532,11 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 Date,
                 String?
             ) -> Void,
+            onAccelerationChunk: @escaping @Sendable (
+                TaptionWatchAccelerationChunk,
+                Date,
+                String?
+            ) -> Void = { _, _, _ in },
             onHealthSnapshot: @escaping @Sendable (
                 TaptionWatchHealthSnapshot,
                 Date,
@@ -473,6 +552,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     ) {
         commandHandler = onCommand
         sensorSummaryHandler = onSensorSummary
+        accelerationChunkHandler = onAccelerationChunk
         healthSnapshotHandler = onHealthSnapshot
         activityConfirmationHandler = onActivityConfirmation
         locationTrackingHandler = onLocationTracking
@@ -775,6 +855,10 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         if let data = envelope[TaptionWatchEnvelope.sensorSummaryKey] as? Data {
             envelopeFields["sensor_bytes"] = String(data.count)
         }
+        if let data = envelope[TaptionWatchEnvelope.accelerationChunkKey]
+            as? Data {
+            envelopeFields["acceleration_bytes"] = String(data.count)
+        }
         if let data = envelope[TaptionWatchEnvelope.healthSnapshotKey] as? Data {
             envelopeFields["health_bytes"] = String(data.count)
         }
@@ -832,6 +916,42 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "watch_sensor_summary_decode_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error).merging([
+                        "bytes": String(data.count),
+                    ]) { _, new in new }
+                )
+            }
+        }
+        if let data = envelope[
+            TaptionWatchEnvelope.accelerationChunkKey
+        ] as? Data {
+            do {
+                let chunk = try decoder.decode(
+                    TaptionWatchAccelerationChunk.self,
+                    from: data
+                )
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_chunk_received",
+                    fields: [
+                        "transport": transport,
+                        "chunk": chunk.id.uuidString,
+                        "samples": String(chunk.samples.count),
+                        "sequence": String(chunk.sequence),
+                        "final": String(chunk.isFinal),
+                    ].merging(
+                        requestID.map { ["request_id": $0] } ?? [:]
+                    ) { _, new in new }
+                )
+                accelerationChunkHandler?(chunk, receivedAt, requestID)
+                latestWatchDataAt = max(
+                    latestWatchDataAt ?? chunk.endedAt,
+                    chunk.endedAt
+                )
+                accepted = true
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_chunk_decode_failed",
                     level: .error,
                     fields: TaptionDiagnosticError.fields(for: error).merging([
                         "bytes": String(data.count),

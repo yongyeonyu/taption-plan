@@ -9326,6 +9326,80 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(aggregate.evidence.contains("시간 가중 집계"))
     }
 
+    func testWatchRawReplayUsesOverlappingChunkWithoutMatchingSequence() {
+        let start = makeDate(2026, 8, 2, 9)
+        let sessionID = UUID()
+        let summary = TaptionWatchSensorSummary(
+            sessionID: sessionID,
+            sequence: 1,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(3.1),
+            isFinal: false,
+            accelerometerSampleCount: 32,
+            accelerometerAverageG: nil,
+            peakAccelerationG: 1.14,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: nil,
+            distanceMeters: nil,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: nil,
+            averageHeartRate: nil,
+            maximumHeartRate: nil,
+            activeEnergyKilocalories: nil,
+            behavior: .stationary,
+            behaviorConfidenceScore: 0.55,
+            behaviorEvidence: ["기존 요약"],
+            behaviorModelVersion: WatchBehaviorClassifier.rulesVersion
+        )
+        let samples = (0..<32).map { index in
+            TaptionWatchAccelerationSample(
+                capturedAt: start.addingTimeInterval(Double(index) * 0.1),
+                acceleration: TaptionWatchSensorVector3(
+                    x: 1 + sin(Double(index) * 0.8) * 0.14,
+                    y: 0,
+                    z: 0
+                ),
+                sessionID: sessionID,
+                sequence: index + 1,
+                isAmbient: false
+            )
+        }
+        let chunk = TaptionWatchAccelerationChunk(
+            sessionID: sessionID,
+            sequence: 99,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(3.1),
+            samples: samples
+        )
+
+        let replayed = WatchActivityRawReplayEngine.replaying(
+            summaries: [summary],
+            chunks: [chunk]
+        )
+
+        XCTAssertEqual(replayed.count, 1)
+        XCTAssertEqual(
+            replayed.first?.behaviorModelVersion,
+            WatchActivityRawReplayEngine.modelVersion
+        )
+        XCTAssertTrue(
+            replayed.first?.behaviorEvidence?.contains("raw 표본 32개") == true
+        )
+    }
+
     func testWatchSensorChunksUpdateTheSameImmutableActivity() {
         let base = makeDate(2026, 8, 2, 9)
         let sessionID = UUID()
@@ -13845,6 +13919,144 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(inference.evidence.contains("평일 09–18시"))
     }
 
+    func testStationaryContextUsesWatchRawMotionForPlaceDetails() {
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let end = start.addingTimeInterval(2 * hour)
+        let readings = [
+            makeContextReading(at: start, flat: true),
+            makeContextReading(at: start.addingTimeInterval(hour), flat: true),
+            makeContextReading(at: start.addingTimeInterval(90 * 60), flat: true),
+        ]
+        let sessionID = UUID()
+        let rawSamples = makeWatchRawSamples(
+            start: start,
+            sessionID: sessionID,
+            count: 12
+        )
+        let typing = makeWatchSummary(
+            start: start,
+            duration: end.timeIntervalSince(start),
+            sessionID: sessionID,
+            behavior: .typing
+        )
+
+        let home = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .home,
+                readings: readings,
+                watchSummaries: [typing],
+                watchAccelerationSamples: rawSamples,
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+        XCTAssertEqual(home.kind, .housework)
+        XCTAssertTrue(
+            home.evidence.contains("집에서 Apple Watch 가속도·손목 움직임")
+        )
+
+        let company = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .company,
+                readings: readings,
+                watchSummaries: [typing],
+                watchAccelerationSamples: rawSamples,
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+        XCTAssertEqual(company.kind, .work)
+        XCTAssertTrue(
+            company.evidence.contains("회사에서 Apple Watch 타이핑 감지")
+        )
+
+        let restaurant = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .restaurant,
+                readings: readings,
+                watchSummaries: [
+                    makeWatchSummary(
+                        start: start,
+                        duration: end.timeIntervalSince(start),
+                        sessionID: sessionID,
+                        behavior: .eating
+                    )
+                ],
+                watchAccelerationSamples: rawSamples,
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+        XCTAssertEqual(restaurant.kind, .mealPlace)
+        XCTAssertTrue(
+            restaurant.evidence.contains("식당에서 Apple Watch 식사 감지")
+        )
+
+        let summaryOnly = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .home,
+                readings: readings,
+                watchSummaries: [typing],
+                calendar: utcCalendar,
+                now: end.addingTimeInterval(hour)
+            )
+        )
+        XCTAssertEqual(summaryOnly.kind, .homeRest)
+    }
+
+    func testWatchRawReplayRecomputesOnlyWhenRawChunkExists() {
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let sessionID = UUID()
+        let summary = makeWatchSummary(
+            start: start,
+            duration: 30,
+            sessionID: sessionID,
+            behavior: .automotive
+        )
+        let legacy = WatchActivityRawReplayEngine.replaying(
+            summaries: [summary],
+            chunks: []
+        )
+        XCTAssertEqual(legacy.first?.behavior, .automotive)
+        XCTAssertEqual(
+            legacy.first?.behaviorModelVersion,
+            WatchBehaviorClassifier.rulesVersion
+        )
+
+        let samples = makeWatchRawSamples(
+            start: start,
+            sessionID: sessionID,
+            count: 65
+        )
+        let chunk = TaptionWatchAccelerationChunk(
+            sessionID: sessionID,
+            sequence: 1,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(30),
+            samples: samples
+        )
+        let replayed = WatchActivityRawReplayEngine.replaying(
+            summaries: [summary],
+            chunks: [chunk]
+        ).first
+
+        XCTAssertEqual(
+            replayed?.behaviorModelVersion,
+            WatchActivityRawReplayEngine.modelVersion
+        )
+        XCTAssertTrue(replayed?.behaviorEvidence?.contains("Apple Watch raw 재생성") == true)
+        XCTAssertTrue(
+            WatchActivityRawReplayEngine.hasRawEvidence(
+                for: summary,
+                in: [chunk]
+            )
+        )
+    }
+
     func testStationaryContextShortStayBetweenTravelsBecomesWaiting() {
         let start = makeDate(2026, 8, 4, 10, 0)
         let end = start.addingTimeInterval(10 * 60)
@@ -13882,6 +14094,105 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(inference.kind, .waiting)
         XCTAssertEqual(inference.kind.title, "대기")
         XCTAssertTrue(inference.evidence.contains("이동 사이 정지"))
+    }
+
+    func testStationaryContextUsesWatchRawMotionForHomeHousework() {
+        let start = makeDate(2026, 8, 8, 14, 0)
+        let end = start.addingTimeInterval(hour)
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .home,
+                readings: [
+                    makeContextReading(at: start, flat: true),
+                    makeContextReading(
+                        at: start.addingTimeInterval(20 * 60),
+                        flat: true
+                    ),
+                    makeContextReading(
+                        at: start.addingTimeInterval(40 * 60),
+                        flat: true
+                    ),
+                ],
+                watchAccelerationSamples: makeWatchRawSamples(
+                    start: start,
+                    values: [0, 0.08, 0, 0.08]
+                ),
+                calendar: utcCalendar,
+                now: end
+            )
+        )
+
+        XCTAssertEqual(inference.kind, .housework)
+        XCTAssertTrue(
+            inference.evidence.contains("집에서 Apple Watch 가속도·손목 움직임")
+        )
+    }
+
+    func testStationaryContextAddsWatchEvidenceAtCompanyAndRestaurant() {
+        let start = makeDate(2026, 8, 8, 14, 0)
+        let end = start.addingTimeInterval(hour)
+        let samples = makeWatchRawSamples(
+            start: start,
+            values: [0, 0.08, 0, 0.08]
+        )
+        let company = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .company,
+                watchAccelerationSamples: samples,
+                calendar: utcCalendar,
+                now: end
+            )
+        )
+        let restaurant = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .restaurant,
+                watchAccelerationSamples: samples,
+                calendar: utcCalendar,
+                now: end
+            )
+        )
+
+        XCTAssertEqual(company.kind, .work)
+        XCTAssertTrue(
+            company.evidence.contains("회사에서 Apple Watch 손목 활동")
+        )
+        XCTAssertEqual(restaurant.kind, .mealPlace)
+        XCTAssertTrue(
+            restaurant.evidence.contains("식당에서 Apple Watch 손목 활동")
+        )
+    }
+
+    func testStationaryContextTravelWinsOverWatchFineDetail() {
+        let start = makeDate(2026, 8, 8, 14, 0)
+        let end = start.addingTimeInterval(hour)
+        let travel = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: start.addingTimeInterval(20 * 60),
+                end: start.addingTimeInterval(30 * 60)
+            ),
+            distanceMeters: 500,
+            confidence: .medium,
+            evidence: ["이동"]
+        )
+        let inference = StationaryContextClassifier().classify(
+            StationaryContextInput(
+                stay: makeContextStay(start: start, end: end),
+                placeKind: .home,
+                travel: [travel],
+                watchAccelerationSamples: makeWatchRawSamples(
+                    start: start,
+                    values: [0, 0.08, 0, 0.08]
+                ),
+                calendar: utcCalendar,
+                now: end
+            )
+        )
+
+        XCTAssertNotEqual(inference.kind, .housework)
     }
 
     func testStationaryContextWithoutEvidenceStaysUnknownAtLowConfidence() {
@@ -13970,7 +14281,10 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(records.first?.title, "근무")
         XCTAssertEqual(records.first?.source, .location)
         XCTAssertEqual(records.first?.behavior, "work")
-        XCTAssertEqual(records.first?.modelVersion, "stationary-context-v1")
+        XCTAssertEqual(
+            records.first?.modelVersion,
+            StationaryContextClassifier.modelVersion
+        )
         XCTAssertEqual(records.first?.id, makeRecords().first?.id)
 
         let catalogIDs = Set(CategoryCatalog.builtIn.map(\.id))
@@ -14724,6 +15038,90 @@ final class FeatureEngineTests: XCTestCase {
                 peakRotationRateRadiansPerSecond: 0.003
             )
         )
+    }
+
+    private func makeWatchRawSamples(
+        start: Date,
+        values: [Double]
+    ) -> [TaptionWatchAccelerationSample] {
+        values.enumerated().map { index, value in
+            TaptionWatchAccelerationSample(
+                capturedAt: start.addingTimeInterval(Double(index) * 10),
+                acceleration: TaptionWatchSensorVector3(
+                    x: value,
+                    y: 0,
+                    z: 0
+                ),
+                sequence: index + 1,
+                isAmbient: true
+            )
+        }
+    }
+
+    private func makeWatchSummary(
+        start: Date,
+        duration: TimeInterval,
+        sessionID: UUID,
+        behavior: WatchBehaviorKind
+    ) -> TaptionWatchSensorSummary {
+        var summary = TaptionWatchSensorSummary(
+            sessionID: sessionID,
+            sequence: 1,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(duration),
+            isFinal: false,
+            accelerometerSampleCount: 64,
+            accelerometerAverageG: nil,
+            peakAccelerationG: 1.1,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: 0,
+            distanceMeters: 0,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: nil,
+            averageHeartRate: nil,
+            maximumHeartRate: nil,
+            activeEnergyKilocalories: nil
+        )
+        summary.behavior = behavior
+        summary.behaviorConfidenceScore = 0.8
+        summary.behaviorEvidence = ["기존 Watch 판정"]
+        summary.behaviorModelVersion = WatchBehaviorClassifier.rulesVersion
+        summary.isAmbient = true
+        return summary
+    }
+
+    private func makeWatchRawSamples(
+        start: Date,
+        sessionID: UUID,
+        count: Int
+    ) -> [TaptionWatchAccelerationSample] {
+        (0..<count).map { index in
+            let sign = index.isMultiple(of: 2) ? 1.0 : -1.0
+            return TaptionWatchAccelerationSample(
+                capturedAt: start.addingTimeInterval(Double(index) * 0.25),
+                acceleration: TaptionWatchSensorVector3(
+                    x: 0,
+                    y: 0,
+                    z: 1 + sign * 0.08
+                ),
+                sessionID: sessionID,
+                sequence: index + 1,
+                isAmbient: true
+            )
+        }
     }
 
     func testSummaryBucketsSplitRecordsAcrossDayBoundaries() {

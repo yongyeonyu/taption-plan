@@ -159,12 +159,13 @@ struct StationaryContextInput: Sendable {
     var actuals: [ActualRecord] = []
     var travel: [TravelSegment] = []
     var watchSummaries: [TaptionWatchSensorSummary] = []
+    var watchAccelerationSamples: [TaptionWatchAccelerationSample] = []
     var calendar: Calendar = .autoupdatingCurrent
     var now: Date = .now
 }
 
 struct StationaryContextClassifier: Sendable {
-    static let modelVersion = "stationary-context-v1"
+    static let modelVersion = "stationary-context-v2"
 
     func classify(_ input: StationaryContextInput) -> StationaryContextInference {
         let stay = input.stay.span
@@ -251,16 +252,49 @@ struct StationaryContextClassifier: Sendable {
             add(leader, 0.08, "90분 이상 체류")
         }
 
-        // 4. 집에서의 손목 움직임으로 집안일과 휴식을 가른다.
-        if input.placeKind == .home {
-            if input.watchSummaries.contains(where: {
-                AppleWatchSensorActivityEngine.sustainedMotion($0)
-                    && TimeSpan(start: $0.startedAt, end: $0.endedAt)
-                        .intersection(with: stay) != nil
-            }) || hasHomeMovement(input.readings, in: stay) {
-                add(.housework, 0.40, "집에서 걷기·가속도 움직임")
-            } else if isLowMotion(input.readings, stay: stay, placement: placement) {
-                add(.homeRest, 0.30, "집에서 움직임 거의 없음")
+        // 4. 휴대폰이 머문 동안 Watch의 손목 신호가 변하면 장소 문맥을
+        // 세부 행동의 prior로 쓴다. 이동 구간은 장소보다 우선한다.
+        let phoneIsStationary = isPhoneStationary(
+            input.readings,
+            travel: input.travel,
+            stay: stay
+        )
+        let watchContextSignals = watchSignals(
+            input.watchSummaries,
+            rawSamples: input.watchAccelerationSamples,
+            overlapping: stay
+        )
+        if phoneIsStationary {
+            switch input.placeKind {
+            case .home:
+                if watchContextSignals.hasSustainedMotion
+                    || hasHomeMovement(input.readings, in: stay) {
+                    add(.housework, 0.55, "집에서 Apple Watch 가속도·손목 움직임")
+                } else if isLowMotion(input.readings, stay: stay, placement: placement) {
+                    add(.homeRest, 0.30, "집에서 움직임 거의 없음")
+                }
+            case .company:
+                if let detail = watchContextSignals.bestBehavior {
+                    add(
+                        .work,
+                        0.36,
+                        "회사에서 Apple Watch \(detail.title) 감지"
+                    )
+                } else if watchContextSignals.hasSustainedMotion {
+                    add(.work, 0.30, "회사에서 Apple Watch 손목 활동")
+                }
+            case .restaurant:
+                if let detail = watchContextSignals.bestBehavior {
+                    add(
+                        .mealPlace,
+                        0.36,
+                        "식당에서 Apple Watch \(detail.title) 감지"
+                    )
+                } else if watchContextSignals.hasSustainedMotion {
+                    add(.mealPlace, 0.30, "식당에서 Apple Watch 손목 활동")
+                }
+            default:
+                break
             }
         }
 
@@ -409,6 +443,101 @@ struct StationaryContextClassifier: Sendable {
         return Double(active.count) / Double(inside.count) >= 0.25
     }
 
+    private func isPhoneStationary(
+        _ readings: [SensorReading],
+        travel: [TravelSegment],
+        stay: TimeSpan
+    ) -> Bool {
+        guard !travel.contains(where: {
+            $0.span.intersection(with: stay) != nil
+        }) else { return false }
+        let inside = readings.filter { stay.contains($0.timestamp) }
+        guard !inside.isEmpty else { return true }
+        let moving = inside.filter {
+            $0.motion == .walking
+                || $0.motion == .running
+                || $0.motion == .cycling
+        }.count
+        return Double(moving) / Double(inside.count) < 0.25
+    }
+
+    private struct WatchContextSignals {
+        var hasSustainedMotion = false
+        var bestBehavior: WatchBehaviorKind?
+        var bestScore = 0.0
+    }
+
+    private func watchSignals(
+        _ summaries: [TaptionWatchSensorSummary],
+        rawSamples: [TaptionWatchAccelerationSample],
+        overlapping stay: TimeSpan
+    ) -> WatchContextSignals {
+        var result = WatchContextSignals()
+        let overlappingRawSamples = rawSamples.filter {
+            stay.contains($0.capturedAt)
+        }
+        guard overlappingRawSamples.count >= 3 else { return result }
+        result.hasSustainedMotion = hasRawMotion(
+            rawSamples,
+            overlapping: stay
+        )
+        for summary in summaries {
+            guard let overlap = TimeSpan(
+                start: summary.startedAt,
+                end: summary.endedAt
+            ).intersection(with: stay), overlap.duration > 0 else {
+                continue
+            }
+            if AppleWatchSensorActivityEngine.sustainedMotion(summary) {
+                result.hasSustainedMotion = true
+            }
+            if let behavior = summary.behavior,
+               (summary.behaviorConfidenceScore ?? 0.5) >= 0.55 {
+                let score = overlap.duration
+                    * max(0.25, summary.behaviorConfidenceScore ?? 0.5)
+                if score > result.bestScore {
+                    result.bestScore = score
+                    result.bestBehavior = behavior
+                }
+            }
+            for segment in summary.behaviorSegments ?? [] {
+                guard let segmentOverlap = TimeSpan(
+                    start: segment.startedAt,
+                    end: segment.endedAt
+                ).intersection(with: stay), segmentOverlap.duration > 0,
+                segment.confidenceScore >= 0.55 else {
+                    continue
+                }
+                let score = segmentOverlap.duration * segment.confidenceScore
+                if score > result.bestScore {
+                    result.bestScore = score
+                    result.bestBehavior = segment.behavior
+                }
+            }
+        }
+        return result
+    }
+
+    private func hasRawMotion(
+        _ samples: [TaptionWatchAccelerationSample],
+        overlapping stay: TimeSpan
+    ) -> Bool {
+        let inside = samples.filter { stay.contains($0.capturedAt) }
+        guard inside.count >= 3 else { return false }
+        let magnitudes = inside.map { $0.acceleration.magnitude }
+        let mean = magnitudes.reduce(0, +) / Double(magnitudes.count)
+        let variance = magnitudes.reduce(0) {
+            $0 + ($1 - mean) * ($1 - mean)
+        } / Double(max(1, magnitudes.count - 1))
+        let changes = zip(magnitudes.dropFirst(), magnitudes).map {
+            abs($0 - $1)
+        }
+        let meanChange = changes.isEmpty
+            ? 0
+            : changes.reduce(0, +) / Double(changes.count)
+        return sqrt(max(0, variance)) >= 0.018 || meanChange >= 0.018
+    }
+
     private func abuts(
         _ travel: [TravelSegment],
         endingAt boundary: Date,
@@ -491,6 +620,7 @@ enum StationaryContextActualEngine {
         actuals: [ActualRecord] = [],
         travel: [TravelSegment] = [],
         watchSummaries: [TaptionWatchSensorSummary] = [],
+        watchAccelerationSamples: [TaptionWatchAccelerationSample] = [],
         inside: TimeSpan,
         minimumDuration: TimeInterval = 5 * 60,
         calendar: Calendar = .autoupdatingCurrent,
@@ -515,6 +645,7 @@ enum StationaryContextActualEngine {
                     actuals: actuals,
                     travel: travel,
                     watchSummaries: watchSummaries,
+                    watchAccelerationSamples: watchAccelerationSamples,
                     calendar: calendar,
                     now: now
                 )
@@ -761,6 +892,8 @@ enum RestaurantMealActualEngine {
     static func records(
         restaurants: [FrequentPlace],
         readings: [SensorReading],
+        watchSummaries: [TaptionWatchSensorSummary] = [],
+        watchAccelerationSamples: [TaptionWatchAccelerationSample] = [],
         inside: TimeSpan,
         asOf: Date = .now
     ) -> [ActualRecord] {
@@ -791,6 +924,15 @@ enum RestaurantMealActualEngine {
                         guard span.duration >= minimumDuration else {
                             return nil
                         }
+                        var evidence = [
+                            "등록 식당: \(restaurant.name)",
+                            "반경 내 15분 이상 연속 체류",
+                        ]
+                        evidence.append(contentsOf: watchEvidence(
+                            summaries: watchSummaries,
+                            rawSamples: watchAccelerationSamples,
+                            inside: span
+                        ))
                         return ActualRecord(
                             id: stableID(restaurant: restaurant, span: span),
                             planID: nil,
@@ -802,15 +944,34 @@ enum RestaurantMealActualEngine {
                             confidence: .high,
                             createdAt: span.start,
                             behavior: "meal",
-                            evidence: [
-                                "등록 식당: \(restaurant.name)",
-                                "반경 내 15분 이상 연속 체류",
-                            ],
+                            evidence: evidence,
                             modelVersion: modelVersion
                         )
                     }
             }
             .sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private static func watchEvidence(
+        summaries: [TaptionWatchSensorSummary],
+        rawSamples: [TaptionWatchAccelerationSample],
+        inside span: TimeSpan
+    ) -> [String] {
+        let rawCount = rawSamples.filter { span.contains($0.capturedAt) }.count
+        guard rawCount >= 3 else { return [] }
+        let overlapping = summaries.filter {
+            TimeSpan(start: $0.startedAt, end: $0.endedAt)
+                .intersection(with: span) != nil
+        }
+        if let behavior = overlapping
+            .compactMap({ summary -> (WatchBehaviorKind, Double)? in
+                guard let behavior = summary.behavior else { return nil }
+                return (behavior, summary.behaviorConfidenceScore ?? 0.5)
+            })
+            .max(by: { $0.1 < $1.1 }), behavior.1 >= 0.55 {
+            return ["Apple Watch \(behavior.0.title) 감지"]
+        }
+        return rawCount >= 3 ? ["Apple Watch 가속도 활동"] : []
     }
 
     private static func runs(

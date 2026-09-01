@@ -404,6 +404,109 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testWatchAccelerationChunkPreservesRawSamplesAcrossDuplicateDelivery() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-watch-raw-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let start = Date(timeIntervalSince1970: 2_200_000_000)
+        let sessionID = UUID()
+        let samples = (0..<4).map { index in
+            TaptionWatchAccelerationSample(
+                capturedAt: start.addingTimeInterval(Double(index) * 5),
+                acceleration: TaptionWatchSensorVector3(
+                    x: 0,
+                    y: 0,
+                    z: index.isMultiple(of: 2) ? 1.08 : 0.92
+                ),
+                sessionID: sessionID,
+                sequence: index + 1,
+                isAmbient: false
+            )
+        }
+        let chunk = TaptionWatchAccelerationChunk(
+            sessionID: sessionID,
+            sequence: 1,
+            startedAt: start,
+            endedAt: samples.last!.capturedAt,
+            samples: samples
+        )
+
+        try await database.recordWatchAccelerationChunk(chunk)
+        try await database.recordWatchAccelerationChunk(chunk)
+
+        let day = TaptionPlanDayKey(date: chunk.endedAt)
+        let watchStore = try TaptionPlanV3Store(
+            url: directory.appendingPathComponent("taption-plan-watch-v3.sqlite"),
+            device: .appleWatch
+        )
+        let iPhoneStore = try TaptionPlanV3Store(
+            url: directory.appendingPathComponent("taption-plan-iphone-v3.sqlite"),
+            device: .iPhone
+        )
+        let watchDigest = try await watchStore.rawDigest(for: day)
+        let iPhoneDigest = try await iPhoneStore.rawDigest(for: day)
+        XCTAssertEqual(watchDigest.eventCount, 1)
+        XCTAssertEqual(iPhoneDigest.eventCount, 1)
+        let restored = try await database.watchAccelerationSamples(
+            in: TimeSpan(
+                start: start.addingTimeInterval(-1),
+                end: start.addingTimeInterval(21)
+            )
+        )
+        XCTAssertEqual(restored.map(\.id), samples.map(\.id))
+    }
+
+    @MainActor
+    func testPlanDayDatabaseReadsBackTheLatestProjectionAfterRegeneration() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-projection-refresh-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        _ = try await database.migrateLegacyIfNeeded(
+            source: .empty,
+            sourceRevision: 1,
+            readings: [],
+            watchSummaries: [],
+            rawEnvelopes: []
+        )
+
+        let day = Date(timeIntervalSince1970: 2_200_000_000)
+        let actualID = UUID()
+        func snapshot(title: String) -> PlanDayDataSnapshot {
+            PlanDayDataSnapshot(
+                day: day,
+                sourceRevision: 1,
+                sourceUpdatedAt: day,
+                actuals: [
+                    ActualRecord(
+                        id: actualID,
+                        planID: nil,
+                        title: title,
+                        categoryID: "activity",
+                        startedAt: day.addingTimeInterval(60),
+                        endedAt: day.addingTimeInterval(120),
+                        source: .location,
+                        confidence: .medium,
+                        createdAt: day
+                    ),
+                ],
+                places: [],
+                travel: [],
+                readings: [],
+                isComplete: true
+            )
+        }
+
+        try await database.save(snapshot(title: "근무"))
+        try await database.save(snapshot(title: "집안일"))
+
+        let restored = try await database.load(day: day, sourceRevision: 1)
+        XCTAssertEqual(restored?.actuals.first?.title, "집안일")
+        XCTAssertEqual(restored, snapshot(title: "집안일"))
+    }
+
+    @MainActor
     func testPlanDayLoadCoordinatorUsesBoundedCacheAndEvictsOnPressure() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-coordinator-(UUID().uuidString)")
