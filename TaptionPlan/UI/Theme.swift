@@ -123,6 +123,27 @@ extension Color {
     }
 }
 
+/// 메뉴 화면이 공유하는 여백·컨트롤 토큰. 터치 영역은 각 화면의 최소 높이를
+/// 유지하고, 시각적 패딩과 아이콘만 줄여 정보 밀도를 높인다.
+enum TaptionMenuMetrics {
+    static let contentInset: CGFloat = 12
+    static let sectionSpacing: CGFloat = 8
+    static let compactSpacing: CGFloat = 6
+    static let tightSpacing: CGFloat = 5
+    static let compactRowVerticalPadding: CGFloat = 7
+    static let minimumHitSize: CGFloat = 44
+    static let topBarIconSize: CGFloat = 30
+    static let topBarIconHitSize: CGFloat = 44
+    static let topBarNavigationButtonSize: CGFloat = 26
+    static let topBarNavigationHitSize: CGFloat = 44
+    static let chipHorizontalPadding: CGFloat = 8
+    static let suggestionButtonHorizontalPadding: CGFloat = 12
+    static let chipVerticalPadding: CGFloat = 5.25
+    static let compactButtonVerticalPadding: CGFloat = 6
+    static let sectionHeaderVerticalPadding: CGFloat = 8
+    static let scaleControlVerticalPadding: CGFloat = 4.5
+}
+
 /// 지도 홈·기록·설정이 같은 색을 쓰도록 묶은 자동 기록의 대분류 팔레트다.
 enum CanonicalCategoryPalette {
     static let orderedIDs = [

@@ -1579,7 +1579,9 @@ final class RouteTimelineDataTests: XCTestCase {
 
         let movement = projection.legs.filter { $0.activity == .movement }
         XCTAssertEqual(movement.map(\.id), [legID])
-        let frame = try XCTUnwrap(projection.frame(at: date(55)))
+        let frame = try XCTUnwrap(
+            projection.frame(at: date(55), preferredForecastLegIDs: [legID])
+        )
         XCTAssertEqual(frame.legID, legID)
         XCTAssertEqual(frame.mode, .bus)
         XCTAssertEqual(frame.coordinate.longitude, 127.0005, accuracy: 0.00002)
@@ -1772,7 +1774,10 @@ final class RouteTimelineDataTests: XCTestCase {
             30,
             accuracy: 0.5
         )
-        let movement = try XCTUnwrap(projection.frame(at: date(50)))
+        let movementLegID = "movement-gap-\(first.id.uuidString)-\(second.id.uuidString)"
+        let movement = try XCTUnwrap(
+            projection.frame(at: date(50), preferredForecastLegIDs: [movementLegID])
+        )
         XCTAssertEqual(movement.activity, .movement)
         XCTAssertEqual(movement.mode, .subway)
         XCTAssertTrue(movement.legID.hasPrefix("movement-gap-"))
@@ -1914,6 +1919,128 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(frame.routePhase, .actual)
         XCTAssertEqual(frame.activity, .movement)
         XCTAssertTrue(frame.legID.hasPrefix("actual-"))
+    }
+
+    func testWBSPlaybackDoesNotAddForecastForContinuousRecordedCarRoute() {
+        let home = PlaceStay(
+            placeKey: "continuous-home",
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let office = PlaceStay(
+            placeKey: "continuous-office",
+            displayName: "회사",
+            span: TimeSpan(start: date(100), end: date(120)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127.01,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["자동차"]
+        )
+        let readings = stride(from: 10, through: 100, by: 10).map { minute in
+            var value = reading(minute, latitude: 37, id: UUID(), accuracy: 5)
+            value.point = GeoPoint(
+                latitude: 37,
+                longitude: 127 + Double(minute - 10) / 9_000,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+            return value
+        }
+
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [home, office],
+            travel: [travel],
+            readings: readings,
+            calendar: calendar
+        )
+
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
+        )
+        XCTAssertTrue(
+            projection.legs.contains {
+                $0.routePhase == .actual && $0.activity == .movement
+            }
+        )
+    }
+
+    func testWBSPlaybackDoesNotUseHiddenForecastOrLastLegFallback() throws {
+        let home = PlaceStay(
+            placeKey: "hidden-forecast-home",
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(60)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let office = PlaceStay(
+            placeKey: "hidden-forecast-office",
+            displayName: "회사",
+            span: TimeSpan(start: date(100), end: date(120)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127.01,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: home.id,
+            toPlaceID: office.id,
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(55)),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["자동차"]
+        )
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [home, office],
+            travel: [travel],
+            readings: [],
+            calendar: calendar
+        )
+
+        let fallback = try XCTUnwrap(
+            projection.frame(
+                at: date(40),
+                preferredForecastLegIDs: ["visible-other-forecast"]
+            )
+        )
+        XCTAssertEqual(fallback.activity, .stay)
+        XCTAssertNil(projection.frame(at: date(200)))
     }
 
     func testWBSPlaybackPrefersDottedForecastLegWhenItIsRendered() throws {
@@ -2059,6 +2186,7 @@ final class RouteTimelineDataTests: XCTestCase {
             confidence: .high,
             evidence: ["걷기"]
         )
+        let travelLegID = "movement-\(travel.id.uuidString)"
         let projection = MapHomeWBSPlaybackProjection.make(
             selectedDate: thursday,
             places: [from, to],
@@ -2067,13 +2195,22 @@ final class RouteTimelineDataTests: XCTestCase {
             calendar: calendar
         )
         let first = try XCTUnwrap(
-            projection.frame(at: dayStart.addingTimeInterval(10 * 60))
+            projection.frame(
+                at: dayStart.addingTimeInterval(10 * 60),
+                preferredForecastLegIDs: [travelLegID]
+            )
         )
         let middle = try XCTUnwrap(
-            projection.frame(at: dayStart.addingTimeInterval(40 * 60))
+            projection.frame(
+                at: dayStart.addingTimeInterval(40 * 60),
+                preferredForecastLegIDs: [travelLegID]
+            )
         )
         let last = try XCTUnwrap(
-            projection.frame(at: dayStart.addingTimeInterval(70 * 60 - 0.001))
+            projection.frame(
+                at: dayStart.addingTimeInterval(70 * 60 - 0.001),
+                preferredForecastLegIDs: [travelLegID]
+            )
         )
 
         XCTAssertLessThan(first.coordinate.longitude, middle.coordinate.longitude)

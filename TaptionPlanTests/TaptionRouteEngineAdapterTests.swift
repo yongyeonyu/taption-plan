@@ -100,4 +100,19 @@ struct TaptionRouteEngineAdapterTests {
 
         #expect(TaptionRouteEngineAdapter.allowsDottedRoute(for: segment, readings: values))
     }
+
+    @Test func continuousFifteenMinuteRouteDoesNotCreateDottedRoute() {
+        let values = stride(from: 0, through: 20 * 60, by: 10 * 60).map {
+            reading(TimeInterval($0), latitude: 37 + Double($0) / 1_000_000)
+        }
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(20 * 60)),
+            distanceMeters: 1_000,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+
+        #expect(!TaptionRouteEngineAdapter.allowsDottedRoute(for: segment, readings: values))
+    }
 }

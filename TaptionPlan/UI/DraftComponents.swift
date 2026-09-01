@@ -21,8 +21,8 @@ struct DraftTopBar: View {
     var textSizeAdjustment: CGFloat = 0
 
     var body: some View {
-        VStack(spacing: 7) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+        VStack(spacing: TaptionMenuMetrics.sectionSpacing) {
+            HStack(alignment: .firstTextBaseline, spacing: TaptionMenuMetrics.sectionSpacing) {
                 if let onBack {
                     Button(action: onBack) {
                         HStack(spacing: 3) {
@@ -75,13 +75,21 @@ struct DraftTopBar: View {
                                 )
                             )
                             .foregroundStyle(Color.tpInk)
-                            .frame(width: 34, height: 34)
+                            .frame(
+                                width: TaptionMenuMetrics.topBarIconSize,
+                                height: TaptionMenuMetrics.topBarIconSize
+                            )
                             .background(
                                 Color.tpSky.opacity(0.22),
                                 in: Circle()
                             )
                     }
                     .buttonStyle(.plain)
+                    .frame(
+                        width: TaptionMenuMetrics.topBarIconHitSize,
+                        height: TaptionMenuMetrics.topBarIconHitSize
+                    )
+                    .contentShape(Rectangle())
                     .accessibilityLabel(
                         trailingAccessibilityLabel.isEmpty
                             ? trailingSystemImage
@@ -101,6 +109,8 @@ struct DraftTopBar: View {
                                 .lineLimit(1)
                         }
                         .buttonStyle(.plain)
+                        .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
+                        .contentShape(Rectangle())
                         .accessibilityLabel(
                             trailingAccessibilityLabel.isEmpty
                                 ? trailing
@@ -130,7 +140,7 @@ struct DraftTopBar: View {
                 )
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, TaptionMenuMetrics.contentInset)
         .padding(.top, 5)
         .padding(.bottom, 8)
         .background(
@@ -185,10 +195,18 @@ struct DraftTopBar: View {
         } label: {
             Image(systemName: systemName)
                 .font(.taption(size: 12.5, weight: .bold))
-                .frame(width: 28, height: 28)
+                .frame(
+                    width: TaptionMenuMetrics.topBarNavigationButtonSize,
+                    height: TaptionMenuMetrics.topBarNavigationButtonSize
+                )
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .frame(
+            width: TaptionMenuMetrics.topBarNavigationHitSize,
+            height: TaptionMenuMetrics.topBarNavigationHitSize
+        )
+        .contentShape(Rectangle())
         .foregroundStyle(
             isEnabled ? Color.tpInk : Color.tpSecondary.opacity(0.28)
         )
@@ -219,7 +237,7 @@ struct DraftScalePicker: View {
                         .font(.taption(size: 12.5, weight: selected == scale ? .semibold : .regular))
                         .foregroundStyle(selected == scale ? Color.tpInk : Color.tpSecondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
+                        .padding(.vertical, TaptionMenuMetrics.scaleControlVerticalPadding)
                         .background {
                             if selected == scale {
                                 RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -229,6 +247,8 @@ struct DraftScalePicker: View {
                         }
                 }
                 .buttonStyle(.plain)
+                .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
+                .contentShape(Rectangle())
                 .accessibilityLabel("\(scale.rawValue) 보기")
                 .accessibilityIdentifier("schedule.scale.\(scale.rawValue)")
             }
@@ -358,10 +378,10 @@ struct DraftChip: View {
         Text(title)
             .font(.taption(size: fontSize, weight: .bold))
             .foregroundStyle(selected ? Color.white : Color.tpSecondary)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
+            .padding(.horizontal, TaptionMenuMetrics.chipHorizontalPadding)
+            .padding(.vertical, TaptionMenuMetrics.chipVerticalPadding)
             .background(selected ? tint : Color.tpSky.opacity(0.16))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 

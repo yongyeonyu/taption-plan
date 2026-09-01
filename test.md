@@ -90,6 +90,18 @@
 
 ### 미완료 게이트
 
+- `DEV901A001` 현재 설치 `com.taption.plan` `1.0 (125)`와 CoreDevice launch는 확인했다. 앱 정본 snapshot에서 2026-08-31 actuals 0건·travel 153건(확정 2건)·places 300건·관측 weather 0건을 readback했고, time rail 계산상 약 1,252분 미확인 구간이므로 어제 미확인 다수는 데이터와 일치한다. 화면·터치·날짜 이동·재생·지도/사이드바 실기기 대조는 같은 iPhone에서 `cam 메인`의 ShotGuide 카메라 테스트와 `iPhone 사용 중` 상태가 유지되어 iPhone Mirroring이 잠금 요구로 연결되지 않아 미완료다.
 - iPhone 14 Pro에서 최신 Debug 빌드의 실제 지도 화면·재생선 정합성·역 후보 노출·지도 메모 터치 확인
 - Apple Watch 현장 설치·수신·동기화 확인
 - Paid Apps Agreement 활성화·`com.taption.plan.pro` 생성·sandbox 구매/복원 확인
+
+## 2026-09-02 DEV901A001 실기기 이전 기록 정합성 검증
+
+- 대상: iPhone 14 Pro (`C44AF739-127D-572D-AD83-417C7E879045`), iOS 26.6.1
+- 최신 서명 Debug 설치·readback: `Taption Plan com.taption.plan 1.0 125`, launch 성공
+- 실제 기기 XCTest: 라우트·재생·시간축·날씨 관련 203건 통과, 실패 0건 (`/private/tmp/DEV901A001-device-tests-v2.xcresult`)
+- 최신 전체 시뮬레이터 XCTest: 894건 통과, 실패·건너뜀 0건 (`/private/tmp/DEV901A001-full-tests-v2.xcresult`)
+- 정본 대조: 2026-08-31 actuals 0건, travel 153건(확정 2건), places 300건, 관측 weather 0건; 계산된 약 1,252분 미확인 구간은 저장 데이터와 일치
+- 2026-09-01 weather 1,936건은 동시 위치·예보 context 중복이었고, MapHome 표시 투영에서 같은 분 대표값 1건으로 축약하는 회귀 테스트 통과
+- 날짜 전환 stale 데이터·공백 재생 fallback·연속 GPS 이동의 예상 점선 회귀 수정은 실제 기기 테스트 대상에 포함되어 통과
+- 화면·터치·날짜 이동·재생·사이드바·지도 제스처는 iPhone Mirroring의 잠금 요구(`iPhone을 잠그십시오`)로 미완료

@@ -1704,6 +1704,123 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeWeatherCollapsesConcurrentLocationStreamsForDisplay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 23))
+        )
+        let firstDate = try XCTUnwrap(
+            calendar.date(byAdding: .second, value: 10, to: day.addingTimeInterval(10 * 60 * 60))
+        )
+        let observedDate = try XCTUnwrap(
+            calendar.date(byAdding: .second, value: 45, to: day.addingTimeInterval(10 * 60 * 60))
+        )
+        let nextDate = try XCTUnwrap(
+            calendar.date(byAdding: .hour, value: 11, to: day)
+        )
+        let forecast = WeatherContext(
+            observedAt: firstDate,
+            fetchedAt: firstDate,
+            isForecast: true,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 25,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let observed = WeatherContext(
+            observedAt: observedDate,
+            fetchedAt: observedDate,
+            isForecast: false,
+            condition: "흐림",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 24,
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127.1,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let next = WeatherContext(
+            observedAt: nextDate,
+            fetchedAt: nextDate,
+            condition: "비",
+            symbolName: "cloud.rain.fill",
+            temperatureCelsius: 24
+        )
+
+        let spans = MapHomeWeatherTimelineMath.persistentSpans(
+            for: day,
+            contexts: [forecast, observed, next],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(spans.map { $0.context.id }, [observed.id, next.id])
+        XCTAssertEqual(spans[0].span.start, observedDate)
+        XCTAssertEqual(spans[0].span.end, nextDate)
+    }
+
+    func testMapHomeWeatherPrefersObservedOverSameSignatureForecast() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 23))
+        )
+        let firstDate = day.addingTimeInterval(10 * 60 * 60 + 10)
+        let observedDate = day.addingTimeInterval(10 * 60 * 60 + 45)
+        let nextDate = day.addingTimeInterval(11 * 60 * 60)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let forecast = WeatherContext(
+            observedAt: firstDate,
+            fetchedAt: firstDate,
+            isForecast: true,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 25,
+            point: point
+        )
+        let observed = WeatherContext(
+            observedAt: observedDate,
+            fetchedAt: observedDate,
+            isForecast: false,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 25,
+            point: point
+        )
+        let next = WeatherContext(
+            observedAt: nextDate,
+            fetchedAt: nextDate,
+            condition: "흐림",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 24
+        )
+
+        let spans = MapHomeWeatherTimelineMath.persistentSpans(
+            for: day,
+            contexts: [forecast, observed, next],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(spans.map { $0.context.id }, [observed.id, next.id])
+        XCTAssertEqual(spans[0].span.start, observedDate)
+        XCTAssertEqual(spans[0].span.end, nextDate)
+    }
+
     func testMapHomeWeatherOnlyShowsDisplayedWeatherChanges() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -2825,6 +2942,12 @@ final class TimeScaleTests: XCTestCase {
             MapHomePlaybackCameraPolicy.allowsAutomaticFit(
                 isPlaybackRunning: false,
                 hasUserAdjustedMap: false
+            )
+        )
+        XCTAssertFalse(
+            MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+                isPlaybackRunning: false,
+                hasUserAdjustedMap: true
             )
         )
         XCTAssertFalse(

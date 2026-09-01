@@ -19,14 +19,14 @@ struct CategoryManagerView: View {
             )
 
             ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 9) {
+                LazyVStack(spacing: TaptionMenuMetrics.sectionSpacing) {
                     overviewCard
 
                     ForEach(categories) { category in
                         categoryCard(category)
                     }
                 }
-                .padding(12)
+                .padding(TaptionMenuMetrics.contentInset)
             }
             .background(Color.tpBackground)
         }
@@ -45,22 +45,22 @@ struct CategoryManagerView: View {
                 .foregroundStyle(Color.tpSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(TaptionMenuMetrics.contentInset)
         .draftCard(radius: 14)
     }
 
     private func categoryCard(
         _ category: RecordClassificationCategory
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: TaptionMenuMetrics.sectionSpacing) {
+            HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
                 Image(systemName: category.systemImage)
-                    .font(.taption(size: 15, weight: .bold))
+                    .font(.taption(size: 14, weight: .bold))
                     .foregroundStyle(categoryColor(category.id))
-                    .frame(width: 32, height: 32)
+                    .frame(width: 30, height: 30)
                     .background(
                         categoryColor(category.id).opacity(0.16),
-                        in: RoundedRectangle(cornerRadius: 9)
+                        in: RoundedRectangle(cornerRadius: 8)
                     )
 
                 Text(category.title)
@@ -84,7 +84,7 @@ struct CategoryManagerView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(11)
+        .padding(10)
         .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
     }
 
@@ -92,11 +92,11 @@ struct CategoryManagerView: View {
         _ detail: RecordClassificationDetail,
         tint: Color
     ) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
             Image(systemName: detail.systemImage)
-                .font(.taption(size: 11, weight: .semibold))
+                .font(.taption(size: 10, weight: .semibold))
                 .foregroundStyle(tint)
-                .frame(width: 22)
+                .frame(width: 20)
             Text(detail.title)
                 .font(.taption(size: 9.5, weight: .semibold))
                 .foregroundStyle(Color.tpInk)
@@ -106,9 +106,9 @@ struct CategoryManagerView: View {
                 automaticBadge
             }
         }
-        .padding(.horizontal, 9)
-        .frame(minHeight: 34)
-        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 9))
+        .padding(.horizontal, TaptionMenuMetrics.chipHorizontalPadding)
+        .frame(minHeight: 31)
+        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var automaticBadge: some View {

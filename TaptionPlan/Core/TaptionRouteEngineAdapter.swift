@@ -190,7 +190,7 @@ enum TaptionRouteEngineAdapter {
         for segment: TravelSegment,
         readings: [SensorReading]
     ) -> Bool {
-        let maximumGap: TimeInterval = 5 * 60
+        let maximumGap: TimeInterval = 15 * 60
         let route = readings
             .filter { reading in
                 guard reading.timestamp >= segment.span.start,

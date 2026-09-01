@@ -280,6 +280,16 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 ?? locations.last { $0.place.span.end <= segment.span.start }
             let target = segment.toPlaceID.flatMap { locationsByID[$0] }
                 ?? locations.first { $0.place.span.start >= segment.span.end }
+            if TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
+                for: segment,
+                readings: readings
+            ) {
+                if let sourceID = source?.place.id, let targetID = target?.place.id {
+                    explicitPairs.insert(pairKey(sourceID, targetID))
+                }
+                explicitMovementSpans.append(overlap)
+                continue
+            }
             let legID = "movement-\(segment.id.uuidString)"
             let resolved = routesByLegID[legID] ?? []
             let fallback = [source?.coordinate, target?.coordinate].compactMap { $0 }
@@ -428,17 +438,16 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 && $0.activity == .movement
                 && preferredForecastLegIDs.contains($0.id)
         }
-        let candidates = preferredForecast.isEmpty ? active : preferredForecast
-        let leg = candidates.max { lhs, rhs in
+        let candidates = preferredForecast.isEmpty
+            ? active.filter { $0.activity == .stay || $0.routePhase != .forecast }
+            : preferredForecast
+        guard let leg = candidates.max(by: { lhs, rhs in
             if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
             let left = Self.priority(lhs)
             let right = Self.priority(rhs)
             if left != right { return left < right }
             return lhs.id < rhs.id
-        } ?? (date < legs[0].startDate
-            ? legs[0]
-            : legs.last(where: { $0.startDate <= date }))
-        guard let leg else { return nil }
+        }) else { return nil }
         let duration = max(0.001, leg.endDate.timeIntervalSince(leg.startDate))
         let progress = min(1, max(0, date.timeIntervalSince(leg.startDate) / duration))
         let center = leg.coordinates.first ?? Self.zeroPoint

@@ -449,6 +449,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let onViewportChange: (MapHomeVectorViewport, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
     let onSingleFingerPanEnded: () -> Void
+    let onUserCameraGesture: () -> Void
     let onLongPress: (CLLocationCoordinate2D) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -503,6 +504,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             (viewport: MapHomeVectorViewport, force: Bool)?
         private var isViewportDeliveryScheduled = false
         private var observedPanGestures: [UIPanGestureRecognizer] = []
+        private var observedCameraGestures: [UIGestureRecognizer] = []
         private var longPressGesture: UILongPressGestureRecognizer?
 
         init(parent: MapHomeVectorMap) {
@@ -512,6 +514,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         func attach(to mapView: MLNMapView) {
             self.mapView = mapView
             attachPanGestures(in: mapView)
+            attachCameraGestures(in: mapView)
             let longPress = UILongPressGestureRecognizer(
                 target: self,
                 action: #selector(handleLongPress(_:))
@@ -529,6 +532,10 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 gesture.removeTarget(self, action: #selector(handlePan(_:)))
             }
             observedPanGestures.removeAll()
+            for gesture in observedCameraGestures {
+                gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
+            }
+            observedCameraGestures.removeAll()
             if let longPressGesture {
                 mapView.removeGestureRecognizer(longPressGesture)
             }
@@ -655,6 +662,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             updateContent(in: mapView)
             applyCameraCommandIfNeeded(to: mapView)
             attachPanGestures(in: mapView)
+            attachCameraGestures(in: mapView)
             publishViewport(from: mapView, force: true)
         }
 
@@ -681,6 +689,11 @@ struct MapHomeVectorMap: UIViewRepresentable {
                         || gesture.state == .failed {
                 parent.onSingleFingerPanEnded()
             }
+        }
+
+        @objc private func handleCameraGesture(_ gesture: UIGestureRecognizer) {
+            guard gesture.state == .began else { return }
+            parent.onUserCameraGesture()
         }
 
         @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
@@ -710,10 +723,36 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private func attachPanGestures(in view: UIView) {
             let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
                 .compactMap { $0 as? UIPanGestureRecognizer }
-            let current = Set(observedPanGestures.map(ObjectIdentifier.init))
-            for gesture in gestures where !current.contains(ObjectIdentifier(gesture)) {
+            let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
+            for gesture in observedPanGestures
+            where !currentIDs.contains(ObjectIdentifier(gesture)) {
+                gesture.removeTarget(self, action: #selector(handlePan(_:)))
+            }
+            observedPanGestures.removeAll {
+                !currentIDs.contains(ObjectIdentifier($0))
+            }
+            let observedIDs = Set(observedPanGestures.map { ObjectIdentifier($0) })
+            for gesture in gestures where !observedIDs.contains(ObjectIdentifier(gesture)) {
                 gesture.addTarget(self, action: #selector(handlePan(_:)))
                 observedPanGestures.append(gesture)
+            }
+        }
+
+        private func attachCameraGestures(in view: UIView) {
+            let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
+                .filter { $0 is UIPinchGestureRecognizer || $0 is UIRotationGestureRecognizer }
+            let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
+            for gesture in observedCameraGestures
+            where !currentIDs.contains(ObjectIdentifier(gesture)) {
+                gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
+            }
+            observedCameraGestures.removeAll {
+                !currentIDs.contains(ObjectIdentifier($0))
+            }
+            let observedIDs = Set(observedCameraGestures.map { ObjectIdentifier($0) })
+            for gesture in gestures where !observedIDs.contains(ObjectIdentifier(gesture)) {
+                gesture.addTarget(self, action: #selector(handleCameraGesture(_:)))
+                observedCameraGestures.append(gesture)
             }
         }
 

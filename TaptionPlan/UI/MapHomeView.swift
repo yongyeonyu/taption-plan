@@ -1003,9 +1003,10 @@ enum MapHomeWeatherTimelineMath {
 
     static func context(
         at date: Date,
-        contexts: [WeatherContext]
+        contexts: [WeatherContext],
+        calendar: Calendar = .autoupdatingCurrent
     ) -> WeatherContext? {
-        WeatherTimelineEngine.coalesced(contexts)
+        displayContexts(contexts, calendar: calendar)
             .filter { $0.observedAt <= date }
             .max { $0.observedAt < $1.observedAt }
     }
@@ -1018,8 +1019,7 @@ enum MapHomeWeatherTimelineMath {
     ) -> [(context: WeatherContext, span: TimeSpan)] {
         let dayStart = calendar.startOfDay(for: date)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? date
-        let ordered = WeatherTimelineEngine.coalesced(contexts)
-            .sorted { $0.observedAt < $1.observedAt }
+        let ordered = displayContexts(contexts, calendar: calendar)
         var displayRuns: [(context: WeatherContext, start: Date)] = []
         var lastDisplayedContext: WeatherContext?
 
@@ -1057,6 +1057,81 @@ enum MapHomeWeatherTimelineMath {
         }
     }
 
+    private static func displayContexts(
+        _ contexts: [WeatherContext],
+        calendar: Calendar
+    ) -> [WeatherContext] {
+        let ordered = coalescedDisplayContexts(contexts).sorted {
+            if $0.observedAt != $1.observedAt {
+                return $0.observedAt < $1.observedAt
+            }
+            if ($0.isForecast == true) != ($1.isForecast == true) {
+                return $0.isForecast != true
+            }
+            if $0.fetchedAt != $1.fetchedAt {
+                return ($0.fetchedAt ?? .distantPast)
+                    < ($1.fetchedAt ?? .distantPast)
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        var result: [(bucket: Date, context: WeatherContext)] = []
+        result.reserveCapacity(ordered.count)
+        for context in ordered {
+            let bucket = calendar.dateInterval(
+                of: .minute,
+                for: context.observedAt
+            )?.start ?? context.observedAt
+            guard let lastIndex = result.indices.last,
+                  result[lastIndex].bucket == bucket else {
+                result.append((bucket: bucket, context: context))
+                continue
+            }
+            let current = result[lastIndex].context
+            if prefersForDisplay(context, over: current) {
+                result[lastIndex].context = context
+            }
+        }
+        return result.map(\.context)
+    }
+
+    static func coalescedDisplayContexts(
+        _ contexts: [WeatherContext]
+    ) -> [WeatherContext] {
+        (
+            WeatherTimelineEngine.coalesced(
+                contexts.filter { $0.isForecast != true }
+            )
+            + WeatherTimelineEngine.coalesced(
+                contexts.filter { $0.isForecast == true }
+            )
+        ).sorted {
+            if $0.observedAt != $1.observedAt {
+                return $0.observedAt < $1.observedAt
+            }
+            if ($0.isForecast == true) != ($1.isForecast == true) {
+                return $0.isForecast != true
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    private static func prefersForDisplay(
+        _ candidate: WeatherContext,
+        over current: WeatherContext
+    ) -> Bool {
+        if ((candidate.isForecast == true) != (current.isForecast == true)) {
+            return candidate.isForecast != true
+        }
+        if candidate.observedAt != current.observedAt {
+            return candidate.observedAt > current.observedAt
+        }
+        if candidate.fetchedAt != current.fetchedAt {
+            return (candidate.fetchedAt ?? .distantPast)
+                > (current.fetchedAt ?? .distantPast)
+        }
+        return candidate.id.uuidString > current.id.uuidString
+    }
+
     private static func startsNewDisplayRun(
         from previous: WeatherContext,
         to current: WeatherContext,
@@ -1081,7 +1156,7 @@ enum MapHomeWeatherDisplayCache {
     ) -> [WeatherContext] {
         let fresh = incoming.filter(MapHomeWeatherDisplayPolicy.isComplete)
         guard !fresh.isEmpty else { return cached }
-        return WeatherTimelineEngine.coalesced(
+        return MapHomeWeatherTimelineMath.coalescedDisplayContexts(
             cached + fresh
         )
     }
@@ -1437,7 +1512,7 @@ struct MapHomeView: View {
             )
         )
         _cachedWeatherContexts = State(
-            initialValue: WeatherTimelineEngine.coalesced(
+            initialValue: MapHomeWeatherTimelineMath.coalescedDisplayContexts(
                 model.snapshot.weather.filter(MapHomeWeatherDisplayPolicy.isComplete)
             )
         )
@@ -1820,6 +1895,8 @@ struct MapHomeView: View {
             mapSearchCompleter.clear()
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
+            sidebarPinchStepOffset = 0
+            lastSidebarPinchRenderUptime = 0
         }
         .task(
             id: MapHomeRouteReadingsTaskKey(
@@ -2129,6 +2206,7 @@ struct MapHomeView: View {
             onViewportChange: applyVectorMapViewport,
             onSingleFingerPanBegan: handleUserMapPan,
             onSingleFingerPanEnded: finishDisplayedStickmanViewportProjection,
+            onUserCameraGesture: handleUserCameraGesture,
             onLongPress: presentMapLongPressMenu
         )
         .id(style.rawValue)
@@ -2254,6 +2332,7 @@ struct MapHomeView: View {
                 }
             },
             onSingleFingerPanBegan: handleUserMapPan,
+            onUserCameraGesture: handleUserCameraGesture,
             onLongPress: presentMapLongPressMenu,
             onAnnotationSelected: handleAppleMapAnnotation
         )
@@ -3960,6 +4039,7 @@ struct MapHomeView: View {
             direction: direction
         )
         guard distance != camera.distance else { return }
+        recordUserMapAdjustment()
         let anchor = userTrackingMode.keepsCameraLocked || isMapCenteredOnUser
             ? displayedLocationCoordinate ?? camera.centerCoordinate
             : camera.centerCoordinate
@@ -5787,6 +5867,11 @@ struct MapHomeView: View {
         nearbyTransitPlaces = []
         hasDeferredWBSPlaybackRefresh = false
         timeRailSegments = [.wholeDayUnconfirmed]
+        timeSidebarVisibleStartMinute = 0
+        timeSidebarVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
+        sidebarPinchStepOffset = 0
+        lastSidebarPinchRenderUptime = 0
+        zoomResetToken += 1
         hasAppliedInitialMapFocus = false
         routeDocumentProjectionGate.reset()
         mapRenderCache.invalidateRouteData()
@@ -6474,15 +6559,13 @@ struct MapHomeView: View {
     }
 
     private var displayedLocationCoordinate: CLLocationCoordinate2D? {
-        if let coordinate = historicalPlaybackCoordinate,
-           selectedTimelineMinute != nil {
-            return coordinate
+        if selectedTimelineMinute != nil {
+            return historicalPlaybackCoordinate ?? expectedRoutePlaybackCoordinate
         }
-        if let expectedRoutePlaybackCoordinate,
-           selectedTimelineMinute != nil || currentCoordinate == nil {
-            return expectedRoutePlaybackCoordinate
+        guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) else {
+            return nil
         }
-        return historicalPlaybackCoordinate ?? currentCoordinate
+        return currentCoordinate
     }
 
     private var displayedPlaybackMinute: Double? {
@@ -6499,7 +6582,13 @@ struct MapHomeView: View {
     }
 
     private var displayedLocationDate: Date {
-        displayedPlaybackDate ?? .now
+        if let displayedPlaybackDate {
+            return displayedPlaybackDate
+        }
+        let calendar = Calendar.autoupdatingCurrent
+        return calendar.isDateInToday(model.selectedDate)
+            ? .now
+            : calendar.startOfDay(for: model.selectedDate)
     }
 
     private var displayedStickmanAction: MapHomeStickmanAction {
@@ -6783,8 +6872,9 @@ struct MapHomeView: View {
             latitudeDelta: payload.latitudeDelta,
             longitudeDelta: payload.longitudeDelta
         )
-        let shouldApplyCachedCamera = MapHomePlaybackCameraPolicy.allowsInitialFocus(
-            isPlaybackRunning: isDayPlaybackRunning
+        let shouldApplyCachedCamera = MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+            isPlaybackRunning: isDayPlaybackRunning,
+            hasUserAdjustedMap: hasUserAdjustedMap
         )
         if shouldApplyCachedCamera {
             visibleMapCenter = center
@@ -7392,8 +7482,9 @@ struct MapHomeView: View {
     }
 
     private func focusMapIfNeeded() {
-        guard MapHomePlaybackCameraPolicy.allowsInitialFocus(
-            isPlaybackRunning: isDayPlaybackRunning
+        guard MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+            isPlaybackRunning: isDayPlaybackRunning,
+            hasUserAdjustedMap: hasUserAdjustedMap
         ) else { return }
         guard let region = mapRouteFitRegion else { return }
         guard case .automatic = mapPosition else { return }
@@ -7412,8 +7503,9 @@ struct MapHomeView: View {
     }
 
     private func applyInitialMapFocusIfNeeded() {
-        guard MapHomePlaybackCameraPolicy.allowsInitialFocus(
-            isPlaybackRunning: isDayPlaybackRunning
+        guard MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+            isPlaybackRunning: isDayPlaybackRunning,
+            hasUserAdjustedMap: hasUserAdjustedMap
         ),
               !hasAppliedInitialMapFocus,
               let region = mapRouteFitRegion else { return }
@@ -7445,8 +7537,9 @@ struct MapHomeView: View {
     }
 
     private func focusMapOnAllRoutes() {
-        guard MapHomePlaybackCameraPolicy.allowsInitialFocus(
-            isPlaybackRunning: isDayPlaybackRunning
+        guard MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+            isPlaybackRunning: isDayPlaybackRunning,
+            hasUserAdjustedMap: hasUserAdjustedMap
         ) else { return }
         guard let region = mapRouteFitRegion else {
             setMapPosition(.automatic)
@@ -7723,19 +7816,27 @@ struct MapHomeView: View {
             duringPlayback: isDayPlaybackRunning
         ) == false
         else { return }
-        hasUserAdjustedMap = true
+        recordUserMapAdjustment()
         if usesVectorRoadMap,
            let vectorMapViewport = vectorMapViewportStore.viewport {
             mapPosition = .region(vectorMapViewport.region)
         }
+        setUserTrackingMode(.idle)
+        isMapCenteredOnUser = false
+    }
+
+    private func handleUserCameraGesture() {
+        recordUserMapAdjustment()
+    }
+
+    private func recordUserMapAdjustment() {
+        hasUserAdjustedMap = true
         hasCancelledInitialLocationFocus = true
         initialLocationRequestTask?.cancel()
         initialLocationRequestTask = nil
         currentLocationRequestTask?.cancel()
         currentLocationRequestTask = nil
         appleViewportCommand = nil
-        setUserTrackingMode(.idle)
-        isMapCenteredOnUser = false
     }
 
     @discardableResult
@@ -12951,6 +13052,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let contentInsets: UIEdgeInsets
     let onCameraFrame: (MapHomeCameraFrame, CGPoint?, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
+    let onUserCameraGesture: () -> Void
     let onLongPress: (CLLocationCoordinate2D) -> Void
     let onAnnotationSelected: (MapHomeAppleAnnotationKind) -> Void
 
@@ -13007,6 +13109,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
         private var lastCenteredPlaybackCoordinate: CLLocationCoordinate2D?
         private var panGesture: UIPanGestureRecognizer?
+        private var observedCameraGestures: [UIGestureRecognizer] = []
+        private var lastCameraPublishUptime = -Double.infinity
         private var longPressGesture: UILongPressGestureRecognizer?
 
         init(parent: MapHomeAppleMap) {
@@ -13025,6 +13129,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             pan.delegate = self
             mapView.addGestureRecognizer(pan)
             panGesture = pan
+            attachCameraGestures(in: mapView)
 
             let longPress = UILongPressGestureRecognizer(
                 target: self,
@@ -13041,11 +13146,16 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             if let panGesture {
                 mapView.removeGestureRecognizer(panGesture)
             }
+            for gesture in observedCameraGestures {
+                gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
+            }
+            observedCameraGestures.removeAll()
             if let longPressGesture {
                 mapView.removeGestureRecognizer(longPressGesture)
             }
             panGesture = nil
             longPressGesture = nil
+            lastCameraPublishUptime = -Double.infinity
             self.mapView = nil
         }
 
@@ -13212,6 +13322,11 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             }
         }
 
+        @objc private func handleCameraGesture(_ gesture: UIGestureRecognizer) {
+            guard gesture.state == .began else { return }
+            parent.onUserCameraGesture()
+        }
+
         @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
             guard gesture.state == .began,
                   let mapView else { return }
@@ -13339,6 +13454,28 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                shouldCenterPlayback(at: playback.cameraCoordinate) {
                 mapView.setCenter(playback.cameraCoordinate, animated: false)
             }
+        }
+
+        private func attachCameraGestures(in view: UIView) {
+            let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
+                .filter { $0 is UIPinchGestureRecognizer || $0 is UIRotationGestureRecognizer }
+            let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
+            for gesture in observedCameraGestures
+            where !currentIDs.contains(ObjectIdentifier(gesture)) {
+                gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
+            }
+            observedCameraGestures.removeAll {
+                !currentIDs.contains(ObjectIdentifier($0))
+            }
+            let observedIDs = Set(observedCameraGestures.map { ObjectIdentifier($0) })
+            for gesture in gestures where !observedIDs.contains(ObjectIdentifier(gesture)) {
+                gesture.addTarget(self, action: #selector(handleCameraGesture(_:)))
+                observedCameraGestures.append(gesture)
+            }
+        }
+
+        private func allSubviews(in view: UIView) -> [UIView] {
+            [view] + view.subviews.flatMap(allSubviews)
         }
 
         private func shouldCenterPlayback(
@@ -13494,6 +13631,11 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             from mapView: MKMapView,
             isFinal: Bool
         ) {
+            let now = ProcessInfo.processInfo.systemUptime
+            guard isFinal || now - lastCameraPublishUptime >= 1.0 / 60.0 else {
+                return
+            }
+            lastCameraPublishUptime = now
             let camera = MapCamera(
                 centerCoordinate: mapView.camera.centerCoordinate,
                 distance: max(mapView.camera.altitude, 1),
