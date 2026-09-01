@@ -38,7 +38,7 @@ xcrun devicectl list devices
 - IPA의 네 번들 모두 `1.0 (122)`, Apple Distribution 서명, deep/strict codesign, Production iCloud, `beta-reports-active=true`, `get-task-allow=false` 확인.
 - altool 결과: `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE`, `PROCESSINGSTATE: VALID`.
 - App Store Connect API readback: build 122 `VALID`, Internal 그룹 관계에 build UUID 노출, 그룹 빌드 83개, 내부 테스터 1명.
-- 브라우저의 그룹 빌드·테스터 화면 readback은 Chrome 확장 연결 중단으로 아직 별도 게이트다. API readback을 화면 readback으로 과장하지 않는다.
+- Chrome의 그룹 빌드 화면에서 `TP Taption Plan 내부 테스트 · 1명의 테스터 · 83개의 빌드`, build `1.0 (122) · 테스트 중 · iOS`를 readback했다. 테스터 화면에는 내부 테스터 1명이 노출됐고 현재 설치 표시는 `1.0 (121)`이다.
 
 ## 기능 변경 요약
 
@@ -66,10 +66,9 @@ xcrun devicectl list devices
 
 ## 다음 우선순위
 
-1. Chrome 연결을 복구해 Internal 그룹 화면에서 `1.0 (122) · 테스트 중 · iOS`, 그룹 빌드 수, 테스터 1명 노출을 읽는다. 이미 API 연결이 끝났으므로 build 재업로드나 중복 그룹 추가는 금지한다.
-2. iPhone 실제 화면에서 2026-08-31 오전 경로를 열고 검암 체류 후보, 가정→검암→마곡나루 지하철 예상경로, 점선과 졸라맨 재생선 정합을 직접 터치 검증한다.
-3. Watch에서 `지금 가져오기`를 누르고 iPhone 설정의 `수신 대기`가 실제 envelope 뒤 `최근 수신`으로 바뀌는지 로그와 함께 확인한다.
-4. Paid Apps Agreement 활성화 후 `com.taption.plan.pro`를 생성하고 sandbox 구매·복원을 별도로 검증한다.
+1. iPhone 실제 화면에서 2026-08-31 오전 경로를 열고 검암 체류 후보, 가정→검암→마곡나루 지하철 예상경로, 점선과 졸라맨 재생선 정합을 직접 터치 검증한다.
+2. Watch에서 `지금 가져오기`를 누르고 iPhone 설정의 `수신 대기`가 실제 envelope 뒤 `최근 수신`으로 바뀌는지 로그와 함께 확인한다.
+3. Paid Apps Agreement 활성화 후 `com.taption.plan.pro`를 생성하고 sandbox 구매·복원을 별도로 검증한다.
 
 ## 실기기 공유 규칙
 
