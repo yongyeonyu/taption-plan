@@ -1704,6 +1704,62 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(spans[1].context.id, third.id)
     }
 
+    func testWeatherRawTimelineStoresOnlyDisplayedChanges() {
+        let start = makeDate(2026, 8, 23, 10)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let first = WeatherContext(
+            observedAt: start,
+            isForecast: true,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20.1,
+            point: point
+        )
+        let same = WeatherContext(
+            observedAt: start.addingTimeInterval(60 * 60),
+            isForecast: true,
+            condition: "Clear",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20.4,
+            point: point
+        )
+        let changed = WeatherContext(
+            observedAt: start.addingTimeInterval(2 * 60 * 60),
+            isForecast: true,
+            condition: "흐림",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 20.4,
+            point: point
+        )
+        let current = WeatherContext(
+            observedAt: start.addingTimeInterval(3 * 60 * 60),
+            isForecast: false,
+            condition: "흐림",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 20.4,
+            point: point
+        )
+
+        let changes = WeatherTimelineEngine.changedRawContexts(
+            [first, same, changed, current],
+            relativeTo: []
+        )
+
+        XCTAssertEqual(changes.map(\.id), [first.id, changed.id, current.id])
+        XCTAssertTrue(
+            WeatherTimelineEngine.changedRawContexts(
+                [same],
+                relativeTo: [first, changed]
+            ).isEmpty
+        )
+    }
+
     func testMapHomeWeatherDisplayCacheSurvivesViewportRefreshWithoutNetworkData() {
         let observedAt = makeDate(2026, 8, 23, 10)
         let cached = WeatherContext(

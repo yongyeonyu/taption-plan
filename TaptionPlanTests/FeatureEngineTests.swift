@@ -11921,6 +11921,7 @@ final class FeatureEngineTests: XCTestCase {
             fetchedAt: fetchedAt,
             isStale: true,
             isForecast: true,
+            providerName: "WeatherKit",
             condition: "맑음",
             symbolName: "sun.max.fill",
             temperatureCelsius: 28
@@ -11932,6 +11933,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(decoded.fetchedAt, fetchedAt)
         XCTAssertEqual(decoded.isStale, true)
         XCTAssertEqual(decoded.isForecast, true)
+        XCTAssertEqual(decoded.providerName, "WeatherKit")
     }
 
     func testOpenMeteoHourlyContextsMarkFutureValuesAsForecasts() async throws {
@@ -11960,7 +11962,7 @@ final class FeatureEngineTests: XCTestCase {
             )?.queryItems ?? []
             XCTAssertEqual(
                 items.first(where: { $0.name == "forecast_days" })?.value,
-                "16"
+                "10"
             )
             let json = """
             {
@@ -11993,6 +11995,32 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(contexts.count, 2)
         XCTAssertTrue(contexts.allSatisfy { $0.isForecast == true })
         XCTAssertEqual(WeatherURLProtocolStub.requestCount, 1)
+    }
+
+    func testOpenMeteoHourlyContextsSkipHistoricalOnlyRanges() async throws {
+        let through = Date.now.addingTimeInterval(-60)
+        let from = through.addingTimeInterval(-3_600)
+        WeatherURLProtocolStub.requestCount = 0
+        WeatherURLProtocolStub.handler = { _ in
+            XCTFail("historical weather must use the raw archive")
+            return (500, Data())
+        }
+        defer { WeatherURLProtocolStub.handler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [WeatherURLProtocolStub.self]
+        let service = OpenMeteoWeatherContextService(
+            session: URLSession(configuration: configuration)
+        )
+
+        let contexts = try await service.hourlyContexts(
+            latitude: 37.5,
+            longitude: 127,
+            from: from,
+            through: through
+        )
+
+        XCTAssertTrue(contexts.isEmpty)
+        XCTAssertEqual(WeatherURLProtocolStub.requestCount, 0)
     }
 
     func testWeatherProjectionReplacesCurrentHourOnlyAtSameLocation() {

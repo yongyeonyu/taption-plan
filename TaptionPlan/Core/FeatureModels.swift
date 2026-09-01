@@ -1400,6 +1400,9 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     /// True when the provider supplied a forecast rather than an observed
     /// current value. Legacy snapshots omit this field and remain readable.
     var isForecast: Bool?
+    /// Provider provenance for raw weather replay. Legacy snapshots omit this
+    /// field and remain readable.
+    var providerName: String?
     var condition: String
     var symbolName: String
     var temperatureCelsius: Double
@@ -1417,6 +1420,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         fetchedAt: Date? = nil,
         isStale: Bool? = false,
         isForecast: Bool? = false,
+        providerName: String? = nil,
         condition: String,
         symbolName: String,
         temperatureCelsius: Double,
@@ -1433,6 +1437,7 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         self.fetchedAt = fetchedAt
         self.isStale = isStale
         self.isForecast = isForecast
+        self.providerName = providerName
         self.condition = condition
         self.symbolName = symbolName
         self.temperatureCelsius = temperatureCelsius

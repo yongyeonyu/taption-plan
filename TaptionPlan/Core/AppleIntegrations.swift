@@ -1210,6 +1210,7 @@ private extension HKWorkoutActivityType {
 // MARK: - Weather
 
 actor AppleWeatherContextService {
+    private static let maximumForecastDays = 10
     private let service = WeatherKit.WeatherService.shared
     private let fallbackService: OpenMeteoWeatherContextService
     private var cachedContext: CachedWeatherContext?
@@ -1302,63 +1303,47 @@ actor AppleWeatherContextService {
     ) async throws -> [WeatherContext] {
         let point = CLLocation(latitude: latitude, longitude: longitude)
         let now = Date.now
+        let forecastStart = max(start, now)
+        let maximumEnd = Calendar.autoupdatingCurrent.date(
+            byAdding: .day,
+            value: Self.maximumForecastDays,
+            to: forecastStart
+        ) ?? forecastStart.addingTimeInterval(
+            TimeInterval(Self.maximumForecastDays) * 24 * 60 * 60
+        )
+        let forecastEnd = min(end, maximumEnd)
+        guard forecastStart < forecastEnd else { return [] }
         var contexts: [WeatherContext] = []
         var loadedForecast = false
 
-        if start < now {
-            let historicalEnd = min(end, now)
-            if start < historicalEnd {
-                do {
-                    let historical = try await service.weather(
-                        for: point,
-                        including: .hourly(
-                            startDate: start,
-                            endDate: historicalEnd
-                        )
-                    )
-                    contexts.append(contentsOf: historical.map {
-                        Self.weatherContext($0, isForecast: false)
-                    })
-                } catch {
-                    // Preserve stored observations when historical WeatherKit
-                    // data is unavailable for this location.
-                }
+        do {
+            let forecast = try await service.weather(
+                for: point,
+                including: .hourly(
+                    startDate: forecastStart,
+                    endDate: forecastEnd
+                )
+            )
+            let values = forecast.map {
+                Self.weatherContext(
+                    $0,
+                    isForecast: $0.date >= forecastStart
+                )
             }
+            contexts.append(contentsOf: values)
+            loadedForecast = values.contains {
+                $0.observedAt >= forecastStart
+            }
+        } catch {
+            // Fall through to the existing provider fallback below.
         }
 
-        if end > now {
-            let forecastStart = max(start, now)
-            if forecastStart < end {
-                do {
-                    let forecast = try await service.weather(
-                        for: point,
-                        including: .hourly(
-                            startDate: forecastStart,
-                            endDate: end
-                        )
-                    )
-                    let values = forecast.map {
-                        Self.weatherContext(
-                            $0,
-                            isForecast: $0.date >= forecastStart
-                        )
-                    }
-                    contexts.append(contentsOf: values)
-                    loadedForecast = values.contains {
-                        $0.observedAt >= forecastStart
-                    }
-                } catch {
-                    // Fall through to the existing provider fallback below.
-                }
-            }
-        }
-
-        if end > now, !loadedForecast {
+        if !loadedForecast {
             if let fallback = try? await fallbackService.hourlyContexts(
                 latitude: latitude,
                 longitude: longitude,
-                from: max(start, now),
-                through: end
+                from: forecastStart,
+                through: forecastEnd
             ) {
                 contexts.append(contentsOf: fallback)
             }
@@ -1374,7 +1359,7 @@ actor AppleWeatherContextService {
                 including: .hourly
             )
             let values = hourly.forecast.filter {
-                $0.date >= start && $0.date < end
+                $0.date >= forecastStart && $0.date < forecastEnd
             }
             guard !values.isEmpty else {
                 throw WeatherContextServiceError.temporarilyUnavailable
@@ -1386,8 +1371,8 @@ actor AppleWeatherContextService {
             return try await fallbackService.hourlyContexts(
                 latitude: latitude,
                 longitude: longitude,
-                from: start,
-                through: end
+                from: forecastStart,
+                through: forecastEnd
             )
         }
     }
@@ -1401,6 +1386,7 @@ actor AppleWeatherContextService {
             fetchedAt: .now,
             isStale: false,
             isForecast: isForecast,
+            providerName: "WeatherKit",
             condition: String(describing: value.condition),
             symbolName: value.symbolName,
             temperatureCelsius: value.temperature.converted(to: .celsius).value,
@@ -1425,6 +1411,7 @@ actor AppleWeatherContextService {
             observedAt: date,
             fetchedAt: date,
             isStale: false,
+            providerName: "WeatherKit",
             condition: String(describing: current.condition),
             symbolName: current.symbolName,
             temperatureCelsius: current.temperature.converted(to: .celsius).value,
@@ -1530,6 +1517,7 @@ actor OpenMeteoWeatherContextService {
                     observedAt: date,
                     fetchedAt: date,
                     isStale: false,
+                    providerName: "Open-Meteo",
                     condition: presentation.condition,
                     symbolName: presentation.symbolName,
                     temperatureCelsius: payload.current.temperatureCelsius,
@@ -1554,6 +1542,9 @@ actor OpenMeteoWeatherContextService {
         from start: Date,
         through end: Date
     ) async throws -> [WeatherContext] {
+        let now = Date.now
+        let forecastStart = max(start, now)
+        guard forecastStart < end else { return [] }
         var components = URLComponents(
             string: "https://api.open-meteo.com/v1/forecast"
         )
@@ -1572,7 +1563,7 @@ actor OpenMeteoWeatherContextService {
                 name: "timezone",
                 value: TimeZone.autoupdatingCurrent.identifier
             ),
-            URLQueryItem(name: "forecast_days", value: "16"),
+            URLQueryItem(name: "forecast_days", value: "10"),
         ]
         guard let url = components?.url else {
             throw OpenMeteoWeatherError.invalidRequest
@@ -1600,7 +1591,7 @@ actor OpenMeteoWeatherContextService {
         return zip(hourly.time, zip(hourly.temperatureCelsius, zip(hourly.weatherCode, zip(hourly.precipitationProbability, hourly.isDay))))
             .compactMap { value -> WeatherContext? in
                 guard let observedAt = formatter.date(from: value.0),
-                      observedAt >= start,
+                      observedAt >= forecastStart,
                       observedAt < end else { return nil }
                 let presentation = OpenMeteoWeatherCodePresentation(
                     code: value.1.1.0,
@@ -1611,6 +1602,7 @@ actor OpenMeteoWeatherContextService {
                     fetchedAt: fetchedAt,
                     isStale: false,
                     isForecast: observedAt >= fetchedAt,
+                    providerName: "Open-Meteo",
                     condition: presentation.condition,
                     symbolName: presentation.symbolName,
                     temperatureCelsius: value.1.0,

@@ -50,6 +50,8 @@ struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
     var kind: String
     var schemaVersion: Int
     var payloadJSON: String
+    var payloadChecksum: String?
+    var payloadByteCount: Int?
 
     init<T: Encodable>(
         id: UUID = UUID(),
@@ -67,6 +69,8 @@ struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
         self.schemaVersion = schemaVersion
         let data = try encoder.encode(payload)
         self.payloadJSON = String(decoding: data, as: UTF8.self)
+        self.payloadChecksum = TaptionPlanCanonicalStorage.checksum(data)
+        self.payloadByteCount = data.count
     }
 }
 

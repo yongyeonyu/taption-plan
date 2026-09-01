@@ -2830,6 +2830,42 @@ enum WeatherTimelineEngine {
         return result
     }
 
+    /// Returns only the points where the displayed weather changes. The raw
+    /// archive keeps those transition points; the full timeline is rebuilt by
+    /// carrying each value forward until the next point.
+    static func changedRawContexts(
+        _ incoming: [WeatherContext],
+        relativeTo existing: [WeatherContext]
+    ) -> [WeatherContext] {
+        var timeline = existing
+        var changes: [WeatherContext] = []
+        for context in incoming.sorted(by: {
+            if $0.observedAt != $1.observedAt {
+                return $0.observedAt < $1.observedAt
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }) {
+            let previous = timeline
+                .filter {
+                    sameRawStream($0, context)
+                        && $0.observedAt <= context.observedAt
+                }
+                .max {
+                    if $0.observedAt != $1.observedAt {
+                        return $0.observedAt < $1.observedAt
+                    }
+                    return $0.id.uuidString < $1.id.uuidString
+                }
+            if previous == nil
+                || rawDisplaySignature(previous!)
+                    != rawDisplaySignature(context) {
+                changes.append(context)
+            }
+            timeline.append(context)
+        }
+        return changes
+    }
+
     private static func signature(_ context: WeatherContext) -> Signature {
         Signature(
             condition: context.condition,
@@ -2837,6 +2873,38 @@ enum WeatherTimelineEngine {
             // Merge by what the timeline shows.  Raw PM values, provider and
             // fallback state belong to the detail view and must not split a
             // visually identical weather run.
+            airGrade: context.airQuality?.overallGrade,
+            location: LocationSignature(context)
+        )
+    }
+
+    private struct RawDisplaySignature: Equatable {
+        let condition: String
+        let symbolName: String
+        let temperature: Int
+        let airGrade: AirQualityGrade?
+        let location: LocationSignature
+    }
+
+    private static func sameRawStream(
+        _ lhs: WeatherContext,
+        _ rhs: WeatherContext
+    ) -> Bool {
+        guard (lhs.isForecast == true) == (rhs.isForecast == true) else {
+            return false
+        }
+        guard lhs.placeID == rhs.placeID else { return false }
+        guard lhs.placeID == nil else { return true }
+        return LocationSignature(lhs) == LocationSignature(rhs)
+    }
+
+    private static func rawDisplaySignature(
+        _ context: WeatherContext
+    ) -> RawDisplaySignature {
+        RawDisplaySignature(
+            condition: context.condition,
+            symbolName: context.symbolName,
+            temperature: Int(context.temperatureCelsius.rounded()),
             airGrade: context.airQuality?.overallGrade,
             location: LocationSignature(context)
         )

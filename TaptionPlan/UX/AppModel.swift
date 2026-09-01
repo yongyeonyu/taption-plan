@@ -492,7 +492,7 @@ final class AppModel {
     )
     private static let mapLocationReadingTimeout: TimeInterval = 3
     private static let weatherPreviewRefreshInterval: TimeInterval = 30 * 60
-    private static let weatherPreviewMaximumDays = 16
+    private static let weatherPreviewMaximumDays = 7
 
     var selectedTab: RootTab = .schedule
     var selectedScale: TimeScale = .day
@@ -2666,7 +2666,6 @@ final class AppModel {
                 )
                 return
             }
-            await refreshMidnightWeatherIfNeeded()
             let date = Date.now
             let payload = await cloudBackupPayload(now: date)
             appLogBytes = payload.appLog?.utf8.count ?? 0
@@ -2711,25 +2710,6 @@ final class AppModel {
               securityStatus.settings.midnightBackupEnabled,
               calendar.component(.hour, from: .now) == 0 else { return }
         await saveCloudBackup(reason: "background_deferred")
-    }
-
-    private func refreshMidnightWeatherIfNeeded() async {
-        let calendar = Calendar.autoupdatingCurrent
-        let now = Date.now
-        guard securityStatus.settings.midnightBackupEnabled,
-              calendar.component(.hour, from: now) == 0,
-              let point = latestSensorReading?.point
-                  ?? snapshot.weather.last(where: { $0.point != nil })?.point,
-              let dayEnd = calendar.date(
-                  byAdding: .day,
-                  value: 1,
-                  to: calendar.startOfDay(for: now)
-              ) else { return }
-        await refreshWeather24Hours(
-            at: point,
-            from: calendar.startOfDay(for: now),
-            through: dayEnd
-        )
     }
 
     private func applyAirPodsActivity(
@@ -6737,6 +6717,73 @@ final class AppModel {
         }
     }
 
+    private func archiveWeatherRawContexts(
+        _ contexts: [WeatherContext],
+        kind: String
+    ) async {
+        guard let rawDeviceDataArchive else { return }
+        guard !contexts.isEmpty else { return }
+        do {
+            let envelopes = try contexts.map { context in
+                try RawDeviceDataEnvelope(
+                    capturedAt: context.observedAt,
+                    source: .gps,
+                    kind: kind,
+                    payload: context
+                )
+            }
+            try await rawDeviceDataArchive.append(envelopes)
+        } catch {
+            Self.integrationLogger.error(
+                "Weather raw archive failed: \(kind, privacy: .public) \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    private func restoreRawWeather(in span: TimeSpan) async {
+        guard let rawDeviceDataArchive,
+              let envelopes = try? await rawDeviceDataArchive.envelopes(
+                  in: span
+              ) else {
+            return
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let contexts = envelopes
+            .filter {
+                $0.source == .gps
+                    && ($0.kind == "weather-context"
+                        || $0.kind == "weather-forecast-hourly")
+            }
+            .compactMap { envelope -> WeatherContext? in
+                guard let data = envelope.payloadJSON.data(using: .utf8) else {
+                    return nil
+                }
+                if let byteCount = envelope.payloadByteCount,
+                   byteCount != data.count {
+                    return nil
+                }
+                if let checksum = envelope.payloadChecksum,
+                   checksum != TaptionPlanCanonicalStorage.checksum(data) {
+                    return nil
+                }
+                return try? decoder.decode(WeatherContext.self, from: data)
+            }
+        guard !contexts.isEmpty else { return }
+        snapshot.weather = WeatherTimelineEngine.coalesced(
+            snapshot.weather + contexts
+        )
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "weather_raw_restored",
+            fields: [
+                "envelopes": String(envelopes.count),
+                "contexts": String(contexts.count),
+                "from": String(span.start.timeIntervalSince1970),
+                "through": String(span.end.timeIntervalSince1970),
+            ]
+        )
+    }
+
     /// 이번 갱신이 실제로 신호를 들여다본 구간. 사진·건강 앱에서 메운 점은
     /// 연속 수집이 아니라 드문드문한 복원이므로 근거로 세지 않는다.
     private static func sensorEvidenceSpan(
@@ -6865,7 +6912,6 @@ final class AppModel {
     }
 
     func refreshSensorTimeline(containing date: Date? = nil) async {
-        guard let sensorService else { return }
         let span = TimelineAggregationEngine().interval(
             for: .day,
             containing: date ?? selectedDate
@@ -6878,6 +6924,8 @@ final class AppModel {
                 "span_end": String(span.end.timeIntervalSinceReferenceDate),
             ]
         )
+        await restoreRawWeather(in: span)
+        guard let sensorService else { return }
         let watchData = await watchSensorTimelineData(in: span)
         let watchSummaries = watchData.summaries
         let watchAccelerationSamples = watchData.accelerationSamples
@@ -7024,9 +7072,6 @@ final class AppModel {
                 return
             }
             await refreshWeather(
-                for: snapshot.places.filter {
-                    $0.span.intersection(with: span) != nil
-                },
                 in: span,
                 fallbackReading: latestReadingWithPoint
             )
@@ -7346,7 +7391,6 @@ final class AppModel {
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(
-                for: basePlaces,
                 in: span,
                 fallbackReading: latestReadingWithPoint
             )
@@ -9451,7 +9495,8 @@ final class AppModel {
     }
 
     private func refreshFutureWeatherPreviewIfNeeded() async {
-        guard settings.locationEnabled || settings.weatherEnabled,
+        guard isSceneActive,
+              settings.locationEnabled || settings.weatherEnabled,
               liveWeatherRefreshTask == nil else {
             return
         }
@@ -9467,7 +9512,8 @@ final class AppModel {
         at point: GeoPoint,
         now: Date = .now
     ) async {
-        guard settings.locationEnabled || settings.weatherEnabled,
+        guard isSceneActive,
+              settings.locationEnabled || settings.weatherEnabled,
               liveWeatherRefreshTask == nil else {
             return
         }
@@ -9509,13 +9555,11 @@ final class AppModel {
                 contexts[index].isForecast = true
                 contexts[index].point = point
                 contexts[index].placeName = "현재 위치"
-                archiveRawDeviceData(
-                    source: .gps,
-                    kind: "weather-forecast-hourly",
-                    payload: contexts[index],
-                    capturedAt: contexts[index].observedAt
-                )
             }
+            await archiveWeatherRawContexts(
+                contexts,
+                kind: "weather-forecast-hourly"
+            )
             snapshot.weather = WeatherTimelineEngine.replacing(
                 snapshot.weather,
                 forecast: contexts,
@@ -9553,7 +9597,8 @@ final class AppModel {
     ) {
         // Weather is part of the automatic sensor record. Location collection
         // enables it even when the legacy weather toggle is still off.
-        guard settings.locationEnabled || settings.weatherEnabled else {
+        guard isSceneActive,
+              settings.locationEnabled || settings.weatherEnabled else {
             return
         }
         let movedFarEnough = lastLiveEnvironmentPoint.map {
@@ -9635,23 +9680,19 @@ final class AppModel {
                     self.lastFutureWeatherPoint = point
                 }
 
-                self.archiveRawDeviceData(
-                    source: .gps,
-                    kind: "weather-context",
-                    payload: context,
-                    capturedAt: context.observedAt
-                )
                 for index in futureContexts.indices {
                     futureContexts[index].isForecast = true
                     futureContexts[index].point = point
                     futureContexts[index].placeName = "현재 위치"
-                    self.archiveRawDeviceData(
-                        source: .gps,
-                        kind: "weather-forecast-hourly",
-                        payload: futureContexts[index],
-                        capturedAt: futureContexts[index].observedAt
-                    )
                 }
+                await self.archiveWeatherRawContexts(
+                    [context],
+                    kind: "weather-context"
+                )
+                await self.archiveWeatherRawContexts(
+                    futureContexts,
+                    kind: "weather-forecast-hourly"
+                )
                 self.lastLiveEnvironmentPoint = point
                 self.lastLiveEnvironmentAt = date
                 self.lastLiveEnvironmentFailureAt = nil
@@ -9778,89 +9819,30 @@ final class AppModel {
     }
 
     private func refreshWeather(
-        for places: [PlaceStay],
         in span: TimeSpan,
         fallbackReading: SensorReading? = nil
     ) async {
-        let locatedPlaces = places.filter { $0.point != nil }
-        if locatedPlaces.isEmpty,
-           let fallbackReading,
-           let point = fallbackReading.point {
-            await refreshWeather(
-                at: point,
-                observedAt: fallbackReading.timestamp
+        let calendar = Calendar.autoupdatingCurrent
+        guard isSceneActive else { return }
+        guard calendar.isDate(span.start, inSameDayAs: .now) else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "weather_historical_restored",
+                fields: [
+                    "from": String(span.start.timeIntervalSince1970),
+                    "through": String(span.end.timeIntervalSince1970),
+                ]
             )
             return
         }
-        guard !locatedPlaces.isEmpty else { return }
-
-        var contexts: [WeatherContext] = []
-        var firstError: Error?
-        for place in locatedPlaces {
-            guard let point = place.point else { continue }
-            do {
-                var context = try await weatherService.context(
-                    latitude: point.latitude,
-                    longitude: point.longitude,
-                    at: place.span.end
-                )
-                context.observedAt = place.span.end
-                context.placeID = place.id
-                context.placeName = place.displayName
-                context.point = point
-                context.airQuality = try? await airQualityService.context(
-                    latitude: point.latitude,
-                    longitude: point.longitude,
-                    at: place.span.end
-                )
-                archiveRawDeviceData(
-                    source: .gps,
-                    kind: "weather-context",
-                    payload: context,
-                    capturedAt: place.span.end
-                )
-                contexts.append(context)
-            } catch {
-                if firstError == nil {
-                    firstError = error
-                }
-            }
+        let latestStoredPoint = snapshot.weather
+            .filter { $0.point != nil && $0.isForecast != true }
+            .max(by: { $0.observedAt < $1.observedAt })?.point
+        guard let point = fallbackReading?.point
+            ?? latestSensorReading?.point
+            ?? latestStoredPoint else {
+            return
         }
-
-        if !contexts.isEmpty {
-            for context in contexts {
-                snapshot.weather = WeatherTimelineEngine.replacing(
-                    snapshot.weather,
-                    current: context
-                )
-            }
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "stored_environment_refreshed",
-                fields: ["contexts": String(contexts.count)]
-            )
-            await persistDeviceLocalSnapshot()
-            if let point = fallbackReading?.point
-                ?? latestSensorReading?.point {
-                await refreshFutureWeatherIfNeeded(at: point)
-            }
-        }
-
-        // This refresh runs as part of automatic sensor analysis.  A weather
-        // provider outage must never interrupt an exercise session (or show a
-        // modal alert during background collection).  Keep existing context
-        // data and let the next refresh retry instead.
-        if let firstError, contexts.isEmpty {
-            Self.integrationLogger.info(
-                "Stored weather refresh unavailable: \(firstError.localizedDescription, privacy: .public)"
-            )
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "stored_environment_failed",
-                level: .error,
-                fields: [
-                    "error": String(describing: type(of: firstError)),
-                ]
-            )
-        }
+        await refreshWeather(at: point, observedAt: .now)
     }
 
     private func refreshWeather(
@@ -9884,11 +9866,9 @@ final class AppModel {
                 longitude: point.longitude,
                 at: observedAt
             )
-            archiveRawDeviceData(
-                source: .gps,
-                kind: "weather-context",
-                payload: context,
-                capturedAt: observedAt
+            await archiveWeatherRawContexts(
+                [context],
+                kind: "weather-context"
             )
             snapshot.weather = WeatherTimelineEngine.replacing(
                 snapshot.weather,
@@ -9910,50 +9890,6 @@ final class AppModel {
             )
             TaptionPlanDiagnosticsLogger.shared.record(
                 "stored_environment_fallback_failed",
-                level: .error,
-                fields: ["error": String(describing: type(of: error))]
-            )
-        }
-    }
-
-    private func refreshWeather24Hours(
-        at point: GeoPoint,
-        from start: Date,
-        through end: Date
-    ) async {
-        do {
-            var contexts = try await weatherService.hourlyContexts(
-                latitude: point.latitude,
-                longitude: point.longitude,
-                from: start,
-                through: end
-            )
-            for index in contexts.indices {
-                contexts[index].isForecast =
-                    contexts[index].observedAt >= Date.now
-                contexts[index].point = point
-                contexts[index].placeName = "현재 위치"
-                archiveRawDeviceData(
-                    source: .gps,
-                    kind: "weather-forecast-hourly",
-                    payload: contexts[index],
-                    capturedAt: contexts[index].observedAt
-                )
-            }
-            guard !contexts.isEmpty else { return }
-            snapshot.weather = WeatherTimelineEngine.replacing(
-                snapshot.weather,
-                forecast: contexts,
-                forecastRange: TimeSpan(start: start, end: end)
-            )
-            await persistDeviceLocalSnapshot()
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "midnight_weather_forecast_refreshed",
-                fields: ["contexts": String(contexts.count)]
-            )
-        } catch {
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "midnight_weather_forecast_failed",
                 level: .error,
                 fields: ["error": String(describing: type(of: error))]
             )

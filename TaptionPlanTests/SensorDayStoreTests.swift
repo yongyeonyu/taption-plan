@@ -161,6 +161,12 @@ final class SensorDayStoreTests: XCTestCase {
         )
 
         XCTAssertEqual(restored, [envelope])
+        let payloadData = try XCTUnwrap(envelope.payloadJSON.data(using: .utf8))
+        XCTAssertEqual(envelope.payloadByteCount, payloadData.count)
+        XCTAssertEqual(
+            envelope.payloadChecksum,
+            TaptionPlanCanonicalStorage.checksum(payloadData)
+        )
         let store = try TaptionPlanDayStore(url: databaseURL)
         let events = try await store.events(
             from: TaptionPlanDayKey(date: date),
