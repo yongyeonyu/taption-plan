@@ -739,12 +739,12 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testSidebarRulerFontGrowsAcrossAllZoomSteps() {
+    func testSidebarRulerFontStaysFixedAcrossAllZoomSteps() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.zoomDurations.map {
                 MapHomeTimeSidebarMath.rulerFontSize(durationMinutes: $0)
             },
-            [10, 11, 12, 13, 14]
+            [10, 10, 10, 10, 10]
         )
         XCTAssertLessThanOrEqual(
             MapHomeTimeSidebarMath.rulerTickWidth
@@ -894,7 +894,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(labels.hours, [13, 14, 15])
         XCTAssertEqual(
             labels.minutes,
-            [790, 800, 810, 820, 830, 850, 860, 870, 880, 890]
+            [795, 810, 825, 855, 870, 885]
         )
     }
 
@@ -914,16 +914,16 @@ final class TimeScaleTests: XCTestCase {
             trackHeight: 680
         )
 
-        XCTAssertTrue(rows.contains { $0.minuteComponent == 15 })
+        XCTAssertFalse(rows.contains { $0.minuteComponent == 15 })
         XCTAssertTrue(rows.contains { $0.minuteComponent == 30 })
-        XCTAssertTrue(rows.contains { $0.minuteComponent == 45 })
+        XCTAssertFalse(rows.contains { $0.minuteComponent == 45 })
 
         let compactRows = MapHomeTimeSidebarMath.visibleRulerRows(
             window: 360...1080,
             durationMinutes: 720,
             trackHeight: 220
         )
-        XCTAssertTrue(compactRows.contains { $0.minuteComponent == 30 })
+        XCTAssertFalse(compactRows.contains { $0.minuteComponent == 30 })
     }
 
     func testExpandedSidebarRulerChoosesReadableMinuteSteps() {
@@ -946,14 +946,14 @@ final class TimeScaleTests: XCTestCase {
                 durationMinutes: 180,
                 trackHeight: 400
             ),
-            10
+            15
         )
         XCTAssertEqual(
             MapHomeTimeSidebarMath.minuteRulerStep(
                 durationMinutes: 180,
                 trackHeight: 192
             ),
-            15
+            30
         )
     }
 
@@ -1702,6 +1702,55 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(spans[0].span.start, firstDate)
         XCTAssertEqual(spans[0].span.end, thirdDate)
         XCTAssertEqual(spans[1].context.id, third.id)
+    }
+
+    func testFullDayWeatherOnlyShowsLargeTemperatureChanges() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 23))
+        )
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 10, to: day))
+        let oneDegreeDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 11, to: day))
+        let twoDegreeDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 12, to: day))
+        let weatherChangeDate = try XCTUnwrap(calendar.date(byAdding: .hour, value: 13, to: day))
+        let first = WeatherContext(
+            observedAt: firstDate,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20
+        )
+        let oneDegreeChange = WeatherContext(
+            observedAt: oneDegreeDate,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 21
+        )
+        let twoDegreeChange = WeatherContext(
+            observedAt: twoDegreeDate,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 22
+        )
+        let weatherChange = WeatherContext(
+            observedAt: weatherChangeDate,
+            condition: "비",
+            symbolName: "cloud.rain.fill",
+            temperatureCelsius: 22
+        )
+
+        let spans = MapHomeWeatherTimelineMath.persistentSpans(
+            for: day,
+            contexts: [first, oneDegreeChange, twoDegreeChange, weatherChange],
+            calendar: calendar,
+            minimumTemperatureChangeCelsius: MapHomeWeatherTimelineMath.fullDayTemperatureChangeCelsius
+        )
+
+        XCTAssertEqual(spans.map { $0.context.id }, [first.id, twoDegreeChange.id, weatherChange.id])
+        XCTAssertEqual(spans[0].span.start, firstDate)
+        XCTAssertEqual(spans[0].span.end, twoDegreeDate)
+        XCTAssertEqual(spans[1].span.start, twoDegreeDate)
+        XCTAssertEqual(spans[1].span.end, weatherChangeDate)
     }
 
     func testWeatherRawTimelineStoresOnlyDisplayedChanges() {
@@ -2486,14 +2535,14 @@ final class TimeScaleTests: XCTestCase {
 
         XCTAssertEqual(
             rows.map(\.minute),
-            [480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600]
+            [480, 495, 510, 525, 540, 555, 570, 585, 600]
         )
         XCTAssertEqual(rows.first?.hour, 8)
         XCTAssertNil(rows.first?.minuteComponent)
-        XCTAssertEqual(rows[1].minuteComponent, 10)
+        XCTAssertEqual(rows[1].minuteComponent, 15)
         XCTAssertNil(rows[1].hour)
-        XCTAssertEqual(rows[6].hour, 9)
-        XCTAssertNil(rows[6].minuteComponent)
+        XCTAssertEqual(rows[4].hour, 9)
+        XCTAssertNil(rows[4].minuteComponent)
     }
 
     func testMapHomeTimeSidebarHandleStartsOnTouchLikeWBS() {

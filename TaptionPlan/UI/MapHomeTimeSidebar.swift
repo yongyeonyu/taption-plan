@@ -1842,7 +1842,11 @@ struct MapHomeWeatherSidebar: View {
         return MapHomeWeatherTimelineMath.persistentSpans(
             for: date,
             contexts: contexts.filter(MapHomeWeatherDisplayPolicy.isComplete),
-            calendar: calendar
+            calendar: calendar,
+            minimumTemperatureChangeCelsius: visibleDurationMinutes
+                == MapHomeTimeSidebarMath.fullDayMinutes
+                ? MapHomeWeatherTimelineMath.fullDayTemperatureChangeCelsius
+                : 0
         ).compactMap { entry in
             let start = entry.span.start
             let end = entry.span.end
@@ -1874,7 +1878,7 @@ enum MapHomeTimeSidebarMath {
     static let rulerHourColumnWidth: CGFloat = 16
     static let rulerMinuteColumnWidth: CGFloat = 16
     static let rulerColumnSpacing: CGFloat = 2
-    static let minimumRulerLabelSpacing: CGFloat = 12
+    static let minimumRulerLabelSpacing: CGFloat = 24
     static let selectionTimeBlockWidth: CGFloat = 56
     static let handleDoubleTapHitScale: CGFloat = 1.5
     static let selectionTimeBlockHitWidth: CGFloat =
@@ -1963,13 +1967,7 @@ enum MapHomeTimeSidebarMath {
     }
 
     static func rulerFontSize(durationMinutes: Int) -> CGFloat {
-        switch durationMinutes {
-        case ...60: 14
-        case ...180: 13
-        case ...360: 12
-        case ...720: 11
-        default: 10
-        }
+        10
     }
 
     static func rulerColumnWidth(durationMinutes: Int) -> CGFloat {
@@ -2104,11 +2102,11 @@ enum MapHomeTimeSidebarMath {
         durationMinutes: Int,
         trackHeight: CGFloat
     ) -> MapHomeTimeRulerLabels {
-        let firstHour = max(0, Int(ceil(Double(window.lowerBound) / 60)))
-        let lastHour = min(24, Int(floor(Double(window.upperBound) / 60)))
-        let hours = firstHour <= lastHour
-            ? Array(firstHour...lastHour)
-            : []
+        let hours = visibleHourLabels(
+            window: window,
+            durationMinutes: durationMinutes,
+            trackHeight: trackHeight
+        )
 
         let minuteStep = minuteRulerStep(
             durationMinutes: durationMinutes,
@@ -2139,7 +2137,7 @@ enum MapHomeTimeSidebarMath {
         let duration = CGFloat(min(max(durationMinutes, 1), fullDayMinutes))
         let pointsPerMinute = max(trackHeight, 1) / duration
         let spacing = minimumRulerLabelSpacing(durationMinutes: durationMinutes)
-        return [1, 5, 10, 15, 20, 30].first {
+        return [1, 5, 10, 15, 20, 30, 60, 120].first {
             pointsPerMinute * CGFloat($0) >= spacing
         } ?? 30
     }

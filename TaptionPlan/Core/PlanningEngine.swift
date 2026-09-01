@@ -2682,6 +2682,7 @@ enum WeatherTimelineEngine {
 
     private struct Signature: Equatable {
         let condition: String
+        let symbolName: String
         let temperature: Int
         let airGrade: AirQualityGrade?
         let location: LocationSignature
@@ -2872,6 +2873,7 @@ enum WeatherTimelineEngine {
     private static func signature(_ context: WeatherContext) -> Signature {
         Signature(
             condition: context.condition,
+            symbolName: context.symbolName,
             temperature: Int(context.temperatureCelsius.rounded()),
             // Merge by what the timeline shows.  Raw PM values, provider and
             // fallback state belong to the detail view and must not split a

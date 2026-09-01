@@ -12169,16 +12169,40 @@ final class FeatureEngineTests: XCTestCase {
             changed,
         ])
 
-        XCTAssertEqual(merged.count, 2)
+        XCTAssertEqual(merged.count, 3)
         XCTAssertEqual(merged[0].observedAt, start)
         XCTAssertEqual(
             merged[0].validUntil,
-            changed.observedAt
+            repeated.observedAt
         )
         XCTAssertEqual(
             merged[1].validUntil,
+            changed.observedAt
+        )
+        XCTAssertEqual(
+            merged[2].validUntil,
             changed.observedAt.addingTimeInterval(15 * 60)
         )
+    }
+
+    func testWeatherTimelineSplitsWhenWeatherSymbolChanges() {
+        let start = makeDate(2026, 8, 1, 10)
+        let first = WeatherContext(
+            observedAt: start,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 26
+        )
+        let symbolChanged = WeatherContext(
+            observedAt: start.addingTimeInterval(60 * 60),
+            condition: "맑음",
+            symbolName: "cloud.sun.fill",
+            temperatureCelsius: 26
+        )
+
+        let merged = WeatherTimelineEngine.coalesced([first, symbolChanged])
+
+        XCTAssertEqual(merged.map(\.observedAt), [start, symbolChanged.observedAt])
     }
 
     func testWeatherTimelineKeepsSameDisplayedWeatherContinuous() {

@@ -978,15 +978,7 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
 }
 
 enum MapHomeWeatherTimelineMath {
-    private struct DisplaySignature: Equatable {
-        let symbolName: String
-        let temperature: Int
-
-        init(_ context: WeatherContext) {
-            symbolName = context.symbolName
-            temperature = Int(context.temperatureCelsius.rounded())
-        }
-    }
+    static let fullDayTemperatureChangeCelsius = 2
 
     static func context(
         at date: Date,
@@ -1000,24 +992,33 @@ enum MapHomeWeatherTimelineMath {
     static func persistentSpans(
         for date: Date,
         contexts: [WeatherContext],
-        calendar: Calendar = .autoupdatingCurrent
+        calendar: Calendar = .autoupdatingCurrent,
+        minimumTemperatureChangeCelsius: Int = 0
     ) -> [(context: WeatherContext, span: TimeSpan)] {
         let dayStart = calendar.startOfDay(for: date)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? date
         let ordered = WeatherTimelineEngine.coalesced(contexts)
             .sorted { $0.observedAt < $1.observedAt }
         var displayRuns: [(context: WeatherContext, start: Date)] = []
+        var lastDisplayedContext: WeatherContext?
 
         for context in ordered {
             guard let lastIndex = displayRuns.indices.last else {
                 displayRuns.append((context: context, start: context.observedAt))
+                lastDisplayedContext = context
                 continue
             }
-            if DisplaySignature(displayRuns[lastIndex].context)
-                == DisplaySignature(context) {
-                displayRuns[lastIndex].context = context
+            if !startsNewDisplayRun(
+                from: lastDisplayedContext ?? displayRuns[lastIndex].context,
+                to: context,
+                minimumTemperatureChangeCelsius: minimumTemperatureChangeCelsius
+            ) {
+                if minimumTemperatureChangeCelsius == 0 {
+                    displayRuns[lastIndex].context = context
+                }
             } else {
                 displayRuns.append((context: context, start: context.observedAt))
+                lastDisplayedContext = context
             }
         }
 
@@ -1033,6 +1034,22 @@ enum MapHomeWeatherTimelineMath {
             guard start < end, start < dayEnd, end > dayStart else { return nil }
             return (context: run.context, span: TimeSpan(start: start, end: end))
         }
+    }
+
+    private static func startsNewDisplayRun(
+        from previous: WeatherContext,
+        to current: WeatherContext,
+        minimumTemperatureChangeCelsius: Int
+    ) -> Bool {
+        guard previous.symbolName == current.symbolName else { return true }
+
+        let previousTemperature = Int(previous.temperatureCelsius.rounded())
+        let currentTemperature = Int(current.temperatureCelsius.rounded())
+        let temperatureChange = abs(currentTemperature - previousTemperature)
+        if minimumTemperatureChangeCelsius > 0 {
+            return temperatureChange >= minimumTemperatureChangeCelsius
+        }
+        return temperatureChange != 0
     }
 }
 
