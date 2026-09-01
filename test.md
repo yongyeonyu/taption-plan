@@ -90,8 +90,6 @@
 
 ### 미완료 게이트
 
-- `DEV901A001` 현재 설치 `com.taption.plan` `1.0 (125)`와 CoreDevice launch는 확인했다. 앱 정본 snapshot에서 2026-08-31 actuals 0건·travel 153건(확정 2건)·places 300건·관측 weather 0건을 readback했고, time rail 계산상 약 1,252분 미확인 구간이므로 어제 미확인 다수는 데이터와 일치한다. 화면·터치·날짜 이동·재생·지도/사이드바 실기기 대조는 같은 iPhone에서 `cam 메인`의 ShotGuide 카메라 테스트와 `iPhone 사용 중` 상태가 유지되어 iPhone Mirroring이 잠금 요구로 연결되지 않아 미완료다.
-- iPhone 14 Pro에서 최신 Debug 빌드의 실제 지도 화면·재생선 정합성·역 후보 노출·지도 메모 터치 확인
 - Apple Watch 현장 설치·수신·동기화 확인
 - Paid Apps Agreement 활성화·`com.taption.plan.pro` 생성·sandbox 구매/복원 확인
 
@@ -104,4 +102,10 @@
 - 정본 대조: 2026-08-31 actuals 0건, travel 153건(확정 2건), places 300건, 관측 weather 0건; 계산된 약 1,252분 미확인 구간은 저장 데이터와 일치
 - 2026-09-01 weather 1,936건은 동시 위치·예보 context 중복이었고, MapHome 표시 투영에서 같은 분 대표값 1건으로 축약하는 회귀 테스트 통과
 - 날짜 전환 stale 데이터·공백 재생 fallback·연속 GPS 이동의 예상 점선 회귀 수정은 실제 기기 테스트 대상에 포함되어 통과
-- 화면·터치·날짜 이동·재생·사이드바·지도 제스처는 iPhone Mirroring의 잠금 요구(`iPhone을 잠그십시오`)로 미완료
+## 2026-09-02 DEV901A001 iPhone Mirroring 화면 검증
+
+- 대상: iPhone 14 Pro (`C44AF739-127D-572D-AD83-417C7E879045`), 설치 `Taption Plan 1.0 (125)`
+- Mirroring에서 Plan 화면을 열고 2026-09-02 → 2026-09-01 날짜 이동, 2026-09-01 지도·weather rail 렌더링, 시간축 23:59 → 11:54 이동을 확인했다.
+- 2026-09-01 재생에서 버튼이 일시정지 상태로 전환되고 선택 시간이 11:54 → 12:34 → 15:30으로 진행되며 지도 경로·졸라맨 표시가 stale 경로로 점프하지 않는 것을 확인했다. 정지 후 2026-09-02로 복귀했다.
+- 2026-09-02 재생에서 선택 시간이 01:20 → 01:49로 진행되고 재생 중 경로가 비정상적으로 이전 날짜/마지막 leg를 재사용하지 않는 것을 확인했다.
+- 지도 단일 손가락 이동, 확대/축소 컨트롤, 현재 위치 복원을 실제 터치로 확인했다. Mirroring 자동 입력 API에는 다중 손가락 pinch 입력이 없어 pinch 자체의 물리 latency는 직접 측정하지 못했으며, 해당 MagnificationGesture 입력 예산은 소스 회귀 테스트로 검증했다.
