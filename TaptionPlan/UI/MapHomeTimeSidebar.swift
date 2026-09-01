@@ -1843,10 +1843,8 @@ struct MapHomeWeatherSidebar: View {
             for: date,
             contexts: contexts.filter(MapHomeWeatherDisplayPolicy.isComplete),
             calendar: calendar,
-            minimumTemperatureChangeCelsius: visibleDurationMinutes
-                == MapHomeTimeSidebarMath.fullDayMinutes
-                ? MapHomeWeatherTimelineMath.fullDayTemperatureChangeCelsius
-                : 0
+            minimumTemperatureChangeCelsius:
+                MapHomeWeatherTimelineMath.fullDayTemperatureChangeCelsius
         ).compactMap { entry in
             let start = entry.span.start
             let end = entry.span.end

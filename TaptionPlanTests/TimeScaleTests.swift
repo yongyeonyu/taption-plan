@@ -485,6 +485,43 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeCameraProjectionLimitsParentReadbackAndFlushesFinalFrame() {
+        let projection = MapHomeCameraFrameProjection()
+
+        XCTAssertTrue(
+            projection.shouldPublishParentReadback(
+                nowUptime: 1,
+                isFinal: false
+            )
+        )
+        XCTAssertFalse(
+            projection.shouldPublishParentReadback(
+                nowUptime: 1.02,
+                isFinal: false
+            )
+        )
+        XCTAssertTrue(
+            projection.shouldPublishParentReadback(
+                nowUptime: 1.04,
+                isFinal: false
+            )
+        )
+        XCTAssertTrue(
+            projection.shouldPublishParentReadback(
+                nowUptime: 1.041,
+                isFinal: true
+            )
+        )
+
+        projection.reset()
+        XCTAssertTrue(
+            projection.shouldPublishParentReadback(
+                nowUptime: 2,
+                isFinal: false
+            )
+        )
+    }
+
     func testStickmanViewportProjectionCoalesces240HzAndFlushesLatestPoint() {
         let projection = MapHomeStickmanViewportProjection()
         let initial = CGPoint(x: 100, y: 200)
@@ -856,6 +893,10 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(
             MapHomeTimeSidebarPinchMath.stepOffset(magnification: 1),
             0
+        )
+        XCTAssertEqual(
+            MapHomeTimeSidebarPinchMath.stepOffset(magnification: 1.11),
+            1
         )
         XCTAssertEqual(
             MapHomeTimeSidebarPinchMath.stepOffset(magnification: 1.2),

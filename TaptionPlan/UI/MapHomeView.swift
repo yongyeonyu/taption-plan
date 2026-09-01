@@ -273,6 +273,7 @@ final class MapHomeCameraFrameProjection {
     private(set) var latestFrame: MapHomeCameraFrame?
     private var renderedFrame: MapHomeCameraFrame?
     private var inputBudget = TaptionPlanNLEInputBudgetEngine()
+    private var lastParentReadbackUptime = -Double.infinity
 
     func submit(
         _ frame: MapHomeCameraFrame,
@@ -292,9 +293,20 @@ final class MapHomeCameraFrameProjection {
         return submit(latestFrame, nowUptime: nowUptime, force: true)
     }
 
+    func shouldPublishParentReadback(
+        nowUptime: TimeInterval,
+        isFinal: Bool
+    ) -> Bool {
+        guard isFinal || nowUptime - lastParentReadbackUptime >= 1.0 / 30.0
+        else { return false }
+        lastParentReadbackUptime = nowUptime
+        return true
+    }
+
     func reset() {
         latestFrame = nil
         renderedFrame = nil
+        lastParentReadbackUptime = -Double.infinity
         _ = inputBudget.beginGeneration()
     }
 }
@@ -506,6 +518,11 @@ final class MapHomeRouteDocumentProjectionGate {
         needsReadingPreparation = false
         return refresh
     }
+
+    func reset() {
+        needsRefresh = false
+        needsReadingPreparation = false
+    }
 }
 
 private struct MapHomeRouteCoordinateBounds {
@@ -700,7 +717,7 @@ enum MapHomeOverlayLayoutMath {
 }
 
 enum MapHomeTimeSidebarPinchMath {
-    static let scalePerStep: CGFloat = 1.18
+    static let scalePerStep: CGFloat = 1.10
     static let maximumStepOffset = 4
 
     static func stepOffset(magnification: CGFloat) -> Int {
@@ -709,6 +726,10 @@ enum MapHomeTimeSidebarPinchMath {
         let offset = raw >= 0 ? Int(floor(raw)) : Int(ceil(raw))
         return min(max(offset, -maximumStepOffset), maximumStepOffset)
     }
+}
+
+private enum MapHomeForecastRouteDisplayPolicy {
+    static let maximumVisibleRoutes = 8
 }
 
 enum MapHomeLocationActivation: Equatable {
@@ -1874,6 +1895,7 @@ struct MapHomeView: View {
             weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
 
             if dayChanged {
+                resetDayScopedMapState()
                 hasUserAdjustedMap = false
                 routeReadingsLoadState = .loading(
                     MapHomeRouteReadingsPolicy.dayKey(for: newDate)
@@ -2224,18 +2246,14 @@ struct MapHomeView: View {
                     frame,
                     nowUptime: now,
                     force: isFinal
+                ), mapCameraFrameProjection.shouldPublishParentReadback(
+                    nowUptime: now,
+                    isFinal: isFinal
                 ) {
                     applyMapCameraFrame(rendered, locationPoint: locationPoint)
                 }
-                if let locationPoint {
-                    submitDisplayedStickmanViewportPoint(locationPoint)
-                }
-                if isFinal {
-                    finishDisplayedStickmanViewportProjection()
-                }
             },
             onSingleFingerPanBegan: handleUserMapPan,
-            onSingleFingerPanEnded: finishDisplayedStickmanViewportProjection,
             onLongPress: presentMapLongPressMenu,
             onAnnotationSelected: handleAppleMapAnnotation
         )
@@ -2329,8 +2347,8 @@ struct MapHomeView: View {
     }
 
     private var appleMapForecastRoutes: [MapHomeAppleRoute] {
-        let expected = visibleExpectedRouteOverlays
-        let generated = visibleWBSGeneratedRouteOverlays
+        let expected = displayedExpectedRouteOverlays
+        let generated = displayedWBSGeneratedRouteOverlays
         let fallback = expected.map { overlay in
             MapHomeAppleRoute(
                 id: "expected-\(overlay.id.uuidString)",
@@ -2577,7 +2595,7 @@ struct MapHomeView: View {
     }
 
     private var vectorExpectedRoutes: [MapHomeVectorRoute] {
-        let expected = visibleExpectedRouteOverlays.map { overlay in
+        let expected = displayedExpectedRouteOverlays.map { overlay in
             MapHomeVectorRoute(
                 id: "expected-\(overlay.id.uuidString)",
                 coordinates: overlay.coordinates,
@@ -2585,7 +2603,7 @@ struct MapHomeView: View {
                 opacity: MapHomeWBSTripStyle.forecastRouteOpacity
             )
         }
-        let generated = visibleWBSGeneratedRouteOverlays.map { overlay in
+        let generated = displayedWBSGeneratedRouteOverlays.map { overlay in
             MapHomeVectorRoute(
                 id: "wbs-\(overlay.id)",
                 coordinates: overlay.coordinates,
@@ -5747,6 +5765,33 @@ struct MapHomeView: View {
         timeRailSegments = next
     }
 
+    private func resetDayScopedMapState() {
+        dayDataSnapshot = nil
+        routeReadings = []
+        normalizedRouteReadings = []
+        historicalPlaybackReadings = []
+        displayRouteReadings = []
+        historicalPlaybackPoint = nil
+        routeProjection = nil
+        wbsPlaybackProjection = nil
+        timelineRouteOverlays = []
+        cachedTemporaryLocations = []
+        expectedRouteOverlays = []
+        wbsGeneratedRouteOverlays = []
+        pendingForecastRouteState = nil
+        expectedRouteCache.removeAll(keepingCapacity: true)
+        expectedRouteRefreshTask?.cancel()
+        expectedRouteRefreshTask = nil
+        liveRouteProjectionRefreshTask?.cancel()
+        liveRouteProjectionRefreshTask = nil
+        nearbyTransitPlaces = []
+        hasDeferredWBSPlaybackRefresh = false
+        timeRailSegments = [.wholeDayUnconfirmed]
+        hasAppliedInitialMapFocus = false
+        routeDocumentProjectionGate.reset()
+        mapRenderCache.invalidateRouteData()
+    }
+
     private var currentDayDataSnapshot: PlanDayDataSnapshot? {
         guard let dayDataSnapshot,
               dayDataSnapshot.sourceRevision == model.snapshotRevision,
@@ -5835,11 +5880,28 @@ struct MapHomeView: View {
         }
     }
 
+    private var displayedExpectedRouteOverlays: [MapHomeExpectedRouteOverlay] {
+        Array(
+            visibleExpectedRouteOverlays.prefix(
+                MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes
+            )
+        )
+    }
+
     private var visibleWBSGeneratedRouteOverlays: [MapHomeWBSGeneratedRouteOverlay] {
         let cutoff = routeOverlayCutoff
         return wbsGeneratedRouteOverlays.compactMap {
             $0.visible(through: cutoff)
         }
+    }
+
+    private var displayedWBSGeneratedRouteOverlays: [MapHomeWBSGeneratedRouteOverlay] {
+        let remaining = max(
+            0,
+            MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes
+                - displayedExpectedRouteOverlays.count
+        )
+        return Array(visibleWBSGeneratedRouteOverlays.prefix(remaining))
     }
 
     private func scheduleExpectedRouteRefresh() {
@@ -5876,11 +5938,16 @@ struct MapHomeView: View {
                 dayEnd: dayEnd
             )
         )
+        guard !Task.isCancelled,
+              calendar.isDate(selectedDay, inSameDayAs: model.selectedDate)
+        else { return }
         if expectedRouteCache.count > 128 {
             expectedRouteCache.removeAll(keepingCapacity: true)
         }
 
-        let limitedRequests = Array(requests.prefix(24))
+        let limitedRequests = Array(
+            requests.prefix(MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes)
+        )
         let fallbackExpected = limitedRequests.map {
             expectedRouteOverlay(for: $0, coordinates: [
                 CLLocationCoordinate2D(
@@ -5901,9 +5968,17 @@ struct MapHomeView: View {
             fallbackExpected.map { "movement-\($0.id.uuidString)" }
                 + storedWBSResolvedRoutes.map(\.legID)
         )
-        let fallbackGenerated = generatedWBSRouteOverlays(
-            from: fallbackProjection,
-            excluding: excludedLegIDs
+        let fallbackGenerated = Array(
+            generatedWBSRouteOverlays(
+                from: fallbackProjection,
+                excluding: excludedLegIDs
+            ).prefix(
+                max(
+                    0,
+                    MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes
+                        - fallbackExpected.count
+                )
+            )
         )
         recordExpectedRouteProjectionDiagnostics(
             phase: "fallback",
@@ -5955,11 +6030,19 @@ struct MapHomeView: View {
             expected: resolvedExpected,
             generated: []
         )
-        var resolvedGenerated = generatedWBSRouteOverlays(
-            from: resolvedProjection,
-            excluding: Set(
-                resolvedExpected.map { "movement-\($0.id.uuidString)" }
-                    + storedWBSResolvedRoutes.map(\.legID)
+        var resolvedGenerated = Array(
+            generatedWBSRouteOverlays(
+                from: resolvedProjection,
+                excluding: Set(
+                    resolvedExpected.map { "movement-\($0.id.uuidString)" }
+                        + storedWBSResolvedRoutes.map(\.legID)
+                )
+            ).prefix(
+                max(
+                    0,
+                    MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes
+                        - resolvedExpected.count
+                )
             )
         )
         let resolvedExcludedLegIDs = Set(
@@ -6335,9 +6418,9 @@ struct MapHomeView: View {
 
     private var visibleForecastPlaybackLegIDs: Set<String> {
         Set(
-            visibleExpectedRouteOverlays.map {
+            displayedExpectedRouteOverlays.map {
                 "movement-\($0.id.uuidString)"
-            } + visibleWBSGeneratedRouteOverlays.map(\.id)
+            } + displayedWBSGeneratedRouteOverlays.map(\.id)
         )
     }
 
@@ -6609,9 +6692,10 @@ struct MapHomeView: View {
             routeReadings = merged
             transitBoardingReadingsRevision &+= 1
         }
+        refreshTimeRailSegments()
         scheduleTransitPOIRefresh()
         scheduleExpectedRouteRefresh()
-        guard !isTimelineInteractionActive else {
+        guard !isTimelineInteractionActive || isDayPlaybackRunning else {
             routeDocumentProjectionGate.deferRefresh(preparingReadings: true)
             return
         }
@@ -6933,7 +7017,7 @@ struct MapHomeView: View {
     private func requestRouteProjectionRefresh(
         preparingReadings: Bool = false
     ) {
-        guard !isTimelineInteractionActive else {
+        guard !isTimelineInteractionActive || isDayPlaybackRunning else {
             routeDocumentProjectionGate.deferRefresh(
                 preparingReadings: preparingReadings
             )
@@ -7017,14 +7101,15 @@ struct MapHomeView: View {
         let sourceReadings = routeReadings
             + model.liveRouteState.readings
             + (model.latestSensorReading.map { [$0] } ?? [])
+        let dayReadings = sourceReadings.filter {
+            $0.timestamp >= dayStart && $0.timestamp < dayEnd
+        }
         let filteredRouteReadings = TaptionRouteEngineAdapter
-            .filteredReadings(from: sourceReadings)
-        normalizedRouteReadings = RouteTimelineDataEngine
+            .filteredReadings(from: dayReadings)
+        let normalized = RouteTimelineDataEngine
             .normalizedDisplayReadings(filteredRouteReadings)
-            .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
-        historicalPlaybackReadings = RouteTimelineDataEngine
-            .normalizedDisplayReadings(filteredRouteReadings)
-            .filter { $0.timestamp >= dayStart && $0.timestamp < dayEnd }
+        normalizedRouteReadings = normalized
+        historicalPlaybackReadings = normalized
         displayRouteReadings = RouteTimelineDataEngine.displayReadings(
             from: normalizedRouteReadings
         )
@@ -7317,8 +7402,8 @@ struct MapHomeView: View {
 
     private var mapRouteFitRegion: MKCoordinateRegion? {
         var coordinates = timelineRouteOverlays.flatMap(\.coordinates)
-            + visibleExpectedRouteOverlays.flatMap(\.coordinates)
-            + visibleWBSGeneratedRouteOverlays.flatMap(\.coordinates)
+            + displayedExpectedRouteOverlays.flatMap(\.coordinates)
+            + displayedWBSGeneratedRouteOverlays.flatMap(\.coordinates)
             + subwayRouteOverlays.flatMap(\.coordinates)
         if coordinates.isEmpty, let currentCoordinate {
             coordinates = [currentCoordinate]
@@ -7342,8 +7427,8 @@ struct MapHomeView: View {
     private func sharedZoomLevel(for span: MKCoordinateSpan) -> CGFloat? {
         guard let bounds = mapRenderCache.bounds(
             timeline: timelineRouteOverlays,
-            expected: visibleExpectedRouteOverlays,
-            generated: visibleWBSGeneratedRouteOverlays,
+            expected: displayedExpectedRouteOverlays,
+            generated: displayedWBSGeneratedRouteOverlays,
             subway: subwayRouteOverlays,
             current: currentCoordinate
         ) else { return nil }
@@ -12866,7 +12951,6 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let contentInsets: UIEdgeInsets
     let onCameraFrame: (MapHomeCameraFrame, CGPoint?, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
-    let onSingleFingerPanEnded: () -> Void
     let onLongPress: (CLLocationCoordinate2D) -> Void
     let onAnnotationSelected: (MapHomeAppleAnnotationKind) -> Void
 
@@ -12895,7 +12979,9 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
         context.coordinator.parent = self
-        mapView.layoutMargins = contentInsets
+        if mapView.layoutMargins != contentInsets {
+            mapView.layoutMargins = contentInsets
+        }
         context.coordinator.applyMapStyle(to: mapView)
         context.coordinator.updateContent(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
@@ -12913,6 +12999,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var lastCameraRevision = Int.min
         private var lastViewportCommandRevision = 0
         private var lastRoutesSignature = ""
+        private var lastMapStyleRawValue: String?
+        private var lastAnnotationsSignature = ""
+        private var lastPlaybackSignature: String?
+        private var lastCentersPlayback: Bool?
         private var routeStyles: [ObjectIdentifier: MapHomeAppleRouteStyle] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
         private var lastCenteredPlaybackCoordinate: CLLocationCoordinate2D?
@@ -12960,6 +13050,9 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func applyMapStyle(to mapView: MKMapView) {
+            let styleRawValue = parent.style.runtimeStyle.rawValue
+            guard lastMapStyleRawValue != styleRawValue else { return }
+            lastMapStyleRawValue = styleRawValue
             mapView.mapType = .mutedStandard
             mapView.overrideUserInterfaceStyle = .light
             mapView.clipsToBounds = true
@@ -13113,7 +13206,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             case .began:
                 parent.onSingleFingerPanBegan()
             case .ended, .cancelled, .failed:
-                parent.onSingleFingerPanEnded()
+                break
             default:
                 break
             }
@@ -13172,6 +13265,17 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateAnnotations(in mapView: MKMapView) {
+            let signature = parent.annotations.map { annotation in
+                [
+                    annotation.id,
+                    String(annotation.coordinate.latitude),
+                    String(annotation.coordinate.longitude),
+                    String(annotation.isInteractive),
+                    String(describing: annotation.kind),
+                ].joined(separator: "|")
+            }.joined(separator: ";")
+            guard signature != lastAnnotationsSignature else { return }
+            lastAnnotationsSignature = signature
             let existing = mapView.annotations.compactMap { $0 as? MapHomeAppleMapAnnotation }
             let byID = Dictionary(uniqueKeysWithValues: existing.map { ($0.identifier, $0) })
             let wantedIDs = Set(parent.annotations.map(\.id))
@@ -13192,6 +13296,25 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateWalker(in mapView: MKMapView) {
+            let playbackSignature = parent.playback.map { playback in
+                [
+                    String(playback.coordinate.latitude),
+                    String(playback.coordinate.longitude),
+                    String(playback.cameraCoordinate.latitude),
+                    String(playback.cameraCoordinate.longitude),
+                    String(playback.headingDegrees),
+                    String(describing: playback.action),
+                    playback.accessibilityLabel,
+                    String(describing: playback.phase),
+                    String(describing: playback.stickmanAnimationPhase),
+                ].joined(separator: "|")
+            }
+            guard playbackSignature != lastPlaybackSignature
+                    || parent.centersPlayback != lastCentersPlayback else {
+                return
+            }
+            lastPlaybackSignature = playbackSignature
+            lastCentersPlayback = parent.centersPlayback
             guard let playback = parent.playback else {
                 if let walkerAnnotation {
                     mapView.removeAnnotation(walkerAnnotation)
