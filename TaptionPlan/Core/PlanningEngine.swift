@@ -2856,9 +2856,12 @@ enum WeatherTimelineEngine {
                     }
                     return $0.id.uuidString < $1.id.uuidString
                 }
-            if previous == nil
-                || rawDisplaySignature(previous!)
-                    != rawDisplaySignature(context) {
+            guard let previous else {
+                changes.append(context)
+                timeline.append(context)
+                continue
+            }
+            if rawDisplaySignature(previous) != rawDisplaySignature(context) {
                 changes.append(context)
             }
             timeline.append(context)
@@ -2879,7 +2882,6 @@ enum WeatherTimelineEngine {
     }
 
     private struct RawDisplaySignature: Equatable {
-        let condition: String
         let symbolName: String
         let temperature: Int
         let airGrade: AirQualityGrade?
@@ -2902,7 +2904,6 @@ enum WeatherTimelineEngine {
         _ context: WeatherContext
     ) -> RawDisplaySignature {
         RawDisplaySignature(
-            condition: context.condition,
             symbolName: context.symbolName,
             temperature: Int(context.temperatureCelsius.rounded()),
             airGrade: context.airQuality?.overallGrade,
