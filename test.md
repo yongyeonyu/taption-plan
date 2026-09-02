@@ -137,3 +137,15 @@
 - TestFlight 업로드 성공: Delivery UUID `3297b1a2-fde1-40b3-b219-b99f13cf4c1e`; App Store Connect API에서 build 127 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false` 처리 완료를 확인했다.
 - `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)에 build 127 연결 성공. 그룹 빌드 API에서 전체 88개와 build 127, 테스터 API에서 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
 - App Store Connect 그룹 빌드·테스터 실제 화면은 Chrome과 in-app Browser가 로그인 화면으로 열려 자격 증명을 입력하지 않았으므로 UI readback은 미완료다. TestFlight build 127 실기기 설치·launch·실제 터치도 별도 게이트다.
+
+## 2026-09-03 TF26PUSH01 build-up·기기 설치
+
+- 배포 소스 `84448b8aa8fc7b9de35b2903561a90095c2bee62`를 `main`에 커밋·푸시하고 build number를 `128`로 올렸다.
+- package 테스트: Core 40/40, Activity 12/12, Route 17/17, Engine 1/1 통과.
+- Release archive/export 성공: `/private/tmp/TF26PUSH01-release-r2/TaptionPlan-1.0-128.xcarchive`, `/private/tmp/TF26PUSH01-release-r2/Export/TaptionPlan.ipa`; IPA SHA-256 `b6532fc4be01c52a03fe1ef85f60b3bdb5156f77901cdd7483812834db9154e6`.
+- 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (128)`, Apple Distribution 서명·Production iCloud·TestFlight entitlement·deep/strict codesign·`altool --validate-app` 통과.
+- TestFlight 업로드 성공: Delivery UUID `3ce79d87-b2cd-429e-b988-816d0b9af84a`; App Store Connect API readback `VALID`, `APP_STORE_ELIGIBLE`, `expired=false`.
+- `TP Taption Plan 내부 테스트` 연결 성공. 그룹 빌드 API readback은 전체 89개·build 128 `VALID`, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)이다.
+- iPhone 14 Pro(`C44AF739-127D-572D-AD83-417C7E879045`) TestFlight 업데이트 후 `com.taption.plan` `1.0 (128)` 설치와 launch PID `26948`를 readback했다.
+- iPad Pro(`4CEC6BE9-E528-52A1-AB94-654A6CDA7E5E`)는 현재 `Taption Plan 1.0 (125)`이다. CoreDevice로 beta IPA를 직접 설치할 수 없어(`0xe800801f`, beta profile entitlement 오류) TestFlight 앱을 통한 build 128 다운로드·설치·launch는 남은 게이트다.
+- ASC 그룹·테스터 실제 화면은 로그인 필요로 미완료다. 관련 로그: `/private/tmp/TF26PUSH01-asc-readback.json`, `/private/tmp/TF26PUSH01-iphone-launch.json`, `/private/tmp/TF26PUSH01-ipad-before-apps.log`.
