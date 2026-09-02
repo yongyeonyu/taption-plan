@@ -510,11 +510,15 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - 활동·수면·장소·이동·센서 판정에 `ActivityDataProvenance`를 연결해 원본 관측, 보조 데이터, 예상 데이터, 사용자 교정을 구분한다. 원본 센서와 확정 기록은 보존하고 화면·정본 이벤트에는 provenance marker를 함께 기록한다.
 - 수면 추론은 iPhone 원본의 화면 꺼짐·무사용·이동 없음·충전/자택/야간 보조 조건을 모두 만족하고 5분 지속될 때만 자동 예상 기록을 만든다. 기존 자동 잠금과 사용자 확인 교정은 별도 상태로 유지한다.
 - 장소·활동 분류와 GPS 공백 경로는 근거·confidence·model version을 유지하며, `Review`·`Schedule`·`MapHome`은 실제/보조/예상/미확인 신뢰도 라벨과 이동수단을 동일하게 투영한다. 원본 GPS와 예상 경로를 섞어 덮어쓰지 않는다.
-- 앱·iOS Widget·Watch 앱·Watch Widget의 배포 build number를 `1.0 (127)`로 올렸다. TestFlight archive/export와 App Store Connect 증적은 커밋 후 별도 릴리스 게이트로 기록한다.
+- 앱·iOS Widget·Watch 앱·Watch Widget의 배포 build number를 `1.0 (127)`로 올렸다. 배포 소스 커밋은 `311b5832cc9819e91f16c79af2970eb7a6dbc51b`이며 `main`·`origin/main`·원격 main이 일치한다.
 
 ### 검증
 
 - `TaptionActivityEngine` package 12/12, `TaptionRouteEngine` package 17/17 통과
 - `TaptionPlan` 전체 XCTest 900/900 통과: iPad Pro (12.9-inch) (6th generation), iOS 26.5, `/tmp/GTR902A001-full-tests/Logs/Test/Test-TaptionPlan-2026.09.02_22-52-06-+0900.xcresult`
 - 앱 target generic iOS Debug build 통과: `/private/tmp/GTR902A001-app-target-auto/Build/Products/Debug-iphonesimulator/TaptionPlan.app`
-- TestFlight build 127의 archive/export, 업로드·처리, `TP Taption Plan 내부 테스트` 연결, 그룹 빌드 화면·테스터 화면 노출은 다음 릴리스 게이트에서 SHA·경로·상태를 추가한다.
+- Release archive/export 통과: `/private/tmp/REL902A002-release-v2/TaptionPlan-1.0-127.xcarchive`, `/private/tmp/REL902A002-release-v2/Export/TaptionPlan.ipa`; IPA SHA-256 `05f179337b4bdaa5c7dcd887adc1f5246ccd27de00d0d394210829f2c99c8aa0`
+- 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (127)`, Apple Distribution 서명·Production iCloud·TestFlight entitlement·deep/strict codesign 및 `altool --validate-app` 통과
+- TestFlight 업로드 성공: Delivery UUID `3297b1a2-fde1-40b3-b219-b99f13cf4c1e`; App Store Connect API 처리 상태 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`
+- `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)에 build 127 연결 성공. 그룹 빌드 API에서 build 127과 전체 88개 빌드, 테스터 API에서 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
+- App Store Connect 그룹 빌드·테스터 실제 화면은 Chrome과 in-app Browser 모두 로그인 화면으로 열려 자격 증명을 입력하지 않았으므로 UI readback만 남은 게이트다.

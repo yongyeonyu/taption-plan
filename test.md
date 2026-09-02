@@ -128,3 +128,12 @@
 - 정리 후 readback: `/private/tmp` 50G, 데이터 볼륨 여유 61GiB, CoreSimulator 2.1G. `XCTestDevices`·Xcode `DerivedData`는 0B, Xcode `Archives` 1.4G는 보존했다.
 - 정리 직후 다른 작업이 iPad Simulator `2CD5BB05-7C63-4D44-A0B3-170F83F62210`를 부팅하고 `WBS33GOAL1` XCTest를 실행 중인 것을 확인해 해당 작업과 현재 산출물을 보존했다. CoreDevice가 사용 중인 `/private/tmp/CAM30LIBR1-stage4-REZrnD`와 `/private/tmp/CAM29LIVE3-camera-r4.jsonl`도 보존했다.
 - 사용자 휴지통 readback은 0개이며, 현재 Taption Plan 소스·Git 상태와 build 126 release 증적은 삭제하지 않았다.
+
+## 2026-09-02 REL902A002 TestFlight build-up
+
+- 배포 소스 커밋 `311b5832cc9819e91f16c79af2970eb7a6dbc51b`을 `main`에 커밋·푸시했고, archive 시점 `main`·`origin/main`·원격 main 일치 및 tracked/untracked clean을 확인했다.
+- Release archive/export 성공: `/private/tmp/REL902A002-release-v2/TaptionPlan-1.0-127.xcarchive`, `/private/tmp/REL902A002-release-v2/Export/TaptionPlan.ipa`; IPA SHA-256 `05f179337b4bdaa5c7dcd887adc1f5246ccd27de00d0d394210829f2c99c8aa0`.
+- 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (127)`, Apple Distribution 서명·Production iCloud·TestFlight entitlement·deep/strict codesign·`altool --validate-app` 통과.
+- TestFlight 업로드 성공: Delivery UUID `3297b1a2-fde1-40b3-b219-b99f13cf4c1e`; App Store Connect API에서 build 127 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false` 처리 완료를 확인했다.
+- `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)에 build 127 연결 성공. 그룹 빌드 API에서 전체 88개와 build 127, 테스터 API에서 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
+- App Store Connect 그룹 빌드·테스터 실제 화면은 Chrome과 in-app Browser가 로그인 화면으로 열려 자격 증명을 입력하지 않았으므로 UI readback은 미완료다. TestFlight build 127 실기기 설치·launch·실제 터치도 별도 게이트다.

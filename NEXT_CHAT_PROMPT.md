@@ -14,30 +14,29 @@ xcrun simctl list devices
 
 ## 현재 릴리스 정본
 
-- 요청 ID: `REL902A001`
-- 문서·정리 본문 반영 기준 SHA: `1cee1a7221a7afe06fa7caa7585c3c2e7efca98f` (현재 `main`은 시작 명령으로 재확인)
-- 배포 소스 SHA: `6b302ea2f9bca3f818c829514af1ee147b83be47`
-- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (126)`
-- Release archive: `/private/tmp/REL902A001-release/TaptionPlan-1.0-126.xcarchive`
-- Export IPA: `/private/tmp/REL902A001-release/Export/TaptionPlan.ipa`
-- IPA SHA-256: `5db4f2dbb11f7fa3ac64aca515dc6fd3474c35ecc6e19ddcff1373f56664ed25`
-- Delivery/build UUID: `8e66a688-a922-4f76-b761-4da7b3faadb1`
+- 요청 ID: `REL902A002`
+- 배포 소스 SHA: `311b5832cc9819e91f16c79af2970eb7a6dbc51b`
+- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (127)`
+- Release archive: `/private/tmp/REL902A002-release-v2/TaptionPlan-1.0-127.xcarchive`
+- Export IPA: `/private/tmp/REL902A002-release-v2/Export/TaptionPlan.ipa`
+- IPA SHA-256: `05f179337b4bdaa5c7dcd887adc1f5246ccd27de00d0d394210829f2c99c8aa0`
+- Delivery/build UUID: `3297b1a2-fde1-40b3-b219-b99f13cf4c1e`
 - App Store Connect App ID: `6797370230`
 - Internal 그룹: `TP Taption Plan 내부 테스트`, ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`
-- build 126은 App Store Connect API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 빌드 API에 포함, 그룹 빌드 수 87개, 내부 테스터 1명으로 readback했다.
+- build 127은 App Store Connect API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 빌드 API에 포함, 전체 그룹 빌드 88개, 내부 테스터 1명(`INSTALLED`)으로 readback했다.
 
 ## 현재 검증·정리 상태
 
-- `test.md`에 build 126 archive/export·서명·API readback과 2026-09-02 저장공간 정리 증적이 있다.
-- App Store Connect Chrome/in-app Browser의 그룹 빌드·테스터 화면은 로그인 화면으로 열려 UI readback이 미완료다. 계정 자격 증명을 대신 입력하지 않는다.
+- `test.md`에 build 127 archive/export·서명·API readback과 2026-09-02 저장공간 정리 증적이 있다.
+- App Store Connect Chrome/in-app Browser의 build 127 그룹 빌드·테스터 화면은 로그인 화면으로 열려 UI readback이 미완료다. 계정 자격 증명을 대신 입력하지 않는다.
 - iPhone 14 Pro `C44AF739-127D-572D-AD83-417C7E879045`와 iPad Pro `4CEC6BE9-E528-52A1-AB94-654A6CDA7E5E`의 Debug `1.0 (125)` 설치·launch/readback 및 미러링 화면 검증은 완료됐지만 build 126의 실기기 설치·실제 터치 증거로 대체하지 않는다.
 - 종료된 구형 Simulator 5대의 data는 삭제했고 iOS/watchOS 26.5 runtime은 보존했다. 현재 다른 작업이 iPad Simulator `2CD5BB05-7C63-4D44-A0B3-170F83F62210`에서 `WBS33GOAL1` XCTest를 실행 중이면 중단하거나 삭제하지 않는다.
 - `/private/tmp` 정리 후 약 50G, 데이터 볼륨 여유 61GiB를 readback했다. `XCTestDevices`·Xcode `DerivedData`는 0B, Xcode `Archives`는 1.4G로 보존 중이다. REL release 증적과 활성 카메라 로그도 보존한다.
 
 ## 반드시 남은 게이트
 
-1. 로그인된 App Store Connect Chrome에서 internal 그룹의 build 126 빌드 탭과 테스터 탭을 열어 UI 노출을 readback한다.
-2. 필요하면 iPhone/iPad TestFlight build 126 설치·버전 readback·launch·실제 지도 터치와 재생선/점선 정합을 별도로 검증한다.
+1. 로그인된 App Store Connect Chrome에서 internal 그룹의 build 127 빌드 탭과 테스터 탭을 열어 UI 노출을 readback한다. 기존 `REL902A001` build 126 UI 게이트도 `temp.md` 기록대로 유지한다.
+2. 필요하면 iPhone/iPad TestFlight build 127 설치·버전 readback·launch·실제 지도 터치와 재생선/점선 정합을 별도로 검증한다.
 3. Apple Watch 실제 envelope 수신과 `수신 대기 → 최근 수신` 전환을 확인한다.
 4. Paid Apps Agreement 활성화, `com.taption.plan.pro` 생성, sandbox 구매·복원을 확인한다.
 
