@@ -125,8 +125,12 @@ public struct RouteGapInferenceEngine: Sendable {
     private func priority(_ mode: RouteTravelMode) -> Int {
         switch mode {
         case .subway: 5
+        case .airplane: 6
+        case .train: 5
         case .automotive: 4
+        case .privateVehicle: 4
         case .cycling: 3
+        case .bus: 3
         case .running: 2
         case .walking: 1
         case .unknown: 0

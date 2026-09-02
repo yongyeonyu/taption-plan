@@ -172,4 +172,23 @@ struct RouteEngineTests {
         ))
         #expect(!rejected.allowsConnection)
     }
+
+    @Test func extendedTransportModesHaveDistinctSpeedsAndExpectedRouteProvenance() {
+        #expect(RouteTravelMode.bus.maximumSpeedMetersPerSecond < RouteTravelMode.train.maximumSpeedMetersPerSecond)
+        #expect(RouteTravelMode.airplane.maximumSpeedMetersPerSecond > RouteTravelMode.train.maximumSpeedMetersPerSecond)
+        #expect(RouteTravelMode.privateVehicle.maximumSpeedMetersPerSecond == RouteTravelMode.automotive.maximumSpeedMetersPerSecond)
+
+        let expected = ExpectedRoute(
+            span: DateInterval(start: base, duration: 3_600),
+            mode: .airplane,
+            coordinates: [.init(latitude: 37, longitude: 126), .init(latitude: 35, longitude: 129)],
+            source: .airportDirect,
+            confidence: 0.8,
+            provenance: ["airport-to-airport-direct"]
+        )
+
+        #expect(expected.isHighConfidence)
+        #expect(expected.source == .airportDirect)
+        #expect(expected.provenance == ["airport-to-airport-direct"])
+    }
 }

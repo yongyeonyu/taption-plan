@@ -15,7 +15,11 @@ public enum RouteTravelMode: String, Codable, Hashable, Sendable {
     case running
     case cycling
     case automotive
+    case privateVehicle
     case subway
+    case bus
+    case train
+    case airplane
     case unknown
 
     public var maximumSpeedMetersPerSecond: Double {
@@ -24,10 +28,41 @@ public enum RouteTravelMode: String, Codable, Hashable, Sendable {
         case .running: 9
         case .cycling: 25
         case .automotive: 90
+        case .privateVehicle: 90
         case .subway: 120
+        case .bus: 35
+        case .train: 120
+        case .airplane: 280
         case .unknown: 55
         }
     }
+}
+
+public enum ExpectedRouteSource: String, Codable, CaseIterable, Hashable, Sendable {
+    case subwayCatalog
+    case busCatalog
+    case operatingSystemRoute
+    case airportDirect
+}
+
+public struct ExpectedRoute: Codable, Hashable, Sendable {
+    public let span: DateInterval
+    public let mode: RouteTravelMode
+    public let coordinates: [RouteCoordinate]
+    public let source: ExpectedRouteSource
+    public let confidence: Double
+    public let provenance: [String]
+
+    public init(span: DateInterval, mode: RouteTravelMode, coordinates: [RouteCoordinate], source: ExpectedRouteSource, confidence: Double, provenance: [String] = []) {
+        self.span = span
+        self.mode = mode
+        self.coordinates = coordinates
+        self.source = source
+        self.confidence = min(1, max(0, confidence))
+        self.provenance = provenance
+    }
+
+    public var isHighConfidence: Bool { confidence >= 0.80 }
 }
 
 public struct RouteSample: Codable, Hashable, Sendable, Identifiable {

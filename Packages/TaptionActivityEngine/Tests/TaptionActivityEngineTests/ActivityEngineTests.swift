@@ -145,4 +145,53 @@ final class ActivityEngineTests: XCTestCase {
         XCTAssertEqual(result.first?.majorCategoryID, "sleep")
         XCTAssertEqual(result.first?.span, span)
     }
+
+    func testSleepRequiresCoreAndTwoSupportingConditionsForFiveMinutes() {
+        let configuration = SleepInferenceConfiguration()
+        let samples = stride(from: 0, through: 5 * 60, by: 60).map { minute in
+            SleepRuleSample(
+                timestamp: base.addingTimeInterval(TimeInterval(minute)),
+                screenIsOn: false,
+                inactivityDuration: 30 * 60,
+                distanceFromHomeMeters: 40,
+                ambientIsDark: true,
+                isCharging: false
+            )
+        }
+
+        let result = SleepInferenceEngine(configuration: configuration).infer(samples)
+
+        XCTAssertEqual(result.state, .asleep)
+        XCTAssertEqual(result.provenance?.tier, .expected)
+        XCTAssertEqual(result.provenance?.status, .automaticallyConfirmed)
+    }
+
+    func testSleepWakeRequiresScreenActivityAndReleasedSupportCondition() {
+        let result = SleepInferenceEngine().infer([
+            SleepRuleSample(
+                timestamp: base,
+                screenIsOn: true,
+                inactivityDuration: 0,
+                phoneMoved: true,
+                distanceFromHomeMeters: 300,
+                ambientIsDark: false,
+                isCharging: false
+            )
+        ])
+
+        XCTAssertEqual(result.state, .wakeCandidate)
+    }
+
+    func testRegisteredPlaceWinsOverPOIAndRequiresFifteenMinutes() {
+        let span = ActivityTimeSpan(start: base, end: base.addingTimeInterval(15 * 60))
+        let result = PlaceActivityInferenceEngine().infer(.init(
+            span: span,
+            registeredKind: .workplace,
+            poiKind: .restaurant
+        ))
+
+        XCTAssertEqual(result?.categoryID, "work")
+        XCTAssertEqual(result?.detailID, "work.rest")
+        XCTAssertEqual(result?.provenance.source, "registered-place-v1")
+    }
 }
