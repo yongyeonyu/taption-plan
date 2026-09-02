@@ -146,8 +146,27 @@ final class ActivityEngineTests: XCTestCase {
         XCTAssertEqual(result.first?.span, span)
     }
 
-    func testSleepRequiresCoreAndTwoSupportingConditionsForFiveMinutes() {
+    func testSleepRequiresCoreAndAllSupportingConditionsForFiveMinutes() {
         let configuration = SleepInferenceConfiguration()
+        let samples = stride(from: 0, through: 5 * 60, by: 60).map { minute in
+            SleepRuleSample(
+                timestamp: base.addingTimeInterval(TimeInterval(minute)),
+                screenIsOn: false,
+                inactivityDuration: 30 * 60,
+                distanceFromHomeMeters: 40,
+                ambientIsDark: true,
+                isCharging: true
+            )
+        }
+
+        let result = SleepInferenceEngine(configuration: configuration).infer(samples)
+
+        XCTAssertEqual(result.state, .asleep)
+        XCTAssertEqual(result.provenance?.tier, .expected)
+        XCTAssertEqual(result.provenance?.status, .automaticallyConfirmed)
+    }
+
+    func testSleepDoesNotInferWithOnlyTwoSupportingConditions() {
         let samples = stride(from: 0, through: 5 * 60, by: 60).map { minute in
             SleepRuleSample(
                 timestamp: base.addingTimeInterval(TimeInterval(minute)),
@@ -159,11 +178,7 @@ final class ActivityEngineTests: XCTestCase {
             )
         }
 
-        let result = SleepInferenceEngine(configuration: configuration).infer(samples)
-
-        XCTAssertEqual(result.state, .asleep)
-        XCTAssertEqual(result.provenance?.tier, .expected)
-        XCTAssertEqual(result.provenance?.status, .automaticallyConfirmed)
+        XCTAssertNotEqual(SleepInferenceEngine().infer(samples).state, .asleep)
     }
 
     func testSleepWakeRequiresScreenActivityAndReleasedSupportCondition() {

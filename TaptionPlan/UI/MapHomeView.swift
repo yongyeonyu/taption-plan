@@ -114,6 +114,7 @@ enum MapHomeLayerPriority {
 }
 
 enum MapHomeAppleAnnotationLayerPriority {
+    static let userLocation: CGFloat = 0
     static let place: CGFloat = 0
     static let stickman: CGFloat = 100
 }
@@ -1472,7 +1473,7 @@ struct MapHomeView: View {
         "#F2D58D", "#F28FA9", "#B7DCC7", "#B7D5EE",
     ]
 
-    private static let mapCacheAlgorithmKey = "route-document-v2"
+    private static let mapCacheAlgorithmKey = "route-document-v3"
 
     private enum Layout {
         static let horizontalInset: CGFloat = 10
@@ -2000,6 +2001,12 @@ struct MapHomeView: View {
         .onChange(of: model.snapshot.actuals) { _, _ in
             dayDataSnapshot = nil
             refreshTimeRailSegments()
+            requestRouteProjectionRefresh()
+        }
+        .onChange(of: model.sleepSessions) { _, _ in
+            requestRouteProjectionRefresh(preparingReadings: true)
+        }
+        .onChange(of: model.settings.confirmedSleepSpans) { _, _ in
             requestRouteProjectionRefresh()
         }
         .onChange(of: model.snapshot.travel) { _, _ in
@@ -6368,10 +6375,10 @@ struct MapHomeView: View {
     ) -> ExpectedRouteTransport? {
         guard let mode else { return nil }
         switch mode {
-        case .car, .taxi, .bus: return .automobile
-        case .subway, .train: return .transit
+        case .car, .taxi: return .automobile
+        case .bus, .subway, .train: return .transit
         case .walking, .running, .cycling: return .walking
-        case .airplane, .ship: return nil
+        case .airplane, .ship: return .direct
         }
     }
 
@@ -7172,6 +7179,8 @@ struct MapHomeView: View {
             readings: displayRouteReadings,
             readingsAreNormalized: true,
             filtersSparseRouteConnections: true,
+            confirmedSleepSpans: model.settings.confirmedSleepSpans,
+            sleepSessions: model.sleepSessions,
             calendar: calendar
         )
         let overlays = makeTimelineRouteOverlays(next)
@@ -7280,7 +7289,10 @@ struct MapHomeView: View {
             places: dayData?.places ?? model.snapshot.places,
             travel: dayData?.travel ?? model.snapshot.travel,
             readings: currentDayReadings,
-            resolvedRoutes: expectedRoutes + generatedRoutes + storedWBSResolvedRoutes
+            resolvedRoutes: expectedRoutes + generatedRoutes + storedWBSResolvedRoutes,
+            actuals: dayData?.actuals ?? model.snapshot.actuals,
+            confirmedSleepSpans: model.settings.confirmedSleepSpans,
+            sleepSessions: model.sleepSessions
         )
     }
 
@@ -7326,6 +7338,24 @@ struct MapHomeView: View {
             return nil
         }
         let date = routeTimelineDate
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let sleepSpans = MapHomeSleepLocationPolicy.spans(
+            actuals: currentDayDataSnapshot?.actuals ?? model.snapshot.actuals,
+            confirmedSleepSpans: model.settings.confirmedSleepSpans,
+            sleepSessions: model.sleepSessions,
+            in: TimeSpan(start: dayStart, end: dayEnd)
+        )
+        let sleepAnchors = MapHomeSleepLocationPolicy.anchors(
+            for: sleepSpans,
+            readings: historicalPlaybackReadings
+        )
+        let sleepPoint = MapHomeSleepLocationPolicy.contains(
+            date,
+            in: sleepAnchors
+        )?.point
         let confirmedSubwayPoint = (currentDayDataSnapshot?.travel ?? model.snapshot.travel)
             .filter { segment in
                 guard segment.mode == .subway,
@@ -7349,11 +7379,13 @@ struct MapHomeView: View {
                 in: $0.segments
             )
         }
-        let point = confirmedSubwayPoint
+        let point = sleepPoint
+            ?? confirmedSubwayPoint
             ?? timelineRoutePoint
             ?? RouteTimelineDataEngine.playbackCoordinate(
                 at: date,
-                inNormalizedReadings: historicalPlaybackReadings
+                inNormalizedReadings: historicalPlaybackReadings,
+                sleepAnchors: sleepAnchors
             )
         if historicalPlaybackPoint != point {
             historicalPlaybackPoint = point
@@ -12578,6 +12610,8 @@ enum MapHomeAppleRouteFallbackPolicy {
             [.transit, .automobile, .walking]
         case .walking:
             [.walking, .automobile]
+        case .direct:
+            [.direct]
         }
     }
 }
@@ -12591,6 +12625,7 @@ private enum MapHomeAppleRouteTransport: String {
     case automobile
     case transit
     case walking
+    case direct
 
     init(mode: TravelMode) {
         switch mode {
@@ -12598,8 +12633,10 @@ private enum MapHomeAppleRouteTransport: String {
             self = .automobile
         case .subway, .train, .bus:
             self = .transit
-        case .walking, .running, .cycling, .airplane, .ship:
+        case .walking, .running, .cycling:
             self = .walking
+        case .airplane, .ship:
+            self = .direct
         }
     }
 
@@ -13000,6 +13037,9 @@ private actor MapHomeAppleRouteResolver {
         transport: ExpectedRouteTransport,
         departureDate: Date
     ) async -> [CLLocationCoordinate2D]? {
+        if transport == .direct {
+            return [start, end]
+        }
         let request = MKDirections.Request()
         request.source = MKMapItem(
             placemark: MKPlacemark(coordinate: start)
@@ -13012,6 +13052,7 @@ private actor MapHomeAppleRouteResolver {
         case .automobile: .automobile
         case .transit: .transit
         case .walking: .walking
+        case .direct: .walking
         }
         if transport == .transit {
             request.departureDate = departureDate
@@ -13183,6 +13224,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             updateRoutes(in: mapView)
             updateAnnotations(in: mapView)
             updateWalker(in: mapView)
+            normalizeAnnotationLayerOrder(in: mapView)
         }
 
         func applyCameraCommandIfNeeded(to mapView: MKMapView) {
@@ -13231,6 +13273,14 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             publishCameraFrame(from: mapView, isFinal: true)
+        }
+
+        func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+            normalizeAnnotationLayerOrder(in: mapView)
+        }
+
+        func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
+            normalizeAnnotationLayerOrder(in: mapView)
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
@@ -13510,6 +13560,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             }
             view.displayPriority = .required
             view.collisionMode = .none
+            view.zPriority = .max
+            view.selectedZPriority = .max
             view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.stickman
             view.superview?.bringSubviewToFront(view)
             view.isEnabled = false
@@ -13531,12 +13583,35 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             )
             view.transform = .identity
             view.displayPriority = .defaultHigh
+            view.zPriority = .defaultUnselected
+            view.selectedZPriority = .defaultUnselected
             view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
             view.isEnabled = annotation.isInteractive
             view.isAccessibilityElement = true
             view.accessibilityTraits = annotation.isInteractive ? .button : .image
             view.accessibilityIdentifier = "MapHome.appleAnnotation.\(annotation.identifier)"
             view.accessibilityLabel = annotation.kind.accessibilityLabel
+        }
+
+        private func normalizeAnnotationLayerOrder(in mapView: MKMapView) {
+            for annotation in mapView.annotations {
+                guard let view = mapView.view(for: annotation) else { continue }
+                if annotation is MKUserLocation {
+                    view.zPriority = .min
+                    view.selectedZPriority = .min
+                    view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.userLocation
+                } else if annotation is MapHomeAppleMapAnnotation {
+                    view.zPriority = .defaultUnselected
+                    view.selectedZPriority = .defaultUnselected
+                    view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
+                }
+            }
+            guard let walkerAnnotation,
+                  let view = mapView.view(for: walkerAnnotation) else { return }
+            view.zPriority = .max
+            view.selectedZPriority = .max
+            view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.stickman
+            view.superview?.bringSubviewToFront(view)
         }
 
         private func descriptor(

@@ -172,9 +172,10 @@ public struct ActivityClassificationOverride: Codable, Hashable, Sendable {
     public let behavior: String?
     public let updatedAt: Date
     public let isLocked: Bool
+    public let isUserConfirmed: Bool
 
     private enum CodingKeys: String, CodingKey {
-        case id, span, majorCategoryID, detailID, title, behavior, updatedAt, isLocked
+        case id, span, majorCategoryID, detailID, title, behavior, updatedAt, isLocked, isUserConfirmed
     }
 
     public init(
@@ -185,7 +186,8 @@ public struct ActivityClassificationOverride: Codable, Hashable, Sendable {
         title: String? = nil,
         behavior: String? = nil,
         updatedAt: Date = .now,
-        isLocked: Bool = false
+        isLocked: Bool = false,
+        isUserConfirmed: Bool = true
     ) {
         self.id = id
         self.span = span
@@ -195,6 +197,7 @@ public struct ActivityClassificationOverride: Codable, Hashable, Sendable {
         self.behavior = behavior
         self.updatedAt = updatedAt
         self.isLocked = isLocked
+        self.isUserConfirmed = isUserConfirmed
     }
 
     public init(from decoder: Decoder) throws {
@@ -207,6 +210,7 @@ public struct ActivityClassificationOverride: Codable, Hashable, Sendable {
         behavior = try values.decodeIfPresent(String.self, forKey: .behavior)
         updatedAt = try values.decodeIfPresent(Date.self, forKey: .updatedAt) ?? span.start
         isLocked = try values.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
+        isUserConfirmed = try values.decodeIfPresent(Bool.self, forKey: .isUserConfirmed) ?? true
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -219,6 +223,7 @@ public struct ActivityClassificationOverride: Codable, Hashable, Sendable {
         try values.encodeIfPresent(behavior, forKey: .behavior)
         try values.encode(updatedAt, forKey: .updatedAt)
         try values.encode(isLocked, forKey: .isLocked)
+        try values.encode(isUserConfirmed, forKey: .isUserConfirmed)
     }
 
     public var isSleep: Bool {
@@ -237,6 +242,12 @@ public struct ActivitySegment: Codable, Hashable, Sendable, Identifiable {
     public let evidence: [String]
     public let sampleCount: Int
     public let isUserConfirmed: Bool
+    public let provenance: ActivityDataProvenance
+
+    private enum CodingKeys: String, CodingKey {
+        case id, span, majorCategoryID, detailID, title, behavior
+        case confidence, evidence, sampleCount, isUserConfirmed, provenance
+    }
 
     public init(
         id: UUID,
@@ -248,7 +259,8 @@ public struct ActivitySegment: Codable, Hashable, Sendable, Identifiable {
         confidence: Double,
         evidence: [String],
         sampleCount: Int,
-        isUserConfirmed: Bool
+        isUserConfirmed: Bool,
+        provenance: ActivityDataProvenance? = nil
     ) {
         self.id = id
         self.span = span
@@ -260,6 +272,56 @@ public struct ActivitySegment: Codable, Hashable, Sendable, Identifiable {
         self.evidence = evidence
         self.sampleCount = sampleCount
         self.isUserConfirmed = isUserConfirmed
+        self.provenance = provenance ?? .init(
+            tier: isUserConfirmed ? .groundTruth : .expected,
+            status: isUserConfirmed
+                ? .userCorrected
+                : ActivityAutomaticConfirmation.status(for: confidence),
+            source: isUserConfirmed ? "user-correction" : "activity-classifier-v1",
+            evidence: evidence,
+            confidence: confidence,
+            span: span
+        )
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        span = try values.decode(ActivityTimeSpan.self, forKey: .span)
+        majorCategoryID = try values.decode(String.self, forKey: .majorCategoryID)
+        detailID = try values.decode(String.self, forKey: .detailID)
+        title = try values.decode(String.self, forKey: .title)
+        behavior = try values.decode(String.self, forKey: .behavior)
+        confidence = try values.decodeIfPresent(Double.self, forKey: .confidence) ?? 0
+        evidence = try values.decodeIfPresent([String].self, forKey: .evidence) ?? []
+        sampleCount = try values.decodeIfPresent(Int.self, forKey: .sampleCount) ?? 0
+        isUserConfirmed = try values.decodeIfPresent(Bool.self, forKey: .isUserConfirmed) ?? false
+        provenance = try values.decodeIfPresent(ActivityDataProvenance.self, forKey: .provenance)
+            ?? .init(
+                tier: isUserConfirmed ? .groundTruth : .expected,
+                status: isUserConfirmed
+                    ? .userCorrected
+                    : ActivityAutomaticConfirmation.status(for: confidence),
+                source: isUserConfirmed ? "user-correction" : "activity-classifier-v1",
+                evidence: evidence,
+                confidence: confidence,
+                span: span
+            )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(span, forKey: .span)
+        try values.encode(majorCategoryID, forKey: .majorCategoryID)
+        try values.encode(detailID, forKey: .detailID)
+        try values.encode(title, forKey: .title)
+        try values.encode(behavior, forKey: .behavior)
+        try values.encode(confidence, forKey: .confidence)
+        try values.encode(evidence, forKey: .evidence)
+        try values.encode(sampleCount, forKey: .sampleCount)
+        try values.encode(isUserConfirmed, forKey: .isUserConfirmed)
+        try values.encode(provenance, forKey: .provenance)
     }
 }
 

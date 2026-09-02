@@ -72,6 +72,15 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
     let readings: [SensorReading]
     let isComplete: Bool
 
+    var dataTrustProjection: TaptionDataTrustProjection {
+        TaptionActivityEngineAdapter.dataTrustProjection(
+            readings: readings,
+            actuals: actuals,
+            places: places,
+            travel: travel
+        )
+    }
+
     init(
         day: Date,
         sourceRevision: UInt64,
@@ -3628,9 +3637,8 @@ final class AppModel {
         }
         await refreshFutureWeatherPreviewIfNeeded()
         logAutomaticRecordSummary()
-        // Calendar, HealthKit, Watch, location and motion records are device
-        // ground truth. Save them locally before any potentially slow cloud
-        // request so opening the app always updates today's timeline first.
+        // Save raw device records locally before any potentially slow cloud
+        // request. Automatic interpretations remain separate projections.
         if persistDeviceSnapshot {
             await persistDeviceLocalSnapshot()
         }
@@ -6875,6 +6883,49 @@ final class AppModel {
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 
+    private func applyPlaceActivityRecords(
+        stays: [PlaceStay],
+        inside span: TimeSpan
+    ) {
+        let kinds = FrequentPlaceResolutionEngine()
+            .kindsByPlaceKey(settings.frequentPlaces)
+        let protectedIDs = Set(snapshot.actuals.compactMap { actual -> UUID? in
+            guard actual.modelVersion == "place-activity-v1",
+                  actual.manuallyCorrected else { return nil }
+            return actual.id
+        })
+        let existingAutomatic = snapshot.actuals.filter {
+            $0.source.usesAutomaticClassification
+                && $0.span(asOf: span.end).intersection(with: span) != nil
+                && !protectedIDs.contains($0.id)
+        }
+        let fresh = stays.compactMap { stay in
+            TaptionActivityEngineAdapter.placeActivityActual(
+                for: stay,
+                registeredKind: kinds[stay.placeKey],
+                inside: span
+            )
+        }.filter { candidate in
+            let candidateSpan = candidate.span(asOf: span.end)
+            return !protectedIDs.contains(candidate.id)
+                && !existingAutomatic.contains { actual in
+                    (actual.span(asOf: span.end).intersection(with: candidateSpan)?.duration
+                        ?? 0) >= candidateSpan.duration * 0.5
+                }
+                && !snapshot.settings.suppressedActualIDs.contains(candidate.id)
+        }
+        snapshot.actuals.removeAll { actual in
+            actual.modelVersion == "place-activity-v1"
+                && !protectedIDs.contains(actual.id)
+                && actual.span(asOf: span.end).intersection(with: span) != nil
+        }
+        snapshot.actuals.append(contentsOf: fresh)
+        snapshot.actuals.sort {
+            if $0.startedAt != $1.startedAt { return $0.startedAt < $1.startedAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
     private func isAutomaticRestaurantMeal(_ actual: ActualRecord) -> Bool {
         guard actual.source == .location else { return false }
         if actual.modelVersion == RestaurantMealActualEngine.modelVersion {
@@ -7044,6 +7095,7 @@ final class AppModel {
                 ),
                 inside: span
             )
+            applyPlaceActivityRecords(stays: snapshot.places, inside: span)
             // Sleep inference depends on the current observation cutoff, not
             // only on new samples. Re-run it on refresh so an earlier sparse
             // pass can become valid as today's sensor window completes.
@@ -7062,6 +7114,11 @@ final class AppModel {
                     snapshot.settings.confirmedSleepSpans,
                     to: snapshot.actuals
                 )
+            applyClassifiedActivityRecords(
+                readings: sensorQuality.routeReadings,
+                travel: snapshot.travel,
+                inside: span
+            )
             applyInferredGapRecords(
                 readings: sensorQuality.readings,
                 travel: snapshot.travel,
@@ -7367,6 +7424,7 @@ final class AppModel {
             ),
             inside: span
         )
+        applyPlaceActivityRecords(stays: contextStays, inside: span)
         applyChargingInactivitySleepRecords(
             // Sleep inference also consumes motion-only samples that have no
             // GPS point; keep the raw sensor stream as its input.
@@ -7382,6 +7440,11 @@ final class AppModel {
         snapshot.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
             snapshot.settings.confirmedSleepSpans,
             to: snapshot.actuals
+        )
+        applyClassifiedActivityRecords(
+            readings: readings,
+            travel: snapshot.travel,
+            inside: span
         )
         applyInferredGapRecords(
             readings: sensorQuality.readings,
@@ -7459,51 +7522,86 @@ final class AppModel {
         )
     }
 
+    private func applyClassifiedActivityRecords(
+        readings: [SensorReading],
+        travel: [TravelSegment],
+        inside span: TimeSpan
+    ) {
+        let existing = snapshot.actuals.filter {
+            $0.modelVersion == TaptionActivityEngineAdapter.classifiedActivityModelVersion
+                && $0.span(asOf: span.end).intersection(with: span) != nil
+        }
+        let baseActuals = snapshot.actuals.filter {
+            $0.modelVersion != TaptionActivityEngineAdapter.classifiedActivityModelVersion
+        }
+        let fresh = TaptionActivityEngineAdapter.classifiedActivityActuals(
+            readings: readings,
+            travel: travel,
+            corrections: snapshot.settings.activityCorrections,
+            actuals: baseActuals,
+            inside: span
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        let merged = ActivityClassificationLockEngine
+            .mergingLockedClassifications(
+                existing: existing,
+                fresh: fresh,
+                inside: span
+            )
+        snapshot.actuals.removeAll {
+            $0.modelVersion == TaptionActivityEngineAdapter.classifiedActivityModelVersion
+                && $0.span(asOf: span.end).intersection(with: span) != nil
+        }
+        snapshot.actuals.append(contentsOf: merged)
+        snapshot.actuals.sort {
+            if $0.startedAt != $1.startedAt { return $0.startedAt < $1.startedAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sensor_activity_classification_completed",
+            fields: [
+                "fresh": String(fresh.count),
+                "persisted": String(merged.count),
+                "model": TaptionActivityEngineAdapter.classifiedActivityModelVersion,
+            ]
+        )
+    }
+
     private func applyChargingInactivitySleepRecords(
         readings: [SensorReading],
         inside span: TimeSpan
     ) {
         guard !readings.isEmpty else { return }
-        let existingSleepActuals = snapshot.actuals.filter {
-            ($0.modelVersion == ChargingInactivitySleepEngine.modelVersion
-                || $0.modelVersion == PhoneSleepWakeEngine.modelVersion)
-                && $0.span(asOf: span.end).intersection(with: span) != nil
-        }
-        let prior = snapshot.actuals.filter {
-            $0.modelVersion != ChargingInactivitySleepEngine.modelVersion
-                && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
-        }
-        let records = PhoneSleepFallbackEngine.records(
-            readings: readings,
-            actuals: prior,
-            inside: span,
-            nominalMaximumSampleGap: max(
-                20 * 60,
-                settings.sensorCollectionProfile.interval * 1.6 + 60
-            ),
-            authoritativeSleepSpans: sleepSessions
-                .compactMap { $0.span.intersection(with: span) }
-            ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
-        // A sparse or still-catching-up sensor window is not evidence that a
-        // previously derived sleep result disappeared.
-        guard !records.isEmpty else { return }
-        let mergedRecords = ActivityClassificationLockEngine
-            .mergingLockedClassifications(
-                existing: existingSleepActuals,
-                fresh: records,
-                inside: span
-            )
         let evidenceSpan = TimeSpan(
             start: readings.map(\.timestamp).min() ?? span.start,
             end: readings.map(\.timestamp).max() ?? span.start
         )
+        let records = TaptionActivityEngineAdapter.strictSleepActuals(
+            readings: readings,
+            actuals: snapshot.actuals,
+            inside: span,
+            homePoint: settings.frequentPlaces.first {
+                $0.kind == .home && $0.isAutomaticRecordingEnabled
+            }?.point,
+            maximumSampleGap: max(
+                20 * 60,
+                settings.sensorCollectionProfile.interval * 1.6 + 60
+            ),
+            authoritativeSleepSpans: sleepSessions.compactMap {
+                $0.span.intersection(with: span)
+            }
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
         snapshot.actuals.removeAll { actual in
             (actual.modelVersion == ChargingInactivitySleepEngine.modelVersion
                 || actual.modelVersion == PhoneSleepWakeEngine.modelVersion)
                 && actual.span(asOf: span.end)
                     .intersection(with: evidenceSpan) != nil
         }
-        snapshot.actuals.append(contentsOf: mergedRecords)
+        snapshot.actuals.removeAll { actual in
+            actual.modelVersion == TaptionActivityEngineAdapter.strictSleepModelVersion
+                && actual.span(asOf: span.end)
+                    .intersection(with: evidenceSpan) != nil
+        }
+        snapshot.actuals.append(contentsOf: records)
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 

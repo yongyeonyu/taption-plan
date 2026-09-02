@@ -126,6 +126,7 @@ public struct RouteGapInferenceEngine: Sendable {
         switch mode {
         case .subway: 5
         case .airplane: 6
+        case .ship: 4
         case .train: 5
         case .automotive: 4
         case .privateVehicle: 4

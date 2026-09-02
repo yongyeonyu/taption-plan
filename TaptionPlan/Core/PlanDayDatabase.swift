@@ -808,6 +808,7 @@ actor PlanDayDatabase {
                     id: try projectionID(actual.id, day: day, value: actual),
                     domain: "plan-actual",
                     provenance: ["source:\(actual.source.rawValue)", "projection:day"]
+                        + TaptionActivityEngineAdapter.provenanceMarkers(for: actual)
                 )
             )
         }
@@ -822,6 +823,7 @@ actor PlanDayDatabase {
                     id: try projectionID(place.id, day: day, value: place),
                     domain: "plan-place",
                     provenance: ["source:place-resolution", "projection:day"]
+                        + TaptionActivityEngineAdapter.provenanceMarkers(for: place)
                 )
             )
         }
@@ -836,6 +838,7 @@ actor PlanDayDatabase {
                     id: try projectionID(travel.id, day: day, value: travel),
                     domain: "plan-travel",
                     provenance: ["source:\(travel.mode.rawValue)", "projection:day"]
+                        + TaptionActivityEngineAdapter.provenanceMarkers(for: travel)
                 )
             )
         }
@@ -846,7 +849,7 @@ actor PlanDayDatabase {
             let provenance = [
                 "source-device:\(reading.sourceDevice?.rawValue ?? "iPhone")",
                 "projection:day",
-            ]
+            ] + TaptionActivityEngineAdapter.provenanceMarkers(for: reading)
             let readingEvent = try event(
                 value: reading,
                 device: .iPhone,

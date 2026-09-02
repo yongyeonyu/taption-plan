@@ -105,6 +105,93 @@ struct TaptionActivityEngineAdapterTests {
         #expect(!projection.routeReadings.isEmpty)
     }
 
+    @Test func dataTrustSeparatesRawPreciseSupportingAndExpectedRecords() {
+        let precise = SensorReading(
+            timestamp: base,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true
+        )
+        let supporting = SensorReading(
+            timestamp: base.addingTimeInterval(60),
+            point: GeoPoint(
+                latitude: 37.001,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 250,
+                verticalAccuracy: 100
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: false
+        )
+        let automatic = ActualRecord(
+            planID: nil,
+            title: "활동",
+            categoryID: "activity",
+            startedAt: base,
+            endedAt: base.addingTimeInterval(60),
+            source: .motion,
+            confidence: .high
+        )
+        let manual = ActualRecord(
+            planID: nil,
+            title: "사용자 기록",
+            categoryID: "activity",
+            startedAt: base.addingTimeInterval(60),
+            endedAt: base.addingTimeInterval(120),
+            source: .manual,
+            confidence: .high
+        )
+
+        let projection = TaptionActivityEngineAdapter.dataTrustProjection(
+            readings: [precise, supporting],
+            actuals: [automatic, manual],
+            places: [],
+            travel: []
+        )
+
+        #expect(projection.rawReadings.count == 2)
+        #expect(projection.filteredGPSReadings.count == 1)
+        #expect(projection.supportingReadings == [supporting])
+        #expect(projection.actuals[automatic.id]?.tier == .expected)
+        #expect(projection.actuals[automatic.id]?.status == .automaticallyConfirmed)
+        #expect(projection.actuals[manual.id]?.tier == .groundTruth)
+        #expect(projection.actuals[manual.id]?.status == .userCorrected)
+        #expect(TaptionActivityEngineAdapter.trustLabel(for: supporting) == "보조 데이터")
+    }
+
+    @Test func registeredPlaceActivityUsesPlaceInferenceWithoutReplacingPlaceRecord() {
+        let stay = PlaceStay(
+            placeKey: "frequent-company",
+            displayName: "회사",
+            span: TimeSpan(start: base, end: base.addingTimeInterval(15 * 60)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+
+        let actual = TaptionActivityEngineAdapter.placeActivityActual(
+            for: stay,
+            registeredKind: .company,
+            inside: stay.span
+        )
+
+        #expect(actual?.categoryID == "work")
+        #expect(actual?.modelVersion == "place-activity-v1")
+        #expect(actual.map { TaptionActivityEngineAdapter.trustLabel(for: $0) } == "예상 데이터 · 자동확정")
+    }
+
     @Test func inferredGapRecordsStayOutsideConfirmedSleep() {
         let sleep = ActualRecord(
             planID: nil,

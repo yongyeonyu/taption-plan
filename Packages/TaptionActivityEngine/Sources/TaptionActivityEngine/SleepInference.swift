@@ -45,7 +45,7 @@ public struct SleepInferenceConfiguration: Codable, Hashable, Sendable {
     public var minimumSupportingConditions: Int
     public var persistenceDuration: TimeInterval
 
-    public init(inactivityDuration: TimeInterval = 30 * 60, homeRadiusMeters: Double = 100, minimumSupportingConditions: Int = 2, persistenceDuration: TimeInterval = 5 * 60) {
+    public init(inactivityDuration: TimeInterval = 30 * 60, homeRadiusMeters: Double = 100, minimumSupportingConditions: Int = 3, persistenceDuration: TimeInterval = 5 * 60) {
         self.inactivityDuration = max(0, inactivityDuration)
         self.homeRadiusMeters = max(0, homeRadiusMeters)
         self.minimumSupportingConditions = min(3, max(0, minimumSupportingConditions))
@@ -90,7 +90,7 @@ public struct SleepInferenceEngine: Sendable {
         guard let first = continuous.last else { return .init(state: .sleepCandidate, confidence: 0.7) }
         let state: SleepInferenceState = last.timestamp.timeIntervalSince(first.timestamp) >= configuration.persistenceDuration ? .asleep : .sleepCandidate
         let confidence = state == .asleep ? 0.85 : 0.7
-        return makeResult(state: state, samples: ordered, confidence: confidence, evidence: ["화면 꺼짐", "30분 무사용", "휴대폰 이동 없음", "보조 조건 2개 이상"])
+        return makeResult(state: state, samples: Array(continuous), confidence: confidence, evidence: ["화면 꺼짐", "30분 무사용", "휴대폰 이동 없음", "보조 조건 모두 충족"])
     }
 
     private func makeResult(state: SleepInferenceState, samples: [SleepRuleSample], confidence: Double, evidence: [String]) -> SleepInferenceResult {

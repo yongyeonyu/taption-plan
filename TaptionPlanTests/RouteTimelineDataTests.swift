@@ -1241,7 +1241,7 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
-    func testRegisteredEndpointFallbackDoesNotInventUnconfirmedRoadRoute() {
+    func testRegisteredEndpointsAlwaysRequestBestExpectedRoadRoute() throws {
         let home = FrequentPlace(
             kind: .home,
             point: GeoPoint(
@@ -1285,7 +1285,7 @@ final class RouteTimelineDataTests: XCTestCase {
             isClassificationLocked: true
         )
 
-        XCTAssertTrue(
+        let request = try XCTUnwrap(
             ExpectedRouteRequestEngine.requests(
                 travel: [travel],
                 places: [from, to],
@@ -1293,8 +1293,11 @@ final class RouteTimelineDataTests: XCTestCase {
                 in: TimeSpan(start: date(0), end: date(1_440)),
                 through: date(1_440),
                 frequentPlaces: [home, company]
-            ).isEmpty
+            ).first
         )
+        XCTAssertEqual(request.transport, .automobile)
+        XCTAssertEqual(request.provenance, "explicit-travel-mode")
+        XCTAssertEqual(request.confidence, 1)
     }
 
     func testExpectedRouteSkipsStoredSubwayAndUsesTransitForTrain() throws {
@@ -1347,6 +1350,63 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(requests.count, 1)
         XCTAssertEqual(requests.first?.segmentID, train.id)
         XCTAssertEqual(requests.first?.transport, .transit)
+    }
+
+    func testExpectedBusRouteUsesTransitAndKeepsInferenceProvenance() throws {
+        let bus = TravelSegment(
+            mode: .bus,
+            span: TimeSpan(start: date(10), end: date(40)),
+            distanceMeters: 8_000,
+            confidence: .medium,
+            evidence: ["버스"]
+        )
+        let requests = ExpectedRouteRequestEngine.requests(
+            travel: [bus],
+            places: [],
+            readings: [
+                reading(10, latitude: 37.10),
+                reading(40, latitude: 37.16),
+            ],
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        )
+
+        let request = try XCTUnwrap(requests.first)
+        XCTAssertEqual(request.transport, .transit)
+        XCTAssertEqual(request.provenance, "explicit-travel-mode")
+        XCTAssertEqual(request.confidence, 1)
+    }
+
+    func testExpectedAirAndShipRoutesUseDirectExpectedPath() throws {
+        let airplane = TravelSegment(
+            mode: .airplane,
+            span: TimeSpan(start: date(10), end: date(70)),
+            distanceMeters: 50_000,
+            confidence: .high,
+            evidence: ["비행기"]
+        )
+        let ship = TravelSegment(
+            mode: .ship,
+            span: TimeSpan(start: date(80), end: date(140)),
+            distanceMeters: 12_000,
+            confidence: .high,
+            evidence: ["배"]
+        )
+        let requests = ExpectedRouteRequestEngine.requests(
+            travel: [airplane, ship],
+            places: [],
+            readings: [
+                reading(10, latitude: 37.10),
+                reading(70, latitude: 37.55),
+                reading(80, latitude: 37.60),
+                reading(140, latitude: 37.70),
+            ],
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        )
+
+        XCTAssertEqual(requests.map(\.transport), [.direct, .direct])
+        XCTAssertEqual(requests.map(\.provenance), ["explicit-travel-mode", "explicit-travel-mode"])
     }
 
     func testExpectedRouteAtPartialCutoffUsesLatestObservedEndpoint() throws {
@@ -1456,6 +1516,10 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(
             MapHomeAppleRouteFallbackPolicy.transports(for: .walking),
             [.walking, .automobile]
+        )
+        XCTAssertEqual(
+            MapHomeAppleRouteFallbackPolicy.transports(for: .direct),
+            [.direct]
         )
     }
 
@@ -1781,6 +1845,105 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(movement.activity, .movement)
         XCTAssertEqual(movement.mode, .subway)
         XCTAssertTrue(movement.legID.hasPrefix("movement-gap-"))
+    }
+
+    func testSLP902A001ConfirmedSleepPinsPlaybackAndCameraWhilePreservingAdjacentMovementAndReadings() throws {
+        let sleepAnchor = GeoPoint(
+            latitude: 37.01,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let confirmedSleep = SleepSession(
+            id: UUID(uuidString: "A902A001-0000-0000-0000-000000000001")!,
+            span: TimeSpan(start: date(20), end: date(40)),
+            asleepDuration: 20 * 60,
+            awakeDuration: 0,
+            inBedDuration: 20 * 60,
+            stageDurations: [.asleepUnspecified: 20 * 60],
+            sourceNames: ["Apple Watch"],
+            segments: []
+        )
+        XCTAssertTrue(confirmedSleep.isAppleWatchConfirmed)
+        let readings = [
+            reading(0, latitude: 37),
+            reading(10, latitude: 37.001),
+            reading(20, latitude: sleepAnchor.latitude),
+            reading(30, latitude: 37.02),
+            reading(40, latitude: 37.03),
+            reading(50, latitude: 37.04),
+        ]
+        let originalReadings = readings
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [],
+            travel: [],
+            readings: readings,
+            confirmedSleepSpans: [confirmedSleep.span],
+            calendar: calendar
+        )
+
+        let beforeSleep = try XCTUnwrap(projection.frame(at: date(5)))
+        XCTAssertEqual(beforeSleep.activity, .movement)
+        XCTAssertEqual(beforeSleep.routePhase, .actual)
+        XCTAssertEqual(beforeSleep.coordinate.latitude, 37.0005, accuracy: 0.0001)
+
+        let duringSleep = try XCTUnwrap(projection.frame(at: date(25)))
+        let laterDuringSleep = try XCTUnwrap(projection.frame(at: date(35)))
+        for frame in [duringSleep, laterDuringSleep] {
+            XCTAssertEqual(frame.activity, .stay)
+            XCTAssertEqual(frame.coordinate.latitude, sleepAnchor.latitude, accuracy: 0.0001)
+            XCTAssertEqual(frame.coordinate.longitude, sleepAnchor.longitude, accuracy: 0.0001)
+            XCTAssertEqual(frame.cameraCoordinate, sleepAnchor)
+        }
+
+        let afterSleep = try XCTUnwrap(projection.frame(at: date(45)))
+        XCTAssertEqual(afterSleep.activity, .movement)
+        XCTAssertEqual(afterSleep.routePhase, .actual)
+        XCTAssertEqual(afterSleep.coordinate.latitude, 37.035, accuracy: 0.0001)
+        XCTAssertEqual(readings, originalReadings)
+    }
+
+    func testSLP902A001RouteTimelinePinsSleepCutoffAndOmitsSleepMovementWhilePreservingReadings() throws {
+        let confirmedSleep = SleepSession(
+            id: UUID(uuidString: "A902A001-0000-0000-0000-000000000002")!,
+            span: TimeSpan(start: date(20), end: date(40)),
+            asleepDuration: 20 * 60,
+            awakeDuration: 0,
+            inBedDuration: 20 * 60,
+            stageDurations: [.asleepUnspecified: 20 * 60],
+            sourceNames: ["Apple Watch"],
+            segments: []
+        )
+        let readings = [
+            reading(0, latitude: 37),
+            reading(20, latitude: 37.01),
+            reading(30, latitude: 37.02),
+            reading(40, latitude: 37.03),
+            reading(50, latitude: 37.04),
+        ]
+        let originalReadings = readings
+        let sleepAnchor = try XCTUnwrap(readings[1].point)
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 35,
+            actuals: [],
+            readings: readings,
+            sleepSessions: [confirmedSleep],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            try XCTUnwrap(projection.coordinateAtCutoff),
+            sleepAnchor
+        )
+        XCTAssertTrue(
+            projection.segments.allSatisfy {
+                $0.end <= confirmedSleep.span.start || $0.start >= date(35)
+            }
+        )
+        XCTAssertEqual(readings, originalReadings)
     }
 
     func testWBSPlaybackDoesNotInventGapWithoutMovementEvidence() {

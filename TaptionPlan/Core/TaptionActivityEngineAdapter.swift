@@ -18,10 +18,463 @@ struct TaptionSensorQualityProjection: Sendable {
     let rejectionCounts: [String: Int]
 }
 
+struct TaptionDataTrustProjection: Sendable {
+    let rawReadings: [SensorReading]
+    let filteredGPSReadings: [SensorReading]
+    let supportingReadings: [SensorReading]
+    let actuals: [UUID: ActivityDataProvenance]
+    let places: [UUID: ActivityDataProvenance]
+    let travel: [UUID: ActivityDataProvenance]
+}
+
 enum TaptionActivityEngineAdapter {
     static let engine = ActivityClassificationEngine()
     static let confirmedSleepModelVersion = "manual-confirmed-sleep-v1"
     static let inferredGapModelVersion = "activity-gap-viterbi-v1"
+    static let classifiedActivityModelVersion = "activity-classifier-v1"
+    static let strictSleepModelVersion = "sleep-rule-v1"
+
+    static func dataTrustProjection(
+        readings: [SensorReading],
+        actuals: [ActualRecord],
+        places: [PlaceStay],
+        travel: [TravelSegment]
+    ) -> TaptionDataTrustProjection {
+        let quality = qualityProjection(from: readings)
+        return TaptionDataTrustProjection(
+            rawReadings: readings,
+            filteredGPSReadings: quality.routeReadings,
+            supportingReadings: readings.filter(isSupportingReading),
+            actuals: Dictionary(
+                actuals.map { ($0.id, provenance(for: $0)) },
+                uniquingKeysWith: { _, latest in latest }
+            ),
+            places: Dictionary(
+                places.map { ($0.id, provenance(for: $0)) },
+                uniquingKeysWith: { _, latest in latest }
+            ),
+            travel: Dictionary(
+                travel.map { ($0.id, provenance(for: $0)) },
+                uniquingKeysWith: { _, latest in latest }
+            )
+        )
+    }
+
+    static func provenance(for reading: SensorReading) -> ActivityDataProvenance {
+        let supporting = isSupportingReading(reading)
+        let source = reading.sourceDevice == .appleWatch ? "apple-watch" : "iphone"
+        let span = ActivityTimeSpan(
+            start: reading.timestamp,
+            end: reading.timestamp.addingTimeInterval(1)
+        )
+        return ActivityDataProvenance(
+            tier: supporting ? .supporting : .groundTruth,
+            status: .observed,
+            source: supporting ? "coarse-location-\(source)" : "raw-sensor-\(source)",
+            evidence: supporting
+                ? ["GPS 유실 또는 대략적 위치", "Wi-Fi·기지국 보조"]
+                : ["원본 센서 관측"],
+            confidence: supporting ? 0.45 : 1,
+            span: span
+        )
+    }
+
+    static func provenance(for actual: ActualRecord) -> ActivityDataProvenance {
+        let isUserCorrected = actual.manuallyCorrected
+            || actual.source == .manual
+            || actual.source == .timer
+        let isGroundTruth = isUserCorrected
+            || !actual.source.usesAutomaticClassification
+        let score = confidenceScore(actual.confidence)
+        let span = ActivityTimeSpan(
+            start: actual.startedAt,
+            end: max(actual.startedAt.addingTimeInterval(1), actual.endedAt ?? actual.startedAt)
+        )
+        if isGroundTruth {
+            return ActivityDataProvenance(
+                tier: .groundTruth,
+                status: isUserCorrected ? .userCorrected : .observed,
+                source: actual.source.rawValue,
+                evidence: actual.evidence,
+                confidence: score,
+                span: span
+            )
+        }
+        let status: ActivityInferenceStatus = actual.categoryID == "unconfirmed"
+            ? .unresolved
+            : ActivityAutomaticConfirmation.status(for: score)
+        return ActivityDataProvenance(
+            tier: .expected,
+            status: status,
+            source: actual.modelVersion ?? actual.source.rawValue,
+            evidence: actual.evidence,
+            confidence: score,
+            span: span
+        )
+    }
+
+    static func provenance(for place: PlaceStay) -> ActivityDataProvenance {
+        let registered = place.isRegisteredFrequentPlace
+        let score = confidenceScore(place.confidence)
+        return ActivityDataProvenance(
+            tier: registered ? .groundTruth : .expected,
+            status: registered ? .observed : ActivityAutomaticConfirmation.status(for: score),
+            source: registered ? "registered-place" : "place-detection-v1",
+            evidence: registered ? ["사용자 등록 장소"] : ["GPS 체류 감지"],
+            confidence: score,
+            span: ActivityTimeSpan(start: place.span.start, end: place.span.end)
+        )
+    }
+
+    static func provenance(for travel: TravelSegment) -> ActivityDataProvenance {
+        let score = confidenceScore(travel.confidence)
+        let isUserCorrected = travel.evidence.contains {
+            $0.hasPrefix("사용자 확인") || $0 == "사용자 교정"
+        }
+        return ActivityDataProvenance(
+            tier: isUserCorrected ? .groundTruth : .expected,
+            status: isUserCorrected
+                ? .userCorrected
+                : ActivityAutomaticConfirmation.status(for: score),
+            source: isUserCorrected ? "user-travel-correction" : "travel-inference-v1",
+            evidence: travel.evidence,
+            confidence: score,
+            span: ActivityTimeSpan(start: travel.span.start, end: travel.span.end)
+        )
+    }
+
+    static func trustLabel(for actual: ActualRecord) -> String {
+        trustLabel(provenance(for: actual))
+    }
+
+    static func trustLabel(for reading: SensorReading) -> String {
+        trustLabel(provenance(for: reading))
+    }
+
+    static func trustLabel(for place: PlaceStay) -> String {
+        trustLabel(provenance(for: place))
+    }
+
+    static func trustLabel(for travel: TravelSegment) -> String {
+        trustLabel(provenance(for: travel))
+    }
+
+    static func provenanceMarkers(for actual: ActualRecord) -> [String] {
+        markers(for: provenance(for: actual))
+    }
+
+    static func provenanceMarkers(for reading: SensorReading) -> [String] {
+        markers(for: provenance(for: reading))
+    }
+
+    static func provenanceMarkers(for place: PlaceStay) -> [String] {
+        markers(for: provenance(for: place))
+    }
+
+    static func provenanceMarkers(for travel: TravelSegment) -> [String] {
+        markers(for: provenance(for: travel))
+    }
+
+    static func classifiedActivityActuals(
+        readings: [SensorReading],
+        travel: [TravelSegment],
+        corrections: [UUID: ActivityCorrection],
+        actuals: [ActualRecord],
+        inside span: TimeSpan,
+        createdAt: Date = .now
+    ) -> [ActualRecord] {
+        let result = classify(
+            readings: readings,
+            travel: travel,
+            corrections: corrections,
+            actuals: actuals
+        )
+        let activitySpan = ActivityTimeSpan(start: span.start, end: span.end)
+        return result.segments.compactMap { segment in
+            guard !segment.isUserConfirmed,
+                  segment.span.duration >= 5 * 60,
+                  let clipped = segment.span.intersection(activitySpan),
+                  clipped.duration >= 5 * 60 else {
+                return nil
+            }
+            let clippedTimeSpan = TimeSpan(start: clipped.start, end: clipped.end)
+            if segment.majorCategoryID == "movement",
+               travel.contains(where: {
+                   $0.span.intersection(with: clippedTimeSpan)?.duration ?? 0
+                       >= min(5 * 60, clippedTimeSpan.duration * 0.5)
+               }) {
+                return nil
+            }
+            if actuals.contains(where: { actual in
+                actual.source.usesAutomaticClassification
+                    && actual.span(asOf: span.end).intersection(with: clippedTimeSpan)?.duration
+                        ?? 0 >= min(5 * 60, clippedTimeSpan.duration * 0.5)
+            }) {
+                return nil
+            }
+            return ActualRecord(
+                id: segment.id,
+                planID: nil,
+                title: segment.title,
+                categoryID: segment.majorCategoryID,
+                startedAt: clipped.start,
+                endedAt: clipped.end,
+                source: .motion,
+                confidence: ConfidenceLevel(score: segment.confidence),
+                createdAt: createdAt,
+                behavior: segment.behavior,
+                evidence: unique(segment.evidence + ["필터링 센서 투영"]),
+                modelVersion: classifiedActivityModelVersion
+            )
+        }
+    }
+
+    static func placeActivityActual(
+        for stay: PlaceStay,
+        registeredKind: FrequentPlaceKind?,
+        inside span: TimeSpan,
+        createdAt: Date = .now
+    ) -> ActualRecord? {
+        guard let clipped = stay.span.intersection(with: span) else { return nil }
+        let evidence = ActivityPlaceEvidence(
+            span: ActivityTimeSpan(start: clipped.start, end: clipped.end),
+            registeredKind: activityPlaceKind(for: registeredKind),
+            poiKind: activityPOIKind(for: stay.displayName)
+        )
+        guard let inference = PlaceActivityInferenceEngine().infer(evidence) else {
+            return nil
+        }
+        let title: String
+        switch inference.categoryID {
+        case "work": title = "근무"
+        case "study": title = "수업·학습"
+        case "eating": title = "식사"
+        case "activity": title = "휴식"
+        default: title = stay.displayName
+        }
+        return ActualRecord(
+            id: ActivityStableID.uuid(
+                seed: "place-activity|\(stay.id.uuidString)|\(clipped.start.timeIntervalSince1970)|\(clipped.end.timeIntervalSince1970)"
+            ),
+            planID: nil,
+            title: title,
+            categoryID: inference.categoryID,
+            startedAt: clipped.start,
+            endedAt: clipped.end,
+            source: .location,
+            confidence: ConfidenceLevel(score: inference.confidence),
+            createdAt: createdAt,
+            behavior: inference.detailID,
+            evidence: unique(inference.provenance.evidence + ["장소 의미 예상"]),
+            modelVersion: "place-activity-v1"
+        )
+    }
+
+    static func strictSleepActuals(
+        readings: [SensorReading],
+        actuals: [ActualRecord],
+        inside span: TimeSpan,
+        homePoint: GeoPoint?,
+        maximumSampleGap: TimeInterval,
+        authoritativeSleepSpans: [TimeSpan] = [],
+        asOf: Date = .now,
+        createdAt: Date = .now
+    ) -> [ActualRecord] {
+        guard let homePoint else { return [] }
+        let configuration = SleepInferenceConfiguration()
+        let ordered = readings
+            .filter {
+                $0.sourceDevice != .appleWatch
+                    && span.contains($0.timestamp)
+                    && $0.timestamp <= asOf
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+        guard ordered.count >= 2 else { return [] }
+
+        var runs: [[SleepRuleSample]] = []
+        var inactivityStart: Date?
+        var previous: SensorReading?
+        for reading in ordered {
+            if let previous,
+               reading.timestamp.timeIntervalSince(previous.timestamp)
+                    > max(maximumSampleGap, 20 * 60) {
+                runs.append([])
+                inactivityStart = nil
+            }
+            let moved = phoneMoved(reading, after: previous)
+            let inactive = !moved && isInactive(reading)
+            if inactive {
+                inactivityStart = inactivityStart ?? reading.timestamp
+            } else {
+                inactivityStart = nil
+            }
+            let distance = reading.point.map { distanceMeters($0, homePoint) }
+            let ruleSample = SleepRuleSample(
+                timestamp: reading.timestamp,
+                screenIsOn: reading.screenIsOn,
+                inactivityDuration: inactivityStart.map {
+                    reading.timestamp.timeIntervalSince($0)
+                } ?? 0,
+                phoneMoved: moved,
+                distanceFromHomeMeters: distance,
+                ambientIsDark: reading.screenBrightness.map { $0 <= 0.25 },
+                isCharging: reading.powerState?.isCharging == true,
+                userWakeActivity: reading.screenIsOn == true
+                    || moved
+                    || (reading.stepCount ?? 0) > 0
+            )
+            if runs.isEmpty {
+                runs.append([ruleSample])
+            } else {
+                runs[runs.count - 1].append(ruleSample)
+            }
+            previous = reading
+        }
+
+        let blocked = actuals.compactMap { actual -> TimeSpan? in
+            guard actual.source == .appUsage
+                    || AutomaticRecordTimelineEngine.isConfirmedWorkout(actual)
+                    || (actual.source == .healthKit
+                        && AutomaticRecordTimelineEngine.isSleep(actual))
+                    || (actual.source == .appleWatch
+                        && AutomaticRecordTimelineEngine.isSleep(actual)) else {
+                return nil
+            }
+            return actual.span(asOf: asOf).intersection(with: span)
+        } + authoritativeSleepSpans.compactMap { $0.intersection(with: span) }
+        let engine = SleepInferenceEngine(configuration: configuration)
+        return runs.compactMap { samples in
+            let result = engine.infer(samples)
+            guard result.state == .asleep,
+                  let provenance = result.provenance,
+                  let candidate = TimeSpan(
+                      start: provenance.span.start,
+                      end: provenance.span.end
+                  ).intersection(with: span),
+                  candidate.duration >= configuration.persistenceDuration,
+                  !blocked.contains(where: { $0.intersection(with: candidate) != nil }) else {
+                return nil
+            }
+            return ActualRecord(
+                id: ActivityStableID.uuid(
+                    seed: "\(strictSleepModelVersion)|\(candidate.start.timeIntervalSince1970)|\(candidate.end.timeIntervalSince1970)"
+                ),
+                planID: nil,
+                title: "수면",
+                categoryID: "sleep",
+                startedAt: candidate.start,
+                endedAt: candidate.end,
+                source: .motion,
+                confidence: ConfidenceLevel(score: provenance.confidence),
+                createdAt: createdAt,
+                behavior: "sleep-rule",
+                evidence: unique(provenance.evidence + ["모든 수면 조건 충족"]),
+                modelVersion: strictSleepModelVersion
+            )
+        }
+    }
+
+    private static func isSupportingReading(_ reading: SensorReading) -> Bool {
+        reading.locationFixQuality == .approximate || !reading.gpsAvailable
+    }
+
+    private static func activityPlaceKind(
+        for kind: FrequentPlaceKind?
+    ) -> ActivityPlaceKind? {
+        switch kind {
+        case .home: .home
+        case .company: .workplace
+        case .school, .academy: .school
+        case .restaurant: .restaurant
+        case .hobby, .exercise, .custom, nil: nil
+        }
+    }
+
+    private static func activityPOIKind(for name: String) -> ActivityPlaceKind? {
+        let value = name.localizedLowercase
+        if ["식당", "음식점", "레스토랑", "restaurant", "mcdonald", "맥도날드", "치킨"]
+            .contains(where: value.contains) {
+            return .restaurant
+        }
+        if ["회사", "오피스", "office", "business"].contains(where: value.contains) {
+            return .workplace
+        }
+        if ["학교", "학원", "대학", "school", "academy", "university"]
+            .contains(where: value.contains) {
+            return .school
+        }
+        if ["집", "home"].contains(where: value.contains) {
+            return .home
+        }
+        return nil
+    }
+
+    private static func confidenceScore(_ confidence: ConfidenceLevel) -> Double {
+        switch confidence {
+        case .low: 0.25
+        case .medium: 0.60
+        case .high: 0.90
+        }
+    }
+
+    private static func trustLabel(_ provenance: ActivityDataProvenance) -> String {
+        switch provenance.tier {
+        case .groundTruth:
+            return provenance.status == .userCorrected
+                ? "Ground truth · 사용자 확인"
+                : "Ground truth"
+        case .supporting:
+            return "보조 데이터"
+        case .expected:
+            switch provenance.status {
+            case .automaticallyConfirmed:
+                return "예상 데이터 · 자동확정"
+            case .unresolved:
+                return "예상 데이터 · 미확인"
+            default:
+                return "예상 데이터"
+            }
+        }
+    }
+
+    private static func markers(
+        for provenance: ActivityDataProvenance
+    ) -> [String] {
+        [
+            "data-tier:\(provenance.tier.rawValue)",
+            "inference-status:\(provenance.status.rawValue)",
+            "provenance:\(provenance.source)",
+        ]
+    }
+
+    private static func isInactive(_ reading: SensorReading) -> Bool {
+        guard (reading.stepCount ?? 0) <= 0 else { return false }
+        switch reading.motion {
+        case .stationary:
+            return true
+        case .unknown:
+            guard let summary = reading.deviceMotionSummary else { return true }
+            return summary.userAccelerationStandardDeviationG <= 0.01
+                && summary.meanRotationRateRadiansPerSecond <= 0.03
+        case .walking, .running, .cycling, .automotive:
+            return false
+        }
+    }
+
+    private static func phoneMoved(
+        _ reading: SensorReading,
+        after _: SensorReading?
+    ) -> Bool {
+        if reading.motion.isMovement || (reading.stepCount ?? 0) > 0 {
+            return true
+        }
+        guard reading.motion == .unknown,
+              let summary = reading.deviceMotionSummary else {
+            return false
+        }
+        return summary.userAccelerationStandardDeviationG > 0.01
+            || summary.meanRotationRateRadiansPerSecond > 0.03
+    }
 
     static func qualityProjection(
         from readings: [SensorReading]
@@ -193,7 +646,7 @@ enum TaptionActivityEngineAdapter {
     ) -> [ActivityClassificationOverride] {
         actuals.compactMap { actual -> ActivityClassificationOverride? in
             let correction = correction(for: actual, corrections: corrections)
-            guard correction != nil || actual.isClassificationLocked || actual.manuallyCorrected else {
+            guard correction != nil || actual.manuallyCorrected || actual.isClassificationLocked else {
                 return nil
             }
             let start = correction?.startedAt ?? actual.startedAt
@@ -211,7 +664,8 @@ enum TaptionActivityEngineAdapter {
                 title: correction?.title ?? actual.title,
                 behavior: correction?.behavior ?? actual.behavior,
                 updatedAt: actual.createdAt,
-                isLocked: actual.isClassificationLocked || actual.manuallyCorrected
+                isLocked: actual.manuallyCorrected || correction != nil || actual.isClassificationLocked,
+                isUserConfirmed: correction != nil || actual.manuallyCorrected
             )
         }
     }

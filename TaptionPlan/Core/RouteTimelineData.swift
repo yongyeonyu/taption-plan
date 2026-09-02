@@ -124,6 +124,81 @@ enum MapHomeWBSRoutePhase: String, Hashable, Sendable {
     case forecast
 }
 
+struct MapHomeSleepLocationAnchor: Hashable, Sendable {
+    let span: TimeSpan
+    let point: GeoPoint
+}
+
+enum MapHomeSleepLocationPolicy {
+    static func spans(
+        actuals: [ActualRecord],
+        confirmedSleepSpans: [TimeSpan] = [],
+        sleepSessions: [SleepSession] = [],
+        in day: TimeSpan,
+        through date: Date? = nil
+    ) -> [TimeSpan] {
+        let upperBound = min(day.end, date ?? day.end)
+        guard upperBound > day.start else { return [] }
+
+        let actualSpans = actuals.compactMap { actual -> TimeSpan? in
+            guard AutomaticRecordTimelineEngine.isSleep(actual) else {
+                return nil
+            }
+            let end = min(actual.endedAt ?? upperBound, upperBound)
+            guard end > actual.startedAt else { return nil }
+            return TimeSpan(start: actual.startedAt, end: end)
+                .intersection(with: day)
+        }
+        let sessionSpans = sleepSessions.compactMap { session -> TimeSpan? in
+            guard session.asleepDuration > 0 else { return nil }
+            return session.span.intersection(with: day)
+        }
+        let confirmedSpans = confirmedSleepSpans.compactMap { span -> TimeSpan? in
+            guard span.duration > 0 else { return nil }
+            return span.intersection(with: day)
+        }
+        return ActualIntervalMergeEngine.union(
+            actualSpans + confirmedSpans + sessionSpans,
+            mergeGap: 0
+        )
+    }
+
+    static func anchors(
+        for spans: [TimeSpan],
+        readings: [SensorReading]
+    ) -> [MapHomeSleepLocationAnchor] {
+        let ordered = readings
+            .compactMap { reading -> (Date, GeoPoint)? in
+                guard let point = reading.point, isValid(point) else {
+                    return nil
+                }
+                return (reading.timestamp, point)
+            }
+            .sorted { $0.0 < $1.0 }
+        return spans.compactMap { span in
+            let point = ordered.last { $0.0 <= span.start }?.1
+                ?? ordered.first { $0.0 >= span.start && $0.0 < span.end }?.1
+                ?? ordered.first?.1
+            guard let point else { return nil }
+            return MapHomeSleepLocationAnchor(span: span, point: point)
+        }
+    }
+
+    static func contains(
+        _ date: Date,
+        in anchors: [MapHomeSleepLocationAnchor]
+    ) -> MapHomeSleepLocationAnchor? {
+        anchors.first { $0.span.start <= date && date < $0.span.end }
+    }
+
+    private static func isValid(_ point: GeoPoint) -> Bool {
+        point.latitude.isFinite
+            && point.longitude.isFinite
+            && (-90...90).contains(point.latitude)
+            && (-180...180).contains(point.longitude)
+    }
+}
+
 enum MapHomeWBSPlaybackActivity: Hashable, Sendable {
     case movement
     case stay
@@ -234,12 +309,25 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         travel: [TravelSegment],
         readings: [SensorReading],
         resolvedRoutes: [MapHomeWBSResolvedRoute] = [],
+        actuals: [ActualRecord] = [],
+        confirmedSleepSpans: [TimeSpan] = [],
+        sleepSessions: [SleepSession] = [],
         calendar: Calendar = .autoupdatingCurrent
     ) -> Self {
         let dayStart = calendar.startOfDay(for: selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
             ?? dayStart.addingTimeInterval(24 * 60 * 60)
         let day = TimeSpan(start: dayStart, end: dayEnd)
+        let sleepSpans = MapHomeSleepLocationPolicy.spans(
+            actuals: actuals,
+            confirmedSleepSpans: confirmedSleepSpans,
+            sleepSessions: sleepSessions,
+            in: day
+        )
+        let sleepAnchors = MapHomeSleepLocationPolicy.anchors(
+            for: sleepSpans,
+            readings: readings
+        )
         let routesByLegID = Dictionary(
             resolvedRoutes.map { ($0.legID, validCoordinates($0.coordinates)) },
             uniquingKeysWith: { _, latest in latest }
@@ -380,7 +468,16 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             )
         }
 
-        legs.append(contentsOf: deduplicatedForecastMovements(forecastMovements))
+        legs.append(contentsOf: deduplicatedForecastMovements(forecastMovements).filter { movement in
+            !sleepSpans.contains { sleepSpan in
+                sleepSpan.intersection(
+                    with: TimeSpan(
+                        start: movement.startDate,
+                        end: movement.endDate
+                    )
+                ) != nil
+            }
+        })
 
         let trace = readings
             .compactMap { reading -> (SensorReading, GeoPoint)? in
@@ -402,7 +499,15 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                   duration <= maximumActualGap,
                   source.0.trackingSessionEnded != true,
                   calendar.isDate(source.0.timestamp, inSameDayAs: target.0.timestamp),
-                  distanceMeters(source.1, target.1) > 0.1 else { continue }
+                  distanceMeters(source.1, target.1) > 0.1,
+                  !sleepSpans.contains(where: { sleepSpan in
+                      sleepSpan.intersection(
+                          with: TimeSpan(
+                              start: source.0.timestamp,
+                              end: target.0.timestamp
+                          )
+                      ) != nil
+                  }) else { continue }
             legs.append(
                 MapHomeWBSPlaybackLeg(
                     id: "actual-\(source.0.id.uuidString)-\(target.0.id.uuidString)",
@@ -416,6 +521,31 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 )
             )
         }
+
+        legs.append(contentsOf: sleepSpans.enumerated().compactMap { index, span in
+            let point = sleepAnchors.first(where: { $0.span == span })?.point
+                ?? locations
+                    .min {
+                        abs($0.place.span.start.timeIntervalSince(span.start))
+                            < abs($1.place.span.start.timeIntervalSince(span.start))
+                    }?
+                    .coordinate
+            guard let point else { return nil }
+            let sourcePlaceID = locations
+                .first { $0.place.span.contains(span.start) }?
+                .place
+                .id
+            return MapHomeWBSPlaybackLeg(
+                id: "sleep-\(index)-\(span.start.timeIntervalSinceReferenceDate)",
+                startDate: span.start,
+                endDate: span.end,
+                coordinates: [point],
+                routePhase: .actual,
+                activity: .stay,
+                categoryID: RouteTimelineCategory.sleep.rawValue,
+                sourcePlaceID: sourcePlaceID
+            )
+        })
 
         legs.sort {
             if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
@@ -438,9 +568,18 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 && $0.activity == .movement
                 && preferredForecastLegIDs.contains($0.id)
         }
-        let candidates = preferredForecast.isEmpty
-            ? active.filter { $0.activity == .stay || $0.routePhase != .forecast }
-            : preferredForecast
+        let sleepStays = active.filter {
+            $0.activity == .stay
+                && $0.categoryID == RouteTimelineCategory.sleep.rawValue
+        }
+        let candidates: [MapHomeWBSPlaybackLeg]
+        if let sleepStay = sleepStays.max(by: { $0.startDate < $1.startDate }) {
+            candidates = [sleepStay]
+        } else if preferredForecast.isEmpty {
+            candidates = active.filter { $0.activity == .stay || $0.routePhase != .forecast }
+        } else {
+            candidates = preferredForecast
+        }
         guard let leg = candidates.max(by: { lhs, rhs in
             if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
             let left = Self.priority(lhs)
@@ -463,11 +602,16 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             )
             cameraCoordinate = coordinate
         case .stay:
-            coordinate = Self.orbitCoordinate(around: center, progress: progress)
-            next = Self.orbitCoordinate(
-                around: center,
-                progress: min(1, progress + Self.lookAheadProgress)
-            )
+            if leg.categoryID == RouteTimelineCategory.sleep.rawValue {
+                coordinate = center
+                next = center
+            } else {
+                coordinate = Self.orbitCoordinate(around: center, progress: progress)
+                next = Self.orbitCoordinate(
+                    around: center,
+                    progress: min(1, progress + Self.lookAheadProgress)
+                )
+            }
             cameraCoordinate = center
         }
         let direction: MapHomeWBSPlaybackDirection
@@ -480,10 +624,12 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                     progress: max(0, progress - Self.lookAheadProgress)
                 )
             case .stay:
-                previous = Self.orbitCoordinate(
-                    around: center,
-                    progress: max(0, progress - Self.lookAheadProgress)
-                )
+                previous = leg.categoryID == RouteTimelineCategory.sleep.rawValue
+                    ? center
+                    : Self.orbitCoordinate(
+                        around: center,
+                        progress: max(0, progress - Self.lookAheadProgress)
+                    )
             }
             direction = Self.direction(from: previous, to: coordinate)
         } else {
@@ -676,7 +822,12 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         case .running: .running
         case .cycling: .cycling
         case .automotive: .car
+        case .privateVehicle: .car
         case .subway: .subway
+        case .bus: .bus
+        case .train: .train
+        case .airplane: .airplane
+        case .ship: .ship
         case .unknown: nil
         }
     }
@@ -891,6 +1042,7 @@ enum ExpectedRouteTransport: String, Hashable, Sendable {
     case automobile
     case transit
     case walking
+    case direct
 }
 
 struct ExpectedRouteRequest: Identifiable, Hashable, Sendable {
@@ -901,6 +1053,30 @@ struct ExpectedRouteRequest: Identifiable, Hashable, Sendable {
     let end: GeoPoint
     let departureDate: Date
     let arrivalDate: Date
+    let provenance: String
+    let confidence: Double
+
+    init(
+        segmentID: UUID,
+        mode: TravelMode,
+        transport: ExpectedRouteTransport,
+        start: GeoPoint,
+        end: GeoPoint,
+        departureDate: Date,
+        arrivalDate: Date,
+        provenance: String = "expected-route",
+        confidence: Double = 0
+    ) {
+        self.segmentID = segmentID
+        self.mode = mode
+        self.transport = transport
+        self.start = start
+        self.end = end
+        self.departureDate = departureDate
+        self.arrivalDate = arrivalDate
+        self.provenance = provenance
+        self.confidence = min(1, max(0, confidence))
+    }
 
     var id: UUID { segmentID }
 }
@@ -954,8 +1130,9 @@ enum ExpectedRouteRequestEngine {
             }
             .sorted { $0.timestamp < $1.timestamp }
 
-        let candidates: [RequestCandidate] = deduplicated(travel)
+        let orderedTravel = deduplicated(travel)
             .sorted { $0.span.start < $1.span.start }
+        let candidates: [RequestCandidate] = orderedTravel
             .compactMap { segment in
                 guard segment.span.intersection(with: day) != nil,
                       segment.span.start < cutoff,
@@ -1022,17 +1199,35 @@ enum ExpectedRouteRequestEngine {
                       distanceMeters(start.point, end.point)
                         >= minimumRouteDistanceMeters
                 else { return nil }
-                let hasRegisteredEndpointFallback =
-                    segment.mode == .subway
-                    && segment.isClassificationLocked
-                    && segment.distanceMeters >= minimumRouteDistanceMeters
-                    && start.usesRegisteredFrequentPlace
-                    && end.usesRegisteredFrequentPlace
-                guard hasRegisteredEndpointFallback
-                        || TaptionRouteEngineAdapter.allowsDottedRoute(
-                            for: segment,
-                            readings: readingsInSegment
-                        ) else {
+                let inference = RouteGapInferenceEngine().infer(.init(
+                    start: visibleSpan.start,
+                    end: visibleSpan.end,
+                    startCoordinate: RouteCoordinate(
+                        latitude: start.point.latitude,
+                        longitude: start.point.longitude
+                    ),
+                    endCoordinate: RouteCoordinate(
+                        latitude: end.point.latitude,
+                        longitude: end.point.longitude
+                    ),
+                    samples: TaptionRouteEngineAdapter.samples(
+                        from: readingsInSegment.filter(reliableLocationReading)
+                    ),
+                    precedingMode: adjacentMode(
+                        before: segment,
+                        in: orderedTravel
+                    ),
+                    followingMode: adjacentMode(
+                        after: segment,
+                        in: orderedTravel
+                    ),
+                    explicitMode: routeMode(for: segment.mode),
+                    endpointConfidence: min(
+                        endpointConfidence(start),
+                        endpointConfidence(end)
+                    )
+                ))
+                guard inference.allowsConnection else {
                     return nil
                 }
                 return RequestCandidate(
@@ -1044,7 +1239,9 @@ enum ExpectedRouteRequestEngine {
                         start: start.point,
                         end: end.point,
                         departureDate: visibleSpan.start,
-                        arrivalDate: visibleSpan.end
+                        arrivalDate: visibleSpan.end,
+                        provenance: inference.provenance,
+                        confidence: inference.confidence
                     )
                 )
             }
@@ -1060,15 +1257,61 @@ enum ExpectedRouteRequestEngine {
         for segment: TravelSegment
     ) -> ExpectedRouteTransport? {
         switch segment.mode {
-        case .car, .taxi, .bus:
+        case .car, .taxi:
             .automobile
-        case .subway, .train:
+        case .bus, .subway, .train:
             .transit
         case .walking, .running, .cycling:
             .walking
         case .airplane, .ship:
-            nil
+            .direct
         }
+    }
+
+    private static func routeMode(for mode: TravelMode) -> RouteTravelMode {
+        switch mode {
+        case .walking: .walking
+        case .running: .running
+        case .cycling: .cycling
+        case .bus: .bus
+        case .subway: .subway
+        case .taxi, .car: .automotive
+        case .train: .train
+        case .airplane: .airplane
+        case .ship: .ship
+        }
+    }
+
+    private static func adjacentMode(
+        before segment: TravelSegment,
+        in travel: [TravelSegment]
+    ) -> RouteTravelMode {
+        travel
+            .filter { $0.id != segment.id && $0.span.end <= segment.span.start }
+            .max { $0.span.end < $1.span.end }
+            .map { routeMode(for: $0.mode) }
+            ?? .unknown
+    }
+
+    private static func adjacentMode(
+        after segment: TravelSegment,
+        in travel: [TravelSegment]
+    ) -> RouteTravelMode {
+        travel
+            .filter { $0.id != segment.id && $0.span.start >= segment.span.end }
+            .min { $0.span.start < $1.span.start }
+            .map { routeMode(for: $0.mode) }
+            ?? .unknown
+    }
+
+    private static func endpointConfidence(_ endpoint: Endpoint) -> Double {
+        if endpoint.usesRegisteredFrequentPlace { return 1 }
+        let accuracy = endpoint.point.horizontalAccuracy
+        guard accuracy.isFinite, accuracy >= 0 else { return 0.8 }
+        if accuracy <= 20 { return 1 }
+        if accuracy <= 100 { return 0.9 }
+        if accuracy <= 150 { return 0.75 }
+        return 0.5
     }
 
     private static func reliableLocationReading(
@@ -1186,7 +1429,9 @@ enum ExpectedRouteRequestEngine {
                     start: request.start,
                     end: request.end,
                     departureDate: item.coverage.start,
-                    arrivalDate: item.coverage.end
+                    arrivalDate: item.coverage.end,
+                    provenance: request.provenance,
+                    confidence: request.confidence
                 )
             )
         }
@@ -1273,6 +1518,8 @@ enum RouteTimelineDataEngine {
         liveReadings: [SensorReading] = [],
         readingsAreNormalized: Bool = false,
         filtersSparseRouteConnections: Bool = false,
+        confirmedSleepSpans: [TimeSpan] = [],
+        sleepSessions: [SleepSession] = [],
         calendar: Calendar = .autoupdatingCurrent
     ) -> RouteTimelineProjection {
         let dayStart = calendar.startOfDay(for: selectedDate)
@@ -1297,6 +1544,17 @@ enum RouteTimelineDataEngine {
             includesApproximateLocations: readingsAreNormalized,
             filtersSparseConnections: filtersSparseRouteConnections
         )
+        let sleepSpans = MapHomeSleepLocationPolicy.spans(
+            actuals: actuals,
+            confirmedSleepSpans: confirmedSleepSpans,
+            sleepSessions: sleepSessions,
+            in: daySpan,
+            through: cutoff
+        )
+        let sleepAnchors = MapHomeSleepLocationPolicy.anchors(
+            for: sleepSpans,
+            readings: allDayReadings
+        )
         let visibleReadings = allDayReadings.filter {
             $0.timestamp <= cutoff
         }
@@ -1315,10 +1573,21 @@ enum RouteTimelineDataEngine {
         let selectedCategory = timelineDate.map { _ in
             category(at: cutoff, in: automatic, through: cutoff)
         }
-        let coordinateAtCutoff = confirmedSubwayCoordinate(
-            at: cutoff,
-            in: travel
-        ) ?? coordinateIndex.playbackCoordinate(at: cutoff)?.point
+        let coordinateAtCutoff: GeoPoint?
+        if let sleepAnchor = MapHomeSleepLocationPolicy.contains(
+            cutoff,
+            in: sleepAnchors
+        )?.point {
+            coordinateAtCutoff = sleepAnchor
+        } else {
+            coordinateAtCutoff = confirmedSubwayCoordinate(
+                at: cutoff,
+                in: travel
+            ) ?? coordinateIndex.playbackCoordinate(
+                at: cutoff,
+                sleepAnchors: sleepAnchors
+            )?.point
+        }
         let segments = makeSegments(
             samples: samples,
             coordinateIndex: coordinateIndex,
@@ -1326,7 +1595,9 @@ enum RouteTimelineDataEngine {
             travel: travel,
             cutoff: cutoff,
             selectedCategory: selectedCategory,
-            selectedSpan: selectedSpan
+            selectedSpan: selectedSpan,
+            sleepSpans: sleepSpans,
+            sleepAnchors: sleepAnchors
         )
         return RouteTimelineProjection(
             selectedDate: selectedDate,
@@ -1348,6 +1619,8 @@ enum RouteTimelineDataEngine {
         liveReadings: [SensorReading] = [],
         readingsAreNormalized: Bool = false,
         filtersSparseRouteConnections: Bool = false,
+        confirmedSleepSpans: [TimeSpan] = [],
+        sleepSessions: [SleepSession] = [],
         calendar: Calendar = .autoupdatingCurrent
     ) -> RouteTimelineProjection {
         let cutoff = minute.map {
@@ -1367,6 +1640,8 @@ enum RouteTimelineDataEngine {
             liveReadings: liveReadings,
             readingsAreNormalized: readingsAreNormalized,
             filtersSparseRouteConnections: filtersSparseRouteConnections,
+            confirmedSleepSpans: confirmedSleepSpans,
+            sleepSessions: sleepSessions,
             calendar: calendar
         )
     }
@@ -1424,13 +1699,20 @@ enum RouteTimelineDataEngine {
 
     static func playbackCoordinate(
         at date: Date,
-        inNormalizedReadings readings: [SensorReading]
+        inNormalizedReadings readings: [SensorReading],
+        sleepAnchors: [MapHomeSleepLocationAnchor] = []
     ) -> GeoPoint? {
         guard let first = readings.first,
               validPoint(
                 from: first,
                 includesApproximateLocations: true
               ) != nil else { return nil }
+        if let sleepAnchor = MapHomeSleepLocationPolicy.contains(
+            date,
+            in: sleepAnchors
+        )?.point {
+            return sleepAnchor
+        }
 
         // A route archive can begin after the selected timeline time (for
         // example, when only the recent live window has been loaded). Keep
@@ -1810,12 +2092,26 @@ enum RouteTimelineDataEngine {
             }
         }
 
-        func playbackCoordinate(at date: Date) -> ResolvedCoordinate? {
-            resolvedCoordinate(at: date, maximumGap: nil)
+        func playbackCoordinate(
+            at date: Date,
+            sleepAnchors: [MapHomeSleepLocationAnchor] = []
+        ) -> ResolvedCoordinate? {
+            resolvedCoordinate(
+                at: date,
+                maximumGap: nil,
+                sleepAnchors: sleepAnchors
+            )
         }
 
-        func routeCoordinate(at date: Date) -> ResolvedCoordinate? {
-            resolvedCoordinate(at: date, maximumGap: maximumInterpolationGap)
+        func routeCoordinate(
+            at date: Date,
+            sleepAnchors: [MapHomeSleepLocationAnchor] = []
+        ) -> ResolvedCoordinate? {
+            resolvedCoordinate(
+                at: date,
+                maximumGap: maximumInterpolationGap,
+                sleepAnchors: sleepAnchors
+            )
         }
 
         func isContinuous(from start: Date, to end: Date) -> Bool {
@@ -1844,9 +2140,19 @@ enum RouteTimelineDataEngine {
 
         private func resolvedCoordinate(
             at date: Date,
-            maximumGap: TimeInterval?
+            maximumGap: TimeInterval?,
+            sleepAnchors: [MapHomeSleepLocationAnchor]
         ) -> ResolvedCoordinate? {
             guard let first = values.first else { return nil }
+            if let sleepAnchor = MapHomeSleepLocationPolicy.contains(
+                date,
+                in: sleepAnchors
+            ) {
+                return ResolvedCoordinate(
+                    point: sleepAnchor.point,
+                    isInterpolated: false
+                )
+            }
             if date < first.timestamp {
                 return ResolvedCoordinate(point: first.point, isInterpolated: false)
             }
@@ -2036,7 +2342,9 @@ enum RouteTimelineDataEngine {
         travel: [TravelSegment],
         cutoff: Date,
         selectedCategory: RouteTimelineCategory?,
-        selectedSpan: TimeSpan?
+        selectedSpan: TimeSpan?,
+        sleepSpans: [TimeSpan],
+        sleepAnchors: [MapHomeSleepLocationAnchor]
     ) -> [RouteTimelineSegment] {
         guard let first = samples.first, first.timestamp < cutoff else { return [] }
         let interiorBoundaries = (
@@ -2044,6 +2352,7 @@ enum RouteTimelineDataEngine {
                 + actuals.flatMap { actual in
                     [actual.startedAt, actual.endedAt ?? cutoff]
                 }
+                + sleepSpans.flatMap { [$0.start, $0.end] }
                 + confirmedSubwaySegments(in: travel).flatMap {
                     [$0.span.start, $0.span.end]
                 }
@@ -2054,11 +2363,24 @@ enum RouteTimelineDataEngine {
         var result: [RouteTimelineSegment] = []
         var accumulator: SegmentAccumulator?
         for (start, end) in zip(boundaries, boundaries.dropFirst()) where start < end {
-            guard coordinateIndex.isContinuous(from: start, to: end),
-                  let startPoint = coordinateIndex.routeCoordinate(at: start)?.point,
-                  let endPoint = coordinateIndex.routeCoordinate(at: end)?.point,
-                  !sameLocation(startPoint, endPoint) else { continue }
             let midpoint = start.addingTimeInterval(end.timeIntervalSince(start) / 2)
+            let sleepAnchor = MapHomeSleepLocationPolicy.contains(
+                midpoint,
+                in: sleepAnchors
+            )?.point
+            guard coordinateIndex.isContinuous(from: start, to: end),
+                  let resolvedStart = coordinateIndex.routeCoordinate(
+                      at: start,
+                      sleepAnchors: sleepAnchors
+                  )?.point,
+                  let resolvedEnd = coordinateIndex.routeCoordinate(
+                      at: end,
+                      sleepAnchors: sleepAnchors
+                  )?.point else { continue }
+            let startPoint = sleepAnchor ?? resolvedStart
+            let endPoint = sleepAnchor ?? resolvedEnd
+            guard
+                  !sameLocation(startPoint, endPoint) else { continue }
             let category = category(
                 at: midpoint,
                 in: actuals,

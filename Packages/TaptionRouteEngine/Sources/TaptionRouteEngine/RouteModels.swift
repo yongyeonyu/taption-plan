@@ -20,6 +20,7 @@ public enum RouteTravelMode: String, Codable, Hashable, Sendable {
     case bus
     case train
     case airplane
+    case ship
     case unknown
 
     public var maximumSpeedMetersPerSecond: Double {
@@ -33,6 +34,7 @@ public enum RouteTravelMode: String, Codable, Hashable, Sendable {
         case .bus: 35
         case .train: 120
         case .airplane: 280
+        case .ship: 70
         case .unknown: 55
         }
     }

@@ -504,3 +504,17 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - CLN902A001에서 종료된 구형 iOS Simulator 5대의 device data를 삭제했다. iOS/watchOS 26.5 runtime은 보존했다. 이후 다른 작업이 새 iPad Simulator `2CD5BB05-7C63-4D44-A0B3-170F83F62210`를 부팅해 실행한 XCTest는 중단하지 않았다.
 - `/private/tmp`에서 문서 증적·현재 TestFlight archive·활성 카메라 로그를 제외한 소유 가능한 이전 임시 산출물 2,387개 약 27.92G를 정리했고, root 소유 `FTABHarvest` 1개는 보존했다. `XCTestDevices`·Xcode `DerivedData`는 0B, Xcode `Archives` 1.4G는 보존했다.
 - 정리 readback은 `/private/tmp` 50G, 데이터 볼륨 여유 61G, 사용자 휴지통 0개다. `.codex`, 소스, 현재 실행 중인 WBS33 XCTest 산출물, REL902A001 release 증적, 활성 카메라 로그는 삭제하지 않았다.
+
+## 2026-09-02 REL902A002 GTR 데이터 신뢰도·추론 통합
+
+- 활동·수면·장소·이동·센서 판정에 `ActivityDataProvenance`를 연결해 원본 관측, 보조 데이터, 예상 데이터, 사용자 교정을 구분한다. 원본 센서와 확정 기록은 보존하고 화면·정본 이벤트에는 provenance marker를 함께 기록한다.
+- 수면 추론은 iPhone 원본의 화면 꺼짐·무사용·이동 없음·충전/자택/야간 보조 조건을 모두 만족하고 5분 지속될 때만 자동 예상 기록을 만든다. 기존 자동 잠금과 사용자 확인 교정은 별도 상태로 유지한다.
+- 장소·활동 분류와 GPS 공백 경로는 근거·confidence·model version을 유지하며, `Review`·`Schedule`·`MapHome`은 실제/보조/예상/미확인 신뢰도 라벨과 이동수단을 동일하게 투영한다. 원본 GPS와 예상 경로를 섞어 덮어쓰지 않는다.
+- 앱·iOS Widget·Watch 앱·Watch Widget의 배포 build number를 `1.0 (127)`로 올렸다. TestFlight archive/export와 App Store Connect 증적은 커밋 후 별도 릴리스 게이트로 기록한다.
+
+### 검증
+
+- `TaptionActivityEngine` package 12/12, `TaptionRouteEngine` package 17/17 통과
+- `TaptionPlan` 전체 XCTest 900/900 통과: iPad Pro (12.9-inch) (6th generation), iOS 26.5, `/tmp/GTR902A001-full-tests/Logs/Test/Test-TaptionPlan-2026.09.02_22-52-06-+0900.xcresult`
+- 앱 target generic iOS Debug build 통과: `/private/tmp/GTR902A001-app-target-auto/Build/Products/Debug-iphonesimulator/TaptionPlan.app`
+- TestFlight build 127의 archive/export, 업로드·처리, `TP Taption Plan 내부 테스트` 연결, 그룹 빌드 화면·테스터 화면 노출은 다음 릴리스 게이트에서 SHA·경로·상태를 추가한다.

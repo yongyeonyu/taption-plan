@@ -3918,6 +3918,7 @@ struct ActualRecordDetailView: View {
             }
 
             detailRow("데이터 출처", sourceName(record.source))
+            detailRow("데이터 신뢰도", TaptionActivityEngineAdapter.trustLabel(for: record))
             detailRow("신뢰도", record.confidence.rawValue)
             let related = relatedRecords(for: record)
             if related.count > 1 {

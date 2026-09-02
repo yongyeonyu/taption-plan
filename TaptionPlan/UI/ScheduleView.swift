@@ -4492,7 +4492,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private func actualDetailSubtitle(_ actual: ActualRecord) -> String {
-        let span = "실제 · \(actual.startedAt.formatted(date: .omitted, time: .shortened))–\((actual.endedAt ?? .now).formatted(date: .omitted, time: .shortened))"
+        let span = "\(TaptionActivityEngineAdapter.trustLabel(for: actual)) · \(actual.startedAt.formatted(date: .omitted, time: .shortened))–\((actual.endedAt ?? .now).formatted(date: .omitted, time: .shortened))"
         let source = actualSourceLabel(actual.source)
         let origin = actual.sourceKind.rawValue
         guard let behavior = actual.behavior
@@ -9456,7 +9456,7 @@ private struct TimelineBoard: View {
             status: .completed,
             isActual: true,
             detailText:
-                "실제 · \(actualSourceName(actual.source)) · \(confidenceName(actual.confidence))",
+                "\(TaptionActivityEngineAdapter.trustLabel(for: actual)) · \(actualSourceName(actual.source)) · \(confidenceName(actual.confidence))",
             categoryID: actual.categoryID,
             categoryName: index.categoryNames[actual.categoryID]
         )

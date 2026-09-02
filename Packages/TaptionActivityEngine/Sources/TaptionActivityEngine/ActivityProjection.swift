@@ -114,7 +114,8 @@ public struct ActivityClassificationProjection: Codable, Hashable, Sendable {
                     title: override.title,
                     behavior: override.behavior,
                     updatedAt: override.updatedAt,
-                    isLocked: override.isLocked
+                    isLocked: override.isLocked,
+                    isUserConfirmed: override.isUserConfirmed
                 )
             }
             return override

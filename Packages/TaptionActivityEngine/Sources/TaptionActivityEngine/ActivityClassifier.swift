@@ -69,7 +69,15 @@ public struct ActivityClassificationEngine: Sendable {
                     confidence: min(previousLast.confidence, firstTail.confidence),
                     evidence: unique(previousLast.evidence + firstTail.evidence),
                     sampleCount: previousLast.sampleCount + firstTail.sampleCount - 1,
-                    isUserConfirmed: previousLast.isUserConfirmed
+                    isUserConfirmed: previousLast.isUserConfirmed,
+                    provenance: .init(
+                        tier: previousLast.provenance.tier,
+                        status: previousLast.provenance.status,
+                        source: previousLast.provenance.source,
+                        evidence: unique(previousLast.provenance.evidence + firstTail.provenance.evidence),
+                        confidence: min(previousLast.confidence, firstTail.confidence),
+                        span: ActivityTimeSpan(start: previousLast.span.start, end: firstTail.span.end)
+                    )
                 )
                 nextSegments = prefix + [merged] + Array(tail.dropFirst())
             } else {
@@ -157,8 +165,12 @@ public struct ActivityClassificationEngine: Sendable {
                 title: override.title ?? taxonomy.major(for: override.majorCategoryID)?.title ?? "활동",
                 behavior: override.behavior ?? override.detailID.flatMap { taxonomy.detail(for: $0)?.behavior } ?? "manual",
                 confidence: 1,
-                evidence: [override.isSleep ? "사용자 확인 수면" : "사용자 확인"],
-                confirmed: true
+                evidence: [
+                    override.isUserConfirmed
+                        ? (override.isSleep ? "사용자 확인 수면" : "사용자 확인")
+                        : "자동 분류 잠금"
+                ],
+                confirmed: override.isUserConfirmed
             )
         }
 
@@ -211,9 +223,30 @@ public struct ActivityClassificationEngine: Sendable {
                 let midpoint = span.start.addingTimeInterval(span.duration / 2)
                 if let override = relevant.first(where: { $0.span.start <= midpoint && midpoint < $0.span.end }) {
                     let c = classification(for: ActivitySensorEvidence(timestamp: midpoint), overrides: [override])
-                    return ActivitySegment(id: stableID(seed: "\(segment.id.uuidString)|\(span.start.timeIntervalSince1970)"), span: span, majorCategoryID: c.majorID, detailID: c.detailID, title: c.title, behavior: c.behavior, confidence: c.confidence, evidence: c.evidence, sampleCount: segment.sampleCount, isUserConfirmed: true)
+                    return ActivitySegment(
+                        id: stableID(seed: "\(segment.id.uuidString)|\(span.start.timeIntervalSince1970)"),
+                        span: span,
+                        majorCategoryID: c.majorID,
+                        detailID: c.detailID,
+                        title: c.title,
+                        behavior: c.behavior,
+                        confidence: c.confidence,
+                        evidence: c.evidence,
+                        sampleCount: segment.sampleCount,
+                        isUserConfirmed: c.confirmed,
+                        provenance: .init(
+                            tier: c.confirmed ? .groundTruth : .expected,
+                            status: c.confirmed
+                                ? .userCorrected
+                                : ActivityAutomaticConfirmation.status(for: c.confidence),
+                            source: c.confirmed ? "user-correction" : "classification-lock",
+                            evidence: c.evidence,
+                            confidence: c.confidence,
+                            span: span
+                        )
+                    )
                 }
-                return ActivitySegment(id: stableID(seed: "\(segment.id.uuidString)|\(span.start.timeIntervalSince1970)"), span: span, majorCategoryID: segment.majorCategoryID, detailID: segment.detailID, title: segment.title, behavior: segment.behavior, confidence: segment.confidence, evidence: segment.evidence, sampleCount: segment.sampleCount, isUserConfirmed: segment.isUserConfirmed)
+                return ActivitySegment(id: stableID(seed: "\(segment.id.uuidString)|\(span.start.timeIntervalSince1970)"), span: span, majorCategoryID: segment.majorCategoryID, detailID: segment.detailID, title: segment.title, behavior: segment.behavior, confidence: segment.confidence, evidence: segment.evidence, sampleCount: segment.sampleCount, isUserConfirmed: segment.isUserConfirmed, provenance: segment.provenance)
             }
         }
     }
@@ -226,13 +259,13 @@ public struct ActivityClassificationEngine: Sendable {
                   last.detailID == segment.detailID,
                   last.isUserConfirmed == segment.isUserConfirmed,
                   last.span.end == segment.span.start else { result.append(segment); continue }
-            result[result.count - 1] = ActivitySegment(id: last.id, span: ActivityTimeSpan(start: last.span.start, end: segment.span.end), majorCategoryID: last.majorCategoryID, detailID: last.detailID, title: last.title, behavior: last.behavior, confidence: min(last.confidence, segment.confidence), evidence: unique(last.evidence + segment.evidence), sampleCount: last.sampleCount + segment.sampleCount, isUserConfirmed: last.isUserConfirmed)
+            result[result.count - 1] = ActivitySegment(id: last.id, span: ActivityTimeSpan(start: last.span.start, end: segment.span.end), majorCategoryID: last.majorCategoryID, detailID: last.detailID, title: last.title, behavior: last.behavior, confidence: min(last.confidence, segment.confidence), evidence: unique(last.evidence + segment.evidence), sampleCount: last.sampleCount + segment.sampleCount, isUserConfirmed: last.isUserConfirmed, provenance: .init(tier: last.provenance.tier, status: last.provenance.status, source: last.provenance.source, evidence: unique(last.provenance.evidence + segment.provenance.evidence), confidence: min(last.confidence, segment.confidence), span: ActivityTimeSpan(start: last.span.start, end: segment.span.end)))
         }
         return result
     }
 
     private func makeSegment(_ raw: RawSegment) -> ActivitySegment {
-        ActivitySegment(id: stableID(seed: raw.firstID.uuidString), span: raw.span, majorCategoryID: raw.classification.majorID, detailID: raw.classification.detailID, title: raw.classification.title, behavior: raw.classification.behavior, confidence: raw.confidence, evidence: raw.evidence, sampleCount: raw.sampleCount, isUserConfirmed: raw.classification.confirmed)
+        ActivitySegment(id: stableID(seed: raw.firstID.uuidString), span: raw.span, majorCategoryID: raw.classification.majorID, detailID: raw.classification.detailID, title: raw.classification.title, behavior: raw.classification.behavior, confidence: raw.confidence, evidence: raw.evidence, sampleCount: raw.sampleCount, isUserConfirmed: raw.classification.confirmed, provenance: .init(tier: raw.classification.confirmed ? .groundTruth : .expected, status: raw.classification.confirmed ? .userCorrected : ActivityAutomaticConfirmation.status(for: raw.confidence), source: raw.classification.confirmed ? "user-correction" : "activity-classifier-v1", evidence: raw.evidence, confidence: raw.confidence, span: raw.span))
     }
 
     private func normalizedOverrides(_ overrides: [ActivityClassificationOverride]) -> [ActivityClassificationOverride] {
