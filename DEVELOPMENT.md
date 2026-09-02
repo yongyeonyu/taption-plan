@@ -495,3 +495,12 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - 배포 소스 커밋 `53e18940bbf13459927d23053ad783f0b8431294`를 `origin/main`에 먼저 푸시했다. IPA SHA-256은 `3957d7f3800314fc9af6f201a3a4ad3ef20548120f6917072337ef187dffa667`이다.
 - TestFlight Delivery UUID `d1cf40bf-7b56-42ef-a7cb-12d82067734c`는 처리 `COMPLETE`, 오류·처리 경고 0, App Store Connect에서 `제출 준비 완료`로 readback했다. MapLibre 외부 framework dSYM 미포함은 심볼 업로드 경고로 별도 기록하며 앱 업로드는 수락됐다.
 - `TP Taption Plan 내부 테스트`에 build 121을 연결했다. 그룹 상세는 `내부 그룹 · 1명의 테스터 · 82개의 빌드`, 빌드 탭은 `1.0 (121) · 테스트 중 · iOS`, 테스터 탭은 내부 테스터 1명을 표시한다. 현재 설치 표시는 `1.0 (120)`이므로 build 121 설치·실행·실제 터치와 Apple Watch 현장 수신은 별도 게이트다.
+
+## 2026-09-02 REL902A001 · CLN902A001 최신 배포·문서·저장소 정리
+
+- build 126 배포 소스는 `6b302ea2f9bca3f818c829514af1ee147b83be47`이며, Release archive/export·Apple Distribution 서명·네 번들 `1.0 (126)`·deep/strict codesign·`altool --validate-app` 검증을 완료했다.
+- TestFlight Delivery UUID는 `8e66a688-a922-4f76-b761-4da7b3faadb1`이고 App Store Connect API에서 build 126 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`를 확인했다. `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)에 연결되어 그룹 빌드 87개와 내부 테스터 1명을 API readback했다.
+- App Store Connect 그룹 빌드·테스터 화면은 Chrome과 in-app Browser가 로그인 화면으로 열려 자격 증명을 입력하지 않았으므로 남은 게이트다. Apple Watch 현장 수신과 Paid Apps Agreement·IAP·Sandbox 구매/복원도 기존 미완료 게이트로 유지한다.
+- CLN902A001에서 종료된 구형 iOS Simulator 5대의 device data를 삭제했다. iOS/watchOS 26.5 runtime은 보존했다. 이후 다른 작업이 새 iPad Simulator `2CD5BB05-7C63-4D44-A0B3-170F83F62210`를 부팅해 실행한 XCTest는 중단하지 않았다.
+- `/private/tmp`에서 문서 증적·현재 TestFlight archive·활성 카메라 로그를 제외한 소유 가능한 이전 임시 산출물 2,387개 약 27.92G를 정리했고, root 소유 `FTABHarvest` 1개는 보존했다. `XCTestDevices`·Xcode `DerivedData`는 0B, Xcode `Archives` 1.4G는 보존했다.
+- 정리 readback은 `/private/tmp` 50G, 데이터 볼륨 여유 61G, 사용자 휴지통 0개다. `.codex`, 소스, 현재 실행 중인 WBS33 XCTest 산출물, REL902A001 release 증적, 활성 카메라 로그는 삭제하지 않았다.

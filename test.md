@@ -119,3 +119,12 @@
 - TestFlight 업로드 성공: Delivery UUID `8e66a688-a922-4f76-b761-4da7b3faadb1`; App Store Connect API readback에서 build `126`이 `VALID`, `APP_STORE_ELIGIBLE`, `expired=false`로 확인됐다.
 - `TP Taption Plan 내부 테스트`(internal group, ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)에 build `126` 연결 성공. 그룹 빌드 API에서 `87개`와 build `126` `VALID`, 내부 테스터 API에서 `1명`(`axony99@gmail.com`)을 readback했다.
 - App Store Connect 그룹 빌드 화면·테스터 화면은 연결된 Chrome과 in-app Browser가 로그인 화면으로 열려 계정 자격 증명을 입력하지 않았으므로 미완료 게이트로 남긴다.
+
+## 2026-09-02 CLN902A001 저장공간 정리
+
+- 정리 전 readback: 데이터 볼륨 여유 39GiB, `/private/tmp` 약 77G, CoreSimulator 약 26G.
+- 종료 상태였던 iOS 26.5 Simulator 5대의 device data를 삭제했다: `37ED8B8E-1EA0-43DF-BC49-D43B91CC3A0A`, `A1BCAC6A-AA32-4D3F-90A9-FF3CBAE39CC1`, `3D26B7FD-55B0-4404-BA2F-44FE1C6FBB8D`, `4E0207AD-E023-4D87-8089-00F476421D04`, `75BE290F-DC49-4540-9901-127E6D0074A6`. iOS/watchOS 26.5 runtime은 보존했다.
+- 문서에 남은 증적·REL902A001 release archive·활성 카메라 로그를 제외하고, 2026-09-01 이전 소유 가능한 `/private/tmp` 임시 산출물 2,387개 약 27.92G를 정리했다. root 소유 `FTABHarvest` 1개는 권한 보호로 보존했다.
+- 정리 후 readback: `/private/tmp` 50G, 데이터 볼륨 여유 61GiB, CoreSimulator 2.1G. `XCTestDevices`·Xcode `DerivedData`는 0B, Xcode `Archives` 1.4G는 보존했다.
+- 정리 직후 다른 작업이 iPad Simulator `2CD5BB05-7C63-4D44-A0B3-170F83F62210`를 부팅하고 `WBS33GOAL1` XCTest를 실행 중인 것을 확인해 해당 작업과 현재 산출물을 보존했다. CoreDevice가 사용 중인 `/private/tmp/CAM30LIBR1-stage4-REZrnD`와 `/private/tmp/CAM29LIVE3-camera-r4.jsonl`도 보존했다.
+- 사용자 휴지통 readback은 0개이며, 현재 Taption Plan 소스·Git 상태와 build 126 release 증적은 삭제하지 않았다.
