@@ -15,6 +15,7 @@ xcrun simctl list devices
 ## 현재 릴리스 정본
 
 - 요청 ID: `REL902A001`
+- 문서·정리 반영 현재 `main` SHA: `1cee1a7221a7afe06fa7caa7585c3c2e7efca98f`
 - 배포 소스 SHA: `6b302ea2f9bca3f818c829514af1ee147b83be47`
 - 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (126)`
 - Release archive: `/private/tmp/REL902A001-release/TaptionPlan-1.0-126.xcarchive`
