@@ -534,3 +534,12 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - iPhone 14 Pro(`C44AF739-127D-572D-AD83-417C7E879045`) TestFlight 화면에서 Taption Plan 업데이트를 수행했고, `devicectl`로 `com.taption.plan` `1.0 (128)` 설치와 PID `26948` launch를 readback했다.
 - iPad Pro(`4CEC6BE9-E528-52A1-AB94-654A6CDA7E5E`)는 현재 `1.0 (125)`이며 TestFlight 앱이 설치돼 있지 않다. beta IPA의 CoreDevice 직접 설치는 `0xe800801f Attempted to install a Beta profile without the proper entitlement`로 거부되어 TestFlight 앱을 통한 iPad 128 다운로드·설치·launch는 미완료다.
 - App Store Connect 그룹 빌드·테스터 실제 화면은 로그인 화면으로 열려 자격 증명을 입력하지 않았으므로 UI readback은 미완료다.
+
+## 2026-09-03 SLP903TF02 수면 연결 복구·TestFlight build 129
+
+- 오늘 iCloud 월간·raw 센서 백업은 정상 갱신됐지만 Watch 건강 스냅샷이 `health_enabled=false`로 처리되어 HealthKit 수면 조회가 생략된 것이 누락 원인이었다.
+- 오늘 수면 기록이 없고 건강 연동이 꺼진 경우 일정 화면에 원인 안내와 명시적 `수면 연결` 버튼을 표시한다. 버튼은 기존 HealthKit 권한 요청·전체 이력 동기화 경로를 사용하며 백그라운드에서 권한을 임의 활성화하지 않는다.
+- 배포 소스 `3544ff8baf551cbe0b0817029e5ad5962048a6fa`, 전체 XCTest 901/901, generic iOS Debug build, Release archive/export, 네 번들 `1.0 (129)`, Production iCloud/TestFlight entitlement, deep/strict codesign과 `altool --validate-app`을 확인했다.
+- archive `/private/tmp/SLP903TF02-release/TaptionPlan-1.0-129.xcarchive`, IPA `/private/tmp/SLP903TF02-release/Export/TaptionPlan.ipa`, SHA-256 `3acc55045b44c3bbc94e6172edf43f372ab9efba467b347e65b8aec2d546c723`이다.
+- TestFlight Delivery UUID `411a22f3-430a-48fb-bde7-03269ca710e6`은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. `TP Taption Plan 내부 테스트` 연결 후 그룹 build 90개 중 build 129와 내부 테스터 1명(`INSTALLED`)을 readback했다.
+- 실제 iPhone에서 `수면 연결` 탭·HealthKit 수면 권한 승인·오늘 기록 재조회와 build 129 설치·launch는 사용자가 돌아온 뒤 확인할 별도 물리 게이트다.

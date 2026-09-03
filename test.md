@@ -149,3 +149,12 @@
 - iPhone 14 Pro(`C44AF739-127D-572D-AD83-417C7E879045`) TestFlight 업데이트 후 `com.taption.plan` `1.0 (128)` 설치와 launch PID `26948`를 readback했다.
 - iPad Pro(`4CEC6BE9-E528-52A1-AB94-654A6CDA7E5E`)는 현재 `Taption Plan 1.0 (125)`이다. CoreDevice로 beta IPA를 직접 설치할 수 없어(`0xe800801f`, beta profile entitlement 오류) TestFlight 앱을 통한 build 128 다운로드·설치·launch는 남은 게이트다.
 - ASC 그룹·테스터 실제 화면은 로그인 필요로 미완료다. 관련 로그: `/private/tmp/TF26PUSH01-asc-readback.json`, `/private/tmp/TF26PUSH01-iphone-launch.json`, `/private/tmp/TF26PUSH01-ipad-before-apps.log`.
+
+## 2026-09-03 SLP903TF02 수면 연결 복구·build 129
+
+- iCloud 백업은 정상이고 Watch snapshot의 `health_enabled=false` 때문에 HealthKit 수면 refresh가 실행되지 않은 원인을 확인했다.
+- 오늘 수면이 없고 건강 연동이 꺼진 경우만 `수면 연결` 안내를 표시하는 회귀 테스트를 포함해 전체 XCTest 901/901, 실패·스킵 0을 통과했다: `/private/tmp/SLP903TF02-full.xcresult`.
+- generic iOS Debug build와 Release archive/export를 통과했다. 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (129)`, Production iCloud/TestFlight entitlement와 deep/strict codesign, `altool --validate-app`이 정상이다.
+- IPA SHA-256은 `3acc55045b44c3bbc94e6172edf43f372ab9efba467b347e65b8aec2d546c723`, Delivery UUID는 `411a22f3-430a-48fb-bde7-03269ca710e6`이다.
+- App Store Connect API에서 build 129 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 연결, 그룹 build 90개 중 build 129, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
+- HealthKit 권한 승인과 오늘 수면 실제 생성은 사용자 탭이 필요한 별도 실기기 게이트다. iPad에는 TestFlight `4.3.0 (659.1)`이 설치돼 있으며 앱 build 129 다운로드·설치·launch가 남아 있다.

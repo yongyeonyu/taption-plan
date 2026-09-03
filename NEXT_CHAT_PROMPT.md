@@ -14,29 +14,30 @@ xcrun simctl list devices
 
 ## 현재 릴리스 정본
 
-- 요청 ID: `TF26PUSH01`
-- 배포 소스 SHA(바이너리): `84448b8aa8fc7b9de35b2903561a90095c2bee62`
-- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (128)`
-- Release archive: `/private/tmp/TF26PUSH01-release-r2/TaptionPlan-1.0-128.xcarchive`
-- Export IPA: `/private/tmp/TF26PUSH01-release-r2/Export/TaptionPlan.ipa`
-- IPA SHA-256: `b6532fc4be01c52a03fe1ef85f60b3bdb5156f77901cdd7483812834db9154e6`
-- Delivery/build UUID: `3ce79d87-b2cd-429e-b988-816d0b9af84a`
+- 요청 ID: `SLP903TF02`
+- 배포 소스 SHA(바이너리): `3544ff8baf551cbe0b0817029e5ad5962048a6fa`
+- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (129)`
+- Release archive: `/private/tmp/SLP903TF02-release/TaptionPlan-1.0-129.xcarchive`
+- Export IPA: `/private/tmp/SLP903TF02-release/Export/TaptionPlan.ipa`
+- IPA SHA-256: `3acc55045b44c3bbc94e6172edf43f372ab9efba467b347e65b8aec2d546c723`
+- Delivery/build UUID: `411a22f3-430a-48fb-bde7-03269ca710e6`
 - App Store Connect App ID: `6797370230`
 - Internal 그룹: `TP Taption Plan 내부 테스트`, ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`
-- build 128은 App Store Connect API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 빌드 API에 포함, 전체 그룹 빌드 89개, 내부 테스터 1명(`INSTALLED`)으로 readback했다.
+- build 129는 App Store Connect API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 빌드 API에 포함, 전체 그룹 빌드 90개, 내부 테스터 1명(`INSTALLED`)으로 readback했다.
 
 ## 현재 검증·정리 상태
 
-- `test.md`에 build 128 archive/export·서명·API readback과 iPhone TestFlight 설치·launch 증적이 있다.
-- App Store Connect Chrome/in-app Browser의 build 128 그룹 빌드·테스터 화면은 로그인 화면으로 열려 UI readback이 미완료다. 계정 자격 증명을 대신 입력하지 않는다.
-- iPhone 14 Pro `C44AF739-127D-572D-AD83-417C7E879045`는 TestFlight build 128 `1.0 (128)` 설치·launch까지 완료했다. iPad Pro `4CEC6BE9-E528-52A1-AB94-654A6CDA7E5E`는 현재 `1.0 (125)`이며 TestFlight 앱이 없어 build 128 다운로드·설치·launch가 남아 있다. beta IPA의 CoreDevice 직접 설치는 `0xe800801f` entitlement 오류로 대체하지 않는다.
+- `test.md`에 build 129 archive/export·서명·API readback과 전체 XCTest 901/901 증적이 있다.
+- App Store Connect Chrome/in-app Browser의 build 129 그룹 빌드·테스터 화면은 로그인 화면으로 열려 UI readback이 미완료다. 계정 자격 증명을 대신 입력하지 않는다.
+- iPhone 14 Pro의 마지막 확인 설치는 TestFlight build 128이다. iPad Pro는 앱 build 125이고 TestFlight `4.3.0 (659.1)`이 설치돼 있다. 양 기기의 build 129 다운로드·설치·launch는 남은 물리 게이트다.
+- 오늘 수면 누락 원인은 HealthKit 연동 비활성화다. build 129는 오늘 수면이 없으면 `수면 연결` 버튼을 표시하며 실제 권한 승인·오늘 수면 재조회는 사용자 탭이 필요하다.
 - 종료된 구형 Simulator 5대의 data는 삭제했고 iOS/watchOS 26.5 runtime은 보존했다. 현재 다른 작업이 iPad Simulator `2CD5BB05-7C63-4D44-A0B3-170F83F62210`에서 `WBS33GOAL1` XCTest를 실행 중이면 중단하거나 삭제하지 않는다.
 - `/private/tmp` 정리 후 약 50G, 데이터 볼륨 여유 61GiB를 readback했다. `XCTestDevices`·Xcode `DerivedData`는 0B, Xcode `Archives`는 1.4G로 보존 중이다. REL release 증적과 활성 카메라 로그도 보존한다.
 
 ## 반드시 남은 게이트
 
-1. 로그인된 App Store Connect Chrome에서 internal 그룹의 build 128 빌드 탭과 테스터 탭을 열어 UI 노출을 readback한다. 기존 `REL902A001` build 126 UI 게이트도 `temp.md` 기록대로 유지한다.
-2. iPad에 TestFlight를 설치하고 `TP Taption Plan 내부 테스트`의 build 128을 다운로드·설치한 뒤 `1.0 (128)` version/build readback과 launch를 별도로 검증한다. 이후 iPhone·iPad에서 실제 지도 터치와 재생선/점선 정합을 검증한다.
+1. 로그인된 App Store Connect Chrome에서 internal 그룹의 build 129 빌드 탭과 테스터 탭을 열어 UI 노출을 readback한다.
+2. iPhone·iPad의 TestFlight에서 build 129를 다운로드·설치한 뒤 version/build readback과 launch를 검증한다. iPhone에서 `수면 연결`을 탭해 수면 읽기 권한을 승인하고 오늘 수면 actual 생성·iCloud 재백업을 확인한다.
 3. Apple Watch 실제 envelope 수신과 `수신 대기 → 최근 수신` 전환을 확인한다.
 4. Paid Apps Agreement 활성화, `com.taption.plan.pro` 생성, sandbox 구매·복원을 확인한다.
 
