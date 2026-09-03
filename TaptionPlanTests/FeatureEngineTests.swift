@@ -12930,6 +12930,58 @@ final class FeatureEngineTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testTodayShowsSleepConnectionNoticeUntilHealthOrSleepIsAvailable()
+        async {
+        var disconnected = makeSnapshot()
+        disconnected.settings.healthEnabled = false
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: disconnected),
+            cloudSyncService: nil
+        )
+        await model.bootstrap()
+        model.selectedScale = .day
+        model.selectedDate = .now
+
+        XCTAssertTrue(model.needsSleepConnectionNotice)
+
+        var connected = makeSnapshot()
+        connected.settings.healthEnabled = true
+        let connectedModel = AppModel(
+            repository: InMemoryPlanRepository(snapshot: connected),
+            cloudSyncService: nil
+        )
+        await connectedModel.bootstrap()
+        connectedModel.selectedDate = .now
+        XCTAssertFalse(connectedModel.needsSleepConnectionNotice)
+
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: .now)
+        var recorded = makeSnapshot(actuals: [
+            ActualRecord(
+                planID: nil,
+                title: "수면",
+                categoryID: "sleep",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(7 * 3_600),
+                source: .healthKit,
+                confidence: .high,
+                createdAt: start,
+                behavior: WatchBehaviorKind.sleep.rawValue
+            ),
+        ])
+        recorded.settings.healthEnabled = false
+        let recordedModel = AppModel(
+            repository: InMemoryPlanRepository(snapshot: recorded),
+            cloudSyncService: nil
+        )
+        await recordedModel.bootstrap()
+        recordedModel.selectedDate = .now
+        XCTAssertFalse(recordedModel.needsSleepConnectionNotice)
+
+        model.selectedScale = .week
+        XCTAssertFalse(model.needsSleepConnectionNotice)
+    }
+
     func testPeriodNavigationStillRejectsZeroDirection() {
         let date = makeDate(2026, 7, 31, 12)
         let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)

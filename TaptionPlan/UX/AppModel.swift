@@ -718,6 +718,20 @@ final class AppModel {
         return missing.isEmpty ? nil : missing
     }
 
+    var needsSleepConnectionNotice: Bool {
+        guard selectedScale == .day,
+              !settings.healthEnabled,
+              Calendar.autoupdatingCurrent.isDateInToday(selectedDate) else {
+            return false
+        }
+        let today = daySpan(containing: selectedDate)
+        return !snapshot.actuals.contains {
+            ($0.categoryID == "sleep"
+                || $0.behavior == WatchBehaviorKind.sleep.rawValue)
+                && $0.span(asOf: today.end).intersection(with: today) != nil
+        }
+    }
+
     @ObservationIgnored private let repository: any PlanDataRepository
     @ObservationIgnored private let biometricProtectedSnapshotStore:
         BiometricProtectedSnapshotStore?

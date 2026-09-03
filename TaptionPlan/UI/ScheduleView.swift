@@ -1913,6 +1913,9 @@ struct ScheduleView: View {
             if let missing = model.timelineIntegrationNotice {
                 integrationNotice(missing)
             }
+            if model.needsSleepConnectionNotice {
+                sleepConnectionNotice
+            }
             if let prompt = model.appleWatchOnboardingPrompt {
                 appleWatchNotice(prompt)
             }
@@ -2105,6 +2108,35 @@ struct ScheduleView: View {
         .background(Color.tpPlace.opacity(0.22))
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.tpPlaceDark.opacity(0.18)).frame(height: 0.5)
+        }
+    }
+
+    private var sleepConnectionNotice: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "moon.zzz")
+                .font(.taption(size: 13, weight: .bold))
+                .foregroundStyle(Color.tpHealthDark)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("오늘 수면 기록을 가져오지 못했습니다")
+                    .font(.taption(size: 9.5, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Text("건강 앱의 수면 읽기 연결을 확인해 주세요")
+                    .font(.taption(size: 7.5, weight: .semibold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            Spacer(minLength: 4)
+            Button("수면 연결") {
+                Task { await model.requestHealth() }
+            }
+            .font(.taption(size: 8, weight: .bold))
+            .buttonStyle(.borderedProminent)
+            .tint(Color.tpHealthDark)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Color(red: 0.93, green: 0.96, blue: 0.91))
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Color.tpHealthDark.opacity(0.18)).frame(height: 0.5)
         }
     }
 
