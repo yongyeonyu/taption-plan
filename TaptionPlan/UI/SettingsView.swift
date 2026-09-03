@@ -220,6 +220,8 @@ struct SettingsView: View {
                             .disabled(model.isHealthHistorySyncRunning)
                         }
                         watchInstallRow
+                        watchAccelerationCollectionRow
+                        watchDataSyncRow
                         locationIntegrationRow
                         if let session = model.activeTrackingSession {
                             liveTrackingRow(session)
@@ -236,8 +238,6 @@ struct SettingsView: View {
                             model.presentPermissionOnboarding(for: .location)
                         }
                         sensorCollectionProfileRow
-                        watchAccelerationCollectionRow
-                        watchDataSyncRow
                         settingsToggleRow(
                             icon: "cloud.sun",
                             iconBackground: .tpWeather,

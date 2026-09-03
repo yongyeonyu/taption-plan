@@ -132,6 +132,16 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case airplane
     case cycling
 
+    var isMoving: Bool {
+        switch self {
+        case .movement, .walking, .running, .car, .subway,
+             .privateVehicle, .bus, .ship, .airplane, .cycling:
+            true
+        default:
+            false
+        }
+    }
+
     var title: String {
         switch self {
         case .activity: "활동"
@@ -581,7 +591,7 @@ struct MapHomeStickmanMarker: View {
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
-        let isStatic = reduceMotion || isLuminanceReduced
+        let isStatic = reduceMotion || isLuminanceReduced || !action.isMoving
         TimelineView(
             .animation(
                 minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
@@ -618,7 +628,7 @@ struct MapHomeStickmanGlyph: View {
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
-        let isStatic = reduceMotion || isLuminanceReduced
+        let isStatic = reduceMotion || isLuminanceReduced || !action.isMoving
         TimelineView(
             .animation(
                 minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,

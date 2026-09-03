@@ -20536,6 +20536,14 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(MapHomeStickmanAnimationEngine.phase(for: 1), 23)
     }
 
+    func testOnlyMovementStickmanActionsAnimate() {
+        XCTAssertEqual(
+            Set(MapHomeStickmanAction.allCases.filter(\.isMoving)),
+            [.movement, .walking, .running, .car, .subway, .privateVehicle,
+             .bus, .ship, .airplane, .cycling]
+        )
+    }
+
     func testArticulatedStickmanPoseCoversEveryActionAndStaysOnCanvas() {
         for action in TaptionStickmanPoseAction.allCases {
             let poses = (0..<12).map {
