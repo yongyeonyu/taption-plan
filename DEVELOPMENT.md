@@ -549,3 +549,11 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - 날짜 변경 시 지도 일자 상태 초기화가 사이드바 레일을 하루 전체 `미확인`으로 먼저 덮어쓰는 원인을 확인했다.
 - 경로 상태를 초기화할 때 선택한 날짜의 저장 actual·travel을 즉시 다시 투영해 대분류를 유지하도록 수정했다.
 - 서로 다른 날짜의 `업무`·`수업` 분류가 섞이거나 미확인으로 소실되지 않는 집중 XCTest와 Debug 테스트 빌드를 통과했다: `/private/tmp/SID903A001-focused-r2.xcresult`.
+
+## 2026-09-03 TF903B013X TestFlight build 130
+
+- 날짜 전환 사이드바 대분류 유지 수정이 포함된 배포 소스 `1829efb1d02c7e81724787e5c787a9d4fff260a1`를 main에 푸시했다.
+- 전체 XCTest 902/902, 실패·스킵 0을 통과했다: `/private/tmp/TF903B013X-full.xcresult`.
+- Release archive/export와 네 번들 `1.0 (130)`, Production iCloud/TestFlight entitlement, deep/strict codesign, `altool --validate-app`을 확인했다.
+- archive `/private/tmp/TF903B013X-release/TaptionPlan-1.0-130.xcarchive`, IPA `/private/tmp/TF903B013X-release/Export/TaptionPlan.ipa`, SHA-256 `0904b72f68a00f32bd7cd29b48c027acfb4764c684d3696265b1fb1035218fa8`이다.
+- Delivery UUID `064f2803-95d1-458b-96bc-819b087c13c9`은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. 내부 그룹 연결 후 그룹 build 91개 중 build 130과 내부 테스터 1명(`INSTALLED`)을 readback했다.

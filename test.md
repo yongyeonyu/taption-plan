@@ -164,3 +164,11 @@
 - 날짜 전환 초기화에서 전체 `미확인` 대입을 제거하고 선택 날짜의 actual·travel 대분류를 즉시 투영한다.
 - `TimeScaleTests.testMapHomeSidebarDateChangeProjectsTheSelectedDaysMajorCategories` 통과, 실패 0: `/private/tmp/SID903A001-focused-r2.xcresult`.
 - 테스트 실행 과정의 Debug 앱·Widget·Watch target 빌드가 성공했다. 실제 기기 날짜 전환 화면 확인은 별도 게이트다.
+
+## 2026-09-03 TF903B013X TestFlight build 130
+
+- 전체 XCTest 902/902, 실패·스킵 0: `/private/tmp/TF903B013X-full.xcresult`.
+- Release archive/export 성공. 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (130)`, Production iCloud/TestFlight entitlement와 deep/strict codesign, `altool --validate-app` 통과.
+- IPA SHA-256 `0904b72f68a00f32bd7cd29b48c027acfb4764c684d3696265b1fb1035218fa8`, Delivery UUID `064f2803-95d1-458b-96bc-819b087c13c9`.
+- App Store Connect API에서 build 130 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 연결, 그룹 build 91개 중 build 130, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
+- build 130 실기기 설치·launch와 날짜 변경 실제 화면 확인은 별도 게이트다.
