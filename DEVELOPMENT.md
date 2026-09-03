@@ -557,3 +557,11 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - Release archive/export와 네 번들 `1.0 (130)`, Production iCloud/TestFlight entitlement, deep/strict codesign, `altool --validate-app`을 확인했다.
 - archive `/private/tmp/TF903B013X-release/TaptionPlan-1.0-130.xcarchive`, IPA `/private/tmp/TF903B013X-release/Export/TaptionPlan.ipa`, SHA-256 `0904b72f68a00f32bd7cd29b48c027acfb4764c684d3696265b1fb1035218fa8`이다.
 - Delivery UUID `064f2803-95d1-458b-96bc-819b087c13c9`은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. 내부 그룹 연결 후 그룹 build 91개 중 build 130과 내부 테스터 1명(`INSTALLED`)을 readback했다.
+
+## 2026-09-03 REL903TF01 TestFlight build 131
+
+- Apple Watch 자동 가져오기·가속도 설정을 Watch 앱 행 바로 아래로 이동하고, 이동이 아닌 졸라맨 동작은 정지 프레임으로 고정했다.
+- 기능 소스 `4c5d9aaf76ef558ec3302f2763bb27562eac45aa`, 배포 소스 `cceb9f655c76b4e5981891ed7f80c89f03b6a2cc`를 `main`에 푸시했다. 비이동 동작 회귀 XCTest와 Debug 테스트 빌드가 통과했다.
+- Release archive/export 성공: `/private/tmp/taption-rel903-build131/TaptionPlan-1.0-131.xcarchive`, `/private/tmp/taption-rel903-build131/Export/TaptionPlan.ipa`; 네 번들 모두 `1.0 (131)`, deep/strict codesign과 `altool --validate-app` 통과, IPA SHA-256 `4435667dba069fda3706217b5c6af8947cef75eb72689525bc2fd75dd603f6f8`.
+- Delivery/build UUID `805169b0-e3d9-41b2-883d-475504a3884d`는 API에서 `VALID`·`expired=false`다. `TP Taption Plan 내부 테스트` 연결 후 그룹 build 92개 중 build 131과 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
+- build 131 실기기 설치·launch와 실제 Watch 설정·비이동 정지 화면 확인은 별도 물리 게이트다.

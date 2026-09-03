@@ -172,3 +172,11 @@
 - IPA SHA-256 `0904b72f68a00f32bd7cd29b48c027acfb4764c684d3696265b1fb1035218fa8`, Delivery UUID `064f2803-95d1-458b-96bc-819b087c13c9`.
 - App Store Connect API에서 build 130 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 연결, 그룹 build 91개 중 build 130, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
 - build 130 실기기 설치·launch와 날짜 변경 실제 화면 확인은 별도 게이트다.
+
+## 2026-09-03 REL903TF01 TestFlight build 131
+
+- `MapHomeStickmanTests.testOnlyMovementStickmanActionsAnimate` 통과, 실패 0. 테스트 실행 과정의 Debug 앱·Widget·Watch target 빌드도 성공했다.
+- Release archive/export 성공. 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (131)`, deep/strict codesign과 `altool --validate-app` 통과.
+- IPA SHA-256 `4435667dba069fda3706217b5c6af8947cef75eb72689525bc2fd75dd603f6f8`, Delivery/build UUID `805169b0-e3d9-41b2-883d-475504a3884d`.
+- App Store Connect API에서 build 131 `VALID`·`expired=false`, 내부 그룹 연결, 그룹 build 92개 중 build 131, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
+- build 131 실기기 설치·launch와 실제 Watch 설정·비이동 정지 화면 확인은 별도 게이트다.
