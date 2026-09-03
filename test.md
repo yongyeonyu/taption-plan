@@ -158,3 +158,9 @@
 - IPA SHA-256은 `3acc55045b44c3bbc94e6172edf43f372ab9efba467b347e65b8aec2d546c723`, Delivery UUID는 `411a22f3-430a-48fb-bde7-03269ca710e6`이다.
 - App Store Connect API에서 build 129 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 연결, 그룹 build 90개 중 build 129, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
 - HealthKit 권한 승인과 오늘 수면 실제 생성은 사용자 탭이 필요한 별도 실기기 게이트다. iPad에는 TestFlight `4.3.0 (659.1)`이 설치돼 있으며 앱 build 129 다운로드·설치·launch가 남아 있다.
+
+## 2026-09-03 SID903A001 날짜 전환 사이드바 회귀
+
+- 날짜 전환 초기화에서 전체 `미확인` 대입을 제거하고 선택 날짜의 actual·travel 대분류를 즉시 투영한다.
+- `TimeScaleTests.testMapHomeSidebarDateChangeProjectsTheSelectedDaysMajorCategories` 통과, 실패 0: `/private/tmp/SID903A001-focused-r2.xcresult`.
+- 테스트 실행 과정의 Debug 앱·Widget·Watch target 빌드가 성공했다. 실제 기기 날짜 전환 화면 확인은 별도 게이트다.

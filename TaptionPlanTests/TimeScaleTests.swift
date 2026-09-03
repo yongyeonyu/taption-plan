@@ -410,6 +410,52 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testMapHomeSidebarDateChangeProjectsTheSelectedDaysMajorCategories() {
+        let calendar = Calendar(identifier: .gregorian)
+        let firstDay = calendar.date(
+            from: DateComponents(year: 2026, month: 9, day: 1)
+        )!
+        let secondDay = calendar.date(byAdding: .day, value: 1, to: firstDay)!
+        let records = [
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: firstDay.addingTimeInterval(9 * 3_600),
+                endedAt: firstDay.addingTimeInterval(10 * 3_600),
+                source: .manual,
+                manuallyCorrected: true
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "수업",
+                categoryID: "study",
+                startedAt: secondDay.addingTimeInterval(13 * 3_600),
+                endedAt: secondDay.addingTimeInterval(14 * 3_600),
+                source: .manual,
+                manuallyCorrected: true
+            ),
+        ]
+
+        let first = MapHomeTimeRailSegmentEngine.segments(
+            from: records,
+            on: firstDay,
+            asOf: secondDay.addingTimeInterval(2 * 86_400),
+            calendar: calendar
+        )
+        let second = MapHomeTimeRailSegmentEngine.segments(
+            from: records,
+            on: secondDay,
+            asOf: secondDay.addingTimeInterval(2 * 86_400),
+            calendar: calendar
+        )
+
+        XCTAssertTrue(first.contains { $0.categoryID == "work" })
+        XCTAssertFalse(first.contains { $0.categoryID == "study" })
+        XCTAssertTrue(second.contains { $0.categoryID == "study" })
+        XCTAssertFalse(second.contains { $0.categoryID == "work" })
+    }
+
     func testMapRouteDocumentGateCollapses240HzSourceCallbacksIntoOneCommit() {
         let gate = MapHomeRouteDocumentProjectionGate()
 

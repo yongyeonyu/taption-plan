@@ -1973,7 +1973,7 @@ struct MapHomeView: View {
             weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
 
             if dayChanged {
-                resetDayScopedMapState()
+                resetDayScopedMapState(for: newDate)
                 hasUserAdjustedMap = false
                 routeReadingsLoadState = .loading(
                     MapHomeRouteReadingsPolicy.dayKey(for: newDate)
@@ -5852,7 +5852,7 @@ struct MapHomeView: View {
         timeRailSegments = next
     }
 
-    private func resetDayScopedMapState() {
+    private func resetDayScopedMapState(for date: Date) {
         dayDataSnapshot = nil
         routeReadings = []
         normalizedRouteReadings = []
@@ -5873,7 +5873,11 @@ struct MapHomeView: View {
         liveRouteProjectionRefreshTask = nil
         nearbyTransitPlaces = []
         hasDeferredWBSPlaybackRefresh = false
-        timeRailSegments = [.wholeDayUnconfirmed]
+        timeRailSegments = MapHomeTimeRailSegmentEngine.segments(
+            from: model.snapshot.actuals,
+            travel: model.snapshot.travel,
+            on: date
+        )
         timeSidebarVisibleStartMinute = 0
         timeSidebarVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
         sidebarPinchStepOffset = 0

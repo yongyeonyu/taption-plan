@@ -543,3 +543,9 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - archive `/private/tmp/SLP903TF02-release/TaptionPlan-1.0-129.xcarchive`, IPA `/private/tmp/SLP903TF02-release/Export/TaptionPlan.ipa`, SHA-256 `3acc55045b44c3bbc94e6172edf43f372ab9efba467b347e65b8aec2d546c723`이다.
 - TestFlight Delivery UUID `411a22f3-430a-48fb-bde7-03269ca710e6`은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. `TP Taption Plan 내부 테스트` 연결 후 그룹 build 90개 중 build 129와 내부 테스터 1명(`INSTALLED`)을 readback했다.
 - 실제 iPhone에서 `수면 연결` 탭·HealthKit 수면 권한 승인·오늘 기록 재조회와 build 129 설치·launch는 사용자가 돌아온 뒤 확인할 별도 물리 게이트다.
+
+## 2026-09-03 SID903A001 날짜 전환 사이드바 분류 유지
+
+- 날짜 변경 시 지도 일자 상태 초기화가 사이드바 레일을 하루 전체 `미확인`으로 먼저 덮어쓰는 원인을 확인했다.
+- 경로 상태를 초기화할 때 선택한 날짜의 저장 actual·travel을 즉시 다시 투영해 대분류를 유지하도록 수정했다.
+- 서로 다른 날짜의 `업무`·`수업` 분류가 섞이거나 미확인으로 소실되지 않는 집중 XCTest와 Debug 테스트 빌드를 통과했다: `/private/tmp/SID903A001-focused-r2.xcresult`.
