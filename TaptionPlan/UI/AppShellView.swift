@@ -109,10 +109,6 @@ struct AppShellView: View {
             advanceInitialLaunchProgress(to: 0.86)
             dismissInitialLaunchOverlayIfReady()
         }
-        .onChange(of: model.initialDerivedDataPreloadProgress) { _, progress in
-            let progress = min(max(progress, 0), 1)
-            advanceInitialLaunchProgress(to: 0.20 + progress * 0.64)
-        }
         .onChange(of: isSecurityStateReady) { _, _ in
             dismissInitialLaunchOverlayIfReady()
         }

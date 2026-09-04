@@ -557,7 +557,6 @@ final class AppModel {
     private(set) var backupRestoreRevision: UInt64 = 0
     @ObservationIgnored private var timestampOnlySnapshotAssignment = false
     private(set) var isBootstrapped = false
-    private(set) var initialDerivedDataPreloadProgress = 0.0
     /// 저장소를 읽지 못한 상태에서 빈 스냅샷을 저장하면 기존 기록을
     /// 덮어쓸 수 있다. 복구 가능한 저장본을 다시 읽기 전까지 저장을 막는다.
     @ObservationIgnored private var repositoryLoadFailed = false
@@ -1347,12 +1346,15 @@ final class AppModel {
         return result
     }
 
-    private func cloudBackupPayload(now: Date = .now) async -> PlanCloudBackupPayload {
+    private func cloudBackupPayload(
+        now: Date = .now,
+        includesRoutes: Bool = true
+    ) async -> PlanCloudBackupPayload {
         let backupLog = TaptionPlanDiagnosticsLogger.shared.combinedLog(
             maximumBytes: TaptionPlanDiagnosticsLogPolicy.maximumBackupBytes
         )
         let appLog = backupLog.isEmpty ? nil : backupLog
-        guard let sensorService else {
+        guard includesRoutes, let sensorService else {
             return PlanCloudBackupPayload(
                 snapshot: snapshot,
                 appLog: appLog
@@ -2329,7 +2331,6 @@ final class AppModel {
                 // projection as later date changes. Raw records remain lazy.
                 source = Self.preparedLoadedSnapshot(source)
                 snapshot = source
-                await preloadInitialDerivedData()
                 if source.settings.confirmedSleepSpans
                     != originalConfirmedSleepSpans
                     || source.actuals != originalActuals
@@ -2416,6 +2417,9 @@ final class AppModel {
         dayDatabaseMigrationTask = Task { @MainActor [weak self, dayDatabase, sensorService, legacyRawDeviceArchive, legacyWatchSensorArchive, source, sourceRevision] in
             defer { self?.dayDatabaseMigrationTask = nil }
             do {
+                guard try await dayDatabase.requiresLegacyMigration() else {
+                    return
+                }
                 guard let legacyRawDeviceArchive,
                       let legacyWatchSensorArchive else {
                     TaptionPlanDiagnosticsLogger.shared.record(
@@ -2453,7 +2457,7 @@ final class AppModel {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "day_database_migration_failed",
                     level: .error,
-                    fields: ["error": String(describing: type(of: error))]
+                    fields: TaptionDiagnosticError.compactFields(for: error)
                 )
             }
         }
@@ -2461,49 +2465,6 @@ final class AppModel {
 
     private func waitForBootstrapPreparation() async {
         await bootstrapPreparationTask?.value
-    }
-
-    private func preloadInitialDerivedData() async {
-        initialDerivedDataPreloadProgress = 0
-        guard let dayLoadCoordinator else {
-            initialDerivedDataPreloadProgress = 1
-            return
-        }
-        let source = snapshot
-        let sourceRevision = snapshotRevision
-        let startedAt = ProcessInfo.processInfo.systemUptime
-        await dayLoadCoordinator.preloadMonth(
-            containing: selectedDate,
-            source: source,
-            sourceRevision: sourceRevision,
-            sensorLoader: { [weak self] day in
-                guard let self else {
-                    return SensorReadingsLoadResult(
-                        readings: [],
-                        isComplete: false
-                    )
-                }
-                return await self.sensorReadingsLoadResult(
-                    in: self.daySpan(containing: day)
-                )
-            },
-            progress: { [weak self] progress in
-                self?.initialDerivedDataPreloadProgress = progress
-            }
-        )
-        initialDerivedDataPreloadProgress = 1
-        TaptionPlanDiagnosticsLogger.shared.record(
-            "initial_derived_data_preloaded",
-            fields: [
-                "days": String(dayLoadCoordinator.cachedDayCount),
-                "duration_ms": String(
-                    Int(
-                        (ProcessInfo.processInfo.systemUptime - startedAt)
-                            * 1_000
-                    )
-                ),
-            ]
-        )
     }
 
     func sceneBecameActive() async {
@@ -2527,6 +2488,7 @@ final class AppModel {
         } else {
             setExternalPrivacyLocked(false)
         }
+        guard !wasSceneActive else { return }
         scheduleForegroundPreparation()
     }
 
@@ -2559,13 +2521,6 @@ final class AppModel {
                 return
             }
 
-            await self.refreshCloudBackupAfterForeground()
-            guard !Task.isCancelled,
-                  self.isSceneActive,
-                  self.foregroundPreparationGeneration == generation else {
-                return
-            }
-
             await self.applyPendingLocationTrackingRequest()
             await self.hydrateLatestMapLocationAnchor()
             self.applyPendingLocationTrackingGuidance()
@@ -2573,6 +2528,12 @@ final class AppModel {
                 self?.applyAirPodsActivity(observation)
             }
             self.scheduleForegroundRefresh()
+            if self.securityStatus.settings.cloudBackupEnabled {
+                await self.saveCloudBackup(
+                    reason: "foreground_deferred",
+                    includesRawSensors: false
+                )
+            }
         }
     }
 
@@ -2667,12 +2628,10 @@ final class AppModel {
         }
     }
 
-    private func refreshCloudBackupAfterForeground() async {
-        guard securityStatus.settings.cloudBackupEnabled else { return }
-        await saveCloudBackup(reason: "foreground_deferred")
-    }
-
-    private func saveCloudBackup(reason: String) async {
+    private func saveCloudBackup(
+        reason: String,
+        includesRawSensors: Bool = true
+    ) async {
         let logger = TaptionPlanDiagnosticsLogger.shared
         let operation = logger.beginOperation(
             "icloud_backup_automatic",
@@ -2692,13 +2651,27 @@ final class AppModel {
                 return
             }
             let date = Date.now
-            let payload = await cloudBackupPayload(now: date)
-            appLogBytes = payload.appLog?.utf8.count ?? 0
-            let generation = try await saveCloudBackupGeneration(
-                using: securityBackupService,
-                payload: payload,
-                date: date
+            let payload = await cloudBackupPayload(
+                now: date,
+                includesRoutes: includesRawSensors
             )
+            appLogBytes = payload.appLog?.utf8.count ?? 0
+            let generation: PlanCloudBackupGeneration
+            if includesRawSensors {
+                generation = try await saveCloudBackupGeneration(
+                    using: securityBackupService,
+                    payload: payload,
+                    date: date
+                )
+            } else {
+                generation = PlanCloudBackupGeneration(
+                    snapshot: try await securityBackupService.saveMonthlyArchive(
+                        payload,
+                        date: date
+                    ),
+                    rawSensors: nil
+                )
+            }
             securityStatus = securityBackupService.status
             logger.finishOperation(
                 operation,
@@ -2707,6 +2680,7 @@ final class AppModel {
                     "reason": reason,
                     "month": generation.snapshot.monthKey,
                     "app_log_bytes": String(appLogBytes),
+                    "raw_sensors": String(includesRawSensors),
                 ]
             )
         } catch {
@@ -2793,17 +2767,17 @@ final class AppModel {
                 self.foregroundRefreshTask = nil
                 return
             }
+            if let lastForegroundRefreshAt = self.lastForegroundRefreshAt,
+               Date.now.timeIntervalSince(lastForegroundRefreshAt) < 5 {
+                self.foregroundRefreshTask = nil
+                return
+            }
             self.watchConnectivityService.refreshConnectionState()
             self.refreshWatchLaunchReport()
             await self.configureHealthBackgroundDeliveryIfNeeded(
                 showErrors: false
             )
             self.startForegroundHealthRefreshIfNeeded()
-            if let lastForegroundRefreshAt = self.lastForegroundRefreshAt,
-               Date.now.timeIntervalSince(lastForegroundRefreshAt) < 5 {
-                self.foregroundRefreshTask = nil
-                return
-            }
             await self.refreshPermissionStates()
             await self.waitForBootstrapPreparation()
             await self.applyPendingWidgetCommands(
@@ -8027,22 +8001,6 @@ final class AppModel {
                     )
                 },
                 forceReload: true
-            )
-            dayLoadCoordinator.prefetchMonth(
-                containing: date,
-                source: source,
-                sourceRevision: sourceRevision,
-                sensorLoader: { [weak self] day in
-                    guard let self else {
-                        return SensorReadingsLoadResult(
-                            readings: [],
-                            isComplete: false
-                        )
-                    }
-                    return await self.sensorReadingsLoadResult(
-                        in: self.daySpan(containing: day)
-                    )
-                }
             )
             return snapshot
         }

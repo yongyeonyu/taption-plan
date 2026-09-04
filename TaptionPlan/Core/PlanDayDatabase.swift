@@ -162,6 +162,13 @@ actor PlanDayDatabase {
         try await save(snapshot, additionalIPhoneEvents: [], additionalWatchEvents: [])
     }
 
+    func requiresLegacyMigration() async throws -> Bool {
+        let completed = try await iPhoneStore.migrationCompleted(
+            Self.legacyMigrationMarker
+        )
+        return !completed
+    }
+
     func migrateLegacyIfNeeded(
         source: TaptionDataSnapshot,
         sourceRevision: UInt64,
@@ -169,10 +176,7 @@ actor PlanDayDatabase {
         watchSummaries: [TaptionWatchSensorSummary],
         rawEnvelopes: [RawDeviceDataEnvelope]
     ) async throws -> PlanDayDatabaseMigrationReport? {
-        let migrationCompleted = try await iPhoneStore.migrationCompleted(
-            Self.legacyMigrationMarker
-        )
-        guard !migrationCompleted else { return nil }
+        guard try await requiresLegacyMigration() else { return nil }
 
         let calendar = Calendar.autoupdatingCurrent
         let days = migrationDays(
@@ -182,7 +186,7 @@ actor PlanDayDatabase {
             rawEnvelopes: rawEnvelopes,
             calendar: calendar
         )
-        func importAndValidate(regenerate: Bool) async throws -> PlanDayDatabaseMigrationReport {
+        func importAndValidate() async throws -> PlanDayDatabaseMigrationReport {
             var iPhoneEventCount = 0
             var watchEventCount = 0
             var exactDigestDayCount = 0
@@ -220,10 +224,6 @@ actor PlanDayDatabase {
                 )
                 let expectedIPhone = baseEvents.iPhone + extras.iPhone
                 let expectedWatch = baseEvents.watch + extras.watch
-                if regenerate {
-                    try await iPhoneStore.removeMaterializedDay(for: dayKey)
-                    try await watchStore.removeMaterializedDay(for: dayKey)
-                }
                 try await save(
                     snapshot,
                     additionalIPhoneEvents: extras.iPhone,
@@ -259,12 +259,18 @@ actor PlanDayDatabase {
 
         let report: PlanDayDatabaseMigrationReport
         do {
-            report = try await importAndValidate(regenerate: false)
+            report = try await importAndValidate()
         } catch is CancellationError {
             throw CancellationError()
         } catch {
+            try await iPhoneStore.resetForIncompleteMigration(
+                Self.legacyMigrationMarker
+            )
+            try await watchStore.resetForIncompleteMigration(
+                Self.legacyMigrationMarker
+            )
             do {
-                report = try await importAndValidate(regenerate: true)
+                report = try await importAndValidate()
             } catch is CancellationError {
                 throw CancellationError()
             } catch {

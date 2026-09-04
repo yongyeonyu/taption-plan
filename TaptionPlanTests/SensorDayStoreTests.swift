@@ -242,6 +242,8 @@ final class SensorDayStoreTests: XCTestCase {
             .appendingPathComponent("plan-day-database-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
         let database = try PlanDayDatabase(directory: directory)
+        let requiredBeforeImport = try await database.requiresLegacyMigration()
+        XCTAssertTrue(requiredBeforeImport)
         let day = Date(timeIntervalSince1970: 2_000_000_000)
         let snapshot = PlanDayDataSnapshot(
             day: day,
@@ -269,8 +271,56 @@ final class SensorDayStoreTests: XCTestCase {
             rawEnvelopes: []
         )
         XCTAssertEqual(report?.dayCount, 0)
+        let requiredAfterImport = try await database.requiresLegacyMigration()
+        XCTAssertFalse(requiredAfterImport)
         let restored = try await database.load(day: day, sourceRevision: 7)
         XCTAssertEqual(restored, snapshot)
+    }
+
+    @MainActor
+    func testLegacyMigrationReplacesAnIncompleteConflictingImport() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-migration-retry-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let envelope = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .iPhoneMotion,
+            kind: "motion-activities",
+            payload: ["state": "walking"]
+        )
+        let store = try TaptionPlanV3Store(
+            url: directory.appendingPathComponent(
+                "taption-plan-iphone-v3.sqlite"
+            ),
+            device: .iPhone
+        )
+        try await store.appendRawEvents([
+            TaptionPlanRawEvent(
+                device: .iPhone,
+                day: TaptionPlanDayKey(date: date),
+                timestamp: date,
+                sequence: 0,
+                id: envelope.id.uuidString,
+                domain: "raw-device-data",
+                provenance: ["incomplete-import"],
+                payload: Data([0])
+            ),
+        ])
+        let database = try PlanDayDatabase(directory: directory)
+
+        let report = try await database.migrateLegacyIfNeeded(
+            source: .empty,
+            sourceRevision: 1,
+            readings: [],
+            watchSummaries: [],
+            rawEnvelopes: [envelope]
+        )
+
+        XCTAssertEqual(report?.dayCount, 1)
+        XCTAssertEqual(report?.iPhoneEventCount, 1)
+        let stillRequiresMigration = try await database.requiresLegacyMigration()
+        XCTAssertFalse(stillRequiresMigration)
     }
 
     @MainActor

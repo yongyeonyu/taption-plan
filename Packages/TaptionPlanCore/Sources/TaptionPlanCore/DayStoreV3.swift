@@ -372,6 +372,25 @@ public actor TaptionPlanV3Store {
         guard try step(statement) == SQLITE_DONE else { throw lastError() }
     }
 
+    public func resetForIncompleteMigration(_ key: String) throws {
+        guard !key.isEmpty else { throw TaptionPlanV3StoreError.invalidIdentifier }
+        guard try migrationCompleted(key) == false else { return }
+        try withTransaction {
+            try execute(
+                "DELETE FROM raw_events WHERE device = ?;",
+                binds: { statement in
+                    try self.bind(self.device.rawValue, to: statement, at: 1)
+                }
+            )
+            try execute(
+                "DELETE FROM day_materialized WHERE device = ?;",
+                binds: { statement in
+                    try self.bind(self.device.rawValue, to: statement, at: 1)
+                }
+            )
+        }
+    }
+
     public func allDays() throws -> [TaptionPlanDayKey] {
         let statement = try prepare(
             """
