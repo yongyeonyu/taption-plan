@@ -464,6 +464,7 @@ struct AppShellView: View {
         if proAccess.grantsAccess {
             advanceInitialLaunchProgress(to: 0.20)
             await model.sceneBecameActive()
+            await model.refreshPermissions()
             model.presentPermissionOnboardingIfNeeded()
             advanceInitialLaunchProgress(to: 0.86)
             scheduleDeferredSensorActivation()

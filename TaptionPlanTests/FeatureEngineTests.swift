@@ -13067,6 +13067,28 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(model.isPermissionOnboardingPresented)
     }
 
+    @MainActor
+    func testPermissionOnboardingStaysHiddenWhenAllStepsAreGranted() async {
+        var snapshot = TaptionDataSnapshot.empty
+        for feature in [
+            PermissionFeature.location,
+            .health,
+            .calendar,
+            .notifications,
+        ] {
+            snapshot.settings.permissions[feature] = .authorized
+        }
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: snapshot),
+            cloudSyncService: nil
+        )
+        await model.bootstrap()
+
+        model.presentPermissionOnboardingIfNeeded()
+
+        XCTAssertFalse(model.isPermissionOnboardingPresented)
+    }
+
     func testPeriodNavigationStillRejectsZeroDirection() {
         let date = makeDate(2026, 7, 31, 12)
         let engine = TimelinePeriodNavigationEngine(calendar: utcCalendar)

@@ -3124,6 +3124,10 @@ final class AppModel {
     /// iCloud로 오가는 스냅샷이 아니라 기기 저장소에 표시 여부를 남긴다.
     func presentPermissionOnboardingIfNeeded() {
         let defaults = UserDefaults.standard
+        if [PermissionFeature.location, .health, .calendar, .notifications]
+            .allSatisfy({ permissionState(for: $0).isGranted }) {
+            return
+        }
         let reason: String
         if defaults.bool(forKey: Self.permissionOnboardingKey) {
             guard !permissionState(for: .health).isGranted,
