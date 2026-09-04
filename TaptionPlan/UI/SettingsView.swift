@@ -137,6 +137,14 @@ struct SettingsView: View {
                         "앱 연동",
                         summary: model.integrationStatusSummary
                     ) {
+                        settingsRow(
+                            icon: "checkmark.shield",
+                            title: "모든 권한 승인",
+                            subtitle: "필요한 시스템 권한을 순서대로 요청",
+                            value: "확인"
+                        ) {
+                            model.presentPermissionOnboarding()
+                        }
                         settingsToggleRow(
                             icon: "calendar",
                             title: "캘린더",

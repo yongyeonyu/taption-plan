@@ -819,6 +819,8 @@ final class AppModel {
         "taption.permission-onboarding.v1"
     private static let healthAuthorizationRequestedKey =
         "taption.health-authorization-requested.v1"
+    private static let healthPermissionReminderKey =
+        "taption.health-permission-reminder.v1"
     private static let watchDataSyncProfileConfiguredKey =
         "taption.watch-data-sync-profile-configured.v1"
     private static let permissionFlagsMigrationKey =
@@ -3121,16 +3123,40 @@ final class AppModel {
     /// 설치 후 첫 실행에서만 권한 안내를 띄운다. 권한은 기기마다 다르므로
     /// iCloud로 오가는 스냅샷이 아니라 기기 저장소에 표시 여부를 남긴다.
     func presentPermissionOnboardingIfNeeded() {
-        guard !UserDefaults.standard.bool(
-            forKey: Self.permissionOnboardingKey
-        ) else { return }
-        permissionOnboardingStartFeature = nil
+        let defaults = UserDefaults.standard
+        let reason: String
+        if defaults.bool(forKey: Self.permissionOnboardingKey) {
+            guard !permissionState(for: .health).isGranted,
+                  !defaults.bool(forKey: Self.healthPermissionReminderKey)
+            else { return }
+            defaults.set(true, forKey: Self.healthPermissionReminderKey)
+            permissionOnboardingStartFeature = .health
+            reason = "missing_health_retry"
+        } else {
+            permissionOnboardingStartFeature = nil
+            reason = "initial"
+        }
         isPermissionOnboardingPresented = true
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "permission_onboarding_presented",
+            fields: [
+                "reason": reason,
+                "health_state": permissionState(for: .health).rawValue,
+            ]
+        )
     }
 
-    func presentPermissionOnboarding(for feature: PermissionFeature) {
+    func presentPermissionOnboarding(for feature: PermissionFeature? = nil) {
         permissionOnboardingStartFeature = feature
         isPermissionOnboardingPresented = true
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "permission_onboarding_presented",
+            fields: [
+                "reason": "settings",
+                "start_feature": feature?.rawValue ?? "all",
+                "health_state": permissionState(for: .health).rawValue,
+            ]
+        )
     }
 
     func finishPermissionOnboarding() async {
@@ -3246,6 +3272,12 @@ final class AppModel {
     func requestHealth() async {
         guard !isRefreshingIntegrations else { return }
         isRefreshingIntegrations = true
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "health_authorization_requested",
+            fields: [
+                "previous_state": permissionState(for: .health).rawValue,
+            ]
+        )
         let watchDataSyncProfile =
             TaptionWatchDataSyncProfile.profileAfterHealthAuthorization(
                 current: snapshot.settings.watchDataSyncProfile,
@@ -3261,6 +3293,10 @@ final class AppModel {
             )
             snapshot.settings.healthEnabled = granted
             snapshot.settings.permissions[.health] = granted ? .authorized : .denied
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "health_authorization_completed",
+                fields: ["granted": String(granted)]
+            )
             if granted {
                 snapshot.settings.watchDataSyncProfile = watchDataSyncProfile
                 await synchronizeHealthHistory(showErrors: true)
@@ -3276,6 +3312,11 @@ final class AppModel {
         } catch {
             snapshot.settings.healthEnabled = false
             snapshot.settings.permissions[.health] = .denied
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "health_authorization_failed",
+                level: .error,
+                fields: TaptionDiagnosticError.fields(for: error)
+            )
             userFacingError = "건강 데이터를 연결하지 못했습니다. \(error.localizedDescription)"
         }
         isRefreshingIntegrations = false

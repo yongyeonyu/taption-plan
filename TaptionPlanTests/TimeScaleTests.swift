@@ -2115,6 +2115,8 @@ final class TimeScaleTests: XCTestCase {
 
         XCTAssertEqual(fields["subway_segment_count"], "1")
         XCTAssertEqual(fields["subway_route_count"], "1")
+        XCTAssertEqual(fields["subway_route_mode_mismatch_count"], "0")
+        XCTAssertEqual(fields["classification_locked_count"], "0")
         XCTAssertEqual(fields["subway_route_lines"], "인천1호선+5호선")
         XCTAssertEqual(
             fields["subway_route_stations"],
@@ -2123,6 +2125,21 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(fields["subway_transfer_stations"], "검암역")
         XCTAssertTrue(fields["travel_mode_counts"]?.contains("subway=1") == true)
         XCTAssertTrue(fields["travel_mode_counts"]?.contains("car=1") == true)
+        XCTAssertEqual(
+            TaptionPlanDiagnosticsTravelSummary.fields(
+                for: [
+                    TravelSegment(
+                        mode: .walking,
+                        span: subway.span,
+                        distanceMeters: subway.distanceMeters,
+                        confidence: .high,
+                        evidence: [],
+                        subwayRoute: route
+                    ),
+                ]
+            )["subway_route_mode_mismatch_count"],
+            "1"
+        )
     }
 
     func testNLEViewportPansAndMagnifiesWithoutChangingDocumentData() {

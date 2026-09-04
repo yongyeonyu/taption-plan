@@ -1146,7 +1146,9 @@ enum ActivityClassificationLockEngine {
                 value.isClassificationLocked = true
                 return value
             }
-            if !candidate.isConfirmed {
+            let isResolvedSubway = candidate.mode == .subway
+                && candidate.subwayRoute.map(SubwayStationCatalog.isValid) == true
+            if !candidate.isConfirmed, !isResolvedSubway {
                 value.mode = previous.mode
                 value.subwayRoute = previous.subwayRoute ?? value.subwayRoute
                 value.isConfirmed = previous.isConfirmed

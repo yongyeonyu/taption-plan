@@ -93,6 +93,9 @@ enum TaptionPlanDiagnosticsTravelSummary {
             .joined(separator: ",")
         let subwaySegments = travel.filter { $0.mode == .subway }
         let routes = subwaySegments.compactMap { $0.subwayRoute }
+        let routeModeMismatches = travel.filter {
+            $0.mode != .subway && $0.subwayRoute != nil
+        }
         let routeLines = uniqueJoined(
             routes.map { $0.lineNames.joined(separator: "+") }
         )
@@ -117,6 +120,12 @@ enum TaptionPlanDiagnosticsTravelSummary {
             ),
             "subway_segment_count": String(subwaySegments.count),
             "subway_route_count": String(routes.count),
+            "subway_route_mode_mismatch_count": String(
+                routeModeMismatches.count
+            ),
+            "classification_locked_count": String(
+                travel.filter { $0.isClassificationLocked }.count
+            ),
             "subway_route_lines": routeLines,
             "subway_route_stations": routeStations,
             "subway_transfer_stations": transfers,

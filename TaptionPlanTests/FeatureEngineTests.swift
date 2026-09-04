@@ -4058,6 +4058,60 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(result[0].isClassificationLocked)
     }
 
+    func testResolvedSubwayReplacesLockedWalkingClassification() {
+        let start = makeDate(2026, 9, 4, 9, 30)
+        let old = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(15 * 60)),
+            distanceMeters: 5_000,
+            confidence: .high,
+            evidence: ["걷기"],
+            isClassificationLocked: true
+        )
+        let route = SubwayRoutePath(
+            stops: [
+                SubwayRouteStop(
+                    lineName: "인천2호선",
+                    order: 11,
+                    stationName: "가정",
+                    latitude: 37.5248,
+                    longitude: 126.6744
+                ),
+                SubwayRouteStop(
+                    lineName: "인천2호선",
+                    order: 10,
+                    stationName: "서구청",
+                    latitude: 37.5441,
+                    longitude: 126.6770
+                ),
+            ],
+            lineNames: ["인천2호선"],
+            transferStationNames: []
+        )
+        let fresh = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(
+                start: start.addingTimeInterval(60),
+                end: start.addingTimeInterval(16 * 60)
+            ),
+            distanceMeters: 5_100,
+            confidence: .high,
+            evidence: ["역 좌표 궤적 일치"],
+            subwayRoute: route
+        )
+
+        let result = ActivityClassificationLockEngine.mergingLockedTravel(
+            existing: [old],
+            fresh: [fresh],
+            inside: TimeSpan(start: start, end: start.addingTimeInterval(hour))
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].mode, TravelMode.subway)
+        XCTAssertEqual(result[0].subwayRoute, route)
+        XCTAssertTrue(result[0].isClassificationLocked)
+    }
+
     func testPhoneSleepWakeChargingShortensConfirmationAndAwakeningCanResettle() {
         let start = makeDate(2026, 8, 10, 22, 0)
         var readings = (0...8).map { index in
@@ -12980,6 +13034,37 @@ final class FeatureEngineTests: XCTestCase {
 
         model.selectedScale = .week
         XCTAssertFalse(model.needsSleepConnectionNotice)
+    }
+
+    @MainActor
+    func testPermissionOnboardingRetriesMissingHealthOnce() {
+        let defaults = UserDefaults.standard
+        let onboardingKey = "taption.permission-onboarding.v1"
+        let reminderKey = "taption.health-permission-reminder.v1"
+        defaults.removeObject(forKey: onboardingKey)
+        defaults.removeObject(forKey: reminderKey)
+        defer {
+            defaults.removeObject(forKey: onboardingKey)
+            defaults.removeObject(forKey: reminderKey)
+        }
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil
+        )
+
+        model.presentPermissionOnboardingIfNeeded()
+        XCTAssertTrue(model.isPermissionOnboardingPresented)
+        XCTAssertNil(model.permissionOnboardingStartFeature)
+
+        model.isPermissionOnboardingPresented = false
+        defaults.set(true, forKey: onboardingKey)
+        model.presentPermissionOnboardingIfNeeded()
+        XCTAssertTrue(model.isPermissionOnboardingPresented)
+        XCTAssertEqual(model.permissionOnboardingStartFeature, .health)
+
+        model.isPermissionOnboardingPresented = false
+        model.presentPermissionOnboardingIfNeeded()
+        XCTAssertFalse(model.isPermissionOnboardingPresented)
     }
 
     func testPeriodNavigationStillRejectsZeroDirection() {
