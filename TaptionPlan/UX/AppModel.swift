@@ -7603,26 +7603,77 @@ final class AppModel {
         readings: [SensorReading],
         inside span: TimeSpan
     ) {
-        guard !readings.isEmpty else { return }
+        let maximumSampleGap = max(
+            20 * 60,
+            settings.sensorCollectionProfile.interval * 1.6 + 60
+        )
+        guard !readings.isEmpty else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sleep_inference_completed",
+                fields: [
+                    "health_enabled": String(settings.healthEnabled),
+                    "home_point": String(
+                        settings.frequentPlaces.contains {
+                            $0.kind == .home
+                                && $0.isAutomaticRecordingEnabled
+                                && $0.point != nil
+                        }
+                    ),
+                    "readings": "0",
+                    "records": "0",
+                    "reason": "no_readings",
+                ]
+            )
+            return
+        }
         let evidenceSpan = TimeSpan(
             start: readings.map(\.timestamp).min() ?? span.start,
             end: readings.map(\.timestamp).max() ?? span.start
         )
+        let homePoint = settings.frequentPlaces.first {
+            $0.kind == .home && $0.isAutomaticRecordingEnabled
+        }?.point
         let records = TaptionActivityEngineAdapter.strictSleepActuals(
             readings: readings,
             actuals: snapshot.actuals,
             inside: span,
-            homePoint: settings.frequentPlaces.first {
-                $0.kind == .home && $0.isAutomaticRecordingEnabled
-            }?.point,
-            maximumSampleGap: max(
-                20 * 60,
-                settings.sensorCollectionProfile.interval * 1.6 + 60
-            ),
+            homePoint: homePoint,
+            maximumSampleGap: maximumSampleGap,
             authoritativeSleepSpans: sleepSessions.compactMap {
                 $0.span.intersection(with: span)
             }
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let largeGapCount = zip(ordered, ordered.dropFirst()).filter {
+            $1.timestamp.timeIntervalSince($0.timestamp) > maximumSampleGap
+        }.count
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "sleep_inference_completed",
+            fields: [
+                "charging": String(readings.filter {
+                    $0.powerState?.isCharging == true
+                }.count),
+                "first": String(evidenceSpan.start.timeIntervalSince1970),
+                "health_enabled": String(settings.healthEnabled),
+                "home_point": String(homePoint != nil),
+                "large_gaps": String(largeGapCount),
+                "last": String(evidenceSpan.end.timeIntervalSince1970),
+                "readings": String(readings.count),
+                "records": String(records.count),
+                "reason": records.isEmpty
+                    ? "conditions_or_continuity_not_met"
+                    : "recorded",
+                "screen_missing": String(readings.filter {
+                    $0.screenIsOn == nil
+                }.count),
+                "screen_off": String(readings.filter {
+                    $0.screenIsOn == false
+                }.count),
+                "screen_on": String(readings.filter {
+                    $0.screenIsOn == true
+                }.count),
+            ]
+        )
         snapshot.actuals.removeAll { actual in
             (actual.modelVersion == ChargingInactivitySleepEngine.modelVersion
                 || actual.modelVersion == PhoneSleepWakeEngine.modelVersion)

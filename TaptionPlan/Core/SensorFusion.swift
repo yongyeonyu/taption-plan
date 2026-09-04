@@ -3672,7 +3672,8 @@ enum AppleDeviceGroundTruthEngine {
         var result = detected
         for segment in preserved where segment.mode == .subway {
             guard let route = segment.subwayRoute,
-                  segment.confidence == .high,
+                  segment.confidence == .high
+                    || segment.isClassificationLocked,
                   SubwayStationCatalog.isValid(route) else {
                 continue
             }

@@ -164,6 +164,10 @@ final class ActivityEngineTests: XCTestCase {
         XCTAssertEqual(result.state, .asleep)
         XCTAssertEqual(result.provenance?.tier, .expected)
         XCTAssertEqual(result.provenance?.status, .automaticallyConfirmed)
+        XCTAssertEqual(
+            result.provenance?.span,
+            ActivityTimeSpan(start: base, end: base.addingTimeInterval(5 * 60))
+        )
     }
 
     func testSleepDoesNotInferWithOnlyTwoSupportingConditions() {

@@ -1144,10 +1144,6 @@ enum ExpectedRouteRequestEngine {
                       segment.span.start < cutoff,
                       let transport = transport(for: segment),
                       !segment.isConfirmed,
-                      !TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
-                          for: segment,
-                          readings: orderedReadings
-                      ),
                       !usesStoredSubwayPath(segment) else { return nil }
 
                 let visibleEnd = min(segment.span.end, cutoff)
@@ -1345,12 +1341,16 @@ enum ExpectedRouteRequestEngine {
                 span: TimeSpan(start: visibleSpan.start, end: first.timestamp)
             ))
         }
-        for (lhs, rhs) in zip(observed, observed.dropFirst())
-        where rhs.timestamp.timeIntervalSince(lhs.timestamp)
-            > MapHomeWBSPlaybackProjection.maximumActualGap {
+        for (lhs, rhs) in zip(observed, observed.dropFirst()) {
             guard let lhsPoint = lhs.point, let rhsPoint = rhs.point else {
                 continue
             }
+            let duration = rhs.timestamp.timeIntervalSince(lhs.timestamp)
+            guard duration > MapHomeWBSPlaybackProjection.maximumActualGap
+                    || (duration > RouteTimelineDataEngine.sparseConnectionMinimumGap
+                        && distanceMeters(lhsPoint, rhsPoint)
+                            > RouteTimelineDataEngine.sparseConnectionMaximumDistanceMeters)
+            else { continue }
             gaps.append(RouteGap(
                 start: Endpoint(
                     point: lhsPoint,

@@ -3995,6 +3995,64 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(records[0].isClassificationLocked)
     }
 
+    func testStrictSleepWithoutHomeUsesObservedDarkChargingRunOnly() {
+        let start = makeDate(2026, 8, 11, 22, 0)
+        var readings = (0...7).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 5 * 60),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .charging,
+                screenBrightness: 0.1,
+                screenIsOn: false
+            )
+        }
+        readings.append(
+            SensorReading(
+                timestamp: start.addingTimeInterval(10 * hour),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .charging,
+                screenBrightness: 0.8,
+                screenIsOn: true
+            )
+        )
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(12 * hour)
+        )
+        let records = TaptionActivityEngineAdapter.strictSleepActuals(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            homePoint: nil,
+            maximumSampleGap: 20 * 60,
+            asOf: span.end
+        )
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].startedAt, start.addingTimeInterval(30 * 60))
+        XCTAssertEqual(records[0].endedAt, start.addingTimeInterval(35 * 60))
+
+        XCTAssertTrue(
+            TaptionActivityEngineAdapter.strictSleepActuals(
+                readings: readings.map {
+                    var value = $0
+                    value.screenBrightness = 0.8
+                    value.screenIsOn = true
+                    return value
+                },
+                actuals: [],
+                inside: span,
+                homePoint: nil,
+                maximumSampleGap: 20 * 60,
+                asOf: span.end
+            ).isEmpty
+        )
+    }
+
     func testAutomaticMajorCategoryRemainsLockedAcrossRefresh() {
         let start = makeDate(2026, 8, 12, 9, 0)
         let old = ActualRecord(
@@ -8604,6 +8662,44 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(result.map(\.mode), [.subway])
         XCTAssertEqual(result.first?.subwayRoute?.transferStationNames, ["검암"])
+    }
+
+    func testMergingTravelRetainsLockedMediumSubwayWhenCluesDisappear() throws {
+        let base = makeDate(2026, 9, 4, 9, 35)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(45 * 60)
+        )
+        let route = try XCTUnwrap(
+            SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"])
+        )
+        let car = TravelSegment(
+            mode: .car,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["후속 센서 자동차"]
+        )
+        let subway = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .medium,
+            evidence: ["원본 GPS 철도 궤적 복원"],
+            subwayRoute: route,
+            isClassificationLocked: true
+        )
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [car],
+            motionActivities: [],
+            pedometer: nil,
+            readings: [],
+            preservedSubwaySegments: [subway]
+        )
+
+        XCTAssertEqual(result.map(\.mode), [.subway])
+        XCTAssertEqual(result.first?.subwayRoute, route)
     }
 
     func testMergingTravelKeepsValidatedSubwayOutsideNewGPSCandidates() throws {

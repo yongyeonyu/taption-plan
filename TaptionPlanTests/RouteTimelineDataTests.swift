@@ -1432,6 +1432,36 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(request.end, endOfGap.point)
     }
 
+    func testExpectedRouteCoversSparseLongDistanceGPSGap() throws {
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(30)),
+            distanceMeters: 2_500,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+        let startOfGap = reading(10, latitude: 37.00)
+        let endOfGap = reading(20, latitude: 37.02)
+        let request = try XCTUnwrap(
+            ExpectedRouteRequestEngine.requests(
+                travel: [segment],
+                places: [],
+                readings: [
+                    startOfGap,
+                    endOfGap,
+                    reading(30, latitude: 37.021),
+                ],
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440)
+            ).first
+        )
+
+        XCTAssertEqual(request.departureDate, date(10))
+        XCTAssertEqual(request.arrivalDate, date(20))
+        XCTAssertEqual(request.start, startOfGap.point)
+        XCTAssertEqual(request.end, endOfGap.point)
+    }
+
     func testExpectedAirAndShipRoutesUseDirectExpectedPath() throws {
         let airplane = TravelSegment(
             mode: .airplane,

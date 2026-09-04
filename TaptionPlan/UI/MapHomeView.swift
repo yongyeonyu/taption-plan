@@ -2642,6 +2642,7 @@ struct MapHomeView: View {
             action: displayedStickmanAction,
             accessibilityLabel: "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)",
             phase: phase,
+            followsUserLocation: selectedTimelineMinute == nil,
             stickmanAnimationPhase: selectedTimelineMinute == nil
                 ? nil
                 : animationPhase
@@ -12700,6 +12701,7 @@ private struct MapHomeApplePlayback {
     let action: MapHomeStickmanAction
     let accessibilityLabel: String
     let phase: MapHomeAppleRoutePhase
+    let followsUserLocation: Bool
     let stickmanAnimationPhase: Int?
 }
 
@@ -13284,6 +13286,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
+            updateWalker(in: mapView)
             normalizeAnnotationLayerOrder(in: mapView)
         }
 
@@ -13465,7 +13468,26 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateWalker(in mapView: MKMapView) {
-            let playbackSignature = parent.playback.map { playback in
+            let playback = parent.playback.map { playback in
+                guard playback.followsUserLocation,
+                      let location = mapView.userLocation.location,
+                      location.horizontalAccuracy >= 0,
+                      abs(location.timestamp.timeIntervalSinceNow) <= 5 * 60,
+                      CLLocationCoordinate2DIsValid(location.coordinate) else {
+                    return playback
+                }
+                return MapHomeApplePlayback(
+                    coordinate: location.coordinate,
+                    cameraCoordinate: location.coordinate,
+                    headingDegrees: playback.headingDegrees,
+                    action: playback.action,
+                    accessibilityLabel: playback.accessibilityLabel,
+                    phase: playback.phase,
+                    followsUserLocation: true,
+                    stickmanAnimationPhase: playback.stickmanAnimationPhase
+                )
+            }
+            let playbackSignature = playback.map { playback in
                 [
                     String(playback.coordinate.latitude),
                     String(playback.coordinate.longitude),
@@ -13475,6 +13497,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     String(describing: playback.action),
                     playback.accessibilityLabel,
                     String(describing: playback.phase),
+                    String(playback.followsUserLocation),
                     String(describing: playback.stickmanAnimationPhase),
                 ].joined(separator: "|")
             }
@@ -13484,7 +13507,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             }
             lastPlaybackSignature = playbackSignature
             lastCentersPlayback = parent.centersPlayback
-            guard let playback = parent.playback else {
+            guard let playback else {
                 if let walkerAnnotation {
                     mapView.removeAnnotation(walkerAnnotation)
                 }

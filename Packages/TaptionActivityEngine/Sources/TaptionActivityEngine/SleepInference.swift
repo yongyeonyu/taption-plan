@@ -90,7 +90,7 @@ public struct SleepInferenceEngine: Sendable {
         guard let first = continuous.last else { return .init(state: .sleepCandidate, confidence: 0.7) }
         let state: SleepInferenceState = last.timestamp.timeIntervalSince(first.timestamp) >= configuration.persistenceDuration ? .asleep : .sleepCandidate
         let confidence = state == .asleep ? 0.85 : 0.7
-        return makeResult(state: state, samples: Array(continuous), confidence: confidence, evidence: ["화면 꺼짐", "30분 무사용", "휴대폰 이동 없음", "보조 조건 모두 충족"])
+        return makeResult(state: state, samples: Array(continuous.reversed()), confidence: confidence, evidence: ["화면 꺼짐", "30분 무사용", "휴대폰 이동 없음", "보조 조건 모두 충족"])
     }
 
     private func makeResult(state: SleepInferenceState, samples: [SleepRuleSample], confidence: Double, evidence: [String]) -> SleepInferenceResult {

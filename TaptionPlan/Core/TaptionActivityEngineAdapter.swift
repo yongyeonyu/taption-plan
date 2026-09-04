@@ -280,8 +280,9 @@ enum TaptionActivityEngineAdapter {
         asOf: Date = .now,
         createdAt: Date = .now
     ) -> [ActualRecord] {
-        guard let homePoint else { return [] }
-        let configuration = SleepInferenceConfiguration()
+        let configuration = SleepInferenceConfiguration(
+            minimumSupportingConditions: homePoint == nil ? 2 : 3
+        )
         let ordered = readings
             .filter {
                 $0.sourceDevice != .appleWatch
@@ -308,7 +309,9 @@ enum TaptionActivityEngineAdapter {
             } else {
                 inactivityStart = nil
             }
-            let distance = reading.point.map { distanceMeters($0, homePoint) }
+            let distance = homePoint.flatMap { home in
+                reading.point.map { distanceMeters($0, home) }
+            }
             let ruleSample = SleepRuleSample(
                 timestamp: reading.timestamp,
                 screenIsOn: reading.screenIsOn,
