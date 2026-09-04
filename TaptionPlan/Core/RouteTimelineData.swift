@@ -1104,6 +1104,12 @@ enum ExpectedRouteRequestEngine {
         let usesRegisteredFrequentPlace: Bool
     }
 
+    private struct RouteGap {
+        let start: Endpoint
+        let end: Endpoint
+        let span: TimeSpan
+    }
+
     static func requests(
         travel: [TravelSegment],
         places: [PlaceStay],
@@ -1138,6 +1144,10 @@ enum ExpectedRouteRequestEngine {
                       segment.span.start < cutoff,
                       let transport = transport(for: segment),
                       !segment.isConfirmed,
+                      !TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
+                          for: segment,
+                          readings: orderedReadings
+                      ),
                       !usesStoredSubwayPath(segment) else { return nil }
 
                 let visibleEnd = min(segment.span.end, cutoff)
@@ -1150,58 +1160,21 @@ enum ExpectedRouteRequestEngine {
                     $0.timestamp >= visibleSpan.start
                         && $0.timestamp <= visibleSpan.end
                 }
-
-                let start = readingsInSegment
-                    .first(where: reliableLocationReading)?
-                    .point
-                    .map {
-                        Endpoint(
-                            point: $0,
-                            usesRegisteredFrequentPlace: false
-                        )
-                    }
-                    ?? placeEndpoint(
-                        id: segment.fromPlaceID,
-                        segment: segment,
-                        placesByID: placesByID,
-                        frequentPointsByKey: frequentPointsByKey
-                    )
-                let end: Endpoint?
-                if visibleEnd < segment.span.end {
-                    end = readingsInSegment
-                        .last(where: reliableLocationReading)?
-                        .point
-                        .map {
-                            Endpoint(
-                                point: $0,
-                                usesRegisteredFrequentPlace: false
-                            )
-                        }
-                } else {
-                    end = readingsInSegment
-                        .last(where: reliableLocationReading)?
-                        .point
-                        .map {
-                            Endpoint(
-                                point: $0,
-                                usesRegisteredFrequentPlace: false
-                            )
-                        }
-                        ?? placeEndpoint(
-                            id: segment.toPlaceID,
-                            segment: segment,
-                            placesByID: placesByID,
-                            frequentPointsByKey: frequentPointsByKey
-                        )
-                }
-
-                guard let start, let end,
-                      distanceMeters(start.point, end.point)
+                guard let gap = largestMissingRouteGap(
+                    for: segment,
+                    in: visibleSpan,
+                    readings: readingsInSegment,
+                    placesByID: placesByID,
+                    frequentPointsByKey: frequentPointsByKey
+                ) else { return nil }
+                let start = gap.start
+                let end = gap.end
+                guard distanceMeters(start.point, end.point)
                         >= minimumRouteDistanceMeters
                 else { return nil }
                 let inference = RouteGapInferenceEngine().infer(.init(
-                    start: visibleSpan.start,
-                    end: visibleSpan.end,
+                    start: gap.span.start,
+                    end: gap.span.end,
                     startCoordinate: RouteCoordinate(
                         latitude: start.point.latitude,
                         longitude: start.point.longitude
@@ -1211,7 +1184,11 @@ enum ExpectedRouteRequestEngine {
                         longitude: end.point.longitude
                     ),
                     samples: TaptionRouteEngineAdapter.samples(
-                        from: readingsInSegment.filter(reliableLocationReading)
+                        from: readingsInSegment.filter {
+                            reliableLocationReading($0)
+                                && $0.timestamp >= gap.span.start
+                                && $0.timestamp <= gap.span.end
+                        }
                     ),
                     precedingMode: adjacentMode(
                         before: segment,
@@ -1238,8 +1215,8 @@ enum ExpectedRouteRequestEngine {
                         transport: transport,
                         start: start.point,
                         end: end.point,
-                        departureDate: visibleSpan.start,
-                        arrivalDate: visibleSpan.end,
+                        departureDate: gap.span.start,
+                        arrivalDate: gap.span.end,
                         provenance: inference.provenance,
                         confidence: inference.confidence
                     )
@@ -1319,9 +1296,89 @@ enum ExpectedRouteRequestEngine {
     ) -> Bool {
         guard let point = reading.point else { return false }
         return isValid(point)
+            && reading.gpsAvailable
             && reading.locationFixQuality != .approximate
             && (point.horizontalAccuracy < 0
                 || point.horizontalAccuracy <= 150)
+    }
+
+    private static func largestMissingRouteGap(
+        for segment: TravelSegment,
+        in visibleSpan: TimeSpan,
+        readings: [SensorReading],
+        placesByID: [UUID: PlaceStay],
+        frequentPointsByKey: [String: GeoPoint]
+    ) -> RouteGap? {
+        let observed = readings.filter(reliableLocationReading)
+        let start = visibleSpan.start == segment.span.start
+            ? placeEndpoint(
+                id: segment.fromPlaceID,
+                segment: segment,
+                placesByID: placesByID,
+                frequentPointsByKey: frequentPointsByKey
+            )
+            : nil
+        let end = visibleSpan.end == segment.span.end
+            ? placeEndpoint(
+                id: segment.toPlaceID,
+                segment: segment,
+                placesByID: placesByID,
+                frequentPointsByKey: frequentPointsByKey
+            )
+            : nil
+        guard let first = observed.first, let last = observed.last else {
+            guard let start, let end else { return nil }
+            return RouteGap(start: start, end: end, span: visibleSpan)
+        }
+
+        var gaps: [RouteGap] = []
+        if first.timestamp.timeIntervalSince(visibleSpan.start)
+            > MapHomeWBSPlaybackProjection.maximumActualGap,
+           let start,
+           let point = first.point {
+            gaps.append(RouteGap(
+                start: start,
+                end: Endpoint(
+                    point: point,
+                    usesRegisteredFrequentPlace: false
+                ),
+                span: TimeSpan(start: visibleSpan.start, end: first.timestamp)
+            ))
+        }
+        for (lhs, rhs) in zip(observed, observed.dropFirst())
+        where rhs.timestamp.timeIntervalSince(lhs.timestamp)
+            > MapHomeWBSPlaybackProjection.maximumActualGap {
+            guard let lhsPoint = lhs.point, let rhsPoint = rhs.point else {
+                continue
+            }
+            gaps.append(RouteGap(
+                start: Endpoint(
+                    point: lhsPoint,
+                    usesRegisteredFrequentPlace: false
+                ),
+                end: Endpoint(
+                    point: rhsPoint,
+                    usesRegisteredFrequentPlace: false
+                ),
+                span: TimeSpan(start: lhs.timestamp, end: rhs.timestamp)
+            ))
+        }
+        if visibleSpan.end.timeIntervalSince(last.timestamp)
+            > MapHomeWBSPlaybackProjection.maximumActualGap,
+           let end,
+           let point = last.point {
+            gaps.append(RouteGap(
+                start: Endpoint(
+                    point: point,
+                    usesRegisteredFrequentPlace: false
+                ),
+                end: end,
+                span: TimeSpan(start: last.timestamp, end: visibleSpan.end)
+            ))
+        }
+        return gaps.max {
+            $0.span.duration < $1.span.duration
+        }
     }
 
     private static func placeEndpoint(

@@ -1377,6 +1377,61 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(request.confidence, 1)
     }
 
+    func testExpectedRouteSkipsCompletelyRecordedGPS() {
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(40)),
+            distanceMeters: 3_000,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+        let readings = [10, 20, 30, 40].map {
+            reading($0, latitude: 37 + Double($0) / 1_000)
+        }
+
+        XCTAssertTrue(
+            ExpectedRouteRequestEngine.requests(
+                travel: [segment],
+                places: [],
+                readings: readings,
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440)
+            ).isEmpty
+        )
+    }
+
+    func testExpectedRouteCoversOnlyTheMissingGPSGap() throws {
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 9_000,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+        let startOfGap = reading(40, latitude: 37.04)
+        let endOfGap = reading(100, latitude: 37.10)
+        let request = try XCTUnwrap(
+            ExpectedRouteRequestEngine.requests(
+                travel: [segment],
+                places: [],
+                readings: [
+                    reading(10, latitude: 37.01),
+                    reading(20, latitude: 37.02),
+                    reading(30, latitude: 37.03),
+                    startOfGap,
+                    endOfGap,
+                ],
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440)
+            ).first
+        )
+
+        XCTAssertEqual(request.departureDate, date(40))
+        XCTAssertEqual(request.arrivalDate, date(100))
+        XCTAssertEqual(request.start, startOfGap.point)
+        XCTAssertEqual(request.end, endOfGap.point)
+    }
+
     func testExpectedAirAndShipRoutesUseDirectExpectedPath() throws {
         let airplane = TravelSegment(
             mode: .airplane,
