@@ -14,21 +14,20 @@ xcrun simctl list devices
 
 ## 현재 릴리스 정본
 
-- 요청 ID: `TFB904A133`
-- 기능 소스 SHA: `8d041e9284d8393cbbf1157cf2b795c1cb6b51cf`
-- 배포 소스 SHA(바이너리): `3930b808c86f20b003e474c56846252156303b41`
-- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (133)`
-- Release archive: `/private/tmp/TFB904A133-release/TaptionPlan-1.0-133.xcarchive`
-- Export IPA: `/private/tmp/TFB904A133-release/Export/TaptionPlan.ipa`
-- IPA SHA-256: `422bcb43a8822b7eac2ff7935471acecddd5a46c2ade6a506ccf6cebdda92f4a`
-- Delivery/build UUID: `bc2b0f81-83f2-4001-80f2-19707a1b1fcc`
+- 요청 ID: `REL904A001`
+- 배포 소스 SHA(바이너리): `f99d72b93919e8646a6fc7d9908330e524eb6034`
+- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (134)`
+- Release archive: `/private/tmp/taption-rel904-build134/TaptionPlan.xcarchive`
+- Export IPA: `/private/tmp/taption-rel904-build134/Export/TaptionPlan.ipa`
+- IPA SHA-256: `225ba74b3de11b05e1c4a530d20a21b495b34ca0b22f8af503184b9dabf45851`
+- Delivery/build UUID: `a3581625-8668-4d3a-85c1-240078bc054e`
 - App Store Connect App ID: `6797370230`
 - Internal 그룹: `TP Taption Plan 내부 테스트`, ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`
-- build 133은 App Store Connect API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 빌드 API에 포함, 전체 그룹 빌드 94개, 내부 테스터 1명(`INSTALLED`)으로 readback했다.
+- build 134는 App Store Connect API에서 `VALID`·`expired=false`, 내부 그룹 빌드 API에 포함, 내부 테스터 1명으로 readback했다.
 
 ## 현재 검증·정리 상태
 
-- `test.md`에 build 133 집중 테스트·archive/export·서명·업로드·API/Chrome readback 증적이 있다.
+- `test.md`에 build 134 집중 테스트·archive/export·서명·업로드·API readback 증적이 있다.
 - Chrome의 Internal 그룹 빌드 화면에서 build `1.0 (133) · 테스트 중 · iOS`, 테스터 화면에서 내부 테스터 1명과 그룹 build 94개를 확인했다.
 - 테스터 화면의 마지막 설치 표시는 TestFlight build 132다. iPad Pro의 마지막 별도 readback은 앱 build 125이고 TestFlight `4.3.0 (659.1)`이 설치돼 있다. build 133 다운로드·설치·launch·실제 발열은 남은 물리 게이트다.
 - 오늘 수면 누락 원인은 HealthKit 연동 비활성화다. build 129는 오늘 수면이 없으면 `수면 연결` 버튼을 표시하며 실제 권한 승인·오늘 수면 재조회는 사용자 탭이 필요하다.
@@ -37,7 +36,7 @@ xcrun simctl list devices
 
 ## 반드시 남은 게이트
 
-1. iPhone·iPad의 TestFlight에서 build 133을 다운로드·설치한 뒤 version/build readback과 launch, 실행 속도·발열, Watch 설정 위치·비이동 졸라맨 정지·날짜 변경 시 사이드바 대분류 유지 화면을 검증한다. 지하철 이동과 수면 권한·조회 뒤 iCloud 로그를 올려 이동 판정·예상경로·HealthKit 이벤트를 확인한다.
+1. iPhone·iPad의 TestFlight에서 build 134를 다운로드·설치한 뒤 version/build readback과 launch, 실행 속도·발열, Watch 설정 위치·비이동 졸라맨 정지·날짜 변경 시 사이드바 대분류 유지 화면을 검증한다. 지하철 이동과 수면 권한·조회 뒤 iCloud 로그를 올려 이동 판정·예상경로·HealthKit 이벤트를 확인한다.
 2. Apple Watch 실제 envelope 수신과 `수신 대기 → 최근 수신` 전환을 확인한다.
 3. Paid Apps Agreement 활성화, `com.taption.plan.pro` 생성, sandbox 구매·복원을 확인한다.
 

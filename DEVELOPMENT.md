@@ -581,3 +581,11 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - Delivery/build UUID `bc2b0f81-83f2-4001-80f2-19707a1b1fcc`는 `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE`, `expired=false`다. `TP Taption Plan 내부 테스트` 연결 후 API에서 그룹 build 94개 중 build 133과 내부 테스터 1명(`INSTALLED`)을 readback했다.
 - Chrome 그룹 빌드 화면에서 `1.0 (133) · 테스트 중 · iOS`, 테스터 화면에서 내부 테스터 1명과 그룹 전체 94개 빌드를 확인했다. 테스터 설치 표시는 기존 `1.0 (132)`이므로 build 133 TestFlight 설치·launch·실제 발열은 별도 물리 게이트다.
 - 디스크 확보를 위해 재생성 가능한 성능 검증·build 132·build 133 DerivedData 약 3.2G를 영구 삭제했다. build 132/133 archive·IPA와 build 133 XCTest 결과는 보존했다.
+
+## 2026-09-04 REL904A001 센서 위치·수면·경로·지하철 수정 및 TestFlight build 134
+
+- iCloud 로그에서 현재위치 점과 졸라맨의 좌표 소스 분리, iPhone 수면 표본 역순으로 인한 0초 provenance, 8분·6.7km 경로 공백 기준 불일치, 후속 재분석의 중간 신뢰도 지하철 덮어쓰기를 확인하고 수정했다.
+- `TaptionActivityEngine` package 12/12, iOS 집중 XCTest 3/3, Debug build가 통과했다. 배포 소스 커밋 `f99d72b93919e8646a6fc7d9908330e524eb6034`를 `main`에 커밋·푸시했다.
+- Release archive/export 성공: `/private/tmp/taption-rel904-build134/TaptionPlan.xcarchive`, `/private/tmp/taption-rel904-build134/Export/TaptionPlan.ipa`; 네 번들 `1.0 (134)`, IPA SHA-256 `225ba74b3de11b05e1c4a530d20a21b495b34ca0b22f8af503184b9dabf45851`이다.
+- `altool --validate-app` 및 업로드 성공. Delivery UUID `a3581625-8668-4d3a-85c1-240078bc054e`는 App Store Connect API에서 `VALID`, `expired=false`로 readback했다.
+- `TP Taption Plan 내부 테스트`에 build 134 연결 후 그룹 빌드 API에서 build 134와 내부 테스터 1명을 readback했다. TestFlight 설치·실행·발열·실제 수면·지하철 화면은 별도 물리 게이트다.

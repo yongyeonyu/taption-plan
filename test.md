@@ -194,3 +194,10 @@
 - Release archive/export와 `altool --validate-app` 통과. 네 번들 모두 `1.0 (133)`, Apple Distribution 서명, TestFlight entitlement 정상이다. IPA SHA-256은 `422bcb43a8822b7eac2ff7935471acecddd5a46c2ade6a506ccf6cebdda92f4a`다.
 - Delivery/build UUID `bc2b0f81-83f2-4001-80f2-19707a1b1fcc`는 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. Internal 그룹 연결 후 API에서 그룹 build 94개 중 build 133과 내부 테스터 1명(`INSTALLED`)을 readback했다.
 - Chrome 그룹 빌드 화면에서 build `1.0 (133) · 테스트 중 · iOS`, 테스터 화면에서 내부 테스터 1명과 그룹 `94개의 빌드`를 확인했다. 현재 설치 표시는 `1.0 (132)`이며 build 133 설치·launch·실제 화면·발열은 미확인이다.
+
+## 2026-09-04 REL904A001 TestFlight build 134
+
+- 위치·수면·경로·지하철 수정 후 `TaptionActivityEngine` 12/12, iOS 집중 XCTest 3/3, Debug build를 통과했다.
+- `main` 커밋·푸시: `f99d72b93919e8646a6fc7d9908330e524eb6034`; Release archive/export 성공, 네 번들 `1.0 (134)`, IPA SHA-256 `225ba74b3de11b05e1c4a530d20a21b495b34ca0b22f8af503184b9dabf45851`.
+- `altool --validate-app` 및 TestFlight 업로드 성공. Delivery UUID `a3581625-8668-4d3a-85c1-240078bc054e`; App Store Connect API에서 build 134 `VALID`·`expired=false` 확인.
+- `TP Taption Plan 내부 테스트` 연결 성공. 그룹 빌드 API에서 build 134와 내부 테스터 1명을 readback했으며, 테스터 설치·실행은 아직 확인하지 않았다.
