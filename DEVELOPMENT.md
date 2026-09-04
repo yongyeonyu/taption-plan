@@ -572,3 +572,12 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - 집중 XCTest 4/4와 Release archive/export, `altool --validate-app`을 통과했다. 배포 소스 `f3425f951d9b05e67be39fcab62847244e77d31f`, 네 번들 `1.0 (132)`, archive `/private/tmp/taption-rel904-build132/TaptionPlan.xcarchive`, IPA `/private/tmp/taption-rel904-build132/Export/TaptionPlan.ipa`, SHA-256 `afc0a852750c0b67e017453a5b9c3aea05cf6b41bb89be211185496ac4de0b5b`다.
 - Delivery/build UUID `5d01450c-2c10-4b8f-bcff-8852258fe2f1`은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. `TP Taption Plan 내부 테스트` 연결 후 그룹 build 93개 중 build 132와 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
 - build 132 설치·launch 및 지하철·예상경로·수면 iCloud 로그 확인은 대표님 테스트 뒤 진행할 물리 게이트다.
+
+## 2026-09-04 TFB904A133 실행 성능·TestFlight build 133
+
+- 실행마다 30일 파생 데이터를 다시 만들고 불완전 day DB 마이그레이션과 원시 센서 백업을 반복하던 경로를 제거·복구형으로 바꾼 기능 커밋은 `8d041e9284d8393cbbf1157cf2b795c1cb6b51cf`, build 133 배포 소스는 `3930b808c86f20b003e474c56846252156303b41`이다.
+- 관련 XCTest 4/4와 generic iOS Simulator Debug build가 통과했다. Release archive/export 및 `altool --validate-app`도 통과했고, 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (133)`, Apple Distribution 서명, `beta-reports-active=true`, `get-task-allow=false`다.
+- archive `/private/tmp/TFB904A133-release/TaptionPlan-1.0-133.xcarchive`, IPA `/private/tmp/TFB904A133-release/Export/TaptionPlan.ipa`, SHA-256 `422bcb43a8822b7eac2ff7935471acecddd5a46c2ade6a506ccf6cebdda92f4a`다.
+- Delivery/build UUID `bc2b0f81-83f2-4001-80f2-19707a1b1fcc`는 `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE`, `expired=false`다. `TP Taption Plan 내부 테스트` 연결 후 API에서 그룹 build 94개 중 build 133과 내부 테스터 1명(`INSTALLED`)을 readback했다.
+- Chrome 그룹 빌드 화면에서 `1.0 (133) · 테스트 중 · iOS`, 테스터 화면에서 내부 테스터 1명과 그룹 전체 94개 빌드를 확인했다. 테스터 설치 표시는 기존 `1.0 (132)`이므로 build 133 TestFlight 설치·launch·실제 발열은 별도 물리 게이트다.
+- 디스크 확보를 위해 재생성 가능한 성능 검증·build 132·build 133 DerivedData 약 3.2G를 영구 삭제했다. build 132/133 archive·IPA와 build 133 XCTest 결과는 보존했다.

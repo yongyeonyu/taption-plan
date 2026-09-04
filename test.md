@@ -187,3 +187,10 @@
 - 네 번들 `1.0 (132)`, IPA SHA-256 `afc0a852750c0b67e017453a5b9c3aea05cf6b41bb89be211185496ac4de0b5b`, Delivery/build UUID `5d01450c-2c10-4b8f-bcff-8852258fe2f1`.
 - App Store Connect API에서 build 132 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 연결, 그룹 build 93개 중 build 132, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
 - build 132 설치·launch 및 지하철·예상경로·수면 로그 확인은 대표님 테스트 후 진행할 별도 실기기 게이트다.
+
+## 2026-09-04 TFB904A133 TestFlight build 133
+
+- 실행 성능 수정 커밋 `8d041e9284d8393cbbf1157cf2b795c1cb6b51cf`, 배포 소스 `3930b808c86f20b003e474c56846252156303b41` 기준 관련 XCTest 4/4와 generic iOS Simulator Debug build가 통과했다: `/private/tmp/TFB904A133-focused.xcresult`.
+- Release archive/export와 `altool --validate-app` 통과. 네 번들 모두 `1.0 (133)`, Apple Distribution 서명, TestFlight entitlement 정상이다. IPA SHA-256은 `422bcb43a8822b7eac2ff7935471acecddd5a46c2ade6a506ccf6cebdda92f4a`다.
+- Delivery/build UUID `bc2b0f81-83f2-4001-80f2-19707a1b1fcc`는 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. Internal 그룹 연결 후 API에서 그룹 build 94개 중 build 133과 내부 테스터 1명(`INSTALLED`)을 readback했다.
+- Chrome 그룹 빌드 화면에서 build `1.0 (133) · 테스트 중 · iOS`, 테스터 화면에서 내부 테스터 1명과 그룹 `94개의 빌드`를 확인했다. 현재 설치 표시는 `1.0 (132)`이며 build 133 설치·launch·실제 화면·발열은 미확인이다.
