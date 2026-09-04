@@ -180,3 +180,10 @@
 - IPA SHA-256 `4435667dba069fda3706217b5c6af8947cef75eb72689525bc2fd75dd603f6f8`, Delivery/build UUID `805169b0-e3d9-41b2-883d-475504a3884d`.
 - App Store Connect API에서 build 131 `VALID`·`expired=false`, 내부 그룹 연결, 그룹 build 92개 중 build 131, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
 - build 131 실기기 설치·launch와 실제 Watch 설정·비이동 정지 화면 확인은 별도 게이트다.
+
+## 2026-09-04 LOG904TF01 TestFlight build 132
+
+- 지하철 잠금 교체·권한 재안내·진단 요약 집중 XCTest 4/4 통과, Release archive/export와 `altool --validate-app` 통과.
+- 네 번들 `1.0 (132)`, IPA SHA-256 `afc0a852750c0b67e017453a5b9c3aea05cf6b41bb89be211185496ac4de0b5b`, Delivery/build UUID `5d01450c-2c10-4b8f-bcff-8852258fe2f1`.
+- App Store Connect API에서 build 132 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 연결, 그룹 build 93개 중 build 132, 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
+- build 132 설치·launch 및 지하철·예상경로·수면 로그 확인은 대표님 테스트 후 진행할 별도 실기기 게이트다.

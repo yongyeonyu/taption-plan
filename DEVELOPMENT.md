@@ -565,3 +565,10 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - Release archive/export 성공: `/private/tmp/taption-rel903-build131/TaptionPlan-1.0-131.xcarchive`, `/private/tmp/taption-rel903-build131/Export/TaptionPlan.ipa`; 네 번들 모두 `1.0 (131)`, deep/strict codesign과 `altool --validate-app` 통과, IPA SHA-256 `4435667dba069fda3706217b5c6af8947cef75eb72689525bc2fd75dd603f6f8`.
 - Delivery/build UUID `805169b0-e3d9-41b2-883d-475504a3884d`는 API에서 `VALID`·`expired=false`다. `TP Taption Plan 내부 테스트` 연결 후 그룹 build 92개 중 build 131과 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
 - build 131 실기기 설치·launch와 실제 Watch 설정·비이동 정지 화면 확인은 별도 물리 게이트다.
+
+## 2026-09-04 LOG904TF01 진단 로그·TestFlight build 132
+
+- 잠긴 걷기 판정보다 최신 유효 지하철 노선을 우선하도록 수정하고, 이동 판정에는 지하철 노선/모드 불일치·잠금 수, 권한 흐름에는 안내 사유·HealthKit 요청/완료/실패를 진단 로그로 남긴다. 기존 예상경로 생성 이벤트와 `health_refresh_completed`의 수면 세션 수도 함께 확인할 수 있다.
+- 집중 XCTest 4/4와 Release archive/export, `altool --validate-app`을 통과했다. 배포 소스 `f3425f951d9b05e67be39fcab62847244e77d31f`, 네 번들 `1.0 (132)`, archive `/private/tmp/taption-rel904-build132/TaptionPlan.xcarchive`, IPA `/private/tmp/taption-rel904-build132/Export/TaptionPlan.ipa`, SHA-256 `afc0a852750c0b67e017453a5b9c3aea05cf6b41bb89be211185496ac4de0b5b`다.
+- Delivery/build UUID `5d01450c-2c10-4b8f-bcff-8852258fe2f1`은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. `TP Taption Plan 내부 테스트` 연결 후 그룹 build 93개 중 build 132와 내부 테스터 1명(`axony99@gmail.com`, `INSTALLED`)을 readback했다.
+- build 132 설치·launch 및 지하철·예상경로·수면 iCloud 로그 확인은 대표님 테스트 뒤 진행할 물리 게이트다.
