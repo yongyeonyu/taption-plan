@@ -651,6 +651,14 @@ final class SensorDayStoreTests: XCTestCase {
 
         let values = try await archive.allReadings()
         XCTAssertEqual(values.map(\.id), [reading.id])
+        let ranged = try await archive.routeReadingsLoadResult(
+            in: TimeSpan(
+                start: date.addingTimeInterval(-1),
+                end: date.addingTimeInterval(2)
+            )
+        )
+        XCTAssertEqual(ranged.readings.map(\.id), [reading.id])
+        XCTAssertFalse(ranged.isComplete)
         let storedEvents = try await dayStore.allEvents(domain: "sensor-reading")
         XCTAssertEqual(storedEvents.count, 2)
     }

@@ -191,6 +191,40 @@ struct RouteEngineTests {
         #expect(!rejected.allowsConnection)
     }
 
+    @Test func gapInferenceRejectsImplausiblySlowLongGap() {
+        let start = RouteCoordinate(latitude: 37, longitude: 127)
+        let end = RouteCoordinate(latitude: 37.00018, longitude: 127)
+        let decision = RouteGapInferenceEngine().infer(.init(
+            start: base,
+            end: base.addingTimeInterval(4 * 60 * 60),
+            startCoordinate: start,
+            endCoordinate: end,
+            explicitMode: .walking
+        ))
+
+        #expect(!decision.allowsConnection)
+    }
+
+    @Test func gapInferenceKeepsEvidenceBackedTransitWithNearbyEndpoints() {
+        let start = RouteCoordinate(latitude: 37, longitude: 127)
+        let end = RouteCoordinate(latitude: 37.001, longitude: 127.001)
+        let decision = RouteGapInferenceEngine().infer(.init(
+            start: base,
+            end: base.addingTimeInterval(60 * 60),
+            startCoordinate: start,
+            endCoordinate: end,
+            samples: [
+                RouteSample(
+                    timestamp: base.addingTimeInterval(30 * 60),
+                    coordinate: start,
+                    mode: .subway
+                ),
+            ]
+        ))
+
+        #expect(decision.mode == .subway)
+    }
+
     @Test func extendedTransportModesHaveDistinctSpeedsAndExpectedRouteProvenance() {
         #expect(RouteTravelMode.bus.maximumSpeedMetersPerSecond < RouteTravelMode.train.maximumSpeedMetersPerSecond)
         #expect(RouteTravelMode.airplane.maximumSpeedMetersPerSecond > RouteTravelMode.train.maximumSpeedMetersPerSecond)

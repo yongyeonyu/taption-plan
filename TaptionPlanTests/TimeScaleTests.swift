@@ -2982,10 +2982,10 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapLocationAnchorPrefersRecentPreciseReading() {
+    func testMapLocationAnchorPrefersFreshPreciseReading() {
         let now = Date(timeIntervalSince1970: 20_000)
         let precise = SensorReading(
-            timestamp: now.addingTimeInterval(-30 * 60),
+            timestamp: now.addingTimeInterval(-4 * 60),
             point: GeoPoint(
                 latitude: 37.5,
                 longitude: 126.9,
@@ -3018,7 +3018,7 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapLocationAnchorAcceptsSixHourBoundaryAndRejectsOlderFix() {
+    func testMapLocationAnchorAcceptsFiveMinuteBoundaryAndRejectsOlderFix() {
         let now = Date(timeIntervalSince1970: 30_000)
         func approximate(age: TimeInterval) -> SensorReading {
             SensorReading(
@@ -3034,8 +3034,8 @@ final class TimeScaleTests: XCTestCase {
                 gpsAvailable: false
             )
         }
-        let boundary = approximate(age: 6 * 60 * 60)
-        let stale = approximate(age: 6 * 60 * 60 + 1)
+        let boundary = approximate(age: 5 * 60)
+        let stale = approximate(age: 5 * 60 + 1)
 
         XCTAssertEqual(
             MapCurrentLocationAnchorPolicy.latestValidReading(

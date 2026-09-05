@@ -2,6 +2,28 @@ import CoreLocation
 import Foundation
 import HealthKit
 
+struct HealthKitImportDeltaCounts: Equatable {
+    let added: Int
+    let updated: Int
+    let deleted: Int
+
+    static func classify(
+        incoming: Set<UUID>,
+        deleted: Set<UUID>,
+        existing: Set<UUID>,
+        countsExistingAsUpdated: Bool
+    ) -> Self {
+        let survivingIncoming = incoming.subtracting(deleted)
+        return Self(
+            added: survivingIncoming.subtracting(existing).count,
+            updated: countsExistingAsUpdated
+                ? survivingIncoming.intersection(existing).count
+                : 0,
+            deleted: deleted.intersection(existing).count
+        )
+    }
+}
+
 struct HealthKitSyncProgress: Hashable, Sendable {
     let completedTypes: Int
     let totalTypes: Int
@@ -387,14 +409,28 @@ actor HealthKitImportCoordinator {
             try Task.checkCancellation()
             importedSamples += records.count
             let encodedAnchor = try Self.encodeAnchor(page.anchor)
-            let added = countsAsNew ? records.count : 0
+            let incomingIDs = Set(records.map(\.uuid))
+            let deletedIDs = Set(page.deleted.map(\.uuid))
+            let existingIDs = try await importStore.existingRecordIDs(
+                Array(incomingIDs.union(deletedIDs))
+            )
+            let delta = HealthKitImportDeltaCounts.classify(
+                incoming: incomingIDs,
+                deleted: deletedIDs,
+                existing: existingIDs,
+                countsExistingAsUpdated: countsAsNew
+            )
             let nextState = updatedState(
                 state,
                 anchor: encodedAnchor,
                 historyComplete: true,
-                sampleCount: state.sampleCount + added - page.deleted.count,
-                addedCount: state.addedCount + added,
-                deletedCount: state.deletedCount + page.deleted.count,
+                sampleCount: max(
+                    0,
+                    state.sampleCount + delta.added - delta.deleted
+                ),
+                addedCount: state.addedCount + delta.added,
+                updatedCount: state.updatedCount + delta.updated,
+                deletedCount: state.deletedCount + delta.deleted,
                 lastSampleDate: maxDate(
                     state.lastSampleDate,
                     records.map(\.endDate).max()

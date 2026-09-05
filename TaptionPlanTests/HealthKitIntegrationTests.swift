@@ -4,6 +4,104 @@ import XCTest
 @testable import TaptionPlan
 
 final class HealthKitIntegrationTests: XCTestCase {
+    func testWatchHealthSnapshotRetriesOnlyMissingRawArchive() {
+        let capturedAt = Date(timeIntervalSince1970: 1_788_000_000)
+        let receivedAt = capturedAt.addingTimeInterval(120)
+
+        XCTAssertTrue(
+            WatchHealthSnapshotRetryPolicy.accepts(
+                capturedAt: capturedAt,
+                fingerprint: "same",
+                receivedAt: receivedAt,
+                lastAppliedAt: nil,
+                rawRetryAt: nil,
+                rawRetryFingerprint: nil,
+                lastRawRetryAttemptAt: nil
+            )
+        )
+        XCTAssertTrue(
+            WatchHealthSnapshotRetryPolicy.accepts(
+                capturedAt: capturedAt,
+                fingerprint: "same",
+                receivedAt: receivedAt,
+                lastAppliedAt: capturedAt,
+                rawRetryAt: capturedAt,
+                rawRetryFingerprint: "same",
+                lastRawRetryAttemptAt: receivedAt.addingTimeInterval(-61)
+            )
+        )
+        XCTAssertFalse(
+            WatchHealthSnapshotRetryPolicy.accepts(
+                capturedAt: capturedAt,
+                fingerprint: "same",
+                receivedAt: receivedAt,
+                lastAppliedAt: capturedAt,
+                rawRetryAt: nil,
+                rawRetryFingerprint: nil,
+                lastRawRetryAttemptAt: nil
+            )
+        )
+        XCTAssertFalse(
+            WatchHealthSnapshotRetryPolicy.accepts(
+                capturedAt: capturedAt,
+                fingerprint: "changed",
+                receivedAt: receivedAt,
+                lastAppliedAt: capturedAt,
+                rawRetryAt: capturedAt,
+                rawRetryFingerprint: "same",
+                lastRawRetryAttemptAt: nil
+            )
+        )
+        XCTAssertFalse(
+            WatchHealthSnapshotRetryPolicy.accepts(
+                capturedAt: capturedAt,
+                fingerprint: "same",
+                receivedAt: receivedAt,
+                lastAppliedAt: capturedAt,
+                rawRetryAt: capturedAt,
+                rawRetryFingerprint: "same",
+                lastRawRetryAttemptAt: receivedAt.addingTimeInterval(-30)
+            )
+        )
+        XCTAssertFalse(
+            WatchHealthSnapshotRetryPolicy.accepts(
+                capturedAt: capturedAt.addingTimeInterval(-1),
+                fingerprint: "same",
+                receivedAt: receivedAt,
+                lastAppliedAt: capturedAt,
+                rawRetryAt: capturedAt.addingTimeInterval(-1),
+                rawRetryFingerprint: "same",
+                lastRawRetryAttemptAt: nil
+            )
+        )
+    }
+
+    func testHealthKitAnchoredDeltaCountsNewUpdatedAndDeletedUUIDs() {
+        let existing = UUID()
+        let removed = UUID()
+        let unknownDeletion = UUID()
+        let added = UUID()
+
+        XCTAssertEqual(
+            HealthKitImportDeltaCounts.classify(
+                incoming: [existing, added],
+                deleted: [removed, unknownDeletion],
+                existing: [existing, removed],
+                countsExistingAsUpdated: true
+            ),
+            HealthKitImportDeltaCounts(added: 1, updated: 1, deleted: 1)
+        )
+        XCTAssertEqual(
+            HealthKitImportDeltaCounts.classify(
+                incoming: [existing, added],
+                deleted: [],
+                existing: [existing],
+                countsExistingAsUpdated: false
+            ),
+            HealthKitImportDeltaCounts(added: 1, updated: 0, deleted: 0)
+        )
+    }
+
     func testHealthSyncOverviewReportsPartialFailures() {
         let overview = HealthKitSyncOverview(states: [
             HealthKitTypeSyncState(

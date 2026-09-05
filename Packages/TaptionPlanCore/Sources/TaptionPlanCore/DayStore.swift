@@ -388,6 +388,28 @@ public actor TaptionPlanDayStore {
         }
     }
 
+    public func existingEventIDs(
+        _ ids: [String],
+        domain: String
+    ) throws -> Set<String> {
+        guard !ids.isEmpty else { return [] }
+        try validate(domain: domain)
+        let statement = try prepare(
+            "SELECT id FROM events WHERE id = ? AND domain = ?;"
+        )
+        defer { sqlite3_finalize(statement) }
+        var result = Set<String>()
+        for id in Set(ids) {
+            try reset(statement)
+            try bind(id, to: statement, at: 1)
+            try bind(domain, to: statement, at: 2)
+            if try step(statement) == SQLITE_ROW {
+                result.insert(id)
+            }
+        }
+        return result
+    }
+
     public func deleteEvents(domain: String) throws {
         try validate(domain: domain)
         try execute(

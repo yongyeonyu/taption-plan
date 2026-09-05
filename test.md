@@ -1,5 +1,23 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-06 ALG904A001 전체 기록 경로 회귀
+
+- Swift Package는 TaptionActivityEngine 14/14, TaptionRouteEngine 20/20, TaptionPlanCore 51/51, TaptionPlanEngine 1/1—총 86/86 통과했다.
+- Watch 원본 제한 재시도·HealthKit 수면 delta·손상 센서 cache·POI 삭제 fence 등 집중 XCTest 7/7 통과: `/private/tmp/ALG904A001-app-r3.9gBYjO/focused.xcresult`.
+- 전체 XCTest·Swift Testing은 1,031건 중 1,030 passed·1 skipped·0 failed다: `/private/tmp/ALG904A001-full-r2.ByyHu3/full.xcresult`. skip은 iOS 26.5 Simulator의 기존 StoreKit 시스템 오류다.
+- 전체 회귀가 검출한 대중교통 예상경로 누락은 근거가 있는 버스·지하철·열차·선박에 저속 endpoint 예외를 적용한 뒤 집중 1/1과 전체 회귀로 재검증했다: `/private/tmp/ALG904A001-route-r1.T6fuAE/route.xcresult`.
+- generic iOS·watchOS Debug와 iOS static analyze는 모두 exit 0이다: `/private/tmp/ALG904A001-build-r1.TPiSR6`. 앱 30일 load p95는 cold `32.998416ms`, warm `0.006625ms`다.
+- 최신 iPhone Simulator 앱 설치·launch PID `73497`을 readback했고 안정화 뒤 5회 CPU `0.0%`, RSS `187,920~187,984KiB`였다. 이는 실기기 장시간 발열·배터리 검증이 아니다.
+- 보안 diff scan은 17/17 변경 파일을 검토하고 malformed timestamp, Watch raw replay, 삭제 후 POI 게시 후보를 수정·검증해 최종 보고 대상 0건으로 완료했다: `/private/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/codex-security-scans-jOiTAE/taption-plan/af7352832651ca69d5863cff8dc36b0c8d2dbdc0_20260905T162732Z_ehr2iwgg/report.md`.
+
+## 2026-09-06 ASC906A001 App Store 판매 초안 readback
+
+- App Store version `1.0`과 build 137의 exact ID 관계, `VALID`·미만료·`APP_STORE_ELIGIBLE`·비면제 암호화 사용 `false`를 API로 확인했다.
+- 공개 개인정보처리방침·지원 문서 HTTP 200과 한국어 설명·키워드·부제·지원/개인정보/개인정보 선택 URL·저작권·생활/건강 및 피트니스 카테고리·제3자 콘텐츠 선언의 저장값을 재조회했다.
+- 연령등급 전 문항을 채웠고 175개 지역 결과는 9+ 172개·한국 전체이용가 1개·10+ 1개·12+ 1개다.
+- 앱 버전은 계속 `PREPARE_FOR_SUBMISSION`이고 review submission은 0개다. 개인정보 없는 iPhone 6.7형 스크린샷 2장의 asset `COMPLETE`와 세트 2건을 API로 확인했다. 심사 연락처·판매 지역·앱 개인정보 수집 답변·Paid Apps Agreement·DSA/비규제 의료기기 선언·첫 IAP 웹 추가는 미완료다.
+- 증적: `/private/tmp/IAP905G002-api.3i778W`, `/private/tmp/ASC906A001-screenshot.sGrWXW`.
+
 ## 2026-09-05 BAK905I001 실제 iCloud 백업 복호화
 
 - iCloud의 8·9월 snapshot·raw 파일을 실제 32바이트 계정 복구 키로 AES-GCM key unwrap·payload decrypt하고 LZFSE·JSON v1·월/generation 쌍까지 검증했다: `/private/tmp/BAK905I001-live.5vfwUn/live-backup-readback.log`.

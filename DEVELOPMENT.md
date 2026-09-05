@@ -1,5 +1,24 @@
 # Taption Plan 개발 문서
 
+## 2026-09-06 ALG904A001 · 전체 기록 알고리즘·성능·배터리 리뷰
+
+- 활동 융합, 경로 공백, 센서 저장·필터, HealthKit·Watch 수신, 지도 실시간 투영과 POI 검색을 함께 검토해 정확성·무결성·전력 결함을 수정했다.
+- 활동 융합은 전수 비교 대신 시간 버킷을 사용하고, 비정상 시각은 원본 근거에 보존하되 분류 입력에서는 제외한다. 긴 저속 공백은 거부하되 역·대중교통 근거가 있는 버스·지하철·열차·선박 구간은 유지한다.
+- HealthKit 수면을 한 번만 조회하고 UUID 집합으로 delta를 계산한다. Watch receipt는 일자 저장 성공 뒤에만 기록하며, 같은 시각의 원본 재시도는 동일 SHA-256 payload·60초 제한·raw-only로 처리해 파생 기록 중복을 막는다.
+- 손상된 센서 범위는 incomplete로 전파해 캐시하지 않는다. 현재 위치·보간 freshness를 분 단위로 제한하고, POI 검색은 30초 gate·취소·task/data generation 검증으로 백그라운드 전력과 삭제 후 stale 게시를 막는다.
+- Swift Package 86/86, 집중 XCTest 7/7, 전체 앱 1,031건 중 1,030 passed·기존 iOS 26.5 StoreKit 시스템 skip 1·failed 0을 통과했다: `/private/tmp/ALG904A001-app-r3.9gBYjO/focused.xcresult`, `/private/tmp/ALG904A001-full-r2.ByyHu3/full.xcresult`.
+- 30일 로드는 cold/warm p95 `32.998416ms`/`0.006625ms`, NLE 240Hz projection p95 `0.000042ms`다. generic iOS·watchOS Debug와 iOS static analyze가 모두 exit 0이며, 재설치한 iPhone Simulator는 안정화 뒤 CPU 5회 `0.0%`, RSS 약 `183.5MiB`였다: `/private/tmp/ALG904A001-build-r1.TPiSR6`.
+- 보안 diff scan은 17개 변경 파일 coverage `complete`, 보고 대상 취약점 0건으로 봉인했다: `/private/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/codex-security-scans-jOiTAE/taption-plan/af7352832651ca69d5863cff8dc36b0c8d2dbdc0_20260905T162732Z_ehr2iwgg/report.md`. 실기기 pinch·장시간 발열/배터리·실제 Watch/HealthKit 수신은 별도 게이트다.
+
+## 2026-09-06 ASC906A001 · App Store 판매 초안 보강
+
+- App Store version `1.0`에 TestFlight build 137(`1b26a479-4bd6-49df-bda2-2f1bf1f0d28a`)을 연결하고 `VALID`·미만료·`APP_STORE_ELIGIBLE`·비면제 암호화 사용 `false`를 API로 재조회했다.
+- 한국어 설명·키워드·지원 URL, 앱 부제·개인정보처리방침/개인정보 선택 URL, `2026 Taption` 저작권, 생활/건강 및 피트니스 카테고리와 제3자 지도 콘텐츠 사용 선언을 입력했다. 공개 `PRIVACY.md`·`SUPPORT.md`는 GitHub에서 HTTP 200을 확인했다.
+- 연령등급 문항은 광고·채팅·UGC·웹 접근·의료 조언 없음, 건강·웰니스 주제 있음으로 실제 기능에 맞춰 완료했다. 175개 지역 결과는 9+ 172개, 한국 전체이용가 1개, 10+ 1개, 12+ 1개다.
+- 상품은 `com.taption.plan.pro` 비소모성 `READY_TO_SUBMIT`, 앱 버전은 `PREPARE_FOR_SUBMISSION`이며 심사 제출은 만들지 않았다. 첫 IAP는 App Store Connect 웹에서 새 앱 버전과 함께 추가해야 한다.
+- 개인정보 없는 iPhone 6.7형 스크린샷 2장을 등록하고 두 asset의 `COMPLETE`와 세트 2건을 API로 재조회했다. 심사 연락처·판매 지역·앱 개인정보 수집 답변·Paid Apps Agreement·DSA·비규제 의료기기 선언은 사용자·법적 판단이 필요한 게이트로 남긴다.
+- API 증적은 `/private/tmp/IAP905G002-api.3i778W`, 원본 스크린샷은 `/private/tmp/ASC906A001-screenshot.sGrWXW`에 보존한다. JWT·복구 키·개인 연락처는 저장하지 않았다.
+
 ## 2026-09-05 BAK905I001 · 실제 iCloud 암호화 백업 readback
 
 - iCloud Drive에 내려온 8·9월 snapshot·raw 파일과 32바이트 계정 복구 키를 일회성 macOS 검증기로 읽어, 실제 AES-GCM key unwrap·payload decrypt·LZFSE 해제·JSON v1·월/generation 쌍을 모두 확인했다.

@@ -6779,6 +6779,69 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testRealtimeMapProjectionRejectsStaleFallbackAndLongInterpolation() {
+        let timestamp = makeDate(2026, 8, 18, 7, 30)
+        func reading(_ offset: TimeInterval, latitude: Double) -> SensorReading {
+            SensorReading(
+                timestamp: timestamp.addingTimeInterval(offset),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+        }
+
+        XCTAssertNil(
+            RealtimeSensorMapProjection.project(
+                readings: [reading(-6 * 60, latitude: 37.5)],
+                at: timestamp
+            )
+        )
+        XCTAssertNil(
+            RealtimeSensorMapProjection.project(
+                readings: [
+                    reading(-11 * 60, latitude: 37.5),
+                    reading(11 * 60, latitude: 37.6),
+                ],
+                at: timestamp
+            )
+        )
+    }
+
+    func testMovementRouteBuilderSkipsGapWithoutSensorOrHealthEvidence() {
+        let start = makeDate(2026, 8, 18, 9)
+        let stays = [
+            PlaceStay(
+                placeKey: "home",
+                displayName: "집",
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(30 * 60)
+                ),
+                confidence: .high
+            ),
+            PlaceStay(
+                placeKey: "office",
+                displayName: "회사",
+                span: TimeSpan(
+                    start: start.addingTimeInterval(60 * 60),
+                    end: start.addingTimeInterval(90 * 60)
+                ),
+                confidence: .high
+            ),
+        ]
+
+        XCTAssertTrue(
+            MovementRouteBuilder().build(
+                stays: stays,
+                readings: []
+            ).isEmpty
+        )
+    }
+
     func testAppleTransportEnrichmentPersistsConfirmedMagongnaruGeomamGajeongJourney() async throws {
         let base = makeDate(2026, 8, 18, 20, 22)
         let samples: [(Double, Double, Double)] = [

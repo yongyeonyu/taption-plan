@@ -4,6 +4,10 @@ import Foundation
 /// between adjacent valid fixes and falls back to a catalog station anchor
 /// when GPS is unavailable; no sensor record is rewritten.
 struct RealtimeSensorMapProjection: Hashable, Sendable {
+    private static let maximumInterpolationGap: TimeInterval = 20 * 60
+    private static let maximumFallbackAge: TimeInterval = 5 * 60
+    private static let maximumTemporaryLocationAge: TimeInterval = 30 * 60
+
     let timestamp: Date
     let point: GeoPoint
     let isEstimated: Bool
@@ -36,23 +40,28 @@ struct RealtimeSensorMapProjection: Hashable, Sendable {
            let after = ordered.first(where: { $0.timestamp >= timestamp }),
            let start = before.point, let end = after.point {
             let duration = after.timestamp.timeIntervalSince(before.timestamp)
-            let fraction = duration > 0
-                ? min(1, max(0, timestamp.timeIntervalSince(before.timestamp) / duration))
-                : 0
-            return Self(
-                timestamp: timestamp,
-                point: interpolate(start, end, fraction: fraction),
-                isEstimated: true,
-                source: "GPS 보간"
-            )
+            if duration <= maximumInterpolationGap {
+                let fraction = duration > 0
+                    ? min(1, max(0, timestamp.timeIntervalSince(before.timestamp) / duration))
+                    : 0
+                return Self(
+                    timestamp: timestamp,
+                    point: interpolate(start, end, fraction: fraction),
+                    isEstimated: true,
+                    source: "GPS 보간"
+                )
+            }
         }
         if let fallback = temporaryLocations.min(by: {
             abs($0.timestamp.timeIntervalSince(timestamp))
                 < abs($1.timestamp.timeIntervalSince(timestamp))
-        }) {
+        }), abs(fallback.timestamp.timeIntervalSince(timestamp))
+            <= maximumTemporaryLocationAge {
             return Self(timestamp: timestamp, point: fallback.point, isEstimated: true, source: fallback.reason)
         }
-        return ordered.last.flatMap { reading in
+        return ordered.last(where: {
+            abs(timestamp.timeIntervalSince($0.timestamp)) <= maximumFallbackAge
+        }).flatMap { reading in
             reading.point.map { Self(timestamp: timestamp, point: $0, isEstimated: true, source: "최근 GPS") }
         }
     }
@@ -3092,13 +3101,20 @@ struct MovementRouteBuilder: Sendable {
                 span.contains($0.timestamp)
             }
             let signature = "\(from.placeKey)->\(to.placeKey)"
+            let segmentHealthEvidence = healthEvidence.filter {
+                $0.span.intersection(with: span) != nil
+            }
+            let correctedMode = correctedModes[signature]
+            guard !segmentReadings.isEmpty
+                    || !segmentHealthEvidence.isEmpty
+                    || correctedMode != nil else {
+                return nil
+            }
             let inference = classifier.classify(
                 readings: segmentReadings,
                 inside: span,
-                healthEvidence: healthEvidence.filter {
-                    $0.span.intersection(with: span) != nil
-                },
-                correctedMode: correctedModes[signature],
+                healthEvidence: segmentHealthEvidence,
+                correctedMode: correctedMode,
                 userTransitLocations: userTransitLocations
             )
             let distance = pathDistance(segmentReadings.compactMap(\.point))
@@ -3110,7 +3126,7 @@ struct MovementRouteBuilder: Sendable {
                 distanceMeters: distance,
                 confidence: inference.confidence,
                 evidence: inference.evidence,
-                isConfirmed: correctedModes[signature] != nil,
+                isConfirmed: correctedMode != nil,
                 subwayRoute: inference.subwayRoute
             )
         }

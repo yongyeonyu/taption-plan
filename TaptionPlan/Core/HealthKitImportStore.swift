@@ -266,6 +266,17 @@ public actor HealthKitImportStore {
         )
     }
 
+    public func existingRecordIDs(_ ids: [UUID]) async throws -> Set<UUID> {
+        let byEventID = ids.reduce(into: [String: UUID]()) {
+            $0[HealthKitSampleRecord.eventID(for: $1)] = $1
+        }
+        let existing = try await dayStore.existingEventIDs(
+            Array(byEventID.keys),
+            domain: Self.eventDomain
+        )
+        return Set(existing.compactMap { byEventID[$0] })
+    }
+
     public func apply(
         records: [HealthKitSampleRecord],
         deletedIDs: [UUID],

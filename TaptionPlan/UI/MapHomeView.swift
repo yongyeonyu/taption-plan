@@ -1401,6 +1401,7 @@ struct MapHomeView: View {
     @State private var pendingUserLocationSelection: MapHomeUserLocationSelection?
     @State private var mapSearchTask: Task<Void, Never>?
     @State private var transitPOIRefreshTask: Task<Void, Never>?
+    @State private var transitPOIRefreshGeneration: UInt64 = 0
     @State private var nearbyTransitPlaces: [TransitBoardingPlace] = []
     @State private var transitBoardingReadingsRevision: UInt64 = 0
     @State private var lastTransitBoardingLiveRefreshAt: Date?
@@ -1956,11 +1957,12 @@ struct MapHomeView: View {
             guard Calendar.autoupdatingCurrent.isDateInToday(
                 model.selectedDate
             ) else { return }
-            refreshTransitBoardingCandidatesIfNeeded(
+            if refreshTransitBoardingCandidatesIfNeeded(
                 at: model.latestSensorReading?.timestamp ?? .now
-            )
+            ) {
+                scheduleTransitPOIRefresh()
+            }
             scheduleLiveRouteProjectionRefresh()
-            scheduleTransitPOIRefresh()
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
@@ -2043,14 +2045,21 @@ struct MapHomeView: View {
             }
         }
         .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
-            refreshTransitBoardingCandidatesIfNeeded(
+            guard Calendar.autoupdatingCurrent.isDateInToday(
+                model.selectedDate
+            ) else { return }
+            if refreshTransitBoardingCandidatesIfNeeded(
                 at: model.liveRouteState.readings.last?.timestamp ?? .now
-            )
+            ) {
+                scheduleTransitPOIRefresh()
+            }
             scheduleLiveRouteProjectionRefresh()
-            scheduleTransitPOIRefresh()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
+                transitPOIRefreshTask?.cancel()
+                transitPOIRefreshTask = nil
+                transitPOIRefreshGeneration &+= 1
                 stopDayPlayback(resetProgress: true)
             } else {
                 Task { await refreshRouteReadings(for: model.selectedDate) }
@@ -5726,13 +5735,14 @@ struct MapHomeView: View {
         }
     }
 
-    private func refreshTransitBoardingCandidatesIfNeeded(at date: Date) {
+    private func refreshTransitBoardingCandidatesIfNeeded(at date: Date) -> Bool {
         guard MapHomeTransitBoardingRefreshPolicy.shouldRefresh(
             lastRefresh: lastTransitBoardingLiveRefreshAt,
             at: date
-        ) else { return }
+        ) else { return false }
         lastTransitBoardingLiveRefreshAt = date
         transitBoardingReadingsRevision &+= 1
+        return true
     }
 
     private func transitBoardingDiagnostics(
@@ -6834,8 +6844,15 @@ struct MapHomeView: View {
 
     private func scheduleTransitPOIRefresh() {
         guard model.isBootstrapped else { return }
+        let dataGeneration = TaptionDataDeletionFence.currentGeneration()
+        guard TaptionDataDeletionFence.allows(
+            generation: dataGeneration
+        ) else { return }
         let selectedDate = model.selectedDate
+        let readings = transitBoardingReadings
         transitPOIRefreshTask?.cancel()
+        transitPOIRefreshGeneration &+= 1
+        let generation = transitPOIRefreshGeneration
         transitPOIRefreshTask = Task { @MainActor in
             do {
                 try await Task.sleep(nanoseconds: 300_000_000)
@@ -6843,9 +6860,13 @@ struct MapHomeView: View {
                 return
             }
             let places = await AppleTransitBoardingPOIResolver.shared.resolving(
-                readings: transitBoardingReadings
+                readings: readings
             )
             guard !Task.isCancelled,
+                  generation == transitPOIRefreshGeneration,
+                  TaptionDataDeletionFence.allows(
+                    generation: dataGeneration
+                  ),
                   Calendar.autoupdatingCurrent.isDate(
                       selectedDate,
                       inSameDayAs: model.selectedDate

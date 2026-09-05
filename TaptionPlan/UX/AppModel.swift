@@ -157,7 +157,7 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
 }
 
 enum MapCurrentLocationAnchorPolicy {
-    static let maximumAge: TimeInterval = 6 * 60 * 60
+    static let maximumAge: TimeInterval = 5 * 60
     static let maximumPreciseAccuracy =
         TrackingSessionPolicy.activeHorizontalAccuracyLimit
 
@@ -199,6 +199,32 @@ enum MapCurrentLocationAnchorPolicy {
 enum BackgroundLocationCollectionPolicy {
     static func isEnabled(hasAlwaysAuthorization: Bool) -> Bool {
         hasAlwaysAuthorization
+    }
+}
+
+enum WatchHealthSnapshotRetryPolicy {
+    static let minimumRetryInterval: TimeInterval = 60
+
+    static func accepts(
+        capturedAt: Date,
+        fingerprint: String?,
+        receivedAt: Date,
+        lastAppliedAt: Date?,
+        rawRetryAt: Date?,
+        rawRetryFingerprint: String?,
+        lastRawRetryAttemptAt: Date?
+    ) -> Bool {
+        guard let lastAppliedAt else { return true }
+        if capturedAt > lastAppliedAt { return true }
+        guard capturedAt == lastAppliedAt,
+              capturedAt == rawRetryAt,
+              let fingerprint,
+              fingerprint == rawRetryFingerprint else {
+            return false
+        }
+        return lastRawRetryAttemptAt.map {
+            receivedAt.timeIntervalSince($0) >= minimumRetryInterval
+        } ?? true
     }
 }
 
@@ -810,6 +836,11 @@ final class AppModel {
     @ObservationIgnored private var isRepositoryWriteActive = false
     @ObservationIgnored private var activeDataMutationCount = 0
     @ObservationIgnored private var lastWatchHealthSnapshotCapturedAt: Date?
+    @ObservationIgnored private var lastWatchHealthSnapshotRawRetryAt: Date?
+    @ObservationIgnored private var lastWatchHealthSnapshotRawRetryFingerprint:
+        String?
+    @ObservationIgnored private var lastWatchHealthSnapshotRawRetryAttemptAt:
+        Date?
     @ObservationIgnored private var isAppUsageRefreshRunning = false
     @ObservationIgnored private var isHealthBackgroundDeliveryConfigured = false
     @ObservationIgnored private var sensorAnalysisDebounceTask: Task<Void, Never>?
@@ -4850,6 +4881,9 @@ final class AppModel {
         liveMergeCacheValue = []
         sensorRefreshFingerprints.removeAll()
         lastWatchHealthSnapshotCapturedAt = nil
+        lastWatchHealthSnapshotRawRetryAt = nil
+        lastWatchHealthSnapshotRawRetryFingerprint = nil
+        lastWatchHealthSnapshotRawRetryAttemptAt = nil
         await dayLoadCoordinator?.invalidateAll()
         var deletionFailures: [String] = []
         func recordDeletionFailure(_ label: String, _ error: Error) {
@@ -6671,12 +6705,6 @@ final class AppModel {
                 "request_id": requestID ?? "none",
             ]
         )
-        noteAppleWatchDataReceived(
-            [.motion],
-            measuredAt: chunk.endedAt,
-            receivedAt: receivedAt,
-            requestID: requestID
-        )
         var storedInDayDatabase = false
         if let dayDatabase {
             do {
@@ -6696,11 +6724,13 @@ final class AppModel {
                 )
             }
         }
+        var storedInLegacyArchive = false
         if !storedInDayDatabase,
            acceptsDataMutation(capturedAt: chunk.endedAt),
            let watchSensorArchive {
             do {
                 try await watchSensorArchive.record(chunk)
+                storedInLegacyArchive = true
                 UserDefaults.standard.set(
                     true,
                     forKey: Self.watchLegacyFallbackReadKey
@@ -6722,6 +6752,20 @@ final class AppModel {
                 )
             }
         }
+        guard storedInDayDatabase || storedInLegacyArchive else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_acceleration_persistence_failed",
+                level: .error,
+                fields: ["chunk": chunk.id.uuidString]
+            )
+            return
+        }
+        noteAppleWatchDataReceived(
+            [.motion],
+            measuredAt: chunk.endedAt,
+            receivedAt: receivedAt,
+            requestID: requestID
+        )
         dayLoadCoordinator?.invalidate(day: chunk.startedAt)
         if !Calendar.autoupdatingCurrent.isDate(
             chunk.startedAt,
@@ -6807,49 +6851,6 @@ final class AppModel {
                     .sorted().joined(separator: ","),
             ]
         )
-        noteAppleWatchDataReceived(
-            dataKinds,
-            measuredAt: summary.endedAt,
-            receivedAt: receivedAt,
-            requestID: requestID
-        )
-        if let heartRate = summary.latestHeartRate,
-           heartRate.isFinite, heartRate > 0 {
-            latestHeartRate = heartRate
-            latestHeartRateUpdatedAt = summary.endedAt
-        }
-        if summary.isFinal {
-            if activeTrackingSession?.id == summary.sessionID {
-                activeTrackingSession = nil
-                trackingSessionWasRecovered = false
-                liveRouteState.session = nil
-                TrackingSessionRecoveryStore.clear()
-                lastTrackingSessionRecoveryPersistAt = nil
-            }
-        } else if summary.isAmbient != true,
-                  activeTrackingSession == nil {
-            let kind: TrackingKind = summary.workoutKind == .running
-                ? .running
-                : .walking
-            let session = TrackingSession(
-                id: summary.sessionID,
-                kind: kind,
-                startedAt: summary.startedAt,
-                linkedPlanID: summary.linkedPlanID,
-                sourceDevice: .appleWatch,
-                iPhoneActive: false,
-                watchActive: true,
-                wasAutomaticallyDetected: false
-            )
-            activeTrackingSession = session
-            liveRouteState = LiveRouteState(
-                session: session,
-                readings: [],
-                lastUpdatedAt: summary.endedAt
-            )
-            TrackingSessionRecoveryStore.save(session)
-            lastTrackingSessionRecoveryPersistAt = summary.endedAt
-        }
         var storedInDayDatabase = false
         if let dayDatabase {
             do {
@@ -6919,6 +6920,49 @@ final class AppModel {
                 ]
             )
             return
+        }
+        noteAppleWatchDataReceived(
+            dataKinds,
+            measuredAt: summary.endedAt,
+            receivedAt: receivedAt,
+            requestID: requestID
+        )
+        if let heartRate = summary.latestHeartRate,
+           heartRate.isFinite, heartRate > 0 {
+            latestHeartRate = heartRate
+            latestHeartRateUpdatedAt = summary.endedAt
+        }
+        if summary.isFinal {
+            if activeTrackingSession?.id == summary.sessionID {
+                activeTrackingSession = nil
+                trackingSessionWasRecovered = false
+                liveRouteState.session = nil
+                TrackingSessionRecoveryStore.clear()
+                lastTrackingSessionRecoveryPersistAt = nil
+            }
+        } else if summary.isAmbient != true,
+                  activeTrackingSession == nil {
+            let kind: TrackingKind = summary.workoutKind == .running
+                ? .running
+                : .walking
+            let session = TrackingSession(
+                id: summary.sessionID,
+                kind: kind,
+                startedAt: summary.startedAt,
+                linkedPlanID: summary.linkedPlanID,
+                sourceDevice: .appleWatch,
+                iPhoneActive: false,
+                watchActive: true,
+                wasAutomaticallyDetected: false
+            )
+            activeTrackingSession = session
+            liveRouteState = LiveRouteState(
+                session: session,
+                readings: [],
+                lastUpdatedAt: summary.endedAt
+            )
+            TrackingSessionRecoveryStore.save(session)
+            lastTrackingSessionRecoveryPersistAt = summary.endedAt
         }
         await archiveRawDeviceData(
             source: .appleWatch,
@@ -7336,15 +7380,26 @@ final class AppModel {
         guard acceptsDataMutation(capturedAt: snapshot.capturedAt) else {
             return
         }
-        if let lastWatchHealthSnapshotCapturedAt,
-           snapshot.capturedAt <= lastWatchHealthSnapshotCapturedAt {
+        let rawPayloadFingerprint = (
+            try? RawDeviceDataMonthlyArchive.payloadEncoder().encode(snapshot)
+        ).map(TaptionPlanCanonicalStorage.checksum)
+        guard WatchHealthSnapshotRetryPolicy.accepts(
+            capturedAt: snapshot.capturedAt,
+            fingerprint: rawPayloadFingerprint,
+            receivedAt: receivedAt,
+            lastAppliedAt: lastWatchHealthSnapshotCapturedAt,
+            rawRetryAt: lastWatchHealthSnapshotRawRetryAt,
+            rawRetryFingerprint:
+                lastWatchHealthSnapshotRawRetryFingerprint,
+            lastRawRetryAttemptAt:
+                lastWatchHealthSnapshotRawRetryAttemptAt
+        ) else {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "watch_health_snapshot_ignored",
                 fields: ["reason": "stale_or_duplicate"]
             )
             return
         }
-        lastWatchHealthSnapshotCapturedAt = snapshot.capturedAt
         activeDataMutationCount += 1
         defer { activeDataMutationCount -= 1 }
         var dataKinds: Set<AppleWatchDataKind> = [.health]
@@ -7367,21 +7422,88 @@ final class AppModel {
                 "health_enabled": String(settings.healthEnabled),
             ]
         )
-        noteAppleWatchDataReceived(
-            dataKinds,
-            measuredAt: snapshot.capturedAt,
-            receivedAt: receivedAt,
-            requestID: requestID
-        )
-        await archiveRawDeviceData(
+        let isRawRetry = snapshot.capturedAt
+            == lastWatchHealthSnapshotCapturedAt
+        if isRawRetry {
+            lastWatchHealthSnapshotRawRetryAttemptAt = receivedAt
+            let rawArchived = await archiveRawDeviceData(
+                source: .appleWatch,
+                kind: "watch-health-snapshot",
+                payload: snapshot,
+                capturedAt: snapshot.capturedAt
+            )
+            guard rawArchived else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_health_snapshot_raw_retry_failed",
+                    level: .error,
+                    fields: [
+                        "captured_at": String(
+                            snapshot.capturedAt.timeIntervalSince1970
+                        ),
+                    ]
+                )
+                return
+            }
+            lastWatchHealthSnapshotRawRetryAt = nil
+            lastWatchHealthSnapshotRawRetryFingerprint = nil
+            lastWatchHealthSnapshotRawRetryAttemptAt = nil
+            noteAppleWatchDataReceived(
+                dataKinds,
+                measuredAt: snapshot.capturedAt,
+                receivedAt: receivedAt,
+                requestID: requestID
+            )
+            return
+        }
+        let rawArchived = await archiveRawDeviceData(
             source: .appleWatch,
             kind: "watch-health-snapshot",
             payload: snapshot,
             capturedAt: snapshot.capturedAt
         )
-        guard acceptsDataMutation(capturedAt: snapshot.capturedAt),
-              lastWatchHealthSnapshotCapturedAt == snapshot.capturedAt else {
+        if !rawArchived {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_health_snapshot_raw_persistence_failed",
+                level: .error,
+                fields: [
+                    "captured_at": String(
+                        snapshot.capturedAt.timeIntervalSince1970
+                    ),
+                    "derived_fallback": "true",
+                ]
+            )
+        }
+        guard acceptsDataMutation(capturedAt: snapshot.capturedAt) else {
             return
+        }
+        guard WatchHealthSnapshotRetryPolicy.accepts(
+            capturedAt: snapshot.capturedAt,
+            fingerprint: rawPayloadFingerprint,
+            receivedAt: receivedAt,
+            lastAppliedAt: lastWatchHealthSnapshotCapturedAt,
+            rawRetryAt: lastWatchHealthSnapshotRawRetryAt,
+            rawRetryFingerprint:
+                lastWatchHealthSnapshotRawRetryFingerprint,
+            lastRawRetryAttemptAt:
+                lastWatchHealthSnapshotRawRetryAttemptAt
+        ) else {
+            return
+        }
+        lastWatchHealthSnapshotCapturedAt = snapshot.capturedAt
+        lastWatchHealthSnapshotRawRetryAt = rawArchived ? nil : snapshot.capturedAt
+        lastWatchHealthSnapshotRawRetryFingerprint = rawArchived
+            ? nil
+            : rawPayloadFingerprint
+        lastWatchHealthSnapshotRawRetryAttemptAt = rawArchived
+            ? nil
+            : receivedAt
+        if rawArchived {
+            noteAppleWatchDataReceived(
+                dataKinds,
+                measuredAt: snapshot.capturedAt,
+                receivedAt: receivedAt,
+                requestID: requestID
+            )
         }
         var watchSleepSessionCount = 0
         if let segments = snapshot.sleepSegments, !segments.isEmpty {
@@ -7498,13 +7620,14 @@ final class AppModel {
         }
     }
 
+    @discardableResult
     private func archiveRawDeviceData<T: Encodable>(
         source: RawDeviceDataSource,
         kind: String,
         payload: T,
         capturedAt: Date = .now
-    ) async {
-        guard let rawDeviceDataArchive else { return }
+    ) async -> Bool {
+        guard let rawDeviceDataArchive else { return false }
         do {
             let envelope = try RawDeviceDataEnvelope(
                 capturedAt: capturedAt,
@@ -7513,10 +7636,12 @@ final class AppModel {
                 payload: payload
             )
             try await rawDeviceDataArchive.append(envelope)
+            return true
         } catch {
             Self.integrationLogger.error(
                 "Raw device data archive failed: \(kind, privacy: .public) \(error.localizedDescription, privacy: .public)"
             )
+            return false
         }
     }
 
@@ -8795,10 +8920,12 @@ final class AppModel {
         let isComplete: Bool
         if let sensorService {
             do {
-                archived = try await sensorService.archivedRouteReadings(
+                let result = try await sensorService
+                    .archivedRouteReadingsLoadResult(
                     in: span
                 )
-                isComplete = true
+                archived = result.readings
+                isComplete = result.isComplete
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "route_readings_load_failed",
@@ -9964,11 +10091,14 @@ final class AppModel {
                     "HealthKit incremental raw sync failed: \(error.localizedDescription, privacy: .public)"
                 )
             }
-            async let actualValues = healthService.actuals(in: span)
+            async let nonSleepActualValues = healthService.nonSleepActuals(
+                in: span
+            )
             async let sessions = healthService.sleepSessions(in: span)
             async let importedValues = healthService.importedActuals(in: span)
-            let directActuals = try await actualValues
             let freshSessions = try await sessions
+            let directActuals = try await nonSleepActualValues
+                + healthService.sleepActuals(from: freshSessions)
             let importedActuals = (try? await importedValues) ?? []
             var actualsByID = importedActuals.reduce(
                 into: [UUID: ActualRecord]()

@@ -74,6 +74,57 @@ final class ActivityEngineTests: XCTestCase {
         XCTAssertTrue(fused.first?.evidence.contains("Apple Watch + iPhone 조합") == true)
     }
 
+    func testWatchAndPhoneFusionScalesToLongRecording() {
+        let evidence = (0..<5_000).flatMap { index in
+            let timestamp = base.addingTimeInterval(Double(index * 3))
+            return [
+                ActivitySensorEvidence(
+                    timestamp: timestamp,
+                    motion: .walking,
+                    source: .iPhone
+                ),
+                ActivitySensorEvidence(
+                    timestamp: timestamp.addingTimeInterval(1),
+                    motion: .walking,
+                    source: .appleWatch
+                ),
+            ]
+        }
+        let startedAt = Date()
+
+        let fused = ActivitySensorEvidenceFusion.fuse(evidence)
+
+        XCTAssertEqual(fused.count, 5_000)
+        XCTAssertLessThan(Date().timeIntervalSince(startedAt), 2)
+    }
+
+    func testFusionRejectsInvalidTimestampButProjectionPreservesInput() {
+        let invalid = ActivitySensorEvidence(
+            timestamp: Date(timeIntervalSinceReferenceDate: 1e100),
+            motion: .stationary,
+            source: .appleWatch
+        )
+        let phone = ActivitySensorEvidence(
+            timestamp: base,
+            motion: .walking,
+            source: .iPhone
+        )
+
+        let fused = ActivitySensorEvidenceFusion.fuse(
+            [invalid, phone],
+            matchingWindow: .nan
+        )
+
+        XCTAssertEqual(fused.map(\.id), [phone.id])
+        XCTAssertFalse(fused.contains { $0.source == .combined })
+        XCTAssertEqual(
+            ActivityClassificationProjection(
+                evidence: [invalid, phone]
+            ).inputEvidence.map(\.id),
+            [invalid.id, phone.id]
+        )
+    }
+
     func testProjectionPreservesLockedOverrideAndCanonicalMajorIDs() {
         let evidence = ActivitySensorEvidence(timestamp: base, motion: .stationary)
         let override = ActivityClassificationOverride(

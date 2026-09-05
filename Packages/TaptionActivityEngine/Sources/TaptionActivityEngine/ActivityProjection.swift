@@ -7,7 +7,16 @@ public enum ActivitySensorEvidenceFusion {
         _ evidence: [ActivitySensorEvidence],
         matchingWindow: TimeInterval = defaultMatchingWindow
     ) -> [ActivitySensorEvidence] {
-        let ordered = evidence.sorted {
+        var valid: [ActivitySensorEvidence] = []
+        for value in evidence {
+            let timestamp = value.timestamp.timeIntervalSinceReferenceDate
+            if timestamp.isFinite,
+               value.timestamp >= .distantPast,
+               value.timestamp <= .distantFuture {
+                valid.append(value)
+            }
+        }
+        let ordered = valid.sorted {
             if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
             return $0.id.uuidString < $1.id.uuidString
         }
@@ -15,6 +24,27 @@ public enum ActivitySensorEvidenceFusion {
             return ordered
         }
 
+        let window = matchingWindow.isFinite
+            ? max(0, matchingWindow)
+            : defaultMatchingWindow
+        let bucketWidth = max(1, window)
+        func bucket(for date: Date) -> Int64 {
+            Int64(floor(date.timeIntervalSinceReferenceDate / bucketWidth))
+        }
+        var phoneBuckets: [Int64: [Int]] = [:]
+        var watchBuckets: [Int64: [Int]] = [:]
+        for (index, value) in ordered.enumerated() {
+            switch value.source {
+            case .iPhone:
+                phoneBuckets[bucket(for: value.timestamp), default: []]
+                    .append(index)
+            case .appleWatch:
+                watchBuckets[bucket(for: value.timestamp), default: []]
+                    .append(index)
+            case .combined:
+                break
+            }
+        }
         var consumed = Set<UUID>()
         var result: [ActivitySensorEvidence] = []
         for candidate in ordered where !consumed.contains(candidate.id) {
@@ -24,15 +54,25 @@ public enum ActivitySensorEvidenceFusion {
                 continue
             }
             let counterpartSource: ActivitySensorSource = candidate.source == .appleWatch ? .iPhone : .appleWatch
-            let counterpart = ordered
+            let candidateBucket = bucket(for: candidate.timestamp)
+            let buckets = counterpartSource == .iPhone
+                ? phoneBuckets
+                : watchBuckets
+            let counterpart = (-1...1)
+                .flatMap { buckets[candidateBucket + Int64($0)] ?? [] }
+                .map { ordered[$0] }
                 .filter {
                     !consumed.contains($0.id)
-                        && $0.source == counterpartSource
-                        && abs($0.timestamp.timeIntervalSince(candidate.timestamp)) <= max(0, matchingWindow)
+                        && abs($0.timestamp.timeIntervalSince(candidate.timestamp))
+                            <= window
                 }
                 .min {
-                    let lhsDistance = abs($0.timestamp.timeIntervalSince(candidate.timestamp))
-                    let rhsDistance = abs($1.timestamp.timeIntervalSince(candidate.timestamp))
+                    let lhsDistance = abs(
+                        $0.timestamp.timeIntervalSince(candidate.timestamp)
+                    )
+                    let rhsDistance = abs(
+                        $1.timestamp.timeIntervalSince(candidate.timestamp)
+                    )
                     if lhsDistance != rhsDistance { return lhsDistance < rhsDistance }
                     return $0.id.uuidString < $1.id.uuidString
                 }

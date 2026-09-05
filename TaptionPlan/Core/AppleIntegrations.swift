@@ -696,9 +696,15 @@ final class AppleHealthService: @unchecked Sendable {
 
     func actuals(in span: TimeSpan) async throws -> [ActualRecord] {
         async let workouts = workoutActuals(in: span)
-        async let sleeps = sleepActuals(in: span)
+        async let sessions = sleepSessions(in: span)
         async let mindful = mindfulSessionActuals(in: span)
-        return try await workouts + sleeps + mindful
+        return try await workouts + sleepActuals(from: sessions) + mindful
+    }
+
+    func nonSleepActuals(in span: TimeSpan) async throws -> [ActualRecord] {
+        async let workouts = workoutActuals(in: span)
+        async let mindful = mindfulSessionActuals(in: span)
+        return try await workouts + mindful
     }
 
     func synchronizeFullHistory(
@@ -836,8 +842,8 @@ final class AppleHealthService: @unchecked Sendable {
         }
     }
 
-    private func sleepActuals(in span: TimeSpan) async throws -> [ActualRecord] {
-        try await sleepSessions(in: span).map { session in
+    func sleepActuals(from sessions: [SleepSession]) -> [ActualRecord] {
+        sessions.map { session in
             let evidence = Array(
                 Set(["HealthKit 수면 기록"] + session.sourceNames)
             ).sorted()
@@ -1166,25 +1172,10 @@ final class AppleHealthService: @unchecked Sendable {
             end: span.end,
             options: []
         )
-        let sort = NSSortDescriptor(
-            key: HKSampleSortIdentifierStartDate,
-            ascending: true
-        )
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: type,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: [sort]
-            ) { _, samples, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: samples ?? [])
-                }
-            }
-            store.execute(query)
-        }
+        return try await HKSampleQueryDescriptor(
+            predicates: [.sample(type: type, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\HKSample.startDate)]
+        ).result(for: store)
     }
 
     private func readTypes() -> [HKObjectType] {
@@ -4171,6 +4162,14 @@ final class AppleTransportContextService {
     }
 }
 
+private final class AppleTransitBoardingSearchHandle: @unchecked Sendable {
+    let search: MKLocalSearch
+
+    init(_ search: MKLocalSearch) {
+        self.search = search
+    }
+}
+
 @MainActor
 final class AppleTransitBoardingPOIResolver {
     static let shared = AppleTransitBoardingPOIResolver()
@@ -4190,13 +4189,16 @@ final class AppleTransitBoardingPOIResolver {
 
         var places: [TransitBoardingPlace] = []
         for point in points {
+            guard !Task.isCancelled else { return [] }
             for kind in UserTransitLocationKind.allCases {
                 for query in kind.mapKitQueries {
+                    guard !Task.isCancelled else { return [] }
                     let place = await nearbyPlace(
                         query: query,
                         kind: kind,
                         point: point
                     )
+                    guard !Task.isCancelled else { return [] }
                     if let place {
                         places.append(place)
                         break
@@ -4238,7 +4240,14 @@ final class AppleTransitBoardingPOIResolver {
             latitudinalMeters: max(300, kind.mapKitSearchRadiusMeters * 2),
             longitudinalMeters: max(300, kind.mapKitSearchRadiusMeters * 2)
         )
-        let response = try? await MKLocalSearch(request: request).start()
+        let handle = AppleTransitBoardingSearchHandle(
+            MKLocalSearch(request: request)
+        )
+        let response = await withTaskCancellationHandler(
+            operation: { try? await handle.search.start() },
+            onCancel: { handle.search.cancel() }
+        )
+        guard !Task.isCancelled else { return nil }
         let origin = CLLocation(latitude: point.latitude, longitude: point.longitude)
         let place = response?.mapItems
             .compactMap { item -> (Double, TransitBoardingPlace)? in

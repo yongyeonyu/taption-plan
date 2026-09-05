@@ -53,17 +53,23 @@ public struct RouteGapInferenceConfiguration: Hashable, Sendable {
     public var minimumDistanceMeters: Double
     public var maximumDistanceMeters: Double
     public var minimumEndpointConfidence: Double
+    public var minimumAverageSpeedMetersPerSecond: Double
 
     public init(
         maximumGapDuration: TimeInterval = 4 * 60 * 60,
         minimumDistanceMeters: Double = 20,
         maximumDistanceMeters: Double = 500_000,
-        minimumEndpointConfidence: Double = 0.6
+        minimumEndpointConfidence: Double = 0.6,
+        minimumAverageSpeedMetersPerSecond: Double = 0.1
     ) {
         self.maximumGapDuration = maximumGapDuration
         self.minimumDistanceMeters = minimumDistanceMeters
         self.maximumDistanceMeters = maximumDistanceMeters
         self.minimumEndpointConfidence = minimumEndpointConfidence
+        self.minimumAverageSpeedMetersPerSecond = max(
+            0,
+            minimumAverageSpeedMetersPerSecond
+        )
     }
 }
 
@@ -143,7 +149,13 @@ public struct RouteGapInferenceEngine: Sendable {
         distance: Double,
         duration: TimeInterval
     ) -> Bool {
-        distance / duration <= mode.maximumSpeedMetersPerSecond * 1.25
+        let speed = distance / duration
+        let minimumSpeed: Double = switch mode {
+        case .subway, .bus, .train, .ship: 0
+        default: configuration.minimumAverageSpeedMetersPerSecond
+        }
+        return speed >= minimumSpeed
+            && speed <= mode.maximumSpeedMetersPerSecond * 1.25
     }
 
     private func routeDistance(

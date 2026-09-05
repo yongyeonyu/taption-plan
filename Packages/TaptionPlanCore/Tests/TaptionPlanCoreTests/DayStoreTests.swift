@@ -91,6 +91,35 @@ final class DayStoreTests: XCTestCase {
         XCTAssertEqual(result.map(\.id), ["a", "b", "c"])
     }
 
+    func testExistingEventIDsRemainDomainScoped() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 6)
+        try await store.appendEvents([
+            .init(
+                day: day,
+                timestamp: .now,
+                sequence: 0,
+                id: "healthkit:known",
+                domain: "healthkit-sample",
+                payload: Data([1])
+            ),
+        ])
+
+        let healthIDs = try await store.existingEventIDs(
+            ["healthkit:known", "healthkit:missing"],
+            domain: "healthkit-sample"
+        )
+        let sensorIDs = try await store.existingEventIDs(
+            ["healthkit:known"],
+            domain: "sensor-reading"
+        )
+
+        XCTAssertEqual(healthIDs, ["healthkit:known"])
+        XCTAssertTrue(sensorIDs.isEmpty)
+    }
+
     func testBatchRollsBackOnConstraintFailure() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

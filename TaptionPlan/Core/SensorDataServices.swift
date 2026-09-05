@@ -1117,17 +1117,24 @@ actor SensorReadingArchive {
         defer { lock.unlock() }
         try checkDataGeneration(generation)
         try await ensureMigrated()
-        let values = try await loadEvents(in: span)
-        return values.sorted(by: readingOrder)
+        let result = try await loadEvents(in: span)
+        return result.readings.sorted(by: readingOrder)
     }
 
     func routeReadings(in span: TimeSpan) async throws -> [SensorReading] {
+        try await routeReadingsLoadResult(in: span).readings
+    }
+
+    func routeReadingsLoadResult(
+        in span: TimeSpan
+    ) async throws -> (readings: [SensorReading], isComplete: Bool) {
         let generation = dataDeletionGeneration
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration(generation)
         try await ensureMigrated()
-        return try await loadEvents(in: span).sorted(by: readingOrder)
+        let result = try await loadEvents(in: span)
+        return (result.readings.sorted(by: readingOrder), result.isComplete)
     }
 
     func allReadings() async throws -> [SensorReading] {
@@ -1139,43 +1146,8 @@ actor SensorReadingArchive {
         guard let dayStore else { throw Error.dayStoreUnavailable }
         var readings: [SensorReading] = []
         for event in try await dayStore.allEvents(domain: "sensor-reading") {
-            do {
-                let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
-                    from: event.payload
-                )
-                readings.append(try TaptionPlanCanonicalStorage.decode(
-                    SensorReading.self,
-                    from: encoded
-                ))
-            } catch {
-                var fields = [
-                    "event_id": event.id,
-                    "event_day": String(
-                        format: "%04d-%02d-%02d",
-                        event.day.year,
-                        event.day.month,
-                        event.day.day
-                    ),
-                    "raw_preserved": "true",
-                ]
-                fields.merge(
-                    TaptionDiagnosticError.compactFields(for: error),
-                    uniquingKeysWith: { _, new in new }
-                )
-                if let recovered = recoveryReading(for: event.id) {
-                    fields["recovery_source"] = recovered.source
-                    readings.append(recovered.reading)
-                } else {
-                    fields["recovery_source"] = "unavailable"
-                    Self.logger.error(
-                        "Unreadable sensor archive event preserved: \(event.id, privacy: .public)"
-                    )
-                }
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "sensor_archive_invalid_reading",
-                    level: .error,
-                    fields: fields
-                )
+            if let reading = decodeReading(from: event) {
+                readings.append(reading)
             }
         }
         return readings.sorted(by: readingOrder)
@@ -1247,20 +1219,77 @@ actor SensorReadingArchive {
         _ = try await dayStore.markMigrationCompleted(Self.migrationKey)
     }
 
-    private func loadEvents(in span: TimeSpan) async throws -> [SensorReading] {
+    private func loadEvents(
+        in span: TimeSpan
+    ) async throws -> (readings: [SensorReading], isComplete: Bool) {
         guard let dayStore else { throw Error.dayStoreUnavailable }
         let start = TaptionPlanDayKey(date: span.start)
         let end = TaptionPlanDayKey(date: span.end)
-        return try await dayStore.events(from: start, through: end, domain: "sensor-reading")
-            .compactMap { event in
-                guard let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
-                    from: event.payload
-                ), let reading = try? TaptionPlanCanonicalStorage.decode(
-                    SensorReading.self,
-                    from: encoded
-                ), span.contains(reading.timestamp) else { return nil }
-                return reading
+        var readings: [SensorReading] = []
+        var isComplete = true
+        for event in try await dayStore.events(
+            from: start,
+            through: end,
+            domain: "sensor-reading"
+        ) {
+            guard span.contains(event.timestamp) else { continue }
+            guard let reading = decodeReading(from: event) else {
+                isComplete = false
+                continue
             }
+            if span.contains(reading.timestamp) {
+                readings.append(reading)
+            }
+        }
+        return (readings, isComplete)
+    }
+
+    private func decodeReading(
+        from event: TaptionPlanDayStore.Event
+    ) -> SensorReading? {
+        do {
+            let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
+                from: event.payload
+            )
+            return try TaptionPlanCanonicalStorage.decode(
+                SensorReading.self,
+                from: encoded
+            )
+        } catch {
+            var fields = [
+                "event_id": event.id,
+                "event_day": String(
+                    format: "%04d-%02d-%02d",
+                    event.day.year,
+                    event.day.month,
+                    event.day.day
+                ),
+                "raw_preserved": "true",
+            ]
+            fields.merge(
+                TaptionDiagnosticError.compactFields(for: error),
+                uniquingKeysWith: { _, new in new }
+            )
+            if let recovered = recoveryReading(for: event.id) {
+                fields["recovery_source"] = recovered.source
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "sensor_archive_invalid_reading",
+                    level: .error,
+                    fields: fields
+                )
+                return recovered.reading
+            }
+            fields["recovery_source"] = "unavailable"
+            Self.logger.error(
+                "Unreadable sensor archive event preserved: \(event.id, privacy: .public)"
+            )
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_archive_invalid_reading",
+                level: .error,
+                fields: fields
+            )
+            return nil
+        }
     }
 
     private func readLegacyFile() -> [SensorReading] {
@@ -1698,6 +1727,12 @@ final class AppleSensorDataService {
         in span: TimeSpan
     ) async throws -> [SensorReading] {
         try await archive.routeReadings(in: span)
+    }
+
+    func archivedRouteReadingsLoadResult(
+        in span: TimeSpan
+    ) async throws -> (readings: [SensorReading], isComplete: Bool) {
+        try await archive.routeReadingsLoadResult(in: span)
     }
 
     func allArchivedRouteReadings() async throws -> [SensorReading] {
