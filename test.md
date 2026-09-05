@@ -1,5 +1,14 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-05 BAK905H010·REL905H011 raw 실패 롤백·TestFlight build 137
+
+- 월간 raw 저장 뒤 snapshot 커밋이 실패할 때 직전 정상 raw가 덮어써지던 결함을 수정했다. 병합 중 이미 읽은 archive를 되돌리며, 이전 파일이 없으면 미커밋 raw만 삭제한다.
+- 집중 회귀 1/1, `SecurityBackupCoreTests` 50/50, 앱 전체 1,027건 중 1,026 passed·1 skipped·0 failed다: `/private/tmp/BAK905H010-focused.K2HmMB/focused.xcresult`, `/private/tmp/BAK905H010-focused.K2HmMB/security-suite.xcresult`, `/private/tmp/BAK905H010-focused.K2HmMB/full.xcresult`. skip은 iOS 26.5 Simulator의 기존 StoreKit 시스템 오류다.
+- 배포 소스 `a6e770f64491e97896136a1b7692620bf6c0c62b`에서 앱·iOS Widget·Watch 앱·Watch Widget을 모두 `1.0 (137)`로 archive/export했다. archive·IPA deep/strict codesign, privacy manifest 5개, Apple Distribution, `beta-reports-active=true`, iCloud `Production`, `get-task-allow=false`와 Apple 서버 사전 검증을 통과했다.
+- archive는 `/private/tmp/REL905H011-release.nFPbOf/TaptionPlan-1.0-137.xcarchive`, IPA는 `/private/tmp/REL905H011-release.nFPbOf/Export/TaptionPlan.ipa`, SHA-256은 `18e5516b30726c1ba7862907062c7421ef743fff7f12165bf0e40f0b0a07d405`다.
+- Delivery/build UUID `1b26a479-4bd6-49df-bda2-2f1bf1f0d28a`는 `VALID`·미만료·`APP_STORE_ELIGIBLE`이다. `TP Taption Plan 내부 테스트` 추가 후 build 137 포함·그룹 빌드 98개·내부 테스터 1명 `INSTALLED`를 API readback했다.
+- TestFlight 클라이언트 build 137 설치·launch·실제 백업 복원·터치·장시간 발열/배터리는 별도 미완료 게이트다.
+
 ## 2026-09-05 BAK905H008·REL905H009 raw 복원·TestFlight build 136
 
 - raw를 생략한 포그라운드 스냅샷 저장이 새 generation ID로 월간 파일을 덮어써 기존 raw 백업을 복원 대상에서 제외할 수 있던 결함을 수정했다. 같은 달의 기존 generation ID를 보존하고 포그라운드 경로는 스냅샷 저장 API를 사용한다.

@@ -1,5 +1,14 @@
 # Taption Plan 개발 문서
 
+## 2026-09-05 BAK905H010·REL905H011 · raw 실패 롤백·build 137
+
+- 월간 전체 백업이 raw 파일을 먼저 갱신한 뒤 snapshot 저장에 실패하면, generation 불일치로 새 raw를 제외하면서 직전 정상 raw 파일까지 잃는 부분 커밋 결함을 수정했다.
+- raw 병합 때 이미 읽은 기존 archive를 재사용해 snapshot 실패 시 되돌리고, 기존 archive가 없으면 미커밋 raw를 삭제한다. 추가 의존성·래퍼·중복 raw 읽기는 없다.
+- 집중 회귀 1/1, 보안·백업 50/50, 앱 전체 1,027건 중 1,026 passed·기존 iOS 26.5 StoreKit 시스템 skip 1·failed 0을 통과했다: `/private/tmp/BAK905H010-focused.K2HmMB/focused.xcresult`, `/private/tmp/BAK905H010-focused.K2HmMB/security-suite.xcresult`, `/private/tmp/BAK905H010-focused.K2HmMB/full.xcresult`.
+- 배포 소스 `a6e770f64491e97896136a1b7692620bf6c0c62b`를 `main`에 푸시하고 네 번들을 `1.0 (137)`로 archive/export했다. archive는 `/private/tmp/REL905H011-release.nFPbOf/TaptionPlan-1.0-137.xcarchive`, IPA는 `/private/tmp/REL905H011-release.nFPbOf/Export/TaptionPlan.ipa`, IPA SHA-256은 `18e5516b30726c1ba7862907062c7421ef743fff7f12165bf0e40f0b0a07d405`다.
+- 배포본은 Apple Distribution, privacy manifest 5개, `beta-reports-active=true`, iCloud `Production`, `get-task-allow=false`, deep/strict codesign과 Apple 서버 사전 검증을 통과했다.
+- Delivery/build UUID `1b26a479-4bd6-49df-bda2-2f1bf1f0d28a`는 `VALID`·미만료·`APP_STORE_ELIGIBLE`이다. `TP Taption Plan 내부 테스트` 추가 후 build 137 포함·그룹 빌드 98개·내부 테스터 1명 `INSTALLED`를 API readback했다.
+
 ## 2026-09-05 BAK905H008·REL905H009 · raw 복원 연속성·build 136
 
 - 포그라운드의 가벼운 스냅샷 백업이 새 generation ID로 월간 파일을 덮어써, 기존 암호화 raw 센서 백업이 다음 전체 백업 전까지 복원에서 제외될 수 있는 결함을 수정했다.

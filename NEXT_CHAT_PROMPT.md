@@ -14,28 +14,28 @@ xcrun simctl list devices
 
 ## 현재 릴리스 정본
 
-- 요청 ID: `REL905H009`
-- 배포 소스 SHA(바이너리): `f76af5a9dd23e880f00c9d3b5cf2b6b173efe83b`
-- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (136)`
-- Release archive: `/private/tmp/REL905H009-release.1kVYsd/TaptionPlan-1.0-136.xcarchive`
-- Export IPA: `/private/tmp/REL905H009-release.1kVYsd/Export/TaptionPlan.ipa`
-- IPA SHA-256: `32486649b566c61a3270ee0424e8d99a50a4c176c3200ea9f0edb1c24c639b86`
-- Delivery/build UUID: `85cabd56-8654-4124-b660-9e8793fe4853`
+- 요청 ID: `REL905H011`
+- 배포 소스 SHA(바이너리): `a6e770f64491e97896136a1b7692620bf6c0c62b`
+- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (137)`
+- Release archive: `/private/tmp/REL905H011-release.nFPbOf/TaptionPlan-1.0-137.xcarchive`
+- Export IPA: `/private/tmp/REL905H011-release.nFPbOf/Export/TaptionPlan.ipa`
+- IPA SHA-256: `18e5516b30726c1ba7862907062c7421ef743fff7f12165bf0e40f0b0a07d405`
+- Delivery/build UUID: `1b26a479-4bd6-49df-bda2-2f1bf1f0d28a`
 - App Store Connect App ID: `6797370230`
 - Internal 그룹: `TP Taption Plan 내부 테스트`, ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`
-- build 136은 App Store Connect에서 `VALID`·`expired=false`·`APP_STORE_ELIGIBLE`이며 Internal 그룹 추가 후 그룹 빌드 API에 포함, 그룹 빌드 97개와 내부 테스터 1명으로 readback했다.
+- build 137은 App Store Connect에서 `VALID`·`expired=false`·`APP_STORE_ELIGIBLE`이며 Internal 그룹 추가 후 그룹 빌드 API에 포함, 그룹 빌드 98개와 내부 테스터 1명 `INSTALLED`로 readback했다.
 
 ## 현재 검증·정리 상태
 
-- `test.md`에 원본 백업 generation 연속성 회귀 1/1, 보안·백업 50/50, 전체 앱 1,027건 중 1,026 passed·1 skipped·0 failed와 build 136 archive/export·서명·업로드·API readback 증적이 있다. skip은 iOS 26.5 Simulator의 StoreKit 시스템 오류로 한정된다.
+- `test.md`에 snapshot 실패 raw 롤백 집중 회귀 1/1, 보안·백업 50/50, 전체 앱 1,027건 중 1,026 passed·1 skipped·0 failed와 build 137 archive/export·서명·업로드·API readback 증적이 있다. skip은 iOS 26.5 Simulator의 StoreKit 시스템 오류로 한정된다.
 - 실제 iCloud 2026-09 일반·raw 센서 백업은 JSON v1 구조와 암호문 SHA-256 digest 일치를 확인했다. PIN 복호화·적용 readback은 아직 실기기에서 확인하지 않았다.
-- iPad Pro에는 개발자 서명 `1.0 (134)`를 설치·버전 readback했지만 기기 잠금으로 launch가 거부됐다. TestFlight 클라이언트 build 136 설치·실행은 아직 물리 검증하지 않았다.
+- iPad Pro에는 개발자 서명 `1.0 (134)`를 설치·버전 readback했지만 기기 잠금으로 launch가 거부됐다. TestFlight 클라이언트 build 137 설치·실행은 아직 물리 검증하지 않았다.
 - `com.taption.plan.pro`는 비소모성 `READY_TO_SUBMIT`, 미국 `USD 9.99`, 한국·미국 포함 175개 지역, 한국어·영어 현지화와 심사 이미지 `COMPLETE`다. Paid Apps Agreement와 앱 버전 상품 연결은 브라우저 재인증이 필요하다.
-- build 136 release DerivedData와 IPA 압축 해제본은 제거했고 archive·IPA·업로드/API 증적은 `/private/tmp/REL905H009-release.1kVYsd`에 보존했다. 열린 핸들이 없는 재생성 가능한 외부 DerivedData 두 곳도 제거해 약 11GiB를 확보했으며 별도 xcresult는 보존했다.
+- build 137 archive·IPA·검증·업로드/API 증적은 `/private/tmp/REL905H011-release.nFPbOf`에, XCTest 증적은 `/private/tmp/BAK905H010-focused.K2HmMB`에 보존한다. 재생성 가능한 DerivedData와 IPA 압축 해제본만 제거한다.
 
 ## 반드시 남은 게이트
 
-1. iPhone·iPad TestFlight에서 build 136을 다운로드·설치한 뒤 version/build readback과 launch, 실행 속도·장시간 발열/배터리, 두 손가락 pinch, 날짜 변경 시 사이드바 대분류 유지 화면을 검증한다.
+1. iPhone·iPad TestFlight에서 build 137을 다운로드·설치한 뒤 version/build readback과 launch, 실행 속도·장시간 발열/배터리, 두 손가락 pinch, 날짜 변경 시 사이드바 대분류 유지 화면을 검증한다.
 2. iPhone/Apple Watch 실제 원본 수신과 `수신 대기 → 최근 수신`, 비이동 졸라맨 정지, 수면·지하철·공백 예상경로 진단 로그를 확인한다.
 3. iCloud 일반·raw 백업을 PIN으로 실제 복호화·적용하고 Apple·Google·Naver 실제 계정 일정 readback, Paid Apps Agreement 활성화, 앱 버전의 `com.taption.plan.pro` 연결, sandbox/TestFlight 구매·복원을 확인한다.
 
