@@ -1,5 +1,14 @@
 # Taption Plan 개발 문서
 
+## 2026-09-05 REL905H007 · build 135 정확도·성능 보강 릴리스
+
+- 자동 기록·경로 생성·행동 분류·센서/Watch 분기·지도 상호작용을 다방면 검토해 확인된 결함을 최소 수정했다. 불완전 일자 캐시, stale projection/migration, 과도한 날짜 조회, 경로 opacity·MapKit overlay 교체, 현재 위치 중복 표시, Watch 유료 잠금 우회를 바로잡았다.
+- 전체 앱 테스트는 1,027건 중 1,026건 통과·실패 0·iOS 26.5 StoreKit 시스템 결함 1건만 skip했다. 집중 회귀 6/6, 성능 회귀 4/4, 30일 로드 cold/warm p95 `33.154708ms`/`0.007334ms`, generic iOS·watchOS Debug와 정적 분석을 통과했다.
+- 배포 소스 `1ca699e5f0da06c18dd453b31c688c5b38405a31`을 `main`에 푸시하고 앱·iOS Widget·Watch 앱·Watch Widget을 `1.0 (135)`로 archive/export했다. IPA SHA-256은 `f2f5ef3b106fb37c480b1e365888fe66844c4c111c0d06b990b9c7bc110807e3`이다.
+- 배포 IPA는 Apple Distribution 서명, `beta-reports-active=true`, iCloud `Production`, `get-task-allow=false`, privacy manifest와 deep/strict codesign을 확인했다.
+- App Store Connect 업로드 Delivery/build UUID는 `365a5ef7-dfda-447f-8b4c-3c807f1ef37e`이며 `VALID`·미만료·`APP_STORE_ELIGIBLE`이다. `TP Taption Plan 내부 테스트`에 API로 추가한 뒤 build 135 포함·그룹 빌드 96개·내부 테스터 1명을 readback했다.
+- TestFlight 클라이언트의 build 135 실기기 설치·실행, 장시간 발열/배터리, 두 손가락 pinch, iPhone/Watch 실제 센서·수면·지하철 수신은 별도 물리 게이트로 남긴다.
+
 ## 2026-08-30 DOCS83047A · 문서 범위 정리
 
 - 사용자 선택 3에 따라 현재 구현 범위와 직접 연결되지 않은 `ACTION_ITEMS.md`와 구현 전 아이디어 문서 `GAME_plan.md`를 삭제했다.

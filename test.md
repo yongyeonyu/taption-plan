@@ -1,5 +1,14 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-05 REL905H007 TestFlight build 135
+
+- 배포 소스 `1ca699e5f0da06c18dd453b31c688c5b38405a31`에서 앱·iOS Widget·Watch 앱·Watch Widget을 모두 `1.0 (135)`로 archive/export했다.
+- 전체 앱 테스트는 1,027건 중 1,026 passed·1 skipped·0 failed, 집중 회귀 6/6, 성능 회귀 4/4이며 iOS·watchOS Debug와 앱 정적 분석을 통과했다. skip 1건은 iOS 26.5 Simulator의 `SKInternalErrorDomain Code 3` StoreKit 시스템 결함이다.
+- archive와 IPA의 deep/strict codesign, 네 번들의 privacy manifest를 확인했다. 배포 IPA는 Apple Distribution, `beta-reports-active=true`, iCloud `Production`, `get-task-allow=false`; SHA-256은 `f2f5ef3b106fb37c480b1e365888fe66844c4c111c0d06b990b9c7bc110807e3`이다.
+- App Store Connect 업로드에 성공했다: Delivery/build UUID `365a5ef7-dfda-447f-8b4c-3c807f1ef37e`, `BUILD-STATUS: VALID`, `IMPORT-STATUS: VALID`, `APP_STORE_ELIGIBLE`, `PROCESSINGSTATE: VALID`, `expired=false`.
+- `TP Taption Plan 내부 테스트`에 build 135를 추가했고 API readback에서 build 135 `VALID`·미만료, 그룹 빌드 96개, 내부 테스터 1명을 확인했다.
+- TestFlight 클라이언트의 build 135 실기기 설치·launch·실제 화면/터치·장시간 발열/배터리는 별도 미완료 게이트다.
+
 ## 2026-09-05 DEV905H006 iPad 최신 소스 설치
 
 - iPad Pro 12.9-inch 6세대(iPadOS 26.6.1, 유선 연결, 개발자 모드)에 최신 dirty 소스의 iOS 실기기 앱·XCTest 번들을 Apple Development로 서명해 `build-for-testing`했다: `/private/tmp/DEV905H006-ipad.wmSSIl/build-for-testing.log`.

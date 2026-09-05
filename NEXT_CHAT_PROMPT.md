@@ -14,30 +14,28 @@ xcrun simctl list devices
 
 ## 현재 릴리스 정본
 
-- 요청 ID: `REL904A001`
-- 배포 소스 SHA(바이너리): `f99d72b93919e8646a6fc7d9908330e524eb6034`
-- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (134)`
-- Release archive: `/private/tmp/taption-rel904-build134/TaptionPlan.xcarchive`
-- Export IPA: `/private/tmp/taption-rel904-build134/Export/TaptionPlan.ipa`
-- IPA SHA-256: `225ba74b3de11b05e1c4a530d20a21b495b34ca0b22f8af503184b9dabf45851`
-- Delivery/build UUID: `a3581625-8668-4d3a-85c1-240078bc054e`
+- 요청 ID: `REL905H007`
+- 배포 소스 SHA(바이너리): `1ca699e5f0da06c18dd453b31c688c5b38405a31`
+- 앱·iOS Widget·Watch 앱·Watch Widget: `1.0 (135)`
+- Release archive: `/private/tmp/REL905H007-release.1Gc6pa/TaptionPlan-1.0-135.xcarchive`
+- Export IPA: `/private/tmp/REL905H007-release.1Gc6pa/Export/TaptionPlan.ipa`
+- IPA SHA-256: `f2f5ef3b106fb37c480b1e365888fe66844c4c111c0d06b990b9c7bc110807e3`
+- Delivery/build UUID: `365a5ef7-dfda-447f-8b4c-3c807f1ef37e`
 - App Store Connect App ID: `6797370230`
 - Internal 그룹: `TP Taption Plan 내부 테스트`, ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`
-- build 134는 App Store Connect API에서 `VALID`·`expired=false`, 내부 그룹 빌드 API에 포함, 내부 테스터 1명으로 readback했다.
+- build 135는 App Store Connect에서 `VALID`·`expired=false`·`APP_STORE_ELIGIBLE`이며 Internal 그룹 추가 후 그룹 빌드 API에 포함, 그룹 빌드 96개와 내부 테스터 1명으로 readback했다.
 
 ## 현재 검증·정리 상태
 
-- `test.md`에 build 134 집중 테스트·archive/export·서명·업로드·API readback 증적이 있다.
-- Chrome의 Internal 그룹 빌드 화면에서 build `1.0 (133) · 테스트 중 · iOS`, 테스터 화면에서 내부 테스터 1명과 그룹 build 94개를 확인했다.
-- 테스터 화면의 마지막 설치 표시는 TestFlight build 132다. iPad Pro의 마지막 별도 readback은 앱 build 125이고 TestFlight `4.3.0 (659.1)`이 설치돼 있다. build 133 다운로드·설치·launch·실제 발열은 남은 물리 게이트다.
-- 오늘 수면 누락 원인은 HealthKit 연동 비활성화다. build 129는 오늘 수면이 없으면 `수면 연결` 버튼을 표시하며 실제 권한 승인·오늘 수면 재조회는 사용자 탭이 필요하다.
-- 종료된 구형 Simulator 5대의 data는 삭제했고 iOS/watchOS 26.5 runtime은 보존했다. 현재 다른 작업이 iPad Simulator `2CD5BB05-7C63-4D44-A0B3-170F83F62210`에서 `WBS33GOAL1` XCTest를 실행 중이면 중단하거나 삭제하지 않는다.
-- build 133 배포 중 재생성 가능한 성능 검증·build 132·build 133 DerivedData 약 3.2G를 영구 삭제했고 당시 데이터 볼륨 여유 약 8.9GiB를 확인했다. build 132/133 archive·IPA, build 133 XCTest 결과와 다른 작업의 활성 산출물은 보존했다.
+- `test.md`에 전체 앱 1,027건 중 1,026 passed·1 skipped·0 failed, 집중 6/6, 성능 4/4, iOS·watchOS Debug/정적 분석과 build 135 archive/export·서명·업로드·API readback 증적이 있다. skip은 iOS 26.5 Simulator의 StoreKit 시스템 오류로 한정된다.
+- iPad Pro에는 최신 개발자 서명 소스 `1.0 (134)`를 설치·버전 readback했지만 기기 잠금으로 launch가 거부됐다. TestFlight 클라이언트 build 135 설치·실행은 아직 물리 검증하지 않았다.
+- `com.taption.plan.pro`는 비소모성 `READY_TO_SUBMIT`, 미국 `USD 9.99`, 한국·미국 포함 175개 지역, 한국어·영어 현지화와 심사 이미지 `COMPLETE`다. Paid Apps Agreement와 앱 버전 상품 연결은 브라우저 재인증이 필요하다.
+- build 135 release DerivedData와 IPA 압축 해제본은 제거했고 archive·IPA·업로드/API 증적은 `/private/tmp/REL905H007-release.1Gc6pa`에 보존했다.
 
 ## 반드시 남은 게이트
 
-1. iPhone·iPad의 TestFlight에서 build 134를 다운로드·설치한 뒤 version/build readback과 launch, 실행 속도·발열, Watch 설정 위치·비이동 졸라맨 정지·날짜 변경 시 사이드바 대분류 유지 화면을 검증한다. 지하철 이동과 수면 권한·조회 뒤 iCloud 로그를 올려 이동 판정·예상경로·HealthKit 이벤트를 확인한다.
-2. Apple Watch 실제 envelope 수신과 `수신 대기 → 최근 수신` 전환을 확인한다.
-3. Paid Apps Agreement 활성화, `com.taption.plan.pro` 생성, sandbox 구매·복원을 확인한다.
+1. iPhone·iPad TestFlight에서 build 135를 다운로드·설치한 뒤 version/build readback과 launch, 실행 속도·장시간 발열/배터리, 두 손가락 pinch, 날짜 변경 시 사이드바 대분류 유지 화면을 검증한다.
+2. iPhone/Apple Watch 실제 원본 수신과 `수신 대기 → 최근 수신`, 비이동 졸라맨 정지, 수면·지하철·공백 예상경로 진단 로그를 확인한다.
+3. Apple·Google·Naver 실제 계정 일정 readback과 Paid Apps Agreement 활성화, 앱 버전의 `com.taption.plan.pro` 연결, sandbox/TestFlight 구매·복원을 확인한다.
 
 완료된 `temp.md` 항목만 삭제하고 미완료 게이트는 남긴다. 문서 변경은 승인 파일만 stage하며 마지막에 `HEAD == origin/main == ls-remote main`, tracked/untracked clean을 확인한다.
