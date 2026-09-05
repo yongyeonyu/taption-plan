@@ -349,7 +349,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(restored.sensorReadings.map(\.id), [reading.id])
     }
 
-    func testMonthlyGenerationIgnoresRawWhenSnapshotCommitFails()
+    func testMonthlyGenerationRestoresRawWhenSnapshotCommitFails()
         async throws {
         let backupStore = FailNextPlanCloudBackupStore()
         let rawStore = InMemoryPlanCloudRawSensorBackupStore()
@@ -409,13 +409,17 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore.archives["2026-08"]?.generationID,
             first.generationID
         )
-        XCTAssertNotEqual(
+        XCTAssertEqual(
             rawStore.archives["2026-08"]?.generationID,
             first.generationID
         )
         XCTAssertEqual(service.status.latestSuccessfulBackupDate, firstDate)
         let restored = try await service.loadLatestBackupPackage()
-        XCTAssertEqual(restored.rawSensorState, .unavailable)
+        guard case let .available(raw) = restored.rawSensorState else {
+            return XCTFail("Snapshot failure must restore the previous raw archive")
+        }
+        XCTAssertEqual(raw.sensorReadings.count, 1)
+        XCTAssertEqual(raw.sensorReadings.first?.timestamp, firstDate)
     }
 
     func testBiometricGateUnlocksWithoutExposingRawBiometric() async throws {

@@ -2047,9 +2047,12 @@ final class PlanSecurityBackupService {
         let accountIdentifier =
             CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope
         let generationID = UUID()
-        let rawArchive: PlanRawSensorMonthlyArchive?
+        let rawSave: (
+            archive: PlanRawSensorMonthlyArchive,
+            previous: PlanRawSensorMonthlyArchive?
+        )?
         if let rawSensorPayload, !rawSensorPayload.isEmpty {
-            rawArchive = try saveRawSensorArchive(
+            rawSave = try saveRawSensorArchive(
                 rawSensorPayload,
                 accountIdentifier: accountIdentifier,
                 accountKey: accountKey,
@@ -2057,20 +2060,35 @@ final class PlanSecurityBackupService {
                 generationID: generationID
             )
         } else {
-            rawArchive = nil
+            rawSave = nil
         }
-        let snapshotArchive = try saveMonthlyArchive(
-            payload,
-            accountIdentifier: accountIdentifier,
-            accountKey: accountKey,
-            date: date,
-            recordsSuccessfulBackup: false,
-            generationID: generationID
-        )
+        let snapshotArchive: PlanMonthlyArchive
+        do {
+            snapshotArchive = try saveMonthlyArchive(
+                payload,
+                accountIdentifier: accountIdentifier,
+                accountKey: accountKey,
+                date: date,
+                recordsSuccessfulBackup: false,
+                generationID: generationID
+            )
+        } catch {
+            if let rawSave {
+                let path = PlanCloudRawSensorBackupPath(
+                    monthKey: rawSave.archive.monthKey
+                )
+                if let previous = rawSave.previous {
+                    try rawSensorBackupStore.save(previous, at: path)
+                } else {
+                    try rawSensorBackupStore.delete(at: path)
+                }
+            }
+            throw error
+        }
         recordSuccessfulBackup(at: date)
         return PlanCloudBackupGeneration(
             snapshot: snapshotArchive,
-            rawSensors: rawArchive,
+            rawSensors: rawSave?.archive,
             generationID: generationID
         )
     }
@@ -2090,7 +2108,7 @@ final class PlanSecurityBackupService {
             accountIdentifier: accountIdentifier,
             accountKey: accountKey,
             date: date
-        )
+        ).archive
     }
 
     func saveRawSensorArchive(
@@ -2107,7 +2125,7 @@ final class PlanSecurityBackupService {
             accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope,
             accountKey: accountKey,
             date: date
-        )
+        ).archive
     }
 
     private func saveMonthlyArchive(
@@ -2170,7 +2188,10 @@ final class PlanSecurityBackupService {
         accountKey: Data?,
         date: Date,
         generationID: UUID? = nil
-    ) throws -> PlanRawSensorMonthlyArchive {
+    ) throws -> (
+        archive: PlanRawSensorMonthlyArchive,
+        previous: PlanRawSensorMonthlyArchive?
+    ) {
         guard let verifier else {
             throw PlanSecurityError.pinRequiredForCloudBackup
         }
@@ -2182,13 +2203,14 @@ final class PlanSecurityBackupService {
             watchAccelerationChunks: payload.watchAccelerationChunks ?? [],
             createdAt: payload.createdAt
         )
-        let payload = try payloadPreservingCurrentMonthRawData(
+        let preserved = try payloadPreservingCurrentMonthRawData(
             normalizedPayload,
             monthKey: monthKey,
             accountIdentifier: accountIdentifier,
             pinKeyData: verifier.keyMaterial,
             accountKeyData: accountKey
         )
+        let payload = preserved.payload
         let encoded = try JSONEncoder.taptionPlan.encode(payload)
         guard encoded.count
             <= TaptionSnapshotCompression.maximumRawSensorUncompressedSize
@@ -2246,7 +2268,7 @@ final class PlanSecurityBackupService {
             archive,
             at: PlanCloudRawSensorBackupPath(monthKey: monthKey)
         )
-        return archive
+        return (archive, preserved.archive)
     }
 
     private func recordSuccessfulBackup(at date: Date) {
@@ -2314,11 +2336,14 @@ final class PlanSecurityBackupService {
         accountIdentifier: String,
         pinKeyData: Data,
         accountKeyData: Data?
-    ) throws -> PlanCloudRawSensorPayload {
+    ) throws -> (
+        payload: PlanCloudRawSensorPayload,
+        archive: PlanRawSensorMonthlyArchive?
+    ) {
         guard let existingArchive = try rawSensorBackupStore.allArchives()
             .filter({ $0.monthKey == monthKey })
             .max(by: Self.archivePrecedes) else {
-            return incoming
+            return (incoming, nil)
         }
         guard existingArchive.accountIdentifier == accountIdentifier else {
             throw PlanSecurityError.accountMismatch
@@ -2352,12 +2377,15 @@ final class PlanSecurityBackupService {
                 + (incoming.watchAccelerationChunks ?? []),
             into: &chunksByID
         )
-        return PlanCloudRawSensorPayload(
-            monthKey: monthKey,
-            sensorReadings: Array(readingsByID.values),
-            envelopes: Array(envelopesByID.values),
-            watchAccelerationChunks: Array(chunksByID.values),
-            createdAt: incoming.createdAt
+        return (
+            PlanCloudRawSensorPayload(
+                monthKey: monthKey,
+                sensorReadings: Array(readingsByID.values),
+                envelopes: Array(envelopesByID.values),
+                watchAccelerationChunks: Array(chunksByID.values),
+                createdAt: incoming.createdAt
+            ),
+            existingArchive
         )
     }
 
