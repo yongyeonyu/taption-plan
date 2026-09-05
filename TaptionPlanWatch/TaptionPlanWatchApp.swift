@@ -1,4 +1,5 @@
 import SwiftUI
+import TaptionPlanCore
 
 @main
 struct TaptionPlanWatchApp: App {
@@ -6,6 +7,7 @@ struct TaptionPlanWatchApp: App {
     @StateObject private var workout: WatchWorkoutManager
 
     init() {
+        TaptionPlanDeviceLocalStorage.excludeFromBackup()
         // 워치 앱은 iPhone 앱과 별도로 업데이트되어 뒤처질 수 있다.
         // 어느 빌드가 실제로 돌고 있는지 기록에 남긴다.
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
@@ -16,8 +18,13 @@ struct TaptionPlanWatchApp: App {
         workout.onSensorSummary = { [weak connectivity] summary in
             connectivity?.sendSensorSummary(summary)
         }
-        workout.onAmbientSensorSummary = { [weak connectivity] summary in
-            await connectivity?.sendSensorSummaryAndWait(summary)
+        workout.onAmbientDrain = {
+            [weak connectivity] summaries, accelerationChunks in
+            guard let connectivity else { return false }
+            return await connectivity.sendAmbientDrainAndWait(
+                summaries: summaries,
+                accelerationChunks: accelerationChunks
+            )
         }
         workout.onAccelerationChunk = { [weak connectivity] chunk in
             await connectivity?.sendAccelerationChunkAndWait(chunk)
@@ -26,10 +33,13 @@ struct TaptionPlanWatchApp: App {
             connectivity?.sendHealthSnapshot(snapshot)
         }
         connectivity.onPayloadChange = { [weak workout] payload in
-            workout?.applySettings(
-                acceleration: payload.accelerationSettings,
-                dataSyncProfile: payload.dataSyncProfile
-            )
+            Task { @MainActor in
+                await workout?.applySettings(
+                    acceleration: payload.accelerationSettings,
+                    dataSyncProfile: payload.dataSyncProfile,
+                    commerceLocked: payload.commerceLocked == true
+                )
+            }
         }
         connectivity.onDataSyncRequest = { [weak connectivity, weak workout] requestID in
             Task { @MainActor in
@@ -40,6 +50,9 @@ struct TaptionPlanWatchApp: App {
                 await workout.syncNow(requestID: requestID)
                 connectivity?.finishDataSyncRequest(requestID)
             }
+        }
+        connectivity.onPurgeRequest = { [weak workout] in
+            await workout?.deleteAllLocalData() ?? false
         }
         connectivity.onWorkoutRequest = {
             [weak connectivity, weak workout] request in

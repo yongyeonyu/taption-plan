@@ -4,6 +4,41 @@ import XCTest
 @testable import TaptionPlan
 
 final class HealthKitIntegrationTests: XCTestCase {
+    func testHealthSyncOverviewReportsPartialFailures() {
+        let overview = HealthKitSyncOverview(states: [
+            HealthKitTypeSyncState(
+                typeIdentifier: "success",
+                historyComplete: true
+            ),
+            HealthKitTypeSyncState(
+                typeIdentifier: "failed",
+                lastError: "denied"
+            ),
+        ])
+
+        XCTAssertEqual(overview.completedTypeCount, 1)
+        XCTAssertEqual(overview.failedTypeCount, 1)
+        XCTAssertEqual(overview.lastError, "denied")
+    }
+
+    @available(iOS 18.0, *)
+    func testDeleteAllReportsUnavailableRawStore() async {
+        let coordinator = HealthKitImportCoordinator(
+            healthStore: HKHealthStore(),
+            importStore: nil
+        )
+
+        do {
+            try await coordinator.deleteAll()
+            XCTFail("Missing raw store must not be reported as deleted")
+        } catch {
+            guard case .some(.localStoreUnavailable) =
+                error as? HealthKitImportCoordinatorError else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        }
+    }
+
     func testHealthAuthorizationEnablesImplicitWatchSync() {
         XCTAssertEqual(
             TaptionWatchDataSyncProfile.profileAfterHealthAuthorization(
@@ -25,6 +60,18 @@ final class HealthKitIntegrationTests: XCTestCase {
                 userDidSetProfile: false
             ),
             .accuracy
+        )
+    }
+
+    func testHealthBackgroundObserversOnlyWakeForTimelineInputs() {
+        XCTAssertEqual(
+            HealthRefreshPolicy.backgroundObservedTypeIdentifiers,
+            [
+                HKObjectType.workoutType().identifier,
+                HKCategoryTypeIdentifier.sleepAnalysis.rawValue,
+                HKCategoryTypeIdentifier.mindfulSession.rawValue,
+                HKQuantityTypeIdentifier.stepCount.rawValue,
+            ]
         )
     }
 
@@ -167,6 +214,42 @@ final class HealthKitIntegrationTests: XCTestCase {
         )
         XCTAssertTrue(remaining.isEmpty)
         XCTAssertEqual(finalState, deletedState)
+    }
+
+    func testHealthKitDeleteAllClearsSamplesAndSyncAnchors() async throws {
+        let url = temporaryDatabaseURL()
+        defer { removeDatabase(at: url) }
+        let store = try HealthKitImportStore(databaseURL: url)
+        let date = Date(timeIntervalSince1970: 1_788_100_000)
+        let sample = HealthKitSampleRecord(
+            uuid: UUID(),
+            typeIdentifier: "HKQuantityTypeIdentifierHeartRate",
+            startDate: date,
+            endDate: date,
+            numericValue: 72,
+            unit: "count/min"
+        )
+        try await store.apply(
+            records: [sample],
+            deletedIDs: [],
+            state: HealthKitTypeSyncState(
+                typeIdentifier: sample.typeIdentifier,
+                anchor: Data("anchor".utf8),
+                sampleCount: 1,
+                addedCount: 1,
+                lastSyncedAt: date
+            )
+        )
+
+        try await store.deleteAll()
+
+        let records = try await store.records(
+            from: date.addingTimeInterval(-1),
+            through: date.addingTimeInterval(1)
+        )
+        let state = try await store.syncState(for: sample.typeIdentifier)
+        XCTAssertTrue(records.isEmpty)
+        XCTAssertNil(state)
     }
 
     func testHealthCategoryIsAvailableForNonDiagnosticProjection() {

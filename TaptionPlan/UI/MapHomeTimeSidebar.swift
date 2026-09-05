@@ -903,6 +903,8 @@ struct MapHomeTimeSidebar: View {
     @State private var handleDrag = MapHomeTimeSidebarHandleDrag()
     @State private var railSnapshot: MapHomeTimeSidebarRailSnapshot
     @State private var pendingRailSegments: [MapHomeTimeRailSegment]?
+    @State private var pinchStepOffset = 0
+    @State private var lastPinchRenderUptime: TimeInterval = 0
 
     private let railWidth: CGFloat
     private let trailingInteractionWidth: CGFloat
@@ -1026,6 +1028,7 @@ struct MapHomeTimeSidebar: View {
                             )
                         )
                         .simultaneousGesture(viewportDragGesture(trackHeight: trackHeight))
+                        .simultaneousGesture(timelineMagnificationGesture)
 
                     Rectangle()
                     .fill(MapHomeTimeSidebarStyle.numericColumnBackground)
@@ -1261,6 +1264,8 @@ struct MapHomeTimeSidebar: View {
             nleProjection.reset()
             handleDrag.reset()
             pendingRailSegments = nil
+            pinchStepOffset = 0
+            lastPinchRenderUptime = 0
         }
         .onChange(of: segments) { _, newSegments in
             if isTimelineInteractionActive {
@@ -1612,6 +1617,36 @@ struct MapHomeTimeSidebar: View {
         onViewportChanged?(visibleStartMinute, visibleDurationMinutes)
         viewportDragStartMinute = nil
         nleProjection.synchronize(with: nleState)
+    }
+
+    private var timelineMagnificationGesture: some Gesture {
+        MagnificationGesture()
+            .onChanged { scale in
+                let offset = MapHomeTimeSidebarPinchMath.stepOffset(
+                    magnification: scale
+                )
+                guard offset != pinchStepOffset else { return }
+                guard TimelineInteractionFrameGate.shouldRender(
+                    lastUptime: &lastPinchRenderUptime,
+                    nowUptime: ProcessInfo.processInfo.systemUptime
+                ) else { return }
+                let delta = offset - pinchStepOffset
+                for _ in 0..<abs(delta) {
+                    zoomTimeline(direction: delta > 0 ? 1 : -1)
+                }
+                pinchStepOffset = offset
+            }
+            .onEnded { scale in
+                let offset = MapHomeTimeSidebarPinchMath.stepOffset(
+                    magnification: scale
+                )
+                let delta = offset - pinchStepOffset
+                for _ in 0..<abs(delta) {
+                    zoomTimeline(direction: delta > 0 ? 1 : -1)
+                }
+                pinchStepOffset = 0
+                lastPinchRenderUptime = 0
+            }
     }
 
     private func publish(_ minute: Int) {

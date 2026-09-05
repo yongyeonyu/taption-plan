@@ -135,6 +135,16 @@ actor AppleWatchSensorActivityArchive {
             }
     }
 
+    func allAccelerationChunks() throws
+        -> [TaptionWatchAccelerationChunk] {
+        try loadAccelerationChunks().sorted {
+            if $0.startedAt != $1.startedAt {
+                return $0.startedAt < $1.startedAt
+            }
+            return $0.sequence < $1.sequence
+        }
+    }
+
     func accelerationSamples(in span: TimeSpan) throws
         -> [TaptionWatchAccelerationSample] {
         try accelerationChunks(in: span)
@@ -150,6 +160,13 @@ actor AppleWatchSensorActivityArchive {
                 }
                 return $0.capturedAt < $1.capturedAt
             }
+    }
+
+    func deleteAll() throws {
+        for url in [fileURL, accelerationFileURL]
+        where FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
     }
 
     private func load() throws -> [TaptionWatchSensorSummary] {
@@ -289,6 +306,17 @@ struct AppleWatchDataReceiptStore {
             }
         }
         return load()
+    }
+
+    func clear() {
+        for kind in AppleWatchDataKind.allCases {
+            defaults.removeObject(
+                forKey: Self.measuredKeyPrefix + kind.rawValue
+            )
+            defaults.removeObject(
+                forKey: Self.receivedKeyPrefix + kind.rawValue
+            )
+        }
     }
 }
 
@@ -438,6 +466,19 @@ enum AppleWatchDataSyncReceiptPolicy {
     }
 }
 
+enum AppleWatchAutomaticSyncPolicy {
+    static let minimumInterval: TimeInterval = 10
+
+    static func shouldRequest(
+        lastRequestUptime: TimeInterval?,
+        nowUptime: TimeInterval
+    ) -> Bool {
+        guard let lastRequestUptime else { return true }
+        return nowUptime < lastRequestUptime
+            || nowUptime - lastRequestUptime >= minimumInterval
+    }
+}
+
 /// 안내를 닫은 기록. 워치를 가진 기기가 어느 것인지는 계정이 아니라 기기의
 /// 성질이라서 iCloud 스냅샷이 아니라 기기 저장소에 남긴다. 덕분에
 /// `cloudPortableSnapshot` / `mergeDeviceLocalData`의 손으로 적은 목록에
@@ -494,6 +535,23 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         }
     }
 
+    private final class BooleanReplyGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<Bool, Never>?
+
+        init(_ continuation: CheckedContinuation<Bool, Never>) {
+            self.continuation = continuation
+        }
+
+        func finish(_ value: Bool) {
+            lock.lock()
+            let pending = continuation
+            continuation = nil
+            lock.unlock()
+            pending?.resume(returning: value)
+        }
+    }
+
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
     private let commandDefaults: UserDefaults
@@ -502,6 +560,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         "TaptionPlan.appliedWatchConfirmationIDs"
     private let lastContactDefaultsKey = "TaptionPlan.lastWatchDataAt.v2"
     private let lock = NSLock()
+    private var lastAutomaticSyncUptime: TimeInterval?
     private var latestPayloadData: Data?
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
     private var sensorSummaryHandler:
@@ -512,7 +571,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         (@Sendable (TaptionWatchHealthSnapshot, Date, String?) -> Void)?
     /// 워치가 보낸 "맞아요 / 아니에요" 응답. AppModel이 별도로 연결한다.
     private var activityConfirmationHandler:
-        (@Sendable (TaptionWatchActivityConfirmation) -> Void)?
+        (@Sendable (TaptionWatchActivityConfirmation, Date) -> Void)?
     private var locationTrackingHandler: (@Sendable (Bool) -> Void)?
     private var locationTrackingGuidanceHandler: (@Sendable () -> Void)?
     private var statusHandler: (@Sendable (AppleWatchConnectionState) -> Void)?
@@ -543,8 +602,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 String?
             ) -> Void = { _, _, _ in },
         onActivityConfirmation: @escaping @Sendable (
-            TaptionWatchActivityConfirmation
-        ) -> Void = { _ in },
+            TaptionWatchActivityConfirmation,
+            Date
+        ) -> Void = { _, _ in },
         onLocationTracking: @escaping @Sendable (Bool) -> Void = { _ in },
         onLocationTrackingGuidance: @escaping @Sendable () -> Void = {},
         onStatusChange: @escaping @Sendable (AppleWatchConnectionState) -> Void,
@@ -725,6 +785,117 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         return true
     }
 
+    func requestWatchDataDeletion(
+        generation: UInt64,
+        requestID: String = UUID().uuidString
+    ) async -> Bool {
+        let logger = TaptionPlanDiagnosticsLogger.shared
+        guard WCSession.isSupported() else { return false }
+        let session = WCSession.default
+        guard session.activationState == .activated,
+              session.isPaired,
+              session.isWatchAppInstalled else {
+            logger.record(
+                "watch_purge_request_rejected",
+                level: .notice,
+                fields: ["request_id": requestID]
+            )
+            return false
+        }
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.purgeRequestKey: true,
+            TaptionWatchEnvelope.purgeRequestIDKey: requestID,
+            TaptionWatchEnvelope.purgeGenerationKey: String(generation),
+        ]
+        session.transferUserInfo(envelope)
+        guard session.isReachable else {
+            logger.record(
+                "watch_purge_queued_without_ack",
+                level: .notice,
+                fields: ["request_id": requestID]
+            )
+            return false
+        }
+        return await withCheckedContinuation { continuation in
+            let gate = BooleanReplyGate(continuation)
+            session.sendMessage(
+                envelope,
+                replyHandler: { reply in
+                    let acknowledged = reply[
+                        TaptionWatchEnvelope.purgeAcknowledgedKey
+                    ] as? Bool == true
+                    let replyID = reply[
+                        TaptionWatchEnvelope.purgeRequestIDKey
+                    ] as? String
+                    logger.record(
+                        "watch_purge_reply_received",
+                        fields: [
+                            "request_id": requestID,
+                            "acknowledged": String(
+                                acknowledged && replyID == requestID
+                            ),
+                        ]
+                    )
+                    gate.finish(acknowledged && replyID == requestID)
+                },
+                errorHandler: { error in
+                    logger.record(
+                        "watch_purge_message_failed",
+                        level: .error,
+                        fields: TaptionDiagnosticError.fields(for: error)
+                            .merging(["request_id": requestID]) {
+                                _, new in new
+                            }
+                    )
+                    gate.finish(false)
+                }
+            )
+            DispatchQueue.global(qos: .utility).asyncAfter(
+                deadline: .now() + 5
+            ) {
+                gate.finish(false)
+            }
+        }
+    }
+
+    func watchDataDeletionRequired() -> Bool {
+        guard WCSession.isSupported() else { return false }
+        let session = WCSession.default
+        return session.activationState == .activated
+            && session.isPaired
+            && session.isWatchAppInstalled
+    }
+
+    func clearLocalState() {
+        lock.lock()
+        latestPayloadData = nil
+        lastAutomaticSyncUptime = nil
+        lock.unlock()
+        commandDefaults.removeObject(forKey: commandDefaultsKey)
+        commandDefaults.removeObject(forKey: confirmationDefaultsKey)
+        commandDefaults.removeObject(forKey: lastContactDefaultsKey)
+    }
+
+    func requestWatchDataSyncIfDue() {
+        let now = ProcessInfo.processInfo.systemUptime
+        lock.lock()
+        let shouldRequest = AppleWatchAutomaticSyncPolicy.shouldRequest(
+            lastRequestUptime: lastAutomaticSyncUptime,
+            nowUptime: now
+        )
+        if shouldRequest {
+            lastAutomaticSyncUptime = now
+        }
+        lock.unlock()
+        guard shouldRequest else { return }
+        guard !requestWatchDataSync() else { return }
+        lock.lock()
+        if lastAutomaticSyncUptime == now {
+            lastAutomaticSyncUptime = nil
+        }
+        lock.unlock()
+    }
+
     func requestDiagnosticsLog() async -> String? {
         let cached = WatchDiagnosticsLogStore.read()
         guard WCSession.isSupported() else { return cached }
@@ -777,7 +948,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         statusHandler?(connectionState(for: session))
         if activationState == .activated {
             publishLatestPayload()
-            requestWatchDataSync()
+            requestWatchDataSyncIfDue()
         }
     }
 
@@ -794,14 +965,14 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         statusHandler?(connectionState(for: session))
         if session.isReachable {
             publishLatestPayload()
-            requestWatchDataSync()
+            requestWatchDataSyncIfDue()
         }
     }
 
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
         statusHandler?(connectionState(for: session))
         publishLatestPayload()
-        requestWatchDataSync()
+        requestWatchDataSyncIfDue()
     }
 
     nonisolated func session(
@@ -841,7 +1012,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     ) -> Bool {
         let receivedAt = Date.now
         var latestWatchDataAt: Date?
-        var accepted = receiveCommand(from: envelope)
+        var accepted = receiveCommand(from: envelope, receivedAt: receivedAt)
         let requestID = envelope[
             TaptionWatchEnvelope.dataSyncRequestIDKey
         ] as? String
@@ -883,6 +1054,21 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             TaptionPlanDiagnosticsLogger.shared.record(
                 "watch_diagnostics_received",
                 fields: ["bytes": String(report.utf8.count)]
+            )
+            accepted = true
+        }
+        if let acknowledged = envelope[
+            TaptionWatchEnvelope.purgeAcknowledgedKey
+        ] as? Bool,
+           let purgeRequestID = envelope[
+               TaptionWatchEnvelope.purgeRequestIDKey
+           ] as? String {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_purge_background_ack_received",
+                fields: [
+                    "request_id": purgeRequestID,
+                    "acknowledged": String(acknowledged),
+                ]
             )
             accepted = true
         }
@@ -1008,7 +1194,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         ),
         // 확인 응답은 실시간 메시지와 백그라운드 큐로 두 번 도착할 수 있다.
         markAsNew(confirmation.id, key: confirmationDefaultsKey) {
-            activityConfirmationHandler?(confirmation)
+            activityConfirmationHandler?(confirmation, receivedAt)
             accepted = true
         }
         if let enabled = envelope[
@@ -1073,12 +1259,16 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     }
 
     @discardableResult
-    private func receiveCommand(from envelope: [String: Any]) -> Bool {
+    private func receiveCommand(
+        from envelope: [String: Any],
+        receivedAt: Date
+    ) -> Bool {
         guard let data = envelope[TaptionWatchEnvelope.commandKey] as? Data,
               let command = try? decoder.decode(
                 TaptionWatchCommand.self,
                 from: data
               ),
+              let command = command.retainingData(receivedAt: receivedAt),
               markAsNew(command.id, key: commandDefaultsKey) else {
             return false
         }

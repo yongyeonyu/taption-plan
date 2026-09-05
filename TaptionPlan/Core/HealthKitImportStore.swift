@@ -176,6 +176,10 @@ public struct HealthKitSyncOverview: Codable, Hashable, Sendable {
         states.filter(\.historyComplete).count
     }
 
+    public var failedTypeCount: Int {
+        states.filter { $0.lastError != nil }.count
+    }
+
     public var lastSyncedAt: Date? {
         states.compactMap(\.lastSyncedAt).max()
     }
@@ -197,9 +201,13 @@ public actor HealthKitImportStore {
     private static let stateDay = TaptionPlanDayKey(year: 0, month: 0, day: 0)
 
     private let dayStore: TaptionPlanDayStore
+    private let writeLockURL: URL
+    private var dataDeletionGeneration: UInt64
 
     public init(databaseURL: URL) throws {
         dayStore = try TaptionPlanDayStore(url: databaseURL)
+        writeLockURL = databaseURL.appendingPathExtension("lock")
+        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
 
     public init(fileManager: FileManager = .default) throws {
@@ -232,17 +240,26 @@ public actor HealthKitImportStore {
 
     @discardableResult
     public func upsert(_ records: [HealthKitSampleRecord]) async throws -> Int {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         let uniqueRecords = records.reduce(into: [UUID: HealthKitSampleRecord]()) {
             $0[$1.uuid] = $1
         }.values
         let events = try uniqueRecords.map { record in
             try makeEvent(for: record)
         }
+        try checkDataGeneration(generation)
         try await dayStore.upsertEvents(events)
         return events.count
     }
 
     public func delete(ids: [UUID]) async throws {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try await dayStore.deleteEvents(
             ids: ids.map(HealthKitSampleRecord.eventID(for:)),
             domain: Self.eventDomain
@@ -254,6 +271,10 @@ public actor HealthKitImportStore {
         deletedIDs: [UUID],
         state: HealthKitTypeSyncState
     ) async throws {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try validate(typeIdentifier: state.typeIdentifier)
         let uniqueRecords = records.reduce(into: [UUID: HealthKitSampleRecord]()) {
             $0[$1.uuid] = $1
@@ -275,6 +296,7 @@ public actor HealthKitImportStore {
             updatedAt: state.lastSyncedAt ?? .now,
             payload: TaptionPlanCanonicalStorage.envelope(for: encodedState)
         )
+        try checkDataGeneration(generation)
         try await dayStore.applyEventDelta(
             upserting: events,
             deletingIDs: deletedIDs.map(HealthKitSampleRecord.eventID(for:)),
@@ -315,10 +337,15 @@ public actor HealthKitImportStore {
 
     /// Stores only the sync checkpoint. Main can combine it with event changes using DayStore's atomic delta API.
     public func saveSyncState(_ state: HealthKitTypeSyncState) async throws {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try validate(typeIdentifier: state.typeIdentifier)
         let domain = Self.stateDomain(for: state.typeIdentifier)
         let currentRevision = try await dayStore.snapshot(domain: domain, day: Self.stateDay)?.revision ?? 0
         guard currentRevision < UInt64.max else { throw HealthKitImportStoreError.revisionOverflow }
+        try checkDataGeneration(generation)
         try await dayStore.saveCodableSnapshot(
             state,
             domain: domain,
@@ -340,6 +367,21 @@ public actor HealthKitImportStore {
                 )
             }
         return HealthKitSyncOverview(states: states)
+    }
+
+    public func deleteAll(generation: UInt64? = nil) async throws {
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        dataDeletionGeneration = generation
+            ?? TaptionDataDeletionFence.currentGeneration()
+        try await dayStore.deleteAllContent()
+    }
+
+    private func checkDataGeneration(_ generation: UInt64) throws {
+        guard generation == dataDeletionGeneration,
+              TaptionDataDeletionFence.allows(generation: generation) else {
+            throw CancellationError()
+        }
     }
 
     private func makeEvent(for record: HealthKitSampleRecord) throws -> TaptionPlanDayStore.Event {

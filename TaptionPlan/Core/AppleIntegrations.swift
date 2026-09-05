@@ -15,6 +15,108 @@ import WeatherKit
 
 // MARK: - Calendar
 
+enum CalendarSyncPolicy {
+    static let automaticRefreshInterval: TimeInterval = 6 * 60 * 60
+
+    static func reconciledCalendarIDs(
+        existing: [String],
+        live: [String]
+    ) -> [String] {
+        guard !existing.isEmpty, !live.isEmpty else { return existing }
+        let available = existing.filter(live.contains)
+        if !available.isEmpty, available.count < existing.count {
+            return existing
+        }
+        // Keep still-live saved calendars, but recover to the live set after
+        // an account reconnect replaces every calendar identifier.
+        return available.isEmpty ? live : available
+    }
+
+    static func hasCompleteSelection(
+        selected: Set<String>,
+        live: Set<String>
+    ) -> Bool {
+        selected.isEmpty || selected.isSubset(of: live)
+    }
+
+    static func deduplicatedEvents(
+        _ events: [CalendarRecord]
+    ) -> [CalendarRecord] {
+        var seen = Set<String>()
+        return events.filter { event in
+            seen.insert(eventIdentityKey(event)).inserted
+        }
+    }
+
+    private static func eventIdentityKey(_ event: CalendarRecord) -> String {
+        let account = event.sourceIdentifier ?? "calendar:\(event.calendarID)"
+        guard let external = event.externalIdentifier,
+              !external.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return "event|\(event.id)"
+        }
+        let recurrence = event.recurrenceIdentifier ?? "single"
+        let occurrence = event.isAllDay || event.isFloatingTime == true
+            ? wallClockKey(event.originalStartDateComponents)
+            : String(event.span.start.timeIntervalSinceReferenceDate.rounded())
+        return "external|\(account)|\(external)|\(recurrence)|\(occurrence)"
+    }
+
+    private static func wallClockKey(_ components: DateComponents?) -> String {
+        guard let components else { return "unknown" }
+        return [
+            components.era,
+            components.year,
+            components.month,
+            components.day,
+            components.hour,
+            components.minute,
+            components.second,
+        ].map { String($0 ?? 0) }.joined(separator: ":")
+    }
+
+    static func refreshSpans(
+        requested: TimeSpan,
+        includesCurrentDeviceDay: Bool,
+        refreshesAutomaticRange: Bool = true,
+        now: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [TimeSpan] {
+        guard includesCurrentDeviceDay else { return [requested] }
+        let today = calendar.startOfDay(for: now)
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)
+        else { return [requested] }
+        let automatic: TimeSpan
+        if refreshesAutomaticRange,
+           let start = calendar.date(byAdding: .day, value: -31, to: today),
+           let end = calendar.date(byAdding: .day, value: 93, to: today) {
+            automatic = TimeSpan(start: start, end: end)
+        } else {
+            automatic = TimeSpan(start: today, end: tomorrow)
+        }
+        if automatic.start <= requested.start,
+           automatic.end >= requested.end {
+            return [automatic]
+        }
+        if automatic.intersection(with: requested) != nil {
+            return [TimeSpan(
+                start: min(automatic.start, requested.start),
+                end: max(automatic.end, requested.end)
+            )]
+        }
+        return [automatic, requested]
+    }
+
+    static func shouldRefreshAutomaticRange(
+        lastRefresh: Date?,
+        now: Date,
+        force: Bool = false
+    ) -> Bool {
+        guard !force, let lastRefresh else { return true }
+        let elapsed = now.timeIntervalSince(lastRefresh)
+        return elapsed < 0 || elapsed >= automaticRefreshInterval
+    }
+}
+
 @MainActor
 final class AppleCalendarService {
     private let eventStore: EKEventStore
@@ -49,30 +151,120 @@ final class AppleCalendarService {
     func events(
         in span: TimeSpan,
         selectedCalendarIDs: Set<String>
-    ) -> [CalendarRecord] {
-        let calendars = eventStore.calendars(for: .event).filter {
-            selectedCalendarIDs.isEmpty
-                || selectedCalendarIDs.contains($0.calendarIdentifier)
-        }
-        let predicate = eventStore.predicateForEvents(
-            withStart: span.start,
-            end: span.end,
-            calendars: calendars
-        )
-        return eventStore.events(matching: predicate).map { event in
-            CalendarRecord(
-                id: event.eventIdentifier ?? UUID().uuidString,
-                calendarID: event.calendar.calendarIdentifier,
-                title: event.title ?? "제목 없는 일정",
-                span: TimeSpan(start: event.startDate, end: event.endDate),
-                isAllDay: event.isAllDay,
-                calendarTitle: event.calendar.title,
-                calendarColorHex: Self.hex(event.calendar.cgColor),
-                sourceTitle: event.calendar.source.title,
-                attendeeCount: event.attendees?.count,
-                isCancelled: event.status == .canceled
+    ) async -> [CalendarRecord]? {
+        let start = span.start
+        let end = span.end
+        let selected = selectedCalendarIDs
+        return await Task.detached(priority: .utility) {
+            let eventStore = EKEventStore()
+            let calendars = eventStore.calendars(for: .event).filter {
+                selected.isEmpty || selected.contains($0.calendarIdentifier)
+            }
+            let available = Set(calendars.map(\.calendarIdentifier))
+            guard CalendarSyncPolicy.hasCompleteSelection(
+                selected: selected,
+                live: available
+            ) else {
+                return nil
+            }
+            let predicate = eventStore.predicateForEvents(
+                withStart: start,
+                end: end,
+                calendars: calendars
             )
-        }
+            let dateComponents: Set<Calendar.Component> = [
+                .era, .year, .month, .day, .hour, .minute, .second,
+                .nanosecond,
+            ]
+            return eventStore.events(matching: predicate).map { event in
+                var eventCalendar = Calendar.autoupdatingCurrent
+                if let timeZone = event.timeZone {
+                    eventCalendar.timeZone = timeZone
+                }
+                let originalStartDateComponents = eventCalendar.dateComponents(
+                    dateComponents,
+                    from: event.startDate
+                )
+                let originalEndDateComponents = eventCalendar.dateComponents(
+                    dateComponents,
+                    from: event.endDate
+                )
+                let stableID = event.eventIdentifier ?? [
+                    event.calendar.calendarIdentifier,
+                    event.calendarItemExternalIdentifier
+                        ?? event.calendarItemIdentifier,
+                    String(event.startDate.timeIntervalSinceReferenceDate),
+                ].joined(separator: "|")
+                return CalendarRecord(
+                    id: stableID,
+                    calendarID: event.calendar.calendarIdentifier,
+                    title: event.title ?? "제목 없는 일정",
+                    span: TimeSpan(start: event.startDate, end: event.endDate),
+                    isAllDay: event.isAllDay,
+                    calendarTitle: event.calendar.title,
+                    calendarColorHex: Self.hex(event.calendar.cgColor),
+                    sourceTitle: event.calendar.source.title,
+                    sourceIdentifier: event.calendar.source.sourceIdentifier,
+                    timeZoneIdentifier: event.timeZone?.identifier,
+                    isFloatingTime: !event.isAllDay && event.timeZone == nil,
+                    originalStartDateComponents: originalStartDateComponents,
+                    originalEndDateComponents: originalEndDateComponents,
+                    externalIdentifier: event.calendarItemExternalIdentifier,
+                    recurrenceIdentifier: Self.recurrenceIdentifier(
+                        for: event.recurrenceRules
+                    ),
+                    attendeeCount: event.attendees?.count,
+                    isCancelled: event.status == .canceled
+                ).normalizedForDisplay()
+            }
+        }.value
+    }
+
+    private nonisolated static func recurrenceIdentifier(
+        for rules: [EKRecurrenceRule]?
+    ) -> String? {
+        guard let rules, !rules.isEmpty else { return nil }
+        return rules.map { rule in
+            let recurrenceEnd: String
+            if let endDate = rule.recurrenceEnd?.endDate {
+                recurrenceEnd = String(
+                    endDate.timeIntervalSinceReferenceDate
+                )
+            } else {
+                recurrenceEnd = "count:\(rule.recurrenceEnd?.occurrenceCount ?? 0)"
+            }
+            let daysOfTheWeek = rule.daysOfTheWeek?.map {
+                "\($0.dayOfTheWeek.rawValue):\($0.weekNumber)"
+            }.joined(separator: ",") ?? ""
+            let daysOfTheMonth = rule.daysOfTheMonth?
+                .map(String.init)
+                .joined(separator: ",") ?? ""
+            let monthsOfTheYear = rule.monthsOfTheYear?
+                .map(String.init)
+                .joined(separator: ",") ?? ""
+            let weeksOfTheYear = rule.weeksOfTheYear?
+                .map(String.init)
+                .joined(separator: ",") ?? ""
+            let daysOfTheYear = rule.daysOfTheYear?
+                .map(String.init)
+                .joined(separator: ",") ?? ""
+            let setPositions = rule.setPositions?
+                .map(String.init)
+                .joined(separator: ",") ?? ""
+            let values = [
+                String(rule.frequency.rawValue),
+                String(rule.interval),
+                String(rule.firstDayOfTheWeek),
+                daysOfTheWeek,
+                daysOfTheMonth,
+                monthsOfTheYear,
+                weeksOfTheYear,
+                daysOfTheYear,
+                setPositions,
+                recurrenceEnd,
+            ]
+            return values.joined(separator: "|")
+        }.joined(separator: ";")
     }
 
     func addPlan(
@@ -92,7 +284,7 @@ final class AppleCalendarService {
         return event.eventIdentifier
     }
 
-    private static func hex(_ color: CGColor) -> String? {
+    private nonisolated static func hex(_ color: CGColor) -> String? {
         guard let components = color.components else { return nil }
         let red: CGFloat
         let green: CGFloat
@@ -250,10 +442,16 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
 // MARK: - Health and Apple Watch data mirrored to iPhone
 
 enum HealthRefreshPolicy {
-    static let foregroundInterval: TimeInterval = 5 * 60
     static let broadRawSyncInterval: TimeInterval = 15 * 60
+    static let foregroundInterval = broadRawSyncInterval
     static let periodicLookback: TimeInterval = 2 * 86_400
     static let backgroundFrequency: HKUpdateFrequency = .immediate
+    static let backgroundObservedTypeIdentifiers: Set<String> = [
+        HKObjectType.workoutType().identifier,
+        HKCategoryTypeIdentifier.sleepAnalysis.rawValue,
+        HKCategoryTypeIdentifier.mindfulSession.rawValue,
+        HKQuantityTypeIdentifier.stepCount.rawValue,
+    ]
 }
 
 actor HealthBackgroundRefreshCoordinator {
@@ -263,6 +461,8 @@ actor HealthBackgroundRefreshCoordinator {
 
     private var handler: Handler?
     private var pendingHandlerWaiters: [CheckedContinuation<Void, Never>] = []
+    private var isDispatching = false
+    private var dispatchWaiters: [CheckedContinuation<Bool, Never>] = []
 
     func register(_ handler: @escaping Handler) {
         self.handler = handler
@@ -270,24 +470,35 @@ actor HealthBackgroundRefreshCoordinator {
         pendingHandlerWaiters.removeAll()
         guard !waiters.isEmpty else { return }
         Task {
-            _ = await handler()
+            _ = await dispatchIfRegistered()
             waiters.forEach { $0.resume() }
         }
     }
 
     func receiveUpdate() async {
-        guard let handler else {
+        guard handler != nil else {
             await withCheckedContinuation { continuation in
                 pendingHandlerWaiters.append(continuation)
             }
             return
         }
-        _ = await handler()
+        _ = await dispatchIfRegistered()
     }
 
     func dispatchIfRegistered() async -> Bool {
         guard let handler else { return false }
-        return await handler()
+        if isDispatching {
+            return await withCheckedContinuation { continuation in
+                dispatchWaiters.append(continuation)
+            }
+        }
+        isDispatching = true
+        let result = await handler()
+        isDispatching = false
+        let waiters = dispatchWaiters
+        dispatchWaiters.removeAll()
+        waiters.forEach { $0.resume(returning: result) }
+        return result
     }
 }
 
@@ -432,7 +643,6 @@ final class AppleHealthService: @unchecked Sendable {
     }
 
     func enableBackgroundDelivery() async throws {
-        var successCount = 0
         var firstError: Error?
         for sampleType in observedSampleTypes() {
             do {
@@ -440,12 +650,11 @@ final class AppleHealthService: @unchecked Sendable {
                     enabled: true,
                     for: sampleType
                 )
-                successCount += 1
             } catch {
                 firstError = firstError ?? error
             }
         }
-        if successCount == 0, let firstError {
+        if let firstError {
             throw firstError
         }
     }
@@ -542,6 +751,12 @@ final class AppleHealthService: @unchecked Sendable {
 
     func importOverview() async throws -> HealthKitSyncOverview {
         try await importCoordinator.overview()
+    }
+
+    func deleteImportedData(generation: UInt64? = nil) async throws {
+        try await importCoordinator.deleteAll(generation: generation)
+        clearPendingObservedChanges()
+        setLastBroadSynchronizationAt(nil)
     }
 
     func sleepSegments(in span: TimeSpan) async throws -> [SleepSegment] {
@@ -1001,7 +1216,10 @@ final class AppleHealthService: @unchecked Sendable {
 
     private func observedSampleTypes() -> [HKSampleType] {
         HealthKitTypeCatalog.observableDescriptors.filter { descriptor in
-            descriptor.backgroundEligible
+            HealthRefreshPolicy.backgroundObservedTypeIdentifiers.contains(
+                descriptor.identifier
+            )
+                && descriptor.backgroundEligible
                 && (!descriptor.isClinical
                     || store.supportsHealthRecords())
         }.compactMap(HealthKitTypeCatalog.observableSampleType(for:))
@@ -1016,6 +1234,12 @@ final class AppleHealthService: @unchecked Sendable {
     private func markObservedChange(_ typeIdentifier: String) {
         observerLock.lock()
         pendingObservedTypeIdentifiers.insert(typeIdentifier)
+        observerLock.unlock()
+    }
+
+    private func clearPendingObservedChanges() {
+        observerLock.lock()
+        pendingObservedTypeIdentifiers.removeAll()
         observerLock.unlock()
     }
 
@@ -2012,12 +2236,6 @@ final class AirPodsActivityService: NSObject, CXCallObserverDelegate, @unchecked
                 self?.refresh()
             },
         ]
-        pollTimer = Timer.scheduledTimer(
-            withTimeInterval: 15,
-            repeats: true
-        ) { [weak self] _ in
-            self?.refresh()
-        }
         refresh()
     }
 
@@ -2051,10 +2269,21 @@ final class AirPodsActivityService: NSObject, CXCallObserverDelegate, @unchecked
         let output = AVAudioSession.sharedInstance().currentRoute.outputs
             .first(where: Self.isAirPodsOutput)
         guard let output else {
+            pollTimer?.invalidate()
+            pollTimer = nil
             finish(&musicObservation, at: date)
             finish(&callObservation, at: date)
             activeCallID = nil
             return
+        }
+
+        if pollTimer == nil {
+            pollTimer = Timer.scheduledTimer(
+                withTimeInterval: 15,
+                repeats: true
+            ) { [weak self] _ in
+                self?.refresh()
+            }
         }
 
         let routeName = output.portName
@@ -2255,14 +2484,18 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private let pedometer = CMPedometer()
 
     private var continuation: AsyncStream<SensorReading>.Continuation?
+    private var readingStreamGeneration: UInt64 = 0
     private var samplingTask: Task<Void, Never>?
     private var movementCandidateTask: Task<Void, Never>?
+    private var movementCandidateMotion: MotionKind?
+    private var movementCandidateGeneration: UInt64 = 0
     private var stationaryStopTask: Task<Void, Never>?
     private var backgroundWakeTask: Task<Void, Never>?
     private var configuration: SensorCollectionConfiguration = .standard
     private var isCollecting = false
     private var isLocationDenied = false
     private var sensorStreamsRunning = false
+    private var sensorStreamGeneration: UInt64 = 0
     private var lastEmissionAt: Date?
     private var lastPersistedLocationTimestamp: Date?
     private var latestLocation: CLLocation?
@@ -2302,9 +2535,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.pausesLocationUpdatesAutomatically = true
     }
 
-    func hardwareAvailability() -> SensorHardwareAvailability {
-        SensorHardwareAvailability(
-            location: CLLocationManager.locationServicesEnabled(),
+    func hardwareAvailability() async -> SensorHardwareAvailability {
+        let locationServicesEnabled = await Task.detached(priority: .utility) {
+            CLLocationManager.locationServicesEnabled()
+        }.value
+        return SensorHardwareAvailability(
+            location: locationServicesEnabled,
             motionActivity: CMMotionActivityManager.isActivityAvailable(),
             deviceMotion: deviceMotionManager.isDeviceMotionAvailable,
             magnetometer: deviceMotionManager.isMagnetometerAvailable,
@@ -2363,6 +2599,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
     }
 
+    func requestImmediateSample() {
+        guard isCollecting,
+              activeTrackingSession == nil,
+              configuration.minimumEmissionInterval > 1 else { return }
+        restartSamplingTask()
+    }
+
     func readings(highAccuracyDuringMovement: Bool = true) -> AsyncStream<SensorReading> {
         var configuration = SensorCollectionConfiguration.standard
         configuration.highAccuracyDuringMovement = highAccuracyDuringMovement
@@ -2373,21 +2616,28 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         configuration: SensorCollectionConfiguration
     ) -> AsyncStream<SensorReading> {
         let configuration = configuration.normalized
+        readingStreamGeneration &+= 1
+        let generation = readingStreamGeneration
         return AsyncStream { continuation in
             self.continuation = continuation
             self.configuration = configuration
             continuation.onTermination = { [weak self] _ in
-                Task { @MainActor in self?.stop() }
+                Task { @MainActor in
+                    guard self?.readingStreamGeneration == generation else {
+                        return
+                    }
+                    self?.stop()
+                }
             }
             start()
         }
     }
 
     func stop() {
+        readingStreamGeneration &+= 1
         samplingTask?.cancel()
         samplingTask = nil
-        movementCandidateTask?.cancel()
-        movementCandidateTask = nil
+        cancelMovementCandidate()
         stationaryStopTask?.cancel()
         stationaryStopTask = nil
         backgroundWakeTask?.cancel()
@@ -2400,6 +2650,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         isLocationDenied = false
         lastPersistedLocationTimestamp = nil
         lastEmissionAt = nil
+        latestLocation = nil
         latestPreciseLocation = nil
         latestRelativeAltitude = nil
         latestPressureKilopascals = nil
@@ -2444,7 +2695,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         trackingSequence = 0
         lastEmissionAt = nil
         lastPersistedLocationTimestamp = nil
-        movementCandidateTask?.cancel()
+        cancelMovementCandidate()
         stationaryStopTask?.cancel()
         applyLocationPolicy(isMoving: true)
         if sensorStreamsRunning {
@@ -2466,7 +2717,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         trackingSequence = 0
         lastEmissionAt = nil
         lastPersistedLocationTimestamp = nil
-        movementCandidateTask?.cancel()
+        cancelMovementCandidate()
         stationaryStopTask?.cancel()
         applyLocationPolicy(isMoving: true)
         if sensorStreamsRunning {
@@ -2492,7 +2743,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     @discardableResult
-    func endTracking(at date: Date = .now) -> TrackingSession? {
+    func endTracking(
+        at date: Date = .now,
+        includesFinalLocation: Bool = true
+    ) -> TrackingSession? {
         guard var session = activeTrackingSession else { return nil }
         session.endedAt = date
         let preferences = activeTrackingPreferences
@@ -2500,7 +2754,11 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         trackingStreamsAreContinuous = false
         stationaryStopTask?.cancel()
         stationaryStopTask = nil
-        if session.wasAutomaticallyDetected {
+        if !includesFinalLocation {
+            latestLocation = nil
+            latestPreciseLocation = nil
+            emit(force: true, completedSession: session)
+        } else if session.wasAutomaticallyDetected {
             emit(force: true, completedSession: session)
         } else if let location = preferredTrackingLocation(
             batteryMinimal: preferences.isBatteryMinimal
@@ -2633,13 +2891,18 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         batteryMinimal: Bool
     ) -> CLLocation? {
         let freshness = max(90, activeTrackingPreferences.interval * 1.5)
+        let now = Date.now
         let candidates = [
             latestPreciseLocation,
             latestLocation,
             locationManager.location,
         ].compactMap { location -> CLLocation? in
             guard let location,
-                  abs(location.timestamp.timeIntervalSinceNow) <= freshness,
+                  CLLocationCoordinate2DIsValid(location.coordinate),
+                  location.horizontalAccuracy.isFinite,
+                  location.horizontalAccuracy >= 0,
+                  now.timeIntervalSince(location.timestamp) >= -5,
+                  now.timeIntervalSince(location.timestamp) <= freshness,
                   TrackingSessionPolicy.allowsPersistingLocation(
                       horizontalAccuracy: location.horizontalAccuracy,
                       batteryMinimal: batteryMinimal
@@ -2660,6 +2923,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     private func startHardwareStreams() {
         guard !sensorStreamsRunning else { return }
+        sensorStreamGeneration &+= 1
+        let generation = sensorStreamGeneration
         sensorStreamsRunning = true
         UIDevice.current.isBatteryMonitoringEnabled = true
         refreshConnectedWiFiIfNeeded(force: true)
@@ -2680,7 +2945,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             activityManager.startActivityUpdates(to: .main) { [weak self] activity in
                 guard let activity else { return }
                 Task { @MainActor in
-                    guard let self else { return }
+                    guard let self,
+                          self.isCollecting,
+                          self.sensorStreamsRunning,
+                          self.sensorStreamGeneration == generation else {
+                        return
+                    }
                     self.latestMotion = Self.motionKind(activity)
                     self.latestMotionConfidence = Self.confidence(activity.confidence)
                     self.updateAutomaticTracking(for: self.latestMotion)
@@ -2742,7 +3012,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                         : nil
                 )
                 Task { @MainActor in
-                    guard let self else { return }
+                    guard let self,
+                          self.isCollecting,
+                          self.sensorStreamsRunning,
+                          self.sensorStreamGeneration == generation else {
+                        return
+                    }
                     self.latestDeviceMotion = snapshot
                     self.deviceMotionAccumulator.append(snapshot)
                     self.emit()
@@ -2761,7 +3036,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                     sessionID: sessionID
                 )
                 Task { @MainActor in
-                    self?.apply(update)
+                    guard let self,
+                          self.isCollecting,
+                          self.sensorStreamsRunning,
+                          self.sensorStreamGeneration == generation else {
+                        return
+                    }
+                    self.apply(update)
                 }
             }
         }
@@ -2784,7 +3065,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                             data?.averageActivePace?.doubleValue
                     )
                     Task { @MainActor in
-                        self?.apply(update)
+                        guard let self,
+                              self.isCollecting,
+                              self.sensorStreamsRunning,
+                              self.sensorStreamGeneration == generation else {
+                            return
+                        }
+                        self.apply(update)
                     }
                 }
             pedometer.startUpdates(from: .now, withHandler: handler)
@@ -2792,6 +3079,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     }
 
     private func stopHardwareStreams() {
+        sensorStreamGeneration &+= 1
         locationManager.stopUpdatingLocation()
         locationManager.allowsBackgroundLocationUpdates = false
         locationManager.showsBackgroundLocationIndicator = false
@@ -2801,9 +3089,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         pedometer.stopUpdates()
         UIDevice.current.isBatteryMonitoringEnabled = false
         sensorStreamsRunning = false
+        currentWiFiFetchInFlight = false
         if activeTrackingSession == nil {
-            movementCandidateTask?.cancel()
-            movementCandidateTask = nil
+            cancelMovementCandidate()
         }
     }
 
@@ -2834,14 +3122,18 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
            Date.now.timeIntervalSince(lastWiFiFetchAt) < 30 {
             return
         }
+        let generation = sensorStreamGeneration
         currentWiFiFetchInFlight = true
         lastWiFiFetchAt = .now
         CurrentConnectedWiFiService.fetchSSID(
             authorizationStatus: locationManager.authorizationStatus
         ) { [weak self] ssid in
             Task { @MainActor in
-                guard let self else { return }
+                guard let self,
+                      self.sensorStreamGeneration == generation else { return }
                 self.currentWiFiFetchInFlight = false
+                guard self.isCollecting,
+                      self.sensorStreamsRunning else { return }
                 self.latestConnectedWiFiSSID = ssid
                 if SubwayWiFiSSID.isAllowed(ssid) {
                     self.subwayWiFiObservationStreak += 1
@@ -2856,13 +3148,20 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         _ manager: CLLocationManager,
         didUpdateLocations locations: [CLLocation]
     ) {
+        guard isCollecting else { return }
         let previousWakeLocation = lastBackgroundWakeLocation
         let isFirstLocationFix = latestLocation == nil
+        let now = Date.now
         let validLocations = locations.filter {
-            $0.horizontalAccuracy >= 0
-                && abs($0.timestamp.timeIntervalSinceNow) < 5 * 60
-        }
-        latestLocation = validLocations.last
+            let age = now.timeIntervalSince($0.timestamp)
+            return CLLocationCoordinate2DIsValid($0.coordinate)
+                && $0.horizontalAccuracy.isFinite
+                && $0.horizontalAccuracy >= 0
+                && age >= -5
+                && age < 5 * 60
+        }.sorted { $0.timestamp < $1.timestamp }
+        guard let newestLocation = validLocations.last else { return }
+        latestLocation = newestLocation
         if let precise = validLocations.last(where: {
             $0.horizontalAccuracy
                 <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
@@ -2874,7 +3173,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             promoteBackgroundMovementIfNeeded(
                 latestLocation,
                 previous: previousWakeLocation,
-                batch: locations
+                batch: validLocations
             )
         }
         if activeTrackingSession?.wasAutomaticallyDetected == true {
@@ -2903,8 +3202,21 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 interval: configuration.minimumEmissionInterval
               ),
               !sensorStreamsRunning,
-              activeTrackingSession == nil else { return }
-        let batchStart = batch.first { $0.horizontalAccuracy >= 0 }
+              activeTrackingSession == nil,
+              location.horizontalAccuracy
+                <= TrackingSessionPolicy.activeHorizontalAccuracyLimit else {
+            return
+        }
+        let previous = previous.flatMap {
+            $0.horizontalAccuracy
+                <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
+                ? $0
+                : nil
+        }
+        let batchStart = batch.first {
+            $0.horizontalAccuracy
+                <= TrackingSessionPolicy.activeHorizontalAccuracyLimit
+        }
         let distance = previous.map(location.distance)
             ?? batchStart.map(location.distance)
             ?? 0
@@ -2913,10 +3225,15 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         } ?? batchStart.map {
             location.timestamp.timeIntervalSince($0.timestamp)
         } ?? .greatestFiniteMagnitude
+        let speed = location.speed.isFinite
+            && location.speedAccuracy.isFinite
+            && location.speedAccuracy >= 0 ? location.speed : -1
         guard TrackingSessionPolicy.shouldPromoteBackgroundMovement(
-            speedMetersPerSecond: location.speed,
+            speedMetersPerSecond: speed,
             displacementMeters: distance,
-            elapsed: elapsed
+            elapsed: elapsed,
+            horizontalAccuracy: location.horizontalAccuracy,
+            speedAccuracy: location.speedAccuracy
         ) else {
             return
         }
@@ -2948,6 +3265,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         _ manager: CLLocationManager,
         didVisit visit: CLVisit
     ) {
+        guard isCollecting,
+              CLLocationCoordinate2DIsValid(visit.coordinate),
+              visit.horizontalAccuracy.isFinite,
+              visit.horizontalAccuracy >= 0 else { return }
         let date = visit.departureDate == .distantFuture
             ? visit.arrivalDate
             : visit.departureDate
@@ -2986,8 +3307,15 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 manager.stopUpdatingLocation()
                 restartSamplingTask()
             }
-        } else if activeTrackingSession != nil {
-            endTracking()
+        } else if permissionState() == .denied {
+            isLocationDenied = true
+            samplingTask?.cancel()
+            samplingTask = nil
+            stopHardwareStreams()
+            if activeTrackingSession != nil {
+                endTracking(includesFinalLocation: false)
+            }
+            updateBackgroundWakeMonitoring()
         }
     }
 
@@ -3003,7 +3331,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         samplingTask = nil
         stopHardwareStreams()
         if activeTrackingSession != nil {
-            endTracking()
+            endTracking(includesFinalLocation: false)
         }
         locationManager.stopMonitoringSignificantLocationChanges()
         locationManager.stopMonitoringVisits()
@@ -3014,7 +3342,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         completedSession: TrackingSession? = nil,
         allowManualTrackingSample: Bool = false
     ) {
-        guard continuation != nil else { return }
+        guard isCollecting, continuation != nil else { return }
         refreshConnectedWiFiIfNeeded()
         if activeTrackingSession?.wasAutomaticallyDetected == false,
            completedSession == nil,
@@ -3116,6 +3444,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 subwayWiFiObservationStreak: subwayWiFiObservationStreak,
                 trackingSessionID: session?.id,
                 trackingKind: session?.kind,
+                trackingWasAutomaticallyDetected:
+                    session?.wasAutomaticallyDetected,
                 sourceDevice: .iPhone,
                 sequence: session == nil ? nil : trackingSequence,
                 trackingSessionEnded: completedSession != nil
@@ -3153,8 +3483,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     private func updateAutomaticTracking(for motion: MotionKind) {
         guard sensorStreamsRunning else {
-            movementCandidateTask?.cancel()
-            movementCandidateTask = nil
+            cancelMovementCandidate()
             return
         }
         if let session = activeTrackingSession,
@@ -3192,16 +3521,29 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 || motion == .cycling
                 || motion == .automotive,
               latestMotionConfidence != .low else {
-            movementCandidateTask?.cancel()
-            movementCandidateTask = nil
+            cancelMovementCandidate()
             return
         }
-        guard movementCandidateTask == nil else { return }
+        if movementCandidateTask != nil {
+            guard movementCandidateMotion != motion else { return }
+            cancelMovementCandidate()
+        }
+        movementCandidateGeneration &+= 1
+        let generation = movementCandidateGeneration
+        movementCandidateMotion = motion
         movementCandidateTask = Task { [weak self] in
+            defer {
+                if let self,
+                   self.movementCandidateGeneration == generation {
+                    self.movementCandidateTask = nil
+                    self.movementCandidateMotion = nil
+                }
+            }
             try? await Task.sleep(
                 for: .seconds(TrackingSessionPolicy.automaticStartDuration)
             )
             guard !Task.isCancelled, let self,
+                  self.movementCandidateGeneration == generation,
                   self.activeTrackingSession == nil,
                   self.sensorStreamsRunning,
                   self.latestMotion == motion,
@@ -3227,8 +3569,14 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             self.trackingSequence = 0
             self.applyLocationPolicy(isMoving: true)
             self.emit(force: true)
-            self.movementCandidateTask = nil
         }
+    }
+
+    private func cancelMovementCandidate() {
+        movementCandidateGeneration &+= 1
+        movementCandidateTask?.cancel()
+        movementCandidateTask = nil
+        movementCandidateMotion = nil
     }
 
     private func apply(_ update: AltimeterSensorUpdate) {

@@ -51,6 +51,16 @@
         }
       }
     },
+    "?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "?"
+          }
+        }
+      }
+    },
     "·" : {
       "localizations" : {
         "en" : {
@@ -385,6 +395,16 @@
         }
       }
     },
+    "%@ 지하철 임시 위치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ subway temporary location"
+          }
+        }
+      }
+    },
     "%@ 추천" : {
       "localizations" : {
         "en" : {
@@ -459,6 +479,22 @@
         }
       }
     },
+    "%@, %@ 탑승 확인" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm %1$@, %2$@ ride"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@ 탑승 확인"
+          }
+        }
+      }
+    },
     "%@, %@부터 %@" : {
       "localizations" : {
         "en" : {
@@ -492,6 +528,7 @@
       }
     },
     "%@로 Pro 영구 구매" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -563,7 +600,18 @@
         }
       }
     },
+    "%lld%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%"
+          }
+        }
+      }
+    },
     "%lld°" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -710,6 +758,7 @@
       }
     },
     "4자리 비밀번호" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -757,6 +806,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Your 14-day free trial has started."
+          }
+        }
+      }
+    },
+    "15분보다 짧은 방문은 식사로 기록하지 않습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Visits shorter than 15 minutes aren't recorded as meals."
           }
         }
       }
@@ -959,6 +1018,7 @@
       }
     },
     "Face ID / Touch ID" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1137,11 +1197,22 @@
       }
     },
     "Taption Plan은 위치·건강·캘린더·사진·앱 사용시간을 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Taption Plan reads your location, health, calendar, photos, and app usage to record your day for you. Allow only what you need, and change permissions anytime in Settings."
+          }
+        }
+      }
+    },
+    "Taption Plan은 위치·건강·캘린더를 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taption Plan reads your location, health data, and calendars to record your day for you. Allow only what you need, and change permissions anytime in Settings."
           }
         }
       }
@@ -1202,6 +1273,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Drag the Gantt body to move it, and pinch with two fingers to zoom to one-minute precision"
+          }
+        }
+      }
+    },
+    "건강 앱의 수면 읽기 연결을 확인해 주세요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the Health app connection for sleep data"
           }
         }
       }
@@ -1328,7 +1409,18 @@
         }
       }
     },
+    "계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plans, actual records, notes, and automatic travel records will be deleted. Purchase history and trial usage will be kept. This action cannot be undone."
+          }
+        }
+      }
+    },
     "계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 이 작업은 되돌릴 수 없습니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1833,6 +1925,7 @@
       }
     },
     "두 번 탭하면 섹션 편집을 엽니다" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1848,6 +1941,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Double-tap to zoom, long-press and drag to move, or drag either endpoint to adjust the length"
+          }
+        }
+      }
+    },
+    "드래그하면 시간을 이동하고 두 번 탭하면 섹션 편집을 엽니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag to move through time and double-tap to edit the section"
           }
         }
       }
@@ -2832,6 +2935,16 @@
         }
       }
     },
+    "수면 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect sleep"
+          }
+        }
+      }
+    },
     "수면·활동 기록은 시간을 포함하는 루틴에만 연결할 수 있습니다." : {
       "localizations" : {
         "en" : {
@@ -2969,6 +3082,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Get started"
+          }
+        }
+      }
+    },
+    "식당 삭제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete restaurant"
+          }
+        }
+      }
+    },
+    "식당 추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add restaurant"
           }
         }
       }
@@ -3196,11 +3329,22 @@
       }
     },
     "애플·구글 캘린더에서 가져온 내용은 ‘일정’ 카드에 표시됩니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Items imported from Apple and Google Calendar appear on the Schedule card."
+          }
+        }
+      }
+    },
+    "애플·구글·네이버 캘린더에서 가져온 내용은 ‘일정’ 카드에 표시됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Items imported from Apple, Google, and Naver Calendar appear on the Schedule card."
           }
         }
       }
@@ -3470,6 +3614,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Today"
+          }
+        }
+      }
+    },
+    "오늘 수면 기록을 가져오지 못했습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t import today’s sleep data"
           }
         }
       }
@@ -4022,6 +4176,16 @@
         }
       }
     },
+    "임시 위치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temporary location"
+          }
+        }
+      }
+    },
     "자동" : {
       "localizations" : {
         "en" : {
@@ -4183,6 +4347,7 @@
       }
     },
     "잠금을 해제해 주세요" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4438,6 +4603,16 @@
         }
       }
     },
+    "지도 스타일, WBS 지도, Apple만 사용" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Map style, WBS map, Apple only"
+          }
+        }
+      }
+    },
     "지도를 탭해 장소의 기준점을 선택하세요." : {
       "localizations" : {
         "en" : {
@@ -4508,7 +4683,18 @@
         }
       }
     },
+    "집 · 학교 · 학원 · 회사 · 식당을 현재 위치로 지정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set home, school, academy, work, or a restaurant to your current location"
+          }
+        }
+      }
+    },
     "집 · 학교 · 학원 · 회사 등을 현재 위치로 지정" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4544,6 +4730,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Create first child plan"
+          }
+        }
+      }
+    },
+    "최근 수신 시각 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last received · %@"
+          }
+        }
+      }
+    },
+    "최근 수신 시각 없음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No data received"
           }
         }
       }
@@ -4771,6 +4977,7 @@
       }
     },
     "하루 재생" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4781,6 +4988,7 @@
       }
     },
     "하루 재생 일시 정지" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4821,6 +5029,7 @@
       }
     },
     "한 번 결제 · 자동 갱신 없음" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4872,6 +5081,7 @@
       }
     },
     "현재 날씨 %@, %lld도" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4973,6 +5183,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Home Screen · medium widget"
+          }
+        }
+      }
+    },
+    "화면 오른쪽 끝까지 끌어 시간을 선택합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag to the right edge of the screen to select a time"
           }
         }
       }

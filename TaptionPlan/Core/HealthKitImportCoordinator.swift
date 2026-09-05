@@ -11,14 +11,11 @@ struct HealthKitSyncProgress: Hashable, Sendable {
 
 enum HealthKitImportCoordinatorError: LocalizedError {
     case localStoreUnavailable
-    case missingAnchor
 
     var errorDescription: String? {
         switch self {
         case .localStoreUnavailable:
             "HealthKit 로컬 원본 저장소를 열지 못했습니다."
-        case .missingAnchor:
-            "HealthKit 증분 동기화 기준점을 만들지 못했습니다."
         }
     }
 }
@@ -26,38 +23,6 @@ enum HealthKitImportCoordinatorError: LocalizedError {
 @available(iOS 18.0, *)
 actor HealthKitImportCoordinator {
     typealias ProgressHandler = @Sendable (HealthKitSyncProgress) async -> Void
-
-    private final class IncrementalQueryAccumulator<Value: Sendable>:
-        @unchecked Sendable
-    {
-        private let lock = NSLock()
-        private var values: [Value] = []
-        private var continuation: CheckedContinuation<[Value], Error>?
-
-        init(_ continuation: CheckedContinuation<[Value], Error>) {
-            self.continuation = continuation
-        }
-
-        func append(_ newValues: [Value]) {
-            lock.lock()
-            values.append(contentsOf: newValues)
-            lock.unlock()
-        }
-
-        func finish(error: Error? = nil) {
-            lock.lock()
-            let pending = continuation
-            continuation = nil
-            let result = values
-            lock.unlock()
-            guard let pending else { return }
-            if let error {
-                pending.resume(throwing: error)
-            } else {
-                pending.resume(returning: result)
-            }
-        }
-    }
 
     private struct AnchoredPage: @unchecked Sendable {
         let samples: [HKSample]
@@ -133,6 +98,13 @@ actor HealthKitImportCoordinator {
         )
     }
 
+    func deleteAll(generation: UInt64? = nil) async throws {
+        guard let importStore else {
+            throw HealthKitImportCoordinatorError.localStoreUnavailable
+        }
+        try await importStore.deleteAll(generation: generation)
+    }
+
     func synchronizeFullHistory(
         progress: ProgressHandler? = nil
     ) async throws -> HealthKitSyncOverview {
@@ -190,13 +162,24 @@ actor HealthKitImportCoordinator {
             )
         }
 
-        try? await importDocuments()
-        try? await importUserAnnotatedMedications()
-        try? await importCharacteristics()
-        try? await importActivitySummaries(
-            from: healthStore.earliestPermittedSampleDate(),
-            through: .now
-        )
+        try await importWhenAvailable(
+            typeIdentifier: HealthKitTypeCatalog.documents.first?.identifier
+        ) { try await importDocuments() }
+        try await importWhenAvailable(
+            typeIdentifier: "HKDataTypeIdentifierUserAnnotatedMedicationConcept"
+        ) {
+            try await importUserAnnotatedMedications()
+        }
+        try await importWhenAvailable { try await importCharacteristics() }
+        try await importWhenAvailable(
+            typeIdentifier: "HKActivitySummaryTypeIdentifier"
+        ) {
+            try await importActivitySummaries(
+                from: healthStore.earliestPermittedSampleDate(),
+                through: .now
+            )
+        }
+        try Task.checkCancellation()
         return try await importStore.overview()
     }
 
@@ -249,20 +232,52 @@ actor HealthKitImportCoordinator {
                 try await importStore.saveSyncState(state)
             }
         }
-        try? await importDocuments()
-        try? await importUserAnnotatedMedications()
-        try? await importCharacteristics()
-        try? await importActivitySummaries(
-            from: calendar.date(byAdding: .day, value: -31, to: .now)
-                ?? Date(timeIntervalSinceNow: -31 * 86_400),
-            through: .now
-        )
+        try await importWhenAvailable(
+            typeIdentifier: HealthKitTypeCatalog.documents.first?.identifier
+        ) { try await importDocuments() }
+        try await importWhenAvailable(
+            typeIdentifier: "HKDataTypeIdentifierUserAnnotatedMedicationConcept"
+        ) {
+            try await importUserAnnotatedMedications()
+        }
+        try await importWhenAvailable { try await importCharacteristics() }
+        try await importWhenAvailable(
+            typeIdentifier: "HKActivitySummaryTypeIdentifier"
+        ) {
+            try await importActivitySummaries(
+                from: calendar.date(byAdding: .day, value: -31, to: .now)
+                    ?? Date(timeIntervalSinceNow: -31 * 86_400),
+                through: .now
+            )
+        }
+        try Task.checkCancellation()
         return try await importStore.overview()
     }
 
     private func sampleDescriptors() -> [HealthKitTypeDescriptor] {
         HealthKitTypeCatalog.observableDescriptors.filter { descriptor in
             !descriptor.isClinical || healthStore.supportsHealthRecords()
+        }
+    }
+
+    private func importWhenAvailable(
+        typeIdentifier: String? = nil,
+        _ operation: () async throws -> Void
+    ) async throws {
+        try Task.checkCancellation()
+        do {
+            try await operation()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            guard let typeIdentifier, let importStore else { return }
+            let previous = try await importStore.syncState(for: typeIdentifier)
+                ?? HealthKitTypeSyncState(typeIdentifier: typeIdentifier)
+            try await importStore.saveSyncState(updatedState(
+                previous,
+                lastSyncedAt: .now,
+                lastError: error.localizedDescription
+            ))
         }
     }
 
@@ -310,10 +325,11 @@ actor HealthKitImportCoordinator {
                 from: pageStart,
                 through: pageEnd
             )
-            let records = await records(
+            let records = try await records(
                 from: samples,
                 descriptor: descriptor
             )
+            try Task.checkCancellation()
             importedSamples += records.count
             let nextState = updatedState(
                 state,
@@ -364,10 +380,11 @@ actor HealthKitImportCoordinator {
                 type: sampleType,
                 anchor: anchor
             )
-            let records = await records(
+            let records = try await records(
                 from: page.samples,
                 descriptor: descriptor
             )
+            try Task.checkCancellation()
             importedSamples += records.count
             let encodedAnchor = try Self.encodeAnchor(page.anchor)
             let added = countsAsNew ? records.count : 0
@@ -400,25 +417,12 @@ actor HealthKitImportCoordinator {
     }
 
     private func firstSampleDate(for type: HKSampleType) async throws -> Date? {
-        let sort = NSSortDescriptor(
-            key: HKSampleSortIdentifierStartDate,
-            ascending: true
-        )
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: type,
-                predicate: nil,
-                limit: 1,
-                sortDescriptors: [sort]
-            ) { _, samples, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: samples?.first?.startDate)
-                }
-            }
-            healthStore.execute(query)
-        }
+        let values = try await HKSampleQueryDescriptor(
+            predicates: [.sample(type: type)],
+            sortDescriptors: [SortDescriptor(\HKSample.startDate)],
+            limit: 1
+        ).result(for: healthStore)
+        return values.first?.startDate
     }
 
     private func samples(
@@ -431,64 +435,44 @@ actor HealthKitImportCoordinator {
             end: end,
             options: .strictStartDate
         )
-        let sort = NSSortDescriptor(
-            key: HKSampleSortIdentifierStartDate,
-            ascending: true
-        )
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: type,
-                predicate: predicate,
-                limit: HKObjectQueryNoLimit,
-                sortDescriptors: [sort]
-            ) { _, values, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: values ?? [])
-                }
-            }
-            healthStore.execute(query)
-        }
+        return try await HKSampleQueryDescriptor(
+            predicates: [.sample(type: type, predicate: predicate)],
+            sortDescriptors: [SortDescriptor(\HKSample.startDate)]
+        ).result(for: healthStore)
     }
 
     private func anchoredPage(
         type: HKSampleType,
         anchor: HKQueryAnchor?
     ) async throws -> AnchoredPage {
-        try await withCheckedThrowingContinuation { continuation in
-            let query = HKAnchoredObjectQuery(
-                type: type,
-                predicate: nil,
-                anchor: anchor,
-                limit: 500
-            ) { _, samples, deleted, newAnchor, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else if let newAnchor {
-                    continuation.resume(returning: AnchoredPage(
-                        samples: samples ?? [],
-                        deleted: deleted ?? [],
-                        anchor: newAnchor
-                    ))
-                } else {
-                    continuation.resume(
-                        throwing: HealthKitImportCoordinatorError.missingAnchor
-                    )
-                }
-            }
-            healthStore.execute(query)
-        }
+        let result = try await HKAnchoredObjectQueryDescriptor(
+            predicates: [.sample(type: type)],
+            anchor: anchor,
+            limit: 500
+        ).result(for: healthStore)
+        return AnchoredPage(
+            samples: result.addedSamples,
+            deleted: result.deletedObjects,
+            anchor: result.newAnchor
+        )
     }
 
     private func records(
         from samples: [HKSample],
         descriptor: HealthKitTypeDescriptor
-    ) async -> [HealthKitSampleRecord] {
+    ) async throws -> [HealthKitSampleRecord] {
+        try Task.checkCancellation()
         var result: [HealthKitSampleRecord] = []
         result.reserveCapacity(samples.count)
         for sample in samples {
-            let payload = try? await specializedPayload(for: sample)
+            let payload: Data?
+            do {
+                payload = try await specializedPayload(for: sample)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                payload = nil
+            }
             result.append(
                 record(
                     from: sample,
@@ -497,6 +481,7 @@ actor HealthKitImportCoordinator {
                 )
             )
         }
+        try Task.checkCancellation()
         return result
     }
 
@@ -668,18 +653,26 @@ actor HealthKitImportCoordinator {
             return
         }
         let documents = try await documents(type: type)
+        try Task.checkCancellation()
         _ = try await importStore.upsert(
             documents.map { record(from: $0, descriptor: descriptor) }
         )
+        let previous = try await importStore.syncState(for: descriptor.identifier)
+            ?? HealthKitTypeSyncState(typeIdentifier: descriptor.identifier)
+        try await importStore.saveSyncState(updatedState(
+            previous,
+            historyComplete: true,
+            lastSyncedAt: .now,
+            lastError: nil
+        ))
     }
 
     private func documents(type: HKDocumentType) async throws
         -> [HKDocumentSample]
     {
-        try await withCheckedThrowingContinuation { continuation in
-            let accumulator = IncrementalQueryAccumulator<HKDocumentSample>(
-                continuation
-            )
+        var result: [HKDocumentSample] = []
+        let stream = AsyncThrowingStream<[HKDocumentSample], Error> {
+            continuation in
             let query = HKDocumentQuery(
                 documentType: type,
                 predicate: nil,
@@ -688,22 +681,30 @@ actor HealthKitImportCoordinator {
                 includeDocumentData: true
             ) { _, documents, done, error in
                 if let error {
-                    accumulator.finish(error: error)
+                    continuation.finish(throwing: error)
                     return
                 }
-                accumulator.append(documents ?? [])
+                continuation.yield(documents ?? [])
                 if done {
-                    accumulator.finish()
+                    continuation.finish()
                 }
+            }
+            continuation.onTermination = { @Sendable _ in
+                self.healthStore.stop(query)
             }
             healthStore.execute(query)
         }
+        for try await batch in stream {
+            result.append(contentsOf: batch)
+        }
+        return result
     }
 
     private func importUserAnnotatedMedications() async throws {
         guard #available(iOS 26.0, *), let importStore else { return }
         let identifier = "HKDataTypeIdentifierUserAnnotatedMedicationConcept"
         let medications = try await userAnnotatedMedications()
+        try Task.checkCancellation()
         let now = Date.now
         let records = try medications.map { medication in
             let codings = medication.medication.relatedCodings.map {
@@ -756,6 +757,7 @@ actor HealthKitImportCoordinator {
         let previousSet = Set(previousIDs)
         let currentSet = Set(currentIDs)
         let deletedIDs = previousSet.subtracting(currentSet)
+        try Task.checkCancellation()
         let state = updatedState(
             previousState,
             historyCursor: try PropertyListEncoder().encode(currentIDs),
@@ -784,31 +786,13 @@ actor HealthKitImportCoordinator {
     private func userAnnotatedMedications() async throws
         -> [HKUserAnnotatedMedication]
     {
-        try await withCheckedThrowingContinuation { continuation in
-            let accumulator = IncrementalQueryAccumulator<
-                HKUserAnnotatedMedication
-            >(continuation)
-            let query = HKUserAnnotatedMedicationQuery(
-                predicate: nil,
-                limit: HKObjectQueryNoLimit
-            ) { _, medication, done, error in
-                if let error {
-                    accumulator.finish(error: error)
-                    return
-                }
-                if let medication {
-                    accumulator.append([medication])
-                }
-                if done {
-                    accumulator.finish()
-                }
-            }
-            healthStore.execute(query)
-        }
+        try await HKUserAnnotatedMedicationQueryDescriptor()
+            .result(for: healthStore)
     }
 
     private func importCharacteristics() async throws {
         guard let importStore else { return }
+        try Task.checkCancellation()
         let now = Date.now
         let values: [(String, String?)] = [
             (
@@ -843,6 +827,7 @@ actor HealthKitImportCoordinator {
             ),
         ]
         for (identifier, value) in values {
+            try Task.checkCancellation()
             let previous = try await importStore.syncState(for: identifier)
                 ?? HealthKitTypeSyncState(typeIdentifier: identifier)
             let records = value.map {
@@ -884,6 +869,7 @@ actor HealthKitImportCoordinator {
     ) async throws {
         guard let importStore else { return }
         let summaries = try await activitySummaries(from: start, through: end)
+        try Task.checkCancellation()
         let records = summaries.compactMap { summary -> HealthKitSampleRecord? in
             let components = summary.dateComponents(for: calendar)
             guard let day = calendar.date(from: components),
@@ -920,6 +906,7 @@ actor HealthKitImportCoordinator {
                 ]
             )
         }
+        try Task.checkCancellation()
         let identifier = "HKActivitySummaryTypeIdentifier"
         let previous = try await importStore.syncState(for: identifier)
             ?? HealthKitTypeSyncState(typeIdentifier: identifier)
@@ -961,18 +948,9 @@ actor HealthKitImportCoordinator {
             forActivitySummariesBetweenStart: startComponents,
             end: endComponents
         )
-        return try await withCheckedThrowingContinuation { continuation in
-            let query = HKActivitySummaryQuery(
-                predicate: predicate
-            ) { _, summaries, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: summaries ?? [])
-                }
-            }
-            healthStore.execute(query)
-        }
+        return try await HKActivitySummaryQueryDescriptor(
+            predicate: predicate
+        ).result(for: healthStore)
     }
 
     private func updatedState(

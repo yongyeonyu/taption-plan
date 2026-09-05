@@ -104,13 +104,15 @@ final class AppLanguagePreferenceTests: XCTestCase {
             viewportEnd: now.addingTimeInterval(3_600),
             items: [],
             catStyle: "calico",
-            reducesMotion: false
+            reducesMotion: false,
+            commerceLocked: true
         )
         let encoded = try JSONEncoder().encode(payload)
         var object = try XCTUnwrap(
             JSONSerialization.jsonObject(with: encoded) as? [String: Any]
         )
         object.removeValue(forKey: "languagePreference")
+        object.removeValue(forKey: "commerceLocked")
         let oldData = try JSONSerialization.data(withJSONObject: object)
 
         let decoded = try JSONDecoder().decode(
@@ -118,6 +120,7 @@ final class AppLanguagePreferenceTests: XCTestCase {
             from: oldData
         )
         XCTAssertNil(decoded.languagePreference)
+        XCTAssertNil(decoded.commerceLocked)
         XCTAssertEqual(decoded.generatedAt, now)
     }
 }

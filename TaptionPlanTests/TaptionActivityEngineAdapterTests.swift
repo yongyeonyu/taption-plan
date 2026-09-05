@@ -79,6 +79,25 @@ struct TaptionActivityEngineAdapterTests {
         #expect(evidence.first?.isPreciseLocation == false)
     }
 
+    @Test func unavailableGPSDoesNotBecomePreciseFromQualityLabel() {
+        let value = SensorReading(
+            timestamp: base,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: false
+        )
+
+        let evidence = TaptionActivityEngineAdapter.evidence(from: [value])
+
+        #expect(evidence.first?.isPreciseLocation == false)
+    }
+
     @Test func qualityProjectionRejectsScalarSpikeWithoutMutatingRawReadings() {
         let readings = (0..<7).map { index in
             SensorReading(

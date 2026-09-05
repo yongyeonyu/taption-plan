@@ -3,6 +3,47 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreTests: XCTestCase {
+    func testDeleteAllContentKeepsMigrationMarker() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 5)
+        try await store.saveSnapshot(
+            .init(
+                domain: "plan",
+                day: day,
+                revision: 1,
+                updatedAt: .now,
+                payload: Data([1])
+            )
+        )
+        try await store.appendEvents([
+            .init(
+                day: day,
+                timestamp: .now,
+                sequence: 1,
+                id: "raw-1",
+                domain: "sensor",
+                payload: Data([2])
+            )
+        ])
+        try await store.setMetadata("value", forKey: "user-value")
+        _ = try await store.markMigrationCompleted("legacy-import")
+
+        try await store.deleteAllContent()
+
+        let snapshot = try await store.snapshot(domain: "plan", day: day)
+        let events = try await store.events(from: day, through: day)
+        let metadata = try await store.metadata(forKey: "user-value")
+        let migrationCompleted = try await store.migrationCompleted(
+            "legacy-import"
+        )
+        XCTAssertNil(snapshot)
+        XCTAssertTrue(events.isEmpty)
+        XCTAssertNil(metadata)
+        XCTAssertTrue(migrationCompleted)
+    }
+
     func testCanonicalSnapshotAndOneTimeConversion() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -72,6 +113,56 @@ final class DayStoreTests: XCTestCase {
         let result = try await store.events(from: day, through: day)
 
         XCTAssertEqual(result.map(\.id), ["existing"])
+    }
+
+    func testUniqueAppendRejectsConflictsAndDomainDeleteIsScoped() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 4)
+        let store = try TaptionPlanDayStore(url: url)
+        let first = TaptionPlanDayStore.Event(
+            day: day,
+            timestamp: .init(timeIntervalSince1970: 10),
+            sequence: 1,
+            id: "sensor-1",
+            domain: "sensor-reading",
+            payload: Data([1])
+        )
+        try await store.appendUniqueEvents([first])
+        try await store.appendUniqueEvents([first])
+        do {
+            try await store.appendUniqueEvents([
+                .init(
+                    day: day,
+                    timestamp: .init(timeIntervalSince1970: 20),
+                    sequence: 2,
+                    id: first.id,
+                    domain: first.domain,
+                    payload: Data([2])
+                )
+            ])
+            XCTFail("Expected immutable event conflict")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .eventConflict(id: first.id))
+        }
+        try await store.appendUniqueEvents([
+            .init(
+                day: day,
+                timestamp: .init(timeIntervalSince1970: 30),
+                sequence: 3,
+                id: "raw-1",
+                domain: "raw-device-data",
+                payload: Data([3])
+            )
+        ])
+
+        let sensor = try await store.allEvents(domain: first.domain)
+        XCTAssertEqual(sensor.map(\.payload), [Data([1])])
+        try await store.deleteEvents(domain: first.domain)
+        let deleted = try await store.allEvents(domain: first.domain)
+        let retained = try await store.allEvents(domain: "raw-device-data")
+        XCTAssertTrue(deleted.isEmpty)
+        XCTAssertEqual(retained.map(\.id), ["raw-1"])
     }
 
     func testEventsCanBeUpsertedAndDeletedWithinTheirDomain() async throws {
@@ -350,6 +441,30 @@ final class DayStoreTests: XCTestCase {
                 payload: Data("stale".utf8)
             )
         )
+    }
+
+    func testEqualSnapshotRevisionCannotReplaceExistingPayload() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 5)
+        try await store.saveSnapshot(.init(
+            domain: "sensor",
+            day: day,
+            revision: 7,
+            updatedAt: .now,
+            payload: Data("first".utf8)
+        ))
+        try await store.saveSnapshot(.init(
+            domain: "sensor",
+            day: day,
+            revision: 7,
+            updatedAt: .now,
+            payload: Data("second".utf8)
+        ))
+
+        let restored = try await store.snapshot(domain: "sensor", day: day)
+        XCTAssertEqual(restored?.payload, Data("first".utf8))
     }
 
     private func temporaryURL() -> URL {

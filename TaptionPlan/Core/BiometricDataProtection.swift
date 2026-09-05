@@ -197,6 +197,11 @@ final class BiometricProtectedSnapshotStore {
         return .protected(createdAt: archive.createdAt)
     }
 
+    func deleteStoredSnapshot() throws {
+        guard fileManager.fileExists(atPath: archiveURL.path) else { return }
+        try fileManager.removeItem(at: archiveURL)
+    }
+
     private func loadArchive() throws -> BiometricProtectedSnapshotArchive {
         guard fileManager.fileExists(atPath: archiveURL.path) else {
             throw BiometricDataProtectionError.archiveMissing

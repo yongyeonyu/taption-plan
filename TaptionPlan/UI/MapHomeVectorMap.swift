@@ -14,6 +14,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     static let sourceURL = "https://tiles.openfreemap.org/planet"
     static let glyphsURL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf"
     static let routeHex = MapHomeWBSTripStyle.actualRouteHex
+    static let transitRouteHex = MapHomeWBSTripStyle.transitRouteHex
 
     var backgroundHex: String {
         switch self {
@@ -376,22 +377,43 @@ enum MapHomeVectorNavigationMath {
 struct MapHomeVectorRoute {
     let id: String
     let coordinates: [CLLocationCoordinate2D]
+    let geometrySignature: Int
     let colorHex: String
     let opacity: Double
 
     var signature: String {
-        let first = coordinates.first
-        let last = coordinates.last
         return [
             id,
-            String(coordinates.count),
-            String(first?.latitude ?? 0),
-            String(first?.longitude ?? 0),
-            String(last?.latitude ?? 0),
-            String(last?.longitude ?? 0),
+            String(geometrySignature),
             colorHex,
             String(opacity),
         ].joined(separator: "|")
+    }
+}
+
+enum MapHomeRouteGeometrySignature {
+    static func value(for coordinates: [CLLocationCoordinate2D]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(coordinates.count)
+        for coordinate in coordinates {
+            hasher.combine(coordinate.latitude.bitPattern)
+            hasher.combine(coordinate.longitude.bitPattern)
+        }
+        return hasher.finalize()
+    }
+
+    static func derived(
+        from base: Int,
+        coordinates: [CLLocationCoordinate2D]
+    ) -> Int {
+        var hasher = Hasher()
+        hasher.combine(base)
+        hasher.combine(coordinates.count)
+        if let last = coordinates.last {
+            hasher.combine(last.latitude.bitPattern)
+            hasher.combine(last.longitude.bitPattern)
+        }
+        return hasher.finalize()
     }
 }
 
@@ -443,6 +465,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let subwayRoutes: [MapHomeVectorRoute]
     let markers: [MapHomeVectorMarker]
     let contentInsets: UIEdgeInsets
+    let longPressExclusionFrame: CGRect
     let followsHeading: Bool
     let headingDegrees: CLLocationDirection
     let displayedCoordinate: CLLocationCoordinate2D?
@@ -681,6 +704,18 @@ struct MapHomeVectorMap: UIViewRepresentable {
             true
         }
 
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldReceive touch: UITouch
+        ) -> Bool {
+            guard gestureRecognizer === longPressGesture,
+                  let view = gestureRecognizer.view else { return true }
+            return MapHomeLongPressRoutingMath.shouldPresentLocation(
+                at: touch.location(in: view),
+                excluding: parent.longPressExclusionFrame
+            )
+        }
+
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
             if gesture.state == .began, gesture.numberOfTouches == 1 {
                 parent.onSingleFingerPanBegan()
@@ -698,6 +733,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
             guard gesture.state == .began,
+                  gesture.numberOfTouches <= 1,
                   let mapView else { return }
             parent.onLongPress(
                 mapView.convert(
@@ -775,7 +811,11 @@ struct MapHomeVectorMap: UIViewRepresentable {
             let subwayLayer = lineLayer(
                 LayerID.subwayLayer,
                 source: subway,
-                color: NSExpression(forConstantValue: UIColor(red: 69 / 255, green: 139 / 255, blue: 136 / 255, alpha: 1)),
+                color: NSExpression(
+                    forConstantValue: UIColor(
+                        Color(hex: MapHomeWBSTripStyle.transitRouteHex)
+                    )
+                ),
                 width: MapHomeWBSTripStyle.actualRouteLineWidth,
                 opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.actualRouteOpacity)
             )
@@ -785,7 +825,11 @@ struct MapHomeVectorMap: UIViewRepresentable {
             let activeLayer = lineLayer(
                 LayerID.activeLayer,
                 source: active,
-                color: NSExpression(forConstantValue: UIColor(red: 69 / 255, green: 139 / 255, blue: 136 / 255, alpha: 1)),
+                color: NSExpression(
+                    forConstantValue: UIColor(
+                        Color(hex: MapHomeWBSTripStyle.actualRouteHex)
+                    )
+                ),
                 width: MapHomeWBSTripStyle.actualRouteLineWidth,
                 opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.actualRouteOpacity)
             )
@@ -795,7 +839,11 @@ struct MapHomeVectorMap: UIViewRepresentable {
             let expectedLayer = lineLayer(
                 LayerID.expectedLayer,
                 source: expected,
-                color: NSExpression(forConstantValue: UIColor(red: 198 / 255, green: 93 / 255, blue: 77 / 255, alpha: 1)),
+                color: NSExpression(
+                    forConstantValue: UIColor(
+                        Color(hex: MapHomeWBSTripStyle.forecastRouteHex)
+                    )
+                ),
                 width: MapHomeWBSTripStyle.forecastRouteLineWidth,
                 opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.forecastRouteOpacity)
             )

@@ -1,13 +1,14 @@
 import Foundation
+import Dispatch
 import TaptionPlanCore
 
-enum TaptionDiagnosticsLevel: String {
+enum TaptionDiagnosticsLevel: String, Sendable {
     case info
     case notice
     case error
 }
 
-enum TaptionDiagnosticsWriteStatus: Equatable {
+enum TaptionDiagnosticsWriteStatus: Equatable, Sendable {
     case neverAttempted
     case primarySucceeded
     case fallbackSucceeded
@@ -56,6 +57,18 @@ struct TaptionDiagnosticsOperation: Equatable, Sendable {
 enum TaptionPlanDiagnosticsLogPolicy {
     static let maximumBackupBytes = 512_000
 
+    private static let personalHealthTokens = [
+        "health", "sleep", "heart", "blood", "glucose", "oxygen",
+        "respir", "workout", "exercise", "stand", "energy", "calorie",
+        "step", "weight", "body",
+    ]
+
+    private static let technicalFields: Set<String> = [
+        "duration_ms", "error_code", "error_description", "error_domain",
+        "error_type", "operation", "operation_id", "outcome", "reason",
+        "underlying_code", "underlying_domain",
+    ]
+
     static func bounded(
         _ log: String,
         maximumBytes: Int = maximumBackupBytes
@@ -70,6 +83,40 @@ enum TaptionPlanDiagnosticsLogPolicy {
         }
         let start = suffix.index(after: newline)
         return String(decoding: suffix[start...], as: UTF8.self)
+    }
+
+    static func redactingPersonalHealthFields(in log: String) -> String {
+        log.split(whereSeparator: \Character.isNewline).compactMap { line in
+            guard let data = line.data(using: .utf8),
+                  var entry = try? JSONSerialization.jsonObject(with: data)
+                    as? [String: Any] else {
+                let value = String(line)
+                let lowered = value.lowercased()
+                return personalHealthTokens.contains {
+                    lowered.contains($0)
+                } ? nil : value
+            }
+            let event = (entry["event"] as? String)?.lowercased() ?? ""
+            let isHealthEvent = personalHealthTokens.contains {
+                event.contains($0)
+            }
+            if let fields = entry["fields"] as? [String: Any] {
+                entry["fields"] = fields.filter { key, _ in
+                    let normalized = key.lowercased()
+                    if isHealthEvent {
+                        return technicalFields.contains(normalized)
+                    }
+                    return !personalHealthTokens.contains {
+                        normalized.contains($0)
+                    }
+                }
+            }
+            guard let redacted = try? JSONSerialization.data(
+                withJSONObject: entry,
+                options: [.sortedKeys]
+            ) else { return nil }
+            return String(decoding: redacted, as: UTF8.self)
+        }.joined(separator: "\n")
     }
 }
 
@@ -144,13 +191,14 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     private let primaryDirectoryURL: URL
     private let fallbackDirectoryURL: URL?
     private let maximumBytes: Int
-    private let lock = NSLock()
+    private let queue = DispatchQueue(
+        label: "com.taption.plan.diagnostics",
+        qos: .utility
+    )
     private var writeStatus = TaptionDiagnosticsWriteStatus.neverAttempted
 
     var lastWriteStatus: TaptionDiagnosticsWriteStatus {
-        lock.lock()
-        defer { lock.unlock() }
-        return writeStatus
+        queue.sync { writeStatus }
     }
 
     init(
@@ -171,9 +219,22 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
         level: TaptionDiagnosticsLevel = .info,
         fields: [String: String] = [:]
     ) {
-        lock.lock()
-        defer { lock.unlock() }
+        if level == .error {
+            queue.sync {
+                writeRecord(event, level: level, fields: fields)
+            }
+            return
+        }
+        queue.async { [self] in
+            writeRecord(event, level: level, fields: fields)
+        }
+    }
 
+    private func writeRecord(
+        _ event: String,
+        level: TaptionDiagnosticsLevel,
+        fields: [String: String]
+    ) {
         do {
             let data = try makeEntryData(
                 event: event,
@@ -252,29 +313,46 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     }
 
     func combinedLog(maximumBytes: Int? = nil) -> String {
-        lock.lock()
-        defer { lock.unlock() }
-        var urls = [previousURL, currentURL]
-        if let fallbackDirectoryURL,
-           fallbackDirectoryURL != primaryDirectoryURL {
-            urls.append(
-                fallbackDirectoryURL.appendingPathComponent(
-                    "iphone-previous.jsonl"
+        queue.sync {
+            var urls = [previousURL, currentURL]
+            if let fallbackDirectoryURL,
+               fallbackDirectoryURL != primaryDirectoryURL {
+                urls.append(
+                    fallbackDirectoryURL.appendingPathComponent(
+                        "iphone-previous.jsonl"
+                    )
                 )
-            )
-            urls.append(
-                fallbackDirectoryURL.appendingPathComponent("iphone.jsonl")
+                urls.append(
+                    fallbackDirectoryURL.appendingPathComponent("iphone.jsonl")
+                )
+            }
+            let combined = urls
+                .compactMap { try? String(contentsOf: $0, encoding: .utf8) }
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
+            let redacted = TaptionPlanDiagnosticsLogPolicy
+                .redactingPersonalHealthFields(in: combined)
+            guard let maximumBytes else { return redacted }
+            return TaptionPlanDiagnosticsLogPolicy.bounded(
+                redacted,
+                maximumBytes: maximumBytes
             )
         }
-        let combined = urls
-            .compactMap { try? String(contentsOf: $0, encoding: .utf8) }
-            .filter { !$0.isEmpty }
-            .joined(separator: "\n")
-        guard let maximumBytes else { return combined }
-        return TaptionPlanDiagnosticsLogPolicy.bounded(
-            combined,
-            maximumBytes: maximumBytes
-        )
+    }
+
+    func clear() {
+        queue.sync {
+            let directories = [primaryDirectoryURL, fallbackDirectoryURL]
+                .compactMap { $0 }
+            for directory in directories {
+                for name in ["iphone.jsonl", "iphone-previous.jsonl"] {
+                    try? fileManager.removeItem(
+                        at: directory.appendingPathComponent(name)
+                    )
+                }
+            }
+            writeStatus = .neverAttempted
+        }
     }
 
     private var currentURL: URL {
@@ -376,13 +454,19 @@ struct WatchDiagnosticsLogStore {
     private static let dateKey = "taption.watch.diagnostics.received-at.v1"
 
     static func save(_ report: String, defaults: UserDefaults = .standard) {
-        guard !report.isEmpty else { return }
-        defaults.set(report, forKey: reportKey)
+        let safe = TaptionWatchDiagnosticsPrivacy.redacted(report)
+        guard !safe.isEmpty else { return }
+        defaults.set(safe, forKey: reportKey)
         defaults.set(Date.now, forKey: dateKey)
     }
 
     static func read(defaults: UserDefaults = .standard) -> String? {
         defaults.string(forKey: reportKey)
+    }
+
+    static func clear(defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: reportKey)
+        defaults.removeObject(forKey: dateKey)
     }
 }
 
@@ -427,7 +511,11 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
             .sorted { $0.key < $1.key }
             .map { "\($0.key): \($0.value)" }
             .joined(separator: "\n")
-        let resolvedWatchLog = watchLog.flatMap { value in
+        let safeIPhoneLog = TaptionPlanDiagnosticsLogPolicy
+            .redactingPersonalHealthFields(in: iphoneLog)
+        let resolvedWatchLog = watchLog.map(
+            TaptionWatchDiagnosticsPrivacy.redacted
+        ).flatMap { value in
             value.isEmpty ? nil : value
         } ?? "(unavailable)"
         let text = """
@@ -439,7 +527,7 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
         \(environment)
 
         ## iphone_log
-        \(iphoneLog.isEmpty ? "(empty)" : iphoneLog)
+        \(safeIPhoneLog.isEmpty ? "(empty)" : safeIPhoneLog)
 
         ## apple_watch_log
         \(resolvedWatchLog)
@@ -451,6 +539,13 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
         )
         try retainNewestPackages(limit: 6)
         return url
+    }
+
+    func deleteAll() throws {
+        guard fileManager.fileExists(atPath: packageDirectoryURL.path) else {
+            return
+        }
+        try fileManager.removeItem(at: packageDirectoryURL)
     }
 
     private func retainNewestPackages(limit: Int) throws {
@@ -499,6 +594,9 @@ struct TaptionDiagnosticsLatestLogManifest: Codable, Equatable, Sendable {
 }
 
 struct TaptionPlanDiagnosticsICloudExporter {
+    private static let legacyHealthLogCleanupKey =
+        "TaptionPlan.diagnosticsLegacyHealthLogCleanup.v1"
+
     typealias Transfer = (URL, URL) throws -> Void
 
     var fileManager: FileManager = .default
@@ -567,6 +665,31 @@ struct TaptionPlanDiagnosticsICloudExporter {
             try? fileManager.removeItem(at: stagingDirectory)
             throw error
         }
+    }
+
+    @discardableResult
+    func deleteAll() throws -> Bool {
+        guard let container = ubiquityContainerURL() else {
+            throw TaptionPlanDiagnosticsICloudError.unavailable
+        }
+        let directory = container
+            .appendingPathComponent("Documents", isDirectory: true)
+            .appendingPathComponent("TaptionLogs", isDirectory: true)
+        guard fileManager.fileExists(atPath: directory.path) else {
+            return false
+        }
+        try fileManager.removeItem(at: directory)
+        return true
+    }
+
+    func removeLegacyPersonalHealthLogsIfNeeded(
+        defaults: UserDefaults = .standard
+    ) throws {
+        guard !defaults.bool(forKey: Self.legacyHealthLogCleanupKey) else {
+            return
+        }
+        _ = try deleteAll()
+        defaults.set(true, forKey: Self.legacyHealthLogCleanupKey)
     }
 
     private func exportLatestManifest(

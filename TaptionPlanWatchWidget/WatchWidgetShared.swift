@@ -26,6 +26,11 @@ enum TaptionWatchWidgetStore {
         let data = try JSONEncoder().encode(payload)
         defaults.set(data, forKey: payloadKey)
     }
+
+    static func clear() {
+        UserDefaults(suiteName: appGroupIdentifier)?
+            .removeObject(forKey: payloadKey)
+    }
 }
 
 /// 워치 앱이 남기고 워치 위젯이 읽는 "지금 재고 있는 것".
@@ -54,5 +59,10 @@ enum TaptionWatchMeasurementStore {
             throw CocoaError(.fileNoSuchFile)
         }
         defaults.set(try JSONEncoder().encode(snapshot), forKey: key)
+    }
+
+    static func clear() {
+        UserDefaults(suiteName: TaptionWatchWidgetStore.appGroupIdentifier)?
+            .removeObject(forKey: key)
     }
 }

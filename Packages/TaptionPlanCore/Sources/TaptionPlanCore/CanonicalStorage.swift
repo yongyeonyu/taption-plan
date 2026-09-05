@@ -26,6 +26,7 @@ public enum TaptionPlanCanonicalStorageError: Error, Equatable, Sendable {
 public enum TaptionPlanCanonicalStorage {
     public static let maximumUncompressedSize = 64 * 1_024 * 1_024
     private static let envelopeMagic = Data("TP-CANON".utf8)
+    private static let minimumCompressionSize = 4 * 1_024
 
     public static func encode<Value: Encodable>(_ value: Value, compress: Bool = true) throws -> TaptionPlanEncodedPayload {
         let encoder = PropertyListEncoder()
@@ -35,7 +36,10 @@ public enum TaptionPlanCanonicalStorage {
             throw TaptionPlanCanonicalStorageError.invalidPayload
         }
         let payload: (Data, Bool)
-        if compress, let compressed = lzfse(raw), compressed.count < raw.count {
+        if compress,
+           raw.count >= minimumCompressionSize,
+           let compressed = lzfse(raw),
+           compressed.count < raw.count {
             payload = (compressed, true)
         } else {
             payload = (raw, false)
@@ -45,6 +49,9 @@ public enum TaptionPlanCanonicalStorage {
 
     public static func envelope(for encoded: TaptionPlanEncodedPayload) -> Data {
         var envelope = envelopeMagic
+        envelope.reserveCapacity(
+            envelopeMagic.count + 1 + 8 + 64 + encoded.data.count
+        )
         envelope.append(encoded.isCompressed ? 1 : 0)
         var size = UInt64(encoded.uncompressedSize).bigEndian
         withUnsafeBytes(of: &size) { envelope.append(contentsOf: $0) }
@@ -108,20 +115,24 @@ public enum TaptionPlanCanonicalStorage {
     }
 
     private static func lzfse(_ data: Data) -> Data? {
-        guard !data.isEmpty else { return data }
-        var capacity = max(data.count + 64, 256)
-        while capacity <= data.count * 8 + 1_024 {
-            var output = Data(count: capacity)
-            let count = output.withUnsafeMutableBytes { out in
-                data.withUnsafeBytes { input in
-                    compression_encode_buffer(out.bindMemory(to: UInt8.self).baseAddress!, capacity,
-                                               input.bindMemory(to: UInt8.self).baseAddress!, data.count, nil, COMPRESSION_LZFSE)
-                }
+        guard data.count > 1 else { return nil }
+        let capacity = data.count - 1
+        var output = Data(count: capacity)
+        let count = output.withUnsafeMutableBytes { out in
+            data.withUnsafeBytes { input in
+                compression_encode_buffer(
+                    out.bindMemory(to: UInt8.self).baseAddress!,
+                    capacity,
+                    input.bindMemory(to: UInt8.self).baseAddress!,
+                    data.count,
+                    nil,
+                    COMPRESSION_LZFSE
+                )
             }
-            if count > 0 { output.count = count; return output }
-            capacity *= 2
         }
-        return nil
+        guard count > 0 else { return nil }
+        output.count = count
+        return output
     }
 
     private static func unlzfse(_ data: Data, size: Int) throws -> Data {

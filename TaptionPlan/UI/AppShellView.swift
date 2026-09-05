@@ -1,4 +1,5 @@
 @preconcurrency import ActivityKit
+import EventKit
 import SwiftUI
 import UIKit
 
@@ -10,7 +11,7 @@ struct AppShellView: View {
         AppLanguagePreference.sharedDefaultsKey,
         store: UserDefaults(suiteName: AppLanguagePreference.appGroupIdentifier)
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
-    @State private var model = AppModel()
+    @State private var model = AppModel(startsCommerceLocked: true)
     @State private var proAccess = TaptionProAccessController()
     private let sensorLiveActivityController =
         SensorCollectionLiveActivityController.shared
@@ -87,6 +88,11 @@ struct AppShellView: View {
             )
         ) { _ in
             model.handleMemoryPressure()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: .EKEventStoreChanged)
+        ) { _ in
+            model.scheduleCalendarStoreRefresh(forceWide: true)
         }
         .onChange(of: scenePhase) { _, phase in
             handleScenePhaseChange(phase)
@@ -267,6 +273,9 @@ struct AppShellView: View {
                 }
                 if !isInitialLaunchOverlayVisible,
                    initialLaunchProgressValue >= 1 {
+                    break
+                }
+                if initialLaunchProgressValue >= initialLaunchProgressTarget {
                     break
                 }
                 try? await Task.sleep(for: .milliseconds(33))
@@ -1164,6 +1173,11 @@ struct PermissionOnboardingSheet: View {
     private func stateText(_ step: PermissionOnboardingStep) -> String {
         if skipped.contains(step.id) { return "나중에" }
         let state = model.permissionState(for: step.feature)
+        if step.feature == .health, !model.settings.healthEnabled {
+            return state == .denied || state == .unavailable
+                ? state.settingsLabel
+                : "연결 필요"
+        }
         return state == .notDetermined ? "" : state.settingsLabel
     }
 
@@ -1234,7 +1248,7 @@ struct TaptionProAccessView: View {
                                 )
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("닫기")
+                        .accessibilityLabel(text("닫기", "Close"))
                     }
                 }
 
@@ -1294,7 +1308,7 @@ struct TaptionProAccessView: View {
                 )
 
                 if controller.state == .loading {
-                    ProgressView("Pro 상태 확인 중")
+                    ProgressView(text("Pro 상태 확인 중", "Checking Pro status"))
                         .padding(.vertical, 18)
                 } else {
                     actionButtons
@@ -1318,7 +1332,7 @@ struct TaptionProAccessView: View {
                 set: { if !$0 { controller.message = nil } }
             )
         ) {
-            Button("확인") { controller.message = nil }
+            Button(text("확인", "OK")) { controller.message = nil }
         } message: {
             proMessage
         }
@@ -1387,7 +1401,7 @@ struct TaptionProAccessView: View {
                 Button {
                     controller.startTrial()
                 } label: {
-                    Text("14일 무료 체험 시작")
+                    Text(text("14일 무료 체험 시작", "Start 14-day free trial"))
                         .font(.system(size: 17, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
@@ -1416,14 +1430,14 @@ struct TaptionProAccessView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Button("구매 복원") {
+                Button(text("구매 복원", "Restore purchase")) {
                     Task { await controller.restore() }
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.tpReferenceBlue)
             } else if allowsDismiss {
-                Button("계속 사용") { dismiss() }
+                Button(text("계속 사용", "Continue")) { dismiss() }
                     .font(.system(size: 17, weight: .bold))
                     .buttonStyle(.borderedProminent)
                     .tint(Color.tpInk)

@@ -1,11 +1,6 @@
 import Foundation
 import TaptionPlanCore
 
-private struct WatchMaterializedDayPayload: Codable, Sendable {
-    let day: TaptionPlanDayKey
-    let summaries: [TaptionWatchSensorSummary]
-}
-
 /// The Watch keeps its own append-only v3 store.  WatchConnectivity is only a
 /// transport; a summary is persisted here before it is sent to the iPhone.
 actor WatchDayDatabase {
@@ -29,30 +24,38 @@ actor WatchDayDatabase {
     }
 
     func append(_ chunk: TaptionWatchAccelerationChunk) async throws {
-        let payload = try TaptionPlanCanonicalStorage.encode(chunk)
-        let event = TaptionPlanRawEvent(
-            device: .appleWatch,
-            day: TaptionPlanDayKey(date: chunk.endedAt),
-            timestamp: chunk.endedAt,
-            sequence: UInt64(max(0, chunk.sequence)),
-            id: chunk.id.uuidString,
-            domain: "watch-acceleration",
-            provenance: [
-                "source-device:appleWatch",
-                "source:WatchAcceleration",
-                "storage:watch-v3",
-                "raw:accelerometer-v1",
-                "sample-count:\(chunk.samples.count)",
-            ],
-            payload: TaptionPlanCanonicalStorage.envelope(for: payload)
-        )
-        try await store.appendRawEvents([event])
-        try await materialize(day: event.day)
+        try await appendBatch([], chunks: [chunk])
     }
 
     func appendBatch(_ summaries: [TaptionWatchSensorSummary]) async throws {
-        guard !summaries.isEmpty else { return }
-        let events = try summaries.map { summary -> TaptionPlanRawEvent in
+        try await appendBatch(summaries, chunks: [])
+    }
+
+    func appendBatch(
+        _ summaries: [TaptionWatchSensorSummary],
+        chunks: [TaptionWatchAccelerationChunk]
+    ) async throws {
+        guard !summaries.isEmpty || !chunks.isEmpty else { return }
+        let chunkEvents = try chunks.map { chunk -> TaptionPlanRawEvent in
+            let payload = try TaptionPlanCanonicalStorage.encode(chunk)
+            return TaptionPlanRawEvent(
+                device: .appleWatch,
+                day: TaptionPlanDayKey(date: chunk.endedAt),
+                timestamp: chunk.endedAt,
+                sequence: UInt64(max(0, chunk.sequence)),
+                id: chunk.id.uuidString,
+                domain: "watch-acceleration",
+                provenance: [
+                    "source-device:appleWatch",
+                    "source:WatchAcceleration",
+                    "storage:watch-v3",
+                    "derived:downsampled-accelerometer-v1",
+                    "sample-count:\(chunk.samples.count)",
+                ],
+                payload: TaptionPlanCanonicalStorage.envelope(for: payload)
+            )
+        }
+        let summaryEvents = try summaries.map { summary -> TaptionPlanRawEvent in
             let day = TaptionPlanDayKey(date: summary.endedAt)
             let id = "\(summary.sessionID.uuidString):\(summary.sequence)"
             let payload = try TaptionPlanCanonicalStorage.encode(summary)
@@ -71,46 +74,11 @@ actor WatchDayDatabase {
                 payload: TaptionPlanCanonicalStorage.envelope(for: payload)
             )
         }
-        try await store.appendRawEvents(events)
-        let days = Set(events.map(\.day))
-        for day in days {
-            try await materialize(day: day)
-        }
+        try await store.appendRawEvents(chunkEvents + summaryEvents)
     }
 
-    private func materialize(day: TaptionPlanDayKey) async throws {
-        let summaries = try await store.rawEvents(
-            for: day,
-            domain: "watch-sensor-summary"
-        ).map { event -> TaptionWatchSensorSummary in
-            let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
-                from: event.payload
-            )
-            return try TaptionPlanCanonicalStorage.decode(
-                TaptionWatchSensorSummary.self,
-                from: encoded
-            )
-        }
-        let digest = try await store.rawDigest(for: day)
-        let materialized = WatchMaterializedDayPayload(
-            day: day,
-            summaries: summaries
-        )
-        let materializedPayload = try TaptionPlanCanonicalStorage.encode(
-            materialized
-        )
-        let row = TaptionPlanMaterializedDay(
-            device: .appleWatch,
-            day: day,
-            sourceRevision: UInt64(max(0, digest.eventCount)),
-            projectionVersion: TaptionPlanV3Store.projectionVersion,
-            rawDigest: digest.sha256,
-            rawEventCount: digest.eventCount,
-            firstTimestamp: digest.firstTimestamp,
-            lastTimestamp: digest.lastTimestamp,
-            payload: TaptionPlanCanonicalStorage.envelope(for: materializedPayload)
-        )
-        try await store.replaceMaterializedDay(row)
+    func deleteAll() async throws {
+        try await store.deleteAllData()
     }
 
     private static func directory() -> URL? {

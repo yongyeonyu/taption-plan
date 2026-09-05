@@ -981,7 +981,7 @@ private struct TaptionSharedStickmanView: View {
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
-        let isStatic = reduceMotion || isLuminanceReduced
+        let isStatic = reduceMotion || isLuminanceReduced || !action.isMoving
         TimelineView(
             .animation(
                 minimumInterval: TaptionLiveActivityStickmanAnimation.frameDuration,
@@ -2161,7 +2161,7 @@ struct TaptionWidgetActionIntent: AppIntent {
         var command = TaptionWidgetCommand(planID: id, kind: action)
         var refreshedPayload: TaptionWidgetPayload?
         do {
-            let repository = try FilePlanRepository.appGroup()
+            let repository = try SQLitePlanRepository.appGroup()
             let source = try await repository.load()
             let updated = try TaptionWidgetCommandEngine.apply(
                 command,
@@ -2206,7 +2206,7 @@ struct TaptionWidgetLocationTrackingIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         TaptionLocationTrackingRequestStore.write(enabled)
-        if let repository = try? FilePlanRepository.appGroup(),
+        if let repository = try? SQLitePlanRepository.appGroup(),
            var snapshot = try? await repository.load() {
             snapshot.settings.locationEnabled = enabled
             if !enabled {
@@ -2337,7 +2337,9 @@ private struct SensorCollectionCompactHeartRate: View {
     let state: SensorCollectionActivityAttributes.ContentState
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1, paused: false)) { timeline in
+        TimelineView(
+            .animation(minimumInterval: 1, paused: !state.isCollecting)
+        ) { timeline in
             if state.isCollecting,
                state.sensorHUDUntil.map({ timeline.date < $0 }) == true {
                 if let heartRate = state.latestHeartRate,
@@ -2435,26 +2437,21 @@ private struct SensorCollectionWaveformView: View {
         TimelineView(
             .animation(
                 minimumInterval: 1.0 / 30.0,
-                paused: reduceMotion
+                paused: reduceMotion || !state.isCollecting
             )
         ) { timeline in
             waveform(at: timeline.date)
+                .overlay {
+                    scanline(at: timeline.date)
+                }
         }
         .frame(minWidth: 24, maxWidth: .infinity)
         .frame(height: 14)
-        .overlay {
-            TimelineView(
-                .animation(
-                    minimumInterval: 1.0 / 30.0,
-                    paused: reduceMotion
-                )
-            ) { timeline in
-                scanline(at: timeline.date)
-            }
-        }
         .overlay(alignment: .topTrailing) {
             if state.isCollecting && showsIndicator {
-                TimelineView(.animation(minimumInterval: 1, paused: false)) { timeline in
+                TimelineView(
+                    .animation(minimumInterval: 1, paused: false)
+                ) { timeline in
                     Circle()
                         .fill(.red)
                         .frame(width: 2, height: 2)

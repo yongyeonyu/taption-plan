@@ -132,6 +132,16 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
     case airplane
     case cycling
 
+    var isMoving: Bool {
+        switch self {
+        case .movement, .walking, .running, .car, .subway,
+             .privateVehicle, .bus, .ship, .airplane, .cycling:
+            true
+        default:
+            false
+        }
+    }
+
     static func resolve(categoryID: String, title: String) -> Self {
         let category = categoryID.lowercased().replacingOccurrences(of: " ", with: "")
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
@@ -2723,6 +2733,15 @@ enum TaptionWidgetSharedStore {
             try FileManager.default.removeItem(at: url)
         }
         return commands.sorted { $0.requestedAt < $1.requestedAt }
+    }
+
+    static func deleteAll() throws {
+        for name in [payloadFileName, commandsFileName, snapshotFileName] {
+            let url = fileURL(name)
+            if FileManager.default.fileExists(atPath: url.path) {
+                try FileManager.default.removeItem(at: url)
+            }
+        }
     }
 
     private static func readCommands() -> [TaptionWidgetCommand] {

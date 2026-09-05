@@ -3,6 +3,43 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreV3Tests: XCTestCase {
+    func testDeleteAllDataKeepsMigrationMarker() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanV3Store(url: url, device: .iPhone)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 5)
+        let raw = event(day: day, id: "gps-1", timestamp: 10)
+        try await store.appendRawEvents([raw])
+        let digest = try await store.rawDigest(for: day)
+        try await store.replaceMaterializedDay(
+            .init(
+                device: .iPhone,
+                day: day,
+                sourceRevision: 1,
+                projectionVersion: 1,
+                rawDigest: digest.sha256,
+                rawEventCount: digest.eventCount,
+                firstTimestamp: digest.firstTimestamp,
+                lastTimestamp: digest.lastTimestamp,
+                payload: Data([3])
+            )
+        )
+        _ = try await store.markMigrationCompleted("legacy-import")
+
+        try await store.deleteAllData()
+
+        let days = try await store.allDays()
+        let events = try await store.rawEvents(for: day)
+        let materialized = try await store.materializedDay(for: day)
+        let migrationCompleted = try await store.migrationCompleted(
+            "legacy-import"
+        )
+        XCTAssertTrue(days.isEmpty)
+        XCTAssertTrue(events.isEmpty)
+        XCTAssertNil(materialized)
+        XCTAssertTrue(migrationCompleted)
+    }
+
     func testDateQueryUsesDayLeadingIndex() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -121,6 +158,118 @@ final class DayStoreV3Tests: XCTestCase {
         XCTAssertNotEqual(firstDigest.sha256, changedDigest.sha256)
     }
 
+    func testDigestUsesDomainAsTheFinalStableSortKey() async throws {
+        let firstURL = temporaryURL()
+        let secondURL = temporaryURL()
+        defer {
+            removeDatabase(at: firstURL)
+            removeDatabase(at: secondURL)
+        }
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 5)
+        let gps = event(day: day, id: "shared", timestamp: 10)
+        let motion = TaptionPlanRawEvent(
+            device: gps.device,
+            day: gps.day,
+            timestamp: gps.timestamp,
+            sequence: gps.sequence,
+            id: gps.id,
+            domain: "motion",
+            provenance: gps.provenance,
+            payload: Data([8])
+        )
+        let firstStore = try TaptionPlanV3Store(
+            url: firstURL,
+            device: .iPhone
+        )
+        let secondStore = try TaptionPlanV3Store(
+            url: secondURL,
+            device: .iPhone
+        )
+        try await firstStore.appendRawEvents([gps, motion])
+        try await secondStore.appendRawEvents([motion, gps])
+
+        let expected = TaptionPlanV3Store.digest(
+            events: [motion, gps],
+            device: .iPhone,
+            day: day
+        )
+        let firstDigest = try await firstStore.rawDigest(for: day)
+        let secondDigest = try await secondStore.rawDigest(for: day)
+        XCTAssertEqual(firstDigest, expected)
+        XCTAssertEqual(secondDigest, expected)
+    }
+
+    func testStreamingRawDigestMatchesCanonicalDigestForLargePayloads() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanV3Store(url: url, device: .iPhone)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 4)
+        let events = (0..<1_000).map { index in
+            event(
+                day: day,
+                id: "gps-\(index)",
+                timestamp: TimeInterval(index),
+                payload: Data(repeating: UInt8(index % 255), count: 4_096)
+            )
+        }
+        try await store.appendRawEvents(events)
+
+        let digest = try await store.rawDigest(for: day)
+
+        XCTAssertEqual(digest, TaptionPlanV3Store.digest(
+            events: events,
+            device: .iPhone,
+            day: day
+        ))
+    }
+
+    func testRawDigestCacheSeesAnotherConnectionCommit() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 5)
+        let first = try TaptionPlanV3Store(url: url, device: .iPhone)
+        let second = try TaptionPlanV3Store(url: url, device: .iPhone)
+        try await first.appendRawEvents([
+            event(day: day, id: "first", timestamp: 1),
+        ])
+        let cached = try await first.rawDigest(for: day)
+
+        try await second.appendRawEvents([
+            event(day: day, id: "second", timestamp: 2),
+        ])
+
+        let updated = try await first.rawDigest(for: day)
+        XCTAssertNotEqual(updated, cached)
+    }
+
+    func testRawDigestCacheEvictsPastCapacity() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanV3Store(url: url, device: .iPhone)
+        let calendar = Calendar(identifier: .gregorian)
+        let start = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))
+        )
+
+        for offset in 0...TaptionPlanV3Store.rawDigestCacheCapacity {
+            let date = try XCTUnwrap(
+                calendar.date(byAdding: .day, value: offset, to: start)
+            )
+            let day = TaptionPlanDayKey(date: date, calendar: calendar)
+            try await store.appendRawEvents([
+                event(
+                    day: day,
+                    id: "event-\(offset)",
+                    timestamp: TimeInterval(offset)
+                ),
+            ])
+            _ = try await store.rawDigest(for: day)
+        }
+
+        let count = await store.rawDigestCacheCount
+        XCTAssertEqual(count, TaptionPlanV3Store.rawDigestCacheCapacity)
+    }
+
     func testMaterializedDayIsReplacedAsOneRowAndAllDaysIsIndexed() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -160,6 +309,70 @@ final class DayStoreV3Tests: XCTestCase {
         XCTAssertEqual(loaded.payload, Data([2]))
         let days = try await store.allDays()
         XCTAssertEqual(days, [day])
+    }
+
+    func testThirtyDayColdAndWarmReadP95StaysInteractive() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let days = (1...30).map {
+            TaptionPlanDayKey(year: 2026, month: 8, day: $0)
+        }
+        do {
+            let store = try TaptionPlanV3Store(url: url, device: .iPhone)
+            for (dayIndex, day) in days.enumerated() {
+                let events = (0..<1_440).map { minute in
+                    event(
+                        day: day,
+                        id: "gps-\(dayIndex)-\(minute)",
+                        timestamp: TimeInterval(dayIndex * 86_400 + minute * 60),
+                        provenance: ["iPhone.location", "CoreMotion"],
+                        payload: Data(repeating: UInt8(minute % 255), count: 64)
+                    )
+                }
+                try await store.appendRawEvents(events)
+                let digest = try await store.rawDigest(for: day)
+                try await store.replaceMaterializedDay(.init(
+                    device: .iPhone,
+                    day: day,
+                    sourceRevision: 1,
+                    projectionVersion: 1,
+                    rawDigest: digest.sha256,
+                    rawEventCount: digest.eventCount,
+                    firstTimestamp: digest.firstTimestamp,
+                    lastTimestamp: digest.lastTimestamp,
+                    payload: Data(repeating: UInt8(dayIndex), count: 16_384)
+                ))
+            }
+            try await store.checkpoint()
+        }
+
+        let store = try TaptionPlanV3Store(url: url, device: .iPhone)
+        func readDurations() async throws -> [Double] {
+            var milliseconds: [Double] = []
+            for day in days {
+                let started = DispatchTime.now().uptimeNanoseconds
+                _ = try await store.rawDigest(for: day)
+                _ = try await store.materializedDay(for: day)
+                let elapsed = DispatchTime.now().uptimeNanoseconds - started
+                milliseconds.append(Double(elapsed) / 1_000_000)
+            }
+            return milliseconds
+        }
+        func p95(_ values: [Double]) -> Double {
+            let sorted = values.sorted()
+            let index = max(
+                0,
+                min(sorted.count - 1, Int(ceil(Double(sorted.count) * 0.95)) - 1)
+            )
+            return sorted[index]
+        }
+
+        let coldP95 = p95(try await readDurations())
+        let warmP95 = p95(try await readDurations())
+        print("DAY_STORE_30D_COLD_P95_MS=\(coldP95)")
+        print("DAY_STORE_30D_WARM_P95_MS=\(warmP95)")
+        XCTAssertLessThan(coldP95, 100)
+        XCTAssertLessThan(warmP95, 50)
     }
 
     func testExistingV2StoreIsRejectedWithoutMutatingIt() throws {

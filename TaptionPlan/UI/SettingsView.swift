@@ -148,7 +148,7 @@ struct SettingsView: View {
                         settingsToggleRow(
                             icon: "calendar",
                             title: "캘린더",
-                            subtitle: "Apple · Google 캘린더 일정 가져오기",
+                            subtitle: "iPhone 캘린더의 Apple · Google · Naver 일정",
                             isOn: Binding(
                                 get: {
                                     !model.settings.selectedCalendarIDs.isEmpty
@@ -271,7 +271,7 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "square.and.arrow.up",
                             title: "내 데이터 내보내기",
-                            subtitle: "계획·실제·메모를 JSON으로 저장",
+                            subtitle: "계획·실제·메모·위치 등 전체 기록을 JSON으로 저장",
                             value: ""
                         ) {
                             do {
@@ -363,6 +363,9 @@ struct SettingsView: View {
         }
         .sheet(item: $sharedExport) { value in
             ActivityShareSheet(items: [value.url])
+                .onDisappear {
+                    try? FileManager.default.removeItem(at: value.url)
+                }
         }
         .sheet(isPresented: $showsUserTransitLocations) {
             UserTransitLocationsSettingsView(model: model)
@@ -377,7 +380,7 @@ struct SettingsView: View {
             }
             Button("취소", role: .cancel) {}
         } message: {
-            Text("계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.")
+            Text("계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다.")
         }
     }
 
@@ -392,7 +395,7 @@ struct SettingsView: View {
                 value: model.cloudStatusText,
                 valueIsOn: model.permissionState(for: .cloud).isGranted
             ) {
-                Task { await model.synchronizeCloud() }
+                model.startManualCloudSync()
             }
             if let guidance = model.cloudStatusGuidance {
                 Text(guidance)

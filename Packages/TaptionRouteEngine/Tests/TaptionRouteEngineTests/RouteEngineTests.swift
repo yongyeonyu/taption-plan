@@ -72,6 +72,24 @@ struct RouteEngineTests {
         #expect(simplified.count <= 4_096)
     }
 
+    @Test func simplifierClampsInvalidMaximumCount() {
+        let points = [
+            RouteCoordinate(latitude: 37, longitude: 126),
+            RouteCoordinate(latitude: 37.001, longitude: 126.001),
+            RouteCoordinate(latitude: 37.002, longitude: 126),
+        ]
+
+        let simplified = RoutePathSimplifier.simplify(
+            points,
+            toleranceMeters: 0.1,
+            maximumCount: 0
+        )
+
+        #expect(simplified.count <= 2)
+        #expect(simplified.first == points.first)
+        #expect(simplified.last == points.last)
+    }
+
     @Test func subwayEvidenceWinsAndFalseZeroDistanceIsRejected() {
         let subway = SubwayRouteEvidence(lineName: "9호선", stationNames: ["가정", "검암", "마곡나루"], coordinates: [.init(latitude: 37, longitude: 126), .init(latitude: 37.5, longitude: 126.5)])
         #expect(RouteEvidenceGate.allowsDottedRoute(.init(subway: subway)))

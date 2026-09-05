@@ -18,6 +18,7 @@ struct WatchAmbientArchiveSample: Sendable {
 struct WatchAmbientDrainResult: Sendable {
     var summaries: [TaptionWatchSensorSummary] = []
     var archiveSamples: [WatchAmbientArchiveSample] = []
+    var pendingHighWater: Date? = nil
 }
 
 /// 배경 기록이 실제로 살아 있는지. 워치 화면과 위젯이 같은 값을 본다.
@@ -50,11 +51,20 @@ actor WatchAmbientSensorRecorder {
     static let maximumRecordingDuration: TimeInterval = 12 * 3_600
     private static let rearmMargin: TimeInterval = 30 * 60
 
+    /// 남은 창이 30분 이하일 때만 다음 12시간 창을 건다. WC/background
+    /// 콜백이 겹쳐도 actor 직렬화와 이 조건으로 중복 시작을 막는다.
+    static func shouldArm(now: Date, armedUntil: Date?) -> Bool {
+        guard let armedUntil else { return true }
+        return armedUntil.timeIntervalSince(now) <= Self.rearmMargin
+    }
+
     private let defaults: UserDefaults
     private let highWaterKey = "TaptionPlan.watchSensorRecorderHighWater"
     private let armedUntilKey = "TaptionPlan.watchSensorRecorderArmedUntil"
     private let armedAtKey = "TaptionPlan.watchSensorRecorderArmedAt"
     private let failureCountKey = "TaptionPlan.watchSensorRecorderDrainFailures"
+    private let retryAfterKey = "TaptionPlan.watchSensorRecorderRetryAfter"
+    private let pendingSessionKey = "TaptionPlan.watchSensorRecorderPendingSession"
     private lazy var recorder = CMSensorRecorder()
 
     init(defaults: UserDefaults = .standard) {
@@ -77,9 +87,17 @@ actor WatchAmbientSensorRecorder {
         )
     }
 
+    func deleteAll(now: Date = .now) {
+        defaults.set(now, forKey: highWaterKey)
+        defaults.set(now, forKey: armedAtKey)
+        defaults.removeObject(forKey: armedUntilKey)
+        defaults.removeObject(forKey: failureCountKey)
+        defaults.removeObject(forKey: retryAfterKey)
+        defaults.removeObject(forKey: pendingSessionKey)
+    }
+
     /// 앱이 실행될 때마다 API가 허용하는 가장 먼 미래까지 기록을 다시 건다.
-    /// 재무장은 12시간 창을 처음부터 다시 시작하므로, 남은 창이 충분하면
-    /// 건너뛴다.
+    /// 현재 창이 30분보다 더 남아 있으면 기존 기록을 유지한다.
     func arm(now: Date = .now) {
         let authorization = CMSensorRecorder.authorizationStatus()
         guard CMSensorRecorder.isAccelerometerRecordingAvailable(),
@@ -90,9 +108,10 @@ actor WatchAmbientSensorRecorder {
             )
             return
         }
-        if let armedUntil = defaults.object(forKey: armedUntilKey) as? Date,
-           armedUntil.timeIntervalSince(now)
-            > Self.maximumRecordingDuration - Self.rearmMargin {
+        if !Self.shouldArm(
+            now: now,
+            armedUntil: defaults.object(forKey: armedUntilKey) as? Date
+        ) {
             WatchLaunchDiagnostics.mark("ambient arm reused")
             return
         }
@@ -122,6 +141,11 @@ actor WatchAmbientSensorRecorder {
             )
             return WatchAmbientDrainResult()
         }
+        if let retryAfter = defaults.object(forKey: retryAfterKey) as? Date,
+           retryAfter > now {
+            WatchLaunchDiagnostics.mark("ambient drain deferred after failure")
+            return WatchAmbientDrainResult()
+        }
         let highWater = WatchSensorQueryPlan.sanitizedHighWater(
             defaults.object(forKey: highWaterKey) as? Date,
             now: now
@@ -138,8 +162,17 @@ actor WatchAmbientSensorRecorder {
         WatchLaunchDiagnostics.mark("ambient drain windows=\(windows.count)")
 
         let recorder = self.recorder
-        var pipeline = WatchAmbientBehaviorPipeline(sessionID: UUID())
+        let sessionID: UUID
+        if let stored = defaults.string(forKey: pendingSessionKey)
+            .flatMap(UUID.init(uuidString:)) {
+            sessionID = stored
+        } else {
+            sessionID = UUID()
+            defaults.set(sessionID.uuidString, forKey: pendingSessionKey)
+        }
+        var pipeline = WatchAmbientBehaviorPipeline(sessionID: sessionID)
         var ledger = WatchSensorDrainLedger(highWater: highWater)
+
         for window in windows {
             do {
                 // 조회와 열거를 한 @try 안에 넣는다. CMSensorDataList는
@@ -155,25 +188,37 @@ actor WatchAmbientSensorRecorder {
                     }
                 }
                 ledger.succeeded(window)
+                defaults.removeObject(forKey: failureCountKey)
+                defaults.removeObject(forKey: retryAfterKey)
             } catch {
                 ledger.failed(window)
-                reportDrainFailure(window, error: error)
+                _ = reportDrainFailure(window, error: error, now: now)
+                break
             }
-            if ledger.isExhausted { break }
         }
         if ledger.failureCount == 0 {
             defaults.removeObject(forKey: failureCountKey)
+            defaults.removeObject(forKey: retryAfterKey)
         }
-        // 표본이 하나도 없어도 워터마크는 조회한 끝까지 올린다. 그렇지
-        // 않으면 손목을 차지 않은 구간을 매번 다시 훑게 된다.
-        if let highWater = ledger.highWater {
-            defaults.set(highWater, forKey: highWaterKey)
-        }
-        let result = pipeline.finish()
+        // 결과가 WatchDayDatabase와 전송 경로에 저장된 뒤에만 manager가
+        // watermark를 커밋한다. 중간 종료 시 같은 session ID로 재시도해
+        // SQLite의 idempotent raw event insert가 중복을 막는다.
+        var result = pipeline.finish()
+        result.pendingHighWater = ledger.highWater
         WatchLaunchDiagnostics.mark(
             "ambient drain complete summaries=\(result.summaries.count) samples=\(result.archiveSamples.count) failures=\(ledger.failureCount)"
         )
         return result
+    }
+
+    func commit(highWater: Date?, now: Date = .now) {
+        guard let highWater, highWater <= now else { return }
+        let current = WatchSensorQueryPlan.sanitizedHighWater(
+            defaults.object(forKey: highWaterKey) as? Date,
+            now: now
+        )
+        defaults.set(max(current ?? highWater, highWater), forKey: highWaterKey)
+        defaults.removeObject(forKey: pendingSessionKey)
     }
 
     /// 기록을 처음 건 시각. 이보다 앞은 표본이 존재할 수 없다.
@@ -193,20 +238,31 @@ actor WatchAmbientSensorRecorder {
         return derived
     }
 
-    /// 예외는 건너뛰고 넘어가지만 조용히 넘어가지는 않는다. 실행 진단
-    /// 파일은 다음 실행 때 iPhone 설정 화면으로 그대로 전달된다.
+    /// 예외 구간은 다음 실행에서 재시도하고 진단 파일은 iPhone 설정 화면으로
+    /// 그대로 전달한다.
     private func reportDrainFailure(
         _ window: WatchSensorQueryWindow,
-        error: Error
-    ) {
+        error: Error,
+        now: Date
+    ) -> Int {
         let total = defaults.integer(forKey: failureCountKey) + 1
         defaults.set(total, forKey: failureCountKey)
+        let retryDelay = min(
+            6 * 3_600,
+            30 * 60 * pow(2, Double(min(total - 1, 4)))
+        )
+        defaults.set(
+            now.addingTimeInterval(retryDelay),
+            forKey: retryAfterKey
+        )
         let span = Int(window.duration.rounded())
         WatchLaunchDiagnostics.mark(
             "ambient-drain-exception total=\(total)"
                 + " from=\(Int(window.start.timeIntervalSince1970))"
-                + " span=\(span)s \(error.localizedDescription)"
+                + " span=\(span)s retry=\(Int(retryDelay))s"
+                + " \(error.localizedDescription)"
         )
+        return total
     }
 }
 
@@ -366,7 +422,9 @@ private struct WatchAmbientBehaviorPipeline {
                 WatchBehaviorWindowAnalyzer.windowDuration
             )
         }
+        var advancedWindow = false
         while let windowEnd = nextWindowEnd, capturedAt >= windowEnd {
+            advancedWindow = true
             let windowStart = windowEnd.addingTimeInterval(
                 -WatchBehaviorWindowAnalyzer.windowDuration
             )
@@ -407,6 +465,7 @@ private struct WatchAmbientBehaviorPipeline {
                 WatchBehaviorWindowAnalyzer.strideDuration
             )
         }
+        guard advancedWindow else { return }
         let cutoff = (nextWindowEnd ?? capturedAt).addingTimeInterval(
             -WatchBehaviorWindowAnalyzer.windowDuration * 2
         )

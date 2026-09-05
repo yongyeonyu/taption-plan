@@ -52,7 +52,9 @@ enum TaptionRouteEngineAdapter {
         includeLowConfidenceBoundaries: Bool = true
     ) -> [SensorReading] {
         let originals = Dictionary(grouping: readings, by: \.id)
-            .compactMapValues { $0.first }
+            .compactMapValues { values in
+                values.min(by: preferredOriginalReading)
+            }
         let segments = displayRoute(from: readings).segments
         var result: [SensorReading] = []
         for index in segments.indices {
@@ -179,7 +181,11 @@ enum TaptionRouteEngineAdapter {
             MissingRouteEvidence(
                 motionDetected: hasMotion,
                 cellularContinuity: hasContinuity,
-                subwayWiFi: segmentReadings.contains { $0.subwayWiFiObservationStreak ?? 0 > 0 },
+                subwayWiFi: segmentReadings.contains {
+                    SubwayWiFiSSID.hasContinuousEvidence(
+                        streak: $0.subwayWiFiObservationStreak
+                    )
+                },
                 subway: subwayEvidence,
                 observedDistanceMeters: distance
             )
@@ -190,11 +196,18 @@ enum TaptionRouteEngineAdapter {
         for segment: TravelSegment,
         readings: [SensorReading]
     ) -> Bool {
+        hasCompleteRecordedRoute(in: segment.span, readings: readings)
+    }
+
+    static func hasCompleteRecordedRoute(
+        in span: TimeSpan,
+        readings: [SensorReading]
+    ) -> Bool {
         let maximumGap: TimeInterval = 15 * 60
         let route = readings
             .filter { reading in
-                guard reading.timestamp >= segment.span.start,
-                      reading.timestamp <= segment.span.end,
+                guard reading.timestamp >= span.start,
+                      reading.timestamp <= span.end,
                       reading.gpsAvailable,
                       reading.locationFixQuality != .approximate,
                       let point = reading.point else {
@@ -204,25 +217,37 @@ enum TaptionRouteEngineAdapter {
                     && point.longitude.isFinite
                     && (-90...90).contains(point.latitude)
                     && (-180...180).contains(point.longitude)
-                    && (point.horizontalAccuracy <= 0
-                        || point.horizontalAccuracy <= 150)
+                    && point.horizontalAccuracy.isFinite
+                    && point.horizontalAccuracy >= 0
+                    && point.horizontalAccuracy <= 150
             }
             .sorted { $0.timestamp < $1.timestamp }
         guard let first = route.first,
               let last = route.last,
               route.count >= 2,
               distance(of: route) > 20,
-              first.timestamp.timeIntervalSince(segment.span.start) <= maximumGap,
-              segment.span.end.timeIntervalSince(last.timestamp) <= maximumGap else {
+              first.timestamp.timeIntervalSince(span.start) <= maximumGap,
+              span.end.timeIntervalSince(last.timestamp) <= maximumGap else {
             return false
         }
         return zip(route, route.dropFirst()).allSatisfy {
-            $1.timestamp.timeIntervalSince($0.timestamp) <= maximumGap
+            let duration = $1.timestamp.timeIntervalSince($0.timestamp)
+            guard duration <= maximumGap else { return false }
+            guard duration > RouteTimelineDataEngine.sparseConnectionMinimumGap,
+                  let lhs = $0.point,
+                  let rhs = $1.point else { return true }
+            return coordinateDistance(
+                RouteCoordinate(latitude: lhs.latitude, longitude: lhs.longitude),
+                RouteCoordinate(latitude: rhs.latitude, longitude: rhs.longitude)
+            ) <= RouteTimelineDataEngine.sparseConnectionMaximumDistanceMeters
         }
     }
 
     private static func routeMode(for reading: SensorReading) -> RouteTravelMode {
-        if reading.matchesRailRoute || reading.subwayWiFiObservationStreak ?? 0 > 0 {
+        if reading.matchesRailRoute
+            || SubwayWiFiSSID.hasContinuousEvidence(
+                streak: reading.subwayWiFiObservationStreak
+            ) {
             return .subway
         }
         switch reading.motion {
@@ -232,6 +257,54 @@ enum TaptionRouteEngineAdapter {
         case .automotive: return .automotive
         case .stationary, .unknown: return .unknown
         }
+    }
+
+    private static func preferredOriginalReading(
+        _ lhs: SensorReading,
+        _ rhs: SensorReading
+    ) -> Bool {
+        let payloadRank: (SensorReading) -> Int = { reading in
+            guard let point = reading.point,
+                  point.latitude.isFinite,
+                  point.longitude.isFinite,
+                  (-90...90).contains(point.latitude),
+                  (-180...180).contains(point.longitude),
+                  point.horizontalAccuracy.isFinite,
+                  point.horizontalAccuracy >= 0,
+                  point.horizontalAccuracy <= 150 else {
+                return 0
+            }
+            return reading.gpsAvailable
+                && reading.locationFixQuality != .approximate ? 2 : 1
+        }
+        let lhsPayloadRank = payloadRank(lhs)
+        let rhsPayloadRank = payloadRank(rhs)
+        if lhsPayloadRank != rhsPayloadRank {
+            return lhsPayloadRank > rhsPayloadRank
+        }
+        let lhsAccuracy: Double = {
+            guard let value = lhs.point?.horizontalAccuracy,
+                  value.isFinite,
+                  value >= 0 else {
+                return .greatestFiniteMagnitude
+            }
+            return value
+        }()
+        let rhsAccuracy: Double = {
+            guard let value = rhs.point?.horizontalAccuracy,
+                  value.isFinite,
+                  value >= 0 else {
+                return .greatestFiniteMagnitude
+            }
+            return value
+        }()
+        if lhsAccuracy != rhsAccuracy {
+            return lhsAccuracy < rhsAccuracy
+        }
+        if lhs.sequence != rhs.sequence {
+            return (lhs.sequence ?? .min) > (rhs.sequence ?? .min)
+        }
+        return lhs.timestamp < rhs.timestamp
     }
 
     private static func subwayEvidence(

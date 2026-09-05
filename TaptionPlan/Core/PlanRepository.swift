@@ -1,5 +1,6 @@
 import CloudKit
 import Compression
+import Darwin
 import Foundation
 import OSLog
 #if canImport(TaptionPlanCore)
@@ -9,6 +10,153 @@ import TaptionPlanCore
 protocol PlanDataRepository: Sendable {
     func load() async throws -> TaptionDataSnapshot
     func save(_ snapshot: TaptionDataSnapshot) async throws
+    func deleteAll() async throws
+}
+
+final class TaptionDataFileLock: @unchecked Sendable {
+    private var descriptor: Int32
+
+    private init(url: URL) throws {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        descriptor = Darwin.open(
+            url.path,
+            O_CREAT | O_RDWR,
+            S_IRUSR | S_IWUSR
+        )
+        guard descriptor >= 0 else {
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+        }
+    }
+
+    static func acquire(url: URL) async throws -> TaptionDataFileLock {
+        let lock = try TaptionDataFileLock(url: url)
+        while flock(lock.descriptor, LOCK_EX | LOCK_NB) != 0 {
+            let code = errno
+            guard code == EWOULDBLOCK || code == EAGAIN else {
+                lock.unlock()
+                throw NSError(domain: NSPOSIXErrorDomain, code: Int(code))
+            }
+            do {
+                try await Task.sleep(for: .milliseconds(10))
+            } catch {
+                lock.unlock()
+                throw error
+            }
+        }
+        return lock
+    }
+
+    func unlock() {
+        guard descriptor >= 0 else { return }
+        flock(descriptor, LOCK_UN)
+        Darwin.close(descriptor)
+        descriptor = -1
+    }
+
+    deinit {
+        unlock()
+    }
+}
+
+enum TaptionDataDeletionFence {
+    private static let generationKey = "TaptionPlan.dataDeletionGeneration"
+    private static let cutoffKey = "TaptionPlan.dataDeletionCutoff"
+    private static let activeKey = "TaptionPlan.dataDeletionActive"
+
+    private static var defaults: UserDefaults {
+        UserDefaults(
+            suiteName: TaptionPlanSharedContainer.appGroupIdentifier
+        ) ?? .standard
+    }
+
+    static func currentGeneration() -> UInt64 {
+        UInt64(defaults.string(forKey: generationKey) ?? "") ?? 0
+    }
+
+    private static let repositoryDeletionPendingKey =
+        "TaptionPlan.repositoryDeletionPending"
+
+    static func beginRepositoryDeletion() {
+        defaults.set(true, forKey: repositoryDeletionPendingKey)
+        defaults.synchronize()
+    }
+
+    static func finishRepositoryDeletion() {
+        defaults.removeObject(forKey: repositoryDeletionPendingKey)
+        defaults.synchronize()
+    }
+
+    static func repositoryDeletionIsPending() -> Bool {
+        defaults.bool(forKey: repositoryDeletionPendingKey)
+    }
+
+    static func cutoff() -> Date? {
+        defaults.object(forKey: cutoffKey) as? Date
+    }
+
+    static func advance(at date: Date = .now) -> UInt64 {
+        let current = currentGeneration()
+        let clock = UInt64(max(1, date.timeIntervalSince1970 * 1_000))
+        let next = max(current == .max ? current : current + 1, clock)
+        defaults.set(String(next), forKey: generationKey)
+        defaults.set(date, forKey: cutoffKey)
+        defaults.set(String(getpid()), forKey: activeKey)
+        defaults.synchronize()
+        return next
+    }
+
+    static func finish(generation: UInt64) {
+        guard generation == currentGeneration() else { return }
+        defaults.removeObject(forKey: activeKey)
+        defaults.synchronize()
+    }
+
+    static func allows(generation: UInt64, capturedAt: Date? = nil) -> Bool {
+        if defaults.object(forKey: activeKey) != nil {
+            if let marker = defaults.string(forKey: activeKey),
+               let pid = Int32(marker),
+               pid > 0,
+               Darwin.kill(pid, 0) == 0 || errno == EPERM {
+                return false
+            }
+            defaults.removeObject(forKey: activeKey)
+            defaults.synchronize()
+        }
+        guard generation == currentGeneration() else { return false }
+        guard let capturedAt, let cutoff = cutoff() else { return true }
+        return capturedAt > cutoff
+    }
+}
+
+private enum TaptionRepositoryDeletionMarker {
+    static func write(generation: UInt64, to url: URL) throws {
+        try Data(String(generation).utf8).write(
+            to: url,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
+        )
+    }
+
+    static func recoveredGeneration(at url: URL, current: UInt64) -> UInt64 {
+        guard let data = try? Data(contentsOf: url),
+              let value = String(data: data, encoding: .utf8),
+              let generation = UInt64(value),
+              generation >= current else {
+            return current < UInt64.max ? current + 1 : current
+        }
+        return generation
+    }
+}
+
+extension PlanDataRepository {
+    func deleteAll() async throws {
+        try await save(.empty)
+    }
 }
 
 enum TaptionLocalDatabaseLocation {
@@ -44,7 +192,8 @@ enum TaptionLocalDatabaseLocation {
 actor MigratingPlanRepository: PlanDataRepository {
     private let primary: any PlanDataRepository
     private let legacy: any PlanDataRepository
-    private var migrationTask: Task<Void, Never>?
+    private var writeTail: Task<Void, Error>?
+    private var migrationTask: Task<Void, Error>?
 
     init(
         primary: any PlanDataRepository,
@@ -55,6 +204,10 @@ actor MigratingPlanRepository: PlanDataRepository {
     }
 
     func load() async throws -> TaptionDataSnapshot {
+        if TaptionDataDeletionFence.repositoryDeletionIsPending() {
+            try await deleteAll()
+            return .empty
+        }
         let shared: TaptionDataSnapshot
         do {
             shared = try await primary.load()
@@ -82,25 +235,66 @@ actor MigratingPlanRepository: PlanDataRepository {
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         migrationTask?.cancel()
         migrationTask = nil
-        try await primary.save(snapshot)
+        let previous = writeTail
+        let primary = self.primary
+        let task = Task<Void, Error> {
+            if let previous { _ = try? await previous.value }
+            try await primary.save(snapshot)
+        }
+        writeTail = task
+        try await task.value
+    }
+
+    func deleteAll() async throws {
+        migrationTask?.cancel()
+        migrationTask = nil
+        TaptionDataDeletionFence.beginRepositoryDeletion()
+        let previous = writeTail
+        let primary = self.primary
+        let legacy = self.legacy
+        let task = Task<Void, Error> {
+            if let previous { _ = try? await previous.value }
+            var firstError: Error?
+            do {
+                try await primary.deleteAll()
+            } catch {
+                firstError = error
+            }
+            do {
+                try await legacy.deleteAll()
+            } catch {
+                if firstError == nil { firstError = error }
+            }
+            if let firstError { throw firstError }
+        }
+        writeTail = task
+        try await task.value
+        TaptionDataDeletionFence.finishRepositoryDeletion()
     }
 
     private func schedulePrimaryMigration(_ snapshot: TaptionDataSnapshot) {
         guard migrationTask == nil else { return }
+        let previous = writeTail
         let primary = self.primary
-        migrationTask = Task.detached(priority: .utility) {
+        let generation = TaptionDataDeletionFence.currentGeneration()
+        let task = Task.detached(priority: .utility) {
+            if let previous { _ = try? await previous.value }
             // A caller may save a newer snapshot as soon as the legacy value
             // is returned. Never let this one-time import overwrite it, and
             // never replace a primary that failed to decode.
             guard !Task.isCancelled,
+                  TaptionDataDeletionFence.allows(generation: generation),
                   let current = try? await primary.load(),
                   !Task.isCancelled,
+                  TaptionDataDeletionFence.allows(generation: generation),
                   current.updatedAt == .distantPast else {
                 return
             }
             guard !Task.isCancelled else { return }
-            try? await primary.save(snapshot)
+            try await primary.save(snapshot)
         }
+        writeTail = task
+        migrationTask = task
     }
 }
 
@@ -111,6 +305,14 @@ enum RepositoryError: Error, Equatable {
     case cloudSchemaUnavailable
     case cloudPayloadMissing
     case appGroupUnavailable
+    case staleGeneration
+}
+
+enum TaptionSnapshotCompressionError: Error, Equatable {
+    case invalidLimit
+    case invalidHeader
+    case uncompressedSizeExceedsLimit(actual: UInt64, maximum: Int)
+    case decompressionFailed(expected: Int, actual: Int)
 }
 
 /// Keeps the shared snapshot small without changing its on-disk path.  The
@@ -120,9 +322,18 @@ enum TaptionSnapshotCompression {
     private static let magic: [UInt8] = [0x54, 0x50, 0x5A, 0x31]
     private static let headerSize = magic.count + 8
     private static let minimumSize = 4 * 1024
+    static let maximumUncompressedSize = 64 * 1_024 * 1_024
+    // ponytail: one monthly raw JSON caps at 256 MiB; split by retention unit
+    // when growth requires it.
+    static let maximumRawSensorUncompressedSize = 256 * 1_024 * 1_024
 
-    static func encode(_ json: Data) -> Data {
-        guard json.count >= minimumSize else { return json }
+    static func encode(
+        _ json: Data,
+        maximumSize: Int = Self.maximumUncompressedSize
+    ) -> Data {
+        guard maximumSize > 0,
+              json.count >= minimumSize,
+              json.count <= maximumSize else { return json }
         var compressed = Data(repeating: 0, count: json.count + 64)
         let encodedCount: Int = json.withUnsafeBytes { source in
             compressed.withUnsafeMutableBytes { destination in
@@ -155,17 +366,36 @@ enum TaptionSnapshotCompression {
     }
 
     static func decode(_ data: Data) -> Data {
-        guard data.count > headerSize,
+        (try? decodeChecked(data)) ?? data
+    }
+
+    static func decodeChecked(
+        _ data: Data,
+        maximumSize: Int = Self.maximumUncompressedSize
+    ) throws -> Data {
+        guard maximumSize > 0 else {
+            throw TaptionSnapshotCompressionError.invalidLimit
+        }
+        guard data.count >= magic.count,
               data.prefix(magic.count).elementsEqual(magic) else {
             return data
+        }
+        guard data.count >= headerSize else {
+            throw TaptionSnapshotCompressionError.invalidHeader
         }
 
         let originalSize = readLittleEndian(
             data.dropFirst(magic.count).prefix(8)
         )
-        guard originalSize > 0,
-              originalSize <= UInt64(Int.max) else {
-            return data
+        guard originalSize > 0 else {
+            throw TaptionSnapshotCompressionError.invalidHeader
+        }
+        guard originalSize <= UInt64(maximumSize) else {
+            throw TaptionSnapshotCompressionError
+                .uncompressedSizeExceedsLimit(
+                    actual: originalSize,
+                    maximum: maximumSize
+                )
         }
         let expectedSize = Int(originalSize)
         var decoded = Data(repeating: 0, count: expectedSize)
@@ -189,7 +419,13 @@ enum TaptionSnapshotCompression {
                 )
             }
         }
-        return decodedCount == expectedSize ? decoded : data
+        guard decodedCount == expectedSize else {
+            throw TaptionSnapshotCompressionError.decompressionFailed(
+                expected: expectedSize,
+                actual: decodedCount
+            )
+        }
+        return decoded
     }
 
     private static func appendLittleEndian(_ value: UInt64, to data: inout Data) {
@@ -212,9 +448,14 @@ actor FilePlanRepository: PlanDataRepository {
     )
 
     private let fileURL: URL
+    private let lockURL: URL
+    private let generationURL: URL
+    private let deletionPendingURL: URL
     private let storageLabel: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private var fileGeneration: UInt64
+    private var dataDeletionGeneration: UInt64
 
     private var backupURL: URL {
         fileURL.appendingPathExtension("backup")
@@ -222,9 +463,16 @@ actor FilePlanRepository: PlanDataRepository {
 
     init(fileURL: URL, storageLabel: String = "file") {
         self.fileURL = fileURL
+        lockURL = fileURL.appendingPathExtension("lock")
+        generationURL = fileURL.appendingPathExtension("generation")
+        deletionPendingURL = fileURL.appendingPathExtension("deletion-pending")
         self.storageLabel = storageLabel
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
+        fileGeneration = Self.readGeneration(
+            at: fileURL.appendingPathExtension("generation")
+        )
+        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
         encoder.outputFormatting = [.sortedKeys]
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
@@ -291,6 +539,26 @@ actor FilePlanRepository: PlanDataRepository {
     }
 
     func load() async throws -> TaptionDataSnapshot {
+        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
+        defer { lock.unlock() }
+        if FileManager.default.fileExists(atPath: deletionPendingURL.path) {
+            let recoveredGeneration = TaptionRepositoryDeletionMarker.recoveredGeneration(
+                at: deletionPendingURL,
+                current: readGeneration()
+            )
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                try FileManager.default.removeItem(at: fileURL)
+            }
+            if FileManager.default.fileExists(atPath: backupURL.path) {
+                try FileManager.default.removeItem(at: backupURL)
+            }
+            try Data(String(recoveredGeneration).utf8).write(
+                to: generationURL,
+                options: .atomic
+            )
+            try FileManager.default.removeItem(at: deletionPendingURL)
+        }
+        fileGeneration = readGeneration()
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             if let recovered = try? loadSnapshot(at: backupURL) {
                 Self.logger.error(
@@ -331,6 +599,14 @@ actor FilePlanRepository: PlanDataRepository {
         do {
             let json = try encoder.encode(value)
             let data = TaptionSnapshotCompression.encode(json)
+            let lock = try await TaptionDataFileLock.acquire(url: lockURL)
+            defer { lock.unlock() }
+            guard fileGeneration == readGeneration(),
+                  TaptionDataDeletionFence.allows(
+                    generation: dataDeletionGeneration
+                  ) else {
+                throw RepositoryError.staleGeneration
+            }
             try FileManager.default.createDirectory(
                 at: fileURL.deletingLastPathComponent(),
                 withIntermediateDirectories: true
@@ -340,7 +616,19 @@ actor FilePlanRepository: PlanDataRepository {
             if FileManager.default.fileExists(atPath: fileURL.path),
                (try? loadSnapshot(at: fileURL)) != nil {
                 let previous = try Data(contentsOf: fileURL)
-                try previous.write(to: backupURL, options: [.atomic])
+                try previous.write(
+                    to: backupURL,
+                    options: [
+                        .atomic,
+                        .completeFileProtectionUntilFirstUserAuthentication,
+                    ]
+                )
+            }
+            guard fileGeneration == readGeneration(),
+                  TaptionDataDeletionFence.allows(
+                    generation: dataDeletionGeneration
+                  ) else {
+                throw RepositoryError.staleGeneration
             }
             try data.write(
                 to: fileURL,
@@ -361,12 +649,40 @@ actor FilePlanRepository: PlanDataRepository {
     }
 
     func deleteAll() async throws {
+        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
+        defer { lock.unlock() }
+        let current = readGeneration()
+        guard current < UInt64.max else {
+            throw RepositoryError.staleGeneration
+        }
+        fileGeneration = current + 1
+        try TaptionRepositoryDeletionMarker.write(
+            generation: fileGeneration,
+            to: deletionPendingURL
+        )
+        try Data(String(fileGeneration).utf8).write(
+            to: generationURL,
+            options: .atomic
+        )
+        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
         if FileManager.default.fileExists(atPath: fileURL.path) {
             try FileManager.default.removeItem(at: fileURL)
         }
         if FileManager.default.fileExists(atPath: backupURL.path) {
             try FileManager.default.removeItem(at: backupURL)
         }
+        try FileManager.default.removeItem(at: deletionPendingURL)
+    }
+
+    private func readGeneration() -> UInt64 {
+        Self.readGeneration(at: generationURL)
+    }
+
+    private static func readGeneration(at url: URL) -> UInt64 {
+        guard let data = try? Data(contentsOf: url),
+              let value = String(data: data, encoding: .utf8),
+              let generation = UInt64(value) else { return 0 }
+        return generation
     }
 
     private func loadSnapshot(at url: URL) throws -> TaptionDataSnapshot {
@@ -392,10 +708,20 @@ actor SQLitePlanRepository: PlanDataRepository {
     private static let day = TaptionPlanDayKey(year: 0, month: 0, day: 0)
 
     private let store: TaptionPlanDayStore
+    private let lockURL: URL
+    private let generationURL: URL
+    private let deletionPendingURL: URL
     private var nextRevision: UInt64 = 0
+    private var observedGeneration: UInt64?
+    private var dataDeletionGeneration: UInt64
 
     init(databaseURL: URL) throws {
         self.store = try TaptionPlanDayStore(url: databaseURL)
+        lockURL = databaseURL.appendingPathExtension("lock")
+        generationURL = databaseURL.appendingPathExtension("generation")
+        deletionPendingURL = databaseURL.appendingPathExtension("deletion-pending")
+        observedGeneration = Self.readGeneration(at: generationURL)
+        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
 
     static func applicationSupport(
@@ -433,10 +759,38 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     func load() async throws -> TaptionDataSnapshot {
-        try await loadFromStore()
+        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
+        defer { lock.unlock() }
+        if FileManager.default.fileExists(atPath: deletionPendingURL.path) {
+            let recoveredGeneration = TaptionRepositoryDeletionMarker.recoveredGeneration(
+                at: deletionPendingURL,
+                current: readGeneration()
+            )
+            try await store.deleteAllContent()
+            try Data(String(recoveredGeneration).utf8).write(
+                to: generationURL,
+                options: .atomic
+            )
+            try FileManager.default.removeItem(at: deletionPendingURL)
+            nextRevision = 0
+        }
+        observedGeneration = readGeneration()
+        return try await loadFromStore()
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
+        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
+        defer { lock.unlock() }
+        let generation = readGeneration()
+        guard observedGeneration == nil || observedGeneration == generation else {
+            throw RepositoryError.staleGeneration
+        }
+        guard TaptionDataDeletionFence.allows(
+            generation: dataDeletionGeneration
+        ) else {
+            throw RepositoryError.staleGeneration
+        }
+        observedGeneration = generation
         var value = snapshot
         value.updatedAt = .now
         let existingRows = try await store.snapshots(day: Self.day)
@@ -446,6 +800,14 @@ actor SQLitePlanRepository: PlanDataRepository {
         let revisions = Dictionary(
             uniqueKeysWithValues: existingRows.map { ($0.domain, $0.revision) }
         )
+        nextRevision = max(
+            nextRevision,
+            existingRows.map(\.revision).max() ?? 0
+        )
+        guard nextRevision < UInt64(Int64.max) else {
+            throw TaptionPlanDayStoreError.revisionOverflow
+        }
+        nextRevision += 1
         var writes: [TaptionPlanDayStore.Snapshot] = []
 
         try append(
@@ -460,6 +822,7 @@ actor SQLitePlanRepository: PlanDataRepository {
         try append(domain: "plan.actuals", value: value.actuals, existingPayload: rowsByDomain["plan.actuals"]?.payload, revisions: revisions, to: &writes)
         try append(domain: "plan.recordLinks", value: value.recordLinks, existingPayload: rowsByDomain["plan.recordLinks"]?.payload, revisions: revisions, to: &writes)
         try append(domain: "plan.memos", value: value.memos, existingPayload: rowsByDomain["plan.memos"]?.payload, revisions: revisions, to: &writes)
+        try append(domain: "plan.stickers", value: value.stickers, existingPayload: rowsByDomain["plan.stickers"]?.payload, revisions: revisions, to: &writes)
         try append(domain: "plan.categories", value: value.categories, existingPayload: rowsByDomain["plan.categories"]?.payload, revisions: revisions, to: &writes)
         try append(domain: "plan.photos", value: value.photos, existingPayload: rowsByDomain["plan.photos"]?.payload, revisions: revisions, to: &writes)
         try append(domain: "plan.calendarEvents", value: value.calendarEvents, existingPayload: rowsByDomain["plan.calendarEvents"]?.payload, revisions: revisions, to: &writes)
@@ -470,8 +833,43 @@ actor SQLitePlanRepository: PlanDataRepository {
         try append(domain: "plan.yearlyReports", value: value.yearlyReports, existingPayload: rowsByDomain["plan.yearlyReports"]?.payload, revisions: revisions, to: &writes)
         try append(domain: "plan.settings", value: value.settings, existingPayload: rowsByDomain["plan.settings"]?.payload, revisions: revisions, to: &writes)
         guard !writes.isEmpty else { return }
+        guard TaptionDataDeletionFence.allows(
+            generation: dataDeletionGeneration
+        ) else {
+            throw RepositoryError.staleGeneration
+        }
         try await store.saveSnapshots(writes)
-        nextRevision = max(nextRevision, writes.map(\.revision).max() ?? 0)
+    }
+
+    func deleteAll() async throws {
+        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
+        defer { lock.unlock() }
+        let current = readGeneration()
+        guard current < UInt64.max else {
+            throw TaptionPlanDayStoreError.revisionOverflow
+        }
+        let next = current + 1
+        try TaptionRepositoryDeletionMarker.write(
+            generation: next,
+            to: deletionPendingURL
+        )
+        try Data(String(next).utf8).write(to: generationURL, options: .atomic)
+        try await store.deleteAllContent()
+        nextRevision = 0
+        observedGeneration = next
+        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
+        try FileManager.default.removeItem(at: deletionPendingURL)
+    }
+
+    private func readGeneration() -> UInt64 {
+        Self.readGeneration(at: generationURL)
+    }
+
+    private static func readGeneration(at url: URL) -> UInt64 {
+        guard let data = try? Data(contentsOf: url),
+              let value = String(data: data, encoding: .utf8),
+              let generation = UInt64(value) else { return 0 }
+        return generation
     }
 
     private struct Metadata: Codable, Equatable, Sendable {
@@ -501,6 +899,7 @@ actor SQLitePlanRepository: PlanDataRepository {
         try decode("plan.actuals", from: rowByDomain, into: &value.actuals)
         try decode("plan.recordLinks", from: rowByDomain, into: &value.recordLinks)
         try decode("plan.memos", from: rowByDomain, into: &value.memos)
+        try decode("plan.stickers", from: rowByDomain, into: &value.stickers)
         try decode("plan.categories", from: rowByDomain, into: &value.categories)
         try decode("plan.photos", from: rowByDomain, into: &value.photos)
         try decode("plan.calendarEvents", from: rowByDomain, into: &value.calendarEvents)
@@ -546,14 +945,14 @@ actor SQLitePlanRepository: PlanDataRepository {
         )
         guard force || payload != existingPayload else { return }
         let currentRevision = revisions[domain] ?? 0
-        guard currentRevision < UInt64.max else {
+        guard nextRevision > currentRevision else {
             throw TaptionPlanDayStoreError.revisionOverflow
         }
         writes.append(
             .init(
                 domain: domain,
                 day: Self.day,
-                revision: currentRevision + 1,
+                revision: nextRevision,
                 updatedAt: .now,
                 payload: payload
             )
@@ -578,6 +977,10 @@ actor InMemoryPlanRepository: PlanDataRepository {
         value.updatedAt = .now
         self.snapshot = value
     }
+
+    func deleteAll() async throws {
+        snapshot = .empty
+    }
 }
 
 enum CloudSyncDecision: Equatable, Sendable {
@@ -591,6 +994,63 @@ enum CloudBackupRecordKey {
     static func memo(_ id: UUID) -> String { "memo:\(id.uuidString)" }
     static func sticker(_ id: UUID) -> String { "sticker:\(id.uuidString)" }
     static func link(_ id: UUID) -> String { "link:\(id.uuidString)" }
+}
+
+/// A snapshot is portable only when it does not claim device-derived results
+/// without the raw evidence that can reproduce them. User edits remain the
+/// authority; automatic records are rebuilt after raw sensor restore.
+enum PlanCloudSnapshotRecoveryPolicy {
+    static func sourceSafe(
+        _ snapshot: TaptionDataSnapshot
+    ) -> TaptionDataSnapshot {
+        var value = snapshot
+        value.actuals.removeAll {
+            $0.source.usesAutomaticClassification && !$0.manuallyCorrected
+        }
+        value.travel.removeAll { !$0.isConfirmed }
+        return value
+    }
+
+    static func iCloudSafe(
+        _ snapshot: TaptionDataSnapshot
+    ) -> TaptionDataSnapshot {
+        let excludedActualIDs = Set(snapshot.actuals.compactMap {
+            actual -> UUID? in
+            if actual.categoryID == "sleep"
+                || (actual.source.usesAutomaticClassification
+                    && !actual.manuallyCorrected) {
+                return actual.id
+            }
+            switch actual.source {
+            case .healthKit, .appleWatch:
+                return actual.id
+            default:
+                return nil
+            }
+        })
+        var value = sourceSafe(snapshot)
+        let excludedNodeIDs = Set(excludedActualIDs.map {
+            "automatic.actual.\($0.uuidString)"
+        })
+        value.actuals.removeAll { excludedActualIDs.contains($0.id) }
+        value.recordLinks.removeAll {
+            excludedNodeIDs.contains($0.fromNodeID)
+                || excludedNodeIDs.contains($0.toNodeID)
+        }
+        value.memos = value.memos.map { memo in
+            guard let targetID = memo.targetID,
+                  excludedNodeIDs.contains(targetID) else { return memo }
+            var detached = memo
+            detached.targetID = nil
+            return detached
+        }
+        value.settings.activityCorrections = value.settings.activityCorrections
+            .filter { !excludedActualIDs.contains($0.key) }
+        value.settings.suppressedActualIDs.subtract(excludedActualIDs)
+        value.settings.confirmedSleepSpans = []
+        value.yearlyReports = []
+        return value
+    }
 }
 
 enum CloudSnapshotRecoveryEngine {
@@ -894,6 +1354,8 @@ actor CloudKitSnapshotSyncService {
     private static let recordName = "taption-data-v1"
     private static let recordType = "TaptionSnapshot"
     private static let inlineLimit = 850_000
+    private static let temporaryAssetPrefix = "taption-cloud-"
+    private static let temporaryAssetMaximumAge: TimeInterval = 60 * 60
 
     private let container: CKContainer
     private let database: CKDatabase
@@ -901,7 +1363,6 @@ actor CloudKitSnapshotSyncService {
     private let decoder: JSONDecoder
     private var schemaUnavailable = false
     private var uploadInProgress = false
-    private var uploadWaiters: [CheckedContinuation<Void, Never>] = []
 
     nonisolated static func automatic() -> CloudKitSnapshotSyncService? {
 #if targetEnvironment(simulator)
@@ -938,6 +1399,69 @@ actor CloudKitSnapshotSyncService {
         self.decoder = JSONDecoder()
         encoder.dateEncodingStrategy = .secondsSince1970
         decoder.dateDecodingStrategy = .secondsSince1970
+        Task.detached(priority: .utility) {
+            let removed = Self.removeStaleTemporaryAssets(
+                in: FileManager.default.temporaryDirectory,
+                before: Date.now.addingTimeInterval(
+                    -Self.temporaryAssetMaximumAge
+                )
+            )
+            if removed > 0 {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "cloud_stale_temp_assets_removed",
+                    fields: ["count": String(removed)]
+                )
+            }
+        }
+    }
+
+    @discardableResult
+    nonisolated static func removeStaleTemporaryAssets(
+        in directory: URL,
+        before cutoff: Date,
+        fileManager: FileManager = .default
+    ) -> Int {
+        guard let urls = try? fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [
+                .contentModificationDateKey,
+                .isRegularFileKey,
+            ],
+            options: [.skipsHiddenFiles]
+        ) else { return 0 }
+
+        var removed = 0
+        for url in urls where
+            url.lastPathComponent.hasPrefix(temporaryAssetPrefix)
+                && url.pathExtension == "json" {
+            guard let values = try? url.resourceValues(
+                forKeys: [.contentModificationDateKey, .isRegularFileKey]
+            ),
+            values.isRegularFile == true,
+            let modifiedAt = values.contentModificationDate,
+            modifiedAt < cutoff
+            else { continue }
+            do {
+                try fileManager.removeItem(at: url)
+                removed += 1
+            } catch {}
+        }
+        return removed
+    }
+
+    nonisolated static func writeTemporaryAsset(_ data: Data) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "\(Self.temporaryAssetPrefix)\(UUID().uuidString).json"
+            )
+        try data.write(
+            to: url,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
+        )
+        return url
     }
 
     func accountState() async -> PermissionState {
@@ -1001,22 +1525,27 @@ actor CloudKitSnapshotSyncService {
             throw RepositoryError.cloudAccountUnavailable
         }
 
+        let safeLocal = PlanCloudSnapshotRecoveryPolicy.iCloudSafe(local)
         guard let remote = try await fetch() else {
-            let uploaded = try await upload(local)
+            let uploaded = try await upload(safeLocal)
             return (uploaded, .uploaded)
         }
+        let safeRemote = PlanCloudSnapshotRecoveryPolicy.iCloudSafe(remote)
         let merged = CloudSnapshotRecoveryEngine.merge(
-            local: local,
-            remote: remote
+            local: safeLocal,
+            remote: safeRemote
         )
-        if merged == local, merged == remote {
+        if remote != safeRemote {
+            return (try await upload(merged), .uploaded)
+        }
+        if merged == safeLocal, merged == safeRemote {
             return (merged, .unchanged)
         }
-        if merged == remote {
+        if merged == safeRemote {
             return (merged, .downloaded)
         }
         let uploaded = try await upload(merged)
-        return (uploaded, merged == local ? .uploaded : .downloaded)
+        return (uploaded, merged == safeLocal ? .uploaded : .downloaded)
     }
 
     func fetch() async throws -> TaptionDataSnapshot? {
@@ -1024,24 +1553,44 @@ actor CloudKitSnapshotSyncService {
         return try snapshot(from: record)
     }
 
+    func deleteSnapshot() async throws {
+        try await acquireUploadTurn()
+        defer { releaseUploadTurn() }
+        guard await accountState() == .authorized else {
+            throw RepositoryError.cloudAccountUnavailable
+        }
+        do {
+            _ = try await database.deleteRecord(
+                withID: CKRecord.ID(recordName: Self.recordName)
+            )
+        } catch let error as CKError where error.code == .unknownItem {
+            return
+        }
+    }
+
     @discardableResult
     func upload(_ snapshot: TaptionDataSnapshot) async throws -> TaptionDataSnapshot {
-        await acquireUploadTurn()
+        try await acquireUploadTurn()
         defer { releaseUploadTurn() }
         try Task.checkCancellation()
         guard !schemaUnavailable else {
             throw RepositoryError.cloudSchemaUnavailable
         }
         do {
+            let safeSnapshot = PlanCloudSnapshotRecoveryPolicy.iCloudSafe(
+                snapshot
+            )
             let record = try await fetchRecord()
             let value: TaptionDataSnapshot
             if let record {
                 value = CloudSnapshotRecoveryEngine.merge(
-                    local: snapshot,
-                    remote: try self.snapshot(from: record)
+                    local: safeSnapshot,
+                    remote: PlanCloudSnapshotRecoveryPolicy.iCloudSafe(
+                        try self.snapshot(from: record)
+                    )
                 )
             } else {
-                value = snapshot
+                value = safeSnapshot
             }
             var stamped = value
             stamped.updatedAt = .now
@@ -1072,20 +1621,17 @@ actor CloudKitSnapshotSyncService {
         }
     }
 
-    private func acquireUploadTurn() async {
-        guard uploadInProgress else {
-            uploadInProgress = true
-            return
+    private func acquireUploadTurn() async throws {
+        while uploadInProgress {
+            try Task.checkCancellation()
+            try await Task.sleep(for: .milliseconds(10))
         }
-        await withCheckedContinuation { uploadWaiters.append($0) }
+        try Task.checkCancellation()
+        uploadInProgress = true
     }
 
     private func releaseUploadTurn() {
-        guard !uploadWaiters.isEmpty else {
-            uploadInProgress = false
-            return
-        }
-        uploadWaiters.removeFirst().resume()
+        uploadInProgress = false
     }
 
     private func fetchRecord() async throws -> CKRecord? {
@@ -1128,12 +1674,7 @@ actor CloudKitSnapshotSyncService {
             let data = try encoder.encode(value)
             let assetURL: URL?
             if data.count > Self.inlineLimit {
-                let url = FileManager.default.temporaryDirectory
-                    .appendingPathComponent(
-                        "taption-cloud-\(UUID().uuidString).json"
-                    )
-                try data.write(to: url, options: .atomic)
-                assetURL = url
+                assetURL = try Self.writeTemporaryAsset(data)
             } else {
                 assetURL = nil
             }
@@ -1177,7 +1718,9 @@ actor CloudKitSnapshotSyncService {
                 if let remote = try? snapshot(from: record) {
                     value = CloudSnapshotRecoveryEngine.merge(
                         local: value,
-                        remote: remote
+                        remote: PlanCloudSnapshotRecoveryPolicy.iCloudSafe(
+                            remote
+                        )
                     )
                     value.updatedAt = .now
                 }

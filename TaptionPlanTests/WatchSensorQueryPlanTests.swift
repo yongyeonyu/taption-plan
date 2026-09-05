@@ -195,7 +195,7 @@ final class WatchSensorQueryPlanTests: XCTestCase {
         XCTAssertFalse(ledger.isExhausted)
     }
 
-    func testLedgerAdvancesPastAThrowingWindowSoItIsNeverRetriedForever() {
+    func testLedgerRetriesAThrowingWindowWithoutLosingIt() {
         let start = now.addingTimeInterval(-3_600)
         let window = WatchSensorQueryWindow(
             start: start,
@@ -203,16 +203,15 @@ final class WatchSensorQueryPlanTests: XCTestCase {
         )
         var ledger = WatchSensorDrainLedger(highWater: start)
         ledger.failed(window)
-        XCTAssertEqual(ledger.highWater, window.end)
+        XCTAssertEqual(ledger.highWater, start)
         XCTAssertEqual(ledger.failureCount, 1)
 
-        // 다음 실행은 같은 범위를 다시 만들지 않는다.
         let next = WatchSensorQueryPlan.windows(
             now: now,
             armedAt: start,
             highWater: ledger.highWater
         )
-        XCTAssertTrue(next.allSatisfy { $0.start >= window.end })
+        XCTAssertEqual(next.first?.start, window.start)
     }
 
     func testLedgerNeverMovesTheWatermarkBackwards() {
@@ -228,7 +227,7 @@ final class WatchSensorQueryPlanTests: XCTestCase {
         XCTAssertEqual(ledger.highWater, ahead)
     }
 
-    func testLedgerStopsAfterTheFailureLimitWithoutLosingProgress() {
+    func testLedgerStopsAfterTheFailureLimitWithoutAdvancing() {
         let start = now.addingTimeInterval(-6 * 3_600)
         var ledger = WatchSensorDrainLedger(highWater: start, failureLimit: 2)
         var cursor = start
@@ -241,30 +240,388 @@ final class WatchSensorQueryPlanTests: XCTestCase {
             cursor = window.end
         }
         XCTAssertEqual(ledger.failureCount, 2)
-        XCTAssertEqual(ledger.highWater, cursor)
+        XCTAssertEqual(ledger.highWater, start)
     }
 
-    func testMixedSuccessAndFailureLeavesNoUnreadGapBehindTheWatermark() {
+    func testExhaustedWindowStaysPendingForRetry() {
+        let start = now.addingTimeInterval(-6 * 3_600)
+        let window = WatchSensorQueryWindow(
+            start: start,
+            end: start.addingTimeInterval(1_800)
+        )
+        var ledger = WatchSensorDrainLedger(highWater: start)
+        for _ in 0..<WatchSensorDrainLedger.defaultFailureLimit {
+            ledger.failed(window)
+        }
+
+        XCTAssertTrue(ledger.isExhausted)
+        XCTAssertEqual(ledger.highWater, start)
+    }
+
+    func testFailureKeepsWatermarkAtLastSuccessfulWindow() throws {
         let start = now.addingTimeInterval(-4 * 3_600)
         let plan = WatchSensorQueryPlan.windows(
             now: now,
             armedAt: start,
             highWater: nil
         )
-        var ledger = WatchSensorDrainLedger(
-            highWater: nil,
-            failureLimit: plan.count + 1
+        let first = try XCTUnwrap(plan.first)
+        let second = try XCTUnwrap(plan.dropFirst().first)
+        var ledger = WatchSensorDrainLedger(highWater: nil)
+        ledger.succeeded(first)
+        ledger.failed(second)
+
+        XCTAssertEqual(ledger.highWater, first.end)
+    }
+}
+
+final class WatchDeletionPayloadTests: XCTestCase {
+    private let cutoff = Date(timeIntervalSince1970: 1_800_000_000)
+
+    func testCommandRejectsFutureClockButAllowsDelayedDelivery() {
+        let planID = UUID()
+        let future = TaptionWatchCommand(
+            planID: planID,
+            kind: .start,
+            requestedAt: cutoff.addingTimeInterval(301)
         )
-        for (index, window) in plan.enumerated() {
-            if index % 3 == 0 {
-                ledger.failed(window)
-            } else {
-                ledger.succeeded(window)
-            }
+        let delayed = TaptionWatchCommand(
+            planID: planID,
+            kind: .complete,
+            requestedAt: cutoff.addingTimeInterval(-86_400)
+        )
+
+        XCTAssertNil(future.retainingData(receivedAt: cutoff))
+        XCTAssertEqual(delayed.retainingData(receivedAt: cutoff), delayed)
+    }
+
+    func testAccelerationChunkKeepsOnlyPostDeletionSamples() throws {
+        let samples = [-1.0, 1.0, 2.0].enumerated().map { index, offset in
+            TaptionWatchAccelerationSample(
+                capturedAt: cutoff.addingTimeInterval(offset),
+                acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
+                sequence: index,
+                isAmbient: true
+            )
         }
-        // 워터마크는 계획한 마지막 지점과 정확히 같다. 뒤에 남은 구간도,
-        // 이미 읽은 구간을 다시 읽는 일도 없다.
-        XCTAssertEqual(ledger.highWater, plan.last?.end)
+        let chunk = TaptionWatchAccelerationChunk(
+            sessionID: nil,
+            sequence: 1,
+            startedAt: cutoff.addingTimeInterval(-10),
+            endedAt: cutoff.addingTimeInterval(3),
+            samples: samples
+        )
+
+        let retained = try XCTUnwrap(chunk.retainingData(after: cutoff))
+
+        XCTAssertEqual(retained.samples.count, 2)
+        XCTAssertTrue(retained.samples.allSatisfy { $0.capturedAt > cutoff })
+        XCTAssertEqual(retained.startedAt, cutoff)
+    }
+
+    func testSummaryRejectsCrossingDeletionAndFiltersOldRoutePoints() throws {
+        var crossing = makeSummary(
+            startedAt: cutoff.addingTimeInterval(-1),
+            endedAt: cutoff.addingTimeInterval(30)
+        )
+        XCTAssertNil(crossing.retainingData(after: cutoff))
+
+        crossing.startedAt = cutoff.addingTimeInterval(1)
+        crossing.routePoints = [
+            makeLocation(at: cutoff),
+            makeLocation(at: cutoff.addingTimeInterval(2)),
+        ]
+        let retained = try XCTUnwrap(crossing.retainingData(after: cutoff))
+        XCTAssertEqual(retained.routePoints?.map(\.capturedAt), [
+            cutoff.addingTimeInterval(2),
+        ])
+    }
+
+    func testConfirmationRejectsAnObservedSpanFromBeforeDeletion() {
+        let crossing = TaptionWatchActivityConfirmation(
+            respondedAt: cutoff.addingTimeInterval(30),
+            observedStartedAt: cutoff.addingTimeInterval(-30),
+            observedEndedAt: cutoff.addingTimeInterval(20),
+            isCorrect: true,
+            observedBehavior: .walking
+        )
+        let fresh = TaptionWatchActivityConfirmation(
+            respondedAt: cutoff.addingTimeInterval(30),
+            observedStartedAt: cutoff.addingTimeInterval(1),
+            observedEndedAt: cutoff.addingTimeInterval(20),
+            isCorrect: true,
+            observedBehavior: .walking
+        )
+
+        XCTAssertNil(crossing.retainingData(after: cutoff))
+        XCTAssertNotNil(fresh.retainingData(after: cutoff))
+    }
+
+    func testHealthSnapshotDropsPreDeletionDailyTotalsAndClipsSleep() throws {
+        let snapshot = TaptionWatchHealthSnapshot(
+            capturedAt: cutoff.addingTimeInterval(120),
+            dayStart: cutoff.addingTimeInterval(-3_600),
+            activeEnergyKilocalories: 500,
+            exerciseMinutes: 30,
+            standHours: 5,
+            sleepMinutes: 60,
+            sleepSegments: [
+                TaptionWatchSleepSegment(
+                    id: UUID(),
+                    stage: "core",
+                    startDate: cutoff.addingTimeInterval(-60),
+                    endDate: cutoff.addingTimeInterval(60),
+                    sourceName: "Watch",
+                    sourceBundleIdentifier: "test",
+                    deviceName: nil,
+                    timeZoneIdentifier: nil,
+                    isUserEntered: false
+                ),
+            ],
+            workoutCount: 2,
+            source: "Watch"
+        )
+
+        let retained = try XCTUnwrap(snapshot.retainingData(after: cutoff))
+
+        XCTAssertEqual(retained.dayStart, cutoff)
+        XCTAssertNil(retained.activeEnergyKilocalories)
+        XCTAssertNil(retained.exerciseMinutes)
+        XCTAssertNil(retained.standHours)
+        XCTAssertEqual(retained.workoutCount, 0)
+        XCTAssertEqual(retained.sleepSegments?.first?.startDate, cutoff)
+        XCTAssertEqual(retained.sleepMinutes, 1)
+    }
+
+    func testHealthSnapshotDropsLegacyPreDeletionSleepTotal() throws {
+        let snapshot = TaptionWatchHealthSnapshot(
+            capturedAt: cutoff.addingTimeInterval(120),
+            dayStart: cutoff.addingTimeInterval(60),
+            activeEnergyKilocalories: nil,
+            exerciseMinutes: nil,
+            standHours: nil,
+            sleepMinutes: 60,
+            sleepSegments: nil,
+            workoutCount: 0,
+            source: "Watch"
+        )
+
+        let retained = try XCTUnwrap(snapshot.retainingData(after: cutoff))
+
+        XCTAssertNil(retained.sleepMinutes)
+    }
+
+    func testMotionPayloadsRejectFutureClocksAndFilterNestedTimestamps() throws {
+        var chunk = TaptionWatchAccelerationChunk(
+            sessionID: nil,
+            sequence: 1,
+            startedAt: cutoff,
+            endedAt: cutoff.addingTimeInterval(10),
+            samples: [
+                TaptionWatchAccelerationSample(
+                    capturedAt: cutoff.addingTimeInterval(1),
+                    acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
+                    sequence: 1,
+                    isAmbient: true
+                ),
+                TaptionWatchAccelerationSample(
+                    capturedAt: cutoff.addingTimeInterval(301),
+                    acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
+                    sequence: 2,
+                    isAmbient: true
+                ),
+            ]
+        )
+        let retainedChunk = try XCTUnwrap(
+            chunk.retainingData(after: nil, receivedAt: cutoff)
+        )
+        XCTAssertEqual(retainedChunk.samples.map(\.sequence), [1])
+
+        chunk.endedAt = cutoff.addingTimeInterval(301)
+        XCTAssertNil(chunk.retainingData(after: nil, receivedAt: cutoff))
+
+        var summary = makeSummary(
+            startedAt: cutoff,
+            endedAt: cutoff.addingTimeInterval(10)
+        )
+        summary.routePoints = [
+            makeLocation(at: cutoff.addingTimeInterval(1)),
+            makeLocation(at: cutoff.addingTimeInterval(301)),
+        ]
+        summary.behaviorSegments = [
+            WatchBehaviorSegment(
+                startedAt: cutoff,
+                endedAt: cutoff.addingTimeInterval(1),
+                behavior: .walking,
+                confidenceScore: 1,
+                evidence: [],
+                modelVersion: "test"
+            ),
+            WatchBehaviorSegment(
+                startedAt: cutoff.addingTimeInterval(301),
+                endedAt: cutoff.addingTimeInterval(302),
+                behavior: .walking,
+                confidenceScore: 1,
+                evidence: [],
+                modelVersion: "test"
+            ),
+        ]
+        let retainedSummary = try XCTUnwrap(
+            summary.retainingData(after: nil, receivedAt: cutoff)
+        )
+        XCTAssertEqual(retainedSummary.routePoints?.count, 1)
+        XCTAssertEqual(retainedSummary.behaviorSegments?.count, 1)
+
+        summary.endedAt = cutoff.addingTimeInterval(301)
+        XCTAssertNil(summary.retainingData(after: nil, receivedAt: cutoff))
+    }
+
+    func testConfirmationRejectsFutureClock() {
+        let confirmation = TaptionWatchActivityConfirmation(
+            respondedAt: cutoff.addingTimeInterval(301),
+            observedStartedAt: cutoff,
+            observedEndedAt: cutoff.addingTimeInterval(1),
+            isCorrect: true,
+            observedBehavior: .walking
+        )
+
+        XCTAssertNil(
+            confirmation.retainingData(after: nil, receivedAt: cutoff)
+        )
+    }
+
+    func testHealthSnapshotRejectsFutureCaptureAndDropsFutureSleep() throws {
+        let futureSegment = TaptionWatchSleepSegment(
+            id: UUID(),
+            stage: "core",
+            startDate: cutoff.addingTimeInterval(600),
+            endDate: cutoff.addingTimeInterval(900),
+            sourceName: "Watch",
+            sourceBundleIdentifier: "test",
+            deviceName: nil,
+            timeZoneIdentifier: nil,
+            isUserEntered: false
+        )
+        let crossingSegment = TaptionWatchSleepSegment(
+            id: UUID(),
+            stage: "core",
+            startDate: cutoff.addingTimeInterval(290),
+            endDate: cutoff.addingTimeInterval(310),
+            sourceName: "Watch",
+            sourceBundleIdentifier: "test",
+            deviceName: nil,
+            timeZoneIdentifier: nil,
+            isUserEntered: false
+        )
+        var snapshot = TaptionWatchHealthSnapshot(
+            capturedAt: cutoff.addingTimeInterval(301),
+            dayStart: cutoff.addingTimeInterval(-3_600),
+            activeEnergyKilocalories: nil,
+            exerciseMinutes: nil,
+            standHours: nil,
+            sleepMinutes: 5,
+            sleepSegments: [futureSegment, crossingSegment],
+            workoutCount: 0,
+            source: "Watch"
+        )
+
+        XCTAssertNil(snapshot.retainingData(after: nil, receivedAt: cutoff))
+
+        snapshot.capturedAt = cutoff
+        let retained = try XCTUnwrap(
+            snapshot.retainingData(after: nil, receivedAt: cutoff)
+        )
+        XCTAssertEqual(retained.sleepSegments?.count, 1)
+        XCTAssertEqual(
+            retained.sleepSegments?.first?.endDate,
+            cutoff.addingTimeInterval(300)
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(retained.sleepMinutes),
+            10.0 / 60.0,
+            accuracy: 0.001
+        )
+    }
+
+    func testCompletedPurgeGenerationRejectsReplay() {
+        XCTAssertTrue(
+            TaptionWatchPurgeGenerationPolicy.shouldExecute(
+                requested: 11,
+                completed: 10
+            )
+        )
+        XCTAssertFalse(
+            TaptionWatchPurgeGenerationPolicy.shouldExecute(
+                requested: 10,
+                completed: 10
+            )
+        )
+        XCTAssertFalse(
+            TaptionWatchPurgeGenerationPolicy.shouldExecute(
+                requested: 9,
+                completed: 10
+            )
+        )
+    }
+
+    func testWatchSummaryFallbackReadingIDIsStablePerSequence() {
+        var summary = makeSummary(startedAt: .now, endedAt: .now)
+        let first = summary.fallbackReadingID
+
+        XCTAssertEqual(first, summary.fallbackReadingID)
+        summary.sequence += 1
+        XCTAssertNotEqual(first, summary.fallbackReadingID)
+    }
+
+    private func makeSummary(
+        startedAt: Date,
+        endedAt: Date
+    ) -> TaptionWatchSensorSummary {
+        TaptionWatchSensorSummary(
+            sessionID: UUID(),
+            sequence: 1,
+            workoutKind: .walking,
+            linkedPlanID: nil,
+            linkedPlanTitle: nil,
+            linkedCategoryID: nil,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            isFinal: false,
+            accelerometerSampleCount: 1,
+            accelerometerAverageG: nil,
+            peakAccelerationG: nil,
+            gyroscopeSampleCount: 0,
+            gyroscopeAverageRadiansPerSecond: nil,
+            peakRotationRateRadiansPerSecond: nil,
+            gravity: nil,
+            userAccelerationG: nil,
+            rotationRateRadiansPerSecond: nil,
+            attitudeRadians: nil,
+            relativeAltitudeMeters: nil,
+            pressureKilopascals: nil,
+            stepCount: nil,
+            distanceMeters: nil,
+            floorsAscended: nil,
+            floorsDescended: nil,
+            latestHeartRate: nil,
+            averageHeartRate: nil,
+            maximumHeartRate: nil,
+            activeEnergyKilocalories: nil
+        )
+    }
+
+    private func makeLocation(at date: Date) -> TaptionWatchLocationPoint {
+        TaptionWatchLocationPoint(
+            id: UUID(),
+            capturedAt: date,
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5,
+            speedMetersPerSecond: nil,
+            courseDegrees: nil
+        )
     }
 }
 
@@ -551,6 +908,27 @@ final class AppleWatchDataReceiptStoreTests: XCTestCase {
                 receivedRequestID: nil,
                 measuredAt: requestedAt,
                 receivedAt: receivedAt
+            )
+        )
+    }
+
+    func testAutomaticWatchSyncCoalescesConnectionCallbackBursts() {
+        XCTAssertTrue(
+            AppleWatchAutomaticSyncPolicy.shouldRequest(
+                lastRequestUptime: nil,
+                nowUptime: 100
+            )
+        )
+        XCTAssertFalse(
+            AppleWatchAutomaticSyncPolicy.shouldRequest(
+                lastRequestUptime: 100,
+                nowUptime: 109.9
+            )
+        )
+        XCTAssertTrue(
+            AppleWatchAutomaticSyncPolicy.shouldRequest(
+                lastRequestUptime: 100,
+                nowUptime: 110
             )
         )
     }

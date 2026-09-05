@@ -895,6 +895,21 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testMapLongPressIgnoresAnnotationTouches() {
+        let annotation = MKAnnotationView(
+            annotation: nil,
+            reuseIdentifier: "test"
+        )
+        let child = UIView()
+        annotation.addSubview(child)
+
+        XCTAssertTrue(MapHomeLongPressRoutingMath.isAnnotationTouch(child))
+        XCTAssertTrue(MapHomeLongPressRoutingMath.isAnnotationTouch(annotation))
+        XCTAssertFalse(MapHomeLongPressRoutingMath.isAnnotationTouch(UIView()))
+        XCTAssertFalse(MapHomeLongPressRoutingMath.isAnnotationTouch(nil))
+    }
+
     func testMapLongPressOffersLocationAndMapMemoActions() {
         XCTAssertEqual(
             MapHomeLongPressAction.allCases.map(\.rawValue),
@@ -963,6 +978,24 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(
             MapHomeTimeSidebarPinchMath.stepOffset(magnification: .nan),
             0
+        )
+    }
+
+    func testMapRouteGeometrySignatureIncludesMiddleCoordinates() {
+        let first = CLLocationCoordinate2D(latitude: 37, longitude: 127)
+        let last = CLLocationCoordinate2D(latitude: 38, longitude: 128)
+
+        XCTAssertNotEqual(
+            MapHomeRouteGeometrySignature.value(for: [
+                first,
+                CLLocationCoordinate2D(latitude: 37.25, longitude: 127.25),
+                last,
+            ]),
+            MapHomeRouteGeometrySignature.value(for: [
+                first,
+                CLLocationCoordinate2D(latitude: 37.75, longitude: 127.75),
+                last,
+            ])
         )
     }
 
@@ -2015,6 +2048,60 @@ final class TimeScaleTests: XCTestCase {
                 relativeTo: [first, changed]
             ).isEmpty
         )
+    }
+
+    func testDeviceForecastDoesNotMultiplyWhenLocationChanges() {
+        let start = makeDate(2026, 8, 23, 10)
+        let first = WeatherContext(
+            observedAt: start,
+            fetchedAt: start,
+            isForecast: true,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let moved = WeatherContext(
+            observedAt: start.addingTimeInterval(5 * 60),
+            fetchedAt: start.addingTimeInterval(60),
+            isForecast: true,
+            condition: "Clear",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20.4,
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127.1,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+
+        XCTAssertEqual(
+            WeatherTimelineEngine.coalesced([first, moved]).map(\.id),
+            [moved.id]
+        )
+        XCTAssertTrue(
+            WeatherTimelineEngine.changedRawContexts(
+                [moved],
+                relativeTo: [first]
+            ).isEmpty
+        )
+        let replaced = WeatherTimelineEngine.replacing(
+            [first],
+            forecast: [moved],
+            forecastRange: TimeSpan(
+                start: moved.observedAt,
+                end: moved.observedAt.addingTimeInterval(2 * 60 * 60)
+            )
+        )
+        XCTAssertEqual(replaced.map(\.id), [moved.id])
     }
 
     func testMapHomeWeatherDisplayCacheSurvivesViewportRefreshWithoutNetworkData() {
@@ -4068,6 +4155,10 @@ final class TimeScaleTests: XCTestCase {
         }
 
         XCTAssertEqual(MapHomeVectorStyle.routeHex, MapHomeWBSTripStyle.actualRouteHex)
+        XCTAssertEqual(
+            MapHomeVectorStyle.transitRouteHex,
+            MapHomeWBSTripStyle.transitRouteHex
+        )
     }
 
     func testMapDisplayStylesMapToTheirVectorStyleOrNilForMapKit() {

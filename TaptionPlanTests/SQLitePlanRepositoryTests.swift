@@ -51,6 +51,129 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         )
     }
 
+    func testFileRepositoryCreatedBeforeDeletionCannotRestoreStaleData() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "taption-plan-file-repository-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        let fileURL = directory.appendingPathComponent("snapshot.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let stale = FilePlanRepository(fileURL: fileURL)
+        let deleting = FilePlanRepository(fileURL: fileURL)
+        var old = TaptionDataSnapshot.empty
+        old.plans = [
+            PlanRecord(
+                title: "삭제 전 계획",
+                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
+                categoryID: "work"
+            )
+        ]
+        try await stale.save(old)
+
+        try await deleting.deleteAll()
+        do {
+            try await stale.save(old)
+            XCTFail("stale file repository restored deleted data")
+        } catch {
+            XCTAssertEqual(error as? RepositoryError, .staleGeneration)
+        }
+        let restored = try await deleting.load()
+        XCTAssertEqual(restored, .empty)
+    }
+
+    func testFileRepositoryCanSaveAgainAfterReloadingDeletedGeneration() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "taption-plan-file-reload-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        let fileURL = directory.appendingPathComponent("snapshot.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let reloading = FilePlanRepository(fileURL: fileURL)
+        let deleting = FilePlanRepository(fileURL: fileURL)
+
+        try await deleting.deleteAll()
+        let empty = try await reloading.load()
+        XCTAssertEqual(empty, .empty)
+
+        var fresh = TaptionDataSnapshot.empty
+        fresh.plans = [
+            PlanRecord(
+                title: "삭제 후 계획",
+                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
+                categoryID: "work"
+            )
+        ]
+        try await reloading.save(fresh)
+
+        let saved = try await FilePlanRepository(fileURL: fileURL).load()
+        XCTAssertEqual(saved.plans.map(\.title), ["삭제 후 계획"])
+    }
+
+    func testFileRepositoryRecoversInterruptedDeletionBeforeReload() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "taption-plan-file-interrupted-delete-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        let fileURL = directory.appendingPathComponent("snapshot.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let repository = FilePlanRepository(fileURL: fileURL)
+        var old = TaptionDataSnapshot.empty
+        old.plans = [
+            PlanRecord(
+                title: "삭제 중단 전 계획",
+                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
+                categoryID: "work"
+            )
+        ]
+        try await repository.save(old)
+        var newer = old
+        newer.plans[0].title = "백업에 남은 계획"
+        try await repository.save(newer)
+
+        try Data("1".utf8).write(
+            to: fileURL.appendingPathExtension("generation"),
+            options: [.atomic]
+        )
+        try Data("1".utf8).write(
+            to: fileURL.appendingPathExtension("deletion-pending"),
+            options: [.atomic]
+        )
+
+        let restored = try await FilePlanRepository(fileURL: fileURL).load()
+
+        XCTAssertEqual(restored, .empty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: fileURL.appendingPathExtension("backup").path
+            )
+        )
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: fileURL.appendingPathExtension("deletion-pending").path
+            )
+        )
+    }
+
+    func testCloudKitTemporaryAssetUsesFileProtection() throws {
+        let url = try CloudKitSnapshotSyncService.writeTemporaryAsset(
+            Data(repeating: 0x41, count: 850_001)
+        )
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+#if !targetEnvironment(simulator)
+        XCTAssertEqual(
+            try FileManager.default.attributesOfItem(atPath: url.path)[.protectionKey]
+                as? FileProtectionType,
+            .completeUntilFirstUserAuthentication
+        )
+#endif
+    }
+
     func testFutureWeatherForecastSurvivesSQLiteRoundTrip() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -81,6 +204,37 @@ final class SQLitePlanRepositoryTests: XCTestCase {
 
         XCTAssertEqual(restored.weather, [forecast])
         XCTAssertEqual(restored.weather.first?.isForecast, true)
+    }
+
+    func testMapStickersSurviveSQLiteRoundTrip() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+
+        let occurredAt = Date(timeIntervalSince1970: 1_800_000_000)
+        var value = TaptionDataSnapshot.empty
+        value.stickers = [
+            MapSticker(
+                title: "현장 메모",
+                memo: "원본 위치",
+                placement: .map,
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                ),
+                occurredAt: occurredAt,
+                createdAt: occurredAt,
+                updatedAt: occurredAt
+            ),
+        ]
+
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        try await repository.save(value)
+        let restored = try await SQLitePlanRepository(databaseURL: url).load()
+
+        XCTAssertEqual(restored.stickers, value.stickers)
     }
 
     func testLegacyMigrationReturnsBeforePrimaryWriteFinishes() async throws {
@@ -114,6 +268,52 @@ final class SQLitePlanRepositoryTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(5))
         }
         XCTFail("background legacy migration did not finish")
+    }
+
+    func testExplicitSaveWaitsForAndSupersedesLegacyMigration() async throws {
+        var existing = TaptionDataSnapshot.empty
+        existing.updatedAt = Date(timeIntervalSince1970: 1_725_000_000)
+        existing.plans = [
+            PlanRecord(
+                title: "기존 기록",
+                span: TimeSpan(
+                    start: existing.updatedAt,
+                    end: existing.updatedAt.addingTimeInterval(60)
+                ),
+                categoryID: "activity"
+            )
+        ]
+        let replacement: TaptionDataSnapshot = {
+            var snapshot = TaptionDataSnapshot.empty
+            snapshot.plans = [
+                PlanRecord(
+                    title: "최신 기록",
+                    span: TimeSpan(
+                        start: existing.updatedAt,
+                        end: existing.updatedAt.addingTimeInterval(120)
+                    ),
+                    categoryID: "work"
+                )
+            ]
+            return snapshot
+        }()
+        let primary = BlockingPlanRepository()
+        let repository = MigratingPlanRepository(
+            primary: primary,
+            legacy: InMemoryPlanRepository(snapshot: existing)
+        )
+
+        _ = try await repository.load()
+        await primary.waitUntilSaveStarted()
+        let save = Task { try await repository.save(replacement) }
+        try await Task.sleep(for: .milliseconds(20))
+        let primaryBeforeRelease = try await primary.load()
+        XCTAssertTrue(primaryBeforeRelease.plans.isEmpty)
+
+        await primary.releaseSave()
+        try await save.value
+        let saved = try await primary.load()
+        XCTAssertEqual(saved.plans, replacement.plans)
     }
 
     func testRoundTripReopenAndCanonicalPayload() async throws {
@@ -215,6 +415,153 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertEqual(value, .empty)
     }
 
+    func testRepositoryCreatedBeforeDeletionCannotRestoreStaleData() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let stale = try SQLitePlanRepository(databaseURL: url)
+        let deleting = try SQLitePlanRepository(databaseURL: url)
+        var old = TaptionDataSnapshot.empty
+        old.plans = [
+            PlanRecord(
+                title: "삭제 전 계획",
+                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
+                categoryID: "work"
+            )
+        ]
+        try await stale.save(old)
+        _ = try await deleting.load()
+
+        try await deleting.deleteAll()
+        do {
+            try await stale.save(old)
+            XCTFail("stale repository restored deleted data")
+        } catch {
+            XCTAssertEqual(error as? RepositoryError, .staleGeneration)
+        }
+        let restored = try await deleting.load()
+        XCTAssertEqual(restored, .empty)
+    }
+
+    func testRepositoryRecoversInterruptedDeletionBeforeReload() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        var old = TaptionDataSnapshot.empty
+        old.plans = [
+            PlanRecord(
+                title: "삭제 중단 전 계획",
+                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
+                categoryID: "work"
+            )
+        ]
+        try await repository.save(old)
+
+        try Data("1".utf8).write(
+            to: url.appendingPathExtension("generation"),
+            options: [.atomic]
+        )
+        try Data("1".utf8).write(
+            to: url.appendingPathExtension("deletion-pending"),
+            options: [.atomic]
+        )
+
+        let restored = try await SQLitePlanRepository(databaseURL: url).load()
+
+        XCTAssertEqual(restored, .empty)
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: url.appendingPathExtension("deletion-pending").path
+            )
+        )
+    }
+
+    func testMigratingRepositoryDoesNotRestoreLegacyAfterInterruptedDeletion() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "taption-plan-migrating-interrupted-delete-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        defer {
+            TaptionDataDeletionFence.finishRepositoryDeletion()
+            try? FileManager.default.removeItem(at: directory)
+        }
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        let primaryURL = directory.appendingPathComponent("primary.sqlite")
+        let legacyURL = directory.appendingPathComponent("legacy.json")
+        let primary = try SQLitePlanRepository(databaseURL: primaryURL)
+        let legacy = FilePlanRepository(fileURL: legacyURL)
+        var old = TaptionDataSnapshot.empty
+        old.plans = [
+            PlanRecord(
+                title: "legacy stale 계획",
+                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
+                categoryID: "work"
+            )
+        ]
+        try await primary.save(old)
+        try await legacy.save(old)
+
+        try await primary.deleteAll()
+        TaptionDataDeletionFence.beginRepositoryDeletion()
+
+        let repository = MigratingPlanRepository(primary: primary, legacy: legacy)
+        let restored = try await repository.load()
+        let legacyRestored = try await FilePlanRepository(
+            fileURL: legacyURL
+        ).load()
+
+        XCTAssertEqual(restored, .empty)
+        XCTAssertEqual(legacyRestored, .empty)
+        XCTAssertFalse(TaptionDataDeletionFence.repositoryDeletionIsPending())
+    }
+
+    func testRepositoryRejectsSaveWhileGlobalDeletionFenceIsActive() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        let generation = TaptionDataDeletionFence.advance()
+        defer { TaptionDataDeletionFence.finish(generation: generation) }
+
+        do {
+            try await repository.save(.empty)
+            XCTFail("repository wrote while user data deletion was active")
+        } catch {
+            XCTAssertEqual(error as? RepositoryError, .staleGeneration)
+        }
+
+        try await repository.deleteAll()
+        TaptionDataDeletionFence.finish(generation: generation)
+        var replacement = TaptionDataSnapshot.empty
+        replacement.categories = CategoryCatalog.builtIn
+        try await repository.save(replacement)
+        let saved = try await repository.load()
+        XCTAssertEqual(
+            saved.categories,
+            CategoryCatalog.builtIn
+        )
+    }
+
+    func testSeparateRepositoryInstancesAllocateDistinctRevisions() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let first = try SQLitePlanRepository(databaseURL: url)
+        let second = try SQLitePlanRepository(databaseURL: url)
+
+        async let firstSave: Void = first.save(.empty)
+        async let secondSave: Void = second.save(.empty)
+        _ = try await (firstSave, secondSave)
+
+        let store = try TaptionPlanDayStore(url: url)
+        let metadata = try await store.snapshot(
+            domain: "plan.metadata",
+            day: .init(year: 0, month: 0, day: 0)
+        )
+        XCTAssertEqual(metadata?.revision, 2)
+    }
+
     private func temporaryURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-plan-repository-\(UUID().uuidString)")
@@ -222,7 +569,7 @@ final class SQLitePlanRepositoryTests: XCTestCase {
     }
 
     private func removeDatabase(at url: URL) {
-        for suffix in ["", "-wal", "-shm"] {
+        for suffix in ["", "-wal", "-shm", ".lock", ".generation", ".deletion-pending"] {
             try? FileManager.default.removeItem(atPath: url.path + suffix)
         }
     }
@@ -231,6 +578,7 @@ final class SQLitePlanRepositoryTests: XCTestCase {
 private actor BlockingPlanRepository: PlanDataRepository {
     private var value = TaptionDataSnapshot.empty
     private var saveStarted = false
+    private var shouldBlockNextSave = true
     private var pendingSave: CheckedContinuation<Void, Never>?
 
     func load() async throws -> TaptionDataSnapshot {
@@ -239,8 +587,11 @@ private actor BlockingPlanRepository: PlanDataRepository {
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         saveStarted = true
-        await withCheckedContinuation { continuation in
-            pendingSave = continuation
+        if shouldBlockNextSave {
+            shouldBlockNextSave = false
+            await withCheckedContinuation { continuation in
+                pendingSave = continuation
+            }
         }
         value = snapshot
     }

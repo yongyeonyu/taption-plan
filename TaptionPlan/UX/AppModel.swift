@@ -158,6 +158,8 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
 
 enum MapCurrentLocationAnchorPolicy {
     static let maximumAge: TimeInterval = 6 * 60 * 60
+    static let maximumPreciseAccuracy =
+        TrackingSessionPolicy.activeHorizontalAccuracyLimit
 
     static func latestValidReading(
         in readings: [SensorReading],
@@ -190,7 +192,7 @@ enum MapCurrentLocationAnchorPolicy {
     private static func isPrecise(_ reading: SensorReading) -> Bool {
         guard reading.gpsAvailable || reading.locationFixQuality == .precise,
               let point = reading.point else { return false }
-        return point.horizontalAccuracy <= 50
+        return point.horizontalAccuracy <= maximumPreciseAccuracy
     }
 }
 
@@ -495,6 +497,15 @@ enum PlanCloudBackupRestoreResult: Equatable {
 @MainActor
 @Observable
 final class AppModel {
+    private(set) static weak var applicationInstance: AppModel?
+
+    static func backgroundTaskInstance() -> AppModel {
+        if let applicationInstance { return applicationInstance }
+        let model = AppModel(registersHealthBackgroundHandler: false)
+        applicationInstance = model
+        return model
+    }
+
     private static let integrationLogger = Logger(
         subsystem: "com.taption.plan",
         category: "AutomaticRecords"
@@ -528,6 +539,10 @@ final class AppModel {
 
     private(set) var snapshot: TaptionDataSnapshot = .empty {
         didSet {
+            if oldValue == snapshot {
+                timestampOnlySnapshotAssignment = false
+                return
+            }
             snapshotRevision &+= 1
 
             // Device snapshots are frequent. Keep a separate revision for
@@ -535,8 +550,14 @@ final class AppModel {
             // Gantt layout cache survives ordinary live collection.
             let timestampOnly = timestampOnlySnapshotAssignment
             timestampOnlySnapshotAssignment = false
-            if !timestampOnly
-                && (oldValue.weather != snapshot.weather
+            if !timestampOnly {
+                if oldValue.actuals != snapshot.actuals
+                    || oldValue.places != snapshot.places
+                    || oldValue.travel != snapshot.travel {
+                    dayProjectionRevision &+= 1
+                    dayDatabaseMigrationTask?.cancel()
+                }
+                if oldValue.weather != snapshot.weather
                     || oldValue.plans != snapshot.plans
                     || oldValue.actuals != snapshot.actuals
                     || oldValue.travel != snapshot.travel
@@ -547,12 +568,14 @@ final class AppModel {
                     || oldValue.recordLinks != snapshot.recordLinks
                     || oldValue.memos != snapshot.memos
                     || oldValue.settings.timelineRowOrder
-                        != snapshot.settings.timelineRowOrder) {
-                timelineRevision &+= 1
+                        != snapshot.settings.timelineRowOrder {
+                    timelineRevision &+= 1
+                }
             }
         }
     }
     @ObservationIgnored private(set) var snapshotRevision: UInt64 = 0
+    @ObservationIgnored private(set) var dayProjectionRevision: UInt64 = 0
     @ObservationIgnored private(set) var timelineRevision: UInt64 = 0
     private(set) var backupRestoreRevision: UInt64 = 0
     @ObservationIgnored private var timestampOnlySnapshotAssignment = false
@@ -769,14 +792,33 @@ final class AppModel {
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
     @ObservationIgnored private var foregroundHealthRefreshTask:
         Task<Void, Never>?
+    @ObservationIgnored private var calendarStoreRefreshTask:
+        Task<Void, Never>?
+    @ObservationIgnored private var calendarStoreRefreshRequiresWide = false
+    @ObservationIgnored private var selectedDateRefreshTask:
+        Task<Void, Never>?
+    @ObservationIgnored private var selectedDateRefreshGeneration = 0
     @ObservationIgnored private var widgetReloadFollowupTask:
         Task<Void, Never>?
     @ObservationIgnored private var isSceneActive = false
+    @ObservationIgnored private(set) var isCommerceLocked = false
     @ObservationIgnored private var isHealthRefreshRunning = false
+    @ObservationIgnored private var isSensorTimelineRefreshing = false
+    @ObservationIgnored private var isDeletingUserData = false
+    @ObservationIgnored private var dataDeletionGeneration =
+        TaptionDataDeletionFence.currentGeneration()
+    @ObservationIgnored private var isRepositoryWriteActive = false
+    @ObservationIgnored private var activeDataMutationCount = 0
+    @ObservationIgnored private var lastWatchHealthSnapshotCapturedAt: Date?
     @ObservationIgnored private var isAppUsageRefreshRunning = false
     @ObservationIgnored private var isHealthBackgroundDeliveryConfigured = false
     @ObservationIgnored private var sensorAnalysisDebounceTask: Task<Void, Never>?
+    @ObservationIgnored private var sensorAnalysisTaskGeneration = 0
+    @ObservationIgnored private var sensorAnalysisRequestRevision: UInt64 = 0
+    @ObservationIgnored private var pendingSensorAnalysisRevisions: [Date: UInt64] = [:]
     @ObservationIgnored private var finalizedTrackingSessionIDs = Set<UUID>()
+    @ObservationIgnored private var latestWatchSummarySequence: [UUID: Int] = [:]
+    @ObservationIgnored private var finalizedWatchSummarySessionIDs = Set<UUID>()
     @ObservationIgnored private var liveWeatherRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var lastLiveEnvironmentPoint: GeoPoint?
     @ObservationIgnored private var lastLiveEnvironmentAt: Date?
@@ -789,6 +831,7 @@ final class AppModel {
     @ObservationIgnored private var pendingWatchActivitySuggestion:
         TaptionWatchActivitySuggestion?
     @ObservationIgnored private var pendingDeviceLocalPersistTask: Task<Void, Never>?
+    @ObservationIgnored private var cloudSyncTask: Task<Void, Never>?
     @ObservationIgnored private var liveMergeCacheKey: LiveMergeCacheKey?
     @ObservationIgnored private var liveMergeCacheValue: [SensorReading] = []
     @ObservationIgnored private var sensorRefreshFingerprints:
@@ -822,8 +865,12 @@ final class AppModel {
         "taption.health-permission-reminder.v1"
     private static let watchDataSyncProfileConfiguredKey =
         "taption.watch-data-sync-profile-configured.v1"
+    private static let watchLegacyFallbackReadKey =
+        "taption.watch-legacy-fallback-read.v1"
     private static let permissionFlagsMigrationKey =
         "taption.permission-flags-sync.v2"
+    private static let calendarAutomaticRefreshKey =
+        "taption.calendar-automatic-refresh.v1"
     private static let diagnosticsLatestFileKey =
         "taption.diagnostics.latest.file.v1"
     private static let diagnosticsLatestSavedAtKey =
@@ -845,8 +892,11 @@ final class AppModel {
         let readingCount: Int
         let latestReadingID: UUID?
         let latestMotionEnd: Date?
+        let motionHash: Int
         let pedometerEnd: Date?
+        let pedometerHash: Int?
         let latestHealthEvidenceEnd: Date?
+        let healthEvidenceHash: Int
         let watchSummaryCount: Int
         let latestWatchSummaryEnd: Date?
         let watchAccelerationSampleCount: Int
@@ -885,8 +935,10 @@ final class AppModel {
         rawDeviceDataArchive: RawDeviceDataDayArchive? = nil,
         appleWatchDataReceiptStore: AppleWatchDataReceiptStore =
             AppleWatchDataReceiptStore(),
-        registersHealthBackgroundHandler: Bool = true
+        registersHealthBackgroundHandler: Bool = true,
+        startsCommerceLocked: Bool = false
     ) {
+        isCommerceLocked = startsCommerceLocked
         let repositorySource: String
         if let repository {
             self.repository = repository
@@ -999,17 +1051,25 @@ final class AppModel {
         self.voiceMemoPlayer.onFinish = { [weak self] in
             self?.playingVoiceAttachmentID = nil
         }
-        self.sensorService?.onReadingPersisted = { [weak self] reading in
+        self.sensorService?.onReadingsPersisted = { [weak self] readings in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                let accepted = readings.filter {
+                    self.acceptsDataMutation(capturedAt: $0.timestamp)
+                }
+                guard !accepted.isEmpty else { return }
                 self.sensorStorageErrorDescription = nil
-                self.dayLoadCoordinator?.invalidate(day: reading.timestamp)
-                self.handleLiveSensorReading(reading)
+                for day in Set(accepted.map {
+                    Calendar.autoupdatingCurrent.startOfDay(for: $0.timestamp)
+                }) {
+                    self.dayLoadCoordinator?.invalidate(day: day)
+                }
+                self.handlePersistedSensorReadings(accepted)
             }
         }
         self.sensorService?.onPersistenceFailed = { [weak self] description in
             Task { @MainActor [weak self] in
-                guard let self else { return }
+                guard let self, self.acceptsDataMutation() else { return }
                 self.sensorStorageErrorDescription = description
                 self.isSensorCollecting = false
                 self.sensorBackgroundCoordinator.endSession()
@@ -1049,9 +1109,12 @@ final class AppModel {
                     )
                 }
             },
-            onActivityConfirmation: { [weak self] confirmation in
+            onActivityConfirmation: { [weak self] confirmation, receivedAt in
                 Task { @MainActor [weak self] in
-                    await self?.applyWatchActivityConfirmation(confirmation)
+                    await self?.applyWatchActivityConfirmation(
+                        confirmation,
+                        receivedAt: receivedAt
+                    )
                 }
             },
             // Watch settings are owned by the iPhone. Older Watch builds may
@@ -1059,8 +1122,9 @@ final class AppModel {
             // value instead of letting the Watch mutate app settings.
             onLocationTracking: { [weak self] _ in
                 Task { @MainActor [weak self] in
-                    guard let self else { return }
+                    guard let self, self.acceptsDataMutation() else { return }
                     await self.bootstrap()
+                    guard self.acceptsDataMutation() else { return }
                     self.publishWatchPayload()
                 }
             },
@@ -1078,6 +1142,7 @@ final class AppModel {
             }
         )
         if registersHealthBackgroundHandler {
+            Self.applicationInstance = self
             Task { [weak self] in
                 await HealthBackgroundRefreshCoordinator.shared.register {
                     [weak self] in
@@ -1169,6 +1234,9 @@ final class AppModel {
     }
 
     func saveCloudBackupNow() async throws {
+        guard acceptsDataMutation() else { throw CancellationError() }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         let logger = TaptionPlanDiagnosticsLogger.shared
         let operation = logger.beginOperation("icloud_backup_manual")
         var appLogBytes = 0
@@ -1181,6 +1249,7 @@ final class AppModel {
             }
             let date = Date.now
             let payload = await cloudBackupPayload(now: date)
+            guard acceptsDataMutation() else { throw CancellationError() }
             appLogBytes = payload.appLog?.utf8.count ?? 0
             let generation = try await saveCloudBackupGeneration(
                 using: securityBackupService,
@@ -1218,6 +1287,9 @@ final class AppModel {
     func applyCloudBackup(
         _ restored: PlanCloudBackupRestorePackage
     ) async throws -> PlanCloudBackupRestoreResult {
+        guard acceptsDataMutation() else { throw CancellationError() }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         guard !repositoryLoadFailed else {
             throw RepositoryError.invalidSnapshot
         }
@@ -1240,6 +1312,9 @@ final class AppModel {
         var readingsByID: [UUID: SensorReading] = [:]
         for reading in backup.routePoints.map(\.sensorReading)
             + (rawSensorPayload?.sensorReadings ?? []) {
+            if let existing = readingsByID[reading.id], existing != reading {
+                throw PlanSecurityError.invalidArchive
+            }
             readingsByID[reading.id] = reading
         }
         let restoredReadings = readingsByID.values.sorted {
@@ -1252,7 +1327,11 @@ final class AppModel {
             $0.point != nil
         }
         let localPermissions = snapshot.settings.permissions
-        var value = backup.snapshot
+        // Automatic records and inferred travel are valid only with the raw
+        // evidence that can reproduce them. Manual/confirmed edits remain.
+        var value = PlanCloudSnapshotRecoveryPolicy.iCloudSafe(
+            backup.snapshot
+        )
         value.settings.permissions = localPermissions
         value.settings.transitBoardingDecisions =
             snapshot.settings.transitBoardingDecisions
@@ -1278,7 +1357,7 @@ final class AppModel {
         }
         value.settings.cloudResetAt = .now
         value.updatedAt = .now
-        try await repository.save(value)
+        _ = try await saveToRepository(value)
         snapshot = value
 
         if !restoredReadings.isEmpty, let sensorService {
@@ -1314,15 +1393,67 @@ final class AppModel {
         } else if rawSensorPayload?.envelopes.isEmpty == false {
             result = .snapshotOnly
         }
+        if let chunks = rawSensorPayload?.watchAccelerationChunks,
+           !chunks.isEmpty {
+            if watchSensorArchive == nil && dayDatabase == nil {
+                result = .snapshotOnly
+            } else {
+                do {
+                    for chunk in chunks {
+                        if let dayDatabase {
+                            do {
+                                try await dayDatabase
+                                    .recordWatchAccelerationChunk(chunk)
+                            } catch {
+                                guard let watchSensorArchive else { throw error }
+                                try await watchSensorArchive.record(chunk)
+                            }
+                        } else if let watchSensorArchive {
+                            try await watchSensorArchive.record(chunk)
+                        }
+                        dayLoadCoordinator?.invalidate(day: chunk.startedAt)
+                        dayLoadCoordinator?.invalidate(day: chunk.endedAt)
+                    }
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "icloud_backup_restore_watch_acceleration_merged",
+                        fields: ["chunks": String(chunks.count)]
+                    )
+                } catch {
+                    result = .snapshotOnly
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "icloud_backup_restore_watch_acceleration_failed",
+                        level: .error,
+                        fields: TaptionDiagnosticError.compactFields(for: error)
+                    )
+                }
+            }
+        }
         liveMergeCacheKey = nil
         liveMergeCacheValue = []
         sensorRefreshFingerprints.removeAll()
+        let calendar = Calendar.autoupdatingCurrent
+        let restoredAnalysisDates = Set(
+            restoredReadings.map { calendar.startOfDay(for: $0.timestamp) }
+                + (rawSensorPayload?.watchAccelerationChunks ?? [])
+                    .flatMap {
+                        [
+                            calendar.startOfDay(for: $0.startedAt),
+                            calendar.startOfDay(for: $0.endedAt),
+                        ]
+                    }
+        ).sorted()
+        for date in restoredAnalysisDates {
+            await refreshSensorTimeline(containing: date)
+        }
+        if !restoredAnalysisDates.isEmpty {
+            await persistDeviceLocalSnapshot()
+        }
 
         if permissionState(for: .cloud).isGranted,
            let cloudSyncService {
             do {
                 let uploaded = try await cloudSyncService.upload(
-                    cloudPortableSnapshot(snapshot)
+                    Self.cloudPortableSnapshot(snapshot)
                 )
                 let committed = preparedCloudMergedSnapshot(
                     mergeDeviceLocalData(
@@ -1331,7 +1462,7 @@ final class AppModel {
                     ),
                     preservingUpdatedAt: snapshot.updatedAt
                 )
-                try await repository.save(committed)
+                _ = try await saveToRepository(committed)
                 assignCommittedCloudSnapshot(committed)
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
@@ -1350,13 +1481,16 @@ final class AppModel {
         now: Date = .now,
         includesRoutes: Bool = true
     ) async -> PlanCloudBackupPayload {
+        let portableSnapshot = PlanCloudSnapshotRecoveryPolicy.iCloudSafe(
+            snapshot
+        )
         let backupLog = TaptionPlanDiagnosticsLogger.shared.combinedLog(
             maximumBytes: TaptionPlanDiagnosticsLogPolicy.maximumBackupBytes
         )
         let appLog = backupLog.isEmpty ? nil : backupLog
         guard includesRoutes, let sensorService else {
             return PlanCloudBackupPayload(
-                snapshot: snapshot,
+                snapshot: portableSnapshot,
                 appLog: appLog
             )
         }
@@ -1365,7 +1499,7 @@ final class AppModel {
             in: span
         )) ?? []
         return PlanCloudBackupPayload(
-            snapshot: snapshot,
+            snapshot: portableSnapshot,
             routePoints: PlanBackupRoutePointReducer.reduce(readings),
             appLog: appLog
         )
@@ -1399,12 +1533,14 @@ final class AppModel {
         date: Date
     ) async throws -> PlanCloudBackupGeneration {
         let rawSensorPayload = await cloudRawSensorPayload(now: date)
+        guard acceptsDataMutation() else { throw CancellationError() }
         let generation = try await securityBackupService.saveMonthlyGeneration(
             payload,
             rawSensorPayload: rawSensorPayload.isEmpty
                 ? nil
                 : rawSensorPayload,
-            date: date
+            date: date,
+            dataGeneration: dataDeletionGeneration
         )
         guard let archive = generation.rawSensors else {
             TaptionPlanDiagnosticsLogger.shared.record(
@@ -1951,12 +2087,18 @@ final class AppModel {
         if let healthSyncProgress {
             return "\(healthSyncProgress.completedTypes)/\(healthSyncProgress.totalTypes)"
         }
+        if healthSyncOverview.failedTypeCount > 0 {
+            return "완료 \(healthSyncOverview.completedTypeCount) · 오류 \(healthSyncOverview.failedTypeCount)"
+        }
         return "\(healthSyncOverview.completedTypeCount)개 유형"
     }
 
     var healthSyncDetail: String {
         if let healthSyncProgress {
             return "\(healthSyncProgress.typeName) · \(healthSyncProgress.importedSamples)건 가져옴"
+        }
+        if let error = healthSyncOverview.lastError {
+            return "일부 건강 유형 재시도 필요 · \(error)"
         }
         if let last = healthSyncOverview.lastSyncedAt {
             return "전체 이력·증분 원본 · 마지막 \(last.formatted(date: .omitted, time: .shortened))"
@@ -2029,12 +2171,12 @@ final class AppModel {
         let scheduleScale = scale.scheduleEquivalent
         guard selectedScale != scheduleScale else { return }
         selectedScale = scheduleScale
+        scheduleCalendarStoreRefresh()
         if settings.rememberLastScale {
             snapshot.settings.startScale = scheduleScale.timelineLevel
         }
-        // NLE rule: changing the view resolution only changes the local
-        // viewport. HealthKit, location, calendar and app-usage sources are
-        // immutable document inputs and must not be re-read for a tab tap.
+        // Only the visible EventKit window changes with scale. Sensor and
+        // app-usage sources remain untouched.
         if settings.rememberLastScale {
             Task { await persist() }
         }
@@ -2051,7 +2193,7 @@ final class AppModel {
             return
         }
         selectedDate = targetDate
-        Task { await refreshEnabledData() }
+        scheduleSelectedDateRefresh()
     }
 
     /// 기록 탭은 시간표와 배율이 따로다. 원형 시간표를 옆으로 넘길 때는
@@ -2073,7 +2215,7 @@ final class AppModel {
             return
         }
         selectedDate = targetDate
-        Task { await refreshEnabledData() }
+        scheduleSelectedDateRefresh()
     }
 
     private func canShiftSelectedDate(by direction: Int) -> Bool {
@@ -2087,7 +2229,40 @@ final class AppModel {
 
     func returnToNow() {
         selectedDate = .now
-        Task { await refreshEnabledData() }
+        scheduleSelectedDateRefresh()
+    }
+
+    private func scheduleSelectedDateRefresh() {
+        guard isSceneActive else { return }
+        selectedDateRefreshGeneration &+= 1
+        let generation = selectedDateRefreshGeneration
+        selectedDateRefreshTask?.cancel()
+        selectedDateRefreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if self.selectedDateRefreshGeneration == generation {
+                    self.selectedDateRefreshTask = nil
+                }
+            }
+            do {
+                try await Task.sleep(for: .milliseconds(100))
+                while self.isRefreshingIntegrations {
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+            } catch {
+                return
+            }
+            guard self.selectedDateRefreshGeneration == generation,
+                  self.isSceneActive else { return }
+            let selectedDate = self.selectedDate
+            await self.refreshEnabledData(
+                dataSpan: self.daySpan(containing: selectedDate),
+                healthSpan: SleepAnalysisEngine.overnightSpan(
+                    containing: selectedDate
+                ),
+                force: false
+            )
+        }
     }
 
     func openDeepLink(_ url: URL) async {
@@ -2288,7 +2463,7 @@ final class AppModel {
     }
 
     func bootstrap() async {
-        guard !isBootstrapped else {
+        guard acceptsDataMutation(), !isBootstrapped else {
             return
         }
         if let bootstrapTask {
@@ -2299,8 +2474,11 @@ final class AppModel {
         TaptionPlanDiagnosticsLogger.shared.record("bootstrap_started")
         let task = Task { [weak self] in
             guard let self else { return }
+            defer { bootstrapTask = nil }
             do {
                 var source = try await repository.load()
+                try Task.checkCancellation()
+                guard acceptsDataMutation() else { return }
                 repositoryLoadFailed = false
                 source.weather = WeatherTimelineEngine.coalesced(source.weather)
                 let originalConfirmedSleepSpans = source.settings.confirmedSleepSpans
@@ -2357,7 +2535,10 @@ final class AppModel {
                 )
                 await applyPendingWidgetCommands(repositoryAlreadyLoaded: true)
                 scheduleDayDatabaseMigration()
+            } catch is CancellationError {
+                return
             } catch {
+                guard acceptsDataMutation() else { return }
                 repositoryLoadFailed = true
                 var fallback = TaptionDataSnapshot.empty
                 fallback.categories = CategoryCatalog.builtIn
@@ -2370,20 +2551,21 @@ final class AppModel {
                     fields: ["error": String(describing: type(of: error))]
                 )
             }
-            bootstrapTask = nil
         }
         bootstrapTask = task
         await task.value
     }
 
     private func scheduleBootstrapPreparation() {
-        guard bootstrapPreparationTask == nil else { return }
+        guard acceptsDataMutation(), bootstrapPreparationTask == nil else {
+            return
+        }
         bootstrapPreparationTask = Task { @MainActor [weak self] in
             guard let self else { return }
             // Give SwiftUI a complete frame before touching the full record
             // graph. This is intentionally a yield, not a fixed sleep.
             await Task.yield()
-            guard !Task.isCancelled else {
+            guard !Task.isCancelled, self.acceptsDataMutation() else {
                 self.bootstrapPreparationTask = nil
                 return
             }
@@ -2391,7 +2573,7 @@ final class AppModel {
             let loaded = await Task.detached(priority: .utility) {
                 Self.preparedLoadedSnapshot(source)
             }.value
-            guard !Task.isCancelled else {
+            guard !Task.isCancelled, self.acceptsDataMutation() else {
                 self.bootstrapPreparationTask = nil
                 return
             }
@@ -2411,11 +2593,17 @@ final class AppModel {
               let dayDatabase,
               let sensorService else { return }
         let source = snapshot
-        let sourceRevision = snapshotRevision
+        let sourceRevision = dayProjectionRevision
         let legacyRawDeviceArchive = self.rawDeviceDataArchive
         let legacyWatchSensorArchive = self.watchSensorArchive
         dayDatabaseMigrationTask = Task { @MainActor [weak self, dayDatabase, sensorService, legacyRawDeviceArchive, legacyWatchSensorArchive, source, sourceRevision] in
-            defer { self?.dayDatabaseMigrationTask = nil }
+            defer {
+                let needsRetry = self?.dayProjectionRevision != sourceRevision
+                self?.dayDatabaseMigrationTask = nil
+                if needsRetry {
+                    self?.scheduleDayDatabaseMigration()
+                }
+            }
             do {
                 guard try await dayDatabase.requiresLegacyMigration() else {
                     return
@@ -2431,14 +2619,17 @@ final class AppModel {
                 }
                 let readings = try await sensorService.allArchivedRouteReadings()
                 let watchSummaries = try await legacyWatchSensorArchive.allSummaries()
+                let watchAccelerationChunks = try await legacyWatchSensorArchive
+                    .allAccelerationChunks()
                 let rawEnvelopes = try await legacyRawDeviceArchive.allEnvelopes()
                 guard !Task.isCancelled,
-                      self?.snapshotRevision == sourceRevision else { return }
+                      self?.dayProjectionRevision == sourceRevision else { return }
                 if let report = try await dayDatabase.migrateLegacyIfNeeded(
                     source: source,
                     sourceRevision: sourceRevision,
                     readings: readings,
                     watchSummaries: watchSummaries,
+                    watchAccelerationChunks: watchAccelerationChunks,
                     rawEnvelopes: rawEnvelopes
                 ) {
                     TaptionPlanDiagnosticsLogger.shared.record(
@@ -2469,6 +2660,7 @@ final class AppModel {
 
     func sceneBecameActive() async {
         SensorBackgroundWakeNotification.cancel()
+        isCommerceLocked = false
         let wasSceneActive = isSceneActive
         isSceneActive = true
         if let securityBackupService {
@@ -2582,6 +2774,11 @@ final class AppModel {
 
     func sceneEnteredBackground() async {
         isSceneActive = false
+        selectedDateRefreshGeneration &+= 1
+        selectedDateRefreshTask?.cancel()
+        selectedDateRefreshTask = nil
+        calendarStoreRefreshTask?.cancel()
+        calendarStoreRefreshTask = nil
         foregroundPreparationGeneration &+= 1
         foregroundPreparationTask?.cancel()
         foregroundPreparationTask = nil
@@ -2600,6 +2797,7 @@ final class AppModel {
         deferredVisibleRefreshTask = nil
         foregroundHealthRefreshTask?.cancel()
         foregroundHealthRefreshTask = nil
+        liveWeatherRefreshTask?.cancel()
         if let rawDeviceDataArchive {
             try? await rawDeviceDataArchive.checkpoint()
         }
@@ -2608,11 +2806,18 @@ final class AppModel {
     }
 
     func suspendForCommerceLock() async {
+        isCommerceLocked = true
         isSceneActive = false
+        await concealExternalSurfaces()
+        selectedDateRefreshGeneration &+= 1
+        selectedDateRefreshTask?.cancel()
+        selectedDateRefreshTask = nil
+        calendarStoreRefreshTask?.cancel()
+        calendarStoreRefreshTask = nil
         foregroundPreparationGeneration &+= 1
         foregroundPreparationTask?.cancel()
         foregroundPreparationTask = nil
-        sensorService?.stopCollection()
+        await sensorService?.stopCollectionAndWait()
         sensorBackgroundCoordinator.cancel()
         SensorBackgroundWakeNotification.cancel()
         syncSensorBackgroundState()
@@ -2623,6 +2828,7 @@ final class AppModel {
         deferredVisibleRefreshTask = nil
         foregroundHealthRefreshTask?.cancel()
         foregroundHealthRefreshTask = nil
+        liveWeatherRefreshTask?.cancel()
         if activeTrackingSession != nil {
             await stopTracking()
         }
@@ -2632,6 +2838,9 @@ final class AppModel {
         reason: String,
         includesRawSensors: Bool = true
     ) async {
+        guard acceptsDataMutation() else { return }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         let logger = TaptionPlanDiagnosticsLogger.shared
         let operation = logger.beginOperation(
             "icloud_backup_automatic",
@@ -2655,6 +2864,7 @@ final class AppModel {
                 now: date,
                 includesRoutes: includesRawSensors
             )
+            guard acceptsDataMutation() else { throw CancellationError() }
             appLogBytes = payload.appLog?.utf8.count ?? 0
             let generation: PlanCloudBackupGeneration
             if includesRawSensors {
@@ -2664,13 +2874,13 @@ final class AppModel {
                     date: date
                 )
             } else {
-                generation = PlanCloudBackupGeneration(
-                    snapshot: try await securityBackupService.saveMonthlyArchive(
+                generation = try await securityBackupService
+                    .saveMonthlyGeneration(
                         payload,
-                        date: date
-                    ),
-                    rawSensors: nil
-                )
+                        rawSensorPayload: nil,
+                        date: date,
+                        dataGeneration: dataDeletionGeneration
+                    )
             }
             securityStatus = securityBackupService.status
             logger.finishOperation(
@@ -2714,7 +2924,10 @@ final class AppModel {
     private func applyAirPodsActivity(
         _ observation: AirPodsActivityObservation
     ) {
-        guard !snapshot.settings.suppressedActualIDs.contains(observation.id)
+        guard acceptsDataMutation(
+            capturedAt: observation.endedAt ?? observation.startedAt
+        ),
+        !snapshot.settings.suppressedActualIDs.contains(observation.id)
         else { return }
         let source: ActualSource
         let behavior: String
@@ -2792,6 +3005,7 @@ final class AppModel {
             self.lastForegroundRefreshAt = .now
             self.foregroundRefreshTask = nil
             self.scheduleDeferredVisibleRefresh()
+            self.scheduleCalendarStoreRefresh()
         }
     }
 
@@ -2842,11 +3056,13 @@ final class AppModel {
         await waitForBootstrapPreparation()
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
         await refreshPermissionStates()
+        watchConnectivityService.requestWatchDataSyncIfDue()
         let samplingWindow = settings.sensorCollectionProfile.samplingWindowDuration
         let sensorService = self.sensorService
         let persistenceToken = sensorService?.persistenceToken() ?? 0
         await self.resumeSensorCollectionAndRestoreTrackingIfNeeded()
         if isSensorCollecting, let sensorService {
+            sensorService.requestImmediateSample()
             // BG refresh tasks may be terminated as soon as this method
             // returns. Wait for the archive consumer to confirm one write,
             // rather than assuming the sampling window completed it.
@@ -2879,7 +3095,10 @@ final class AppModel {
                 }
             }
         }
-        await refreshEnabledData(includesCurrentDeviceDay: true)
+        await refreshEnabledData(
+            includesCurrentDeviceDay: true,
+            persistDeviceSnapshot: false
+        )
         await saveCloudBackupOnBackground()
         await persist()
         await reconcileSensorCollectionLiveActivity(isForeground: false)
@@ -3098,13 +3317,13 @@ final class AppModel {
     /// iCloud로 오가는 스냅샷이 아니라 기기 저장소에 표시 여부를 남긴다.
     func presentPermissionOnboardingIfNeeded() {
         let defaults = UserDefaults.standard
-        if [PermissionFeature.location, .health, .calendar, .notifications]
+        if [PermissionFeature.location, .calendar, .notifications]
             .allSatisfy({ permissionState(for: $0).isGranted }) {
-            return
+            if settings.healthEnabled { return }
         }
         let reason: String
         if defaults.bool(forKey: Self.permissionOnboardingKey) {
-            guard !permissionState(for: .health).isGranted,
+            guard !settings.healthEnabled,
                   !defaults.bool(forKey: Self.healthPermissionReminderKey)
             else { return }
             defaults.set(true, forKey: Self.healthPermissionReminderKey)
@@ -3120,6 +3339,7 @@ final class AppModel {
             fields: [
                 "reason": reason,
                 "health_state": permissionState(for: .health).rawValue,
+                "health_enabled": String(settings.healthEnabled),
             ]
         )
     }
@@ -3225,13 +3445,31 @@ final class AppModel {
             let state: PermissionState = granted ? .authorized : .denied
             snapshot.settings.permissions[.calendar] = state
             if granted {
-                let ids = calendarService.calendars().map(\.id)
-                snapshot.settings.selectedCalendarIDs = ids
-                refreshCalendarEvents()
+                if snapshot.settings.selectedCalendarIDs.isEmpty {
+                    snapshot.settings.selectedCalendarIDs = calendarService
+                        .calendars()
+                        .map(\.id)
+                }
+                await refreshCalendarEvents()
+                UserDefaults.standard.removeObject(
+                    forKey: Self.calendarAutomaticRefreshKey
+                )
+            } else {
+                snapshot.calendarEvents.removeAll()
+                calendarStoreRefreshTask?.cancel()
+                calendarStoreRefreshTask = nil
+                calendarStoreRefreshRequiresWide = false
             }
             await persist()
         } catch {
-            snapshot.settings.permissions[.calendar] = calendarService.permissionState()
+            let state = calendarService.permissionState()
+            snapshot.settings.permissions[.calendar] = state
+            if !state.isGranted {
+                snapshot.calendarEvents.removeAll()
+                calendarStoreRefreshTask?.cancel()
+                calendarStoreRefreshTask = nil
+                calendarStoreRefreshRequiresWide = false
+            }
             userFacingError = "캘린더를 연결하지 못했습니다. \(error.localizedDescription)"
         }
         isRefreshingIntegrations = false
@@ -3242,6 +3480,9 @@ final class AppModel {
             await requestCalendar()
             return
         }
+        calendarStoreRefreshTask?.cancel()
+        calendarStoreRefreshTask = nil
+        calendarStoreRefreshRequiresWide = false
         snapshot.settings.selectedCalendarIDs = []
         snapshot.calendarEvents = []
         await persist()
@@ -3337,9 +3578,15 @@ final class AppModel {
                     }
                 }
             TaptionPlanDiagnosticsLogger.shared.record(
-                "health_history_sync_completed",
+                healthSyncOverview.failedTypeCount == 0
+                    ? "health_history_sync_completed"
+                    : "health_history_sync_partial",
+                level: healthSyncOverview.failedTypeCount == 0
+                    ? .info
+                    : .error,
                 fields: [
                     "types": String(healthSyncOverview.completedTypeCount),
+                    "errors": String(healthSyncOverview.failedTypeCount),
                     "samples": String(healthSyncOverview.totalSampleCount),
                     "deletions": String(healthSyncOverview.totalDeletedCount),
                 ]
@@ -3402,7 +3649,7 @@ final class AppModel {
             return
         }
 
-        sensorAvailability = sensorService.hardwareAvailability()
+        sensorAvailability = await sensorService.hardwareAvailability()
         var status = sensorService.locationAuthorizationStatus()
         snapshot.settings.permissions[.location] =
             sensorService.locationPermissionState()
@@ -3538,7 +3785,7 @@ final class AppModel {
     }
 
     func disableLocationCollection() async {
-        sensorService?.stopCollection()
+        await sensorService?.stopCollectionAndWait()
         sensorBackgroundCoordinator.cancel()
         syncSensorBackgroundState()
         isSensorCollecting = false
@@ -3556,7 +3803,9 @@ final class AppModel {
         force: Bool = false
     ) async {
         await waitForBootstrapPreparation()
-        guard !isRefreshingIntegrations else { return }
+        guard acceptsDataMutation(), !isRefreshingIntegrations else { return }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: selectedDate)
         let refreshKey = [
@@ -3597,6 +3846,7 @@ final class AppModel {
             ]
         )
         isRefreshingIntegrations = true
+        var calendarRetryForceWide: Bool?
         defer {
             isRefreshingIntegrations = false
             integrationRefreshGate.commit(
@@ -3617,6 +3867,11 @@ final class AppModel {
                     ),
                 ]
             )
+            if let calendarRetryForceWide {
+                scheduleCalendarStoreRefresh(
+                    forceWide: calendarRetryForceWide
+                )
+            }
         }
         let refreshSpan = dataSpan ?? visibleDataSpan
         let photoSpan = permissionState(for: .photos).isGranted
@@ -3631,7 +3886,34 @@ final class AppModel {
         if permissionState(for: .calendar).isGranted,
            !settings.selectedCalendarIDs.isEmpty {
             await Task.yield()
-            refreshCalendarEvents(in: refreshSpan)
+            let now = Date.now
+            let lastAutomaticRefresh = UserDefaults.standard.object(
+                forKey: Self.calendarAutomaticRefreshKey
+            ) as? Date
+            let refreshesAutomaticRange =
+                includesCurrentDeviceDay
+                && CalendarSyncPolicy.shouldRefreshAutomaticRange(
+                    lastRefresh: lastAutomaticRefresh,
+                    now: now
+                )
+            var completed = true
+            for span in CalendarSyncPolicy.refreshSpans(
+                requested: refreshSpan,
+                includesCurrentDeviceDay: includesCurrentDeviceDay,
+                refreshesAutomaticRange: refreshesAutomaticRange,
+                now: now
+            ) {
+                completed = await refreshCalendarEvents(in: span) && completed
+            }
+            if !completed {
+                calendarRetryForceWide = refreshesAutomaticRange
+            }
+            if refreshesAutomaticRange, completed {
+                UserDefaults.standard.set(
+                    now,
+                    forKey: Self.calendarAutomaticRefreshKey
+                )
+            }
         }
         if settings.healthEnabled {
             do {
@@ -3689,6 +3971,9 @@ final class AppModel {
     }
 
     func synchronizeCloud(showErrors: Bool = true) async {
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         guard let cloudSyncService, !isCloudSyncing else {
             if cloudSyncService == nil {
                 snapshot.settings.permissions[.cloud] = .unavailable
@@ -3719,9 +4004,15 @@ final class AppModel {
 
         do {
             let localDeviceData = snapshot
+            let sourceRevision = snapshotRevision
             let (cloudValue, _) = try await cloudSyncService.synchronize(
-                local: cloudPortableSnapshot(snapshot)
+                local: Self.cloudPortableSnapshot(snapshot)
             )
+            guard sourceRevision == snapshotRevision,
+                  acceptsDataMutation() else {
+                isCloudSyncing = false
+                return
+            }
             let asOf = Date.now
             var committed = preparedCloudMergedSnapshot(
                 mergeDeviceLocalData(
@@ -3742,10 +4033,17 @@ final class AppModel {
             persisted.memos.removeAll {
                 pendingMapMemoIDs.contains($0.id)
             }
-            try await repository.save(persisted)
-            assignCommittedCloudSnapshot(committed)
-            lastReviewArchiveRefreshAt = asOf
-            publishWidgetPayload()
+            if try await saveToRepository(
+                persisted,
+                expectedRevision: sourceRevision
+            ) {
+                assignCommittedCloudSnapshot(committed)
+                lastReviewArchiveRefreshAt = asOf
+                publishWidgetPayload()
+            }
+        } catch is CancellationError {
+            // Deletion cancels the registered manual task; do not surface a
+            // cancellation as a failed user-initiated sync.
         } catch {
             if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
                 || error is RepositoryError
@@ -3771,6 +4069,13 @@ final class AppModel {
             }
         }
         isCloudSyncing = false
+    }
+
+    func startManualCloudSync() {
+        cloudSyncTask?.cancel()
+        cloudSyncTask = Task { @MainActor [weak self] in
+            await self?.synchronizeCloud()
+        }
     }
 
     func selectCatCoat(_ coat: CatCoat) {
@@ -4209,6 +4514,13 @@ final class AppModel {
             containing: completed.startedAt,
             immediately: true
         )
+        if let endedAt = completed.endedAt,
+           !Calendar.autoupdatingCurrent.isDate(
+               completed.startedAt,
+               inSameDayAs: endedAt
+           ) {
+            scheduleSensorAnalysis(containing: endedAt, immediately: true)
+        }
     }
 
     func liveSensorReadings(in span: TimeSpan) -> [SensorReading] {
@@ -4295,17 +4607,12 @@ final class AppModel {
         let data = try SnapshotExporter.jsonData(snapshot)
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("TaptionPlanExport", isDirectory: true)
+        try? FileManager.default.removeItem(at: directory)
         try FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true
         )
-        let year = Calendar.autoupdatingCurrent.component(
-            .year,
-            from: selectedDate
-        )
-        let url = directory.appendingPathComponent(
-            "Taption-Plan-\(year).json"
-        )
+        let url = directory.appendingPathComponent("Taption-Plan-Data.json")
         try data.write(to: url, options: [.atomic, .completeFileProtection])
         return url
     }
@@ -4435,9 +4742,78 @@ final class AppModel {
     }
 
     func deleteAllUserData() async {
-        sensorService?.stopCollection()
+        guard acceptsDataMutation() else { return }
+        isDeletingUserData = true
+        let deletionCutoff = Date.now
+        dataDeletionGeneration = TaptionDataDeletionFence.advance(
+            at: deletionCutoff
+        )
+        defer {
+            sensorService?.finishDataDeletion()
+            TaptionDataDeletionFence.finish(
+                generation: dataDeletionGeneration
+            )
+            isDeletingUserData = false
+        }
+        foregroundPreparationGeneration &+= 1
+        let pendingTasks = [
+            bootstrapTask,
+            bootstrapPreparationTask,
+            foregroundPreparationTask,
+            foregroundRefreshTask,
+            deferredVisibleRefreshTask,
+            foregroundHealthRefreshTask,
+            calendarStoreRefreshTask,
+            selectedDateRefreshTask,
+            widgetReloadFollowupTask,
+            calibrationNoticeTask,
+            transitDecisionPersistTask,
+            sensorAnalysisDebounceTask,
+            liveWeatherRefreshTask,
+            pendingDeviceLocalPersistTask,
+            cloudSyncTask,
+            dayDatabaseMigrationTask,
+        ].compactMap { $0 }
+        pendingTasks.forEach { $0.cancel() }
+        bootstrapTask = nil
+        bootstrapPreparationTask = nil
+        foregroundPreparationTask = nil
+        foregroundRefreshTask = nil
+        deferredVisibleRefreshTask = nil
+        foregroundHealthRefreshTask = nil
+        calendarStoreRefreshTask = nil
+        calendarStoreRefreshRequiresWide = false
+        selectedDateRefreshGeneration &+= 1
+        selectedDateRefreshTask = nil
+        widgetReloadFollowupTask = nil
+        calibrationNoticeTask = nil
+        transitDecisionPersistTask = nil
+        transitDecisionPersistRequested = false
+        sensorAnalysisDebounceTask = nil
+        sensorAnalysisTaskGeneration &+= 1
+        pendingSensorAnalysisRevisions.removeAll(keepingCapacity: false)
+        liveWeatherRefreshTask = nil
+        pendingDeviceLocalPersistTask = nil
+        cloudSyncTask = nil
+        dayDatabaseMigrationTask = nil
+        _ = airPodsActivityService.stop(at: deletionCutoff)
+        await sensorService?.prepareForDataDeletion()
         sensorBackgroundCoordinator.cancel()
         syncSensorBackgroundState()
+        for task in pendingTasks { await task.value }
+        while isHealthRefreshRunning || activeDataMutationCount > 0 {
+            do {
+                try await Task.sleep(for: .milliseconds(10))
+            } catch {
+                userFacingError = "데이터 삭제가 취소되었습니다. 다시 시도해 주세요."
+                return
+            }
+        }
+        _ = voiceMemoRecorder.stop()
+        voiceMemoPlayer.stop()
+        isRecordingVoiceMemo = false
+        playingVoiceAttachmentID = nil
+        await liveActivityController.concealAll()
         TrackingSessionRecoveryStore.clear()
         activeTrackingSession = nil
         trackingSessionWasRecovered = false
@@ -4457,8 +4833,184 @@ final class AppModel {
         groupNavigationPath = []
         memoEntry = nil
         sleepSessions = []
-        try? await sensorService?.deleteArchivedReadings()
-        await persist()
+        pendingMapMemoIDs.removeAll()
+        finalizedTrackingSessionIDs.removeAll()
+        latestWatchSummarySequence.removeAll()
+        finalizedWatchSummarySessionIDs.removeAll()
+        pendingWatchActivitySuggestion = nil
+        latestSensorReading = nil
+        latestMapAnchorHydratedDay = nil
+        lastLiveEnvironmentPoint = nil
+        lastLiveEnvironmentAt = nil
+        lastLiveEnvironmentFailureAt = nil
+        lastReviewArchiveRefreshAt = nil
+        UserDefaults.standard.removeObject(
+            forKey: Self.calendarAutomaticRefreshKey
+        )
+        liveMergeCacheKey = nil
+        liveMergeCacheValue = []
+        sensorRefreshFingerprints.removeAll()
+        lastWatchHealthSnapshotCapturedAt = nil
+        await dayLoadCoordinator?.invalidateAll()
+        var deletionFailures: [String] = []
+        func recordDeletionFailure(_ label: String, _ error: Error) {
+            deletionFailures.append(label)
+            Self.integrationLogger.error(
+                "Data deletion failed: \(label, privacy: .public), \(error.localizedDescription, privacy: .public)"
+            )
+        }
+        if let cloudSyncService {
+            do {
+                try await cloudSyncService.deleteSnapshot()
+            } catch {
+                recordDeletionFailure("iCloud 동기화 기록", error)
+            }
+        } else if permissionState(for: .cloud).isGranted {
+            recordDeletionFailure("iCloud 동기화 기록", CancellationError())
+        }
+        do {
+            try await repository.deleteAll()
+        } catch {
+            recordDeletionFailure("앱 기록", error)
+        }
+        if let sensorService {
+            do {
+                try await sensorService.deleteArchivedReadings(
+                    generation: dataDeletionGeneration
+                )
+            } catch {
+                recordDeletionFailure("iPhone 센서 원본", error)
+            }
+        }
+        do {
+            try await healthService.deleteImportedData(
+                generation: dataDeletionGeneration
+            )
+        } catch {
+            recordDeletionFailure("건강 데이터 원본", error)
+        }
+        healthSyncOverview = HealthKitSyncOverview(states: [])
+        lastHealthRefreshAt = nil
+        if let rawDeviceDataArchive {
+            do {
+                try await rawDeviceDataArchive.deleteAll(
+                    generation: dataDeletionGeneration
+                )
+            } catch {
+                recordDeletionFailure("기기 원본", error)
+            }
+        }
+        if let watchSensorArchive {
+            do {
+                try await watchSensorArchive.deleteAll()
+                UserDefaults.standard.removeObject(
+                    forKey: Self.watchLegacyFallbackReadKey
+                )
+            } catch {
+                recordDeletionFailure("Watch 기존 원본", error)
+            }
+        }
+        if watchConnectivityService.watchDataDeletionRequired(),
+           !(await watchConnectivityService.requestWatchDataDeletion(
+               generation: dataDeletionGeneration
+           )) {
+            recordDeletionFailure("Watch 본체 확인", CancellationError())
+        }
+        if let dayDatabase {
+            do {
+                try await dayDatabase.deleteAll(
+                    generation: dataDeletionGeneration
+                )
+            } catch {
+                recordDeletionFailure("날짜별 원본", error)
+            }
+        }
+        if let biometricProtectedSnapshotStore {
+            do {
+                try biometricProtectedSnapshotStore.deleteStoredSnapshot()
+            } catch {
+                recordDeletionFailure("보호된 스냅샷", error)
+            }
+        }
+        biometricDataProtectionStatus = biometricProtectedSnapshotStore?.status
+            ?? .unavailable
+        if let securityBackupService {
+            do {
+                try securityBackupService.deleteAllBackups()
+            } catch {
+                recordDeletionFailure("iCloud 백업", error)
+            }
+        }
+        securityStatus = securityBackupService?.status ?? securityStatus
+        appleWatchDataReceiptStore.clear()
+        watchConnectivityService.clearLocalState()
+        appleWatchLastDataReceivedAt = nil
+        appleWatchReceivedDataKinds = []
+        WatchActivityConfirmationStore.clear()
+        WatchActivityLearningStore.clear()
+        WatchLaunchReportStore.clear()
+        WatchDiagnosticsLogStore.clear()
+        watchLaunchReport = nil
+        do {
+            try TaptionWidgetSharedStore.deleteAll()
+        } catch {
+            recordDeletionFailure("위젯 공유 기록", error)
+        }
+        do {
+            try TaptionPlanDiagnosticsLogPackageBuilder.applicationSupport()
+                .deleteAll()
+        } catch {
+            recordDeletionFailure("진단 로그", error)
+        }
+        do {
+            try TaptionPlanDiagnosticsICloudExporter().deleteAll()
+        } catch {
+            recordDeletionFailure("iCloud 진단 로그", error)
+        }
+        let diagnosticsDefaults = UserDefaults(
+            suiteName: TaptionWidgetSharedStore.appGroupIdentifier
+        ) ?? .standard
+        diagnosticsDefaults.removeObject(forKey: Self.diagnosticsLatestFileKey)
+        diagnosticsDefaults.removeObject(forKey: Self.diagnosticsLatestSavedAtKey)
+        diagnosticsExportStatus = "준비됨"
+        if let applicationSupport = try? FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        ) {
+            try? FileManager.default.removeItem(
+                at: applicationSupport.appendingPathComponent(
+                    "TaptionPlan/VoiceMemos",
+                    isDirectory: true
+                )
+            )
+        }
+        try? FileManager.default.removeItem(
+            at: FileManager.default.temporaryDirectory.appendingPathComponent(
+                "TaptionPlanExport",
+                isDirectory: true
+            )
+        )
+        TaptionPlanDiagnosticsLogger.shared.clear()
+        // The replacement snapshot is post-deletion state, so release the
+        // cross-process fence before writing it. `isDeletingUserData` still
+        // blocks ordinary mutations until this method returns.
+        TaptionDataDeletionFence.finish(
+            generation: dataDeletionGeneration
+        )
+        if !(await persist(allowingDeletion: true)) {
+            deletionFailures.append("빈 저장본")
+        }
+        if !deletionFailures.isEmpty {
+            userFacingError = "일부 데이터를 삭제하지 못했습니다: "
+                + deletionFailures.joined(separator: ", ")
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "user_data_deletion_incomplete",
+                level: .error,
+                fields: ["stores": deletionFailures.joined(separator: ",")]
+            )
+        }
     }
 
     func resetSettingsToDefaults() async {
@@ -4466,7 +5018,7 @@ final class AppModel {
         await waitForBootstrapPreparation()
         guard !repositoryLoadFailed else { return }
 
-        sensorService?.stopCollection()
+        await sensorService?.stopCollectionAndWait()
         sensorBackgroundCoordinator.cancel()
         syncSensorBackgroundState()
         isSensorCollecting = false
@@ -5661,7 +6213,7 @@ final class AppModel {
             snapshot.plans[index].externalCalendarID = calendarID
             snapshot.plans[index].externalEventID = eventID
             snapshot.plans[index].updatedAt = .now
-            refreshCalendarEvents()
+            await refreshCalendarEvents()
             await persist()
         } catch {
             userFacingError =
@@ -6008,6 +6560,11 @@ final class AppModel {
     }
 
     private func applyWatchCommand(_ command: TaptionWatchCommand) async {
+        guard acceptsDataMutation(capturedAt: command.requestedAt) else {
+            return
+        }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         switch command.kind {
         case .start:
             await startPlan(command.planID, at: command.requestedAt)
@@ -6097,6 +6654,13 @@ final class AppModel {
         receivedAt: Date,
         requestID: String?
     ) async {
+        guard let chunk = chunk.retainingData(
+            after: TaptionDataDeletionFence.cutoff(),
+            receivedAt: receivedAt
+        ) else { return }
+        guard acceptsDataMutation(capturedAt: chunk.endedAt) else { return }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         TaptionPlanDiagnosticsLogger.shared.record(
             "watch_acceleration_chunk_apply_started",
             fields: [
@@ -6114,9 +6678,34 @@ final class AppModel {
             receivedAt: receivedAt,
             requestID: requestID
         )
-        if let watchSensorArchive {
+        var storedInDayDatabase = false
+        if let dayDatabase {
+            do {
+                try await dayDatabase.recordWatchAccelerationChunk(chunk)
+                storedInDayDatabase = true
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_day_database_recorded",
+                    fields: ["chunk": chunk.id.uuidString]
+                )
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_day_database_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error).merging([
+                        "chunk": chunk.id.uuidString,
+                    ]) { _, new in new }
+                )
+            }
+        }
+        if !storedInDayDatabase,
+           acceptsDataMutation(capturedAt: chunk.endedAt),
+           let watchSensorArchive {
             do {
                 try await watchSensorArchive.record(chunk)
+                UserDefaults.standard.set(
+                    true,
+                    forKey: Self.watchLegacyFallbackReadKey
+                )
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "watch_acceleration_archive_recorded",
                     fields: [
@@ -6127,23 +6716,6 @@ final class AppModel {
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "watch_acceleration_archive_failed",
-                    level: .error,
-                    fields: TaptionDiagnosticError.fields(for: error).merging([
-                        "chunk": chunk.id.uuidString,
-                    ]) { _, new in new }
-                )
-            }
-        }
-        if let dayDatabase {
-            do {
-                try await dayDatabase.recordWatchAccelerationChunk(chunk)
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "watch_acceleration_day_database_recorded",
-                    fields: ["chunk": chunk.id.uuidString]
-                )
-            } catch {
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "watch_acceleration_day_database_failed",
                     level: .error,
                     fields: TaptionDiagnosticError.fields(for: error).merging([
                         "chunk": chunk.id.uuidString,
@@ -6165,7 +6737,20 @@ final class AppModel {
                 "samples": String(chunk.samples.count),
             ]
         )
-        scheduleSensorAnalysis(containing: chunk.startedAt, immediately: true)
+        guard acceptsDataMutation(capturedAt: chunk.endedAt) else { return }
+        scheduleSensorAnalysis(
+            containing: chunk.startedAt,
+            immediately: chunk.isFinal
+        )
+        if !Calendar.autoupdatingCurrent.isDate(
+            chunk.startedAt,
+            inSameDayAs: chunk.endedAt
+        ) {
+            scheduleSensorAnalysis(
+                containing: chunk.endedAt,
+                immediately: chunk.isFinal
+            )
+        }
     }
 
     private func applyWatchSensorSummary(
@@ -6173,6 +6758,35 @@ final class AppModel {
         receivedAt: Date,
         requestID: String?
     ) async {
+        guard let summary = summary.retainingData(
+            after: TaptionDataDeletionFence.cutoff(),
+            receivedAt: receivedAt
+        ) else { return }
+        guard acceptsDataMutation(capturedAt: summary.endedAt) else { return }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
+        let previousSequence = latestWatchSummarySequence[summary.sessionID]
+        let wasFinalizedPreviously = !summary.isFinal
+            && snapshot.actuals.contains {
+                $0.source == .appleWatch
+                    && ($0.id == summary.sessionID
+                        || $0.sensorChunkID == summary.sessionID)
+                    && $0.endedAt != nil
+            }
+        if finalizedWatchSummarySessionIDs.contains(summary.sessionID)
+            || wasFinalizedPreviously
+            || previousSequence.map({ summary.sequence <= $0 }) == true {
+            if let dayDatabase {
+                try? await dayDatabase.recordWatchSummary(summary)
+            } else if let watchSensorArchive {
+                try? await watchSensorArchive.record(summary)
+            }
+            return
+        }
+        latestWatchSummarySequence[summary.sessionID] = summary.sequence
+        if summary.isFinal {
+            finalizedWatchSummarySessionIDs.insert(summary.sessionID)
+        }
         var dataKinds: Set<AppleWatchDataKind> = [.motion, .activity]
         if summary.latestHeartRate != nil
             || summary.averageHeartRate != nil
@@ -6210,11 +6824,11 @@ final class AppModel {
                 activeTrackingSession = nil
                 trackingSessionWasRecovered = false
                 liveRouteState.session = nil
+                TrackingSessionRecoveryStore.clear()
+                lastTrackingSessionRecoveryPersistAt = nil
             }
-            TrackingSessionRecoveryStore.clear()
-            lastTrackingSessionRecoveryPersistAt = nil
         } else if summary.isAmbient != true,
-                  activeTrackingSession?.id != summary.sessionID {
+                  activeTrackingSession == nil {
             let kind: TrackingKind = summary.workoutKind == .running
                 ? .running
                 : .walking
@@ -6237,15 +6851,36 @@ final class AppModel {
             TrackingSessionRecoveryStore.save(session)
             lastTrackingSessionRecoveryPersistAt = summary.endedAt
         }
-        archiveRawDeviceData(
-            source: .appleWatch,
-            kind: "watch-sensor-summary",
-            payload: summary,
-            capturedAt: summary.endedAt
-        )
-        if let watchSensorArchive {
+        var storedInDayDatabase = false
+        if let dayDatabase {
+            do {
+                try await dayDatabase.recordWatchSummary(summary)
+                storedInDayDatabase = true
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_day_database_merge_succeeded",
+                    fields: ["sequence": String(summary.sequence)]
+                )
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_day_database_merge_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error).merging([
+                        "sequence": String(summary.sequence),
+                    ]) { _, new in new }
+                )
+            }
+        }
+        var storedInLegacyArchive = false
+        if !storedInDayDatabase,
+           acceptsDataMutation(capturedAt: summary.endedAt),
+           let watchSensorArchive {
             do {
                 try await watchSensorArchive.record(summary)
+                storedInLegacyArchive = true
+                UserDefaults.standard.set(
+                    true,
+                    forKey: Self.watchLegacyFallbackReadKey
+                )
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "watch_sensor_archive_recorded",
                     fields: ["sequence": String(summary.sequence)]
@@ -6263,23 +6898,41 @@ final class AppModel {
                     + error.localizedDescription
             }
         }
-        if let dayDatabase {
-            do {
-                try await dayDatabase.recordWatchSummary(summary)
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "watch_day_database_merge_succeeded",
-                    fields: ["sequence": String(summary.sequence)]
-                )
-            } catch {
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "watch_day_database_merge_failed",
-                    level: .error,
-                    fields: TaptionDiagnosticError.fields(for: error).merging([
-                        "sequence": String(summary.sequence),
-                    ]) { _, new in new }
-                )
+        guard storedInDayDatabase || storedInLegacyArchive else {
+            if latestWatchSummarySequence[summary.sessionID]
+                == summary.sequence {
+                if let previousSequence {
+                    latestWatchSummarySequence[summary.sessionID] =
+                        previousSequence
+                } else {
+                    latestWatchSummarySequence[summary.sessionID] = nil
+                }
+                if summary.isFinal {
+                    finalizedWatchSummarySessionIDs.remove(summary.sessionID)
+                }
             }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_sensor_summary_persistence_failed",
+                level: .error,
+                fields: [
+                    "session": summary.sessionID.uuidString,
+                    "sequence": String(summary.sequence),
+                ]
+            )
+            return
         }
+        await archiveRawDeviceData(
+            source: .appleWatch,
+            kind: "watch-sensor-summary",
+            payload: summary,
+            capturedAt: summary.endedAt
+        )
+        guard acceptsDataMutation(capturedAt: summary.endedAt),
+              latestWatchSummarySequence[summary.sessionID]
+                == summary.sequence,
+              summary.isFinal
+                || !finalizedWatchSummarySessionIDs.contains(summary.sessionID)
+        else { return }
         dayLoadCoordinator?.invalidate(day: summary.startedAt)
         if !Calendar.autoupdatingCurrent.isDate(
             summary.startedAt,
@@ -6437,7 +7090,7 @@ final class AppModel {
                !summary.isFinal {
                 readings.append(
                     SensorReading(
-                        id: summary.isFinal ? summary.sessionID : UUID(),
+                        id: summary.fallbackReadingID,
                         timestamp: summary.endedAt,
                         motion: watchMotion,
                         motionConfidence: .medium,
@@ -6539,13 +7192,37 @@ final class AppModel {
             suppressedIDs: snapshot.settings.suppressedActualIDs
         )
         await persistDeviceLocalSnapshot()
+        guard acceptsDataMutation(capturedAt: summary.endedAt) else { return }
+        scheduleSensorAnalysis(
+            containing: summary.startedAt,
+            immediately: summary.isFinal
+        )
+        if !Calendar.autoupdatingCurrent.isDate(
+            summary.startedAt,
+            inSameDayAs: summary.endedAt
+        ) {
+            scheduleSensorAnalysis(
+                containing: summary.endedAt,
+                immediately: summary.isFinal
+            )
+        }
     }
 
     /// Watch의 답을 파생 기록과 개인화 표본에 반영한다. 원시 센서 아카이브는
     /// 수정하지 않으며 같은 패턴이 충분히 쌓이기 전까지 자동 확정하지 않는다.
     private func applyWatchActivityConfirmation(
-        _ confirmation: TaptionWatchActivityConfirmation
+        _ confirmation: TaptionWatchActivityConfirmation,
+        receivedAt: Date
     ) async {
+        guard let confirmation = confirmation.retainingData(
+            after: TaptionDataDeletionFence.cutoff(),
+            receivedAt: receivedAt
+        ) else { return }
+        guard acceptsDataMutation(capturedAt: confirmation.respondedAt) else {
+            return
+        }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         guard !WatchActivityConfirmationStore.read().contains(where: {
             $0.id == confirmation.id
         }) else { return }
@@ -6646,6 +7323,31 @@ final class AppModel {
         receivedAt: Date,
         requestID: String?
     ) async {
+        guard let snapshot = snapshot.retainingData(
+            after: TaptionDataDeletionFence.cutoff(),
+            receivedAt: receivedAt
+        ) else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_health_snapshot_ignored",
+                level: .notice,
+                fields: ["reason": "deletion_or_invalid_timestamp"]
+            )
+            return
+        }
+        guard acceptsDataMutation(capturedAt: snapshot.capturedAt) else {
+            return
+        }
+        if let lastWatchHealthSnapshotCapturedAt,
+           snapshot.capturedAt <= lastWatchHealthSnapshotCapturedAt {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_health_snapshot_ignored",
+                fields: ["reason": "stale_or_duplicate"]
+            )
+            return
+        }
+        lastWatchHealthSnapshotCapturedAt = snapshot.capturedAt
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         var dataKinds: Set<AppleWatchDataKind> = [.health]
         if snapshot.workoutCount > 0 {
             dataKinds.insert(.activity)
@@ -6654,6 +7356,13 @@ final class AppModel {
             "watch_health_snapshot_apply_started",
             fields: [
                 "workout_count": String(snapshot.workoutCount),
+                "sleep_minutes": String(snapshot.sleepMinutes ?? 0),
+                "sleep_payload_present": String(
+                    !(snapshot.sleepSegments?.isEmpty ?? true)
+                ),
+                "sleep_segment_count": String(
+                    snapshot.sleepSegments?.count ?? 0
+                ),
                 "data_kinds": dataKinds.map(\.rawValue)
                     .sorted().joined(separator: ","),
                 "health_enabled": String(settings.healthEnabled),
@@ -6665,13 +7374,70 @@ final class AppModel {
             receivedAt: receivedAt,
             requestID: requestID
         )
-        archiveRawDeviceData(
+        await archiveRawDeviceData(
             source: .appleWatch,
             kind: "watch-health-snapshot",
             payload: snapshot,
             capturedAt: snapshot.capturedAt
         )
-        if settings.healthEnabled {
+        guard acceptsDataMutation(capturedAt: snapshot.capturedAt),
+              lastWatchHealthSnapshotCapturedAt == snapshot.capturedAt else {
+            return
+        }
+        var watchSleepSessionCount = 0
+        if let segments = snapshot.sleepSegments, !segments.isEmpty {
+            let sleepSegments = segments.compactMap { segment -> SleepSegment? in
+                guard let stage = SleepStage(rawValue: segment.stage),
+                      segment.endDate > segment.startDate else {
+                    return nil
+                }
+                return SleepSegment(
+                    id: segment.id,
+                    stage: stage,
+                    span: TimeSpan(
+                        start: segment.startDate,
+                        end: segment.endDate
+                    ),
+                    sourceName: segment.sourceName,
+                    sourceBundleIdentifier: segment.sourceBundleIdentifier,
+                    deviceName: segment.deviceName,
+                    timeZoneIdentifier: segment.timeZoneIdentifier,
+                    isUserEntered: segment.isUserEntered
+                )
+            }
+            let sessions = SleepAnalysisEngine().sessions(from: sleepSegments)
+            watchSleepSessionCount = sessions.count
+            if !sessions.isEmpty {
+                let overnightSpan = SleepAnalysisEngine.overnightSpan(
+                    containing: snapshot.capturedAt
+                )
+                sleepSessions.removeAll {
+                    $0.isAppleWatchConfirmed
+                        && $0.span.intersection(with: overnightSpan) != nil
+                }
+                sleepSessions.append(contentsOf: sessions)
+                sleepSessions.sort { $0.span.start < $1.span.start }
+                self.snapshot.actuals.removeAll {
+                    $0.source == .appleWatch
+                        && AutomaticRecordTimelineEngine.isSleep($0)
+                        && $0.span(asOf: snapshot.capturedAt).intersection(
+                            with: overnightSpan
+                        ) != nil
+                }
+                self.snapshot.actuals = SleepActualReconciliationEngine.applying(
+                    self.snapshot.actuals,
+                    sessions: sessions,
+                    inside: overnightSpan,
+                    asOf: snapshot.capturedAt
+                )
+            }
+        }
+        let shouldRefreshHealth = settings.healthEnabled
+            && (lastHealthRefreshAt.map {
+                Date.now.timeIntervalSince($0)
+                    >= HealthRefreshPolicy.foregroundInterval
+            } ?? true)
+        if shouldRefreshHealth {
             await refreshHealthData(showErrors: false)
         }
         await persistDeviceLocalSnapshot()
@@ -6679,7 +7445,12 @@ final class AppModel {
             "watch_health_snapshot_applied",
             fields: [
                 "workout_count": String(snapshot.workoutCount),
-                "health_refresh_requested": String(settings.healthEnabled),
+                "sleep_minutes": String(snapshot.sleepMinutes ?? 0),
+                "sleep_segment_count": String(
+                    snapshot.sleepSegments?.count ?? 0
+                ),
+                "sleep_sessions_created": String(watchSleepSessionCount),
+                "health_refresh_requested": String(shouldRefreshHealth),
             ]
         )
     }
@@ -6733,7 +7504,7 @@ final class AppModel {
         kind: String,
         payload: T,
         capturedAt: Date = .now
-    ) {
+    ) async {
         guard let rawDeviceDataArchive else { return }
         do {
             let envelope = try RawDeviceDataEnvelope(
@@ -6742,15 +7513,7 @@ final class AppModel {
                 kind: kind,
                 payload: payload
             )
-            Task(priority: .utility) {
-                do {
-                    try await rawDeviceDataArchive.append(envelope)
-                } catch {
-                    Self.integrationLogger.error(
-                        "Raw device data archive failed: \(kind, privacy: .public) \(error.localizedDescription, privacy: .public)"
-                    )
-                }
-            }
+            try await rawDeviceDataArchive.append(envelope)
         } catch {
             Self.integrationLogger.error(
                 "Raw device data archive failed: \(kind, privacy: .public) \(error.localizedDescription, privacy: .public)"
@@ -6763,9 +7526,13 @@ final class AppModel {
         kind: String
     ) async {
         guard let rawDeviceDataArchive else { return }
-        guard !contexts.isEmpty else { return }
+        let changes = WeatherTimelineEngine.changedRawContexts(
+            contexts,
+            relativeTo: snapshot.weather
+        )
+        guard !changes.isEmpty else { return }
         do {
-            let envelopes = try contexts.map { context in
+            let envelopes = try changes.map { context in
                 try RawDeviceDataEnvelope(
                     capturedAt: context.observedAt,
                     source: .gps,
@@ -6995,7 +7762,23 @@ final class AppModel {
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 
-    func refreshSensorTimeline(containing date: Date? = nil) async {
+    @discardableResult
+    func refreshSensorTimeline(containing date: Date? = nil) async -> Bool {
+        guard acceptsDataMutation() else { return false }
+        while isSensorTimelineRefreshing {
+            do {
+                try await Task.sleep(for: .milliseconds(10))
+            } catch {
+                return false
+            }
+            guard acceptsDataMutation() else { return false }
+        }
+        isSensorTimelineRefreshing = true
+        activeDataMutationCount += 1
+        defer {
+            activeDataMutationCount -= 1
+            isSensorTimelineRefreshing = false
+        }
         let span = TimelineAggregationEngine().interval(
             for: .day,
             containing: date ?? selectedDate
@@ -7009,7 +7792,7 @@ final class AppModel {
             ]
         )
         await restoreRawWeather(in: span)
-        guard let sensorService else { return }
+        guard let sensorService else { return true }
         let watchData = await watchSensorTimelineData(in: span)
         let watchSummaries = watchData.summaries
         let watchAccelerationSamples = watchData.accelerationSamples
@@ -7026,7 +7809,7 @@ final class AppModel {
             )
             userFacingError =
                 "위치 기록을 읽지 못했습니다. \(error.localizedDescription)"
-            return
+            return false
         }
         // Raw readings stay in the archive. Every downstream algorithm uses
         // a copy whose scalar and route outliers are excluded with provenance.
@@ -7067,8 +7850,6 @@ final class AppModel {
         )
         let pedometer =
             try? await sensorService.pedometerSummary(in: span)
-        let iPhonePedometerEvidence =
-            await sensorService.pedometerEvidence(for: motionActivities)
         let healthKitMovementEvidence: [AppleMovementEvidence]
         if settings.healthEnabled {
             healthKitMovementEvidence =
@@ -7080,10 +7861,13 @@ final class AppModel {
             readingCount: archivedReadings.count,
             latestReadingID: archivedReadings.last?.id,
             latestMotionEnd: motionActivities.map(\.span.end).max(),
+            motionHash: motionActivities.hashValue,
             pedometerEnd: pedometer?.span.end,
+            pedometerHash: pedometer?.hashValue,
             latestHealthEvidenceEnd: healthKitMovementEvidence
                 .map(\.span.end)
                 .max(),
+            healthEvidenceHash: healthKitMovementEvidence.hashValue,
             watchSummaryCount: watchSummaries.count,
             latestWatchSummaryEnd: watchSummaries.map(\.endedAt).max(),
             watchAccelerationSampleCount: watchAccelerationSamples.count,
@@ -7159,15 +7943,16 @@ final class AppModel {
             )
             guard (settings.locationEnabled || settings.weatherEnabled),
                   weatherNeedsRefresh(for: latestReadingWithPoint) else {
-                return
+                return true
             }
             await refreshWeather(
                 in: span,
                 fallbackReading: latestReadingWithPoint
             )
-            return
+            return true
         }
-        sensorRefreshFingerprints[span.start] = refreshFingerprint
+        let iPhonePedometerEvidence =
+            await sensorService.pedometerEvidence(for: motionActivities)
         if !motionActivities.isEmpty {
             let existingAutomatic = snapshot.actuals.filter {
                 $0.source != .motion
@@ -7203,26 +7988,30 @@ final class AppModel {
             snapshot.actuals.append(contentsOf: mergedMotionActuals)
             snapshot.actuals.sort { $0.startedAt < $1.startedAt }
         }
-        archiveRawDeviceData(
-            source: .iPhoneMotion,
-            kind: "motion-activities",
-            payload: motionActivities,
-            capturedAt: span.end
-        )
+        if let capturedAt = motionActivities.map(\.span.end).max() {
+            await archiveRawDeviceData(
+                source: .iPhoneMotion,
+                kind: "motion-activities",
+                payload: motionActivities,
+                capturedAt: capturedAt
+            )
+        }
         if let pedometer {
-            archiveRawDeviceData(
+            await archiveRawDeviceData(
                 source: .iPhonePedometer,
                 kind: "pedometer-summary",
                 payload: pedometer,
-                capturedAt: span.end
+                capturedAt: pedometer.span.end
             )
         }
-        archiveRawDeviceData(
-            source: .healthKit,
-            kind: "movement-evidence",
-            payload: healthKitMovementEvidence,
-            capturedAt: span.end
-        )
+        if let capturedAt = healthKitMovementEvidence.map(\.span.end).max() {
+            await archiveRawDeviceData(
+                source: .healthKit,
+                kind: "movement-evidence",
+                payload: healthKitMovementEvidence,
+                capturedAt: capturedAt
+            )
+        }
         let healthMovementEvidence =
             iPhonePedometerEvidence + healthKitMovementEvidence
         let photoLocationReadings = photoBackfillReadings(
@@ -7265,7 +8054,8 @@ final class AppModel {
                     "reason": "no_evidence",
                 ]
             )
-            return
+            sensorRefreshFingerprints[span.start] = refreshFingerprint
+            return true
         }
 
         var readings = AppleDeviceGroundTruthEngine
@@ -7491,6 +8281,8 @@ final class AppModel {
                 fallbackReading: latestReadingWithPoint
             )
         }
+        sensorRefreshFingerprints[span.start] = refreshFingerprint
+        return true
     }
 
     private func applyReplayedWatchSummaries(
@@ -7926,7 +8718,17 @@ final class AppModel {
         var summaries = [String: TaptionWatchSensorSummary]()
         var chunks = [UUID: TaptionWatchAccelerationChunk]()
 
-        if let watchSensorArchive {
+        let needsLegacyArchive: Bool
+        if let dayDatabase {
+            needsLegacyArchive =
+                ((try? await dayDatabase.requiresLegacyMigration()) ?? true)
+                || UserDefaults.standard.bool(
+                    forKey: Self.watchLegacyFallbackReadKey
+                )
+        } else {
+            needsLegacyArchive = true
+        }
+        if needsLegacyArchive, let watchSensorArchive {
             for summary in (try? await watchSensorArchive.summaries(in: span))
                 ?? [] {
                 summaries["\(summary.sessionID.uuidString):\(summary.sequence)"] =
@@ -8029,13 +8831,31 @@ final class AppModel {
     /// Loads the WBS-style day snapshot: one source snapshot plus one bounded
     /// sensor read. Every consumer receives derived arrays from that captured
     /// value, so an async load cannot mix two revisions or rewrite raw data.
-    func planDayDataSnapshot(for date: Date) async -> PlanDayDataSnapshot {
-        await refreshSensorTimeline(containing: date)
+    func planDayDataSnapshot(
+        for date: Date,
+        forceReload: Bool = true
+    ) async -> PlanDayDataSnapshot {
+        let empty = {
+            PlanDayDataSnapshot.make(
+                date: date,
+                sourceRevision: 0,
+                source: .empty,
+                sensorResult: SensorReadingsLoadResult(
+                    readings: [],
+                    isComplete: false
+                )
+            )
+        }
+        guard acceptsDataMutation() else { return empty() }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
+        if forceReload {
+            await refreshSensorTimeline(containing: date)
+            guard acceptsDataMutation() else { return empty() }
+        }
         let source = snapshot
-        let sourceRevision = snapshotRevision
+        let sourceRevision = dayProjectionRevision
         if let dayLoadCoordinator {
-            // 날짜를 다시 열 때는 이미 캐시된 day row를 먼저 반환하지 않고,
-            // 위에서 읽은 raw Watch/iPhone 신호로 새 projection을 만든다.
             let snapshot = await dayLoadCoordinator.load(
                 day: date,
                 source: source,
@@ -8051,13 +8871,14 @@ final class AppModel {
                         in: self.daySpan(containing: day)
                     )
                 },
-                forceReload: true
+                forceReload: forceReload
             )
-            return snapshot
+            return acceptsDataMutation() ? snapshot : empty()
         }
         let result = await sensorReadingsLoadResult(
             in: daySpan(containing: date)
         )
+        guard acceptsDataMutation() else { return empty() }
         return PlanDayDataSnapshot.make(
             date: date,
             sourceRevision: sourceRevision,
@@ -8081,7 +8902,10 @@ final class AppModel {
            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart),
            span.start == dayStart,
            span.end == dayEnd {
-            return await planDayDataSnapshot(for: dayStart).readings
+            return await planDayDataSnapshot(
+                for: dayStart,
+                forceReload: false
+            ).readings
         }
         return await sensorReadingsLoadResult(in: span).readings
     }
@@ -8881,11 +9705,21 @@ final class AppModel {
             snapshot.settings.showsPhotosInWidgets = false
             snapshot.photos = []
         }
+        let previousCalendarState = permissionState(for: .calendar)
         let calendarState = calendarService.permissionState()
         snapshot.settings.permissions[.calendar] = calendarState
+        if calendarState.isGranted, !previousCalendarState.isGranted {
+            UserDefaults.standard.removeObject(
+                forKey: Self.calendarAutomaticRefreshKey
+            )
+        }
         if !permissionState(for: .calendar).isGranted {
-            snapshot.settings.selectedCalendarIDs = []
-            snapshot.calendarEvents = []
+            calendarStoreRefreshTask?.cancel()
+            calendarStoreRefreshTask = nil
+            calendarStoreRefreshRequiresWide = false
+            if !snapshot.calendarEvents.isEmpty {
+                snapshot.calendarEvents.removeAll()
+            }
         }
         var healthState = PermissionState.unavailable
         do {
@@ -8909,7 +9743,7 @@ final class AppModel {
             snapshot.settings.backgroundPreciseLocationEnabled =
                 snapshot.settings.locationEnabled
                 && sensorService.hasAlwaysLocationAuthorization()
-            sensorAvailability = sensorService.hardwareAvailability()
+            sensorAvailability = await sensorService.hardwareAvailability()
             if permissionState(for: .location).isGranted {
                 snapshot.settings.locationEnabled = true
                 snapshot.settings.backgroundPreciseLocationEnabled =
@@ -8917,7 +9751,7 @@ final class AppModel {
             } else {
                 // 권한이 없는 동안 수집만 멈춘다. locationEnabled를 지우면
                 // iOS 설정에서 권한을 다시 허용해도 기록이 재개되지 않는다.
-                sensorService.stopCollection()
+                await sensorService.stopCollectionAndWait()
                 sensorBackgroundCoordinator.cancel()
                 syncSensorBackgroundState()
                 isSensorCollecting = false
@@ -8978,31 +9812,137 @@ final class AppModel {
         snapshot.photos.sort { $0.capturedAt < $1.capturedAt }
     }
 
-    private func refreshCalendarEvents() {
-        refreshCalendarEvents(in: visibleDataSpan)
+    private func refreshCalendarEvents() async {
+        await refreshCalendarEvents(in: visibleDataSpan)
     }
 
-    private func refreshCalendarEvents(in span: TimeSpan) {
-        if !snapshot.settings.selectedCalendarIDs.isEmpty {
-            snapshot.settings.selectedCalendarIDs =
-                calendarService.calendars().map(\.id)
+    func scheduleCalendarStoreRefresh(forceWide: Bool = false) {
+        guard isBootstrapped,
+              isSceneActive,
+              permissionState(for: .calendar).isGranted,
+              !snapshot.settings.selectedCalendarIDs.isEmpty else { return }
+        calendarStoreRefreshRequiresWide =
+            calendarStoreRefreshRequiresWide || forceWide
+        calendarStoreRefreshTask?.cancel()
+        calendarStoreRefreshTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled,
+                  let self,
+                  self.isSceneActive,
+                  self.permissionState(for: .calendar).isGranted,
+                  !self.snapshot.settings.selectedCalendarIDs.isEmpty else {
+                return
+            }
+            let forceWide = self.calendarStoreRefreshRequiresWide
+            self.calendarStoreRefreshRequiresWide = false
+            let now = Date.now
+            let lastAutomaticRefresh = UserDefaults.standard.object(
+                forKey: Self.calendarAutomaticRefreshKey
+            ) as? Date
+            let refreshesAutomaticRange =
+                CalendarSyncPolicy.shouldRefreshAutomaticRange(
+                    lastRefresh: lastAutomaticRefresh,
+                    now: now,
+                    force: forceWide
+                )
+            let spans = CalendarSyncPolicy.refreshSpans(
+                requested: self.visibleDataSpan,
+                includesCurrentDeviceDay: true,
+                refreshesAutomaticRange: refreshesAutomaticRange,
+                now: now
+            )
+            var completed = false
+            for attempt in 0..<2 {
+                if attempt > 0 {
+                    try? await Task.sleep(for: .seconds(2))
+                    guard !Task.isCancelled, self.isSceneActive else { return }
+                }
+                completed = true
+                for span in spans {
+                    completed = await self.refreshCalendarEvents(in: span)
+                        && completed
+                }
+                if completed { break }
+            }
+            if refreshesAutomaticRange, completed {
+                UserDefaults.standard.set(
+                    now,
+                    forKey: Self.calendarAutomaticRefreshKey
+                )
+            }
+            await self.persistDeviceLocalSnapshot()
         }
-        let selected = Set(snapshot.settings.selectedCalendarIDs)
-        let fresh = calendarService.events(in: span, selectedCalendarIDs: selected)
-        let freshIDs = Set(fresh.map(\.id))
+    }
+
+    @discardableResult
+    private func refreshCalendarEvents(in span: TimeSpan) async -> Bool {
+        snapshot.calendarEvents = snapshot.calendarEvents.map {
+            $0.normalizedForDisplay()
+        }
+        guard !snapshot.settings.selectedCalendarIDs.isEmpty else { return false }
+        let liveCalendarIDs = calendarService.calendars().map(\.id)
+        guard !liveCalendarIDs.isEmpty else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "calendar_refresh_deferred_empty_store",
+                level: .notice
+            )
+            return false
+        }
+        let reconciledCalendarIDs = CalendarSyncPolicy.reconciledCalendarIDs(
+            existing: snapshot.settings.selectedCalendarIDs,
+            live: liveCalendarIDs
+        )
+        let liveIDs = Set(liveCalendarIDs)
+        guard CalendarSyncPolicy.hasCompleteSelection(
+            selected: Set(reconciledCalendarIDs),
+            live: liveIDs
+        ) else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "calendar_refresh_deferred_partial_store",
+                level: .notice
+            )
+            return false
+        }
+        snapshot.settings.selectedCalendarIDs = reconciledCalendarIDs
+        let selected = Set(reconciledCalendarIDs)
+        guard let fresh = await calendarService.events(
+            in: span,
+            selectedCalendarIDs: selected
+        ) else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "calendar_refresh_deferred_background_store",
+                level: .notice
+            )
+            return false
+        }
+        guard !Task.isCancelled,
+              permissionState(for: .calendar).isGranted,
+              Set(snapshot.settings.selectedCalendarIDs) == selected else {
+            return false
+        }
+        let freshEvents = fresh.filter { $0.isCancelled != true }
+        let deduplicatedFresh = CalendarSyncPolicy.deduplicatedEvents(
+            freshEvents
+        )
+        let freshIDs = Set(deduplicatedFresh.map(\.id))
         snapshot.calendarEvents.removeAll {
-            freshIDs.contains($0.id)
+            !liveIDs.contains($0.calendarID)
+                || freshIDs.contains($0.id)
                 || $0.span.intersection(with: span) != nil
         }
-        snapshot.calendarEvents.append(contentsOf: fresh)
+        snapshot.calendarEvents.append(contentsOf: deduplicatedFresh)
+        snapshot.calendarEvents = CalendarSyncPolicy.deduplicatedEvents(
+            snapshot.calendarEvents
+        )
         snapshot.calendarEvents.sort { $0.span.start < $1.span.start }
+        return true
     }
 
     private func refreshHealthData(
         in requestedSpan: TimeSpan? = nil,
         showErrors: Bool = true
     ) async {
-        guard !isHealthRefreshRunning else { return }
+        guard acceptsDataMutation(), !isHealthRefreshRunning else { return }
         isHealthRefreshRunning = true
         defer { isHealthRefreshRunning = false }
         let span = requestedSpan ?? recentHealthSpan
@@ -9078,7 +10018,7 @@ final class AppModel {
                 $0.span.intersection(with: span) != nil
             }
             if Set(existingHealthActuals) != Set(visibleFreshActuals) {
-                archiveRawDeviceData(
+                await archiveRawDeviceData(
                     source: .healthKit,
                     kind: "health-actuals",
                     payload: freshActuals,
@@ -9086,7 +10026,7 @@ final class AppModel {
                 )
             }
             if Set(existingSleepSessions) != Set(freshSessions) {
-                archiveRawDeviceData(
+                await archiveRawDeviceData(
                     source: .healthKit,
                     kind: "sleep-sessions",
                     payload: freshSessions,
@@ -9245,9 +10185,12 @@ final class AppModel {
     }
 
     private func handleObservedHealthChange() async {
+        guard acceptsDataMutation() else { return }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         receiveSensorWake(.healthKitBackgroundDelivery)
         await bootstrap()
-        guard settings.healthEnabled else { return }
+        guard acceptsDataMutation(), settings.healthEnabled else { return }
         await refreshHealthData(
             in: periodicHealthSpan,
             showErrors: false
@@ -9383,12 +10326,19 @@ final class AppModel {
     }
 
     private func resumeSensorCollectionAndRestoreTrackingIfNeeded() async {
+        guard acceptsDataMutation() else {
+            await sensorService?.stopCollectionAndWait()
+            isSensorCollecting = false
+            return
+        }
         resumeSensorCollectionIfNeeded()
         await restoreTrackingSessionIfNeeded()
     }
 
     private func restoreTrackingSessionIfNeeded() async {
+        let generation = dataDeletionGeneration
         guard activeTrackingSession == nil,
+              acceptsDataMutation(),
               settings.locationEnabled,
               permissionState(for: .location).isGranted,
               let sensorService,
@@ -9404,8 +10354,16 @@ final class AppModel {
             TrackingSessionRecoveryStore.clear()
             return
         }
+        guard !Task.isCancelled,
+              generation == dataDeletionGeneration,
+              acceptsDataMutation(capturedAt: session.startedAt) else {
+            return
+        }
 
         session.endedAt = nil
+        guard generation == dataDeletionGeneration,
+              acceptsDataMutation(capturedAt: session.startedAt),
+              !Task.isCancelled else { return }
         let restored = sensorService.resumeTracking(
             session,
             preferences: settings.gpsLoggingPreferences
@@ -9417,12 +10375,17 @@ final class AppModel {
             for: restored,
             through: now
         )) ?? []
+        guard generation == dataDeletionGeneration,
+              acceptsDataMutation(capturedAt: restored.startedAt),
+              !Task.isCancelled else {
+            await sensorService.stopCollectionAndWait()
+            activeTrackingSession = nil
+            trackingSessionWasRecovered = false
+            isSensorCollecting = false
+            return
+        }
         let routeReadings = readings
-            .filter {
-                guard let point = $0.point else { return false }
-                return point.horizontalAccuracy >= 0
-                    && point.horizontalAccuracy <= 50
-            }
+            .filter(TrackingSessionPolicy.isPreciseRouteReading)
             .suffix(4_000)
         liveRouteState = LiveRouteState(
             session: restored,
@@ -9502,19 +10465,38 @@ final class AppModel {
         }
     }
 
-    private func handleLiveSensorReading(_ reading: SensorReading) {
+    private func handlePersistedSensorReadings(
+        _ readings: [SensorReading]
+    ) {
+        guard let latest = readings.max(by: {
+            $0.timestamp < $1.timestamp
+        }) else { return }
         if let sensorService {
             _ = sensorBackgroundCoordinator.markSaved(
-                at: reading.timestamp,
+                at: latest.timestamp,
                 persistedToken: sensorService.persistenceToken()
             )
             if !settings.backgroundPreciseLocationEnabled {
                 _ = sensorBackgroundCoordinator.expireIfNeeded(
-                    at: reading.timestamp
+                    at: latest.timestamp
                 )
             }
             syncSensorBackgroundState()
         }
+        for reading in readings.sorted(by: {
+            $0.timestamp < $1.timestamp
+        }) {
+            handleLiveSensorReading(reading)
+        }
+        Task { [weak self] in
+            guard let self else { return }
+            await self.reconcileSensorCollectionLiveActivity(
+                isForeground: self.isSceneActive
+            )
+        }
+    }
+
+    private func handleLiveSensorReading(_ reading: SensorReading) {
         if reading.locationFixQuality == .approximate {
             latestSensorReading = reading
         } else {
@@ -9532,8 +10514,10 @@ final class AppModel {
                     startedAt: reading.timestamp,
                     linkedPlanID: nil,
                     sourceDevice: reading.sourceDevice ?? .iPhone,
-                    wasAutomaticallyDetected: kind != .automatic
-                        && reading.sourceDevice == .iPhone
+                    wasAutomaticallyDetected:
+                        reading.trackingWasAutomaticallyDetected
+                        ?? (kind == .automatic
+                            && reading.sourceDevice == .iPhone)
                 )
                 activeTrackingSession = session
             }
@@ -9574,8 +10558,7 @@ final class AppModel {
         }
 
         if let point = reading.point {
-            if point.horizontalAccuracy >= 0,
-               point.horizontalAccuracy <= 50 {
+            if TrackingSessionPolicy.isPreciseRouteReading(reading) {
                 let lastPoint = liveRouteState.readings.last?.point
                 let shouldAppend = lastPoint.map {
                     distanceMeters($0, point) >= 2
@@ -9598,12 +10581,6 @@ final class AppModel {
         }
         liveRouteState.session = session
         liveRouteState.lastUpdatedAt = reading.timestamp
-        Task { [weak self] in
-            guard let self else { return }
-            await self.reconcileSensorCollectionLiveActivity(
-                isForeground: self.isSceneActive
-            )
-        }
 
         if reading.trackingSessionEnded == true,
            var completed = session {
@@ -9630,20 +10607,64 @@ final class AppModel {
         containing date: Date,
         immediately: Bool
     ) {
-        if !immediately, sensorAnalysisDebounceTask != nil {
-            return
-        }
-        if immediately {
-            sensorAnalysisDebounceTask?.cancel()
-        }
+        let day = Calendar.autoupdatingCurrent.startOfDay(for: date)
+        sensorAnalysisRequestRevision &+= 1
+        pendingSensorAnalysisRevisions[day] = sensorAnalysisRequestRevision
+        startSensorAnalysis(immediately: immediately)
+    }
+
+    private func startSensorAnalysis(immediately: Bool) {
+        if !immediately, sensorAnalysisDebounceTask != nil { return }
+        if immediately { sensorAnalysisDebounceTask?.cancel() }
+        sensorAnalysisTaskGeneration &+= 1
+        let generation = sensorAnalysisTaskGeneration
         sensorAnalysisDebounceTask = Task { [weak self] in
             if !immediately {
                 try? await Task.sleep(for: .seconds(120))
             }
-            guard !Task.isCancelled, let self else { return }
-            await self.refreshSensorTimeline(containing: date)
+            guard !Task.isCancelled,
+                  let self,
+                  self.sensorAnalysisTaskGeneration == generation else {
+                return
+            }
+            let batch = self.pendingSensorAnalysisRevisions.sorted {
+                $0.key < $1.key
+            }
+            var failedDays = 0
+            for (day, revision) in batch {
+                guard !Task.isCancelled,
+                      self.sensorAnalysisTaskGeneration == generation else {
+                    return
+                }
+                let succeeded = await self.refreshSensorTimeline(
+                    containing: day
+                )
+                if succeeded,
+                   self.pendingSensorAnalysisRevisions[day] == revision {
+                    self.pendingSensorAnalysisRevisions[day] = nil
+                } else if !succeeded {
+                    failedDays += 1
+                }
+            }
+            guard !Task.isCancelled,
+                  self.sensorAnalysisTaskGeneration == generation else {
+                return
+            }
             await self.persistDeviceLocalSnapshot()
+            guard self.sensorAnalysisTaskGeneration == generation else {
+                return
+            }
             self.sensorAnalysisDebounceTask = nil
+            if failedDays > 0 {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "sensor_analysis_retry_scheduled",
+                    level: .notice,
+                    fields: ["days": String(failedDays)]
+                )
+            }
+            if !self.pendingSensorAnalysisRevisions.isEmpty {
+                self.startSensorAnalysis(immediately: false)
+            }
         }
     }
 
@@ -9704,8 +10725,9 @@ final class AppModel {
             var contexts = fetched.filter {
                 $0.observedAt >= futureStart && $0.observedAt < range.end
             }
-            lastFutureWeatherRefreshAt = now
-            lastFutureWeatherPoint = point
+            guard isSceneActive,
+                  acceptsDataMutation(),
+                  !Task.isCancelled else { return }
             guard !contexts.isEmpty else {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "weather_preview_empty",
@@ -9717,6 +10739,8 @@ final class AppModel {
                 )
                 return
             }
+            lastFutureWeatherRefreshAt = now
+            lastFutureWeatherPoint = point
             for index in contexts.indices {
                 contexts[index].isForecast = true
                 contexts[index].point = point
@@ -9743,8 +10767,6 @@ final class AppModel {
         } catch is CancellationError {
             return
         } catch {
-            lastFutureWeatherRefreshAt = now
-            lastFutureWeatherPoint = point
             TaptionPlanDiagnosticsLogger.shared.record(
                 "weather_preview_failed",
                 level: .error,
@@ -9808,6 +10830,9 @@ final class AppModel {
                     longitude: point.longitude,
                     at: date
                 )
+                guard !Task.isCancelled,
+                      self.isSceneActive,
+                      self.acceptsDataMutation() else { return }
 
                 var futureContexts: [WeatherContext] = []
                 var futureRange: TimeSpan?
@@ -9828,6 +10853,8 @@ final class AppModel {
                             }
                         if !futureContexts.isEmpty {
                             futureRange = range
+                            self.lastFutureWeatherRefreshAt = now
+                            self.lastFutureWeatherPoint = point
                         }
                     } catch is CancellationError {
                         throw CancellationError()
@@ -9842,10 +10869,11 @@ final class AppModel {
                             ]
                         )
                     }
-                    self.lastFutureWeatherRefreshAt = now
-                    self.lastFutureWeatherPoint = point
                 }
 
+                guard !Task.isCancelled,
+                      self.isSceneActive,
+                      self.acceptsDataMutation() else { return }
                 for index in futureContexts.indices {
                     futureContexts[index].isForecast = true
                     futureContexts[index].point = point
@@ -9859,6 +10887,9 @@ final class AppModel {
                     futureContexts,
                     kind: "weather-forecast-hourly"
                 )
+                guard !Task.isCancelled,
+                      self.isSceneActive,
+                      self.acceptsDataMutation() else { return }
                 self.lastLiveEnvironmentPoint = point
                 self.lastLiveEnvironmentAt = date
                 self.lastLiveEnvironmentFailureAt = nil
@@ -9989,7 +11020,6 @@ final class AppModel {
         fallbackReading: SensorReading? = nil
     ) async {
         let calendar = Calendar.autoupdatingCurrent
-        guard isSceneActive else { return }
         guard calendar.isDate(span.start, inSameDayAs: .now) else {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "weather_historical_restored",
@@ -10032,10 +11062,12 @@ final class AppModel {
                 longitude: point.longitude,
                 at: observedAt
             )
+            guard !Task.isCancelled, acceptsDataMutation() else { return }
             await archiveWeatherRawContexts(
                 [context],
                 kind: "weather-context"
             )
+            guard !Task.isCancelled, acceptsDataMutation() else { return }
             snapshot.weather = WeatherTimelineEngine.replacing(
                 snapshot.weather,
                 current: context
@@ -10284,10 +11316,16 @@ final class AppModel {
                     calendar: calendar
                 ),
             accelerationSettings: TaptionWatchAccelerationSettings(
-                profile: snapshot.settings.watchAccelerationProfile
+                profile: isCommerceLocked
+                    ? .off
+                    : snapshot.settings.watchAccelerationProfile
             ),
-            dataSyncProfile: snapshot.settings.watchDataSyncProfile,
-            locationTrackingEnabled: snapshot.settings.locationEnabled,
+            dataSyncProfile: isCommerceLocked
+                ? .off
+                : snapshot.settings.watchDataSyncProfile,
+            locationTrackingEnabled: isCommerceLocked
+                ? false
+                : snapshot.settings.locationEnabled,
             locationPermissionState:
                 snapshot.settings.permissions[.location]?.rawValue,
             activitySuggestion: hidesSensitiveContent
@@ -10295,6 +11333,7 @@ final class AppModel {
                 : pendingWatchActivitySuggestion.flatMap {
                     now.timeIntervalSince($0.endedAt) <= 2 * 3_600 ? $0 : nil
                 },
+            commerceLocked: isCommerceLocked,
             languagePreference: AppLanguagePreference.current.watchPayloadValue
         )
         var identity = watchPayload
@@ -10409,6 +11448,20 @@ final class AppModel {
         )
     }
 
+    private var hasCurrentDataGeneration: Bool {
+        dataDeletionGeneration
+            == TaptionDataDeletionFence.currentGeneration()
+    }
+
+    private func acceptsDataMutation(capturedAt: Date? = nil) -> Bool {
+        !isCommerceLocked
+            && !isDeletingUserData
+            && TaptionDataDeletionFence.allows(
+                generation: dataDeletionGeneration,
+                capturedAt: capturedAt
+            )
+    }
+
     private func assignTimestampOnlySnapshot(_ value: TaptionDataSnapshot) {
         // Persisting a sensor snapshot updates only the envelope timestamp.
         // Mark that assignment so didSet does not compare every historical
@@ -10418,8 +11471,40 @@ final class AppModel {
         snapshot = value
     }
 
+    private func saveToRepository(
+        _ value: TaptionDataSnapshot,
+        expectedRevision: UInt64? = nil
+    ) async throws -> Bool {
+        guard hasCurrentDataGeneration else {
+            throw RepositoryError.staleGeneration
+        }
+        if let expectedRevision, expectedRevision != snapshotRevision {
+            return false
+        }
+        while isRepositoryWriteActive {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard hasCurrentDataGeneration else {
+            throw RepositoryError.staleGeneration
+        }
+        if let expectedRevision, expectedRevision != snapshotRevision {
+            return false
+        }
+        isRepositoryWriteActive = true
+        defer { isRepositoryWriteActive = false }
+        try await repository.save(value)
+        if let expectedRevision, expectedRevision != snapshotRevision {
+            return false
+        }
+        return true
+    }
+
     @discardableResult
-    private func persist() async -> Bool {
+    private func persist(allowingDeletion: Bool = false) async -> Bool {
+        guard hasCurrentDataGeneration,
+              allowingDeletion || !isDeletingUserData else { return false }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         guard !repositoryLoadFailed else {
             Self.integrationLogger.error(
                 "Persistence blocked after repository load failure; preserving existing data"
@@ -10434,14 +11519,22 @@ final class AppModel {
             value.updatedAt = .now
             var visibleValue = value
             visibleValue.memos = snapshot.memos
-            try await repository.save(value)
-            assignTimestampOnlySnapshot(visibleValue)
+            let sourceRevision = snapshotRevision
+            guard try await saveToRepository(
+                value,
+                expectedRevision: sourceRevision
+            ) else { return true }
+            if snapshotRevision == sourceRevision {
+                assignTimestampOnlySnapshot(visibleValue)
+            }
+            let cloudSourceRevision = snapshotRevision
             if pendingMapMemoIDs.isEmpty,
+               !isDeletingUserData,
                permissionState(for: .cloud).isGranted,
                let cloudSyncService {
                 do {
                     let uploaded = try await cloudSyncService.upload(
-                        cloudPortableSnapshot(value)
+                        Self.cloudPortableSnapshot(value)
                     )
                     let localDeviceData = snapshot
                     let pendingMemos = localDeviceData.memos.filter {
@@ -10464,7 +11557,12 @@ final class AppModel {
                     persisted.memos.removeAll {
                         pendingMapMemoIDs.contains($0.id)
                     }
-                    try await repository.save(persisted)
+                    guard cloudSourceRevision == snapshotRevision,
+                          acceptsDataMutation(),
+                          try await saveToRepository(
+                              persisted,
+                              expectedRevision: cloudSourceRevision
+                          ) else { return true }
                     assignCommittedCloudSnapshot(committed)
                 } catch {
                     if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
@@ -10532,11 +11630,11 @@ final class AppModel {
         }
     }
 
-    private func cloudPortableSnapshot(
+    nonisolated static func cloudPortableSnapshot(
         _ source: TaptionDataSnapshot
     ) -> TaptionDataSnapshot {
-        var value = source
-        value.actuals.removeAll(where: Self.isDeviceLocalActual)
+        var value = PlanCloudSnapshotRecoveryPolicy.iCloudSafe(source)
+        value.calendarEvents = []
         value.photos = []
         value.memos = value.memos.map { memo in
             var portable = memo
@@ -10602,6 +11700,7 @@ final class AppModel {
             recoveringMissingFrom: value.stickers,
             id: \.id
         ).sorted { $0.updatedAt < $1.updatedAt }
+        value.calendarEvents = local.calendarEvents
         value.photos = local.photos
         value.settings.permissions = local.settings.permissions
         value.settings.showsPhotos = local.settings.showsPhotos
@@ -10794,6 +11893,9 @@ final class AppModel {
     }
 
     private func persistDeviceLocalSnapshot() async {
+        guard acceptsDataMutation() else { return }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
         guard !repositoryLoadFailed else {
             Self.integrationLogger.error(
                 "Device persistence blocked after repository load failure; preserving existing data"
@@ -10821,8 +11923,14 @@ final class AppModel {
             value.updatedAt = .now
             var visibleValue = value
             visibleValue.memos = snapshot.memos
-            assignTimestampOnlySnapshot(visibleValue)
-            try await repository.save(value)
+            let sourceRevision = snapshotRevision
+            guard try await saveToRepository(
+                value,
+                expectedRevision: sourceRevision
+            ) else { return }
+            if snapshotRevision == sourceRevision {
+                assignTimestampOnlySnapshot(visibleValue)
+            }
             publishWidgetPayload()
         } catch {
             userFacingError =

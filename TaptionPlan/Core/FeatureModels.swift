@@ -1180,10 +1180,65 @@ struct CalendarRecord: Identifiable, Codable, Hashable, Sendable {
     var calendarTitle: String
     var calendarColorHex: String?
     var sourceTitle: String?
+    var sourceIdentifier: String? = nil
+    /// EventKit keeps the event's wall-clock zone and floating-time state
+    /// separately from its absolute Date values. Keep both so a day reload or
+    /// device-zone change does not move an all-day/floating event to another
+    /// day.
+    var timeZoneIdentifier: String? = nil
+    var isFloatingTime: Bool? = nil
+    var originalStartDateComponents: DateComponents? = nil
+    var originalEndDateComponents: DateComponents? = nil
+    var externalIdentifier: String? = nil
+    var recurrenceIdentifier: String? = nil
     /// 정지 구간 문맥 추론에서 쓰는 EventKit 부가 정보. 이전 보관본은 값이
     /// 없으므로 옵셔널로 둔다.
     var attendeeCount: Int? = nil
     var isCancelled: Bool? = nil
+
+    /// The timeline uses the device calendar for day buckets and labels. A
+    /// floating or all-day event is date-based, so rebuild its span from the
+    /// original wall-clock components instead of interpreting EventKit's Date
+    /// as an instant in the current zone.
+    func normalizedForDisplay(
+        in calendar: Calendar = .autoupdatingCurrent
+    ) -> CalendarRecord {
+        guard (isAllDay || isFloatingTime == true),
+              let originalStartDateComponents,
+              let start = Self.date(
+                  from: originalStartDateComponents,
+                  in: calendar,
+                  allDay: isAllDay
+              ) else {
+            return self
+        }
+        let end = originalEndDateComponents.flatMap {
+            Self.date(from: $0, in: calendar, allDay: isAllDay)
+        } ?? calendar.date(byAdding: .day, value: 1, to: start)
+        guard let end, end > start else { return self }
+        var value = self
+        value.span = TimeSpan(start: start, end: end)
+        return value
+    }
+
+    private static func date(
+        from components: DateComponents,
+        in calendar: Calendar,
+        allDay: Bool
+    ) -> Date? {
+        var value = DateComponents()
+        value.era = components.era
+        value.year = components.year
+        value.month = components.month
+        value.day = components.day
+        if !allDay {
+            value.hour = components.hour
+            value.minute = components.minute
+            value.second = components.second
+            value.nanosecond = components.nanosecond
+        }
+        return calendar.date(from: value)
+    }
 }
 
 struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
@@ -3125,6 +3180,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var behaviorModelVersion: String?
     var trackingSessionID: UUID?
     var trackingKind: TrackingKind?
+    var trackingWasAutomaticallyDetected: Bool?
     var sourceDevice: TrackingDevice?
     var sequence: Int?
     var trackingSessionEnded: Bool?
@@ -3178,6 +3234,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         behaviorModelVersion: String? = nil,
         trackingSessionID: UUID? = nil,
         trackingKind: TrackingKind? = nil,
+        trackingWasAutomaticallyDetected: Bool? = nil,
         sourceDevice: TrackingDevice? = nil,
         sequence: Int? = nil,
         trackingSessionEnded: Bool? = nil
@@ -3235,6 +3292,8 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.behaviorModelVersion = behaviorModelVersion
         self.trackingSessionID = trackingSessionID
         self.trackingKind = trackingKind
+        self.trackingWasAutomaticallyDetected =
+            trackingWasAutomaticallyDetected
         self.sourceDevice = sourceDevice
         self.sequence = sequence
         self.trackingSessionEnded = trackingSessionEnded

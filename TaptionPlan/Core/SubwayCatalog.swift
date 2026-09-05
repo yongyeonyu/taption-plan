@@ -5,6 +5,8 @@ import Foundation
 /// CC0 공개 역 목록으로 보완한다. 원본 센서가 아니라 경로를 그리기 위한
 /// 정적 파생자료이므로 로그와 분리해 보관한다.
 enum SubwayStationCatalog {
+    private static let maximumStationSampleGap: TimeInterval = 30 * 60
+
     struct Station: Hashable, Sendable {
         let lineName: String
         let order: Int
@@ -267,7 +269,7 @@ enum SubwayStationCatalog {
 
         var names: [String] = []
         for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
-            guard let point = reading.point else { continue }
+            guard let point = reliableGPSPoint(from: reading) else { continue }
             guard let location = stations.min(by: {
                 distanceMeters(point, $0.point) < distanceMeters(point, $1.point)
             }) else { continue }
@@ -396,10 +398,7 @@ enum SubwayStationCatalog {
     ) -> StationJourney? {
         let ordered = readings.sorted { $0.timestamp < $1.timestamp }
         let samples: [StationPointSample] = ordered.compactMap { reading in
-            guard let point = reading.point,
-                  reading.locationFixQuality != .approximate,
-                  point.horizontalAccuracy > 0,
-                  point.horizontalAccuracy <= 100 else {
+            guard let point = reliableGPSPoint(from: reading) else {
                 return nil
             }
             // GPS 표본은 역 중심에서 수십~수백 m 벗어날 수 있다. 체류
@@ -434,7 +433,10 @@ enum SubwayStationCatalog {
             var end = index
             while end + 1 < samples.count,
                   let nextName = samples[end + 1].stationName,
-                  normalized(nextName) == normalizedName {
+                  normalized(nextName) == normalizedName,
+                  samples[end + 1].timestamp.timeIntervalSince(
+                      samples[end].timestamp
+                  ) <= Self.maximumStationSampleGap {
                 end += 1
             }
 
@@ -444,7 +446,17 @@ enum SubwayStationCatalog {
             if duration >= minimumStayDuration,
                let coordinate = coordinate(for: stationName) {
                 let after = samples[(end + 1)...]
-                let outsideDistances = after.compactMap { sample -> Double? in
+                var contiguousAfter: [StationPointSample] = []
+                var previous = samples[end]
+                for sample in after {
+                    guard sample.timestamp.timeIntervalSince(previous.timestamp)
+                            <= Self.maximumStationSampleGap else {
+                        break
+                    }
+                    contiguousAfter.append(sample)
+                    previous = sample
+                }
+                let outsideDistances = contiguousAfter.compactMap { sample -> Double? in
                     let distance = distanceMeters(sample.point, coordinate)
                     return distance >= exitDistanceMeters ? distance : nil
                 }
@@ -474,6 +486,15 @@ enum SubwayStationCatalog {
               let first = candidateStays.first,
               let last = candidateStays.last,
               normalized(first.stationName) != normalized(last.stationName) else {
+            return nil
+        }
+        let journeySamples = samples.filter {
+            $0.timestamp >= first.arrival && $0.timestamp <= last.departure
+        }
+        guard zip(journeySamples, journeySamples.dropFirst()).allSatisfy({
+            $1.timestamp.timeIntervalSince($0.timestamp)
+                <= Self.maximumStationSampleGap
+        }) else {
             return nil
         }
         let names = candidateStays.map(\.stationName)
@@ -564,7 +585,7 @@ enum SubwayStationCatalog {
                 }?.stationName
             }
         }
-        guard let point = reading.point else { return nil }
+        guard let point = reliableGPSPoint(from: reading) else { return nil }
         var nearest: (name: String, distance: Double)?
         for stop in route.stops {
             guard let coordinate = stop.coordinate else { continue }
@@ -660,9 +681,7 @@ enum SubwayStationCatalog {
             point: GeoPoint
         )] = []
         for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
-            guard let point = reading.point,
-                  point.horizontalAccuracy < 0
-                    || point.horizontalAccuracy <= 100,
+            guard let point = reliableGPSPoint(from: reading),
                   let station = nearest(
                       to: point,
                       maximumDistanceMeters: maximumDistanceMeters
@@ -698,21 +717,12 @@ enum SubwayStationCatalog {
         // 실제 노선상 이동 거리가 가장 긴 단순 경로를 선택한다. 역을 다시
         // 방문하는 후보는 도로를 따라 여러 역 반경을 스친 잡음일 가능성이
         // 높아 제외한다.
-        let candidates = trajectoryCandidates(
+        guard let best = bestTrajectoryCandidate(
             from: observations,
             minimumObservedStationCount: minimumObservedStationCount,
             minimumDuration: minimumDuration,
             minimumRouteStopCount: minimumRouteStopCount
-        )
-        guard let best = candidates.max(by: { lhs, rhs in
-            if lhs.route.stops.count != rhs.route.stops.count {
-                return lhs.route.stops.count < rhs.route.stops.count
-            }
-            if lhs.names.count != rhs.names.count {
-                return lhs.names.count < rhs.names.count
-            }
-            return lhs.last.timestamp < rhs.last.timestamp
-        }) else {
+        ) else {
             return nil
         }
         return CoordinateTrajectory(
@@ -723,7 +733,25 @@ enum SubwayStationCatalog {
         )
     }
 
-    private static func trajectoryCandidates(
+    private static func reliableGPSPoint(
+        from reading: SensorReading
+    ) -> GeoPoint? {
+        guard reading.gpsAvailable,
+              reading.locationFixQuality != .approximate,
+              let point = reading.point,
+              point.latitude.isFinite,
+              point.longitude.isFinite,
+              (-90...90).contains(point.latitude),
+              (-180...180).contains(point.longitude),
+              point.horizontalAccuracy.isFinite,
+              point.horizontalAccuracy > 0,
+              point.horizontalAccuracy <= 100 else {
+            return nil
+        }
+        return point
+    }
+
+    private static func bestTrajectoryCandidate(
         from observations: [(
             name: String,
             timestamp: Date,
@@ -732,41 +760,99 @@ enum SubwayStationCatalog {
         minimumObservedStationCount: Int,
         minimumDuration: TimeInterval,
         minimumRouteStopCount: Int
-    ) -> [(
+    ) -> (
         names: [String],
         route: SubwayRoutePath,
         first: (name: String, timestamp: Date, point: GeoPoint),
         last: (name: String, timestamp: Date, point: GeoPoint)
-    )] {
-        guard observations.count >= minimumObservedStationCount else { return [] }
-        var result: [(
+    )? {
+        guard observations.count >= minimumObservedStationCount else {
+            return nil
+        }
+        let routeLegs = zip(observations, observations.dropFirst()).map {
+            pair -> [Int]? in
+            guard let starts = stationIndices[normalized(pair.0.name)],
+                  let ends = stationIndices[normalized(pair.1.name)] else {
+                return nil
+            }
+            return shortestPath(from: starts, to: ends)
+        }
+        var best: (
             names: [String],
             route: SubwayRoutePath,
             first: (name: String, timestamp: Date, point: GeoPoint),
             last: (name: String, timestamp: Date, point: GeoPoint)
-        )] = []
+        )?
         for start in observations.indices {
             let firstEnd = start + minimumObservedStationCount - 1
             guard firstEnd < observations.count else { continue }
-            for end in firstEnd..<observations.count {
-                let window = Array(observations[start...end])
-                let names = window.map(\.name)
-                guard Set(names.map(normalized)).count >= minimumObservedStationCount,
-                      let first = window.first,
-                      let last = window.last,
+            var names = [observations[start].name]
+            var distinctNames = Set([normalized(observations[start].name)])
+            var path: [Int] = []
+            var lastPathIndexByName: [String: Int] = [:]
+            var hasInvalidRepeat = false
+            for end in (start + 1)..<observations.count {
+                names.append(observations[end].name)
+                distinctNames.insert(normalized(observations[end].name))
+                if let leg = routeLegs[end - 1] {
+                    let skipFirst = path.last == leg.first
+                    for node in leg.dropFirst(skipFirst ? 1 : 0) {
+                        let stationName = normalized(stations[node].stationName)
+                        if let previous = lastPathIndexByName[stationName],
+                           path.count - previous > 1 {
+                            hasInvalidRepeat = true
+                            break
+                        }
+                        lastPathIndexByName[stationName] = path.count
+                        path.append(node)
+                    }
+                }
+                if hasInvalidRepeat || path.count > 64 { break }
+                guard !path.isEmpty else { continue }
+                let first = observations[start]
+                let last = observations[end]
+                guard end >= firstEnd,
+                      distinctNames.count >= minimumObservedStationCount,
                       last.timestamp.timeIntervalSince(first.timestamp)
                         >= minimumDuration,
-                      let route = route(for: names),
-                      route.stops.count >= minimumRouteStopCount,
-                      route.stops.count
+                      path.count >= minimumRouteStopCount,
+                      path.count
                         <= min(64, max(12, names.count * 8)),
-                      !hasNonAdjacentStationRepeat(route) else {
+                      let route = route(from: path) else {
                     continue
                 }
-                result.append((names, route, first, last))
+                let candidate = (names, route, first, last)
+                if let best,
+                   !trajectoryCandidatePrecedes(best, candidate) {
+                    continue
+                }
+                best = candidate
             }
         }
-        return result
+        return best
+    }
+
+    private static func trajectoryCandidatePrecedes(
+        _ lhs: (
+            names: [String],
+            route: SubwayRoutePath,
+            first: (name: String, timestamp: Date, point: GeoPoint),
+            last: (name: String, timestamp: Date, point: GeoPoint)
+        ),
+        _ rhs: (
+            names: [String],
+            route: SubwayRoutePath,
+            first: (name: String, timestamp: Date, point: GeoPoint),
+            last: (name: String, timestamp: Date, point: GeoPoint)
+        )
+    ) -> Bool {
+        if lhs.route.stops.count != rhs.route.stops.count {
+            return lhs.route.stops.count < rhs.route.stops.count
+        }
+        if lhs.names.count != rhs.names.count {
+            return lhs.names.count < rhs.names.count
+        }
+        return lhs.last.timestamp < rhs.last.timestamp
     }
 
     private static func hasNonAdjacentStationRepeat(
@@ -873,6 +959,10 @@ enum SubwayStationCatalog {
         }
         guard path.count >= 2 else { return nil }
 
+        return route(from: path)
+    }
+
+    private static func route(from path: [Int]) -> SubwayRoutePath? {
         let stops = path.map { index in
             let station = stations[index]
             return SubwayRouteStop(

@@ -1,6 +1,18 @@
 import SwiftUI
 import UIKit
 
+enum MapHomeWBSTripStyle {
+    static let paperHex = "#FCF9F4"
+    static let actualRouteHex = "#458B88"
+    static let transitRouteHex = "#9A6A2D"
+    static let forecastRouteHex = "#C65D4D"
+    static let actualRouteOpacity = 0.96
+    static let forecastRouteOpacity = 0.78
+    static let actualRouteLineWidth: CGFloat = 2.2
+    static let forecastRouteLineWidth: CGFloat = 1.8
+    static let routeDash: [NSNumber] = [4, 3]
+}
+
 extension Font {
     static func taption(
         size: CGFloat,

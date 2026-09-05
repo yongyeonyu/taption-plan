@@ -54,7 +54,7 @@ struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
     var payloadByteCount: Int?
 
     init<T: Encodable>(
-        id: UUID = UUID(),
+        id: UUID? = nil,
         capturedAt: Date = .now,
         source: RawDeviceDataSource,
         kind: String,
@@ -62,15 +62,58 @@ struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
         payload: T,
         encoder: JSONEncoder = RawDeviceDataMonthlyArchive.payloadEncoder()
     ) throws {
-        self.id = id
         self.capturedAt = capturedAt
         self.source = source
         self.kind = kind
         self.schemaVersion = schemaVersion
         let data = try encoder.encode(payload)
         self.payloadJSON = String(decoding: data, as: UTF8.self)
-        self.payloadChecksum = TaptionPlanCanonicalStorage.checksum(data)
+        let checksum = TaptionPlanCanonicalStorage.checksum(data)
+        self.payloadChecksum = checksum
         self.payloadByteCount = data.count
+        self.id = id ?? Self.stableID(
+            capturedAt: capturedAt,
+            source: source,
+            kind: kind,
+            schemaVersion: schemaVersion,
+            payloadChecksum: checksum
+        )
+    }
+
+    var hasValidPayload: Bool {
+        guard let data = payloadJSON.data(using: .utf8) else { return false }
+        if let payloadByteCount, payloadByteCount != data.count { return false }
+        if let payloadChecksum,
+           payloadChecksum != TaptionPlanCanonicalStorage.checksum(data) {
+            return false
+        }
+        return true
+    }
+
+    private static func stableID(
+        capturedAt: Date,
+        source: RawDeviceDataSource,
+        kind: String,
+        schemaVersion: Int,
+        payloadChecksum: String
+    ) -> UUID {
+        let seed = [
+            source.rawValue,
+            kind,
+            String(schemaVersion),
+            String(capturedAt.timeIntervalSince1970.bitPattern),
+            payloadChecksum,
+        ].joined(separator: "|")
+        let hex = String(
+            TaptionPlanCanonicalStorage.checksum(Data(seed.utf8)).prefix(32)
+        )
+        let first = String(hex.prefix(8))
+        let second = String(hex.dropFirst(8).prefix(4))
+        let third = String(hex.dropFirst(12).prefix(4))
+        let fourth = String(hex.dropFirst(16).prefix(4))
+        let fifth = String(hex.dropFirst(20).prefix(12))
+        let value = "\(first)-\(second)-\(third)-\(fourth)-\(fifth)"
+        return UUID(uuidString: value)!
     }
 }
 
@@ -93,6 +136,7 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         qos: .utility
     )
     private let flushDelay: TimeInterval
+    private var archiveGeneration: UInt64 = 0
     private var scheduledMonths = Set<String>()
     private var monthEnvelopeCache: [String: [RawDeviceDataEnvelope]] = [:]
     private var monthEnvelopeCacheOrder: [String] = []
@@ -153,6 +197,9 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
 
     func append(envelopes: [RawDeviceDataEnvelope]) throws {
         guard !envelopes.isEmpty else { return }
+        guard envelopes.allSatisfy(\.hasValidPayload) else {
+            throw ArchiveError.invalidEnvelope
+        }
         var monthsToSchedule: [String] = []
         lock.lock()
         do {
@@ -268,12 +315,14 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         for payload in payloads {
             for line in payload.split(separator: 0x0A) {
                 do {
-                    decoded.append(
-                        try decoder.decode(
-                            RawDeviceDataEnvelope.self,
-                            from: Data(line)
-                        )
+                    let envelope = try decoder.decode(
+                        RawDeviceDataEnvelope.self,
+                        from: Data(line)
                     )
+                    guard envelope.hasValidPayload else {
+                        throw ArchiveError.invalidEnvelope
+                    }
+                    decoded.append(envelope)
                 } catch {
                     if strict { throw ArchiveError.invalidEnvelope }
                 }
@@ -397,6 +446,18 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         }
     }
 
+    func deleteAll() throws {
+        lock.lock()
+        defer { lock.unlock() }
+        archiveGeneration &+= 1
+        scheduledMonths.removeAll()
+        monthEnvelopeCache.removeAll()
+        monthEnvelopeCacheOrder.removeAll()
+        if FileManager.default.fileExists(atPath: rootDirectory.path) {
+            try FileManager.default.removeItem(at: rootDirectory)
+        }
+    }
+
     private func monthDirectory(for monthKey: String) throws -> URL {
         let directory = rootDirectory.appendingPathComponent(
             monthKey,
@@ -445,9 +506,13 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
 
     private func flush(monthKey: String) throws {
         let pendingURL: URL?
+        let generation: UInt64
         lock.lock()
         do {
-            scheduledMonths.remove(monthKey)
+            guard scheduledMonths.remove(monthKey) != nil else {
+                lock.unlock()
+                return
+            }
             let directory = try monthDirectory(for: monthKey)
             let journalURL = journalFileURL(in: directory)
             guard FileManager.default.fileExists(atPath: journalURL.path) else {
@@ -473,6 +538,7 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
                 to: destination
             )
             pendingURL = destination
+            generation = archiveGeneration
             lock.unlock()
         } catch {
             lock.unlock()
@@ -480,11 +546,18 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         }
         guard let pendingURL else { return }
         let payload = try Data(contentsOf: pendingURL)
+        let compressed = try compress(payload)
         let destination = pendingURL
             .deletingPathExtension()
             .deletingPathExtension()
             .appendingPathExtension("jsonl.zlib")
-        try compress(payload).write(
+        lock.lock()
+        defer { lock.unlock() }
+        guard generation == archiveGeneration,
+              FileManager.default.fileExists(atPath: pendingURL.path) else {
+            return
+        }
+        try compressed.write(
             to: destination,
             options: [
                 .atomic,
@@ -694,6 +767,15 @@ final class TrackingSessionChunkArchive: @unchecked Sendable {
         return result.sorted { $0.timestamp < $1.timestamp }
     }
 
+    func deleteAll() throws {
+        lock.lock()
+        defer { lock.unlock() }
+        pending.removeAll()
+        if FileManager.default.fileExists(atPath: rootDirectory.path) {
+            try FileManager.default.removeItem(at: rootDirectory)
+        }
+    }
+
     private func write(_ chunk: PendingChunk, sessionID: UUID) throws {
         guard !chunk.readings.isEmpty else { return }
         let components = calendar.dateComponents(
@@ -796,6 +878,8 @@ actor RawDeviceDataDayArchive {
         case invalidEnvelope
     }
     private let store: TaptionPlanDayStore
+    private let writeLockURL: URL
+    private var dataDeletionGeneration: UInt64
 
     init(databaseURL: URL) throws {
         try FileManager.default.createDirectory(
@@ -803,6 +887,8 @@ actor RawDeviceDataDayArchive {
             withIntermediateDirectories: true
         )
         store = try TaptionPlanDayStore(url: databaseURL)
+        writeLockURL = databaseURL.appendingPathExtension("lock")
+        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
 
     static func applicationSupport() throws -> RawDeviceDataDayArchive {
@@ -818,15 +904,24 @@ actor RawDeviceDataDayArchive {
 
     func append(_ envelopes: [RawDeviceDataEnvelope]) async throws {
         guard !envelopes.isEmpty else { return }
-        var seen = Set<UUID>()
-        let events = try envelopes
+        guard envelopes.allSatisfy(\.hasValidPayload) else {
+            throw Error.invalidEnvelope
+        }
+        let generation = dataDeletionGeneration
+        var uniqueByID: [UUID: RawDeviceDataEnvelope] = [:]
+        for envelope in envelopes {
+            if let existing = uniqueByID[envelope.id], existing != envelope {
+                throw TaptionPlanDayStoreError.eventConflict(id: envelope.id.uuidString)
+            }
+            uniqueByID[envelope.id] = envelope
+        }
+        let events = try uniqueByID.values
             .sorted {
                 if $0.capturedAt != $1.capturedAt {
                     return $0.capturedAt < $1.capturedAt
                 }
                 return $0.id.uuidString < $1.id.uuidString
             }
-            .filter { seen.insert($0.id).inserted }
             .map { envelope in
                 TaptionPlanDayStore.Event(
                     day: TaptionPlanDayKey(date: envelope.capturedAt),
@@ -839,7 +934,10 @@ actor RawDeviceDataDayArchive {
                     )
                 )
             }
-        try await store.upsertEvents(events)
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
+        try await store.appendUniqueEvents(events)
     }
 
     func envelopes(in span: TimeSpan) async throws
@@ -849,14 +947,16 @@ actor RawDeviceDataDayArchive {
             through: TaptionPlanDayKey(date: span.end),
             domain: Self.domain
         )
-        return events.compactMap { event in
-            guard let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
+        return try events.compactMap { event in
+            let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
                 from: event.payload
-            ), let value = try? TaptionPlanCanonicalStorage.decode(
+            )
+            let value = try TaptionPlanCanonicalStorage.decode(
                 RawDeviceDataEnvelope.self,
                 from: encoded
-            ), span.contains(value.capturedAt) else { return nil }
-            return value
+            )
+            guard value.hasValidPayload else { throw Error.invalidEnvelope }
+            return span.contains(value.capturedAt) ? value : nil
         }
     }
 
@@ -867,7 +967,7 @@ actor RawDeviceDataDayArchive {
             ), let value = try? TaptionPlanCanonicalStorage.decode(
                 RawDeviceDataEnvelope.self,
                 from: encoded
-            ) else {
+            ), value.hasValidPayload else {
                 throw Error.invalidEnvelope
             }
             return value
@@ -875,7 +975,26 @@ actor RawDeviceDataDayArchive {
     }
 
     func checkpoint() async throws {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try await store.checkpoint()
+    }
+
+    func deleteAll(generation: UInt64? = nil) async throws {
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        dataDeletionGeneration = generation
+            ?? TaptionDataDeletionFence.currentGeneration()
+        try await store.deleteEvents(domain: Self.domain)
+    }
+
+    private func checkDataGeneration(_ generation: UInt64) throws {
+        guard generation == dataDeletionGeneration,
+              TaptionDataDeletionFence.allows(generation: generation) else {
+            throw CancellationError()
+        }
     }
 }
 
@@ -887,6 +1006,7 @@ actor SensorReadingArchive {
     private enum Error: Swift.Error {
         case dayStoreUnavailable
         case invalidReading
+        case conflictingReading
     }
 
     private static let migrationKey = "sensor-reading-v1-to-day-store-v2"
@@ -896,6 +1016,8 @@ actor SensorReadingArchive {
     private let legacyDecoder: JSONDecoder
     private let rawArchive: RawDeviceDataMonthlyArchive?
     private let trackingChunkArchive: TrackingSessionChunkArchive?
+    private let writeLockURL: URL
+    private var dataDeletionGeneration: UInt64
 
     init(
         fileURL: URL,
@@ -916,6 +1038,8 @@ actor SensorReadingArchive {
             withIntermediateDirectories: true
         )
         self.dayStore = try TaptionPlanDayStore(url: storeURL)
+        self.writeLockURL = storeURL.appendingPathExtension("lock")
+        self.dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
         self.legacyDecoder = JSONDecoder()
         legacyDecoder.dateDecodingStrategy = .secondsSince1970
     }
@@ -956,17 +1080,21 @@ actor SensorReadingArchive {
 
     func append(_ readings: [SensorReading], now: Date = .now) async throws {
         guard !readings.isEmpty else { return }
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try await ensureMigrated()
         guard let dayStore else { throw Error.dayStoreUnavailable }
-        let unique = Dictionary(grouping: readings, by: \.id).compactMap { $0.value.first }
-        var knownIDs = Set<String>()
-        let days = unique.map { TaptionPlanDayKey(date: $0.timestamp) }
-        if let start = days.min(), let end = days.max() {
-            let events = try await dayStore.events(from: start, through: end, domain: "sensor-reading")
-            knownIDs.formUnion(events.map(\.id))
+        var readingsByID: [UUID: SensorReading] = [:]
+        for reading in readings {
+            if let existing = readingsByID[reading.id], existing != reading {
+                throw Error.conflictingReading
+            }
+            readingsByID[reading.id] = reading
         }
+        let unique = Array(readingsByID.values)
         let events = try unique
-            .filter { !knownIDs.contains($0.id.uuidString) }
             .map { reading in
                 TaptionPlanDayStore.Event(
                     day: TaptionPlanDayKey(date: reading.timestamp),
@@ -979,45 +1107,106 @@ actor SensorReadingArchive {
                     )
                 )
             }
-        try await dayStore.appendEvents(events)
+        try await dayStore.appendUniqueEvents(events)
         _ = now
     }
 
     func readings(in span: TimeSpan) async throws -> [SensorReading] {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try await ensureMigrated()
         let values = try await loadEvents(in: span)
         return values.sorted(by: readingOrder)
     }
 
     func routeReadings(in span: TimeSpan) async throws -> [SensorReading] {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try await ensureMigrated()
         return try await loadEvents(in: span).sorted(by: readingOrder)
     }
 
     func allReadings() async throws -> [SensorReading] {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try await ensureMigrated()
         guard let dayStore else { throw Error.dayStoreUnavailable }
-        return try await dayStore.allEvents(domain: "sensor-reading").map { event in
-            guard let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
-                from: event.payload
-            ), let reading = try? TaptionPlanCanonicalStorage.decode(
-                SensorReading.self,
-                from: encoded
-            ) else {
-                throw Error.invalidReading
+        var readings: [SensorReading] = []
+        for event in try await dayStore.allEvents(domain: "sensor-reading") {
+            do {
+                let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
+                    from: event.payload
+                )
+                readings.append(try TaptionPlanCanonicalStorage.decode(
+                    SensorReading.self,
+                    from: encoded
+                ))
+            } catch {
+                var fields = [
+                    "event_id": event.id,
+                    "event_day": String(
+                        format: "%04d-%02d-%02d",
+                        event.day.year,
+                        event.day.month,
+                        event.day.day
+                    ),
+                    "raw_preserved": "true",
+                ]
+                fields.merge(
+                    TaptionDiagnosticError.compactFields(for: error),
+                    uniquingKeysWith: { _, new in new }
+                )
+                if let recovered = recoveryReading(for: event.id) {
+                    fields["recovery_source"] = recovered.source
+                    readings.append(recovered.reading)
+                } else {
+                    fields["recovery_source"] = "unavailable"
+                    Self.logger.error(
+                        "Unreadable sensor archive event preserved: \(event.id, privacy: .public)"
+                    )
+                }
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "sensor_archive_invalid_reading",
+                    level: .error,
+                    fields: fields
+                )
             }
-            return reading
         }
-            .sorted(by: readingOrder)
+        return readings.sorted(by: readingOrder)
     }
 
     func compact(now: Date = .now) async throws {
         _ = now
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         try await ensureMigrated()
     }
 
-    func deleteAll() async throws {
-        try await ensureMigrated()
+    func deleteAll(generation: UInt64? = nil) async throws {
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        dataDeletionGeneration = generation
+            ?? TaptionDataDeletionFence.currentGeneration()
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        try await dayStore.deleteEvents(domain: "sensor-reading")
+        try rawArchive?.deleteAll()
+        try trackingChunkArchive?.deleteAll()
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+
+    private func checkDataGeneration(_ generation: UInt64) throws {
+        guard generation == dataDeletionGeneration,
+              TaptionDataDeletionFence.allows(generation: generation) else {
+            throw CancellationError()
+        }
     }
 
     func rawEnvelopes(inMonthContaining date: Date) async throws
@@ -1032,19 +1221,17 @@ actor SensorReadingArchive {
         var migrated = readLegacyFile()
         if let rawArchive { migrated.append(contentsOf: try rawArchive.sensorReadings()) }
         if let trackingChunkArchive { migrated.append(contentsOf: try trackingChunkArchive.allPersistedReadings()) }
-        var seen = Set<UUID>()
-        let unique = migrated.filter { seen.insert($0.id).inserted }
-        let days = unique.map { TaptionPlanDayKey(date: $0.timestamp) }
-        var existingIDs = Set<String>()
-        if let start = days.min(), let end = days.max() {
-            let existing = try await dayStore.events(
-                from: start,
-                through: end,
-                domain: "sensor-reading"
-            )
-            existingIDs.formUnion(existing.map(\.id))
+        var readingsByID: [UUID: SensorReading] = [:]
+        var unique: [SensorReading] = []
+        for reading in migrated {
+            if let existing = readingsByID[reading.id] {
+                if existing != reading { throw Error.conflictingReading }
+                continue
+            }
+            readingsByID[reading.id] = reading
+            unique.append(reading)
         }
-        let events = try unique.filter { !existingIDs.contains($0.id.uuidString) }.map { reading in
+        let events = try unique.map { reading in
             TaptionPlanDayStore.Event(
                 day: TaptionPlanDayKey(date: reading.timestamp),
                 timestamp: reading.timestamp,
@@ -1056,7 +1243,7 @@ actor SensorReadingArchive {
                 )
             )
         }
-        if !events.isEmpty { try await dayStore.appendEvents(events) }
+        try await dayStore.appendUniqueEvents(events)
         _ = try await dayStore.markMigrationCompleted(Self.migrationKey)
     }
 
@@ -1083,6 +1270,26 @@ actor SensorReadingArchive {
         }
     }
 
+    private func recoveryReading(
+        for eventID: String
+    ) -> (reading: SensorReading, source: String)? {
+        guard let id = UUID(uuidString: eventID) else { return nil }
+        if let reading = readLegacyFile().first(where: { $0.id == id }) {
+            return (reading, "legacy")
+        }
+        if let rawArchive,
+           let readings = try? rawArchive.sensorReadings(),
+           let reading = readings.first(where: { $0.id == id }) {
+            return (reading, "raw")
+        }
+        if let trackingChunkArchive,
+           let readings = try? trackingChunkArchive.allPersistedReadings(),
+           let reading = readings.first(where: { $0.id == id }) {
+            return (reading, "tracking")
+        }
+        return nil
+    }
+
     private func readingOrder(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
         if lhs.timestamp != rhs.timestamp { return lhs.timestamp < rhs.timestamp }
         if lhs.sequence != rhs.sequence { return (lhs.sequence ?? .max) < (rhs.sequence ?? .max) }
@@ -1092,6 +1299,8 @@ actor SensorReadingArchive {
 
 @MainActor
 final class AppleSensorDataService {
+    private static let persistenceBatchSize = 5
+    private static let persistenceBatchDelay: Duration = .seconds(5)
     private static let logger = Logger(
         subsystem: "com.taption.plan",
         category: "SensorArchive"
@@ -1099,25 +1308,43 @@ final class AppleSensorDataService {
     private let collector: AppleSensorCollector
     private let archive: SensorReadingArchive
     private let history: AppleMotionHistoryService
+    private let streamFactory:
+        ((SensorCollectionConfiguration) -> AsyncStream<SensorReading>)?
+    private let appendReadings: ([SensorReading]) async throws -> Void
     private var collectionTask: Task<Void, Never>?
     private var activeConfiguration: SensorCollectionConfiguration?
     private var collectionGeneration = 0
     private var isCollectionStreamLive = false
+    private var isDataDeletionActive = false
     private var persistedReadingCount = 0
     private var lastPersistedReadingAt: Date?
+    private var pendingReadings: [SensorReading] = []
+    private var inFlightReadings: [SensorReading] = []
+    private var inFlightGeneration: Int?
+    private var pendingFlushTask: Task<Void, Never>?
+    private var trailingFlushTask: Task<Void, Never>?
+    private var lastFlushedCollectionGeneration: Int?
 
     private(set) var lastPersistenceErrorDescription: String?
-    var onReadingPersisted: ((SensorReading) -> Void)?
+    var onReadingsPersisted: (([SensorReading]) -> Void)?
     var onPersistenceFailed: ((String) -> Void)?
 
     init(
         collector: AppleSensorCollector? = nil,
         archive: SensorReadingArchive,
-        history: AppleMotionHistoryService = AppleMotionHistoryService()
+        history: AppleMotionHistoryService = AppleMotionHistoryService(),
+        streamFactory:
+            ((SensorCollectionConfiguration) -> AsyncStream<SensorReading>)? = nil,
+        appendReadings:
+            (([SensorReading]) async throws -> Void)? = nil
     ) {
         self.collector = collector ?? AppleSensorCollector()
         self.archive = archive
         self.history = history
+        self.streamFactory = streamFactory
+        self.appendReadings = appendReadings ?? { readings in
+            try await archive.append(readings)
+        }
     }
 
     static func applicationSupport(
@@ -1130,8 +1357,8 @@ final class AppleSensorDataService {
         )
     }
 
-    func hardwareAvailability() -> SensorHardwareAvailability {
-        collector.hardwareAvailability()
+    func hardwareAvailability() async -> SensorHardwareAvailability {
+        await collector.hardwareAvailability()
     }
 
     func locationPermissionState() -> PermissionState {
@@ -1162,9 +1389,14 @@ final class AppleSensorDataService {
         await history.requestAuthorization()
     }
 
+    func requestImmediateSample() {
+        collector.requestImmediateSample()
+    }
+
     func startCollection(
         configuration: SensorCollectionConfiguration = .standard
     ) {
+        guard !isDataDeletionActive else { return }
         let configuration = configuration.normalized
         // A finished stream leaves a completed task behind. Restart in that
         // case, otherwise recording never resumes after the reading stream
@@ -1174,7 +1406,9 @@ final class AppleSensorDataService {
            activeConfiguration == configuration {
             return
         }
+        let previousCollectionTask = collectionTask
         stopCollection()
+        let previousFlushTask = trailingFlushTask
         activeConfiguration = configuration
         collectionGeneration += 1
         let generation = collectionGeneration
@@ -1191,31 +1425,15 @@ final class AppleSensorDataService {
                 ),
             ]
         )
-        let stream = collector.readings(configuration: configuration)
+        let stream = streamFactory?(configuration)
+            ?? collector.readings(configuration: configuration)
         collectionTask = Task { [weak self] in
+            await previousCollectionTask?.value
+            await previousFlushTask?.value
             for await reading in stream {
-                guard !Task.isCancelled, let self else { break }
-                do {
-                    try await self.archive.append(reading)
-                    self.persistedReadingCount += 1
-                    self.lastPersistedReadingAt = reading.timestamp
-                    self.lastPersistenceErrorDescription = nil
-                    self.onReadingPersisted?(reading)
-                } catch {
-                    let description = error.localizedDescription
-                    if self.lastPersistenceErrorDescription != description {
-                        TaptionPlanDiagnosticsLogger.shared.record(
-                            "sensor_archive_append_failed",
-                            level: .error,
-                            fields: TaptionDiagnosticError.fields(for: error)
-                        )
-                    }
-                    self.lastPersistenceErrorDescription = description
-                    self.onPersistenceFailed?(description)
-                    Self.logger.error(
-                        "Sensor archive append failed: \(error.localizedDescription, privacy: .public)"
-                    )
-                    self.stopCollection()
+                guard !Task.isCancelled, let self,
+                      self.collectionGeneration == generation else { break }
+                guard await self.enqueue(reading, generation: generation) else {
                     return
                 }
             }
@@ -1271,12 +1489,159 @@ final class AppleSensorDataService {
     }
 
     func stopCollection() {
+        let generation = collectionGeneration
+        let activeTask = collectionTask
+        let activeFlushTask = pendingFlushTask
+        pendingFlushTask?.cancel()
+        pendingFlushTask = nil
         collectionGeneration += 1
         isCollectionStreamLive = false
         collectionTask?.cancel()
         collectionTask = nil
         activeConfiguration = nil
         collector.stop()
+        guard (!pendingReadings.isEmpty || !inFlightReadings.isEmpty),
+              !isDataDeletionActive else { return }
+        let previous = trailingFlushTask
+        trailingFlushTask = Task { [weak self] in
+            await previous?.value
+            await activeTask?.value
+            await activeFlushTask?.value
+            guard let self else { return }
+            var saved = false
+            for attempt in 0..<3 where !Task.isCancelled {
+                saved = await self.flushPendingReadings(generation: generation)
+                if saved || self.isDataDeletionActive { break }
+                if attempt < 2 {
+                    try? await Task.sleep(for: .seconds(1 << attempt))
+                }
+            }
+        }
+    }
+
+    func stopCollectionAndWait() async {
+        let pending = collectionTask
+        let pendingFlush = pendingFlushTask
+        stopCollection()
+        let trailing = trailingFlushTask
+        await pending?.value
+        await pendingFlush?.value
+        await trailing?.value
+    }
+
+    func prepareForDataDeletion() async {
+        isDataDeletionActive = true
+        await stopCollectionAndWait()
+        pendingReadings.removeAll(keepingCapacity: true)
+    }
+
+    func finishDataDeletion() {
+        isDataDeletionActive = false
+    }
+
+    private func enqueue(
+        _ reading: SensorReading,
+        generation: Int
+    ) async -> Bool {
+        pendingReadings.append(reading)
+        guard inFlightReadings.isEmpty else { return true }
+        if lastFlushedCollectionGeneration != generation
+            || pendingReadings.count >= Self.persistenceBatchSize
+            || reading.trackingSessionEnded == true {
+            return await flushPendingReadings(generation: generation)
+        }
+        schedulePendingFlush(generation: generation)
+        return true
+    }
+
+    private func flushPendingReadings(generation: Int) async -> Bool {
+        guard inFlightReadings.isEmpty else { return true }
+        pendingFlushTask?.cancel()
+        pendingFlushTask = nil
+        let readings = pendingReadings
+        guard !readings.isEmpty else { return true }
+        inFlightReadings = readings
+        inFlightGeneration = generation
+        let saved = await persist(readings, generation: generation)
+        if inFlightGeneration == generation {
+            if saved {
+                pendingReadings.removeFirst(
+                    min(readings.count, pendingReadings.count)
+                )
+            }
+            inFlightReadings.removeAll(keepingCapacity: true)
+            inFlightGeneration = nil
+        }
+        if !saved,
+           collectionGeneration == generation,
+           !isDataDeletionActive {
+            stopCollection()
+        }
+        guard saved,
+              collectionGeneration == generation,
+              !pendingReadings.isEmpty else { return saved }
+        if pendingReadings.count >= Self.persistenceBatchSize
+            || pendingReadings.contains(where: { $0.trackingSessionEnded == true }) {
+            return await flushPendingReadings(generation: generation)
+        }
+        schedulePendingFlush(generation: generation)
+        return true
+    }
+
+    private func schedulePendingFlush(generation: Int) {
+        guard pendingFlushTask == nil,
+              inFlightReadings.isEmpty,
+              !pendingReadings.isEmpty else { return }
+        pendingFlushTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.persistenceBatchDelay)
+            guard !Task.isCancelled,
+                  let self,
+                  self.collectionGeneration == generation else { return }
+            self.pendingFlushTask = nil
+            _ = await self.flushPendingReadings(generation: generation)
+        }
+    }
+
+    private func persist(
+        _ readings: [SensorReading],
+        generation: Int
+    ) async -> Bool {
+        guard !readings.isEmpty else { return true }
+        do {
+            try await appendReadings(readings)
+            guard !isDataDeletionActive else { return false }
+            persistedReadingCount += readings.count
+            if let latest = readings.map(\.timestamp).max() {
+                lastPersistedReadingAt = max(
+                    lastPersistedReadingAt ?? latest,
+                    latest
+                )
+            }
+            lastPersistenceErrorDescription = nil
+            if collectionGeneration == generation {
+                lastFlushedCollectionGeneration = generation
+            }
+            onReadingsPersisted?(readings)
+            return true
+        } catch {
+            guard !isDataDeletionActive else { return false }
+            let description = error.localizedDescription
+            if lastPersistenceErrorDescription != description {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "sensor_archive_append_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error)
+                )
+            }
+            lastPersistenceErrorDescription = description
+            Self.logger.error(
+                "Sensor archive append failed: \(error.localizedDescription, privacy: .public)"
+            )
+            if collectionGeneration == generation {
+                onPersistenceFailed?(description)
+            }
+            return false
+        }
     }
 
     @discardableResult
@@ -1360,28 +1725,29 @@ final class AppleSensorDataService {
     }
 
     func recordExternalReadings(_ readings: [SensorReading]) async throws {
+        guard !isDataDeletionActive else { throw CancellationError() }
         guard let first = readings.min(by: { $0.timestamp < $1.timestamp }),
               let last = readings.max(by: { $0.timestamp < $1.timestamp }) else {
             return
         }
-        let existingIDs = Set(
-            try await archive.routeReadings(
+        let existingReadings = try await archive.routeReadings(
                 in: TimeSpan(
                     start: first.timestamp.addingTimeInterval(-1),
                     end: last.timestamp.addingTimeInterval(1)
                 )
-            ).map(\.id)
-        )
-        var seen = Set<UUID>()
-        let fresh = readings
-            .sorted(by: { $0.timestamp < $1.timestamp })
-            .filter { reading in
-                !existingIDs.contains(reading.id)
-                    && seen.insert(reading.id).inserted
-            }
-        try await archive.append(fresh)
-        for reading in fresh {
-            onReadingPersisted?(reading)
+            )
+        let existingIDs = Set(existingReadings.map(\.id))
+        guard !isDataDeletionActive else { throw CancellationError() }
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        try await archive.append(ordered)
+        guard !isDataDeletionActive else { throw CancellationError() }
+        var notified = Set<UUID>()
+        let inserted = ordered.filter {
+            !existingIDs.contains($0.id)
+                && notified.insert($0.id).inserted
+        }
+        if !inserted.isEmpty {
+            onReadingsPersisted?(inserted)
         }
     }
 
@@ -1429,7 +1795,7 @@ final class AppleSensorDataService {
         return result
     }
 
-    func deleteArchivedReadings() async throws {
-        try await archive.deleteAll()
+    func deleteArchivedReadings(generation: UInt64? = nil) async throws {
+        try await archive.deleteAll(generation: generation)
     }
 }

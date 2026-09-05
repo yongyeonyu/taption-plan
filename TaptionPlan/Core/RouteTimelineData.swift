@@ -226,6 +226,7 @@ struct MapHomeWBSPlaybackLeg: Hashable, Sendable {
     let endDate: Date
     let coordinates: [GeoPoint]
     let cumulativeDistances: [Double]
+    let segmentLengths: [Double]
     let routePhase: MapHomeWBSRoutePhase
     let activity: MapHomeWBSPlaybackActivity
     let mode: TravelMode?
@@ -249,7 +250,12 @@ struct MapHomeWBSPlaybackLeg: Hashable, Sendable {
         self.startDate = startDate
         self.endDate = max(startDate.addingTimeInterval(0.001), endDate)
         self.coordinates = coordinates
-        self.cumulativeDistances = Self.distances(for: coordinates)
+        let cumulativeDistances = Self.distances(for: coordinates)
+        self.cumulativeDistances = cumulativeDistances
+        self.segmentLengths = zip(
+            cumulativeDistances,
+            cumulativeDistances.dropFirst()
+        ).map { $1 - $0 }
         self.routePhase = routePhase
         self.activity = activity
         self.mode = mode
@@ -297,11 +303,54 @@ struct MapHomeWBSPlaybackFrame: Hashable, Sendable {
 /// 정규화하고 재생 중에는 날짜로 frame만 조회한다.
 struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
     static let maximumActualGap: TimeInterval = 15 * 60
-    static let stayRadiusMeters: Double = 30
     static let lookAheadProgress = 0.01
+    private static let frameIndexInterval: TimeInterval = 60
 
     let selectedDate: Date
     let legs: [MapHomeWBSPlaybackLeg]
+    private let legIndicesByMinute: [[Int]]
+
+    private init(selectedDate: Date, legs: [MapHomeWBSPlaybackLeg]) {
+        self.selectedDate = selectedDate
+        self.legs = legs
+        let duration = max(
+            0,
+            legs.lazy.map(\.endDate).max()?.timeIntervalSince(selectedDate)
+                ?? 0
+        )
+        let bucketCount = max(
+            1,
+            Int(ceil(duration / Self.frameIndexInterval))
+        )
+        var index = [[Int]](repeating: [], count: bucketCount)
+        for (legIndex, leg) in legs.enumerated() {
+            let first = Int(floor(
+                leg.startDate.timeIntervalSince(selectedDate)
+                    / Self.frameIndexInterval
+            ))
+            let last = Int(floor(
+                (leg.endDate.timeIntervalSince(selectedDate) - 0.000_001)
+                    / Self.frameIndexInterval
+            ))
+            guard last >= 0, first < bucketCount else { continue }
+            for bucket in max(0, first)...min(bucketCount - 1, last) {
+                index[bucket].append(legIndex)
+            }
+        }
+        legIndicesByMinute = index
+    }
+
+    static func == (
+        lhs: MapHomeWBSPlaybackProjection,
+        rhs: MapHomeWBSPlaybackProjection
+    ) -> Bool {
+        lhs.selectedDate == rhs.selectedDate && lhs.legs == rhs.legs
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(selectedDate)
+        hasher.combine(legs)
+    }
 
     static func make(
         selectedDate: Date,
@@ -378,6 +427,13 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 explicitMovementSpans.append(overlap)
                 continue
             }
+            if segment.isConfirmed {
+                if let sourceID = source?.place.id, let targetID = target?.place.id {
+                    explicitPairs.insert(pairKey(sourceID, targetID))
+                }
+                explicitMovementSpans.append(overlap)
+                continue
+            }
             let legID = "movement-\(segment.id.uuidString)"
             let resolved = routesByLegID[legID] ?? []
             let fallback = [source?.coordinate, target?.coordinate].compactMap { $0 }
@@ -418,7 +474,10 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             )
             guard !explicitMovementSpans.contains(where: {
                 $0.intersection(with: gap) != nil
-            }) else { continue }
+            }), !TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
+                in: gap,
+                readings: readings
+            ) else { continue }
             let gapReadings = readings.filter {
                 $0.timestamp >= gap.start && $0.timestamp <= gap.end
             }
@@ -484,6 +543,11 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 guard reading.timestamp >= dayStart,
                       reading.timestamp < dayEnd,
                       let point = reading.point,
+                      reading.gpsAvailable,
+                      reading.locationFixQuality != .approximate,
+                      point.horizontalAccuracy.isFinite,
+                      point.horizontalAccuracy >= 0,
+                      point.horizontalAccuracy <= 150,
                       isValid(point) else { return nil }
                 return (reading, point)
             }
@@ -500,6 +564,9 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                   source.0.trackingSessionEnded != true,
                   calendar.isDate(source.0.timestamp, inSameDayAs: target.0.timestamp),
                   distanceMeters(source.1, target.1) > 0.1,
+                  !(duration > RouteTimelineDataEngine.sparseConnectionMinimumGap
+                    && distanceMeters(source.1, target.1)
+                        > RouteTimelineDataEngine.sparseConnectionMaximumDistanceMeters),
                   !sleepSpans.contains(where: { sleepSpan in
                       sleepSpan.intersection(
                           with: TimeSpan(
@@ -562,7 +629,14 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         preferredForecastLegIDs: Set<String> = []
     ) -> MapHomeWBSPlaybackFrame? {
         guard !legs.isEmpty else { return nil }
-        let active = legs.filter { date >= $0.startDate && date < $0.endDate }
+        let elapsed = date.timeIntervalSince(selectedDate)
+        guard elapsed >= 0 else { return nil }
+        let minute = Int(elapsed / Self.frameIndexInterval)
+        guard legIndicesByMinute.indices.contains(minute) else { return nil }
+        let active = legIndicesByMinute[minute].compactMap { index in
+            let leg = legs[index]
+            return date >= leg.startDate && date < leg.endDate ? leg : nil
+        }
         let preferredForecast = active.filter {
             $0.routePhase == .forecast
                 && $0.activity == .movement
@@ -602,16 +676,8 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             )
             cameraCoordinate = coordinate
         case .stay:
-            if leg.categoryID == RouteTimelineCategory.sleep.rawValue {
-                coordinate = center
-                next = center
-            } else {
-                coordinate = Self.orbitCoordinate(around: center, progress: progress)
-                next = Self.orbitCoordinate(
-                    around: center,
-                    progress: min(1, progress + Self.lookAheadProgress)
-                )
-            }
+            coordinate = center
+            next = center
             cameraCoordinate = center
         }
         let direction: MapHomeWBSPlaybackDirection
@@ -624,12 +690,7 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                     progress: max(0, progress - Self.lookAheadProgress)
                 )
             case .stay:
-                previous = leg.categoryID == RouteTimelineCategory.sleep.rawValue
-                    ? center
-                    : Self.orbitCoordinate(
-                        around: center,
-                        progress: max(0, progress - Self.lookAheadProgress)
-                    )
+                previous = center
             }
             direction = Self.direction(from: previous, to: coordinate)
         } else {
@@ -690,28 +751,6 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         let normalized = degrees >= 0 ? degrees : degrees + 360
         let slot = Int(floor((normalized + 22.5) / 45)) % 8
         return MapHomeWBSPlaybackDirection(rawValue: slot) ?? .north
-    }
-
-    static func orbitCoordinate(
-        around center: GeoPoint,
-        progress: Double,
-        radiusMeters: Double = stayRadiusMeters
-    ) -> GeoPoint {
-        let angle = min(1, max(0, progress)) * 2 * .pi
-        let metersPerDegreeLatitude = 111_111.0
-        let latitude = center.latitude
-            + sin(angle) * radiusMeters / metersPerDegreeLatitude
-        let metersPerDegreeLongitude = metersPerDegreeLatitude
-            * max(0.2, cos(center.latitude * .pi / 180))
-        let longitude = center.longitude
-            + cos(angle) * radiusMeters / metersPerDegreeLongitude
-        return GeoPoint(
-            latitude: latitude,
-            longitude: longitude,
-            altitude: center.altitude,
-            horizontalAccuracy: center.horizontalAccuracy,
-            verticalAccuracy: center.verticalAccuracy
-        )
     }
 
     static func distanceMeters(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Double {
@@ -782,7 +821,10 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
     ) -> TravelMode? {
         let values = [second, first]
         if values.contains(where: {
-            $0.matchesRailRoute || ($0.subwayWiFiObservationStreak ?? 0) > 0
+            $0.matchesRailRoute
+                || SubwayWiFiSSID.hasContinuousEvidence(
+                    streak: $0.subwayWiFiObservationStreak
+                )
         }) { return .subway }
         if values.contains(where: \.matchesPublicTransitRoute) { return .bus }
         if values.contains(where: \.onWater) { return .ship }
@@ -802,7 +844,9 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         _ reading: SensorReading
     ) -> RouteTravelMode {
         if reading.matchesRailRoute
-            || (reading.subwayWiFiObservationStreak ?? 0) > 0 {
+            || SubwayWiFiSSID.hasContinuousEvidence(
+                streak: reading.subwayWiFiObservationStreak
+            ) {
             return .subway
         }
         switch reading.motion {
@@ -1294,8 +1338,9 @@ enum ExpectedRouteRequestEngine {
         return isValid(point)
             && reading.gpsAvailable
             && reading.locationFixQuality != .approximate
-            && (point.horizontalAccuracy < 0
-                || point.horizontalAccuracy <= 150)
+            && point.horizontalAccuracy.isFinite
+            && point.horizontalAccuracy >= 0
+            && point.horizontalAccuracy <= 150
     }
 
     private static func largestMissingRouteGap(
@@ -1807,7 +1852,9 @@ enum RouteTimelineDataEngine {
             return beforePoint
         }
         let gap = readings[lower].timestamp.timeIntervalSince(before.timestamp)
-        guard gap > 0 else { return beforePoint }
+        guard gap > 0, gap <= maximumInterpolationGap else {
+            return beforePoint
+        }
         return interpolate(
             beforePoint,
             afterPoint,
@@ -2155,7 +2202,7 @@ enum RouteTimelineDataEngine {
         ) -> ResolvedCoordinate? {
             resolvedCoordinate(
                 at: date,
-                maximumGap: nil,
+                maximumGap: maximumInterpolationGap,
                 sleepAnchors: sleepAnchors
             )
         }
@@ -2551,6 +2598,13 @@ enum RouteTimelineDataEngine {
         _ lhs: SensorReading,
         _ rhs: SensorReading
     ) -> Bool {
+        let leftIsApproximate = lhs.locationFixQuality == .approximate
+            || !lhs.gpsAvailable
+        let rightIsApproximate = rhs.locationFixQuality == .approximate
+            || !rhs.gpsAvailable
+        if leftIsApproximate != rightIsApproximate {
+            return !leftIsApproximate
+        }
         let leftAccuracy = accuracyRank(lhs.point?.horizontalAccuracy)
         let rightAccuracy = accuracyRank(rhs.point?.horizontalAccuracy)
         if leftAccuracy != rightAccuracy { return leftAccuracy < rightAccuracy }
@@ -2574,7 +2628,7 @@ enum RouteTimelineDataEngine {
               (-90...90).contains(point.latitude),
               (-180...180).contains(point.longitude) else { return nil }
         let isPrecise = reading.gpsAvailable
-            || reading.locationFixQuality == .precise
+            && reading.locationFixQuality != .approximate
         let isUsableApproximate = includesApproximateLocations
             && !isPrecise
             && (reading.locationFixQuality == .approximate

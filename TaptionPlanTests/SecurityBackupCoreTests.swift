@@ -141,6 +141,147 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(replacement.status.latestSuccessfulBackupDate, date)
     }
 
+    func testDeleteAllBackupsClearsSnapshotRawAndSuccessDate() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore
+        )
+        try service.setPIN("1234")
+        let date = Date(timeIntervalSince1970: 1_788_000_000)
+        _ = try service.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: date
+        )
+        _ = try service.saveRawSensorArchive(
+            .init(
+                monthKey: "2026-09",
+                sensorReadings: [SensorReading(timestamp: date)],
+                envelopes: [],
+                createdAt: date
+            ),
+            accountIdentifier: "account-a",
+            date: date
+        )
+
+        try service.deleteAllBackups()
+
+        XCTAssertTrue(backupStore.archives.isEmpty)
+        XCTAssertTrue(rawStore.archives.isEmpty)
+        XCTAssertNil(service.status.latestSuccessfulBackupDate)
+    }
+
+    func testDeleteAllBackupsKeepsSuccessDateWhenAStoreFails() throws {
+        let date = Date(timeIntervalSince1970: 1_788_000_000)
+        let service = makeService(
+            rawSensorBackupStore: DeleteFailingRawSensorBackupStore()
+        )
+        try service.setPIN("1234")
+        _ = try service.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: date
+        )
+
+        XCTAssertThrowsError(try service.deleteAllBackups())
+        XCTAssertEqual(service.status.latestSuccessfulBackupDate, date)
+    }
+
+    func testFileBackupDeleteRemovesOnlyTaptionArchives() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("backup-delete-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let backupDirectory = root.appendingPathComponent("Taption Plan")
+        let rawDirectory = backupDirectory.appendingPathComponent("Raw Sensors")
+        try FileManager.default.createDirectory(
+            at: rawDirectory,
+            withIntermediateDirectories: true
+        )
+        let backup = backupDirectory.appendingPathComponent(
+            "2026-09.taptionbackup"
+        )
+        let raw = rawDirectory.appendingPathComponent(
+            "2026-09.rawsensorbackup"
+        )
+        let unrelated = backupDirectory.appendingPathComponent("keep.txt")
+        try Data([1]).write(to: backup)
+        try Data([2]).write(to: raw)
+        try Data([3]).write(to: unrelated)
+
+        try FilePlanCloudBackupStore(root: root).deleteAll()
+        try FilePlanCloudRawSensorBackupStore(root: root).deleteAll()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: backup.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: raw.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: unrelated.path))
+    }
+
+    func testFileBackupStoresSkipOneCorruptArchive() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("backup-corrupt-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let snapshotStore = FilePlanCloudBackupStore(root: root)
+        let createdAt = Date(timeIntervalSince1970: 1_788_000_000)
+        let snapshot = PlanMonthlyArchive(
+            monthKey: "2026-08",
+            accountIdentifier: "account-a",
+            encryptedPayload: Data([1]),
+            wrappedPayloadKey: Data([2]),
+            accountWrappedPayloadKey: Data([3]),
+            createdAt: createdAt
+        )
+        try snapshotStore.save(
+            snapshot,
+            at: PlanCloudBackupPath(monthKey: snapshot.monthKey)
+        )
+        let snapshotDirectory = root.appendingPathComponent("Taption Plan")
+        try Data("truncated".utf8).write(
+            to: snapshotDirectory.appendingPathComponent(
+                "2026-09.taptionbackup"
+            )
+        )
+
+        let rawStore = FilePlanCloudRawSensorBackupStore(root: root)
+        let raw = PlanRawSensorMonthlyArchive(
+            monthKey: "2026-08",
+            accountIdentifier: "account-a",
+            encryptedPayload: Data([4]),
+            wrappedPayloadKey: Data([5]),
+            accountWrappedPayloadKey: Data([6]),
+            createdAt: createdAt
+        )
+        try rawStore.save(
+            raw,
+            at: PlanCloudRawSensorBackupPath(monthKey: raw.monthKey)
+        )
+        let rawDirectory = snapshotDirectory.appendingPathComponent(
+            "Raw Sensors"
+        )
+        try Data("truncated".utf8).write(
+            to: rawDirectory.appendingPathComponent(
+                "2026-09.rawsensorbackup"
+            )
+        )
+
+        XCTAssertEqual(try snapshotStore.allArchives(), [snapshot])
+        XCTAssertEqual(try rawStore.allArchives(), [raw])
+
+        try snapshotStore.delete(
+            at: PlanCloudBackupPath(monthKey: snapshot.monthKey)
+        )
+        try rawStore.delete(
+            at: PlanCloudRawSensorBackupPath(monthKey: raw.monthKey)
+        )
+        XCTAssertThrowsError(try snapshotStore.allArchives()) { error in
+            XCTAssertEqual(error as? PlanSecurityError, .invalidArchive)
+        }
+        XCTAssertThrowsError(try rawStore.allArchives()) { error in
+            XCTAssertEqual(error as? PlanSecurityError, .invalidArchive)
+        }
+    }
+
     func testMonthlyGenerationRecordsSuccessOnlyAfterRawArchiveCompletes() async throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let rawStore = FailOncePlanCloudRawSensorBackupStore()
@@ -179,7 +320,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? BackupStoreTestError, .injected)
         }
-        XCTAssertEqual(Array(backupStore.archives.keys), ["2026-08"])
+        XCTAssertTrue(backupStore.archives.isEmpty)
         XCTAssertTrue(rawStore.archives.isEmpty)
         XCTAssertNil(service.status.latestSuccessfulBackupDate)
 
@@ -191,8 +332,79 @@ final class SecurityBackupCoreTests: XCTestCase {
 
         XCTAssertEqual(generation.snapshot.monthKey, "2026-08")
         XCTAssertEqual(generation.rawSensors?.monthKey, "2026-08")
+        XCTAssertEqual(generation.snapshot.generationID, generation.generationID)
+        XCTAssertEqual(generation.rawSensors?.generationID, generation.generationID)
         XCTAssertEqual(Array(rawStore.archives.keys), ["2026-08"])
         XCTAssertEqual(service.status.latestSuccessfulBackupDate, date)
+    }
+
+    func testMonthlyGenerationIgnoresRawWhenSnapshotCommitFails()
+        async throws {
+        let backupStore = FailNextPlanCloudBackupStore()
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore,
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
+        )
+        try service.setPIN("1234")
+        let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
+        let first = try await service.saveMonthlyGeneration(
+            PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: .init(
+                monthKey: "ignored",
+                sensorReadings: [SensorReading(
+                    timestamp: firstDate,
+                    point: GeoPoint(
+                        latitude: 37.5,
+                        longitude: 126.9,
+                        altitude: 20,
+                        horizontalAccuracy: 8,
+                        verticalAccuracy: 10
+                    )
+                )],
+                createdAt: firstDate
+            ),
+            date: firstDate
+        )
+
+        backupStore.failNextSave = true
+        let failedDate = firstDate.addingTimeInterval(60)
+        do {
+            _ = try await service.saveMonthlyGeneration(
+                PlanCloudBackupPayload(snapshot: .empty),
+                rawSensorPayload: .init(
+                    monthKey: "ignored",
+                    sensorReadings: [SensorReading(
+                        timestamp: failedDate,
+                        point: GeoPoint(
+                            latitude: 37.6,
+                            longitude: 127,
+                            altitude: 20,
+                            horizontalAccuracy: 8,
+                            verticalAccuracy: 10
+                        )
+                    )],
+                    createdAt: failedDate
+                ),
+                date: failedDate
+            )
+            XCTFail("Snapshot commit failure must fail the generation")
+        } catch {
+            XCTAssertEqual(error as? BackupStoreTestError, .injected)
+        }
+
+        XCTAssertEqual(
+            backupStore.archives["2026-08"]?.generationID,
+            first.generationID
+        )
+        XCTAssertNotEqual(
+            rawStore.archives["2026-08"]?.generationID,
+            first.generationID
+        )
+        XCTAssertEqual(service.status.latestSuccessfulBackupDate, firstDate)
+        let restored = try await service.loadLatestBackupPackage()
+        XCTAssertEqual(restored.rawSensorState, .unavailable)
     }
 
     func testBiometricGateUnlocksWithoutExposingRawBiometric() async throws {
@@ -260,7 +472,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(PlanArchiveSchedule.monthsBetween(start, end, calendar: calendar), ["2025-07", "2025-08", "2025-09", "2025-10"])
     }
 
-    func testRawSensorArchiveIsSeparateEncryptedAndExcludesHealthKit() async throws {
+    func testRawSensorArchiveKeepsOnlyLocationAndWeatherData() async throws {
         let rawStore = InMemoryPlanCloudRawSensorBackupStore()
         let recoveryKeys = InMemoryPlanCloudRecoveryKeyProvider()
         let service = makeService(
@@ -278,7 +490,32 @@ final class SecurityBackupCoreTests: XCTestCase {
                 horizontalAccuracy: 8,
                 verticalAccuracy: 10
             ),
+            stepCount: 8_000,
             sourceDevice: .iPhone
+        )
+        let watchReading = SensorReading(
+            timestamp: date.addingTimeInterval(1),
+            point: reading.point,
+            sourceDevice: .appleWatch
+        )
+        let weatherContext = WeatherContext(
+            observedAt: date,
+            condition: "Clear",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 21,
+            point: reading.point
+        )
+        let weather = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .gps,
+            kind: "weather-context",
+            payload: weatherContext
+        )
+        let mislabeled = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .gps,
+            kind: "weather-context",
+            payload: ["sleepMinutes": 420]
         )
         let motion = try RawDeviceDataEnvelope(
             capturedAt: date,
@@ -298,11 +535,27 @@ final class SecurityBackupCoreTests: XCTestCase {
             kind: "watch-health-snapshot",
             payload: ["heartRate": "72"]
         )
+        let sessionID = UUID()
+        let sample = TaptionWatchAccelerationSample(
+            capturedAt: date,
+            acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
+            sessionID: sessionID,
+            sequence: 1,
+            isAmbient: false
+        )
+        let chunk = TaptionWatchAccelerationChunk(
+            sessionID: sessionID,
+            sequence: 1,
+            startedAt: date,
+            endedAt: date,
+            samples: [sample]
+        )
         let archive = try await service.saveRawSensorArchive(
             PlanCloudRawSensorPayload(
                 monthKey: "2026-08",
-                sensorReadings: [reading],
-                envelopes: [motion, health, watchHealth],
+                sensorReadings: [reading, watchReading],
+                envelopes: [weather, mislabeled, motion, health, watchHealth],
+                watchAccelerationChunks: [chunk],
                 createdAt: date
             ),
             date: date
@@ -320,8 +573,129 @@ final class SecurityBackupCoreTests: XCTestCase {
         let decoded = try archive.decodedPayload(
             accountKeyData: Data(repeating: 9, count: 32)
         )
-        XCTAssertEqual(decoded.sensorReadings, [reading])
-        XCTAssertEqual(decoded.envelopes.map(\.id), [motion.id])
+        XCTAssertEqual(decoded.sensorReadings.map(\.id), [reading.id])
+        XCTAssertNil(decoded.sensorReadings.first?.stepCount)
+        XCTAssertEqual(decoded.envelopes.map(\.id), [weather.id])
+        XCTAssertEqual(decoded.watchAccelerationChunks, [])
+    }
+
+    func testRawCloudExportCompactsWeatherToDisplayedTransitions() throws {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 0,
+            horizontalAccuracy: 5,
+            verticalAccuracy: 5
+        )
+        let first = WeatherContext(
+            observedAt: start,
+            fetchedAt: start,
+            isForecast: true,
+            condition: "이전 예보",
+            symbolName: "cloud.rain.fill",
+            temperatureCelsius: 20.1,
+            point: point
+        )
+        let repeated = WeatherContext(
+            observedAt: start,
+            fetchedAt: start.addingTimeInterval(60 * 60),
+            isForecast: true,
+            condition: "Clear",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20.4,
+            point: point
+        )
+        let changed = WeatherContext(
+            observedAt: start.addingTimeInterval(2 * 60 * 60),
+            isForecast: true,
+            condition: "흐림",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 20.4,
+            point: point
+        )
+        let sameLater = WeatherContext(
+            observedAt: start.addingTimeInterval(60 * 60),
+            fetchedAt: start.addingTimeInterval(60 * 60),
+            isForecast: true,
+            condition: "Clear",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 20.4,
+            point: GeoPoint(
+                latitude: 37.6,
+                longitude: 127.1,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let contexts = [first, repeated, sameLater, changed]
+        let envelopes = try contexts.map {
+            try RawDeviceDataEnvelope(
+                capturedAt: $0.observedAt,
+                source: .gps,
+                kind: "weather-forecast-hourly",
+                payload: $0
+            )
+        }
+
+        let payload = PlanCloudRawSensorPayload(
+            monthKey: "2026-08",
+            envelopes: envelopes
+        )
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let exported = try payload.envelopes.map {
+            try decoder.decode(
+                WeatherContext.self,
+                from: Data($0.payloadJSON.utf8)
+            )
+        }
+
+        XCTAssertEqual(exported.map(\.id), [repeated.id, changed.id])
+    }
+
+    func testRawCompressionUsesBoundedSeparateLimitAndCheckedDiagnostics() throws {
+        let knownArchiveSize = 146_067_067
+        XCTAssertEqual(
+            TaptionSnapshotCompression.maximumUncompressedSize,
+            64 * 1_024 * 1_024
+        )
+        XCTAssertGreaterThan(
+            TaptionSnapshotCompression.maximumRawSensorUncompressedSize,
+            knownArchiveSize
+        )
+        XCTAssertGreaterThan(
+            knownArchiveSize,
+            TaptionSnapshotCompression.maximumUncompressedSize
+        )
+
+        var oversized = Data([0x54, 0x50, 0x5A, 0x31])
+        let size = UInt64(
+            TaptionSnapshotCompression.maximumRawSensorUncompressedSize + 1
+        )
+        for shift in stride(from: 0, to: 64, by: 8) {
+            oversized.append(UInt8((size >> UInt64(shift)) & 0xFF))
+        }
+        oversized.append(0)
+
+        XCTAssertThrowsError(
+            try TaptionSnapshotCompression.decodeChecked(
+                oversized,
+                maximumSize: TaptionSnapshotCompression
+                    .maximumRawSensorUncompressedSize
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? TaptionSnapshotCompressionError,
+                .uncompressedSizeExceedsLimit(
+                    actual: size,
+                    maximum: TaptionSnapshotCompression
+                        .maximumRawSensorUncompressedSize
+                )
+            )
+        }
+        XCTAssertEqual(TaptionSnapshotCompression.decode(oversized), oversized)
     }
 
     func testBackupPackageCombinesRawSensorArchivesAcrossMonths() throws {
@@ -395,7 +769,109 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensors.sensorReadings.map(\.id),
             [julyReading.id, augustReading.id]
         )
-        XCTAssertEqual(rawSensors.envelopes.map(\.id), [envelope.id])
+        XCTAssertTrue(rawSensors.envelopes.isEmpty)
+    }
+
+    func testRawBackupRejectsConflictingPayloadForTheSameID() throws {
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(rawSensorBackupStore: rawStore)
+        try service.setPIN("1234")
+        let date = Date(timeIntervalSince1970: 1_777_700_000)
+        let id = UUID()
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 20,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        let original = SensorReading(id: id, timestamp: date, point: point)
+        let conflicting = SensorReading(
+            id: id,
+            timestamp: date.addingTimeInterval(1),
+            point: point
+        )
+        _ = try service.saveRawSensorArchive(
+            PlanCloudRawSensorPayload(
+                monthKey: "ignored",
+                sensorReadings: [original],
+                createdAt: date
+            ),
+            accountIdentifier: "account-a",
+            date: date
+        )
+
+        XCTAssertThrowsError(
+            try service.saveRawSensorArchive(
+                PlanCloudRawSensorPayload(
+                    monthKey: "ignored",
+                    sensorReadings: [conflicting],
+                    createdAt: date
+                ),
+                accountIdentifier: "account-a",
+                date: date
+            )
+        ) { error in
+            XCTAssertEqual(error as? PlanSecurityError, .invalidArchive)
+        }
+    }
+
+    func testRawRestoreRejectsConflictingIDsAcrossMonths() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore
+        )
+        try service.setPIN("1234")
+        let july = Date(timeIntervalSince1970: 1_775_000_000)
+        let august = Date(timeIntervalSince1970: 1_777_700_000)
+        let id = UUID()
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 20,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        _ = try service.saveRawSensorArchive(
+            PlanCloudRawSensorPayload(
+                monthKey: "ignored",
+                sensorReadings: [SensorReading(
+                    id: id,
+                    timestamp: july,
+                    point: point
+                )],
+                createdAt: july
+            ),
+            accountIdentifier: "account-a",
+            date: july
+        )
+        _ = try service.saveRawSensorArchive(
+            PlanCloudRawSensorPayload(
+                monthKey: "ignored",
+                sensorReadings: [SensorReading(
+                    id: id,
+                    timestamp: august,
+                    point: point
+                )],
+                createdAt: august
+            ),
+            accountIdentifier: "account-a",
+            date: august
+        )
+        _ = try service.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: august
+        )
+
+        XCTAssertEqual(
+            try service.loadLatestBackupPackage(
+                accountIdentifier: "account-a"
+            ).rawSensorState,
+            .invalidArchive
+        )
     }
 
     func testBackupPackageReportsCorruptedRawArchiveSeparately() throws {
@@ -526,6 +1002,72 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(restored.routePoints.map(\.id), [reading.id])
     }
 
+    func testBAK905H002AccountKeyRewrapKeepsRawGeneration() async throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let recoveryKeys = InMemoryPlanCloudRecoveryKeyProvider()
+        let writer = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore,
+            cloudRecoveryKeyProvider: recoveryKeys
+        )
+        try writer.setPIN("1234")
+        let reading = SensorReading(
+            timestamp: .now,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            sourceDevice: .iPhone
+        )
+        let generation = try await writer.saveMonthlyGeneration(
+            PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: .init(
+                monthKey: PlanArchiveSchedule.monthKey(for: .now),
+                sensorReadings: [reading],
+                createdAt: .now
+            )
+        )
+        XCTAssertEqual(
+            backupStore.archives.values.first?.generationID,
+            generation.generationID
+        )
+        XCTAssertEqual(
+            rawStore.archives.values.first?.generationID,
+            generation.generationID
+        )
+        let accountKey = try await recoveryKeys.key()
+        _ = try rawStore.archives.values.first?.decodedPayload(
+            accountKeyData: accountKey
+        )
+
+        let reinstalled = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore,
+            cloudRecoveryKeyProvider: recoveryKeys
+        )
+        try reinstalled.setPIN("9876")
+        let firstRestore = try await reinstalled.loadLatestBackupPackage()
+        guard case .available = firstRestore.rawSensorState else {
+            return XCTFail(
+                "Account recovery must restore raw data: \(firstRestore.rawSensorState)"
+            )
+        }
+        XCTAssertEqual(
+            backupStore.archives.values.first?.generationID,
+            rawStore.archives.values.first?.generationID
+        )
+        let restored = try await reinstalled.loadLatestBackupPackage()
+
+        guard case let .available(payload) = restored.rawSensorState else {
+            return XCTFail("Rewrapped snapshot must keep its raw generation")
+        }
+        XCTAssertEqual(payload.sensorReadings.map(\.id), [reading.id])
+    }
+
     func testPortableBackupDeduplicatesPhotoAndMemoMediaReferences() throws {
         let photoID = "photos-asset-1"
         var snapshot = TaptionDataSnapshot.empty
@@ -570,6 +1112,238 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(portable.mediaReferences.map(\.id), [photoID])
         XCTAssertEqual(portable.userContent.memos[0].mediaReferenceIDs, [photoID])
         XCTAssertEqual(portable.contentLinks.count, 1)
+    }
+
+    func testPortableCalendarPreferencesKeepEventKitProviderIdentity() throws {
+        let start = Date(timeIntervalSince1970: 100)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.settings.selectedCalendarIDs = ["google-work", "naver-home"]
+        snapshot.calendarEvents = [
+            CalendarRecord(
+                id: "google-event",
+                calendarID: "google-work",
+                title: "회의",
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(3_600)
+                ),
+                isAllDay: false,
+                calendarTitle: "Work",
+                calendarColorHex: nil,
+                sourceTitle: "Google",
+                sourceIdentifier: "account@gmail.com"
+            ),
+            CalendarRecord(
+                id: "naver-event",
+                calendarID: "naver-home",
+                title: "약속",
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(3_600)
+                ),
+                isAllDay: false,
+                calendarTitle: "Home",
+                calendarColorHex: nil,
+                sourceTitle: "네이버",
+                sourceIdentifier: "account@naver.com"
+            ),
+        ]
+
+        let preferences = try XCTUnwrap(
+            PlanCloudBackupPayload(snapshot: snapshot).portableContent
+        ).externalCalendarPreferences
+
+        XCTAssertNil(preferences.preferredProvider)
+        XCTAssertEqual(
+            Set(preferences.selectedCalendars.map(\.account.provider)),
+            [.google, .naver]
+        )
+    }
+
+    func testSourceSafeSnapshotKeepsManualCorrectionsAndConfirmedTravel() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let manual = ActualRecord(
+            planID: nil,
+            title: "수동 기록",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .manual
+        )
+        let automatic = ActualRecord(
+            planID: nil,
+            title: "건강 자동 기록",
+            categoryID: "health",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .healthKit
+        )
+        let corrected = ActualRecord(
+            planID: nil,
+            title: "교정한 위치 기록",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .location,
+            manuallyCorrected: true
+        )
+        let inferredTravel = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(600)
+            ),
+            distanceMeters: 1_000,
+            confidence: .medium,
+            evidence: []
+        )
+        let confirmedTravel = TravelSegment(
+            mode: .bus,
+            span: TimeSpan(
+                start: start.addingTimeInterval(900),
+                end: start.addingTimeInterval(1_500)
+            ),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["사용자 확인"],
+            isConfirmed: true
+        )
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [manual, automatic, corrected]
+        snapshot.travel = [inferredTravel, confirmedTravel]
+
+        let safe = PlanCloudSnapshotRecoveryPolicy.sourceSafe(snapshot)
+
+        XCTAssertEqual(
+            safe.actuals.map(\.id),
+            [manual.id, corrected.id]
+        )
+        XCTAssertEqual(safe.travel.map(\.id), [confirmedTravel.id])
+    }
+
+    func testICloudSnapshotExcludesHealthAndWatchResults() {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let manual = ActualRecord(
+            planID: nil,
+            title: "수동 기록",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .manual
+        )
+        let correctedLocation = ActualRecord(
+            planID: nil,
+            title: "교정한 위치",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .location,
+            manuallyCorrected: true
+        )
+        let health = ActualRecord(
+            planID: nil,
+            title: "수면",
+            categoryID: "sleep",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .healthKit,
+            manuallyCorrected: true
+        )
+        let watch = ActualRecord(
+            planID: nil,
+            title: "운동",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .appleWatch,
+            manuallyCorrected: true
+        )
+        let correctedPhoneSleep = ActualRecord(
+            planID: nil,
+            title: "교정한 수면",
+            categoryID: "sleep",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .motion,
+            manuallyCorrected: true
+        )
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [
+            manual, correctedLocation, health, watch, correctedPhoneSleep,
+        ]
+        let healthNodeID = "automatic.actual.\(health.id.uuidString)"
+        snapshot.recordLinks = [
+            RecordLink(fromNodeID: healthNodeID, toNodeID: "action.keep"),
+        ]
+        snapshot.memos = [
+            ActionMemo(
+                targetID: healthNodeID,
+                categoryID: "sleep",
+                kind: .idea,
+                text: "기기 내부 메모"
+            ),
+        ]
+        snapshot.settings.activityCorrections[health.id] = ActivityCorrection(
+            title: "교정 수면",
+            categoryID: "sleep"
+        )
+        snapshot.settings.suppressedActualIDs.insert(health.id)
+        snapshot.settings.confirmedSleepSpans = [
+            TimeSpan(start: start, end: start.addingTimeInterval(600)),
+        ]
+
+        let safe = PlanCloudSnapshotRecoveryPolicy.iCloudSafe(snapshot)
+
+        XCTAssertEqual(safe.actuals.map(\.id), [manual.id, correctedLocation.id])
+        XCTAssertTrue(safe.recordLinks.isEmpty)
+        XCTAssertNil(safe.memos.first?.targetID)
+        XCTAssertNil(safe.settings.activityCorrections[health.id])
+        XCTAssertFalse(safe.settings.suppressedActualIDs.contains(health.id))
+        XCTAssertTrue(safe.settings.confirmedSleepSpans.isEmpty)
+
+        let payload = PlanCloudBackupPayload(snapshot: snapshot)
+        XCTAssertEqual(payload.snapshot.actuals.map(\.id), [manual.id, correctedLocation.id])
+        XCTAssertTrue(payload.snapshot.recordLinks.isEmpty)
+        XCTAssertEqual(payload.snapshot.travel, [])
+    }
+
+    func testCloudBackupRouteStripsFitnessSignalsAndWatchPoints() throws {
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 20,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        let phone = SensorReading(
+            timestamp: date,
+            point: point,
+            motion: .walking,
+            motionConfidence: .high,
+            stepCount: 2_000,
+            sourceDevice: .iPhone
+        )
+        let watch = SensorReading(
+            timestamp: date.addingTimeInterval(1),
+            point: point,
+            motion: .walking,
+            motionConfidence: .high,
+            stepCount: 2_000,
+            sourceDevice: .appleWatch
+        )
+
+        let payload = PlanCloudBackupPayload(
+            snapshot: .empty,
+            routePoints: [
+                try XCTUnwrap(PlanBackupRoutePoint(phone)),
+                try XCTUnwrap(PlanBackupRoutePoint(watch)),
+            ]
+        )
+
+        XCTAssertEqual(payload.routePoints.map(\.id), [phone.id])
+        XCTAssertEqual(payload.routePoints[0].sensorReading.motion, .unknown)
+        XCTAssertNil(payload.routePoints[0].sensorReading.stepCount)
     }
 
     func testSameMonthBackupMergesGPSAndKeepsLatestFullSettings() throws {
@@ -666,6 +1440,59 @@ final class SecurityBackupCoreTests: XCTestCase {
         )
     }
 
+    func testStaleSameMonthBackupDoesNotEraseNewerRecords() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let service = makeService(backupStore: backupStore)
+        try service.setPIN("1234")
+        let month = Date(timeIntervalSince1970: 1_785_600_000)
+
+        var newer = TaptionDataSnapshot.empty
+        newer.updatedAt = month.addingTimeInterval(3_600)
+        newer.settings.locationEnabled = true
+        newer.plans = [
+            PlanRecord(
+                title: "newer",
+                span: TimeSpan(
+                    start: month,
+                    end: month.addingTimeInterval(1_800)
+                ),
+                categoryID: "work"
+            )
+        ]
+        _ = try service.saveMonthlyArchive(
+            PlanCloudBackupPayload(snapshot: newer),
+            accountIdentifier: "account-a",
+            date: month
+        )
+
+        var stale = TaptionDataSnapshot.empty
+        stale.updatedAt = month
+        stale.plans = [
+            PlanRecord(
+                title: "stale-writer-only",
+                span: TimeSpan(
+                    start: month.addingTimeInterval(7_200),
+                    end: month.addingTimeInterval(9_000)
+                ),
+                categoryID: "work"
+            )
+        ]
+        _ = try service.saveMonthlyArchive(
+            PlanCloudBackupPayload(snapshot: stale),
+            accountIdentifier: "account-a",
+            date: month.addingTimeInterval(10_800)
+        )
+
+        let restored = try service.loadLatestBackup(
+            accountIdentifier: "account-a"
+        ).snapshot
+        XCTAssertEqual(Set(restored.plans.map(\.title)), [
+            "newer",
+            "stale-writer-only",
+        ])
+        XCTAssertTrue(restored.settings.locationEnabled)
+    }
+
     func testSameMonthBackupPreservesExistingAppLogWhenLatestPayloadIsEmpty() throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: backupStore)
@@ -690,7 +1517,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let restored = try service.loadLatestBackup(
             accountIdentifier: "account-a"
         )
-        XCTAssertEqual(restored.appLog, "first-operation\n")
+        XCTAssertEqual(restored.appLog, "first-operation")
     }
 
     func testBackupRestoreCombinesRoutesAcrossMonthlyArchives() throws {
@@ -761,7 +1588,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         )
     }
 
-    func testBackupPayloadKeepsTravel() throws {
+    func testBackupPayloadKeepsConfirmedTravel() throws {
         let service = makeService()
         try service.setPIN("1234")
         var snapshot = TaptionDataSnapshot.empty
@@ -774,7 +1601,8 @@ final class SecurityBackupCoreTests: XCTestCase {
                 ),
                 distanceMeters: 12_000,
                 confidence: .high,
-                evidence: ["지하철"]
+                evidence: ["사용자 확인"],
+                isConfirmed: true
             ),
         ]
 
@@ -1318,6 +2146,38 @@ private enum BackupStoreTestError: Error, Equatable {
     case injected
 }
 
+private final class FailNextPlanCloudBackupStore: PlanCloudBackupStore {
+    var failNextSave = false
+    private(set) var archives: [String: PlanMonthlyArchive] = [:]
+
+    func save(
+        _ archive: PlanMonthlyArchive,
+        at path: PlanCloudBackupPath
+    ) throws {
+        if failNextSave {
+            failNextSave = false
+            throw BackupStoreTestError.injected
+        }
+        archives[path.monthKey] = archive
+    }
+
+    func delete(at path: PlanCloudBackupPath) throws {
+        archives[path.monthKey] = nil
+    }
+
+    func latest() throws -> PlanMonthlyArchive? {
+        archives.values.max { $0.monthKey < $1.monthKey }
+    }
+
+    func allArchives() throws -> [PlanMonthlyArchive] {
+        Array(archives.values)
+    }
+
+    func deleteAll() throws {
+        archives.removeAll()
+    }
+}
+
 private final class FailOncePlanCloudRawSensorBackupStore:
     PlanCloudRawSensorBackupStore {
     private var failsNextSave = true
@@ -1334,6 +2194,10 @@ private final class FailOncePlanCloudRawSensorBackupStore:
         archives[path.monthKey] = archive
     }
 
+    func delete(at path: PlanCloudRawSensorBackupPath) throws {
+        archives[path.monthKey] = nil
+    }
+
     func latest() throws -> PlanRawSensorMonthlyArchive? {
         archives.values.max { $0.monthKey < $1.monthKey }
     }
@@ -1341,4 +2205,21 @@ private final class FailOncePlanCloudRawSensorBackupStore:
     func allArchives() throws -> [PlanRawSensorMonthlyArchive] {
         Array(archives.values)
     }
+
+    func deleteAll() throws {
+        archives.removeAll()
+    }
+}
+
+private final class DeleteFailingRawSensorBackupStore:
+    PlanCloudRawSensorBackupStore {
+    func save(
+        _ archive: PlanRawSensorMonthlyArchive,
+        at path: PlanCloudRawSensorBackupPath
+    ) throws {}
+
+    func delete(at path: PlanCloudRawSensorBackupPath) throws {}
+    func latest() throws -> PlanRawSensorMonthlyArchive? { nil }
+    func allArchives() throws -> [PlanRawSensorMonthlyArchive] { [] }
+    func deleteAll() throws { throw BackupStoreTestError.injected }
 }

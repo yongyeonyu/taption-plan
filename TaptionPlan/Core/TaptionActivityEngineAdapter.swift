@@ -326,6 +326,10 @@ enum TaptionActivityEngineAdapter {
                     || moved
                     || (reading.stepCount ?? 0) > 0
             )
+            if ruleSample.userWakeActivity,
+               runs.last?.isEmpty == false {
+                runs.append([])
+            }
             if runs.isEmpty {
                 runs.append([ruleSample])
             } else {
@@ -552,7 +556,14 @@ enum TaptionActivityEngineAdapter {
             let travelSegment = travel.first { $0.span.contains(reading.timestamp) }
             let detailHint = travelSegment.map(detailID(for:))
             let accuracy = reading.point?.horizontalAccuracy
+            let hasValidCoordinate = reading.point.map { point in
+                point.latitude.isFinite
+                    && point.longitude.isFinite
+                    && (-90...90).contains(point.latitude)
+                    && (-180...180).contains(point.longitude)
+            } == true
             let hasValidatedPreciseFix = reading.gpsAvailable
+                && hasValidCoordinate
                 && accuracy.map { $0.isFinite && (0...150).contains($0) } == true
                 && reading.locationFixQuality != .approximate
             return ActivitySensorEvidence(
@@ -561,8 +572,7 @@ enum TaptionActivityEngineAdapter {
                 motion: motion(for: reading.motion),
                 speedMetersPerSecond: reading.speedMetersPerSecond,
                 horizontalAccuracyMeters: accuracy,
-                isPreciseLocation: reading.locationFixQuality == .precise
-                    || hasValidatedPreciseFix,
+                isPreciseLocation: hasValidatedPreciseFix,
                 stepCount: reading.stepCount,
                 screenIsOn: reading.screenIsOn,
                 screenBrightness: reading.screenBrightness,

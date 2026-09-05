@@ -17,7 +17,9 @@ enum WatchLaunchDiagnostics {
             appropriateFor: nil,
             create: true
         )) ?? URL.temporaryDirectory
-        return root.appendingPathComponent(fileName)
+        return root
+            .appendingPathComponent("TaptionPlan", isDirectory: true)
+            .appendingPathComponent(fileName)
     }
 
     /// 실행 단계를 즉시 파일에 남긴다. 프로세스가 곧바로 죽어도 남아야 하므로
@@ -25,7 +27,9 @@ enum WatchLaunchDiagnostics {
     static func mark(_ stage: String) {
         lock.lock()
         defer { lock.unlock() }
-        let line = "\(Date.now.timeIntervalSince1970.rounded()) \(stage)\n"
+        let safeStage = TaptionWatchDiagnosticsPrivacy.redacted(stage)
+        guard !safeStage.isEmpty else { return }
+        let line = "\(Date.now.timeIntervalSince1970.rounded()) \(safeStage)\n"
         guard let data = line.data(using: .utf8) else { return }
         let size = (try? fileURL.resourceValues(
             forKeys: [.fileSizeKey]
@@ -42,6 +46,21 @@ enum WatchLaunchDiagnostics {
         }
         if handle == nil {
             let url = fileURL
+            let fileManager = FileManager.default
+            try? fileManager.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            if let legacyRoot = try? fileManager.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: false
+            ) {
+                try? fileManager.removeItem(
+                    at: legacyRoot.appendingPathComponent(fileName)
+                )
+            }
             if !FileManager.default.fileExists(atPath: url.path) {
                 FileManager.default.createFile(atPath: url.path, contents: nil)
             }

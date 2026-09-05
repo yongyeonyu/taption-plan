@@ -2,11 +2,243 @@ import XCTest
 import UIKit
 import CoreLocation
 import StoreKit
+import StoreKitTest
 import SwiftUI // TEMP-CAT-SHEET
 @testable import TaptionPlan
 
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
+
+    @MainActor
+    func testImmediateSensorAnalysisKeepsEveryPendingDay() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            TrackingSessionRecoveryStore.clear()
+            TaptionPlanDiagnosticsLogger.shared.clear()
+        }
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let sensorService = AppleSensorDataService(archive: archive)
+        var stored = TaptionDataSnapshot.empty
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+        let persistedBefore = try await repository.load().updatedAt
+        let calendar = Calendar.autoupdatingCurrent
+        let firstDay = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: calendar.startOfDay(for: .now)
+        )!
+        let secondDay = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: firstDay
+        )!
+        let readings = [firstDay, secondDay].map { day in
+            SensorReading(
+                timestamp: day.addingTimeInterval(hour),
+                trackingSessionID: UUID(),
+                trackingKind: .automatic,
+                sourceDevice: .iPhone,
+                trackingSessionEnded: true
+            )
+        }
+        for reading in readings {
+            try await archive.append(
+                reading,
+                now: secondDay.addingTimeInterval(2 * hour)
+            )
+        }
+        TaptionPlanDiagnosticsLogger.shared.clear()
+
+        sensorService.onReadingsPersisted?(readings)
+
+        let expectedStarts = [firstDay, secondDay].map {
+            String($0.timeIntervalSinceReferenceDate)
+        }
+        let deadline = Date.now.addingTimeInterval(5)
+        var log = ""
+        var persistedAfter = persistedBefore
+        while Date.now < deadline {
+            log = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+            persistedAfter = try await repository.load().updatedAt
+            let loadedDays = log.components(
+                separatedBy: "sensor_timeline_evidence_loaded"
+            ).count - 1
+            if expectedStarts.allSatisfy({ log.contains($0) }),
+               loadedDays >= 2,
+               persistedAfter > persistedBefore { break }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertTrue(expectedStarts.allSatisfy { log.contains($0) })
+        XCTAssertGreaterThanOrEqual(
+            log.components(
+                separatedBy: "sensor_timeline_evidence_loaded"
+            ).count - 1,
+            2
+        )
+        XCTAssertGreaterThan(persistedAfter, persistedBefore)
+    }
+
+    @MainActor
+    func testSensorAnalysisKeepsFailedDayForRetry() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let archiveDirectory = root.appendingPathComponent(
+            "archive",
+            isDirectory: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            TrackingSessionRecoveryStore.clear()
+            TaptionPlanDiagnosticsLogger.shared.clear()
+        }
+        let archive = try SensorReadingArchive(
+            fileURL: archiveDirectory.appendingPathComponent("readings.jsonl"),
+            dayStoreURL: archiveDirectory.appendingPathComponent("data.sqlite")
+        )
+        let sensorService = AppleSensorDataService(archive: archive)
+        var stored = TaptionDataSnapshot.empty
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+        try FileManager.default.removeItem(at: archiveDirectory)
+        try Data().write(to: archiveDirectory)
+        TaptionPlanDiagnosticsLogger.shared.clear()
+
+        sensorService.onReadingsPersisted?([
+            SensorReading(
+                timestamp: .now,
+                trackingSessionID: UUID(),
+                trackingKind: .automatic,
+                sourceDevice: .iPhone,
+                trackingSessionEnded: true
+            )
+        ])
+
+        let deadline = Date.now.addingTimeInterval(3)
+        var log = ""
+        while Date.now < deadline {
+            log = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+            if log.contains("sensor_analysis_retry_scheduled") { break }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertTrue(log.contains("sensor_timeline_read_failed"))
+        XCTAssertTrue(log.contains("sensor_analysis_retry_scheduled"))
+    }
+
+    @MainActor
+    func testPersistedTrackingReadingsRecoverAutomaticAndManualSessions() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let sensorService = AppleSensorDataService(
+            archive: try SensorReadingArchive(
+                fileURL: directory.appendingPathComponent("readings.jsonl")
+            )
+        )
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        let capturedAt = Date.now.addingTimeInterval(60)
+
+        sensorService.onReadingsPersisted?([
+            SensorReading(
+                timestamp: capturedAt,
+                trackingSessionID: UUID(),
+                trackingKind: .automatic,
+                sourceDevice: .iPhone
+            )
+        ])
+        await Task.yield()
+        XCTAssertEqual(model.activeTrackingSession?.kind, .automatic)
+        XCTAssertTrue(model.activeTrackingSession?.wasAutomaticallyDetected == true)
+
+        sensorService.onReadingsPersisted?([
+            SensorReading(
+                timestamp: capturedAt.addingTimeInterval(1),
+                trackingSessionID: UUID(),
+                trackingKind: .walking,
+                trackingWasAutomaticallyDetected: true,
+                sourceDevice: .iPhone
+            )
+        ])
+        await Task.yield()
+        XCTAssertEqual(model.activeTrackingSession?.kind, .walking)
+        XCTAssertTrue(model.activeTrackingSession?.wasAutomaticallyDetected == true)
+
+        sensorService.onReadingsPersisted?([
+            SensorReading(
+                timestamp: capturedAt.addingTimeInterval(2),
+                trackingSessionID: UUID(),
+                trackingKind: .walking,
+                trackingWasAutomaticallyDetected: false,
+                sourceDevice: .iPhone
+            )
+        ])
+        await Task.yield()
+        XCTAssertEqual(model.activeTrackingSession?.kind, .walking)
+        XCTAssertFalse(model.activeTrackingSession?.wasAutomaticallyDetected == true)
+    }
+
+    @MainActor
+    func testBackgroundWorkReusesTheApplicationSensorAndWatchOwner() {
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil
+        )
+
+        XCTAssertTrue(AppModel.backgroundTaskInstance() === model)
+        XCTAssertTrue(
+            AppModel.backgroundTaskInstance()
+                === AppModel.backgroundTaskInstance()
+        )
+    }
+
+    func testHealthBackgroundRefreshCoalescesCallbackBursts() async {
+        let coordinator = HealthBackgroundRefreshCoordinator()
+        let counter = HealthRefreshCallCounter()
+        await coordinator.register {
+            await counter.increment()
+            try? await Task.sleep(for: .milliseconds(50))
+            return true
+        }
+
+        let results = await withTaskGroup(of: Bool.self) { group in
+            for _ in 0..<8 {
+                group.addTask {
+                    await coordinator.dispatchIfRegistered()
+                }
+            }
+            return await group.reduce(into: []) { $0.append($1) }
+        }
+        let callCount = await counter.value
+
+        XCTAssertEqual(results, Array(repeating: true, count: 8))
+        XCTAssertEqual(callCount, 1)
+    }
 
     func testInitialLaunchGateWaitsForMapShellWhenAccessIsGranted() {
         let common = (
@@ -107,11 +339,27 @@ final class FeatureEngineTests: XCTestCase {
             MapHomeRouteReadingsTaskKey(
                 date: day,
                 isBootstrapped: true,
+                dayProjectionRevision: 3,
                 calendar: utcCalendar
             ),
             MapHomeRouteReadingsTaskKey(
                 date: sameDay,
                 isBootstrapped: true,
+                dayProjectionRevision: 3,
+                calendar: utcCalendar
+            )
+        )
+        XCTAssertNotEqual(
+            MapHomeRouteReadingsTaskKey(
+                date: day,
+                isBootstrapped: true,
+                dayProjectionRevision: 3,
+                calendar: utcCalendar
+            ),
+            MapHomeRouteReadingsTaskKey(
+                date: day,
+                isBootstrapped: true,
+                dayProjectionRevision: 4,
                 calendar: utcCalendar
             )
         )
@@ -937,11 +1185,12 @@ final class FeatureEngineTests: XCTestCase {
     func testMapHomeLocationHierarchyKeepsConfiguredAndUserDestinationsDistinct() {
         XCTAssertEqual(
             MapHomeLocationDestination.allCases.map(\.rawValue),
-            ["home", "company", "school", "exercise", "hobby", "restaurant", "user"]
+            ["home", "company", "school", "academy", "exercise", "hobby", "restaurant", "user"]
         )
         XCTAssertEqual(MapHomeLocationDestination.home.placeKind, .home)
         XCTAssertEqual(MapHomeLocationDestination.company.placeKind, .company)
         XCTAssertEqual(MapHomeLocationDestination.school.placeKind, .school)
+        XCTAssertEqual(MapHomeLocationDestination.academy.placeKind, .academy)
         XCTAssertEqual(MapHomeLocationDestination.exercise.placeKind, .exercise)
         XCTAssertEqual(MapHomeLocationDestination.hobby.placeKind, .hobby)
         XCTAssertNil(MapHomeLocationDestination.user.placeKind)
@@ -1353,6 +1602,48 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(model.snapshot.updatedAt, updatedAt)
 
         await model.sceneEnteredBackground()
+    }
+
+    func testCloudSnapshotKeepsExternalCalendarDataOnDevice() {
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.calendarEvents = [
+            CalendarRecord(
+                id: "external-event",
+                calendarID: "google-calendar",
+                title: "Private meeting",
+                span: TimeSpan(
+                    start: makeDate(2026, 8, 12, 9, 0),
+                    end: makeDate(2026, 8, 12, 10, 0)
+                ),
+                isAllDay: false,
+                calendarTitle: "Work",
+                calendarColorHex: nil,
+                sourceTitle: "Google"
+            )
+        ]
+
+        XCTAssertTrue(
+            AppModel.cloudPortableSnapshot(snapshot).calendarEvents.isEmpty
+        )
+        XCTAssertEqual(snapshot.calendarEvents.count, 1)
+    }
+
+    @MainActor
+    func testCommerceLockStopsAndResumesModelMutations() async {
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false,
+            startsCommerceLocked: true
+        )
+
+        XCTAssertTrue(model.isCommerceLocked)
+        await model.suspendForCommerceLock()
+
+        XCTAssertTrue(model.isCommerceLocked)
+
+        await model.sceneBecameActive()
+        XCTAssertFalse(model.isCommerceLocked)
     }
 
     @MainActor
@@ -3749,6 +4040,47 @@ final class FeatureEngineTests: XCTestCase {
                 elapsed: 120
             )
         )
+        XCTAssertFalse(
+            TrackingSessionPolicy.shouldPromoteBackgroundMovement(
+                speedMetersPerSecond: 8,
+                displacementMeters: 120,
+                elapsed: 120,
+                horizontalAccuracy: 500,
+                speedAccuracy: 1
+            )
+        )
+        XCTAssertFalse(
+            TrackingSessionPolicy.shouldPromoteBackgroundMovement(
+                speedMetersPerSecond: 8,
+                displacementMeters: 120,
+                elapsed: 120,
+                horizontalAccuracy: 10,
+                speedAccuracy: -1
+            )
+        )
+    }
+
+    func testLiveRouteRequiresPreciseAvailableGPS() {
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 20,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        XCTAssertTrue(TrackingSessionPolicy.isPreciseRouteReading(
+            SensorReading(timestamp: .now, point: point)
+        ))
+        XCTAssertFalse(TrackingSessionPolicy.isPreciseRouteReading(
+            SensorReading(
+                timestamp: .now,
+                point: point,
+                locationFixQuality: .approximate
+            )
+        ))
+        XCTAssertFalse(TrackingSessionPolicy.isPreciseRouteReading(
+            SensorReading(timestamp: .now, point: point, gpsAvailable: false)
+        ))
     }
 
     func testRecordTimelineColorsStayDistinctWithinEachRing() {
@@ -4051,6 +4383,49 @@ final class FeatureEngineTests: XCTestCase {
                 asOf: span.end
             ).isEmpty
         )
+    }
+
+    func testStrictSleepClosesCompletedRunWhenWakeSampleIsContinuous() {
+        let start = makeDate(2026, 8, 12, 22, 0)
+        var readings = (0...72).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 5 * 60),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .charging,
+                screenBrightness: 0.1,
+                screenIsOn: false
+            )
+        }
+        readings.append(
+            SensorReading(
+                timestamp: start.addingTimeInterval(6 * hour + 5 * 60),
+                motion: .walking,
+                motionConfidence: .high,
+                stepCount: 5,
+                powerState: .unplugged,
+                screenBrightness: 0.8,
+                screenIsOn: true
+            )
+        )
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(8 * hour)
+        )
+
+        let records = TaptionActivityEngineAdapter.strictSleepActuals(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            homePoint: nil,
+            maximumSampleGap: 20 * 60,
+            asOf: span.end
+        )
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].startedAt, start.addingTimeInterval(30 * 60))
+        XCTAssertEqual(records[0].endedAt, start.addingTimeInterval(6 * hour))
     }
 
     func testAutomaticMajorCategoryRemainsLockedAcrossRefresh() {
@@ -5367,6 +5742,74 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testApproximateGPSDoesNotUseRegisteredSubwayEndpoints() {
+        let base = makeDate(2026, 8, 12, 8, 0)
+        let stationData: [(String, Double, Double)] = [
+            ("가정역", 37.5248, 126.6744),
+            ("마곡나루역", 37.5667, 126.8273),
+        ]
+        let locations = stationData.map { name, latitude, longitude in
+            UserTransitLocation(
+                name: name,
+                kind: .subwayStation,
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 0,
+                    horizontalAccuracy: -1,
+                    verticalAccuracy: -1
+                ),
+                radiusMeters: 100
+            )
+        }
+        let readings = stationData.enumerated().map { index, value in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 10 * 60),
+                point: GeoPoint(
+                    latitude: value.1,
+                    longitude: value.2,
+                    altitude: 0,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 10
+                ),
+                locationFixQuality: .approximate,
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                gpsAvailable: false
+            )
+        }
+
+        let result = TravelModeClassifier().classify(
+            readings: readings,
+            userTransitLocations: locations
+        )
+
+        XCTAssertNotEqual(result.mode, .subway)
+    }
+
+    func testApproximateGPSDoesNotCreateVehicleSpeedSignal() {
+        let base = makeDate(2026, 8, 12, 8, 0)
+        let readings = (0..<2).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                point: GeoPoint(
+                    latitude: 37.5 + Double(index) * 0.01,
+                    longitude: 126.9,
+                    altitude: 0,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 10
+                ),
+                locationFixQuality: .approximate,
+                speedMetersPerSecond: 12,
+                motion: .walking,
+                gpsAvailable: false
+            )
+        }
+
+        XCTAssertEqual(TravelModeClassifier().classify(readings: readings).mode, .walking)
+    }
+
     func testSingleUserSubwayStationAndCarrierWiFiOverrideAutomotive() {
         let base = makeDate(2026, 8, 12, 21, 0)
         let point = GeoPoint(
@@ -5561,6 +6004,71 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testCoordinateTrajectoryRejectsUnknownLocationAccuracy() {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let readings = [
+            (37.5248, 126.6744),
+            (37.5692, 126.6737),
+            (37.5667, 126.8273),
+        ].enumerated().map { index, coordinate in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 10 * 60),
+                point: GeoPoint(
+                    latitude: coordinate.0,
+                    longitude: coordinate.1,
+                    altitude: 0,
+                    horizontalAccuracy: -1,
+                    verticalAccuracy: -1
+                )
+            )
+        }
+
+        XCTAssertNil(
+            SubwayStationCatalog.coordinateTrajectory(from: readings)
+        )
+    }
+
+    func testCoordinateTrajectoryRejectsNonGPSAndApproximateLocations() {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let points = [
+            (37.5248, 126.6744),
+            (37.5692, 126.6737),
+            (37.5667, 126.8273),
+        ]
+        func readings(
+            gpsAvailable: Bool,
+            quality: LocationFixQuality?
+        ) -> [SensorReading] {
+            points.enumerated().map { index, coordinate in
+                SensorReading(
+                    timestamp: base.addingTimeInterval(
+                        Double(index) * 10 * 60
+                    ),
+                    point: GeoPoint(
+                        latitude: coordinate.0,
+                        longitude: coordinate.1,
+                        altitude: 0,
+                        horizontalAccuracy: 10,
+                        verticalAccuracy: 10
+                    ),
+                    locationFixQuality: quality,
+                    gpsAvailable: gpsAvailable
+                )
+            }
+        }
+
+        XCTAssertNil(
+            SubwayStationCatalog.coordinateTrajectory(
+                from: readings(gpsAvailable: false, quality: .precise)
+            )
+        )
+        XCTAssertNil(
+            SubwayStationCatalog.coordinateTrajectory(
+                from: readings(gpsAvailable: true, quality: .approximate)
+            )
+        )
+    }
+
     func testCoordinateTrajectoryChoosesLongestSimpleRouteAcrossDayNoise() throws {
         let base = makeDate(2026, 8, 11, 9, 35)
         let samples: [(Double, Double, Double)] = [
@@ -5595,6 +6103,38 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(trajectory.route.transferStationNames, ["검암"])
         XCTAssertEqual(trajectory.route.stops.first?.stationName, "가정")
         XCTAssertEqual(trajectory.route.stops.last?.stationName, "마곡나루")
+    }
+
+    func testSHE905H001DenseSubwayTrajectoryStaysBounded() {
+        let base = makeDate(2026, 8, 11, 0, 0)
+        let stations = [
+            (37.5248, 126.6744),
+            (37.5692, 126.6737),
+            (37.57127, 126.7359),
+            (37.5667, 126.8273),
+        ]
+        let readings = (0..<96).map { index in
+            let coordinate = stations[index % stations.count]
+            return SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 180),
+                point: GeoPoint(
+                    latitude: coordinate.0,
+                    longitude: coordinate.1,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high
+            )
+        }
+
+        measure {
+            XCTAssertNotNil(
+                SubwayStationCatalog.coordinateTrajectory(from: readings)
+            )
+        }
     }
 
     func testCoordinateTrajectoryCreatesSubwaySegmentAcrossUnknownMotion() throws {
@@ -6015,6 +6555,38 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(segment.evidence.contains("출발역·환승역·도착역 상태 확정"))
     }
 
+    func testStationJourneyDoesNotBridgeMissingSampleGap() {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let samples: [(Double, Double, Double, Bool)] = [
+            (0, 37.5248, 126.6744, true),
+            (5, 37.5248, 126.6744, true),
+            (6, 37.5500, 126.7500, false),
+            (10, 37.5500, 126.7500, false),
+            // The 50-minute gap has no observed route continuity.
+            (60, 37.5667, 126.8273, true),
+            (65, 37.5667, 126.8273, true),
+            (66, 37.5600, 126.8273, false),
+            (67, 37.5590, 126.8273, false),
+        ]
+        let readings = samples.map { minute, latitude, longitude, rail in
+            SensorReading(
+                timestamp: base.addingTimeInterval(minute * 60),
+                point: GeoPoint(
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 20,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                motion: .automotive,
+                motionConfidence: .high,
+                matchesRailRoute: rail
+            )
+        }
+
+        XCTAssertNil(SubwayStationCatalog.stationJourney(from: readings))
+    }
+
     func testSubwayRoutePriorityKeepsExactLineDuringLiveGPSWindow() throws {
         let base = makeDate(2026, 8, 18, 7, 0)
         let readings = [
@@ -6180,6 +6752,31 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(projection.point.latitude, 37.5692, accuracy: 0.0001)
         XCTAssertEqual(projection.point.longitude, 126.6737, accuracy: 0.0001)
         XCTAssertNil(readings[0].point)
+    }
+
+    func testRealtimeMapProjectionIgnoresApproximateGPSFixes() {
+        let timestamp = makeDate(2026, 8, 18, 7, 1)
+        let readings = [
+            SensorReading(
+                timestamp: timestamp,
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                ),
+                locationFixQuality: .approximate,
+                gpsAvailable: true
+            )
+        ]
+
+        XCTAssertNil(
+            RealtimeSensorMapProjection.project(
+                readings: readings,
+                at: timestamp
+            )
+        )
     }
 
     func testAppleTransportEnrichmentPersistsConfirmedMagongnaruGeomamGajeongJourney() async throws {
@@ -6630,6 +7227,81 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(
             resolved[0].span.intersection(with: resolved[1].span)
         )
+    }
+
+    func testResolvingOverlapsRechecksAfterTrimmingChangesOrder() {
+        let base = makeDate(2026, 8, 4, 10, 0)
+        let first = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(200)
+            ),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+        let trimmed = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base.addingTimeInterval(20),
+                end: base.addingTimeInterval(300)
+            ),
+            distanceMeters: 1_800,
+            confidence: .low,
+            evidence: ["Core Motion"]
+        )
+        let later = TravelSegment(
+            mode: .cycling,
+            span: TimeSpan(
+                start: base.addingTimeInterval(100),
+                end: base.addingTimeInterval(400)
+            ),
+            distanceMeters: 2_500,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+
+        let resolved = AppleDeviceGroundTruthEngine.resolvingOverlaps(
+            [first, trimmed, later]
+        )
+
+        XCTAssertEqual(resolved.map(\.id), [first.id, later.id])
+        XCTAssertEqual(
+            resolved[0].span,
+            TimeSpan(start: base, end: base.addingTimeInterval(100))
+        )
+        XCTAssertEqual(resolved[1].span, later.span)
+        for pair in zip(resolved, resolved.dropFirst()) {
+            XCTAssertNil(pair.0.span.intersection(with: pair.1.span))
+        }
+    }
+
+    func testResolvingOverlapsHandlesLargeArchiveWithoutUnboundedPasses() {
+        let base = makeDate(2026, 8, 4, 10, 0)
+        let segments = (0..<4_667).map { index in
+            TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(Double(index) * 30),
+                    end: base.addingTimeInterval(Double(index) * 30 + 120)
+                ),
+                distanceMeters: 100,
+                confidence: .medium,
+                evidence: ["GPS"]
+            )
+        }
+
+        measure {
+            let resolved = AppleDeviceGroundTruthEngine.resolvingOverlaps(
+                segments
+            )
+            XCTAssertTrue(
+                zip(resolved, resolved.dropFirst()).allSatisfy {
+                    $0.span.intersection(with: $1.span) == nil
+                }
+            )
+        }
     }
 
     func testCoalescingTravelMergesSameModeFragmentsAcrossSamplingGaps() {
@@ -7229,6 +7901,35 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertEqual(sessions[0].asleepDuration, 7 * hour)
         XCTAssertEqual(sessions[0].awakeDuration, 1.5 * hour)
+    }
+
+    func testWatchSleepSegmentsBecomeAuthoritativeAppleWatchSleep() {
+        let start = makeDate(2026, 8, 4, 23)
+        let segments = [
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(7 * hour)
+                ),
+                sourceName: "Apple Watch"
+            )
+        ]
+        let sessions = SleepAnalysisEngine().sessions(from: segments)
+        let actuals = SleepActualReconciliationEngine.applying(
+            [],
+            sessions: sessions,
+            inside: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(8 * hour)
+            ),
+            asOf: start.addingTimeInterval(8 * hour)
+        )
+
+        XCTAssertEqual(actuals.count, 1)
+        XCTAssertEqual(actuals[0].source, .appleWatch)
+        XCTAssertEqual(actuals[0].categoryID, "sleep")
+        XCTAssertEqual(actuals[0].behavior, WatchBehaviorKind.sleep.rawValue)
     }
 
     func testSleepAnalysisAcceptsIPhoneOnlyInBedRecord() {
@@ -7859,7 +8560,8 @@ final class FeatureEngineTests: XCTestCase {
                 accelerationSettings: settings,
                 dataSyncProfile: .batterySaver,
                 locationTrackingEnabled: true,
-                locationPermissionState: PermissionState.authorized.rawValue
+                locationPermissionState: PermissionState.authorized.rawValue,
+                commerceLocked: true
             )
         )
         let decoded = try JSONDecoder().decode(
@@ -7869,6 +8571,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(decoded.accelerationSettings, settings)
         XCTAssertEqual(decoded.dataSyncProfile, .batterySaver)
         XCTAssertEqual(decoded.locationTrackingEnabled, true)
+        XCTAssertEqual(decoded.commerceLocked, true)
         XCTAssertEqual(
             decoded.locationPermissionState,
             PermissionState.authorized.rawValue
@@ -8454,10 +9157,10 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(TrackingSessionPolicy.activeHorizontalAccuracyLimit, 50)
     }
 
-    func testHealthRefreshUsesFiveMinuteForegroundAndImmediateBackgroundPolicy() {
+    func testHealthRefreshUsesFifteenMinuteFallbackAndImmediateBackgroundPolicy() {
         XCTAssertEqual(
             HealthRefreshPolicy.foregroundInterval,
-            5 * 60
+            15 * 60
         )
         XCTAssertEqual(
             HealthRefreshPolicy.periodicLookback,
@@ -9831,6 +10534,29 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testPlaceDetectionDoesNotBridgeAnUnobservedDay() {
+        let base = makeDate(2026, 7, 30)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 30,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 5
+        )
+        let readings = [
+            SensorReading(timestamp: base, point: point, motion: .stationary),
+            SensorReading(
+                timestamp: base.addingTimeInterval(12 * 60 * 60),
+                point: point,
+                motion: .stationary
+            ),
+        ]
+
+        XCTAssertTrue(
+            PlaceDetectionEngine().detectStays(readings: readings).isEmpty
+        )
+    }
+
     func testRegisteredRestaurantNeeds15MinutesAndMapsToEating() {
         let base = makeDate(2026, 7, 30, 12)
         let point = GeoPoint(
@@ -10125,6 +10851,37 @@ final class FeatureEngineTests: XCTestCase {
                 point: point,
                 motion: .stationary,
                 trackingKind: .automatic
+            )
+        ]
+
+        XCTAssertTrue(WalkingLocationEngine().build(readings: readings).isEmpty)
+    }
+
+    func testWalkingLocationEngineIgnoresApproximateLocationEvenWithGoodAccuracy() {
+        let base = makeDate(2026, 7, 30, 18)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 30,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 5
+        )
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: point,
+                locationFixQuality: .approximate,
+                motion: .walking,
+                gpsAvailable: false,
+                trackingKind: .walking
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(60),
+                point: point,
+                locationFixQuality: .approximate,
+                motion: .walking,
+                gpsAvailable: false,
+                trackingKind: .walking
             )
         ]
 
@@ -11187,6 +11944,30 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(restored.plans, [plan])
     }
 
+    @MainActor
+    func testSnapshotExportRemovesStaleTemporaryFile() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("TaptionPlanExport", isDirectory: true)
+        let stale = directory.appendingPathComponent("stale.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        try Data("private".utf8).write(to: stale)
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+
+        let export = try model.exportSnapshotURL()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: stale.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: export.path))
+        XCTAssertEqual(export.lastPathComponent, "Taption-Plan-Data.json")
+    }
+
     func testEncryptedFileRepositoryRoundTrip() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-test-\(UUID().uuidString)", isDirectory: true)
@@ -11224,6 +12005,14 @@ final class FeatureEngineTests: XCTestCase {
         var second = first
         second.plans[0].title = "새 기록"
         try await repository.save(second)
+        #if !targetEnvironment(simulator)
+        XCTAssertEqual(
+            try FileManager.default.attributesOfItem(
+                atPath: fileURL.appendingPathExtension("backup").path
+            )[.protectionKey] as? FileProtectionType,
+            .completeUntilFirstUserAuthentication
+        )
+        #endif
         try Data("broken".utf8).write(to: fileURL, options: [.atomic])
 
         let recovered = try await repository.load()
@@ -11239,6 +12028,17 @@ final class FeatureEngineTests: XCTestCase {
 
         let legacy = Data("{\"schemaVersion\":1}".utf8)
         XCTAssertEqual(TaptionSnapshotCompression.decode(legacy), legacy)
+    }
+
+    func testSnapshotCompressionRejectsOversizedHeaderBeforeAllocation() {
+        var stored = Data([0x54, 0x50, 0x5A, 0x31])
+        let oversized = UInt64(64 * 1_024 * 1_024 + 1)
+        for shift in stride(from: 0, to: 64, by: 8) {
+            stored.append(UInt8((oversized >> UInt64(shift)) & 0xFF))
+        }
+        stored.append(0)
+
+        XCTAssertEqual(TaptionSnapshotCompression.decode(stored), stored)
     }
 
     func testBiometricProtectedSnapshotCodecEncryptsCompressedSnapshot() throws {
@@ -11429,6 +12229,49 @@ final class FeatureEngineTests: XCTestCase {
             TaptionCommercePolicy.trialDuration,
             14 * 24 * 60 * 60
         )
+    }
+
+    func testStoreKitProductPurchaseEntitlementAndRestore() async throws {
+        #if targetEnvironment(simulator)
+        let osVersion = ProcessInfo.processInfo.operatingSystemVersion
+        if osVersion.majorVersion == 26, osVersion.minorVersion == 5 {
+            throw XCTSkip("iOS 26.5 StoreKitTest fails with SKInternalErrorDomain Code 3")
+        }
+        #endif
+
+        let configurationURL = try XCTUnwrap(
+            Bundle(for: FeatureEngineTests.self).url(
+                forResource: "Products",
+                withExtension: "storekit"
+            )
+        )
+        let session = try SKTestSession(contentsOf: configurationURL)
+        session.resetToDefaultState()
+        session.clearTransactions()
+        session.disableDialogs = true
+        defer {
+            session.clearTransactions()
+            session.resetToDefaultState()
+        }
+
+        let purchaseService = StoreKitPurchaseService()
+        let loadedProduct = try await purchaseService.loadProProduct()
+        let product = try XCTUnwrap(loadedProduct)
+        let entitlementBeforePurchase = await purchaseService.hasProEntitlement()
+        let purchaseOutcome = try await purchaseService.purchasePro()
+        let entitlementAfterPurchase = await purchaseService.hasProEntitlement()
+        session.clearTransactions()
+        let priorPurchase = try await session.buyProduct(
+            identifier: TaptionCommercePolicy.proProductID
+        )
+        await priorPurchase.finish()
+        let restored = try await StoreKitPurchaseService().restorePurchases()
+
+        XCTAssertEqual(product.id, TaptionCommercePolicy.proProductID)
+        XCTAssertFalse(entitlementBeforePurchase)
+        XCTAssertEqual(purchaseOutcome, .purchased)
+        XCTAssertTrue(entitlementAfterPurchase)
+        XCTAssertTrue(restored)
     }
 
     func testProTrialStartsOnlyWhenARecordExistsAndExpiresAtFourteenDays() {
@@ -11810,6 +12653,392 @@ final class FeatureEngineTests: XCTestCase {
                 NSError(domain: "CKErrorDomain", code: 3)
             )
         )
+    }
+
+    func testCloudKitTempAssetCleanupPreservesFreshAndUnrelatedFiles() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let now = Date.now
+        let stale = root.appendingPathComponent("taption-cloud-stale.json")
+        let fresh = root.appendingPathComponent("taption-cloud-fresh.json")
+        let unrelated = root.appendingPathComponent("other.json")
+        for url in [stale, fresh, unrelated] {
+            try Data("payload".utf8).write(to: url)
+        }
+        try FileManager.default.setAttributes(
+            [.modificationDate: now.addingTimeInterval(-7_200)],
+            ofItemAtPath: stale.path
+        )
+
+        XCTAssertEqual(
+            CloudKitSnapshotSyncService.removeStaleTemporaryAssets(
+                in: root,
+                before: now.addingTimeInterval(-3_600)
+            ),
+            1
+        )
+        XCTAssertFalse(FileManager.default.fileExists(atPath: stale.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fresh.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: unrelated.path))
+    }
+
+    func testCalendarSyncPreservesSelectionAcrossEmptyStore() {
+        XCTAssertEqual(
+            CalendarSyncPolicy.reconciledCalendarIDs(
+                existing: ["work"],
+                live: ["work", "personal"]
+            ),
+            ["work"]
+        )
+        XCTAssertEqual(
+            CalendarSyncPolicy.reconciledCalendarIDs(
+                existing: ["apple", "google", "naver"],
+                live: []
+            ),
+            ["apple", "google", "naver"]
+        )
+        XCTAssertEqual(
+            CalendarSyncPolicy.reconciledCalendarIDs(
+                existing: ["apple", "google", "naver"],
+                live: ["apple", "naver"]
+            ),
+            ["apple", "google", "naver"]
+        )
+        XCTAssertEqual(
+            CalendarSyncPolicy.reconciledCalendarIDs(
+                existing: ["old"],
+                live: ["new"]
+            ),
+            ["new"]
+        )
+        XCTAssertEqual(
+            CalendarSyncPolicy.reconciledCalendarIDs(
+                existing: [],
+                live: ["new"]
+            ),
+            []
+        )
+        XCTAssertTrue(CalendarSyncPolicy.hasCompleteSelection(
+            selected: ["apple", "google"],
+            live: ["apple", "google", "naver"]
+        ))
+        XCTAssertFalse(CalendarSyncPolicy.hasCompleteSelection(
+            selected: ["apple", "google"],
+            live: ["apple"]
+        ))
+    }
+
+    @MainActor
+    func testCalendarSelectionSurvivesPermissionRefresh() async {
+        var stored = TaptionDataSnapshot.empty
+        stored.settings.selectedCalendarIDs = ["work", "personal"]
+        stored.settings.permissions[.calendar] = .denied
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+
+        await model.refreshPermissions()
+
+        XCTAssertEqual(
+            model.snapshot.settings.selectedCalendarIDs,
+            ["work", "personal"]
+        )
+    }
+
+    func testCalendarEventDisplayPreservesAllDayAndFloatingWallClock() {
+        var displayCalendar = Calendar(identifier: .gregorian)
+        displayCalendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let allDay = CalendarRecord(
+            id: "all-day",
+            calendarID: "calendar",
+            title: "휴일",
+            span: TimeSpan(
+                start: makeDate(2026, 9, 4, 15),
+                end: makeDate(2026, 9, 5, 15)
+            ),
+            isAllDay: true,
+            calendarTitle: "개인",
+            calendarColorHex: nil,
+            sourceTitle: "Apple",
+            originalStartDateComponents: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 5
+            ),
+            originalEndDateComponents: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 6
+            )
+        )
+        let normalizedAllDay = allDay.normalizedForDisplay(
+            in: displayCalendar
+        )
+        XCTAssertEqual(
+            displayCalendar.component(.day, from: normalizedAllDay.span.start),
+            5
+        )
+        XCTAssertEqual(normalizedAllDay.span.duration, 24 * 60 * 60)
+
+        let floating = CalendarRecord(
+            id: "floating",
+            calendarID: "calendar",
+            title: "떠 있는 일정",
+            span: TimeSpan(
+                start: makeDate(2026, 9, 4, 15),
+                end: makeDate(2026, 9, 4, 16)
+            ),
+            isAllDay: false,
+            calendarTitle: "개인",
+            calendarColorHex: nil,
+            sourceTitle: "Apple",
+            isFloatingTime: true,
+            originalStartDateComponents: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 5,
+                hour: 10,
+                minute: 30
+            ),
+            originalEndDateComponents: DateComponents(
+                year: 2026,
+                month: 9,
+                day: 5,
+                hour: 11,
+                minute: 30
+            )
+        )
+        let normalizedFloating = floating.normalizedForDisplay(
+            in: displayCalendar
+        )
+        XCTAssertEqual(
+            displayCalendar.dateComponents(
+                [.day, .hour, .minute],
+                from: normalizedFloating.span.start
+            ),
+            DateComponents(day: 5, hour: 10, minute: 30)
+        )
+
+        var changedDeviceCalendar = Calendar(identifier: .gregorian)
+        changedDeviceCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let storedAllDay = normalizedAllDay
+        let reloadedAllDay = storedAllDay.normalizedForDisplay(
+            in: changedDeviceCalendar
+        )
+        XCTAssertEqual(
+            changedDeviceCalendar.component(
+                .day,
+                from: reloadedAllDay.span.start
+            ),
+            5
+        )
+        let storedFloating = normalizedFloating
+        let reloadedFloating = storedFloating.normalizedForDisplay(
+            in: changedDeviceCalendar
+        )
+        XCTAssertEqual(
+            changedDeviceCalendar.dateComponents(
+                [.day, .hour, .minute],
+                from: reloadedFloating.span.start
+            ),
+            DateComponents(day: 5, hour: 10, minute: 30)
+        )
+    }
+
+    func testCalendarDeduplicationUsesAccountRecurrenceAndOccurrence() {
+        let start = makeDate(2026, 9, 5, 10)
+        func event(
+            id: String,
+            source: String,
+            occurrence: Date = start,
+            recurrence: String? = "weekly",
+            sourceTitle: String = "Google"
+        ) -> CalendarRecord {
+            CalendarRecord(
+                id: id,
+                calendarID: "calendar",
+                title: "회의",
+                span: TimeSpan(
+                    start: occurrence,
+                    end: occurrence.addingTimeInterval(hour)
+                ),
+                isAllDay: false,
+                calendarTitle: "업무",
+                calendarColorHex: nil,
+                sourceTitle: sourceTitle,
+                sourceIdentifier: source,
+                externalIdentifier: "external-1",
+                recurrenceIdentifier: recurrence
+            )
+        }
+
+        let deduplicated = CalendarSyncPolicy.deduplicatedEvents([
+            event(id: "copy-a", source: "google-account"),
+            event(id: "copy-b", source: "google-account"),
+            event(
+                id: "renamed-source",
+                source: "google-account",
+                sourceTitle: "Apple"
+            ),
+            event(id: "other-account", source: "google-account-2"),
+            event(
+                id: "other-occurrence",
+                source: "google-account",
+                occurrence: start.addingTimeInterval(24 * 60 * 60)
+            ),
+            CalendarRecord(
+                id: "all-day-a",
+                calendarID: "calendar",
+                title: "휴일",
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(24 * 60 * 60)
+                ),
+                isAllDay: true,
+                calendarTitle: "업무",
+                calendarColorHex: nil,
+                sourceTitle: "Google",
+                sourceIdentifier: "google-account",
+                originalStartDateComponents: DateComponents(
+                    year: 2026,
+                    month: 9,
+                    day: 5
+                ),
+                externalIdentifier: "all-day-1"
+            ),
+            CalendarRecord(
+                id: "all-day-b",
+                calendarID: "other-calendar",
+                title: "휴일",
+                span: TimeSpan(
+                    start: start.addingTimeInterval(9 * 60 * 60),
+                    end: start.addingTimeInterval(33 * 60 * 60)
+                ),
+                isAllDay: true,
+                calendarTitle: "업무 복사본",
+                calendarColorHex: nil,
+                sourceTitle: "Google",
+                sourceIdentifier: "google-account",
+                originalStartDateComponents: DateComponents(
+                    year: 2026,
+                    month: 9,
+                    day: 5
+                ),
+                externalIdentifier: "all-day-1"
+            ),
+        ])
+        XCTAssertEqual(deduplicated.map(\.id), [
+            "copy-a",
+            "other-account",
+            "other-occurrence",
+            "all-day-a",
+        ])
+    }
+
+    func testCalendarSyncRefreshesTodayWithoutBridgingFarHistory() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let now = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 9,
+            day: 5,
+            hour: 12
+        ))!
+        let todayStart = calendar.startOfDay(for: now)
+        let today = TimeSpan(
+            start: todayStart,
+            end: calendar.date(byAdding: .day, value: 1, to: todayStart)!
+        )
+        let automatic = CalendarSyncPolicy.refreshSpans(
+            requested: today,
+            includesCurrentDeviceDay: true,
+            now: now,
+            calendar: calendar
+        )
+        XCTAssertEqual(automatic.count, 1)
+        XCTAssertLessThanOrEqual(automatic[0].start, today.start)
+        XCTAssertGreaterThanOrEqual(automatic[0].end, today.end)
+
+        let history = TimeSpan(
+            start: calendar.date(from: DateComponents(
+                year: 2020,
+                month: 1,
+                day: 1
+            ))!,
+            end: calendar.date(from: DateComponents(
+                year: 2020,
+                month: 2,
+                day: 1
+            ))!
+        )
+        let split = CalendarSyncPolicy.refreshSpans(
+            requested: history,
+            includesCurrentDeviceDay: true,
+            now: now,
+            calendar: calendar
+        )
+        XCTAssertEqual(split.count, 2)
+        XCTAssertEqual(split[1], history)
+    }
+
+    func testCalendarSyncLimitsAutomaticRangeBetweenWideRefreshes() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let now = calendar.date(from: DateComponents(
+            year: 2026,
+            month: 9,
+            day: 5,
+            hour: 12
+        ))!
+        let history = TimeSpan(
+            start: calendar.date(from: DateComponents(
+                year: 2020,
+                month: 1,
+                day: 1
+            ))!,
+            end: calendar.date(from: DateComponents(
+                year: 2020,
+                month: 1,
+                day: 2
+            ))!
+        )
+        let spans = CalendarSyncPolicy.refreshSpans(
+            requested: history,
+            includesCurrentDeviceDay: true,
+            refreshesAutomaticRange: false,
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(spans.count, 2)
+        XCTAssertEqual(spans[0].start, calendar.startOfDay(for: now))
+        XCTAssertEqual(
+            spans[0].end,
+            calendar.date(byAdding: .day, value: 1, to: spans[0].start)
+        )
+        XCTAssertEqual(spans[1], history)
+        XCTAssertFalse(CalendarSyncPolicy.shouldRefreshAutomaticRange(
+            lastRefresh: now.addingTimeInterval(-60),
+            now: now
+        ))
+        XCTAssertTrue(CalendarSyncPolicy.shouldRefreshAutomaticRange(
+            lastRefresh: now.addingTimeInterval(
+                -CalendarSyncPolicy.automaticRefreshInterval
+            ),
+            now: now
+        ))
+        XCTAssertTrue(CalendarSyncPolicy.shouldRefreshAutomaticRange(
+            lastRefresh: now,
+            now: now,
+            force: true
+        ))
     }
 
     func testCloudRecoveryRestoresRecordsMissingFromNewerLocalSnapshot() {
@@ -13174,6 +14403,7 @@ final class FeatureEngineTests: XCTestCase {
         ] {
             snapshot.settings.permissions[feature] = .authorized
         }
+        snapshot.settings.healthEnabled = true
         let model = AppModel(
             repository: InMemoryPlanRepository(snapshot: snapshot),
             cloudSyncService: nil
@@ -15722,6 +16952,79 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testCloudRestoreWithoutRawKeepsOnlyManualAndConfirmedRecords() async throws {
+        let start = Date(timeIntervalSince1970: 1_787_538_400)
+        let manual = ActualRecord(
+            planID: nil,
+            title: "수동 기록",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .manual
+        )
+        let automatic = ActualRecord(
+            planID: nil,
+            title: "HealthKit 기록",
+            categoryID: "health",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .healthKit
+        )
+        let corrected = ActualRecord(
+            planID: nil,
+            title: "수동 교정 위치",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            source: .location,
+            manuallyCorrected: true
+        )
+        let inferred = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(600)
+            ),
+            distanceMeters: 1_000,
+            confidence: .medium,
+            evidence: []
+        )
+        let confirmed = TravelSegment(
+            mode: .bus,
+            span: TimeSpan(
+                start: start.addingTimeInterval(900),
+                end: start.addingTimeInterval(1_500)
+            ),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["사용자 확인"],
+            isConfirmed: true
+        )
+        var restored = TaptionDataSnapshot.empty
+        restored.actuals = [manual, automatic, corrected]
+        restored.travel = [inferred, confirmed]
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+
+        let result = try await model.applyCloudBackup(
+            PlanCloudBackupRestorePackage(
+                backup: PlanCloudBackupPayload(snapshot: restored),
+                rawSensorState: .unavailable
+            )
+        )
+
+        XCTAssertEqual(result, .complete)
+        XCTAssertEqual(
+            Set(model.snapshot.actuals.map(\.id)),
+            Set([manual.id, corrected.id])
+        )
+        XCTAssertEqual(model.snapshot.travel.map(\.id), [confirmed.id])
+    }
+
+    @MainActor
     func testCloudRestoreRehydratesRawSensorsAndIsIdempotent() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("cloud-restore-\(UUID().uuidString)")
@@ -15752,11 +17055,18 @@ final class FeatureEngineTests: XCTestCase {
             ),
             sourceDevice: .iPhone
         )
+        let weather = WeatherContext(
+            observedAt: date,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 24,
+            point: reading.point
+        )
         let envelope = try RawDeviceDataEnvelope(
             capturedAt: date,
-            source: .iPhoneMotion,
-            kind: "motion-activities",
-            payload: ["state": "walking"]
+            source: .gps,
+            kind: "weather-context",
+            payload: weather
         )
         let restored = PlanCloudBackupRestorePackage(
             backup: PlanCloudBackupPayload(snapshot: .empty),
@@ -15966,6 +17276,22 @@ final class FeatureEngineTests: XCTestCase {
         model.openMemoEntry(at: makeDate(2026, 8, 4, 14, 12))
         model.addMemoAtEntryInstant(text: "여기서 막혔다", kind: .blocker)
         XCTAssertNotEqual(model.timelineRevision, before)
+    }
+
+    @MainActor
+    func testTimestampOnlyPersistenceKeepsDayProjectionCacheRevision() async {
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        let snapshotRevision = model.snapshotRevision
+        let dayRevision = model.dayProjectionRevision
+
+        await model.setCalendarEnabled(false)
+
+        XCTAssertGreaterThan(model.snapshotRevision, snapshotRevision)
+        XCTAssertEqual(model.dayProjectionRevision, dayRevision)
     }
 
     /// 순간을 그리는 표식이 화소보다 얇아지면 안 된다. 붙어 있는 메모는 낱개로
@@ -19511,7 +20837,7 @@ final class FeatureEngineTests: XCTestCase {
         ).makePackage(
             summary: ["build": "47", "actuals": "12"],
             iphoneLog: "iphone-event",
-            watchLog: "watch-event"
+            watchLog: "health snapshot ready workouts=2\nwatch-event"
         )
         let text = try String(contentsOf: package, encoding: .utf8)
 
@@ -19519,6 +20845,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(text.contains("iphone-event"))
         XCTAssertTrue(text.contains("## apple_watch_log"))
         XCTAssertTrue(text.contains("watch-event"))
+        XCTAssertFalse(text.contains("workouts=2"))
         XCTAssertTrue(text.contains("raw health values are excluded"))
     }
 
@@ -19714,6 +21041,30 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(candidates.first?.kind, .subwayStation)
         XCTAssertEqual(candidates.first?.source, .catalog)
         XCTAssertEqual(candidates.first?.mode, .subway)
+    }
+
+    func testTransitBoardingRejectsUnknownLocationAccuracy() throws {
+        let start = makeDate(2026, 8, 31, 9)
+        let point = try XCTUnwrap(
+            SubwayStationCatalog.stations.first {
+                $0.stationName == "검암" && $0.coordinate != nil
+            }?.coordinate
+        )
+        let readings = [0, 3].map { minute in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(minute) * 60),
+                point: point,
+                gpsAvailable: true
+            )
+        }
+
+        XCTAssertTrue(
+            TransitBoardingCandidateEngine.candidates(
+                readings: readings,
+                registeredLocations: [],
+                travel: [uncertainTransitTravel(at: start)]
+            ).isEmpty
+        )
     }
 
     func testStaticSubwayCatalogRejectsTwoStationCarFallbackWithoutRailEvidence()
@@ -20348,9 +21699,20 @@ final class FeatureEngineTests: XCTestCase {
         locationFixQuality: LocationFixQuality? = nil,
         sourceDevice: TrackingDevice? = nil
     ) -> SensorReading {
-        SensorReading(
+        let observedPoint = GeoPoint(
+            latitude: point.latitude,
+            longitude: point.longitude,
+            altitude: point.altitude,
+            horizontalAccuracy: point.horizontalAccuracy < 0
+                ? 10
+                : point.horizontalAccuracy,
+            verticalAccuracy: point.verticalAccuracy < 0
+                ? 10
+                : point.verticalAccuracy
+        )
+        return SensorReading(
             timestamp: date,
-            point: point,
+            point: observedPoint,
             locationFixQuality: locationFixQuality,
             gpsAvailable: true,
             sourceDevice: sourceDevice
@@ -21176,6 +22538,14 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
+    func testOnlyMovementLiveActivityStickmanActionsAnimate() {
+        XCTAssertEqual(
+            Set(TaptionLiveActivityStickmanAction.allCases.filter(\.isMoving)),
+            [.movement, .walking, .running, .car, .subway, .privateVehicle,
+             .bus, .ship, .airplane, .cycling]
+        )
+    }
+
     func testLiveActivityStickmanKeepsAllRawActionsAndUsesDeterministicSharedPoses() {
         let expectedRawValues = [
             "activity", "computer", "reading", "hobby", "sleeping",
@@ -21907,4 +23277,12 @@ private final class WeatherURLProtocolStub: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+}
+
+private actor HealthRefreshCallCounter {
+    private(set) var value = 0
+
+    func increment() {
+        value += 1
+    }
 }

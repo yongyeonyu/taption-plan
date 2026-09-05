@@ -2746,6 +2746,12 @@ enum WeatherTimelineEngine {
                     == currentBucket {
                 return false
             }
+            if let forecastRange, !incomingForecast.isEmpty,
+               value.isForecast == true, value.placeID == nil,
+               !(value.observedAt >= forecastRange.start
+                    && value.observedAt < forecastRange.end) {
+                return false
+            }
             guard let forecastRange, !incomingForecast.isEmpty,
                   value.observedAt >= forecastRange.start,
                   value.observedAt < forecastRange.end else {
@@ -2800,6 +2806,18 @@ enum WeatherTimelineEngine {
                 for: current,
                 defaultDuration: defaultDuration
             ).end
+            if current.isForecast == true, current.placeID == nil,
+               let index = result.lastIndex(where: {
+                   $0.isForecast == true && $0.placeID == nil
+                       && hourBucket(for: $0.observedAt)
+                           == hourBucket(for: current.observedAt)
+               }) {
+                if (current.fetchedAt ?? .distantPast)
+                    >= (result[index].fetchedAt ?? .distantPast) {
+                    result[index] = current
+                }
+                continue
+            }
             guard let lastIndex = result.indices.last else {
                 result.append(current)
                 continue
@@ -2887,7 +2905,7 @@ enum WeatherTimelineEngine {
         let symbolName: String
         let temperature: Int
         let airGrade: AirQualityGrade?
-        let location: LocationSignature
+        let location: LocationSignature?
     }
 
     private static func sameRawStream(
@@ -2898,6 +2916,7 @@ enum WeatherTimelineEngine {
             return false
         }
         guard lhs.placeID == rhs.placeID else { return false }
+        if lhs.isForecast == true, lhs.placeID == nil { return true }
         guard lhs.placeID == nil else { return true }
         return LocationSignature(lhs) == LocationSignature(rhs)
     }
@@ -2909,7 +2928,9 @@ enum WeatherTimelineEngine {
             symbolName: context.symbolName,
             temperature: Int(context.temperatureCelsius.rounded()),
             airGrade: context.airQuality?.overallGrade,
-            location: LocationSignature(context)
+            location: context.isForecast == true && context.placeID == nil
+                ? nil
+                : LocationSignature(context)
         )
     }
 
@@ -2942,6 +2963,10 @@ enum WeatherTimelineEngine {
         _ lhs: WeatherContext,
         _ rhs: WeatherContext
     ) -> Bool {
+        if lhs.isForecast == true, rhs.isForecast == true,
+           lhs.placeID == nil, rhs.placeID == nil {
+            return true
+        }
         guard lhs.placeID == rhs.placeID else { return false }
         switch (lhs.point, rhs.point) {
         case let (lhsPoint?, rhsPoint?):

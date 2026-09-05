@@ -40,6 +40,22 @@ final class StorageContractsTests: XCTestCase {
         }
     }
 
+    func testCanonicalCompressionSkipsSmallPayloadsAndCompressesLargePayloads() throws {
+        let small = try TaptionPlanCanonicalStorage.encode(
+            Data(repeating: 7, count: 512)
+        )
+        let largeValue = Data(repeating: 7, count: 64 * 1_024)
+        let large = try TaptionPlanCanonicalStorage.encode(largeValue)
+
+        XCTAssertFalse(small.isCompressed)
+        XCTAssertTrue(large.isCompressed)
+        XCTAssertLessThan(large.data.count, large.uncompressedSize)
+        XCTAssertEqual(
+            try TaptionPlanCanonicalStorage.decode(Data.self, from: large),
+            largeValue
+        )
+    }
+
     func testRobustScalarFilterRejectsPhysicalAndIsolatedOutliersWithoutChangingInput() {
         let input: [Double?] = [1, 1.1, 0.9, 90, 1, 1.05, .nan, -1]
         let originalCount = input.count

@@ -232,7 +232,11 @@ private struct TimelineFrameBudgetProbeView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
-        context.coordinator.probe.start()
+        if ProcessInfo.processInfo.environment[
+            "TAPTION_TIMELINE_FRAME_PROBE"
+        ] == "1" {
+            context.coordinator.probe.start()
+        }
         return view
     }
 
@@ -5327,7 +5331,7 @@ private struct TimelineDetailPanel: View {
                     }
                 }
             }
-            Text("애플·구글 캘린더에서 가져온 내용은 ‘일정’ 카드에 표시됩니다.")
+            Text("애플·구글·네이버 캘린더에서 가져온 내용은 ‘일정’ 카드에 표시됩니다.")
                 .font(.taption(size: 7.5, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
         }

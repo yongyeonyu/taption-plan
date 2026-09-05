@@ -2,6 +2,7 @@ import BackgroundTasks
 import Foundation
 import OSLog
 import SwiftUI
+import TaptionPlanCore
 import UIKit
 import UserNotifications
 import WidgetKit
@@ -89,7 +90,7 @@ enum TaptionPlanBackgroundRefresh {
                 logger.notice("Background refresh skipped while Pro is locked")
                 return
             }
-            let model = AppModel(registersHealthBackgroundHandler: false)
+            let model = AppModel.backgroundTaskInstance()
             let success = await model.performBackgroundRefresh(
                 wakeReason: .bgAppRefresh
             )
@@ -153,6 +154,11 @@ final class TaptionPlanAppDelegate:
         didFinishLaunchingWithOptions launchOptions:
             [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        TaptionPlanDeviceLocalStorage.excludeFromBackup()
+        Task.detached(priority: .utility) {
+            try? TaptionPlanDiagnosticsICloudExporter()
+                .removeLegacyPersonalHealthLogsIfNeeded()
+        }
         UNUserNotificationCenter.current().delegate = self
         TaptionPlanBackgroundRefresh.register()
         let launchReason = launchOptions?[.location] == nil
@@ -168,9 +174,7 @@ final class TaptionPlanAppDelegate:
             sensorRecoveryTask = Task { @MainActor in
                 guard await TaptionProAccessController.currentAccessGranted()
                 else { return }
-                let model = AppModel(
-                    registersHealthBackgroundHandler: false
-                )
+                let model = AppModel.backgroundTaskInstance()
                 _ = await model.performBackgroundRefresh(
                     wakeReason: .locationRelaunch
                 )
@@ -189,7 +193,7 @@ final class TaptionPlanAppDelegate:
                 return
             }
             let model = await MainActor.run {
-                AppModel(registersHealthBackgroundHandler: false)
+                AppModel.backgroundTaskInstance()
             }
             await model.performHealthBackgroundRefresh()
         }

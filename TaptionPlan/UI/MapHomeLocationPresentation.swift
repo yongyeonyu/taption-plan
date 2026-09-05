@@ -5,6 +5,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
     case home
     case company
     case school
+    case academy
     case exercise
     case hobby
     case restaurant
@@ -17,6 +18,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .home: .home
         case .company: .company
         case .school: .school
+        case .academy: .academy
         case .exercise: .exercise
         case .hobby: .hobby
         case .restaurant: .restaurant
@@ -29,10 +31,10 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .home: self = .home
         case .company: self = .company
         case .school: self = .school
+        case .academy: self = .academy
         case .exercise: self = .exercise
         case .hobby: self = .hobby
         case .restaurant: self = .restaurant
-        case .academy: return nil
         case .custom: self = .user
         }
     }
@@ -42,6 +44,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .home: "집"
         case .company: "회사"
         case .school: "학교"
+        case .academy: "학원"
         case .exercise: "운동"
         case .hobby: "취미"
         case .restaurant: "식당"
@@ -54,6 +57,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .home: "Home"
         case .company: "Work"
         case .school: "School"
+        case .academy: "Academy"
         case .exercise: "Exercise"
         case .hobby: "Hobby"
         case .restaurant: "Restaurant"
@@ -66,6 +70,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .home: "house.fill"
         case .company: "building.2.fill"
         case .school: "graduationcap.fill"
+        case .academy: "book.closed.fill"
         case .exercise: "figure.run"
         case .hobby: "paintpalette.fill"
         case .restaurant: "storefront.fill"
@@ -78,6 +83,7 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         case .home: Color.tpPastelButter
         case .company: Color.tpPastelSky
         case .school: Color.tpPastelMint
+        case .academy: Color.tpPastelLavender
         case .exercise: Color.tpPastelRose
         case .hobby: Color.tpPastelLavender
         case .restaurant: Color.tpPastelButter
@@ -91,21 +97,12 @@ struct MapHomeLocationThumbnail: View {
     var size: CGFloat = 42
 
     var body: some View {
-        Group {
-            if destination == .home {
-                Image("MapHomeHouseMarker")
-                    .resizable()
-                    .scaledToFit()
-                    .padding(2)
-            } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                        .fill(destination.tint.opacity(0.14))
-                    Image(systemName: destination.systemImage)
-                        .font(.system(size: size * 0.42, weight: .semibold))
-                        .foregroundStyle(destination.tint)
-                }
-            }
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                .fill(destination.tint.opacity(0.14))
+            Image(systemName: destination.systemImage)
+                .font(.system(size: size * 0.42, weight: .semibold))
+                .foregroundStyle(Color.tpInk)
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
@@ -577,7 +574,11 @@ enum MapHomeStickmanRoutePhase {
     case forecast
 
     var color: Color {
-        Color(hex: self == .actual ? "#458B88" : "#C65D4D")
+        Color(
+            hex: self == .actual
+                ? MapHomeWBSTripStyle.actualRouteHex
+                : MapHomeWBSTripStyle.forecastRouteHex
+        )
     }
 }
 

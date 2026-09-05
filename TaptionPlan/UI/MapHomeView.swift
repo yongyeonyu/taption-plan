@@ -11,17 +11,6 @@ enum RouteMapLineStyle {
     static let minimumOpacity: Double = 0.72
 }
 
-enum MapHomeWBSTripStyle {
-    static let paperHex = "#FCF9F4"
-    static let actualRouteHex = "#458B88"
-    static let forecastRouteHex = "#C65D4D"
-    static let actualRouteOpacity = 0.96
-    static let forecastRouteOpacity = 0.78
-    static let actualRouteLineWidth: CGFloat = 2.2
-    static let forecastRouteLineWidth: CGFloat = 1.8
-    static let routeDash: [NSNumber] = [4, 3]
-}
-
 enum MapHomeCompassControlState: Equatable, Sendable {
     case directionArrow
     case compass
@@ -157,6 +146,16 @@ enum MapHomeCameraLayoutMath {
 
 enum MapHomeLongPressRoutingMath {
     static let exclusionPadding: CGFloat = 8
+
+    @MainActor
+    static func isAnnotationTouch(_ view: UIView?) -> Bool {
+        var currentView = view
+        while let current = currentView {
+            if current is MKAnnotationView { return true }
+            currentView = current.superview
+        }
+        return false
+    }
 
     static func shouldPresentLocation(
         at point: CGPoint,
@@ -422,7 +421,8 @@ private struct MapHomeCachedTemporaryLocation: Codable, Sendable {
 }
 
 private struct MapHomeTransitBoardingCandidateCacheKey: Equatable {
-    let snapshotRevision: UInt64
+    let dayProjectionRevision: UInt64
+    let settingsHash: Int
     let readingsRevision: UInt64
     let nearbyPlacesRevision: UInt64
     let cutoff: Date
@@ -1324,14 +1324,17 @@ enum MapHomeRouteReadingsLoadState: Equatable {
 struct MapHomeRouteReadingsTaskKey: Hashable {
     let day: Date
     let isBootstrapped: Bool
+    let dayProjectionRevision: UInt64
 
     init(
         date: Date,
         isBootstrapped: Bool,
+        dayProjectionRevision: UInt64 = 0,
         calendar: Calendar = .autoupdatingCurrent
     ) {
         day = calendar.startOfDay(for: date)
         self.isBootstrapped = isBootstrapped
+        self.dayProjectionRevision = dayProjectionRevision
     }
 }
 
@@ -1419,6 +1422,7 @@ struct MapHomeView: View {
     @State private var normalizedRouteReadings: [SensorReading] = []
     @State private var historicalPlaybackReadings: [SensorReading] = []
     @State private var displayRouteReadings: [SensorReading] = []
+    @State private var lastPreparedRouteReadingsSignature: String?
     @State private var historicalPlaybackPoint: GeoPoint?
     @State private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] = []
     @State private var cachedTemporaryLocations: [SubwayStationCatalog.TemporaryLocation] = []
@@ -1434,14 +1438,11 @@ struct MapHomeView: View {
     )
     @State private var sharedZoomLevel: CGFloat = 1
     @State private var zoomResetToken = 0
-    @State private var timeSidebarZoomStep = 0
     @State private var weatherVisibleStartMinute = 0
     @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var timeSidebarVisibleStartMinute = 0
     @State private var timeSidebarVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var cachedWeatherContexts: [WeatherContext]
-    @State private var sidebarPinchStepOffset = 0
-    @State private var lastSidebarPinchRenderUptime: TimeInterval = 0
     @State private var activePaletteCategoryID: String?
     @State private var customPaletteColor = Color.tpReferenceMint
     @State private var mapCameraFrameProjection = MapHomeCameraFrameProjection()
@@ -1463,9 +1464,9 @@ struct MapHomeView: View {
     @State private var lastPlaybackMapFocusUptime: TimeInterval = 0
     @State private var lastPlaybackMarkerUptime: TimeInterval = 0
     @State private var lastTimelineMapFocusUptime: TimeInterval = 0
-    @State private var dayPlaybackElapsedSeconds: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
     @State private var mapDayCacheStore: TaptionPlanDayStore?
+    @State private var mapDayCacheWriteTask: Task<Void, Never>?
 
     private static let categoryPaletteHexes = [
         "#8FD9C5", "#A9CFF0", "#A7DDEB", "#C2B4E9",
@@ -1740,8 +1741,15 @@ struct MapHomeView: View {
             for: CGSize.self,
             of: { $0.size },
             action: { size in
-                guard mapViewportSize != size else { return }
-                mapViewportSize = size
+                let integralSize = CGSize(
+                    width: size.width.rounded(),
+                    height: size.height.rounded()
+                )
+                Task { @MainActor in
+                    await Task.yield()
+                    guard mapViewportSize != integralSize else { return }
+                    mapViewportSize = integralSize
+                }
             }
         )
         .preferredColorScheme(.light)
@@ -1896,13 +1904,12 @@ struct MapHomeView: View {
             mapSearchCompleter.clear()
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
-            sidebarPinchStepOffset = 0
-            lastSidebarPinchRenderUptime = 0
         }
         .task(
             id: MapHomeRouteReadingsTaskKey(
                 date: model.selectedDate,
-                isBootstrapped: model.isBootstrapped
+                isBootstrapped: model.isBootstrapped,
+                dayProjectionRevision: model.dayProjectionRevision
             )
         ) {
             guard model.isBootstrapped else { return }
@@ -1928,14 +1935,20 @@ struct MapHomeView: View {
             persistMapDayCache()
             await refreshRouteReadings(for: date)
             applyInitialMapFocusIfNeeded()
+            guard Calendar.autoupdatingCurrent.isDateInToday(date) else {
+                return
+            }
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(nanoseconds: 60_000_000_000)
                 } catch {
                     return
                 }
+                guard Calendar.autoupdatingCurrent.isDateInToday(date) else {
+                    return
+                }
                 refreshTimeRailSegments()
-                await refreshRouteReadings(for: date)
+                await refreshRouteReadings(for: date, forceReload: false)
                 applyInitialMapFocusIfNeeded()
             }
         }
@@ -2022,7 +2035,10 @@ struct MapHomeView: View {
         }
         .onChange(of: model.backupRestoreRevision) { _, _ in
             Task {
-                await refreshRouteReadings(for: model.selectedDate)
+                await refreshRouteReadings(
+                    for: model.selectedDate,
+                    forceReload: true
+                )
                 scheduleExpectedRouteRefresh()
             }
         }
@@ -2207,6 +2223,7 @@ struct MapHomeView: View {
             subwayRoutes: vectorSubwayRoutes,
             markers: vectorMapMarkers,
             contentInsets: vectorMapContentInsets,
+            longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
             followsHeading: isHeadingMode,
             headingDegrees: -compassRotationDegrees,
             displayedCoordinate: displayedLocationCoordinate,
@@ -2325,6 +2342,7 @@ struct MapHomeView: View {
                 || isTimelineInteractionActive
                 || userTrackingMode.keepsCameraLocked,
             contentInsets: vectorMapContentInsets,
+            longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
             onCameraFrame: { frame, locationPoint, isFinal in
                 let now = ProcessInfo.processInfo.systemUptime
                 if let rendered = mapCameraFrameProjection.submit(
@@ -2398,8 +2416,10 @@ struct MapHomeView: View {
             MapHomeVectorRoute(
                 id: overlay.id,
                 coordinates: overlay.coordinates,
+                geometrySignature: overlay.geometrySignature,
                 colorHex: MapHomeWBSTripStyle.actualRouteHex,
                 opacity: MapHomeWBSTripStyle.actualRouteOpacity
+                    * min(max(overlay.opacity, 0), 1)
             )
         }
     }
@@ -2409,8 +2429,10 @@ struct MapHomeView: View {
             MapHomeAppleRoute(
                 id: "timeline-\(overlay.id)",
                 coordinates: overlay.coordinates,
+                geometrySignature: overlay.geometrySignature,
                 colorHex: MapHomeWBSTripStyle.actualRouteHex,
-                opacity: MapHomeWBSTripStyle.actualRouteOpacity,
+                opacity: MapHomeWBSTripStyle.actualRouteOpacity
+                    * min(max(overlay.opacity, 0), 1),
                 phase: .actual,
                 transport: nil
             )
@@ -2421,7 +2443,8 @@ struct MapHomeView: View {
             return MapHomeAppleRoute(
                 id: "subway-\(overlay.id.uuidString)",
                 coordinates: overlay.coordinates,
-                colorHex: MapHomeWBSTripStyle.actualRouteHex,
+                geometrySignature: overlay.geometrySignature,
+                colorHex: MapHomeWBSTripStyle.transitRouteHex,
                 opacity: MapHomeWBSTripStyle.actualRouteOpacity,
                 phase: .actual,
                 transport: .transit
@@ -2439,6 +2462,7 @@ struct MapHomeView: View {
             MapHomeAppleRoute(
                 id: "expected-\(overlay.id.uuidString)",
                 coordinates: overlay.coordinates,
+                geometrySignature: overlay.geometrySignature,
                 colorHex: MapHomeWBSTripStyle.forecastRouteHex,
                 opacity: MapHomeWBSTripStyle.forecastRouteOpacity,
                 phase: .forecast,
@@ -2448,6 +2472,7 @@ struct MapHomeView: View {
             MapHomeAppleRoute(
                 id: "wbs-\(overlay.id)",
                 coordinates: overlay.coordinates,
+                geometrySignature: overlay.geometrySignature,
                 colorHex: MapHomeWBSTripStyle.forecastRouteHex,
                 opacity: MapHomeWBSTripStyle.forecastRouteOpacity,
                 phase: .forecast,
@@ -2458,6 +2483,10 @@ struct MapHomeView: View {
         let expectedLegIDs = Set(expected.map { "movement-\($0.id.uuidString)" })
         let generatedLegIDs = Set(generated.map(\.id))
         let dottedLegIDs = expectedLegIDs.union(generatedLegIDs)
+        let baseSignatures = Dictionary(
+            fallback.map { ($0.id, $0.geometrySignature) },
+            uniquingKeysWith: { first, _ in first }
+        )
         let cutoff = routeOverlayCutoff
         let projected = projection.legs.compactMap { leg -> MapHomeAppleRoute? in
             guard dottedLegIDs.contains(leg.id),
@@ -2473,17 +2502,19 @@ struct MapHomeView: View {
             } else {
                 id = "wbs-\(leg.id)"
             }
+            guard let baseSignature = baseSignatures[id] else { return nil }
             return MapHomeAppleRoute(
                 id: id,
                 coordinates: coordinates,
+                geometrySignature: MapHomeRouteGeometrySignature.derived(
+                    from: baseSignature,
+                    coordinates: coordinates
+                ),
                 colorHex: MapHomeWBSTripStyle.forecastRouteHex,
                 opacity: MapHomeWBSTripStyle.forecastRouteOpacity,
                 phase: .forecast,
                 transport: leg.mode.map { MapHomeAppleRouteTransport(mode: $0) }
             )
-        }
-        guard Set(projected.map(\.id)) == Set(fallback.map(\.id)) else {
-            return fallback
         }
         return projected
     }
@@ -2506,7 +2537,8 @@ struct MapHomeView: View {
         )
         return MapHomeExpectedRouteOverlay.prefixByDistance(
             coordinates,
-            fraction: fraction
+            fraction: fraction,
+            segmentLengths: leg.segmentLengths
         )
     }
 
@@ -2608,7 +2640,8 @@ struct MapHomeView: View {
                 at: displayedLocationDate,
                 departureDate: route.departureDate,
                 arrivalDate: route.arrivalDate,
-                coordinates: route.coordinates
+                coordinates: route.coordinates,
+                segmentLengths: route.segmentLengths
             )
             phase = .forecast
             animationPhase = MapHomeExpectedRoutePlaybackMath.progress(
@@ -2676,8 +2709,10 @@ struct MapHomeView: View {
         return MapHomeVectorRoute(
             id: "active-\(overlay.id)",
             coordinates: overlay.coordinates,
+            geometrySignature: overlay.geometrySignature,
             colorHex: MapHomeWBSTripStyle.actualRouteHex,
             opacity: MapHomeWBSTripStyle.actualRouteOpacity
+                * min(max(overlay.opacity, 0), 1)
         )
     }
 
@@ -2686,6 +2721,7 @@ struct MapHomeView: View {
             MapHomeVectorRoute(
                 id: "expected-\(overlay.id.uuidString)",
                 coordinates: overlay.coordinates,
+                geometrySignature: overlay.geometrySignature,
                 colorHex: MapHomeWBSTripStyle.forecastRouteHex,
                 opacity: MapHomeWBSTripStyle.forecastRouteOpacity
             )
@@ -2694,6 +2730,7 @@ struct MapHomeView: View {
             MapHomeVectorRoute(
                 id: "wbs-\(overlay.id)",
                 coordinates: overlay.coordinates,
+                geometrySignature: overlay.geometrySignature,
                 colorHex: MapHomeWBSTripStyle.forecastRouteHex,
                 opacity: MapHomeWBSTripStyle.forecastRouteOpacity
             )
@@ -2707,7 +2744,8 @@ struct MapHomeView: View {
             return MapHomeVectorRoute(
                 id: "subway-\(overlay.id)",
                 coordinates: overlay.coordinates,
-                colorHex: MapHomeWBSTripStyle.actualRouteHex,
+                geometrySignature: overlay.geometrySignature,
+                colorHex: MapHomeWBSTripStyle.transitRouteHex,
                 opacity: MapHomeWBSTripStyle.actualRouteOpacity
             )
         }
@@ -2819,6 +2857,7 @@ struct MapHomeView: View {
                                 "\(location.stationName) temporary subway location"
                             )
                         )
+                        .allowsHitTesting(false)
                     }
                 }
             }
@@ -3558,7 +3597,6 @@ struct MapHomeView: View {
     private func startDayPlayback() {
         dayPlaybackTask?.cancel()
         if (selectedTimelineMinute ?? 0) >= MapHomeTimeSidebarMath.fullDayMinutes {
-            dayPlaybackElapsedSeconds = 0
             selectedTimelineMinute = 0
         }
         let currentDate = Date.now
@@ -3575,9 +3613,6 @@ struct MapHomeView: View {
             )
         )
         var playbackMinute = currentMinute
-        if currentMinute == 0 {
-            dayPlaybackElapsedSeconds = 0
-        }
         dayPlaybackCurrentMinute = currentMinute
         let movingRanges = dayPlaybackMovementRanges
         if currentMinute == 0 {
@@ -3623,7 +3658,6 @@ struct MapHomeView: View {
                     ),
                     playbackEndMinute
                 )
-                dayPlaybackElapsedSeconds += elapsed
                 let minute = min(
                     MapHomeTimeSidebarMath.fullDayMinutes,
                     max(0, Int(playbackMinute.rounded(.down)))
@@ -3786,9 +3820,6 @@ struct MapHomeView: View {
         lastPlaybackMapFocusUptime = 0
         lastPlaybackMarkerUptime = 0
         lastTimelineMapFocusUptime = 0
-        if resetProgress {
-            dayPlaybackElapsedSeconds = 0
-        }
         if wasRunning {
             isTimelineInteractionActive = false
             _ = flushDeferredRouteProjection()
@@ -3844,7 +3875,6 @@ struct MapHomeView: View {
                         segments: timeRailSegments,
                         categoryColors: model.settings.mapCategoryColors,
                         zoomResetToken: zoomResetToken,
-                        zoomStepToken: timeSidebarZoomStep,
                         railWidth: Layout.timeRailWidth,
                         maximumSelectableMinute: nil,
                         trailingInteractionWidth: Layout.horizontalInset,
@@ -3914,32 +3944,6 @@ struct MapHomeView: View {
                         railHeight / 2,
                         proxy.size.height - railHeight / 2
                     )
-                )
-                .contentShape(Rectangle())
-                .simultaneousGesture(
-                    MagnificationGesture()
-                        .onChanged { scale in
-                            let offset = MapHomeTimeSidebarPinchMath.stepOffset(
-                                magnification: scale
-                            )
-                            guard offset != sidebarPinchStepOffset else { return }
-                            guard TimelineInteractionFrameGate.shouldRender(
-                                lastUptime: &lastSidebarPinchRenderUptime,
-                                nowUptime: ProcessInfo.processInfo.systemUptime
-                            ) else { return }
-                            timeSidebarZoomStep += offset - sidebarPinchStepOffset
-                            sidebarPinchStepOffset = offset
-                        }
-                        .onEnded { scale in
-                            let offset = MapHomeTimeSidebarPinchMath.stepOffset(
-                                magnification: scale
-                            )
-                            if offset != sidebarPinchStepOffset {
-                                timeSidebarZoomStep += offset - sidebarPinchStepOffset
-                            }
-                            sidebarPinchStepOffset = 0
-                            lastSidebarPinchRenderUptime = 0
-                        }
                 )
             }
         }
@@ -5672,11 +5676,19 @@ struct MapHomeView: View {
         let dayData = currentDayDataSnapshot
         let registeredLocations = model.settings.userTransitLocations
         let nearbyPlaces = nearbyTransitPlaces
-        let travel = dayData?.travel ?? model.snapshot.travel
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let daySpan = TimeSpan(start: dayStart, end: dayEnd)
+        let travel = dayData?.travel ?? model.snapshot.travel.filter {
+            $0.span.intersection(with: daySpan) != nil
+        }
         let decisions = model.settings.transitBoardingDecisions
         let cutoff = routeOverlayCutoff
         let key = MapHomeTransitBoardingCandidateCacheKey(
-            snapshotRevision: model.snapshotRevision,
+            dayProjectionRevision: model.dayProjectionRevision,
+            settingsHash: registeredLocations.hashValue ^ decisions.hashValue,
             readingsRevision: transitBoardingReadingsRevision,
             nearbyPlacesRevision: nearbyTransitPlacesRevision,
             cutoff: MapHomeTransitBoardingRefreshPolicy.cutoffBucket(cutoff)
@@ -5859,6 +5871,7 @@ struct MapHomeView: View {
         normalizedRouteReadings = []
         historicalPlaybackReadings = []
         displayRouteReadings = []
+        lastPreparedRouteReadingsSignature = nil
         historicalPlaybackPoint = nil
         routeProjection = nil
         wbsPlaybackProjection = nil
@@ -5881,8 +5894,6 @@ struct MapHomeView: View {
         )
         timeSidebarVisibleStartMinute = 0
         timeSidebarVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
-        sidebarPinchStepOffset = 0
-        lastSidebarPinchRenderUptime = 0
         zoomResetToken += 1
         hasAppliedInitialMapFocus = false
         routeDocumentProjectionGate.reset()
@@ -5891,7 +5902,7 @@ struct MapHomeView: View {
 
     private var currentDayDataSnapshot: PlanDayDataSnapshot? {
         guard let dayDataSnapshot,
-              dayDataSnapshot.sourceRevision == model.snapshotRevision,
+              dayDataSnapshot.sourceRevision == model.dayProjectionRevision,
               dayDataSnapshot.projectionVersion == TaptionPlanV3Store.projectionVersion,
               Calendar.autoupdatingCurrent.isDate(
                   dayDataSnapshot.day,
@@ -6735,7 +6746,10 @@ struct MapHomeView: View {
         )
     }
 
-    private func refreshRouteReadings(for date: Date) async {
+    private func refreshRouteReadings(
+        for date: Date,
+        forceReload: Bool = false
+    ) async {
         let viewSignpostID = OSSignpostID(log: Self.dayViewSignpostLog)
         os_signpost(
             .begin,
@@ -6755,10 +6769,13 @@ struct MapHomeView: View {
         let dayStart = calendar.startOfDay(for: date)
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
         else { return }
-        let dayData = await model.planDayDataSnapshot(for: date)
+        let dayData = await model.planDayDataSnapshot(
+            for: date,
+            forceReload: forceReload
+        )
         guard !Task.isCancelled,
               calendar.isDate(date, inSameDayAs: model.selectedDate),
-              dayData.sourceRevision == model.snapshotRevision
+              dayData.sourceRevision == model.dayProjectionRevision
         else { return }
         var snapshotFields = TaptionPlanDiagnosticsTravelSummary.fields(
             for: dayData.travel
@@ -6841,6 +6858,10 @@ struct MapHomeView: View {
     }
 
     private func loadMapDayCache(for date: Date) async {
+        let generation = TaptionDataDeletionFence.currentGeneration()
+        guard TaptionDataDeletionFence.allows(generation: generation) else {
+            return
+        }
         if mapDayCacheStore == nil {
             mapDayCacheStore = makeMapDayCacheStore()
         }
@@ -6853,6 +6874,7 @@ struct MapHomeView: View {
             algorithmKey: Self.mapCacheAlgorithmKey,
             styleKey: styleKey
         ), Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
+            && TaptionDataDeletionFence.allows(generation: generation)
         else { return }
         guard payload.sourceUpdatedAt == nil
                 || payload.sourceUpdatedAt == model.snapshot.updatedAt else {
@@ -7008,6 +7030,8 @@ struct MapHomeView: View {
               visibleMapCenter.longitude.isFinite,
               visibleMapSpan.latitudeDelta.isFinite,
               visibleMapSpan.longitudeDelta.isFinite else { return }
+        guard let databaseURL = try? TaptionLocalDatabaseLocation
+            .sharedOrApplicationSupport() else { return }
         if mapDayCacheStore == nil {
             mapDayCacheStore = makeMapDayCacheStore()
         }
@@ -7078,13 +7102,36 @@ struct MapHomeView: View {
         )
         let day = TaptionPlanDayKey(date: model.selectedDate)
         let styleKey = model.settings.mapDisplayStyle.runtimeStyle.rawValue
-        Task {
-            try? await mapDayCacheStore.saveCodableMapDayDocument(
-                payload,
-                day: day,
-                algorithmKey: Self.mapCacheAlgorithmKey,
-                styleKey: styleKey
-            )
+        let generation = TaptionDataDeletionFence.currentGeneration()
+        guard TaptionDataDeletionFence.allows(generation: generation) else {
+            return
+        }
+        mapDayCacheWriteTask?.cancel()
+        mapDayCacheWriteTask = Task {
+            do {
+                let lock = try await TaptionDataFileLock.acquire(
+                    url: databaseURL.appendingPathExtension("lock")
+                )
+                defer { lock.unlock() }
+                guard !Task.isCancelled,
+                      TaptionDataDeletionFence.allows(
+                        generation: generation
+                      ) else { return }
+                _ = try await mapDayCacheStore.saveCodableMapDayDocument(
+                    payload,
+                    day: day,
+                    algorithmKey: Self.mapCacheAlgorithmKey,
+                    styleKey: styleKey
+                )
+            } catch is CancellationError {
+                return
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "map_day_cache_save_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.fields(for: error)
+                )
+            }
         }
     }
 
@@ -7142,8 +7189,37 @@ struct MapHomeView: View {
             }
             mapRenderCache.invalidateRouteData()
             requestRouteProjectionRefresh(preparingReadings: true)
+            if let timestamp = [
+                model.latestSensorReading?.timestamp,
+                model.liveRouteState.readings.last?.timestamp,
+            ].compactMap({ $0 }).max() {
+                removeCompletedExpectedRoutes(at: timestamp)
+            }
             liveRouteProjectionRefreshTask = nil
         }
+    }
+
+    private func removeCompletedExpectedRoutes(at timestamp: Date) {
+        guard !expectedRouteOverlays.isEmpty else { return }
+        let travel = currentDayDataSnapshot?.travel ?? model.snapshot.travel
+        let travelByID = Dictionary(
+            uniqueKeysWithValues: travel.map { ($0.id, $0) }
+        )
+        let readings = currentDayReadings
+        let completed = Set<UUID>(expectedRouteOverlays.compactMap { overlay in
+            guard overlay.departureDate <= timestamp,
+                  let segment = travelByID[overlay.id],
+                  TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
+                      for: segment,
+                      readings: readings
+                  ) else { return nil }
+            return overlay.id
+        })
+        guard !completed.isEmpty else { return }
+        expectedRouteOverlays.removeAll { completed.contains($0.id) }
+        mapRenderCache.invalidateExpectedRoutes()
+        refreshWBSPlaybackProjection()
+        persistMapDayCache()
     }
 
     @discardableResult
@@ -7202,6 +7278,27 @@ struct MapHomeView: View {
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
             ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let preparationSignature = [
+            String(dayStart.timeIntervalSinceReferenceDate),
+            String(model.dayProjectionRevision),
+            String(transitBoardingReadingsRevision),
+            String(routeReadings.count),
+            routeReadings.last?.id.uuidString ?? "none",
+            String(model.liveRouteState.readings.count),
+            model.liveRouteState.readings.last?.id.uuidString ?? "none",
+            model.liveRouteState.lastUpdatedAt.map {
+                String($0.timeIntervalSinceReferenceDate)
+            } ?? "none",
+            model.latestSensorReading?.id.uuidString ?? "none",
+            model.latestSensorReading.map {
+                String($0.timestamp.timeIntervalSinceReferenceDate)
+            } ?? "none",
+        ].joined(separator: "|")
+        guard preparationSignature != lastPreparedRouteReadingsSignature else {
+            requestWBSPlaybackProjectionRefresh()
+            return
+        }
+        lastPreparedRouteReadingsSignature = preparationSignature
         let sourceReadings = routeReadings
             + model.liveRouteState.readings
             + (model.latestSensorReading.map { [$0] } ?? [])
@@ -7226,7 +7323,9 @@ struct MapHomeView: View {
                 "normalized_readings": String(normalizedRouteReadings.count),
                 "display_readings": String(displayRouteReadings.count),
                 "watch_source_readings": String(
-                    sourceReadings.filter { $0.sourceDevice == .appleWatch }.count
+                    sourceReadings.filter {
+                        $0.sourceDevice == .appleWatch
+                    }.count
                 ),
                 "readings_with_point": String(
                     normalizedRouteReadings.filter { $0.point != nil }.count
@@ -7235,7 +7334,11 @@ struct MapHomeView: View {
                     normalizedRouteReadings.filter(\.matchesRailRoute).count
                 ),
                 "readings_station_name": String(
-                    Set(normalizedRouteReadings.compactMap(\.nearbyStationName)).count
+                    Set(
+                        normalizedRouteReadings.compactMap(
+                            \.nearbyStationName
+                        )
+                    ).count
                 ),
             ]
         )
@@ -7263,10 +7366,26 @@ struct MapHomeView: View {
     }
 
     private func refreshWBSPlaybackProjection() {
-        let next = makeWBSPlaybackProjection(
+        var next = makeWBSPlaybackProjection(
             expected: expectedRouteOverlays,
             generated: wbsGeneratedRouteOverlays
         )
+        let activeGeneratedIDs = Set(next.legs.compactMap { leg in
+            leg.routePhase == .forecast && leg.activity == .movement
+                ? leg.id
+                : nil
+        })
+        let generated = wbsGeneratedRouteOverlays.filter {
+            activeGeneratedIDs.contains($0.id)
+        }
+        if generated.count != wbsGeneratedRouteOverlays.count {
+            wbsGeneratedRouteOverlays = generated
+            mapRenderCache.invalidateExpectedRoutes()
+            next = makeWBSPlaybackProjection(
+                expected: expectedRouteOverlays,
+                generated: generated
+            )
+        }
         if wbsPlaybackProjection != next {
             wbsPlaybackProjection = next
         }
@@ -10262,26 +10381,47 @@ enum MapHomeExpectedRoutePlaybackMath {
         at date: Date,
         departureDate: Date,
         arrivalDate: Date,
-        coordinates: [CLLocationCoordinate2D]
+        coordinates: [CLLocationCoordinate2D],
+        segmentLengths: [Double]? = nil
     ) -> CLLocationCoordinate2D? {
         guard coordinates.count >= 2,
               departureDate <= date,
               date <= arrivalDate,
               arrivalDate > departureDate else { return nil }
 
-        let lengths = zip(coordinates, coordinates.dropFirst()).map {
-            CLLocation(latitude: $0.0.latitude, longitude: $0.0.longitude)
-                .distance(from: CLLocation(latitude: $0.1.latitude, longitude: $0.1.longitude))
-        }
-        let total = lengths.reduce(0, +)
-        guard total > 0 else { return coordinates.first }
-
         guard let fraction = progress(
             at: date,
             departureDate: departureDate,
             arrivalDate: arrivalDate
         ) else { return nil }
-        let target = total * fraction
+        return coordinate(
+            atProgress: fraction,
+            coordinates: coordinates,
+            segmentLengths: segmentLengths
+        )
+    }
+
+    static func segmentLengths(
+        for coordinates: [CLLocationCoordinate2D]
+    ) -> [Double] {
+        zip(coordinates, coordinates.dropFirst()).map {
+            CLLocation(latitude: $0.0.latitude, longitude: $0.0.longitude)
+                .distance(from: CLLocation(latitude: $0.1.latitude, longitude: $0.1.longitude))
+        }
+    }
+
+    static func coordinate(
+        atProgress progress: Double,
+        coordinates: [CLLocationCoordinate2D],
+        segmentLengths cachedLengths: [Double]? = nil
+    ) -> CLLocationCoordinate2D? {
+        guard coordinates.count >= 2 else { return coordinates.first }
+        let lengths = cachedLengths?.count == coordinates.count - 1
+            ? cachedLengths!
+            : segmentLengths(for: coordinates)
+        let total = lengths.reduce(0, +)
+        guard total > 0 else { return coordinates.first }
+        let target = total * min(max(progress, 0), 1)
         var traversed = 0.0
         for (index, length) in lengths.enumerated() {
             guard length > 0 else { continue }
@@ -10389,13 +10529,52 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
     let departureDate: Date
     let arrivalDate: Date
     let coordinates: [CLLocationCoordinate2D]
+    let segmentLengths: [Double]
+    let geometrySignature: Int
+
+    init(
+        id: UUID,
+        mode: TravelMode,
+        departureDate: Date,
+        arrivalDate: Date,
+        coordinates: [CLLocationCoordinate2D]
+    ) {
+        self.id = id
+        self.mode = mode
+        self.departureDate = departureDate
+        self.arrivalDate = arrivalDate
+        self.coordinates = coordinates
+        segmentLengths = MapHomeExpectedRoutePlaybackMath.segmentLengths(
+            for: coordinates
+        )
+        geometrySignature = MapHomeRouteGeometrySignature.value(for: coordinates)
+    }
+
+    private init(
+        id: UUID,
+        mode: TravelMode,
+        departureDate: Date,
+        arrivalDate: Date,
+        coordinates: [CLLocationCoordinate2D],
+        segmentLengths: [Double],
+        geometrySignature: Int
+    ) {
+        self.id = id
+        self.mode = mode
+        self.departureDate = departureDate
+        self.arrivalDate = arrivalDate
+        self.coordinates = coordinates
+        self.segmentLengths = segmentLengths
+        self.geometrySignature = geometrySignature
+    }
 
     func coordinate(at date: Date) -> CLLocationCoordinate2D? {
         MapHomeExpectedRoutePlaybackMath.coordinate(
             at: date,
             departureDate: departureDate,
             arrivalDate: arrivalDate,
-            coordinates: coordinates
+            coordinates: coordinates,
+            segmentLengths: segmentLengths
         )
     }
 
@@ -10408,39 +10587,65 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
             max(cutoff.timeIntervalSince(departureDate) / duration, 0),
             1
         )
-        let visibleCoordinates = Self.prefixByDistance(
+        let visible = Self.prefixByDistanceResult(
             coordinates,
-            fraction: fraction
+            fraction: fraction,
+            segmentLengths: segmentLengths
         )
         return Self(
             id: id,
             mode: mode,
             departureDate: departureDate,
             arrivalDate: arrivalDate,
-            coordinates: visibleCoordinates
+            coordinates: visible.coordinates,
+            segmentLengths: visible.segmentLengths,
+            geometrySignature: MapHomeRouteGeometrySignature.derived(
+                from: geometrySignature,
+                coordinates: visible.coordinates
+            )
         )
     }
 
     fileprivate static func prefixByDistance(
         _ coordinates: [CLLocationCoordinate2D],
-        fraction: Double
+        fraction: Double,
+        segmentLengths cachedLengths: [Double]? = nil
     ) -> [CLLocationCoordinate2D] {
-        guard coordinates.count >= 2 else { return coordinates }
-        let lengths = zip(coordinates, coordinates.dropFirst()).map {
-            CLLocation(
-                latitude: $0.0.latitude,
-                longitude: $0.0.longitude
-            ).distance(from: CLLocation(
-                latitude: $0.1.latitude,
-                longitude: $0.1.longitude
-            ))
+        prefixByDistanceResult(
+            coordinates,
+            fraction: fraction,
+            segmentLengths: cachedLengths
+        ).coordinates
+    }
+
+    fileprivate struct PrefixResult {
+        let coordinates: [CLLocationCoordinate2D]
+        let segmentLengths: [Double]
+    }
+
+    fileprivate static func prefixByDistanceResult(
+        _ coordinates: [CLLocationCoordinate2D],
+        fraction: Double,
+        segmentLengths cachedLengths: [Double]? = nil
+    ) -> PrefixResult {
+        guard coordinates.count >= 2 else {
+            return PrefixResult(coordinates: coordinates, segmentLengths: [])
         }
+        let lengths = cachedLengths?.count == coordinates.count - 1
+            ? cachedLengths!
+            : MapHomeExpectedRoutePlaybackMath.segmentLengths(for: coordinates)
         let total = lengths.reduce(0, +)
-        guard total > 0 else { return Array(coordinates.prefix(2)) }
+        guard total > 0 else {
+            return PrefixResult(
+                coordinates: Array(coordinates.prefix(2)),
+                segmentLengths: [0]
+            )
+        }
 
         let target = total * min(max(fraction, 0), 1)
         var traversed = 0.0
         var result = [coordinates[0]]
+        var resultLengths: [Double] = []
         for (index, length) in lengths.enumerated() {
             let next = coordinates[index + 1]
             guard length > 0 else { continue }
@@ -10457,14 +10662,24 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
                             + (next.longitude - coordinates[index].longitude) * ratio
                     )
                 )
-                return result.count >= 2
-                    ? result
-                    : Array(coordinates.prefix(2))
+                resultLengths.append(length * ratio)
+                return PrefixResult(
+                    coordinates: result.count >= 2
+                        ? result
+                        : Array(coordinates.prefix(2)),
+                    segmentLengths: result.count >= 2
+                        ? resultLengths
+                        : [length]
+                )
             }
             result.append(next)
+            resultLengths.append(length)
             traversed += length
         }
-        return Array(coordinates.suffix(2))
+        return PrefixResult(
+            coordinates: coordinates,
+            segmentLengths: lengths
+        )
     }
 }
 
@@ -10474,6 +10689,44 @@ private struct MapHomeWBSGeneratedRouteOverlay: Identifiable {
     let departureDate: Date
     let arrivalDate: Date
     let coordinates: [CLLocationCoordinate2D]
+    let segmentLengths: [Double]
+    let geometrySignature: Int
+
+    init(
+        id: String,
+        mode: TravelMode?,
+        departureDate: Date,
+        arrivalDate: Date,
+        coordinates: [CLLocationCoordinate2D]
+    ) {
+        self.id = id
+        self.mode = mode
+        self.departureDate = departureDate
+        self.arrivalDate = arrivalDate
+        self.coordinates = coordinates
+        segmentLengths = MapHomeExpectedRoutePlaybackMath.segmentLengths(
+            for: coordinates
+        )
+        geometrySignature = MapHomeRouteGeometrySignature.value(for: coordinates)
+    }
+
+    private init(
+        id: String,
+        mode: TravelMode?,
+        departureDate: Date,
+        arrivalDate: Date,
+        coordinates: [CLLocationCoordinate2D],
+        segmentLengths: [Double],
+        geometrySignature: Int
+    ) {
+        self.id = id
+        self.mode = mode
+        self.departureDate = departureDate
+        self.arrivalDate = arrivalDate
+        self.coordinates = coordinates
+        self.segmentLengths = segmentLengths
+        self.geometrySignature = geometrySignature
+    }
 
     func visible(through cutoff: Date) -> Self? {
         guard cutoff > departureDate, coordinates.count >= 2 else { return nil }
@@ -10484,14 +10737,21 @@ private struct MapHomeWBSGeneratedRouteOverlay: Identifiable {
             max(cutoff.timeIntervalSince(departureDate) / duration, 0),
             1
         )
+        let visible = MapHomeExpectedRouteOverlay.prefixByDistanceResult(
+            coordinates,
+            fraction: fraction,
+            segmentLengths: segmentLengths
+        )
         return Self(
             id: id,
             mode: mode,
             departureDate: departureDate,
             arrivalDate: arrivalDate,
-            coordinates: MapHomeExpectedRouteOverlay.prefixByDistance(
-                coordinates,
-                fraction: fraction
+            coordinates: visible.coordinates,
+            segmentLengths: visible.segmentLengths,
+            geometrySignature: MapHomeRouteGeometrySignature.derived(
+                from: geometrySignature,
+                coordinates: visible.coordinates
             )
         )
     }
@@ -10506,6 +10766,18 @@ struct MapHomeSubwayRouteOverlay: Identifiable {
     let id: UUID
     let coordinates: [CLLocationCoordinate2D]
     let estimated: Bool
+    let geometrySignature: Int
+
+    init(
+        id: UUID,
+        coordinates: [CLLocationCoordinate2D],
+        estimated: Bool
+    ) {
+        self.id = id
+        self.coordinates = coordinates
+        self.estimated = estimated
+        geometrySignature = MapHomeRouteGeometrySignature.value(for: coordinates)
+    }
 }
 
 enum MapHomeSubwayRouteOverlayEngine {
@@ -10669,6 +10941,22 @@ private struct MapHomeTimelineRouteOverlay: Identifiable {
     let opacity: Double
     let speedMetersPerSecond: Double?
     let coordinates: [CLLocationCoordinate2D]
+    let geometrySignature: Int
+
+    init(
+        id: String,
+        categoryID: String,
+        opacity: Double,
+        speedMetersPerSecond: Double?,
+        coordinates: [CLLocationCoordinate2D]
+    ) {
+        self.id = id
+        self.categoryID = categoryID
+        self.opacity = opacity
+        self.speedMetersPerSecond = speedMetersPerSecond
+        self.coordinates = coordinates
+        geometrySignature = MapHomeRouteGeometrySignature.value(for: coordinates)
+    }
 }
 
 private struct MapHomeTemporaryLocationAnnotation: Identifiable {
@@ -10714,7 +11002,7 @@ private struct MapHomePlacePin: View {
 
             Text("Lv.\(floor ?? 1)")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(destination.tint)
+                .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 .background(.white, in: Capsule())
@@ -10730,12 +11018,12 @@ private struct MapHomeTransitPlacePin: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            MapHomeMarkerLabel(title: name, color: Color.tpReferenceBlue)
+            MapHomeMarkerLabel(title: name, color: Color.tpTransitDark)
             Image(systemName: kind.systemImage)
-                .font(.system(size: 5.5, weight: .bold))
+                .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 22, height: 22)
-                .background(Color.tpReferenceBlue, in: Circle())
+                .background(Color.tpTransitDark, in: Circle())
                 .overlay { Circle().stroke(.white, lineWidth: 1) }
                 .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
         }
@@ -10749,12 +11037,12 @@ private struct MapHomeTransitBoardingCandidatePin: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            MapHomeMarkerLabel(title: name, color: Color.tpReferenceGold)
+            MapHomeMarkerLabel(title: name, color: Color.tpTransitDark)
             Text("?")
                 .font(.system(size: 16, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .frame(width: 28, height: 28)
-                .background(Color.tpReferenceGold, in: Circle())
+                .background(Color.tpTransitDark, in: Circle())
                 .overlay { Circle().stroke(.white, lineWidth: 1.5) }
                 .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
         }
@@ -10776,7 +11064,6 @@ private struct MapHomeProjectedAnnotation<Content: View>: View {
     let point: CGPoint
     let anchor: UnitPoint
     let content: Content
-    @State private var contentSize = CGSize.zero
 
     init(
         point: CGPoint,
@@ -10789,18 +11076,18 @@ private struct MapHomeProjectedAnnotation<Content: View>: View {
     }
 
     var body: some View {
+        let xOffset = (0.5 - anchor.x)
+        let yOffset = (0.5 - anchor.y)
         content
-            .onGeometryChange(
-                for: CGSize.self,
-                of: { $0.size },
-                action: { size in
-                    guard contentSize != size else { return }
-                    contentSize = size
-                }
-            )
+            .visualEffect { content, geometry in
+                content.offset(
+                    x: xOffset * geometry.size.width,
+                    y: yOffset * geometry.size.height
+                )
+            }
             .position(
-                x: point.x + (0.5 - anchor.x) * contentSize.width,
-                y: point.y + (0.5 - anchor.y) * contentSize.height
+                x: point.x,
+                y: point.y
             )
     }
 }
@@ -11121,10 +11408,11 @@ private struct MapHomeMarkerLabel: View {
     var body: some View {
         Text(title)
             .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .foregroundStyle(color)
+            .foregroundStyle(Color.tpInk)
             .padding(.horizontal, 13)
             .padding(.vertical, 7)
             .background(.white, in: Capsule())
+            .overlay { Capsule().stroke(color.opacity(0.45), lineWidth: 1) }
             .shadow(color: .black.opacity(0.10), radius: 6, y: 3)
     }
 }
@@ -12650,6 +12938,7 @@ private enum MapHomeAppleRouteTransport: String {
 private struct MapHomeAppleRoute {
     let id: String
     let coordinates: [CLLocationCoordinate2D]
+    let geometrySignature: Int
     let colorHex: String
     let opacity: Double
     let phase: MapHomeAppleRoutePhase
@@ -12747,18 +13036,23 @@ enum MapHomeApplePlaybackMath {
         at date: Date,
         departureDate: Date,
         arrivalDate: Date,
-        coordinates: [CLLocationCoordinate2D]
+        coordinates: [CLLocationCoordinate2D],
+        segmentLengths: [Double]? = nil
     ) -> CLLocationDirection {
         guard coordinates.count >= 2 else { return 0 }
         let duration = arrivalDate.timeIntervalSince(departureDate)
         let progress = duration > 0
             ? min(max(date.timeIntervalSince(departureDate) / duration, 0), 1)
             : 1
-        let currentCoordinate = coordinate(atProgress: progress, coordinates: coordinates)
-        let lookAhead = coordinate(
+        guard let currentCoordinate = MapHomeExpectedRoutePlaybackMath.coordinate(
+            atProgress: progress,
+            coordinates: coordinates,
+            segmentLengths: segmentLengths
+        ), let lookAhead = MapHomeExpectedRoutePlaybackMath.coordinate(
             atProgress: min(1, progress + lookAheadProgress),
-            coordinates: coordinates
-        )
+            coordinates: coordinates,
+            segmentLengths: segmentLengths
+        ) else { return 0 }
         if !sameLocation(currentCoordinate, lookAhead) {
             return stableHeading(
                 MapHomeVectorNavigationMath.bearing(
@@ -12767,10 +13061,11 @@ enum MapHomeApplePlaybackMath {
                 )
             )
         }
-        let lookBehind = coordinate(
+        let lookBehind = MapHomeExpectedRoutePlaybackMath.coordinate(
             atProgress: max(0, progress - lookAheadProgress),
-            coordinates: coordinates
-        )
+            coordinates: coordinates,
+            segmentLengths: segmentLengths
+        ) ?? currentCoordinate
         return stableHeading(
             MapHomeVectorNavigationMath.bearing(
                 from: lookBehind,
@@ -12823,33 +13118,6 @@ enum MapHomeApplePlaybackMath {
                 to: points[points.count - 1].1
             )
         )
-    }
-
-    private static func coordinate(
-        atProgress progress: Double,
-        coordinates: [CLLocationCoordinate2D]
-    ) -> CLLocationCoordinate2D {
-        let lengths = zip(coordinates, coordinates.dropFirst()).map {
-            distance(from: $0.0, to: $0.1)
-        }
-        let total = lengths.reduce(0, +)
-        guard total > 0 else { return coordinates[0] }
-        let target = total * min(max(progress, 0), 1)
-        var traversed = 0.0
-        for (index, length) in lengths.enumerated() where length > 0 {
-            if traversed + length >= target {
-                let next = coordinates[index + 1]
-                let ratio = min(max((target - traversed) / length, 0), 1)
-                return CLLocationCoordinate2D(
-                    latitude: coordinates[index].latitude
-                        + (next.latitude - coordinates[index].latitude) * ratio,
-                    longitude: coordinates[index].longitude
-                        + (next.longitude - coordinates[index].longitude) * ratio
-                )
-            }
-            traversed += length
-        }
-        return coordinates[coordinates.count - 1]
     }
 
     private static func sameLocation(
@@ -13097,6 +13365,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let playback: MapHomeApplePlayback?
     let centersPlayback: Bool
     let contentInsets: UIEdgeInsets
+    let longPressExclusionFrame: CGRect
     let onCameraFrame: (MapHomeCameraFrame, CGPoint?, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
     let onUserCameraGesture: () -> Void
@@ -13128,9 +13397,12 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.isApplyingSwiftUIUpdate = true
+        defer { context.coordinator.isApplyingSwiftUIUpdate = false }
         if mapView.layoutMargins != contentInsets {
             mapView.layoutMargins = contentInsets
         }
+        context.coordinator.refreshGestureAttachments(in: mapView)
         context.coordinator.applyMapStyle(to: mapView)
         context.coordinator.updateContent(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
@@ -13153,12 +13425,18 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var lastPlaybackSignature: String?
         private var lastCentersPlayback: Bool?
         private var routeStyles: [ObjectIdentifier: MapHomeAppleRouteStyle] = [:]
+        private var routePolylines: [String: MKPolyline] = [:]
+        private var routeSignatures: [String: String] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
         private var lastCenteredPlaybackCoordinate: CLLocationCoordinate2D?
-        private var panGesture: UIPanGestureRecognizer?
+        private var observedPanGestures: [UIPanGestureRecognizer] = []
         private var observedCameraGestures: [UIGestureRecognizer] = []
+        private var lastGestureAttachmentScanUptime = -Double.infinity
         private var lastCameraPublishUptime = -Double.infinity
         private var longPressGesture: UILongPressGestureRecognizer?
+        fileprivate var isApplyingSwiftUIUpdate = false
+        private var cameraFramePublishPending = false
+        private var cameraFramePublishIsFinal = false
 
         init(parent: MapHomeAppleMap) {
             self.parent = parent
@@ -13166,17 +13444,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
         func attach(to mapView: MKMapView) {
             self.mapView = mapView
-            let pan = UIPanGestureRecognizer(
-                target: self,
-                action: #selector(handlePan(_:))
-            )
-            pan.minimumNumberOfTouches = 1
-            pan.maximumNumberOfTouches = 1
-            pan.cancelsTouchesInView = false
-            pan.delegate = self
-            mapView.addGestureRecognizer(pan)
-            panGesture = pan
-            attachCameraGestures(in: mapView)
+            refreshGestureAttachments(in: mapView, force: true)
 
             let longPress = UILongPressGestureRecognizer(
                 target: self,
@@ -13184,15 +13452,17 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             )
             longPress.minimumPressDuration = 0.55
             longPress.allowableMovement = 12
+            longPress.cancelsTouchesInView = false
             longPress.delegate = self
             mapView.addGestureRecognizer(longPress)
             longPressGesture = longPress
         }
 
         func detach(from mapView: MKMapView) {
-            if let panGesture {
-                mapView.removeGestureRecognizer(panGesture)
+            for gesture in observedPanGestures {
+                gesture.removeTarget(self, action: #selector(handlePan(_:)))
             }
+            observedPanGestures.removeAll()
             for gesture in observedCameraGestures {
                 gesture.removeTarget(self, action: #selector(handleCameraGesture(_:)))
             }
@@ -13200,10 +13470,45 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             if let longPressGesture {
                 mapView.removeGestureRecognizer(longPressGesture)
             }
-            panGesture = nil
             longPressGesture = nil
             lastCameraPublishUptime = -Double.infinity
+            lastGestureAttachmentScanUptime = -Double.infinity
+            cameraFramePublishIsFinal = false
             self.mapView = nil
+        }
+
+        func refreshGestureAttachments(
+            in mapView: MKMapView,
+            force: Bool = false
+        ) {
+            let now = ProcessInfo.processInfo.systemUptime
+            guard force
+                    || observedPanGestures.isEmpty
+                    || observedCameraGestures.isEmpty
+                    || now - lastGestureAttachmentScanUptime >= 1 else {
+                return
+            }
+            lastGestureAttachmentScanUptime = now
+            attachPanGestures(in: mapView)
+            attachCameraGestures(in: mapView)
+        }
+
+        func attachPanGestures(in view: UIView) {
+            let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
+                .compactMap { $0 as? UIPanGestureRecognizer }
+            let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
+            for gesture in observedPanGestures
+            where !currentIDs.contains(ObjectIdentifier(gesture)) {
+                gesture.removeTarget(self, action: #selector(handlePan(_:)))
+            }
+            observedPanGestures.removeAll {
+                !currentIDs.contains(ObjectIdentifier($0))
+            }
+            let observedIDs = Set(observedPanGestures.map { ObjectIdentifier($0) })
+            for gesture in gestures where !observedIDs.contains(ObjectIdentifier(gesture)) {
+                gesture.addTarget(self, action: #selector(handlePan(_:)))
+                observedPanGestures.append(gesture)
+            }
         }
 
         func applyMapStyle(to mapView: MKMapView) {
@@ -13230,7 +13535,6 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             updateRoutes(in: mapView)
             updateAnnotations(in: mapView)
             updateWalker(in: mapView)
-            normalizeAnnotationLayerOrder(in: mapView)
         }
 
         func applyCameraCommandIfNeeded(to mapView: MKMapView) {
@@ -13254,7 +13558,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             } else if let coordinate = parent.routes.first?.coordinates.first {
                 mapView.setCenter(coordinate, animated: false)
             }
-            publishCameraFrame(from: mapView, isFinal: true)
+            publishCameraFrameAfterUpdate(from: mapView, isFinal: true)
         }
 
         func applyViewportCommandIfNeeded(to mapView: MKMapView) {
@@ -13270,11 +13574,39 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             } else if let coordinate = command.centerCoordinate {
                 MapHomeAppleCameraCommand.center(coordinate, on: mapView)
             }
-            publishCameraFrame(from: mapView, isFinal: true)
+            publishCameraFrameAfterUpdate(from: mapView, isFinal: true)
         }
 
         func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
             publishCameraFrame(from: mapView, isFinal: false)
+        }
+
+        func mapView(
+            _ mapView: MKMapView,
+            regionWillChangeAnimated animated: Bool
+        ) {
+            refreshGestureAttachments(in: mapView, force: true)
+            var hasCameraGesture = false
+            var hasSingleFingerPan = false
+            for view in allSubviews(in: mapView) {
+                for gesture in view.gestureRecognizers ?? []
+                where gesture.state == .began || gesture.state == .changed {
+                    if gesture is UIPinchGestureRecognizer
+                        || gesture is UIRotationGestureRecognizer {
+                        hasCameraGesture = true
+                    }
+                    if let pan = gesture as? UIPanGestureRecognizer,
+                       pan.numberOfTouches <= 1 {
+                        hasSingleFingerPan = true
+                    }
+                }
+            }
+            if hasCameraGesture {
+                parent.onUserCameraGesture()
+            }
+            if hasSingleFingerPan {
+                parent.onSingleFingerPanBegan()
+            }
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
@@ -13287,10 +13619,23 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
             updateWalker(in: mapView)
-            normalizeAnnotationLayerOrder(in: mapView)
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            if annotation is MKUserLocation {
+                let reuseIdentifier = "MapHome.hiddenUserLocation"
+                let view = mapView.dequeueReusableAnnotationView(
+                    withIdentifier: reuseIdentifier
+                ) ?? MKAnnotationView(
+                    annotation: annotation,
+                    reuseIdentifier: reuseIdentifier
+                )
+                view.annotation = annotation
+                view.isHidden = true
+                view.isAccessibilityElement = false
+                view.canShowCallout = false
+                return view
+            }
             if let walker = annotation as? MapHomeAppleWalkerAnnotation {
                 let reuseIdentifier = "MapHome.appleWalker"
                 let view = (mapView.dequeueReusableAnnotationView(withIdentifier: reuseIdentifier)
@@ -13357,14 +13702,16 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             shouldReceive touch: UITouch
         ) -> Bool {
             if gestureRecognizer === longPressGesture {
-                return true
+                guard !MapHomeLongPressRoutingMath.isAnnotationTouch(touch.view) else {
+                    return false
+                }
+                guard let view = gestureRecognizer.view else { return true }
+                return MapHomeLongPressRoutingMath.shouldPresentLocation(
+                    at: touch.location(in: view),
+                    excluding: parent.longPressExclusionFrame
+                )
             }
-            var view: UIView? = touch.view
-            while let current = view {
-                if current is MKAnnotationView { return false }
-                view = current.superview
-            }
-            return true
+            return !MapHomeLongPressRoutingMath.isAnnotationTouch(touch.view)
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
@@ -13386,6 +13733,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
         @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
             guard gesture.state == .began,
+                  gesture.numberOfTouches <= 1,
                   let mapView else { return }
             parent.onLongPress(
                 mapView.convert(
@@ -13396,32 +13744,48 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateRoutes(in mapView: MKMapView) {
-            let signature = parent.routes.map { route in
-                let first = route.coordinates.first
-                let last = route.coordinates.last
-                return [
+            let routeSignatures = Dictionary(
+                parent.routes.map { route in
+                    (route.id, [
                     route.id,
                     route.phase == .actual ? "actual" : "forecast",
-                    String(route.coordinates.count),
-                    String(first?.latitude ?? 0),
-                    String(first?.longitude ?? 0),
-                    String(last?.latitude ?? 0),
-                    String(last?.longitude ?? 0),
+                    String(route.geometrySignature),
                     route.colorHex,
                     String(route.opacity),
-                ].joined(separator: "|")
+                    ].joined(separator: "|"))
+                },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let signature = parent.routes.compactMap {
+                routeSignatures[$0.id]
             }.joined(separator: ";")
             guard signature != lastRoutesSignature else { return }
             lastRoutesSignature = signature
-            mapView.removeOverlays(mapView.overlays)
-            routeStyles.removeAll(keepingCapacity: true)
+            let staleIDs = Set(self.routePolylines.keys).filter {
+                routeSignatures[$0] != self.routeSignatures[$0]
+            }
+            let removed = staleIDs.compactMap {
+                self.routePolylines.removeValue(forKey: $0)
+            }
+            for polyline in removed {
+                routeStyles.removeValue(forKey: ObjectIdentifier(polyline))
+            }
+            if !removed.isEmpty {
+                mapView.removeOverlays(removed)
+            }
+            for id in staleIDs {
+                self.routeSignatures.removeValue(forKey: id)
+            }
             let polylines = parent.routes.compactMap { route -> MKPolyline? in
+                guard self.routePolylines[route.id] == nil else { return nil }
                 guard route.coordinates.count >= 2 else { return nil }
                 var coordinates = route.coordinates
                 let polyline = MKPolyline(
                     coordinates: &coordinates,
                     count: coordinates.count
                 )
+                self.routePolylines[route.id] = polyline
+                self.routeSignatures[route.id] = routeSignatures[route.id]
                 routeStyles[ObjectIdentifier(polyline)] = MapHomeAppleRouteStyle(
                     color: UIColor(hex: route.colorHex),
                     opacity: CGFloat(min(max(route.opacity, 0), 1)),
@@ -13472,6 +13836,9 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 guard playback.followsUserLocation,
                       let location = mapView.userLocation.location,
                       location.horizontalAccuracy >= 0,
+                      location.horizontalAccuracy
+                        <= MapCurrentLocationAnchorPolicy
+                            .maximumPreciseAccuracy,
                       abs(location.timestamp.timeIntervalSinceNow) <= 5 * 60,
                       CLLocationCoordinate2DIsValid(location.coordinate) else {
                     return playback
@@ -13533,7 +13900,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             }
         }
 
-        private func attachCameraGestures(in view: UIView) {
+        func attachCameraGestures(in view: UIView) {
             let gestures = allSubviews(in: view).flatMap { $0.gestureRecognizers ?? [] }
                 .filter { $0 is UIPinchGestureRecognizer || $0 is UIRotationGestureRecognizer }
             let currentIDs = Set(gestures.map { ObjectIdentifier($0) })
@@ -13592,6 +13959,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.stickman
             view.superview?.bringSubviewToFront(view)
             view.isEnabled = false
+            view.isUserInteractionEnabled = false
             view.isAccessibilityElement = true
             view.accessibilityTraits = .image
             view.accessibilityLabel = annotation.label
@@ -13614,6 +13982,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             view.selectedZPriority = .defaultUnselected
             view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
             view.isEnabled = annotation.isInteractive
+            view.isUserInteractionEnabled = annotation.isInteractive
             view.isAccessibilityElement = true
             view.accessibilityTraits = annotation.isInteractive ? .button : .image
             view.accessibilityIdentifier = "MapHome.appleAnnotation.\(annotation.identifier)"
@@ -13733,6 +14102,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             from mapView: MKMapView,
             isFinal: Bool
         ) {
+            if isApplyingSwiftUIUpdate {
+                publishCameraFrameAfterUpdate(from: mapView, isFinal: isFinal)
+                return
+            }
             let now = ProcessInfo.processInfo.systemUptime
             guard isFinal || now - lastCameraPublishUptime >= 1.0 / 60.0 else {
                 return
@@ -13752,6 +14125,24 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 mapView.convert($0.coordinate, toPointTo: mapView)
             }
             parent.onCameraFrame(frame, locationPoint, isFinal)
+        }
+
+        private func publishCameraFrameAfterUpdate(
+            from mapView: MKMapView,
+            isFinal: Bool
+        ) {
+            cameraFramePublishIsFinal = cameraFramePublishIsFinal || isFinal
+            guard !cameraFramePublishPending else { return }
+            cameraFramePublishPending = true
+            Task { @MainActor [weak self, weak mapView] in
+                await Task.yield()
+                guard let self else { return }
+                self.cameraFramePublishPending = false
+                let isFinal = self.cameraFramePublishIsFinal
+                self.cameraFramePublishIsFinal = false
+                guard let mapView else { return }
+                self.publishCameraFrame(from: mapView, isFinal: isFinal)
+            }
         }
     }
 }

@@ -14,7 +14,21 @@ struct RealtimeSensorMapProjection: Hashable, Sendable {
         at timestamp: Date,
         temporaryLocations: [SubwayStationCatalog.TemporaryLocation] = []
     ) -> Self? {
-        let ordered = readings.filter { $0.point != nil }.sorted { $0.timestamp < $1.timestamp }
+        let ordered = readings.filter { reading in
+            guard reading.gpsAvailable,
+                  reading.locationFixQuality != .approximate,
+                  let point = reading.point,
+                  point.latitude.isFinite,
+                  point.longitude.isFinite,
+                  (-90...90).contains(point.latitude),
+                  (-180...180).contains(point.longitude),
+                  point.horizontalAccuracy.isFinite,
+                  point.horizontalAccuracy >= 0,
+                  point.horizontalAccuracy <= 150 else {
+                return false
+            }
+            return true
+        }.sorted { $0.timestamp < $1.timestamp }
         if let exact = ordered.first(where: { $0.timestamp == timestamp }), let point = exact.point {
             return Self(timestamp: timestamp, point: point, isEstimated: false, source: "GPS")
         }
@@ -409,7 +423,9 @@ struct TravelModeClassifier: Sendable {
             for: latestSubwayWiFi?.connectedWiFiSSID
         )
         let subwayWiFiSignal = subwayWiFiFamily != nil
-            && subwayWiFiStreak >= 2
+            && SubwayWiFiSSID.hasContinuousEvidence(
+                streak: subwayWiFiStreak
+            )
             && railSpeedSignal
             && railContext
         let stationStopPattern = resolvedSubwayRoute.map {
@@ -874,7 +890,21 @@ struct TravelModeClassifier: Sendable {
     }
 
     private func firstLastDisplacement(_ readings: [SensorReading]) -> Double {
-        let points = readings.compactMap(\.point)
+        let points = readings.compactMap { reading -> GeoPoint? in
+            guard reading.gpsAvailable,
+                  reading.locationFixQuality != .approximate,
+                  let point = reading.point,
+                  point.latitude.isFinite,
+                  point.longitude.isFinite,
+                  (-90...90).contains(point.latitude),
+                  (-180...180).contains(point.longitude),
+                  point.horizontalAccuracy.isFinite,
+                  point.horizontalAccuracy >= 0,
+                  point.horizontalAccuracy <= 150 else {
+                return nil
+            }
+            return point
+        }
         guard let first = points.first, let last = points.last else { return 0 }
         return distanceMeters(first, last)
     }
@@ -927,6 +957,21 @@ struct TravelModeClassifier: Sendable {
 
     private func speedSeries(for readings: [SensorReading]) -> [Double] {
         var values = readings.compactMap { reading -> Double? in
+            guard reading.gpsAvailable,
+                  reading.locationFixQuality != .approximate else {
+                return nil
+            }
+            if let point = reading.point {
+                guard point.latitude.isFinite,
+                      point.longitude.isFinite,
+                      (-90...90).contains(point.latitude),
+                      (-180...180).contains(point.longitude),
+                      point.horizontalAccuracy.isFinite,
+                      point.horizontalAccuracy >= 0,
+                      point.horizontalAccuracy <= 150 else {
+                    return nil
+                }
+            }
             guard let speed = reading.speedMetersPerSecond,
                   speed >= 0,
                   speed.isFinite else {
@@ -944,7 +989,20 @@ struct TravelModeClassifier: Sendable {
         }
 
         let pointReadings = readings
-            .filter { $0.point != nil }
+            .filter { reading in
+                guard reading.gpsAvailable,
+                      reading.locationFixQuality != .approximate,
+                      let point = reading.point else {
+                    return false
+                }
+                return point.latitude.isFinite
+                    && point.longitude.isFinite
+                    && (-90...90).contains(point.latitude)
+                    && (-180...180).contains(point.longitude)
+                    && point.horizontalAccuracy.isFinite
+                    && point.horizontalAccuracy >= 0
+                    && point.horizontalAccuracy <= 150
+            }
             .sorted { $0.timestamp < $1.timestamp }
         for pair in zip(pointReadings, pointReadings.dropFirst()) {
             guard let from = pair.0.point,
@@ -1517,9 +1575,23 @@ enum HealthRouteMergeEngine {
         _ date: Date,
         in sorted: [Date]
     ) -> Bool {
-        sorted.contains {
-            abs($0.timeIntervalSince(date)) < minimumSpacingSeconds
+        var lower = 0
+        var upper = sorted.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if sorted[middle] < date {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
         }
+        if lower < sorted.count,
+           abs(sorted[lower].timeIntervalSince(date)) < minimumSpacingSeconds {
+            return true
+        }
+        return lower > 0
+            && abs(sorted[lower - 1].timeIntervalSince(date))
+                < minimumSpacingSeconds
     }
 }
 
@@ -2363,6 +2435,7 @@ struct FloorTimelineEngine: Sendable {
 struct PlaceDetectionEngine: Sendable {
     var minimumDwell: TimeInterval = 15 * 60
     var radiusMeters: Double = 70
+    var maximumSampleGap: TimeInterval = 90 * 60
 
     func detectStays(
         readings: [SensorReading],
@@ -2378,8 +2451,14 @@ struct PlaceDetectionEngine: Sendable {
 
         for reading in sorted {
             guard let point = reading.point else { continue }
-            if let anchor = current.first?.point,
-               distanceMeters(anchor, point) > radiusMeters {
+            let sampleGapTooLarge = current.last.map {
+                reading.timestamp.timeIntervalSince($0.timestamp)
+                    > maximumSampleGap
+            } ?? false
+            let movedTooFar = current.first?.point.map {
+                distanceMeters($0, point) > radiusMeters
+            } ?? false
+            if sampleGapTooLarge || movedTooFar {
                 if !current.isEmpty { groups.append(current) }
                 current = [reading]
             } else {
@@ -2743,10 +2822,13 @@ enum TransitBoardingCandidateEngine {
               point.latitude.isFinite,
               point.longitude.isFinite,
               (-90...90).contains(point.latitude),
-              (-180...180).contains(point.longitude) else {
+              (-180...180).contains(point.longitude),
+              point.horizontalAccuracy.isFinite,
+              point.horizontalAccuracy > 0,
+              point.horizontalAccuracy <= 200 else {
             return false
         }
-        return point.horizontalAccuracy <= 0 || point.horizontalAccuracy <= 200
+        return true
     }
 
     private static func representativePoint(
@@ -2900,6 +2982,14 @@ struct WalkingLocationEngine: Sendable {
             .filter {
                 $0.trackingKind == .walking
                     && $0.point != nil
+                    && $0.gpsAvailable
+                    && $0.locationFixQuality != .approximate
+                    && ($0.point?.latitude.isFinite ?? false)
+                    && ($0.point?.longitude.isFinite ?? false)
+                    && ($0.point?.latitude ?? .nan) >= -90
+                    && ($0.point?.latitude ?? .nan) <= 90
+                    && ($0.point?.longitude ?? .nan) >= -180
+                    && ($0.point?.longitude ?? .nan) <= 180
                     && ($0.point?.horizontalAccuracy ?? .infinity)
                         >= 0
                     && ($0.point?.horizontalAccuracy ?? .infinity)
@@ -3005,7 +3095,9 @@ struct MovementRouteBuilder: Sendable {
             let inference = classifier.classify(
                 readings: segmentReadings,
                 inside: span,
-                healthEvidence: healthEvidence,
+                healthEvidence: healthEvidence.filter {
+                    $0.span.intersection(with: span) != nil
+                },
                 correctedMode: correctedModes[signature],
                 userTransitLocations: userTransitLocations
             )
@@ -3798,14 +3890,26 @@ enum AppleDeviceGroundTruthEngine {
     static func resolvingOverlaps(
         _ segments: [TravelSegment]
     ) -> [TravelSegment] {
-        let ordered = segments.sorted {
+        let ordered = segments.filter { $0.span.duration > 0 }.sorted {
             if $0.span.start == $1.span.start {
                 return $0.span.duration > $1.span.duration
             }
             return $0.span.start < $1.span.start
         }
+        var suffixStart = Array(
+            repeating: Date.distantFuture,
+            count: ordered.count + 1
+        )
+        if !ordered.isEmpty {
+            for index in stride(from: ordered.count - 1, through: 0, by: -1) {
+                suffixStart[index] = min(
+                    suffixStart[index + 1],
+                    ordered[index].span.start
+                )
+            }
+        }
         var result: [TravelSegment] = []
-        for segment in ordered {
+        for (index, segment) in ordered.enumerated() {
             guard let last = result.last,
                   last.span.intersection(with: segment.span) != nil else {
                 result.append(segment)
@@ -3820,6 +3924,12 @@ enum AppleDeviceGroundTruthEngine {
                 // 뒤쪽만 남겨 이어 붙일 수 있으면 잘라서 유지한다.
                 guard segment.span.end.timeIntervalSince(last.span.end) >= 60
                 else { continue }
+                // The trimmed suffix would be reordered behind a later
+                // input. Drop this lower-priority candidate so the one-pass
+                // output stays sorted and cannot overlap an earlier winner.
+                guard suffixStart[index + 1] >= last.span.end else {
+                    continue
+                }
                 var trimmed = segment
                 trimmed.span = TimeSpan(
                     start: last.span.end,
@@ -3847,7 +3957,12 @@ enum AppleDeviceGroundTruthEngine {
                 result[result.count - 1] = segment
             }
         }
-        return result
+        return result.filter { $0.span.duration > 0 }.sorted {
+            if $0.span.start != $1.span.start {
+                return $0.span.start < $1.span.start
+            }
+            return $0.span.end < $1.span.end
+        }
     }
 
     /// 듀티사이클 샘플링이 만든 같은 모드의 이동 조각을 하나로 잇는다.

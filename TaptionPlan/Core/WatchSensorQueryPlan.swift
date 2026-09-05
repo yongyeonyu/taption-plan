@@ -89,9 +89,8 @@ enum WatchSensorQueryPlan {
 
 /// 조회 결과에 따라 워터마크를 옮기는 규칙.
 ///
-/// 예외로 건너뛴 토막도 끝까지 올린다. 올리지 않으면 다음 실행이 같은
-/// 범위를 다시 물어 같은 예외를 영원히 반복한다. 워터마크는 절대 뒤로
-/// 가지 않으므로 이미 읽은 구간을 다시 읽지도 않는다.
+/// 성공한 토막까지만 워터마크를 올린다. 실패한 범위는 다음 실행에서 다시
+/// 읽어 일시적인 Core Motion 오류가 기록 유실로 바뀌지 않게 한다.
 struct WatchSensorDrainLedger {
     /// 한 번 실행에서 예외를 이만큼 만나면 나머지 토막은 다음 실행으로
     /// 미룬다. 전 구간이 잘못된 상태에서 한 번에 수십 번 던지지 않는다.
@@ -112,9 +111,8 @@ struct WatchSensorDrainLedger {
         advance(past: window)
     }
 
-    mutating func failed(_ window: WatchSensorQueryWindow) {
+    mutating func failed(_: WatchSensorQueryWindow) {
         failureCount += 1
-        advance(past: window)
     }
 
     private mutating func advance(past window: WatchSensorQueryWindow) {

@@ -4,6 +4,21 @@ import WidgetKit
 
 @MainActor
 final class WatchConnectivityController: NSObject, ObservableObject {
+    private final class PurgeReplyHandler: @unchecked Sendable {
+        private let handler: ([String: Any]) -> Void
+
+        init(_ handler: @escaping ([String: Any]) -> Void) {
+            self.handler = handler
+        }
+
+        func finish(requestID: String, succeeded: Bool) {
+            handler([
+                TaptionWatchEnvelope.purgeRequestIDKey: requestID,
+                TaptionWatchEnvelope.purgeAcknowledgedKey: succeeded,
+            ])
+        }
+    }
+
     @Published private(set) var payload: TaptionWatchPayload?
     @Published private(set) var statusText = AppLanguagePreference.text(
         korean: "iPhone 연결 중",
@@ -19,6 +34,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         "TaptionPlan.pendingWatchAccelerationChunks"
     private let pendingHealthSnapshotsKey =
         "TaptionPlan.pendingWatchHealthSnapshots"
+    private let completedPurgeGenerationKey =
+        "TaptionPlan.completedWatchPurgeGeneration"
     private var pendingSensorSummaries: [TaptionWatchSensorSummary] = []
     private var pendingAccelerationChunks: [TaptionWatchAccelerationChunk] = []
     private var pendingHealthSnapshots: [TaptionWatchHealthSnapshot] = []
@@ -26,10 +43,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private var handledWorkoutRequestIDs = Set<UUID>()
     private var handledDataSyncRequestIDs = Set<String>()
     private var activeDataSyncRequestID: String?
+    private var activePurge:
+        (id: UUID, generation: UInt64, task: Task<Bool, Never>)?
+    private var sensorWriteTasks: [UUID: Task<Void, Never>] = [:]
+    private var isPurgingData = false
     private let dayDatabase: WatchDayDatabase?
     var onWorkoutRequest: ((TaptionWatchWorkoutRequest) -> Void)?
     var onPayloadChange: ((TaptionWatchPayload) -> Void)?
     var onDataSyncRequest: ((String) -> Void)?
+    var onPurgeRequest: (() async -> Bool)?
 
     private var didPrepare = false
     private var didActivateConnectivity = false
@@ -124,6 +146,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     func requestSync() {
+        guard !isPurgingData else { return }
         let requestID = UUID().uuidString
         beginDataSyncRequest(requestID: requestID, source: "watch_button")
         // The button must drain the Watch's local recorder before asking the
@@ -185,6 +208,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         requestID: String?,
         source: String
     ) {
+        guard !isPurgingData else { return }
         let resolvedID = requestID ?? UUID().uuidString
         if handledDataSyncRequestIDs.count >= 100 {
             handledDataSyncRequestIDs.removeAll(keepingCapacity: true)
@@ -204,18 +228,24 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     func sendSensorSummary(_ summary: TaptionWatchSensorSummary) {
-        Task { @MainActor [weak self] in
-            await self?.sendSensorSummaryAndWait(summary)
+        let taskID = UUID()
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.sensorWriteTasks[taskID] = nil }
+            await self.sendSensorSummaryAndWait(summary)
         }
+        sensorWriteTasks[taskID] = task
     }
 
     func sendSensorSummaryAndWait(_ summary: TaptionWatchSensorSummary) async {
+        guard !isPurgingData else { return }
         WatchLaunchDiagnostics.mark(
             "sensor send requested sequence=\(summary.sequence) samples=\(summary.accelerometerSampleCount)"
         )
         if let dayDatabase {
             do {
                 try await dayDatabase.append(summary)
+                guard !isPurgingData else { return }
                 sendSensorSummaryTransport(summary)
             } catch {
                 cachePending(summary)
@@ -226,15 +256,47 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         sendSensorSummaryTransport(summary)
     }
 
+    func sendAmbientDrainAndWait(
+        summaries: [TaptionWatchSensorSummary],
+        accelerationChunks: [TaptionWatchAccelerationChunk]
+    ) async -> Bool {
+        guard !isPurgingData else { return false }
+        if let dayDatabase {
+            do {
+                try await dayDatabase.appendBatch(
+                    summaries,
+                    chunks: accelerationChunks
+                )
+            } catch {
+                summaries.forEach(cachePending)
+                accelerationChunks.forEach(cachePending)
+                WatchLaunchDiagnostics.mark("ambient batch store failed")
+                return false
+            }
+        }
+        guard !isPurgingData else { return false }
+        var scheduled = true
+        for chunk in accelerationChunks where
+            !sendAccelerationChunkTransport(chunk) {
+            scheduled = false
+        }
+        for summary in summaries where !sendSensorSummaryTransport(summary) {
+            scheduled = false
+        }
+        return scheduled
+    }
+
     func sendAccelerationChunkAndWait(
         _ chunk: TaptionWatchAccelerationChunk
     ) async {
+        guard !isPurgingData else { return }
         WatchLaunchDiagnostics.mark(
             "acceleration send requested chunk=\(chunk.id.uuidString) samples=\(chunk.samples.count)"
         )
         if let dayDatabase {
             do {
                 try await dayDatabase.append(chunk)
+                guard !isPurgingData else { return }
                 sendAccelerationChunkTransport(chunk)
             } catch {
                 cachePending(chunk)
@@ -247,15 +309,16 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         sendAccelerationChunkTransport(chunk)
     }
 
+    @discardableResult
     private func sendSensorSummaryTransport(
         _ summary: TaptionWatchSensorSummary
-    ) {
+    ) -> Bool {
         guard WCSession.isSupported() else {
             cachePending(summary)
             WatchLaunchDiagnostics.mark(
                 "sensor send queued unsupported sequence=\(summary.sequence)"
             )
-            return
+            return false
         }
         let session = WCSession.default
         guard session.activationState == .activated else {
@@ -263,22 +326,25 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             WatchLaunchDiagnostics.mark(
                 "sensor send queued inactive sequence=\(summary.sequence) state=\(session.activationState.rawValue)"
             )
-            return
+            return false
         }
-        if !transfer(summary, through: session) {
+        let scheduled = transfer(summary, through: session)
+        if !scheduled {
             cachePending(summary)
         }
+        return scheduled
     }
 
+    @discardableResult
     private func sendAccelerationChunkTransport(
         _ chunk: TaptionWatchAccelerationChunk
-    ) {
+    ) -> Bool {
         guard WCSession.isSupported() else {
             cachePending(chunk)
             WatchLaunchDiagnostics.mark(
                 "acceleration send queued unsupported chunk=\(chunk.id.uuidString)"
             )
-            return
+            return false
         }
         let session = WCSession.default
         guard session.activationState == .activated else {
@@ -286,14 +352,14 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             WatchLaunchDiagnostics.mark(
                 "acceleration send queued inactive chunk=\(chunk.id.uuidString) state=\(session.activationState.rawValue)"
             )
-            return
+            return false
         }
         guard let data = try? encoder.encode(chunk) else {
             cachePending(chunk)
             WatchLaunchDiagnostics.mark(
                 "acceleration encode failed chunk=\(chunk.id.uuidString)"
             )
-            return
+            return false
         }
         var envelope: [String: Any] = [
             TaptionWatchEnvelope.accelerationChunkKey: data,
@@ -317,12 +383,14 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                 }
             )
         }
+        return true
     }
 
     func sendActivityConfirmation(
         _ confirmation: TaptionWatchActivityConfirmation
     ) {
-        guard WCSession.isSupported(),
+        guard !isPurgingData,
+              WCSession.isSupported(),
               let data = try? encoder.encode(confirmation) else {
             return
         }
@@ -338,6 +406,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     func sendHealthSnapshot(_ snapshot: TaptionWatchHealthSnapshot) {
+        guard !isPurgingData else { return }
         let requestID = activeDataSyncRequestID ?? "none"
         guard WCSession.isSupported() else {
             cachePending(snapshot)
@@ -459,6 +528,13 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let diagnosticsRequested = message[
             TaptionWatchEnvelope.diagnosticsRequestKey
         ] as? Bool == true
+        let purgeRequestID = message[
+            TaptionWatchEnvelope.purgeRequestIDKey
+        ] as? String
+        let purgeRequested = message[
+            TaptionWatchEnvelope.purgeRequestKey
+        ] as? Bool == true
+        let purgeGeneration = Self.purgeGeneration(in: message)
         WatchLaunchDiagnostics.mark(
             "envelope received transport=live_message keys=\(message.keys.sorted().joined(separator: ",")) request_id=\(dataSyncRequestID ?? "none") data_sync=\(dataSyncRequested)"
         )
@@ -475,6 +551,14 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                 WatchLaunchDiagnostics.mark("diagnostics requested")
                 self?.sendDiagnosticsLog()
             }
+            if purgeRequested,
+               let purgeRequestID,
+               let purgeGeneration {
+                _ = await self?.performPurge(
+                    requestID: purgeRequestID,
+                    generation: purgeGeneration
+                )
+            }
         }
     }
 
@@ -483,6 +567,26 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
+        if message[TaptionWatchEnvelope.purgeRequestKey] as? Bool == true {
+            guard let requestID = message[
+                TaptionWatchEnvelope.purgeRequestIDKey
+            ] as? String,
+            let generation = Self.purgeGeneration(in: message) else {
+                replyHandler([
+                    TaptionWatchEnvelope.purgeAcknowledgedKey: false,
+                ])
+                return
+            }
+            let reply = PurgeReplyHandler(replyHandler)
+            Task { @MainActor [weak self] in
+                let succeeded = await self?.performPurge(
+                    requestID: requestID,
+                    generation: generation
+                ) ?? false
+                reply.finish(requestID: requestID, succeeded: succeeded)
+            }
+            return
+        }
         if message[
             TaptionWatchEnvelope.diagnosticsRequestKey
         ] as? Bool == true {
@@ -514,6 +618,13 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         let diagnosticsRequested = userInfo[
             TaptionWatchEnvelope.diagnosticsRequestKey
         ] as? Bool == true
+        let purgeRequestID = userInfo[
+            TaptionWatchEnvelope.purgeRequestIDKey
+        ] as? String
+        let purgeRequested = userInfo[
+            TaptionWatchEnvelope.purgeRequestKey
+        ] as? Bool == true
+        let purgeGeneration = Self.purgeGeneration(in: userInfo)
         WatchLaunchDiagnostics.mark(
             "envelope received transport=user_info keys=\(userInfo.keys.sorted().joined(separator: ",")) request_id=\(dataSyncRequestID ?? "none") data_sync=\(dataSyncRequested)"
         )
@@ -530,11 +641,171 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                 WatchLaunchDiagnostics.mark("diagnostics requested background")
                 self?.sendDiagnosticsLog()
             }
+            if purgeRequested,
+               let purgeRequestID,
+               let purgeGeneration {
+                _ = await self?.performPurge(
+                    requestID: purgeRequestID,
+                    generation: purgeGeneration
+                )
+            }
         }
     }
 
+    private nonisolated static func purgeGeneration(
+        in envelope: [String: Any]
+    ) -> UInt64? {
+        guard let value = envelope[
+            TaptionWatchEnvelope.purgeGenerationKey
+        ] as? String else { return nil }
+        return UInt64(value)
+    }
+
+    private func completedPurgeGeneration() -> UInt64 {
+        guard let data = TaptionWatchDeviceLocalDefaults.data(
+            forKey: completedPurgeGenerationKey
+        ), let value = String(data: data, encoding: .utf8) else { return 0 }
+        return UInt64(value) ?? 0
+    }
+
+    private func finishPurge(
+        id: UUID,
+        generation: UInt64,
+        succeeded: Bool
+    ) {
+        guard activePurge?.id == id else { return }
+        activePurge = nil
+        guard succeeded else { return }
+        let completed = max(completedPurgeGeneration(), generation)
+        TaptionWatchDeviceLocalDefaults.set(
+            Data(String(completed).utf8),
+            forKey: completedPurgeGenerationKey
+        )
+    }
+
+    private func performPurge(
+        requestID: String,
+        generation: UInt64
+    ) async -> Bool {
+        guard generation > 0 else {
+            sendPurgeAcknowledgement(
+                requestID: requestID,
+                succeeded: false
+            )
+            return false
+        }
+        while let activePurge {
+            let succeeded = await activePurge.task.value
+            finishPurge(
+                id: activePurge.id,
+                generation: activePurge.generation,
+                succeeded: succeeded
+            )
+            if !TaptionWatchPurgeGenerationPolicy.shouldExecute(
+                requested: generation,
+                completed: completedPurgeGeneration()
+            ) {
+                sendPurgeAcknowledgement(
+                    requestID: requestID,
+                    succeeded: true
+                )
+                return true
+            }
+            if !succeeded {
+                sendPurgeAcknowledgement(
+                    requestID: requestID,
+                    succeeded: false
+                )
+                return false
+            }
+        }
+        if !TaptionWatchPurgeGenerationPolicy.shouldExecute(
+            requested: generation,
+            completed: completedPurgeGeneration()
+        ) {
+            sendPurgeAcknowledgement(requestID: requestID, succeeded: true)
+            return true
+        }
+        let purgeID = UUID()
+        let task = Task { @MainActor [weak self] in
+            await self?.executePurge() ?? false
+        }
+        activePurge = (purgeID, generation, task)
+        let succeeded = await task.value
+        finishPurge(
+            id: purgeID,
+            generation: generation,
+            succeeded: succeeded
+        )
+        sendPurgeAcknowledgement(
+            requestID: requestID,
+            succeeded: succeeded
+        )
+        return succeeded
+    }
+
+    private func executePurge() async -> Bool {
+        isPurgingData = true
+        defer { isPurgingData = false }
+        widgetReloadFollowupTask?.cancel()
+        widgetReloadFollowupTask = nil
+        let writeTasks = Array(sensorWriteTasks.values)
+        writeTasks.forEach { $0.cancel() }
+        for task in writeTasks { await task.value }
+        sensorWriteTasks.removeAll(keepingCapacity: false)
+        pendingSensorSummaries.removeAll(keepingCapacity: false)
+        pendingAccelerationChunks.removeAll(keepingCapacity: false)
+        pendingHealthSnapshots.removeAll(keepingCapacity: false)
+        activeDataSyncRequestID = nil
+        persistPendingSensorSummaries()
+        persistPendingAccelerationChunks()
+        persistPendingHealthSnapshots()
+
+        let managerSucceeded = await onPurgeRequest?() ?? false
+        let databaseSucceeded: Bool
+        if let dayDatabase {
+            do {
+                try await dayDatabase.deleteAll()
+                databaseSucceeded = true
+            } catch {
+                databaseSucceeded = false
+                WatchLaunchDiagnostics.mark(
+                    "day database purge failed error=\(error.localizedDescription)"
+                )
+            }
+        } else {
+            databaseSucceeded = false
+        }
+
+        payload = nil
+        handledWorkoutRequestIDs.removeAll(keepingCapacity: false)
+        handledDataSyncRequestIDs.removeAll(keepingCapacity: false)
+        TaptionWatchDeviceLocalDefaults.removeObject(forKey: cachedPayloadKey)
+        TaptionWatchWidgetStore.clear()
+        TaptionWatchMeasurementStore.clear()
+        WidgetCenter.shared.reloadAllTimelines()
+        WatchLaunchDiagnostics.mark(
+            "local purge completed manager=\(managerSucceeded) database=\(databaseSucceeded)"
+        )
+        return managerSucceeded && databaseSucceeded
+    }
+
+    private func sendPurgeAcknowledgement(
+        requestID: String,
+        succeeded: Bool
+    ) {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        session.transferUserInfo([
+            TaptionWatchEnvelope.purgeRequestIDKey: requestID,
+            TaptionWatchEnvelope.purgeAcknowledgedKey: succeeded,
+        ])
+    }
+
     private func applyWorkoutRequest(data: Data) {
-        guard let request = try? decoder.decode(
+        guard !isPurgingData,
+              let request = try? decoder.decode(
             TaptionWatchWorkoutRequest.self,
             from: data
         ), handledWorkoutRequestIDs.insert(request.id).inserted else {
@@ -547,7 +818,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     private func apply(data: Data) {
-        guard let value = try? decoder.decode(
+        guard !isPurgingData,
+              let value = try? decoder.decode(
                 TaptionWatchPayload.self,
                 from: data
               ) else {
@@ -562,12 +834,14 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             "payload applied acceleration=\(value.accelerationSettings?.profile.rawValue.description ?? "none") sync=\(value.dataSyncProfile?.rawValue.description ?? "none")"
         )
         onPayloadChange?(value)
-        UserDefaults.standard.set(data, forKey: cachedPayloadKey)
+        TaptionWatchDeviceLocalDefaults.set(data, forKey: cachedPayloadKey)
         publishToWidget(value)
     }
 
     private func restoreCachedPayload() {
-        guard let data = UserDefaults.standard.data(forKey: cachedPayloadKey),
+        guard let data = TaptionWatchDeviceLocalDefaults.data(
+            forKey: cachedPayloadKey
+        ),
               let value = try? decoder.decode(
                 TaptionWatchPayload.self,
                 from: data
@@ -679,25 +953,32 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     private func flushPendingSensorSummaries(using session: WCSession) {
-        guard session.activationState == .activated,
+        guard !isPurgingData,
+              session.activationState == .activated,
               !pendingSensorSummaries.isEmpty else {
             return
         }
         let pending = pendingSensorSummaries
         pendingSensorSummaries = []
         if let dayDatabase {
-            Task { @MainActor [weak self, dayDatabase, pending] in
+            let taskID = UUID()
+            let task = Task { @MainActor [weak self, dayDatabase, pending] in
                 guard let self else { return }
+                defer { self.sensorWriteTasks[taskID] = nil }
                 do {
                     try await dayDatabase.appendBatch(pending)
                 } catch {
-                    pending.forEach { self.cachePending($0) }
+                    if !Task.isCancelled, !self.isPurgingData {
+                        pending.forEach { self.cachePending($0) }
+                    }
                     WatchLaunchDiagnostics.mark("sensor batch store failed before send")
                     return
                 }
+                guard !Task.isCancelled, !self.isPurgingData else { return }
                 self.transferPendingSensorSummaries(pending, through: session)
                 self.persistPendingSensorSummaries()
             }
+            sensorWriteTasks[taskID] = task
             persistPendingSensorSummaries()
             return
         }
@@ -724,7 +1005,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     private func flushPendingAccelerationChunks(using session: WCSession) {
-        guard session.activationState == .activated,
+        guard !isPurgingData,
+              session.activationState == .activated,
               !pendingAccelerationChunks.isEmpty else { return }
         let pending = pendingAccelerationChunks
         pendingAccelerationChunks = []
@@ -763,7 +1045,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     private func flushPendingHealthSnapshots(using session: WCSession) {
-        guard session.activationState == .activated else {
+        guard !isPurgingData,
+              session.activationState == .activated else {
             if !pendingHealthSnapshots.isEmpty {
                 WatchLaunchDiagnostics.mark(
                     "health queue flush skipped reason=inactive state=\(session.activationState.rawValue)"
@@ -784,7 +1067,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     private func restorePendingHealthSnapshots() {
-        guard let data = UserDefaults.standard.data(
+        guard let data = TaptionWatchDeviceLocalDefaults.data(
             forKey: pendingHealthSnapshotsKey
         ),
         let values = try? decoder.decode(
@@ -795,7 +1078,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     }
 
     private func restorePendingAccelerationChunks() {
-        guard let data = UserDefaults.standard.data(
+        guard let data = TaptionWatchDeviceLocalDefaults.data(
             forKey: pendingAccelerationChunksKey
         ), let values = try? decoder.decode(
             [TaptionWatchAccelerationChunk].self,
@@ -809,7 +1092,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
 
     private func persistPendingAccelerationChunks() {
         if pendingAccelerationChunks.isEmpty {
-            UserDefaults.standard.removeObject(
+            TaptionWatchDeviceLocalDefaults.removeObject(
                 forKey: pendingAccelerationChunksKey
             )
             return
@@ -817,22 +1100,30 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         guard let data = try? encoder.encode(pendingAccelerationChunks) else {
             return
         }
-        UserDefaults.standard.set(data, forKey: pendingAccelerationChunksKey)
+        TaptionWatchDeviceLocalDefaults.set(
+            data,
+            forKey: pendingAccelerationChunksKey
+        )
     }
 
     private func persistPendingHealthSnapshots() {
         if pendingHealthSnapshots.isEmpty {
-            UserDefaults.standard.removeObject(forKey: pendingHealthSnapshotsKey)
+            TaptionWatchDeviceLocalDefaults.removeObject(
+                forKey: pendingHealthSnapshotsKey
+            )
             return
         }
         guard let data = try? encoder.encode(pendingHealthSnapshots) else {
             return
         }
-        UserDefaults.standard.set(data, forKey: pendingHealthSnapshotsKey)
+        TaptionWatchDeviceLocalDefaults.set(
+            data,
+            forKey: pendingHealthSnapshotsKey
+        )
     }
 
     private func restorePendingSensorSummaries() {
-        guard let data = UserDefaults.standard.data(
+        guard let data = TaptionWatchDeviceLocalDefaults.data(
             forKey: pendingSensorSummariesKey
         ),
         let values = try? decoder.decode(
@@ -849,7 +1140,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
 
     private func persistPendingSensorSummaries() {
         if pendingSensorSummaries.isEmpty {
-            UserDefaults.standard.removeObject(
+            TaptionWatchDeviceLocalDefaults.removeObject(
                 forKey: pendingSensorSummariesKey
             )
             return
@@ -857,7 +1148,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         guard let data = try? encoder.encode(pendingSensorSummaries) else {
             return
         }
-        UserDefaults.standard.set(
+        TaptionWatchDeviceLocalDefaults.set(
             data,
             forKey: pendingSensorSummariesKey
         )

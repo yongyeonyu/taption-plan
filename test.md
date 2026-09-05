@@ -1,5 +1,110 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-05 DEV905H006 iPad 최신 소스 설치
+
+- iPad Pro 12.9-inch 6세대(iPadOS 26.6.1, 유선 연결, 개발자 모드)에 최신 dirty 소스의 iOS 실기기 앱·XCTest 번들을 Apple Development로 서명해 `build-for-testing`했다: `/private/tmp/DEV905H006-ipad.wmSSIl/build-for-testing.log`.
+- 앱과 내장 Watch·Widget 서명 검증 후 `com.taption.plan` 1.0(134)을 설치했고 기기 앱 목록에서 같은 버전을 readback했다.
+- 설치 후 실행은 `FBSOpenApplicationErrorDomain Code 7 / Locked`로 거부됐다: `/private/tmp/DEV905H006-ipad.wmSSIl/launch.log`. 잠금 해제 전에는 첫 화면·StoreKit 실거래 XCTest·터치 판정을 통과로 처리하지 않는다.
+- 설치 뒤 재생성 가능한 이 프로젝트 전용 DerivedData는 제거했고 테스트·설치 로그는 보존했다.
+
+## 2026-09-05 REL905H005 판매 상태 API 재검증
+
+- App Store Connect API에서 Taption Plan 앱과 TestFlight 1.0(134) `VALID`·미만료, `TP Taption Plan 내부 테스트` 연결, 내부 테스터 1명을 다시 확인했다.
+- `com.taption.plan.pro`는 비소모성 `READY_TO_SUBMIT`; 한국어·영어 현지화, 미국 기준 `USD 9.99`, 한국·미국 포함 175개 지역, 새 지역 자동 추가, 1206×2622 심사 이미지 `COMPLETE`, 상품 버전 1 `PREPARE_FOR_SUBMISSION`이다.
+- 현재 API 키는 앱 버전 조회를 403으로 거부하고 계약 목록은 공개 API 경로가 없어, Paid Apps Agreement와 앱 버전 상품 연결은 App Store Connect 브라우저 재인증 게이트로 유지한다.
+
+## 2026-09-05 OPT905H004 다방면 코드 리뷰·후속 최적화
+
+- 지도 시각·지도/데이터 런타임·상거래/Watch 경계를 세 갈래로 검토했으며 P0는 없고 확인된 P1을 모두 최소 수정했다.
+- 불완전 일자 projection은 저장·메모리 캐시하지 않아 다음 조회에서 복구하며, 원본 revision 변경으로 중단된 legacy migration은 최신 revision으로 다시 예약한다.
+- 날짜 전환 시 3일 전체 공급자 강제 조회를 제거하고 선택 일자와 overnight 수면 구간만 증분 조회한다. 지도 로드 key에도 projection revision을 포함해 stale 화면을 막았다.
+- 실제 경로의 선택 opacity를 두 지도 렌더러에 보존하고 MapKit은 변경된 polyline만 교체한다. gesture 시작 시 최신 pinch·pan recognizer를 연결하고 native 현재위치 점은 숨겨 같은 좌표의 졸라맨 하나만 표시한다. 집 마커도 기존 평면 SF Symbol 체계로 통일했다.
+- 유료 권한 확인 전 iPhone 데이터 변경을 차단하고 Watch payload에 잠금 상태를 전달해 가속도·건강 동기화·위치·운동을 중단한다. 구형 Watch payload는 선택 필드로 계속 decode한다.
+- 신규 집중 회귀 6/6과 성능·경로 회귀 4/4가 통과했다: `/private/tmp/PRD904A001-p1-focus-r3.cIOcqn/result.xcresult`, `/private/tmp/PRD904A001-p1-perf.ErbfPz/result.xcresult`. 앱 30일 load p95는 cold `33.154708ms`, warm `0.007334ms`다.
+- 최신 전체 검증은 총 1,027건 중 1,026 통과·실패 0·스킵 1이다: `/private/tmp/OPT905H004-full.9nXS8G/result.xcresult`. 스킵은 iOS 26.5 Simulator의 기존 StoreKit `SKInternalErrorDomain Code 3`에만 한정된다.
+- Watch 단독 Debug build와 전체 앱 정적 분석도 exit 0이며, iPhone·Watch 실제 센서 수신과 장시간 발열·배터리·pinch는 `DEV903V001` 실기기 게이트로 유지한다.
+
+## 2026-09-05 ALG905H003 전체 알고리즘·성능·배터리 리뷰
+
+- 센서·HealthKit·Watch·행동·지하철·경로·캘린더·iCloud 백업을 병렬 검토하고 확인된 정확도·성능 결함을 최소 수정했다.
+- GPS 정밀도 기준과 지하철 연속 관측 조건을 수집·복원 경로에 동일 적용했고, 조밀한 지하철 후보 생성은 인접 최단 경로를 한 번만 계산하도록 바꿨다. HealthKit 무변경 foreground 조회 간격은 15분으로 늘렸다.
+- 예상 경로는 실제 정밀 경로가 완성되면 도착 시각 이후에도 제거하고 stale 생성 경로를 재사용하지 않는다. 재생 WBS leg는 분 단위 색인으로 조회하며 정확한 분 경계와 DST 23·25시간을 회귀 검증했다.
+- 캘린더 부분 응답은 선택·기존 일정을 보존하고 최신 날짜 요청만 100ms debounce 후 재조회한다. iCloud 월별 raw→snapshot 저장에 같은 generation ID를 부여하고 같은 세대만 복원하며 손상 파일은 파일 단위로 격리한다.
+- Watch ambient drain은 요약마다 전체 가속도 배열을 재필터링하던 경로를 순차 커서 O(N+M)로 바꾸고, 가속도 청크·요약을 SQLite 한 번에 저장한다. 운동 중 표본 수 UI 갱신은 25Hz에서 1Hz로 줄였으며 행동 창이 전진할 때만 보존 배열을 정리한다.
+- 집중 회귀는 센서·지하철 6/6(`/private/tmp/SHE905H001-r2.sSQPZB/result.xcresult`, 96역 조밀 경로 0.831초)과 시간·백업 경계 3/3(`/private/tmp/EDGE905H001-r5.ByXdTJ/result.xcresult`) 통과했다.
+- Swift Package 회귀는 Core 50/50, Activity 12/12, Route 18/18, PlanEngine 1/1로 총 81/81 통과했다.
+- 최종 전체 XCTest는 1,024 통과·0 실패·1 건너뜀, 총 1,025건이다: `/private/tmp/ALG905H003-final.UCNk7Q/result.xcresult`. 건너뜀 1건은 iOS 26.5 Simulator의 기존 `SKInternalErrorDomain Code 3` StoreKit 시스템 결함이다.
+- generic iOS Simulator Debug build, Swift parse, `git diff --check`, 단일 아키텍처 Xcode 정적 분석이 모두 통과했다. iPhone·Watch 장시간 발열·배터리와 실제 HealthKit·Watch 수신은 `DEV903V001` 실기기 게이트로 유지한다.
+
+## 2026-09-05 TRK905H001 자동 추적 세션 복원
+
+- 자동 감지 수집기는 걷기·달리기를 `walking`·`running`으로 저장하지만 AppModel은 `automatic` 종류만 자동 세션으로 재구성해, 재시작 뒤 자동 종료가 빠지고 고정밀 센서가 계속 실행될 수 있었다.
+- `SensorReading` 원본에 선택형 자동 감지 여부를 저장하고 이를 복원에 우선 사용했다. 구형 원본은 기존 `automatic` 규칙으로 읽으며 수동 걷기는 수동으로 유지한다.
+- 자동 걷기·수동 걷기·구형 자동 세션 집중 XCTest 1/1 통과, 실패·스킵 0: `/private/tmp/TRK905H001.yGj1cw/result.xcresult`. Swift parse와 `git diff --check`도 통과했다.
+
+## 2026-09-05 WCM905H001 Watch 명령 시각 검증
+
+- Watch 센서·건강 payload와 달리 일정 명령에는 수신 시각 상한이 없어, 크게 틀어진 Watch 시계가 미래의 실행·완료·연기 기록을 만들 수 있는 누락을 확인했다.
+- 기존 5분 clock-skew 정책을 명령 decode 직후와 중복 ID 저장 전에 적용했다. 지연 도착한 과거 명령은 그대로 허용하고 5분을 넘는 미래 명령만 거부한다.
+- `WatchDeletionPayloadTests` 10/10 통과, 실패·스킵 0: `/private/tmp/WCM905H001.ShgOVY/result.xcresult`. Swift parse와 `git diff --check`도 통과했다.
+- 현재 CoreDevice readback은 iPad 연결, iPhone·Apple Watch unavailable이다. iOS 26.6.1 iPad StoreKit 실기기 XCTest는 빌드·서명 뒤 기기 잠금으로 실행 직전 중단했으며, 실제 Watch 명령 송수신도 기존 실기기 게이트로 유지한다.
+
+## 2026-09-05 ALG904A001·CAC905H001·EXP905H001·WDI905H001·SEN905H001 추가 리뷰
+
+- 변경 60개 소스·테스트 파일을 저장소·센서/HealthKit/Watch·지도/경로/UI 세 영역으로 병렬 검토했다. 보안 diff scan은 coverage `complete`, 보고 대상 취약점 0건으로 완료됐다: `/private/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/codex-security-scans-kQTEid/taption-plan/9684e36b705bb0acfdea29298a04397951e403e8_20260905T092546Z_mfy6cpty/report.md`.
+- 성능·배터리 보정은 raw digest 캐시를 64일 LRU로 제한하고, 센서 분석을 날짜별 pending·최대 120초 묶음으로 합치며 자정 경계 시작·종료일을 모두 처리한다. DB 읽기 실패 날짜는 제거하지 않고 동일 cadence로 재시도한다.
+- Watch 삭제는 성공 generation을 Watch 로컬에 보존하고 실시간·보장 전송의 중복 요청을 직렬화했다. 삭제 후 재생되는 과거 명령, 저장 중 삭제 fence, 미래시각 건강·가속도·행동·확인 payload와 내부 수면·표본·경로를 차단하거나 경계에서 절단한다.
+- 구형 Watch 수면 합계는 삭제 경계 뒤 구간 근거가 없으면 제거하고, 수신 허용 상한을 걸친 수면 구간은 유효 부분만 남겨 재계산한다. Watch 최종 요약과 가속도 청크는 자정을 넘으면 양일 분석을 직접 예약한다.
+- 개인 기록 내보내기는 앱 전용 임시 폴더의 이전 파일을 지우고 공유 종료 시 현재 파일도 삭제하며, 전체 기록·위치 포함 범위와 파일명을 실제 payload에 맞췄다.
+- TaptionPlanCore 50/50과 내보내기 집중 회귀를 통과했다. 최신 Watch 삭제·미래시각·수면 9건, 다중 날짜 분석·DB 실패 재시도 2건은 공용 빌드 락 안에서 11/11 통과했고 iOS 앱·embedded Watch Debug 산출물을 함께 빌드했다: `/Users/u_mo_c/Library/Developer/Xcode/DerivedData/TaptionPlan-gvqtjbpzkfvutrdlxdzhdyhsyane/Logs/Test/Test-TaptionPlan-2026.09.05_19-49-25-+0900.xcresult`.
+- Swift parse와 `git diff --check`를 통과했다. 실물 Watch 삭제·센서 수신·수면 반영, iPhone 장시간 발열/배터리와 지도 두 손가락 pinch는 자동 검증 범위 밖이라 기존 실기기 게이트로 유지한다.
+
+## 2026-09-05 PAY905A001 유료 상품 준비
+
+- App Store Connect API 사전 조회에서 앱 `6797370230`의 앱 내 구입은 0건이었고, TestFlight build `134`는 `VALID`·만료 아님·내부 그룹 1개 연결 상태였다.
+- `com.taption.plan.pro`를 비소모성 상품으로 생성했다: 상품 ID `6808848628`, 이름 `Taption Plan Pro Lifetime`.
+- 한국어·영어 현지화 2건, 미국 기준 소비자가 `USD 9.99`·개발자 수익 `USD 8.49`, 신규 지역 자동 제공과 175개 판매 지역(미국·한국 포함)을 API readback했다.
+- 심사용 구매 화면 `/private/tmp/PRD904A001-iap-review.png`를 업로드했고 asset 상태 `COMPLETE`, 심사 메모 저장 후 상품 상태 `READY_TO_SUBMIT`을 readback했다.
+- 로컬 StoreKit 구성 가격도 `0.99`에서 `9.99`로 맞췄고 product ID·상품 타입·가격 JSON 검증과 `git diff --check`를 통과했다.
+- StoreKitTest 자동검증은 실제 `Product.products`·`Product.purchase`·`Transaction.currentEntitlements`·`AppStore.sync` 경로를 사용하며, 구성 파일은 테스트 번들에만 포함하고 실기기 테스트 타깃을 앱과 같은 개발팀으로 서명했다.
+- Xcode 26.6의 iOS 26.5 Simulator 두 기기에서 CLI·IDE 모두 `SKInternalErrorDomain Code 3` 시스템 결함이 재현돼 해당 runtime만 명시적으로 건너뛴다. 전체 앱 결과는 `988 passed / 0 failed / 1 skipped`, 총 989건이다: `/private/tmp/IAP905G002-full-r2.xcresult`.
+- iOS 26.6.1 iPad용 테스트 번들은 서명·빌드됐지만 기기가 잠겨 실제 구매·권한·복원 실행 직전 취소됐다. 잠금 해제 뒤 같은 테스트의 1/1 통과가 남아 있다.
+- iPhone 시뮬레이터에서 권한 안내는 전체 건너뛰기 뒤 한 번만 재표시되고 세 번째 실행부터 숨겨짐을 확인했다. 지도 렌더·확대 버튼·16회 날짜 왕복·접근성 XXXL을 확인했고, idle CPU 5회 모두 `0.0%`, 날짜 왕복 20초 평균 `2.55%`·최대 `26.00%`였다.
+- 상품 제출은 보류했다. Chrome의 계약 페이지는 `authResult=FAILED` 로그인 화면으로 열렸고 자격 증명은 입력하지 않았다. Paid Apps Agreement 활성 상태, sandbox/TestFlight 상품 조회·구매·복원, 앱 버전 연결·심사 제출은 별도 외부 게이트다.
+
+## 2026-09-05 ALG904A001·PRD904A001 코드 리뷰·성능·배터리 회귀
+
+- iCloud 원본 readback: actual 39건, travel 4,667건/33일, weather 5,675건, calendar 104건, floor 1,688건, raw reading 7,403건, envelope 19,132건이었다. Watch acceleration·Watch sleep 원본은 0건이고 당시 `health_enabled=false`였다.
+- 날씨 envelope 13,673건은 실제 관측 시각 97개·fetch 232회·위치 bucket 53개로 중복이 컸다. raw 압축 해제 예상 크기 `146,067,067 bytes`가 기존 64MiB 제한을 넘었고, 일자 DB fallback이 이동 4,667건 전체를 후보화했다.
+- 확정 결함 수정: MapKit recognizer 재부착·1Hz 탐색 제한, 일자 캐시의 불필요한 강제 재생성, timestamp-only 전체 projection 무효화, 파생 projection 누적, 동기식 진단 로그, Watch raw 이중 저장 일부 실패 readback, legacy Watch 가속도 이관 누락, cold background wake 중복 센서·Watch 소유, HealthKit callback burst·query 취소 누락·부분 실패 은폐, 이동 후보 task 고착, background 날씨 작업, Watch 자동 동기화 burst.
+- 저장·전력 결함 수정: 다중 저장 실패 rollback, 전역 삭제 fence, 삭제 뒤 새 세대 빈 스냅샷 저장, raw 내부 checksum·byte count 검증과 안정적 identity, 첫·마지막 즉시 저장을 포함한 최대 5개/5초 센서 batch, background refresh 단일 저장, 동일 파생 raw 멱등 저장, Watch 로컬 archive 우선 보존, iPhone sensor generation·실패 batch 재큐잉, Watch purge 중 지연 저장 취소, 백업 부분 삭제 시 성공일 보존.
+- 추가 최적화: 일시적 빈 캘린더 응답에서 선택·cache 보존, 권한 재허용·EventKit 변경 시 광역 갱신과 평시 6시간 cadence, background 날씨 cancellation fence, iPhone background wake 기반 Watch 자동 재무장, 과거 날짜의 60초 route polling 중단, Debug frame probe 환경변수 opt-in, 1시간 지난 CloudKit 업로드 임시 파일 정리.
+- 알고리즘·복원 수정: 부정확·근사·비정상 GPS를 실제 경로·재생·보행·지하철·예상경로에서 제외하고 긴 공백은 직선 보간하지 않는다. segment-local 증거·역 간격 guard·O(n log n) 겹침 정리, source-safe 복원, Watch purge command·ACK와 지연 저장 fence를 적용했다.
+- 날씨 raw는 256MiB 제한과 checksum·byte count 검증을 유지하면서 같은 예보 시각의 최신 revision만 채택하고, 기기 위치를 forecast stream identity에서 제외한 뒤 화면 값 변화만 저장한다. 이 결함은 첫 전체 실행에서 회귀 테스트 실패 1건으로 검출·수정했다.
+- 캘린더는 source/timezone/floating/original component·external recurrence occurrence를 보존하고 provider/account/occurrence 중복을 제거했다. SQLite 정본은 유지하며 CSV는 교환용 export/import로만 제한한다.
+- 시각 체계 수정: 실제 경로 teal, 예상 경로 red dash, 대중교통 gold를 공통 theme token으로 통일하고 장소·학원 아이콘 및 대중교통 라벨 가독성을 일치시켰다.
+- 무결성·성능·스타일 집중 XCTest 9/9, 실패·스킵 0: `/private/tmp/PRD904A001-review-focused-final.xcresult`.
+- HealthKit·Watch legacy 집중 XCTest 18/18, 실패·스킵 0: `/private/tmp/PRD904A001-health-storage-focused.xcresult`.
+- 캘린더·CloudKit 임시 파일·백업 실패 집중 XCTest 5/5, 실패·스킵 0: `/private/tmp/PRD904A001-followup-focused-v2.xcresult`.
+- Swift Package: TaptionPlanCore 49/49, TaptionActivityEngine 12/12, TaptionRouteEngine 18/18, TaptionPlanEngine 1/1—총 80/80 통과. raw digest는 쓰기 변경 시만 무효화하고 다른 SQLite 연결의 commit은 `data_version`으로 감지한다. 최신 30일 day store p95는 cold `5.280917ms`, warm `0.0315ms`다.
+- 삭제 fence 활성 중 저장 거부와 해제 뒤 새 세대 저장 성공 회귀 18/18 통과: `/private/tmp/ALG904A001-deletion-focus-r4.S7hOjq/result.xcresult`.
+- 임시 DB 격리·30일 로드 집중 XCTest 3/3 통과: `/private/tmp/PRD904A001-digest-cache-r4.JjAEIC/focused.xcresult`. 앱 30일 load p95는 cold `51.037208ms`, warm `0.007792ms`다.
+- 최신 전체 앱 검증은 XCTest와 Swift Testing 총 1,005건 중 1,004 통과·실패 0·스킵 1: `/private/tmp/PRD904A001-digest-cache-r4.JjAEIC/full-final.xcresult`. 스킵은 iOS 26.5 StoreKitTest `SKInternalErrorDomain Code 3` 시스템 결함에만 한정된다. 이 실행의 앱 30일 load p95는 cold `35.755208ms`, warm `0.008375ms`, 이동 4,667건 겹침 정리 평균은 약 `0.007s`다.
+- 최신 변경 기준 generic iOS Debug build, generic watchOS Debug build, iOS static analyze가 각각 exit 0으로 통과했다: `/private/tmp/PRD904A001-digest-cache-r4.JjAEIC`.
+- iCloud snapshot·raw backup·진단 로그에서 HealthKit·Watch·수면 정보와 파생 보고서를 제외하고, 기존 iCloud 건강 로그를 1회 삭제한다. App Group과 `Application Support/TaptionPlan`은 시스템 iCloud 백업 제외 속성을 적용했으며 Simulator에서 `com.apple.metadata:com_apple_backup_excludeItem`을 readback했다.
+- 앱·iOS Widget·Watch 앱·Watch Widget에 Required Reason API privacy manifest를 포함해 모두 `plutil` 검증했다. Release archive/export는 `/private/tmp/PRD904A001-release-r1/TaptionPlan-1.0-134.xcarchive`, `/private/tmp/PRD904A001-release-r1/Export/TaptionPlan.ipa`이며 네 번들 모두 `1.0 (134)`, Apple Distribution, Production iCloud, `beta-reports-active=true`, `get-task-allow=false`, deep/strict codesign을 통과했다. IPA SHA-256은 `2680e24aaa97f6a019d8ff7fe95f6f62522e53bef5a5a384276065c1ab34f224`다.
+- Swift parse, `git diff --check`, StoreKit JSON 구문 검증을 통과했다. Xcode 설치본에는 별도 `privacytool` 실행 파일이 없어 archive 내 매니페스트 존재·plist 구문·번들 서명으로 검증했다.
+- 최신 iPad Simulator 산출물을 재설치·launch해 PID `39271`을 readback했다. 5초 뒤 CPU `5.2%`에서 이후 4회 `0.0%`로 안정화됐고 RSS 약 `263~267MiB`였으며 crash 없이 유지됐다.
+- 최신 iPhone Simulator에서 권한 안내의 건강 데이터만 `연결 필요`이고 위치·캘린더는 `연결됨`인 상태를 readback했다. 전체 건너뛰기 후 지도 확대 3회와 날짜 왕복 20회를 실제 UI로 수행해 오늘 화면으로 정상 복귀했고, 이후 CPU 5회 모두 `0.0%`, RSS 약 `300MiB`로 안정화됐다. 화면 증적: `/private/tmp/PRD904A001-digest-cache-r4.JjAEIC/latest-map-clean.png`.
+- 자동 검증은 실제 두 손가락 pinch, 장시간 발열·배터리, iPhone/Watch 센서 실수신, Apple·Google·Naver 실제 계정, StoreKit sandbox 및 App Store Connect 판매 상태를 증명하지 않는다.
+
+## 2026-09-05 ALG904A001·PRD904A001 현재 기기 readback
+
+- 최신 dirty 소스의 Apple Development 서명 Debug `Taption Plan com.taption.plan 1.0 (134)`를 iPhone 14 Pro(`C44AF739-127D-572D-AD83-417C7E879045`)에 설치하고 앱 목록과 실행 중 PID `8297`을 readback했다. 이는 TestFlight 설치가 아니다.
+- 앱 시작 시 CloudKit 전용 임시 파일은 `59개·172,184,964 bytes(164.2MiB)`에서 `0개`로 정리됐고, 최신 1시간 파일과 무관 파일 보존은 회귀 테스트로 확인했다.
+- iPad Pro(`4CEC6BE9-E528-52A1-AB94-654A6CDA7E5E`)에 같은 최신 Apple Development 서명 Debug `Taption Plan 1.0 (134)`를 설치하고 앱 목록에서 버전을 readback했다. 반복 launch는 잠긴 기기에서 `FBSOpenApplicationErrorDomain code 7 · Locked`로 거부되어 실행·화면·터치는 미완료다. Apple Watch(`9229A9F2-B4F1-5A44-ACFA-0E5B00F3B3AF`)는 `unavailable`이다.
+- 위 결과는 최신 dirty 소스 설치·프로세스 실행·임시 파일 정리만 증명한다. TestFlight 1.0(134) 설치, 화면·두 손가락 터치, 장시간 발열·전력, 센서 정확도와 Watch 실제 수신·purge ack는 별도 게이트다.
+
 ## 2026-08-31
 
 - 대상: iPhone 14 Pro (`C44AF739-127D-572D-AD83-417C7E879045`)

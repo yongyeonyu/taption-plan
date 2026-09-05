@@ -5,6 +5,7 @@ public enum TaptionPlanDayStoreError: Error, Equatable, Sendable {
     case invalidDomain
     case invalidMetadataKey
     case invalidMigrationKey
+    case eventConflict(id: String)
     case revisionOverflow
     case database(code: Int32, message: String)
     case databaseCorrupt(message: String)
@@ -90,6 +91,36 @@ public actor TaptionPlanDayStore {
     }
 
     private nonisolated(unsafe) var database: OpaquePointer?
+    private static let snapshotUpsertSQL =
+        """
+        INSERT INTO snapshots(domain, day_key, revision, updated_at, payload)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(domain, day_key) DO UPDATE SET
+            revision = excluded.revision,
+            updated_at = excluded.updated_at,
+            payload = excluded.payload
+        WHERE excluded.revision > snapshots.revision;
+        """
+    private static let eventInsertSQL =
+        "INSERT INTO events(day_key, timestamp, sequence, id, domain, payload) VALUES (?, ?, ?, ?, ?, ?);"
+    private static let uniqueEventInsertSQL =
+        "INSERT INTO events(day_key, timestamp, sequence, id, domain, payload) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING;"
+    private static let eventLookupSQL =
+        "SELECT day_key, timestamp, sequence, id, domain, payload FROM events WHERE id = ?;"
+    private static let eventUpsertSQL =
+        """
+        INSERT INTO events(day_key, timestamp, sequence, id, domain, payload)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            day_key = excluded.day_key,
+            timestamp = excluded.timestamp,
+            sequence = excluded.sequence,
+            domain = excluded.domain,
+            payload = excluded.payload
+        WHERE events.domain = excluded.domain;
+        """
+    private static let eventDeleteSQL =
+        "DELETE FROM events WHERE id = ? AND domain = ?;"
 
     public init(url: URL) throws {
         var handle: OpaquePointer?
@@ -102,6 +133,15 @@ public actor TaptionPlanDayStore {
         database = handle
         do {
             try Self.initializeDatabase(handle)
+            #if os(iOS) || os(watchOS)
+            try Self.applyFileProtection(to: url)
+            try Self.applyFileProtection(
+                to: URL(fileURLWithPath: url.path + "-wal")
+            )
+            try Self.applyFileProtection(
+                to: URL(fileURLWithPath: url.path + "-shm")
+            )
+            #endif
         } catch {
             sqlite3_close(handle)
             database = nil
@@ -189,9 +229,21 @@ public actor TaptionPlanDayStore {
     }
 
     public func saveSnapshots(_ snapshots: [Snapshot]) throws {
+        guard !snapshots.isEmpty else { return }
+        let statement = try prepare(Self.snapshotUpsertSQL)
+        defer { sqlite3_finalize(statement) }
         try withTransaction {
             for snapshot in snapshots {
-                try saveSnapshotRow(snapshot)
+                try validate(domain: snapshot.domain)
+                try reset(statement)
+                try bind(snapshot.domain, to: statement, at: 1)
+                try bind(dayKey(snapshot.day), to: statement, at: 2)
+                try bind(snapshot.revision, to: statement, at: 3)
+                try bind(snapshot.updatedAt.timeIntervalSince1970, to: statement, at: 4)
+                try bind(snapshot.payload, to: statement, at: 5)
+                guard try step(statement) == SQLITE_DONE else {
+                    throw lastError()
+                }
             }
         }
     }
@@ -271,28 +323,55 @@ public actor TaptionPlanDayStore {
     }
 
     public func appendEvents(_ events: [Event]) throws {
+        guard !events.isEmpty else { return }
+        let statement = try prepare(Self.eventInsertSQL)
+        defer { sqlite3_finalize(statement) }
         try withTransaction {
             for event in events {
                 try validate(domain: event.domain)
-                try execute(
-                    "INSERT INTO events(day_key, timestamp, sequence, id, domain, payload) VALUES (?, ?, ?, ?, ?, ?);",
-                    binds: { statement in
-                        try self.bind(self.dayKey(event.day), to: statement, at: 1)
-                        try self.bind(event.timestamp.timeIntervalSince1970, to: statement, at: 2)
-                        try self.bind(event.sequence, to: statement, at: 3)
-                        try self.bind(event.id, to: statement, at: 4)
-                        try self.bind(event.domain, to: statement, at: 5)
-                        try self.bind(event.payload, to: statement, at: 6)
-                    }
-                )
+                try reset(statement)
+                try bind(event, to: statement)
+                guard try step(statement) == SQLITE_DONE else {
+                    throw lastError()
+                }
+            }
+        }
+    }
+
+    public func appendUniqueEvents(_ events: [Event]) throws {
+        guard !events.isEmpty else { return }
+        let insert = try prepare(Self.uniqueEventInsertSQL)
+        let lookup = try prepare(Self.eventLookupSQL)
+        defer {
+            sqlite3_finalize(insert)
+            sqlite3_finalize(lookup)
+        }
+        try withTransaction {
+            for event in events {
+                try validate(domain: event.domain)
+                try reset(insert)
+                try bind(event, to: insert)
+                guard try step(insert) == SQLITE_DONE else {
+                    throw lastError()
+                }
+                guard sqlite3_changes(database) == 0 else { continue }
+                try reset(lookup)
+                try bind(event.id, to: lookup, at: 1)
+                guard try step(lookup) == SQLITE_ROW else { throw lastError() }
+                guard try readEvent(lookup) == event else {
+                    throw TaptionPlanDayStoreError.eventConflict(id: event.id)
+                }
             }
         }
     }
 
     public func upsertEvents(_ events: [Event]) throws {
+        guard !events.isEmpty else { return }
+        let statement = try prepare(Self.eventUpsertSQL)
+        defer { sqlite3_finalize(statement) }
         try withTransaction {
             for event in events {
-                try upsertEventRow(event)
+                try upsertEventRow(event, using: statement)
             }
         }
     }
@@ -300,10 +379,30 @@ public actor TaptionPlanDayStore {
     public func deleteEvents(ids: [String], domain: String) throws {
         guard !ids.isEmpty else { return }
         try validate(domain: domain)
+        let statement = try prepare(Self.eventDeleteSQL)
+        defer { sqlite3_finalize(statement) }
         try withTransaction {
             for id in Set(ids) {
-                try deleteEventRow(id: id, domain: domain)
+                try deleteEventRow(id: id, domain: domain, using: statement)
             }
+        }
+    }
+
+    public func deleteEvents(domain: String) throws {
+        try validate(domain: domain)
+        try execute(
+            "DELETE FROM events WHERE domain = ?;",
+            binds: { statement in
+                try self.bind(domain, to: statement, at: 1)
+            }
+        )
+    }
+
+    public func deleteAllContent() throws {
+        try withTransaction {
+            try execute("DELETE FROM snapshots;")
+            try execute("DELETE FROM events;")
+            try execute("DELETE FROM metadata;")
         }
     }
 
@@ -317,15 +416,23 @@ public actor TaptionPlanDayStore {
         guard events.allSatisfy({ $0.domain == domain }) else {
             throw TaptionPlanDayStoreError.invalidDomain
         }
+        let upsert = events.isEmpty ? nil : try prepare(Self.eventUpsertSQL)
+        let deleting = deletingIDs.isEmpty ? nil : try prepare(Self.eventDeleteSQL)
+        let saving = snapshots.isEmpty ? nil : try prepare(Self.snapshotUpsertSQL)
+        defer {
+            sqlite3_finalize(upsert)
+            sqlite3_finalize(deleting)
+            sqlite3_finalize(saving)
+        }
         try withTransaction {
             for event in events {
-                try upsertEventRow(event)
+                try upsertEventRow(event, using: upsert)
             }
             for id in Set(deletingIDs) {
-                try deleteEventRow(id: id, domain: domain)
+                try deleteEventRow(id: id, domain: domain, using: deleting)
             }
             for snapshot in snapshots {
-                try saveSnapshotRow(snapshot)
+                try saveSnapshotRow(snapshot, using: saving)
             }
         }
     }
@@ -460,6 +567,8 @@ public actor TaptionPlanDayStore {
             );
             CREATE INDEX IF NOT EXISTS events_day_time_index
                 ON events(day_key, timestamp, sequence, id, domain);
+            CREATE INDEX IF NOT EXISTS events_domain_day_time_index
+                ON events(domain, day_key, timestamp, sequence, id);
             CREATE TABLE IF NOT EXISTS metadata (
                 key TEXT NOT NULL PRIMARY KEY,
                 value TEXT NOT NULL
@@ -479,6 +588,14 @@ public actor TaptionPlanDayStore {
                 throw Self.error(code: result, message: text)
             }
         }
+    }
+
+    private static func applyFileProtection(to url: URL) throws {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        try FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+            ofItemAtPath: url.path
+        )
     }
 
     private func withTransaction(_ body: () throws -> Void) throws {
@@ -502,61 +619,51 @@ public actor TaptionPlanDayStore {
         guard try step(statement) == SQLITE_DONE else { throw lastError() }
     }
 
-    private func saveSnapshotRow(_ snapshot: Snapshot) throws {
+    private func saveSnapshotRow(
+        _ snapshot: Snapshot,
+        using statement: OpaquePointer?
+    ) throws {
+        guard let statement else { throw lastError() }
         try validate(domain: snapshot.domain)
-        try execute(
-            """
-            INSERT INTO snapshots(domain, day_key, revision, updated_at, payload)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(domain, day_key) DO UPDATE SET
-                revision = excluded.revision,
-                updated_at = excluded.updated_at,
-                payload = excluded.payload
-            WHERE excluded.revision >= snapshots.revision;
-            """,
-            binds: { statement in
-                try self.bind(snapshot.domain, to: statement, at: 1)
-                try self.bind(self.dayKey(snapshot.day), to: statement, at: 2)
-                try self.bind(snapshot.revision, to: statement, at: 3)
-                try self.bind(snapshot.updatedAt.timeIntervalSince1970, to: statement, at: 4)
-                try self.bind(snapshot.payload, to: statement, at: 5)
-            }
-        )
+        try reset(statement)
+        try bind(snapshot.domain, to: statement, at: 1)
+        try bind(dayKey(snapshot.day), to: statement, at: 2)
+        try bind(snapshot.revision, to: statement, at: 3)
+        try bind(snapshot.updatedAt.timeIntervalSince1970, to: statement, at: 4)
+        try bind(snapshot.payload, to: statement, at: 5)
+        guard try step(statement) == SQLITE_DONE else { throw lastError() }
     }
 
-    private func upsertEventRow(_ event: Event) throws {
+    private func upsertEventRow(
+        _ event: Event,
+        using statement: OpaquePointer?
+    ) throws {
+        guard let statement else { throw lastError() }
         try validate(domain: event.domain)
-        try execute(
-            """
-            INSERT INTO events(day_key, timestamp, sequence, id, domain, payload)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                day_key = excluded.day_key,
-                timestamp = excluded.timestamp,
-                sequence = excluded.sequence,
-                domain = excluded.domain,
-                payload = excluded.payload
-            WHERE events.domain = excluded.domain;
-            """,
-            binds: { statement in
-                try self.bind(self.dayKey(event.day), to: statement, at: 1)
-                try self.bind(event.timestamp.timeIntervalSince1970, to: statement, at: 2)
-                try self.bind(event.sequence, to: statement, at: 3)
-                try self.bind(event.id, to: statement, at: 4)
-                try self.bind(event.domain, to: statement, at: 5)
-                try self.bind(event.payload, to: statement, at: 6)
-            }
-        )
+        try reset(statement)
+        try bind(event, to: statement)
+        guard try step(statement) == SQLITE_DONE else { throw lastError() }
     }
 
-    private func deleteEventRow(id: String, domain: String) throws {
-        try execute(
-            "DELETE FROM events WHERE id = ? AND domain = ?;",
-            binds: { statement in
-                try self.bind(id, to: statement, at: 1)
-                try self.bind(domain, to: statement, at: 2)
-            }
-        )
+    private func deleteEventRow(
+        id: String,
+        domain: String,
+        using statement: OpaquePointer?
+    ) throws {
+        guard let statement else { throw lastError() }
+        try reset(statement)
+        try bind(id, to: statement, at: 1)
+        try bind(domain, to: statement, at: 2)
+        guard try step(statement) == SQLITE_DONE else { throw lastError() }
+    }
+
+    private func bind(_ event: Event, to statement: OpaquePointer) throws {
+        try bind(dayKey(event.day), to: statement, at: 1)
+        try bind(event.timestamp.timeIntervalSince1970, to: statement, at: 2)
+        try bind(event.sequence, to: statement, at: 3)
+        try bind(event.id, to: statement, at: 4)
+        try bind(event.domain, to: statement, at: 5)
+        try bind(event.payload, to: statement, at: 6)
     }
 
     private func prepare(_ sql: String) throws -> OpaquePointer {
@@ -575,10 +682,21 @@ public actor TaptionPlanDayStore {
         return result
     }
 
+    private func reset(_ statement: OpaquePointer) throws {
+        guard sqlite3_reset(statement) == SQLITE_OK,
+              sqlite3_clear_bindings(statement) == SQLITE_OK else {
+            throw lastError()
+        }
+    }
+
     private func readSnapshot(_ statement: OpaquePointer) throws -> Snapshot {
         guard let domain = sqlite3_column_text(statement, 0).map({ String(cString: $0) }),
-              let day = parseDayKey(sqlite3_column_text(statement, 1).map { String(cString: $0) } ?? "") else {
-            throw lastError()
+              !domain.isEmpty,
+              let dayValue = sqlite3_column_text(statement, 1).map({ String(cString: $0) }),
+              let day = parseDayKey(dayValue) else {
+            throw TaptionPlanDayStoreError.databaseCorrupt(
+                message: "Invalid snapshot row"
+            )
         }
         let revision = try readUInt64(sqlite3_column_int64(statement, 2))
         let payload = readData(statement, at: 4)
@@ -592,10 +710,15 @@ public actor TaptionPlanDayStore {
     }
 
     private func readEvent(_ statement: OpaquePointer) throws -> Event {
-        guard let day = parseDayKey(sqlite3_column_text(statement, 0).map { String(cString: $0) } ?? ""),
+        guard let dayValue = sqlite3_column_text(statement, 0).map({ String(cString: $0) }),
+              let day = parseDayKey(dayValue),
               let id = sqlite3_column_text(statement, 3).map({ String(cString: $0) }),
-              let domain = sqlite3_column_text(statement, 4).map({ String(cString: $0) }) else {
-            throw lastError()
+              !id.isEmpty,
+              let domain = sqlite3_column_text(statement, 4).map({ String(cString: $0) }),
+              !domain.isEmpty else {
+            throw TaptionPlanDayStoreError.databaseCorrupt(
+                message: "Invalid event row"
+            )
         }
         return Event(
             day: day,

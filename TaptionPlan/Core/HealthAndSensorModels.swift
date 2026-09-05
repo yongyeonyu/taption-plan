@@ -428,6 +428,7 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
 /// evidence of a subway ride.  Matching is deliberately independent from
 /// the UI and movement classifier so archived readings can be re-analysed.
 enum SubwayWiFiSSID {
+    static let minimumContinuousObservations = 2
     private static let allowed: Set<String> = [
         "t wifi",
         "t wifi secure",
@@ -465,7 +466,7 @@ enum SubwayWiFiSSID {
     /// the train, so the name itself need not remain identical.
     static func hasContinuousEvidence(
         _ ssids: [String?],
-        minimumObservations: Int = 2
+        minimumObservations: Int = minimumContinuousObservations
     ) -> Bool {
         guard minimumObservations > 0 else { return false }
         var run = 0
@@ -478,6 +479,10 @@ enum SubwayWiFiSSID {
             }
         }
         return false
+    }
+
+    static func hasContinuousEvidence(streak: Int?) -> Bool {
+        (streak ?? 0) >= minimumContinuousObservations
     }
 }
 
@@ -506,12 +511,31 @@ enum TrackingSessionPolicy {
             )
     }
 
+    static func isPreciseRouteReading(_ reading: SensorReading) -> Bool {
+        guard reading.gpsAvailable,
+              reading.locationFixQuality != .approximate,
+              let point = reading.point else { return false }
+        return point.latitude.isFinite
+            && point.longitude.isFinite
+            && (-90...90).contains(point.latitude)
+            && (-180...180).contains(point.longitude)
+            && point.horizontalAccuracy.isFinite
+            && (0...activeHorizontalAccuracyLimit)
+                .contains(point.horizontalAccuracy)
+    }
+
     static func shouldPromoteBackgroundMovement(
         speedMetersPerSecond: Double,
         displacementMeters: Double,
-        elapsed: TimeInterval
+        elapsed: TimeInterval,
+        horizontalAccuracy: Double = 0,
+        speedAccuracy: Double = 0
     ) -> Bool {
-        speedMetersPerSecond >= 3
+        guard horizontalAccuracy.isFinite,
+              (0...activeHorizontalAccuracyLimit).contains(horizontalAccuracy),
+              speedAccuracy.isFinite,
+              speedAccuracy >= 0 else { return false }
+        return speedMetersPerSecond >= 3
             || elapsed > 0 && elapsed <= 10 * 60
                 && displacementMeters >= 80
     }

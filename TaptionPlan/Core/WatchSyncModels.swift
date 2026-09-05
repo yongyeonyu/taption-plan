@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 #if canImport(CoreML)
 import CoreML
 #endif
@@ -2036,6 +2037,7 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var locationTrackingEnabled: Bool? = nil
     var locationPermissionState: String? = nil
     var activitySuggestion: TaptionWatchActivitySuggestion? = nil
+    var commerceLocked: Bool? = nil
     /// Optional so payloads cached by older iPhone builds continue to decode.
     /// `automatic` is resolved on the receiving Watch using its own locale.
     var languagePreference: String? = nil
@@ -2048,8 +2050,21 @@ struct TaptionWatchHealthSnapshot: Codable, Hashable, Sendable {
     var exerciseMinutes: Double?
     var standHours: Double?
     var sleepMinutes: Double?
+    var sleepSegments: [TaptionWatchSleepSegment]? = nil
     var workoutCount: Int
     var source: String
+}
+
+struct TaptionWatchSleepSegment: Codable, Hashable, Sendable {
+    var id: UUID
+    var stage: String
+    var startDate: Date
+    var endDate: Date
+    var sourceName: String
+    var sourceBundleIdentifier: String
+    var deviceName: String?
+    var timeZoneIdentifier: String?
+    var isUserEntered: Bool
 }
 
 struct TaptionWatchSensorVector3: Codable, Hashable, Sendable {
@@ -2131,6 +2146,158 @@ struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
     var waterLockEnabled: Bool? = nil
 }
 
+private let taptionWatchMaximumClockSkew: TimeInterval = 5 * 60
+
+extension TaptionWatchCommand {
+    func retainingData(receivedAt: Date) -> Self? {
+        requestedAt <= receivedAt.addingTimeInterval(
+            taptionWatchMaximumClockSkew
+        ) ? self : nil
+    }
+}
+
+extension TaptionWatchAccelerationChunk {
+    func retainingData(
+        after cutoff: Date?,
+        receivedAt: Date? = nil
+    ) -> Self? {
+        let latestAllowed = receivedAt?.addingTimeInterval(
+            taptionWatchMaximumClockSkew
+        )
+        if let latestAllowed {
+            guard startedAt <= latestAllowed,
+                  endedAt <= latestAllowed else { return nil }
+        }
+        let retained = samples.filter { sample in
+            if let cutoff, sample.capturedAt <= cutoff { return false }
+            if let latestAllowed,
+               sample.capturedAt > latestAllowed { return false }
+            return true
+        }
+        if let cutoff, endedAt <= cutoff { return nil }
+        guard !retained.isEmpty else { return nil }
+        var value = self
+        value.samples = retained
+        if let cutoff { value.startedAt = max(startedAt, cutoff) }
+        value.endedAt = max(value.startedAt, endedAt)
+        return value
+    }
+}
+
+extension TaptionWatchSensorSummary {
+    var fallbackReadingID: UUID {
+        var value = sessionID.uuid
+        var hash = UInt64(bitPattern: Int64(sequence))
+            &+ 14_695_981_039_346_656_037
+        withUnsafeMutableBytes(of: &value) { bytes in
+            for index in bytes.indices {
+                hash ^= UInt64(bytes[index])
+                hash = hash &* 1_099_511_628_211
+                bytes[index] ^= UInt8(truncatingIfNeeded: hash >> 24)
+            }
+            bytes[6] = (bytes[6] & 0x0F) | 0x50
+            bytes[8] = (bytes[8] & 0x3F) | 0x80
+        }
+        return UUID(uuid: value)
+    }
+
+    func retainingData(
+        after cutoff: Date?,
+        receivedAt: Date? = nil
+    ) -> Self? {
+        let latestAllowed = receivedAt?.addingTimeInterval(
+            taptionWatchMaximumClockSkew
+        )
+        func isAllowed(_ date: Date) -> Bool {
+            if let cutoff, date <= cutoff { return false }
+            if let latestAllowed, date > latestAllowed { return false }
+            return true
+        }
+        guard isAllowed(startedAt), isAllowed(endedAt) else { return nil }
+        var value = self
+        value.routePoints = routePoints?.filter {
+            isAllowed($0.capturedAt)
+        }
+        value.behaviorSegments = behaviorSegments?.filter {
+            isAllowed($0.startedAt) && isAllowed($0.endedAt)
+        }
+        return value
+    }
+}
+
+extension TaptionWatchActivityConfirmation {
+    func retainingData(
+        after cutoff: Date?,
+        receivedAt: Date? = nil
+    ) -> Self? {
+        let latestAllowed = receivedAt?.addingTimeInterval(
+            taptionWatchMaximumClockSkew
+        )
+        func isAllowed(_ date: Date) -> Bool {
+            if let cutoff, date <= cutoff { return false }
+            if let latestAllowed, date > latestAllowed { return false }
+            return true
+        }
+        guard isAllowed(respondedAt),
+              isAllowed(observedStartedAt),
+              isAllowed(observedEndedAt) else { return nil }
+        return self
+    }
+}
+
+extension TaptionWatchHealthSnapshot {
+    func retainingData(
+        after cutoff: Date?,
+        receivedAt: Date? = nil
+    ) -> Self? {
+        let latestAllowed = receivedAt?.addingTimeInterval(
+            taptionWatchMaximumClockSkew
+        )
+        if let latestAllowed {
+            guard capturedAt <= latestAllowed,
+                  dayStart <= latestAllowed else { return nil }
+        }
+        guard cutoff != nil || latestAllowed != nil else { return self }
+        if let cutoff, capturedAt <= cutoff { return nil }
+        var value = self
+        let retained = (sleepSegments ?? []).compactMap {
+            segment -> TaptionWatchSleepSegment? in
+            var segment = segment
+            if let latestAllowed {
+                guard segment.startDate < latestAllowed else { return nil }
+                segment.endDate = min(segment.endDate, latestAllowed)
+            }
+            guard segment.endDate > segment.startDate else { return nil }
+            guard let cutoff else { return segment }
+            guard segment.endDate > cutoff else { return nil }
+            segment.startDate = max(segment.startDate, cutoff)
+            return segment.endDate > segment.startDate ? segment : nil
+        }
+        if sleepSegments != nil {
+            value.sleepSegments = retained
+            let sleepMinutes = retained
+                .filter {
+                    ["core", "deep", "rem", "asleepUnspecified"]
+                        .contains($0.stage)
+                }
+                .reduce(0) {
+                    $0 + $1.endDate.timeIntervalSince($1.startDate)
+                } / 60
+            value.sleepMinutes = sleepMinutes > 0 ? sleepMinutes : nil
+        } else if cutoff != nil {
+            value.sleepMinutes = nil
+        }
+        if let cutoff, dayStart <= cutoff {
+            value.dayStart = cutoff
+            value.activeEnergyKilocalories = nil
+            value.exerciseMinutes = nil
+            value.standHours = nil
+            value.workoutCount = 0
+        }
+        return value
+    }
+}
+
 enum TaptionWatchEnvelope {
     static let payloadKey = "taption.watch.payload"
     static let commandKey = "taption.watch.command"
@@ -2149,6 +2316,51 @@ enum TaptionWatchEnvelope {
     static let launchDiagnosticsKey = "taption.watch.launch-diagnostics"
     static let diagnosticsRequestKey = "taption.watch.diagnostics-request"
     static let diagnosticsLogKey = "taption.watch.diagnostics-log"
+    static let purgeRequestKey = "taption.watch.purge-request"
+    static let purgeRequestIDKey = "taption.watch.purge-request-id"
+    static let purgeGenerationKey = "taption.watch.purge-generation"
+    static let purgeAcknowledgedKey = "taption.watch.purge-acknowledged"
+}
+
+enum TaptionWatchPurgeGenerationPolicy {
+    static func shouldExecute(
+        requested: UInt64,
+        completed: UInt64
+    ) -> Bool {
+        requested > completed
+    }
+}
+
+enum TaptionWatchDeviceLocalDefaults {
+    private static var protectedStore: UserDefaults? {
+        UserDefaults(
+            suiteName: TaptionPlanSharedContainer.appGroupIdentifier
+        )
+    }
+
+    static func data(forKey key: String) -> Data? {
+        guard let store = protectedStore else {
+            UserDefaults.standard.removeObject(forKey: key)
+            return nil
+        }
+        if let data = store.data(forKey: key) { return data }
+        guard let legacy = UserDefaults.standard.data(forKey: key) else {
+            return nil
+        }
+        store.set(legacy, forKey: key)
+        UserDefaults.standard.removeObject(forKey: key)
+        return legacy
+    }
+
+    static func set(_ data: Data, forKey key: String) {
+        protectedStore?.set(data, forKey: key)
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+
+    static func removeObject(forKey key: String) {
+        protectedStore?.removeObject(forKey: key)
+        UserDefaults.standard.removeObject(forKey: key)
+    }
 }
 
 /// Apple Watch가 보내온 직전 실행 기록. 워치 앱이 실행 중 종료될 때 어느
@@ -2168,11 +2380,11 @@ enum WatchActivityConfirmationStore {
             all.removeFirst(all.count - limit)
         }
         guard let data = try? JSONEncoder().encode(all) else { return }
-        UserDefaults.standard.set(data, forKey: key)
+        TaptionWatchDeviceLocalDefaults.set(data, forKey: key)
     }
 
     static func read() -> [TaptionWatchActivityConfirmation] {
-        guard let data = UserDefaults.standard.data(forKey: key),
+        guard let data = TaptionWatchDeviceLocalDefaults.data(forKey: key),
               let values = try? JSONDecoder().decode(
                 [TaptionWatchActivityConfirmation].self,
                 from: data
@@ -2180,6 +2392,10 @@ enum WatchActivityConfirmationStore {
             return []
         }
         return values
+    }
+
+    static func clear() {
+        TaptionWatchDeviceLocalDefaults.removeObject(forKey: key)
     }
 }
 
@@ -2193,16 +2409,35 @@ enum WatchActivityLearningStore {
         all.append(value)
         if all.count > limit { all.removeFirst(all.count - limit) }
         guard let data = try? JSONEncoder().encode(all) else { return }
-        UserDefaults.standard.set(data, forKey: key)
+        TaptionWatchDeviceLocalDefaults.set(data, forKey: key)
     }
 
     static func read() -> [WatchActivityPatternSample] {
-        guard let data = UserDefaults.standard.data(forKey: key),
+        guard let data = TaptionWatchDeviceLocalDefaults.data(forKey: key),
               let values = try? JSONDecoder().decode(
                 [WatchActivityPatternSample].self,
                 from: data
               ) else { return [] }
         return values
+    }
+
+    static func clear() {
+        TaptionWatchDeviceLocalDefaults.removeObject(forKey: key)
+    }
+}
+
+enum TaptionWatchDiagnosticsPrivacy {
+    private static let personalHealthTokens = [
+        "health", "sleep", "heart", "blood", "glucose", "oxygen",
+        "respir", "workout", "exercise", "stand", "energy", "calorie",
+        "step", "weight", "body",
+    ]
+
+    static func redacted(_ report: String) -> String {
+        report.split(whereSeparator: \Character.isNewline).filter { line in
+            let value = line.lowercased()
+            return !personalHealthTokens.contains { value.contains($0) }
+        }.joined(separator: "\n")
     }
 }
 
@@ -2211,7 +2446,9 @@ enum WatchLaunchReportStore {
     private static let dateKey = "TaptionPlan.watchLaunchReportDate"
 
     static func save(_ report: String) {
-        UserDefaults.standard.set(report, forKey: key)
+        let safe = TaptionWatchDiagnosticsPrivacy.redacted(report)
+        guard !safe.isEmpty else { return }
+        UserDefaults.standard.set(safe, forKey: key)
         UserDefaults.standard.set(Date.now, forKey: dateKey)
     }
 

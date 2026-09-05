@@ -39,6 +39,7 @@ public struct RouteTimeCoordinateIndex: Sendable {
 public enum RoutePathSimplifier {
     public static func simplify(_ points: [RouteCoordinate], toleranceMeters: Double = 5, maximumCount: Int = 4_096) -> [RouteCoordinate] {
         guard points.count > 2 else { return points }
+        let maximumCount = max(2, maximumCount)
         var tolerance = max(0, toleranceMeters)
         let boundedInput: [RouteCoordinate]
         if points.count > maximumCount * 2 {

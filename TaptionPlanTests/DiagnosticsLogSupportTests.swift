@@ -97,16 +97,94 @@ final class DiagnosticsLogSupportTests: XCTestCase {
             fields: ["app_log_bytes": "42"]
         )
 
-        let log = try String(
-            contentsOf: rootURL
-                .appendingPathComponent("primary/iphone.jsonl"),
-            encoding: .utf8
-        )
+        let log = logger.combinedLog()
         XCTAssertTrue(log.contains("operation_started"))
         XCTAssertTrue(log.contains("operation_finished"))
         XCTAssertTrue(log.contains(operation.id.uuidString))
         XCTAssertTrue(log.contains("\"duration_ms\":"))
         XCTAssertTrue(log.contains("\"outcome\":\"success\""))
+    }
+
+    func testExportedLogRemovesPersonalHealthFields() throws {
+        let logger = TaptionPlanDiagnosticsLogger(
+            directoryURL: rootURL.appendingPathComponent("primary"),
+            fallbackDirectoryURL: nil
+        )
+
+        logger.record(
+            "watch_health_snapshot_applied",
+            fields: [
+                "sleep_minutes": "420",
+                "workout_count": "2",
+                "reason": "received",
+            ]
+        )
+        logger.record(
+            "route_inference",
+            fields: [
+                "subway_route": "2호선",
+                "step_count": "9000",
+            ]
+        )
+
+        let log = logger.combinedLog()
+        XCTAssertTrue(log.contains("watch_health_snapshot_applied"))
+        XCTAssertTrue(log.contains("\"reason\":\"received\""))
+        XCTAssertTrue(log.contains("\"subway_route\":\"2호선\""))
+        XCTAssertFalse(log.contains("420"))
+        XCTAssertFalse(log.contains("workout_count"))
+        XCTAssertFalse(log.contains("step_count"))
+    }
+
+    func testCachedWatchLogRemovesPersonalHealthLines() throws {
+        let suite = "TaptionPlanTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        WatchDiagnosticsLogStore.save(
+            "health snapshot ready workouts=2\nconnectivity activated",
+            defaults: defaults
+        )
+
+        XCTAssertEqual(
+            WatchDiagnosticsLogStore.read(defaults: defaults),
+            "connectivity activated"
+        )
+    }
+
+    func testLegacyICloudDiagnosticsAreRemovedOnce() throws {
+        let cloud = rootURL.appendingPathComponent("iCloud")
+        let logs = cloud
+            .appendingPathComponent("Documents", isDirectory: true)
+            .appendingPathComponent("TaptionLogs", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: logs,
+            withIntermediateDirectories: true
+        )
+        try Data("sleep_minutes=420".utf8).write(
+            to: logs.appendingPathComponent("TaptionLogs-old.txt")
+        )
+        let suite = "TaptionPlanTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let exporter = TaptionPlanDiagnosticsICloudExporter(
+            ubiquityContainerURL: { cloud },
+            transferItem: { _, _ in }
+        )
+
+        try exporter.removeLegacyPersonalHealthLogsIfNeeded(
+            defaults: defaults
+        )
+        XCTAssertFalse(FileManager.default.fileExists(atPath: logs.path))
+
+        try FileManager.default.createDirectory(
+            at: logs,
+            withIntermediateDirectories: true
+        )
+        try exporter.removeLegacyPersonalHealthLogsIfNeeded(
+            defaults: defaults
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: logs.path))
     }
 
     func testBoundedLogKeepsCompleteNewestLinesWithinLimit() {

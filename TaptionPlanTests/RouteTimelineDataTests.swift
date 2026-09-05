@@ -352,7 +352,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(projection.segments.map(\.opacity), [0.5, 0.5, 1.0])
     }
 
-    func testExactSampleAndLongGPSGapInterpolatePlaybackButKeepRouteGap() throws {
+    func testExactSampleAndLongGPSGapHoldsLastObservedPoint() throws {
         let projection = RouteTimelineDataEngine.project(
             selectedDate: date(0),
             throughMinute: 10,
@@ -366,7 +366,7 @@ final class RouteTimelineDataTests: XCTestCase {
 
         XCTAssertEqual(
             try XCTUnwrap(projection.coordinateAtCutoff).latitude,
-            38,
+            37,
             accuracy: 0.0001
         )
         XCTAssertTrue(projection.segments.isEmpty)
@@ -760,6 +760,48 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertTrue(point.verticalAccuracy.isFinite)
     }
 
+    func testRouteTimelineDoesNotPromoteApproximateQualityToPreciseGPS() {
+        let approximate = SensorReading(
+            timestamp: date(0),
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: true
+        )
+        let precise = SensorReading(
+            timestamp: date(0),
+            point: GeoPoint(
+                latitude: 38,
+                longitude: 128,
+                altitude: 0,
+                horizontalAccuracy: 20,
+                verticalAccuracy: 5
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true
+        )
+
+        XCTAssertTrue(
+            RouteTimelineDataEngine.normalizedReadings([approximate]).isEmpty
+        )
+        XCTAssertEqual(
+            RouteTimelineDataEngine.normalizedDisplayReadings([approximate]).count,
+            1
+        )
+        XCTAssertEqual(
+            RouteTimelineDataEngine.normalizedDisplayReadings([
+                approximate,
+                precise,
+            ]).first?.id,
+            precise.id
+        )
+    }
+
     func testDenseRealtimeRouteProjectionStaysLinearAndMerged() {
         let start = date(0)
         let readings = (0..<10_000).map { index in
@@ -1100,7 +1142,98 @@ final class RouteTimelineDataTests: XCTestCase {
                 through: date(1_440)
             ).isEmpty
         )
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [from, to],
+            travel: [travel],
+            readings: [],
+            calendar: calendar
+        )
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
+        )
         XCTAssertEqual(travel, original)
+    }
+
+    func testConfirmedSubwayRouteDoesNotCreateDottedOverlay() {
+        let from = PlaceStay(
+            placeKey: "home",
+            displayName: "집",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.50,
+                longitude: 126.90,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let to = PlaceStay(
+            placeKey: "work",
+            displayName: "회사",
+            span: TimeSpan(start: date(60), end: date(120)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.60,
+                longitude: 127.00,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: from.id,
+            toPlaceID: to.id,
+            mode: .subway,
+            span: TimeSpan(start: date(10), end: date(60)),
+            distanceMeters: 10_000,
+            confidence: .high,
+            evidence: ["지하철"],
+            isConfirmed: true,
+            subwayRoute: SubwayRoutePath(
+                stops: [
+                    SubwayRouteStop(
+                        lineName: "1호선",
+                        order: 0,
+                        stationName: "A",
+                        latitude: 37.50,
+                        longitude: 126.90
+                    ),
+                    SubwayRouteStop(
+                        lineName: "1호선",
+                        order: 1,
+                        stationName: "B",
+                        latitude: 37.60,
+                        longitude: 127.00
+                    ),
+                ],
+                lineNames: ["1호선"],
+                transferStationNames: []
+            )
+        )
+
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [from, to],
+            travel: [travel],
+            readings: [],
+            resolvedRoutes: [
+                MapHomeWBSResolvedRoute(
+                    legID: "movement-\(travel.id.uuidString)",
+                    coordinates: travel.subwayRoute!.coordinates
+                )
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
+        )
     }
 
     func testExpectedSubwayRouteUsesRegisteredEndpointsAndCollapsesBridgedDuplicates()
@@ -1385,7 +1518,7 @@ final class RouteTimelineDataTests: XCTestCase {
             confidence: .medium,
             evidence: ["자동차"]
         )
-        let readings = [10, 20, 30, 40].map {
+        let readings = [10, 15, 20, 25, 30, 35, 40].map {
             reading($0, latitude: 37 + Double($0) / 1_000)
         }
 
@@ -1920,7 +2053,7 @@ final class RouteTimelineDataTests: XCTestCase {
                 stay.coordinate,
                 stay.cameraCoordinate
             ),
-            30,
+            0,
             accuracy: 0.5
         )
         let movementLegID = "movement-gap-\(first.id.uuidString)-\(second.id.uuidString)"
@@ -1930,6 +2063,41 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(movement.activity, .movement)
         XCTAssertEqual(movement.mode, .subway)
         XCTAssertTrue(movement.legID.hasPrefix("movement-gap-"))
+    }
+
+    func testMPR905H001RecordedRouteRemovesGeneratedForecastGap() {
+        let first = PlaceStay(
+            placeKey: "first-recorded",
+            displayName: "첫 장소",
+            span: TimeSpan(start: date(0), end: date(20)),
+            confidence: .high,
+            point: reading(20, latitude: 37).point
+        )
+        let second = PlaceStay(
+            placeKey: "second-recorded",
+            displayName: "둘째 장소",
+            span: TimeSpan(start: date(80), end: date(120)),
+            confidence: .high,
+            point: reading(80, latitude: 37.01).point
+        )
+        let readings = stride(from: 20, through: 80, by: 10).map {
+            reading($0, latitude: 37 + Double($0 - 20) / 6_000)
+        }
+
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [first, second],
+            travel: [],
+            readings: readings,
+            calendar: calendar
+        )
+
+        XCTAssertFalse(projection.legs.contains {
+            $0.id.hasPrefix("movement-gap-")
+        })
+        XCTAssertTrue(projection.legs.contains {
+            $0.routePhase == .actual && $0.activity == .movement
+        })
     }
 
     func testSLP902A001ConfirmedSleepPinsPlaybackAndCameraWhilePreservingAdjacentMovementAndReadings() throws {
@@ -1957,7 +2125,7 @@ final class RouteTimelineDataTests: XCTestCase {
             reading(20, latitude: sleepAnchor.latitude),
             reading(30, latitude: 37.02),
             reading(40, latitude: 37.03),
-            reading(50, latitude: 37.04),
+            reading(50, latitude: 37.038),
         ]
         let originalReadings = readings
         let projection = MapHomeWBSPlaybackProjection.make(
@@ -1986,7 +2154,7 @@ final class RouteTimelineDataTests: XCTestCase {
         let afterSleep = try XCTUnwrap(projection.frame(at: date(45)))
         XCTAssertEqual(afterSleep.activity, .movement)
         XCTAssertEqual(afterSleep.routePhase, .actual)
-        XCTAssertEqual(afterSleep.coordinate.latitude, 37.035, accuracy: 0.0001)
+        XCTAssertEqual(afterSleep.coordinate.latitude, 37.034, accuracy: 0.0001)
         XCTAssertEqual(readings, originalReadings)
     }
 
@@ -2167,6 +2335,78 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(frame.routePhase, .actual)
         XCTAssertEqual(frame.activity, .movement)
         XCTAssertTrue(frame.legID.hasPrefix("actual-"))
+    }
+
+    func testWBSPlaybackBreaksSparseActualRouteGap() {
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [],
+            travel: [],
+            readings: [
+                reading(0, latitude: 37),
+                SensorReading(
+                    timestamp: date(6),
+                    point: GeoPoint(
+                        latitude: 37,
+                        longitude: 127.03,
+                        altitude: 0,
+                        horizontalAccuracy: 5,
+                        verticalAccuracy: 5
+                    )
+                ),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .actual && $0.activity == .movement
+            }.isEmpty
+        )
+        XCTAssertNil(projection.frame(at: date(3)))
+    }
+
+    func testWBSPlaybackDoesNotTreatApproximateGPSAsActualTrace() {
+        let readings = [
+            SensorReading(
+                timestamp: date(20),
+                point: GeoPoint(
+                    latitude: 37,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                ),
+                locationFixQuality: .approximate,
+                gpsAvailable: false
+            ),
+            SensorReading(
+                timestamp: date(30),
+                point: GeoPoint(
+                    latitude: 37.001,
+                    longitude: 127.001,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                ),
+                locationFixQuality: .approximate,
+                gpsAvailable: false
+            ),
+        ]
+
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [],
+            travel: [],
+            readings: readings,
+            calendar: calendar
+        )
+
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .actual && $0.activity == .movement
+            }.isEmpty
+        )
     }
 
     func testWBSPlaybackDoesNotAddForecastForContinuousRecordedCarRoute() {
@@ -2468,9 +2708,121 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(last.direction, .east)
     }
 
+    func testMPR905H001DensePlaybackFrameLookup() {
+        let start = date(0)
+        let readings = (0...10_000).map { second in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(second)),
+                point: GeoPoint(
+                    latitude: 37 + Double(second) * 0.000_002,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+        }
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: start,
+            places: [],
+            travel: [],
+            readings: readings,
+            calendar: calendar
+        )
+        XCTAssertEqual(
+            projection.legs.filter { $0.activity == .movement }.count,
+            10_000
+        )
+
+        measure {
+            var resolved = 0
+            for second in stride(from: 0, to: 10_000, by: 5) {
+                if projection.frame(
+                    at: start.addingTimeInterval(Double(second) + 0.5)
+                ) != nil {
+                    resolved += 1
+                }
+            }
+            XCTAssertEqual(resolved, 2_000)
+        }
+    }
+
+    func testMPR905H001FrameIndexHonorsExactMinuteBoundary() throws {
+        let start = date(0)
+        let readings = (0...2).map { minute in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(minute) * 60),
+                point: GeoPoint(
+                    latitude: 37 + Double(minute) * 0.001,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+        }
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: start,
+            places: [],
+            travel: [],
+            readings: readings,
+            calendar: calendar
+        )
+        let legs = projection.legs.filter { $0.activity == .movement }
+        XCTAssertEqual(legs.count, 2)
+
+        XCTAssertEqual(
+            try XCTUnwrap(projection.frame(at: start.addingTimeInterval(60))).legID,
+            legs[1].id
+        )
+        XCTAssertNil(projection.frame(at: start.addingTimeInterval(120)))
+    }
+
+    func testMPR905H001FrameIndexHonorsDSTDayLength() throws {
+        var localCalendar = Calendar(identifier: .gregorian)
+        localCalendar.timeZone = try XCTUnwrap(
+            TimeZone(identifier: "America/Los_Angeles")
+        )
+        for components in [
+            DateComponents(year: 2026, month: 3, day: 8),
+            DateComponents(year: 2026, month: 11, day: 1),
+        ] {
+            let dayStart = try XCTUnwrap(localCalendar.date(from: components))
+            let dayEnd = try XCTUnwrap(
+                localCalendar.date(byAdding: .day, value: 1, to: dayStart)
+            )
+            let stay = PlaceStay(
+                placeKey: "dst",
+                displayName: "DST",
+                span: TimeSpan(start: dayStart, end: dayEnd),
+                confidence: .high,
+                point: GeoPoint(
+                    latitude: 37,
+                    longitude: 127,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+            let projection = MapHomeWBSPlaybackProjection.make(
+                selectedDate: dayStart,
+                places: [stay],
+                travel: [],
+                readings: [],
+                calendar: localCalendar
+            )
+
+            XCTAssertNotNil(
+                projection.frame(at: dayEnd.addingTimeInterval(-0.001))
+            )
+            XCTAssertNil(projection.frame(at: dayEnd))
+        }
+    }
+
     func testMapHomeWBSTripStyleMatchesWBSRouteTokens() {
         XCTAssertEqual(MapHomeWBSTripStyle.paperHex, "#FCF9F4")
         XCTAssertEqual(MapHomeWBSTripStyle.actualRouteHex, "#458B88")
+        XCTAssertEqual(MapHomeWBSTripStyle.transitRouteHex, "#9A6A2D")
         XCTAssertEqual(MapHomeWBSTripStyle.forecastRouteHex, "#C65D4D")
         XCTAssertEqual(MapHomeWBSTripStyle.actualRouteLineWidth, 2.2)
         XCTAssertEqual(MapHomeWBSTripStyle.forecastRouteLineWidth, 1.8)

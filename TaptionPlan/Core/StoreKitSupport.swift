@@ -495,7 +495,7 @@ final class TaptionProAccessController {
     }
 
     func startTrial(now: Date = .now) {
-        guard !isActionInFlight else { return }
+        guard !isActionInFlight, state == .trialNotStarted else { return }
         isActionInFlight = true
         let record = trialPersistence.startTrial(at: now)
         setState(TaptionProTrialPolicy.state(record: record, now: now))
