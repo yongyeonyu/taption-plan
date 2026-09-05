@@ -21,6 +21,11 @@
 
 구현 세부와 검증 명령은 [`DEVELOPMENT.md`](DEVELOPMENT.md)에 기록합니다.
 
+## 지원과 개인정보
+
+- [지원](SUPPORT.md)
+- [개인정보처리방침](PRIVACY.md)
+
 ## 실행
 
 1. `TaptionPlan.xcodeproj`를 Xcode에서 엽니다.

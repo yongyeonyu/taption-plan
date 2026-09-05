@@ -28,7 +28,7 @@ xcrun simctl list devices
 ## 현재 검증·정리 상태
 
 - `test.md`에 snapshot 실패 raw 롤백 집중 회귀 1/1, 보안·백업 50/50, 전체 앱 1,027건 중 1,026 passed·1 skipped·0 failed와 build 137 archive/export·서명·업로드·API readback 증적이 있다. skip은 iOS 26.5 Simulator의 StoreKit 시스템 오류로 한정된다.
-- 실제 iCloud 2026-09 일반·raw 센서 백업은 JSON v1 구조와 암호문 SHA-256 digest 일치를 확인했다. PIN 복호화·적용 readback은 아직 실기기에서 확인하지 않았다.
+- 실제 iCloud 2026-08·09 일반·raw 백업은 계정 복구 키로 AES-GCM key unwrap·payload decrypt·LZFSE 해제·JSON v1·월/generation 쌍까지 확인했다: `/private/tmp/BAK905I001-live.5vfwUn/live-backup-readback.log`. 앱 UI의 실제 복원 적용·merge readback은 아직 실기기에서 확인하지 않았다.
 - iPad Pro에는 개발자 서명 `1.0 (134)`를 설치·버전 readback했지만 기기 잠금으로 launch가 거부됐다. TestFlight 클라이언트 build 137 설치·실행은 아직 물리 검증하지 않았다.
 - `com.taption.plan.pro`는 비소모성 `READY_TO_SUBMIT`, 미국 `USD 9.99`, 한국·미국 포함 175개 지역, 한국어·영어 현지화와 심사 이미지 `COMPLETE`다. Paid Apps Agreement와 앱 버전 상품 연결은 브라우저 재인증이 필요하다.
 - build 137 archive·IPA·검증·업로드/API 증적은 `/private/tmp/REL905H011-release.nFPbOf`에, XCTest 증적은 `/private/tmp/BAK905H010-focused.K2HmMB`에 보존한다. 재생성 가능한 DerivedData와 IPA 압축 해제본만 제거한다.
@@ -37,6 +37,6 @@ xcrun simctl list devices
 
 1. iPhone·iPad TestFlight에서 build 137을 다운로드·설치한 뒤 version/build readback과 launch, 실행 속도·장시간 발열/배터리, 두 손가락 pinch, 날짜 변경 시 사이드바 대분류 유지 화면을 검증한다.
 2. iPhone/Apple Watch 실제 원본 수신과 `수신 대기 → 최근 수신`, 비이동 졸라맨 정지, 수면·지하철·공백 예상경로 진단 로그를 확인한다.
-3. iCloud 일반·raw 백업을 PIN으로 실제 복호화·적용하고 Apple·Google·Naver 실제 계정 일정 readback, Paid Apps Agreement 활성화, 앱 버전의 `com.taption.plan.pro` 연결, sandbox/TestFlight 구매·복원을 확인한다.
+3. iCloud 일반·raw 백업을 앱에서 실제 복원·merge하고 Apple·Google·Naver 실제 계정 일정 readback, Paid Apps Agreement 활성화, 앱 버전의 `com.taption.plan.pro` 연결, sandbox/TestFlight 구매·복원을 확인한다.
 
 완료된 `temp.md` 항목만 삭제하고 미완료 게이트는 남긴다. 문서 변경은 승인 파일만 stage하며 마지막에 `HEAD == origin/main == ls-remote main`, tracked/untracked clean을 확인한다.

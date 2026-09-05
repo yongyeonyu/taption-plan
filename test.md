@@ -1,5 +1,11 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-05 BAK905I001 실제 iCloud 백업 복호화
+
+- iCloud의 8·9월 snapshot·raw 파일을 실제 32바이트 계정 복구 키로 AES-GCM key unwrap·payload decrypt하고 LZFSE·JSON v1·월/generation 쌍까지 검증했다: `/private/tmp/BAK905I001-live.5vfwUn/live-backup-readback.log`.
+- 8월은 route 2,516건, raw reading 15,369건·envelope 12,876건이며 9월은 route 2,728건, raw reading 7,403건·envelope 19,132건이다. 네 payload 모두 무결성·복호화·압축 해제가 정상이다.
+- 좌표·건강값·복구 키는 출력하지 않았고 일회성 검증기 소스·바이너리는 삭제했다. 앱 UI에서 복원 적용·merge한 뒤 데이터 readback하는 단계는 실기기 미완료다.
+
 ## 2026-09-05 BAK905H010·REL905H011 raw 실패 롤백·TestFlight build 137
 
 - 월간 raw 저장 뒤 snapshot 커밋이 실패할 때 직전 정상 raw가 덮어써지던 결함을 수정했다. 병합 중 이미 읽은 archive를 되돌리며, 이전 파일이 없으면 미커밋 raw만 삭제한다.
