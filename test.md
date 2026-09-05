@@ -1,5 +1,15 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-05 BAK905H008·REL905H009 raw 복원·TestFlight build 136
+
+- raw를 생략한 포그라운드 스냅샷 저장이 새 generation ID로 월간 파일을 덮어써 기존 raw 백업을 복원 대상에서 제외할 수 있던 결함을 수정했다. 같은 달의 기존 generation ID를 보존하고 포그라운드 경로는 스냅샷 저장 API를 사용한다.
+- 원본 백업 연속성 집중 회귀 1/1, `SecurityBackupCoreTests` 50/50, 앱 전체 1,027건 중 1,026 passed·1 skipped·0 failed다: `/private/tmp/BAK905H008-focused.b6Zr0b/result.xcresult`, `/private/tmp/BAK905H008-focused.b6Zr0b/security-suite.xcresult`, `/private/tmp/BAK905H008-focused.b6Zr0b/full.xcresult`. skip은 iOS 26.5 Simulator의 기존 StoreKit 시스템 오류다.
+- 실제 iCloud의 `2026-09.taptionbackup`과 `2026-09.rawsensorbackup`은 JSON v1, 암호화 payload·PIN/account wrapped key 포함, 저장 digest와 암호문 SHA-256 일치를 확인했다. 실기기 PIN 복호화·복원 적용은 확인하지 않았다.
+- 배포 소스 `f76af5a9dd23e880f00c9d3b5cf2b6b173efe83b`에서 네 번들을 `1.0 (136)`으로 archive/export했다. archive·IPA deep/strict codesign과 네 privacy manifest, 배포 IPA의 Apple Distribution·`beta-reports-active=true`·iCloud `Production`·`get-task-allow=false`를 확인했다.
+- IPA SHA-256은 `32486649b566c61a3270ee0424e8d99a50a4c176c3200ea9f0edb1c24c639b86`; Delivery/build UUID는 `85cabd56-8654-4124-b660-9e8793fe4853`이며 `VALID`·미만료·`APP_STORE_ELIGIBLE`이다.
+- `TP Taption Plan 내부 테스트`에 build 136을 추가했고 API readback에서 build 136 `VALID`, 그룹 빌드 97개, 내부 테스터 1명을 확인했다.
+- TestFlight 클라이언트 build 136 설치·launch·실제 백업 복원·터치·장시간 발열/배터리는 별도 미완료 게이트다.
+
 ## 2026-09-05 REL905H007 TestFlight build 135
 
 - 배포 소스 `1ca699e5f0da06c18dd453b31c688c5b38405a31`에서 앱·iOS Widget·Watch 앱·Watch Widget을 모두 `1.0 (135)`로 archive/export했다.

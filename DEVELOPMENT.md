@@ -1,5 +1,15 @@
 # Taption Plan 개발 문서
 
+## 2026-09-05 BAK905H008·REL905H009 · raw 복원 연속성·build 136
+
+- 포그라운드의 가벼운 스냅샷 백업이 새 generation ID로 월간 파일을 덮어써, 기존 암호화 raw 센서 백업이 다음 전체 백업 전까지 복원에서 제외될 수 있는 결함을 수정했다.
+- raw를 새로 저장하지 않을 때는 기존 월간 스냅샷의 generation ID를 보존하고, 포그라운드 경로는 raw 없는 새 generation 대신 스냅샷 저장을 사용한다. 별도 계층이나 의존성은 추가하지 않았다.
+- 실제 iCloud 2026-09 스냅샷·raw 센서 백업은 JSON v1 구조, 암호화 payload와 이중 wrapped key, 저장 SHA-256 digest 일치를 확인했다. PIN 복호화·실제 복원은 잠긴 실기기 게이트로 남겼다.
+- 보안·백업 회귀 50/50, 앱 전체 1,027건 중 1,026 passed·1 known StoreKit system skip·0 failed를 통과했다: `/private/tmp/BAK905H008-focused.b6Zr0b/security-suite.xcresult`, `/private/tmp/BAK905H008-focused.b6Zr0b/full.xcresult`.
+- 배포 소스 `f76af5a9dd23e880f00c9d3b5cf2b6b173efe83b`를 `main`에 푸시하고 네 번들을 `1.0 (136)`으로 archive/export했다. IPA SHA-256은 `32486649b566c61a3270ee0424e8d99a50a4c176c3200ea9f0edb1c24c639b86`이다.
+- 배포본의 privacy manifest, Apple Distribution, `beta-reports-active=true`, iCloud `Production`, `get-task-allow=false`, deep/strict codesign을 확인했다.
+- Delivery/build UUID `85cabd56-8654-4124-b660-9e8793fe4853`은 `VALID`·미만료·`APP_STORE_ELIGIBLE`이다. Internal 그룹 추가 후 build 136 포함·그룹 빌드 97개·내부 테스터 1명을 API readback했다.
+
 ## 2026-09-05 REL905H007 · build 135 정확도·성능 보강 릴리스
 
 - 자동 기록·경로 생성·행동 분류·센서/Watch 분기·지도 상호작용을 다방면 검토해 확인된 결함을 최소 수정했다. 불완전 일자 캐시, stale projection/migration, 과도한 날짜 조회, 경로 opacity·MapKit overlay 교체, 현재 위치 중복 표시, Watch 유료 잠금 우회를 바로잡았다.
