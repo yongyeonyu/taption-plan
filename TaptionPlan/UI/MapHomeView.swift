@@ -1369,6 +1369,7 @@ struct MapHomeView: View {
     @State private var isAppleWatchMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
     @State private var isGPSLoggingMenuExpanded = false
+    @State private var isSettingsPresented = false
     @State private var isDataProtectionPresented = false
     @State private var isSettingsResetConfirmationPresented = false
     @AppStorage(
@@ -1843,6 +1844,10 @@ struct MapHomeView: View {
         .sheet(isPresented: $isDataProtectionPresented) {
             MapHomeSecuritySheet(model: model, language: language)
                 .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isSettingsPresented) {
+            SettingsView(model: model)
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isCategoryAddPresented) {
@@ -5010,6 +5015,43 @@ struct MapHomeView: View {
             .accessibilityLabel(language.text("설정 목록", "Settings list"))
 
             if isSettingsMenuExpanded {
+                Button {
+                    isSettingsPresented = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "gearshape.2.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.tpReferenceRose)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(language.text("전체 설정", "All Settings"))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Text(
+                                language.text(
+                                    "권한 · Watch 자동 가져오기 · 가속도",
+                                    "Permissions, Watch auto-import, and acceleration"
+                                )
+                            )
+                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(Color.primary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                    .background(
+                        Color.tpReferenceRose.opacity(0.055),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("전체 설정 열기", "Open all settings"))
+                .padding(.leading, 12)
+
                 Button {
                     isDataProtectionPresented = true
                 } label: {

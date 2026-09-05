@@ -1,5 +1,14 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-06 DEV903V001 iPhone·Watch 실기기 확인
+
+- iPhone 14 Pro(iOS 26.6.1)에 최신 Apple Development Debug `1.0 (137)`을 빌드·설치·launch했고 앱 프로세스 PID `13362`와 버전을 readback했다. 빌드·서명 증적은 `/private/tmp/DEV903V001-iphone-settings-r1.log`이며 Debug dylib SHA-256은 `7bd3355fa7bcebfa9c47d087d072fb882563e2f8c75d23e192583a67b184ec06`이다.
+- 교체 전 설치돼 있던 `1.0 (137)`도 launch했지만 설치 provenance를 TestFlight로 확정하지 않았으므로, 최신 개발자 설치와 TestFlight 클라이언트 설치를 같은 PASS로 합치지 않는다.
+- 실제 iPhone에서 날짜 ±1일·±7일 이동, 지도 +/-와 한 손가락 pan, 권한 완료 상태에서 온보딩 비노출을 확인했다. 직전 동일 지도·핀치 코드의 물리 iPhone 집중 XCTest는 3/3 통과·실패/스킵 0이다: `/private/tmp/DEV903V001-iphone-focused-r1.xcresult`.
+- Watch 자동 가져오기·가속도 수집·모든 권한 승인은 비활성 레거시 설정에만 있어 접근 불가였고, 현재 지도 설정에 기존 `SettingsView` 진입점 하나를 연결했다. 변경 소스의 iPhone 빌드·설치·launch는 통과했지만 iPhone Mirroring 자동 클릭이 원격 화면에 전달되지 않아 새 버튼과 실제 두 손가락 pinch는 물리 터치 미확인이다.
+- Apple Watch SE에는 Debug `1.0 (137)`을 설치했고 iPhone의 최근 Watch 접촉 시각 갱신을 확인했다. Watch 앱 launch는 `Navigation away from clock is not allowed due to one or more active system states`로 거부돼 화면·센서 실수신·수면 반영은 미확인이다.
+- `xctrace` Time Profiler는 연결된 iPhone을 인식했지만 boot 대기 timeout으로 trace를 만들지 못했다. 장시간 발열·배터리와 TestFlight build 137 클라이언트 provenance/launch는 계속 별도 게이트다.
+
 ## 2026-09-06 ALG904A001 전체 기록 경로 회귀
 
 - Swift Package는 TaptionActivityEngine 14/14, TaptionRouteEngine 20/20, TaptionPlanCore 51/51, TaptionPlanEngine 1/1—총 86/86 통과했다.

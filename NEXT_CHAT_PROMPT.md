@@ -27,6 +27,9 @@ xcrun simctl list devices
 
 ## 현재 검증·정리 상태
 
+- iPhone 14 Pro(iOS 26.6.1)에 최신 Apple Development Debug `1.0 (137)`을 빌드·설치·launch하고 PID `13362`를 readback했다: `/private/tmp/DEV903V001-iphone-settings-r1.log`. 직전 동일 지도·핀치 코드의 물리 iPhone 집중 XCTest는 3/3 통과했다: `/private/tmp/DEV903V001-iphone-focused-r1.xcresult`.
+- 비활성 레거시 화면에만 있던 Watch 자동 가져오기·가속도 수집·모든 권한 승인 제어는 현재 지도 설정의 `전체 설정` 진입점에서 기존 `SettingsView`를 열도록 최소 연결했다. 변경 소스의 빌드·설치·launch는 통과했지만 iPhone Mirroring 원격 레이어가 자동 클릭을 받지 않아 새 버튼과 실제 두 손가락 pinch는 물리 터치 미확인이다.
+- Apple Watch SE에는 Debug `1.0 (137)`을 설치했고 최근 접촉 시각 갱신을 확인했다. 활성 시스템 상태가 시계 화면 이탈을 막아 Watch launch·센서 화면은 미확인이다. TestFlight 정본은 계속 build 137이며 이번 소스 변경은 아직 업로드하지 않았다.
 - `test.md`에 snapshot 실패 raw 롤백 집중 회귀 1/1, 보안·백업 50/50, 전체 앱 1,027건 중 1,026 passed·1 skipped·0 failed와 build 137 archive/export·서명·업로드·API readback 증적이 있다. skip은 iOS 26.5 Simulator의 StoreKit 시스템 오류로 한정된다.
 - 실제 iCloud 2026-08·09 일반·raw 백업은 계정 복구 키로 AES-GCM key unwrap·payload decrypt·LZFSE 해제·JSON v1·월/generation 쌍까지 확인했다: `/private/tmp/BAK905I001-live.5vfwUn/live-backup-readback.log`. 앱 UI의 실제 복원 적용·merge readback은 아직 실기기에서 확인하지 않았다.
 - iPad Pro에는 개발자 서명 `1.0 (134)`를 설치·버전 readback했지만 기기 잠금으로 launch가 거부됐다. TestFlight 클라이언트 build 137 설치·실행은 아직 물리 검증하지 않았다.
@@ -38,8 +41,8 @@ xcrun simctl list devices
 
 ## 반드시 남은 게이트
 
-1. iPhone·iPad TestFlight에서 build 137을 다운로드·설치한 뒤 version/build readback과 launch, 실행 속도·장시간 발열/배터리, 두 손가락 pinch, 날짜 변경 시 사이드바 대분류 유지 화면을 검증한다.
-2. iPhone/Apple Watch 실제 원본 수신과 `수신 대기 → 최근 수신`, 비이동 졸라맨 정지, 수면·지하철·공백 예상경로 진단 로그 및 장시간 발열·배터리를 확인한다.
+1. iPhone에서 `설정 → 전체 설정`이 열리고 Watch 자동 가져오기·가속도·모든 권한 승인 제어가 보이는지 실제 터치한다. 이어 iPhone·iPad TestFlight build 137의 클라이언트 provenance/launch, 장시간 발열·배터리, 실제 두 손가락 pinch와 날짜 변경 시 대분류 유지 화면을 검증한다.
+2. Watch의 활성 시스템 상태를 해제해 앱을 launch한 뒤 iPhone/Apple Watch 실제 원본 수신과 `수신 대기 → 최근 수신`, 비이동 졸라맨 정지, 수면·지하철·공백 예상경로 진단 로그를 확인한다.
 3. iCloud 일반·raw 백업을 앱에서 실제 복원·merge하고 Apple·Google·Naver 실제 계정 일정 readback, Paid Apps Agreement 활성화, 앱 버전에 첫 IAP를 웹으로 추가하고 sandbox/TestFlight 구매·복원을 확인한다.
 4. 개인정보 수집 답변·판매 지역·심사 연락처·DSA/비규제 의료기기 선언을 확정한다.
 

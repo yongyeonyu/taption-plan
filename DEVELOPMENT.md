@@ -1,5 +1,13 @@
 # Taption Plan 개발 문서
 
+## 2026-09-06 DEV903V001 · iPhone 실기기 설치·설정 진입 보강
+
+- iPhone 14 Pro(iOS 26.6.1)와 Apple Watch SE 연결을 확인했다. 기존 설치 앱 `1.0 (137)`은 교체 전 launch했고, 최신 소스의 Apple Development Debug `1.0 (137)`도 빌드·deep/strict codesign·설치·launch 및 실행 프로세스 PID `13362`를 readback했다.
+- Watch 자동 가져오기·가속도 수집·모든 권한 승인 제어가 비활성 레거시 `SettingsView`에만 있어 현재 지도 UI에서 접근할 수 없던 결함을 확인했다. 지도 설정 목록에 기존 `SettingsView`를 여는 `전체 설정` 진입점 하나만 추가해 제어를 중복 구현하지 않았다.
+- 실기기 Debug 빌드는 `/private/tmp/DEV903V001-iphone-settings-r1.log`에서 `BUILD SUCCEEDED`; 앱 버전 `1.0 (137)`, Debug dylib SHA-256 `7bd3355fa7bcebfa9c47d087d072fb882563e2f8c75d23e192583a67b184ec06`이다.
+- 직전 동일 지도·핀치 코드의 iPhone 집중 XCTest는 3/3 통과했다: `/private/tmp/DEV903V001-iphone-focused-r1.xcresult`. 실제 두 손가락 터치, 새 `전체 설정` 버튼 터치, 장시간 발열·배터리는 iPhone Mirroring 원격 레이어가 자동 클릭을 받지 않아 물리 확인 게이트로 남긴다.
+- Watch Debug `1.0 (137)` 설치와 새 Watch 접촉 시각 갱신은 확인했지만, Watch launch는 활성 시스템 상태 때문에 시계 화면 이탈이 거부됐다. TestFlight 배포본은 기존 build 137이며 이번 소스 변경은 아직 업로드하지 않았다.
+
 ## 2026-09-06 ALG904A001 · 전체 기록 알고리즘·성능·배터리 리뷰
 
 - 활동 융합, 경로 공백, 센서 저장·필터, HealthKit·Watch 수신, 지도 실시간 투영과 POI 검색을 함께 검토해 정확성·무결성·전력 결함을 수정했다.
